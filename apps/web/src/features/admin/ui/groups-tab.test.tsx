@@ -1,0 +1,223 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { TRPCProxyContext } from "../../../lib/trpc-context";
+import type { MockGroup, MockUser } from "../../../shared/lib/admin-mock-data";
+import { createMockTRPC } from "../../../test-utils/mock-trpc";
+import { GroupsTab } from "./groups-tab";
+
+// ----- mocks ---------------------------------------------------------
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+  },
+}));
+
+// ----- fixtures ------------------------------------------------------
+
+const USERS: MockUser[] = [
+  {
+    id: "u-head-1",
+    name: "Alice Head",
+    lastName: "Alice",
+    firstName: "Head",
+    middleName: null,
+    position: null,
+    email: "alice@example.com",
+    role: "head",
+    groupId: "g-1",
+    department: "Engineering",
+    isActive: true,
+  },
+];
+
+const GROUPS: MockGroup[] = [
+  {
+    id: "g-1",
+    name: "Alpha Group",
+    description: "First group",
+    archived: false,
+    headUserId: "u-head-1",
+  },
+  {
+    id: "g-2",
+    name: "Beta Group",
+    description: null,
+    archived: false,
+    headUserId: null,
+  },
+];
+
+// ----- tRPC test double ----------------------------------------------
+
+function renderTab(opts?: { groups?: MockGroup[]; users?: MockUser[] }) {
+  const { proxy, captured } = createMockTRPC([
+    { path: ["admin", "snapshot"] },
+    { path: ["admin", "saveReportingGroup"], mutation: true },
+    { path: ["admin", "archiveReportingGroup"], mutation: true },
+  ]);
+
+  captured["admin.saveReportingGroup"].mutationFn.mockResolvedValue({
+    id: "g-new",
+  });
+  captured["admin.archiveReportingGroup"].mutationFn.mockResolvedValue({
+    id: "g-1",
+  });
+
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+
+  function Wrapper({ children }: { readonly children: ReactNode }) {
+    return (
+      <QueryClientProvider client={qc}>
+        <TRPCProxyContext.Provider value={proxy}>
+          {children}
+        </TRPCProxyContext.Provider>
+      </QueryClientProvider>
+    );
+  }
+
+  const result = render(
+    <GroupsTab groups={opts?.groups ?? GROUPS} users={opts?.users ?? USERS} />,
+    { wrapper: Wrapper },
+  );
+
+  return { ...result, captured };
+}
+
+/** Opens the Add Group dialog by clicking the header button. */
+function openAddDialog() {
+  const addBtn = screen.getByRole("button", { name: "Add group" });
+  fireEvent.click(addBtn);
+}
+
+// ----- tests ---------------------------------------------------------
+
+describe("GroupsTab — a11y regression (verify-a11y-recommended-flip)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("dialog backdrop ARIA attributes", () => {
+    it("backdrop outer div has role='presentation'", () => {
+      renderTab();
+      openAddDialog();
+
+      const backdrop = screen.getByTestId("crud-sheet");
+      expect(backdrop).toHaveAttribute("role", "presentation");
+    });
+
+    it("inner dialog div has role='dialog' and aria-modal='true'", () => {
+      renderTab();
+      openAddDialog();
+
+      const dialog = screen.getByRole("dialog");
+      expect(dialog).toHaveAttribute("aria-modal", "true");
+    });
+  });
+
+  describe("Escape closes the dialog", () => {
+    it("pressing Escape removes data-testid='crud-sheet' from the DOM", () => {
+      renderTab();
+      openAddDialog();
+
+      expect(screen.getByTestId("crud-sheet")).toBeInTheDocument();
+
+      fireEvent.keyDown(document, { key: "Escape" });
+
+      expect(screen.queryByTestId("crud-sheet")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Cancel button closes the dialog", () => {
+    it("clicking Cancel removes data-testid='crud-sheet' from the DOM", async () => {
+      renderTab();
+      openAddDialog();
+
+      expect(screen.getByTestId("crud-sheet")).toBeInTheDocument();
+
+      const cancelBtn = screen.getByRole("button", { name: /cancel/i });
+      await userEvent.click(cancelBtn);
+
+      expect(screen.queryByTestId("crud-sheet")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("backdrop click closes the dialog", () => {
+    it("clicking the backdrop div removes data-testid='crud-sheet' from the DOM", async () => {
+      renderTab();
+      openAddDialog();
+
+      expect(screen.getByTestId("crud-sheet")).toBeInTheDocument();
+
+      const backdrop = screen.getByTestId("crud-sheet");
+      await userEvent.click(backdrop);
+
+      expect(screen.queryByTestId("crud-sheet")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("clicking inside dialog does NOT close it (stopPropagation)", () => {
+    it("clicking the role='dialog' element keeps data-testid='crud-sheet' in the DOM", async () => {
+      renderTab();
+      openAddDialog();
+
+      expect(screen.getByTestId("crud-sheet")).toBeInTheDocument();
+
+      const dialogPanel = screen.getByRole("dialog");
+      await userEvent.click(dialogPanel);
+
+      expect(screen.getByTestId("crud-sheet")).toBeInTheDocument();
+    });
+  });
+});
+
+// admin-dialog-focus-management (autofocus-admin-dialogs)
+describe("GroupsTab — focus management (autofocus-admin-dialogs)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("group-name input receives focus when the dialog opens (autoFocus)", () => {
+    renderTab();
+    openAddDialog();
+
+    const input = screen.getByLabelText(/^name$/i);
+    // React honours autoFocus on conditionally-mounted elements in jsdom;
+    // dropping the autoFocus wiring in production code fails this assert.
+    expect(input).toHaveFocus();
+  });
+
+  it("focus returns to the trigger button after the dialog closes via Cancel", () => {
+    renderTab();
+    const addBtn = screen.getByRole("button", { name: "Add group" });
+    addBtn.focus();
+    fireEvent.click(addBtn);
+
+    expect(screen.getByTestId("crud-sheet")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    expect(screen.queryByTestId("crud-sheet")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(addBtn);
+  });
+
+  it("focus returns to the trigger button after the dialog closes via Escape", () => {
+    renderTab();
+    const addBtn = screen.getByRole("button", { name: "Add group" });
+    addBtn.focus();
+    fireEvent.click(addBtn);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByTestId("crud-sheet")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(addBtn);
+  });
+});

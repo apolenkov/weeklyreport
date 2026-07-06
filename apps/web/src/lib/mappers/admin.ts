@@ -5,7 +5,7 @@
  * Per CONTEXT.md migration order, used by Users, Products, Periods, Reminders,
  * and Settings tabs. The mapper is intentionally self-contained and re-declares
  * the presentation types so downstream consumers do not couple to a particular
- * UI module (`apps/web/src/components/admin/mock-data.ts`).
+ * UI module (`apps/web/src/shared/lib/admin-mock-data.ts`).
  *
  * R3a-4 split: the presentation types live in `admin-types.ts` and the
  * form-state→API helpers in `admin-form-inputs.ts`; this module keeps the

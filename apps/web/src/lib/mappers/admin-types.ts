@@ -2,7 +2,7 @@
  * Presentation types for the admin tabs, extracted from `admin.ts` (R3a-4
  * max-lines split). These are intentionally self-contained re-declarations so
  * downstream consumers do not couple to a particular UI module
- * (`apps/web/src/components/admin/mock-data.ts`). The mapper logic that
+ * (`apps/web/src/shared/lib/admin-mock-data.ts`). The mapper logic that
  * produces them lives in `admin.ts`; the form-state→API helpers live in
  * `admin-form-inputs.ts`.
  */
