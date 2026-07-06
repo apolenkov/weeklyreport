@@ -42,7 +42,7 @@ import type {
 } from "@customreport/shared";
 import { DAYS_PER_WEEK, MS_PER_DAY, STAGE_NAMES } from "@customreport/shared";
 
-import { formatPeriodLabel } from "../format-date";
+import { formatPeriodLabel } from "../../../lib/format-date";
 import type {
   MappedAdminSnapshot,
   MockGroup,

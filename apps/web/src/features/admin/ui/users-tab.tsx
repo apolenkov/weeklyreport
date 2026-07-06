@@ -6,7 +6,6 @@ import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../../lib/cache-keys";
-import { toAdminUserInput } from "../../../lib/mappers";
 import { useTRPC } from "../../../lib/trpc-context";
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
 import type {
@@ -14,6 +13,7 @@ import type {
   MockUser,
   UserRole,
 } from "../../../shared/lib/admin-mock-data";
+import { toAdminUserInput } from "../model/admin";
 import { TabFilter, TabHeader, TabSearch } from "./tab-header";
 
 interface UserFormData {

@@ -48,7 +48,7 @@ vi.mock("../../../lib/trpc-context", () => ({
   }),
 }));
 
-vi.mock("../../../lib/mappers", () => ({
+vi.mock("../../../features/report-sections/model/weekly-report", () => ({
   mapWeeklyReport: () => ({
     portfolio: [],
     products: [],

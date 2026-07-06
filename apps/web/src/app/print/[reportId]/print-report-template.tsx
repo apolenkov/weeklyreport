@@ -10,9 +10,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
+import { mapWeeklyReport } from "../../../features/report-sections/model/weekly-report";
 import { formatClientErrorMessage } from "../../../lib/client-error-reporting";
 import { joinPeriodLabel } from "../../../lib/format-date";
-import { mapWeeklyReport } from "../../../lib/mappers";
 import { useTRPC } from "../../../lib/trpc-context";
 import type {
   PortfolioProduct,

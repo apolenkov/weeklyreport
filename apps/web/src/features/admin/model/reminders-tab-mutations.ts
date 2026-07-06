@@ -2,9 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../../lib/cache-keys";
-import { toReminderPolicyInput } from "../../../lib/mappers";
 import { useTRPC } from "../../../lib/trpc-context";
 import type { MockReminderPolicy } from "../../../shared/lib/admin-mock-data";
+import { toReminderPolicyInput } from "./admin";
 import { isoFromDate } from "./reminders-tab-format";
 
 export function toggledPayload(policy: MockReminderPolicy) {

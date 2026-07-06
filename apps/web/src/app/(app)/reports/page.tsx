@@ -13,7 +13,7 @@ import {
   type HistoryEntry,
   mapCompiledHistoryEntries,
   mapHistoryEntries,
-} from "../../../lib/mappers";
+} from "../../../features/report-sections/model/lead-history";
 import { useSession } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
 import { SearchInput } from "../../../shared/ui/search-input";

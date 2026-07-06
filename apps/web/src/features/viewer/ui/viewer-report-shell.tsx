@@ -7,10 +7,6 @@ import { Suspense, useCallback, useEffect, useMemo } from "react";
 import { HeadSlidesClient } from "../../../components/slides/head-slides-client";
 import { SlideSkeleton } from "../../../components/slides/slide-skeleton";
 import { getClientErrorDetails } from "../../../lib/client-error-reporting";
-import {
-  formatDateRange,
-  isoWeekNumber,
-} from "../../../lib/mappers/lead-history";
 import { useTRPC } from "../../../lib/trpc-context";
 import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../../../shared/ui/report-shell/archive-toggle";
@@ -20,6 +16,10 @@ import { useReportShellUrlState } from "../../../shared/ui/report-shell/use-repo
 import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
 import { ExportPdfButton } from "../../pdf-export/ui/export-pdf-button";
 import { PeriodNavigator } from "../../period/ui/period-navigator";
+import {
+  formatDateRange,
+  isoWeekNumber,
+} from "../../report-sections/model/lead-history";
 import type { ReportPeriod } from "../../report-sections/model/mock-data";
 import { WeeklyReportPage } from "../../report-sections/ui/weekly-report-page";
 import { WeeklyReportSkeleton } from "../../report-sections/ui/weekly-report-skeleton";

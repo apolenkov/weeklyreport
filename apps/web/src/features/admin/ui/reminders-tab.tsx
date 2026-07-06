@@ -3,13 +3,13 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { toReminderPolicyInput } from "../../../lib/mappers";
 import { pluralize } from "../../../lib/pluralize";
 import type {
   MockReminder,
   MockReminderPolicy,
 } from "../../../shared/lib/admin-mock-data";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
+import { toReminderPolicyInput } from "../model/admin";
 import {
   emptyPolicyForm,
   type PolicyFormState,

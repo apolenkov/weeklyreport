@@ -4,12 +4,12 @@ import type {
 } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 
+import type { CrossAuthorContentRow } from "../../features/report-sections/model/lead-cross-author";
 import { riskCoversStage } from "../../features/report-sections/model/stage-tags";
-import type { CrossAuthorContentRow } from "../../lib/mappers/lead-cross-author";
 import {
   stageStatusToTraffic,
   trafficToStageStatus,
-} from "../../lib/mappers/traffic-light";
+} from "../../features/report-sections/model/traffic-light";
 import { deriveEffectiveStageStatus } from "../../lib/stage-status";
 import { buildSlideGridModel, type SlideGridModel } from "./slide-grid-model";
 

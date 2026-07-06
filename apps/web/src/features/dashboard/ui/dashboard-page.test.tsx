@@ -83,7 +83,7 @@ vi.mock("../../../shared/ui/confirmation-dialog", () => ({
 
 // Mapper is unit-tested separately; stub it so the success-path render does not
 // need a full WeeklyReportReadModel fixture (head-dashboard-declutter test 5.1).
-vi.mock("../../../lib/mappers", () => ({
+vi.mock("../model/dashboard", () => ({
   mapDashboardData: () => ({
     kpi: {
       submitted: 0,

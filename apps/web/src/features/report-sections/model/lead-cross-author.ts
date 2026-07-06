@@ -1,16 +1,12 @@
 /**
- * Cross-author mappers for the lead form (refactor-lead-mappers slice).
- *
- * Extracted verbatim from the inline derivation blocks in
- * `components/lead/lead-form.tsx` (F8 stage-map build + overlay).
- * Pure functions; behavior is pinned by `lead-cross-author.test.ts` and the
- * lead-form characterization suites.
+ * Cross-author mappers for the lead form. Pure functions; behavior is pinned by
+ * `lead-cross-author.test.ts` and the lead-form characterization suites.
  *
  * Input types are structural mirrors of the `leadForm.crossAuthors` /
- * `leadForm.crossAuthorContent` query rows — `lib/mappers` must not import
- * component types (`components/lead/mock-data.ts`); see design D2.
+ * `leadForm.crossAuthorContent` query rows: this model layer must not import UI
+ * component types, so it re-declares the row shapes it consumes.
  *
- * Two distinct reads feed this module (scope-lead-report-to-own-contribution):
+ * Two distinct reads feed this module:
  *   - `crossAuthors` (status-only, ALWAYS fetched): per shared product, the
  *     foreign stage names + RISK-DERIVED traffic-light status + initials.
  *     Drives `buildCrossAuthorStageMap` (foreign chips) and honest health.

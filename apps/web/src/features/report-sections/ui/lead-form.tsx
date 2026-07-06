@@ -43,24 +43,6 @@ import {
   moveToNextWeekPatch,
   pauseItemPatch,
 } from "../../../lib/lead-item-actions";
-import { mapLeadFormData, mapLeadReviewFeedback } from "../../../lib/mappers";
-import type { ItemWorkflowStatus as MapperItemWorkflowStatus } from "../../../lib/mappers/item-status";
-import {
-  applyCrossAuthorStageOverrides,
-  buildCrossAuthorStageMap,
-  mapForeignDecisions,
-  mapForeignItems,
-  mapForeignRisks,
-} from "../../../lib/mappers/lead-cross-author";
-import {
-  normalizeStageName,
-  ownedStagesForProject,
-} from "../../../lib/mappers/lead-form";
-import {
-  formatDateRange,
-  isoWeekNumber,
-} from "../../../lib/mappers/lead-history";
-import { stageStatusToTraffic } from "../../../lib/mappers/traffic-light";
 import { SessionContext } from "../../../lib/session-provider";
 import { isConflictError } from "../../../lib/trpc";
 import { useTRPC } from "../../../lib/trpc-context";
@@ -89,6 +71,21 @@ import { FillFromButton } from "../../period/ui/fill-from-button";
 import { PeriodNavigator } from "../../period/ui/period-navigator";
 import { RequestReopenDialog } from "../../period/ui/request-reopen-dialog";
 import { LeadReviewFeedback } from "../../review/ui/lead-review-feedback";
+import type { ItemWorkflowStatus as MapperItemWorkflowStatus } from "../model/item-status";
+import {
+  applyCrossAuthorStageOverrides,
+  buildCrossAuthorStageMap,
+  mapForeignDecisions,
+  mapForeignItems,
+  mapForeignRisks,
+} from "../model/lead-cross-author";
+import {
+  mapLeadFormData,
+  mapLeadReviewFeedback,
+  normalizeStageName,
+  ownedStagesForProject,
+} from "../model/lead-form";
+import { formatDateRange, isoWeekNumber } from "../model/lead-history";
 import type {
   DecisionEntry,
   KanbanItem,
@@ -96,6 +93,7 @@ import type {
   ReportPeriod,
   RiskEntry,
 } from "../model/mock-data";
+import { stageStatusToTraffic } from "../model/traffic-light";
 import { ItemEditDialog } from "./item-edit-dialog";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
 import {

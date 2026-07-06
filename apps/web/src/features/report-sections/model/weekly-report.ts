@@ -21,7 +21,7 @@
  */
 import type { WeeklyReportReadModel } from "@customreport/shared";
 
-import { statusLabel } from "../status-presentation";
+import { statusLabel } from "../../../lib/status-presentation";
 import { reportHasContent } from "./report-content";
 import {
   buildProductToAuthorMap,

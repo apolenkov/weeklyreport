@@ -9,6 +9,11 @@ import {
   shortNameFromName,
 } from "@customreport/shared";
 
+import {
+  deriveLeadStatus,
+  type LeadStatus,
+} from "../../report-sections/model/lead-status";
+import { trafficToStageStatus } from "../../report-sections/model/traffic-light";
 import type { LeadInfo, ProductStatus, TrafficLight } from "./dashboard";
 import {
   countActivityRecords,
@@ -16,8 +21,6 @@ import {
   countSectionContent,
   productColumnCounts,
 } from "./dashboard-counts";
-import { deriveLeadStatus, type LeadStatus } from "./lead-status";
-import { trafficToStageStatus } from "./traffic-light";
 
 const TRAFFIC_ICON: Record<ProductStatus, string> = {
   "on-track": "✓", // ✓

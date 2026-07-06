@@ -1,4 +1,4 @@
-import type { StageStatus } from "./mappers/traffic-light";
+import type { StageStatus } from "../features/report-sections/model/traffic-light";
 
 const PRECEDENCE: Record<StageStatus, number> = {
   blocked: 3,

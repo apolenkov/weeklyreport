@@ -24,17 +24,6 @@ import {
 } from "../../../lib/cache-keys";
 import { getClientErrorDetails } from "../../../lib/client-error-reporting";
 import { joinPeriodLabel } from "../../../lib/format-date";
-import {
-  type LeadOverviewRow,
-  mapWeeklyReport,
-  mapWeeklyReportLeadGroups,
-  mapWeeklyReportLeadOverview,
-} from "../../../lib/mappers";
-import {
-  formatDateRange,
-  isoWeekNumber,
-} from "../../../lib/mappers/lead-history";
-import { reportHasContent } from "../../../lib/mappers/report-content";
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
@@ -65,7 +54,15 @@ import {
   type SubmissionFilter,
   SubmissionFilterToggle,
 } from "../../review/ui/submission-filter";
+import { formatDateRange, isoWeekNumber } from "../model/lead-history";
 import type { ReportPeriod } from "../model/mock-data";
+import { reportHasContent } from "../model/report-content";
+import {
+  type LeadOverviewRow,
+  mapWeeklyReport,
+  mapWeeklyReportLeadGroups,
+  mapWeeklyReportLeadOverview,
+} from "../model/weekly-report";
 import { ActivityStatusStrip } from "./activity-status-strip";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
 import {

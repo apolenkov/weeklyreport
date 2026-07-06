@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   type LeadReviewFeedbackRecord,
   mapLeadReviewFeedback,
-} from "../../../lib/mappers";
+} from "../../report-sections/model/lead-form";
 import { LeadReviewFeedback } from "./lead-review-feedback";
 
 const REVIEWER_ID = "99999999-9999-4999-8999-999999999999";

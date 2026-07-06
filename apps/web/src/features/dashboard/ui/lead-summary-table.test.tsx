@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { LeadInfo } from "../../../lib/mappers/dashboard";
+import type { LeadInfo } from "../model/dashboard";
 import { LeadSummaryTable } from "./lead-summary-table";
 
 // The Remind/Revoke buttons own their own tRPC/react-query wiring; stub them so

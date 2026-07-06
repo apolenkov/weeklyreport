@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import type { LeadActivityCard } from "../../../lib/mappers/lead-form";
+import type { LeadActivityCard } from "../../report-sections/model/lead-form";
 
 type TrafficLightStatus = "green" | "yellow" | "red";
 

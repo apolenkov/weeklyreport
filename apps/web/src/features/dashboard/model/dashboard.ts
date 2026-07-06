@@ -31,11 +31,14 @@ import type {
   WeeklyReportReadModel,
 } from "@customreport/shared";
 
-import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
+import {
+  formatPeriodRangeWithYear,
+  formatWeekLabel,
+} from "../../../lib/format-date";
+import type { LeadStatus } from "../../report-sections/model/lead-status";
 import { escalationToBlockedItem } from "./dashboard-escalations";
 import { buildKpiData, formatRelativeDeadline } from "./dashboard-kpi";
 import { buildLeadInfos, initialsFromName } from "./dashboard-leads";
-import type { LeadStatus } from "./lead-status";
 
 export { formatRelativeDeadline } from "./dashboard-kpi";
 

@@ -7,7 +7,10 @@
  * as the covering-risk DISPLAY overlay — it is never settable or persistable.
  */
 
-import { type AlarmRisk, deriveItemAlarmFromRisks } from "../item-alarm";
+import {
+  type AlarmRisk,
+  deriveItemAlarmFromRisks,
+} from "../../../lib/item-alarm";
 
 const IN_PROGRESS_STATUS = "in-progress";
 
