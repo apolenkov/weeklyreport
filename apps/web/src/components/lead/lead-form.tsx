@@ -34,6 +34,7 @@ import {
 import { crossAuthorContentFetchEnabled } from "../../lib/cross-author-content-gate";
 import {
   markCompletePatch,
+  moveToCurrentWeekPatch,
   moveToNextWeekPatch,
 } from "../../lib/lead-item-actions";
 import { mapLeadFormData, mapLeadReviewFeedback } from "../../lib/mappers";
@@ -1480,6 +1481,10 @@ export function LeadForm({
     updateDraftItemInPlace(itemId, moveToNextWeekPatch());
   }
 
+  function handleMoveToCurrentWeek(itemId: string) {
+    updateDraftItemInPlace(itemId, moveToCurrentWeekPatch());
+  }
+
   // Route "set blocked" through blocker (risk) creation, prefilled — never a
   // free blocked item status. Shared by the quick-add "Blocker" entry (no
   // product/stage), the item dialog's alarm gesture (product + stage), and an
@@ -1979,6 +1984,7 @@ export function LeadForm({
                       ownPeriodRanks={ownPeriodRanks}
                       addSignal={nextWeekAddSignal}
                       publishedLockedIds={publishedLockedItemIds}
+                      onMoveToCurrentWeek={handleMoveToCurrentWeek}
                     />
                   </AccordionSection>
                 </>

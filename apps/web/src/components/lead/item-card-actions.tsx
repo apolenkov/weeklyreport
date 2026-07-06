@@ -64,6 +64,21 @@ function ArrowRightIcon() {
   );
 }
 
+function ArrowLeftIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3 w-3"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+      aria-hidden="true"
+    >
+      <path d="M19 12H5M11 6l-6 6 6 6" />
+    </svg>
+  );
+}
+
 const NEUTRAL_ACTION_CLASS =
   "flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]";
 
@@ -83,6 +98,8 @@ interface ItemCardActionsProps {
   readonly onMarkComplete?: (id: string) => void;
   /** Move action: flips `type` to next IN PLACE (same durable identity). */
   readonly onMoveToNextWeek?: (id: string) => void;
+  /** Move action: flips `type` back to current IN PLACE (same durable identity). */
+  readonly onMoveToCurrentWeek?: (id: string) => void;
 }
 
 /**
@@ -100,6 +117,7 @@ export function ItemCardActions({
   onDelete,
   onMarkComplete,
   onMoveToNextWeek,
+  onMoveToCurrentWeek,
 }: ItemCardActionsProps) {
   if (locked || isEditing) {
     return item.foreign === true ? (
@@ -110,6 +128,17 @@ export function ItemCardActions({
   }
   return (
     <div className="flex shrink-0 gap-1">
+      {onMoveToCurrentWeek && item.status !== "completed" && (
+        <button
+          type="button"
+          className={NEUTRAL_ACTION_CLASS}
+          onClick={() => onMoveToCurrentWeek(item.id)}
+          aria-label="Move to current week"
+          title="Move to current week"
+        >
+          <ArrowLeftIcon />
+        </button>
+      )}
       {onMarkComplete && item.status !== "completed" && (
         <button
           type="button"

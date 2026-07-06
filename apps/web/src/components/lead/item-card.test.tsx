@@ -13,7 +13,8 @@
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import { ItemCard } from "./item-card";
 import type { KanbanItem, RiskEntry } from "./mock-data";
@@ -319,5 +320,38 @@ describe("ItemCard — foreign covering-risk attribution (record-status-ux-polis
       "title",
       "Status is set by the covering risk/blocker — resolve it to change.",
     );
+  });
+});
+
+describe("ItemCard — move-to-current-week action (F4)", () => {
+  it("renders the Move to current week button when the handler is passed", () => {
+    render(<ItemCard item={BASE_ITEM} onMoveToCurrentWeek={() => undefined} />);
+    expect(
+      screen.getByRole("button", { name: "Move to current week" }),
+    ).toBeInTheDocument();
+  });
+
+  it("calls onMoveToCurrentWeek with the item id on click", async () => {
+    const onMoveToCurrentWeek = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ItemCard item={BASE_ITEM} onMoveToCurrentWeek={onMoveToCurrentWeek} />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Move to current week" }),
+    );
+    expect(onMoveToCurrentWeek).toHaveBeenCalledWith("item-1");
+  });
+
+  it("withholds the action from a completed item", () => {
+    render(
+      <ItemCard
+        item={{ ...BASE_ITEM, status: "completed" }}
+        onMoveToCurrentWeek={() => undefined}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Move to current week" }),
+    ).toBeNull();
   });
 });
