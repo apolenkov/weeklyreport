@@ -513,7 +513,6 @@ export function mapLeadItems(
       const status = deriveItemStatus({
         workflowStatus: item.workflowStatus,
         type: item.type,
-        completed: item.completed ?? null,
       });
       return {
         id:
@@ -646,7 +645,6 @@ export function mapLeadActivityCards(
       status: deriveItemStatus({
         workflowStatus: item.workflowStatus,
         type: item.type,
-        completed: item.completed ?? null,
       }),
       text: item.text,
       author: section.authorName,

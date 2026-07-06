@@ -20,12 +20,6 @@ import {
 import { canonicalStageIds } from "./stage-tags";
 
 /** The prefill an item's alarm gesture hands to blocker (risk) creation. */
-export interface BlockerPrefill {
-  readonly productId: string;
-  readonly stageIds: string[];
-  readonly severity: "at-risk" | "blocked";
-}
-
 interface ItemEditDialogProps {
   /** Open/close state. Caller controls so it can wire submit/cancel. */
   readonly open: boolean;
@@ -78,12 +72,6 @@ interface ItemEditDialogProps {
    * derived from the risk, never a free chip — record-status-derived-from-risk).
    */
   readonly risks?: readonly RiskEntry[];
-  /**
-   * Route a product-parented, uncovered item to blocker creation: opens the
-   * risk (blocker) dialog prefilled with the item's product, stage, and the
-   * chosen severity, instead of setting a free blocked status on the item.
-   */
-  readonly onRouteToBlocker?: (prefill: BlockerPrefill) => void;
   readonly onSave: (next: KanbanItem) => void;
   readonly onCancel: () => void;
 }
@@ -98,12 +86,31 @@ interface Choice {
 
 const CSS_PRIMARY = "var(--color-primary)";
 const IN_PROGRESS_STATUS = "in-progress";
+// Shared quiet-chip palette for the not-in-flight states.
+const CSS_MUTED = "var(--color-muted)";
+const CSS_MUTED_FG = "var(--color-muted-foreground)";
+const CHIP_IDLE_BORDER = "rgba(0,0,0,0.15)";
 
-// record-status-derived-from-risk: no free "Blocked" chip. An item's blocked /
-// at-risk alarm is DERIVED from a covering risk (the card floors it), never a
-// free item status — "set blocked" routes through blocker (risk) creation via
-// the quick-add "Blocker" entry. Only progress states are authorable here.
+// record-status-derived-from-risk: no free "Blocked" chip and no in-dialog
+// blocker gesture. An item's blocked / at-risk alarm is DERIVED from a
+// covering risk, never a free item status — a blocker is created in Risks &
+// Blockers (or the quick-add "Blocker" entry). Each item type authors only
+// its own progress vocabulary (rework-item-status-model).
 const CURRENT_WEEK_CHOICES: readonly Choice[] = [
+  {
+    value: IN_PROGRESS_STATUS,
+    label: "! In Progress",
+    bg: "var(--color-success)",
+    color: CSS_PRIMARY,
+    border: "var(--color-starbucks-accent)",
+  },
+  {
+    value: "paused",
+    label: "‖ Paused",
+    bg: CSS_MUTED,
+    color: CSS_MUTED_FG,
+    border: CHIP_IDLE_BORDER,
+  },
   {
     value: "completed",
     label: "✓ Completed",
@@ -111,29 +118,22 @@ const CURRENT_WEEK_CHOICES: readonly Choice[] = [
     color: "#fff",
     border: CSS_PRIMARY,
   },
-  {
-    value: IN_PROGRESS_STATUS,
-    label: "! In Progress",
-    bg: "var(--color-success)",
-    color: CSS_PRIMARY,
-    border: "var(--color-starbucks-accent)",
-  },
 ];
 
 const NEXT_WEEK_CHOICES: readonly Choice[] = [
   {
     value: "planned",
     label: "○ Planned",
-    bg: "var(--color-muted)",
-    color: "var(--color-muted-foreground)",
-    border: "rgba(0,0,0,0.15)",
+    bg: CSS_MUTED,
+    color: CSS_MUTED_FG,
+    border: CHIP_IDLE_BORDER,
   },
   {
-    value: IN_PROGRESS_STATUS,
-    label: "! In Progress",
-    bg: "var(--color-success)",
-    color: CSS_PRIMARY,
-    border: "var(--color-starbucks-accent)",
+    value: "postponed",
+    label: "» Postponed",
+    bg: CSS_MUTED,
+    color: CSS_MUTED_FG,
+    border: CHIP_IDLE_BORDER,
   },
 ];
 
@@ -189,25 +189,15 @@ function isItemCovered(args: CoverageArgs): boolean {
   );
 }
 
-type StatusSlot = "locked" | "chips-blockable" | "chips";
+type StatusSlot = "locked" | "chips";
 
 /**
- * The status slot to render: `locked` (a covering risk owns the alarm),
- * `chips-blockable` (progress chips plus the route-to-blocker gesture), or plain
- * `chips`. The gesture is offered only for a current-week product item whose
- * caller can route to blocker creation.
+ * The status slot to render: `locked` (a covering risk owns the alarm) or the
+ * per-type progress `chips`. No in-dialog blocker gesture exists — blockers
+ * are created in Risks & Blockers (rework-item-status-model).
  */
-function resolveStatusSlot(
-  args: CoverageArgs & {
-    readonly week: "current" | "next";
-    readonly canRoute: boolean;
-  },
-): StatusSlot {
-  if (isItemCovered(args)) return "locked";
-  if (!args.isActivityParent && args.week === "current" && args.canRoute) {
-    return "chips-blockable";
-  }
-  return "chips";
+function resolveStatusSlot(args: CoverageArgs): StatusSlot {
+  return isItemCovered(args) ? "locked" : "chips";
 }
 
 /**
@@ -265,7 +255,7 @@ function ItemStatusChips({
               style={{
                 background: selected ? c.bg : "transparent",
                 color: selected ? c.color : "var(--color-foreground)",
-                border: `1.5px solid ${selected ? c.border : "rgba(0,0,0,0.15)"}`,
+                border: `1.5px solid ${selected ? c.border : CHIP_IDLE_BORDER}`,
               }}
               aria-pressed={selected}
             >
@@ -296,38 +286,24 @@ function CoveredStatusLock() {
   );
 }
 
-/** The alarm gesture on an uncovered item: routes to blocker (risk) creation. */
-function MarkBlockedRow({ onClick }: { readonly onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="mt-2 inline-flex min-h-[var(--touch-target-min)] md:min-h-[34px] items-center gap-1 self-start rounded-[var(--radius-pill)] border border-[rgba(200,32,20,0.3)] bg-transparent px-3 py-1 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:bg-[rgba(200,32,20,0.08)]"
-    >
-      ⚠ Mark as blocked…
-    </button>
-  );
-}
-
-/** The status slot: the locked message, or the progress chips (+ alarm gesture). */
+/** The status slot: the locked message, or the progress chips. The former
+ * in-dialog "mark as blocked" gesture is gone — blockers live in Risks &
+ * Blockers (rework-item-status-model). */
 function StatusSlotView({
   slot,
   choices,
   status,
   onSelect,
-  onMarkBlocked,
 }: {
   readonly slot: StatusSlot;
   readonly choices: readonly Choice[];
   readonly status: ItemStatus;
   readonly onSelect: (value: ItemStatus) => void;
-  readonly onMarkBlocked: () => void;
 }) {
   if (slot === "locked") return <CoveredStatusLock />;
   return (
     <div className="flex flex-col">
       <ItemStatusChips choices={choices} status={status} onSelect={onSelect} />
-      {slot === "chips-blockable" && <MarkBlockedRow onClick={onMarkBlocked} />}
     </div>
   );
 }
@@ -357,7 +333,6 @@ function ItemEditDialogContent({
   stagesForProduct,
   ownPeriodRanks,
   risks,
-  onRouteToBlocker,
   onSave,
   onCancel,
 }: ItemEditDialogProps) {
@@ -454,20 +429,7 @@ function ItemEditDialogContent({
     stageIds: effectiveStageIds,
     status,
     risks,
-    week,
-    canRoute: onRouteToBlocker !== undefined,
   });
-
-  function handleMarkBlocked() {
-    // Route "set blocked" through blocker creation, prefilled — never a free
-    // blocked item status. Closing the item dialog hands off to the risk dialog.
-    onRouteToBlocker?.({
-      productId: parent.id,
-      stageIds: canonicalStageIds(effectiveStageIds),
-      severity: "blocked",
-    });
-    onCancel();
-  }
 
   function setParentAndStages(nextParent: RecordParent) {
     setParent(nextParent);
@@ -695,7 +657,6 @@ function ItemEditDialogContent({
               choices={choices}
               status={status}
               onSelect={setStatus}
-              onMarkBlocked={handleMarkBlocked}
             />
           </div>
         </div>

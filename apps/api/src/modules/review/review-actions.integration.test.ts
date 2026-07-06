@@ -343,7 +343,7 @@ describe("review-actions (integration)", () => {
           type: "next",
           text: "Carry me",
           tag: "feature",
-          workflowStatus: "in_progress",
+          workflowStatus: "planned",
           stageNames: ["dev"],
         },
       });

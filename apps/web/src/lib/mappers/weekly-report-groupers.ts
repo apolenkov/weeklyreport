@@ -129,7 +129,6 @@ export function groupItemsByProject(
           {
             workflowStatus: item.workflowStatus,
             type: item.type,
-            completed: item.completed ?? null,
             projectId: item.projectId,
             stageIds: item.stageIds,
           },
@@ -150,9 +149,9 @@ export function groupItemsByProject(
 }
 
 /**
- * Group risks across all sections by `projectId`. Severity is inferred from the
- * lead section's matching item with `workflowStatus === 'blocked'`; otherwise
- * defaults to `'at-risk'`.
+ * Group risks across all sections by `projectId`. A risk missing an explicit
+ * severity defaults to `'at-risk'` (there is no stored blocked item status to
+ * infer from — rework-item-status-model).
  *
  * `projectNames` is the REPORT-WIDE id→name map (fix-product-name-resolution):
  * resolving only against the owning section's projects rendered "Unknown" for
@@ -164,20 +163,12 @@ export function groupRisksByProject(
 ): Map<string, WeeklyReportRisk[]> {
   const map = new Map<string, WeeklyReportRisk[]>();
   for (const section of sections) {
-    // Detect blocked items per project for legacy risk severity inference.
-    const blockedProjects = new Set(
-      section.items
-        .filter((item) => item.workflowStatus === "blocked")
-        .map((item) => item.projectId),
-    );
     for (const risk of section.risks) {
       // activity-first-class: activity-parented risks (projectId null) render
       // under their activity, not a product column — skip them here.
       if (risk.projectId == null) continue;
       const productName = projectNames.get(risk.projectId) ?? "Unknown";
-      const severity: "blocked" | "at-risk" =
-        risk.severity ??
-        (blockedProjects.has(risk.projectId) ? "blocked" : "at-risk");
+      const severity: "blocked" | "at-risk" = risk.severity ?? "at-risk";
       const text = `${risk.risk} — Impact: ${risk.impact} — Mitigation: ${risk.mitigation}`;
       // Same hardcoded-"Dev" fix as items: show the risk's real stage tags.
       const riskStages = (risk.stageIds ?? []).join("+");

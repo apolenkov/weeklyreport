@@ -204,7 +204,13 @@ const ISO_DATE_PREFIX_LENGTH = 10;
  * would be a silent behavior change.
  */
 export function coerceWorkflowToItemStatus(ws: string): ItemStatus {
-  if (ws === "done" || ws === "in_progress" || ws === "blocked") {
+  if (
+    ws === "done" ||
+    ws === "in_progress" ||
+    ws === "paused" ||
+    ws === "postponed" ||
+    ws === "planned"
+  ) {
     return workflowToItemStatus(ws);
   }
   return "planned";

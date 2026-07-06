@@ -6,6 +6,11 @@ export interface StatusBadge {
   label: string;
 }
 
+// The quiet not-in-flight states (planned / paused / postponed) share one
+// muted pill treatment — only their label differs.
+const MUTED_BADGE_BG = "var(--color-muted)";
+const MUTED_BADGE_TEXT = "var(--color-muted-foreground)";
+
 export const STATUS_BADGE = {
   "in-progress": {
     bg: "var(--color-success)",
@@ -30,9 +35,19 @@ export const STATUS_BADGE = {
     label: "At Risk",
   },
   planned: {
-    bg: "var(--color-muted)",
-    text: "var(--color-muted-foreground)",
+    bg: MUTED_BADGE_BG,
+    text: MUTED_BADGE_TEXT,
     label: "Planned",
+  },
+  paused: {
+    bg: MUTED_BADGE_BG,
+    text: MUTED_BADGE_TEXT,
+    label: "Paused",
+  },
+  postponed: {
+    bg: MUTED_BADGE_BG,
+    text: MUTED_BADGE_TEXT,
+    label: "Postponed",
   },
 } as const satisfies Record<string, StatusBadge>;
 

@@ -19,7 +19,13 @@ export interface AlarmItem {
   readonly stageIds?: readonly string[];
   /** @deprecated legacy single-stage label; read only to heal old rows. */
   readonly stageName?: string;
-  readonly status: "in-progress" | "completed" | "blocked" | "planned";
+  readonly status:
+    | "in-progress"
+    | "completed"
+    | "planned"
+    | "paused"
+    | "postponed"
+    | "blocked";
 }
 
 /** Minimal risk shape the derivation reads. */
@@ -51,9 +57,9 @@ function itemStageNames(item: AlarmItem): readonly string[] {
  * same-product risk so its alarm is never silently under-reported. Empty
  * (placeholder) risks cover nothing.
  *
- * Eligibility: only an `in-progress` item is floored. A `completed` or
- * `planned` item is finished / not-yet-started work — a covering risk is about
- * in-flight work on the stage, so flooring those to an alarm would be wrong
+ * Eligibility: only an `in-progress` item is floored. A `completed`, `planned`,
+ * `paused` or `postponed` item is finished / not-in-flight work — a covering
+ * risk is about in-flight work on the stage, so flooring those would be wrong
  * (seed `mock-data.ts` cw2/cw4 are completed + stage-less on a risk-covered
  * product — the wildcard would otherwise floor them).
  *

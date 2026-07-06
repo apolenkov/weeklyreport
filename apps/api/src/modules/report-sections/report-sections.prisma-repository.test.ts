@@ -574,12 +574,12 @@ describe("mapPrismaToReportSection — activity derived-status floor", () => {
     ]);
   });
 
-  it("floors the pill red for a blocked own item, leaving the stored status", () => {
+  it("an item's progress status never floors the pill (alarms are risks)", () => {
     const section = mapRow(
-      activityRow({ storedStatus: "green", items: [activityItem("blocked")] }),
+      activityRow({ storedStatus: "green", items: [activityItem("paused")] }),
     );
     expect(section.activities[0]?.status).toBe("green");
-    expect(section.activities[0]?.derivedStatus).toBe("red");
+    expect(section.activities[0]?.derivedStatus).toBe("green");
   });
 
   it("floors at least yellow for a covering at-risk own risk", () => {

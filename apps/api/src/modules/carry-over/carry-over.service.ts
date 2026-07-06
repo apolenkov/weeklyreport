@@ -181,10 +181,10 @@ export class CarryOverService {
           (item) =>
             item.type === "next" &&
             !item.carriedOver &&
-            // Finished work is closed — a done or completed next-week item is
-            // not carried into the new period.
+            // Finished work is closed; postponed work was explicitly pushed
+            // beyond this period — the lead re-plans it by hand, never auto.
             item.workflowStatus !== "done" &&
-            item.completed !== true &&
+            item.workflowStatus !== "postponed" &&
             isActivityCarryable(item.activityId, targetActivityIds) &&
             !(
               item.stableId !== undefined &&

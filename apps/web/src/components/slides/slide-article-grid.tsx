@@ -22,8 +22,12 @@ import type {
 } from "./slide-grid-model";
 
 /** The one shared 4-column template — identical in the header row and every
- * subsection so columns align vertically across the whole slide. */
-const GRID_TEMPLATE = "grid grid-cols-[1.15fr_1fr_1.1fr_1fr] gap-x-4";
+ * subsection so columns align vertically across the whole slide. Current/Next
+ * carry the prose, Risks/Decisions are sparse by nature, so the content lanes
+ * take the width (council-grilled: keep 4 columns — the fixed position of the
+ * Risks lane is the head's severity scan-line; merging would trade it for a
+ * weaker order-based rule). */
+const GRID_TEMPLATE = "grid grid-cols-[1.35fr_1.25fr_0.85fr_0.85fr] gap-x-4";
 
 const COLUMNS = [
   {

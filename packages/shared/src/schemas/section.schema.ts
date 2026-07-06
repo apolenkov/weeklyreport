@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { roleSchema } from "./auth";
 import {
+  addItemTypeStatusIssue,
   itemTypeSchema,
   itemWorkflowStatusSchema,
   reportSectionStatusSchema,
@@ -86,7 +87,6 @@ export const itemInputSchema = z.object({
   tag: safeText({ max: 50 }),
   workflowStatus: itemWorkflowStatusSchema,
   carriedOver: z.boolean().default(false),
-  completed: z.boolean().nullable().optional(),
   priorityRank: z.number().int().min(1).nullable().optional(),
   // Length-tolerant here; the itemWriteSchema superRefine requires ≥1 stage for a
   // product parent and rejects any stage on an activity parent.
@@ -166,12 +166,15 @@ export const decisionReadModelSchema = decisionInputSchema.extend({
 // schema keeps `.extend`ing draftSaveSchema (a superRefine yields a ZodEffects,
 // which is not `.extend`able). The DB CHECK is the defence-in-depth backstop.
 const addParentXorIssues = (
+  value: {
+    readonly activityId?: string | null;
+    readonly stageIds?: readonly string[];
+  },
   productId: string | null | undefined,
-  activityId: string | null | undefined,
-  stageIds: readonly string[] | undefined,
   productPath: "projectId" | "productId",
   ctx: z.RefinementCtx,
 ): void => {
+  const { activityId, stageIds } = value;
   const hasProduct = productId != null;
   const hasActivity = activityId != null;
   if (hasProduct === hasActivity) {
@@ -199,35 +202,17 @@ const addParentXorIssues = (
   }
 };
 
-export const itemWriteSchema = itemInputSchema.superRefine((value, ctx) =>
-  addParentXorIssues(
-    value.projectId,
-    value.activityId,
-    value.stageIds,
-    "projectId",
-    ctx,
-  ),
-);
+export const itemWriteSchema = itemInputSchema.superRefine((value, ctx) => {
+  addParentXorIssues(value, value.projectId, "projectId", ctx);
+  addItemTypeStatusIssue(value.type, value.workflowStatus, ctx);
+});
 
 export const riskWriteSchema = riskInputSchema.superRefine((value, ctx) =>
-  addParentXorIssues(
-    value.projectId,
-    value.activityId,
-    value.stageIds,
-    "projectId",
-    ctx,
-  ),
+  addParentXorIssues(value, value.projectId, "projectId", ctx),
 );
 
 export const decisionWriteSchema = decisionInputSchema.superRefine(
-  (value, ctx) =>
-    addParentXorIssues(
-      value.productId,
-      value.activityId,
-      value.stageIds,
-      "productId",
-      ctx,
-    ),
+  (value, ctx) => addParentXorIssues(value, value.productId, "productId", ctx),
 );
 
 export const draftSaveSchema = z.object({

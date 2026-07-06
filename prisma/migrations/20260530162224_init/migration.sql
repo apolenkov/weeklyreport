@@ -17,7 +17,7 @@ CREATE TYPE "TrafficLightStatus" AS ENUM ('green', 'yellow', 'red');
 CREATE TYPE "ItemType" AS ENUM ('current', 'next');
 
 -- CreateEnum
-CREATE TYPE "ItemWorkflowStatus" AS ENUM ('done', 'in_progress', 'blocked');
+CREATE TYPE "ItemWorkflowStatus" AS ENUM ('planned', 'in_progress', 'paused', 'postponed', 'done');
 
 -- CreateEnum
 CREATE TYPE "PdfExportStatus" AS ENUM ('pending', 'completed', 'failed');
@@ -209,7 +209,6 @@ CREATE TABLE "Item" (
     "tag" TEXT NOT NULL,
     "workflowStatus" "ItemWorkflowStatus" NOT NULL,
     "carriedOver" BOOLEAN NOT NULL DEFAULT false,
-    "completed" BOOLEAN,
     "priorityRank" INTEGER,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -941,6 +940,18 @@ ALTER TABLE "ProjectActivityProduct" ADD CONSTRAINT "ProjectActivityProduct_prod
 ALTER TABLE "Item"
   ADD CONSTRAINT "Item_parent_xor_check"
   CHECK ((("projectId" IS NOT NULL)::int + ("activityId" IS NOT NULL)::int) = 1);
+
+-- Per-type progress vocabulary (rework-item-status-model): current items may
+-- only hold in_progress/paused/done, next items only planned/postponed.
+-- Prisma cannot express a CHECK, so it is hand-written here as defence-in-depth
+-- behind the Zod refinement in the shared item schema.
+ALTER TABLE "Item"
+  ADD CONSTRAINT "Item_type_status_check"
+  CHECK (
+    ("type" = 'current' AND "workflowStatus" IN ('in_progress', 'paused', 'done'))
+    OR
+    ("type" = 'next' AND "workflowStatus" IN ('planned', 'postponed'))
+  );
 ALTER TABLE "Risk"
   ADD CONSTRAINT "Risk_parent_xor_check"
   CHECK ((("projectId" IS NOT NULL)::int + ("activityId" IS NOT NULL)::int) = 1);

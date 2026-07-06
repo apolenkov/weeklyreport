@@ -192,7 +192,7 @@ describe("ReportSectionsService — saveDraft happy path", () => {
         type: "next" as const,
         text: "Plan feature Y",
         tag: "planning",
-        workflowStatus: "in_progress" as const,
+        workflowStatus: "planned" as const,
         carriedOver: false,
         stageIds: ["Development"],
       },
@@ -509,7 +509,7 @@ describe("ReportSectionsService — submitSection validation errors", () => {
               type: "next",
               text: "Future work",
               tag: "planning",
-              workflowStatus: "in_progress",
+              workflowStatus: "planned",
               carriedOver: false,
               stageIds: ["Development"],
             },
@@ -827,7 +827,9 @@ describe("ReportSectionsService — item tag and workflowStatus combinations", (
     "support",
     "tech-debt",
   ] as const;
-  const statuses = ["done", "in_progress", "blocked"] as const;
+  // The current-item vocabulary (blocked is never a stored status; next-only
+  // values are covered by the per-type rejection tests).
+  const statuses = ["done", "in_progress", "paused"] as const;
 
   for (const tag of tags) {
     for (const ws of statuses) {

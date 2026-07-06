@@ -80,7 +80,7 @@ describe("unified-activity lifecycle (integration)", () => {
         type,
         text,
         tag: "feature",
-        workflowStatus: "in_progress",
+        workflowStatus: type === "next" ? "planned" : "in_progress",
         carriedOver: false,
         stageNames: ["Development"],
       },
@@ -317,7 +317,7 @@ describe("unified-activity lifecycle (integration)", () => {
         {
           ...writeItem(PUBLISHED_ITEM_LINEAGE, "Item with feedback"),
           type: "next" as const,
-          completed: false,
+          workflowStatus: "planned" as const,
         },
       ],
       risks: [],
@@ -433,11 +433,12 @@ describe("unified-activity lifecycle (integration)", () => {
     expect(carried.type).toBe("current");
 
     // The lead moves it to next week. The web layer writes moveToNextWeekPatch
-    // through saveSection; the persisted shape is type=next, completed=false,
-    // carriedOver=false with the durable identity preserved.
+    // through saveSection; the persisted shape is type=next, workflowStatus
+    // reset to the next vocabulary, carriedOver=false with the durable
+    // identity preserved.
     await prisma.item.update({
       where: { id: carried.id },
-      data: { type: "next", completed: false, carriedOver: false },
+      data: { type: "next", workflowStatus: "planned", carriedOver: false },
     });
 
     // Period N+2: carry again → the moved item continues. It would be silently
@@ -485,7 +486,6 @@ describe("unified-activity lifecycle (integration)", () => {
         text: "Done work",
         tag: "feature",
         workflowStatus: "done",
-        completed: true,
         carriedOver: false,
       },
     });

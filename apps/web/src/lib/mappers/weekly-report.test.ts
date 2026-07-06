@@ -245,7 +245,7 @@ describe("mapWeeklyReport", () => {
     expect(expectDefined(crmReport?.risks[0]).severity).toBe("at-risk");
   });
 
-  it("infers risk severity as blocked when project has any blocked item", () => {
+  it("defaults a risk with no explicit severity to at-risk, regardless of item status (rework-item-status-model: no stored blocked item to infer from)", () => {
     const report = baseReport({
       portfolioOverview: [
         {
@@ -276,7 +276,7 @@ describe("mapWeeklyReport", () => {
               type: "current",
               text: "ETL fix",
               tag: "etl",
-              workflowStatus: "blocked",
+              workflowStatus: "in_progress",
               carriedOver: false,
             },
           ],
@@ -296,7 +296,7 @@ describe("mapWeeklyReport", () => {
 
     const result = mapWeeklyReport(report);
     const crmReport = result.products.find((p) => p.id === PROJECT_A);
-    expect(expectDefined(crmReport?.risks[0]).severity).toBe("blocked");
+    expect(expectDefined(crmReport?.risks[0]).severity).toBe("at-risk");
   });
 
   it("honors persisted risk severity when no blocked item exists", () => {

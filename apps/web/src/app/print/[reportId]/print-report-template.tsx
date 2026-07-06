@@ -76,6 +76,10 @@ function workflowBadge(status: string): string {
       return "Blocked";
     case "planned":
       return "Planned";
+    case "paused":
+      return "Paused";
+    case "postponed":
+      return "Postponed";
     default:
       return status;
   }

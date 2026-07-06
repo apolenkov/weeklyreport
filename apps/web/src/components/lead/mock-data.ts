@@ -38,7 +38,11 @@ export interface Product {
   riskCount?: number;
 }
 
-export type ItemStatus = "in-progress" | "completed" | "blocked" | "planned";
+// Single source: the mapper's union (rework-item-status-model) — progress
+// values plus the risk-derived display-only "blocked".
+import type { ItemStatus } from "../../lib/mappers/item-status";
+
+export type { ItemStatus };
 
 export interface KanbanItem {
   id: string;

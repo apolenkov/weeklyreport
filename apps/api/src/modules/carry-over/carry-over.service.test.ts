@@ -279,7 +279,7 @@ describe("CarryOverService", () => {
           type: "next",
           text: "Lead 3 next item",
           tag: "infra",
-          workflowStatus: "blocked",
+          workflowStatus: "planned",
           carriedOver: false,
         },
       ],

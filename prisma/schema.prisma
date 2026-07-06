@@ -425,7 +425,6 @@ model Item {
   tag             String
   workflowStatus  ItemWorkflowStatus
   carriedOver     Boolean                  @default(false)
-  completed       Boolean?
   priorityRank    Int?
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
@@ -847,10 +846,16 @@ enum ItemType {
   next
 }
 
+// Progress only — alarms (at-risk/blocked) are never stored on an item, they
+// derive from covering risks (record-status-derivation). Per-type vocabulary:
+// current → in_progress | paused | done; next → planned | postponed.
+// Enforced by shared Zod + a hand-written CHECK in the init migration.
 enum ItemWorkflowStatus {
-  done
+  planned
   in_progress
-  blocked
+  paused
+  postponed
+  done
 }
 
 enum PdfExportStatus {

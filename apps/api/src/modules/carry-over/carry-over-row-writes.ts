@@ -33,7 +33,6 @@ export async function persistCarriedRowsForSection(
         tag: i.tag,
         workflowStatus: i.workflowStatus,
         carriedOver: true,
-        completed: i.completed ?? null,
         priorityRank: i.priorityRank ?? null,
         stageNames: i.stageIds ?? [],
       })),

@@ -750,7 +750,7 @@ async function main() {
           type: ItemType.next,
           text: texts.next[i]!,
           tag: tagCycle[i % tagCycle.length]!,
-          workflowStatus: ItemWorkflowStatus.in_progress,
+          workflowStatus: ItemWorkflowStatus.planned,
           stageNames: [stageNameFor(cfg.leadIndex + i + 3)],
         },
         create: {
@@ -760,7 +760,7 @@ async function main() {
           type: ItemType.next,
           text: texts.next[i]!,
           tag: tagCycle[i % tagCycle.length]!,
-          workflowStatus: ItemWorkflowStatus.in_progress,
+          workflowStatus: ItemWorkflowStatus.planned,
           stageNames: [stageNameFor(cfg.leadIndex + i + 3)],
         },
       });

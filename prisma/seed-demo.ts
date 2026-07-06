@@ -96,7 +96,6 @@ type DemoItem = {
   status: ItemWorkflowStatus;
   stages: StageName[];
   priorityRank?: number;
-  completed?: boolean;
 };
 
 type DemoRisk = {
@@ -215,7 +214,7 @@ const SMALL_DATASET: TierDataset = {
           type: ItemType.current,
           text: "Рефакторинг модуля авторизации заблокирован: ждём доступ к внешнему IdP",
           tag: "feature",
-          status: ItemWorkflowStatus.blocked,
+          status: ItemWorkflowStatus.in_progress,
           stages: ["Development"],
           priorityRank: 1,
         },
@@ -223,7 +222,7 @@ const SMALL_DATASET: TierDataset = {
           type: ItemType.next,
           text: "Подключить вход через корпоративный IdP после выдачи доступа",
           tag: "feature",
-          status: ItemWorkflowStatus.in_progress,
+          status: ItemWorkflowStatus.planned,
           stages: ["Development"],
         },
       ],
@@ -265,7 +264,7 @@ const SMALL_DATASET: TierDataset = {
           type: ItemType.next,
           text: "Покрыть коннектор контрактными тестами перед интеграцией",
           tag: "feature",
-          status: ItemWorkflowStatus.in_progress,
+          status: ItemWorkflowStatus.planned,
           stages: ["Development"],
         },
       ],
@@ -315,7 +314,7 @@ const SMALL_DATASET: TierDataset = {
           type: ItemType.next,
           text: "Спланировать целевые показатели следующего спринта дашборда BI",
           tag: "infra",
-          status: ItemWorkflowStatus.in_progress,
+          status: ItemWorkflowStatus.planned,
           stages: ["Planning"],
         },
       ],
@@ -353,7 +352,7 @@ const SMALL_DATASET: TierDataset = {
           type: ItemType.next,
           text: "Автоматизировать регрессию входа портала в CI на следующей неделе",
           tag: "bugfix",
-          status: ItemWorkflowStatus.in_progress,
+          status: ItemWorkflowStatus.planned,
           stages: ["Testing"],
         },
       ],
@@ -387,7 +386,7 @@ const SMALL_DATASET: TierDataset = {
           type: ItemType.next,
           text: "Подготовить нагрузочные тесты REST-коннектора к следующему спринту",
           tag: "feature",
-          status: ItemWorkflowStatus.in_progress,
+          status: ItemWorkflowStatus.planned,
           stages: ["Testing"],
         },
       ],
@@ -420,7 +419,7 @@ const SMALL_DATASET: TierDataset = {
           type: ItemType.next,
           text: "Прогнать приёмочные сценарии дашборда BI на следующей неделе",
           tag: "bugfix",
-          status: ItemWorkflowStatus.in_progress,
+          status: ItemWorkflowStatus.planned,
           stages: ["Testing"],
         },
       ],
@@ -447,7 +446,7 @@ const SMALL_DATASET: TierDataset = {
           type: ItemType.next,
           text: "Автоматизировать выкладку дашборда BI через CI/CD пайплайн",
           tag: "infra",
-          status: ItemWorkflowStatus.in_progress,
+          status: ItemWorkflowStatus.planned,
           stages: ["DevOps"],
         },
       ],
@@ -475,14 +474,14 @@ const SMALL_DATASET: TierDataset = {
           type: ItemType.current,
           text: "Деплой портала заблокирован: не выделены мощности кластера",
           tag: "infra",
-          status: ItemWorkflowStatus.blocked,
+          status: ItemWorkflowStatus.in_progress,
           stages: ["DevOps"],
         },
         {
           type: ItemType.next,
           text: "Настроить мониторинг кластера портала после выделения ресурсов",
           tag: "infra",
-          status: ItemWorkflowStatus.in_progress,
+          status: ItemWorkflowStatus.planned,
           stages: ["DevOps"],
         },
       ],
@@ -503,17 +502,21 @@ const SMALL_DATASET: TierDataset = {
       ownedStages: ["DevOps"],
       items: [
         {
+          // Status exemplar: PAUSED — the small tier must show every current-item
+          // status treatment, including work paused mid-stream.
           type: ItemType.current,
-          text: "Развернули стенд интеграций в общем кластере для приёмки",
+          text: "Развёртывание стенда интеграций приостановлено: ждём окно на общем кластере",
           tag: "infra",
-          status: ItemWorkflowStatus.in_progress,
+          status: ItemWorkflowStatus.paused,
           stages: ["DevOps"],
         },
         {
+          // Status exemplar: POSTPONED — the small tier must show every next-item
+          // status treatment, including planned work pushed out.
           type: ItemType.next,
           text: "Автоматизировать выкладку коннектора через CI/CD пайплайн",
           tag: "infra",
-          status: ItemWorkflowStatus.in_progress,
+          status: ItemWorkflowStatus.postponed,
           stages: ["DevOps"],
         },
       ],
@@ -560,9 +563,6 @@ function buildHugeDataset(): TierDataset {
       : atRisk
         ? TrafficLightStatus.yellow
         : TrafficLightStatus.green;
-    const itemStatus = blocked
-      ? ItemWorkflowStatus.blocked
-      : ItemWorkflowStatus.in_progress;
 
     return {
       leadId: p.leadId,
@@ -579,7 +579,7 @@ function buildHugeDataset(): TierDataset {
           type: ItemType.current,
           text: `Работы по продукту «${p.name}» на этапе ${stage}`,
           tag: "feature",
-          status: itemStatus,
+          status: ItemWorkflowStatus.in_progress,
           stages: [stage],
           priorityRank: 1,
         },
@@ -589,25 +589,34 @@ function buildHugeDataset(): TierDataset {
           tag: "bugfix",
           status: ItemWorkflowStatus.done,
           stages: [stage],
-          completed: true,
         },
         {
           type: ItemType.next,
           text: `Следующий фокус по продукту «${p.name}»`,
           tag: "ops",
-          status: ItemWorkflowStatus.in_progress,
+          status: ItemWorkflowStatus.planned,
           stages: [stage],
         },
       ],
-      risk: atRisk
+      // A red product's blocked signal IS its blocker risk (no stored blocked
+      // item status exists) — every 5th product gets one, every 3rd an at-risk.
+      risk: blocked
         ? {
-            risk: `Открытый риск по продукту «${p.name}»`,
-            impact: "Возможен сдвиг сроков на этапе доставки",
-            mitigation: "Еженедельный синк с командой и заказчиком",
-            severity: "at-risk",
+            risk: `Блокер по продукту «${p.name}»: внешняя зависимость встала`,
+            impact: "Работы на этапе остановлены до разблокировки",
+            mitigation: "Эскалация владельцу зависимости",
+            severity: "blocked",
             stage,
           }
-        : undefined,
+        : atRisk
+          ? {
+              risk: `Открытый риск по продукту «${p.name}»`,
+              impact: "Возможен сдвиг сроков на этапе доставки",
+              mitigation: "Еженедельный синк с командой и заказчиком",
+              severity: "at-risk",
+              stage,
+            }
+          : undefined,
       decision: {
         text: `Зафиксировать приоритеты по продукту «${p.name}»`,
         impact: "Снимает неопределённость по очереди задач",
@@ -987,7 +996,6 @@ async function seedActiveLeadSection(
         tag: item.tag,
         workflowStatus: item.status,
         carriedOver: false,
-        completed: item.completed ?? false,
         stageNames: item.stages,
         priorityRank: item.priorityRank ?? null,
       })),
@@ -1061,7 +1069,6 @@ async function seedPriorLeadSection(
         tag: "feature",
         workflowStatus: ItemWorkflowStatus.done,
         carriedOver: false,
-        completed: true,
         stageNames: [c.ownedStages[0] ?? "Development"],
         priorityRank: 1,
       },
@@ -1133,19 +1140,121 @@ async function seedSmallActivities(): Promise<void> {
     }),
   );
 
-  // One live record on the first portal activity: the slide shows a project
-  // row with content, the others stay status-only header rows.
+  // «Исследование новых интеграций» carries a full set (current + next item,
+  // risk, decision) so the slide shows a fully-populated activity row.
+  await prisma.item.createMany({
+    data: [
+      {
+        id: makeRowId(),
+        reportSectionId: vasilySection.id,
+        type: ItemType.current,
+        activityId: created[0],
+        text: "Составили шорт-лист интеграций для пилота",
+        tag: "research",
+        workflowStatus: ItemWorkflowStatus.in_progress,
+        carriedOver: false,
+        stageNames: [],
+      },
+      {
+        id: makeRowId(),
+        reportSectionId: vasilySection.id,
+        type: ItemType.next,
+        activityId: created[0],
+        text: "Согласовать пилотных партнёров для новых интеграций",
+        tag: "research",
+        workflowStatus: ItemWorkflowStatus.planned,
+        carriedOver: false,
+        stageNames: [],
+      },
+    ],
+  });
+  await prisma.risk.create({
+    data: {
+      id: makeRowId(),
+      reportSectionId: vasilySection.id,
+      activityId: created[0],
+      risk: "Партнёр задерживает доступ к API для пилотной интеграции",
+      impact: "Сдвиг сроков пилота новых интеграций",
+      mitigation: "Эскалация владельцу API, поиск альтернативного партнёра",
+      severity: "at-risk",
+      stageNames: [],
+    },
+  });
+  await prisma.decision.create({
+    data: {
+      id: makeRowId(),
+      reportSectionId: vasilySection.id,
+      activityId: created[0],
+      text: "Зафиксировать шорт-лист партнёров для пилота интеграций",
+      owner: VASILY_LABEL,
+      impact: "Даёт чёткий периметр для оценки следующего этапа",
+      stageNames: [],
+    },
+  });
+
+  // «Поддержка и сопровождение» carries one current item — a status-only
+  // header row with a single live record, no next item/risk/decision.
   await prisma.item.create({
     data: {
       id: makeRowId(),
       reportSectionId: vasilySection.id,
       type: ItemType.current,
-      activityId: created[0],
-      text: "Составили шорт-лист интеграций для пилота",
-      tag: "research",
+      activityId: created[1],
+      text: "Обработали текущие обращения пользователей портала",
+      tag: "ops",
       workflowStatus: ItemWorkflowStatus.in_progress,
       carriedOver: false,
-      completed: false,
+      stageNames: [],
+    },
+  });
+
+  // «Технический долг и рефакторинг» (BI) carries a full set too.
+  await prisma.item.createMany({
+    data: [
+      {
+        id: makeRowId(),
+        reportSectionId: vasilySection.id,
+        type: ItemType.current,
+        activityId: created[2],
+        text: "Выделили модуль форматирования отчётов BI в общую библиотеку",
+        tag: "tech-debt",
+        workflowStatus: ItemWorkflowStatus.in_progress,
+        carriedOver: false,
+        stageNames: [],
+      },
+      {
+        id: makeRowId(),
+        reportSectionId: vasilySection.id,
+        type: ItemType.next,
+        activityId: created[2],
+        text: "Спланировать рефакторинг слоя доступа к данным BI",
+        tag: "tech-debt",
+        workflowStatus: ItemWorkflowStatus.planned,
+        carriedOver: false,
+        stageNames: [],
+      },
+    ],
+  });
+  await prisma.risk.create({
+    data: {
+      id: makeRowId(),
+      reportSectionId: vasilySection.id,
+      activityId: created[2],
+      risk: "Накопленный технический долг замедляет доработки дашборда BI",
+      impact: "Растущее время на каждую следующую фичу BI",
+      mitigation: "Выделить фиксированную долю спринта под рефакторинг",
+      severity: "at-risk",
+      stageNames: [],
+    },
+  });
+  await prisma.decision.create({
+    data: {
+      id: makeRowId(),
+      reportSectionId: vasilySection.id,
+      activityId: created[2],
+      text: "Выделять 20% спринта под технический долг BI до конца квартала",
+      owner: VASILY_LABEL,
+      impact: "Останавливает рост технического долга дашборда BI",
       stageNames: [],
     },
   });

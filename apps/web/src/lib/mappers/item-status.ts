@@ -1,111 +1,100 @@
 /**
- * Item-status mapper: bridges the API ItemWorkflowStatus enum
- * (done/in_progress/blocked) with the UI ItemStatus enum
- * (completed/in-progress/blocked/planned).
+ * Item-status mapper: bridges the stored ItemWorkflowStatus enum
+ * (planned/in_progress/paused/postponed/done) with the UI ItemStatus.
  *
- * 'planned' is a presentation-only state with no DB enum value:
- * next-week in-progress rows use completed=null for planned and
- * completed=false for explicit in-progress.
+ * The stored enum is the single source of progress (rework-item-status-model):
+ * no completed flag, no stored blocked. `blocked` exists in the UI union only
+ * as the covering-risk DISPLAY overlay — it is never settable or persistable.
  */
 
 import { type AlarmRisk, deriveItemAlarmFromRisks } from "../item-alarm";
 
 const IN_PROGRESS_STATUS = "in-progress";
 
-export type ItemWorkflowStatus = "done" | "in_progress" | "blocked";
+export type ItemWorkflowStatus =
+  | "planned"
+  | "in_progress"
+  | "paused"
+  | "postponed"
+  | "done";
 export type ItemType = "current" | "next";
-export type ItemStatus = "in-progress" | "completed" | "blocked" | "planned";
+export type ItemStatus =
+  | "in-progress"
+  | "completed"
+  | "planned"
+  | "paused"
+  | "postponed"
+  | "blocked";
 
-/**
- * Converts a stored ItemWorkflowStatus to its presentation ItemStatus.
- * Note: 'planned' is never produced by this function -- it is only
- * derivable from {@link deriveItemStatus} for next-week rows.
- */
+/** Converts a stored ItemWorkflowStatus to its presentation ItemStatus.
+ * Never produces 'blocked' — that is the risk-derived overlay only. */
 export function workflowToItemStatus(
   ws: ItemWorkflowStatus,
-): Exclude<ItemStatus, "planned"> {
+): Exclude<ItemStatus, "blocked"> {
   switch (ws) {
     case "done":
       return "completed";
     case "in_progress":
       return IN_PROGRESS_STATUS;
-    case "blocked":
-      return "blocked";
+    case "planned":
+      return "planned";
+    case "paused":
+      return "paused";
+    case "postponed":
+      return "postponed";
   }
 }
 
-/**
- * Inverse mapping for non-computed presentation states.
- * 'planned' has no API equivalent and is excluded at the type level.
- */
+/** Inverse mapping for settable presentation states — 'blocked' is excluded
+ * at the type level (a blocker is a risk, never an item status). */
 export function itemStatusToWorkflow(
-  status: Exclude<ItemStatus, "planned">,
+  status: Exclude<ItemStatus, "blocked">,
 ): ItemWorkflowStatus {
   switch (status) {
     case "completed":
       return "done";
     case IN_PROGRESS_STATUS:
       return "in_progress";
-    case "blocked":
-      return "blocked";
+    case "planned":
+      return "planned";
+    case "paused":
+      return "paused";
+    case "postponed":
+      return "postponed";
   }
 }
 
-/**
- * Derives the display ItemStatus from an item's stored fields.
- *
- * Rules:
- * - type === 'next' + workflowStatus='in_progress' + completed=false
- *   -> 'in-progress'
- * - type === 'next' + workflowStatus='in_progress' + completed null/undefined
- *   -> 'planned'
- * - explicit done/blocked next-week status is preserved
- * - explicit workflowStatus on a current-week item wins
- * - default for current-week with no workflowStatus -> 'in-progress'
- */
+/** The display ItemStatus of a stored item: the enum verbatim, with a
+ * type-appropriate default for legacy rows missing a status. */
 export function deriveItemStatus(item: {
   workflowStatus: ItemWorkflowStatus | null;
   type: ItemType;
-  completed?: boolean | null;
 }): ItemStatus {
-  if (item.type === "next") {
-    if (item.workflowStatus === "done") return "completed";
-    if (item.workflowStatus === "blocked") return "blocked";
-    if (item.workflowStatus === "in_progress" && item.completed === false) {
-      return IN_PROGRESS_STATUS;
-    }
-    return "planned";
-  }
-  if (item.workflowStatus) {
-    return workflowToItemStatus(item.workflowStatus);
-  }
-  return IN_PROGRESS_STATUS;
+  if (item.workflowStatus) return workflowToItemStatus(item.workflowStatus);
+  return item.type === "next" ? "planned" : IN_PROGRESS_STATUS;
 }
 
 /**
  * record-status-derived-from-risk: apply the covering-risk BLOCKED overlay to a
- * base progress status — the SAME derivation the lead card uses. A `blocked`
- * base is a legacy stored value; it shows as in-progress unless a covering
- * blocked-severity risk exists. `at-risk` amber stays deferred to a later
- * head-parity pass, so ONLY the blocked overlay is applied on the head surfaces.
+ * base progress status — the SAME derivation the lead card uses. Only an
+ * in-progress item is eligible for the derived alarm. `at-risk` amber stays
+ * deferred to a later head-parity pass, so ONLY the blocked overlay is applied
+ * on the head surfaces.
  */
 export function applyBlockedRiskOverlay(
   base: ItemStatus,
   parent: { projectId: string; stageIds?: readonly string[] | null },
   alarmRisks: readonly AlarmRisk[],
 ): ItemStatus {
-  // Coerce a stored blocked to in-progress before the overlay so the
-  // derivation's in-progress eligibility gate fires.
-  const eligible = base === "blocked" ? IN_PROGRESS_STATUS : base;
   const covered = deriveItemAlarmFromRisks(
     {
       productId: parent.projectId,
       stageIds: parent.stageIds ?? undefined,
-      status: eligible,
+      status: base,
     },
     alarmRisks,
   );
-  return covered === "blocked" ? "blocked" : eligible;
+  return covered === "blocked" ? "blocked" : base;
 }
 
 /**
@@ -116,7 +105,6 @@ export function deriveHeadItemStatus(
   item: {
     workflowStatus: ItemWorkflowStatus | null;
     type: ItemType;
-    completed?: boolean | null;
     projectId: string;
     stageIds?: readonly string[] | null;
   },

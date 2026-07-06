@@ -10,8 +10,15 @@ export type SlideTrafficStatus = "green" | "yellow" | "red" | null;
 
 /** Per-row frame tone: every row is a bordered two-line card; the border hue
  * IS the status — neutral (expected work), green (done), yellow (at-risk),
- * red (blocked). */
-export type GridTone = "neutral" | "note" | "completed" | "at-risk" | "blocked";
+ * red (blocked), plus the dashed paused/postponed work states. */
+export type GridTone =
+  | "neutral"
+  | "note"
+  | "completed"
+  | "at-risk"
+  | "blocked"
+  | "paused"
+  | "postponed";
 
 export interface GridAuthor {
   readonly id: string;
@@ -30,6 +37,9 @@ export interface GridRow {
   /** False on 2nd+ rows of a same-author series — the badge is omitted. */
   readonly showAuthorBadge: boolean;
   readonly tone: GridTone;
+  /** Status word shown on hover — the frame stays word-free, the tooltip
+   * carries the status instead of repeating the row text. */
+  readonly hoverLabel: string;
   readonly stageNames: readonly string[];
 }
 
@@ -122,19 +132,41 @@ const rowId = (
   index: number,
 ): string => id ?? stableId ?? `${kind}-${String(index)}`;
 
+export interface ToneEntry {
+  readonly tone: GridTone;
+  readonly hoverLabel: string;
+}
+
+/** Exhaustive workflow-status → (tone, hover label) map — no default case, so
+ * a new enum member fails the build instead of reading silently neutral. */
+export function itemToneEntry(status: OwnItem["workflowStatus"]): ToneEntry {
+  switch (status) {
+    case "done":
+      return { tone: "completed", hoverLabel: "Completed" };
+    case "paused":
+      return { tone: "paused", hoverLabel: "Paused" };
+    case "postponed":
+      return { tone: "postponed", hoverLabel: "Postponed" };
+    case "planned":
+      return { tone: "neutral", hoverLabel: "Planned" };
+    case "in_progress":
+      return { tone: "neutral", hoverLabel: "In progress" };
+  }
+}
+
 export function buildOwnItemRow(
   item: OwnItem,
   owner: GridAuthor,
   index: number,
 ): GridRow {
+  const { tone, hoverLabel } = itemToneEntry(item.workflowStatus);
   return {
     id: rowId(item.id, item.stableId, "item", index),
     text: item.text.trim(),
     authorId: owner.id,
     showAuthorBadge: true,
-    // A stored `blocked` item reads neutral here (existing coercion
-    // convention) — blocker semantics live in the Risks column only.
-    tone: item.workflowStatus === "done" ? "completed" : "neutral",
+    tone,
+    hoverLabel,
     stageNames: sortStageNames(item.stageIds ?? []),
   };
 }
@@ -151,6 +183,7 @@ export function buildOwnRiskRow(
     authorId: owner.id,
     showAuthorBadge: true,
     tone: blocked ? "blocked" : "at-risk",
+    hoverLabel: blocked ? "Blocked" : "At risk",
     stageNames: sortStageNames(risk.stageIds ?? []),
   };
 }
@@ -167,6 +200,7 @@ export function buildOwnDecisionRow(
     showAuthorBadge: true,
     // Decisions are facts, not work in flight — solid quiet frame.
     tone: "note",
+    hoverLabel: "Decision",
     stageNames: sortStageNames(decision.stageIds ?? []),
   };
 }

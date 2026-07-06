@@ -48,11 +48,41 @@ export const reportDate = () =>
 
 export const trafficLightStatusSchema = z.enum(["green", "yellow", "red"]);
 export const itemTypeSchema = z.enum(["current", "next"]);
+// Progress only — alarms (at-risk/blocked) derive from covering risks and are
+// never stored on an item. Per-type vocabulary below; the write superRefine in
+// section.schema.ts enforces it (DB CHECK is the defence-in-depth backstop).
 export const itemWorkflowStatusSchema = z.enum([
-  "done",
+  "planned",
   "in_progress",
-  "blocked",
+  "paused",
+  "postponed",
+  "done",
 ]);
+export const CURRENT_ITEM_STATUSES = ["in_progress", "paused", "done"] as const;
+export const NEXT_ITEM_STATUSES = ["planned", "postponed"] as const;
+
+/**
+ * Per-type progress vocabulary (rework-item-status-model): the enum is shared,
+ * the legal subset depends on the item type. The DB CHECK restates this.
+ * @param type - The item type whose vocabulary applies.
+ * @param workflowStatus - The candidate stored status.
+ * @param ctx - Zod refinement context receiving the issue.
+ */
+export function addItemTypeStatusIssue(
+  type: "current" | "next",
+  workflowStatus: string,
+  ctx: z.RefinementCtx,
+): void {
+  const legal: readonly string[] =
+    type === "current" ? CURRENT_ITEM_STATUSES : NEXT_ITEM_STATUSES;
+  if (!legal.includes(workflowStatus)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["workflowStatus"],
+      message: `A ${type} item allows only: ${legal.join(", ")}.`,
+    });
+  }
+}
 export const riskSeveritySchema = z.enum(["at-risk", "blocked"]);
 export const reportSectionStatusSchema = z.enum(["draft", "submitted"]);
 export const reportStatusSchema = z.enum(["draft", "published"]);
