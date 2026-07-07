@@ -928,7 +928,6 @@ export default defineConfig([
       "apps/api/src/modules/admin/admin-settings.queries.ts", // 19-field schema→update mapping; complexity is schema width, not branching
       "apps/api/src/modules/admin/admin-snapshot-write.queries.ts", // role-aware user upsert + FK-guarded deletion
       "apps/api/src/modules/admin/period-admin.service.ts", // manual period edit + per-field audit diff (only layer with before+after)
-      "apps/api/src/modules/analytics/analytics.prisma-repository.ts", // 3-level traversal (reports→sections→statuses) → period×project matrix
       "apps/web/src/app/(app)/reports/page.tsx", // see cyclomatic block (same role-aware renderer)
       "apps/web/src/features/dashboard/ui/remind-lead-button.tsx", // one ConfirmState machine → label/message/icon/disabled
       "apps/web/src/features/report-sections/ui/lead-form.tsx", // see cyclomatic block (same monolith)
