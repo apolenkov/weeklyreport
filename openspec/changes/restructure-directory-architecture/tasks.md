@@ -47,7 +47,7 @@
 
 ## 3. Web: remaining slices (one domain per change)
 
-- [ ] 3.1 Relocate the remaining web domains one slice at a time — including the
+- [x] 3.1 Relocate the remaining web domains one slice at a time — including the
       giant `lead/` (→ `report-sections` + `period` + `review`) and `admin/` —
       dissolving `lib/mappers/` into each slice's `model/` and moving
       `report-shell`/`common`/`ui` primitives to `src/shared/`; keep every move OUT
