@@ -3,11 +3,11 @@ import type { ReportSectionReadModel, Role } from "@customreport/shared";
 import {
   customreportCrossAuthorContentReadsTotal,
   customreportReopenRequestsTotal,
-} from "../../infrastructure/metrics/metrics.registry.js";
+} from "../../../infrastructure/metrics/metrics.registry.js";
 import {
   filterSectionToSharedProducts,
   resolveCrossAuthorScope,
-} from "./lead-form-cross-author-scope";
+} from "../domain/lead-form-cross-author-scope";
 import {
   computeReopenEligibility,
   type CrossAuthorSectionRow,
@@ -17,7 +17,7 @@ import {
   type LeadFormRepository,
   reopenBlockedMessage,
   ReopenRequestError,
-} from "./lead-form-shared";
+} from "../domain/lead-form-shared";
 import { ReportSectionDomainError } from "./report-sections.service.js";
 
 // Re-export the error classes and shared types from their original module
@@ -28,14 +28,18 @@ export type {
   CrossAuthorSectionRow,
   LeadFormRepository,
   ReopenEligibilityFacts,
-} from "./lead-form-shared";
+} from "../domain/lead-form-shared";
 export {
   computeReopenEligibility,
   LeadFormAccessError,
   LeadFormConstraintError,
   LeadFormDomainError,
   ReopenRequestError,
-} from "./lead-form-shared";
+} from "../domain/lead-form-shared";
+
+// DI token binding the LeadFormRepository port to its adapter at the module
+// boundary — the service depends on the port, not the prisma class.
+export const LEAD_FORM_REPOSITORY = Symbol("LeadFormRepository");
 
 /**
  * Lead-form facade: reopen / cross-author / revoke / by-period / fill-from.

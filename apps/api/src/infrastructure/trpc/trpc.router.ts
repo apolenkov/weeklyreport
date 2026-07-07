@@ -56,8 +56,8 @@ import type { PeriodService } from "../../modules/period/period.service.js";
 import type { ProjectActivityService } from "../../modules/project-activity/project-activity.service.js";
 import { PublicationService } from "../../modules/publication/application/publication.service.js";
 import { RemindersService } from "../../modules/reminders/reminders.service.js";
-import type { LeadFormService } from "../../modules/report-sections/lead-form.service.js";
-import type { ReportSectionsService } from "../../modules/report-sections/report-sections.service.js";
+import type { LeadFormService } from "../../modules/report-sections/application/lead-form.service.js";
+import type { ReportSectionsService } from "../../modules/report-sections/application/report-sections.service.js";
 import type { ReviewService } from "../../modules/review/application/review.service.js";
 import type { ReviewActionsService } from "../../modules/review/application/review-actions.service.js";
 import {

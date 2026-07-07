@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 
 import type { AppLogger } from "../../lib/logger";
-import { ensureLeadSection } from "../report-sections/ensure-lead-section";
+import { ensureLeadSection } from "../report-sections/domain/ensure-lead-section";
 import {
   CarryOverDomainError,
   type CarryOverRepository,

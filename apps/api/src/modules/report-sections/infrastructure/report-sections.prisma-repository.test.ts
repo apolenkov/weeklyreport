@@ -5,12 +5,12 @@
 // for a product the system can name.
 import { describe, expect, it, vi } from "vitest";
 
+import { SectionVersionConflictError } from "../application/report-sections.service";
 import {
   mapPrismaToReportSection,
   type PrismaReportSectionWithRelations,
   ReportSectionsPrismaRepository,
 } from "./report-sections.prisma-repository";
-import { SectionVersionConflictError } from "./report-sections.service";
 
 const SECTION_ID = "11111111-1111-4111-8111-111111111111";
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";

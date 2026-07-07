@@ -5,7 +5,7 @@ import { buildEscalationsFromReadSections } from "../report-escalations";
 import {
   mapPrismaToReportSection,
   type PrismaReportSectionWithRelations,
-} from "../report-sections/report-sections.prisma-repository";
+} from "../report-sections/infrastructure/report-sections.prisma-repository";
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
 
 function createRepository(findFirst: ReturnType<typeof vi.fn>) {

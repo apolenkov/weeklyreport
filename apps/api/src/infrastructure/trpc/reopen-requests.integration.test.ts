@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { LeadFormPrismaRepository } from "../../modules/report-sections/lead-form.prisma-repository";
-import { ReopenRequestError } from "../../modules/report-sections/lead-form.service";
+import { ReopenRequestError } from "../../modules/report-sections/application/lead-form.service";
+import { LeadFormPrismaRepository } from "../../modules/report-sections/infrastructure/lead-form.prisma-repository";
 import {
   cleanDatabase,
   createTestPrisma,

@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
-import { LeadFormPrismaRepository } from "../../modules/report-sections/lead-form.prisma-repository.js";
-import { LeadFormService } from "../../modules/report-sections/lead-form.service.js";
+import { LeadFormService } from "../../modules/report-sections/application/lead-form.service.js";
+import { LeadFormPrismaRepository } from "../../modules/report-sections/infrastructure/lead-form.prisma-repository.js";
 import { createAppRouter } from "./trpc.router.js";
 
 /**

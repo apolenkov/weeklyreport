@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
-import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 
 /**
  * Published lineage of a section's records: the durable `stableId`s of items

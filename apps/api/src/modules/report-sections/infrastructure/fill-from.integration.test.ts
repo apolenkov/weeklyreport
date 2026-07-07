@@ -1,7 +1,10 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { type LeadFormRepository, LeadFormService } from "./lead-form.service";
+import {
+  type LeadFormRepository,
+  LeadFormService,
+} from "../application/lead-form.service";
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */

@@ -5,14 +5,14 @@ import {
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
-import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
-import { queryPublishedLineage } from "./published-lineage";
+import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
 import {
   ReportSectionDomainError,
   type ReportSectionsRepository,
   SectionVersionConflictError,
-} from "./report-sections.service";
+} from "../application/report-sections.service";
+import { queryPublishedLineage } from "../domain/published-lineage";
 
 /**
  * Shared Prisma include constant for the full ReportSection aggregate.

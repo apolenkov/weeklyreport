@@ -1,22 +1,22 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { expectDefined } from "../../test-utils/expect-defined.js";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
   seedTestData,
-} from "../../test-utils/prisma-test-helper";
+} from "../../../test-utils/prisma-test-helper";
 import {
   buildAutoCarryOverDeps,
   carryOverIntoOpenedPeriod,
-} from "../carry-over/auto-carry-over";
-import { CarryOverPrismaRepository } from "../carry-over/carry-over.prisma-repository";
-import { CarryOverService } from "../carry-over/carry-over.service";
+} from "../../carry-over/auto-carry-over";
+import { CarryOverPrismaRepository } from "../../carry-over/carry-over.prisma-repository";
+import { CarryOverService } from "../../carry-over/carry-over.service";
+import { LeadFormService } from "../application/lead-form.service";
+import { ReportSectionsService } from "../application/report-sections.service";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";
-import { LeadFormService } from "./lead-form.service";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
-import { ReportSectionsService } from "./report-sections.service";
 
 /**
  * Real-DB coverage for the unified-activity-entry lifecycle rules:

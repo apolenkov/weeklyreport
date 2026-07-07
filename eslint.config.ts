@@ -100,16 +100,16 @@ const apiCrossModuleGrandfathered: Record<string, readonly string[]> = {
   ],
   archive: [
     "published-report-snapshot.ts",
-    "report-sections/report-sections.prisma-repository.ts",
+    "report-sections/infrastructure/report-sections.prisma-repository.ts",
   ],
   auth: ["admin/session-revocation.service.ts"],
   "carry-over": [
-    "report-sections/ensure-lead-section.ts",
-    "report-sections/report-sections.prisma-repository.ts",
+    "report-sections/domain/ensure-lead-section.ts",
+    "report-sections/infrastructure/report-sections.prisma-repository.ts",
   ],
   "pdf-export": [
     "published-report-snapshot.ts",
-    "report-sections/report-sections.prisma-repository.ts",
+    "report-sections/infrastructure/report-sections.prisma-repository.ts",
   ],
   period: [
     "admin/admin-shared.ts",
@@ -134,11 +134,11 @@ const apiCrossModuleGrandfathered: Record<string, readonly string[]> = {
     "organization/organization.service.ts",
   ],
   "report-sections": ["admin/admin.module.ts", "admin/admin.service.ts"],
-  review: ["report-sections/revoke-transition.ts"],
+  review: ["report-sections/domain/revoke-transition.ts"],
   "weekly-report": [
     "published-report-snapshot.ts",
     "report-escalations.ts",
-    "report-sections/report-sections.prisma-repository.ts",
+    "report-sections/infrastructure/report-sections.prisma-repository.ts",
     "review/domain/review-authz.ts",
   ],
 };
@@ -721,9 +721,13 @@ export default defineConfig([
     },
   },
   // Zone 4 — api domain purity (package-name zone). Files under an invariant
-  // module's domain/ must not import an adapter dependency, so deleting Nest/Prisma
-  // leaves the pure domain compiling. domain/ subfolders arrive in slice 4; inert
-  // until then (zero current violations).
+  // module's domain/ must carry no RUNTIME adapter dependency: a value import of
+  // Nest/Prisma/ioredis/bullmq/nodemailer is forbidden, so the domain never
+  // executes framework code — inject an adapter through a port instead. Type-only
+  // imports are allowed (`allowTypeImports`): the transition applicators the plan
+  // places here (revoke-transition, period-transition.apply) type their injected
+  // tx as a structural slice of `Prisma.TransactionClient`, which is erased at
+  // compile time and imposes no runtime coupling.
   {
     files: [
       "apps/api/src/modules/period/domain/**/*.ts",
@@ -744,8 +748,9 @@ export default defineConfig([
                 "bullmq",
                 "nodemailer",
               ],
+              allowTypeImports: true,
               message:
-                "domain/ is pure: no @prisma/client, @nestjs/*, ioredis, bullmq or nodemailer — inject an adapter through a port instead (restructure-directory-architecture).",
+                "domain/ carries no runtime framework dependency: no VALUE import of @prisma/client, @nestjs/*, ioredis, bullmq or nodemailer — inject an adapter through a port instead. `import type` is allowed (compile-time only) (restructure-directory-architecture).",
             },
           ],
         },
@@ -862,7 +867,7 @@ export default defineConfig([
       // shed few lines at a clarity cost — exempt, not churn.
       "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // tRPC instance + all procedure builders share the private `t` binding
       "apps/api/src/modules/admin/period-admin.service.ts", // one Admin period-lifecycle service class
-      "apps/api/src/modules/report-sections/report-sections.prisma-repository.ts", // one Prisma persistence layer; include/type/mapper/class coupled
+      "apps/api/src/modules/report-sections/infrastructure/report-sections.prisma-repository.ts", // one Prisma persistence layer; include/type/mapper/class coupled
       "apps/web/src/features/admin/ui/users-tab.tsx", // one CRUD panel; table + dialogs share one state tree
       "apps/web/src/features/admin/ui/groups-tab.tsx", // one CRUD tab; dialogs share one state machine
       "apps/web/src/features/admin/ui/products-tab.tsx", // one CRUD screen; private icon helpers only
@@ -881,7 +886,7 @@ export default defineConfig([
       // possible but would not improve the file (per code-style: keep the larger
       // unit and say why).
       "apps/api/src/infrastructure/trpc/trpc.router.ts", // single tRPC god-router; all 17 namespace sub-routers close over one RouterDeps; real fix is service-layer extraction, not a shell split
-      "apps/api/src/modules/report-sections/lead-form.prisma-repository.ts", // one DI provider for one LeadFormRepository interface; domain separation already lives at the service layer above it
+      "apps/api/src/modules/report-sections/infrastructure/lead-form.prisma-repository.ts", // one DI provider for one LeadFormRepository interface; domain separation already lives at the service layer above it
       "apps/web/src/features/report-sections/ui/lead-form.tsx", // monolithic component; 6 queries/5 mutations/~15 state vars share one scope; best-case extraction still leaves ~1440 lines — needs multi-PR architectural work, not a mechanical split
       "apps/web/src/features/slides/model/section-slide-utils.ts", // core mapper buildSectionSlideModel (247 lines) + its private helpers are inseparable; extracting all else still leaves ~335 lines
     ],

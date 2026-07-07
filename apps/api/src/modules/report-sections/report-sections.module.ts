@@ -2,10 +2,18 @@ import { Module } from "@nestjs/common";
 
 import { AdminModule } from "../admin/admin.module";
 import { AdminService } from "../admin/admin.service";
-import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";
-import { LeadFormService } from "./lead-form.service";
-import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
-import { ReportSectionsService } from "./report-sections.service";
+import {
+  LEAD_FORM_REPOSITORY,
+  type LeadFormRepository,
+  LeadFormService,
+} from "./application/lead-form.service";
+import {
+  REPORT_SECTIONS_REPOSITORY,
+  type ReportSectionsRepository,
+  ReportSectionsService,
+} from "./application/report-sections.service";
+import { LeadFormPrismaRepository } from "./infrastructure/lead-form.prisma-repository";
+import { ReportSectionsPrismaRepository } from "./infrastructure/report-sections.prisma-repository";
 
 @Module({
   // AdminModule is imported so ReportSectionsService can read
@@ -14,11 +22,14 @@ import { ReportSectionsService } from "./report-sections.service";
   // injection) keeps the service test seam narrow — tests pass a tiny stub.
   imports: [AdminModule],
   providers: [
-    ReportSectionsPrismaRepository,
-    LeadFormPrismaRepository,
+    {
+      provide: REPORT_SECTIONS_REPOSITORY,
+      useClass: ReportSectionsPrismaRepository,
+    },
+    { provide: LEAD_FORM_REPOSITORY, useClass: LeadFormPrismaRepository },
     {
       provide: ReportSectionsService,
-      useFactory: (repo: ReportSectionsPrismaRepository, admin: AdminService) =>
+      useFactory: (repo: ReportSectionsRepository, admin: AdminService) =>
         new ReportSectionsService(repo, async () => {
           const s = await admin.getSettings();
           return {
@@ -26,12 +37,12 @@ import { ReportSectionsService } from "./report-sections.service";
             allowLateSubmissions: s.allowLateSubmissions,
           };
         }),
-      inject: [ReportSectionsPrismaRepository, AdminService],
+      inject: [REPORT_SECTIONS_REPOSITORY, AdminService],
     },
     {
       provide: LeadFormService,
-      useFactory: (repo: LeadFormPrismaRepository) => new LeadFormService(repo),
-      inject: [LeadFormPrismaRepository],
+      useFactory: (repo: LeadFormRepository) => new LeadFormService(repo),
+      inject: [LEAD_FORM_REPOSITORY],
     },
   ],
   exports: [ReportSectionsService, LeadFormService],

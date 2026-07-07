@@ -1,17 +1,17 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { expectDefined } from "../../test-utils/expect-defined.js";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
   seedTestData,
-} from "../../test-utils/prisma-test-helper";
-import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
+} from "../../../test-utils/prisma-test-helper";
 import {
   ReportSectionsService,
   SectionVersionConflictError,
-} from "./report-sections.service";
+} from "../application/report-sections.service";
+import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
 describe("ReportSectionsPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
