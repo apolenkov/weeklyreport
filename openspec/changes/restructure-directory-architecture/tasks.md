@@ -69,7 +69,7 @@
 
 ## 4. api: formalize existing ports in the invariant modules (internal only)
 
-- [ ] 4.1 For the four invariant modules `period`, `report-sections`, `review`, and
+- [x] 4.1 For the four invariant modules `period`, `report-sections`, `review`, and
       `publication` (`admin` stays MODERATE-flat — not in this slice), lift internal
       files into `domain/application/infrastructure`, push residual `@prisma`/`@nestjs`
       imports out of the pure domain files, and inject repositories by Symbol token
