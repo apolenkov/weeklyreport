@@ -1,7 +1,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { expectDefined } from "../../test-utils/expect-defined.js";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   ReportSectionDomainError,
   type ReportSectionsRepository,

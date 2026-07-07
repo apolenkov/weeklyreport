@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import {
   customreportSectionsSubmittedTotal,
   customreportSectionSubmissionLatencySeconds,
-} from "../../infrastructure/metrics/metrics.registry.js";
-import { expectDefined } from "../../test-utils/expect-defined.js";
+} from "../../../infrastructure/metrics/metrics.registry.js";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   ReportSectionAccessError,
   type ReportSectionsRepository,

@@ -19,10 +19,10 @@ import {
 import {
   customreportSectionsSubmittedTotal,
   customreportSectionSubmissionLatencySeconds,
-} from "../../infrastructure/metrics/metrics.registry.js";
-import { createServiceLogger } from "../../lib/logger-service.js";
-import { findPublishedRecordViolation } from "./published-record-guard.js";
-import { mergeSection } from "./report-section-merge.js";
+} from "../../../infrastructure/metrics/metrics.registry.js";
+import { createServiceLogger } from "../../../lib/logger-service.js";
+import { findPublishedRecordViolation } from "../domain/published-record-guard.js";
+import { mergeSection } from "../domain/report-section-merge.js";
 
 export class ReportSectionDomainError extends Error {
   constructor(
@@ -86,6 +86,10 @@ export interface ReportSectionsRepository {
     expectedVersion: number,
   ): Promise<ReportSectionReadModel>;
 }
+
+// DI token binding the ReportSectionsRepository port to its adapter at the
+// module boundary — the service depends on the port, not the prisma class.
+export const REPORT_SECTIONS_REPOSITORY = Symbol("ReportSectionsRepository");
 
 /**
  * Minimal AppSettings shape the service needs to enforce grace + late

@@ -11,7 +11,7 @@ import {
   deriveEffectiveProductStatus,
   mapPrismaToReportSection,
   reportSectionFullInclude,
-} from "./report-sections/report-sections.prisma-repository";
+} from "./report-sections/infrastructure/report-sections.prisma-repository";
 
 export const reportFullIncludeForSnapshot = {
   sections: { include: reportSectionFullInclude },

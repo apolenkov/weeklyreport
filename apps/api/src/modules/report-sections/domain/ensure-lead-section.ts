@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 
-import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
+import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
 
 /**
  * Provision a lead's `ReportSection` (and its seeded `ProjectStatus` rows) for a

@@ -31,12 +31,12 @@ import {
   LeadFormConstraintError,
   LeadFormDomainError,
   ReopenRequestError,
-} from "../../modules/report-sections/lead-form.service.js";
+} from "../../modules/report-sections/application/lead-form.service.js";
 import {
   ReportSectionAccessError,
   ReportSectionDomainError,
   SectionVersionConflictError,
-} from "../../modules/report-sections/report-sections.service.js";
+} from "../../modules/report-sections/application/report-sections.service.js";
 import {
   ReviewAccessError,
   ReviewConstraintError,

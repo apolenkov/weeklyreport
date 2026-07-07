@@ -1,13 +1,13 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { expectDefined } from "../../test-utils/expect-defined.js";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
   seedTestData,
   TEST_IDS,
-} from "../../test-utils/prisma-test-helper";
+} from "../../../test-utils/prisma-test-helper";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";
 
 /**

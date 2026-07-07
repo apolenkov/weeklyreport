@@ -13,7 +13,7 @@ import {
   mapPrismaToReportSection,
   type PrismaReportSectionWithRelations,
   reportSectionFullInclude,
-} from "../report-sections/report-sections.prisma-repository";
+} from "../report-sections/infrastructure/report-sections.prisma-repository";
 import {
   CarryOverConflictError,
   type CarryOverRepository,

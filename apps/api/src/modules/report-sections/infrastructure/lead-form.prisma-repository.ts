@@ -2,29 +2,29 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
-import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
+import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
 import type {
   CrossAuthorSectionRow,
   LeadFormRepository,
-} from "./lead-form.service";
-import type { ReopenEligibilityFacts } from "./lead-form-shared";
+} from "../application/lead-form.service";
+import {
+  ReportSectionDomainError,
+  SectionVersionConflictError,
+} from "../application/report-sections.service";
+import type { ReopenEligibilityFacts } from "../domain/lead-form-shared";
 import {
   initialsFromName,
   LeadFormDomainError,
   reopenBlockedMessage,
   ReopenRequestError,
-} from "./lead-form-shared";
-import { queryPublishedLineage } from "./published-lineage";
+} from "../domain/lead-form-shared";
+import { queryPublishedLineage } from "../domain/published-lineage";
+import { applyRevokeTransition } from "../domain/revoke-transition";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
 } from "./report-sections.prisma-repository";
-import {
-  ReportSectionDomainError,
-  SectionVersionConflictError,
-} from "./report-sections.service";
-import { applyRevokeTransition } from "./revoke-transition";
 
 /**
  * Mirrors `normalizeStageName` in apps/web/src/lib/mappers/lead-form.ts — the
