@@ -2,7 +2,7 @@ import { type AdminSnapshot, composeName } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import type { PolicyApplicatorService } from "../reminders/policy-applicator.service";
+import type { PolicyApplicatorService } from "../reminders/index.js";
 import { writePeriodRow } from "./admin-entity-write.queries";
 import { ensureFallbackReportingGroup } from "./admin-group.queries";
 import { getSnapshot } from "./admin-snapshot.queries";

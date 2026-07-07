@@ -5,4 +5,8 @@
  * buildTransition is the pure lifecycle-field writer; publication imports it to
  * compose a period transition inside its own publish path.
  */
-export { buildTransition } from "./domain/period-transition.js";
+export { isOpenBoundaryConflict } from "./application/period-factory.js";
+export {
+  buildTransition,
+  initialPeriodState,
+} from "./domain/period-transition.js";

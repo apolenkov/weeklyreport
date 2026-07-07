@@ -23,7 +23,7 @@ import {
 
 import { computeDeadline } from "../../lib/business-date.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
-import { initialPeriodState } from "../period/domain/period-transition.js";
+import { initialPeriodState } from "../period/index.js";
 import {
   AdminAccessError,
   AdminPeriodNotFoundError,

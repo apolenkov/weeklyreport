@@ -5,7 +5,7 @@ import {
   ENV_CONFIG,
 } from "../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
-import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
+import { PolicyApplicatorService } from "../reminders/index.js";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
 import { AdminService } from "./admin.service";
 import { SessionRevocationService } from "./session-revocation.service";

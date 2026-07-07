@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
 import { requireEnv } from "../../lib/env.js";
-import { OrganizationService } from "../organization/organization.service";
+import { OrganizationService } from "../organization/index.js";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository";
 import type {
   DueDeadlineRule,

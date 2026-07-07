@@ -13,7 +13,7 @@ import {
   mapPrismaToReportSection,
   type PrismaReportSectionWithRelations,
   reportSectionFullInclude,
-} from "../report-sections/infrastructure/report-sections.prisma-repository.js";
+} from "../report-sections/index.js";
 import type {
   PdfExportJobRecord,
   PdfExportRepository,

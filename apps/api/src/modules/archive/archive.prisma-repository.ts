@@ -17,7 +17,7 @@ import {
   filterSnapshotSections,
   parsePublishedSnapshot,
 } from "../published-report-snapshot.js";
-import { reportSectionFullInclude } from "../report-sections/infrastructure/report-sections.prisma-repository.js";
+import { reportSectionFullInclude } from "../report-sections/index.js";
 import type {
   ArchiveReadFilter,
   ArchiveRepository,

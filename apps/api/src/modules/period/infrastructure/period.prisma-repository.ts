@@ -2,13 +2,13 @@ import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { publishCompareAndSet } from "../../../lib/publish-compare-and-set.js";
-import { AdminPeriodOverlapError } from "../../admin/admin-shared.js";
+import { AdminPeriodOverlapError } from "../../admin/index.js";
 import {
   buildAssembledReportFromPrismaRow,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
 } from "../../published-report-snapshot.js";
-import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository.js";
+import { WeeklyReportPrismaRepository } from "../../weekly-report/index.js";
 import type {
   PeriodRepository,
   PublishPeriodOutcome,

@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 
-import { AdminModule } from "../admin/admin.module";
-import { AdminService } from "../admin/admin.service";
+import { AdminModule, AdminService } from "../admin/index.js";
 import {
   LEAD_FORM_REPOSITORY,
   type LeadFormRepository,
