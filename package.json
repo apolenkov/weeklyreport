@@ -81,7 +81,7 @@
     "vitest": "^4.1.9"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,mjs}": [
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
       "eslint --fix --no-warn-ignored",
       "prettier --write",
       "node scripts/find-archaeology.mjs"
