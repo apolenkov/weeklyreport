@@ -4,7 +4,7 @@ import type { Queue } from "bullmq";
 import { ClsService } from "nestjs-cls";
 
 import { BullMQModule } from "../../infrastructure/bullmq/bullmq.module";
-import { OrganizationModule } from "../organization/organization.module";
+import { OrganizationModule } from "../organization/index.js";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository";
 import { RemindersScheduler } from "./reminders.scheduler";
 import { RemindersService } from "./reminders.service";

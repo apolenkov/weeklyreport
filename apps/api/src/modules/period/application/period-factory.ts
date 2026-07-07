@@ -13,8 +13,6 @@ import {
   initialPeriodState,
 } from "../domain/period-transition.js";
 
-const logger = new Logger("PeriodFactory");
-
 /**
  * refactor-auth-exemplary-layering: the single sanctioned period-creation
  * writer. Both creators — the period-creator cron scheduler and the lazy
@@ -197,7 +195,11 @@ export async function ensureCurrentPeriod(
           now,
         );
       } catch (error) {
-        logger.warn(
+        // Constructed here, not at module load: importing this file through the
+        // period barrel must stay side-effect-free (a top-level `new Logger()`
+        // couples every barrel consumer to Nest logging at load and breaks
+        // tests that mock @nestjs/common without a Logger export).
+        new Logger("PeriodFactory").warn(
           `applyToPeriod failed for period=${created.id}; reminder rules deferred to backfill: ${
             error instanceof Error ? error.message : "unknown error"
           }`,

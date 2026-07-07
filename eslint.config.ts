@@ -93,26 +93,13 @@ const apiModules = [
 // the loose files relocate in a later slice. (published-report-snapshot.ts itself imports
 // report-sections, but it is not under modules/A/** so no zone targets it as a consumer.)
 const apiCrossModuleGrandfathered: Record<string, readonly string[]> = {
-  admin: [
-    "period/application/period-factory.ts",
-    "period/domain/period-transition.ts",
-    "reminders/policy-applicator.service.ts",
-  ],
-  archive: [
-    "published-report-snapshot.ts",
-    "report-sections/infrastructure/report-sections.prisma-repository.ts",
-  ],
-  auth: ["admin/session-revocation.service.ts"],
-  "carry-over": [
-    "report-sections/application/ensure-lead-section.ts",
-    "report-sections/infrastructure/report-sections.prisma-repository.ts",
-  ],
-  "pdf-export": [
-    "published-report-snapshot.ts",
-    "report-sections/infrastructure/report-sections.prisma-repository.ts",
-  ],
+  admin: ["period/index.ts", "reminders/index.ts"],
+  archive: ["published-report-snapshot.ts", "report-sections/index.ts"],
+  auth: ["admin/index.ts"],
+  "carry-over": ["report-sections/index.ts"],
+  "pdf-export": ["published-report-snapshot.ts", "report-sections/index.ts"],
   period: [
-    "admin/admin-shared.ts",
+    "admin/index.ts",
     "admin/admin.module.ts",
     "admin/admin.service.ts",
     "analytics/analytics.cache.ts",
@@ -126,20 +113,17 @@ const apiCrossModuleGrandfathered: Record<string, readonly string[]> = {
     "published-report-snapshot.ts",
     "reminders/policy-applicator.service.ts",
     "weekly-report/weekly-report.module.ts",
-    "weekly-report/weekly-report.prisma-repository.ts",
+    "weekly-report/index.ts",
   ],
   publication: ["period/index.ts", "published-report-snapshot.ts"],
-  reminders: [
-    "organization/organization.module.ts",
-    "organization/organization.service.ts",
-  ],
-  "report-sections": ["admin/admin.module.ts", "admin/admin.service.ts"],
+  reminders: ["organization/index.ts"],
+  "report-sections": ["admin/index.ts"],
   review: ["report-sections/index.ts"],
   "weekly-report": [
     "published-report-snapshot.ts",
     "report-escalations.ts",
-    "report-sections/infrastructure/report-sections.prisma-repository.ts",
-    "review/domain/review-authz.ts",
+    "report-sections/index.ts",
+    "review/index.ts",
   ],
 };
 

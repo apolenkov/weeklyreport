@@ -17,7 +17,7 @@ import { Injectable } from "@nestjs/common";
 import type { ReportStatus } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
+import { PolicyApplicatorService } from "../reminders/index.js";
 import type { AdminRepository, PeriodRowFromRepo } from "./admin.service";
 import * as entityWriteQueries from "./admin-entity-write.queries";
 import * as groupQueries from "./admin-group.queries";

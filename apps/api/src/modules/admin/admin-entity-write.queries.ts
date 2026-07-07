@@ -8,7 +8,7 @@ import {
 import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import type { PolicyApplicatorService } from "../reminders/policy-applicator.service";
+import type { PolicyApplicatorService } from "../reminders/index.js";
 import { ensureFallbackReportingGroup } from "./admin-group.queries";
 import { resolveLifecycle } from "./snapshot-lifecycle.js";
 

@@ -7,4 +7,10 @@
  * would break it. Grows one curated named re-export per consumer as slice 6
  * reroutes each deep import here.
  */
+export { ensureLeadSection } from "./application/ensure-lead-section.js";
 export { applyRevokeTransition } from "./application/revoke-transition.js";
+export {
+  mapPrismaToReportSection,
+  type PrismaReportSectionWithRelations,
+  reportSectionFullInclude,
+} from "./infrastructure/report-sections.prisma-repository.js";

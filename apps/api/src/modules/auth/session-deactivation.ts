@@ -1,5 +1,5 @@
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import type { SessionRevocationService } from "../admin/session-revocation.service.js";
+import type { SessionRevocationService } from "../admin/index.js";
 
 /**
  * The single source of truth for the revoked/deactivated decision across every

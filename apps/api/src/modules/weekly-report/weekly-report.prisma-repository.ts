@@ -14,8 +14,8 @@ import { buildEscalationsFromReadSections } from "../report-escalations.js";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
-} from "../report-sections/infrastructure/report-sections.prisma-repository.js";
-import { isDesignatedReviewer } from "../review/domain/review-authz.js";
+} from "../report-sections/index.js";
+import { isDesignatedReviewer } from "../review/index.js";
 import { computeCrossGroupSignal } from "./cross-group-signal.js";
 import type {
   WeeklyReportRepository,
