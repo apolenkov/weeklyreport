@@ -2,10 +2,10 @@ import { MS_PER_HOUR } from "@customreport/shared";
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
-import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import type { AuditLogger } from "../../lib/audit-logger.js";
-import { AdminService } from "../admin/admin.service";
-import { PublicationService } from "../publication/application/publication.service";
+import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import type { AuditLogger } from "../../../lib/audit-logger.js";
+import { AdminService } from "../../admin/admin.service";
+import { PublicationService } from "../../publication/application/publication.service";
 
 /**
  * Hourly scheduler that auto-publishes draft Reports whose `deadline +

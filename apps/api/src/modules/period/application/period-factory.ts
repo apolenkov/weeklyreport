@@ -5,10 +5,13 @@ import type { PrismaClient } from "@prisma/client";
 import {
   computeDeadline,
   getCurrentWeekBounds,
-} from "../../lib/business-date.js";
-import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
-import type { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
-import { buildTransition, initialPeriodState } from "./period-transition.js";
+} from "../../../lib/business-date.js";
+import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
+import type { PolicyApplicatorService } from "../../reminders/policy-applicator.service.js";
+import {
+  buildTransition,
+  initialPeriodState,
+} from "../domain/period-transition.js";
 
 const logger = new Logger("PeriodFactory");
 

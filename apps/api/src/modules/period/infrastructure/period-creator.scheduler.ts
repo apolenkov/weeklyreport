@@ -3,15 +3,15 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import type { PrismaClient } from "@prisma/client";
 
-import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import type { AuditLogger } from "../../lib/audit-logger.js";
-import { AdminService } from "../admin/admin.service";
-import { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
+import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import type { AuditLogger } from "../../../lib/audit-logger.js";
+import { AdminService } from "../../admin/admin.service";
+import { PolicyApplicatorService } from "../../reminders/policy-applicator.service.js";
 import {
   ensureCurrentPeriod,
   isOpenBoundaryConflict,
-} from "./period-factory.js";
-import { buildTransition } from "./period-transition.js";
+} from "../application/period-factory.js";
+import { buildTransition } from "../domain/period-transition.js";
 
 /** The `report` delegate methods the scheduled→open flip needs. */
 type FlipReportDelegate = Pick<

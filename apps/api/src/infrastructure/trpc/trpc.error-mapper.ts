@@ -15,7 +15,7 @@ import { PdfExportDomainError } from "../../modules/pdf-export/pdf-export.servic
 import {
   PeriodNotFoundError,
   PeriodScopeError,
-} from "../../modules/period/period.service.js";
+} from "../../modules/period/application/period.service.js";
 import {
   ProjectActivityDomainError,
   ProjectActivityNotFoundError,

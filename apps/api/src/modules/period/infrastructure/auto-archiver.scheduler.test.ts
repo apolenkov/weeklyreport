@@ -1,7 +1,7 @@
 import type { AppSettings } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
+import { createNullAuditLogger } from "../../../lib/audit-logger.js";
 import { AutoArchiverScheduler } from "./auto-archiver.scheduler.js";
 
 function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {

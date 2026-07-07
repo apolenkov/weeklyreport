@@ -1,21 +1,21 @@
 import { Injectable } from "@nestjs/common";
 
-import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { publishCompareAndSet } from "../../lib/publish-compare-and-set.js";
-import { AdminPeriodOverlapError } from "../admin/admin-shared.js";
+import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import { publishCompareAndSet } from "../../../lib/publish-compare-and-set.js";
+import { AdminPeriodOverlapError } from "../../admin/admin-shared.js";
 import {
   buildAssembledReportFromPrismaRow,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
-} from "../published-report-snapshot.js";
-import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";
+} from "../../published-report-snapshot.js";
+import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository.js";
 import type {
   PeriodRepository,
   PublishPeriodOutcome,
-} from "./period.service.js";
-import { isOpenBoundaryConflict } from "./period-factory.js";
-import { applyTransition } from "./period-transition.apply.js";
-import { buildTransition } from "./period-transition.js";
+} from "../application/period.service.js";
+import { isOpenBoundaryConflict } from "../application/period-factory.js";
+import { applyTransition } from "../domain/period-transition.apply.js";
+import { buildTransition } from "../domain/period-transition.js";
 
 @Injectable()
 export class PeriodPrismaRepository implements PeriodRepository {

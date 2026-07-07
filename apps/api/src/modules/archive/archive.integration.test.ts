@@ -7,7 +7,7 @@ import {
   disconnectTestPrisma,
   seedTestData,
 } from "../../test-utils/prisma-test-helper";
-import { PeriodPrismaRepository } from "../period/period.prisma-repository.js";
+import { PeriodPrismaRepository } from "../period/infrastructure/period.prisma-repository.js";
 import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";
 import { ArchivePrismaRepository } from "./archive.prisma-repository";
 import { encodeArchiveCursor } from "./archive-cursor.js";

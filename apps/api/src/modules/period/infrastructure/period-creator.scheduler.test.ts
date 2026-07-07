@@ -2,7 +2,7 @@ import type { AppSettings } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
+import { createNullAuditLogger } from "../../../lib/audit-logger.js";
 import {
   flipDueScheduledToOpen,
   PeriodCreatorScheduler,

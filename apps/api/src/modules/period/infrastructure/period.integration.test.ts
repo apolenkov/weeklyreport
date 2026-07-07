@@ -7,7 +7,7 @@ import {
   type PeriodRepository,
   PeriodService,
   type ReopenPolicyReader,
-} from "./period.service";
+} from "../application/period.service";
 
 const noopInvalidate: AnalyticsCacheInvalidator = () => Promise.resolve();
 const noGatingReopenPolicy: ReopenPolicyReader = () =>

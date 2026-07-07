@@ -3,7 +3,7 @@ import { MS_PER_HOUR, type UserSession } from "@customreport/shared";
 import {
   customreportPeriodStateTransitionsTotal,
   customreportReportsSubmittedTotal,
-} from "../../infrastructure/metrics/metrics.registry.js";
+} from "../../../infrastructure/metrics/metrics.registry.js";
 
 export class PeriodAccessError extends Error {
   constructor(message: string) {
@@ -92,6 +92,10 @@ export interface PeriodRepository {
    */
   listSectionIds(reportId: string): Promise<string[]>;
 }
+
+// DI token binding the PeriodRepository port to its adapter at the module
+// boundary — the service depends on the port, not the concrete prisma class.
+export const PERIOD_REPOSITORY = Symbol("PeriodRepository");
 
 /**
  * The cache invalidation port. PeriodService stays Redis-free; the

@@ -1,9 +1,9 @@
 import { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
-import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { AdminPeriodOverlapError } from "../admin/admin-shared.js";
-import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";
+import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import { AdminPeriodOverlapError } from "../../admin/admin-shared.js";
+import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository.js";
 import { PeriodPrismaRepository } from "./period.prisma-repository.js";
 
 /**

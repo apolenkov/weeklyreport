@@ -1,20 +1,20 @@
 import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
-} from "../../test-utils/prisma-test-helper";
-import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository";
-import { PeriodPrismaRepository } from "./period.prisma-repository";
+} from "../../../test-utils/prisma-test-helper";
+import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository";
 import {
   type AnalyticsCacheInvalidator,
   PeriodScopeError,
   PeriodService,
   type ReopenPolicyReader,
-} from "./period.service";
+} from "../application/period.service";
+import { PeriodPrismaRepository } from "./period.prisma-repository";
 
 const noopInvalidate: AnalyticsCacheInvalidator = () => Promise.resolve();
 const noGatingReopenPolicy: ReopenPolicyReader = () =>

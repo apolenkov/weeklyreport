@@ -3,7 +3,7 @@ import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { publishCompareAndSet } from "../../../lib/publish-compare-and-set.js";
-import { buildTransition } from "../../period/period-transition.js";
+import { buildTransition } from "../../period/domain/period-transition.js";
 import {
   buildAssembledReportFromPrismaRow,
   reportFullIncludeForSnapshot,
