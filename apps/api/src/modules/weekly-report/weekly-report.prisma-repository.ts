@@ -15,7 +15,7 @@ import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
 } from "../report-sections/report-sections.prisma-repository.js";
-import { isDesignatedReviewer } from "../review/review-authz.js";
+import { isDesignatedReviewer } from "../review/domain/review-authz.js";
 import { computeCrossGroupSignal } from "./cross-group-signal.js";
 import type {
   WeeklyReportRepository,

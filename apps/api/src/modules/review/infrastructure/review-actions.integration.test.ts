@@ -1,20 +1,20 @@
 import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { expectDefined } from "../../test-utils/expect-defined.js";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
   seedTestData,
   TEST_IDS,
-} from "../../test-utils/prisma-test-helper";
-import { CarryOverPrismaRepository } from "../carry-over/carry-over.prisma-repository.js";
-import { CarryOverService } from "../carry-over/carry-over.service.js";
-import { ReportSectionsPrismaRepository } from "../report-sections/report-sections.prisma-repository.js";
-import { applyRevokeTransition } from "../report-sections/revoke-transition.js";
+} from "../../../test-utils/prisma-test-helper";
+import { CarryOverPrismaRepository } from "../../carry-over/carry-over.prisma-repository.js";
+import { CarryOverService } from "../../carry-over/carry-over.service.js";
+import { ReportSectionsPrismaRepository } from "../../report-sections/report-sections.prisma-repository.js";
+import { applyRevokeTransition } from "../../report-sections/revoke-transition.js";
+import { ReviewActionsService } from "../application/review-actions.service";
 import { ReviewActionsPrismaRepository } from "./review-actions.prisma-repository";
-import { ReviewActionsService } from "./review-actions.service";
 
 const STABLE_A = "aaaa1111-0000-4000-8000-00000000aaaa";
 
