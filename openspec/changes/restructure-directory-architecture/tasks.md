@@ -81,11 +81,19 @@
 
 ## 5. api: wrap infra as ports (Email/Queue/Cache)
 
-- [ ] 5.1 Define EmailPort over `infrastructure/email`, QueuePort over
+- [x] 5.1 Define EmailPort over `infrastructure/email`, QueuePort over
       `infrastructure/bullmq`, and CachePort over redis; bind port→adapter at each
       consuming module's boundary so reminders/analytics/pdf-export become
       unit-testable with in-memory fakes. Full unit gate green.
-      **Gated on clean git status (parallel session).**
+      C5 (8f5cfb08): `EmailPort` + `EMAIL_PORT` token — the reminder worker injects
+      the interface; test double drops its `as never`. C6 (2f3ea69c): `JobEnqueuer`
+      port — reminders/pdf-export narrow off bullmq's `Queue`; a real Queue
+      structurally satisfies the port so wiring is unchanged; doubles drop their
+      casts. C7 (CachePort) needed no new code: `RedisReadThroughCache`
+      (infrastructure/cache/read-through-cache.ts) already IS the port and already
+      ships a Map-backed in-memory fake test; analytics/telemetry implement
+      `*CachePort`. Slice-5 payoff (unit-testable via in-memory fakes) was already
+      met — this slice removed the type-hygiene escape hatches.
 
 ## 6. api: reroute cross-module deep imports to facades + flip the zone to error
 
