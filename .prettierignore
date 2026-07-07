@@ -14,3 +14,5 @@ pnpm-lock.yaml
 scheduled_tasks.lock
 # Agent worktrees are full repo copies — they format themselves.
 .claude/worktrees/
+# Codex rescue runtime — machine-local tool artifacts, not repo source.
+.agents/

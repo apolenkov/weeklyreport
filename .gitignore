@@ -31,6 +31,9 @@ apps/web/next-env.d.ts
 .goals
 scheduled_tasks.lock
 
+# Codex rescue runtime (agent-council skills/artifacts, machine-local)
+.agents/
+
 # CodeGraph local index (machine-specific, not part of repo)
 .codegraph/
 
