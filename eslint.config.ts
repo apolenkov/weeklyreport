@@ -728,6 +728,28 @@ export default defineConfig([
       ],
     },
   },
+  // ── Immutability regime: `let` ban, rolled out folder-by-folder. ──
+  // `no-let` (via no-restricted-syntax) is enabled per-area; this `files` list
+  // GROWS with each rollout commit until it spans all source, then collapses into
+  // a single global rule. A load-bearing mutable binding — a loop counter, a lazy
+  // singleton, a running accumulator a functional rewrite would only obscure —
+  // keeps its `let` behind an inline
+  // `// eslint-disable-next-line no-restricted-syntax -- <why>`. Tests, seeds and
+  // e2e stay imperative and are excluded.
+  {
+    files: ["apps/api/src/lib/**/*.ts"],
+    ignores: ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "VariableDeclaration[kind='let']",
+          message:
+            "Immutability regime: prefer const. A load-bearing mutable binding may keep `let` behind an inline `eslint-disable-next-line no-restricted-syntax -- <why>`.",
+        },
+      ],
+    },
+  },
   // Zone 6 — ui stays domain-free (package-name zone). packages/ui primitives must
   // not import @customreport/shared domain schemas; charts receive finished series
   // as props. Currently 0 violations.
