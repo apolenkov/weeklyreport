@@ -431,7 +431,7 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
         return { id: "job" };
       },
     };
-    const service = new RemindersService(repository, undefined, queue as never);
+    const service = new RemindersService(repository, undefined, queue);
 
     await service.requestReminderExecution(activeRule.id, "lead@test.local");
 
@@ -448,7 +448,7 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
         return { id: "job" };
       },
     };
-    const service = new RemindersService(repository, undefined, queue as never);
+    const service = new RemindersService(repository, undefined, queue);
 
     await service.requestReminderExecution(activeRule.id, "lead@test.local");
 

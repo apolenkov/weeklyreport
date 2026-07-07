@@ -302,7 +302,7 @@ describe("AUTH-05 PDF export JWT signing", () => {
         enqueued.push({ name, data });
         return { id: "fake" };
       },
-    } as never;
+    };
 
     const service = new PdfExportService(
       createRepository(publishedReport),
@@ -337,7 +337,7 @@ describe("AUTH-05 PDF export JWT signing", () => {
         enqueued.push({ name, data });
         return { id: "fake" };
       },
-    } as never;
+    };
 
     const presigned = jwt.sign({ reportId, custom: "override" }, PDF_SECRET, {
       expiresIn: "1m",
