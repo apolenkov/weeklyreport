@@ -5,8 +5,8 @@ import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 
 /**
- * UFB-036 (Phase 44-03): the seam that turns ReminderPolicy templates
- * into concrete ReminderRule rows for a given Period (Report).
+ * The seam that turns ReminderPolicy templates into concrete ReminderRule
+ * rows for a given Period (Report).
  *
  * Lifecycle:
  *   - admin.savePeriod creates a Report row → applyToPeriod(report) is
@@ -14,11 +14,8 @@ import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
  *   - prisma/backfill-policy-rules.ts iterates over open periods and
  *     calls applyToPeriod for each, idempotently
  *   - the @Cron scheduler keeps querying ReminderRule directly
- *     (untouched in this plan)
  *
- * Validity gate (added on top of plan-as-written, after the scope
- * extension landed validFrom/validUntil on ReminderPolicy in the same
- * day): a policy applies to a period only if
+ * Validity gate: a policy applies to a period only if
  *   - policy.active === true
  *   - period.deadline >= policy.validFrom
  *   - policy.validUntil === null OR period.deadline <= policy.validUntil

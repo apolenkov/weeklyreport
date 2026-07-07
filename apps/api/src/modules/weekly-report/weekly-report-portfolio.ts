@@ -12,7 +12,7 @@ import type { WeeklyReportScopeSession } from "./weekly-report.service.js";
 
 /**
  * Portfolio-overview builder + scope-where helper for
- * `WeeklyReportPrismaRepository`, split out (R3a-4 max-lines drain) as the
+ * `WeeklyReportPrismaRepository` — the
  * live (non-published) read path's project-aggregation logic: one entry
  * per non-archived project, worst-status folded across every lead section
  * that touched it.
@@ -68,7 +68,7 @@ export function buildPortfolioOverview(
 }
 
 /**
- * UFB-040 / Phase 46-04: build a Prisma where fragment for the given scope
+ * Build a Prisma where fragment for the given scope
  * target from the caller's session, or `undefined` when no filter applies
  * (admin or no-session paths).
  */

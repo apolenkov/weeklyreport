@@ -27,7 +27,7 @@ export class RemindersPrismaRepository implements RemindersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * NOTIF-04: returns active deadline rules whose fireAt is in the past,
+   * Returns active deadline rules whose fireAt is in the past,
    * pre-resolved with the recipient leads (those whose ReportSection for
    * the rule's reportId is still 'draft' status). Rules without a reportId
    * are skipped — they have no concrete deadline to remind about.
@@ -239,8 +239,8 @@ export class RemindersPrismaRepository implements RemindersRepository {
   }
 
   async listExecutions(ruleId: string): Promise<AdminReminderExecution[]> {
-    // FIX-03 (Phase 35-08): explicit LIMIT 100 on the admin "executions"
-    // listing. Without it Prisma issues `... ORDER BY createdAt DESC OFFSET $1`
+    // Explicit LIMIT 100 on the admin "executions" listing. Without it Prisma
+    // issues `... ORDER BY createdAt DESC OFFSET $1`
     // with no upper bound, which a) trips the slow-query log on growing
     // tables and b) loads more rows into memory than the UI ever paginates
     // through (admin reminder page caps at 20 per page; 100 covers ~5 pages

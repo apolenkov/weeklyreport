@@ -17,7 +17,7 @@ export class ArchiveDomainError extends Error {
 }
 
 /**
- * AUTH-04 (Phase 28-01): the role-aware filter expressed as a plain object
+ * The role-aware filter expressed as a plain object
  * the repository merges into its Prisma `where`. This shape stays Prisma-free
  * at the service layer so the domain code does not import `@prisma/client`.
  *
@@ -30,7 +30,7 @@ export interface ArchiveReadFilter {
 }
 
 /**
- * UFB-040 / Phase 46-03: archive section visibility filter.
+ * Archive section visibility filter.
  *
  * Repository receives the requester's session (or the narrow Pick used by
  * tests) so it can spread `groupScopeFilter(session, 'reportSection')` into
@@ -58,7 +58,7 @@ export interface ArchiveRepository {
 }
 
 /**
- * AUTH-04 (Phase 28-01): translate the session role into the read filter.
+ * Translate the session role into the read filter.
  * Viewers MUST see only published reports — defense-in-depth on top of the
  * repository's existing hard floor (`status: 'published'`). For non-viewer
  * roles (head/lead/admin) and for `undefined` (legacy callers / no-role

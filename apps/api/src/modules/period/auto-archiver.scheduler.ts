@@ -8,14 +8,13 @@ import { AdminService } from "../admin/admin.service";
 import { buildTransition } from "./period-transition.js";
 
 /**
- * UFB-049 / Phase 50-B: daily scheduler that flips published Reports to
- * `archived=true` once their `publishedAt + autoArchiveWeeksAfterPublish *
- * 7d` cutoff has passed.
+ * Daily scheduler that flips published Reports to `archived=true` once their
+ * `publishedAt + autoArchiveWeeksAfterPublish * 7d` cutoff has passed.
  *
  * Skips entirely when `autoArchiveWeeksAfterPublish === 0` — the admin's
- * way of saying "never auto-archive". This is the opt-IN default; the
- * Phase 50-A schema default of 0 keeps existing orgs on the manual-archive
- * path until they flip the toggle.
+ * way of saying "never auto-archive". This is the opt-IN default; the schema
+ * default of 0 keeps existing orgs on the manual-archive path until they flip
+ * the toggle.
  *
  * Idempotency: the where-clause already excludes `archived=true` rows, so
  * a tick that runs twice on the same day is a no-op on the second pass.

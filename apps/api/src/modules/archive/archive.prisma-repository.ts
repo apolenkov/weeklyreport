@@ -26,7 +26,7 @@ import type {
 import { decodeArchiveCursor, encodeArchiveCursor } from "./archive-cursor.js";
 
 /**
- * AUTH-04 (Phase 28-01): defense-in-depth status floor.
+ * Defense-in-depth status floor.
  *
  * The archive surface has always been "published reports only" — the
  * hardcoded floor below is the single source of truth for that contract.
@@ -221,7 +221,7 @@ function withArchiveKeyset(
 }
 
 /**
- * UFB-040 / Phase 46-03: build the nested-sections where fragment from the
+ * Build the nested-sections where fragment from the
  * caller's session. Returns `undefined` when no scope filter applies (admin,
  * or no session passed at all — legacy callers / scripts).
  */

@@ -3,8 +3,7 @@ import type { ReportSectionReadModel, Role } from "@customreport/shared";
 import type { LeadFormRepository } from "./lead-form-shared";
 
 /**
- * Lead cross-author read scoping, split out of `lead-form.service.ts`
- * (R3a-4 max-lines drain): resolving the shared-product scope for a
+ * Lead cross-author read scoping: resolving the shared-product scope for a
  * requested foreign author, and filtering a section's product-keyed
  * collections down to that scope.
  */

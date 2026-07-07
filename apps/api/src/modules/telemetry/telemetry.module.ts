@@ -14,7 +14,7 @@ import { TelemetryPrismaRepository } from "./telemetry.prisma-repository.js";
 import { TelemetryService } from "./telemetry.service.js";
 
 /**
- * Phase 52 (UFB-054) — product-telemetry wiring.
+ * Product-telemetry wiring.
  *
  *  - `TelemetryGauges` installs Prom `collect` callbacks on boot.
  *  - `TelemetryService` backs the `telemetry.summary` tRPC procedure

@@ -23,7 +23,7 @@ interface RawHit {
 }
 
 /**
- * 39-05 (PERF-05): Prisma repository for full-text search.
+ * Prisma repository for full-text search.
  *
  * Strategy: one $queryRaw with four UNION ALL chunks (Item, Risk, Decision,
  * Project), each chunk filtering its own `searchTsv @@ plainto_tsquery`,
@@ -82,7 +82,7 @@ export class SearchPrismaRepository implements SearchRepository {
     const projectMineFilter =
       scope === "mine" ? Prisma.sql`AND p."leadId" = ${userId}` : Prisma.empty;
 
-    // TD-03: group-scope filters derived from the session's allowed group IDs.
+    // Group-scope filters derived from the session's allowed group IDs.
     // null (admin) → no filter. Non-empty array → subquery against User.reportingGroupId.
     // The service guarantees groupIds is never an empty array here.
     const sectionGroupFilter =

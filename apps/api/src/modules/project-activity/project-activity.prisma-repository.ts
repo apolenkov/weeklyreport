@@ -27,7 +27,7 @@ interface ActivityRow {
   activityProducts: { product: { id: string; name: string } }[];
 }
 
-// Zod-parse on the way out (REPO-09) so the wire contract is enforced at the
+// Zod-parse on the way out so the wire contract is enforced at the
 // repository boundary.
 function toReadModel(row: ActivityRow): ProjectActivity {
   return projectActivitySchema.parse({

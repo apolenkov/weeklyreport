@@ -60,7 +60,7 @@ export interface ReportSectionsRepository {
   ): Promise<ReportSectionReadModel | null>;
   getReportStatus(reportId: string): Promise<string | null>;
   /**
-   * UFB-049 / Phase 50-B: deadline-aware variant. Returns `null` when the
+   * Deadline-aware variant. Returns `null` when the
    * report does not exist (caller treats that as "no gate to enforce").
    * Kept optional so legacy in-memory test repositories that predate the
    * 50-B grace-period gate keep compiling — the service falls back to
@@ -88,8 +88,8 @@ export interface ReportSectionsRepository {
 }
 
 /**
- * UFB-049 / Phase 50-B: minimal AppSettings shape the service needs to
- * enforce grace + late submission rules. Modeled as a callback rather
+ * Minimal AppSettings shape the service needs to enforce grace + late
+ * submission rules. Modeled as a callback rather
  * than a direct AdminService dependency so unit tests can pass a tiny
  * stub without standing up the admin module.
  */
@@ -103,8 +103,8 @@ export class ReportSectionsService {
 
   constructor(
     private readonly repository: ReportSectionsRepository,
-    // UFB-049 / Phase 50-B: optional grace-period settings provider.
-    // When wired, submitSection enforces:
+    // Optional grace-period settings provider. When wired, submitSection
+    // enforces:
     //   - now > deadline + gracePeriodHours AND !allowLateSubmissions
     //     → ReportSectionAccessError ("Past deadline; submissions closed.")
     //   - now > deadline (irrespective of grace) → section.late = true
@@ -181,7 +181,7 @@ export class ReportSectionsService {
   }
 
   /**
-   * UFB-049 / Phase 50-B: deadline gate for submitSection. Returns the
+   * Deadline gate for submitSection. Returns the
    * `late` flag to stamp on the section. Throws ReportSectionAccessError
    * (→ 403 in the tRPC layer) when the deadline has passed beyond the
    * configured grace window AND late submissions are forbidden.
@@ -258,7 +258,7 @@ export class ReportSectionsService {
       mergeSection(section, parsedInput, "draft"),
       // Expected version is the CLIENT-loaded value, not the freshly-fetched
       // row's — otherwise the compare-and-set always matches and the lock is a
-      // no-op (design D5).
+      // no-op.
       parsedInput.version,
     );
     this.logger.info("section draft saved", {
@@ -276,8 +276,8 @@ export class ReportSectionsService {
     const section = await this.getActiveSection(parsedInput.reportSectionId);
     this.assertCanEditSection(section, actorUserId);
 
-    // UFB-049 / Phase 50-B: deadline gate runs BEFORE the content
-    // validator so a past-deadline submission with !allowLateSubmissions
+    // Deadline gate runs BEFORE the content validator so a past-deadline
+    // submission with !allowLateSubmissions
     // returns 403 even when the payload is otherwise valid. Conversely
     // a payload with missing traffic-lights still fails on the content
     // check first when within grace window — UX wants the most-specific
@@ -307,8 +307,8 @@ export class ReportSectionsService {
       parsedInput.version,
     );
 
-    // Phase 52-A (UFB-054): product telemetry. We always bump the
-    // submission counter, labelled by the same `late` flag persisted on
+    // Product telemetry. We always bump the submission counter, labelled by
+    // the same `late` flag persisted on
     // the row, so dashboard math matches the badge in the UI. The
     // latency histogram observes signed seconds (deadline − now) — but
     // only when the repository can report the deadline (the in-memory

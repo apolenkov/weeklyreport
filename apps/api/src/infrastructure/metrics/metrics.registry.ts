@@ -7,7 +7,7 @@ import {
 } from "prom-client";
 
 /**
- * 37-02 / 37-03 / 36-01: shared prom-client registry + counter singletons.
+ * Shared prom-client registry + counter singletons.
  *
  * Every counter referenced by deploy/grafana/customreport-dashboard.json
  * lives here so there's a single import point and a single registration
@@ -30,7 +30,7 @@ export const httpRequestDurationSeconds = new Histogram({
 });
 
 /**
- * 37-02 — every BullMQ job that exhausts its retry budget and lands in the
+ * Every BullMQ job that exhausts its retry budget and lands in the
  * failed-set increments this counter. Read in Grafana via `rate(...)` for
  * a per-second growth signal; an alertmanager rule on top of the absolute
  * value vs DLQ_ALERT_THRESHOLD provides the page.
@@ -43,7 +43,7 @@ export const dlqFailedTotal = new Counter({
 });
 
 /**
- * 36-01 follow-on — every rate-limit response increments this counter,
+ * Every rate-limit response increments this counter,
  * tagged by bucket (auth | trpc). Lets ops see a brute-force attempt as
  * a spike before the rate-limit log line scrolls off.
  */
@@ -55,7 +55,7 @@ export const rateLimitHitsTotal = new Counter({
 });
 
 /**
- * 37-02 — every login outcome (saml-callback success/fail, dev-login
+ * Every login outcome (saml-callback success/fail, dev-login
  * success). Lets the dashboard distinguish "login attempt rate dropped"
  * (real outage) from "login attempt rate spiked" (brute-force).
  */
@@ -67,7 +67,7 @@ export const loginAttemptsTotal = new Counter({
 });
 
 /**
- * 47-03 (DX-03) — per-procedure tRPC latency histogram. Labels:
+ * Per-procedure tRPC latency histogram. Labels:
  * - `procedure` — tRPC `path` (e.g. `admin.snapshot`, `weeklyReport.get`)
  * - `type` — `query` | `mutation` | `subscription`
  * - `status` — `success` | `error`
@@ -86,7 +86,7 @@ export const trpcRequestDurationSeconds = new Histogram({
 });
 
 /**
- * 47-03 (DX-03) — companion counter to the histogram. Used for the
+ * Companion counter to the histogram. Used for the
  * dashboard's request-volume panel and the error-rate stat
  * (`status="error"` over `status=*`). Histogram `_count` could carry
  * the same signal, but a dedicated counter is cheaper to query and the
@@ -100,7 +100,7 @@ export const trpcRequestTotal = new Counter({
 });
 
 // ============================================================
-// Phase 52 — Product / business-KPI telemetry (UFB-054).
+// Product / business-KPI telemetry.
 //
 // Distinct from the engineering telemetry above (which measures
 // latency / errors / DLQ / login). The metrics below answer
@@ -108,14 +108,14 @@ export const trpcRequestTotal = new Counter({
 // which roles miss deadlines, how many reopens we churn through,
 // who actually opens PDFs.
 //
-// Prefix `customreport_*` per phase-spec, even though the existing
-// counters use `cr_*`. The mismatch is a deferred consolidation
-// (renaming existing counters would re-baseline production SLOs,
-// which is out of scope here). Tracked in the phase SUMMARY.
+// Prefix `customreport_*`, even though the existing counters use
+// `cr_*`. The mismatch is a deferred consolidation — renaming
+// existing counters would re-baseline production SLOs, which is out
+// of scope here.
 // ============================================================
 
 /**
- * 52-A — every Report transition into the `published` state increments
+ * Every Report transition into the `published` state increments
  * this counter (whether driven by an explicit `publishReport` action or
  * the auto-publisher cron). Labelled by `state` so future expansion
  * (e.g. `state='archived'`) does not require a new counter.
@@ -128,7 +128,7 @@ export const customreportReportsSubmittedTotal = new Counter({
 });
 
 /**
- * 52-A — every ReportSection submission. `late` is the on-time flag
+ * Every ReportSection submission. `late` is the on-time flag
  * stamped at submit time by ReportSectionsService (`now > deadline`).
  * The two-label cardinality (late=true|false) keeps the series count
  * bounded; aggregating with `sum by (late)` answers the «how often do
@@ -142,7 +142,7 @@ export const customreportSectionsSubmittedTotal = new Counter({
 });
 
 /**
- * 52-A — signed-seconds histogram of (deadline − submittedAt). Negative
+ * Signed-seconds histogram of (deadline − submittedAt). Negative
  * buckets surface how far in advance leads typically submit;
  * positive buckets surface how late they are when they slip.
  *
@@ -157,7 +157,7 @@ export const customreportSectionSubmissionLatencySeconds = new Histogram({
 });
 
 /**
- * 52-A — rolling on-time ratio (last 4 published periods, per
+ * Rolling on-time ratio (last 4 published periods, per
  * ReportSection because that is what the head dashboard's «late» badge
  * reflects). Set by a `collect` async callback in TelemetryGauges so
  * the value refreshes lazily at Prometheus scrape time — no scheduler.
@@ -169,7 +169,7 @@ export const customreportReportsOnTimeRatio = new Gauge({
 });
 
 /**
- * 52-A — distinct lead authors who submitted in the most recently
+ * Distinct lead authors who submitted in the most recently
  * published period. Engagement signal; pairs with reports_submitted_total
  * to distinguish «volume up because more leads» from «volume up because
  * the same leads filed twice».
@@ -181,7 +181,7 @@ export const customreportActiveLeadsTotal = new Gauge({
 });
 
 /**
- * 52-A — reopen-request funnel. `state ∈ {requested, approved, rejected}`.
+ * Reopen-request funnel. `state ∈ {requested, approved, rejected}`.
  * `requested` fires from LeadFormService.requestReopen; `approved` and
  * `rejected` fire from the admin.respondReopenRequest mutation. The
  * three-state funnel exposes both demand (requested rate) and the
@@ -195,7 +195,7 @@ export const customreportReopenRequestsTotal = new Counter({
 });
 
 /**
- * 52-A — PDF export requests, labelled by requesting role. Engagement
+ * PDF export requests, labelled by requesting role. Engagement
  * signal: a healthy product sees viewers + heads pulling exports.
  */
 export const customreportPdfExportRequestsTotal = new Counter({
@@ -206,7 +206,7 @@ export const customreportPdfExportRequestsTotal = new Counter({
 });
 
 /**
- * 52-A — period state-machine transitions (`from` → `to`). Covers
+ * Period state-machine transitions (`from` → `to`). Covers
  * `open → published` (manual + auto), and any future archival
  * transitions plumbed in. Lets ops distinguish a stuck pipeline
  * («no published transitions in 7d») from a slow one.
@@ -219,7 +219,7 @@ export const customreportPeriodStateTransitionsTotal = new Counter({
 });
 
 /**
- * scope-lead-report-to-own-contribution (D6b) — every full-content
+ * scope-lead-report-to-own-contribution — every full-content
  * cross-author read on the lead form ("Everyone" visibility lens).
  * `result ∈ {allowed, denied, empty}` audits the authorization boundary:
  * a denied read returns an empty payload, so without this label a denial
@@ -238,12 +238,12 @@ export const customreportCrossAuthorContentReadsTotal = new Counter({
 });
 
 // ============================================================
-// Phase 55 (Telegram) — day-1 metrics per TODO discipline rule.
+// Telegram — day-1 metrics.
 // Declared here even while MockTelegramAdapter is the only path.
 // ============================================================
 
 /**
- * 55 — every outbound Telegram message attempt. `status` is `ok` |
+ * Every outbound Telegram message attempt. `status` is `ok` |
  * `error`. Lets ops chart message delivery rate and detect silent
  * failures before users notice missed notifications.
  */
@@ -255,7 +255,7 @@ export const telegramMessageSentTotal = new Counter({
 });
 
 /**
- * 55 — user ↔ bot binding lifecycle events. `event` is
+ * User ↔ bot binding lifecycle events. `event` is
  * `created` | `deleted` | `reactivated`. Lets ops see how many
  * users have active Telegram bindings and whether the /start flow
  * is being used.

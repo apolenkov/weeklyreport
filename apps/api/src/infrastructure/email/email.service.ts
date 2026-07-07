@@ -48,7 +48,7 @@ export class EmailService {
   }
 
   /**
-   * UFB-048 / Phase 50-A: optional per-call `from` override lets the
+   * Optional per-call `from` override lets the
    * reminder processor pass `AppSettings.notificationFromEmail` without
    * mutating shared service state. Null/undefined falls back to the
    * env-configured `SMTP_FROM` value resolved in the constructor.
@@ -81,13 +81,13 @@ export class EmailService {
   }
 
   /**
-   * NOTIF-03 (Phase 28-03): multipart HTML + plaintext send. nodemailer accepts
+   * Multipart HTML + plaintext send. nodemailer accepts
    * both `html` and `text` simultaneously — corporate spam filters score
    * multipart higher, and clients that don't render HTML still receive the
-   * plaintext body. Use this overload for deadline reminders (NOTIF-01) and
+   * plaintext body. Use this overload for deadline reminders and
    * any future template-rendered email.
    *
-   * UFB-048 / Phase 50-A: optional `from` override identical to `sendMail`.
+   * Optional `from` override identical to `sendMail`.
    */
   async sendMailMultipart(
     to: string,

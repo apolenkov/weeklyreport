@@ -26,7 +26,7 @@ import { PeriodService } from "./period.service.js";
 import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
 
 /**
- * UFB-049 / Phase 50-B: three scheduler classes (`PeriodCreatorScheduler`,
+ * Three scheduler classes (`PeriodCreatorScheduler`,
  * `AutoPublisherScheduler`, `AutoArchiverScheduler`) are wired here. They
  * consume `AdminService` (settings), `PrismaService` (DB), and — for the
  * auto-publisher — `PublicationService` (publishAuto). NestSchedule's

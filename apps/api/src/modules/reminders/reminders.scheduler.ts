@@ -15,16 +15,15 @@ import { RemindersService } from "./reminders.service";
 const ISO_DATE_LENGTH = 10;
 
 /**
- * NOTIF-04 (Phase 28-03), NOTIF-02/05 (Phase 29-05): hourly tick that
- * dispatches T-24h deadline reminders AND T+2h escalation digests in one
- * scheduler pass.
+ * Hourly tick that dispatches T-24h deadline reminders AND T+2h escalation
+ * digests in one scheduler pass.
  *
  * The scheduler is contract-light:
  *   1. Query active deadline rules whose fireAt is in the past AND that have
  *      ≥1 lead with a 'draft' section for the rule's reportId.
  *   2. For each (rule, recipient) pair, call the existing
  *      `requestReminderExecution` with kind='deadline' payload — UNLESS the
- *      recipient has notificationOptOut=true (NOTIF-05).
+ *      recipient has notificationOptOut=true.
  *   3. Query active escalation rules whose fireAt is in the past AND that
  *      have ≥1 late lead. For each (rule, head) pair, call
  *      `requestReminderExecution` once with kind='escalation' digest payload.
@@ -38,9 +37,9 @@ export class RemindersScheduler {
   constructor(
     private readonly service: RemindersService,
     private readonly repository: RemindersPrismaRepository,
-    // UFB-047 / Phase 49-01: brand snapshot is fetched once per `runOnce`
-    // (not per-recipient) so a single tick that fans out to all 6+ leads
-    // hits the `Organization` table exactly once, not 6 times.
+    // Brand snapshot is fetched once per `runOnce` (not per-recipient) so a
+    // single tick that fans out to all 6+ leads hits the `Organization` table
+    // exactly once, not 6 times.
     private readonly organizationService: OrganizationService,
   ) {}
 
@@ -89,7 +88,7 @@ export class RemindersScheduler {
     const sectionUrl = buildSectionUrl(rule.reportId);
     const deadlineIso = rule.fireAt.toISOString();
     for (const recipient of rule.recipients) {
-      // NOTIF-05 (Phase 29-05): per-user opt-out for kind='deadline' only.
+      // Per-user opt-out for kind='deadline' only.
       if (recipient.notificationOptOut) {
         continue;
       }

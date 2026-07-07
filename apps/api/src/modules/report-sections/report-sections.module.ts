@@ -8,11 +8,10 @@ import { ReportSectionsPrismaRepository } from "./report-sections.prisma-reposit
 import { ReportSectionsService } from "./report-sections.service";
 
 @Module({
-  // UFB-049 / Phase 50-B: AdminModule is imported so ReportSectionsService
-  // can read `gracePeriodHours` + `allowLateSubmissions` from the
-  // AppSettings singleton on every submitSection call. The callback shape
-  // (rather than direct service injection) keeps the service test seam
-  // narrow — tests pass a tiny stub.
+  // AdminModule is imported so ReportSectionsService can read
+  // `gracePeriodHours` + `allowLateSubmissions` from the AppSettings singleton
+  // on every submitSection call. The callback shape (rather than direct service
+  // injection) keeps the service test seam narrow — tests pass a tiny stub.
   imports: [AdminModule],
   providers: [
     ReportSectionsPrismaRepository,

@@ -82,17 +82,16 @@ export interface DueEscalationRule {
 }
 
 /**
- * NOTIF-01/03 (Phase 28-03), NOTIF-02 (Phase 29-05): the richer payload
- * threaded by the scheduler through `requestReminderExecution`. The
- * dedupeKey uses `${rule.id}:${kind}:${cycleDate}:${recipientEmail}` so two
- * scheduler ticks within one UTC day collapse to a single execution for
- * both kinds.
+ * The richer payload threaded by the scheduler through
+ * `requestReminderExecution`. The dedupeKey uses
+ * `${rule.id}:${kind}:${cycleDate}:${recipientEmail}` so two scheduler ticks
+ * within one UTC day collapse to a single execution for both kinds.
  *
- * The v2.0 follow-up dedupe key shape
+ * The legacy dedupe key shape
  * (`${rule.id}:${fireAt.toISOString()}:${recipientEmail}`) is preserved for
- * legacy callers that omit `payload`.
+ * callers that omit `payload`.
  *
- * UFB-047 / Phase 49-01: every payload now carries `organization` —
+ * Every payload carries `organization` —
  * `{shortName, fullName}` snapshotted at enqueue time from the
  * `Organization` singleton. The worker re-renders the template with that
  * snapshot, so a mid-flight admin edit of the brand strings does NOT

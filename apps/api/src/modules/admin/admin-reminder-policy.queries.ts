@@ -7,8 +7,7 @@ import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { audienceFromPrisma, audienceToPrisma } from "./admin-enum-mappers";
 
 /**
- * UFB-036 (Phase 44-02): ReminderPolicy CRUD, extracted from
- * `admin.prisma-repository.ts` (R3a-4 max-lines split).
+ * ReminderPolicy CRUD.
  */
 
 export async function listReminderPolicies(
@@ -25,7 +24,7 @@ export async function listReminderPolicies(
       timezone: row.timezone,
       audience: audienceFromPrisma[row.audience],
       active: row.active,
-      // UFB-036 (Phase 44-04): surface the validity window so the
+      // Surface the validity window so the
       // Reminders Tab can render and edit it.
       validFrom: row.validFrom,
       validUntil: row.validUntil,

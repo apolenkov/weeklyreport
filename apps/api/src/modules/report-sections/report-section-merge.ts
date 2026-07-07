@@ -6,10 +6,9 @@ import {
 } from "@customreport/shared";
 
 /**
- * The draft/submit write-path merge, split out of `report-sections.service.ts`
- * (R3a-4 max-lines drain): folds a save/submit payload onto the server-loaded
- * section read model — stage statuses, per-project traffic-light aggregation,
- * lead-owned decisions, and the activity-status slice.
+ * The draft/submit write-path merge: folds a save/submit payload onto the
+ * server-loaded section read model — stage statuses, per-project traffic-light
+ * aggregation, lead-owned decisions, and the activity-status slice.
  */
 
 /** Worst-case severity rank for the per-project traffic-light aggregation (any red stage wins). */
@@ -18,10 +17,10 @@ export function mergeSection(
   section: ReportSectionReadModel,
   input: DraftSavePayload | SubmitSectionPayload,
   nextStatus: "draft" | "submitted",
-  // UFB-049 / Phase 50-B: explicit late flag set by submitSection when
-  // `now > Report.deadline` at submit-time. Defaults to whatever the
-  // existing section row already carries so saveDraft / reopen paths
-  // don't accidentally clear a previously-stamped late flag.
+  // Explicit late flag set by submitSection when `now > Report.deadline` at
+  // submit-time. Defaults to whatever the existing section row already carries
+  // so saveDraft / reopen paths don't accidentally clear a previously-stamped
+  // late flag.
   late?: boolean,
 ): ReportSectionReadModel {
   const stageStatusByKey = new Map(

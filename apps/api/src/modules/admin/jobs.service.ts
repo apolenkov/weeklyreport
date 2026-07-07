@@ -6,7 +6,7 @@ const DEFAULT_FAILED_JOBS_LIMIT = 50;
 const MAX_FAILED_JOBS_LIMIT = 200;
 
 /**
- * Phase 35-06 — admin BullMQ DLQ surface.
+ * Admin BullMQ DLQ surface.
  *
  * Thin wrapper around the live `email-reminder` Queue handle so the tRPC
  * router can stay declarative and the unit tests can swap in a fake queue

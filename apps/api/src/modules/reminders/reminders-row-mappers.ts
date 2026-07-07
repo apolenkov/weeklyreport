@@ -9,9 +9,9 @@ import type { Prisma } from "@prisma/client";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 
 /**
- * Pure Prisma-row <-> domain-model mappers for `RemindersPrismaRepository`,
- * split out (R3a-4 max-lines drain): execution/rule row translation, the
- * dedupeKey P2002 conflict detector, and the recipient-email extractor.
+ * Pure Prisma-row <-> domain-model mappers for `RemindersPrismaRepository`:
+ * execution/rule row translation, the dedupeKey P2002 conflict detector, and
+ * the recipient-email extractor.
  */
 
 /** Length of an ISO calendar date (`YYYY-MM-DD`) after `toISOString().slice(0, n)`. */
@@ -98,17 +98,14 @@ export function toRuleDomain(rule: {
 }
 
 /**
- * Extracts recipientEmail from dedupeKey. Two key shapes are in flight in v6.0:
+ * Extracts recipientEmail from dedupeKey. Two key shapes are in flight:
  *
- *   Legacy (BUG-023, v2.0):     `${ruleId}:<ISO with Z>:${email}`
+ *   Legacy:     `${ruleId}:<ISO with Z>:${email}`
  *     example: `<uuid>:2026-04-12T10:00:00.000Z:user@example.com`
  *
- *   Phase 28+ (NOTIF-04/02):    `${ruleId}:${kind}:YYYY-MM-DD:${email}`
+ *   Current:    `${ruleId}:${kind}:YYYY-MM-DD:${email}`
  *     example: `<uuid>:deadline:2026-04-12:user@example.com`
  *     example: `<uuid>:escalation:2026-04-12:head@example.com`
- *
- * Phase 32-C / H-02: the legacy regex `/Z:(.+)$/` returned '' for every Phase
- * 28+ key (no `Z:`), silently breaking AdminReminderExecution.recipientEmail.
  *
  * Strategy: split on ':' and take the LAST segment that matches an email
  * shape. Both shapes terminate with the email, so this is robust to either

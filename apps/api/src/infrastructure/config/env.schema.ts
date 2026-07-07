@@ -22,7 +22,7 @@ export const envSchema = z
     // (`reminders.scheduler.ts`). Required so prod emails never link to
     // localhost; in dev/compose it is set to the same web origin as FRONTEND_URL.
     APP_BASE_URL: z.url(),
-    // 36-04: optional CSV of additional allowed origins for CORS. Lets
+    // Optional CSV of additional allowed origins for CORS. Lets
     // prod accept e.g. customreport.example.com + admin.customreport.
     // example.com from the same API instance. Wildcards (*) are rejected
     // in superRefine when NODE_ENV=production.
@@ -74,7 +74,7 @@ export const envSchema = z
     SMTP_PASS: z.string().optional(),
     SMTP_FROM: z.string().optional(),
 
-    // OpenTelemetry (37-01). The endpoint stays optional — the SDK only starts
+    // OpenTelemetry. The endpoint stays optional — the SDK only starts
     // when OTEL_EXPORTER_OTLP_ENDPOINT is set AND OTEL_SDK_DISABLED is not
     // 'true'. The toggle + sampler are required so the telemetry posture is
     // always explicit. See otel.bootstrap.ts.
@@ -91,14 +91,14 @@ export const envSchema = z
     // Browser → server log forwarder toggle (`main.ts`). Optional prod opt-in;
     // dev enables the forwarder via NODE_ENV, prod opts in with "true".
     CLIENT_LOG_FORWARDING: z.string().optional(),
-    // Telegram bot token (Phase 55). Optional: unset/blank →
+    // Telegram bot token. Optional: unset/blank →
     // MockTelegramAdapter; a non-blank value activates real delivery. The
     // configured-check is centralised in `isTelegramConfigured`.
     TG_BOT_TOKEN: z.string().optional(),
 
     // PDF generation
     PDF_BASE_URL: z.url(),
-    // Phase 23-01: directory where the BullMQ worker writes generated PDFs and
+    // Directory where the BullMQ worker writes generated PDFs and
     // where /pdfs static mount serves them. Resolved relative to the API's cwd
     // (apps/api/) at runtime — `./storage/pdfs` lands at `apps/api/storage/pdfs`.
     PDF_OUTPUT_DIR: z.string(),
@@ -132,7 +132,7 @@ export const envSchema = z
       .optional(),
   })
   .superRefine((data, ctx) => {
-    // 36-03: production fences. Boot must fail if any of these aren't met.
+    // Production fences. Boot must fail if any of these aren't met.
     if (data.NODE_ENV === "production") {
       if (data.AUTH_DEV_MODE) {
         ctx.addIssue({

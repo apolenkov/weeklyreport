@@ -23,7 +23,7 @@ export interface OrganizationRepository {
 }
 
 /**
- * UFB-047 / Phase 48-A: organization identity service.
+ * Organization identity service.
  *
  * Owns the singleton `Organization` row. Two read paths:
  *  - {@link getOrganization}: returns the full row including timestamps;
@@ -33,15 +33,11 @@ export interface OrganizationRepository {
  *    the tRPC context factory when hydrating `session.organization` on
  *    every authenticated request.
  *
- * TODO(Phase-59-multi-org): the singleton invariant (`id='singleton'`)
- * is the seam that turns this service into a true multi-tenant root.
- * When Phase 59 ships:
- *   - drop the singleton constant, accept any id
- *   - every read takes `organizationId` from `session.organization.id`
- *   - add `BusinessUnit` sibling under the org (optional cluster layer)
- * Until then: all tRPC procedures + scope-filter assume exactly one row.
- * See .planning/phases/59-multi-org-hierarchy/59-CONTEXT.md for the
- * proposed `root_head` / `super_head` / `head` reporting tree.
+ * TODO(multi-org): the singleton invariant (`id='singleton'`) is the seam
+ * that turns this service into a true multi-tenant root — drop the singleton
+ * constant, accept any id, and take `organizationId` from
+ * `session.organization.id` on every read. Until then all tRPC procedures +
+ * scope-filter assume exactly one row.
  *
  * The write path ({@link updateOrganization}) is admin-only; the
  * `admin.organization.update` audit event is emitted by the router (where

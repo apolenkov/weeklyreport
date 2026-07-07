@@ -1,7 +1,7 @@
 /* eslint-disable simple-import-sort/imports -- bootstrap order is load-bearing: `reflect-metadata` MUST be the first executed import for Nest DI metadata, and Sentry.init() MUST run before the OTel bootstrap import (http-module hook order); sorting these imports would break runtime instrumentation. */
 import "reflect-metadata";
 
-// Phase 68: Sentry Node SDK init BEFORE OTel (http module hook order).
+// Sentry Node SDK init BEFORE OTel (http module hook order).
 // Sentry hooks Node's `http` module for error context; OTel also patches it.
 // Sentry must run first so its instrumentation wraps the original http, not OTel's wrapper.
 import * as Sentry from "@sentry/nestjs";
@@ -26,7 +26,7 @@ if (process.env.SENTRY_DSN) {
   });
 }
 
-// 37-01: OTel bootstrap MUST run before any module that imports http /
+// OTel bootstrap MUST run before any module that imports http /
 // express / prisma so the SDK can monkey-patch them. startOtel() is a
 // no-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set and OTEL_SDK_DISABLED
 // is not 'true'.
@@ -128,10 +128,9 @@ function normalizeHttpRoute(path: string): string {
 }
 
 async function bootstrap() {
-  // AUTH-01 / Phase 32-C M-05: dev-auth fence runs from
-  // AppModule.onApplicationBootstrap so every NestFactory.create caller
-  // (e2e harness, CLI, this server) is protected uniformly. See
-  // app.module.ts.
+  // The dev-auth fence runs from AppModule.onApplicationBootstrap so every
+  // NestFactory.create caller (e2e harness, CLI, this server) is protected
+  // uniformly. See app.module.ts.
 
   // validateEnv() exits the process on any missing/invalid required var, so by
   // this point every value is present and valid. The schema has no defaults —
@@ -139,7 +138,7 @@ async function bootstrap() {
   // needed for the callers that still read process.env directly.
   const env = validateEnv();
 
-  // Phase 68: pre-bootstrap logger (no CLS yet) routed through NestAppLoggerAdapter
+  // Pre-bootstrap logger (no CLS yet) routed through NestAppLoggerAdapter
   // so all NestJS Logger(context) calls in services/schedulers land in app.log.
   // After CLS is resolved, the adapter is upgraded to the CLS-aware instance.
   const preBootLogger = createAppLogger({
@@ -155,7 +154,7 @@ async function bootstrap() {
     logger: nestLoggerAdapter,
   });
 
-  // Phase 68: global Sentry exception filter — captures 5xx and non-HTTP errors.
+  // Global Sentry exception filter — captures 5xx and non-HTTP errors.
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalFilters(new SentryExceptionFilter(httpAdapter));
 
@@ -170,7 +169,7 @@ async function bootstrap() {
 
   nestLoggerAdapter.setLogger(logger);
   logger.info("bootstrap started");
-  // 37-01: log OTel decision for ops visibility (one line, structured).
+  // Log OTel decision for ops visibility (one line, structured).
   if (otelDecision.started) {
     logger.info("otel sdk started", {
       phase: "otel",
@@ -200,7 +199,7 @@ async function bootstrap() {
   const correlationIdMiddleware = app.get(CorrelationIdMiddleware);
   app.use(correlationIdMiddleware.use.bind(correlationIdMiddleware));
 
-  // 36-04: multi-origin whitelist. FRONTEND_URLS (CSV) optionally extends
+  // Multi-origin whitelist. FRONTEND_URLS (CSV) optionally extends
   // FRONTEND_URL (single). Production env validates no '*' is in the list.
   // CORS reflects the request's origin only when it matches one of the
   // whitelisted entries — wildcard is never allowed.
@@ -334,7 +333,7 @@ async function bootstrap() {
 
   const prismaService = app.get(PrismaService);
 
-  // Phase 35-06: thin wrapper around the email-reminder Queue handle for the
+  // Thin wrapper around the email-reminder Queue handle for the
   // admin DLQ admin tab (`/admin?tab=jobs`). Stays out of the NestJS DI graph
   // for the same reason emailReminderQueue does — see the @nestjs/bullmq DI
   // bug note in bullmq.module.ts.
@@ -348,9 +347,9 @@ async function bootstrap() {
     },
   });
 
-  // HF10 (lead-report-surface-polish): auto carry-over closure shared by the
-  // tRPC createPeriodManual seam and the login provisioning seam below. Best
-  // effort by construction — carryOverIntoOpenedPeriod never rejects.
+  // Auto carry-over closure shared by the tRPC createPeriodManual seam and the
+  // login provisioning seam below. Best effort by construction —
+  // carryOverIntoOpenedPeriod never rejects.
   const autoCarryOverDeps = buildAutoCarryOverDeps({
     prisma: prismaService,
     repository: app.get(CarryOverPrismaRepository),
@@ -384,7 +383,7 @@ async function bootstrap() {
     emailReminderQueue,
     telegramOutboundQueue,
     jobsService,
-    // Phase 52 (UFB-054): telemetry.summary backend.
+    // telemetry.summary backend.
     telemetryService: app.get(TelemetryService),
   });
 
@@ -425,7 +424,7 @@ async function bootstrap() {
     pdfDir,
   });
 
-  // 36-01: rate-limit /trpc with the permissive bucket. The /auth limiter
+  // Rate-limit /trpc with the permissive bucket. The /auth limiter
   // is mounted further down with mountAuthRoutes (it needs to wrap the
   // /auth/* routes the auth module registers).
   const { authLimiter, trpcLimiter, vitalsLimiter } = createRateLimits({
@@ -451,10 +450,10 @@ async function bootstrap() {
   const samlOptions = createSamlStrategyOptions(process.env);
   const samlStrategy = createSamlStrategy(samlOptions);
   const authCtrl = createAuthController(process.env);
-  // AUTH-08 (Phase 29-01): structured audit channel for login-success/fail
+  // Structured audit channel for login-success/fail
   // and logout. Wired here so the same AppLogger drives every audit event.
   const auditLogger = createAuditLogger(logger);
-  // 36-01: gate all /auth/* routes behind the strict auth limiter.
+  // Gate all /auth/* routes behind the strict auth limiter.
   // Express applies middlewares in order, so registering it BEFORE
   // mountAuthRoutes covers every /auth/* route the module mounts.
   // Skip /auth/dev-login — gated by AUTH_DEV_MODE flag (dev-only),
@@ -466,10 +465,10 @@ async function bootstrap() {
     }
     return authLimiter(req, res, next);
   }) as RequestHandler);
-  // refactor-auth-exemplary-layering: the auth module delegates lead-workspace
-  // provisioning to the period + report-section domains. Compose them here in
-  // the composition root: settings are read PER CALL so admin changes propagate
-  // to newly-created periods, exactly as the old inline path did.
+  // The auth module delegates lead-workspace provisioning to the period +
+  // report-section domains. Compose them here in the composition root:
+  // settings are read PER CALL so admin changes propagate to newly-created
+  // periods.
   const policyApplicator = app.get(PolicyApplicatorService);
   const adminService = app.get(AdminService);
   const provisionLeadWorkspace: ProvisionLeadWorkspace = async (userId) => {
@@ -487,7 +486,7 @@ async function bootstrap() {
       reportId,
       userId,
     );
-    // HF10: unconditional, not gated on "just created" — the execution-dedupe
+    // Unconditional, not gated on "just created" — the execution-dedupe
     // short-circuit makes an already-carried period a single indexed read, so
     // every login doubles as a free retry after a transient carry failure.
     // Never rejects; a carry problem must not block login.

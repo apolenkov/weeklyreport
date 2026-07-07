@@ -32,19 +32,19 @@ import * as snapshotWriteQueries from "./admin-snapshot-write.queries";
 /**
  * Prisma implementation of AdminRepository.
  *
- * R3a-4 split: this class is a thin DI facade. The per-domain Prisma logic
+ * This class is a thin DI facade. The per-domain Prisma logic
  * lives in sibling `admin-*.queries.ts` modules (settings / group /
  * reminder-policy / snapshot / period / group-product); each method delegates
  * to a free function taking `this.prisma` (and, for snapshot writes,
- * `this.policyApplicator`). Method signatures are unchanged so the DI token,
- * the AdminRepository interface, and the integration tests are unaffected.
- * All output is parsed through Zod schemas in the query modules (REPO-09).
+ * `this.policyApplicator`). Method signatures match the AdminRepository
+ * interface and the DI token. All output is parsed through Zod schemas in
+ * the query modules.
  */
 @Injectable()
 export class AdminPrismaRepository implements AdminRepository {
   constructor(
     private readonly prisma: PrismaService,
-    // UFB-036 (Phase 44-03): post-create hook that materializes one
+    // post-create hook that materializes one
     // ReminderRule per active ReminderPolicy whose validity window
     // covers the new period's deadline. Wired in admin.module.ts.
     private readonly policyApplicator?: PolicyApplicatorService,
@@ -86,7 +86,7 @@ export class AdminPrismaRepository implements AdminRepository {
     return groupQueries.listStageAssignments(this.prisma, projectId);
   }
 
-  // ---- ReminderPolicy (UFB-036 / Phase 44-02) ----
+  // ---- ReminderPolicy ----
 
   listReminderPolicies(): Promise<ReminderPolicy[]> {
     return policyQueries.listReminderPolicies(this.prisma);
@@ -148,7 +148,7 @@ export class AdminPrismaRepository implements AdminRepository {
     );
   }
 
-  // ---- Periods (UFB-052 / 063 / 067) ----
+  // ---- Periods ----
 
   listPeriodsByState(filter: {
     states: readonly PeriodState[];
@@ -185,7 +185,7 @@ export class AdminPrismaRepository implements AdminRepository {
       this.prisma,
       input,
     );
-    // UFB-036 parity: materialize one ReminderRule per active policy on the
+    // materialize one ReminderRule per active policy on the
     // freshly-created period — like `saveSnapshot` (snapshot periods) and
     // `period-factory` (scheduler/login periods). `now` is forwarded so a
     // backfilled period whose deadline is already past does not arm elapsed
@@ -250,7 +250,7 @@ export class AdminPrismaRepository implements AdminRepository {
     return periodQueries.deleteReport(this.prisma, reportId);
   }
 
-  // ---- Group ↔ Product M:M (UFB-054 / Phase 56-B) ----
+  // ---- Group ↔ Product M:M ----
 
   attachProductToGroup(input: GroupProductEdgeInput): Promise<GroupProduct> {
     return groupProductQueries.attachProductToGroup(this.prisma, input);

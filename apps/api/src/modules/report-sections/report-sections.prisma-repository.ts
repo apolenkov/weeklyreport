@@ -116,8 +116,8 @@ export type PrismaReportSectionWithRelations = NonNullable<
   Awaited<ReturnType<PrismaService["reportSection"]["findUnique"]>>
 > & {
   authorId: string;
-  // UFB-049 / Phase 50-B: late column surfaced explicitly so the
-  // mapPrismaToReportSection type narrows without an `unknown` cast.
+  // late column surfaced explicitly so the mapPrismaToReportSection type
+  // narrows without an `unknown` cast.
   late: boolean;
   author: {
     name: string;
@@ -443,7 +443,7 @@ function toReviewViews(
 
 /**
  * Maps a Prisma ReportSection with all relations to the domain ReportSectionReadModel.
- * Field names are mapped from Prisma conventions to Zod schema conventions (REPO-09).
+ * Field names are mapped from Prisma conventions to Zod schema conventions.
  */
 export function mapPrismaToReportSection(
   row: PrismaReportSectionWithRelations,
@@ -519,10 +519,9 @@ export function mapPrismaToReportSection(
     version: row.version,
     status: row.status,
     submittedAt: row.submittedAt,
-    // UFB-049 / Phase 50-B: late flag stamped by submitSection when
-    // `now > Report.deadline` at submit-time. Coerced to false when
-    // Prisma row predates the migration (defensive — the column default
-    // means this should never fire in practice).
+    // late flag stamped by submitSection when `now > Report.deadline` at
+    // submit-time. Coerced to false when Prisma row predates the migration
+    // (defensive — the column default means this should never fire in practice).
     late: (row as { late?: boolean }).late ?? false,
     projects: [...assignmentsByProjectId.values()]
       .map(({ project, assignments }) => {
@@ -802,10 +801,9 @@ export class ReportSectionsPrismaRepository
   }
 
   /**
-   * UFB-049 / Phase 50-B: deadline-aware report lookup used by the
-   * submitSection grace-period gate. Returns null when the report does
-   * not exist so the service can no-op the gate without ad-hoc
-   * try/catch.
+   * Deadline-aware report lookup used by the submitSection grace-period gate.
+   * Returns null when the report does not exist so the service can no-op the
+   * gate without ad-hoc try/catch.
    */
   async getReportMeta(
     reportId: string,

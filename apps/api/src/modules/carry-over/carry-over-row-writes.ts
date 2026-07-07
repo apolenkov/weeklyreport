@@ -2,8 +2,8 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
 /**
- * Persists one target section's carried rows inside the caller's transaction
- * (extracted from carry-over.prisma-repository.ts saveCarryOver). Both inserts
+ * Persists one target section's carried rows inside the caller's transaction.
+ * Both inserts
  * ride `skipDuplicates`: a carried lineage the target section already holds
  * (the `@@unique([reportSectionId, stableId])` index) is skipped, not a P2002
  * misread as a dedupe-key race — the service also filters such lineages

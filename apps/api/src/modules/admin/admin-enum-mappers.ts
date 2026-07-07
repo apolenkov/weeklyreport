@@ -5,11 +5,10 @@ import type {
 } from "@prisma/client";
 
 /**
- * Wire format ↔ Prisma enum mappers, extracted from
- * `admin.prisma-repository.ts` (R3a-4 max-lines split) so the per-domain
- * query modules (settings / reminder-policy / snapshot) share one boundary.
+ * Wire format ↔ Prisma enum mappers shared by the per-domain query
+ * modules (settings / reminder-policy / snapshot) as one boundary.
  *
- * UFB-036 (Phase 44-02): `ReminderAudience`. The Prisma model uses
+ * `ReminderAudience`. The Prisma model uses
  * screaming-snake (`LEAD_WITH_DRAFT | HEAD_OF_LATE`); the wire/zod contract
  * uses lowercase-hyphen (`lead-with-draft | head-of-late`).
  */
@@ -29,7 +28,7 @@ export const audienceToPrisma: Record<
 };
 
 /**
- * UFB-048 (Phase 48-B): wire ↔ Prisma translators for the `WorkingDays`
+ * Wire ↔ Prisma translators for the `WorkingDays`
  * enum. Mirrors the audience mappers so the DB convention
  * (`MON_FRI | MON_SAT | MON_SUN`) does not leak past this boundary into
  * shared schemas or the React UI.

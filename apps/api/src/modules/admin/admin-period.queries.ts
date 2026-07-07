@@ -5,8 +5,7 @@ import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { PeriodRowFromRepo } from "./admin.service";
 
 /**
- * Period (Report) read queries for the Admin Periods tab, extracted from
- * `admin.prisma-repository.ts` (R3a-4 max-lines split): list/overlap/read/
+ * Period (Report) read queries for the Admin Periods tab: list/overlap/read/
  * delete-guard read/delete. Lifecycle-transition writes (create/update/
  * archive/unarchive) live in `admin-period-lifecycle.ts`.
  */
@@ -94,7 +93,7 @@ export async function listPeriodsByState(
 }
 
 /**
- * UFB-063: find the most recent Report whose [periodStart, periodEnd]
+ * Find the most recent Report whose [periodStart, periodEnd]
  * range overlaps the supplied half-open range. Used by the service's
  * pre-create overlap gate to surface the blocking row's date span.
  * Returns null when the range is free.
@@ -107,7 +106,7 @@ export async function findOverlappingPeriod(
     periodStart: Date;
     periodEnd: Date;
     /**
-     * UFB-067: excluded id so the update path can re-run the overlap
+     * Excluded id so the update path can re-run the overlap
      * gate without self-conflicting against the row being edited. The
      * Prisma `NOT: { id }` clause stays out of the WHERE when the
      * caller omits the field — pure additive change for create callers.
@@ -128,7 +127,7 @@ export async function findOverlappingPeriod(
 }
 
 /**
- * UFB-067: read a single Report's edit envelope. Used by the service's
+ * Read a single Report's edit envelope. Used by the service's
  * updatePeriodManual to surface a `NOT_FOUND` error early and to grab
  * the `from`-snapshot for the audit envelope.
  */

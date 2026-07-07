@@ -169,8 +169,7 @@ async function upsertReminderRules(
 }
 
 /**
- * Whole-snapshot restore (extracted from `admin-snapshot.queries.ts` to keep
- * each module under the size budget). All DB work runs in ONE interactive
+ * Whole-snapshot restore. All DB work runs in ONE interactive
  * transaction so a mid-write failure rolls the entire restore back instead of
  * leaving a partial org state. The restore is ADDITIVE-ONLY: it upserts every
  * supplied row and never deletes/archives a row for being absent from the

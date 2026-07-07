@@ -17,8 +17,7 @@ import type { AdminRepository } from "./admin-shared";
 
 /**
  * Owns projects, reporting groups, stage assignments, and the
- * Group ↔ Product M:M surface. Extracted verbatim from `AdminService`
- * (code-quality-modernization, Wave 3); behavior unchanged.
+ * Group ↔ Product M:M surface.
  */
 export class ProjectAdminService {
   private readonly logger: AppLogger;
@@ -61,7 +60,7 @@ export class ProjectAdminService {
     return this.getSnapshot();
   }
 
-  /** API-12: Upsert a stage assignment (unique on stageId+projectId). */
+  /** Upsert a stage assignment (unique on stageId+projectId). */
   async saveStageAssignment(data: {
     userId: string;
     stageId: string;
@@ -72,20 +71,20 @@ export class ProjectAdminService {
     );
   }
 
-  /** API-12: Delete a stage assignment by ID. */
+  /** Delete a stage assignment by ID. */
   async deleteStageAssignment(id: string): Promise<{ success: true }> {
     await this.repository.deleteStageAssignment(id);
     return { success: true };
   }
 
-  /** API-12: List stage assignments for a project. */
+  /** List stage assignments for a project. */
   async listStageAssignments(projectId: string): Promise<StageAssignment[]> {
     const rows = await this.repository.listStageAssignments(projectId);
     return rows.map((r) => stageAssignmentSchema.parse(r));
   }
 
   // -----------------------------------------------------------------
-  // UFB-054 (Phase 56-B): Group ↔ Product M:M surface
+  // Group ↔ Product M:M surface
   // -----------------------------------------------------------------
 
   /**

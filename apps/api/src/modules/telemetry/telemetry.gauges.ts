@@ -78,7 +78,7 @@ export class TelemetryGaugesPrismaRepository implements TelemetryGaugesPort {
 }
 
 /**
- * 52-A (UFB-054): wires the two query-backed gauges to the prom-client
+ * Wires the two query-backed gauges to the prom-client
  * registry via Gauge.collect async callbacks. The callbacks run at Prom
  * scrape time (every ~15s in production), so the queries above are
  * effectively rate-limited to scrape cadence — no scheduler needed.

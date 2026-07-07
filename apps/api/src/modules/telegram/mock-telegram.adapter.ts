@@ -1,4 +1,4 @@
-// Phase 55 (UFB-056): MockTelegramAdapter — deterministic stub used until
+// MockTelegramAdapter — deterministic stub used until
 // the org activates a real Telegram bot. Logs the payload to stderr as a
 // structured JSON line (so it shows up in the API log stream just like a
 // real BullMQ worker event) and always returns `{ ok: true }`.

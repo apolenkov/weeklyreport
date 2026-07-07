@@ -62,8 +62,8 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
         id: job.jobId,
         reportId: job.reportId,
         status: (pdfStatusToDb[job.status] ?? "pending") as "pending",
-        // Phase 23-01: thread session userId for audit; fall back to 'system'
-        // for non-tRPC callers (workers, scripts) so the column stays NOT NULL.
+        // Thread session userId for audit; fall back to 'system' for non-tRPC
+        // callers (workers, scripts) so the column stays NOT NULL.
         requestedBy: requestedBy ?? "system",
         filePath: job.artifactUrl,
         error: null,
@@ -140,8 +140,8 @@ export function toAssembledReport(
       section as unknown as PrismaReportSectionWithRelations,
     ),
   );
-  // fix-published-empty-stage-risk-floor (D3 / blind-spot #7): compute the PDF
-  // top-line totals from the floored `trafficLight` of the mapped sections, NOT
+  // fix-published-empty-stage-risk-floor: compute the PDF top-line totals from
+  // the floored `trafficLight` of the mapped sections, NOT
   // from raw `projectStatuses`, so the per-product cards and the top-line totals
   // agree inside the same PDF. `computePortfolioOverviewFromReadSections` re-
   // applies the same own-risk floor the mapper baked into each card.

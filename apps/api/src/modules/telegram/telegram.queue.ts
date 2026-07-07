@@ -1,12 +1,12 @@
-// Phase 55 (UFB-056): Telegram outbound BullMQ worker — seeds-only.
+// Telegram outbound BullMQ worker — seeds-only.
 //
 // The worker consumes jobs of shape `{ chatId: string; text: string }` from
 // the `telegram-outbound` queue (registered in BullMQModule) and dispatches
-// them through the resolved TelegramAdapter. In Phase 55 the only producer
+// them through the resolved TelegramAdapter. The only producer
 // is `admin.testTelegramSend`, which is admin-only and proves the wiring
 // without needing a real bot.
 //
-// Worker shape mirrors EmailReminderProcessor (Phase 28-03) deliberately:
+// Worker shape mirrors EmailReminderProcessor deliberately:
 //   - raw `new Worker(...)` on OnModuleInit, not @Processor — works around
 //     the @nestjs/bullmq 11 + NestJS 11 DiscoveryService DI bug.
 //   - structured-JSON failure log on the `failed` event so the existing

@@ -158,7 +158,7 @@ export interface LeadFormRepository {
     userId: string,
   ): Promise<{ coOwnsShared: boolean; rows: CrossAuthorSectionRow[] }>;
   /**
-   * SC-165: Revoke every submitted section in a report. scope-leadform-revoke-authz:
+   * Revoke every submitted section in a report. scope-leadform-revoke-authz:
    * `scope` is the caller's `reportSection` group-scope fragment spread into the
    * `updateMany` where, so a head revokes only their own group's submissions
    * (admin scope is `{}` → global).

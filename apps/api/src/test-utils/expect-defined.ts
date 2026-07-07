@@ -1,4 +1,4 @@
-// Phase 34-06 — type-narrow helper for tests.
+// Type-narrow helper for tests.
 //
 // Replaces `foo!.bar` (non-null assertion, lint warning) with
 // `expectDefined(foo).bar` (runtime check + type narrow). Use in

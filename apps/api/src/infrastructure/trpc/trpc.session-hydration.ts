@@ -6,7 +6,7 @@ import {
 import { PrismaService } from "../prisma/prisma.service.js";
 
 /**
- * UFB-047 / Phase 48-A: 5-second TTL cache for the Organization singleton.
+ * 5-second TTL cache for the Organization singleton.
  *
  * The org row is read on every authenticated tRPC call to hydrate
  * `session.organization`. A short TTL keeps admin renames visible within
@@ -25,7 +25,7 @@ export function clearOrgCache(): void {
 }
 
 /**
- * UFB-040 / Phase 46-01: viewer sessions need an up-to-date list of granted
+ * Viewer sessions need an up-to-date list of granted
  * `ReportingGroup.id`s for groupScopeFilter. We hydrate per-request rather
  * than baking into the JWT because admin can grant/revoke at any time and
  * stale JWTs would leak (or block) access.
@@ -59,7 +59,7 @@ async function hydrateReportingGroupName(
 }
 
 /**
- * UFB-047 / Phase 48-A: hydrate the singleton organization identity onto
+ * Hydrate the singleton organization identity onto
  * the session so authenticated routes can render the brand without a
  * second round-trip. We DO NOT bake this into the JWT for two reasons:
  *   1. JWTs are 1h-lived; admin renames would not propagate until refresh.
@@ -77,7 +77,7 @@ async function hydrateOrganization(
 ): Promise<UserSession> {
   const now = Date.now();
   if (!orgCache || orgCache.expiresAt < now) {
-    // UFB-060: seed defaults are generic — concrete tenant brand stays
+    // Seed defaults are generic — concrete tenant brand stays
     // in the seed file / admin-edited Organization row, never in code.
     const row = await prisma.organization.upsert({
       where: { id: "singleton" },

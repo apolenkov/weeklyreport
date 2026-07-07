@@ -6,7 +6,7 @@ import { createGzip } from "node:zlib";
 import { MS_PER_DAY, MS_PER_HOUR } from "@customreport/shared";
 
 /**
- * File sink for the app logger (extracted from logger.ts): size-based rotation
+ * File sink for the app logger: size-based rotation
  * into gzip archives, age-based archive pruning, and a per-sink serialized
  * write queue so concurrent emit() calls never interleave appendFile with a
  * rotation. Fire-and-forget at the call site is preserved by chaining onto the

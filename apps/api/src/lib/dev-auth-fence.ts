@@ -1,5 +1,5 @@
 /**
- * AUTH-01 (Phase 29-04): boot-time fence (CC-2 fail-closed).
+ * Boot-time fence (fail-closed).
  *
  * Refuses to start the API in `NODE_ENV=production` whenever either dev-auth
  * env switch is active. This is a configuration-time check (verified once at
@@ -10,7 +10,7 @@
  * The fence is intentionally narrow:
  *  - Throws on `NODE_ENV==='production'` only — dev/test/staging are unaffected.
  *  - Considers both `AUTH_DEV_MODE` (legacy) and `AUTH_DEV_MODE_ALLOW_TEST`
- *    (Phase 28 staged switch) — both must be off in production.
+ *    (staged switch) — both must be off in production.
  *  - Symmetric handling: either flag → throw, neither → pass through.
  */
 export function assertNoDevAuthInProduction(env: NodeJS.ProcessEnv): void {

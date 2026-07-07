@@ -22,7 +22,7 @@ import {
 } from "./analytics-period-math.js";
 
 /**
- * AUTH-04 (Phase 28-01) parity: only published reports are visible to the
+ * Parity: only published reports are visible to the
  * analytics surface, identical to ArchivePrismaRepository.PUBLISHED_FLOOR.
  */
 const PUBLISHED_FLOOR = { status: "published" as const };

@@ -130,7 +130,7 @@ interface RouterDeps {
   pdfExportService: PdfExportService;
   adminService: AdminService;
   /**
-   * UFB-047 / Phase 48-A: organization identity surface.
+   * Organization identity surface.
    *  - `org.getPublic` (publicProcedure) reads shortName/fullName for the
    *    anonymous landing hero.
    *  - `admin.getOrganization` / `admin.updateOrganization` manage the
@@ -142,7 +142,7 @@ interface RouterDeps {
   organizationService?: OrganizationService;
   remindersService: RemindersService;
   /**
-   * HF10 (lead-report-surface-polish): best-effort auto carry-over, fired
+   * lead-report-surface-polish: best-effort auto carry-over, fired
    * when a manually created period is minted open (a scheduled-born one is
    * carried later, at its scheduled→open flip). Never rejects. Optional so
    * role-coverage test fixtures that build the router with `{}` deps keep
@@ -154,19 +154,19 @@ interface RouterDeps {
   weeklyReportService: WeeklyReportService;
   leadFormService: LeadFormService;
   /**
-   * Phase 30-01 (ANAL-01): analytics surface — traffic light history,
+   * Analytics surface — traffic light history,
    * lead velocity, period comparison. Cached via Redis with prefix-wide
    * invalidation on PeriodService.publishPeriod / reopenPeriod.
    */
   analyticsService: AnalyticsService;
   /**
-   * Phase 39-05 (PERF-05): full-text search across Item / Risk / Decision
+   * Full-text search across Item / Risk / Decision
    * / Project. tsvector + GIN, Russian text-search config. Role-gated
    * scope via SearchAuthorizationError → FORBIDDEN.
    */
   searchService: SearchService;
   /**
-   * UX-18 (Phase 35-08): live activity feed for the head/admin dashboard
+   * Live activity feed for the head/admin dashboard
    * "Активность за текущий период" panel. One row per lead's section in
    * the open period, with section-level counts + last-edit timestamp.
    * Polled every 15s by the dashboard.
@@ -180,13 +180,13 @@ interface RouterDeps {
    */
   projectActivityService: ProjectActivityService;
   /**
-   * NOTIF-06 (Phase 29-05): read-only BullMQ Queue handle used by
+   * Read-only BullMQ Queue handle used by
    * `admin.dlqCount` to surface failed-job count. Optional so existing test
    * fixtures can call createAppRouter(stubDeps) without instantiating Redis.
    */
   emailReminderQueue?: Queue;
   /**
-   * UFB-056 / Phase 55-3: BullMQ Queue handle for `telegram-outbound`.
+   * BullMQ Queue handle for `telegram-outbound`.
    * Drives the admin smoke-test (`admin.testTelegramSend`) so the wiring
    * (queue → worker → MockTelegramAdapter) is provable without an active
    * bot. Optional so role-coverage fixtures that build the router with
@@ -195,7 +195,7 @@ interface RouterDeps {
    */
   telegramOutboundQueue?: Queue;
   /**
-   * Phase 35-06: BullMQ DLQ admin surface — `admin.jobs.listFailed` /
+   * BullMQ DLQ admin surface — `admin.jobs.listFailed` /
    * `admin.jobs.retryFailed`. Optional so test fixtures and the role-coverage
    * harness can build the router with `{}` deps; in that mode the service
    * is constructed locally from an undefined Queue and every call returns
@@ -203,7 +203,7 @@ interface RouterDeps {
    */
   jobsService?: JobsService;
   /**
-   * Phase 52 (UFB-054): product-telemetry surface — `telemetry.summary`
+   * Product-telemetry surface — `telemetry.summary`
    * returns the leadership-readable KPI bundle (reports submitted, on-time
    * ratio, active leads, late sections, pending reopens, PDF export
    * volume, 4-week sparkline). Optional so role-coverage test fixtures
@@ -212,7 +212,7 @@ interface RouterDeps {
    */
   telemetryService?: TelemetryService;
   /**
-   * A2 (UAT-v7 2026-05-12): Redis-backed session revocation for
+   * Redis-backed session revocation for
    * deactivate/activate user. Optional so existing role-coverage test
    * fixtures that build the router with `{}` deps keep compiling —
    * when undefined the mutations still flip isActive in Prisma but skip
@@ -356,7 +356,7 @@ async function assertLeadInScope(
 
 export function createAppRouter(deps: RouterDeps) {
   return router({
-    // === Auth namespace (v5.0 — AUTH-04) ===
+    // === Auth namespace ===
     auth: router({
       me: publicProcedure.query(({ ctx }) => {
         // ctx.session is UserSession | null; null means unauthenticated.
@@ -364,12 +364,12 @@ export function createAppRouter(deps: RouterDeps) {
         // from "still loading" without throwing — preventing the 401
         // interceptor from triggering an immediate redirect on every load.
         //
-        // UFB-047 / Phase 48-A: `session.organization` is hydrated by the
+        // `session.organization` is hydrated by the
         // context factory (mirrors viewerGroupAccess pattern) so the web
         // chrome can render the brand without a second round-trip.
         return ctx.session;
       }),
-      // fix-report-surface-integrity W2 (task 3.3): the `/print` web route
+      // fix-report-surface-integrity: the `/print` web route
       // gate needs the one bit `me` cannot give it — whether the inbound
       // cookie verified as a PDF-export-scoped JWT (`ctx.isPdfExport`) and the
       // bound `reportId` (`ctx.pdfReportId`). For a `requestedBy` PDF token the
@@ -387,7 +387,7 @@ export function createAppRouter(deps: RouterDeps) {
       }),
     }),
 
-    // === Organization namespace (UFB-047 / Phase 48-A) ===
+    // === Organization namespace ===
     // Public read-only surface for the anonymous landing page. Returns
     // only the `{ shortName, fullName }` pair — no timestamps, no ids —
     // so future schema fields cannot leak unintentionally to the public.
@@ -395,7 +395,7 @@ export function createAppRouter(deps: RouterDeps) {
       getPublic: publicProcedure.query(async () => {
         try {
           if (!deps.organizationService) {
-            // UFB-060: Fallback for in-memory test fixtures. Generic
+            // Fallback for in-memory test fixtures. Generic
             // identity — the concrete tenant brand lives in the seed
             // file / admin-edited Organization row, never here.
             return DEFAULT_ORGANIZATION_IDENTITY;
@@ -865,10 +865,8 @@ export function createAppRouter(deps: RouterDeps) {
 
     // === Review namespace ===
     review: router({
-      // AUTH-04 (Phase 28-01): review.dashboard hardened from protectedProcedure
-      // → headProcedure. Defense-in-depth: only heads (and admins, aliased)
-      // see the submission dashboard. assembledReport / publish were already
-      // headProcedure.
+      // review.dashboard is headProcedure — defense-in-depth: only heads (and
+      // admins, aliased) see the submission dashboard.
       dashboard: headProcedure.query(async ({ ctx }) => {
         try {
           // Resolve the current editable period from the DB through the shared
@@ -1003,7 +1001,7 @@ export function createAppRouter(deps: RouterDeps) {
 
     // === PDF Export namespace ===
     pdfExport: router({
-      // W2 (fix-report-surface-integrity): Export-PDF is gated by
+      // fix-report-surface-integrity: Export-PDF is gated by
       // `leadershipProcedure` (head + admin + viewer). Lead is EXCLUDED and
       // gets FORBIDDEN — a lead is the data subject of the report, not an
       // exporter; the lead UI surfaces a ComingSoon control instead of firing
@@ -1018,13 +1016,13 @@ export function createAppRouter(deps: RouterDeps) {
         .input(z.object({ reportId: z.uuid() }))
         .mutation(async ({ input, ctx }) => {
           try {
-            // Phase 23-01: thread session userId so the pdf_export_jobs row
+            // Thread session userId so the pdf_export_jobs row
             // attributes the request to the requester, not 'system'.
             return await deps.pdfExportService.requestPdfExport(
               input.reportId,
               ctx.session.userId,
               undefined,
-              // Phase 52-A (UFB-054): role label for
+              // Role label for
               // customreport_pdf_export_requests_total{role}.
               ctx.session.role,
             );
@@ -1076,7 +1074,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * UFB-056 / Phase 55-4: read the external-integrations status bundle
+       * Read the external-integrations status bundle
        * for the Settings → Integrations sub-tab. v1 carries Telegram only.
        * Telegram is considered «active» only when both the API has
        * `TG_BOT_TOKEN` set AND at least one TelegramBinding row has
@@ -1103,7 +1101,7 @@ export function createAppRouter(deps: RouterDeps) {
       }),
 
       /**
-       * UFB-056 / Phase 55-4: admin smoke-test for the telegram-outbound
+       * Admin smoke-test for the telegram-outbound
        * queue. Enqueues a single job that the in-process TelegramProcessor
        * picks up and forwards to the MockTelegramAdapter (or the real bot
        * once activated). Returns `{ jobId }` so the admin UI can confirm
@@ -1145,7 +1143,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * UFB-047 / Phase 48-A: read the singleton `Organization` row for
+       * Read the singleton `Organization` row for
        * the Settings → Identity tab. The full row (including timestamps)
        * is returned so the admin form can show a "last updated" hint;
        * the public landing page uses `org.getPublic` instead.
@@ -1165,7 +1163,7 @@ export function createAppRouter(deps: RouterDeps) {
       }),
 
       /**
-       * UFB-047 / Phase 48-A: update the singleton `Organization` row.
+       * Update the singleton `Organization` row.
        * Emits the dedicated `admin.organization.update` audit event in
        * addition to the generic `mutation` envelope so SIEM rules and
        * brand-tampering dashboards can filter on `event` without parsing
@@ -1254,7 +1252,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * UFB-036 (Phase 44-02): per-period reminder rules are no longer
+       * Per-period reminder rules are no longer
        * written through the admin tab. Rules are derived from
        * `ReminderPolicy` rows by the period scheduler in 44-03+. The
        * read path (admin.getSnapshot.reminderRules) stays as-is so the
@@ -1271,7 +1269,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * UFB-036 (Phase 44-02): list all reminder policies (active +
+       * List all reminder policies (active +
        * archived). Used by the admin tab to render the policy editor
        * grid.
        */
@@ -1284,7 +1282,7 @@ export function createAppRouter(deps: RouterDeps) {
       }),
 
       /**
-       * UFB-036 (Phase 44-02 / Phase 44-05): upsert a reminder policy
+       * Upsert a reminder policy
        * by id. The dedicated `admin.policy.save` audit event is emitted
        * in addition to the generic `mutation` envelope so SIEM rules
        * filtering on `event` (and dashboards splitting create vs update)
@@ -1312,7 +1310,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * UFB-036 (Phase 44-02 / Phase 44-05): archive a reminder policy.
+       * Archive a reminder policy.
        * Repository hard-deletes when no derived rules exist; otherwise
        * flips the `active` flag. The dedicated `admin.policy.remove`
        * audit event is emitted on the success path only — failed
@@ -1337,10 +1335,10 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * UFB-052 (Phase 51-B): paginated period list for the redesigned
+       * Paginated period list for the redesigned
        * Admin → Periods tab. Filters by lifecycle bucket
        * (`active | archive | <PeriodState>`) using the
-       * `(periodState, periodStart desc)` index added in 51-C. Returns
+       * `(periodState, periodStart desc)` index. Returns
        * rich rows with server-precomputed `canReopen` / `canArchive`
        * so the UI does not need to know the reopen-policy rules.
        */
@@ -1365,7 +1363,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * UFB-063: admin escape hatch that mints a Period without waiting
+       * Admin escape hatch that mints a Period without waiting
        * for the daily `PeriodCreatorScheduler` (00:05 UTC cron). Fresh
        * dev/staging DBs were blocked on the cron tick before this
        * procedure landed; admins can now seed a period from the
@@ -1405,7 +1403,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * UFB-067: admin in-place edit for an existing Period's date
+       * Admin in-place edit for an existing Period's date
        * envelope + weekLabel. Symmetric counterpart to
        * `createPeriodManual` so the row-level Edit icon in the Periods
        * tab can reuse the same `<CreatePeriodDialog>` UI in "edit" mode.
@@ -1469,9 +1467,9 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * UFB-052 (Phase 51-B): manual archive. Sets both `archived=true`
+       * Manual archive. Sets both `archived=true`
        * and `periodState='archived'` atomically so the two-state-machine
-       * invariant from 51-C is preserved.
+       * invariant is preserved.
        */
       archivePeriod: adminProcedure
         .input(z.object({ periodId: z.uuid() }))
@@ -1484,7 +1482,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * UFB-052 (Phase 51-B): manual un-archive — flips `archived=false`
+       * Manual un-archive — flips `archived=false`
        * and derives the next `periodState` from the legacy
        * `(status, periodStatus)` tuple at write time (the new state
        * column lost the pre-archive distinction when it was overwritten
@@ -1501,7 +1499,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * A27: delete a period (Report) and cascade-delete all child rows.
+       * Delete a period (Report) and cascade-delete all child rows.
        * Guard: cannot delete published periods.
        */
       deleteReport: adminProcedure
@@ -1525,7 +1523,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * A2 (UAT-v7 2026-05-12): deactivate a user — sets isActive=false in
+       * Deactivate a user — sets isActive=false in
        * Prisma and adds the userId to the Redis revoked set so any in-flight
        * JWT session is rejected immediately by the context factory.
        */
@@ -1545,7 +1543,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * A2 (UAT-v7 2026-05-12): re-activate a user — sets isActive=true in
+       * Re-activate a user — sets isActive=true in
        * Prisma and removes the userId from the Redis revoked set so new logins
        * can proceed normally.
        */
@@ -1656,7 +1654,7 @@ export function createAppRouter(deps: RouterDeps) {
       }),
 
       // -----------------------------------------------------------------
-      // UFB-054 (Phase 56-B): explicit Group ↔ Product M:M surface.
+      // Explicit Group ↔ Product M:M surface.
       //
       // Mutations are idempotent (attach upserts on the unique tuple;
       // detach uses deleteMany so a double-click is harmless). Reads are
@@ -1708,8 +1706,8 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      // NOTIF-06 (Phase 29-05): BullMQ DLQ count — failed-jobs set of the
-      // email-reminder queue. adminProcedure (admin/head only — D-AUTH-03).
+      // BullMQ DLQ count — failed-jobs set of the
+      // email-reminder queue. adminProcedure (admin/head only).
       // Returns { count: 0 } when the Queue handle is absent (e.g. unit test
       // wiring) so the procedure is always callable.
       dlqCount: adminProcedure.query(async () => {
@@ -1724,7 +1722,7 @@ export function createAppRouter(deps: RouterDeps) {
         }
       }),
 
-      // v8.1: queryable in-app mutation audit history. The log rows are
+      // Queryable in-app mutation audit history. The log rows are
       // written by mutationAuditMiddleware and keyed by the same correlation id
       // as the structured app.log line for support/debug lookups.
       actionLog: router({
@@ -1767,7 +1765,7 @@ export function createAppRouter(deps: RouterDeps) {
           }),
       }),
 
-      // Phase 35-06: BullMQ DLQ admin surface. Lifts the Bull Board view
+      // BullMQ DLQ admin surface. Lifts the Bull Board view
       // (/admin/queues) into the in-app /admin?tab=jobs page so the head can
       // triage failed jobs without leaving the SPA. adminProcedure (admin/head
       // only). Mutation audit (procedure='admin.jobs.retryFailed', target=jobId)
@@ -1838,7 +1836,7 @@ export function createAppRouter(deps: RouterDeps) {
           try {
             const status = input?.status ?? "pending";
             const statusFilter = status === "all" ? {} : { status };
-            // reopen-request-lifecycle (D8): a head sees only its own group's
+            // reopen-request-lifecycle: a head sees only its own group's
             // requests; admin is global ({}). The scope fragment is a
             // ReportSectionWhereInput, so it nests UNDER reportSection — these
             // are ReopenRequest queries, not ReportSection queries.
@@ -1897,7 +1895,7 @@ export function createAppRouter(deps: RouterDeps) {
         )
         .mutation(async ({ input, ctx }) => {
           try {
-            // reopen-request-lifecycle (D8): scoped re-load — a head cannot
+            // reopen-request-lifecycle: scoped re-load — a head cannot
             // decide an out-of-group request by passing its id (the scoped
             // findFirst finds nothing → reject). Admin scope is {} (global).
             const scope = groupScopeFilter(ctx.session, "reportSection");
@@ -1915,7 +1913,7 @@ export function createAppRouter(deps: RouterDeps) {
             const reviewNote = input.note?.trim() ? input.note.trim() : null;
             const decidedBy = ctx.session.userId;
 
-            // reopen-request-lifecycle (D6): the decision is race-safe against a
+            // reopen-request-lifecycle: the decision is race-safe against a
             // second decider (head + admin can both act). The status re-check
             // and the section flip happen inside ONE transaction via conditional
             // updateMany; only the row-count-1 winner takes effect.
@@ -1943,7 +1941,7 @@ export function createAppRouter(deps: RouterDeps) {
 
               // Approve = flip the section back to draft so the lead can edit
               // again, but ONLY if it is still submitted. A separate revoke can
-              // have moved it to draft while the request stayed pending.
+              // have flipped it to draft while the request stayed pending.
               const flipped = await tx.reportSection.updateMany({
                 where: { id: req.reportSectionId, status: "submitted" },
                 data: {
@@ -1979,7 +1977,7 @@ export function createAppRouter(deps: RouterDeps) {
             });
 
             // Loser of a concurrent decision: changed nothing. A 409 CONFLICT
-            // is the honest code (the request moved out from under this call);
+            // is the honest code (the request slipped out from under this call);
             // no funnel metric.
             if (outcome.kind === "already-processed") {
               throw new TRPCError({
@@ -1996,7 +1994,7 @@ export function createAppRouter(deps: RouterDeps) {
                 staleAutoClosed: true as const,
               };
             }
-            // Phase 52-A (UFB-054): only a winning, real decision increments the
+            // Only a winning, real decision increments the
             // funnel, AFTER the transaction commits.
             customreportReopenRequestsTotal.inc({ state: outcome.decision });
             return {
@@ -2011,7 +2009,7 @@ export function createAppRouter(deps: RouterDeps) {
 
       pendingReopenCount: headProcedure.query(async ({ ctx }) => {
         try {
-          // reopen-request-lifecycle (D8): same group scope as the list — a
+          // reopen-request-lifecycle: same group scope as the list — a
           // head counts only its own group's pending requests; admin global.
           const scope = groupScopeFilter(ctx.session, "reportSection");
           const count = await deps.prisma.reopenRequest.count({
@@ -2025,7 +2023,7 @@ export function createAppRouter(deps: RouterDeps) {
     }),
 
     // === Archive namespace ===
-    // AUTH-04 (Phase 28-01): archive.list / archive.detail use anyRoleProcedure
+    // archive.list / archive.detail use anyRoleProcedure
     // because heads, leads, admins, and viewers all consume this surface but
     // with different row visibility. The Prisma `where` filter at the service
     // layer (driven by ctx.session.role) is the actual gate — viewers can
@@ -2054,7 +2052,7 @@ export function createAppRouter(deps: RouterDeps) {
               ctx.session.role,
               ctx.session,
             );
-            // TD-01: probe detection — non-admin fetched a report but group
+            // Probe detection — non-admin fetched a report but group
             // scope filtered out all sections. May false-positive on reports
             // that genuinely have no sections; acceptable given the low rate
             // of empty published reports in this domain.
@@ -2077,7 +2075,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * A22: head-only mutation to move a published report into the archive.
+       * Head-only mutation to move a published report into the archive.
        * Sets `archived=true` on the Report row via adminService.archivePeriod
        * (which uses Report.id — "period" and "report" are the same table).
        * After this call the report appears in archive.list and is no longer
@@ -2095,7 +2093,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * A22: head-only mutation to un-archive a report (move back to
+       * Head-only mutation to un-archive a report (move back to
        * "published but not archived"). Sets `archived=false` via
        * adminService.unarchivePeriod and removes it from archive.list.
        */
@@ -2193,7 +2191,7 @@ export function createAppRouter(deps: RouterDeps) {
           z.object({
             reportId: z.uuid(),
             ruleId: z.uuid().optional(),
-            // T-F4-4 (plan §23.4): scope dispatch to a single lead so the
+            // Scope dispatch to a single lead so the
             // Head Dashboard Remind button can ping one author without
             // exposing emails to the client. When undefined, falls back to
             // the original "every draft author" behaviour used by the
@@ -2273,15 +2271,15 @@ export function createAppRouter(deps: RouterDeps) {
                 reason: "no-matching-section",
               };
             }
-            // Race-safe attribution (Codex review fix): call the service
+            // Race-safe attribution: call the service
             // first — it atomically inserts via the dedupeKey @unique index,
             // so two concurrent clicks never produce two emails. Then read
             // the execution back and compare `createdAt` to the call's
             // start. If it lies inside the call window it is genuinely new,
             // otherwise the service deduplicated against a prior dispatch.
-            // Old pattern (pre-read + service call) had a TOCTOU race where
-            // both concurrent callers saw `existing === null` and both
-            // incremented `dispatched`, mis-reporting the counter even
+            // A pre-read + service call would reintroduce a TOCTOU race where
+            // both concurrent callers see `existing === null` and both
+            // increment `dispatched`, mis-reporting the counter even
             // though only one email actually went out.
             const fireAtIso = rule.fireAt.toISOString();
             let dispatched = 0;
@@ -2345,7 +2343,7 @@ export function createAppRouter(deps: RouterDeps) {
     }),
 
     // === Weekly Report namespace (v4.0) ===
-    // AUTH-04 (Phase 28-01): weeklyReport.get uses anyRoleProcedure because
+    // weeklyReport.get uses anyRoleProcedure because
     // viewers, leads, heads, and admins all consume this surface. The
     // service layer scopes the read to published periods for viewers.
     weeklyReport: router({
@@ -2359,7 +2357,7 @@ export function createAppRouter(deps: RouterDeps) {
               ctx.session.role,
               ctx.session,
             );
-            // R3a: no-period is a normal 200 response, not an error path.
+            // No-period is a normal 200 response, not an error path.
             if (result.status === "no-period") {
               ctx.logger.info("weekly report: no active period", {
                 phase: WEEKLY_REPORT_LOAD_LOG_PHASE,
@@ -2372,7 +2370,7 @@ export function createAppRouter(deps: RouterDeps) {
               const { crossGroup: _crossGroup, ...publicResult } = result;
               return publicResult;
             }
-            // D2/D3: emit scopeAccessed once when a non-admin read surfaces
+            // Emit scopeAccessed once when a non-admin read surfaces
             // cross-group products. crossGroup is internal — strip before return.
             const { crossGroup, ...publicResult } = result;
             if (
@@ -2510,9 +2508,8 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       // TODO(versions-v2): the version-history procedures (versions,
-      // restoreVersion, getVersion, createSnapshot, setVersionPinned) lived
-      // here until the full removal of version snapshots; re-add them when
-      // versions-v2 is designed.
+      // restoreVersion, getVersion, createSnapshot, setVersionPinned) are
+      // deferred; re-add them when versions-v2 is designed.
 
       revoke: headProcedure
         .input(z.object({ reportSectionId: z.uuid() }))
@@ -2580,10 +2577,10 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      // scope-lead-report-to-own-contribution (7a/7b) — the lead form's
+      // scope-lead-report-to-own-contribution — the lead form's
       // "Everyone" visibility lens. Full foreign content, gated by report
       // access AND product co-ownership for ALL callers (no head/admin
-      // bypass — see design D6); the role is intentionally NOT passed.
+      // bypass); the role is intentionally NOT passed.
       crossAuthorContent: protectedProcedure
         .input(z.object({ reportId: z.uuid() }))
         .query(async ({ input, ctx }) => {
@@ -2598,8 +2595,8 @@ export function createAppRouter(deps: RouterDeps) {
         }),
     }),
 
-    // === Analytics namespace (Phase 30-01..02) ===
-    // ANAL-01..03 use anyRoleProcedure because heads, leads, admins, and
+    // === Analytics namespace ===
+    // These procedures use anyRoleProcedure because heads, leads, admins, and
     // viewers all consume trend data. The repository layer enforces the
     // published-only floor (PUBLISHED_FLOOR mirrors archive.prisma-repository
     // pattern), so viewer sessions only ever see published-period rows.
@@ -2639,7 +2636,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
     }),
 
-    // === Search namespace (Phase 39-05 — PERF-05) ===
+    // === Search namespace ===
     // Full-text search across Item / Risk / Decision / Project. The service
     // layer validates the input and gates `scope='all'` to head/admin via
     // SearchAuthorizationError; the router maps that to FORBIDDEN.
@@ -2674,7 +2671,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
     }),
 
-    // === Activity namespace (UX-18, Phase 35-08) ===
+    // === Activity namespace ===
     // Live activity feed for the head/admin dashboard "Активность за
     // текущий период" panel. headProcedure — only heads (and admins,
     // aliased) consume the per-lead status snapshot.
@@ -2756,7 +2753,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
     }),
 
-    // === Telemetry namespace (Phase 52 / UFB-054) ===
+    // === Telemetry namespace ===
     // Product-KPI surface for the in-app dashboard card. Authorised by
     // `leadershipProcedure` (head + admin + viewer); lead role is denied
     // because lead is the data subject of these KPIs, not a consumer.
