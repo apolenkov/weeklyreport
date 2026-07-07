@@ -3,7 +3,7 @@ import { z } from "zod";
 import { safeText } from "./report-primitives.schema";
 
 /**
- * 39-05 (PERF-05): full-text search.
+ * Full-text search.
  *
  * The search procedure (`search.query`) returns a flat array of hits across
  * Item / Risk / Decision / Project. Each hit carries a discriminated `type`
