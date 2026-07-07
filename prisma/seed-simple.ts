@@ -2,7 +2,7 @@
  * SIMPLE seed — minimal demo data for live presentation.
  *
  * Clean slate with just enough rows to show every feature without overwhelming:
- *   - 1 head, 1 viewer, 1 admin, 6 leads (RU names — Phase 35-08)
+ *   - 1 head, 1 viewer, 1 admin, 6 leads (RU names)
  *   - 6 products (one per lead)
  *   - 7 SDLC stages
  *   - 8 reports (active, published, archived history, scheduled future)
@@ -14,15 +14,14 @@
  * `pnpm db:seed:simple` only — the migrations.seed in prisma.config.ts
  * still points at seed.ts.
  *
- * Phase 35-08 (FIX-01): the active period is anchored to the *current*
- * week (Monday..Sunday in UTC) so weeklyReport.get always finds an open
- * report covering today. Previously the static 2026-04-13..04-19 window
- * drifted into the past after that week ended → WeeklyReportDomainError
- * 'No active report period found' on every page load.
+ * The active period is anchored to the *current* week (Monday..Sunday in
+ * UTC) so weeklyReport.get always finds an open report covering today. A
+ * static window would drift into the past once its week ends →
+ * WeeklyReportDomainError 'No active report period found' on every page load.
  *
- * Phase 35-08 (RU): every Item.text / Risk.{risk,impact,mitigation} /
- * Decision.text / Priority.text / Project.name / User.name is in Russian
- * Cyrillic. Realistic content for a Development department demo.
+ * Every Item.text / Risk.{risk,impact,mitigation} / Decision.text /
+ * Priority.text / Project.name / User.name is in Russian Cyrillic. Realistic
+ * content for a Development department demo.
  *
  * Run:
  *   pnpm db:seed:simple
@@ -66,8 +65,8 @@ const LEAD_IGOR = "a0000000-0000-4000-8000-000000000013";
 const LEAD_DMITRY = "a0000000-0000-4000-8000-000000000014";
 const LEAD_OLGA = "a0000000-0000-4000-8000-000000000015";
 const LEAD_SERGEY = "a0000000-0000-4000-8000-000000000016";
-// P13: PM (non-technical) leads — MOBILE/CLOUD/DEVOPS only
-// F1 (v8.3): Boris (LEAD_MOBILE_PM) also owns Plan+Analysis+Design on PROD_CRM,
+// PM (non-technical) leads — MOBILE/CLOUD/DEVOPS only.
+// Boris (LEAD_MOBILE_PM) also owns Plan+Analysis+Design on PROD_CRM,
 // Vasily owns Dev+Test+DevOps+Support (4/7) — enables cross-author readonly UAT demo.
 const LEAD_MOBILE_PM = "a0000000-0000-4000-8000-000000000022";
 const LEAD_CLOUD_PM = "a0000000-0000-4000-8000-000000000023";
@@ -83,7 +82,7 @@ const PROD_CLOUD = "a0000000-0000-4000-8000-000000000205";
 const PROD_DEVOPS = "a0000000-0000-4000-8000-000000000207";
 const PROD_PAYMENTS = "a0000000-0000-4000-8000-000000000209";
 const PROD_HR = "a0000000-0000-4000-8000-00000000020b";
-// P61: Vasily's 3 extra products (small-MVP demo — product-switcher + co-author overlay)
+// Vasily's 3 extra products (small-MVP demo — product-switcher + co-author overlay)
 const PROD_CRM_SALES = "a0000000-0000-4000-8000-00000000020d";
 const PROD_CRM_DATA = "a0000000-0000-4000-8000-00000000020f";
 const PROD_CRM_360 = "a0000000-0000-4000-8000-000000000211";
@@ -99,7 +98,7 @@ const STAGE_SUPPORT = "a0000000-0000-4000-8000-000000000707";
 const REPORT_ACTIVE = "a0000000-0000-4000-8000-000000000001";
 const REPORT_PUBLISHED = "a0000000-0000-4000-8000-000000000002";
 const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
-// A36: second group so head scoping can be tested (head only sees own group's leads)
+// Second group so head scoping can be tested (head only sees own group's leads)
 const FINANCE_GROUP_ID = "a0000000-0000-4000-8000-000000000302";
 const POLICY_DEADLINE = "a0000000-0000-4000-8000-000000000a01";
 const POLICY_ESCALATION = "a0000000-0000-4000-8000-000000000a02";
@@ -113,7 +112,7 @@ const ACTIVITY_ONLY_STATUS_ID = "a0000000-0000-4000-8000-00000000cce0";
 const ACTIVITY_ONLY_PRODUCT_LINK_ID = "a0000000-0000-4000-8000-00000000cde0";
 const ACTIVITY_ONLY_SECTION_ID = "a0000000-0000-4000-8000-00000000040a";
 
-// ---- Date helpers (FIX-01, Phase 35-08) ----
+// ---- Date helpers ----
 // Compute the current ISO week in UTC so the active period always covers
 // "today" no matter when the seed runs. Mirrors the derivation in
 // prisma/seed-constants.ts so both seeds agree on the period bounds.
@@ -194,7 +193,7 @@ const PREV_FRIDAY_DEADLINE = (() => {
 })();
 const PREV_SUBMIT_AT = plusDaysUTC(PREV_MONDAY, 3); // Thursday of previous week
 
-// UFB-037: extra historical + future periods so the Periods admin tab and
+// Extra historical + future periods so the Periods admin tab and
 // /reports archive show realistic data instead of a 1-row "0/1 Submission"
 // dashboard. Historical = published (deeper history), future = open
 // (so admins can preview upcoming weeks). Each period gets a deterministic
@@ -299,7 +298,7 @@ function demoPublishedSnapshot(input: {
 }
 
 async function main() {
-  // C7 destructive-guard (UAT plan v7): refuse on prod-looking DATABASE_URL.
+  // Destructive-guard: refuse on prod-looking DATABASE_URL.
   assertNonProdDestructive("seed-simple");
 
   console.log("[seed-simple] Wiping existing data...");
@@ -307,8 +306,8 @@ async function main() {
   // go before ReportSection deletes. Other CASCADE FKs (ProjectStatus →
   // ReportSection, Items → ReportSection, etc.) flow naturally.
   //
-  // Phase 55 (TelegramBinding → User): drop before User.
-  // Phase 56 (GroupProduct → Project + ReportingGroup): drop before Project.
+  // TelegramBinding → User: drop before User.
+  // GroupProduct → Project + ReportingGroup: drop before Project.
   await prisma.reminderExecution.deleteMany({});
   await prisma.reminderRule.deleteMany({});
   await prisma.reminderPolicy.deleteMany({});
@@ -317,7 +316,7 @@ async function main() {
   await prisma.item.deleteMany({});
   await prisma.stageStatus.deleteMany({});
   await prisma.projectStatus.deleteMany({});
-  // C3 (project-activity-reporting): delete before ReportingGroup/User/Project.
+  // project-activity-reporting: delete before ReportingGroup/User/Project.
   // ActivityStatus.activityId and ProjectActivity.groupId are RESTRICT, so
   // statuses drop before their activities and activities before their group.
   await prisma.activityStatus.deleteMany({});
@@ -349,7 +348,7 @@ async function main() {
       description: "Default reporting group for CustomReport demo users",
     },
   });
-  // A36: Finance group — LEAD_OLGA + LEAD_SERGEY assigned here so head (in
+  // Finance group — LEAD_OLGA + LEAD_SERGEY assigned here so head (in
   // Software Development) only sees 4 leads, proving group-scope isolation.
   await prisma.reportingGroup.create({
     data: {
@@ -493,7 +492,7 @@ async function main() {
         reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
       },
       {
-        // A36: Finance group lead — Olga and Sergey are in Finance so the
+        // Finance group lead — Olga and Sergey are in Finance so the
         // Software Development head (Антон К.) does NOT see them in their
         // dashboard. This proves group-scope isolation end-to-end.
         id: LEAD_OLGA,
@@ -519,7 +518,7 @@ async function main() {
         samlId: "lead-sergey",
         reportingGroupId: FINANCE_GROUP_ID,
       },
-      // P13: non-technical PM leads in Development group (MOBILE/CLOUD/DEVOPS only)
+      // Non-technical PM leads in Development group (MOBILE/CLOUD/DEVOPS only)
       {
         id: LEAD_MOBILE_PM,
         email: "boris@customreport.local",
@@ -606,7 +605,7 @@ async function main() {
         archived: false,
       },
       { id: PROD_HR, name: "HR-система", leadId: LEAD_SERGEY, archived: false },
-      // P61: Vasily's extra products for small-MVP demo (product-switcher needs ≥2)
+      // Vasily's extra products for small-MVP demo (product-switcher needs ≥2)
       {
         id: PROD_CRM_SALES,
         name: "CRM-Sales Hub",
@@ -639,7 +638,7 @@ async function main() {
       { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_DEVOPS },
       { groupId: FINANCE_GROUP_ID, productId: PROD_PAYMENTS },
       { groupId: FINANCE_GROUP_ID, productId: PROD_HR },
-      // P61: Vasily's extra products belong to the same group as PROD_CRM
+      // Vasily's extra products belong to the same group as PROD_CRM
       { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CRM_SALES },
       { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CRM_DATA },
       { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CRM_360 },
@@ -660,11 +659,10 @@ async function main() {
     ],
   });
 
-  // 35-04 (BUG-143 reproducer): the primary seeded lead owns ALL 7 stages of their
-  // primary project (Маркетинговый портал) so the bug case "lead
-  // assigned everywhere shows up correctly on /lead/report" can be
-  // exercised end-to-end. Other leads stay on the single-Development
-  // assignment from before — the dashboard variety they provide is
+  // A full 7-stage single-owner fixture exists (Vasily on PROD_CRM_DATA /
+  // PROD_CRM_360, below) so the case "lead assigned everywhere shows up
+  // correctly on /lead/report" is exercised end-to-end. Other leads keep a
+  // single-Development assignment — the dashboard variety they provide is
   // still useful and the all-7 case only needs one fixture.
   console.log(
     "[seed-simple] Creating stage assignments (W6: Vasily=Dev/Test/DevOps/Support, Boris=Plan, Victor=Analysis, Galina=Design on PROD_CRM)...",
@@ -678,7 +676,7 @@ async function main() {
     STAGE_DEVOPS,
     STAGE_SUPPORT,
   ];
-  // F1 (v8.3): Vasily owns only the tech stages (4/7) on PROD_CRM.
+  // Vasily owns only the tech stages (4/7) on PROD_CRM.
   // Boris (LEAD_MOBILE_PM) owns the PM stages (3/7) — enables cross-author readonly UAT demo.
   const vasilyCrmStages = [STAGE_DEV, STAGE_TEST, STAGE_DEVOPS, STAGE_SUPPORT];
   await prisma.stageAssignment.createMany({
@@ -719,7 +717,7 @@ async function main() {
         stageId: STAGE_DEV,
         userId: LEAD_SERGEY,
       },
-      // P13: PM leads — Plan/Analysis stages (non-tech focus)
+      // PM leads — Plan/Analysis stages (non-tech focus)
       // MOBILE-PM: Plan + Analysis + Design
       {
         id: "b0000000-0000-4000-8000-000000000023",
@@ -777,7 +775,7 @@ async function main() {
         stageId: STAGE_DESIGN,
         userId: LEAD_DEVOPS_PM,
       },
-      // W6: 3-contributor split on PROD_CRM for cross-author UAT demo.
+      // 3-contributor split on PROD_CRM for cross-author UAT demo.
       // Boris=Planning, Victor=Analysis, Galina=Design (@@unique([stageId, projectId])).
       // Vasily retains Dev+Test+DevOps+Support (4/7 stages).
       {
@@ -798,7 +796,7 @@ async function main() {
         stageId: STAGE_DESIGN,
         userId: LEAD_DEVOPS_PM,
       },
-      // P61: Vasily owns stages on his 3 extra products.
+      // Vasily owns stages on his 3 extra products.
       // On PROD_CRM_SALES Boris (LEAD_MOBILE_PM) owns STAGE_PLAN (co-author demo),
       // so Vasily gets the remaining 6 stages (Analysis through Support).
       // On PROD_CRM_DATA and PROD_CRM_360 Vasily owns all 7 stages.
@@ -822,7 +820,7 @@ async function main() {
         stageId,
         userId: LEAD_1,
       })),
-      // P61 co-author: Boris (LEAD_MOBILE_PM) owns Plan stage on PROD_CRM_SALES
+      // Co-author: Boris (LEAD_MOBILE_PM) owns Plan stage on PROD_CRM_SALES
       // (@@unique([stageId, projectId]) — one owner per stage×product pair).
       // Boris = PM → Planning; Vasily = tech lead → Analysis+Dev+Test+DevOps+Design+Support.
       {
@@ -959,7 +957,7 @@ async function main() {
       label: "Сергей Т.",
       name: "Тополев Сергей Дмитриевич",
     },
-    // P13: PM leads — non-technical, Plan/Analysis/Design focus
+    // PM leads — non-technical, Plan/Analysis/Design focus
     {
       id: LEAD_MOBILE_PM,
       productId: PROD_MOBILE,
@@ -1314,7 +1312,7 @@ async function main() {
         "Архитектура модуля 360-feedback",
       ],
     },
-    // P13: PM leads — Plan/Analysis focus, non-technical vocabulary
+    // PM leads — Plan/Analysis focus, non-technical vocabulary
     [LEAD_MOBILE_PM]: {
       currentItems: [
         {
@@ -1455,13 +1453,13 @@ async function main() {
 
     // Each lead's section gets ProjectStatus rows for primary product +
     // 2 secondaries — keeps the SDLC pipeline + product picker varied.
-    // P61: Vasily uses his 3 extra products as SECONDARY so items/statuses
+    // Vasily uses his 3 extra products as SECONDARY so items/statuses
     // reference PROD_CRM_SALES and PROD_CRM_DATA rather than other leads' products.
     const SECONDARY =
       lead.id === LEAD_1
         ? ([PROD_CRM_SALES, PROD_CRM_DATA] as string[])
         : ALL_PRODUCT_IDS.filter((p) => p !== lead.productId).slice(0, 2);
-    // P61: Vasily's section shows ProjectStatus for all 4 of his products.
+    // Vasily's section shows ProjectStatus for all 4 of his products.
     const STATUS_PRODUCTS: readonly string[] =
       lead.id === LEAD_1
         ? [PROD_CRM, PROD_CRM_SALES, PROD_CRM_DATA, PROD_CRM_360]
@@ -1479,7 +1477,7 @@ async function main() {
       });
     }
 
-    // F1 (v8.3): Vasily owns Dev+Test on PROD_CRM for StageStatus rows.
+    // Vasily owns Dev+Test on PROD_CRM for StageStatus rows.
     // Plan/Analysis/Design belong to Boris — no StageStatus rows for those here.
     const ownedStageIds =
       lead.id === LEAD_1 ? [STAGE_DEV, STAGE_TEST] : [STAGE_DEV];
@@ -1493,7 +1491,7 @@ async function main() {
       })),
     });
 
-    // 35-04: pick a default stage to seed on every Item / Risk / Decision /
+    // Pick a default stage to seed on every Item / Risk / Decision /
     // Priority row so the post-seed UI doesn't show every entry as the '—'
     // legacy placeholder. "Development" matches the seeded Stage.name and
     // the lead's StageAssignment for secondary leads. For the primary seeded lead
@@ -2220,8 +2218,8 @@ async function main() {
     }
   }
 
-  // UFB-039: backfill the seed group's headUserId to the seeded head user
-  // and grant the viewer access to it. Lets the dashboard render with a
+  // Backfill the seed group's headUserId to the seeded head user and grant
+  // the viewer access to it. Lets the dashboard render with a
   // configured leader and a viewer who already sees the group's reports.
   console.log(
     "[seed-simple] Setting group leader + viewer access (UFB-039)...",

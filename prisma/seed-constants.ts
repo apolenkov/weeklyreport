@@ -61,8 +61,8 @@ export const SEED_REPORTING_GROUPS: readonly SeedReportingGroup[] = [
  * Lead UUIDs use range ...0011 through ...0016 to avoid collision with
  * report UUIDs (...0001, ...0002).
  */
-// Phase (structured-user-name): names rebuilt into surname-first ФИО with
-// real parts. `name` is the composed display value
+// structured-user-name: names are surname-first ФИО with real parts. `name`
+// is the composed display value
 // (`{lastName} {firstName} {middleName}`); the surname initials match the
 // legacy abbreviated strings («Антон К.» → Кедров Антон ...). `position` is
 // the admin-maintained HR title (Russian data, allowed in seeds).
@@ -196,13 +196,10 @@ export type SeedProduct = {
 };
 
 /**
- * 12 products, 2 per lead. Names per PLAN 20-01 (this redefines the
- * canonical product set — admin/dashboard mocks diverge from this list
- * and will be reconciled in Phase 21).
+ * 12 products, 2 per lead. The canonical product set.
  */
-// Phase 35-08: product names switched to RU Cyrillic for the demo. The
-// IDs and lead assignments are unchanged so existing tests + UUID-keyed
-// fixtures keep working.
+// Product names are RU Cyrillic for the demo. The IDs and lead assignments
+// are the stable keys existing tests + UUID-keyed fixtures rely on.
 export const SEED_PRODUCTS: readonly SeedProduct[] = [
   {
     id: "a0000000-0000-4000-8000-000000000201",
@@ -311,10 +308,9 @@ export type SeedReport = {
 };
 
 // ----- Date helpers for date-relative seed -----
-// Hardcoded 2026-04-13 (Week 16) drifted into the past; the API auto-creates
-// the actual current-week section empty, so demos and Wave 1 tests landed on
-// a blank form. Compute Week N (current) and Week N-1 (published) from the
-// run time so the seed always populates the page the lead actually opens.
+// Compute Week N (current) and Week N-1 (published) from the run time so the
+// seed always populates the page the lead actually opens. A hardcoded date
+// would drift into the past, leaving the current-week section blank.
 
 function isoWeekNumber(d: Date): number {
   const t = new Date(

@@ -337,14 +337,14 @@ async function main() {
       stageId: "a0000000-0000-4000-8000-000000000706",
       projectId: "a0000000-0000-4000-8000-000000000201",
     },
-    // LSC-01: LEAD_1 on Платёжный шлюз (209) — Support stage → locked+blocked chip for Olga
+    // LEAD_1 on Платёжный шлюз (209) — Support stage → locked+blocked chip for Olga
     {
       id: "a0000000-0000-4000-8000-00000000ca03",
       userId: LEAD_1_ID,
       stageId: "a0000000-0000-4000-8000-000000000707",
       projectId: "a0000000-0000-4000-8000-000000000209",
     },
-    // LSC-02: LEAD_1 on Платёжный шлюз (209) — Planning stage → locked+at-risk chip for Olga
+    // LEAD_1 on Платёжный шлюз (209) — Planning stage → locked+at-risk chip for Olga
     {
       id: "a0000000-0000-4000-8000-00000000ca04",
       userId: LEAD_1_ID,
@@ -362,8 +362,8 @@ async function main() {
     });
   }
 
-  // LSC-05/06: Olga owns Testing + DevOps on product 209 with no stageStatus.
-  // After deriveEffectiveStageStatus fix, risk/item severity drives the chip color.
+  // Olga owns Testing + DevOps on product 209 with no stageStatus, so
+  // deriveEffectiveStageStatus lets risk/item severity drive the chip color.
   for (const lscSa of [
     {
       id: "a0000000-0000-4000-8000-00000000ca05",
@@ -869,8 +869,8 @@ async function main() {
       mitigation: "Раскатка через shadow-mode + кнопка мгновенного rollback",
       stageNames: ["Support"],
     },
-    // LSC-05: Olga's section — risk on Testing stage (no explicit stageStatus).
-    // After deriveEffectiveStageStatus fix the Testing chip shows at-risk (#fef3c7).
+    // Olga's section — risk on Testing stage (no explicit stageStatus), so
+    // deriveEffectiveStageStatus shows the Testing chip at-risk (#fef3c7).
     {
       id: riskId(5),
       reportSectionId: sectionId("1", 5),
@@ -916,7 +916,7 @@ async function main() {
   // Quiet unused-warning for mariaSec (may not be used by risks above)
   void mariaSec;
 
-  // LSC-01/02: LEAD_1 stageStatus on Olga's product 209 so cross-author locked
+  // LEAD_1 stageStatus on Olga's product 209 so cross-author locked
   // chips appear in Olga's view. Support=red (blocked), Planning=yellow (at-risk).
   for (const lscSS of [
     {
@@ -947,7 +947,7 @@ async function main() {
     });
   }
 
-  // LSC-06: Olga's DevOps item on Платёжный шлюз. record-status-derived-from-risk:
+  // Olga's DevOps item on Платёжный шлюз. record-status-derived-from-risk:
   // the item is stored `in_progress` — its blocked pill DERIVES at render from the
   // covering blocked-severity risk riskId(6) on the same section/product/stage
   // (single source of truth). No bare stored `blocked` without a backing risk.
@@ -1348,9 +1348,8 @@ async function main() {
   }
 
   // --- 8. AppSettings singleton ---
-  // UFB-047 / Phase 49-01: legacy `departmentName` field removed; brand
-  // identity is owned by the Organization singleton seeded a few lines
-  // below.
+  // Brand identity is owned by the Organization singleton seeded a few lines
+  // below, not by AppSettings.
   await prisma.appSettings.upsert({
     where: { id: "singleton" },
     update: {
@@ -1384,7 +1383,7 @@ async function main() {
     },
   });
 
-  // --- 9. Organization singleton (UFB-047 / Phase 48-A) ---
+  // --- 9. Organization singleton ---
   // The migration seeds this row on first apply with ON CONFLICT DO NOTHING.
   // On a `prisma migrate reset` the table is recreated and re-seeded by the
   // migration itself; the upsert here is the seed-script's idempotent

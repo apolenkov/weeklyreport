@@ -1,7 +1,7 @@
 /**
- * UFB-069: Full factory-reset wipe + rich preset reseed for manual UAT.
+ * Full factory-reset wipe + rich preset reseed for manual UAT.
  *
- * Behavior change vs the earlier «sections-only» wipe (Phase 35 era):
+ * Behavior:
  *   - Wipes EVERY user-customised table (users, groups, products,
  *     reminder policies, action log, org identity, app settings, etc.).
  *   - Re-seeds a minimal-but-rich preset (2 reporting groups, 7 leads,
@@ -12,7 +12,7 @@
  *     becomes visible.
  *
  * The single-transaction approach mirrors `prisma/seed-simple.ts`'s
- * FK-safe delete order (see UFB-057 fix) and re-uses the canonical IDs
+ * FK-safe delete order and re-uses the canonical IDs
  * from `prisma/seed-constants.ts` so existing manual-uat E2E regressions
  * (`apps/web/e2e/regression/admin-stage-reassignment.spec.ts`,
  * `admin-groups.spec.ts`) keep finding `DevOps-инструменты`, `Игорь`,
@@ -64,7 +64,7 @@ const prisma = new PrismaClient({ adapter });
 
 type CountMap = Record<string, number>;
 
-// --- Extra preset IDs (UFB-069) -----------------------------------------
+// --- Extra preset IDs -----------------------------------------
 // Beyond the 8 canonical IDs in seed-constants (head, viewer, 6 leads), we
 // add: 1 admin, 1 finance head, 1 finance lead, and the Finance
 // reporting group so wipe lands with two real groups instead of one.
@@ -151,20 +151,20 @@ async function flushRedisDb(): Promise<
 // --- Main --------------------------------------------------------------
 
 async function main() {
-  // C7 destructive-guard (UAT plan v7): refuse on prod-looking DATABASE_URL.
-  // Supersedes earlier NODE_ENV-only check — also catches misconfigured envs.
+  // Destructive-guard: refuse on prod-looking DATABASE_URL — catches
+  // misconfigured envs, not just NODE_ENV=production.
   assertNonProdDestructive("wipe-manual-uat");
 
   const result = await prisma.$transaction(
     async (tx) => {
       // ---------- 1. WIPE (FK-safe order) ----------
       //
-      // Same ordering principle as `seed-simple.ts` post-UFB-057. New
-      // additions for UFB-069 marked inline:
-      //   - userActionLog        (audit log clutter — Phase 40+)
-      //   - reminderPolicy       (Phase 44 templates — wipe all)
-      //   - groupProduct         (Phase 56 M:M — must drop before Project)
-      //   - telegramBinding      (Phase 55 stub — must drop before User)
+      // Same FK-safe ordering principle as `seed-simple.ts`. Tables wiped
+      // beyond the report/section content:
+      //   - userActionLog        (audit log clutter)
+      //   - reminderPolicy       (templates — wipe all)
+      //   - groupProduct         (M:M — must drop before Project)
+      //   - telegramBinding      (stub — must drop before User)
       //   - organization         (singleton; reseed to Demo brand below)
       //   - appSettings          (force-reset to schema defaults)
       //
@@ -175,8 +175,8 @@ async function main() {
         reminderExecution: (await tx.reminderExecution.deleteMany({})).count,
         reminderRule: (await tx.reminderRule.deleteMany({})).count,
         reminderPolicy: (await tx.reminderPolicy.deleteMany({})).count,
-        // F1 dropped the Priority model; priorityRank is now a column on Item,
-        // cleared by item.deleteMany below. No separate priority wipe.
+        // priorityRank is a column on Item, cleared by item.deleteMany below —
+        // no separate priority wipe.
         decision: (await tx.decision.deleteMany({})).count,
         risk: (await tx.risk.deleteMany({})).count,
         item: (await tx.item.deleteMany({})).count,
@@ -424,7 +424,7 @@ async function main() {
         ],
       });
 
-      // ---------- 5. RESEED: GroupProduct ownership edges (UFB-054 / Phase 56) ----------
+      // ---------- 5. RESEED: GroupProduct ownership edges ----------
       // Current invariant is one owning group per product. Keep the demo
       // split aligned with the seeded lead's reporting group so Products,
       // Groups, dashboard scoping, and viewer access all tell the same story.
@@ -452,9 +452,8 @@ async function main() {
         ],
       });
 
-      // Primary lead owns all 7 stages of CRM (BUG-143 reproducer pattern);
-      // other leads own Development of their primary product so the SDLC
-      // pipeline picker has data.
+      // Primary lead owns all 7 stages of CRM; other leads own Development of
+      // their primary product so the SDLC pipeline picker has data.
       const allStageIds = [
         STAGE_PLAN,
         STAGE_ANALYSIS,
