@@ -7,7 +7,7 @@ import {
   disconnectTestPrisma,
   seedTestData,
 } from "../../../test-utils/prisma-test-helper";
-import { applyTransition } from "../domain/period-transition.apply.js";
+import { applyTransition } from "../application/period-transition.apply.js";
 
 // ---------------------------------------------------------------------------
 // refactor-period-transition-writer — the period-dual-state-required atomicity

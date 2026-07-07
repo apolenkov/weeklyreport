@@ -10,7 +10,7 @@ import {
   createTestPrisma,
   disconnectTestPrisma,
 } from "../../test-utils/prisma-test-helper";
-import { ensureLeadSection } from "../report-sections/domain/ensure-lead-section";
+import { ensureLeadSection } from "../report-sections/application/ensure-lead-section";
 import { ReportSectionsPrismaRepository } from "../report-sections/infrastructure/report-sections.prisma-repository";
 import { ProjectActivityPrismaRepository } from "./project-activity.prisma-repository";
 import {

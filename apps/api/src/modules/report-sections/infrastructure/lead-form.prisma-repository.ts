@@ -8,10 +8,12 @@ import type {
   CrossAuthorSectionRow,
   LeadFormRepository,
 } from "../application/lead-form.service";
+import { queryPublishedLineage } from "../application/published-lineage";
 import {
   ReportSectionDomainError,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
+import { applyRevokeTransition } from "../application/revoke-transition";
 import type { ReopenEligibilityFacts } from "../domain/lead-form-shared";
 import {
   initialsFromName,
@@ -19,8 +21,6 @@ import {
   reopenBlockedMessage,
   ReopenRequestError,
 } from "../domain/lead-form-shared";
-import { queryPublishedLineage } from "../domain/published-lineage";
-import { applyRevokeTransition } from "../domain/revoke-transition";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,

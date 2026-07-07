@@ -88,7 +88,7 @@ import { ProjectActivityService } from "./modules/project-activity/project-activ
 import { PublicationService } from "./modules/publication/application/publication.service";
 import { PolicyApplicatorService } from "./modules/reminders/policy-applicator.service";
 import { RemindersService } from "./modules/reminders/reminders.service";
-import { ensureLeadSection } from "./modules/report-sections/domain/ensure-lead-section";
+import { ensureLeadSection } from "./modules/report-sections/application/ensure-lead-section";
 import { LeadFormService } from "./modules/report-sections/application/lead-form.service";
 import { ReportSectionsService } from "./modules/report-sections/application/report-sections.service";
 import { ReviewActionsService } from "./modules/review/application/review-actions.service";

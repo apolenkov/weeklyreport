@@ -7,12 +7,12 @@ import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
+import { queryPublishedLineage } from "../application/published-lineage";
 import {
   ReportSectionDomainError,
   type ReportSectionsRepository,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
-import { queryPublishedLineage } from "../domain/published-lineage";
 
 /**
  * Shared Prisma include constant for the full ReportSection aggregate.

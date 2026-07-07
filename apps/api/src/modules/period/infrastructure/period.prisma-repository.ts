@@ -14,7 +14,7 @@ import type {
   PublishPeriodOutcome,
 } from "../application/period.service.js";
 import { isOpenBoundaryConflict } from "../application/period-factory.js";
-import { applyTransition } from "../domain/period-transition.apply.js";
+import { applyTransition } from "../application/period-transition.apply.js";
 import { buildTransition } from "../domain/period-transition.js";
 
 @Injectable()
