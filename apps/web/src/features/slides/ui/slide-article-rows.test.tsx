@@ -1,10 +1,14 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { SdlcTooltipProvider } from "../../shared/ui/sdlc-tooltip";
+import { SdlcTooltipProvider } from "../../../shared/ui/sdlc-tooltip";
+import type {
+  GridAuthor,
+  GridRow,
+  SlideGridModel,
+} from "../model/slide-grid-model";
 import { SlidePriorityStrip } from "./slide-article-header";
 import { SlideCell } from "./slide-article-rows";
-import type { GridAuthor, GridRow, SlideGridModel } from "./slide-grid-model";
 
 const AUTHOR: GridAuthor = {
   id: "author-1",

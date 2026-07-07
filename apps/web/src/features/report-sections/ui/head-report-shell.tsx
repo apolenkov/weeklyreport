@@ -3,8 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Suspense, useCallback, useContext, useMemo } from "react";
 
-import { HeadSlidesClient } from "../../../components/slides/head-slides-client";
-import { SlideSkeleton } from "../../../components/slides/slide-skeleton";
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
 import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
@@ -20,6 +18,8 @@ import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle
 import { ExportPdfButton } from "../../pdf-export/ui/export-pdf-button";
 import { HeadPublishLockAction } from "../../period/ui/head-publish-lock-action";
 import { PeriodNavigator } from "../../period/ui/period-navigator";
+import { HeadSlidesClient } from "../../slides/ui/head-slides-client";
+import { SlideSkeleton } from "../../slides/ui/slide-skeleton";
 import { formatDateRange, isoWeekNumber } from "../model/lead-history";
 import type { ReportPeriod } from "../model/mock-data";
 import { WeeklyReportPage } from "./weekly-report-page";
@@ -36,11 +36,9 @@ interface HeadReportShellProps {
 }
 
 /**
- * Phase 61 (robust-baking-aurora): inline form ↔ slides mode toggle for the
- * head status report page. Mirrors the pattern from lead-form.tsx.
- * UAT 2026-05-22 (done-condition 10): added period navigator + archive toggle
- * parity with the lead report toolbar. Head remains read-only — no version
- * browsing, no section editing.
+ * Inline form ↔ slides mode toggle for the head status report page, with a
+ * period navigator + archive toggle matching the lead report toolbar. Head
+ * remains read-only — no version browsing, no section editing.
  */
 export function HeadReportShell({
   reportId,
@@ -49,9 +47,9 @@ export function HeadReportShell({
 }: HeadReportShellProps) {
   const trpc = useTRPC();
 
-  // head-toolbar-parity D2: the department label moved here from the
-  // WeeklyReportPage context bar the shell now suppresses. Same source:
-  // the Organization singleton's fullName from auth.me (UFB-047).
+  // The department label is the Organization singleton's fullName from auth.me;
+  // the shell suppresses the WeeklyReportPage context bar that would otherwise
+  // carry it, so it is surfaced here instead.
   const sessionState = useContext(SessionContext);
   const departmentLabel =
     sessionState?.organization?.fullName ?? "CustomReport";

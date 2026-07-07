@@ -4,7 +4,7 @@ import {
   STAGE_NAMES,
 } from "@customreport/shared";
 
-import type { CrossAuthorContentRow } from "../../features/report-sections/model/lead-cross-author";
+import type { CrossAuthorContentRow } from "../../report-sections/model/lead-cross-author";
 
 export type SlideTrafficStatus = "green" | "yellow" | "red" | null;
 

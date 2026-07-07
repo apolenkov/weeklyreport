@@ -1,9 +1,9 @@
 import { Check, ChevronsRight, Pause } from "lucide-react";
 import { useRef } from "react";
 
-import { STAGE_ICONS } from "../../features/report-sections/model/stage-chip-config";
-import { useSdlcTooltip } from "../../shared/ui/sdlc-tooltip";
-import type { GridAuthor, GridRow, GridTone } from "./slide-grid-model";
+import { useSdlcTooltip } from "../../../shared/ui/sdlc-tooltip";
+import { STAGE_ICONS } from "../../report-sections/model/stage-chip-config";
+import type { GridAuthor, GridRow, GridTone } from "../model/slide-grid-model";
 
 /** Hover/focus handlers wiring an element to the singleton slide tooltip. */
 function useHoverTooltip<T extends HTMLElement = HTMLSpanElement>(

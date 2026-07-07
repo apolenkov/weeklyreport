@@ -16,8 +16,6 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { LeadSlidesClient } from "../../../components/slides/lead-slides-client";
-import { SlideFullscreenButton } from "../../../components/slides/slide-fullscreen-button";
 import { useFullscreen } from "../../../hooks/use-fullscreen";
 import {
   type DraftSaveContent,
@@ -71,6 +69,8 @@ import { FillFromButton } from "../../period/ui/fill-from-button";
 import { PeriodNavigator } from "../../period/ui/period-navigator";
 import { RequestReopenDialog } from "../../period/ui/request-reopen-dialog";
 import { LeadReviewFeedback } from "../../review/ui/lead-review-feedback";
+import { LeadSlidesClient } from "../../slides/ui/lead-slides-client";
+import { SlideFullscreenButton } from "../../slides/ui/slide-fullscreen-button";
 import type { ItemWorkflowStatus as MapperItemWorkflowStatus } from "../model/item-status";
 import {
   applyCrossAuthorStageOverrides,
@@ -1636,10 +1636,10 @@ export function LeadForm({
                 Your report draft and status context.
               </p>
             </div>
-            {/* LF-3 (Phase 33-04): submitted state now uses the .b-ok variant
-                (light teal bg + dark teal text) — matches mockup s2 rather
-                than the heavier white-on-dark-teal `.b-done` look that read
-                as a destructive "locked" signal. */}
+            {/* Submitted state uses the .b-ok variant (light teal bg + dark
+                teal text) — matches mockup s2 rather than the heavier
+                white-on-dark-teal `.b-done` look that read as a destructive
+                "locked" signal. */}
             {!isSlidesMode &&
               (isSubmitted ? (
                 <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)]">

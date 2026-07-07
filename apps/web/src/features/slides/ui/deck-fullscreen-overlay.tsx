@@ -2,7 +2,7 @@
 
 import { type Ref, useEffect, useState } from "react";
 
-import { AgentReviewComingSoon } from "../../shared/ui/report-shell/agent-review-coming-soon";
+import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
 import { SlideFullscreenButton } from "./slide-fullscreen-button";
 
 /** How long the transient "Press Esc to exit" hint stays on entering fullscreen. */

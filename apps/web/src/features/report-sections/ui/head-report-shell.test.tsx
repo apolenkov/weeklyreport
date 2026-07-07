@@ -19,7 +19,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // head-surface-uat-polish (F1): the per-slide "Open focused report" drill-in
 // link was removed, so the deck no longer surfaces a focus href to the shell.
 // The stub is a plain marker.
-vi.mock("../../../components/slides/head-slides-client", () => ({
+vi.mock("../../slides/ui/head-slides-client", () => ({
   HeadSlidesClient: () => <div data-testid="head-slides-client-stub" />,
 }));
 

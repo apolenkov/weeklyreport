@@ -2,7 +2,7 @@
 
 import { Gauge } from "lucide-react";
 
-import type { SectionSlideModel } from "./section-slide-utils";
+import type { SectionSlideModel } from "../model/section-slide-utils";
 
 /**
  * head-slides-carousel-fullscreen: the head deck's slide navigation — a

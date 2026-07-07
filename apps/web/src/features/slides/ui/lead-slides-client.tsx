@@ -11,22 +11,22 @@ import {
   useState,
 } from "react";
 
-import { useFullscreen } from "../../hooks/use-fullscreen";
-import { crossAuthorContentFetchEnabled } from "../../lib/cross-author-content-gate";
-import { SessionContext } from "../../lib/session-provider";
-import { useTRPC } from "../../lib/trpc-context";
-import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
+import { useFullscreen } from "../../../hooks/use-fullscreen";
+import { crossAuthorContentFetchEnabled } from "../../../lib/cross-author-content-gate";
+import { SessionContext } from "../../../lib/session-provider";
+import { useTRPC } from "../../../lib/trpc-context";
+import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
+import {
+  buildLeadSlidePeriodOptions,
+  resolveLeadSlideReportId,
+} from "../model/lead-slide-periods";
+import { buildLeadDeckModel } from "../model/lead-slides-deck-model";
+import { paginateSectionSlides } from "../model/section-slide-utils";
 import {
   DeckFullscreenOverlay,
   DeckToolbarControls,
 } from "./deck-fullscreen-overlay";
-import {
-  buildLeadSlidePeriodOptions,
-  resolveLeadSlideReportId,
-} from "./lead-slide-periods";
-import { buildLeadDeckModel } from "./lead-slides-deck-model";
 import { ReportSlides } from "./report-slides";
-import { paginateSectionSlides } from "./section-slide-utils";
 import { SlideEmptyState } from "./slide-empty-state";
 import { SlideSkeleton } from "./slide-skeleton";
 
