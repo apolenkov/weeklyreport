@@ -1,8 +1,8 @@
 import type { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
+import { buildTransition } from "../domain/period-transition.js";
 import { applyTransition, runTransition } from "./period-transition.apply.js";
-import { buildTransition } from "./period-transition.js";
 
 // applyTransition is a one-liner over tx.report.update; the unit test pins the
 // delegation contract (right id, data sourced from buildTransition) without a

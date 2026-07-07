@@ -4,7 +4,7 @@ import {
   buildTransition,
   type TransitionCtx,
   type TransitionKind,
-} from "./period-transition.js";
+} from "../domain/period-transition.js";
 
 /**
  * refactor-period-transition-writer: the thin applicator that runs a

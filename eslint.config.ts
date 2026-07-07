@@ -104,7 +104,7 @@ const apiCrossModuleGrandfathered: Record<string, readonly string[]> = {
   ],
   auth: ["admin/session-revocation.service.ts"],
   "carry-over": [
-    "report-sections/domain/ensure-lead-section.ts",
+    "report-sections/application/ensure-lead-section.ts",
     "report-sections/infrastructure/report-sections.prisma-repository.ts",
   ],
   "pdf-export": [
@@ -137,7 +137,7 @@ const apiCrossModuleGrandfathered: Record<string, readonly string[]> = {
     "organization/organization.service.ts",
   ],
   "report-sections": ["admin/admin.module.ts", "admin/admin.service.ts"],
-  review: ["report-sections/domain/revoke-transition.ts"],
+  review: ["report-sections/application/revoke-transition.ts"],
   "weekly-report": [
     "published-report-snapshot.ts",
     "report-escalations.ts",
@@ -724,13 +724,12 @@ export default defineConfig([
     },
   },
   // Zone 4 — api domain purity (package-name zone). Files under an invariant
-  // module's domain/ must carry no RUNTIME adapter dependency: a value import of
-  // Nest/Prisma/ioredis/bullmq/nodemailer is forbidden, so the domain never
-  // executes framework code — inject an adapter through a port instead. Type-only
-  // imports are allowed (`allowTypeImports`): the transition applicators the plan
-  // places here (revoke-transition, period-transition.apply) type their injected
-  // tx as a structural slice of `Prisma.TransactionClient`, which is erased at
-  // compile time and imposes no runtime coupling.
+  // module's domain/ must not import an adapter dependency AT ALL — value OR
+  // type — so the governing law of the module hexagon holds: delete Nest/Prisma
+  // and the pure domain still compiles. A file that types against a Prisma
+  // TransactionClient/entity slice is a transaction applicator (an application
+  // use-case), not domain — it lives in application/ and receives the client
+  // through a port.
   {
     files: [
       "apps/api/src/modules/period/domain/**/*.ts",
@@ -751,9 +750,8 @@ export default defineConfig([
                 "bullmq",
                 "nodemailer",
               ],
-              allowTypeImports: true,
               message:
-                "domain/ carries no runtime framework dependency: no VALUE import of @prisma/client, @nestjs/*, ioredis, bullmq or nodemailer — inject an adapter through a port instead. `import type` is allowed (compile-time only) (restructure-directory-architecture).",
+                "domain/ is pure: no @prisma/client, @nestjs/*, ioredis, bullmq or nodemailer (value OR type) — a Prisma-typed transaction applicator belongs in application/, receiving its client through a port (restructure-directory-architecture).",
             },
           ],
         },
