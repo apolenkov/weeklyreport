@@ -5,7 +5,7 @@ import type {
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
-import { applyRevokeTransition } from "../../report-sections/application/revoke-transition.js";
+import { applyRevokeTransition } from "../../report-sections/index.js";
 import type {
   PostVerdictParams,
   RecordAnchor,

@@ -128,16 +128,13 @@ const apiCrossModuleGrandfathered: Record<string, readonly string[]> = {
     "weekly-report/weekly-report.module.ts",
     "weekly-report/weekly-report.prisma-repository.ts",
   ],
-  publication: [
-    "period/domain/period-transition.ts",
-    "published-report-snapshot.ts",
-  ],
+  publication: ["period/index.ts", "published-report-snapshot.ts"],
   reminders: [
     "organization/organization.module.ts",
     "organization/organization.service.ts",
   ],
   "report-sections": ["admin/admin.module.ts", "admin/admin.service.ts"],
-  review: ["report-sections/application/revoke-transition.ts"],
+  review: ["report-sections/index.ts"],
   "weekly-report": [
     "published-report-snapshot.ts",
     "report-escalations.ts",
