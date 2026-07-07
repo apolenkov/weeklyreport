@@ -82,52 +82,39 @@ const apiModules = [
   "weekly-report",
 ] as const;
 
-// Grandfathered cross-module imports, keyed by CONSUMING module → resolved sibling
-// paths (relative to modules/) it already imports: 30 unique
-// (consumer, target) pairs across 11 consumers (the raw ~40 count is import LINES;
-// several modules import one sibling file from multiple files). Entries are only
-// ever REMOVED (as slice 6 reroutes each to the sibling's index.ts facade), never
-// added or broadened. Two loose files at modules/ ROOT (not inside any module) are
-// also under `from` and imported by several modules today — published-report-snapshot.ts
-// and report-escalations.ts; those imports are grandfathered here too and drop out when
-// the loose files relocate in a later slice. (published-report-snapshot.ts itself imports
-// report-sections, but it is not under modules/A/** so no zone targets it as a consumer.)
-const apiCrossModuleGrandfathered: Record<string, readonly string[]> = {
-  admin: ["period/index.ts", "reminders/index.ts"],
-  archive: ["published-report-snapshot.ts", "report-sections/index.ts"],
-  auth: ["admin/index.ts"],
-  "carry-over": ["report-sections/index.ts"],
-  "pdf-export": ["published-report-snapshot.ts", "report-sections/index.ts"],
-  period: [
-    "admin/index.ts",
-    "analytics/index.ts",
-    "carry-over/index.ts",
-    "publication/index.ts",
-    "published-report-snapshot.ts",
-    "reminders/index.ts",
-    "weekly-report/index.ts",
-  ],
-  publication: ["period/index.ts", "published-report-snapshot.ts"],
-  reminders: ["organization/index.ts"],
-  "report-sections": ["admin/index.ts"],
-  review: ["report-sections/index.ts"],
-  "weekly-report": [
-    "published-report-snapshot.ts",
-    "report-escalations.ts",
-    "report-sections/index.ts",
-    "review/index.ts",
-  ],
+// Loose cross-module files that still live at modules/ ROOT rather than inside a
+// module — published-report-snapshot.ts and report-escalations.ts. Until they
+// relocate into an owning module (a later slice), the modules that import them
+// keep a path exception here, keyed by CONSUMING module. This is the ONLY
+// path-based cross-module exception left: every module→module edge now goes
+// through a sibling index.ts facade barrel (generated below), and any deep
+// internal path errors. (published-report-snapshot.ts itself imports
+// report-sections, but it is not under modules/M/** so no zone targets it.)
+const apiCrossModuleLooseFiles: Record<string, readonly string[]> = {
+  archive: ["published-report-snapshot.ts"],
+  "pdf-export": ["published-report-snapshot.ts"],
+  period: ["published-report-snapshot.ts"],
+  publication: ["published-report-snapshot.ts"],
+  "weekly-report": ["published-report-snapshot.ts", "report-escalations.ts"],
 };
 
 // One zone per module: files under modules/M may import from modules/ ONLY within
-// their own module (except: [M]) plus M's grandfathered sibling paths. A new import
-// of any other sibling internal path errors. The facade barrel (modules/M/index.ts)
-// becomes the sole allowlist entry once slice 6 flips this to error-with-no-grandfather.
+// their own module (except: [M]), through a sibling's index.ts facade barrel, or
+// via a still-loose root file the module already depends on. Any other sibling
+// internal path errors. The barrel allowlist is GENERATED (every sibling's
+// index.ts), so a new module→module edge is legal the moment it targets the
+// facade — no per-edge grandfathering to maintain.
 const apiCrossModuleZones = apiModules.map((moduleName) => ({
   target: `${apiModulesDir}/${moduleName}`,
   from: apiModulesDir,
-  except: [moduleName, ...(apiCrossModuleGrandfathered[moduleName] ?? [])],
-  message: `api module boundary: '${moduleName}' may reach a sibling module only through its index.ts facade barrel, never an internal path (restructure-directory-architecture). Grandfathered exceptions shrink monotonically.`,
+  except: [
+    moduleName,
+    ...apiModules
+      .filter((sibling) => sibling !== moduleName)
+      .map((sibling) => `${sibling}/index.ts`),
+    ...(apiCrossModuleLooseFiles[moduleName] ?? []),
+  ],
+  message: `api module boundary: '${moduleName}' may reach a sibling module only through its index.ts facade barrel, never an internal path (restructure-directory-architecture).`,
 }));
 
 // One zone per web slice: files under features/S may import from features/ only

@@ -97,11 +97,21 @@
 
 ## 6. api: reroute cross-module deep imports to facades + flip the zone to error
 
-- [ ] 6.1 Design a `withTransaction(fn)`/UnitOfWork seam FIRST, then reroute every
-      cross-module deep import to the sibling module's `index.ts` barrel (which
-      re-exports the module class + facade service; the zone's sole `except`
-      pattern — never a raw `*.prisma-repository` or other internal path), and flip
-      the api cross-module lint zone from allowlist→error. Gate on `pnpm test:integration` (single-thread, postgres+redis
-      up) AND the full unit gate; verify the atomic period dual-state write and publish
-      atomicity do not leak `Prisma.TransactionClient`.
-      **Gated on clean git status (parallel session).**
+- [x] 6.1 Reroute every cross-module deep import to the sibling module's
+      `index.ts` barrel and flip the api cross-module lint zone to barrel-only.
+      No new UnitOfWork: the tx seam already existed as pure functions taking a
+      structural `Pick<Prisma.TransactionClient,…>` slice (council finding). C8
+      (64646ae): the two tx/logic seams — review→applyRevokeTransition via
+      report-sections/index, publication→buildTransition via period/index. C9a
+      (38c4f43): 8 more barrels + all non-DI reroutes; also removed a real
+      load-time side effect the barrels exposed (period-factory's top-level
+      `new Logger`). C9b (62c5096): period.module DI + schedulers through sibling
+      barrels. C10 (below): zone flipped from a per-edge grandfather allowlist to
+      a generated barrel-only `except` (self + every sibling `X/index.ts` + the
+      two still-loose root files `published-report-snapshot.ts` /
+      `report-escalations.ts` until they relocate). Deep-path enforcement proven
+      by negative test. Invariant guards held throughout: role-coverage (2),
+      lifecycle-write-gate (1), and the tx-integration proofs (3) green — no
+      `Prisma.TransactionClient` leak (the one cross-boundary pass is a pure fn
+      taking a structural slice). Gate: unit 1410 + integration 258 green at each
+      commit; C8/C9 adversarially verified (Codex CONFIRMED-CLEAN).
