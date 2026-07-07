@@ -7,7 +7,7 @@ import { AdminService } from "../../modules/admin/admin.service";
 import { renderEmail } from "../../modules/email/render-template";
 import { RemindersService } from "../../modules/reminders/reminders.service";
 import type { EnvConfig } from "../config/env.schema";
-import { EmailService } from "../email/email.service";
+import type { EmailPort } from "../email/email.service";
 import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
 import {
   extractTraceId,
@@ -63,7 +63,7 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
 
   constructor(
     private readonly remindersService: RemindersService,
-    private readonly emailService: EmailService,
+    private readonly emailService: EmailPort,
     env: EnvConfig,
     // Optional: surfaces the AppSettings From-address override. Missing at
     // test time (DI fallback); null means "use the SMTP_FROM env default".
