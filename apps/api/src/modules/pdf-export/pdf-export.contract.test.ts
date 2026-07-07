@@ -154,7 +154,7 @@ describe("PdfExportService — contract tests", () => {
         const service = new PdfExportService(
           createRepository(publishedReport),
           undefined,
-          mockQueue as unknown as import("bullmq").Queue,
+          mockQueue,
         );
 
         const job = await service.requestPdfExport(reportId);

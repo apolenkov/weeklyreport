@@ -3,10 +3,10 @@ import {
   type PdfExportJob,
   pdfExportJobSchema,
 } from "@customreport/shared";
-import type { Queue } from "bullmq";
 import jwt from "jsonwebtoken";
 import type { ClsService } from "nestjs-cls";
 
+import type { JobEnqueuer } from "../../infrastructure/bullmq/job-enqueuer.js";
 import {
   captureJobTraceContext,
   resolveCorrelationId,
@@ -117,12 +117,12 @@ export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
 
 export class PdfExportService {
   private readonly logger: AppLogger;
-  private readonly pdfQueue: Queue | null;
+  private readonly pdfQueue: JobEnqueuer | null;
 
   constructor(
     private readonly repository: PdfExportRepository,
     logger?: AppLogger,
-    pdfQueue?: Queue,
+    pdfQueue?: JobEnqueuer,
     private readonly cls?: ClsService,
   ) {
     this.logger = logger ?? createNullLogger();

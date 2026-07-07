@@ -5,9 +5,9 @@ import {
   type PaginatedResult,
   type PaginationInput,
 } from "@customreport/shared";
-import type { Queue } from "bullmq";
 import type { ClsService } from "nestjs-cls";
 
+import type { JobEnqueuer } from "../../infrastructure/bullmq/job-enqueuer.js";
 import {
   captureJobTraceContext,
   resolveCorrelationId,
@@ -131,12 +131,12 @@ export type ReminderExecutionPayload =
 
 export class RemindersService {
   private readonly logger: AppLogger;
-  private readonly emailQueue: Queue | null;
+  private readonly emailQueue: JobEnqueuer | null;
 
   constructor(
     private readonly repository: RemindersRepository,
     logger?: AppLogger,
-    emailQueue?: Queue,
+    emailQueue?: JobEnqueuer,
     private readonly cls?: ClsService,
   ) {
     this.logger = logger ?? createNullLogger();

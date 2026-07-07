@@ -174,7 +174,7 @@ describe("RemindersService — contract tests", () => {
       const service = new RemindersService(
         createRepository(activeRule),
         undefined,
-        mockQueue as unknown as import("bullmq").Queue,
+        mockQueue,
       );
 
       const execution = await service.requestReminderExecution(
