@@ -15,7 +15,7 @@ export interface ActivityRepository {
 }
 
 /**
- * UX-18 (Phase 35-08): activity service for the head/admin dashboard.
+ * Activity service for the head/admin dashboard.
  *
  * Returns a live snapshot of every lead's section status in the currently
  * open period. The frontend polls this endpoint every 15s. Service layer

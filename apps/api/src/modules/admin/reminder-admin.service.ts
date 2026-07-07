@@ -12,8 +12,7 @@ import type { AdminRepository } from "./admin-shared";
 
 /**
  * Owns reminder rules (snapshot-level) and the ReminderPolicy CRUD
- * surface. Extracted verbatim from `AdminService`
- * (code-quality-modernization, Wave 3); behavior unchanged.
+ * surface.
  */
 export class ReminderAdminService {
   private readonly logger: AppLogger;
@@ -42,13 +41,13 @@ export class ReminderAdminService {
   }
 
   // -----------------------------------------------------------------
-  // UFB-036 (Phase 44-02): ReminderPolicy surface
+  // ReminderPolicy surface
   // -----------------------------------------------------------------
 
   /**
    * List all reminder policies (active and archived). Audit-log helper
-   * (`auditLogger.policySave`) is wired in 44-05; this read path stays
-   * silent.
+   * (`auditLogger.policySave`) is wired into the write paths; this read
+   * path stays silent.
    */
   async listPolicies(): Promise<ReminderPolicy[]> {
     if (!this.repository.listReminderPolicies) {
@@ -59,7 +58,7 @@ export class ReminderAdminService {
   }
 
   /**
-   * UFB-036 (Phase 44-05): existence check used by the tRPC router to
+   * Existence check used by the tRPC router to
    * decide whether the upcoming `savePolicy` call is a create or an
    * update — feeds the `admin.policy.save` audit event so SIEM rules
    * and dashboards can split the two cases without diffing payloads.

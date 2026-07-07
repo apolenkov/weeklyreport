@@ -9,7 +9,7 @@ import {
 } from "./carry-over.service";
 
 /**
- * lead-report-surface-polish (HF10, design D4): automatic carry-over runs when
+ * lead-report-surface-polish: automatic carry-over runs when
  * a period becomes OPEN — never for a `scheduled` period, whose source is
  * still being edited and whose `(source, target)` dedupe key must not be
  * burned early. Three call sites share this orchestrator: the login

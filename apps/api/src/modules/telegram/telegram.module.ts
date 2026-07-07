@@ -13,7 +13,7 @@ import { TELEGRAM_ADAPTER, type TelegramAdapter } from "./telegram.adapter.js";
 import { TelegramProcessor } from "./telegram.queue.js";
 
 /**
- * Phase 55 (UFB-056): selects the Telegram adapter based on env.
+ * Selects the Telegram adapter based on env.
  *
  *  - `TG_BOT_TOKEN` empty / unset → MockTelegramAdapter (the seeds-only
  *    default). Stores the payload on the in-process mock so admin smoke
@@ -24,7 +24,7 @@ import { TelegramProcessor } from "./telegram.queue.js";
  *    Mock would swallow notifications.
  *
  * The real provider (telegraf or grammY-backed adapter) will land in its
- * own file (`real-telegram.adapter.ts`) when Phase 55+ activates the bot;
+ * own file (`real-telegram.adapter.ts`) when the bot is activated;
  * at that point this switch grows a `if (token) return new RealAdapter()`
  * arm and the throw becomes unreachable.
  */
@@ -38,9 +38,9 @@ export function selectTelegramAdapter(env: EnvConfig): TelegramAdapter {
   // Activation also requires:
   //   - @BotFather token registered
   //   - user binding flow (/start <one-time-token>) implementation
-  //   - /summary, /ask command handlers (Phase 54 RAG dependency)
+  //   - /summary, /ask command handlers (RAG dependency)
   //
-  // REGISTRATION DECISION (locked 2026-05-12):
+  // REGISTRATION DECISION:
   //   No standalone Telegram registration — users authenticate via SSO only
   //   (Keycloak/SAML). Telegram binding = linking an already-authenticated
   //   user's account to their chat_id via a one-time deep-link token.

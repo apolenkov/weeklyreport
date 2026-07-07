@@ -10,7 +10,7 @@ import {
 import { createServiceLogger } from "../../lib/logger-service.js";
 
 /**
- * 39-05 (PERF-05): SearchRepository contract — Prisma-free at the service
+ * SearchRepository contract — Prisma-free at the service
  * boundary so unit tests can supply an in-memory fake. The Prisma
  * implementation lives in search.prisma-repository.ts and uses $queryRaw
  * with `plainto_tsquery('russian', ...)` against the GIN-indexed
@@ -29,7 +29,7 @@ export interface SearchRepository {
     scope: "mine" | "all" | "published";
     userId: string;
     /**
-     * TD-03: group IDs derived via groupScopeFilter logic.
+     * Group IDs derived via groupScopeFilter logic.
      *   null  → admin; no group filter (see all groups).
      *   [...] → non-admin; filter rows to these reporting-group IDs.
      * An empty array is rejected upstream (early-return empty result) so
@@ -94,7 +94,7 @@ export class SearchService {
       );
     }
 
-    // TD-03: derive allowed group IDs matching groupScopeFilter semantics:
+    // Derive allowed group IDs matching groupScopeFilter semantics:
     //   admin → null (no group filter; sees all groups)
     //   head/lead → [reportingGroupId] (own group only)
     //   viewer → viewerGroupAccess (granted groups, may be empty)

@@ -88,7 +88,7 @@ function observeTrpcDuration(
 }
 
 /**
- * 47-03 (DX-03): Prometheus middleware — records per-procedure latency
+ * Prometheus middleware — records per-procedure latency
  * (`trpc_request_duration_seconds`) and request volume
  * (`trpc_request_total`) with labels `procedure`/`type`/`status`. Wired
  * BEFORE `loggingMiddleware` on every procedure helper so timings
@@ -104,7 +104,7 @@ export const metricsMiddleware = t.middleware(({ path, type, next }) =>
 /**
  * Logging middleware — emits one entry log on procedure start and one exit log
  * on completion (success or error). Both lines carry the same correlationId via
- * the CLS store wired by Phase 25 / Plan 01 / Task 1, because the underlying
+ * the CLS store, because the underlying
  * AppLogger reads correlationId from CLS at emit time.
  *
  * Applied BEFORE auth middleware on every procedure helper so that failed-auth
@@ -239,7 +239,7 @@ export const loggingMiddleware = t.middleware(
 );
 
 /**
- * 36-02 mutation-audit middleware.
+ * Mutation-audit middleware.
  *
  * Captures every authenticated tRPC mutation through the existing
  * AuditLogger (so audit signal flows through the same AppLogger envelope as
@@ -356,7 +356,7 @@ const isAuthed = t.middleware(({ ctx, next }) => {
 });
 
 /**
- * Phase 32-B1 (H-04): PDF-export-scoped session guard.
+ * PDF-export-scoped session guard.
  *
  * When the inbound cookie verified as a PDF-export JWT (ctx.isPdfExport),
  * the synthetic viewer session must be restricted to a tiny read-only
@@ -423,9 +423,9 @@ const pdfExportGuard = t.middleware(
  *
  * Built from `t.procedure` directly (NOT derived from publicProcedure) so
  * any future public-only middleware does not silently propagate into every
- * protected chain (D1). Security-ordering contract: logging runs BEFORE auth
+ * protected chain. Security-ordering contract: logging runs BEFORE auth
  * (failed-auth forensics) and metrics before logging (timing excludes logger
- * overhead; 47-03). Any reordering is a behavior change, not a cleanup.
+ * overhead). Any reordering is a behavior change, not a cleanup.
  */
 function buildProtectedProcedure(authMiddleware: typeof isAuthed) {
   return t.procedure
@@ -438,19 +438,14 @@ function buildProtectedProcedure(authMiddleware: typeof isAuthed) {
 
 export const protectedProcedure = buildProtectedProcedure(isAuthed);
 
-// AUTH-03 (Phase 27) + AUTH-08 (Phase 29-01): role-bound procedures whose
+// Role-bound procedures whose
 // deny branch emits a structured `role-denied` audit event before throwing
 // FORBIDDEN. The role check itself is delegated to the pure `assertRole`
 // helper from @customreport/shared/trpc — the contract is identical, but
 // the middleware lives locally so it can read `ctx.auditLogger` / `ctx.ip`
-// from the api's TrpcContext. Per A-1 (defense-in-depth): the emit lives
+// from the api's TrpcContext. Per defense-in-depth: the emit lives
 // inside the factory so every consumer site inherits the audit signal
-// automatically, including future SAML-driven deny conditions in Phase
-// 29-04.
-//
-// adminProcedure === headProcedure for v6.0 per D-AUTH-03 — admin is a
-// reserved alias until SAML attribute mapping (Phase 29 / AUTH-02)
-// distinguishes it. Existing callers of headProcedure see no breaking diff.
+// automatically, including future SAML-driven deny conditions.
 function buildRoleMiddleware(allowed: Role | Role[]) {
   return t.middleware<{ session: UserSession }>(async ({ ctx, next }) => {
     try {
@@ -472,17 +467,17 @@ function buildRoleMiddleware(allowed: Role | Role[]) {
   });
 }
 
-// UFB-038 (2026-05-10): retire D-AUTH-03 alias. headProcedure still allows
+// headProcedure still allows
 // head + admin (admin is god-mode that inherits head capabilities), but
 // adminProcedure is now its own gate that ONLY admins pass. Heads can no
 // longer access /admin/* tRPC endpoints — they have a dashboard, not an
-// admin panel. Earlier H-01 widening (admin SAML user gets through head
-// procedures) is preserved by keeping admin in the head allowlist.
+// admin panel. Admin still passes head procedures (admin SAML user gets
+// through head procedures) because admin stays in the head allowlist.
 const headRoleMiddleware = buildRoleMiddleware(["head", "admin"]);
 const adminRoleMiddleware = buildRoleMiddleware("admin");
 const leadRoleMiddleware = buildRoleMiddleware("lead");
 const viewerRoleMiddleware = buildRoleMiddleware("viewer");
-// AUTH-04 (Phase 28-01): a "any authenticated role" procedure for read paths
+// A "any authenticated role" procedure for read paths
 // where the service layer is the actual gate (Prisma `where` filtered by
 // session.role). Necessary for archive.* and weeklyReport.get because heads,
 // leads, admins, and viewers all read the same surface but with different
@@ -493,7 +488,7 @@ const anyRoleMiddleware = buildRoleMiddleware([
   "admin",
   "viewer",
 ]);
-// Phase 52 (UFB-054): leadership-audience procedure. Used by
+// Leadership-audience procedure. Used by
 // `telemetry.summary` and any other product-KPI surface that the head,
 // admin, and viewer share but lead must NOT see (a lead is the data
 // subject of these KPIs, not a consumer of them). This is distinct from
@@ -503,7 +498,7 @@ const leadershipRoleMiddleware = buildRoleMiddleware([
   "admin",
   "viewer",
 ]);
-// W2 (fix-report-surface-integrity): ORPHANED — no procedure uses this gate.
+// fix-report-surface-integrity: ORPHANED — no procedure uses this gate.
 // Retained only so role-coverage's ALLOWED_CHAINS keeps a chain to match. The
 // live pdfExport policy is `leadershipProcedure` (head + admin + viewer); lead
 // is FORBIDDEN (data subject, ComingSoon UI). Do not re-wire without a change.
@@ -517,16 +512,16 @@ export const headProcedure = buildProtectedProcedure(headRoleMiddleware);
 export const leadProcedure = buildProtectedProcedure(leadRoleMiddleware);
 export const viewerProcedure = buildProtectedProcedure(viewerRoleMiddleware);
 export const anyRoleProcedure = buildProtectedProcedure(anyRoleMiddleware);
-// UFB-038: admin-only gate. /admin/* tRPC endpoints attach this; head
+// Admin-only gate. /admin/* tRPC endpoints attach this; head
 // users get FORBIDDEN. Use headProcedure for endpoints that should be
 // reachable by both head and admin (dashboards, weekly reports, review).
 export const adminProcedure = buildProtectedProcedure(adminRoleMiddleware);
-// Phase 52 (UFB-054): leadership procedure — head + admin + viewer.
+// Leadership procedure — head + admin + viewer.
 // Lead is excluded by design (lead is the data subject of product KPIs).
 export const leadershipProcedure = buildProtectedProcedure(
   leadershipRoleMiddleware,
 );
-// W2 (fix-report-surface-integrity): orphaned (see leadHeadAdminRoleMiddleware).
+// fix-report-surface-integrity: orphaned (see leadHeadAdminRoleMiddleware).
 // Exported only so role-coverage can register its chain in ALLOWED_CHAINS.
 export const leadHeadAdminProcedure = buildProtectedProcedure(
   leadHeadAdminRoleMiddleware,

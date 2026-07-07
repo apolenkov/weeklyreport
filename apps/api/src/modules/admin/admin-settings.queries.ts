@@ -13,14 +13,14 @@ import {
 } from "./admin-enum-mappers";
 
 /**
- * AppSettings domain queries, extracted from `admin.prisma-repository.ts`
- * (R3a-4 max-lines split). The facade class delegates getSettings/updateSettings
- * here; the screaming-snake `WorkingDays`/`ReminderAudience` enums are translated
- * at this boundary (single point) so callers see only lowercase-hyphen.
+ * AppSettings domain queries. The facade class delegates
+ * getSettings/updateSettings here; the screaming-snake
+ * `WorkingDays`/`ReminderAudience` enums are translated at this boundary
+ * (single point) so callers see only lowercase-hyphen.
  */
 
 /**
- * UFB-048 (Phase 48-B): map a Prisma `AppSettings` row to the wire shape.
+ * Map a Prisma `AppSettings` row to the wire shape.
  */
 function rowToAppSettings(row: {
   autoCreatePeriods: boolean;
@@ -34,18 +34,15 @@ function rowToAppSettings(row: {
   allowLateSubmissions: boolean;
   autoPublishAfterDeadline: boolean;
   autoArchiveWeeksAfterPublish: number;
-  // UFB-051 (Phase 51-A): period-cycle knobs (consumer-less ones removed in
-  // admin-settings-surface-cleanup).
+  // period-cycle knobs
   deadlineTime: string;
   allowReopenAfterPublish: boolean;
   reopenWindowHours: number;
   unifiedActivityView: boolean;
 }): AppSettings {
-  // UFB-047 / Phase 49-01: `departmentName` no longer flows through this
-  // mapper — the column is being dropped in the same migration that
-  // ships this code path. Brand identity lives on the `Organization`
-  // singleton (Identity tab in Settings) and is exposed via
-  // `OrganizationService` / `auth.me.organization`.
+  // `departmentName` does not flow through this mapper. Brand identity
+  // lives on the `Organization` singleton (Identity tab in Settings) and
+  // is exposed via `OrganizationService` / `auth.me.organization`.
   return appSettingsSchema.parse({
     autoCreatePeriods: row.autoCreatePeriods,
     defaultDeadlineDays: row.defaultDeadlineDays,
@@ -79,10 +76,8 @@ export async function updateSettings(
   prisma: PrismaService,
   data: Partial<AppSettings>,
 ): Promise<AppSettings> {
-  // UFB-048: translate enum fields explicitly (mon-fri → MON_FRI, etc.)
+  // Translate enum fields explicitly (mon-fri → MON_FRI, etc.)
   // before handing the payload to Prisma. Other fields pass through.
-  // (UFB-047 / Phase 49-01: `departmentName` removed from the
-  // AppSettings shape — see `rowToAppSettings` for the rationale.)
   const dbData: Record<string, unknown> = {};
   if (data.autoCreatePeriods !== undefined)
     dbData.autoCreatePeriods = data.autoCreatePeriods;

@@ -82,7 +82,7 @@ const DOMAIN_ERROR_CODES: readonly (readonly [
   [ArchiveDomainError, "NOT_FOUND"],
   [WeeklyReportDomainError, "NOT_FOUND"],
   [LeadFormDomainError, "NOT_FOUND"],
-  // reopen-request-lifecycle (D4): a lifecycle/one-pending block is a state
+  // reopen-request-lifecycle: a lifecycle/one-pending block is a state
   // conflict on an existing resource → BAD_REQUEST, not NOT_FOUND.
   [ReopenRequestError, "BAD_REQUEST"],
   // map-domain-errors: lead-form state-constraint (fill submitted/published
@@ -93,10 +93,10 @@ const DOMAIN_ERROR_CODES: readonly (readonly [
   [CarryOverConflictError, "CONFLICT"],
   [ReminderDomainError, "BAD_REQUEST"],
   [CarryOverDomainError, "BAD_REQUEST"],
-  // UFB-063: manual period overlap is terminal (a retry re-overlaps) →
+  // Manual period overlap is terminal (a retry re-overlaps) →
   // BAD_REQUEST, so the "already exists for these dates" toast flows verbatim.
   [AdminPeriodOverlapError, "BAD_REQUEST"],
-  // UFB-067: manual period edit on a missing reportId → NOT_FOUND (distinct
+  // Manual period edit on a missing reportId → NOT_FOUND (distinct
   // from the overlap BAD_REQUEST) so the admin UI shows a row-removed state.
   [AdminPeriodNotFoundError, "NOT_FOUND"],
   // An out-of-scope or archived period-lifecycle target is an authorization

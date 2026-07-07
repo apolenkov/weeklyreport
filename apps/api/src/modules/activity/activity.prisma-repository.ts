@@ -14,7 +14,7 @@ export class ActivityPrismaRepository implements ActivityRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * UX-18: assemble the activity rows for the head dashboard panel.
+   * Assemble the activity rows for the head dashboard panel.
    *
    * 1. Resolve the current open period (most recent periodStatus='open').
    * 2. Load every lead user once.

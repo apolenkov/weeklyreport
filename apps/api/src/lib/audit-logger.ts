@@ -1,9 +1,9 @@
 import type { AuditEvent, AuditLogger } from "./audit-logger-types.js";
 import type { AppLogger } from "./logger.js";
 
-// AUTH-08 audit envelope + event types live in ./audit-logger-types (R3a-4
-// max-lines split). Re-exported here so existing importers (main.ts,
-// trpc.context, auth.routes, the period schedulers) are unaffected.
+// Audit envelope + event types live in ./audit-logger-types. Re-exported
+// here so importers (main.ts, trpc.context, auth.routes, the period
+// schedulers) pull both types and implementations from one module.
 export type * from "./audit-logger-types.js";
 
 /**

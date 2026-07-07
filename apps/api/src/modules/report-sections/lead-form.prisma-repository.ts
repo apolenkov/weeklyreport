@@ -43,10 +43,9 @@ type StageTrafficStatus = "green" | "yellow" | "red" | null;
 export class LeadFormPrismaRepository implements LeadFormRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  // UFB-047 / Phase 49-01: legacy `getDepartmentName()` removed. The
-  // section read model no longer carries a per-section brand label;
-  // frontends pull it from `auth.me.organization` (hydrated per
-  // request) so the source of truth is one row in `Organization`.
+  // The section read model carries no per-section brand label; frontends pull
+  // it from `auth.me.organization` (hydrated per request) so the source of
+  // truth is one row in `Organization`.
 
   async getSectionById(
     sectionId: string,
@@ -215,7 +214,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     await applyRevokeTransition(this.prisma, sectionId, revokedBy);
   }
 
-  /** SC-165: Revoke every submitted section in a report. */
+  /** Revoke every submitted section in a report. */
   async revokeAllSubmitted(
     reportId: string,
     revokedBy: string,

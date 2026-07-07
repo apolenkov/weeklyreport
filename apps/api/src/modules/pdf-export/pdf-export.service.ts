@@ -45,8 +45,7 @@ export interface PdfExportRepository {
 }
 
 /**
- * AUTH-05 (Phase 28-02 / Phase 32-B1 H-04): claim shape carried in the 5-min
- * PDF export JWT.
+ * Claim shape carried in the 5-min PDF export JWT.
  *
  * The reportId claim binds the cookie to a single resource so a leaked
  * cookie cannot be reused to render arbitrary reports. The `kind` claim
@@ -54,10 +53,9 @@ export interface PdfExportRepository {
  * different secret and a much wider claim shape) so the tRPC context
  * verifier can route it to the correct check path.
  *
- * Phase 32-B1 (H-04) adds the server-side verifier (`verifyPdfExportToken`)
- * and wires it into `trpc.context.ts`; the synthetic session it produces
- * is restricted to a hard-coded allowlist of read procedures scoped to the
- * JWT's reportId.
+ * The server-side verifier (`verifyPdfExportToken`) is wired into
+ * `trpc.context.ts`; the synthetic session it produces is restricted to a
+ * hard-coded allowlist of read procedures scoped to the JWT's reportId.
  */
 export interface PdfExportTokenClaims {
   reportId: string;
@@ -82,8 +80,8 @@ const PDF_EXPORT_JWT_ALGORITHM = "HS256" as const;
 const MIN_PDF_EXPORT_JWT_SECRET_LENGTH = 32;
 
 /**
- * AUTH-05 / Phase 32-B1 (H-04): verify a token signed by `signPdfExportToken`
- * against `PDF_EXPORT_JWT_SECRET`. Returns the typed claim shape on success;
+ * Verify a token signed by `signPdfExportToken` against
+ * `PDF_EXPORT_JWT_SECRET`. Returns the typed claim shape on success;
  * throws if the token is invalid, expired, missing the kind claim, or signed
  * with a different secret. This is the deferred verifier called from
  * `trpc.context.ts` after `verifySessionToken` fails.
@@ -132,7 +130,7 @@ export class PdfExportService {
   }
 
   /**
-   * AUTH-05: sign a 5-min scoped JWT with `{reportId}` claim.
+   * Sign a 5-min scoped JWT with `{reportId}` claim.
    *
    * Throws `PdfExportDomainError` (mapped by tRPC error mapper to 500) if the
    * signing secret is missing or shorter than 32 chars — fail loud at request
@@ -160,7 +158,7 @@ export class PdfExportService {
     requestedBy?: string,
     authToken?: string,
     /**
-     * Phase 52-A (UFB-054): requesting role for the product-telemetry
+     * Requesting role for the product-telemetry
      * `customreport_pdf_export_requests_total{role}` counter. Optional —
      * worker / cron callers default to `'system'`. The label is the
      * normalised session role string when supplied.
@@ -174,8 +172,8 @@ export class PdfExportService {
     }
 
     this.logger.info("requesting PDF export", { reportId, requestedBy });
-    // Phase 52-A (UFB-054): bump role-labelled counter before the queue
-    // enqueue. We're past the validation gate, so a successful enqueue
+    // Bump role-labelled counter before the queue enqueue. We're past the
+    // validation gate, so a successful enqueue
     // (or queue-less test scenario) maps 1:1 to a customer-facing
     // "export requested" event.
     customreportPdfExportRequestsTotal.inc({
@@ -196,7 +194,7 @@ export class PdfExportService {
     );
 
     if (this.pdfQueue) {
-      // AUTH-05: derive the auth cookie if the caller didn't pre-sign one. Most
+      // Derive the auth cookie if the caller didn't pre-sign one. Most
       // callers don't — this keeps the contract a single tRPC mutation away
       // from "head clicks Export PDF". Signed lazily so test scenarios without
       // a queue (and thus without a real worker) don't require the secret.
@@ -266,7 +264,7 @@ export class PdfExportService {
    * Builds the Playwright browser cookie configuration for authenticated PDF rendering.
    * The auth cookie must be set before Playwright navigates to the print page.
    *
-   * Phase 32-B2 (M-01): use Playwright's `url` field instead of inferring
+   * Use Playwright's `url` field instead of inferring
    * `domain` (+ `secure` from `protocol`) from `PDF_BASE_URL`. Domain
    * inference is fragile when the URL is an IP (`http://10.0.0.5:3000`),
    * `localhost`, or a behind-proxy hostname — Playwright either rejects

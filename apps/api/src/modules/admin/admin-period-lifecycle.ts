@@ -9,9 +9,8 @@ import {
 } from "./admin-shared.js";
 
 /**
- * Period (Report) lifecycle-transition writes for the Admin Periods tab,
- * split out of `admin-period.queries.ts` (R3a-4 max-lines drain): create,
- * update, archive, unarchive — every mutation that runs through
+ * Period (Report) lifecycle-transition writes for the Admin Periods tab:
+ * create, update, archive, unarchive — every mutation that runs through
  * `buildTransition` and can race the `Report_one_open_per_boundary`
  * partial-unique index.
  */
@@ -40,13 +39,12 @@ export async function openBoundaryGuarded<T>(
 }
 
 /**
- * UFB-063: mint a Report row with the supplied dates + initial state.
+ * Mint a Report row with the supplied dates + initial state.
  * Mirrors `PeriodCreatorScheduler.runOnce`'s bare `report.create` —
  * `status` defaults to 'draft' and `periodStatus` defaults to 'open'
  * at the DB layer (see schema.prisma defaults). No PolicyApplicator
- * call here — the scheduler also skips it (pre-existing gap,
- * documented in the 063 SUMMARY); fixing both paths is deferred to
- * keep this plan additive.
+ * call here — the scheduler also skips it (pre-existing gap); fixing
+ * both paths is deferred.
  */
 export async function createPeriodManual(
   prisma: PrismaService,
@@ -100,7 +98,7 @@ export async function createPeriodManual(
 }
 
 /**
- * UFB-067: patch an existing Report's date envelope + weekLabel. The
+ * Patch an existing Report's date envelope + weekLabel. The
  * service has already filtered `data` down to actually-changed fields,
  * so Prisma's partial-update semantics are exactly what we want — only
  * supplied keys are written, the rest of the row stays untouched.
@@ -154,10 +152,9 @@ export async function updatePeriodManual(
 }
 
 /**
- * UFB-052 (Phase 51-B): manual archive. Writes both the legacy
- * `archived` boolean and the new `periodState='archived'` atomically
- * so the two-state-machine invariant from 51-C (Open Question 1)
- * holds even when the auto-archiver scheduler hasn't run yet.
+ * Manual archive. Writes both the legacy `archived` boolean and the
+ * new `periodState='archived'` atomically so the two-state-machine
+ * invariant holds even when the auto-archiver scheduler hasn't run yet.
  */
 export async function archivePeriod(
   prisma: PrismaService,
@@ -171,7 +168,7 @@ export async function archivePeriod(
 }
 
 /**
- * UFB-052 (Phase 51-B): un-archive — flips `archived=false` and
+ * Un-archive — flips `archived=false` and
  * derives the next `periodState` from the legacy tuple. The legacy
  * `(status, periodStatus)` pair is the only ground truth left after
  * a row was set to `'archived'`, so we read it on the same row and
@@ -185,7 +182,7 @@ export async function archivePeriod(
  * The scheduled→open distinction is lost across an archive round-trip;
  * that is acceptable because admin archive of a SCHEDULED period is
  * a tiny edge case (the PeriodCreator scheduler would just re-mint
- * the row anyway). Documented in the 51-B SUMMARY.
+ * the row anyway).
  */
 export async function unarchivePeriod(
   prisma: PrismaService,

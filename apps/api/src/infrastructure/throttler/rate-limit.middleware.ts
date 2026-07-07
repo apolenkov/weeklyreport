@@ -40,7 +40,7 @@ export function createRateLimits(options: {
     windowMs: 60_000,
     standardHeaders: "draft-7",
     legacyHeaders: false,
-    // FIX-02 (Phase 35-08): wrap the IP through `ipKeyGenerator` from
+    // Wrap the IP through `ipKeyGenerator` from
     // express-rate-limit so IPv6 addresses are normalised by /64 prefix.
     // Without it, the library emits the ERR_ERL_KEY_GEN_IPV6 advisory
     // every request because varying low bits of an IPv6 address would let
@@ -60,7 +60,7 @@ export function createRateLimits(options: {
         ip: req.ip,
         bucket,
       });
-      // 37-02: surface to /metrics so the Grafana panel "Rate-limit hits by
+      // Surface to /metrics so the Grafana panel "Rate-limit hits by
       // bucket" has data.
       rateLimitHitsTotal.inc({ bucket });
       res.status(opts.statusCode).json({

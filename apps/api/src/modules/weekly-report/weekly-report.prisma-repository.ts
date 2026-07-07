@@ -137,10 +137,10 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
   ): Promise<WeeklyReportRepositoryResult | null> {
     const sectionScope = scopeWhere(session, "reportSection");
     const userScope = scopeWhere(session, "user");
-    // UFB-054 / Phase 56-D consumer migration: the weekly-report portfolio
+    // The weekly-report portfolio
     // is the only `'project'`-target scope-filter consumer in the api. Its
     // semantics are "what products does this group currently own?" — that
-    // matches the explicit GroupProduct M:M edge introduced in Phase 56-A,
+    // matches the explicit GroupProduct M:M edge,
     // not the implicit `lead.reportingGroupId` derivation. Opt this site
     // into the explicit edge so a product attached to two groups via the
     // join surfaces in both heads' weekly reports, and a lead rotation
@@ -149,13 +149,6 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     // Lead's write path (saveDraft / submit) does not flow through this
     // helper — it goes through `auth.routes.ts` with `leadId: userId`
     // directly — so flipping this site only affects READ visibility.
-    //
-    // scope-filter-migration status (Phase 56-D + audit-scope-filter-migration):
-    // COMPLETE — useExplicitGroupProducts: true routes project scope through the
-    // explicit GroupProduct join table instead of the legacy lead.reportingGroupId
-    // derivation. All three scope axes (section, user, project) are applied via
-    // scopeWhere() below. Defensive guardGroupScope() is exported from group-scope.ts
-    // for use when callers must assert that session is non-null.
     const projectScope = scopeWhere(session, "project", {
       useExplicitGroupProducts: true,
     });
@@ -198,19 +191,17 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     ).length;
 
     const totalLeads = leadUsers.length;
-    // UFB-047 / Phase 49-01: brand label removed from the weekly read
-    // model. Frontends read `auth.me.organization.fullName` instead, so
-    // the API path no longer touches `AppSettings` here.
+    // The brand label is intentionally absent from the weekly read model —
+    // frontends read `auth.me.organization.fullName`, so this API path does
+    // not touch `AppSettings` here.
 
-    // Phase 48-C (UFB-038): canSendReminder is now driven by ReminderPolicy
-    // validity windows (Phase 44 model), not by legacy per-report
-    // ReminderRule presence. The UI signal `hasActiveReminderRule` keeps its
-    // wire-format name to avoid a cross-cutting rename, but its semantics
-    // are now: "∃ at least one active ReminderPolicy whose validity window
-    // covers this Report.deadline". Without this migration, head/admin
-    // dashboards still showed "Send Reminder" gated on the legacy
-    // per-period rule existence, which mis-matches the new policy-driven
-    // scheduler that materialises ReminderRule rows lazily.
+    // canSendReminder is driven by ReminderPolicy validity windows, not by
+    // per-report ReminderRule presence. The UI signal `hasActiveReminderRule`
+    // keeps its wire-format name to avoid a cross-cutting rename, but its
+    // semantics are: "∃ at least one active ReminderPolicy whose validity
+    // window covers this Report.deadline". The policy-driven scheduler
+    // materialises ReminderRule rows lazily, so gating on per-period rule
+    // existence would mis-match it.
     const activePolicyCount = await this.prisma.reminderPolicy.count({
       where: {
         active: true,
@@ -298,7 +289,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     );
 
     const mappedSections: ReportSectionReadModel[] =
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch
       (report.sections as any[]).map(mapPrismaToReportSection);
     const leadSections = mappedSections.map((section) => {
       const groupId = sectionGroupIds.get(section.reportSectionId) ?? null;

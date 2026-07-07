@@ -46,7 +46,7 @@ export class LeadFormService {
   constructor(private readonly repository: LeadFormRepository) {}
 
   /**
-   * API-03: Revoke a lead's submission (head-only). The injected
+   * Revoke a lead's submission (head-only). The injected
    * `scope` is the caller's `reportSection` group-scope fragment — the section
    * is loaded WITH the scope applied, so a head cannot revoke another group's
    * section by passing its id. An out-of-group (or missing) id resolves to null
@@ -77,7 +77,7 @@ export class LeadFormService {
     return { success: true };
   }
 
-  /** API-07: Fill current form from a past period's data. */
+  /** Fill current form from a past period's data. */
   async fillFrom(
     targetSectionId: string,
     sourceSectionId: string,
@@ -165,7 +165,7 @@ export class LeadFormService {
     return { success: true, copiedItems };
   }
 
-  /** API-04: Request the head to reopen a submitted section. */
+  /** Request the head to reopen a submitted section. */
   async requestReopen(
     sectionId: string,
     userId: string,
@@ -195,14 +195,14 @@ export class LeadFormService {
     }
 
     await this.repository.createReopenRequest(sectionId, userId, reason);
-    // Phase 52-A (UFB-054): product telemetry. `state='requested'` is the
-    // funnel's entry — paired with `approved` / `rejected` from the admin
-    // mutation it gives leadership the full demand-vs-policy picture.
+    // Product telemetry. `state='requested'` is the funnel's entry — paired
+    // with `approved` / `rejected` from the admin mutation it gives leadership
+    // the full demand-vs-policy picture.
     customreportReopenRequestsTotal.inc({ state: "requested" });
     return { success: true };
   }
 
-  /** API-10: Get lead form for a specific period. */
+  /** Get lead form for a specific period. */
   async getByPeriod(
     reportId: string,
     userId: string,
@@ -313,7 +313,7 @@ export class LeadFormService {
   /**
    * Full-content cross-author read for the lead form's "Everyone" visibility
    * lens. Strictly more sensitive than the status-only `getCrossAuthors`, so
-   * gated harder (design D6): the caller must (a) have access to the report —
+   * gated harder: the caller must (a) have access to the report —
    * own a section in it — AND (b) co-own the product whose foreign records are
    * requested. There is NO head/admin bypass: a head or admin who does not
    * co-own the product is denied, exactly like any other non-co-owner. The
@@ -358,7 +358,7 @@ export class LeadFormService {
   }
 
   /**
-   * SC-165: Revoke every submitted section in a report. The injected
+   * Revoke every submitted section in a report. The injected
    * `scope` (the caller's `reportSection` group-scope fragment) is forwarded to
    * the repository's scoped `updateMany`, so a head revokes only their own
    * group's submissions; `revokedCount` reflects only the authorized rows.

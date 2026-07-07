@@ -6,7 +6,7 @@ import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import { buildRedisConnectionOptions } from "../../infrastructure/config/redis-connection";
 
 /**
- * A2 (UAT-v7 2026-05-12): Redis-backed session revocation for the
+ * Redis-backed session revocation for the
  * deactivate/activate user feature.
  *
  * When an admin deactivates a user the userId is added to the Redis set

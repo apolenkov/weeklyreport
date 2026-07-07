@@ -13,8 +13,7 @@ import type { AdminRepository } from "./admin-shared";
 
 /**
  * Owns the AppSettings singleton and the snapshot read path plus the
- * user-level snapshot mutations. Extracted verbatim from `AdminService`
- * (code-quality-modernization, Wave 3); behavior unchanged.
+ * user-level snapshot mutations.
  */
 export class SnapshotAdminService {
   private readonly logger: AppLogger;
@@ -26,12 +25,12 @@ export class SnapshotAdminService {
     this.logger = logger ?? createNullLogger();
   }
 
-  /** API-11: Get application settings singleton. */
+  /** Get application settings singleton. */
   async getSettings(): Promise<AppSettings> {
     return appSettingsSchema.parse(await this.repository.getSettings());
   }
 
-  /** API-11: Update application settings (partial). */
+  /** Update application settings (partial). */
   async updateSettings(data: Partial<AppSettings>): Promise<AppSettings> {
     const parsed = appSettingsUpdateSchema.parse(data);
     return appSettingsSchema.parse(

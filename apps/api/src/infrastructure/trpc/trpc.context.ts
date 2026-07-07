@@ -16,7 +16,7 @@ import { hydrateSession } from "./trpc.session-hydration.js";
 
 export { clearOrgCache } from "./trpc.session-hydration.js";
 
-// D-32: DEV_SESSION must carry reportingGroupId so groupScopeFilter scopes
+// DEV_SESSION must carry reportingGroupId so groupScopeFilter scopes
 // the activity panel to the head's group in dev / integration mode.
 // UUID matches DEFAULT_REPORTING_GROUP_ID in prisma/seed-constants.ts.
 const DEV_SESSION: UserSession = {
@@ -31,7 +31,7 @@ const DEV_SESSION: UserSession = {
 };
 
 /**
- * Phase 32-B1 (H-04): synthetic session created when an inbound cookie is
+ * Synthetic session created when an inbound cookie is
  * a valid PDF-export JWT (kind='pdf-export'). The session must satisfy
  * `userSessionSchema` (uuid userId, email, etc.) so existing middlewares
  * keep their shape contract. Read-only restrictions live on TrpcContext
@@ -126,7 +126,7 @@ export interface TrpcContext {
   /** Optional in direct unit callers; real HTTP contexts always receive it. */
   prisma?: PrismaService;
   /**
-   * AUTH-08 (Phase 29-01): structured audit channel for security-relevant
+   * Structured audit channel for security-relevant
    * events (login success/fail, logout, role-denied). Built once per
    * factory; the same instance is shared across all requests because the
    * underlying AppLogger is request-agnostic (correlation IDs flow via
@@ -140,7 +140,7 @@ export interface TrpcContext {
    */
   ip: string;
   /**
-   * Phase 32-B1 (H-04): true when the inbound cookie verified as a
+   * True when the inbound cookie verified as a
    * PDF-export-scoped JWT (rather than a regular session JWT). When true,
    * the synthetic session is restricted to a hard-coded allowlist of read
    * procedures keyed on `pdfReportId`; all other procedures throw FORBIDDEN
@@ -149,7 +149,7 @@ export interface TrpcContext {
    */
   isPdfExport: boolean;
   /**
-   * Phase 32-B1 (H-04): the reportId from the verified PDF JWT claim, used
+   * The reportId from the verified PDF JWT claim, used
    * by pdfExportGuard to assert the procedure input's reportId matches.
    * `null` whenever `isPdfExport === false`.
    */
@@ -215,7 +215,7 @@ export function createContextFactory(
   // Resolve PrismaService once (not per request) from the NestJS DI container.
   const prisma = _app.get(PrismaService);
   const auditLogger = createAuditLogger(logger);
-  // A2 (UAT-v7 2026-05-12): Redis-backed session revocation fast path.
+  // Redis-backed session revocation fast path.
   // Constructed once; the underlying ioredis client uses lazyConnect so it
   // does not block startup when Redis is unavailable.
   const sessionRevocation = new SessionRevocationService(
@@ -260,7 +260,7 @@ export function createContextFactory(
         };
       }
 
-      // Phase 32-B1 (H-04) + empty-PDF fix: PDF worker authentication path.
+      // PDF worker authentication path.
       // The Playwright browser injects a 5-min JWT signed by
       // `signPdfExportToken` carrying `{ reportId, kind: 'pdf-export',
       // requestedBy }`. We verify against PDF_EXPORT_JWT_SECRET (different
@@ -294,7 +294,6 @@ export function createContextFactory(
       }
     }
 
-    // AUTH-01 / Phase 29-04 (CC-1, CC-2):
     //  - DEV_SESSION fallback ONLY fires when NODE_ENV !== 'production' AND a
     //    dev-auth flag is set. A boot-time fence in `lib/dev-auth-fence.ts`
     //    refuses to start the API at all if either flag is true under
@@ -310,7 +309,7 @@ export function createContextFactory(
     const allowTest =
       isNonProd && process.env.AUTH_DEV_MODE_ALLOW_TEST === "true";
     if (devModeEnabled || allowTest) {
-      // { ...DEV_SESSION } spread is AT THE CALL SITE intentionally (D4):
+      // { ...DEV_SESSION } spread is AT THE CALL SITE intentionally:
       // the four helpers mutate the session object in place; passing the
       // module-level constant directly would pollute it across requests.
       const devWithOrg = await hydrateSession({ ...DEV_SESSION }, prisma);

@@ -14,10 +14,8 @@ import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { audienceFromPrisma } from "./admin-enum-mappers";
 
 /**
- * AdminSnapshot read path, extracted from `admin.prisma-repository.ts`
- * (R3a-4 max-lines split). The write path lives in
- * `admin-snapshot-write.queries.ts` (kept separate to stay under the size
- * budget).
+ * AdminSnapshot read path. The write path lives in
+ * `admin-snapshot-write.queries.ts`.
  */
 
 /**
@@ -73,7 +71,7 @@ export async function getSnapshot(
         role: u.role,
         reportingGroupId: u.reportingGroupId ?? null,
         reportingGroupName: u.reportingGroup?.name ?? null,
-        // A2 (UAT-v7 2026-05-12): surface the soft-deactivation flag.
+        // surface the soft-deactivation flag.
         isActive: u.isActive,
       }),
     ),
@@ -110,7 +108,7 @@ export async function getSnapshot(
       adminReminderRuleSchema.parse({
         id: rule.id,
         reportId: rule.reportId,
-        // UFB-036 (Phase 44-04): expose the policy FK so the admin
+        // expose the policy FK so the admin
         // UI can group derived rules under their owning policy.
         policyId: rule.policyId,
         kind: rule.kind,
@@ -133,7 +131,7 @@ export async function getSnapshot(
         errorMessage: exec.error,
       }),
     ),
-    // UFB-036 (Phase 44-02): policies surfaced inline so the admin
+    // policies surfaced inline so the admin
     // snapshot fetch is one round trip on the wire.
     policies: reminderPolicies.map((row) =>
       reminderPolicySchema.parse({

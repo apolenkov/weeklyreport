@@ -6,7 +6,7 @@ import {
 } from "./metrics.registry.js";
 
 /**
- * 47-03 (DX-03) — minimal contract this middleware needs from the tRPC
+ * Minimal contract this middleware needs from the tRPC
  * middleware runner. We pass-through the result object opaquely so callers
  * can keep their fully-typed `MiddlewareResult<TContext>` (which carries
  * a branded `marker`) without us mirroring those internals here.
@@ -16,14 +16,14 @@ export type TrpcMiddlewareResult<T = unknown> =
   | ({ ok: false; error: TRPCError } & T);
 
 /**
- * 47-03 (DX-03) — tRPC Prometheus middleware.
+ * tRPC Prometheus middleware.
  *
  * Records request latency (`trpc_request_duration_seconds`) and volume
  * (`trpc_request_total`) per procedure, labeled by procedure path, tRPC
  * type (query | mutation | subscription) and outcome (success | error).
  *
  * Wired BEFORE the existing logging/audit middleware on every procedure
- * helper so timings exclude logger overhead (Phase 47-03 plan §6). The
+ * helper so timings exclude logger overhead. The
  * middleware is intentionally framework-agnostic: it accepts the tiny
  * tRPC middleware contract (`{ path, type, next }`) and works with both
  * `publicProcedure` and the role-gated procedures.

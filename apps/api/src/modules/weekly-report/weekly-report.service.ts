@@ -38,7 +38,7 @@ export class WeeklyReportDomainError extends Error {
 }
 
 /**
- * UFB-040 / Phase 46-04: weekly report visibility scope.
+ * Weekly report visibility scope.
  * Repository receives the session so it can filter sections, lead users,
  * and projects by `groupScopeFilter`. Tests pass a narrow Pick.
  */
@@ -144,7 +144,7 @@ export class WeeklyReportService {
    * OR the current editable period (drafts included), gated published-or-current.
    * Non-viewer roles (head/lead/admin) keep their existing visibility.
    *
-   * R3a (UFB-HEAD-DASH): when no active Period exists the service returns
+   * When no active Period exists the service returns
    * `{ status: 'no-period', report: null }` instead of throwing. This
    * eliminates the React Query retry storm (retry: 3 → 3-5 s spinner) on
    * fresh installs and between period cycles. The router logs this path as
@@ -173,7 +173,7 @@ export class WeeklyReportService {
     const resolvedId = reportId ?? (await this.resolveDefaultReportId(role));
 
     if (!resolvedId) {
-      // R3a: no active period — return sentinel instead of throwing NOT_FOUND.
+      // No active period — return sentinel instead of throwing NOT_FOUND.
       this.logger.info("weekly report: no active period");
       return { status: "no-period", report: null, crossGroup: null };
     }

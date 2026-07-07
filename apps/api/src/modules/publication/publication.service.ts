@@ -171,8 +171,8 @@ export class PublicationService {
     private readonly repository: PublicationRepository,
     logger?: AppLogger,
     /**
-     * Phase 54 (UFB-055): on every successful publish, called with the
-     * list of section ids that just landed in the published report.
+     * On every successful publish, called with the list of section ids
+     * that just landed in the published report.
      * Defaults to a no-op so existing tests / fixtures stay green.
      * Errors are swallowed below — publish never fails because of
      * ingestion bookkeeping.

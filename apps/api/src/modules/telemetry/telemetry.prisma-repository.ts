@@ -6,7 +6,7 @@ import { queryActiveLeadsLastPublishedPeriod } from "./telemetry.queries.js";
 import type { TelemetryRepository } from "./telemetry.service.js";
 
 /**
- * Phase 52 (UFB-054) — Prisma-backed implementation of the
+ * Prisma-backed implementation of the
  * `TelemetryRepository` port consumed by TelemetryService. All queries
  * are scoped to the small N (last 1 or 4 periods, last 7 days) so the
  * read path stays sub-100ms even at 10K+ historical reports.

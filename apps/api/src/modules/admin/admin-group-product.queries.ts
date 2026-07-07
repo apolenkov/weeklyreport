@@ -12,8 +12,7 @@ import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { AdminGroupProductConflictError } from "./admin-shared.js";
 
 /**
- * UFB-054 (Phase 56-B): Group ↔ Product M:M edge mutations + reads, extracted
- * from `admin.prisma-repository.ts` (R3a-4 max-lines split).
+ * Group ↔ Product M:M edge mutations + reads.
  */
 
 /**

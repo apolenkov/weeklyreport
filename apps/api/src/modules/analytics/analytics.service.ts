@@ -41,7 +41,7 @@ export interface AnalyticsRepository {
 }
 
 /**
- * Cache port — Phase 30-01 wraps Redis behind this minimal interface so unit
+ * Cache port — wraps Redis behind this minimal interface so unit
  * tests can supply an in-memory fake (the real Redis client is opt-in via
  * AnalyticsCache in analytics.cache.ts).
  */
@@ -49,7 +49,7 @@ export interface AnalyticsCachePort {
   getOrCompute<T>(key: string, fn: () => Promise<T>): Promise<T>;
 }
 
-// Phase 32-C / M-04: namespace under `customreport:` so analytics keys do not
+// Namespace under `customreport:` so analytics keys do not
 // collide with other applications sharing the Redis instance. The cache's
 // SCAN-based invalidation (analytics.cache.ts) walks the same prefix, so all
 // three sub-prefixes must remain on the `customreport:analytics:` root.

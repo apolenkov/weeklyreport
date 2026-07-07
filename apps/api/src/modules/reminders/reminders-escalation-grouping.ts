@@ -1,7 +1,6 @@
 /**
- * Escalation-digest grouping, split out of `reminders.service.ts` (R3a-4
- * max-lines drain): resolving each late lead's active group head and
- * fanning the report's late leads out into one digest per head.
+ * Escalation-digest grouping: resolving each late lead's active group head
+ * and fanning the report's late leads out into one digest per head.
  */
 
 interface EscalationHead {

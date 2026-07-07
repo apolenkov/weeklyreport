@@ -29,8 +29,8 @@ import { QueueRegistry } from "./queue-registry.js";
     }),
     BullModule.registerQueue({ name: "pdf-export" }),
     BullModule.registerQueue({ name: "email-reminder" }),
-    // telegram-outbound is seeds-only until Phase 55; `attempts: 3` is set
-    // per-job at enqueue time, not on the queue.
+    // telegram-outbound is seeds-only until the bot activates; `attempts: 3` is
+    // set per-job at enqueue time, not on the queue.
     BullModule.registerQueue({ name: "telegram-outbound" }),
   ],
   providers: [

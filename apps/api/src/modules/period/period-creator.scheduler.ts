@@ -72,8 +72,8 @@ export async function flipDueScheduledToOpen(
 }
 
 /**
- * UFB-049 / Phase 50-B: daily scheduler that creates the next Period when
- * the most recent one is in the past and `AppSettings.autoCreatePeriods=true`.
+ * Daily scheduler that creates the next Period when the most recent one is in
+ * the past and `AppSettings.autoCreatePeriods=true`.
  *
  * Pattern mirrors {@link RemindersScheduler}: a `runOnce(now)` test seam plus
  * a thin `@Cron` wrapper that supplies `new Date()`. We chose `@Cron` over
@@ -87,9 +87,9 @@ export async function flipDueScheduledToOpen(
  * already exists, so two ticks within the same day collapse to a single
  * Period without DB constraint races.
  *
- * Cron: fires daily at 00:05 (UTC for now; per-tz Cron is deferred to
- * Phase 51-A which broadens the settings surface). The 5-minute offset
- * avoids midnight crowding with backup/maintenance jobs.
+ * Cron: fires daily at 00:05 (UTC for now; per-tz Cron is deferred until the
+ * settings surface broadens). The 5-minute offset avoids midnight crowding
+ * with backup/maintenance jobs.
  */
 @Injectable()
 export class PeriodCreatorScheduler {
@@ -156,9 +156,9 @@ export class PeriodCreatorScheduler {
       return { created: false, reason: "disabled" };
     }
 
-    // UFB-053 / Phase 51-C: before creating, flip any 'scheduled' rows whose
-    // periodStart has been reached to 'open' (the SCHEDULED→OPEN transition for
-    // periods minted ahead-of-time on a previous tick). period-uniqueness: the
+    // Before creating, flip any 'scheduled' rows whose periodStart has been
+    // reached to 'open' (the SCHEDULED→OPEN transition for periods minted
+    // ahead-of-time on a previous tick). period-uniqueness: the
     // partial unique index now constrains this UPDATE, so the flip runs
     // per-boundary with P2002 recovery instead of a single bulk updateMany.
     await flipDueScheduledToOpen(this.prisma.report, now, this.logger);

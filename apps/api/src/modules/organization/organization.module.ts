@@ -4,7 +4,7 @@ import { OrganizationPrismaRepository } from "./organization.prisma-repository.j
 import { OrganizationService } from "./organization.service.js";
 
 /**
- * UFB-047 / Phase 48-A: Organization identity module.
+ * Organization identity module.
  *
  * Owns the singleton `Organization` row. Exposed to the tRPC router via
  * `OrganizationService` (the router resolves it from the Nest container).

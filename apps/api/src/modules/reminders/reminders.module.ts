@@ -10,8 +10,8 @@ import { RemindersScheduler } from "./reminders.scheduler";
 import { RemindersService } from "./reminders.service";
 
 @Module({
-  // UFB-047 / Phase 49-01: `OrganizationModule` exposes `OrganizationService`
-  // so the scheduler can snapshot the brand identity onto every BullMQ job.
+  // `OrganizationModule` exposes `OrganizationService` so the scheduler can
+  // snapshot the brand identity onto every BullMQ job.
   imports: [BullMQModule, OrganizationModule],
   providers: [
     RemindersPrismaRepository,
@@ -28,7 +28,7 @@ import { RemindersService } from "./reminders.service";
         ClsService,
       ],
     },
-    // NOTIF-04 (Phase 28-03): hourly @Cron deadline reminder dispatcher.
+    // Hourly @Cron deadline reminder dispatcher.
     RemindersScheduler,
   ],
   exports: [RemindersService],

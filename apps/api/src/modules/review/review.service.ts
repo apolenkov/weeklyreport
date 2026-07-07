@@ -32,7 +32,7 @@ export class ReviewConstraintError extends Error {
 }
 
 /**
- * UFB-040 / Phase 46-02: dashboard reads honour group-scope visibility.
+ * Dashboard reads honour group-scope visibility.
  * The repository receives the requester's session so it can spread
  * `groupScopeFilter(session, 'reportSection')` into the Prisma where
  * fragment. Tests can pass a `Pick<UserSession, ...>` instead of a full

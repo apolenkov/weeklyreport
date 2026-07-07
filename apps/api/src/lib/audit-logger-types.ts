@@ -5,11 +5,11 @@ import type {
 } from "@customreport/shared";
 
 /**
- * AUTH-08 — structured audit envelope for security-relevant events.
+ * Structured audit envelope for security-relevant events.
  *
  * Every audit line carries the same fixed shape so log-aggregation queries
  * can filter on `event` without parsing the message. The wrapper composes
- * onto the existing AppLogger (Phase 26 nestjs-cls correlation IDs); there
+ * onto the existing AppLogger (nestjs-cls correlation IDs); there
  * is no new transport, no new file rotation, no new env var.
  *
  * Threat-model notes:
@@ -19,15 +19,10 @@ import type {
  *    raw request).
  *  - T2: silent role escalation is prevented by always emitting role-denied
  *    even when role/userId are missing — anonymous events use
- *    `userId: 'anonymous'` and `role: null` (Phase 32-M8 / M-08, replacing
- *    the previous 'unknown' literal which broke SIEM rules tuned to the
- *    Role enum).
+ *    `userId: 'anonymous'` and `role: null`, never a non-enum literal like
+ *    'unknown', which would break SIEM rules tuned to the Role enum.
  *  - T3: ip is captured upstream from `req.ip` (Express trust-proxy aware),
  *    never from raw X-Forwarded-For; this module is a pure consumer.
- *
- * Extracted from `./audit-logger` (R3a-4 max-lines split); the AuditLogger
- * interface + its input shapes live here, the implementations stay there and
- * re-export these types so existing importers are unaffected.
  */
 export type AuditEvent =
   | "login-success"
@@ -62,7 +57,7 @@ type LogoutInput = Omit<AuditEnvelope, "event" | "attemptedRole">;
 type RoleDeniedInput = Omit<AuditEnvelope, "event">;
 
 /**
- * UFB-040 / Phase 46-05: emitted when a head/viewer (anyone non-admin)
+ * Emitted when a head/viewer (anyone non-admin)
  * requests a specific resource id that falls outside their group scope.
  * Mirrors `role-denied` shape but adds a free-form `attemptedScope`
  * description (e.g. "reportSection", "report") and the offending
@@ -74,12 +69,11 @@ type ScopeDeniedInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
 };
 
 /**
- * 36-02 mutation audit envelope.
+ * Mutation audit envelope.
  *
  * Captured for every authenticated tRPC mutation (excluding `auth.*` —
  * already covered by loginSuccess/loginFail — and `ai.*` — privacy: AI
- * prompts/responses must never reach the audit stream, see Phase 31
- * AI-SPEC §5.3 / PITFALLS C-3).
+ * prompts/responses must never reach the audit stream).
  *
  * `target` is a best-effort extraction from the procedure input (id,
  * reportId, sectionId, periodId, projectId, leadId — the common shapes
@@ -98,11 +92,11 @@ type MutationInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
 };
 
 /**
- * UFB-036 / Phase 44-05: emitted whenever an admin upserts or removes
+ * Emitted whenever an admin upserts or removes
  * a {@link ReminderPolicy}. The generic `mutation` envelope already
  * captures these as `procedure='admin.savePolicy' | 'admin.removePolicy'`,
  * but a dedicated event lets SIEM rules filter on `event` directly
- * (mirrors the `scope-denied` precedent from 46-05) and carries the
+ * (mirrors the `scope-denied` precedent) and carries the
  * policy `kind` + create/update `action` so dashboards can split create
  * vs update without parsing the procedure string.
  */
@@ -117,7 +111,7 @@ type PolicyRemoveInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
 };
 
 /**
- * UFB-047 / Phase 48-A: emitted on every successful admin update of the
+ * Emitted on every successful admin update of the
  * `Organization` singleton (shortName/fullName change). Carries the
  * before/after values so SIEM rules and dashboards can audit brand
  * tampering — relevant because the same row drives the landing hero,
@@ -134,7 +128,7 @@ type OrganizationUpdateInput = Omit<
 };
 
 /**
- * UFB-049 / Phase 50-B: emitted by the period-lifecycle scheduler classes
+ * Emitted by the period-lifecycle scheduler classes
  * (`PeriodCreatorScheduler`, `AutoPublisherScheduler`, `AutoArchiverScheduler`).
  *
  * No human actor — `userId='system'` and `role=null`. `ip` is omitted from the
@@ -159,7 +153,7 @@ interface PeriodAutoCreateInput {
   readonly periodEnd: string;
   readonly deadline: string;
   /**
-   * UFB-053 / Phase 51-C: state-transition payload. For a fresh create,
+   * State-transition payload. For a fresh create,
    * `from` is null (no prior state) and `to` is either 'scheduled' (future
    * period) or 'open' (period that has already started by the time the
    * tick runs). Mirrors the publish/archive envelopes so SIEM rules and
@@ -173,20 +167,20 @@ interface PeriodAutoCreateInput {
 interface PeriodAutoPublishInput {
   readonly periodId: string;
   readonly missingSectionsCount: number;
-  /** UFB-053 / Phase 51-C: state transition (typically open → published). */
+  /** State transition (typically open → published). */
   readonly from: PeriodState;
   readonly to: PeriodState;
 }
 
 interface PeriodAutoArchiveInput {
   readonly periodId: string;
-  /** UFB-053 / Phase 51-C: state transition (typically published → archived). */
+  /** State transition (typically published → archived). */
   readonly from: PeriodState;
   readonly to: PeriodState;
 }
 
 /**
- * UFB-063: emitted when an admin manually mints a Period via
+ * Emitted when an admin manually mints a Period via
  * `admin.createPeriodManual`. Unlike `period.auto-create` (system actor,
  * ip='cron'), this event carries a human actor — `userId` / `role` / `ip`
  * are real, taken from the tRPC session. Mirrors the auto-create payload
@@ -227,7 +221,7 @@ export type ScopeAccessedInput = Omit<
 };
 
 /**
- * UFB-067: emitted when an admin edits an existing period's envelope via
+ * Emitted when an admin edits an existing period's envelope via
  * `admin.updatePeriodManual`. The `changes` payload carries only the
  * changed fields' before/after as ISO strings (dates) or string|null
  * (weekLabel) — same shape the service's diff returns. SIEM filters that

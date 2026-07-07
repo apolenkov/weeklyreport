@@ -3,11 +3,11 @@ import type { PrismaClient } from "@prisma/client";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 
 /**
- * refactor-auth-exemplary-layering: provision a lead's `ReportSection` (and its
- * seeded `ProjectStatus` rows) for a given period. Moved out of the auth module
- * — this is report-section domain logic, which `period-dual-state` classifies as
- * a non-period (child-row) writer, so it is exempt from the period transition
- * boundary. `buildUserSession` reaches it through an injected seam at login.
+ * Provision a lead's `ReportSection` (and its seeded `ProjectStatus` rows) for a
+ * given period. This is report-section domain logic, which `period-dual-state`
+ * classifies as a non-period (child-row) writer, so it is exempt from the period
+ * transition boundary. `buildUserSession` reaches it through an injected seam at
+ * login.
  *
  * Concurrency: two concurrent first-logins of the SAME lead could both miss the
  * fast-path find and both create, hitting the `ReportSection_reportId_authorId`

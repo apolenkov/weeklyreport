@@ -64,12 +64,12 @@ export class AdminService {
     this.periodAdmin = new PeriodAdminService(repository, this.logger);
   }
 
-  /** API-11: Get application settings singleton. */
+  /** Get application settings singleton. */
   getSettings(): Promise<AppSettings> {
     return this.snapshotAdmin.getSettings();
   }
 
-  /** API-11: Update application settings (partial). */
+  /** Update application settings (partial). */
   updateSettings(data: Partial<AppSettings>): Promise<AppSettings> {
     return this.snapshotAdmin.updateSettings(data);
   }
@@ -110,7 +110,7 @@ export class AdminService {
     return this.projectAdmin.removeProject(projectId);
   }
 
-  /** API-12: Upsert a stage assignment (unique on stageId+projectId). */
+  /** Upsert a stage assignment (unique on stageId+projectId). */
   saveStageAssignment(data: {
     userId: string;
     stageId: string;
@@ -119,12 +119,12 @@ export class AdminService {
     return this.projectAdmin.saveStageAssignment(data);
   }
 
-  /** API-12: Delete a stage assignment by ID. */
+  /** Delete a stage assignment by ID. */
   deleteStageAssignment(id: string): Promise<{ success: true }> {
     return this.projectAdmin.deleteStageAssignment(id);
   }
 
-  /** API-12: List stage assignments for a project. */
+  /** List stage assignments for a project. */
   listStageAssignments(projectId: string): Promise<StageAssignment[]> {
     return this.projectAdmin.listStageAssignments(projectId);
   }
@@ -134,7 +134,7 @@ export class AdminService {
   }
 
   // -----------------------------------------------------------------
-  // UFB-036 (Phase 44-02): ReminderPolicy surface
+  // ReminderPolicy surface
   // -----------------------------------------------------------------
 
   listPolicies(): Promise<ReminderPolicy[]> {
@@ -154,7 +154,7 @@ export class AdminService {
   }
 
   // -----------------------------------------------------------------
-  // UFB-052 (Phase 51-B): Admin Periods tab read/archive surface
+  // Admin Periods tab read/archive surface
   // -----------------------------------------------------------------
 
   listPeriodsByState(input: {
@@ -198,7 +198,7 @@ export class AdminService {
   }
 
   // -----------------------------------------------------------------
-  // UFB-054 (Phase 56-B): Group ↔ Product M:M surface
+  // Group ↔ Product M:M surface
   // -----------------------------------------------------------------
 
   attachProductToGroup(input: GroupProductEdgeInput): Promise<GroupProduct> {

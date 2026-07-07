@@ -13,7 +13,7 @@ import {
 } from "react-email";
 
 /**
- * NOTIF-01/03 (Phase 28-03): T-24h deadline reminder email.
+ * T-24h deadline reminder email.
  *
  * react-email + <Tailwind> per CONTEXT.md decision lock (MJML rejected).
  * Renders to HTML via react-email's render; the matching plaintext fallback
@@ -21,7 +21,7 @@ import {
  * corporate spam filters score multipart > HTML-only.
  */
 /**
- * UFB-047 / Phase 49-01: brand identity threaded into the template props.
+ * Brand identity threaded into the template props.
  * The BullMQ enqueue path snapshots `OrganizationService.getPublic()` into
  * the job data, so the worker re-renders with whatever the org row said at
  * enqueue time (immune to mid-flight admin edits of the brand strings).
@@ -68,9 +68,9 @@ export function DeadlineEmail({
                 Open my section
               </Button>
             </Section>
-            {/* UFB-047 / Phase 49-01: brand footer rendered from the
-                `organization` payload snapshotted at enqueue time. Subject
-                uses `shortName` (compact); footer uses `fullName` (long). */}
+            {/* Brand footer rendered from the `organization` payload
+                snapshotted at enqueue time. Subject uses `shortName`
+                (compact); footer uses `fullName` (long). */}
             <Text className="text-sm text-gray-500">
               {organization.shortName} — Weekly status reporting for{" "}
               {organization.fullName}.

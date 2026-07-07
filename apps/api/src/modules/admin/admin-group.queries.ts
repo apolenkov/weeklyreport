@@ -9,8 +9,7 @@ import type { Prisma } from "@prisma/client";
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 
 /**
- * ReportingGroup + StageAssignment domain queries, extracted from
- * `admin.prisma-repository.ts` (R3a-4 max-lines split). `ensureFallbackReportingGroup`
+ * ReportingGroup + StageAssignment domain queries. `ensureFallbackReportingGroup`
  * is also consumed by the snapshot domain (saveSnapshot), so it is exported.
  */
 

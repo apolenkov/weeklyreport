@@ -8,8 +8,8 @@ import { AdminService } from "../admin/admin.service";
 import { PublicationService } from "../publication/publication.service";
 
 /**
- * UFB-049 / Phase 50-B: hourly scheduler that auto-publishes draft Reports
- * whose `deadline + gracePeriodHours` has passed and where the org has
+ * Hourly scheduler that auto-publishes draft Reports whose `deadline +
+ * gracePeriodHours` has passed and where the org has
  * opted in via `AppSettings.autoPublishAfterDeadline=true`.
  *
  * Missing sections render as «Не сдал» placeholders at read time — we do

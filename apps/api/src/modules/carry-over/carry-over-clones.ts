@@ -5,7 +5,7 @@ import {
 } from "@customreport/shared";
 
 /**
- * Clone builders for carry-over (extracted from carry-over.service.ts): each
+ * Clone builders for carry-over: each
  * produces the target-period copy of a source record plus its CarryOverRecord
  * audit row, preserving the durable `stableId` lineage via the spread.
  */

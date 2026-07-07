@@ -1,4 +1,4 @@
-// Phase 55 (UFB-056): TelegramAdapter — pluggable provider seam for the
+// TelegramAdapter — pluggable provider seam for the
 // future Telegram bot. Seeds-only scaffolding: only the MockTelegramAdapter
 // is implemented in this phase. The real provider (telegraf / grammY-backed
 // adapter built on `TG_BOT_TOKEN`) is deferred to a follow-on phase that
@@ -40,7 +40,7 @@ export interface TelegramAdapter {
 
 /**
  * Injection token for the TelegramAdapter port. Mirrors the `AI_ADAPTER`
- * pattern in `ai.adapter.ts` (Phase 54): consumers `@Inject(TELEGRAM_ADAPTER)`
+ * pattern in `ai.adapter.ts`: consumers `@Inject(TELEGRAM_ADAPTER)`
  * to receive the concrete implementation selected by `TelegramModule`.
  */
 export const TELEGRAM_ADAPTER = "TELEGRAM_ADAPTER" as const;

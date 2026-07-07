@@ -13,8 +13,7 @@ import {
 } from "./templates/escalation.template.js";
 
 /**
- * NOTIF-01 (Phase 28-03), NOTIF-02 (Phase 29-05): central renderer for the
- * email template catalog.
+ * Central renderer for the email template catalog.
  *
  * Returns `{subject, html, text}`. The processor passes all three to
  * nodemailer so the email is multipart (HTML + plaintext) — corporate
@@ -41,9 +40,8 @@ export async function renderEmail(
         React.createElement(DeadlineEmail, input.props),
       );
       const text = deadlineEmailPlaintext(input.props);
-      // UFB-047 / Phase 49-01: subject prefixes the org `shortName` so the
-      // recipient's inbox folder rules can grep on the brand without
-      // parsing the long-form name.
+      // Subject prefixes the org `shortName` so the recipient's inbox folder
+      // rules can grep on the brand without parsing the long-form name.
       const subject = `[${input.props.organization.shortName}] Reminder: ${input.props.reportPeriod} report section due in 24h`;
       return { subject, html, text };
     }

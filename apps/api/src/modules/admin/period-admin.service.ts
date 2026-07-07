@@ -39,8 +39,7 @@ const ISO_DATE_LENGTH = 10;
 /**
  * Owns the period lifecycle surface: the Admin Periods tab read/archive
  * paths, manual create/update with the overlap gate + grace-period /
- * deadline math, unarchive, and report deletion. Extracted verbatim from
- * `AdminService` (code-quality-modernization, Wave 3); behavior unchanged.
+ * deadline math, unarchive, and report deletion.
  */
 export class PeriodAdminService {
   private readonly logger: AppLogger;
@@ -71,7 +70,7 @@ export class PeriodAdminService {
   }
 
   // -----------------------------------------------------------------
-  // UFB-052 (Phase 51-B): Admin Periods tab read/archive surface
+  // Admin Periods tab read/archive surface
   // -----------------------------------------------------------------
 
   /**
@@ -105,7 +104,7 @@ export class PeriodAdminService {
   }
 
   /**
-   * UFB-052 (Phase 51-B): paginated period list filtered by lifecycle
+   * Paginated period list filtered by lifecycle
    * bucket. Returns rows with server-precomputed `canReopen` (driven
    * by `AppSettings.allowReopenAfterPublish` + `reopenWindowHours`)
    * and `canArchive` so the UI doesn't need to know the policy rules.
@@ -165,10 +164,9 @@ export class PeriodAdminService {
   }
 
   /**
-   * UFB-052 (Phase 51-B): manual archive — flips both the legacy
+   * Manual archive — flips both the legacy
    * `archived` boolean and the new `periodState` enum to `'archived'`
-   * in a single write so the two-state-machine invariant from 51-C
-   * (Open Question 1) is preserved.
+   * in a single write so the two-state-machine invariant is preserved.
    */
   async archivePeriod(periodId: string): Promise<{ success: true }> {
     if (!this.repository.archivePeriod) {
@@ -182,7 +180,7 @@ export class PeriodAdminService {
   }
 
   /**
-   * UFB-063: admin escape hatch that mints a Period without waiting for
+   * Admin escape hatch that mints a Period without waiting for
    * the daily `PeriodCreatorScheduler` (00:05 UTC cron). Targets fresh
    * dev/staging DBs (zero Reports → admin is blocked) and one-off
    * backfill cycles.
@@ -331,7 +329,7 @@ export class PeriodAdminService {
   }
 
   /**
-   * UFB-067: patch an existing Report's date envelope + weekLabel. Mirror
+   * Patch an existing Report's date envelope + weekLabel. Mirror
    * of `createPeriodManual` for the in-place edit flow exposed in the
    * Admin → Periods table (each row now carries an inline Edit icon that
    * opens the same dialog in "edit" mode).
@@ -512,7 +510,7 @@ export class PeriodAdminService {
   }
 
   /**
-   * UFB-052 (Phase 51-B): un-archive — reverts `archived=false` and
+   * Un-archive — reverts `archived=false` and
    * derives the next `periodState` from the legacy tuple at write time
    * (since the new state column lost the pre-archive distinction
    * scheduled/open/published when it was set to `'archived'`). The

@@ -52,7 +52,7 @@ import { WeeklyReportModule } from "./modules/weekly-report/weekly-report.module
       global: true,
       middleware: { mount: false, generateId: false },
     }),
-    // NOTIF-04 (Phase 28-03): hourly @Cron tick for deadline reminder dispatch.
+    // Hourly @Cron tick for deadline reminder dispatch.
     // ScheduleModule.forRoot() must be present for `@Cron(...)` decorators on
     // any provider in the module graph (e.g. RemindersScheduler) to fire.
     ScheduleModule.forRoot(),
@@ -77,7 +77,7 @@ import { WeeklyReportModule } from "./modules/weekly-report/weekly-report.module
     TelemetryModule,
     PeriodModule,
     WeeklyReportModule,
-    // UFB-056 / Phase 55-3: Telegram outbound queue + adapter seam.
+    // Telegram outbound queue + adapter seam.
     // Seeds-only — MockTelegramAdapter unless TG_BOT_TOKEN is set, in
     // which case selectTelegramAdapter throws at boot.
     TelegramModule,
@@ -130,7 +130,7 @@ import { WeeklyReportModule } from "./modules/weekly-report/weekly-report.module
 })
 export class AppModule implements OnApplicationBootstrap {
   /**
-   * AUTH-01 (Phase 29-04 / Phase 32-C M-05): boot-time dev-auth fence.
+   * Boot-time dev-auth fence.
    *
    * Lives on `OnApplicationBootstrap` instead of `bootstrap()` in main.ts so
    * every consumer of `NestFactory.create(AppModule)` (e2e suites, CLI tools,

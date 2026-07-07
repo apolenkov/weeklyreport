@@ -10,17 +10,17 @@ import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { OrganizationRepository } from "./organization.service.js";
 
 /**
- * UFB-047 / Phase 48-A: Prisma implementation of OrganizationRepository.
+ * Prisma implementation of OrganizationRepository.
  *
  * The seed migration inserts the singleton row on first apply (with
  * ON CONFLICT DO NOTHING), so on a healthy boot `getOrganization` always
  * finds a row. The defensive `upsert` here is a safety net for edge cases:
  *   - dev DBs reset without `migrate reset` (rare but possible)
  *   - integration tests that truncate `Organization` between cases
- * UFB-060 (2026-05-11): defaults now come from
- * `DEFAULT_ORGANIZATION_IDENTITY` ('Org' / 'Organization') so the
- * fallback is tenant-agnostic. Real brand strings ('Demo' etc.) live in
- * the seed file and the admin-edited Organization row only.
+ * Defaults come from `DEFAULT_ORGANIZATION_IDENTITY` ('Org' /
+ * 'Organization') so the fallback is tenant-agnostic. Real brand strings
+ * ('Demo' etc.) live in the seed file and the admin-edited Organization
+ * row only.
  */
 @Injectable()
 export class OrganizationPrismaRepository implements OrganizationRepository {

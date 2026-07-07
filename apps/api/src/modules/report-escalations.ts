@@ -4,9 +4,8 @@ import { effectiveProjectStatus } from "./published-report-snapshot.js";
 
 /**
  * The single escalations builder for BOTH the live and published-snapshot
- * paths (extracted from `published-report-snapshot.ts`). Both feed
- * `ReportSectionReadModel[]`, so one function guarantees byte-identical
- * roll-up output across the two surfaces (W7/W8 parity).
+ * paths. Both feed `ReportSectionReadModel[]`, so one function guarantees
+ * byte-identical roll-up output across the two surfaces.
  */
 
 const UNKNOWN_PRODUCT_NAME = "Unknown";
@@ -57,9 +56,8 @@ function flaggedRedEscalation(
 // risks — REPLACING the former `item.workflowStatus === "blocked"` source. A
 // blocked-severity risk yields ONE `blocked` escalation (never also an
 // `unresolved_risk`, see below), so the roll-up count never inflates.
-// activity-first-class (Phase-1, LOCKED decision 0.1): the null-projectId
-// (activity-parented) skip stays so an activity's blockers never reach the
-// product-level roll-up.
+// activity-first-class: the null-projectId (activity-parented) skip stays so
+// an activity's blockers never reach the product-level roll-up.
 function blockedRiskEscalations(
   section: ReportSectionReadModel,
   productNames: ReadonlyMap<string, string>,

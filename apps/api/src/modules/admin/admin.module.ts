@@ -13,7 +13,7 @@ import { SessionRevocationService } from "./session-revocation.service";
 @Module({
   imports: [ConfigModule],
   providers: [
-    // UFB-036 (Phase 44-03): the policy applicator is the seam that
+    // the policy applicator is the seam that
     // turns ReminderPolicy templates into concrete ReminderRule rows
     // when admin.savePeriod creates a new Period. Provided here (not
     // re-imported from RemindersModule) to keep the cycle tight: admin

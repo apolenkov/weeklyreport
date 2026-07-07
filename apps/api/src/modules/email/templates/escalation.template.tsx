@@ -12,8 +12,7 @@ import {
 } from "react-email";
 
 /**
- * NOTIF-02 (Phase 29-05): T+2h escalation digest sent to the head when leads
- * miss the deadline.
+ * T+2h escalation digest sent to the head when leads miss the deadline.
  *
  * Reverse shape of the deadline reminder: the deadline reminder fires
  * per-lead at T-24h; the escalation fires per-head at T+2h aggregating ALL
@@ -22,7 +21,7 @@ import {
  * ticks within one UTC day collapse to a single email even if Cron
  * misfires.
  *
- * Per CONTEXT.md / NOTIF-05: escalation BYPASSES User.notificationOptOut.
+ * Per CONTEXT.md: escalation BYPASSES User.notificationOptOut.
  * Heads must always be notified of late submissions; the opt-out flag only
  * silences kind='deadline' reminders.
  */
@@ -33,9 +32,8 @@ export interface LateLead {
 }
 
 /**
- * UFB-047 / Phase 49-01: see {@link DeadlineEmailProps.organization} —
- * brand strings now flow through the BullMQ payload instead of being
- * hardcoded in the template.
+ * See {@link DeadlineEmailProps.organization} — brand strings flow through
+ * the BullMQ payload rather than being hardcoded in the template.
  */
 export interface OrganizationBrand {
   shortName: string;
@@ -85,8 +83,8 @@ export function EscalationEmail({
                 ))}
               </ul>
             </Section>
-            {/* UFB-047 / Phase 49-01: brand footer rendered from the
-                `organization` payload snapshotted at enqueue time. */}
+            {/* Brand footer rendered from the `organization` payload
+                snapshotted at enqueue time. */}
             <Text className="text-sm text-gray-500">
               {organization.shortName} — Weekly status reporting for{" "}
               {organization.fullName}.
