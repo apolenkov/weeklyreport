@@ -326,7 +326,7 @@ const SMALL_DATASET: TierDataset = {
       },
     },
     // --- Maria (co-owner) — owns Testing; foreign content on Portal --------
-    // D5 (head-dashboard-declutter): Maria is the ONE SUBMITTED lead so the head
+    // head-dashboard-declutter: Maria is the ONE SUBMITTED lead so the head
     // dashboard shows a Revoke affordance. All her contributions are flipped to
     // `submitted` (seedActiveLeadSection submits the section only when EVERY
     // contribution is submitted). Submission is orthogonal to product health and
@@ -431,7 +431,7 @@ const SMALL_DATASET: TierDataset = {
       leadLabel: IGOR_LABEL,
       productId: PROD_BI,
       // small-seed-three-colors: BI is the green showcase — Igor's DevOps is
-      // on-track here (the cluster blocker moved to the Portal, see below).
+      // on-track here (the cluster blocker lives on the Portal, see below).
       productLight: TrafficLightStatus.green,
       sectionStatus: ReportSectionStatus.draft,
       ownedStages: ["DevOps"],
@@ -889,7 +889,7 @@ async function seedReports(): Promise<void> {
   });
 }
 
-// D6 (head-dashboard-declutter): one active reminder policy + rule for the
+// head-dashboard-declutter: one active reminder policy + rule for the
 // active period so the head's per-lead Remind action both renders (the
 // `hasActiveReminderRule` gate counts active ReminderPolicies whose validity
 // window covers `Report.deadline`) and actually dispatches (`reminders.
@@ -1303,7 +1303,7 @@ async function seedDemo(tier: Tier): Promise<void> {
   await seedReports();
   await seedStageAssignments(dataset);
 
-  // D6: small tier seeds an active reminder policy+rule so the dashboard's
+  // Small tier seeds an active reminder policy+rule so the dashboard's
   // per-lead Remind action renders and dispatches for real (the huge tier is a
   // scroll/stress fixture and does not exercise the Remind affordance).
   if (tier === "small") {

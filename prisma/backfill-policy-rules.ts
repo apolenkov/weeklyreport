@@ -1,6 +1,6 @@
 /**
- * UFB-036 (Phase 44-03): one-shot backfill that applies every active
- * ReminderPolicy to every open ReportPeriod.
+ * One-shot backfill that applies every active ReminderPolicy to every open
+ * ReportPeriod.
  *
  *   pnpm db:backfill:reminder-policies
  *

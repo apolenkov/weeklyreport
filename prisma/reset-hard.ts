@@ -1,5 +1,5 @@
 /**
- * UFB-028: Hard reset for clean UAT.
+ * Hard reset for clean UAT.
  *
  * Drops EVERY row in EVERY app table (CASCADE), flushes Redis (BullMQ + cache),
  * then re-seeds via seed-simple. Use before manual UAT runs to start from a
@@ -142,7 +142,7 @@ async function truncateAll(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  // C7 destructive-guard (UAT plan v7): refuse on prod-looking DATABASE_URL.
+  // Destructive-guard: refuse on prod-looking DATABASE_URL.
   assertNonProdDestructive("reset-hard");
 
   console.log("[reset-hard] Starting hard reset…");
