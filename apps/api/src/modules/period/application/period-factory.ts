@@ -7,7 +7,7 @@ import {
   getCurrentWeekBounds,
 } from "../../../lib/business-date.js";
 import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
-import type { PolicyApplicatorService } from "../../reminders/policy-applicator.service.js";
+import type { PolicyApplicatorService } from "../../reminders/index.js";
 import {
   buildTransition,
   initialPeriodState,

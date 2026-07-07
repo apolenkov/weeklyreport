@@ -5,8 +5,8 @@ import type { PrismaClient } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { AuditLogger } from "../../../lib/audit-logger.js";
-import { AdminService } from "../../admin/admin.service";
-import { PolicyApplicatorService } from "../../reminders/policy-applicator.service.js";
+import { AdminService } from "../../admin/index.js";
+import { PolicyApplicatorService } from "../../reminders/index.js";
 import {
   ensureCurrentPeriod,
   isOpenBoundaryConflict,

@@ -4,7 +4,7 @@ import { Cron } from "@nestjs/schedule";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { AuditLogger } from "../../../lib/audit-logger.js";
-import { AdminService } from "../../admin/admin.service";
+import { AdminService } from "../../admin/index.js";
 import { buildTransition } from "../domain/period-transition.js";
 
 /**

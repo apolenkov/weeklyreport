@@ -4,21 +4,18 @@ import { ConfigModule } from "../../infrastructure/config/config.module.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { AuditLogger } from "../../lib/audit-logger.js";
 import { AUDIT_LOGGER } from "../../lib/audit-logger.js";
-import { AdminModule } from "../admin/admin.module.js";
-import { AdminService } from "../admin/admin.service.js";
-import { AnalyticsCache } from "../analytics/analytics.cache.js";
-import { AnalyticsModule } from "../analytics/analytics.module.js";
+import { AdminModule, AdminService } from "../admin/index.js";
+import { AnalyticsCache, AnalyticsModule } from "../analytics/index.js";
 import {
   buildAutoCarryOverDeps,
   carryOverIntoOpenedPeriod,
-} from "../carry-over/auto-carry-over.js";
-import { CarryOverModule } from "../carry-over/carry-over.module.js";
-import { CarryOverPrismaRepository } from "../carry-over/carry-over.prisma-repository.js";
-import { CarryOverService } from "../carry-over/carry-over.service.js";
-import { PublicationService } from "../publication/application/publication.service.js";
-import { PublicationModule } from "../publication/publication.module.js";
-import { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
-import { WeeklyReportModule } from "../weekly-report/weekly-report.module.js";
+  CarryOverModule,
+  CarryOverPrismaRepository,
+  CarryOverService,
+} from "../carry-over/index.js";
+import { PublicationModule, PublicationService } from "../publication/index.js";
+import { PolicyApplicatorService } from "../reminders/index.js";
+import { WeeklyReportModule } from "../weekly-report/index.js";
 import {
   PERIOD_REPOSITORY,
   type PeriodRepository,
