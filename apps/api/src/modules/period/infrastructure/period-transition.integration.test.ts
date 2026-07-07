@@ -1,13 +1,13 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { expectDefined } from "../../test-utils/expect-defined.js";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
   seedTestData,
-} from "../../test-utils/prisma-test-helper";
-import { applyTransition } from "./period-transition.apply.js";
+} from "../../../test-utils/prisma-test-helper";
+import { applyTransition } from "../domain/period-transition.apply.js";
 
 // ---------------------------------------------------------------------------
 // refactor-period-transition-writer — the period-dual-state-required atomicity

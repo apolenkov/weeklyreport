@@ -17,7 +17,7 @@ import {
   PeriodAccessError,
   PeriodNotFoundError,
   PeriodScopeError,
-} from "../../modules/period/period.service.js";
+} from "../../modules/period/application/period.service.js";
 import {
   PublicationAccessError,
   PublicationArchivedError,

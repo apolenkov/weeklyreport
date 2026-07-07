@@ -1,12 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
-} from "../../test-utils/prisma-test-helper";
-import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository";
+} from "../../../test-utils/prisma-test-helper";
+import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository";
 import { PeriodPrismaRepository } from "./period.prisma-repository";
 
 /**

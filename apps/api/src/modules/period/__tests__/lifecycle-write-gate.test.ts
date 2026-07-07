@@ -50,8 +50,8 @@ const WRITE_METHODS = new Set([
 // The only files allowed to name lifecycle fields as literal keys: the
 // transition module itself (it IS the single writer). Stored as path suffixes.
 const EXEMPT_SUFFIXES = [
-  join("modules", "period", "period-transition.ts"),
-  join("modules", "period", "period-transition.apply.ts"),
+  join("modules", "period", "domain", "period-transition.ts"),
+  join("modules", "period", "domain", "period-transition.apply.ts"),
 ];
 
 // A call-site opt-out. Reserved for writes that genuinely are NOT lifecycle

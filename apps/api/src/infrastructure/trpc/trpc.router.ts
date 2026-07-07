@@ -52,7 +52,7 @@ import type { AnalyticsService } from "../../modules/analytics/analytics.service
 import type { ArchiveService } from "../../modules/archive/archive.service.js";
 import { OrganizationService } from "../../modules/organization/organization.service.js";
 import { PdfExportService } from "../../modules/pdf-export/pdf-export.service.js";
-import type { PeriodService } from "../../modules/period/period.service.js";
+import type { PeriodService } from "../../modules/period/application/period.service.js";
 import type { ProjectActivityService } from "../../modules/project-activity/project-activity.service.js";
 import { PublicationService } from "../../modules/publication/application/publication.service.js";
 import { RemindersService } from "../../modules/reminders/reminders.service.js";

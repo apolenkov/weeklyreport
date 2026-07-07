@@ -2,10 +2,10 @@ import { MS_PER_WEEK } from "@customreport/shared";
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 
-import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import type { AuditLogger } from "../../lib/audit-logger.js";
-import { AdminService } from "../admin/admin.service";
-import { buildTransition } from "./period-transition.js";
+import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import type { AuditLogger } from "../../../lib/audit-logger.js";
+import { AdminService } from "../../admin/admin.service";
+import { buildTransition } from "../domain/period-transition.js";
 
 /**
  * Daily scheduler that flips published Reports to `archived=true` once their

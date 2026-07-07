@@ -1,13 +1,13 @@
 import { Prisma } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
+import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
-} from "../../test-utils/prisma-test-helper";
-import { isOpenBoundaryConflict } from "./period-factory.js";
+} from "../../../test-utils/prisma-test-helper";
+import { isOpenBoundaryConflict } from "../application/period-factory.js";
 
 /**
  * period-uniqueness: proves the hand-written partial unique index

@@ -19,11 +19,15 @@ import { PublicationService } from "../publication/application/publication.servi
 import { PublicationModule } from "../publication/publication.module.js";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
 import { WeeklyReportModule } from "../weekly-report/weekly-report.module.js";
-import { AutoArchiverScheduler } from "./auto-archiver.scheduler.js";
-import { AutoPublisherScheduler } from "./auto-publisher.scheduler.js";
-import { PeriodPrismaRepository } from "./period.prisma-repository.js";
-import { PeriodService } from "./period.service.js";
-import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
+import {
+  PERIOD_REPOSITORY,
+  type PeriodRepository,
+  PeriodService,
+} from "./application/period.service.js";
+import { AutoArchiverScheduler } from "./infrastructure/auto-archiver.scheduler.js";
+import { AutoPublisherScheduler } from "./infrastructure/auto-publisher.scheduler.js";
+import { PeriodPrismaRepository } from "./infrastructure/period.prisma-repository.js";
+import { PeriodCreatorScheduler } from "./infrastructure/period-creator.scheduler.js";
 
 /**
  * Three scheduler classes (`PeriodCreatorScheduler`,
@@ -49,11 +53,11 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
     WeeklyReportModule,
   ],
   providers: [
-    PeriodPrismaRepository,
+    { provide: PERIOD_REPOSITORY, useClass: PeriodPrismaRepository },
     {
       provide: PeriodService,
       useFactory: (
-        repo: PeriodPrismaRepository,
+        repo: PeriodRepository,
         cache: AnalyticsCache,
         admin: AdminService,
       ) =>
@@ -73,7 +77,7 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
           // The AI ingestion module was removed; PeriodService's ingestion
           // hook falls back to its no-op default until the AI rebuild.
         ),
-      inject: [PeriodPrismaRepository, AnalyticsCache, AdminService],
+      inject: [PERIOD_REPOSITORY, AnalyticsCache, AdminService],
     },
     // PolicyApplicatorService provided directly (depends only on PrismaService,
     // no circular dep). Injected into the scheduler so that auto-created periods

@@ -94,8 +94,8 @@ const apiModules = [
 // report-sections, but it is not under modules/A/** so no zone targets it as a consumer.)
 const apiCrossModuleGrandfathered: Record<string, readonly string[]> = {
   admin: [
-    "period/period-factory.ts",
-    "period/period-transition.ts",
+    "period/application/period-factory.ts",
+    "period/domain/period-transition.ts",
     "reminders/policy-applicator.service.ts",
   ],
   archive: [
@@ -128,7 +128,10 @@ const apiCrossModuleGrandfathered: Record<string, readonly string[]> = {
     "weekly-report/weekly-report.module.ts",
     "weekly-report/weekly-report.prisma-repository.ts",
   ],
-  publication: ["period/period-transition.ts", "published-report-snapshot.ts"],
+  publication: [
+    "period/domain/period-transition.ts",
+    "published-report-snapshot.ts",
+  ],
   reminders: [
     "organization/organization.module.ts",
     "organization/organization.service.ts",

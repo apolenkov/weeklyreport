@@ -1,8 +1,8 @@
 import type { PeriodState, PeriodStatus } from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { isOpenBoundaryConflict } from "../period/period-factory.js";
-import { buildTransition } from "../period/period-transition.js";
+import { isOpenBoundaryConflict } from "../period/application/period-factory.js";
+import { buildTransition } from "../period/domain/period-transition.js";
 import {
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
