@@ -54,6 +54,36 @@ export class SearchAuthorizationError extends Error {
   }
 }
 
+/**
+ * Group IDs a session may search within, matching groupScopeFilter semantics:
+ *   admin    → null (no group filter; sees all groups)
+ *   viewer   → granted viewerGroupAccess (may be empty)
+ *   head/lead → own reportingGroupId (may be absent → empty)
+ * A non-null empty array means "no group access": the caller short-circuits to
+ * a zero-row result rather than querying (groupScopeFilter({ id: { in: [] } })).
+ */
+function resolveSearchGroupIds(session: UserSession): string[] | null {
+  if (session.role === "admin") return null;
+  if (session.role === "viewer") return session.viewerGroupAccess ?? [];
+  return session.reportingGroupId ? [session.reportingGroupId] : [];
+}
+
+/**
+ * Hit types a session must never see — their UNION ALL chunk is omitted from the
+ * query entirely, so excluded types never consume a slot in the `limit` budget.
+ *
+ * lead + viewer exclude `project`: the only Project destination is /admin
+ * (products), unreachable for both roles, so a project hit dead-ends the search
+ * ("Page unavailable for your role"). Their own item/risk/decision hits still
+ * surface and deep-link correctly. (lead: behavioral-ui-regression-gate 3.1;
+ * viewer: viewer-report-surface-parity Decision 3.)
+ */
+function resolveSearchExcludeTypes(session: UserSession): SearchHit["type"][] {
+  return session.role === "lead" || session.role === "viewer"
+    ? ["project"]
+    : [];
+}
+
 export class SearchService {
   private readonly logger = createServiceLogger("SearchService");
 
@@ -94,47 +124,17 @@ export class SearchService {
       );
     }
 
-    // Derive allowed group IDs matching groupScopeFilter semantics:
-    //   admin → null (no group filter; sees all groups)
-    //   head/lead → [reportingGroupId] (own group only)
-    //   viewer → viewerGroupAccess (granted groups, may be empty)
-    const groupIds: string[] | null =
-      session.role === "admin"
-        ? null
-        : session.role === "viewer"
-          ? (session.viewerGroupAccess ?? [])
-          : session.reportingGroupId
-            ? [session.reportingGroupId]
-            : [];
-
-    // Viewer (or head/lead) with no group access → zero-row result,
-    // consistent with groupScopeFilter({ id: { in: [] } }) semantics.
+    const groupIds = resolveSearchGroupIds(session);
     if (groupIds !== null && groupIds.length === 0) {
       return searchQueryOutputSchema.parse([]);
     }
-
-    // A `lead` has no product-detail destination: the only surface that shows a
-    // Project (product) entity is /admin, which leads cannot access. Returning
-    // a `project` hit to a lead therefore dead-ends the search — clicking it
-    // navigates to /admin and renders "Page unavailable for your role". Exclude
-    // project hits at the repository so they are never fetched and never consume
-    // a slot in the `limit` budget; the lead's own items/risks/decisions for
-    // that product still surface (they deep-link into /lead/report). Found by
-    // the AI UI Driver (behavioral-ui-regression-gate task 3.1).
-    //
-    // A `viewer` is excluded for the same reason: a Project has no publish
-    // state and its destination (/admin?tab=products) is unreachable for a
-    // viewer (viewer-report-surface-parity Decision 3). Their item/risk/
-    // decision hits route to /reports/[reportId] instead.
-    const excludeTypes: SearchHit["type"][] =
-      session.role === "lead" || session.role === "viewer" ? ["project"] : [];
 
     const hits = await this.repository.search({
       q: parsed.q,
       scope: parsed.scope,
       userId: session.userId,
       groupIds,
-      excludeTypes,
+      excludeTypes: resolveSearchExcludeTypes(session),
       limit: parsed.limit,
     });
 
