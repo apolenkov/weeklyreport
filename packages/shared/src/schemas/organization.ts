@@ -4,7 +4,7 @@ const MAX_SHORT_NAME_LENGTH = 16;
 const MAX_FULL_NAME_LENGTH = 200;
 
 /**
- * UFB-047 / Phase 48-A: organization identity singleton schema.
+ * Organization identity singleton schema.
  *
  * `Organization` is the source-of-truth for brand strings rendered in the
  * application chrome (nav-bar, landing hero, PDF report header, email
@@ -69,11 +69,9 @@ export type OrganizationUpdate = z.infer<typeof organizationUpdateSchema>;
 export type OrganizationPublic = z.infer<typeof organizationPublicSchema>;
 
 /**
- * UFB-060 / Phase 58-followup (2026-05-11): generic fallback for the
- * organization identity. The previous fallback hard-coded the seed brand
- * ("PEO" / "Product Engineering & Operations") into application code — a
- * leak of one tenant's identity into a system meant to be deployable for
- * any organization. After this change:
+ * Generic fallback for the organization identity. Must NOT hard-code any
+ * tenant's brand — doing so leaks one tenant's identity into a system meant
+ * to be deployable for any organization.
  *
  *   - This constant is the SOLE in-code fallback when org.getPublic fails
  *     (offline first-boot, race on JWT hydration, etc.).
@@ -81,9 +79,9 @@ export type OrganizationPublic = z.infer<typeof organizationPublicSchema>;
  *     the database. The seed file (`prisma/seed-simple.ts`) is the only
  *     place that still names a concrete brand — and that's demo data, not
  *     a hard-coded fallback.
- *   - When Phase 59 (multi-org) ships, this constant stays — it is the
- *     pre-tenant-resolution chrome render. Once a tenant resolves, real
- *     values from `session.organization` win.
+ *   - Under multi-org, this constant stays — it is the pre-tenant-resolution
+ *     chrome render. Once a tenant resolves, real values from
+ *     `session.organization` win.
  *
  * Keep these strings ASCII-only so they render in any monospace context
  * (terminal logs, fallback PDF chrome) without font fallback noise.

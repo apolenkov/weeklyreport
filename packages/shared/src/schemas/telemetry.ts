@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Phase 52 (UFB-054) — `telemetry.summary` payload shape.
+ * `telemetry.summary` payload shape.
  *
  * Exposed to head / admin / viewer roles via the tRPC procedure of the
  * same name; rendered in-app on `/dashboard` as the KPI card so users

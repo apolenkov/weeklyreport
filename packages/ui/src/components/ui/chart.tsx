@@ -6,9 +6,9 @@ import { ResponsiveContainer, Tooltip } from "recharts";
 
 /**
  * Minimal chart wrapper around recharts — Tailwind-friendly height/width
- * defaults and a styled Tooltip. shadcn-ui Chart's full API was not needed
- * for Phase 30; this slimmer wrapper exposes the two primitives consumed
- * by the trends page chart components.
+ * defaults and a styled Tooltip. A slimmer wrapper than shadcn-ui's full
+ * Chart API: exposes the two primitives consumed by the trends page chart
+ * components.
  */
 
 // `ResponsiveContainer` seeds its first render from `initialDimension`, which

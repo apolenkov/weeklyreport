@@ -8,9 +8,9 @@ const MAX_ORG_FULL_NAME_LENGTH = 200;
  * Role of a User row in the database (Prisma `Role` enum).
  * DB-bound writes (admin user CRUD) MUST validate against this set.
  *
- * Phase 32-C / H-01: widened to include 'admin' so the SAML callback can
- * persist admin-roled Keycloak users without crashing on Prisma's enum
- * validation. Stays in lockstep with `enum Role` in `prisma/schema.prisma`.
+ * Includes 'admin' so the SAML callback can persist admin-roled Keycloak
+ * users without crashing on Prisma's enum validation. Stays in lockstep with
+ * `enum Role` in `prisma/schema.prisma`.
  */
 export const roleSchema = z.enum(["lead", "head", "admin", "viewer"]);
 
@@ -69,10 +69,10 @@ export const userSessionSchema = z.object({
   activeReportId: z.uuid().nullable().optional(),
   activeReportSectionId: z.uuid().nullable().optional(),
   /**
-   * UFB-040 / Phase 46-01: the user's owning reporting group (mirrors
-   * `User.reportingGroupId` in Prisma). Optional on the session shape
-   * because (a) the PDF-export synthetic session has no group context,
-   * (b) legacy JWTs minted before Phase 46 do not carry it. Downstream
+   * The user's owning reporting group (mirrors `User.reportingGroupId` in
+   * Prisma). Optional on the session shape because (a) the PDF-export
+   * synthetic session has no group context, (b) legacy JWTs minted before
+   * this field existed do not carry it. Downstream
    * consumers (groupScopeFilter) treat `undefined` as "no head/lead
    * group context" and fall through to viewer-style empty filter.
    */
@@ -88,7 +88,7 @@ export const userSessionSchema = z.object({
     .max(MAX_REPORTING_GROUP_NAME_LENGTH)
     .optional(),
   /**
-   * UFB-040 / Phase 46-01: list of `ReportingGroup.id` values the viewer
+   * List of `ReportingGroup.id` values the viewer
    * has been granted access to via the `ViewerGroupAccess` join table.
    * Hydrated in `trpc.context.ts` for viewer sessions ONLY (head/lead/
    * admin do not use this list). Empty array is meaningful — it means
@@ -97,11 +97,11 @@ export const userSessionSchema = z.object({
    */
   viewerGroupAccess: z.array(z.uuid()).optional(),
   /**
-   * UFB-047 / Phase 48-A: organization identity hydrated per-request from
-   * the `Organization` singleton in the tRPC context factory. Optional on
-   * the schema for two reasons:
+   * Organization identity hydrated per-request from the `Organization`
+   * singleton in the tRPC context factory. Optional on the schema for two
+   * reasons:
    *   1. JWT payloads (signed by createJwtSigner) do NOT carry it — so a
-   *      JWT minted before Phase 48-A still verifies and the context
+   *      JWT minted before this field existed still verifies and the context
    *      factory fills the field after `verifySession`. Baking the field
    *      into the JWT would invalidate every in-flight cookie on deploy
    *      and would also stale-cache admin renames until next login.

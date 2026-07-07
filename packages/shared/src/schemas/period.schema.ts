@@ -26,10 +26,10 @@ export const reportPeriodSchema = z.object({
   deadline: reportDate(),
   status: reportStatusSchema,
   /**
-   * UFB-053 (Phase 51-C): explicit lifecycle state. Optional so pre-51-C
-   * fixtures and admin-snapshot payloads keep parsing — consumers that
-   * don't yet read the state fall back to the legacy `status`/`archived`
-   * tuple. 51-B Admin Periods tab consumes this field directly.
+   * Explicit lifecycle state. Optional so pre-existing fixtures and
+   * admin-snapshot payloads keep parsing — consumers that don't yet read the
+   * state fall back to the legacy `status`/`archived` tuple. The Admin
+   * Periods tab consumes this field directly.
    */
   periodState: periodStateSchema.optional(),
   /**
@@ -51,8 +51,8 @@ export const reportPeriodSchema = z.object({
 });
 
 /**
- * UFB-052 (Phase 51-B): the lifecycle filter accepted by
- * `admin.listPeriodsByState`. The two virtual buckets fan out to:
+ * The lifecycle filter accepted by `admin.listPeriodsByState`. The two
+ * virtual buckets fan out to:
  *
  *   active  -> { scheduled, open, published-within-reopen-window }
  *   archive -> { archived, published-out-of-reopen-window }
@@ -71,14 +71,13 @@ export const periodListBucketSchema = z.enum([
 ]);
 
 /**
- * UFB-052 (Phase 51-B): the row shape returned by
- * `admin.listPeriodsByState`. Carries everything the redesigned admin
- * Periods tab renders without a second round-trip:
+ * The row shape returned by `admin.listPeriodsByState`. Carries everything
+ * the redesigned admin Periods tab renders without a second round-trip:
  *
  *   - `periodState` is the source of truth for the badge color.
  *   - `submittedCount / totalCount` drives the `4/6` progress badge.
  *   - `canReopen` is server-precomputed from `allowReopenAfterPublish`
- *     + `publishedAt + reopenWindowHours` (51-A `AppSettings`), so the
+ *     + `publishedAt + reopenWindowHours` (`AppSettings`), so the
  *     UI doesn't need to know the reopen-policy rules.
  *   - `canArchive` mirrors the publish state (and skips already-archived).
  */
@@ -110,7 +109,7 @@ export type PeriodListBucket = z.infer<typeof periodListBucketSchema>;
 export type PeriodListItem = z.infer<typeof periodListItemSchema>;
 
 /**
- * UFB-063: input for `admin.createPeriodManual` — admin escape hatch that
+ * Input for `admin.createPeriodManual` — admin escape hatch that
  * mints a Report row without waiting for the daily `PeriodCreatorScheduler`
  * (00:05 UTC cron). Targets two scenarios:
  *
@@ -136,7 +135,7 @@ export type AdminCreatePeriodManualInput = z.infer<
 >;
 
 /**
- * UFB-063: return shape of `admin.createPeriodManual`. Mirrors the
+ * Return shape of `admin.createPeriodManual`. Mirrors the
  * `PeriodCreatorScheduler.runOnce` outcome — minimal projection of the
  * newly-minted Report. The web layer invalidates `listPeriodsByState`
  * afterwards, so we don't need to return the full `PeriodListItem`.
@@ -154,7 +153,7 @@ export type AdminCreatePeriodManualResult = z.infer<
 >;
 
 /**
- * UFB-067: input for `admin.updatePeriodManual` — admin escape hatch that
+ * Input for `admin.updatePeriodManual` — admin escape hatch that
  * edits an existing Report's date envelope without re-running the daily
  * `PeriodCreatorScheduler`. Symmetric counterpart to `createPeriodManual`,
  * keyed on `reportId` (matches the `period.publish` / `period.reopen`
@@ -183,7 +182,7 @@ export type AdminUpdatePeriodManualInput = z.infer<
 >;
 
 /**
- * UFB-067: return shape of `admin.updatePeriodManual`. Mirrors the
+ * Return shape of `admin.updatePeriodManual`. Mirrors the
  * create-counterpart result so the web layer can echo the updated row
  * back into the local cache without a second round-trip (in practice we
  * invalidate `listPeriodsByState` and rely on the refetch, but the shape
@@ -204,14 +203,13 @@ export type AdminUpdatePeriodManualResult = z.infer<
 
 // ---------------------------------------------------------------------------
 // v4.0: App settings (D-68)
-// UFB-048 (Phase 48-B): expanded with 9 org-wide configurable knobs. All new
-// fields carry `.default()` so older clients (and pre-48-B test fixtures)
-// that pass the original 3-key payload still parse — the partial update
-// schema also keeps working unchanged.
+// New fields carry `.default()` so older clients (and test fixtures) that
+// pass the original 3-key payload still parse — the partial update schema
+// also keeps working unchanged.
 // ---------------------------------------------------------------------------
 
 /**
- * UFB-048: working-days enum surfaced for the AppSettings UI hint. v1 is
+ * Working-days enum surfaced for the AppSettings UI hint. v1 is
  * metadata-only — deadline math continues to use Mon-Fri regardless of this
  * value. The wire format is lowercase-hyphen to stay consistent with
  * `reminder-audience`; the API repository owns the wire <-> Prisma mapper.
@@ -224,7 +222,7 @@ export const reminderAudienceWireSchema = z.enum([
 ]);
 
 /**
- * UFB-051 (Phase 51-A): regex guard for the `deadlineTime` HH:MM-in-24h
+ * Regex guard for the `deadlineTime` HH:MM-in-24h
  * string. Pin minutes to two digits and hours to 00..23 so the admin
  * cannot persist garbage like `"25:00"` or `"9:5"` that would later
  * break the deadline-computation path (51-C consumer).
@@ -232,12 +230,12 @@ export const reminderAudienceWireSchema = z.enum([
 const deadlineTimeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const appSettingsSchema = z.object({
-  // UFB-047 / Phase 49-01: `departmentName` removed from AppSettings.
-  // Identity / brand strings live on the `Organization` singleton
-  // (`shortName` for compact references, `fullName` for headings).
+  // Identity / brand strings are NOT in AppSettings — they live on the
+  // `Organization` singleton (`shortName` for compact references,
+  // `fullName` for headings).
   autoCreatePeriods: z.boolean(),
   defaultDeadlineDays: z.number().int().min(1).max(MAX_DEFAULT_DEADLINE_DAYS),
-  // ---- UFB-048: Periods knobs -----------------------------------------
+  // ---- Periods knobs --------------------------------------------------
   periodLengthDays: z
     .number()
     .int()
@@ -259,20 +257,18 @@ export const appSettingsSchema = z.object({
     .min(0)
     .max(MAX_AUTO_ARCHIVE_WEEKS_AFTER_PUBLISH)
     .default(0),
-  // ---- UFB-048: Reminders knobs ---------------------------------------
+  // ---- Reminders knobs ------------------------------------------------
   defaultTimezone: z.string().min(1).default("Europe/Moscow"),
   defaultReminderAudience:
     reminderAudienceWireSchema.default("lead-with-draft"),
-  // ---- UFB-048: Notifications knobs -----------------------------------
+  // ---- Notifications knobs --------------------------------------------
   // Nullable email; `''` is rejected (admins can clear by sending null).
   notificationFromEmail: z
     .union([z.email().max(MAX_EMAIL_LENGTH), z.null()])
     .default(null),
-  // ---- UFB-051 (Phase 51-A): Period-cycle knobs -----------------------
-  // Publish/reopen gating + manual-creation deadline default. The four
-  // consumer-less knobs (firstDayOfWeek, deadlineDayOfWeek, maxOpenPeriods,
-  // requireAllSectionsToPublish) were removed in admin-settings-surface-cleanup
-  // — nothing read them. The fields below all have live consumers.
+  // ---- Period-cycle knobs ---------------------------------------------
+  // Publish/reopen gating + manual-creation deadline default. All fields
+  // below have live consumers.
   // HH:MM in the configured `defaultTimezone`. Regex pins the format so
   // garbage values cannot reach the deadline-computation path. Manual period
   // creation applies it at whole-hour precision; the auto-creation scheduler
@@ -280,7 +276,7 @@ export const appSettingsSchema = z.object({
   deadlineTime: z.string().regex(deadlineTimeRegex).default("18:00"),
   allowReopenAfterPublish: z.boolean().default(true),
   // Window after `publishedAt` during which a published report can be
-  // reopened. `0..168` (one week) matches the 48-B `gracePeriodHours`
+  // reopened. `0..168` (one week) matches the `gracePeriodHours`
   // convention. Default `72` (3 days) chosen as a practical floor for
   // "noticed the bug on Monday, reopen Friday's report" use cases.
   reopenWindowHours: z
@@ -337,9 +333,9 @@ export const periodReadModelSchema = z.object({
   publishedAt: z.coerce.date().nullable(),
   reopenedAt: z.coerce.date().nullable(),
   /**
-   * UFB-053 (Phase 51-C): explicit lifecycle state. Optional so pre-51-C
-   * fixtures still parse; consumers that don't read it fall back to the
-   * legacy tuple. Read paths in 51-B switch to this field.
+   * Explicit lifecycle state. Optional so pre-existing fixtures still parse;
+   * consumers that don't read it fall back to the legacy tuple. Read paths
+   * switch to this field.
    */
   periodState: periodStateSchema.optional(),
 });

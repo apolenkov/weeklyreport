@@ -19,8 +19,8 @@ const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 20;
 
 /**
- * UX-18 (Phase 35-08): row shape for the head/admin "Активность за текущий
- * период" panel. One row per lead's section in the open report period;
+ * Row shape for the head/admin "Активность за текущий период" panel. One
+ * row per lead's section in the open report period;
  * `lastEditAt` is the most-recent updatedAt across the section's rows
  * (items + risks + decisions). Polled every 15s on the
  * dashboard.
@@ -111,8 +111,8 @@ export const adminUserSchema = z.object({
     .max(MAX_REPORTING_GROUP_NAME_LENGTH)
     .nullable()
     .optional(),
-  // A2 (UAT-v7 2026-05-12): soft-deactivation flag. Defaults to true so
-  // existing snapshot rows (created before this field existed) parse cleanly.
+  // Soft-deactivation flag. Defaults to true so existing snapshot rows
+  // (created before this field existed) parse cleanly.
   isActive: z.boolean().default(true),
 });
 
@@ -125,8 +125,8 @@ export const reportingGroupSchema = z.object({
     .nullable()
     .optional(),
   archived: z.boolean(),
-  // UFB-039: optional FK to the User (role=head or admin) that runs this
-  // group. null when the admin has not yet assigned a leader.
+  // Optional FK to the User (role=head or admin) that runs this group.
+  // null when the admin has not yet assigned a leader.
   headUserId: z.uuid().nullable().optional(),
 });
 
@@ -139,7 +139,7 @@ export const adminProjectSchema = z.object({
 });
 
 /**
- * UFB-054 (Phase 56-A/B): explicit Group <-> Product M:M edge row. Returned
+ * Explicit Group <-> Product M:M edge row. Returned
  * by `admin.attachProductToGroup` and consumed by the admin UI list/chip
  * surfaces. The id is server-assigned; the unique business key is the
  * (groupId, productId) tuple.
@@ -152,7 +152,7 @@ export const groupProductSchema = z.object({
 });
 
 /**
- * UFB-054 (Phase 56-B): input for `admin.attachProductToGroup` and
+ * Input for `admin.attachProductToGroup` and
  * `admin.detachProductFromGroup`. Symmetric because the same tuple
  * identifies the edge on both sides of the M:M relation.
  */
@@ -161,8 +161,8 @@ export const groupProductEdgeInputSchema = z.object({
   productId: z.uuid(),
 });
 
-// NOTIF-02 (Phase 29-05): 'escalation' added for T+2h heads-only digest.
-// Bypasses User.notificationOptOut — heads must always be notified.
+// 'escalation' fires the T+2h heads-only digest. Bypasses
+// User.notificationOptOut — heads must always be notified.
 export const adminReminderRuleKindSchema = z.enum([
   "deadline",
   "follow_up",
@@ -174,7 +174,7 @@ export const adminReminderRuleSchema = z.object({
   id: z.uuid(),
   reportId: z.uuid().nullable(),
   /**
-   * UFB-036 (Phase 44-04): the FK back to {@link reminderPolicySchema}.
+   * The FK back to {@link reminderPolicySchema}.
    * Optional on input + transform to `null` so existing fixtures that
    * don't carry the field still validate. The output type is always
    * `string | null` so consumers can group rules under their owning
@@ -277,11 +277,10 @@ export const compiledHistoryResultSchema = z.object({
 });
 
 /**
- * viewer-live-status (task 1.1): result of the Status-target resolver behind
+ * viewer-live-status: result of the Status-target resolver behind
  * `/reports/latest`. `reportId` is the **Status target** — the current editable
  * period (when it has a viewer-visible section), else the newest viewer-visible
- * `published` report, else `null` (empty state). Replaces
- * `latestPublishedReportSchema`.
+ * `published` report, else `null` (empty state).
  */
 export const latestForViewerReportSchema = z.object({
   reportId: z.uuid().nullable(),
@@ -296,7 +295,7 @@ export const adminSnapshotSchema = z.object({
   reminderRules: z.array(adminReminderRuleSchema),
   reminderExecutions: z.array(adminReminderExecutionSchema).default([]),
   /**
-   * UFB-036 (Phase 44-02): list of {@link reminderPolicySchema} rows.
+   * List of {@link reminderPolicySchema} rows.
    * `default([])` keeps every existing fixture / parser call site
    * compatible — older snapshots (and the in-memory test repos) emit
    * snapshots without this field, and the schema fills the array.
@@ -305,7 +304,7 @@ export const adminSnapshotSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
-// Phase 35-06: BullMQ DLQ admin surface (admin.jobs.listFailed / retryFailed)
+// BullMQ DLQ admin surface (admin.jobs.listFailed / retryFailed)
 // ---------------------------------------------------------------------------
 
 /**
@@ -364,9 +363,9 @@ export const weeklyReportReadModelSchema = z.object({
   deadline: reportDate(),
   periodStatus: periodStatusSchema,
   weekLabel: z.string().nullable(),
-  // UFB-047 / Phase 49-01: `departmentName` removed from the weekly read
-  // model. Frontends pull the brand label from `auth.me.organization`
-  // hydrated on every authenticated request (one source of truth).
+  // `departmentName` is NOT on the weekly read model. Frontends pull the
+  // brand label from `auth.me.organization` hydrated on every authenticated
+  // request (one source of truth).
   submissionCount: z.number().int().min(0),
   totalLeads: z.number().int().min(0),
   hasActiveReminderRule: z.boolean().default(false),
@@ -376,7 +375,7 @@ export const weeklyReportReadModelSchema = z.object({
 });
 
 /**
- * R3a (UFB-HEAD-DASH): discriminated-union response for `weeklyReport.get`.
+ * Discriminated-union response for `weeklyReport.get`.
  *
  * When no active Period exists the procedure returns `{ status: 'no-period',
  * report: null }` instead of throwing NOT_FOUND. This eliminates the React

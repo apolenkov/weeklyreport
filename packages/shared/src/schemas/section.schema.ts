@@ -261,7 +261,7 @@ export const submitSectionSchema = draftSaveSchema.extend({
     .default([]),
 });
 
-// 35-04: per-project list of stages owned by the section author on this
+// Per-project list of stages owned by the section author on this
 // project. Sourced from `StageAssignment` rows scoped by (projectId,
 // userId=author). Empty array == author has no stake on this project.
 // unassigned-stage-reporting-exclusion: the lead-form renders the grid from
@@ -294,7 +294,7 @@ export const projectReadModelSchema = z.object({
    * Stages this project's section author owns via `StageAssignment`. The
    * lead-form renders the standard 7-stage grid and marks each stage as
    * "mine" iff its name matches one of these. Optional so existing
-   * fixtures and contract-test factories that pre-date 35-04 still
+   * fixtures and contract-test factories that pre-date this field still
    * type-check; missing -> empty array means "no stake on this project"
    * which the lead-form mapper handles symmetrically.
    */
@@ -323,7 +323,7 @@ export const referencedProjectSchema = z.object({
   projectName: z.string().min(1),
 });
 
-// 35-03: role label of the section author, surfaced end-to-end so the
+// Role label of the section author, surfaced end-to-end so the
 // /lead/report chrome can switch between "Request Reopen" (lead-on-own-
 // section) and "Revoke" (head/admin viewing someone else's section).
 // Optional so legacy fixtures continue to parse — consumers that gate
@@ -338,18 +338,16 @@ export const reportSectionReadModelSchema = z.object({
   // save (see draftSaveSchema). Mints at 1; the repository increments it on
   // every successful write and returns the bumped value here.
   version: z.number().int().min(1),
-  // UFB-047 / Phase 49-01: `departmentName` removed. Consumers that
-  // need a brand label now read it from the per-request session
-  // (`auth.me.organization.shortName` / `.fullName`) — the section
-  // read-model no longer carries a redundant per-section copy.
+  // `departmentName` is NOT on the section read-model — a redundant
+  // per-section copy. Consumers that need a brand label read it from the
+  // per-request session (`auth.me.organization.shortName` / `.fullName`).
   status: reportSectionStatusSchema,
   submittedAt: z.coerce.date().nullable(),
-  // UFB-049 / Phase 50-B: stamped true by submitSection when
-  // `now > Report.deadline` at submit-time (regardless of grace). Drives
-  // a "late" badge on the head dashboard + lead form. Optional in the
-  // inferred TS type so legacy fixtures + Phase 35+ test payloads that
-  // pre-date 50-B still construct ReportSectionReadModel without
-  // breaking. Consumers treat `late === true` only — undefined/false
+  // Stamped true by submitSection when `now > Report.deadline` at
+  // submit-time (regardless of grace). Drives a "late" badge on the head
+  // dashboard + lead form. Optional in the inferred TS type so legacy
+  // fixtures and older test payloads still construct ReportSectionReadModel
+  // without breaking. Consumers treat `late === true` only — undefined/false
   // both mean "on time".
   late: z.boolean().optional(),
   projects: z.array(projectReadModelSchema),

@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import type { Role, UserSession } from "../../schemas/auth";
 
 /**
- * AUTH-03 (Phase 27): pure role assertion — testable without tRPC.
+ * Pure role assertion — testable without tRPC.
  *
  * Throws:
  *   - UNAUTHORIZED when session is null/undefined.

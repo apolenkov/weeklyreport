@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * UFB-036 (Phase 44-02): Wire-format schema for ReminderPolicy.
+ * Wire-format schema for ReminderPolicy.
  *
  * The Prisma model uses a screaming-snake `ReminderAudience` enum
  * (`LEAD_WITH_DRAFT | HEAD_OF_LATE`) on the database side. The wire/zod
@@ -35,7 +35,7 @@ export const reminderPolicySchema = z
     audience: reminderAudienceSchema,
     active: z.boolean(),
     /**
-     * UFB-036 (Phase 44 scope-extension): validity window for the policy.
+     * Validity window for the policy.
      * `validFrom` defaults to "now" so older fixtures (and the in-memory
      * test repos) that emit policies without this field still parse — the
      * schema fills the value rather than rejecting. `validUntil === null`
@@ -48,7 +48,7 @@ export const reminderPolicySchema = z
     validUntil: z.coerce.date().nullable().default(null),
   })
   /**
-   * UFB-036 (Phase 44-05): the validity window must be coherent. The UI
+   * The validity window must be coherent. The UI
    * already disables Save when `validUntil < validFrom`, but a malicious
    * admin client could bypass the React layer; the wire-level refine
    * guarantees the invariant holds at the API boundary too.

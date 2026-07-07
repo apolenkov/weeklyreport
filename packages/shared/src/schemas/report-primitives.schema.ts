@@ -89,13 +89,12 @@ export const reportStatusSchema = z.enum(["draft", "published"]);
 export const periodStatusSchema = z.enum(["open", "published", "reopened"]);
 
 /**
- * UFB-053 (Phase 51-C): explicit lifecycle state for a Period/Report.
- * Replaces the implicit (status × archived × periodStatus) tuple. The
- * legacy fields stay around for the one-release compatibility window —
- * writers update both atomically. Wire format mirrors the lowercase
- * Prisma enum.
+ * Explicit lifecycle state for a Period/Report, superseding the implicit
+ * (status × archived × periodStatus) tuple. The legacy fields stay around
+ * for the one-release compatibility window — writers update both atomically.
+ * Wire format mirrors the lowercase Prisma enum.
  *
- * State transitions wired in 51-C:
+ * State transitions:
  *   - PeriodCreator   : minted with `scheduled` if periodStart > now,
  *                       otherwise `open`; flips `scheduled → open` once
  *                       the period's start day is reached.
@@ -105,8 +104,7 @@ export const periodStatusSchema = z.enum(["open", "published", "reopened"]);
  *   - publish (head)  : `open → published` (also legacy
  *                       status/periodStatus writes).
  *   - reopen (head)   : `published → open` (also legacy
- *                       periodStatus='reopened' — see Open Questions in
- *                       51-C SUMMARY).
+ *                       periodStatus='reopened').
  */
 export const periodStateSchema = z.enum([
   "scheduled",
