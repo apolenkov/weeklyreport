@@ -12,6 +12,30 @@ const DEV_JSON_TRANSPORT_FROM = "noreply@example.com";
 const DEFAULT_SMTP_PORT = 587;
 
 /**
+ * The email-sending seam its consumers (the email-reminder worker) depend on.
+ * `EmailService` is the sole SMTP adapter; a test double implements the same
+ * two methods without touching nodemailer. `EMAIL_PORT` binds the port to the
+ * adapter at the DI boundary so consumers inject the interface, not the class.
+ */
+export interface EmailPort {
+  sendMail(
+    to: string,
+    subject: string,
+    text: string,
+    from?: string | null,
+  ): Promise<void>;
+  sendMailMultipart(
+    to: string,
+    subject: string,
+    html: string,
+    text: string,
+    from?: string | null,
+  ): Promise<void>;
+}
+
+export const EMAIL_PORT = Symbol("EMAIL_PORT");
+
+/**
  * SMTP email service wrapping nodemailer.
  *
  * When SMTP_HOST is configured, sends real emails via the corporate SMTP server.
@@ -21,7 +45,7 @@ const DEFAULT_SMTP_PORT = 587;
  * env.schema, so jsonTransport can never be selected in production.
  */
 @Injectable()
-export class EmailService {
+export class EmailService implements EmailPort {
   private readonly transporter: Transporter;
   private readonly fromAddress: string;
   private readonly isDev: boolean;

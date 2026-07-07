@@ -29,15 +29,9 @@ vi.mock("../../modules/reminders/reminders.service.js", () => ({
   },
 }));
 
-vi.mock("../email/email.service.js", () => ({
-  EmailService: class {
-    sendMail = vi.fn();
-  },
-}));
-
-// UFB-048 / Phase 50-A: AdminService is now an optional constructor
-// dependency of EmailReminderProcessor. Mocking the module keeps the
-// test isolated from Prisma + Nest DI.
+// AdminService is an optional constructor dependency of
+// EmailReminderProcessor. Mocking the module keeps the test isolated from
+// Prisma + Nest DI.
 vi.mock("../../modules/admin/admin.service.js", () => ({
   AdminService: class {
     getSettings = vi.fn();
@@ -116,7 +110,7 @@ describe("EmailReminderProcessor.processJob", () => {
     const mockEmail = createMockEmailService();
     const processor = new EmailReminderProcessor(
       mockReminders as never,
-      mockEmail as never,
+      mockEmail,
       STUB_ENV,
     );
     const job = createMockJob(defaultJobData);
@@ -143,7 +137,7 @@ describe("EmailReminderProcessor.processJob", () => {
     const mockAdmin = createMockAdminService("alerts@corp.example.com");
     const processor = new EmailReminderProcessor(
       mockReminders as never,
-      mockEmail as never,
+      mockEmail,
       STUB_ENV,
       mockAdmin as never,
     );
@@ -169,7 +163,7 @@ describe("EmailReminderProcessor.processJob", () => {
     const mockAdmin = createMockAdminService(null);
     const processor = new EmailReminderProcessor(
       mockReminders as never,
-      mockEmail as never,
+      mockEmail,
       STUB_ENV,
       mockAdmin as never,
     );
@@ -190,7 +184,7 @@ describe("EmailReminderProcessor.processJob", () => {
     const mockEmail = createMockEmailService();
     const processor = new EmailReminderProcessor(
       mockReminders as never,
-      mockEmail as never,
+      mockEmail,
       STUB_ENV,
     );
     const job = createMockJob(defaultJobData);
@@ -207,7 +201,7 @@ describe("EmailReminderProcessor.processJob", () => {
 
     const processor = new EmailReminderProcessor(
       mockReminders as never,
-      mockEmail as never,
+      mockEmail,
       STUB_ENV,
     );
     const job = createMockJob(defaultJobData);

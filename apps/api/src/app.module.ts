@@ -12,7 +12,8 @@ import {
   ENV_CONFIG,
 } from "./infrastructure/config/config.module";
 import type { EnvConfig } from "./infrastructure/config/env.schema";
-import { EmailService } from "./infrastructure/email/email.service";
+import type { EmailPort } from "./infrastructure/email/email.service";
+import { EMAIL_PORT, EmailService } from "./infrastructure/email/email.service";
 import { HealthModule } from "./infrastructure/health/health.module";
 import { MetricsModule } from "./infrastructure/metrics/metrics.module";
 import { CorrelationIdMiddleware } from "./infrastructure/middleware/correlation-id.middleware";
@@ -103,7 +104,7 @@ import { WeeklyReportModule } from "./modules/weekly-report/weekly-report.module
       provide: EmailReminderProcessor,
       useFactory: (
         remindersService: RemindersService,
-        emailService: EmailService,
+        emailService: EmailPort,
         env: EnvConfig,
         adminService: AdminService,
         cls: ClsService,
@@ -118,13 +119,14 @@ import { WeeklyReportModule } from "./modules/weekly-report/weekly-report.module
         ),
       inject: [
         RemindersService,
-        EmailService,
+        EMAIL_PORT,
         ENV_CONFIG,
         AdminService,
         ClsService,
       ],
     },
     EmailService,
+    { provide: EMAIL_PORT, useExisting: EmailService },
     CorrelationIdMiddleware,
   ],
 })
