@@ -25,4 +25,4 @@
       (lead deck), `/head/report/[id]/present` → `?mode=slides` 200 (head deck) —
       no module-resolution 500.
 - [x] 2.5 Adversarial review (deep-reasoner) CLEAN; `openspec validate
-  restructure-web-slides-slice --strict` green.
+restructure-web-slides-slice --strict` green.
