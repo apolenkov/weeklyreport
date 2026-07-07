@@ -28,13 +28,13 @@ vi.mock("./slide-skeleton", () => ({
   SlideSkeleton: () => <div data-testid="slide-skeleton" />,
 }));
 
-vi.mock("../../lib/use-query-error-handler", () => ({
+vi.mock("../../../lib/use-query-error-handler", () => ({
   useQueryErrorHandler: () => undefined,
 }));
 
 // One activity row maps to one slide; identity sort keeps the count stable so
 // the assertion is on enableActivity gating, not the slide-building internals.
-vi.mock("./section-slide-utils", () => ({
+vi.mock("../model/section-slide-utils", () => ({
   buildActivitySlideModel: (row: unknown) => row,
   buildProductScopedSlides: (sections: unknown[]) => sections,
   buildSectionSlideModel: (section: unknown) => section,
@@ -42,7 +42,7 @@ vi.mock("./section-slide-utils", () => ({
   sortSlidesForReview: (slides: unknown[]) => slides,
 }));
 
-vi.mock("../../lib/trpc-context", () => ({
+vi.mock("../../../lib/trpc-context", () => ({
   useTRPC: () => ({
     weeklyReport: {
       get: {

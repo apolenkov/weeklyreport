@@ -4,8 +4,8 @@ import {
   type CanonicalStatus,
   statusDotClassName,
   statusLabel,
-} from "../../lib/status-presentation";
-import type { SlideActivityPill } from "./section-slide-utils";
+} from "../../../lib/status-presentation";
+import type { SlideActivityPill } from "../model/section-slide-utils";
 
 type PillStatus = "green" | "yellow" | "red" | "empty";
 

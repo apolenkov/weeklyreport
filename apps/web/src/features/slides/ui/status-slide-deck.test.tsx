@@ -2,7 +2,7 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { buildSectionSlideModel } from "./section-slide-utils";
+import { buildSectionSlideModel } from "../model/section-slide-utils";
 import { StatusSlideDeck } from "./status-slide-deck";
 
 type Item = ReportSectionReadModel["items"][number];

@@ -4,8 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo } from "react";
 
-import { HeadSlidesClient } from "../../../components/slides/head-slides-client";
-import { SlideSkeleton } from "../../../components/slides/slide-skeleton";
 import { getClientErrorDetails } from "../../../lib/client-error-reporting";
 import { useTRPC } from "../../../lib/trpc-context";
 import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
@@ -23,6 +21,8 @@ import {
 import type { ReportPeriod } from "../../report-sections/model/mock-data";
 import { WeeklyReportPage } from "../../report-sections/ui/weekly-report-page";
 import { WeeklyReportSkeleton } from "../../report-sections/ui/weekly-report-skeleton";
+import { HeadSlidesClient } from "../../slides/ui/head-slides-client";
+import { SlideSkeleton } from "../../slides/ui/slide-skeleton";
 
 // Module-scope so the reference is stable across renders — a fresh literal would
 // churn the hook's `buildQuery` memoization. The viewer strips the one-shot

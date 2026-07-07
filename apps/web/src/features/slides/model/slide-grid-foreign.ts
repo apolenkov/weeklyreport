@@ -1,4 +1,4 @@
-import type { CrossAuthorContentRow } from "../../features/report-sections/model/lead-cross-author";
+import type { CrossAuthorContentRow } from "../../report-sections/model/lead-cross-author";
 import {
   type GridColumnKey,
   type GridRow,
@@ -16,7 +16,7 @@ const KNOWN_ITEM_STATUSES = [
 ] as const;
 
 /** Everyone-mode item rows carry `workflowStatus` as a plain string (structural
- * mirror of untyped query data, design D2); known values reuse the exhaustive
+ * mirror of untyped query data); known values reuse the exhaustive
  * own-item map, anything else reads neutral/"Planned" (same lenient coercion
  * convention as `coerceWorkflowToItemStatus`). */
 function foreignItemToneEntry(workflowStatus: string): ToneEntry {

@@ -4,13 +4,13 @@ import type {
 } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 
-import type { CrossAuthorContentRow } from "../../features/report-sections/model/lead-cross-author";
-import { riskCoversStage } from "../../features/report-sections/model/stage-tags";
+import { deriveEffectiveStageStatus } from "../../../lib/stage-status";
+import type { CrossAuthorContentRow } from "../../report-sections/model/lead-cross-author";
+import { riskCoversStage } from "../../report-sections/model/stage-tags";
 import {
   stageStatusToTraffic,
   trafficToStageStatus,
-} from "../../features/report-sections/model/traffic-light";
-import { deriveEffectiveStageStatus } from "../../lib/stage-status";
+} from "../../report-sections/model/traffic-light";
 import { buildSlideGridModel, type SlideGridModel } from "./slide-grid-model";
 
 const PERCENT_MAX = 100;
@@ -1074,7 +1074,7 @@ export function buildProductScopedSlides(
 
     const bucketFor = (productId: string | null | undefined): ProductAcc =>
       productId && owned.has(productId)
-        ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- intentional non-null assertion (migrated from eslint-disable)
+        ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- membership just checked by owned.has(productId)
           products.get(productId)!
         : ensure(SHARED_PRODUCT_ID, SHARED_PRODUCT_NAME);
 

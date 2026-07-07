@@ -4,7 +4,7 @@ import {
   statusLabel,
   type StatusLabelVariant,
   statusToneClassName,
-} from "../../lib/status-presentation";
+} from "../../../lib/status-presentation";
 
 /**
  * The shared worst-status pill: a canonical status plus its label variant in,

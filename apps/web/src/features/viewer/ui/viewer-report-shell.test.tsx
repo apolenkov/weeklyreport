@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../components/slides/head-slides-client", () => ({
+vi.mock("../../slides/ui/head-slides-client", () => ({
   HeadSlidesClient: (props: { enableActivity?: boolean }) => (
     <div
       data-testid="slides-client-stub"

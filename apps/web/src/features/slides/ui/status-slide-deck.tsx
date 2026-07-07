@@ -3,10 +3,10 @@
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { type ReactNode, useRef } from "react";
 
-import { useFullscreen } from "../../hooks/use-fullscreen";
+import { useFullscreen } from "../../../hooks/use-fullscreen";
+import type { SectionSlideModel } from "../model/section-slide-utils";
 import { DeckFullscreenOverlay } from "./deck-fullscreen-overlay";
 import { HeadSlideCarousel } from "./head-slide-carousel";
-import type { SectionSlideModel } from "./section-slide-utils";
 import { SlideArticle } from "./slide-article";
 
 interface StatusSlideDeckProps {

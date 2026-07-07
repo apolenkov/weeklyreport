@@ -3,16 +3,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
-import { useTRPC } from "../../lib/trpc-context";
-import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
-import { ReportSlides } from "./report-slides";
+import { useTRPC } from "../../../lib/trpc-context";
+import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
 import {
   buildActivitySlideModel,
   buildProductScopedSlides,
   buildSectionSlideModel,
   paginateSectionSlides,
   sortSlidesForReview,
-} from "./section-slide-utils";
+} from "../model/section-slide-utils";
+import { ReportSlides } from "./report-slides";
 import { SlideEmptyState } from "./slide-empty-state";
 import { SlideSkeleton } from "./slide-skeleton";
 

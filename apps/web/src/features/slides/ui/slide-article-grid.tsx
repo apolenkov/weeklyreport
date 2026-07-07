@@ -11,15 +11,15 @@ import {
   type CanonicalStatus,
   statusDotClassName,
   statusLabel,
-} from "../../lib/status-presentation";
-import { SlideCell } from "./slide-article-rows";
-import { columnsRowCount } from "./slide-grid-cells";
+} from "../../../lib/status-presentation";
+import { columnsRowCount } from "../model/slide-grid-cells";
 import type {
   GridAuthor,
   GridProductCard,
   GridSubsection,
   SlideTrafficStatus,
-} from "./slide-grid-model";
+} from "../model/slide-grid-model";
+import { SlideCell } from "./slide-article-rows";
 
 /** The one shared 4-column template — identical in the header row and every
  * subsection so columns align vertically across the whole slide. Current/Next

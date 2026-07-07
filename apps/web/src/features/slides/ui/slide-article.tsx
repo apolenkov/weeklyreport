@@ -2,7 +2,8 @@
 
 import type { ReactNode } from "react";
 
-import type { SectionSlideModel } from "./section-slide-utils";
+import type { SectionSlideModel } from "../model/section-slide-utils";
+import { collectStageNames } from "../model/slide-grid-model";
 import { SlideActivityPills } from "./slide-activity-pills";
 import { SlideColumnHeaderRow, SlideProductCard } from "./slide-article-grid";
 import {
@@ -11,7 +12,6 @@ import {
   SlidePriorityStrip,
 } from "./slide-article-header";
 import { StageLegend } from "./slide-article-rows";
-import { collectStageNames } from "./slide-grid-model";
 
 /**
  * The one slide article for the whole deck (lead sections AND the head's own

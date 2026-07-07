@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 
-import { type CanonicalStatus } from "../../lib/status-presentation";
-import { authorSlotBackground } from "./slide-article-rows";
+import { type CanonicalStatus } from "../../../lib/status-presentation";
 import type {
   GridAuthor,
   SlideGridModel,
   SlideTrafficStatus,
-} from "./slide-grid-model";
+} from "../model/slide-grid-model";
+import { authorSlotBackground } from "./slide-article-rows";
 import { SlideStatusBadge } from "./slide-status-badge";
 
 /** Worst-status traffic light → canonical status for the header pill (D6). */

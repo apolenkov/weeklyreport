@@ -22,44 +22,18 @@ const jsxA11y = jsxA11yPlugin as ESLint.Plugin & {
   configs: { recommended: { rules: Linter.RulesRecord } };
 };
 
-// Phase 1 (migrate-lint-to-eslint-prettier): Biome removed; ESLint owns logic,
-// Prettier owns format, stylelint owns CSS. This config ports Biome's
-// `recommended` surface 1:1 — BEHAVIOR-PRESERVING, NO NEW RULES. The
-// max-strictness regime (strictTypeChecked, import-sort, sonarjs, unicorn,
-// max-lines, jsdoc) is Phase 2 (declare) + Phase 3 (ratchet), NOT here.
+// Max-strictness lint regime. ESLint owns logic, Prettier owns format,
+// stylelint owns CSS. The durable standard lives in the openspec capability
+// `lint-max-strictness-standard` (the single source of truth); this file is
+// its enforcement. Each rule below carries its own rationale; permanent
+// exemptions live in the override blocks at the end.
 //
-// Retained from the residual config: projectService, no-floating-promises
-// (type-aware), react-compiler, react-hooks.
-// Added to absorb Biome `recommended`: @typescript-eslint individual rules
-// (NOT the recommended array — it would smuggle ~20 rules Biome lacks),
-// eslint-plugin-react (no-array-index-key, no-danger, …),
-// eslint-plugin-jsx-a11y (a11y parity; preset is a pragmatic ~match, NOT exact —
-// any jsx-a11y rule with no Biome counterpart that fires NEW must be turned
-// off here to preserve 1:1), unused-imports (no-unused-vars parity).
-// NOTE: simple-import-sort is intentionally NOT here — Biome does not sort
-// imports today (no assist/organizeImports config), so it is net-new and
-// belongs to Phase 3.
-//
-// Phase 2 (declare-lint-max-strictness): the durable max-strictness STANDARD is
-// declared spec-first in openspec — capability `lint-max-strictness-standard`
-// (the single source of truth). NO live strict rule is enabled here; this gate
-// stays exactly as green as Phase 1 left it. Phase 3 (ratchet-lint-to-strict)
-// flips each target below from absent → `error` with its fixup wave.
-// Phase-3 ratchet targets (see the spec for scope/threshold qualifiers):
-//   • base: @typescript-eslint strictTypeChecked + stylisticTypeChecked
-//   • plugins: sonarjs (incl. cognitive-complexity ≤ 15), unicorn (pruned
-//     off-list), jsdoc (packages/shared + packages/ui public API only),
-//     simple-import-sort (net-new), import-boundaries
-//   • core: max-lines 300 (skipBlankLines, skipComments), complexity ≤ 10
-//   • exempt dirs: *.test.*, e2e, prisma/generated, prisma/seed*.ts, *.config.ts
-//   • exclude-list seed (inherited a11y carve-outs, kept off, NOT reopened):
-//     jsx-a11y/no-noninteractive-element-interactions,
-//     jsx-a11y/label-has-associated-control, the test-file full-a11y-off override
-//   • severity reconciliation: no-non-null-assertion → error,
-//     jsx-no-useless-fragment → error, no-unused-imports → error,
-//     react-hooks/exhaustive-deps → stays warn (advisory, false-positive-prone)
-//   • web→api boundary carve-out: import type ALLOWED via
-//     @typescript-eslint/no-restricted-imports { allowTypeImports: true }
+// @typescript-eslint rules are enabled individually (not via the recommended
+// array, which would pull in rules the regime deliberately omits), alongside
+// eslint-plugin-react, jsx-a11y (a pragmatic parity preset — net-new noise is
+// turned off inline below), unused-imports, simple-import-sort, sonarjs,
+// unicorn (a curated allowlist), jsdoc (published packages only), the
+// max-lines + complexity budgets, and the import-boundary zones.
 // sonarjs ships its flat `recommended` config typed as a loose union; narrow it
 // to the rules/settings shape we spread so the type-aware lint stays clean.
 const sonarjsRecommended = sonarjs.configs.recommended as unknown as {
@@ -109,7 +83,7 @@ const apiModules = [
 ] as const;
 
 // Grandfathered cross-module imports, keyed by CONSUMING module → resolved sibling
-// paths (relative to modules/) it already imports. Inventory 2026-07-05: 30 unique
+// paths (relative to modules/) it already imports: 30 unique
 // (consumer, target) pairs across 11 consumers (the raw ~40 count is import LINES;
 // several modules import one sibling file from multiple files). Entries are only
 // ever REMOVED (as slice 6 reroutes each to the sibling's index.ts facade), never
@@ -195,14 +169,15 @@ const webSlices = [
   "period",
   "report-sections",
   "review",
+  "slides",
   "telemetry",
   "viewer",
 ] as const;
-// Grandfathered cross-slice edges: pre-existing couplings between slices, exposed
-// as each domain graduated from components/lib into features/. Explicit allowlist
-// (forbid a slice reaching into a NEW sibling; grandfather the pairs it already
-// touches). `except` is slice-granular, so an entry permits any import between
-// that pair — finer per-file enforcement is a separate mechanism, out of scope.
+// Grandfathered cross-slice edges: pre-existing couplings between slices that
+// the boundary rule allows explicitly — forbid a slice reaching into a NEW
+// sibling, grandfather the pairs it already touches. `except` is slice-granular,
+// so an entry permits any import between that pair — finer per-file enforcement
+// is a separate mechanism, out of scope.
 const webSliceGrandfatheredExcept: Partial<
   Record<(typeof webSlices)[number], readonly string[]>
 > = {
@@ -216,12 +191,16 @@ const webSliceGrandfatheredExcept: Partial<
   // (the assembled-report body they gate publish/reopen on).
   period: ["admin", "report-sections"],
   // report-sections is the assembled-report hub: it composes admin, pdf-export,
-  // period, and review surfaces into the rendered report.
-  "report-sections": ["admin", "pdf-export", "period", "review"],
+  // period, review, and slides surfaces into the rendered report.
+  "report-sections": ["admin", "pdf-export", "period", "review", "slides"],
   // review surfaces sit on top of admin context and the report-sections body.
   review: ["admin", "report-sections"],
-  // the viewer report shell reuses pdf-export, period, and report-sections UI.
-  viewer: ["pdf-export", "period", "report-sections"],
+  // the slide deck reads report-sections' cross-author mappers + stage helpers to
+  // build its grid model.
+  slides: ["report-sections"],
+  // the viewer report shell reuses pdf-export, period, report-sections, and the
+  // slide deck UI.
+  viewer: ["pdf-export", "period", "report-sections", "slides"],
 };
 const webCrossSliceZones = webSlices.map((sliceName) => ({
   target: `${webFeaturesDir}/${sliceName}`,
@@ -288,11 +267,10 @@ export default defineConfig([
       },
     },
     rules: {
-      // Phase 3 (ratchet-lint-to-strict) R3a — net-new ordering/naming cluster.
       // simple-import-sort: deterministic import/export order (autofixable).
       "simple-import-sort/imports": "error",
       "simple-import-sort/exports": "error",
-      // R3a-2: unicorn — a CURATED allowlist, not the recommended preset.
+      // unicorn — a CURATED allowlist, not the recommended preset.
       // Directive: community-strict, no overhead, AI-controlled. The full
       // `recommended` set (3266 firings) is dominated by two notorious rules
       // (prevent-abbreviations, no-null) plus several whose AUTOFIX introduces
@@ -309,8 +287,7 @@ export default defineConfig([
       // hook runs prettier AFTER eslint --fix, every hex literal with a letter
       // digit lands committed-red. Prettier already lowercases the 0x/0b/0o
       // prefix and the `e` exponent, so the rule is redundant apart from the
-      // conflicting hex-digit case. (Latent since R3a-2; surfaced by R3a-4's
-      // repo-wide gate on logger.test.ts 0x1f/0x8b.)
+      // conflicting hex-digit case.
       "unicorn/numeric-separators-style": "error",
       "unicorn/catch-error-name": "error",
       "unicorn/prefer-string-raw": "error",
@@ -358,7 +335,7 @@ export default defineConfig([
           ignore: [String.raw`^\[.+\]$`, "^__tests__$"],
         },
       ],
-      // Biome repo overrides (preserve severities exactly)
+      // Deliberate severity choices:
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-non-null-assertion": "warn",
       "@typescript-eslint/no-unused-vars": "off", // delegated to unused-imports
@@ -366,7 +343,7 @@ export default defineConfig([
         "error",
         {
           ignoreRestSiblings: true,
-          // Biome convention: leading underscore marks intentionally unused vars/args
+          // Leading underscore marks intentionally unused vars/args
           varsIgnorePattern: "^_",
           argsIgnorePattern: "^_",
           caughtErrorsIgnorePattern: "^_",
@@ -375,45 +352,32 @@ export default defineConfig([
       ],
       "unused-imports/no-unused-imports": "warn",
 
-      // React rules Biome recommended enforced
-      // jsx-no-useless-fragment promoted warn→error in Phase-3 ratchet R2a
-      // (declared severity-reconciliation target).
+      // React rules enforced at error.
       "react/jsx-no-useless-fragment": "error",
       "react/no-array-index-key": "error",
       "react/no-danger": "error",
 
-      // jsx-a11y parity (pragmatic preset; prune net-new firers to stay 1:1)
+      // jsx-a11y accessibility rules (recommended preset).
       ...jsxA11y.configs.recommended.rules,
-      // Net-new firers vs Biome (out of Phase-1 1:1 scope):
-      // noNoninteractiveElementInteractions: Biome 2.4.16 has the rule but it is
-      //   NOT recommended (default info, must be explicitly enabled). jsx-a11y
-      //   enables it via recommended preset → net-new behavior.
+      // no-noninteractive-element-interactions: enabled by the recommended
+      // preset, turned off here.
       "jsx-a11y/no-noninteractive-element-interactions": "off",
-      // noLabelWithoutControl: Biome 2.4.16 DOES have this rule as recommended
-      //   (error). However Biome's check accepts wrapping-label patterns (label
-      //   wrapping input + sibling span) that jsx-a11y/label-has-associated-control
-      //   rejects. All 7 firing sites use the wrapping-label pattern and passed
-      //   Biome's check without suppressions → jsx-a11y is stricter here →
-      //   behavioral divergence, not enforcement gap. Off to preserve 1:1 surface.
+      // label-has-associated-control: off. The codebase uses the wrapping-label
+      // pattern (a <label> wrapping its input plus a sibling span), which this
+      // rule wrongly rejects — a false positive, not a real a11y gap.
       "jsx-a11y/label-has-associated-control": "off",
 
-      // ESLint core mapped from Biome recommended (warn = won't gate)
+      // ESLint core rules (warn = won't gate)
       "prefer-rest-params": "error",
       "prefer-template": "warn",
       "no-template-curly-in-string": "warn",
       "no-unused-private-class-members": "warn",
 
-      // Type-aware (retained hard-error + Biome-recommended equivalents)
+      // Type-aware rules
       "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/prefer-optional-chain": "warn",
 
-      // Phase-3 ratchet — R1a SAFE autofix cluster (ratchet-lint-to-strict).
-      // Purely syntactic / proven-noop rules only. EXCLUDED and deferred to a
-      // later reviewed cluster: no-confusing-void-expression & prefer-optional-chain
-      // (fixes alter runtime behavior); no-unnecessary-type-assertion &
-      // non-nullable-type-assertion-style (the lint program flags assertions the
-      // app tsconfig still needs — removing them breaks `tsc`, e.g. `as
-      // HTMLInputElement` in RTL tests, `as CompiledHistoryResult`).
+      // Syntactic / proven-noop type-aware rules (safe autofix).
       "@typescript-eslint/dot-notation": "error",
       "@typescript-eslint/consistent-type-definitions": "error",
       "@typescript-eslint/array-type": "error",
@@ -425,26 +389,21 @@ export default defineConfig([
       "@typescript-eslint/no-unnecessary-boolean-literal-compare": "error",
       "@typescript-eslint/no-inferrable-types": "error",
 
-      // Phase-3 ratchet — R2a SAFE low-risk cluster (ratchet-lint-to-strict).
-      // In-scope declared targets, ascending-risk first wave: two type-aware
-      // rules whose fixes are noop/local, and one strict rule (return-await)
-      // whose fix is a genuine correctness gain (await inside try so the catch
-      // observes async rejections). jsx-no-useless-fragment is promoted in place
-      // above (it was already a Phase-1 warn).
+      // Type-aware rules whose fixes are noop/local, plus return-await, whose
+      // fix is a genuine correctness gain (await inside try so the catch
+      // observes async rejections).
       "@typescript-eslint/no-unnecessary-type-conversion": "error",
       "@typescript-eslint/use-unknown-in-catch-callback-variable": "error",
       "@typescript-eslint/return-await": "error",
 
-      // Phase-3 ratchet — no-deprecated (ratchet-lint-to-strict).
       "@typescript-eslint/no-deprecated": "error",
 
-      // Phase-3 ratchet — R2b-2 (ratchet-lint-to-strict). require-await repo-wide
+      // require-await repo-wide
       // (the declared standard does NOT exempt tests for the type-aware base).
       // src violations are fixed in code; test-mock methods that are async purely
       // to satisfy an async interface contract carry a per-site disable.
       "@typescript-eslint/require-await": "error",
       "@typescript-eslint/no-empty-function": "error",
-      // Phase-3 ratchet — R2b-3 wave-2 (ratchet-lint-to-strict).
       // allowWithDecorator exempts decorated classes: in this NestJS codebase
       // an empty `@Module` class is correct by design (the decorator carries
       // the provider/import metadata). This is the rule's built-in
@@ -456,12 +415,11 @@ export default defineConfig([
         "error",
         { allowWithDecorator: true },
       ],
-      // Phase-3 ratchet — R2b-3 wave-2 last cluster (ratchet-lint-to-strict).
-      // Riskiest of the wave: every firing is a real correctness question
+      // no-misused-promises: every firing is a real correctness question
       // (a Promise used where a void/boolean is expected). Fixed per-site to
       // preserve intended behavior; no eslint-disable escape is permitted here.
       "@typescript-eslint/no-misused-promises": "error",
-      // Phase-3 ratchet — R2b-4 wave-4 (ratchet-lint-to-strict). strictTypeChecked
+      // strictTypeChecked
       // sets every allow:false (202 firings here), but 184 are a plain `${number}`
       // and a handful are `${boolean}` — both safe, idiomatic interpolation. Per
       // the spec's "built-in option is a config choice, not a weakening" scenario
@@ -481,7 +439,6 @@ export default defineConfig([
           allowRegExp: false,
         },
       ],
-      // Phase-3 ratchet — R2b-5 wave-5 (ratchet-lint-to-strict).
       // prefer-nullish-coalescing: SOFTENED from strictTypeChecked's default via
       // `ignorePrimitives: { string: true }` (a deliberate relaxation, documented
       // as such). 20 of 23 firings are string `||` where an empty string is a
@@ -506,14 +463,13 @@ export default defineConfig([
       // (SAML profile fields, generic data-table cells, a spawn error's stderr),
       // each fixed by narrowing to a string at the source — no disables.
       "@typescript-eslint/no-base-to-string": "error",
-      // Phase-3 ratchet — R2b-6 wave-6a (ratchet-lint-to-strict).
       // no-confusing-void-expression: SOFTENED via `ignoreArrowShorthand: true`
       // (a deliberate relaxation from strictTypeChecked's default, documented as
       // such). 270 of 274 firings are arrow-shorthand void returns — idiomatic
       // React event handlers (`onClick={() => setOpen(true)}`) where the void
       // return is intended, not confusing. This softening opens NO Promise hole:
       // the only dangerous arrow-shorthand-void case is a Promise-returning call
-      // in a void slot, and `no-misused-promises` (error since wave 2, with the
+      // in a void slot, and `no-misused-promises` (already error, with the
       // default checksVoidReturn) already rejects that. The 4 remaining real
       // firings — explicit `return <void-call>()` from block-bodied functions in
       // main.ts and sidebar.tsx — were fixed by hand (statement + bare `return`).
@@ -521,7 +477,7 @@ export default defineConfig([
         "error",
         { ignoreArrowShorthand: true },
       ],
-      // Phase-3 ratchet — R2b-6 wave-6b (ratchet-lint-to-strict): the `any`-flow
+      // The `any`-flow
       // family. 218 firings (54 src / 160 test). Every src firing was fixed at
       // its ROOT by giving the value a real type instead of `any` — typed Prisma
       // payloads (Prisma.ReportGetPayload / the shared PrismaReportSectionWith-
@@ -538,7 +494,6 @@ export default defineConfig([
       "@typescript-eslint/no-unsafe-call": "error",
       "@typescript-eslint/no-unsafe-member-access": "error",
       "@typescript-eslint/no-unsafe-return": "error",
-      // Phase-3 ratchet — R2b-6 wave-6c-i (ratchet-lint-to-strict).
       // non-nullable-type-assertion-style: 9 firings, all `x as T` where T is the
       // non-null form of x (i.e. equivalent to `x!`). NOT converted to `!` (that
       // would seed the declared no-non-null-assertion→error target with new debt);
@@ -548,7 +503,6 @@ export default defineConfig([
       // narrowing productId to string honestly; the test sites dropped the
       // assertion (non-optional tuple element / `map.get(k) ?? null`). 0 disables.
       "@typescript-eslint/non-nullable-type-assertion-style": "error",
-      // Phase-3 ratchet — R2b-6 wave-6c-ii (ratchet-lint-to-strict).
       // no-unnecessary-type-assertion: 134 firings (44 src / 90 test). The
       // autofix removed the genuinely-redundant assertions across 40 files
       // cleanly (verified by tsc). The 9 remaining files carry a file-level
@@ -559,9 +513,9 @@ export default defineConfig([
       // reach .value/.checked/.options (TS2339 without it), and lead-form.tsx
       // casts a ternary to a literal union (TS2322 without it). File-level
       // (not line) disables here are position-independent — immune to the
-      // pre-commit-prettier comment-shift hazard (R4a finding (a)).
+      // pre-commit-prettier comment-shift hazard.
       "@typescript-eslint/no-unnecessary-type-assertion": "error",
-      // Phase-3 ratchet — R2b-6 wave-6c-iii (ratchet-lint-to-strict). The last
+      // The last
       // and most behaviour-sensitive cluster: 225 firings, no option lever.
       // Dominant root cause: `noUncheckedIndexedAccess` is OFF, so `arr[i]` is
       // typed non-null though an out-of-bounds index is `undefined` at runtime —
@@ -572,7 +526,7 @@ export default defineConfig([
       // Record lookups) were removed; genuine type-lies at boundaries that have no
       // clean type fix carry a per-site disable with a reason (external lib /
       // queue / DOM / sparse Record / optimistic query contract). The full test
-      // suite caught two optimistic-contract lies (Phase-55 `ci`, synthetic-ctx
+      // suite caught two optimistic-contract lies (a `ci` field, synthetic-ctx
       // `req.headers`) that typecheck could not — both now guarded + disabled.
       "@typescript-eslint/no-unnecessary-condition": "error",
 
@@ -599,17 +553,17 @@ export default defineConfig([
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
 
-      // React Compiler (React 19, no Biome equivalent)
+      // React Compiler (React 19)
       "react-compiler/react-compiler": "error",
 
-      // R3a-4 (ratchet): file size + cyclomatic complexity. `max-lines` counts
-      // real code lines only (skipBlankLines + skipComments); `complexity` uses
-      // the ESLint default of 20 (community best-practice — 10 would be ~87
-      // functions of churn per the directive's "no overhead"; cognitive-15 is
-      // sonarjs's job in R3a-3). The rule is ACTIVE repo-wide so any NEW 300+
-      // file / 20+ function fails immediately. Pre-existing violators are
-      // grandfathered in the override blocks at the end of this config and
-      // ratcheted down one batch at a time.
+      // file size + cyclomatic complexity. `max-lines` counts real code lines
+      // only (skipBlankLines + skipComments); `complexity` uses the ESLint
+      // default of 20 (community best-practice — 10 would be ~87 functions of
+      // churn per the directive's "no overhead"; cognitive-complexity is
+      // sonarjs's job). The rule is ACTIVE repo-wide so any NEW 250+ line file
+      // or 20+ complexity function fails immediately. Pre-existing violators are
+      // grandfathered in the permanent-exempt override blocks at the end of this
+      // config.
       "max-lines": [
         "error",
         { max: 250, skipBlankLines: true, skipComments: true },
@@ -617,14 +571,13 @@ export default defineConfig([
       complexity: ["error", 20],
     },
   },
-  // R3a-3: sonarjs (community recommended preset). Per the §3 user directive
+  // sonarjs (community recommended preset). Per the user directive
   // (community-strict, no overhead, default presets win), the full recommended
-  // ruleset is enabled — every rule that currently fires ZERO times is enforced
-  // going forward (regression prevention). The 29 rules that DO fire today are
-  // turned off below in two buckets: PRUNE (permanent — noise/duplicate/
-  // convention-conflict) and DEFER (a ratchet TODO — flip to error per fixup
-  // wave, same model as the max-lines/complexity ratchet). No code was changed
-  // to land this; the deferred fixups are tracked in tasks.md R3a-3.
+  // ruleset is enabled — every rule that fires ZERO times is enforced going
+  // forward (regression prevention). Rules that fire today split into two
+  // buckets: PRUNE (permanently off — noise/duplicate/convention-conflict) and
+  // the rest, enforced at error after each firing was fixed or per-site
+  // disabled with a reason.
   {
     files: ["**/*.{ts,tsx,js,jsx,mjs}"],
     plugins: { sonarjs },
@@ -637,27 +590,23 @@ export default defineConfig([
       "sonarjs/deprecation": "off", // duplicate of @typescript-eslint/no-deprecated (already error)
       "sonarjs/prefer-read-only-props": "off", // aggressive React-prop-immutability churn (49 sites), suggestion-only, not standard practice
       "sonarjs/no-nested-conditional": "off", // nested ternaries are idiomatic in JSX rendering here (105 sites); cognitive-complexity already bounds nesting
-      // — DEFER (ratchet TODO(R3a-3-fixup): grandfathered repo-wide for now,
-      //   flip to error one fixup wave at a time). Counts measured 2026-06-09. —
-      // R3a-3-fixup WAVE 3 (2026-06-09) — complexity close-out. Read-only
-      // per-file assessment (35-agent Workflow) confirmed the prior census:
-      // these hotspots are cohesive single concerns where splitting below the
-      // threshold fragments logic / breaks memoization (the overnight army
-      // proved it). Accepted as justified-permanent file exempts (below), same
-      // end-state as max-lines R3a-4; new code stays gated.
+      // — ENFORCED AT ERROR (with a reason where a firing survives) —
+      // Behavior-sensitive hotspots (cognitive-complexity, no-nested-functions)
+      // are cohesive single concerns where splitting below the threshold
+      // fragments logic or breaks memoization; those files carry a permanent
+      // exempt in the override blocks below rather than a rewrite. New code
+      // stays gated.
       "sonarjs/cognitive-complexity": "error",
       "sonarjs/no-nested-functions": "error",
-      // R3a-3-fixup wave 1: enforced in src (regression prevention); the only
+      // enforced in src (regression prevention); the only
       // current firings are fake fixtures (10.0.0.x IPs, fake passwords) in
       // test files, scoped off in the test-file override below.
       "sonarjs/no-hardcoded-ip": "error",
       "sonarjs/hardcoded-secret-signatures": "error",
-      // R3a-3-fixup WAVE 2 (2026-06-09): the following were triaged site-by-site
-      // (read-only Workflow census + skeptical verify), then fixed/disabled
-      // sequentially with each diff read. Behavior-sensitive rules (slow-regex,
-      // no-alphabetical-sort, pseudo-random) are per-site-disabled with reasons,
-      // NOT rewritten. 4 rules also need a test-file carve-out (below) where the
-      // firing is inherent to test code.
+      // The following are enforced at error. Behavior-sensitive rules (slow-
+      // regex, no-alphabetical-sort, pseudo-random) are per-site-disabled with
+      // reasons, NOT rewritten. Several also need a test-file carve-out (below)
+      // where the firing is inherent to test code.
       "sonarjs/no-clear-text-protocols": "error", // src: jsonTransport false-positive disabled; tests carved out
       "sonarjs/no-alphabetical-sort": "error", // src: 4 stable-hash sorts per-site-disabled (determinism); tests carved out
       "sonarjs/slow-regex": "error", // 5 src: linear regexes per-site-disabled (incl. prod DB guard — NOT rewritten)
@@ -678,7 +627,7 @@ export default defineConfig([
       // test-only firings; rule stays error in src, carved out in the test override below:
       "sonarjs/no-identical-functions": "error", // test: idiomatic render-wrapper duplication
       "sonarjs/no-undefined-argument": "error", // test: intentional undefined-arg legacy-contract checks
-      // R3a-3-fixup wave 3: verified via the TS language server — `i.id`
+      // verified via the TS language server — `i.id`
       // (string | undefined) vs `record.sourceId` (string | null) overlap on
       // `string`, so the comparison is meaningful (match by id); the null/
       // undefined asymmetry is harmless. 2 sites per-site-disabled in
@@ -691,7 +640,7 @@ export default defineConfig([
       "sonarjs/no-duplicate-string": "error",
     },
   },
-  // R3b: jsdoc — TS-flavored recommended, scoped to the two published packages'
+  // jsdoc — TS-flavored recommended, scoped to the two published packages'
   // public surface (packages/shared + packages/ui) per the scaffold directive.
   // Tests are not public source: excluded so docblock pragmas like
   // `@vitest-environment` are not mis-flagged as invalid jsdoc tags.
@@ -708,7 +657,7 @@ export default defineConfig([
       "jsdoc/require-jsdoc": "off",
     },
   },
-  // R3c: import boundary — apps/web must not import apps/api at RUNTIME. The tRPC
+  // import boundary — apps/web must not import apps/api at RUNTIME. The tRPC
   // client legitimately needs the AppRouter *type* (apps/web/src/lib/trpc.ts), so
   // type-only imports are allowed via allowTypeImports; a VALUE import would pull
   // the Nest/Prisma server graph into the browser bundle. Currently 0 violations.
@@ -837,8 +786,8 @@ export default defineConfig([
       ],
     },
   },
-  // Test-file override: disable jsx-a11y (mirrors Biome's former a11y:off on
-  // tests) and exempt size/complexity budgets (tests routinely exceed them).
+  // Test-file override: disable jsx-a11y on tests and exempt size/complexity
+  // budgets (tests routinely exceed them).
   {
     files: [
       "**/*.test.ts",
@@ -859,17 +808,17 @@ export default defineConfig([
       // Test literals (fixture counts, expected values, dates) are the
       // assertion itself — naming each one adds noise, not meaning.
       "@typescript-eslint/no-magic-numbers": "off",
-      // R3a-3-fixup wave 3: tests are exempt from complexity budgets (same as
+      // tests are exempt from complexity budgets (same as
       // the core `complexity`/`max-lines` above) — long arrange/act/assert
       // bodies and nested setup callbacks are idiomatic test structure.
       "sonarjs/cognitive-complexity": "off",
       "sonarjs/no-nested-functions": "off",
-      // R3a-3-fixup wave 1: test fixtures legitimately embed fake IPs and
+      // test fixtures legitimately embed fake IPs and
       // fake secrets (10.0.0.x audit-log samples, dummy PDF-export passwords).
       // The rules stay `error` in src; tests are exempt by design.
       "sonarjs/no-hardcoded-ip": "off",
       "sonarjs/hardcoded-secret-signatures": "off",
-      // R3a-3-fixup wave 2: firings inherent to test code (the rules stay `error`
+      // firings inherent to test code (the rules stay `error`
       // in src). http:// fixtures for local collectors/IP URLs; intentional
       // undefined args for legacy-contract checks; idiomatic duplicate render
       // wrappers; bare .sort() in test assertions.
@@ -896,7 +845,7 @@ export default defineConfig([
       "sonarjs/no-duplicate-string": "off",
     },
   },
-  // R3a-4: JUSTIFIED PERMANENT max-lines exemptions — data / generated / one-off
+  // JUSTIFIED PERMANENT max-lines exemptions — data / generated / one-off
   // script / bootstrap, where splitting would not improve clarity (per
   // ~/.claude code-style: "if splitting would hurt clarity, keep the larger
   // unit and say why"). These are the documented end-state exempts, NOT TODO.
@@ -909,9 +858,8 @@ export default defineConfig([
       "prisma/wipe-manual-uat.ts", // one-off operational script (cf. seeds, ignored)
       "packages/shared/src/schemas/report.schema.ts", // dense Zod schema catalogue, no logic
       "apps/api/src/main.ts", // bootstrap; load-order documentation, not splittable
-      // Long-tail (300-500), R3a-4 triage (wf wzrtmlhbc, confirmed by hand):
-      // each is one cohesive concern where a split would shed few lines at a
-      // clarity cost — exempt, not churn.
+      // Long-tail (300-500): each is one cohesive concern where a split would
+      // shed few lines at a clarity cost — exempt, not churn.
       "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // tRPC instance + all procedure builders share the private `t` binding
       "apps/api/src/modules/admin/period-admin.service.ts", // one Admin period-lifecycle service class
       "apps/api/src/modules/report-sections/report-sections.prisma-repository.ts", // one Prisma persistence layer; include/type/mapper/class coupled
@@ -922,20 +870,20 @@ export default defineConfig([
       "apps/web/src/features/report-sections/ui/item-edit-dialog.tsx", // one create/edit dialog; shell + content coupled
       "apps/web/src/features/period/ui/decision-edit-dialog.tsx", // one create/edit dialog; XOR parent picker + per-field validation + conditional stage step — parity with item/risk-edit-dialog (shared helpers already extracted)
       "apps/web/src/features/report-sections/ui/lead-form-sync-bridge.tsx", // one context bridge wiring sync to two consumers
-      "apps/web/src/components/slides/status-slide-deck.tsx", // one navigable slide-deck widget
+      "apps/web/src/features/slides/ui/status-slide-deck.tsx", // one navigable slide-deck widget
       "apps/web/src/shared/ui/navigation/nav-bar.tsx", // one role-aware nav widget; MobileNav/coming-soon have no external consumers
       "apps/web/src/features/dashboard/ui/dashboard-page.tsx", // one head-dashboard page; private load-issue helper only
       "apps/web/src/features/report-sections/ui/product-accordion.tsx", // one accordion for one ProductReport
       "apps/web/src/features/report-sections/ui/weekly-report-page.tsx", // one page: data load + 3 mutations + render
       "apps/web/src/features/period/ui/current-week-section.tsx", // 255 lines: FSD relocation forced two model imports to multi-line (longer paths), tipping it 5 over; content unchanged from its <=250 pre-move form. Candidate for a small extraction.
       "apps/web/src/features/report-sections/model/lead-form.ts", // one LeadForm mapping pipeline; types-out alone stays >300, further split fragments it
-      // R3a-4 god-files (700+) triaged to permanent-exempt: a namespace split is
-      // mechanically possible but would not improve the file (per code-style: keep
-      // the larger unit and say why). See wf wjqkbxhc3.
+      // God-files (700+), permanent-exempt: a namespace split is mechanically
+      // possible but would not improve the file (per code-style: keep the larger
+      // unit and say why).
       "apps/api/src/infrastructure/trpc/trpc.router.ts", // single tRPC god-router; all 17 namespace sub-routers close over one RouterDeps; real fix is service-layer extraction, not a shell split
       "apps/api/src/modules/report-sections/lead-form.prisma-repository.ts", // one DI provider for one LeadFormRepository interface; domain separation already lives at the service layer above it
       "apps/web/src/features/report-sections/ui/lead-form.tsx", // monolithic component; 6 queries/5 mutations/~15 state vars share one scope; best-case extraction still leaves ~1440 lines — needs multi-PR architectural work, not a mechanical split
-      "apps/web/src/components/slides/section-slide-utils.ts", // core mapper buildSectionSlideModel (247 lines) + its private helpers are inseparable; extracting all else still leaves ~335 lines
+      "apps/web/src/features/slides/model/section-slide-utils.ts", // core mapper buildSectionSlideModel (247 lines) + its private helpers are inseparable; extracting all else still leaves ~335 lines
     ],
     rules: { "max-lines": "off" },
   },
@@ -978,13 +926,10 @@ export default defineConfig([
     rules: { "sonarjs/no-duplicate-string": "off" },
   },
   //
-  // R3a-3-fixup WAVE 3 (2026-06-09) — JUSTIFIED PERMANENT complexity exempts
-  // (cyclomatic > 20). Each file was assessed read-only, one agent per file
-  // (35-agent Workflow), and confirmed a cohesive single concern where
-  // splitting below the threshold fragments logic, breaks memoization, or is
-  // forced artificial slicing. The overnight refactor army proved blind splits
-  // pass the gate but break behavior. Accepted as permanent (NOT a TODO), same
-  // end-state as the max-lines block; `complexity: 20` still gates new code.
+  // JUSTIFIED PERMANENT complexity exempts (cyclomatic > 20). Each file is a
+  // cohesive single concern where splitting below the threshold fragments
+  // logic, breaks memoization, or forces artificial slicing. Permanent (NOT a
+  // TODO); `complexity: 20` still gates new code.
   {
     files: [
       "apps/web/src/app/(app)/reports/page.tsx", // role-aware history renderer; 5 roles × distinct query/filter/label paths
@@ -999,17 +944,17 @@ export default defineConfig([
       "apps/web/src/features/review/ui/risks-section.tsx", // 3 dialog states across handlers + JSX; prior split broke behavior
       "apps/web/src/features/report-sections/ui/stage-chip.tsx", // interactive chip; dropdown/status/clear/popover entangled via hooks
       "apps/web/src/shared/ui/navigation/nav-bar.tsx", // role-based link filtering + session/hydration across layout slots
-      "apps/web/src/components/slides/head-slides-client.tsx", // guard clauses (loading/error/data) + scope-driven slide build
-      "apps/web/src/components/slides/lead-slides-client.tsx", // hooks + shared state + loading/error/empty returns drive the deck lifecycle
-      "apps/web/src/components/slides/section-slide-utils.ts", // 4 domain transforms; branch count inherent to the data they model
+      "apps/web/src/features/slides/ui/head-slides-client.tsx", // guard clauses (loading/error/data) + scope-driven slide build
+      "apps/web/src/features/slides/ui/lead-slides-client.tsx", // hooks + shared state + loading/error/empty returns drive the deck lifecycle
+      "apps/web/src/features/slides/model/section-slide-utils.ts", // 4 domain transforms; branch count inherent to the data they model
       "apps/web/src/features/report-sections/ui/product-accordion.tsx", // 6 status-aware sections; uniform accordion pattern
       "apps/web/src/features/report-sections/ui/weekly-report-page.tsx", // role-aware state machine: query status + publish + filter + grouping
     ],
     rules: { complexity: "off" },
   },
-  // R3a-3-fixup wave 3 — JUSTIFIED PERMANENT sonarjs/cognitive-complexity
-  // exempts. Same per-file read-only assessment + rationale as the cyclomatic
-  // block above (many files overlap — the same cohesive monoliths).
+  // JUSTIFIED PERMANENT sonarjs/cognitive-complexity exempts. Same rationale
+  // as the cyclomatic block above (many files overlap — the same cohesive
+  // monoliths).
   {
     files: [
       "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // start/finish request logging + error capture in one lifecycle closure
@@ -1024,16 +969,16 @@ export default defineConfig([
       "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // see cyclomatic block
       "apps/web/src/features/review/ui/risks-section.tsx", // see cyclomatic block
       "apps/web/src/features/report-sections/ui/stage-chip.tsx", // see cyclomatic block
-      "apps/web/src/components/slides/section-slide-utils.ts", // see cyclomatic block
-      "apps/web/src/components/slides/status-slide-deck.tsx", // lead/head modes + sidebar/control/fallback render branches
+      "apps/web/src/features/slides/model/section-slide-utils.ts", // see cyclomatic block
+      "apps/web/src/features/slides/ui/status-slide-deck.tsx", // lead/head modes + sidebar/control/fallback render branches
       "apps/web/src/features/report-sections/ui/product-accordion.tsx", // see cyclomatic block
       "apps/web/uat-suite/inventory.mjs", // classify() must stay inline (runs inside page.evaluate) + multi-phase report IIFE
     ],
     rules: { "sonarjs/cognitive-complexity": "off" },
   },
-  // R3a-3-fixup wave 3 — JUSTIFIED PERMANENT sonarjs/no-nested-functions
-  // exempts. Nested callbacks inside render/state-setter pipelines or browser-
-  // serialized scripts; extracting fragments the concern or breaks memoization.
+  // JUSTIFIED PERMANENT sonarjs/no-nested-functions exempts. Nested callbacks
+  // inside render/state-setter pipelines or browser-serialized scripts;
+  // extracting fragments the concern or breaks memoization.
   {
     files: [
       "apps/web/src/features/landing/ui/tagline-cycler.tsx", // self-recursive setTimeout handler mutating timer/visible/index state
