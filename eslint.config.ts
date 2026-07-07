@@ -330,13 +330,11 @@ export default defineConfig([
       // rule wrongly rejects — a false positive, not a real a11y gap.
       "jsx-a11y/label-has-associated-control": "off",
 
-      // Immutability regime (functional/immutable-by-default standard). This is
-      // the free, zero-firing floor: prefer-const forbids a reassigned-never
-      // `let`, no-var bans function-scoped `var`. The stricter arms live in
-      // dedicated blocks — the `let` ban (no-restricted-syntax) with per-site
-      // justified survivors, `no-param-reassign` (props:false global, props:true
-      // scoped to the session-hydration transform), and `functional/immutable-data`
-      // scoped to the pure domain + shared layers.
+      // Immutability regime (functional/immutable-by-default standard): the free,
+      // zero-firing floor. prefer-const forbids a never-reassigned `let`, no-var
+      // bans function-scoped `var`. The `let` ban itself (no-restricted-syntax,
+      // with per-site justified survivors) lives in its own folder-scoped block
+      // below.
       "prefer-const": "error",
       "no-var": "error",
 
