@@ -4,8 +4,8 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { AuditLogger } from "../../../lib/audit-logger.js";
-import { AdminService } from "../../admin/admin.service";
-import { PublicationService } from "../../publication/application/publication.service";
+import { AdminService } from "../../admin/index.js";
+import { PublicationService } from "../../publication/index.js";
 
 /**
  * Hourly scheduler that auto-publishes draft Reports whose `deadline +
