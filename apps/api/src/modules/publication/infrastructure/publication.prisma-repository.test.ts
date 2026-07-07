@@ -6,7 +6,7 @@ import { PublicationPrismaRepository } from "./publication.prisma-repository";
 // The snapshot helpers need a full Prisma row to build/serialize; stub them so
 // these tests can focus on the compare-and-set write guard with bare mocks.
 // vi.mock is hoisted above the imports, so the factory uses inline vi.fn().
-vi.mock("../published-report-snapshot", () => ({
+vi.mock("../../published-report-snapshot", () => ({
   reportFullIncludeForSnapshot: {},
   toPublishedSnapshotJson: vi.fn(() => ({ snapshot: true })),
   buildAssembledReportFromPrismaRow: vi.fn(() => ({

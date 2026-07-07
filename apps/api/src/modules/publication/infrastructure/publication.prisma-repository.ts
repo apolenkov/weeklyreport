@@ -1,19 +1,19 @@
 import type { AssembledReport } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
-import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { publishCompareAndSet } from "../../lib/publish-compare-and-set.js";
-import { buildTransition } from "../period/period-transition.js";
+import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { publishCompareAndSet } from "../../../lib/publish-compare-and-set.js";
+import { buildTransition } from "../../period/period-transition.js";
 import {
   buildAssembledReportFromPrismaRow,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
-} from "../published-report-snapshot";
+} from "../../published-report-snapshot";
 import type {
   AutoPublishResult,
   PublicationRepository,
   PublishReportOutcome,
-} from "./publication.service";
+} from "../application/publication.service";
 
 @Injectable()
 export class PublicationPrismaRepository implements PublicationRepository {

@@ -22,7 +22,7 @@ import {
   PublicationAccessError,
   PublicationArchivedError,
   PublicationNotFoundError,
-} from "../../modules/publication/publication.service.js";
+} from "../../modules/publication/application/publication.service.js";
 import { ReminderDomainError } from "../../modules/reminders/reminders.service.js";
 import {
   LeadFormAccessError,

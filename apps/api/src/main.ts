@@ -85,7 +85,7 @@ import { PdfExportService } from "./modules/pdf-export/pdf-export.service";
 import { ensureCurrentPeriod } from "./modules/period/period-factory";
 import { PeriodService } from "./modules/period/period.service";
 import { ProjectActivityService } from "./modules/project-activity/project-activity.service";
-import { PublicationService } from "./modules/publication/publication.service";
+import { PublicationService } from "./modules/publication/application/publication.service";
 import { PolicyApplicatorService } from "./modules/reminders/policy-applicator.service";
 import { RemindersService } from "./modules/reminders/reminders.service";
 import { ensureLeadSection } from "./modules/report-sections/ensure-lead-section";
