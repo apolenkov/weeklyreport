@@ -71,10 +71,10 @@ const commentPart = (line) => {
 };
 
 const IGNORE =
-  /(^|\/)(node_modules|dist|\.next|\.next-verify|coverage|openspec\/changes\/archive)\//;
+  /(^|\/)(node_modules|dist|\.next[^/]*|coverage|openspec\/changes\/archive)\//;
 const isProdSource = (f) =>
-  /\.(ts|tsx)$/.test(f) &&
-  !/\.(test|spec)\.[tj]sx?$/.test(f) &&
+  /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f) &&
+  !/\.(test|spec)\./.test(f) &&
   !/(^|\/)(e2e|__tests__|__mocks__)\//.test(f) &&
   !IGNORE.test(f);
 
