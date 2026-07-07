@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   customreportPeriodStateTransitionsTotal,
   customreportReportsSubmittedTotal,
-} from "../../infrastructure/metrics/metrics.registry.js";
+} from "../../../infrastructure/metrics/metrics.registry.js";
 import {
   type AutoPublishResult,
   PublicationAccessError,

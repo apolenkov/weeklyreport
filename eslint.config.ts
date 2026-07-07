@@ -122,7 +122,7 @@ const apiCrossModuleGrandfathered: Record<string, readonly string[]> = {
     "carry-over/carry-over.prisma-repository.ts",
     "carry-over/carry-over.service.ts",
     "publication/publication.module.ts",
-    "publication/publication.service.ts",
+    "publication/application/publication.service.ts",
     "published-report-snapshot.ts",
     "reminders/policy-applicator.service.ts",
     "weekly-report/weekly-report.module.ts",

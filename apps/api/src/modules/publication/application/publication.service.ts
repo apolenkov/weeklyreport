@@ -11,8 +11,8 @@ import {
 import {
   customreportPeriodStateTransitionsTotal,
   customreportReportsSubmittedTotal,
-} from "../../infrastructure/metrics/metrics.registry.js";
-import { type AppLogger, createNullLogger } from "../../lib/logger";
+} from "../../../infrastructure/metrics/metrics.registry.js";
+import { type AppLogger, createNullLogger } from "../../../lib/logger";
 
 /**
  * Fire-and-forget post-publish ingestion seam. Unit tests default to a
@@ -124,6 +124,10 @@ export interface PublicationRepository {
    */
   saveAutoPublishedReport(report: AssembledReport): Promise<AutoPublishResult>;
 }
+
+// DI token binding the PublicationRepository port to its adapter at the module
+// boundary — the service depends on the port, not the concrete prisma class.
+export const PUBLICATION_REPOSITORY = Symbol("PublicationRepository");
 
 function compareSections(
   left: ReportSectionReadModel,
