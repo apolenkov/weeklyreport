@@ -118,6 +118,7 @@ export function addBusinessDays(
   wd: WorkingDays,
   tz: string,
 ): Date {
+  // eslint-disable-next-line no-restricted-syntax -- loop-carried running date; reassigned each step (dt = dt.plus) as the business-day walk advances.
   let dt = DateTime.fromJSDate(date).setZone(tz);
   if (!dt.isValid) {
     throw new Error(`business-date: invalid timezone "${tz}"`);
@@ -126,7 +127,9 @@ export function addBusinessDays(
 
   const set = workingDaySet(wd);
   const step = n > 0 ? 1 : -1;
+  // eslint-disable-next-line no-restricted-syntax -- business-day counter, decremented as working days are consumed by the walk below.
   let remaining = Math.abs(n);
+  // eslint-disable-next-line no-restricted-syntax -- iteration-budget guard, incremented per step to bound the variable-length walk (throws past MAX_ITER).
   let iter = 0;
 
   while (remaining > 0) {
