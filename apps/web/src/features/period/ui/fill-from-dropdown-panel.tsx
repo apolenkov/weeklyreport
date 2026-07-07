@@ -31,9 +31,9 @@ interface FillFromDropdownPanelProps {
 }
 
 /**
- * The fill-from split-button's dropdown list (extracted from FillFromButton):
- * portals to document.body so the toolbar's overflow clip cannot truncate
- * it, position:fixed from the trigger rect tracked by the caller.
+ * The fill-from split-button's dropdown list: portals to document.body so the
+ * toolbar's overflow clip cannot truncate it, position:fixed from the trigger
+ * rect tracked by the caller.
  */
 export function FillFromDropdownPanel({
   open,
@@ -88,8 +88,7 @@ export function FillFromDropdownPanel({
           >
             <div className="flex-1">
               {/* Badges share the title line, right-aligned — one
-                  horizontal level for Archived and Previous
-                  (user feedback 2026-06-10). */}
+                  horizontal level for Archived and Previous. */}
               <div className="flex items-center gap-1.5 text-sm font-semibold">
                 <span className="flex-1 truncate">
                   {p.weekLabel} &middot; {p.dateRange}

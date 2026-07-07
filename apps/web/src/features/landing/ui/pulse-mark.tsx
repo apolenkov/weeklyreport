@@ -5,12 +5,8 @@
  *  - .pulse-word "WEEKLY"   — subdued caps eyebrow, sets the eyeline
  *  - .pulse-strong "REPORT" — Fraunces variable display word, static
  *
- * History: this mark previously read «Your PULSE» with a breathing
- * wordmark and an ECG heartbeat trace (Phase 58 / UFB-058). The
- * decorative pulse motif was dropped 2026-06-23 — the landing now names
- * the artifact (the weekly report), with no motion. The component/file
- * names keep the `pulse-` prefix to stay surgical; only the rendered
- * text changed.
+ * The component/file names keep the `pulse-` prefix even though the mark
+ * renders «Weekly Report», not a pulse motif.
  */
 export function PulseMark() {
   return (

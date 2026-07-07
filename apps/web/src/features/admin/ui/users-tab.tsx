@@ -39,7 +39,7 @@ function emptyForm(groups: readonly MockGroup[]): UserFormData {
   };
 }
 
-// A3: role quick-filter options — declared module-level so no per-render alloc
+// role quick-filter options — declared module-level so no per-render alloc
 const ROLE_OPTIONS = [
   { value: "", label: "All roles" },
   { value: "lead", label: "Lead" },
@@ -48,7 +48,7 @@ const ROLE_OPTIONS = [
   { value: "viewer", label: "Viewer" },
 ] as const;
 
-// B3: status quick-filter — default "active" hides deactivated users on load
+// status quick-filter — default "active" hides deactivated users on load
 const STATUS_OPTIONS = [
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
@@ -70,10 +70,10 @@ export function UsersTab({ users, groups }: UsersTabProps) {
   const [deleteTarget, setDeleteTarget] = useState<MockUser | null>(null);
   const [form, setForm] = useState<UserFormData>(() => emptyForm(groups));
   const [search, setSearch] = useState("");
-  // A3: role quick-filter ("" = all roles)
+  // role quick-filter ("" = all roles)
   const [roleFilter, setRoleFilter] = useState("");
   const [groupFilter, setGroupFilter] = useState("");
-  // B3: status quick-filter (default "active" — hides deactivated on load)
+  // status quick-filter (default "active" — hides deactivated on load)
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("active");
 
   // Save the trigger element so the shared focus primitive can restore focus
@@ -141,8 +141,8 @@ export function UsersTab({ users, groups }: UsersTabProps) {
     }),
   );
 
-  // A2 (UAT-v7 2026-05-12): deactivate/activate mutations with immediate
-  // Redis session revocation on the backend.
+  // deactivate/activate mutations with immediate Redis session revocation
+  // on the backend.
   const deactivateUserMut = useMutation(
     trpc.admin.deactivateUser.mutationOptions({
       onSuccess: () => {

@@ -35,9 +35,8 @@ interface RisksSectionProps {
   /** activity-first-class: attached activities forwarded to the parent picker. */
   readonly activities?: readonly { id: string; name: string }[];
   /**
-   * 35-04 (FEAT-144): callback returning the SDLC stages the lead owns on
-   * a given project. Forwarded to the dialog so the stage selector is
-   * scoped per-project.
+   * Callback returning the SDLC stages the lead owns on a given project.
+   * Forwarded to the dialog so the stage selector is scoped per-project.
    */
   readonly stagesForProduct?: (productId: string) => readonly string[];
   /**

@@ -6,7 +6,6 @@ import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
 // Cross-slice: this dispatch container composes the period and review slices.
-// Becomes a sibling-barrel import once those slices register (paired lead/ change).
 import { PeriodsTab } from "../../period/ui/periods-tab";
 import { ReopenTab } from "../../review/ui/reopen-tab";
 import { mapAdminSettings, mapAdminSnapshot } from "../model/admin";
@@ -75,9 +74,9 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
           the snapshot/settings context that the other tabs share. */}
       {activeTab === "reopen" && <ReopenTab />}
 
-      {/* Phase 35-06: Jobs tab is also self-contained — it consumes the
-          BullMQ-backed `admin.jobs.listFailed` query directly and doesn't
-          need the admin snapshot. */}
+      {/* Jobs tab is also self-contained — it consumes the BullMQ-backed
+          `admin.jobs.listFailed` query directly and doesn't need the admin
+          snapshot. */}
       {activeTab === "jobs" && <JobsTab />}
 
       {activeTab === "actions" && <ActionLogTab />}
@@ -111,16 +110,16 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
                 productFilter={productFilter}
               />
             )}
-            {/* UFB-052 (Phase 51-B): PeriodsTab owns its own queries
-                (admin.listPeriodsByState) so it pulls richer rows than
-                the shared admin snapshot can carry — no props needed. */}
+            {/* PeriodsTab owns its own queries (admin.listPeriodsByState) so
+                it pulls richer rows than the shared admin snapshot can
+                carry — no props needed. */}
             {activeTab === "periods" && <PeriodsTab />}
             {activeTab === "reminders" &&
               (() => {
-                // UFB-036 (Phase 44-04): group rules by their owning policy
-                // for the read-only expander on each policy row. Rules whose
-                // `policyId` is `null` (legacy, pre-44-01) are skipped — the
-                // policy editor has no row to attach them to.
+                // Group rules by their owning policy for the read-only
+                // expander on each policy row. Rules whose `policyId` is
+                // `null` (legacy) are skipped — the policy editor has no row
+                // to attach them to.
                 const derivedRulesByPolicyId: Record<
                   string,
                   typeof data.reminders
@@ -135,11 +134,9 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
                   <RemindersTab
                     policies={data.policies}
                     derivedRulesByPolicyId={derivedRulesByPolicyId}
-                    // UFB-048 (Phase 48-B): seed the new-reminder form's
-                    // timezone from AppSettings. Falls back to Europe/Moscow
-                    // when settings haven't loaded yet (handled inside
-                    // emptyPolicyForm). The audience default no longer feeds
-                    // the preset pairing (D7).
+                    // Seed the new-reminder form's timezone from AppSettings.
+                    // Falls back to Europe/Moscow when settings haven't loaded
+                    // yet (handled inside emptyPolicyForm).
                     defaultTimezone={settings?.defaultTimezone}
                   />
                 );

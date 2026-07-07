@@ -12,7 +12,7 @@ import {
   SubmittedBadge,
 } from "./period-listbox-panel";
 
-// 35-07: lead-form addressable URL base. Period nav now emits path-segment
+// Lead-form addressable URL base. Period nav emits path-segment
 // URLs (`/lead/report/<reportId>`) so each week is bookmarkable.
 const LEAD_REPORT_BASE = "/lead/report";
 const PERIOD_SELECT_WIDTH_CH = 24;
@@ -27,12 +27,12 @@ interface PeriodNavigatorProps {
    */
   readonly urlBuilder?: (periodId: string) => string;
   /**
-   * W3: opt-in per-lead submitted marker. Only the lead surface passes this;
+   * Opt-in per-lead submitted marker. Only the lead surface passes this;
    * head and viewer navigators omit it and therefore never show the marker.
    */
   readonly showLeadSubmissionMarkers?: boolean;
   /**
-   * W3: the current lead's `ReportSection.submittedAt` for the displayed
+   * The current lead's `ReportSection.submittedAt` for the displayed
    * period. Sourced ONLY from the lead's own section — never the head shell's
    * fabricated `isSubmitted` flag. The marker shows on the selected period
    * when `showLeadSubmissionMarkers` is set and this value is non-null.
@@ -86,17 +86,17 @@ export function PeriodNavigator({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  // W4: per-instance scoped listbox/option ids, so two navigators on one page
+  // per-instance scoped listbox/option ids, so two navigators on one page
   // never collide on the DOM ids that aria-controls / aria-activedescendant
   // reference (see usePeriodListboxNav).
   const instanceId = useId();
 
-  // 35-07: the dropdown reflects the path-segment reportId when the page is
-  // rendered under `/lead/report/[reportId]`. driver-findings-2026-06-11
-  // finding 4: this navigator is also rendered on `/head/report/[reportId]`
-  // (via HeadReportShell with a urlBuilder), so the regex must match the head
-  // base too — otherwise currentIndex defaults to 0 and the trigger shows the
-  // latest published period instead of the addressed week.
+  // The dropdown reflects the path-segment reportId when the page is
+  // rendered under `/lead/report/[reportId]`. This navigator is also
+  // rendered on `/head/report/[reportId]` (via HeadReportShell with a
+  // urlBuilder), so the regex must match the head base too — otherwise
+  // currentIndex defaults to 0 and the trigger shows the latest published
+  // period instead of the addressed week.
   const pathReportId = useMemo(() => {
     if (!pathname) return null;
     const match = /^\/(?:lead|head)\/report\/([^/]+)$/.exec(pathname);
@@ -112,13 +112,13 @@ export function PeriodNavigator({
   const selectedPeriod = periods.at(currentIndex);
   const hasPrev = currentIndex < periods.length - 1;
   const hasNext = currentIndex > 0;
-  // W3: the submitted marker is per-lead and only known for the displayed
+  // the submitted marker is per-lead and only known for the displayed
   // period (the navigator carries one submittedAt value, never the whole
   // history). It shows on the selected period iff the lead surface opted in
   // and the lead's own section is submitted.
   const selectedSubmitted =
     showLeadSubmissionMarkers && leadSubmittedAt != null;
-  // D3: options expose structured fields (not a flattened label string) so
+  // options expose structured fields (not a flattened label string) so
   // archived/current markers render as badges inside the custom listbox.
   const periodOptions = useMemo(
     () =>
@@ -157,8 +157,8 @@ export function PeriodNavigator({
     if (hasNext && next) navigateTo(next.id);
   }
 
-  // ---- Custom listbox (D3) + swipe gesture, extracted to a hook so this
-  // component stays focused on rendering. ----
+  // ---- Custom listbox + swipe gesture live in a hook so this component
+  // stays focused on rendering. ----
   const {
     listboxId,
     optionIdPrefix,

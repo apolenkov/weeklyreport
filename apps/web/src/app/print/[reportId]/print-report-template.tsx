@@ -1,10 +1,8 @@
 "use client";
 
-/* eslint-disable max-lines -- verbatim extraction of the pre-existing print
-   template out of page.tsx (W2 task 3.3 split: page.tsx becomes a thin async
-   server gate, this client component keeps the unchanged template). Splitting
-   the presentational A4 layout further is out of W2 scope and would be a
-   non-surgical refactor of working code. */
+/* eslint-disable max-lines -- large presentational A4 print template;
+   splitting the layout further would be a non-surgical refactor of working
+   code with no behavioral benefit. */
 
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -19,18 +17,13 @@ import type {
   ProductReport,
 } from "../../../shared/lib/dashboard-mock-data";
 
-/* ------------------------------------------------------------------ */
-/*  Print/PDF Template — Client Component (Phase 21)                  */
-/*  Renders an A4-optimized weekly status report. Fetches via tRPC by */
-/*  reportId param. Phase 23 owns server-rendered PDF orchestration;  */
-/*  this remains the visual template until then.                      */
-/*                                                                    */
-/*  fix-report-surface-integrity W2 (task 3.3): extracted out of      */
-/*  page.tsx so the route's page.tsx can be a thin async SERVER gate  */
-/*  (the PDF-worker-vs-human discriminator + role redirects). This    */
-/*  client template keeps the useQuery + print CSS; the gate renders  */
-/*  it only for the PDF worker.                                       */
-/* ------------------------------------------------------------------ */
+/**
+ * Print/PDF template — client component. Renders an A4-optimized weekly
+ * status report, fetched via tRPC by reportId param. The route's page.tsx is
+ * a thin async server gate (the PDF-worker-vs-human discriminator + role
+ * redirects) and renders this template only for the PDF worker; this client
+ * component keeps the useQuery + print CSS.
+ */
 
 const BORDER_LIGHT = "1px solid #e5e7eb";
 const TEXT_SECONDARY = "rgba(0,0,0,0.58)";
@@ -490,9 +483,9 @@ export function PrintReportTemplate({ reportId }: Props) {
 
   useEffect(() => {
     if (weeklyQ.isError) {
-      // driver-findings-2026-06-11 finding 1: route the load-failure toast
-      // through formatClientErrorMessage so a malformed reportId never echoes
-      // the raw Zod issues array (with the UUID pattern regex) to the user.
+      // Route the load-failure toast through formatClientErrorMessage so a
+      // malformed reportId never echoes the raw Zod issues array (with the
+      // UUID pattern regex) to the user.
       toast.error(
         formatClientErrorMessage("Failed to load report", weeklyQ.error),
       );
@@ -503,7 +496,7 @@ export function PrintReportTemplate({ reportId }: Props) {
     return <LoadingShell reportId={reportId} />;
   }
 
-  // R3a: no-period sentinel — this page always has a reportId, so this
+  // No-period sentinel — this page always has a reportId, so this
   // branch should not occur in practice, but guard for type safety.
   if (weeklyQ.data.status === "no-period") {
     return <LoadingShell reportId={reportId} />;

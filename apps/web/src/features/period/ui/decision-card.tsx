@@ -57,9 +57,8 @@ function formatDeadline(iso: string | null): string {
 }
 
 /**
- * One decision card (extracted from decisions-section.tsx): product/deadline
- * chips, own-record edit/delete vs foreign lock badge, decision/impact body,
- * and the unified author+stage meta-row.
+ * One decision card: product/deadline chips, own-record edit/delete vs foreign
+ * lock badge, decision/impact body, and the unified author+stage meta-row.
  */
 export function DecisionCard({
   decision,

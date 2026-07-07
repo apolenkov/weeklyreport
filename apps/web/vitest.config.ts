@@ -18,9 +18,8 @@ export default defineConfig({
     // spy (e.g. a stderr silencer) never leaks into an unrelated test.
     restoreMocks: true,
     exclude: ["e2e/**", "node_modules/**"],
-    // 34-02: coverage floors. Web has more UI code than tests can drive
-    // without a full E2E layer, so the bar is lower than api. Threshold
-    // raised over time as Phase 35 plans add component-level tests.
+    // Coverage floors. Web has more UI code than tests can drive without a
+    // full E2E layer, so the bar is lower than api.
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov", "html"],

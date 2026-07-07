@@ -1,5 +1,5 @@
 /**
- * UFB-071 (2026-05-11): «Last role memory» on the landing page.
+ * «Last role memory» on the landing page.
  *
  * Stores the most recently authenticated user's role + email + name in
  * `localStorage` so that on the next visit to the AUTH_STUB landing

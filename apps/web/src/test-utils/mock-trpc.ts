@@ -3,9 +3,8 @@
  *
  * Each procedure is declared once as a path descriptor; `queryOptions()`,
  * `queryKey()`, and `pathFilter()` all derive from that single path so the
- * shapes can never diverge. This pins the fix for the vacuous `{ tag }` filter
- * bug (see proposal.md) — `pathFilter()` now always returns
- * `{ queryKey: [splitPath] }`.
+ * shapes can never diverge — `pathFilter()` always returns
+ * `{ queryKey: [splitPath] }`, never a vacuous `{ tag }` filter.
  *
  * @internal — test utility only; not imported by production code.
  */
@@ -133,7 +132,8 @@ export function createMockTRPC(descriptors: ProcedureDescriptor[]): {
 }
 
 // ---------------------------------------------------------------------------
-// Internal builders (extracted to keep createMockTRPC under complexity limit)
+// Internal builders — separate functions keep createMockTRPC under the
+// complexity limit.
 // ---------------------------------------------------------------------------
 
 /**

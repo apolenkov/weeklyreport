@@ -10,7 +10,7 @@ import { useDialogFocus } from "../../../lib/use-dialog-focus";
 import { toReportingGroupInput } from "../model/admin";
 import { TabFilter, TabHeader, TabSearch } from "./tab-header";
 
-// B4: archive quick-filter — default "active" hides archived groups on load
+// archive quick-filter — default "active" hides archived groups on load
 const ARCHIVE_OPTIONS = [
   { value: "active", label: "Active" },
   { value: "archived", label: "Archived" },
@@ -42,15 +42,14 @@ const EMPTY_FORM: GroupFormData = {
 interface GroupsTabProps {
   readonly groups: MockGroup[];
   readonly users: MockUser[];
-  // UFB-054 / Phase 56-C: product roster for the «Products attached»
-  // section inside the edit dialog. Optional so legacy callers that
-  // don't yet thread products through (e.g. unit tests) keep
-  // compiling — the section short-circuits to an empty list.
+  // product roster for the «Products attached» section inside the edit
+  // dialog. Optional so callers that don't thread products through (e.g.
+  // unit tests) keep compiling — the section short-circuits to an empty list.
   readonly products?: MockProduct[];
 }
 
 export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
-  // UFB-039: only head/admin users may lead a group. Filter the candidate
+  // only head/admin users may lead a group. Filter the candidate
   // dropdown so leads/viewers can't be picked.
   const headCandidates = useMemo(
     () => users.filter((u) => u.role === "head" || u.role === "admin"),
@@ -68,7 +67,7 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
   const [showDialog, setShowDialog] = useState(false);
   const [form, setForm] = useState<GroupFormData>(EMPTY_FORM);
   const [search, setSearch] = useState("");
-  // B4: archive quick-filter (default "active" — hides archived groups on load)
+  // archive quick-filter (default "active" — hides archived groups on load)
   const [archiveFilter, setArchiveFilter] =
     useState<ArchiveFilterValue>("active");
 
@@ -163,9 +162,8 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
   return (
     <>
       <div className="space-y-4" data-testid="groups-tab">
-        {/* UFB-049 (2026-05-11): revert 48-A Department sweep —
-            user wants "Group/Groups" in admin UI. Prisma model
-            (ReportingGroup) and test ids unchanged. */}
+        {/* Admin UI uses "Group/Groups" wording; the Prisma model
+            (ReportingGroup) and test ids keep the original naming. */}
         <TabHeader
           title="Groups"
           description={`Reporting groups (organisational units). ${activeGroupCount} active.`}

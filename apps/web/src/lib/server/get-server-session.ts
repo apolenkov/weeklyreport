@@ -11,13 +11,13 @@ import {
 } from "./api-url";
 
 /**
- * AUTH-07 (Phase 29-03): server-only helper that reads the session cookie
- * via Next.js `cookies()` and resolves to a verified UserSession by calling
- * the API's `auth.me` tRPC procedure.
+ * Server-only helper that reads the session cookie via Next.js `cookies()`
+ * and resolves to a verified UserSession by calling the API's `auth.me`
+ * tRPC procedure.
  *
  * Threat-model notes:
  *  - T1: layout-level UX gate only — the actual security boundary is the
- *    api's role middleware (Phase 27 + Phase 29-01). This helper exists so
+ *    api's role middleware. This helper exists so
  *    the user does not see protected layout chrome before the tRPC error
  *    surfaces; it is NOT a substitute for server-side authorisation.
  *  - T2: tRPC v11 superjson + httpBatchLink batches even single GET queries

@@ -49,9 +49,9 @@ interface RemindersTabProps {
     Record<string, readonly MockReminder[]>
   >;
   /**
-   * UFB-048 (Phase 48-B): organisation-wide timezone default for a new
-   * reminder. Optional — older callers get the historical Europe/Moscow
-   * default. The audience default no longer feeds the pairing (D7).
+   * Organisation-wide timezone default for a new reminder. Optional —
+   * callers that omit it fall back to the Europe/Moscow default. The
+   * audience default does not feed the pairing.
    */
   readonly defaultTimezone?: string;
 }

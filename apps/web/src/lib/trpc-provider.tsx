@@ -23,7 +23,7 @@ export function TRPCProvider({ children }: TRPCProviderProps) {
     <QueryClientProvider client={queryClient}>
       <TRPCProxyContext.Provider value={trpc}>
         {children}
-        {/* Phase 33-04 toast UX:
+        {/* Toast UX:
             - position="top-center" — single visual anchor, less off-screen on mobile
             - no closeButton — `richColors` already renders a status icon, so a
               second X next to it produced a double-cross visual that read as

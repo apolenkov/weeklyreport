@@ -19,15 +19,14 @@ import { useTRPC } from "../../../lib/trpc-context";
 import { SearchInput } from "../../../shared/ui/search-input";
 
 /**
- * UX-17 (Phase 35-08): merged Reports page.
+ * Merged Reports page.
  *
  * One role-defaulted history view — lead users get personal History, non-lead
  * users get compiled History. There is no tab state: the page does not read a
  * `tab` query parameter, and the legacy `/lead/history` and `/head/history`
  * routes redirect here without one. Archive visibility is a local, non-URL
  * toggle: History always defaults to the current (non-archived) view and the
- * address bar stays stable when the Archive switch is flipped
- * (lead-live-walk-2026-06-14 §4).
+ * address bar stays stable when the Archive switch is flipped.
  */
 
 const HISTORY_INITIAL_VISIBLE = 10;
@@ -40,8 +39,8 @@ export default function ReportsPage() {
   const isLead = role === "lead";
   const usesCompiledHistory =
     role === "head" || role === "viewer" || role === "admin";
-  // viewer-report-surface-parity (task 4.1): the viewer searches published,
-  // group-scoped content (previously `null` → no search input rendered).
+  // viewer-report-surface-parity: the viewer searches published,
+  // group-scoped content.
   const searchScope = isLead
     ? "mine"
     : role === "head" || role === "admin"

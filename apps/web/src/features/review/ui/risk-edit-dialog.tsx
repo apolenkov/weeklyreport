@@ -48,17 +48,17 @@ interface RiskEditDialogProps {
   readonly initialImpact?: string;
   readonly initialMitigation?: string;
   /**
-   * unify-risk-stage-status (D2): create-mode prefill from a chip-raise
+   * unify-risk-stage-status: create-mode prefill from a chip-raise
    * interception — the clicked stage arrives pre-checked and the clicked
    * severity pre-selected. Ignored in edit mode (the risk's own values win).
    */
   readonly initialStageIds?: string[];
   readonly initialSeverity?: "at-risk" | "blocked";
   /**
-   * 35-04 (FEAT-144): callback returning the SDLC stages the current lead
-   * owns on a given project (= options for the "SDLC Stage" select).
-   * Returning `[]` disables the Save button and surfaces an inline
-   * "no stages assigned — contact admin" message.
+   * Callback returning the SDLC stages the current lead owns on a given
+   * project (= options for the "SDLC Stage" select). Returning `[]` disables
+   * the Save button and surfaces an inline "no stages assigned — contact admin"
+   * message.
    */
   readonly stagesForProduct?: (productId: string) => readonly string[];
 }
@@ -281,12 +281,12 @@ function RiskStageStep({
 }
 
 /**
- * D12 mount/unmount shell (react-compiler-safe): the outer component returns
- * null when closed and mounts the inner content otherwise. Mount = fresh
- * useState from props; close = unmount. No useEffect reset is needed — the
- * remount is the structural reset, and the parent's openSeq dialogKey forces
- * a fresh mount on every open. This makes the A13/A15 invariant
- * (stagesForProduct never read in any deps array) structural.
+ * Mount/unmount shell (react-compiler-safe): the outer component returns null
+ * when closed and mounts the inner content otherwise. Mount = fresh useState
+ * from props; close = unmount. No useEffect reset is needed — the remount is the
+ * structural reset, and the parent's openSeq dialogKey forces a fresh mount on
+ * every open. This makes the invariant (stagesForProduct never read in any deps
+ * array) structural.
  */
 export function RiskEditDialog(props: RiskEditDialogProps) {
   if (!props.open) return null;
@@ -315,8 +315,8 @@ function RiskEditDialogContent({
   const [text, setText] = useState(risk?.text ?? "");
 
   // Severity derived ONCE from pipeline on create; user choice is sticky thereafter.
-  // Severity is NOT re-derived when the user toggles stage checkboxes (Phase 3.5 §5).
-  // A chip-raise prefill (initialSeverity, D2) wins over the derived default.
+  // Severity is NOT re-derived when the user toggles stage checkboxes.
+  // A chip-raise prefill (initialSeverity) wins over the derived default.
   const [severity, setSeverity] = useState<"at-risk" | "blocked">(() => {
     if (risk?.severity) return risk.severity;
     if (initialSeverity) return initialSeverity;
@@ -342,10 +342,10 @@ function RiskEditDialogContent({
   const [impact, setImpact] = useState(initialImpact ?? "");
   const [mitigation, setMitigation] = useState(initialMitigation ?? "");
 
-  // Phase 3.8: stage checkboxes start empty on create. The user marks
-  // stages explicitly. preCheckedStages still renders an info strip
-  // (context only), but does not influence initial selection. A chip-raise
-  // prefill (initialStageIds, D2) pre-checks the clicked stage.
+  // Stage checkboxes start empty on create. The user marks stages explicitly.
+  // preCheckedStages still renders an info strip (context only), but does not
+  // influence initial selection. A chip-raise prefill (initialStageIds)
+  // pre-checks the clicked stage.
   const [stageIds, setStageIds] = useState<string[]>(() => {
     return computeInitialStageIds(risk, initialStageIds);
   });
@@ -396,11 +396,11 @@ function RiskEditDialogContent({
 
   function setParentAndStages(nextParent: RecordParent) {
     setParent(nextParent);
-    // W11 (fix-report-surface-integrity 3.10): clear the stage selection on any
-    // parent switch. NEVER default to all owned stages — that "covers all"
-    // default is the root cause of the inflated-completeness ("6/7") defect.
-    // Switching to an activity hides the stage step; the lead marks product
-    // stages explicitly; the single-owned-stage convenience lives in handleSave.
+    // fix-report-surface-integrity: clear the stage selection on any parent
+    // switch. NEVER default to all owned stages — that "covers all" default is
+    // the root cause of the inflated-completeness ("6/7") defect. Switching to
+    // an activity hides the stage step; the lead marks product stages
+    // explicitly; the single-owned-stage convenience lives in handleSave.
     setStageIds([]);
   }
 
@@ -559,14 +559,12 @@ function RiskEditDialogContent({
           </div>
         )}
 
-        {/* lead-live-walk-2026-06-14 1.x: balanced two-column layout.
-            The former single column ran the full 92vh (Product picker clipped
-            off-screen); the older max-w-4xl two-column read as overloaded. This
-            is the middle ground: a moderate max-w-3xl grid that collapses to
-            one column on a narrow modal (md: breakpoint). Left holds the prose
-            fields, right holds the Classification panel. The prose textareas
-            use flex-1 to absorb height up to the taller (bordered) panel, so
-            the two columns finish at a comparable height with no stray space. */}
+        {/* Balanced two-column layout: a moderate max-w-3xl grid that collapses
+            to one column on a narrow modal (md: breakpoint). Left holds the
+            prose fields, right holds the Classification panel. The prose
+            textareas use flex-1 to absorb height up to the taller (bordered)
+            panel, so the two columns finish at a comparable height with no stray
+            space. */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-stretch">
           {/* Left column: Risk / Impact / Mitigation prose fields. flex-col so
               the textareas can flex-1 and fill the column to the panel height. */}

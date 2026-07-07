@@ -49,8 +49,8 @@ const HEAD_REPORT_ROUTE = "/head/report";
 
 const NAV_LINKS: readonly NavLink[] = [
   { href: "/lead/report", label: "Report", roles: ["lead"] },
-  // UX-17 (Phase 35-08): one History page for both active and archived
-  // report periods; archived visibility is a local toggle inside the page.
+  // One History page for both active and archived report periods; archived
+  // visibility is a local toggle inside the page.
   // remove-dead-history-tab-param: the History link targets bare `/reports` —
   // the page does not read a `tab` query param, so emitting one is dead weight.
   {
@@ -59,15 +59,15 @@ const NAV_LINKS: readonly NavLink[] = [
     title: HISTORY_LINK_TITLE,
     roles: ["lead"],
   },
-  // UAT 2026-05-22: /head/history 307-redirects to /reports (same surface as
-  // viewer). The nav link points directly to the destination.
+  // /head/history 307-redirects to /reports (same surface as viewer). The
+  // nav link points directly to the destination.
   {
     href: "/reports",
     label: "History",
     title: HISTORY_LINK_TITLE,
     roles: ["head"],
   },
-  // viewer-live-status (task 4.1): the viewer is a status observer of the
+  // viewer-live-status: the viewer is a status observer of the
   // current period. The entry resolves the Status target (the current editable
   // period, else the latest visible published report) via the static
   // `/reports/latest` route, which redirects to the resolved report.
@@ -85,11 +85,11 @@ const NAV_LINKS: readonly NavLink[] = [
   },
   { href: HEAD_DASHBOARD_ROUTE, label: "Dashboard", roles: ["head"] },
   { href: HEAD_REPORT_ROUTE, label: "Status", roles: ["head"] },
-  // Slides removed from head nav — slides is a mode toggle inside
-  // Status/History, not a separate destination. The legacy /head/slides URL
-  // still redirects to /reports (back-compat in head/slides/page.tsx).
-  // UFB-038: admin tab is admin-only. heads have a dashboard, not an admin
-  // panel. The /admin/layout.tsx role gate enforces the same on the route.
+  // Slides is a mode toggle inside Status/History, not a separate nav
+  // destination. The legacy /head/slides URL still redirects to /reports
+  // (back-compat in head/slides/page.tsx).
+  // admin tab is admin-only. heads have a dashboard, not an admin panel.
+  // The /admin/layout.tsx role gate enforces the same on the route.
   { href: "/admin", label: "Admin", roles: ["admin"] },
 ];
 
@@ -148,7 +148,7 @@ function isActiveLink(
   }
   if (href === "/reports") {
     // History active state is pathname-based only — independent of the archive
-    // toggle (lead-live-walk-2026-06-14 §4.3) and of any stray `?tab` param.
+    // toggle and of any stray `?tab` param.
     // Exact match (not startsWith) so report subpaths fall through to
     // isPublishedReportPath below rather than this History branch.
     return pathname === "/reports" || isPublishedReportPath(pathname);
@@ -156,10 +156,8 @@ function isActiveLink(
   return pathname.startsWith(href);
 }
 
-// UFB-044: per-role home is now centralised in `lib/role-home.ts` and
-// reused by the dev-login redirect (UFB-034). Previously admin and head
-// both pointed at `/head/dashboard`, which sent admin sessions into the
-// head dashboard — see UFB-044 backlog entry for the user-reported flow.
+// Per-role home is centralised in `lib/role-home.ts` and reused by the
+// dev-login redirect, so admin and head resolve to distinct destinations.
 const getLogoHref = roleHomePath;
 
 function subscribeHydrationStore() {
@@ -188,9 +186,8 @@ function LanguageComingSoonControl() {
 }
 
 function ThemeComingSoonControl() {
-  // TODO(UFB-074): replace this inert control with a real theme switch only
-  // after .planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md
-  // is promoted into a new milestone.
+  // TODO(theme-future): replace this inert control with a real theme switch
+  // once theming is promoted into a milestone.
   return (
     <ComingSoonIconButton
       icon={Moon}
@@ -248,11 +245,10 @@ export function NavBar() {
       }) || "??"
     : "?";
   const roleLabel = role ? getRoleLabel(role) : "";
-  // UFB-066 (2026-05-11): show a skeleton placeholder for the brand pill
-  // while the session query is in-flight, instead of flashing the
-  // DEFAULT_ORGANIZATION_IDENTITY fallback ('ORG') and then swapping to the
-  // real tenant brand ('PEO'). The flash was the «ORG → PEO» pop user saw
-  // on every cold reload.
+  // Show a skeleton placeholder for the brand pill while the session query
+  // is in-flight, instead of flashing the DEFAULT_ORGANIZATION_IDENTITY
+  // fallback ('ORG') and then swapping to the real tenant brand ('PEO'). The
+  // flash was the «ORG → PEO» pop user saw on every cold reload.
   const orgResolved = !visibleSessionLoading && visibleOrganization !== null;
   const orgShortName = orgResolved
     ? visibleOrganization.shortName
@@ -287,7 +283,7 @@ export function NavBar() {
               </div>
             ) : (
               <>
-                {/* UFB-066: brand skeleton until session.organization resolves.
+                {/* Brand skeleton until session.organization resolves.
                     Uses the same fixed brand slot as the resolved logo so
                     the nav center line stays still while auth hydrates. */}
                 <div
@@ -320,9 +316,8 @@ export function NavBar() {
           )}
         </div>
 
-        {/* Navigation — N-2: pill active state, N-3: per-link icon.
-            whitespace-nowrap on each pill prevents wrapping when the
-            right-rail period+avatar squeeze the available width. */}
+        {/* Navigation. whitespace-nowrap on each pill prevents wrapping when
+            the right-rail period+avatar squeeze the available width. */}
         <nav
           aria-label="Main navigation"
           className="hidden sm:flex sm:items-center sm:gap-0.5"
@@ -348,10 +343,10 @@ export function NavBar() {
           })}
         </nav>
 
-        {/* Right rail. Identity now lives in the left home mark + xl text:
-            the rail keeps only actions so the center nav has stable space.
-            UFB-NEW-A1: show skeleton placeholders while session is loading so
-            the header width is stable from first paint → zero CLS on reload.
+        {/* Right rail. Identity lives in the left home mark + xl text, so the
+            rail keeps only actions and the center nav has stable space.
+            Skeleton placeholders show while the session is loading so the
+            header width is stable from first paint → zero CLS on reload.
             Language, Theme and Logout stay grouped as the action rail. */}
         <div className={RIGHT_RAIL_CLASS}>
           {visibleSessionLoading ? (
@@ -379,9 +374,8 @@ export function NavBar() {
                   type="button"
                   onClick={() => {
                     // Fire-and-forget logout: navigate home once the request
-                    // settles (resolve or reject), exactly as the prior
-                    // try/await/finally did. `.finally` keeps the redirect on
-                    // both paths; `void` marks the void-slot intent.
+                    // settles (resolve or reject). `.finally` keeps the
+                    // redirect on both paths; `void` marks the void-slot intent.
                     void fetch("/auth/logout", {
                       method: "POST",
                       credentials: "include",
@@ -416,7 +410,7 @@ export function NavBar() {
         </div>
       </div>
 
-      {/* Teal bottom accent — N-6: 3px tealA, rounded top corners. */}
+      {/* Teal bottom accent — 3px tealA, rounded top corners. */}
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="h-[3px] rounded-t bg-[var(--color-starbucks-accent)]" />
       </div>

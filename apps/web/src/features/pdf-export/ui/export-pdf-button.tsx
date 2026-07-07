@@ -16,7 +16,7 @@ interface ExportPdfButtonProps {
 }
 
 /**
- * Export PDF button — Phase 23-01.
+ * Export PDF button.
  *
  * Wires the leadership-scoped (head/admin/viewer; lead FORBIDDEN)
  * `pdfExport.request` mutation to start a BullMQ job, then
@@ -95,7 +95,7 @@ export function ExportPdfButton({
     requestMut.mutate({ reportId });
   }
 
-  // toolbar-polish: rendered through the shared 32px ToolbarIconButton so the
+  // Rendered through the shared 32px ToolbarIconButton so the
   // head/lead toolbars share one icon-action vocabulary. Per the icon-button
   // primitive the tooltip stays equivalent to the aria-label ("Export PDF"); the
   // unpublished precondition moves to an aria-describedby/sr-only hint, never the

@@ -1,7 +1,7 @@
 /**
- * A27: delete confirmation dialog (extracted from periods-tab.tsx) — a
- * plain backdrop + modal, not a shared primitive, since its copy and
- * destructive-red styling are period-specific.
+ * Delete confirmation dialog — a plain backdrop + modal, not a shared
+ * primitive, since its copy and destructive-red styling are
+ * period-specific.
  */
 export function PeriodsDeleteConfirmDialog({
   isPending,

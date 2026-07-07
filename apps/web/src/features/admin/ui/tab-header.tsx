@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 
 /**
- * UFB-026 / UFB-029: shared header for every admin tab so users / groups /
+ * Shared header for every admin tab so users / groups /
  * products / periods / reminders / reopen / jobs / actions / settings all
  * share the same shape: title + description + count badge on the left,
  * search input + actions on the right.
@@ -101,7 +101,7 @@ export function TabSearch({
 }
 
 /**
- * A3: Quick-filter select — drop-in complement to TabSearch for admin tabs
+ * Quick-filter select — drop-in complement to TabSearch for admin tabs
  * that need a categorical dimension filter (e.g. role, status, group).
  * Options include a sentinel "All" entry with value "".
  */

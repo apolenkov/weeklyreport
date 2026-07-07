@@ -11,7 +11,7 @@ const PRECEDENCE: Record<StageStatus, number> = {
  * Derives effective StageStatus from the risks/items that back the stage —
  * the single source of truth.
  *
- * rethink-pipeline-state-vs-completeness (supersedes the PRJ-2 "explicit chip
+ * rethink-pipeline-state-vs-completeness (supersedes the earlier "explicit chip
  * status must win" rule): severity is the max over covering risks (and blocked
  * items); an explicit at-risk/blocked with NO backing risk can no longer
  * survive, because under the one-source model status is derived from risks and

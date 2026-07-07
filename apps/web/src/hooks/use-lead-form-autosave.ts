@@ -89,7 +89,7 @@ export function stableStringify(value: unknown): string {
  * - Triggers `reports.saveDraft` after `debounceMs` of payload stillness.
  * - Coalesces rapid edits into a single mutation call.
  * - Tracks dirty state (current payload vs last successfully-saved payload).
- * - Attaches a `beforeunload` listener while dirty to satisfy INT-07.
+ * - Attaches a `beforeunload` listener while dirty to warn on unsaved edits.
  * - Skips autosave entirely when disabled (read-only or submitted).
  */
 export function useLeadFormAutosave(
@@ -263,7 +263,7 @@ export function useLeadFormAutosave(
     };
   }, [payloadKey, enabled, dirty, reportSectionId, debounceMs]);
 
-  // beforeunload guard while dirty (INT-07).
+  // beforeunload guard while dirty.
   useEffect(() => {
     if (!dirty) return;
     function handler(e: BeforeUnloadEvent) {

@@ -4,18 +4,18 @@ import {
   JobsTabLabel,
 } from "../../../features/admin";
 // ReopenTabLabel lives in the review slice; the route composes it directly
-// until the review slice registers and exposes a barrel (paired lead/ change).
+// until the review slice registers and exposes a barrel.
 import { ReopenTabLabel } from "../../../features/review/ui/reopen-tab-label";
 
 interface Props {
   searchParams: Promise<{ tab?: string; filter?: string }>;
 }
 
-// Phase 35-06: 'jobs' tab — BullMQ DLQ admin UI. Order: after 'reopen',
+// 'jobs' tab — BullMQ DLQ admin UI. Order: after 'reopen',
 // before 'settings' so the failure-triage workflow lives next to other
 // reactive admin work (reopen requests / failed-job retries).
 //
-// UFB-052 (Phase 51-B): 'periods' tab — admin period lifecycle list.
+// 'periods' tab — admin period lifecycle list.
 // Position: between 'products' and 'reminders' — products → periods →
 // reminders mirrors the actual data-flow ordering (a period scoped to
 // products, with reminders fired against it).
@@ -48,10 +48,10 @@ export default async function AdminPage({ searchParams }: Props) {
             </h1>
           </div>
 
-          {/* MOB-04 (Phase 30-05): native select on mobile, anchor tab list on sm+ */}
+          {/* native select on mobile, anchor tab list on sm+ */}
           <AdminTabsMobileSelect activeTab={activeTab} />
 
-          {/* ADM-1 (Phase 33-04): pill row matching mockup s7. Active = filled
+          {/* pill row matching mockup s7. Active = filled
               tealA pill (`btn-pr`); inactive = transparent ghost. Outer
               container uses bg-white + shadow per mockup spec. */}
           <nav aria-label="Admin tabs" className="hidden sm:block">

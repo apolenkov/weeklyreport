@@ -11,14 +11,13 @@ interface Props {
 }
 
 /**
- * UFB-NEW-A34 (Phase 60 early activation): lead self-preview surface.
+ * Lead self-preview surface.
  *
  * Renders the lead's section exactly as the head sees it in the assembled
  * weekly report. Uses WeeklyReportPage with the current user's authorId to
  * open / highlight / scroll their own section. The product list is scoped to
  * the lead's reporting group server-side (weeklyReport.get via the GroupProduct
- * join), not to the products the lead personally authors
- * (driver-findings-2026-06-11 finding 2). Read-only, no form.
+ * join), not to the products the lead personally authors. Read-only, no form.
  *
  * Server shell. The preview is a lead-only self-review surface: the parent
  * `/lead/*` layout admits lead/head/admin, so this page adds a per-page guard

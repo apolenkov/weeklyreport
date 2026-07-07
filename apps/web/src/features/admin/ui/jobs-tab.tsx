@@ -8,12 +8,11 @@ import { useTRPC } from "../../../lib/trpc-context";
 import { TabHeader, TabSearch } from "./tab-header";
 
 /**
- * Phase 35-06: BullMQ DLQ admin tab.
+ * BullMQ DLQ admin tab.
  *
  * Surfaces the email-reminder queue's failed-jobs set with a per-row Retry
- * button. Replaces the only prior in-app DLQ entry point — the raw
- * `/admin/queues` Bull Board mount — with a UI that matches the rest of the
- * admin tabs (matching row spacing / pill button / tealA accent).
+ * button, styled to match the rest of the admin tabs (row spacing / pill
+ * button / tealA accent).
  *
  * Data source: tRPC `admin.jobs.listFailed` (headProcedure). Retry uses
  * `admin.jobs.retryFailed` and invalidates the list query on success so the

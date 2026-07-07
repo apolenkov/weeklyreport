@@ -1,14 +1,12 @@
 /**
- * UFB-067 icon set + shared IconButton shell for the Periods tab, extracted
- * from `periods-tab.tsx` (R3a-4 max-lines split). Each icon is a 16×16
- * stroke-currentColor SVG; IconButton centralises the 32×32 sizing, hover
- * state, and a11y labelling so `ActionIconRow` stays declarative.
+ * Icon set + shared IconButton shell for the Periods tab. Each icon is a
+ * 16×16 stroke-currentColor SVG; IconButton centralises the 32×32 sizing,
+ * hover state, and a11y labelling so `ActionIconRow` stays declarative.
  */
 
 /**
- * UFB-067: shared icon-button shell. Centralises the 32×32 sizing, hover
- * state, and a11y labelling so the individual `ActionIconRow` icons stay
- * declarative.
+ * Shared icon-button shell. Centralises the 32×32 sizing, hover state, and
+ * a11y labelling so the individual `ActionIconRow` icons stay declarative.
  */
 export function IconButton({
   testId,
@@ -65,7 +63,7 @@ export function Chevron({ expanded }: { readonly expanded: boolean }) {
   );
 }
 
-// UFB-067: per-action icons used by the inline ActionIconRow. Each icon
+// per-action icons used by the inline ActionIconRow. Each icon
 // is a 16×16 stroke-currentColor SVG that the IconButton shell paints in
 // the appropriate tone (muted by default, danger red for Archive). Paths
 // follow the same lucide-style stroke conventions used elsewhere in the

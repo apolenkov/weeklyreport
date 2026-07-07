@@ -9,7 +9,7 @@ import { useSession } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
 
 /**
- * 39-05 (PERF-05): full-text search input.
+ * Full-text search input.
  *
  * Mounted in three places:
  *   - /reports (lead) sidebar with `scope='mine'` (lead's own content)

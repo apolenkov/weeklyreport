@@ -63,8 +63,8 @@ interface ItemEditDialogProps {
    */
   readonly defaultActivityId?: string;
   /**
-   * 35-04 (FEAT-144): callback returning the SDLC stages the current lead
-   * owns on the given project. Constrains the "SDLC Stage" select.
+   * Callback returning the SDLC stages the current lead owns on the given
+   * project. Constrains the "SDLC Stage" select.
    */
   readonly stagesForProduct?: (productId: string) => readonly string[];
   /**
@@ -368,13 +368,13 @@ function StatusSlotView({
 }
 
 /**
- * D12 fix (react-compiler-safe): outer shell conditionally mounts the inner
- * content component. Mount = fresh useState from props; unmount on close.
- * No useEffect reset needed — structural guarantee via mount/unmount.
+ * react-compiler-safe: outer shell conditionally mounts the inner content
+ * component. Mount = fresh useState from props; unmount on close. No useEffect
+ * reset needed — structural guarantee via mount/unmount.
  *
- * A13 invariant preserved: stagesForProduct is NOT in any deps array.
- * useState initialises once at mount from the stable `initial` snapshot, so
- * parent re-renders with a new stagesForProduct reference don't wipe typed text.
+ * Invariant: stagesForProduct is NOT in any deps array. useState initialises
+ * once at mount from the stable `initial` snapshot, so parent re-renders with a
+ * new stagesForProduct reference don't wipe typed text.
  */
 export function ItemEditDialog(props: ItemEditDialogProps) {
   if (!props.open) return null;
@@ -450,10 +450,10 @@ function ItemEditDialogContent({
     item?.priorityRank ?? null,
   );
   // unify-record-dialogs: no stage is pre-selected on create — the lead makes an
-  // explicit choice (mirrors the risk dialog, which dropped the "all owned
-  // stages" default in fix-report-surface-integrity W11). Edit restores the
-  // record's saved stages. The required-stage rule + single-owned-stage
-  // auto-apply in handleSave still let a one-stage product save without a click.
+  // explicit choice (mirrors the risk dialog's no "all owned stages" default).
+  // Edit restores the record's saved stages. The required-stage rule +
+  // single-owned-stage auto-apply in handleSave still let a one-stage product
+  // save without a click.
   const [stageIds, setStageIds] = useState<string[]>(
     item?.stageIds ? [...item.stageIds] : [],
   );
@@ -505,8 +505,8 @@ function ItemEditDialogContent({
   function setParentAndStages(nextParent: RecordParent) {
     setParent(nextParent);
     // Clear the stage selection on any parent switch — never default to all
-    // owned stages (mirrors the risk dialog, W11 3.10). Switching to an activity
-    // hides the stage step; switching back to a product re-shows it empty. The
+    // owned stages (mirrors the risk dialog). Switching to an activity hides the
+    // stage step; switching back to a product re-shows it empty. The
     // single-owned-stage convenience still applies at save time.
     setStageIds([]);
   }

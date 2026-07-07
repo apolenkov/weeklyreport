@@ -12,7 +12,7 @@ import { latestPeriodPair } from "../../../../lib/analytics-periods";
 import { useTRPC } from "../../../../lib/trpc-context";
 
 /**
- * ANAL-04 (Phase 30-03): /reports/trends page.
+ * /reports/trends page.
  *
  * Client component because the existing tRPC seam in this app uses
  * `useTRPC()` from a React context provider (apps/web/src/lib/trpc-context.ts).
@@ -89,10 +89,10 @@ export default function TrendsPage() {
       periodTo: PERIOD_TO,
     }),
   );
-  // Compare the two most recent periods rather than fixed dates: the seed now
+  // Compare the two most recent periods rather than fixed dates: the seed
   // generates period-end dates relative to the run date, so any pinned pair
-  // goes stale and the chart renders empty (driver sweep 2026-06-09). `periods`
-  // arrives ascending, so the last two entries are the latest pair.
+  // goes stale and the chart renders empty. `periods` arrives ascending, so
+  // the last two entries are the latest pair.
   const historyData = isTrafficLightHistoryOutput(history.data)
     ? history.data
     : undefined;

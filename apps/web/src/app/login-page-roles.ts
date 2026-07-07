@@ -1,9 +1,7 @@
 /**
- * Role-aware landing-redirect config for the login page (UX-16, Phase 35-08).
- *
- * Extracted from login-page.client.tsx: the per-role default routes, the
- * seeded dev-login email/label tables, and the pure helpers that derive a
- * redirect target or dev-login URL from them.
+ * Role-aware landing-redirect config for the login page: the per-role default
+ * routes, the seeded dev-login email/label tables, and the pure helpers that
+ * derive a redirect target or dev-login URL from them.
  */
 import { ROLE_HOME_PATH } from "@customreport/shared";
 
@@ -16,7 +14,7 @@ export type Role = "lead" | "head" | "admin" | "viewer";
 export { ROLE_LABEL } from "@customreport/shared";
 
 /**
- * UFB-071 (2026-05-11): seeded dev-mode emails per role. The role grid
+ * Seeded dev-mode emails per role. The role grid
  * on the landing card uses these as the fallback email when no
  * persisted hint exists for that role. Must stay in sync with the
  * `emailByRole` table in `apps/api/src/modules/auth/auth.routes.ts`

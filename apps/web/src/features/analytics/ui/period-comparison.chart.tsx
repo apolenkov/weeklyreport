@@ -6,10 +6,10 @@ import type {
 } from "@customreport/shared";
 
 /**
- * ANAL-04 (Phase 30-03): period-vs-period delta table.
+ * Period-vs-period delta table.
  *
  * Null cells render as '–' (em-dash); zero risk-counts render as '0'. The
- * visual distinction is part of the ANAL-04 contract per CONTEXT D-3.
+ * visual distinction between the two is intentional.
  */
 
 function statusLabel(cell: TrafficLightCell): string {

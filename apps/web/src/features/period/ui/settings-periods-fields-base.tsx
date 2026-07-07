@@ -5,8 +5,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { MockSettings } from "../../../shared/lib/admin-mock-data";
 
 /**
- * UFB-048 (Phase 48-B) period base fields for the Settings → Periods sub-tab,
- * extracted from `settings-tab.tsx` (R3a-4 max-lines split). The owning
+ * Period base fields for the Settings → Periods sub-tab. The owning
  * `PeriodsSubTab` shell holds the draft state and Save button; this component
  * renders the field group and writes through the shared `setDraft`.
  */
@@ -19,7 +18,7 @@ export function PeriodBaseFields({
 }) {
   return (
     <>
-      {/* ── periodLengthDays (UFB-048) ── */}
+      {/* ── periodLengthDays ── */}
       <div>
         <label
           htmlFor="period-length-days"
@@ -48,7 +47,7 @@ export function PeriodBaseFields({
         </p>
       </div>
 
-      {/* ── workingDays (UFB-048) ── */}
+      {/* ── workingDays ── */}
       <fieldset>
         <legend className="mb-1 block text-sm font-medium text-[var(--color-foreground)]">
           Working days
@@ -128,7 +127,7 @@ export function PeriodBaseFields({
         </p>
       </div>
 
-      {/* ── gracePeriodHours (UFB-048) ── */}
+      {/* ── gracePeriodHours ── */}
       <div>
         <label
           htmlFor="grace-period-hours"
@@ -162,7 +161,7 @@ export function PeriodBaseFields({
         </p>
       </div>
 
-      {/* ── allowLateSubmissions (UFB-048) ── */}
+      {/* ── allowLateSubmissions ── */}
       <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)]">
         <input
           name="allow-late-submissions"
@@ -183,7 +182,7 @@ export function PeriodBaseFields({
         </span>
       </label>
 
-      {/* ── autoPublishAfterDeadline (UFB-048) ── */}
+      {/* ── autoPublishAfterDeadline ── */}
       <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)]">
         <input
           name="auto-publish-after-deadline"
@@ -205,7 +204,7 @@ export function PeriodBaseFields({
         </span>
       </label>
 
-      {/* ── autoArchiveWeeksAfterPublish (UFB-048) ── */}
+      {/* ── autoArchiveWeeksAfterPublish ── */}
       <div>
         <label
           htmlFor="auto-archive-weeks"

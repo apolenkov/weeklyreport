@@ -15,7 +15,7 @@ interface LeadHistorySidebarProps {
 // published/archived. The sidebar is shared between the lead personal-history
 // view and the head/viewer compiled-history view; compiled entries never carry
 // "submitted" (see mapCompiledHistoryEntries), so matching only "submitted"
-// left every compiled stat at 0 (driver sweep 2026-06-09).
+// left every compiled stat at 0.
 const COMPLETED_WEEK_STATUSES: ReadonlySet<HistoryEntry["status"]> = new Set([
   "submitted",
   "published",
@@ -28,11 +28,11 @@ function isCompletedWeek(entry: HistoryEntry): boolean {
 const PERCENT_MAX = 100;
 
 /**
- * HIST-2 (Phase 33-04): right-rail companion for the lead history page.
- * Mockup s9 specs three stacked cards — My History Summary, Submission Status,
- * Quick Filters — that turn the history page from a flat archive into a
- * working surface. We ship the first two (stats + pattern); Quick Filters
- * are deferred until the parent page owns filter state worth wiring.
+ * Right-rail companion for the lead history page. Three stacked cards —
+ * My History Summary, Submission Status, Quick Filters — turn the history
+ * page from a flat archive into a working surface. We ship the first two
+ * (stats + pattern); Quick Filters are deferred until the parent page owns
+ * filter state worth wiring.
  *
  * All numbers are derived from `entries` so the sidebar stays a pure
  * presentational fork of the same query result the list uses.

@@ -43,7 +43,7 @@ export function ProductsTab({
   const [pendingArchive, setPendingArchive] = useState<MockProduct | null>(
     null,
   );
-  // B5: local name filter (distinct from the global SearchInput deep-link)
+  // local name filter (distinct from the global SearchInput deep-link)
   const [localSearch, setLocalSearch] = useState("");
 
   // Save the trigger element so the shared focus primitive can restore focus
@@ -66,7 +66,7 @@ export function ProductsTab({
     }
   }, [productFilter, products]);
 
-  // B9: exclude deactivated users from picker; existing assignments to
+  // exclude deactivated users from picker; existing assignments to
   // deactivated leads remain visible via getUserById (full users list).
   const leads = useMemo(
     () => users.filter((u) => u.role === "lead" && u.isActive),
@@ -75,7 +75,7 @@ export function ProductsTab({
   const getUserById = (id: string): MockUser | undefined =>
     users.find((u) => u.id === id);
 
-  // 35-01: per-project assignment counts from the live DB. The mock-data
+  // per-project assignment counts from the live DB. The mock-data
   // mapper hands every product a stages array of 7 nulls (assignment data
   // ships separately via listStageAssignments), so reading `product.stages`
   // for a count would always show 0/7. Light groupBy query instead.
@@ -289,10 +289,9 @@ export function ProductsTab({
                           Owner: {owner?.name ?? "Unknown"}
                         </span>
                       </div>
-                      {/* UFB-054 / Phase 56-C: read-only Groups chips
-                          showing which ReportingGroups own this product
-                          via the explicit GroupProduct edge. Editing
-                          lives in the Groups tab. */}
+                      {/* read-only Groups chips showing which
+                          ReportingGroups own this product via the explicit
+                          GroupProduct edge. Editing lives in the Groups tab. */}
                       <ProductGroupChips productId={product.id} />
                     </div>
                   </div>

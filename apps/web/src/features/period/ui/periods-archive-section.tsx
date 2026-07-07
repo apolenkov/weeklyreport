@@ -4,9 +4,9 @@ import { Chevron } from "./periods-tab-icons";
 import { PeriodTable } from "./periods-tab-table";
 
 /**
- * Archive section (extracted from periods-tab.tsx): collapsed-by-default
- * disclosure over `periodState = archived` rows. The query itself stays
- * gated by `expanded` in the caller so opening this section is the first
+ * Archive section: collapsed-by-default disclosure over
+ * `periodState = archived` rows. The query itself stays gated by
+ * `expanded` in the caller so opening this section is the first
  * round-trip that fetches archived periods.
  */
 export function PeriodsArchiveSection({

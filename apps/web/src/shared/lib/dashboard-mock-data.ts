@@ -81,7 +81,7 @@ export interface PortfolioProduct {
 export interface ReportItem {
   id: string;
   stageLead: string;
-  /** SDLC stage name for the redesigned accordion gutter; live data always sets it. */
+  /** SDLC stage name for the accordion gutter; live data always sets it. */
   stage?: string;
   /** Contributing lead's initials for the gutter; live data always sets it. */
   owner?: string;
@@ -112,7 +112,7 @@ export interface ReportRisk {
   owner?: string;
   severity: "blocked" | "at-risk";
   text: string;
-  /** Structured fields for the redesigned risk row; live data always sets them. */
+  /** Structured fields for the risk row; live data always sets them. */
   problem?: string;
   impact?: string;
   mitigation?: string;
@@ -148,7 +148,7 @@ export interface ProductReport {
   statusLabel: string;
   leads: string;
   /**
-   * Real `ReportSection.id` UUID for AI advisory wiring (Phase 31 / AI-03).
+   * Real `ReportSection.id` UUID for AI advisory wiring.
    * Threaded through `mapWeeklyReport` from the first lead section that
    * authored content for this product. Optional because not every product
    * has a submitting lead in every period.

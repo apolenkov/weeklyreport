@@ -12,14 +12,12 @@ import { riskCoversStage } from "../features/report-sections/model/stage-tags";
 // ---------------------------------------------------------------------------
 // Status <-> Risk coupling (pure, render-time derivation)
 //
-// Consolidated from the former `use-status-risk-coupling.ts` and
-// `use-status-risk-sync.ts` (code-quality-modernization, Wave 3) so the
-// status/risk coordination lives behind a single entry point. The two halves
-// are intentionally distinct exports: `computeCoupling`/`validateCoupling`
-// are pure functions called at render/memo time, while `useStatusRiskSync`
-// is a React hook. Folding the pure functions into the hook would convert
-// their render-time call sites into hook calls and change evaluation timing,
-// so they stay as standalone exports.
+// The two halves are intentionally distinct exports:
+// `computeCoupling`/`validateCoupling` are pure functions called at
+// render/memo time, while `useStatusRiskSync` is a React hook. Folding the
+// pure functions into the hook would convert their render-time call sites
+// into hook calls and change evaluation timing, so they stay as standalone
+// exports.
 // ---------------------------------------------------------------------------
 
 /**
@@ -126,8 +124,6 @@ export function validateCoupling(coupling: CouplingState): {
  * applied by the bridge after a risk-routed flow (unify-risk-stage-status
  * D2/D3). Auto-applies go through `applyStatusSuggestion`, which bypasses
  * the bridge-level interception by construction, so no loop can form.
- *
- * See: .planning/research/PITFALLS.md (Pitfall 5)
  */
 export type SyncSource = "user" | "auto-sync";
 
@@ -156,17 +152,14 @@ export interface UseStatusRiskSyncResult {
  * Stage status applier with a SyncSource ref to discriminate user clicks
  * from bridge auto-applies.
  *
- * History: this hook used to carry the whole Risk -> Stage suggestion flow
- * ("you wrote a risk — bump the chip?", `handleRiskFilled` +
- * `requestStatusUpdateConfirmation`). unify-risk-stage-status (D4) replaced
- * that opt-in question with an automatic severity floor: a saved risk
- * forces its covered chips to at least its severity, so there is nothing
- * left to suggest. The hook now only applies stage status changes; the
- * bridge (`lead-form-sync-bridge`) owns interception of conflicting
- * transitions (raise without a risk, lower with covering risks).
+ * The hook only applies stage status changes; the bridge
+ * (`lead-form-sync-bridge`) owns interception of conflicting transitions
+ * (raise without a risk, lower with covering risks). A saved risk forces its
+ * covered chips to at least its severity (automatic severity floor), so there
+ * is no opt-in "bump the chip?" suggestion to make.
  *
  * The syncSourceRef toggles to 'auto-sync' across the synchronous frame
- * of an auto-applied mutation (Pitfall 5).
+ * of an auto-applied mutation.
  */
 export function useStatusRiskSync(
   args: UseStatusRiskSyncArgs,

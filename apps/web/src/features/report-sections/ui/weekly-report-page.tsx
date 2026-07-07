@@ -78,9 +78,9 @@ interface WeeklyReportPageProps {
    */
   readonly reportId?: string;
   /**
-   * 35-07: when true, the page auto-redirects (router.replace) to the
-   * canonical addressed URL `/head/report/<reportId>` once the active
-   * reportId is known. Off when already on a `[reportId]` route.
+   * When true, the page auto-redirects (router.replace) to the canonical
+   * addressed URL `/head/report/<reportId>` once the active reportId is known.
+   * Off when already on a `[reportId]` route.
    *
    * Optional `canonicalBasePath` (defaults to `/head/report`) lets callers
    * point the redirect at a different addressed surface.
@@ -89,7 +89,7 @@ interface WeeklyReportPageProps {
   readonly canonicalBasePath?: string;
   readonly authorId?: string;
   /**
-   * Grouping axis (head split-view parity, UAT 2026-05-22). "product" (default)
+   * Grouping axis (head split-view parity). "product" (default)
    * is the classic per-product accordion list; "lead" groups products under
    * each authoring lead. A product shared by several leads appears under each —
    * leads own their own phases, so the duplication is expected.
@@ -120,7 +120,7 @@ interface WeeklyReportPageProps {
    */
   readonly contextControlsLeading?: ReactNode;
   /**
-   * head-toolbar-parity D2: a context label (department name plus a short page
+   * head-toolbar-parity: a context label (department name plus a short page
    * descriptor) rendered on the header line beside the title. It is a label,
    * not a control, so it stays out of the two action rows. Head form mode
    * passes it; standalone consumers omit it.
@@ -242,10 +242,9 @@ function ReportOverviewBand({
 
 /**
  * Resolves the page's terminal display state (after loading settles).
- *  - invalid-link (driver finding 1): a malformed reportId (400 BAD_REQUEST) or
- *    a missing report (404 NOT_FOUND). Transient 5xx / network errors fall
- *    through to no-period (unchanged behavior).
- *  - no active period (R3a): no data, or a `no-period` status.
+ *  - invalid-link: a malformed reportId (400 BAD_REQUEST) or a missing report
+ *    (404 NOT_FOUND). Transient 5xx / network errors fall through to no-period.
+ *  - no active period: no data, or a `no-period` status.
  * Returns null when the report should render normally.
  */
 function resolveTerminalNotice(query: {
@@ -271,8 +270,8 @@ function resolveTerminalNotice(query: {
 /**
  * The single labeled Export-PDF control for the toolbar trailing group.
  * head/admin/viewer get the real button; lead gets the inert ComingSoon control
- * (lead is FORBIDDEN from pdfExport — W2). Extracted so the branching stays out
- * of WeeklyReportPage's body.
+ * (lead is FORBIDDEN from pdfExport). A helper so the branching stays out of
+ * WeeklyReportPage's body.
  */
 function ToolbarExportControl({
   canExportPdf,
@@ -491,7 +490,7 @@ function buildAccordionModel(params: {
  * Self-gating Acknowledge control (renders nothing when review is disabled).
  * Mounted in TWO places by role: for a publish-capable reviewer (head/admin)
  * inside the header's Publish & Lock action cluster, so
- * review → acknowledge → publish reads as one sequence (HF1); for a
+ * review → acknowledge → publish reads as one sequence; for a
  * non-publishing access-holder (viewer) it stays a band in the report body —
  * relocating it into a cluster the viewer does not have would orphan their
  * acknowledge path.
@@ -569,9 +568,9 @@ interface ReportContentProps {
 
 /**
  * The report body below the toolbar: the true empty-state when the period has no
- * section content at all (A32 + head-report-visibility — keyed off FULL content,
- * never the submitted count), otherwise the review surfaces + the §7-filtered
- * accordion. Extracted so WeeklyReportPage stays under the complexity budget.
+ * section content at all (head-report-visibility — keyed off FULL content, never
+ * the submitted count), otherwise the review surfaces + the §7-filtered
+ * accordion. A helper so WeeklyReportPage stays under the complexity budget.
  */
 function ReportContent({
   hasAnyContent,
@@ -620,7 +619,7 @@ function ReportContent({
     <>
       {/* Acknowledge band for NON-publishing access-holders only (viewer);
           head/admin acknowledge from the Publish & Lock cluster on the header
-          line (HF1). */}
+          line. */}
       {!reviewModel.isHeadOrAdmin && (
         <AcknowledgeSurface
           reviewModel={reviewModel}
@@ -722,7 +721,7 @@ export function WeeklyReportPage({
   const sessionState = useContext(SessionContext);
   const currentRole = sessionState?.user?.role ?? null;
   const canMutatePeriod = currentRole === "head" || currentRole === "admin";
-  // Export-PDF authz (fix-report-surface-integrity W2): head/admin/viewer get the
+  // Export-PDF authz (fix-report-surface-integrity): head/admin/viewer get the
   // real export; lead is FORBIDDEN at the backend (pdfExport on leadershipProcedure)
   // and sees the inert ComingSoon control instead — never an active button that
   // would 403. The viewer's export is requester-scoped (their own published slice).
@@ -747,10 +746,10 @@ export function WeeklyReportPage({
   const queryInput = reportId ? { reportId } : {};
   const weeklyQ = useQuery(trpc.weeklyReport.get.queryOptions(queryInput));
 
-  // Phase 22 (plan 22-05): wire period.publish + period.reopen to the head's
-  // Publish & Lock / Reopen button. On success, cascade cache invalidation
-  // across dashboard, lead form, and lead history surfaces so all consumers
-  // refetch fresh state without a manual refresh.
+  // Wire period.publish + period.reopen to the head's Publish & Lock / Reopen
+  // button. On success, cascade cache invalidation across dashboard, lead form,
+  // and lead history surfaces so all consumers refetch fresh state without a
+  // manual refresh.
   const publishMut = useMutation(
     trpc.period.publish.mutationOptions({
       onSuccess: () => {
@@ -782,8 +781,8 @@ export function WeeklyReportPage({
     }),
   );
 
-  // A22: archive mutation — head moves a published report into the archive so
-  // it appears in archive.list. Only visible when periodStatus==='published'.
+  // Archive mutation — head moves a published report into the archive so it
+  // appears in archive.list. Only visible when periodStatus==='published'.
   const archiveMut = useMutation(
     trpc.archive.archiveReport.mutationOptions({
       onSuccess: () => {
@@ -806,8 +805,8 @@ export function WeeklyReportPage({
     toastPrefix: "Failed to load status report",
   });
 
-  // 35-07: bare `/head/report` -> redirect to `/head/report/<reportId>`
-  // once the active reportId is known. Skipped when:
+  // Bare `/head/report` -> redirect to `/head/report/<reportId>` once the
+  // active reportId is known. Skipped when:
   //   • the page already renders under `[reportId]` (reportId prop set)
   //   • there is no resolvable report (weeklyQ data not loaded or no-period)
   const resolvedReportId =
@@ -829,7 +828,7 @@ export function WeeklyReportPage({
     canonicalBasePath,
   ]);
 
-  // 35-07: surface the period in the browser tab title.
+  // Surface the period in the browser tab title.
   const titleParts = useMemo(() => {
     if (!weeklyQ.data || weeklyQ.data.status === "no-period") return null;
     const start = weeklyQ.data.periodStart;
@@ -851,8 +850,8 @@ export function WeeklyReportPage({
     return <WeeklyReportSkeleton />;
   }
 
-  // Terminal states (driver finding 1 invalid-link + R3a no-period). Resolved
-  // by a pure helper so the page function stays under the complexity budget.
+  // Terminal states (invalid-link + no-period). Resolved by a pure helper so
+  // the page function stays under the complexity budget.
   const terminalNotice = resolveTerminalNotice(weeklyQ);
   if (terminalNotice) {
     return (
@@ -889,9 +888,7 @@ export function WeeklyReportPage({
   // Head split-view "by lead" grouping (report-card-clarity): slice each product
   // to the lead's OWN contribution — mapWeeklyReportLeadGroups builds per-lead
   // cards from each single section, drops empty leads, and is computed only in
-  // "lead" scope (the default product path stays cheap). This replaced the old
-  // bucketing that reused the cross-lead aggregate cards, which repeated the
-  // whole merged card under every author of a multi-author product.
+  // "lead" scope (the default product path stays cheap).
   const rawLeadGroups =
     scope === "lead" ? mapWeeklyReportLeadGroups(reportData) : [];
   const fullLeadGroups = rawLeadGroups as LeadGroup[];
@@ -983,7 +980,7 @@ export function WeeklyReportPage({
               Publish requires at least one submitted section.
             </span>
           )}
-          {/* head-toolbar-parity D2: department context label — a label, not a
+          {/* head-toolbar-parity: department context label — a label, not a
               control, so it stays on the header line, out of the action rows. */}
           {headerContextLabel}
         </div>
@@ -1001,10 +998,10 @@ export function WeeklyReportPage({
               periodStatus={view.period.periodStatus}
             />
           )}
-          {/* A22: Move-to-archive — a published-period lifecycle action, so it
-              is a document action (neutral/outline), distinct from the
-              show-archived filter in the context bar. Hidden after archiving
-              because this page only navigates active periods. */}
+          {/* Move-to-archive — a published-period lifecycle action, so it is a
+              document action (neutral/outline), distinct from the show-archived
+              filter in the context bar. Hidden after archiving because this page
+              only navigates active periods. */}
           {canMutatePeriod && view.period.periodStatus === "published" && (
             <button
               type="button"
@@ -1018,8 +1015,8 @@ export function WeeklyReportPage({
               {archiveLabel}
             </button>
           )}
-          {/* HF1: the head/admin Acknowledge control sits WITH Publish & Lock
-              so review → acknowledge → publish reads as one sequence. It never
+          {/* The head/admin Acknowledge control sits WITH Publish & Lock so
+              review → acknowledge → publish reads as one sequence. It never
               gates publish; AcknowledgeSurface self-suppresses when review is
               disabled (e.g. a published period). */}
           {canMutatePeriod && (
@@ -1069,7 +1066,7 @@ export function WeeklyReportPage({
       />
 
       {/* Report body: true empty-state OR the review surfaces + §7-filtered
-          accordion. Extracted so this page function stays under the complexity
+          accordion. A helper so this page function stays under the complexity
           budget; the empty-state gate keys off FULL content (head-report-
           visibility), never the submitted count or the filtered accordion. */}
       <ReportContent

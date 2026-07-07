@@ -10,11 +10,10 @@ interface Props {
 }
 
 /**
- * Phase 35-07 (UX-15): addressed lead form. The `[reportId]` segment pins
- * the form to a specific report so every period the lead has access to
- * has a shareable / bookmarkable URL. The bare `/lead/report` route
- * redirects to the canonical addressed URL once the active reportId is
- * known.
+ * Addressed lead form. The `[reportId]` segment pins the form to a specific
+ * report so every period the lead has access to has a shareable /
+ * bookmarkable URL. The bare `/lead/report` route redirects to the canonical
+ * addressed URL once the active reportId is known.
  *
  * The form itself enforces read-only behaviour for non-active reports
  * (the server returns `readOnly: true` from `leadForm.byPeriod` when the

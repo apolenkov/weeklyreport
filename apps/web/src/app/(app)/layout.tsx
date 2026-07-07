@@ -23,7 +23,7 @@ type AppGroupLayoutProps = Readonly<{
 export default function AppGroupLayout({ children }: AppGroupLayoutProps) {
   return (
     <SessionProvider>
-      {/* UFB-065: skeleton fallback eliminates the nav-bar FOUC flash on
+      {/* skeleton fallback eliminates the nav-bar FOUC flash on
           cold reload. NavBarSkeleton matches NavBar height exactly so
           the swap is opacity-only, zero CLS. */}
       <Suspense fallback={<NavBarSkeleton />}>

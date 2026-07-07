@@ -5,13 +5,10 @@ import type { Dispatch, SetStateAction } from "react";
 import type { MockSettings } from "../../../shared/lib/admin-mock-data";
 
 /**
- * UFB-051 period-cycle fields for the Settings → Periods sub-tab, extracted from
- * `settings-tab.tsx` (R3a-4 max-lines split). Each field here has a live
- * consumer: `deadlineTime` is the manual-creation deadline default;
+ * Period-cycle fields for the Settings → Periods sub-tab. Each field here has a
+ * live consumer: `deadlineTime` is the manual-creation deadline default;
  * `allowReopenAfterPublish` + `reopenWindowHours` gate the reopen request path
- * (`period.service`). The four consumer-less knobs (firstDayOfWeek,
- * deadlineDayOfWeek, maxOpenPeriods, requireAllSectionsToPublish) were removed
- * in admin-settings-surface-cleanup.
+ * (`period.service`).
  */
 export function PeriodCycleFields({
   draft,
@@ -22,7 +19,7 @@ export function PeriodCycleFields({
 }) {
   return (
     <>
-      {/* ── deadlineTime (UFB-051) ───────────────────────────────── */}
+      {/* ── deadlineTime ─────────────────────────────────────────── */}
       <div>
         <label
           htmlFor="deadline-time"
@@ -49,7 +46,7 @@ export function PeriodCycleFields({
         </p>
       </div>
 
-      {/* ── allowReopenAfterPublish + reopenWindowHours (UFB-051) ─ */}
+      {/* ── allowReopenAfterPublish + reopenWindowHours ──────────── */}
       <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)]">
         <input
           name="allow-reopen-after-publish"
