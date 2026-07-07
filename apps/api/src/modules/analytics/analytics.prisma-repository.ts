@@ -14,11 +14,13 @@ import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter, guardGroupScope } from "../../lib/group-scope.js";
 import type { AnalyticsRepository } from "./analytics.service.js";
 import {
-  comparePeriodThenCreated,
+  collectComparisonCells,
+  collectProjectNames,
   isoDateOnly,
   nextUtcDay,
   startOfUtcDay,
   statusForProject,
+  UNKNOWN_CELL,
 } from "./analytics-period-math.js";
 
 /**
@@ -81,17 +83,7 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       return acc.set(label, [...(acc.get(label) ?? []), r]);
     }, new Map<string, (typeof reports)[number][]>());
 
-    const projectMap = new Map<string, string>();
-    for (const r of reports) {
-      for (const s of r.sections) {
-        for (const ps of s.projectStatuses) {
-          if (input.projectId && ps.projectId !== input.projectId) continue;
-          if (!projectMap.has(ps.projectId)) {
-            projectMap.set(ps.projectId, ps.project.name);
-          }
-        }
-      }
-    }
+    const projectMap = collectProjectNames(reports, input.projectId);
 
     const rows = Array.from(projectMap.entries()).map(
       ([projectId, projectName]) => {
@@ -176,61 +168,14 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       fetchAll(input.periodB),
     ]);
 
-    interface Cell {
-      status: TrafficLightCell;
-      risks: number;
-      name: string;
-    }
-    // Several reports can fall under one side's day range; process them oldest
-    // first so the latest report's status wins (deterministic tie-break) while
-    // risks accumulate across every contributing report.
-    const collect = (
-      reports: Awaited<ReturnType<typeof fetchAll>>,
-    ): Map<string, Cell> => {
-      const map = new Map<string, Cell>();
-      const ordered = [...reports].sort(comparePeriodThenCreated);
-      for (const report of ordered) {
-        for (const section of report.sections) {
-          for (const ps of section.projectStatuses) {
-            const existing = map.get(ps.projectId);
-            map.set(ps.projectId, {
-              status: ps.status,
-              risks: existing?.risks ?? 0,
-              name: ps.project.name,
-            });
-          }
-          for (const risk of section.risks) {
-            // activity-first-class: an activity-parented risk (null product FK)
-            // counts toward no product's risk tally.
-            if (!risk.projectId) continue;
-            const existing = map.get(risk.projectId) ?? {
-              status: null,
-              risks: 0,
-              name: "Unknown",
-            };
-            map.set(risk.projectId, { ...existing, risks: existing.risks + 1 });
-          }
-        }
-      }
-      return map;
-    };
-
-    const cellsA = collect(a);
-    const cellsB = collect(b);
+    const cellsA = collectComparisonCells(a);
+    const cellsB = collectComparisonCells(b);
 
     const allProjectIds = new Set<string>([...cellsA.keys(), ...cellsB.keys()]);
 
     const rows = Array.from(allProjectIds).map((projectId) => {
-      const ca = cellsA.get(projectId) ?? {
-        status: null,
-        risks: 0,
-        name: "Unknown",
-      };
-      const cb = cellsB.get(projectId) ?? {
-        status: null,
-        risks: 0,
-        name: "Unknown",
-      };
+      const ca = cellsA.get(projectId) ?? UNKNOWN_CELL;
+      const cb = cellsB.get(projectId) ?? UNKNOWN_CELL;
       return {
         projectId,
         projectName: ca.name !== "Unknown" ? ca.name : cb.name,
