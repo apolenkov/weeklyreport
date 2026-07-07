@@ -41,7 +41,7 @@ import {
   ReviewAccessError,
   ReviewConstraintError,
   ReviewNotFoundError,
-} from "../../modules/review/review.service.js";
+} from "../../modules/review/application/review.service.js";
 import { WeeklyReportDomainError } from "../../modules/weekly-report/weekly-report.service.js";
 
 /** A domain error class, matched against the thrown error via `instanceof`. */

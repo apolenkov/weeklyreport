@@ -4,7 +4,7 @@ import {
   type UserSession,
 } from "@customreport/shared";
 
-import { createServiceLogger } from "../../lib/logger-service.js";
+import { createServiceLogger } from "../../../lib/logger-service.js";
 
 export class ReviewAccessError extends Error {
   constructor(message: string) {
@@ -49,6 +49,10 @@ export interface ReviewRepository {
     session: DashboardScopeSession,
   ): Promise<SubmissionDashboardRow[]>;
 }
+
+// DI token binding the ReviewRepository port to its adapter at the module
+// boundary — lets the service depend on the port, not the concrete prisma class.
+export const REVIEW_REPOSITORY = Symbol("ReviewRepository");
 
 const statusOrder: Record<SubmissionDashboardRow["status"], number> = {
   draft: 0,

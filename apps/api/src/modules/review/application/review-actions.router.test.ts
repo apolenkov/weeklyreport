@@ -1,9 +1,9 @@
 import type { UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { createAppRouter } from "../../infrastructure/trpc/trpc.router.js";
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
-import { createNullLogger } from "../../lib/logger.js";
+import { createAppRouter } from "../../../infrastructure/trpc/trpc.router.js";
+import { createNullAuditLogger } from "../../../lib/audit-logger.js";
+import { createNullLogger } from "../../../lib/logger.js";
 
 const VALID_UUID = "00000000-0000-4000-8000-000000000000";
 

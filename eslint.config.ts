@@ -139,7 +139,7 @@ const apiCrossModuleGrandfathered: Record<string, readonly string[]> = {
     "published-report-snapshot.ts",
     "report-escalations.ts",
     "report-sections/report-sections.prisma-repository.ts",
-    "review/review-authz.ts",
+    "review/domain/review-authz.ts",
   ],
 };
 

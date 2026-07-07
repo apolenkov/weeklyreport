@@ -35,7 +35,7 @@ import {
   ReportSectionDomainError,
   SectionVersionConflictError,
 } from "../../modules/report-sections/report-sections.service.js";
-import { ReviewAccessError } from "../../modules/review/review.service.js";
+import { ReviewAccessError } from "../../modules/review/application/review.service.js";
 import { WeeklyReportDomainError } from "../../modules/weekly-report/weekly-report.service.js";
 import { mapDomainError } from "./trpc.error-mapper.js";
 

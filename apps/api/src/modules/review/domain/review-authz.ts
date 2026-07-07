@@ -1,6 +1,6 @@
 import type { UserSession } from "@customreport/shared";
 
-import { computeAllowedGroupIds } from "../../lib/group-scope.js";
+import { computeAllowedGroupIds } from "../../../lib/group-scope.js";
 
 // review-acknowledgement: the session fields the review authz decisions read.
 // Narrowed so callers (and tests) can pass a partial session.

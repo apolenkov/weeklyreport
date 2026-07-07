@@ -4,12 +4,12 @@ import {
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
-import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { groupScopeFilter } from "../../lib/group-scope.js";
+import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import { groupScopeFilter } from "../../../lib/group-scope.js";
 import type {
   DashboardScopeSession,
   ReviewRepository,
-} from "./review.service.js";
+} from "../application/review.service.js";
 
 @Injectable()
 export class ReviewPrismaRepository implements ReviewRepository {

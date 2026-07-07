@@ -4,14 +4,14 @@ import type {
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
-import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { applyRevokeTransition } from "../report-sections/revoke-transition.js";
+import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import { applyRevokeTransition } from "../../report-sections/revoke-transition.js";
 import type {
   PostVerdictParams,
   RecordAnchor,
   ReviewActionsRepository,
   VerdictContext,
-} from "./review-actions.service.js";
+} from "../application/review-actions.service.js";
 
 // review-acknowledgement: the group that owns a record is its section author's
 // reporting group (the same relation path `groupScopeFilter(_, 'reportSection')`

@@ -58,8 +58,8 @@ import { PublicationService } from "../../modules/publication/publication.servic
 import { RemindersService } from "../../modules/reminders/reminders.service.js";
 import type { LeadFormService } from "../../modules/report-sections/lead-form.service.js";
 import type { ReportSectionsService } from "../../modules/report-sections/report-sections.service.js";
-import type { ReviewService } from "../../modules/review/review.service.js";
-import type { ReviewActionsService } from "../../modules/review/review-actions.service.js";
+import type { ReviewService } from "../../modules/review/application/review.service.js";
+import type { ReviewActionsService } from "../../modules/review/application/review-actions.service.js";
 import {
   SearchAuthorizationError,
   type SearchService,

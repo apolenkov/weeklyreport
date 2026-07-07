@@ -1,9 +1,9 @@
 import type { SubmissionDashboardRow, UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { createAppRouter } from "../../infrastructure/trpc/trpc.router.js";
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
-import { createNullLogger } from "../../lib/logger.js";
+import { createAppRouter } from "../../../infrastructure/trpc/trpc.router.js";
+import { createNullAuditLogger } from "../../../lib/audit-logger.js";
+import { createNullLogger } from "../../../lib/logger.js";
 import { type ReviewRepository, ReviewService } from "./review.service";
 
 const reportId = "22222222-2222-4222-8222-222222222222";

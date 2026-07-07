@@ -10,16 +10,16 @@ import {
 } from "@customreport/shared";
 
 import {
-  ReviewAccessError,
-  ReviewConstraintError,
-  ReviewNotFoundError,
-} from "./review.service.js";
-import {
   isDesignatedReviewer,
   isEditablePeriod,
   type ReviewSession,
   scopeCoversGroup,
-} from "./review-authz.js";
+} from "../domain/review-authz.js";
+import {
+  ReviewAccessError,
+  ReviewConstraintError,
+  ReviewNotFoundError,
+} from "./review.service.js";
 
 // review-acknowledgement: a comment's single record anchor (exactly one set;
 // the shared Zod input enforces that before this layer).
@@ -77,6 +77,10 @@ export interface ReviewActionsRepository {
   getVerdictContext(sectionId: string): Promise<VerdictContext | null>;
   postVerdict(params: PostVerdictParams): Promise<{ unsubmitted: boolean }>;
 }
+
+// DI token binding the ReviewActionsRepository port to its adapter at the
+// module boundary — the service depends on the port, not the prisma class.
+export const REVIEW_ACTIONS_REPOSITORY = Symbol("ReviewActionsRepository");
 
 function toAnchor(input: ReviewCommentInput): RecordAnchor {
   return {
