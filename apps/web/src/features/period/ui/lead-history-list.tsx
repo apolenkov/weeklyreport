@@ -143,14 +143,14 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
       {entries.map((entry) => (
         <Link
           key={entry.id}
-          // 35-07 (UX-15): card clicks land on the addressed URL so the
-          // browser tab can be bookmarked and shared. `entry.periodId`
-          // already maps to the report id via mapHistoryEntries.
+          // card clicks land on the addressed URL so the browser tab can be
+          // bookmarked and shared. `entry.periodId` already maps to the
+          // report id via mapHistoryEntries.
           href={entry.href ?? `/lead/report/${entry.periodId}`}
           className="card-surface card-surface-hover group block p-5 transition-[box-shadow,border-color,background-color]"
-          // HIST-1 (Phase 33-04): 3px tealA left strip per mockup s9 — gives
-          // submitted reports the same visual anchor as kanban current-week
-          // cards, so the history page reads as a continuation of the form.
+          // 3px tealA left strip gives submitted reports the same visual
+          // anchor as kanban current-week cards, so the history page reads as
+          // a continuation of the form.
           style={{
             textDecoration: "none",
             color: "inherit",

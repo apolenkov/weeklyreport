@@ -25,8 +25,8 @@ import { useTRPC } from "./trpc-context";
  * That keeps the loading boundary on this provider, not on routing.
  */
 
-// Phase 27 widened the session-level role enum (sessionRoleSchema) to include
-// 'admin' for SAML claim mapping. adminProcedure === headProcedure for v6.0.
+// The session-level role enum (sessionRoleSchema) includes 'admin' for SAML
+// claim mapping. adminProcedure === headProcedure for v6.0.
 export interface SessionUser {
   id: string;
   name: string;
@@ -42,9 +42,9 @@ export interface SessionUser {
 }
 
 /**
- * UFB-047 / Phase 48-A: organization identity hydrated by the API on the
- * `auth.me` response. The nav-bar consumes `organization.shortName` for
- * the brand string; anonymous pages (landing) use `org.getPublic` instead.
+ * Organization identity hydrated by the API on the `auth.me` response. The
+ * nav-bar consumes `organization.shortName` for the brand string; anonymous
+ * pages (landing) use `org.getPublic` instead.
  */
 export interface SessionOrganization {
   shortName: string;
@@ -89,10 +89,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         role: data.role,
         reportingGroupName: data.reportingGroupName,
       },
-      // UFB-047 / Phase 48-A: `auth.me` carries the org identity hydrated
-      // per-request by the tRPC context factory. Older JWTs minted before
-      // Phase 48-A still verify (the field is optional in the schema), so
-      // the consumer must handle `organization === null` gracefully.
+      // `auth.me` carries the org identity hydrated per-request by the tRPC
+      // context factory. The field is optional in the schema (older JWTs may
+      // lack it), so the consumer must handle `organization === null`
+      // gracefully.
       organization: data.organization
         ? {
             shortName: data.organization.shortName,
@@ -104,7 +104,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, [data, isLoading]);
 
-  // UFB-071 (2026-05-11): persist the last authenticated role + email + name
+  // Persist the last authenticated role + email + name
   // into localStorage so the landing page can offer a 1-click resume hint
   // («You were here as {Name} · {Role} — use this role or change?»).
   // Fire from a useEffect so the write is strictly client-only and never

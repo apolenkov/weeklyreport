@@ -16,8 +16,8 @@ export function truncate(value: string, max: number): string {
 }
 
 /**
- * UFB-019: turn machine procedure names into a friendlier "Namespace: Action"
- * label so admins reading the log don't have to translate camelCase mentally.
+ * Turn machine procedure names into a friendlier "Namespace: Action" label so
+ * admins reading the log don't have to translate camelCase mentally.
  */
 export function humanizeProcedure(procedure: string): string {
   const [ns, action] = procedure.split(".");

@@ -16,9 +16,9 @@ export interface PeriodTableProps {
   readonly onReopen: (row: PeriodListItem) => void;
   readonly onArchive: (row: PeriodListItem) => void;
   readonly onUnarchive: (row: PeriodListItem) => void;
-  // A27: delete opens a confirmation dialog before deletion.
+  // delete opens a confirmation dialog before deletion.
   readonly onDelete: (row: PeriodListItem) => void;
-  // UFB-067: row-level edit opens the dialog in edit-mode prefilled
+  // row-level edit opens the dialog in edit-mode prefilled
   // from this row.
   readonly onEdit: (row: PeriodListItem) => void;
 }

@@ -24,9 +24,8 @@ export function toggledPayload(policy: MockReminderPolicy) {
 }
 
 /**
- * Save/remove mutations for a reminder policy (extracted from
- * reminders-tab.tsx): both wire cache invalidation and toast feedback so the
- * tab component only has to call `.mutate`.
+ * Save/remove mutations for a reminder policy: both wire cache invalidation
+ * and toast feedback so the tab component only has to call `.mutate`.
  */
 export function useReminderPolicyMutations() {
   const trpc = useTRPC();

@@ -27,18 +27,14 @@ const AUTH_STUB = webEnv.authStub();
 const APP_VERSION = webEnv.appVersion();
 
 /**
- * UX-16 (Phase 35-08): role-aware default landing.
+ * Role-aware default landing.
  *
- * Previously every visitor was redirected to /head/dashboard, which made
- * leads land on a page they don't have data for and head/admin land on a
- * lead form that returned an infinite skeleton.
- *
- * New behaviour:
+ * Role → default landing:
  *   - lead          → /lead/report
  *   - head | admin  → /head/dashboard
- *   - viewer        → /reports/latest  (the Status entry; viewer-live-status
- *                     made the viewer a status observer, so they land on the
- *                     current Status report, not the History list)
+ *   - viewer        → /reports/latest  (the Status entry; per viewer-live-status
+ *                     the viewer is a status observer, so lands on the current
+ *                     Status report, not the History list)
  *
  * Authentication path:
  *   1. Read auth.me.
@@ -85,29 +81,27 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
   const hasSession = sessionRole !== undefined;
   const sessionLoading = sessionQ.isLoading;
 
-  // UFB-047 / Phase 48-A: organization identity for the landing hero.
-  // `org.getPublic` is a publicProcedure so the anonymous landing page
-  // can fetch it without a session. On failure (offline / first-boot)
-  // we fall back to the seeded Demo identity so the chrome is never empty.
+  // Organization identity for the landing hero. `org.getPublic` is a
+  // publicProcedure so the anonymous landing page can fetch it without a
+  // session. On failure (offline / first-boot) we fall back to the seeded
+  // Demo identity so the chrome is never empty.
   //
-  // TODO(Phase-59-multi-org): today there is exactly one Organization
-  // row (singleton). When Phase 59 ships, `org.getPublic` should be
-  // tenant-aware — either derive from the request host (subdomain
-  // routing) or from a `/org/<slug>/...` path segment. The PulseMark
-  // wordmark itself stays org-agnostic because «Weekly Report» names the
-  // product artifact, not the tenant brand; only the small-caps Demo
-  // footnote line below it should swap per tenant.
-  // See .planning/phases/59-multi-org-hierarchy/59-CONTEXT.md.
+  // TODO(multi-org): today there is exactly one Organization row (singleton).
+  // When multi-org ships, `org.getPublic` should be tenant-aware — either
+  // derive from the request host (subdomain routing) or from a
+  // `/org/<slug>/...` path segment. The PulseMark wordmark itself stays
+  // org-agnostic because «Weekly Report» names the product artifact, not the
+  // tenant brand; only the small-caps Demo footnote line below it should swap
+  // per tenant.
   //
-  // UFB-070: initialOrg is server-fetched by the RSC wrapper (page.tsx)
-  // and passed as a prop so SSR HTML and client first paint agree — no
-  // hydration mismatch.
+  // initialOrg is server-fetched by the RSC wrapper (page.tsx) and passed as
+  // a prop so SSR HTML and client first paint agree — no hydration mismatch.
   const orgQ = useQuery({
     ...trpc.org.getPublic.queryOptions(),
     initialData: initialOrg,
   });
-  // UFB-060: fall back to generic DEFAULT_ORGANIZATION_IDENTITY, not a
-  // hard-coded brand. Real brand strings live in the Organization row.
+  // Fall back to generic DEFAULT_ORGANIZATION_IDENTITY, not a hard-coded
+  // brand. Real brand strings live in the Organization row.
   const org = isOrganizationPublic(orgQ.data)
     ? orgQ.data
     : DEFAULT_ORGANIZATION_IDENTITY;
@@ -120,7 +114,7 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
     defaultRedirectFor(sessionRole),
   );
 
-  // UFB-071 (2026-05-11): «Last session» resume hint. Read from
+  // «Last session» resume hint. Read from
   // localStorage in a client-only useEffect (never during render /
   // SSR) so the first paint matches the server-rendered HTML and the
   // hint pops in only when hydration has run. AUTH_STUB-only.
@@ -132,7 +126,7 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
     setLastRoleLoaded(true);
   }, []);
 
-  // UFB-033: never auto-redirect in AUTH_STUB mode. The API returns a
+  // Never auto-redirect in AUTH_STUB mode. The API returns a
   // DEV_SESSION fallback when no cookie is present, which previously caused
   // an infinite loop: landing redirects to /head/dashboard → proxy.ts sees
   // no cookie → 307 back to /?next=%2Fhead%2Fdashboard → repeat. In stub
@@ -192,8 +186,8 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
           outline without altering the visual design. */}
       <h1 className="sr-only">Weekly Report</h1>
       {/* Left panel — «Weekly Report» hero. PulseBackground renders the
-          static dark-green base + dot grid (the pulse/ECG motif was
-          removed 2026-06-23). PulseMark + TaglineCycler sit above it. */}
+          static dark-green base + dot grid. PulseMark + TaglineCycler sit
+          above it. */}
       <div className="relative hidden flex-1 flex-col items-start justify-center overflow-hidden p-16 text-white lg:flex">
         <PulseBackground />
         <div className="relative z-10 max-w-[480px]">
@@ -207,26 +201,24 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
         </div>
       </div>
 
-      {/* Right panel — single sign-in CTA. UFB-021: no role grid, default
-          to admin in dev-stub mode; role-switch happens after login via
-          the in-app dev role switcher. */}
+      {/* Right panel — single sign-in CTA. No role grid, default to admin in
+          dev-stub mode; role-switch happens after login via the in-app dev
+          role switcher. */}
       <div className="relative flex w-full flex-col items-center justify-center bg-white px-6 sm:px-10 lg:w-[480px] lg:flex-none">
         <div className="w-full max-w-[320px] text-center">
-          {/* UFB-060 (2026-05-11): brand mark removed from the right
-              column — the left panel already shows the «Weekly Report»
-              wordmark at full size, duplicating it on a 480px wide
-              sign-in column was visual noise. Right column is now pure
-              utility: a
-              quiet tagline + the sign-in CTA. The Fraunces font import
-              remains because nav-bar may use it for the in-app
-              brand-pill once authenticated. */}
+          {/* Right column carries no brand mark — the left panel already
+              shows the «Weekly Report» wordmark at full size, so duplicating
+              it on a 480px-wide sign-in column would be visual noise. Right
+              column is pure utility: a quiet tagline + the sign-in CTA. The
+              Fraunces font import remains because nav-bar may use it for the
+              in-app brand-pill once authenticated. */}
           <p className="mb-10 mt-2 text-[15px] text-[var(--color-muted-foreground)]">
             Status Reporting System
           </p>
 
-          {/* UFB-071: when a last-role hint exists, the primary CTA
-              points at that role's dev-login (one-click resume). Falls
-              back to admin in stub mode / SSO in real mode. */}
+          {/* When a last-role hint exists, the primary CTA points at that
+              role's dev-login (one-click resume). Falls back to admin in stub
+              mode / SSO in real mode. */}
           <a
             href={
               AUTH_STUB
@@ -280,15 +272,13 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
             </p>
           </div>
 
-          {/* UFB-071 (rev 2026-06-10, user feedback): the box no longer
-              collapses when no hint is stored — the collapse read as a
-              layout jump (skeleton appears, then vanishes), and without
-              a hint the login page offered NO way to pick a role. The
-              container now always renders at the same height in
-              AUTH_STUB mode (see stubCardClassName): skeleton while
-              loading, last-session hint when stored, or a direct role
-              picker otherwise. In production (AUTH_STUB=false) this
-              block never renders. */}
+          {/* The container always renders at the same height in AUTH_STUB
+              mode (see stubCardClassName): a collapse when no hint is stored
+              would read as a layout jump (skeleton appears, then vanishes),
+              and without a hint the login page would offer NO way to pick a
+              role. Skeleton while loading, last-session hint when stored, or a
+              direct role picker otherwise. In production (AUTH_STUB=false)
+              this block never renders. */}
           {AUTH_STUB && (
             <div className="mt-4">
               {!lastRoleLoaded ? (

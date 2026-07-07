@@ -1,5 +1,5 @@
 /**
- * UFB-035 / UFB-048: curated list of IANA timezones reused by both the
+ * Curated list of IANA timezones reused by both the
  * Reminders Tab (per-policy fire-at editor) and the Settings → Reminders
  * sub-tab (org-wide default timezone). Grouped by region so the select stays
  * human-readable. Adding a new region? Append a new group; do not flatten.

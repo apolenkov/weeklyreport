@@ -5,16 +5,12 @@ import { type NextRequest, NextResponse } from "next/server";
 // 16 docs: "Create a proxy.ts file in the project root, or inside `src` if
 // applicable, so that it is located at the same level as `pages` or `app`."
 // A file at apps/web/proxy.ts (the project root) is silently ignored when
-// src/app exists — Phase 27 (QA-01) discovered this empirically.
-// Phase 27 (QA-03) earlier moved the file *out* of src/ on the false
-// assumption that root-level was canonical; this commit restores the correct
-// src/-level location and the original comment from QA-03 is intentionally
-// inverted.
+// src/app exists.
 
 /**
  * Next.js 16 proxy.ts — replaces middleware.ts as of Next 16.
  *
- * Auth boundary for v5.0 (AUTH-01..AUTH-04):
+ * Auth boundary:
  *   - Requests to (app)/ routes without the `customreport_session` cookie
  *     are redirected to '/' (the login page) with the original path
  *     preserved as ?next=<encoded path>.
@@ -31,7 +27,7 @@ import { type NextRequest, NextResponse } from "next/server";
  *   - '/_next/*'       Next.js internals (assets, RSC, HMR)
  *   - '/favicon.ico'   static asset
  *
- * Role separation lives in v6.0 — this file only checks session existence.
+ * Role separation lives elsewhere — this file only checks session existence.
  */
 
 const COOKIE_NAME = "customreport_session";
@@ -93,12 +89,11 @@ export default function proxy(request: NextRequest): NextResponse {
 /**
  * Matcher: explicit allowlist of protected route prefixes.
  *
- * Switched from negative-lookahead exclusion to positive allowlist after
- * v5.0 integration tests revealed the lookahead matcher fired on every path
- * (including `/`, `/auth/*`, `/_next/*`, `/favicon.ico`) in Next.js 16.
- * Negative-lookahead with `|` alternation does not appear to work in
- * Next.js 16's matcher; the allowlist is unambiguous and matches the plain
- * reading of PROTECTED_PATH_PREFIXES in the proxy body above.
+ * Negative-lookahead exclusion with `|` alternation does not work in
+ * Next.js 16's matcher — the lookahead matcher fires on every path
+ * (including `/`, `/auth/*`, `/_next/*`, `/favicon.ico`). The allowlist is
+ * unambiguous and matches the plain reading of PROTECTED_PATH_PREFIXES in
+ * the proxy body above.
  */
 export const config = {
   matcher: ["/lead/:path*", "/head/:path*", "/reports/:path*", "/admin/:path*"],

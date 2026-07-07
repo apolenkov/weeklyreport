@@ -8,8 +8,8 @@ interface Props {
 }
 
 /**
- * Bare `/head/report` route. Phase 35-07 introduces the addressed view
- * `/head/report/[reportId]` (UX-15). This page is preserved for back-compat:
+ * Bare `/head/report` route. The addressed view `/head/report/[reportId]`
+ * is canonical. This page is preserved for back-compat:
  * legacy bookmarks / email links still land here, and the page redirects
  * (client-side `router.replace`) to the canonical URL once the active
  * reportId is known. The legacy `?period=<week>` query is no longer a

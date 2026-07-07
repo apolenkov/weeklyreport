@@ -1,10 +1,10 @@
 import type { Role } from "@customreport/shared";
 
 /**
- * AUTH-06 (Phase 29-06): pure role-visibility helper for nav link filtering.
+ * Pure role-visibility helper for nav link filtering.
  *
  * MIRRORS the REQUIRED-roles arrays in the four `(app)/{admin,head,lead,reports}/layout.tsx`
- * server-side gates from Phase 29-03. The two MUST stay in sync — if a layout
+ * server-side gates. The two MUST stay in sync — if a layout
  * widens or narrows its role set, this map widens or narrows too. The
  * server-side layout is the trust boundary; this helper is a pure UX hide.
  *

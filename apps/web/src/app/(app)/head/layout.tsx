@@ -4,11 +4,10 @@ import type { ReactNode } from "react";
 import { RoleGate } from "../../../shared/ui/role-gate";
 
 /**
- * AUTH-07 (Phase 29-03): SSR role gate for /head/* routes.
+ * SSR role gate for /head/* routes.
  *
  * Mirrors the api's headProcedure — only roles that act as head pass the
- * gate. admin is included because adminProcedure === headProcedure for
- * v6.0 (D-AUTH-03).
+ * gate. admin is included because adminProcedure === headProcedure.
  */
 const REQUIRED: readonly Role[] = ["head", "admin"];
 

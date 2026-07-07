@@ -5,8 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useTRPC } from "../../../lib/trpc-context";
 
 /**
- * UFB-054 / Phase 56-C: read-only «Groups» chip set for the Products
- * tab. Fetches `admin.listProductGroups({ productId })` and renders one
+ * Read-only «Groups» chip set for the Products tab.
+ * Fetches `admin.listProductGroups({ productId })` and renders one
  * pill per attached ReportingGroup. Editing is intentionally not wired
  * here — chip removal lives in the Groups tab edit dialog (the
  * `GroupProductsEditor` companion component). This keeps the Products

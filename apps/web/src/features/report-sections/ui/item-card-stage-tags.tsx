@@ -58,9 +58,8 @@ export function deriveItemCardStageTags(
 }
 
 /**
- * Footer stage-tag badges (extracted from ItemCard): the "No stage set"
- * warning chip, up to two visible stage-name pills, and a "+N" overflow pill.
- * Presentational only.
+ * Footer stage-tag badges: the "No stage set" warning chip, up to two visible
+ * stage-name pills, and a "+N" overflow pill. Presentational only.
  */
 export function ItemCardStageTagsRow({
   stageTags,

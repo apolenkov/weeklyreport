@@ -14,8 +14,8 @@ import {
 import { DeleteIcon, EditIcon } from "./risk-card-icons";
 
 /**
- * The canonical, display-ready stage tags for a risk (stage-label-canonicalization
- * 2.1): prefer stageIds, fall back to the legacy CSV, canonicalize every value so a
+ * The canonical, display-ready stage tags for a risk (stage-label-canonicalization):
+ * prefer stageIds, fall back to the legacy CSV, canonicalize every value so a
  * stored "Dev" reads as "Development" everywhere it is shown.
  */
 export function canonicalRiskStageTags(risk: {
@@ -37,9 +37,9 @@ interface RiskCardProps {
   readonly onEdit: (risk: RiskEntry) => void;
   readonly onDelete: (id: string) => void;
   /**
-   * simplify-stage-status-interaction (D5): one-click blocked <-> at-risk
-   * severity flip, without opening the full edit dialog. Omitted on read-only /
-   * foreign cards (their action row is a LockBadge, not buttons).
+   * simplify-stage-status-interaction: one-click blocked <-> at-risk severity
+   * flip, without opening the full edit dialog. Omitted on read-only / foreign
+   * cards (their action row is a LockBadge, not buttons).
    */
   readonly onToggleSeverity?: (risk: RiskEntry) => void;
 }
@@ -91,10 +91,9 @@ function deriveRiskCardState(
 }
 
 /**
- * One risk card (extracted from RisksSection): severity/product header, edit
- * + delete actions (or a foreign LockBadge when locked), the risk/impact/
- * mitigation summary, the F4 "select a stage" warning, and the unified
- * author + stage meta-row.
+ * One risk card: severity/product header, edit + delete actions (or a foreign
+ * LockBadge when locked), the risk/impact/mitigation summary, the "select a
+ * stage" warning, and the unified author + stage meta-row.
  */
 export function RiskCard({
   risk,
@@ -215,13 +214,13 @@ export function RiskCard({
           </div>
         </div>
       </div>
-      {/* F4: required-mark when product is at-risk/blocked but no stage selected */}
+      {/* Required-mark when product is at-risk/blocked but no stage selected */}
       {needsStage && (
         <p className="mt-2 text-[11px] font-semibold text-[var(--color-status-at-risk-fg)]">
           ⚠ Select at least one stage — required for at-risk/blocked products.
         </p>
       )}
-      {/* P5: unified [author …… chip] meta-row */}
+      {/* Unified [author …… chip] meta-row */}
       <MetaRow
         authorName={risk.authorName ?? sectionAuthorName}
         stageTags={stageTags}

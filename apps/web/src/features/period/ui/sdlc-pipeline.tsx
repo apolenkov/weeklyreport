@@ -54,7 +54,7 @@ interface SdlcPipelineProps {
     newStatus: StageStatus,
   ) => void;
   /**
-   * F1: Cross-author entries for shared products. Grouped by projectId;
+   * Cross-author entries for shared products. Grouped by projectId;
    * rendered as a subtle "Other contributors" row below each product card.
    */
   readonly crossAuthors?: readonly CrossAuthorEntry[];
@@ -79,7 +79,7 @@ const NO_OWN_STAGES_NOTE = "No stages assigned to you";
 // whole pipeline. Pure label — the count (computeCompleteness) is unchanged.
 const OWN_STAGES_LABEL = "Your stages";
 
-// rethink-pipeline-state-vs-completeness (D2): completeness ring geometry —
+// rethink-pipeline-state-vs-completeness: completeness ring geometry —
 // named so no magic numbers leak into the style object.
 const COMPLETENESS_RING_WIDTH = "1.5px";
 const COMPLETENESS_RING_STYLE = "dashed";
@@ -108,7 +108,7 @@ export function SdlcPipeline({
         {products.map((product) => {
           // Completeness reads the RAW (pre-floor) product so a risk-derived
           // severity floor never inflates the lead's own-input counter. The same
-          // raw product also feeds each chip its pre-floor status (W11 3.9), so a
+          // raw product also feeds each chip its pre-floor status, so a
           // chip floored by the lead's own risk reads "by risk" rather than
           // "status set".
           const rawProduct =
@@ -164,11 +164,9 @@ export function SdlcPipeline({
                 productHealthStatus(product, crossAuthors),
               )}
             >
-              {/* Product header — SDLC-1 (Phase 33-04): replace plain riskSummary
-              text with an inline-flex pill featuring a *pulsing* red dot
-              (`@keyframes risk-pulse` defined in globals.css). Mockup s2
-              uses this to draw the eye to active blockers without users
-              having to read the label. */}
+              {/* Product header — an inline-flex pill featuring a *pulsing* red
+              dot (`@keyframes risk-pulse` defined in globals.css) draws the eye
+              to active blockers without users having to read the label. */}
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]">
@@ -190,7 +188,7 @@ export function SdlcPipeline({
                     </span>
                   )}
                 </div>
-                {/* rethink-pipeline-state-vs-completeness (D2): own-input
+                {/* rethink-pipeline-state-vs-completeness: own-input
                 completeness affordance — RIGHT side, never the health hue.
                 A dashed/dotted outline ring reads "unfinished sketch" while
                 incomplete; an "N/M stages" counter pill gives the exact

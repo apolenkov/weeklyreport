@@ -15,10 +15,11 @@ import { useTRPC } from "../../../lib/trpc-context";
  * when the Telegram transport is configured. The seam is unchanged; only the
  * displayed name is the roadmap target.
  *
- * Phase 55 is seeds-only: there is no real bot, no user-binding UI, no
- * outbound flow beyond the admin smoke-test (which lives on the API
- * surface only, not exposed in this tab). The card stays Coming-Soon so a
- * head/admin reading the tab does not expect messaging to work yet.
+ * The messaging integration is seeds-only: there is no real bot, no
+ * user-binding UI, no outbound flow beyond the admin smoke-test (which lives
+ * on the API surface only, not exposed in this tab). The card stays
+ * Coming-Soon so a head/admin reading the tab does not expect messaging to
+ * work yet.
  */
 export function IntegrationsSubTab() {
   const trpc = useTRPC();
@@ -72,10 +73,9 @@ export function IntegrationsSubTab() {
         </div>
       </div>
 
-      {/* AI Integration — Phase 54 seeds-only; placeholder until provider
+      {/* AI Integration — seeds-only; placeholder until a provider
           is selected (Anthropic / Yandex / Llama). A single provider/model
-          selection drives every AI feature (summary, risk extraction, RAG).
-          TODO(Phase-54-activation) */}
+          selection drives every AI feature (summary, risk extraction, RAG). */}
       <div
         className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
         data-testid="integration-row-ai"

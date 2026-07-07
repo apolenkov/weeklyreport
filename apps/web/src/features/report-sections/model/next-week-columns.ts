@@ -2,9 +2,9 @@ import type { KanbanItem, Product } from "./mock-data";
 import { splitStageNames } from "./stage-tags";
 
 /**
- * Column model for the Next Week board (extracted from next-week-section.tsx):
- * one column per assigned product so empty products still get a "+ Add" CTA,
- * falling back to stage-tag grouping when `products` is not supplied.
+ * Column model for the Next Week board: one column per assigned product so
+ * empty products still get a "+ Add" CTA, falling back to stage-tag grouping
+ * when `products` is not supplied.
  */
 export interface ItemColumn {
   readonly key: string;

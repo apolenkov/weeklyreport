@@ -9,8 +9,7 @@ interface Props {
 }
 
 /**
- * Phase 35-07 (UX-15): addressed head report.
- * Phase 61 (robust-baking-aurora): adds inline form ↔ slides mode toggle via
+ * Addressed head report. Inline form ↔ slides mode toggle via
  * HeadReportShell. `?mode=slides` shows the head slide deck; default is form.
  */
 export default async function HeadReportByIdPage({

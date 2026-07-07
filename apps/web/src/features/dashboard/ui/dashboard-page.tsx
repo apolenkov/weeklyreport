@@ -31,13 +31,11 @@ export function DashboardPage() {
   const queryClient = useQueryClient();
   const [loadStalled, setLoadStalled] = useState(false);
   const [revokeAllOpen, setRevokeAllOpen] = useState(false);
-  // UFB-047 / Phase 49-01: brand label sourced from `auth.me.organization`
-  // (the singleton's `fullName`). Replaces the legacy
-  // `weeklyReport.get.departmentName` field that was dropped with the column.
+  // Brand label sourced from `auth.me.organization` (the singleton's `fullName`).
   const sessionState = useContext(SessionContext);
   const orgFullName = sessionState?.organization?.fullName ?? null;
 
-  // Perf (Vercel audit 2026-05-22): both are expensive portfolio aggregations;
+  // Perf: both are expensive portfolio aggregations;
   // a 60s staleTime avoids redundant refetches on remount/focus vs the 30s
   // global default. Shared query keys keep React Query dedup intact.
   const reviewQ = useQuery({
@@ -217,7 +215,7 @@ export function DashboardPage() {
     );
   }
 
-  // R3a: no active period — show empty state instead of error toast / spinner.
+  // No active period — show empty state instead of error toast / spinner.
   // weeklyQ.data.status === 'no-period' is a normal 200, never an error.
   if (weeklyQ.data.status === "no-period") {
     return (
@@ -247,10 +245,10 @@ export function DashboardPage() {
   });
   const { kpi, leads, blockedAtRisk, pendingLeads } = dashboard;
   // Section-reviews roll-up: the head's at-a-glance verdict state for every
-  // section, relocated here from the report body. A verdict may un-submit a
-  // section, so refresh the dashboard's own queries on mutation.
+  // section. A verdict may un-submit a section, so refresh the dashboard's own
+  // queries on mutation.
   const sectionReviewRows = toSectionReviewRows(weeklyQ.data.leadSections);
-  // UFB-047 / Phase 49-01: see `orgFullName` above.
+  // See `orgFullName` above.
   const departmentLabel = orgFullName ?? "CustomReport";
   const canSendReminder =
     weeklyQ.data.periodStatus !== "published" &&
@@ -274,7 +272,7 @@ export function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* SC-165: Revoke All submitted leads at once */}
+          {/* Revoke All submitted leads at once */}
           {canRevokeAll && (
             <button
               type="button"
@@ -288,14 +286,13 @@ export function DashboardPage() {
               Revoke All ({submittedCount})
             </button>
           )}
-          {/* head-surface-uat-polish (UAT 2026-06-24): the "View Status Report"
-              link was removed — it pointed at the current period, the same
-              destination as the always-present "Status" nav tab, so it was a
-              redundant duplicate. */}
+          {/* No "View Status Report" link here: it would point at the current
+              period, the same destination as the always-present "Status" nav
+              tab — a redundant duplicate. */}
         </div>
       </header>
 
-      {/* SC-165: Revoke All confirm dialog */}
+      {/* Revoke All confirm dialog */}
       <ConfirmationDialog
         open={revokeAllOpen}
         onClose={() => setRevokeAllOpen(false)}
@@ -309,15 +306,15 @@ export function DashboardPage() {
         variant="revoke"
       />
 
-      {/* UX-18 (Phase 35-08): live activity feed at the top of the
-          dashboard so head/admin sees who's already filed and who hasn't
-          without drilling into every section. */}
+      {/* Live activity feed at the top of the dashboard so head/admin sees
+          who's already filed and who hasn't without drilling into every
+          section. */}
       <ActivityLivePanel />
 
       {/* KPI Cards */}
       <KpiCards data={kpi} />
 
-      {/* D-29: head/admin need the per-lead submission table on the dashboard,
+      {/* Head/admin need the per-lead submission table on the dashboard,
           not only the aggregate cards and alert row. */}
       <LeadSummaryTable
         leads={leads}
@@ -333,14 +330,13 @@ export function DashboardPage() {
       />
 
       {/* Section-reviews roll-up: per-section verdict state for the whole
-          period, merged into the dashboard review area (relocated from the
-          report body). Self-suppresses when nothing is reviewable. */}
+          period. Self-suppresses when nothing is reviewable. */}
       <SectionReviewStrip
         sections={sectionReviewRows}
         onMutated={() => refetchDashboardQueries(false)}
       />
 
-      {/* reopen-request-lifecycle (D2): head-side queue of pending reopen
+      {/* reopen-request-lifecycle: head-side queue of pending reopen
           requests with inline approve/reject. Renders nothing when the queue
           is empty. */}
       <ReopenRequestsCard />

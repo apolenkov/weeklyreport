@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 
 /**
- * MOB-04 (Phase 30-05): native <select> for admin-tab navigation at narrow
+ * Native <select> for admin-tab navigation at narrow
  * widths. The desktop anchor-tab list (apps/web/src/app/(app)/admin/page.tsx)
  * stays untouched; this component renders only at sm- viewports via the
  * `sm:hidden` Tailwind class.
@@ -28,11 +28,11 @@ const TABS: readonly { value: AdminTab; label: string }[] = [
   { value: "users", label: "Users" },
   { value: "groups", label: "Groups" },
   { value: "products", label: "Products" },
-  // UFB-052 (Phase 51-B): period lifecycle list (Active/Archive split).
+  // Period lifecycle list (Active/Archive split).
   { value: "periods", label: "Periods" },
   { value: "reminders", label: "Reminders" },
   { value: "reopen", label: "Reopen" },
-  // Phase 35-06: BullMQ DLQ admin UI — failed-job list + retry.
+  // BullMQ DLQ admin UI — failed-job list + retry.
   { value: "jobs", label: "Jobs" },
   { value: "actions", label: "Actions" },
   { value: "settings", label: "Settings" },

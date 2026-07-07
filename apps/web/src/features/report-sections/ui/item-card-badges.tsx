@@ -10,10 +10,9 @@ interface ItemCardBadgesProps {
 }
 
 /**
- * The item card's top-left badge cluster (extracted from ItemCard): the
- * status pill, an optional priority-rank pill, and the published-record
- * marker. Presentational only — the status/lock derivation stays on the
- * card.
+ * The item card's top-left badge cluster: the status pill, an optional
+ * priority-rank pill, and the published-record marker. Presentational only —
+ * the status/lock derivation stays on the card.
  */
 export function ItemCardBadges({
   badge,

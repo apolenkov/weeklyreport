@@ -23,7 +23,7 @@ export interface MockUser {
   groupId: string;
   // Reporting-group display label (NOT an HR field — distinct from `position`).
   department: string;
-  // A2 (UAT-v7 2026-05-12): soft-deactivation flag from the API.
+  // soft-deactivation flag from the API.
   isActive: boolean;
 }
 
@@ -32,7 +32,7 @@ export interface MockGroup {
   name: string;
   description: string | null;
   archived: boolean;
-  // UFB-039: optional FK to a head/admin user (display name resolved via
+  // optional FK to a head/admin user (display name resolved via
   // AdminSnapshot.users on the consumer side).
   headUserId: string | null;
 }
@@ -76,13 +76,13 @@ export interface MockReminder {
   timezone: string;
   version: number;
   reportId: string | null;
-  /** UFB-036 (Phase 44-04): policy FK so derived rules can be grouped. */
+  /** policy FK so derived rules can be grouped. */
   policyId: string | null;
 }
 
 /**
- * UFB-036 (Phase 44-04): presentation type for the Reminders Tab policy
- * editor. Mirrors `reminderPolicySchema` 1:1.
+ * Presentation type for the Reminders Tab policy editor. Mirrors
+ * `reminderPolicySchema` 1:1.
  */
 export interface MockReminderPolicy {
   id: string;
@@ -95,12 +95,9 @@ export interface MockReminderPolicy {
   validUntil: Date | null;
 }
 
-// UFB-048 (Phase 48-B): MockSettings expanded with 9 new fields. Order
-// mirrors the tab grouping in settings-tab.tsx (Periods → Reminders →
-// Notifications) for readability.
-// UFB-047 / Phase 49-01: legacy `departmentName` removed.
-// UFB-051 (Phase 51-A): +8 period-cycle knobs on the Periods sub-tab —
-// see comment in `appSettingsSchema` for the semantics.
+// Order mirrors the tab grouping in settings-tab.tsx (Periods → Reminders →
+// Notifications) for readability. Period-cycle knobs live on the Periods
+// sub-tab — see the comment in `appSettingsSchema` for the semantics.
 export interface MockSettings {
   autoCreatePeriods: boolean;
   defaultDeadlineDays: number;
@@ -111,7 +108,7 @@ export interface MockSettings {
   allowLateSubmissions: boolean;
   autoPublishAfterDeadline: boolean;
   autoArchiveWeeksAfterPublish: number;
-  // UFB-051 period-cycle knobs (consumer-less ones removed in
+  // period-cycle knobs (consumer-less ones removed in
   // admin-settings-surface-cleanup)
   deadlineTime: string; // HH:MM (24h)
   allowReopenAfterPublish: boolean;
@@ -514,14 +511,14 @@ export const MOCK_REMINDERS: MockReminder[] = [
 export const MOCK_SETTINGS: MockSettings = {
   autoCreatePeriods: true,
   defaultDeadlineDays: 5,
-  // UFB-048 (Phase 48-B) defaults
+  // Periods tab defaults
   periodLengthDays: 7,
   workingDays: "mon-fri",
   gracePeriodHours: 24,
   allowLateSubmissions: true,
   autoPublishAfterDeadline: false,
   autoArchiveWeeksAfterPublish: 0,
-  // UFB-051 defaults — mirror SQL.
+  // mirror the SQL defaults
   deadlineTime: "18:00",
   allowReopenAfterPublish: true,
   reopenWindowHours: 72,

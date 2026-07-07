@@ -30,16 +30,16 @@ function nextMonday(from: Date): string {
 
 export interface CreatePeriodValues {
   periodStart: Date;
-  // UFB-067: nullable in edit-mode so the dialog can clear an existing
-  // weekLabel via explicit `null`. Create-mode submitters never pass
-  // `null` here (empty input → undefined / omit).
+  // nullable in edit-mode so the dialog can clear an existing weekLabel via
+  // explicit `null`. Create-mode submitters never pass `null` here (empty
+  // input → undefined / omit).
   periodEnd?: Date;
   deadline?: Date;
   weekLabel?: string | null;
 }
 
 /**
- * UFB-067: render a UTC Date as the `YYYY-MM-DD` value that
+ * Render a UTC Date as the `YYYY-MM-DD` value that
  * `<input type="date">` expects. Used both by the next-Monday default
  * and by the edit-mode prefill of an existing row's envelope. The slice
  * matches the existing create-path `${periodStart}T00:00:00.000Z` round-trip
@@ -70,7 +70,7 @@ export function CreatePeriodDialog({
   isPending,
 }: {
   /**
-   * UFB-067: `mode === 'create'` opens the dialog as «New period» with
+   * `mode === 'create'` opens the dialog as «New period» with
    * a scheduler-aligned default; `mode === 'edit'` opens it as «Edit period»
    * prefilled from `initialValues` (the row being edited).
    */
@@ -115,7 +115,7 @@ export function CreatePeriodDialog({
       : undefined;
     const deadlineDate = deadline ? new Date(`${deadline}:00.000Z`) : undefined;
 
-    // UFB-067: weekLabel clear semantics differ by mode.
+    // weekLabel clear semantics differ by mode.
     // - create: empty → `undefined` (omit from payload).
     // - edit:   empty → `null` (explicit clear of an existing label).
     let weekLabelValue: string | null | undefined;
@@ -134,8 +134,8 @@ export function CreatePeriodDialog({
     });
   }
 
-  // A6b: deadline range validation.
-  // Deadline must fall within [periodStart, periodEnd] when both are set.
+  // Deadline range validation: must fall within [periodStart, periodEnd]
+  // when both are set.
   const deadlineError: string | null = (() => {
     if (!deadline) return null;
     // Parse the datetime-local value as UTC wall-clock to match the submit

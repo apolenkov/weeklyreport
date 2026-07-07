@@ -1,8 +1,8 @@
 /**
- * UFB-062: dynamic tagline cycler on the landing hero.
+ * Dynamic tagline cycler on the landing hero.
  *
  * Driven by React state + setTimeout chain (deterministic cleanup,
- * no setInterval anti-pattern — see UFB-058 comment history).
+ * no setInterval anti-pattern).
  *
  * Rotation schedule: 3 s visible → 250 ms fade-out → swap → 250 ms fade-in.
  * On mount, picks a random start index so repeat visits feel fresh.

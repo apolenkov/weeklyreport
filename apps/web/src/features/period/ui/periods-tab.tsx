@@ -15,7 +15,7 @@ import { PlusIcon } from "./periods-tab-icons";
 import { PeriodTable } from "./periods-tab-table";
 
 /**
- * UFB-052 (Phase 51-B), UFB-067: Admin → Periods tab.
+ * Admin → Periods tab.
  *
  *   ┌─ Active ────────────────────────────────────────────┐
  *   │  rows with periodState ∈ {scheduled, open, published}│
@@ -27,16 +27,14 @@ import { PeriodTable } from "./periods-tab-table";
  *   │  collapsed by default; query is gated (opt-in)     │
  *   └────────────────────────────────────────────────────┘
  *
- * UFB-067: row-level actions surface as INLINE ICON BUTTONS rather than
- * the previous kebab dropdown. The row table, icon set, the create/edit
- * dialog, and the seven lifecycle mutations live in sibling modules
- * (periods-tab-table / periods-tab-icons / periods-tab-dialog /
- * use-period-mutations) extracted in the R3a-4 max-lines split.
+ * Row-level actions surface as inline icon buttons. The row table, icon
+ * set, the create/edit dialog, and the seven lifecycle mutations live in
+ * sibling modules (periods-tab-table / periods-tab-icons /
+ * periods-tab-dialog / use-period-mutations).
  *
- * `period.publish` and `period.reopen` are existing head-procedures
- * (admin role is aliased to head, so they're callable here). Archive +
- * Unarchive are admin-procedures from 51-B. updatePeriodManual is the
- * new 67 surface.
+ * `period.publish` and `period.reopen` are head-procedures (admin role is
+ * aliased to head, so they're callable here). Archive + Unarchive are
+ * admin-procedures. updatePeriodManual backs manual edits.
  */
 export function PeriodsTab() {
   const trpc = useTRPC();
@@ -46,19 +44,19 @@ export function PeriodsTab() {
   // a single round-trip (the active bucket).
   const [showArchive, setShowArchive] = useState(false);
 
-  // UFB-063: «New period» dialog state. Opens via header button; submits
+  // «New period» dialog state. Opens via header button; submits
   // to admin.createPeriodManual; on success invalidates the period
   // lists so the table reflects the new row without a full reload.
   const [showCreate, setShowCreate] = useState(false);
 
-  // UFB-067: edit-mode dialog state. The same component handles both
+  // edit-mode dialog state. The same component handles both
   // create and edit; `editingRow` !== null means the dialog opens in
   // edit-mode prefilled from this row. Submitting calls
   // admin.updatePeriodManual; on success invalidates the lists and
   // closes the dialog.
   const [editingRow, setEditingRow] = useState<PeriodListItem | null>(null);
 
-  // A27: delete confirmation state. When user clicks delete, we set this
+  // delete confirmation state. When user clicks delete, we set this
   // to the row and show a confirmation dialog.
   const [deleteConfirm, setDeleteConfirm] = useState<PeriodListItem | null>(
     null,
@@ -84,7 +82,7 @@ export function PeriodsTab() {
     }
   }, [editingRow]);
 
-  // A27: Esc-to-close for the delete confirmation dialog (matches the
+  // Esc-to-close for the delete confirmation dialog (matches the
   // create/edit dialog pattern below). Backdrop click and Cancel also close.
   useEffect(() => {
     if (!deleteConfirm) return;
@@ -98,7 +96,7 @@ export function PeriodsTab() {
     return () => document.removeEventListener("keydown", handleKey);
   }, [deleteConfirm]);
 
-  // A3: text search over active periods (weekLabel + date range)
+  // text search over active periods (weekLabel + date range)
   const [search, setSearch] = useState("");
 
   const activeQuery = useQuery(
@@ -240,7 +238,7 @@ export function PeriodsTab() {
         }}
       />
 
-      {/* UFB-063: «New period» creation dialog ----------------------- */}
+      {/* «New period» creation dialog ----------------------- */}
       {showCreate && (
         <CreatePeriodDialog
           mode="create"
@@ -261,7 +259,7 @@ export function PeriodsTab() {
         />
       )}
 
-      {/* UFB-067: «Edit period» dialog — same component, edit mode --- */}
+      {/* «Edit period» dialog — same component, edit mode --- */}
       {editingRow && (
         <CreatePeriodDialog
           mode="edit"
@@ -277,7 +275,7 @@ export function PeriodsTab() {
         />
       )}
 
-      {/* A27: Delete confirmation dialog */}
+      {/* Delete confirmation dialog */}
       {deleteConfirm && (
         <PeriodsDeleteConfirmDialog
           isPending={deleteMut.isPending}

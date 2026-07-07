@@ -17,7 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTRPC } from "../../../lib/trpc-context";
 
 /**
- * UX-18 (Phase 35-08): "Submission Activity" panel.
+ * "Submission Activity" panel.
  *
  * Renders one row per lead's section in the open report period with a
  * status pill (Draft / Submitted), counts (items / risks /
@@ -126,8 +126,8 @@ function ActivityRow({
   readonly row: ActivityLiveRow;
   readonly reportId: string;
 }) {
-  // 35-07 (UX-15): switched to addressed URL `/head/report/<reportId>`.
-  // Links always use the addressed form so they're shareable / bookmarkable.
+  // Links always use the addressed URL form `/head/report/<reportId>` so
+  // they're shareable / bookmarkable.
   const href = `/head/report/${encodeURIComponent(reportId)}?authorId=${encodeURIComponent(row.leadId)}`;
   const contentCount =
     row.itemCount + row.riskCount + row.decisionCount + row.priorityCount;
@@ -231,7 +231,7 @@ function StatusPill({
 
 // Avatar initials via the canonical shared helper (surname-first ФИО), with
 // this surface's "??" placeholder for an empty name. The token logic lives once
-// in @customreport/shared (see commit 8fd7e8bf — four cloned copies diverged).
+// in @customreport/shared.
 function initials(name: string): string {
   return sharedInitialsFromName(name) || "??";
 }

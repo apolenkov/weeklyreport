@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { useTRPC } from "../../lib/trpc-context";
 
 /**
- * Phase 48-C (UFB-038): centralised role-guard wrapper.
+ * Centralised role-guard wrapper.
  *
  * Renders {children} only when the current session role matches `role`.
  * When `role` is an array, the gate passes if the session role is in the

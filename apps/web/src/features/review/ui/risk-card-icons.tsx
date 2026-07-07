@@ -1,9 +1,7 @@
 "use client";
 
 /**
- * Edit / delete glyphs for the risk cards. Extracted from
- * `risks-section.tsx` to keep that file within the max-lines budget
- * (unify-risk-stage-status added the chip-prefill dialog wiring there).
+ * Edit / delete glyphs for the risk cards.
  */
 
 export function EditIcon() {

@@ -12,9 +12,8 @@ import {
 import type { PeriodTableProps } from "./periods-tab-table";
 
 /**
- * UFB-067: inline icon-button row for per-row lifecycle actions (extracted
- * from periods-tab-table.tsx). Replaces the previous 3-dot kebab dropdown
- * (UAT-2026-05-11 feedback: «иконки прямо в строке проще, чем выпадашка»).
+ * Inline icon-button row for per-row lifecycle actions. Icons sit directly
+ * in the row (simpler for users than a kebab dropdown).
  *
  * Visibility rules (driven by server-precomputed flags so the UI does
  * not have to know the reopen-policy or archive-state rules):
@@ -26,18 +25,13 @@ import type { PeriodTableProps } from "./periods-tab-table";
  *                  it for un-clicked rows).
  *   - Reopen     — only when `periodState === 'published' && canReopen`.
  *                  `canReopen` is server-computed from the master switch
- *                  + reopen-window math (51-A AppSettings).
+ *                  + reopen-window math.
  *   - Archive    — only when `canArchive` (skips already-archived rows).
  *   - Unarchive  — only when `periodState === 'archived'`.
  *
  * Each icon is 32×32 with a hover state + `aria-label` + `title`. The
- * `data-testid` shape mirrors the previous kebab menu's item testIds so
- * existing tests that asserted on `action-publish-{id}` etc. still resolve;
- * the now-removed `action-menu-trigger-{id}` selector has no replacement
- * because the dropdown trigger no longer exists.
- *
- * No dropdown = no portal = no overflow clipping = the 51-B portal
- * workaround disappears with this refactor.
+ * `data-testid` shape stays `action-<verb>-{id}` so tests asserting on
+ * `action-publish-{id}` etc. resolve.
  */
 export function ActionIconRow({
   row,
@@ -96,7 +90,7 @@ export function ActionIconRow({
           icon={<UnarchiveIcon />}
         />
       )}
-      {/* A27: Delete button. Show when not published, disabled when published. */}
+      {/* Delete button. Show when not published, disabled when published. */}
       {row.periodStatus === "published" ? (
         <IconButton
           testId={`action-delete-${row.id}`}

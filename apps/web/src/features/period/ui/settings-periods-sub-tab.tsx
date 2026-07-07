@@ -21,14 +21,13 @@ export function PeriodsSubTab({
 
   function handleSave() {
     // PATCH semantics — only fields owned by this sub-tab go on the wire.
-    // UFB-047 / Phase 49-01: `departmentName` is no longer part of the
-    // payload; brand identity lives on the Organization singleton (Identity
-    // tab) and is mutated via `admin.updateOrganization`.
-    // UFB-051: the period-cycle knobs ride the same PATCH because they live on
-    // this Periods sub-tab. Each field below has a live consumer (the
-    // period-creator / auto-publisher / auto-archiver schedulers and the
-    // request-path late-submission and reopen gates). The four consumer-less
-    // knobs were removed in admin-settings-surface-cleanup.
+    // `departmentName` is not part of the payload; brand identity lives on the
+    // Organization singleton (Identity tab) and is mutated via
+    // `admin.updateOrganization`.
+    // The period-cycle knobs ride the same PATCH because they live on this
+    // Periods sub-tab. Each field below has a live consumer (the period-creator
+    // / auto-publisher / auto-archiver schedulers and the request-path
+    // late-submission and reopen gates).
     updateSettingsMut.mutate({
       autoCreatePeriods: draft.autoCreatePeriods,
       defaultDeadlineDays: draft.defaultDeadlineDays,
@@ -49,15 +48,11 @@ export function PeriodsSubTab({
 
   return (
     <div className="max-w-lg space-y-5">
-      {/* UFB-047 / Phase 49-01: legacy `departmentName` deprecation banner
-          + input removed alongside the AppSettings column. Brand identity
-          (short + full name) is owned by the Identity tab. */}
-
       <PeriodBaseFields draft={draft} setDraft={setDraft} />
 
       {/* ─────────────────────────────────────────────────────────────
-          UFB-051 — Period-cycle knobs (deadline-time default + reopen
-          gating). All have live consumers; see PeriodCycleFields.
+          Period-cycle knobs (deadline-time default + reopen gating). All
+          have live consumers; see PeriodCycleFields.
           ───────────────────────────────────────────────────────────── */}
       <PeriodCycleFields draft={draft} setDraft={setDraft} />
 

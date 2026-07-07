@@ -9,14 +9,14 @@ import {
 import Link from "next/link";
 
 /**
- * AUTH-07 (Phase 29-03): shared 403 page composed into each (app)/route-group
- * layout when the SSR role check fails.
+ * Shared 403 page composed into each (app)/route-group layout when the SSR
+ * role check fails.
  *
- * T4 mitigation: only `requiredRoles` is rendered into the DOM. The user's
- * actual role is intentionally NOT displayed, so a hostile viewer cannot
- * enumerate role state by hitting protected routes. `homeHref` is a
- * pre-resolved path the caller computes from the session (via `roleHomePath`,
- * or `/` for anonymous), keeping this component role-agnostic.
+ * Only `requiredRoles` is rendered into the DOM. The user's actual role is
+ * intentionally NOT displayed, so a hostile viewer cannot enumerate role
+ * state by hitting protected routes. `homeHref` is a pre-resolved path the
+ * caller computes from the session (via `roleHomePath`, or `/` for
+ * anonymous), keeping this component role-agnostic.
  */
 export interface ForbiddenPageProps {
   readonly requiredRoles: readonly Role[];

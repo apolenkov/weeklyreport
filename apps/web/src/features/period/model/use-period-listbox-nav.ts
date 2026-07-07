@@ -8,7 +8,7 @@ import {
 } from "react";
 
 const SWIPE_THRESHOLD_PX = 50;
-// Gap between the trigger and the portaled listbox panel (D3).
+// Gap between the trigger and the portaled listbox panel.
 const PERIOD_PANEL_GAP_PX = 4;
 
 interface PeriodListboxNavArgs {
@@ -22,10 +22,10 @@ interface PeriodListboxNavArgs {
 }
 
 /**
- * Custom listbox (D3) + swipe-gesture behaviour for PeriodNavigator, extracted
- * so the component focuses on rendering. Native <option> cannot render badge
- * markup, so the select is replaced by a trigger + portaled listbox: focus
- * stays on the trigger and the highlighted option is tracked via
+ * Custom listbox + swipe-gesture behaviour for PeriodNavigator, kept out of
+ * the component so it focuses on rendering. Native <option> cannot render
+ * badge markup, so the select is replaced by a trigger + portaled listbox:
+ * focus stays on the trigger and the highlighted option is tracked via
  * aria-activedescendant (roving without DOM focus).
  */
 export function usePeriodListboxNav({
@@ -37,7 +37,7 @@ export function usePeriodListboxNav({
   onPrev,
   onNext,
 }: PeriodListboxNavArgs) {
-  // W4: per-instance scoped listbox/option ids so two navigators on one page
+  // Per-instance scoped listbox/option ids so two navigators on one page
   // never collide on the DOM ids that aria-controls / aria-activedescendant
   // reference.
   const listboxId = `period-listbox-${instanceId}`;
@@ -143,7 +143,7 @@ export function usePeriodListboxNav({
     }
   }
 
-  // Phase 33-04: swipe gesture. Left = next week, right = previous week.
+  // Swipe gesture. Left = next week, right = previous week.
   const touchStartXRef = useRef<number | null>(null);
   function handleTouchStart(e: ReactTouchEvent<HTMLDivElement>) {
     const t = Array.from(e.touches).at(0);

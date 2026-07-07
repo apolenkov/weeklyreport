@@ -13,21 +13,20 @@ import { useTRPC } from "../../../lib/trpc-context";
 import type { MockProduct } from "../../../shared/lib/admin-mock-data";
 
 /**
- * UFB-054 / Phase 56-C: «Products attached» section inside the Groups
- * tab edit dialog.
+ * «Products attached» section inside the Groups tab edit dialog.
  *
  * Reads `admin.listGroupProducts({ groupId })` for the current group
  * and renders a checkbox toggle per non-archived product. Products already
- * owned by another group are shown as locked, because the B1 invariant is
- * one owning group per product. Toggling an attached product runs
+ * owned by another group are shown as locked, because a product has exactly
+ * one owning group. Toggling an attached product runs
  * `admin.detachProductFromGroup`; toggling a free product runs
  * `admin.attachProductToGroup`. Both mutations are idempotent on the server
- * (Phase 56-B) so double-clicks are safe.
+ * so double-clicks are safe.
  *
  * The component is intentionally self-contained — it owns its own
  * query/cache key and does not coordinate with the parent `GroupsTab`
  * outside the simple `(groupId, products[])` contract. This keeps the
- * blast radius of 56-C tiny and lets the broader admin-snapshot cache
+ * blast radius tiny and lets the broader admin-snapshot cache
  * (queried by the rest of the admin tabs) stay untouched.
  */
 export function GroupProductsEditor({
@@ -53,9 +52,10 @@ export function GroupProductsEditor({
   const attachMut = useMutation(
     trpc.admin.attachProductToGroup.mutationOptions({
       onSuccess: async (_data, variables) => {
-        // Attach may be a reassign (B1 invariant: product moves from old
-        // group to new group). Invalidate ALL listGroupProducts queries so
-        // the old group's list also refreshes, not just the current group.
+        // Attach may be a reassign: a product has one owning group, so it
+        // moves from old group to new group. Invalidate ALL listGroupProducts
+        // queries so the old group's list also refreshes, not just the
+        // current group.
         await Promise.all([
           qc.invalidateQueries(trpc.admin.listGroupProducts.pathFilter()),
           qc.invalidateQueries({

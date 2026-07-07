@@ -55,10 +55,9 @@ export interface ReopenRequest {
 }
 
 /**
- * One reopen-request card (extracted from reopen-tab.tsx): requester +
- * status chip, period/submitted meta, the reason/head-comment blocks, and
- * the inline approve/reject responder when this card is the one being
- * answered.
+ * One reopen-request card: requester + status chip, period/submitted meta, the
+ * reason/head-comment blocks, and the inline approve/reject responder when this
+ * card is the one being answered.
  */
 export function ReopenRequestCard({
   request: r,

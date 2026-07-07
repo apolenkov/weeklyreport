@@ -11,8 +11,8 @@ function statusLabel(status: ReportSectionReadModel["status"]): string {
 
 /**
  * In-report per-section verdict control, mounted only in review mode. Scoped to
- * the sections the caller can act on so a designated viewer-reviewer keeps a
- * verdict home once the head-only roll-up strip moved to the dashboard. Like the
+ * the sections the caller can act on, giving a designated viewer-reviewer a
+ * verdict home (the head-only roll-up strip lives on the dashboard). Like the
  * strip, it renders NO publish/lock control — a viewer-reviewer judges but never
  * publishes. Self-suppresses when the caller can review nothing.
  */

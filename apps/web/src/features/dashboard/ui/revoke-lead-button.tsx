@@ -14,7 +14,7 @@ interface RevokeSectionButtonProps {
 }
 
 /**
- * Per-lead Revoke button for the head dashboard (SC-160).
+ * Per-lead Revoke button for the head dashboard.
  *
  * Reuses the existing `leadForm.revoke` tRPC mutation — no new backend logic.
  * Shows a ConfirmationDialog before mutating; toasts on success or error.
