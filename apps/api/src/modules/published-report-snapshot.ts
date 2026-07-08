@@ -203,11 +203,9 @@ export function computeWorstStatus(
 ): TrafficLightStatus | null {
   if (statuses.length === 0) return null;
 
-  let worst: TrafficLightStatus = "green";
-  for (const status of statuses) {
-    if (statusSeverity[status] > statusSeverity[worst]) {
-      worst = status;
-    }
-  }
-  return worst;
+  return statuses.reduce<TrafficLightStatus>(
+    (worst, status) =>
+      statusSeverity[status] > statusSeverity[worst] ? status : worst,
+    "green",
+  );
 }
