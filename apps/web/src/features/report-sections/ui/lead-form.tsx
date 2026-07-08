@@ -1123,8 +1123,8 @@ export function LeadForm({
         prev.decisions.flatMap((d) => (d.id ? [[d.id, d] as const] : [])),
       );
       // Strip foreign entries — they are read-only and must not bleed into the draft.
-      next = next.filter((d) => !d.foreign);
-      const merged = next.map((d) => {
+      const editableDecisions = next.filter((d) => !d.foreign);
+      const merged = editableDecisions.map((d) => {
         const existing = existingById.get(d.id);
         const deadline = d.deadline ? new Date(d.deadline) : null;
         // activity-first-class: XOR parent — an activity-parented decision clears
@@ -1231,11 +1231,11 @@ export function LeadForm({
       // carries impact + mitigation (filled by the modal-edit dialog), so
       // we propagate all three text fields onto raw rows.
       // Strip foreign entries — they are read-only and must not bleed into the draft.
-      next = next.filter((r) => !r.foreign);
+      const editableRisks = next.filter((r) => !r.foreign);
       const existingById = new Map(
         prev.risks.flatMap((r) => (r.id ? [[r.id, r] as const] : [])),
       );
-      const merged = next.map((r) => {
+      const merged = editableRisks.map((r) => {
         const existing = r.id ? existingById.get(r.id) : undefined;
         // activity-first-class: XOR parent — an activity-parented row clears
         // projectId and carries no stage; a product row keeps today's shape.
@@ -1308,7 +1308,7 @@ export function LeadForm({
   function makeItemsChangeHandler(itemType: "current" | "next") {
     return (next: KanbanItem[]) => {
       // Strip foreign entries — they are read-only and must not bleed into the draft.
-      next = next.filter((kb) => !kb.foreign);
+      const editableItems = next.filter((kb) => !kb.foreign);
       setDraftSection((prev) => {
         if (!prev) return prev;
         const existingById = new Map(
@@ -1316,7 +1316,7 @@ export function LeadForm({
             it.type === itemType && it.id ? [[it.id, it] as const] : [],
           ),
         );
-        const mergedTyped = next.map((kb) => {
+        const mergedTyped = editableItems.map((kb) => {
           const raw = statusToRawFields(kb.status);
           const existing = existingById.get(kb.id);
           // activity-first-class: XOR parent — an activity-parented row clears

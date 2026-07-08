@@ -333,13 +333,14 @@ export default defineConfig([
       // rule wrongly rejects — a false positive, not a real a11y gap.
       "jsx-a11y/label-has-associated-control": "off",
 
-      // Immutability regime (functional/immutable-by-default standard): the free,
-      // zero-firing floor. prefer-const forbids a never-reassigned `let`, no-var
-      // bans function-scoped `var`. The `let` ban itself (no-restricted-syntax,
-      // with per-site justified survivors) lives in its own folder-scoped block
-      // below.
+      // Immutability regime (functional/immutable-by-default standard): prefer-const
+      // forbids a never-reassigned `let`, no-var bans function-scoped `var`, and
+      // no-param-reassign forbids parameter rebinding. The `let` ban itself
+      // (no-restricted-syntax, with per-site justified survivors) lives in its own
+      // folder-scoped block below.
       "prefer-const": "error",
       "no-var": "error",
+      "no-param-reassign": ["error", { props: false }],
 
       // ESLint core rules (warn = won't gate)
       "prefer-rest-params": "error",
