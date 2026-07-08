@@ -72,11 +72,8 @@ export function LeadHistorySidebar({
   // Pattern: longest run of consecutive submitted weeks at the top of the list
   // (entries are newest-first per `mapHistoryEntries`). Captures "current
   // streak" — the number that matters at a glance.
-  let streak = 0;
-  for (const e of entries) {
-    if (isCompletedWeek(e)) streak++;
-    else break;
-  }
+  const firstIncompleteIndex = entries.findIndex((e) => !isCompletedWeek(e));
+  const streak = firstIncompleteIndex === -1 ? total : firstIncompleteIndex;
 
   return (
     <aside aria-label={summaryTitle}>
