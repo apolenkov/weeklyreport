@@ -741,6 +741,7 @@ export default defineConfig([
     files: [
       "apps/api/src/lib/**/*.ts",
       "apps/api/src/modules/published-report-snapshot.ts",
+      "apps/api/src/modules/reminders/**/*.ts",
       "apps/api/src/modules/report-sections/**/*.ts",
     ],
     ignores: ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**"],
