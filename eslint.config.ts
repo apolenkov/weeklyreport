@@ -748,6 +748,7 @@ export default defineConfig([
       "apps/web/src/features/period/ui/lead-history-sidebar.tsx",
       "apps/web/src/features/period/ui/periods-tab-dialog.tsx",
       "apps/web/src/features/report-sections/model/lead-cross-author.ts",
+      "apps/web/src/lib/client-logger.ts",
       "apps/web/src/lib/stage-status.ts",
     ],
     ignores: ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**"],
