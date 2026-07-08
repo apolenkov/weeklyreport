@@ -118,13 +118,9 @@ export function CreatePeriodDialog({
     // weekLabel clear semantics differ by mode.
     // - create: empty → `undefined` (omit from payload).
     // - edit:   empty → `null` (explicit clear of an existing label).
-    let weekLabelValue: string | null | undefined;
     const trimmed = weekLabel.trim();
-    if (trimmed === "") {
-      weekLabelValue = isEdit ? null : undefined;
-    } else {
-      weekLabelValue = trimmed;
-    }
+    const weekLabelValue =
+      trimmed === "" ? (isEdit ? null : undefined) : trimmed;
 
     onSubmit({
       periodStart: startDate,

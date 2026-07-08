@@ -174,14 +174,13 @@ export function ProductsTab({
   }
 
   const filteredProducts = useMemo(() => {
-    let list = productFilter
+    const productFiltered = productFilter
       ? products.filter((p) => p.id === productFilter)
       : products;
     const needle = localSearch.trim().toLowerCase();
-    if (needle) {
-      list = list.filter((p) => p.name.toLowerCase().includes(needle));
-    }
-    return list;
+    return needle
+      ? productFiltered.filter((p) => p.name.toLowerCase().includes(needle))
+      : productFiltered;
   }, [products, productFilter, localSearch]);
   const filterMatched = !!productFilter && filteredProducts.length > 0;
   const activeProducts = filteredProducts.filter((p) => p.status === "active");
