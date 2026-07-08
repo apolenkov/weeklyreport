@@ -2,6 +2,7 @@ import eslintComments from "@eslint-community/eslint-plugin-eslint-comments";
 import type { ESLint, Linter } from "eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 import { createTypeScriptImportResolver } from "eslint-import-resolver-typescript";
+import functional from "eslint-plugin-functional";
 import importX from "eslint-plugin-import-x";
 import jsdoc from "eslint-plugin-jsdoc";
 import jsxA11yPlugin from "eslint-plugin-jsx-a11y";
@@ -57,6 +58,7 @@ const jsdocRecommendedTs = jsdoc.configs["flat/recommended-typescript"] as {
 // these rules is banned below (@eslint-community/eslint-comments/no-restricted-disable)
 // so the config allowlist is the ONLY grandfathering path.
 const eslintCommentsPlugin = eslintComments as unknown as ESLint.Plugin;
+const functionalPlugin = functional as unknown as ESLint.Plugin;
 
 const apiModulesDir = "apps/api/src/modules";
 const apiModules = [
@@ -774,6 +776,22 @@ export default defineConfig([
     files: ["apps/api/src/infrastructure/trpc/trpc.session-hydration.ts"],
     rules: {
       "no-param-reassign": ["error", { props: true }],
+    },
+  },
+  // Functional immutability ratchet: only pure source layers. Infrastructure,
+  // UI, Prisma builders, React refs, and tests keep their local mutation idioms.
+  {
+    files: [
+      "apps/api/src/modules/**/domain/**/*.ts",
+      "packages/shared/src/**/*.ts",
+    ],
+    ignores: ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**"],
+    plugins: { functional: functionalPlugin },
+    rules: {
+      "functional/immutable-data": [
+        "error",
+        { ignoreClasses: true, ignoreImmediateMutation: true },
+      ],
     },
   },
   // Zone 6 — ui stays domain-free (package-name zone). packages/ui primitives must
