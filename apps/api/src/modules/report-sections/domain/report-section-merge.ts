@@ -35,6 +35,7 @@ export function mergeSection(
       ReportSectionReadModel["projects"][number]["ownedStages"]
     >,
   ) => {
+    // eslint-disable-next-line no-restricted-syntax -- Loop-carried severity preserves the first red-stage short-circuit; a reduce would keep scanning after the terminal state.
     let severity = 0;
     for (const stage of ownedStages) {
       if (stage.status === "red") {

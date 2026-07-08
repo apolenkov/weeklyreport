@@ -272,7 +272,11 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     const isCarryable = (row: { activityId: string | null }): boolean =>
       row.activityId === null || targetActivityIds.has(row.activityId);
 
-    let copiedItems = 0;
+    const itemsToCopy = source.items.filter(isCarryable);
+    const risksToCopy = source.risks.filter(isCarryable);
+    const decisionsToCopy = source.decisions.filter(isCarryable);
+    const copiedItems =
+      itemsToCopy.length + risksToCopy.length + decisionsToCopy.length;
 
     try {
       await this.prisma.$transaction(
@@ -305,7 +309,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           // Copy items from source. Next Week source items become Current Week
           // suggestions in the target period. Activity-parented items ride the
           // XOR parent — carry activityId (product FK null) only when re-attached.
-          const itemsToCopy = source.items.filter(isCarryable);
           if (itemsToCopy.length > 0) {
             await tx.item.createMany({
               data: itemsToCopy.map((i) => ({
@@ -326,11 +329,9 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
                 stageNames: i.stageNames,
               })),
             });
-            copiedItems += itemsToCopy.length;
           }
 
           // Copy risks from source (same XOR-parent carry rule as items).
-          const risksToCopy = source.risks.filter(isCarryable);
           if (risksToCopy.length > 0) {
             await tx.risk.createMany({
               data: risksToCopy.map((r) => ({
@@ -344,13 +345,11 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
                 stageNames: r.stageNames,
               })),
             });
-            copiedItems += risksToCopy.length;
           }
 
           // Copy decisions from source. A decision is product- OR activity-
           // parented (XOR); carry the activity case only when re-attached, the
           // product case always. isCarryable(null activityId) == true handles both.
-          const decisionsToCopy = source.decisions.filter(isCarryable);
           if (decisionsToCopy.length > 0) {
             await tx.decision.createMany({
               data: decisionsToCopy.map((d) => ({
@@ -365,7 +364,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
                 activityId: d.activityId,
               })),
             });
-            copiedItems += decisionsToCopy.length;
           }
         },
         { timeout: 15_000 },

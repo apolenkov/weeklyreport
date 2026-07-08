@@ -182,6 +182,9 @@ export default defineConfig([
     // Agent worktrees are full repo copies; linting them triples the file set
     // and OOMs eslint. Each worktree lints itself.
     ".claude/worktrees/**",
+    // Codex/agent-council runtime artifacts are machine-local tools, not repo
+    // source; linting them would make local assistant state a product gate.
+    ".agents/**",
     "**/coverage/**",
     "**/.turbo/**",
     "**/prisma/generated/**",
@@ -735,7 +738,10 @@ export default defineConfig([
   // `// eslint-disable-next-line no-restricted-syntax -- <why>`. Tests, seeds and
   // e2e stay imperative and are excluded.
   {
-    files: ["apps/api/src/lib/**/*.ts"],
+    files: [
+      "apps/api/src/lib/**/*.ts",
+      "apps/api/src/modules/report-sections/**/*.ts",
+    ],
     ignores: ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**"],
     rules: {
       "no-restricted-syntax": [

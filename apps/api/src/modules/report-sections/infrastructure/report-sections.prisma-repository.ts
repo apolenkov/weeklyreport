@@ -262,6 +262,7 @@ const TRAFFIC_LIGHT_RED_SEVERITY = 3;
 function aggregateStageTraffic(
   stages: { status?: string | null }[],
 ): string | null {
+  // eslint-disable-next-line no-restricted-syntax -- Loop-carried severity preserves the first red-stage short-circuit; a reduce would keep scanning after the terminal state.
   let severity = 0;
   for (const stage of stages) {
     if (stage.status === "red") {
@@ -368,21 +369,22 @@ export function deriveEffectiveProductStatus(project: {
     (risk) => risk.projectId === project.projectId,
   );
 
-  let effective = project.trafficLight;
-  for (const stage of project.ownedStages ?? []) {
-    const coveringSeverity = scopedRisks
-      .filter((risk) => riskCoversStageName(risk, stage.stageName))
-      .reduce<TrafficLight | null>(
-        (acc, risk) => worseTraffic(acc, severityToTraffic(risk.severity)),
-        null,
+  return (project.ownedStages ?? []).reduce<TrafficLight | null>(
+    (effective, stage) => {
+      const coveringSeverity = scopedRisks
+        .filter((risk) => riskCoversStageName(risk, stage.stageName))
+        .reduce<TrafficLight | null>(
+          (acc, risk) => worseTraffic(acc, severityToTraffic(risk.severity)),
+          null,
+        );
+      const stageEffective = worseTraffic(
+        asTraffic(stage.status),
+        coveringSeverity,
       );
-    const stageEffective = worseTraffic(
-      asTraffic(stage.status),
-      coveringSeverity,
-    );
-    effective = worseTraffic(effective, stageEffective);
-  }
-  return effective;
+      return worseTraffic(effective, stageEffective);
+    },
+    project.trafficLight,
+  );
 }
 
 /**
