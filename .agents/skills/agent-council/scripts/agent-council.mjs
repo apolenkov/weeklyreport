@@ -4,11 +4,17 @@ import { writeFile } from "node:fs/promises";
 import process from "node:process";
 
 const DEFAULT_TIMEOUT_MS = 180_000;
+const DEFAULT_CODEX_TIMEOUT_MS = 90_000;
+const DEFAULT_CLAUDE_TIMEOUT_MS = 90_000;
+const DEFAULT_OPENCODE_TIMEOUT_MS = 180_000;
 const DEFAULT_MAX_OUTPUT_CHARS = 120_000;
 const DEFAULT_OPENCODE_MODELS = [
-  "opencode-go/deepseek-v4-flash",
+  "opencode-go/deepseek-v4-pro",
   "opencode-go/glm-5.2",
 ];
+const DEFAULT_OPENCODE_VARIANT = "max";
+const DEFAULT_CLAUDE_MODEL = "opus";
+const DEFAULT_CLAUDE_EFFORT = "high";
 
 const DEFAULT_CODEX_COMMAND = [
   "codex",
@@ -18,6 +24,22 @@ const DEFAULT_CODEX_COMMAND = [
   "read-only",
   "--color",
   "never",
+  "-c",
+  "model_reasoning_effort=xhigh",
+];
+
+const DEFAULT_CLAUDE_COMMAND_PREFIX = [
+  "claude",
+  "--print",
+  "--output-format",
+  "text",
+  "--no-session-persistence",
+  "--permission-mode",
+  "dontAsk",
+  "--disable-slash-commands",
+  "--allowed-tools",
+  "Read,Glob,Grep",
+  "--model",
 ];
 
 const strictOpenCodePermission = {
@@ -47,12 +69,21 @@ const usage = `Usage:
 
 Options:
   --cwd <dir>                 Working directory for advisor CLIs.
-  --timeout-ms <ms>           Timeout per advisor. Default: ${DEFAULT_TIMEOUT_MS}.
+  --timeout-ms <ms>           Timeout for every advisor unless a per-seat timeout is set.
+                              Default: Codex ${DEFAULT_CODEX_TIMEOUT_MS}, Claude ${DEFAULT_CLAUDE_TIMEOUT_MS}, OpenCode ${DEFAULT_OPENCODE_TIMEOUT_MS}.
+  --codex-timeout-ms <ms>     Timeout for the Codex advisor.
+  --claude-timeout-ms <ms>    Timeout for the Claude Code advisor.
+  --opencode-timeout-ms <ms>  Timeout for each OpenCode advisor.
   --max-output-chars <n>      Capture cap per stdout/stderr stream. Default: ${DEFAULT_MAX_OUTPUT_CHARS}.
   --codex-cmd <cmd>           Override Codex adapter command.
+  --claude-cmd <cmd>          Override Claude Code adapter command.
+  --claude-model <model>      Claude Code model alias/name. Default: ${DEFAULT_CLAUDE_MODEL}.
+  --claude-effort <level>     Claude Code effort. Default: ${DEFAULT_CLAUDE_EFFORT}.
+  --no-claude                 Disable the Claude Code advisor.
   --opencode-cmd <cmd>        Override OpenCode adapter command.
   --opencode-model <model>    Add an OpenCode Go model advisor. Repeatable.
   --opencode-models <models>  Comma-separated or JSON array of OpenCode model advisors.
+  --opencode-variant <value>  OpenCode model variant/reasoning effort. Default: ${DEFAULT_OPENCODE_VARIANT}.
   --out <file>                Also write the parent Advisor prompt to a file.
   --json                      Print machine-readable JSON.
   --dry-run                   Build prompts and command metadata without running advisors.
@@ -60,10 +91,18 @@ Options:
 
 Environment:
   AGENT_COUNCIL_CODEX_CMD
+  AGENT_COUNCIL_CLAUDE_CMD
+  AGENT_COUNCIL_CLAUDE_MODEL
+  AGENT_COUNCIL_CLAUDE_EFFORT
+  AGENT_COUNCIL_DISABLE_CLAUDE=1
   AGENT_COUNCIL_OPENCODE_CMD
   AGENT_COUNCIL_OPENCODE_MODELS
   AGENT_COUNCIL_OPENCODE_MODEL
+  AGENT_COUNCIL_OPENCODE_VARIANT
   AGENT_COUNCIL_TIMEOUT_MS
+  AGENT_COUNCIL_CODEX_TIMEOUT_MS
+  AGENT_COUNCIL_CLAUDE_TIMEOUT_MS
+  AGENT_COUNCIL_OPENCODE_TIMEOUT_MS
   AGENT_COUNCIL_MAX_OUTPUT_CHARS
   AGENT_COUNCIL_STRICT_OPENCODE_PERMISSIONS=0
 `;
@@ -89,6 +128,7 @@ const main = async () => {
     fallback: DEFAULT_CODEX_COMMAND,
   });
   const opencodeAdvisors = resolveOpenCodeAdvisors(options);
+  const claudeAdvisor = resolveClaudeAdvisor(options);
 
   const advisors = [
     {
@@ -97,13 +137,26 @@ const main = async () => {
       displayCommand: codexCommand,
       cwd: options.cwd,
       env: process.env,
+      timeoutMs: options.codexTimeoutMs,
     },
+    ...(claudeAdvisor
+      ? [
+          {
+            ...claudeAdvisor,
+            command: [...claudeAdvisor.command, childPrompt],
+            cwd: options.cwd,
+            env: process.env,
+            timeoutMs: options.claudeTimeoutMs,
+          },
+        ]
+      : []),
     ...opencodeAdvisors.map((advisor) => ({
       ...advisor,
       command: [...advisor.command, childPrompt],
       cwd: options.cwd,
       env: buildOpenCodeEnv(process.env),
       serialGroup: "opencode",
+      timeoutMs: options.opencodeTimeoutMs,
     })),
   ];
 
@@ -145,12 +198,35 @@ const main = async () => {
 };
 
 function parseArgs(argv) {
+  const globalEnvTimeoutMs = process.env.AGENT_COUNCIL_TIMEOUT_MS
+    ? parsePositiveInt(
+        process.env.AGENT_COUNCIL_TIMEOUT_MS,
+        DEFAULT_TIMEOUT_MS,
+        "AGENT_COUNCIL_TIMEOUT_MS",
+      )
+    : null;
+  const explicitTimeouts = {
+    codex: Boolean(process.env.AGENT_COUNCIL_CODEX_TIMEOUT_MS),
+    claude: Boolean(process.env.AGENT_COUNCIL_CLAUDE_TIMEOUT_MS),
+    opencode: Boolean(process.env.AGENT_COUNCIL_OPENCODE_TIMEOUT_MS),
+  };
   const options = {
     cwd: process.cwd(),
-    timeoutMs: parsePositiveInt(
-      process.env.AGENT_COUNCIL_TIMEOUT_MS,
-      DEFAULT_TIMEOUT_MS,
-      "AGENT_COUNCIL_TIMEOUT_MS",
+    timeoutMs: globalEnvTimeoutMs ?? DEFAULT_TIMEOUT_MS,
+    codexTimeoutMs: parsePositiveInt(
+      process.env.AGENT_COUNCIL_CODEX_TIMEOUT_MS,
+      globalEnvTimeoutMs ?? DEFAULT_CODEX_TIMEOUT_MS,
+      "AGENT_COUNCIL_CODEX_TIMEOUT_MS",
+    ),
+    claudeTimeoutMs: parsePositiveInt(
+      process.env.AGENT_COUNCIL_CLAUDE_TIMEOUT_MS,
+      globalEnvTimeoutMs ?? DEFAULT_CLAUDE_TIMEOUT_MS,
+      "AGENT_COUNCIL_CLAUDE_TIMEOUT_MS",
+    ),
+    opencodeTimeoutMs: parsePositiveInt(
+      process.env.AGENT_COUNCIL_OPENCODE_TIMEOUT_MS,
+      globalEnvTimeoutMs ?? DEFAULT_OPENCODE_TIMEOUT_MS,
+      "AGENT_COUNCIL_OPENCODE_TIMEOUT_MS",
     ),
     maxOutputChars: parsePositiveInt(
       process.env.AGENT_COUNCIL_MAX_OUTPUT_CHARS,
@@ -162,8 +238,13 @@ function parseArgs(argv) {
     help: false,
     out: "",
     codexCmd: "",
+    claudeCmd: "",
+    claudeEffort: "",
+    claudeModel: "",
+    includeClaude: process.env.AGENT_COUNCIL_DISABLE_CLAUDE !== "1",
     opencodeCmd: "",
     opencodeModels: [],
+    opencodeVariant: process.env.AGENT_COUNCIL_OPENCODE_VARIANT || DEFAULT_OPENCODE_VARIANT,
     prompt: "",
   };
 
@@ -198,11 +279,51 @@ function parseArgs(argv) {
     }
 
     if (arg === "--timeout-ms") {
-      options.timeoutMs = parsePositiveInt(
+      const timeoutMs = parsePositiveInt(
         requireValue(argv, (index += 1), "--timeout-ms"),
         DEFAULT_TIMEOUT_MS,
         "--timeout-ms",
       );
+      options.timeoutMs = timeoutMs;
+      if (!explicitTimeouts.codex) {
+        options.codexTimeoutMs = timeoutMs;
+      }
+      if (!explicitTimeouts.claude) {
+        options.claudeTimeoutMs = timeoutMs;
+      }
+      if (!explicitTimeouts.opencode) {
+        options.opencodeTimeoutMs = timeoutMs;
+      }
+      continue;
+    }
+
+    if (arg === "--codex-timeout-ms") {
+      options.codexTimeoutMs = parsePositiveInt(
+        requireValue(argv, (index += 1), "--codex-timeout-ms"),
+        DEFAULT_CODEX_TIMEOUT_MS,
+        "--codex-timeout-ms",
+      );
+      explicitTimeouts.codex = true;
+      continue;
+    }
+
+    if (arg === "--claude-timeout-ms") {
+      options.claudeTimeoutMs = parsePositiveInt(
+        requireValue(argv, (index += 1), "--claude-timeout-ms"),
+        DEFAULT_CLAUDE_TIMEOUT_MS,
+        "--claude-timeout-ms",
+      );
+      explicitTimeouts.claude = true;
+      continue;
+    }
+
+    if (arg === "--opencode-timeout-ms") {
+      options.opencodeTimeoutMs = parsePositiveInt(
+        requireValue(argv, (index += 1), "--opencode-timeout-ms"),
+        DEFAULT_OPENCODE_TIMEOUT_MS,
+        "--opencode-timeout-ms",
+      );
+      explicitTimeouts.opencode = true;
       continue;
     }
 
@@ -220,6 +341,26 @@ function parseArgs(argv) {
       continue;
     }
 
+    if (arg === "--claude-cmd") {
+      options.claudeCmd = requireValue(argv, (index += 1), "--claude-cmd");
+      continue;
+    }
+
+    if (arg === "--claude-model") {
+      options.claudeModel = requireValue(argv, (index += 1), "--claude-model");
+      continue;
+    }
+
+    if (arg === "--claude-effort") {
+      options.claudeEffort = requireValue(argv, (index += 1), "--claude-effort");
+      continue;
+    }
+
+    if (arg === "--no-claude") {
+      options.includeClaude = false;
+      continue;
+    }
+
     if (arg === "--opencode-cmd") {
       options.opencodeCmd = requireValue(argv, (index += 1), "--opencode-cmd");
       continue;
@@ -234,6 +375,11 @@ function parseArgs(argv) {
       options.opencodeModels.push(
         ...parseModelList(requireValue(argv, (index += 1), "--opencode-models")),
       );
+      continue;
+    }
+
+    if (arg === "--opencode-variant") {
+      options.opencodeVariant = requireValue(argv, (index += 1), "--opencode-variant");
       continue;
     }
 
@@ -285,23 +431,29 @@ function resolveCommand({ override, envName, fallback }) {
 function resolveOpenCodeAdvisors(options) {
   const configured = options.opencodeCmd || process.env.AGENT_COUNCIL_OPENCODE_CMD;
   const models = resolveOpenCodeModels(options);
+  const variant = options.opencodeVariant || DEFAULT_OPENCODE_VARIANT;
 
   if (configured) {
     const command = splitCommand(configured);
     const hasModelPlaceholder = command.some((part) => part.includes("{model}"));
+    const expand = (model) =>
+      command.map((part) =>
+        part.replaceAll("{model}", model).replaceAll("{variant}", variant),
+      );
 
     if (!hasModelPlaceholder) {
+      const expanded = expand("");
       return [
         {
           name: "opencode-custom",
-          command,
-          displayCommand: command,
+          command: expanded,
+          displayCommand: expanded,
         },
       ];
     }
 
     return models.map((model) => {
-      const expanded = command.map((part) => part.replaceAll("{model}", model));
+      const expanded = expand(model);
       return {
         name: `opencode-${modelName(model)}`,
         command: expanded,
@@ -311,13 +463,61 @@ function resolveOpenCodeAdvisors(options) {
   }
 
   return models.map((model) => {
-    const command = ["opencode", "run", "--pure", "--model", model];
+    const command = [
+      "opencode",
+      "run",
+      "--pure",
+      "--model",
+      model,
+      "--variant",
+      variant,
+    ];
     return {
       name: `opencode-${modelName(model)}`,
       command,
       displayCommand: command,
     };
   });
+}
+
+function resolveClaudeAdvisor(options) {
+  if (!options.includeClaude) {
+    return null;
+  }
+
+  const configured = options.claudeCmd || process.env.AGENT_COUNCIL_CLAUDE_CMD;
+  const effort =
+    options.claudeEffort ||
+    process.env.AGENT_COUNCIL_CLAUDE_EFFORT ||
+    DEFAULT_CLAUDE_EFFORT;
+
+  if (configured) {
+    const command = splitCommand(configured);
+    const model =
+      options.claudeModel ||
+      process.env.AGENT_COUNCIL_CLAUDE_MODEL ||
+      DEFAULT_CLAUDE_MODEL;
+    const expanded = command.map((part) =>
+      part.replaceAll("{model}", model).replaceAll("{effort}", effort),
+    );
+    return {
+      name: "claude-code",
+      command: expanded,
+      displayCommand: expanded,
+    };
+  }
+
+  const model =
+    options.claudeModel ||
+    process.env.AGENT_COUNCIL_CLAUDE_MODEL ||
+    DEFAULT_CLAUDE_MODEL;
+  const command = [...DEFAULT_CLAUDE_COMMAND_PREFIX, model, "--effort", effort];
+
+  return {
+    name: `claude-code-${modelName(model)}`,
+    command,
+    displayCommand: command,
+  };
 }
 
 function resolveOpenCodeModels(options) {
@@ -538,6 +738,7 @@ async function runAdvisor({
         name,
         status: "spawn_error",
         command: formatCommand(displayCommand),
+        timeoutMs,
         exitCode: null,
         signal: null,
         durationMs: Date.now() - startedAt,
@@ -559,6 +760,7 @@ async function runAdvisor({
         name,
         status: timedOut ? "timeout" : exitCode === 0 ? "ok" : "failed",
         command: formatCommand(displayCommand),
+        timeoutMs,
         exitCode,
         signal,
         durationMs: Date.now() - startedAt,
@@ -581,7 +783,7 @@ async function runAdvisorPlan(advisors, options) {
   const runOne = async (advisor) => {
     const result = await runAdvisor({
       ...advisor,
-      timeoutMs: options.timeoutMs,
+      timeoutMs: advisor.timeoutMs ?? options.timeoutMs,
       maxOutputChars: options.maxOutputChars,
     });
     byName.set(advisor.name, result);
@@ -664,6 +866,7 @@ function dryRunResult(advisor, childPrompt) {
     name: advisor.name,
     status: "dry_run",
     command: formatCommand(advisor.displayCommand),
+    timeoutMs: advisor.timeoutMs,
     exitCode: 0,
     signal: null,
     durationMs: 0,
@@ -681,6 +884,7 @@ function buildAdvisorPrompt({ cwd, userPrompt, childPrompt, results, generatedAt
 
 - status: ${result.status}
 - command: ${result.command}
+- timeoutMs: ${result.timeoutMs ?? "null"}
 - exitCode: ${result.exitCode ?? "null"}
 - signal: ${result.signal ?? "null"}
 - durationMs: ${result.durationMs}
