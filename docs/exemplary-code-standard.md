@@ -69,16 +69,20 @@ pnpm test && pnpm build` green, plus a live boot from source where a boot path
 
 ## 2. Hard thresholds (the WHAT — ESLint, `src` only)
 
-Tighten the existing ratchet (`eslint.config.ts`). Current → target:
+Tighten the existing ratchet (`eslint.config.ts`) without overstating the
+immutability regime:
 
-| Rule                                       | Current | Target                                                                                                                                                     |
-| ------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `max-lines` (skipBlankLines, skipComments) | 300     | **250**                                                                                                                                                    |
-| `max-lines-per-function`                   | (none)  | **50**                                                                                                                                                     |
-| `sonarjs/cognitive-complexity`             | 15      | **10**                                                                                                                                                     |
-| `complexity` (cyclomatic)                  | 20      | **10**                                                                                                                                                     |
-| Immutability                               | partial | `prefer-const`, `no-param-reassign`, no `let`/reassignment/mutation (eslint-plugin-functional or equivalent), `no-restricted-syntax` for in-place mutation |
-| Per-folder/per-file exempt lists in `src`  | several | **none** (each removed as its folder is brought to standard)                                                                                               |
+| Area                                       | Ratified rule                                                                                                                                                                                                                                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `max-lines` (skipBlankLines, skipComments) | **250** for production source. Existing oversize files stay in the explicit exemption block until their module teardown lands.                                                                                                                                                        |
+| `max-lines-per-function`                   | **50** target, still a rollout item; do not claim it is globally enforced until the ESLint rule is active.                                                                                                                                                                            |
+| `sonarjs/cognitive-complexity`             | Global ESLint stays at the Sonar default **15** while module work ratchets hot spots toward **<10** with focused refactors.                                                                                                                                                           |
+| `complexity` (cyclomatic)                  | **20** stays. Do not lower this to 10; cognitive complexity is the readability gate.                                                                                                                                                                                                  |
+| `prefer-const` / `no-var`                  | Global `error`.                                                                                                                                                                                                                                                                       |
+| `no let`                                   | `no-restricted-syntax` bans `let` in production source (`apps/api`, `apps/web`, `packages/shared`, `packages/ui`). Tests, `src/test-utils`, seeds, e2e, and tooling stay out of scope. A load-bearing mutable binding survives only behind an inline disable with a concrete WHY.     |
+| `no-param-reassign`                        | Global `props:false` (parameter rebinding banned). `trpc.session-hydration.ts` is stricter with `props:true` because caller-owned `UserSession` mutation can leak authz/session scope.                                                                                                |
+| `functional/immutable-data`                | Enabled only for pure layers: `apps/api/src/modules/**/domain/**/*.ts` and `packages/shared/src/**/*.ts`, excluding tests, with `ignoreClasses:true` and `ignoreImmediateMutation:true`. Do not enable repo-wide; infra/UI/Prisma builders/React refs are intentionally out of scope. |
+| Per-folder/per-file exempt lists in `src`  | Explicit justified exemptions remain where the code is not yet decomposed. Removing an exemption is a done-signal for that file/module, not a license to silence the rule locally.                                                                                                    |
 
 Adopt the strict, widely-vetted presets and reconcile with Prettier:
 **airbnb-typescript**, **Google TS (`gts`)**, **Vercel/Next** rule sets. Where
@@ -144,8 +148,11 @@ once. Until then, tighten per-folder via local overrides that you then delete.
 
 ## 7. Done definition (whole repo)
 
-- Every `src` file < 250 lines; every function ≤ 50 lines, cognitive complexity
-  < 10; zero `let`/mutation; zero `eslint.config.ts` exempt entries for `src`.
+- `src` follows the active §2 ratchets: `max-lines` 250 with explicit justified
+  exemptions, cyclomatic complexity 20, production-source `no let`, global
+  `prefer-const` / `no-var` / `no-param-reassign`, and scoped
+  `functional/immutable-data` for pure layers. Function size and cognitive <10
+  remain module-teardown targets until their ESLint gates are active.
 - `pnpm lint` runs clean with `--max-warnings 0` — **zero errors AND zero
   warnings** across the repo (a warning is a failure, not an acceptable state).
 - Zero config fallbacks/defaults for product-critical values; boot fails loud.

@@ -339,7 +339,7 @@ export default defineConfig([
       // forbids a never-reassigned `let`, no-var bans function-scoped `var`, and
       // no-param-reassign forbids parameter rebinding. The `let` ban itself
       // (no-restricted-syntax, with per-site justified survivors) lives in its own
-      // folder-scoped block below.
+      // source-scoped block below.
       "prefer-const": "error",
       "no-var": "error",
       "no-param-reassign": ["error", { props: false }],
@@ -732,32 +732,25 @@ export default defineConfig([
       ],
     },
   },
-  // ── Immutability regime: `let` ban, rolled out folder-by-folder. ──
-  // `no-let` (via no-restricted-syntax) is enabled per-area; this `files` list
-  // GROWS with each rollout commit until it spans all source, then collapses into
-  // a single global rule. A load-bearing mutable binding — a loop counter, a lazy
-  // singleton, a running accumulator a functional rewrite would only obscure —
-  // keeps its `let` behind an inline
+  // ── Immutability regime: `let` ban for production source. ──
+  // A load-bearing mutable binding — a loop counter, a lazy singleton, a running
+  // accumulator a functional rewrite would only obscure — keeps its `let` behind
+  // an inline
   // `// eslint-disable-next-line no-restricted-syntax -- <why>`. Tests, seeds and
   // e2e stay imperative and are excluded.
   {
     files: [
-      "apps/api/src/lib/**/*.ts",
-      "apps/api/src/infrastructure/trpc/**/*.ts",
-      "apps/api/src/infrastructure/otel/**/*.ts",
-      "apps/api/src/modules/published-report-snapshot.ts",
-      "apps/api/src/modules/reminders/**/*.ts",
-      "apps/api/src/modules/report-sections/**/*.ts",
-      "apps/web/src/features/admin/ui/products-tab.tsx",
-      "apps/web/src/features/period/ui/lead-history-sidebar.tsx",
-      "apps/web/src/features/period/ui/periods-tab-dialog.tsx",
-      "apps/web/src/features/report-sections/model/lead-cross-author.ts",
-      "apps/web/src/features/report-sections/ui/lead-form.tsx",
-      "apps/web/src/features/slides/model/section-slide-utils.ts",
-      "apps/web/src/lib/client-logger.ts",
-      "apps/web/src/lib/stage-status.ts",
+      "apps/api/src/**/*.{ts,tsx}",
+      "apps/web/src/**/*.{ts,tsx}",
+      "packages/shared/src/**/*.{ts,tsx}",
+      "packages/ui/src/**/*.{ts,tsx}",
     ],
-    ignores: ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**"],
+    ignores: [
+      "**/*.test.{ts,tsx}",
+      "**/*.spec.{ts,tsx}",
+      "**/__tests__/**",
+      "apps/*/src/test-utils/**",
+    ],
     rules: {
       "no-restricted-syntax": [
         "error",
