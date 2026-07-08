@@ -271,6 +271,25 @@ function truncateReason(reason: string, max = MAX_AUDIT_REASON_LENGTH): string {
   return reason.slice(0, max).trimEnd();
 }
 
+async function readOptionalRawInput(
+  getRawInput: () => Promise<unknown>,
+): Promise<unknown> {
+  try {
+    return await getRawInput();
+  } catch {
+    return undefined;
+  }
+}
+
+function extractAuditTarget(raw: unknown): string | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const record = raw as Record<string, unknown>;
+  const targetKey = TARGET_ID_KEYS.find(
+    (key) => typeof record[key] === "string",
+  );
+  return targetKey ? (record[targetKey] as string) : undefined;
+}
+
 export const mutationAuditMiddleware = t.middleware(
   async ({ ctx, next, path, type, getRawInput }) => {
     if (type !== "mutation") return next();
@@ -280,23 +299,9 @@ export const mutationAuditMiddleware = t.middleware(
     const result = await next();
     const duration = Math.round(performance.now() - start);
 
-    let target: string | undefined;
-    try {
-      const raw = await getRawInput();
-      if (raw && typeof raw === "object") {
-        const r = raw as Record<string, unknown>;
-        for (const key of TARGET_ID_KEYS) {
-          const v = r[key];
-          if (typeof v === "string") {
-            target = v;
-            break;
-          }
-        }
-      }
-    } catch {
-      // getRawInput() can throw on already-consumed bodies; skip target
-      // extraction rather than crash the audit emit.
-    }
+    // getRawInput() can throw on already-consumed bodies; skip target
+    // extraction rather than crash the audit emit.
+    const target = extractAuditTarget(await readOptionalRawInput(getRawInput));
 
     const action = {
       userId: ctx.session?.userId ?? "anonymous",
@@ -392,12 +397,7 @@ const pdfExportGuard = t.middleware(
 
     // Cross-check the input reportId against the JWT claim. A PDF cookie
     // bound to report X must not be reusable to read report Y.
-    let raw: unknown;
-    try {
-      raw = await getRawInput();
-    } catch {
-      raw = undefined;
-    }
+    const raw = await readOptionalRawInput(getRawInput);
     const inputReportId =
       raw && typeof raw === "object" && "reportId" in raw
         ? (raw as { reportId?: unknown }).reportId

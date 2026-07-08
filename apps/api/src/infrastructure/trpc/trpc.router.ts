@@ -718,9 +718,13 @@ export function createAppRouter(deps: RouterDeps) {
               .map((report) => {
                 const trafficLights = { green: 0, yellow: 0, red: 0 };
                 const productIds = new Set<string>();
+                // eslint-disable-next-line no-restricted-syntax -- Compiled-history folds counters and product ids in one scoped pass; split reductions would rescan nested rows and obscure the shared filter.
                 let itemCount = 0;
+                // eslint-disable-next-line no-restricted-syntax -- Compiled-history folds counters and product ids in one scoped pass; split reductions would rescan nested rows and obscure the shared filter.
                 let riskCount = 0;
+                // eslint-disable-next-line no-restricted-syntax -- Compiled-history folds counters and product ids in one scoped pass; split reductions would rescan nested rows and obscure the shared filter.
                 let decisionCount = 0;
+                // eslint-disable-next-line no-restricted-syntax -- Compiled-history folds counters and product ids in one scoped pass; split reductions would rescan nested rows and obscure the shared filter.
                 let priorityCount = 0;
 
                 for (const section of report.sections) {
@@ -2282,8 +2286,11 @@ export function createAppRouter(deps: RouterDeps) {
             // increment `dispatched`, mis-reporting the counter even
             // though only one email actually went out.
             const fireAtIso = rule.fireAt.toISOString();
+            // eslint-disable-next-line no-restricted-syntax -- Race-safe dispatch accounting must stay beside the async dedupe call; a reducer would hide the TOCTOU boundary.
             let dispatched = 0;
+            // eslint-disable-next-line no-restricted-syntax -- Race-safe dispatch accounting must stay beside the async dedupe call; a reducer would hide the TOCTOU boundary.
             let alreadySent = 0;
+            // eslint-disable-next-line no-restricted-syntax -- Race-safe dispatch accounting must stay beside the async dedupe call; a reducer would hide the TOCTOU boundary.
             let skipped = 0;
             for (const sec of draftSections) {
               if (sec.author.notificationOptOut) {
