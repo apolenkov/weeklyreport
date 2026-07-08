@@ -309,9 +309,9 @@ export function createContextFactory(
     const allowTest =
       isNonProd && process.env.AUTH_DEV_MODE_ALLOW_TEST === "true";
     if (devModeEnabled || allowTest) {
-      // { ...DEV_SESSION } spread is AT THE CALL SITE intentionally:
-      // the four helpers mutate the session object in place; passing the
-      // module-level constant directly would pollute it across requests.
+      // Keep the module-level DEV_SESSION as a caller-owned baseline. Hydration
+      // returns a new object for added request fields; the spread makes that
+      // ownership boundary explicit at the dev/test call site.
       const devWithOrg = await hydrateSession({ ...DEV_SESSION }, prisma);
       return {
         session: devWithOrg,

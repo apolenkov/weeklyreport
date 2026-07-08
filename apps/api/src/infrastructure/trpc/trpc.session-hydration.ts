@@ -42,8 +42,7 @@ async function hydrateViewerGroupAccess(
     where: { viewerUserId: session.userId },
     select: { groupId: true },
   });
-  session.viewerGroupAccess = grants.map((g) => g.groupId);
-  return session;
+  return { ...session, viewerGroupAccess: grants.map((g) => g.groupId) };
 }
 
 async function hydrateReportingGroupName(
@@ -55,8 +54,7 @@ async function hydrateReportingGroupName(
     where: { id: session.reportingGroupId },
     select: { name: true },
   });
-  if (row) session.reportingGroupName = row.name;
-  return session;
+  return row ? { ...session, reportingGroupName: row.name } : session;
 }
 
 /**
@@ -95,8 +93,7 @@ async function hydrateOrganization(
       expiresAt: now + ORG_CACHE_TTL_MS,
     };
   }
-  session.organization = orgCache.value;
-  return session;
+  return { ...session, organization: orgCache.value };
 }
 
 async function resolveSectionId(
@@ -115,9 +112,9 @@ async function resolveSectionId(
       },
       select: { id: true },
     });
-    if (section) {
-      session.activeReportSectionId = section.id;
-    }
+    return section
+      ? { ...session, activeReportSectionId: section.id }
+      : session;
   }
   return session;
 }
