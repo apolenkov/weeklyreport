@@ -698,16 +698,16 @@ export function paginateSectionSlides(
     return [model];
   }
 
-  const pages: SectionSlideModel[] = [];
-  for (let i = 0; i < productOnly.length; i += productsPerPage) {
-    const chunk = productOnly.slice(i, i + productsPerPage);
-    const isLast = i + productsPerPage >= productOnly.length;
+  return Array.from({ length: pageCount }, (_, pageIndex) => {
+    const start = pageIndex * productsPerPage;
+    const chunk = productOnly.slice(start, start + productsPerPage);
+    const isLast = pageIndex === pageCount - 1;
     const pageSlides =
       isLast && crossProduct ? [...chunk, crossProduct] : chunk;
     // The grid mirrors the page's product set so both render paths agree on
     // which products this page shows.
     const pageIds = new Set(pageSlides.map((p) => p.id));
-    pages.push({
+    return {
       ...model,
       productSlides: pageSlides,
       ...(model.grid === undefined
@@ -720,11 +720,10 @@ export function paginateSectionSlides(
               ),
             },
           }),
-      pageIndex: pages.length,
+      pageIndex,
       pageTotal: pageCount,
-    });
-  }
-  return pages;
+    };
+  });
 }
 
 /** Display label of the cross-product pseudo-entry; never part of the legend. */
@@ -1003,26 +1002,25 @@ export function buildProductScopedSlides(
   const products = new Map<string, ProductAcc>();
 
   const ensure = (id: string, name: string): ProductAcc => {
-    let acc = products.get(id);
-    if (!acc) {
-      acc = {
-        projectId: id,
-        projectName: name,
-        trafficLight: null,
-        ownedStages: new Map(),
-        items: [],
-        risks: [],
-        decisions: [],
-        contributors: [],
-        contributorSet: new Set(),
-        seenSections: new Set(),
-        anySubmitted: false,
-        allSubmitted: true,
-        latestSubmittedAt: null,
-      };
-      products.set(id, acc);
-    }
-    return acc;
+    const existing = products.get(id);
+    if (existing) return existing;
+    const created: ProductAcc = {
+      projectId: id,
+      projectName: name,
+      trafficLight: null,
+      ownedStages: new Map(),
+      items: [],
+      risks: [],
+      decisions: [],
+      contributors: [],
+      contributorSet: new Set(),
+      seenSections: new Set(),
+      anySubmitted: false,
+      allSubmitted: true,
+      latestSubmittedAt: null,
+    };
+    products.set(id, created);
+    return created;
   };
 
   // Register a (product, section) contribution exactly once: tracks the
