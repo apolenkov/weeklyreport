@@ -89,7 +89,9 @@ export function createTraceContextPropagator(): CompositePropagator {
   });
 }
 
+// eslint-disable-next-line no-restricted-syntax -- OTel SDK handle is assigned during bootstrap and read during shutdown; module-level lifecycle state is intentional.
 let sdk: NodeSDK | null = null;
+// eslint-disable-next-line no-restricted-syntax -- OTel logger provider handle is assigned during bootstrap and read during shutdown; module-level lifecycle state is intentional.
 let loggerProvider: LoggerProvider | null = null;
 
 // eslint-disable-next-line sonarjs/no-invariant-returns -- returns the bootstrap decision object from every path by design (disabled vs started); one semantic return value, not an accidental invariant
