@@ -42,50 +42,55 @@ export function validateSubmitInput(
     ];
   }
 
-  const errors: DraftSaveValidationError[] = [];
-
-  for (const project of section.projects) {
+  const projectErrors = section.projects.flatMap((project) => {
     const matchingStatus = input.projectStatuses.find(
       (status) => status.projectId === project.projectId,
     );
-
-    if (!matchingStatus?.status) {
-      errors.push({
-        code: "MISSING_TRAFFIC_LIGHT",
-        message: `Project ${project.projectName} must have a traffic light status.`,
-      });
-    }
 
     const hasCurrentItem = input.items.some(
       (item) => item.projectId === project.projectId && item.type === "current",
     );
 
-    if (!hasCurrentItem) {
-      errors.push({
-        code: "MISSING_CURRENT_ITEM",
-        message: `Project ${project.projectName} needs at least one Current Week item.`,
-      });
-    }
-  }
+    return [
+      ...(!matchingStatus?.status
+        ? [
+            {
+              code: "MISSING_TRAFFIC_LIGHT" as const,
+              message: `Project ${project.projectName} must have a traffic light status.`,
+            },
+          ]
+        : []),
+      ...(!hasCurrentItem
+        ? [
+            {
+              code: "MISSING_CURRENT_ITEM" as const,
+              message: `Project ${project.projectName} needs at least one Current Week item.`,
+            },
+          ]
+        : []),
+    ];
+  });
 
   // activity-first-class: an activity has no SDLC stage and no current-item
   // requirement, but every attached activity must carry a traffic-light status at
   // submit. Server-authoritative — schema tightening alone cannot catch an
   // OMITTED attached activity (a payload that simply drops the status entry).
-  for (const activity of section.activities) {
+  const activityErrors = section.activities.flatMap((activity) => {
     const matchingStatus = (input.activityStatuses ?? []).find(
       (status) => status.activityId === activity.activityId,
     );
 
-    if (!matchingStatus?.status) {
-      errors.push({
-        code: "MISSING_TRAFFIC_LIGHT",
-        message: `Activity ${activity.activityName} must have a traffic light status.`,
-      });
-    }
-  }
+    return matchingStatus?.status
+      ? []
+      : [
+          {
+            code: "MISSING_TRAFFIC_LIGHT" as const,
+            message: `Activity ${activity.activityName} must have a traffic light status.`,
+          },
+        ];
+  });
 
-  return errors;
+  return [...projectErrors, ...activityErrors];
 }
 
 /**
