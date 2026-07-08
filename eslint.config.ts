@@ -744,6 +744,8 @@ export default defineConfig([
       "apps/api/src/modules/published-report-snapshot.ts",
       "apps/api/src/modules/reminders/**/*.ts",
       "apps/api/src/modules/report-sections/**/*.ts",
+      "apps/web/src/features/report-sections/model/lead-cross-author.ts",
+      "apps/web/src/lib/stage-status.ts",
     ],
     ignores: ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**"],
     rules: {
