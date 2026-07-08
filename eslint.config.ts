@@ -767,6 +767,15 @@ export default defineConfig([
       ],
     },
   },
+  // `no-param-reassign` is globally `props:false`; the session hydration
+  // chokepoint is stricter because mutating a caller-owned UserSession can leak
+  // authz scope across the request pipeline.
+  {
+    files: ["apps/api/src/infrastructure/trpc/trpc.session-hydration.ts"],
+    rules: {
+      "no-param-reassign": ["error", { props: true }],
+    },
+  },
   // Zone 6 — ui stays domain-free (package-name zone). packages/ui primitives must
   // not import @customreport/shared domain schemas; charts receive finished series
   // as props. Currently 0 violations.
