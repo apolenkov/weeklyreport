@@ -31,8 +31,11 @@ apps/web/next-env.d.ts
 .goals
 scheduled_tasks.lock
 
-# Codex rescue runtime (agent-council skills/artifacts, machine-local)
-.agents/
+# Agent runtime artifacts are machine-local; the packaged council skill is tracked.
+.agents/*
+!.agents/skills/
+!.agents/skills/agent-council/
+!.agents/skills/agent-council/**
 
 # CodeGraph local index (machine-specific, not part of repo)
 .codegraph/
