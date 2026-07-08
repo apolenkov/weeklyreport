@@ -32,3 +32,5 @@
 - Sequential no-tools council smoke with Codex stub and real OpenCode returned `OPENCODE_COUNCIL_OK`
 - Full no-tools multi-model smoke with real Codex command, DeepSeek Flash, and GLM 5.2: both OpenCode Go advisors returned `ok`; Codex launched but failed on workspace spend cap, which the harness captured as a normal failed advisor result
 - Current high-quality defaults prefer `opencode-go/deepseek-v4-pro` over Flash and pass OpenCode `--variant max`; the older live smoke above used Flash because that was the default at the time.
+- `node --test scripts/agent-council.test.mjs`: covers heading extraction, summary JSON, global deadline, nested-council refusal, and strict OpenCode permission override with stub commands.
+- P0 hardening live smoke after adding `Council Summary`, extraction, deadline, and recursion env: OpenCode DeepSeek Pro and GLM 5.2 returned `ok`; Codex returned `failed` on workspace spend cap; Claude Opus hit the 120s timeout. The harness surfaced all four states in `health` and the summary table.

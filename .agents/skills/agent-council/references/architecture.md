@@ -31,11 +31,13 @@ For this use case, a thin CLI harness is lower-risk than adopting a full framewo
 4. Orchestrator starts Codex and Claude Code concurrently with an OpenCode Go advisor chain.
 5. Each child process gets:
    - a per-process timeout
+   - an optional whole-council deadline
    - stdout/stderr buffering with a character cap
    - process-group termination on timeout where the platform supports it
 6. OpenCode Go advisors run sequentially inside the chain to avoid local OpenCode session database locks.
-7. Orchestrator prints the Advisor Prompt.
-8. Parent Advisor compares the outputs and writes the final answer or code.
+7. Orchestrator extracts standard child headings into machine-readable `extracted` fields and prints a `Council Summary`.
+8. Orchestrator prints the Advisor Prompt.
+9. Parent Advisor compares the outputs and writes the final answer or code.
 
 ## Default Adapters
 
@@ -77,6 +79,7 @@ The skill isolates advisors by policy and process boundary:
 - OpenCode runs without plugins by default through `--pure`.
 - The orchestrator injects strict `OPENCODE_PERMISSION` unless disabled, denying skills, edits, subagents, user questions, web tools, and shell commands while allowing read/search tools.
 - The orchestrator sets `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` for child OpenCode runs so advisor prompts do not recursively invoke this or other Claude-compatible skills.
+- The orchestrator sets `AGENT_COUNCIL_DEPTH=1` and `AGENT_COUNCIL_PARENT_RUN_ID` for every child process and refuses to start if it sees a non-zero depth, preventing nested councils.
 - Child outputs are fenced and treated as untrusted data.
 
 This is not a security sandbox for hostile code. Run the council only in a trusted local workspace.
@@ -102,8 +105,10 @@ Environment variables:
 | `AGENT_COUNCIL_OPENCODE_VARIANT` | OpenCode provider-specific reasoning effort / model variant. Default: `max`. |
 | `AGENT_COUNCIL_OPENCODE_TIMEOUT_MS` | Timeout for each OpenCode advisor. Default: `180000`. |
 | `AGENT_COUNCIL_TIMEOUT_MS` | Global timeout override in milliseconds, applied to all advisors unless a per-seat timeout is set. |
+| `AGENT_COUNCIL_DEADLINE_MS` | Whole-council wall-clock deadline in milliseconds. Disabled by default. |
 | `AGENT_COUNCIL_MAX_OUTPUT_CHARS` | Per-stream capture cap. |
 | `AGENT_COUNCIL_STRICT_OPENCODE_PERMISSIONS` | Set to `0` to avoid injecting strict OpenCode permissions. |
+| `AGENT_COUNCIL_TRUST_OPENCODE_PERMISSION_ENV` | Set to `1` to keep an inherited `OPENCODE_PERMISSION`; by default strict permissions override it. |
 
 CLI flags:
 
@@ -113,6 +118,7 @@ node scripts/agent-council.mjs \
   --codex-timeout-ms 120000 \
   --claude-timeout-ms 120000 \
   --opencode-timeout-ms 240000 \
+  --deadline-ms 600000 \
   --max-output-chars 200000 \
   --claude-model opus \
   --claude-effort high \
@@ -123,10 +129,13 @@ node scripts/agent-council.mjs \
 
 Use `--json` when another script needs machine-readable output.
 
+JSON output includes `health` counters and one `extracted` object per advisor. `extracted` is derived from the required child headings: `Position`, `Assumptions`, `Evidence`, `Risks`, `Implementation Notes`, and `Confidence`. The raw stdout/stderr are still preserved and fenced in the parent prompt.
+
 Fast plumbing smoke test with real OpenCode and no tools:
 
 ```bash
-env OPENCODE_PERMISSION='{"skill":{"*":"deny"},"read":"deny","grep":"deny","glob":"deny","edit":"deny","bash":"deny","webfetch":"deny","websearch":"deny","task":"deny","question":"deny"}' \
+env AGENT_COUNCIL_TRUST_OPENCODE_PERMISSION_ENV=1 \
+  OPENCODE_PERMISSION='{"skill":{"*":"deny"},"read":"deny","grep":"deny","glob":"deny","edit":"deny","bash":"deny","webfetch":"deny","websearch":"deny","task":"deny","question":"deny"}' \
   node scripts/agent-council.mjs \
   --codex-cmd 'node -e "console.log(\"CODEX_STUB_OK\")"' \
   --claude-cmd 'node -e "console.log(\"CLAUDE_STUB_OK\")"' \
@@ -139,6 +148,22 @@ SDK adapter availability check:
 ```bash
 node scripts/claude-agent-sdk-adapter.mjs --help
 ```
+
+Local self-tests without real LLM calls:
+
+```bash
+node --test scripts/agent-council.test.mjs
+```
+
+## Scaling Direction
+
+For many-model councils, keep the current adapter behavior but move toward:
+
+- a declarative seat registry (`name`, `provider`, `command`, `model`, `variant`, `timeoutMs`, `concurrencyGroup`)
+- a scheduler with a global deadline and per-group concurrency
+- OpenCode isolation with per-seat `--dir` or explicit `opencode-local-db` serialization
+- a mandatory parent `Council Summary` / `extracted` consolidation pass before reading raw transcripts
+- optional spend/token controls where each CLI exposes them
 
 ## Packaging
 
