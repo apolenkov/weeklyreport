@@ -14,6 +14,7 @@ import { PrismaService } from "../prisma/prisma.service.js";
  * a single primary-key lookup, so cold reads are cheap.
  */
 const ORG_CACHE_TTL_MS = 5000;
+// eslint-disable-next-line no-restricted-syntax -- Module-level TTL singleton cache must be assignable for refresh and explicit clearOrgCache invalidation.
 let orgCache: {
   value: { shortName: string; fullName: string };
   expiresAt: number;
