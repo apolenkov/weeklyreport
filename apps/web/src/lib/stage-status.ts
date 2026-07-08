@@ -7,6 +7,10 @@ const PRECEDENCE: Record<StageStatus, number> = {
   empty: 0,
 };
 
+function moreSevere(current: StageStatus, candidate: StageStatus): StageStatus {
+  return PRECEDENCE[candidate] > PRECEDENCE[current] ? candidate : current;
+}
+
 /**
  * Derives effective StageStatus from the risks/items that back the stage —
  * the single source of truth.
@@ -45,19 +49,14 @@ export function deriveEffectiveStageStatus(
   risks: readonly { severity?: string }[],
   items: readonly { workflowStatus: string }[],
 ): StageStatus {
-  let best: StageStatus = "empty";
-  for (const r of risks) {
-    const s: StageStatus = r.severity === "blocked" ? "blocked" : "at-risk";
-    if (PRECEDENCE[s] > PRECEDENCE[best]) best = s;
-  }
-  for (const i of items) {
-    if (
-      i.workflowStatus === "blocked" &&
-      PRECEDENCE.blocked > PRECEDENCE[best]
-    ) {
-      best = "blocked";
-    }
-  }
+  const riskBest = risks.reduce<StageStatus>(
+    (best, r) =>
+      moreSevere(best, r.severity === "blocked" ? "blocked" : "at-risk"),
+    "empty",
+  );
+  const best = items.some((i) => i.workflowStatus === "blocked")
+    ? moreSevere(riskBest, "blocked")
+    : riskBest;
   if (best !== "empty") return best;
   // No backing risk/item: a manual at-risk/blocked has nothing to back it, so
   // it collapses to on-track; on-track/empty stay as-is.

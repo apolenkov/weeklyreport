@@ -123,6 +123,17 @@ export type CrossAuthorStageMap = Map<
   Map<string, CrossAuthorStageOverride>
 >;
 
+function getOrCreateStageMap(
+  map: CrossAuthorStageMap,
+  projectId: string,
+): Map<string, CrossAuthorStageOverride> {
+  const existing = map.get(projectId);
+  if (existing) return existing;
+  const created = new Map<string, CrossAuthorStageOverride>();
+  map.set(projectId, created);
+  return created;
+}
+
 // ---- Mappers ----
 
 /**
@@ -139,11 +150,7 @@ export function buildCrossAuthorStageMap(
 ): CrossAuthorStageMap {
   const map: CrossAuthorStageMap = new Map();
   for (const ca of crossAuthors) {
-    let stageMap = map.get(ca.projectId);
-    if (!stageMap) {
-      stageMap = new Map();
-      map.set(ca.projectId, stageMap);
-    }
+    const stageMap = getOrCreateStageMap(map, ca.projectId);
     for (const sn of ca.stageNames) {
       const norm = normalizeStageName(sn);
       const stageEntry = ca.stages.find((s) =>
