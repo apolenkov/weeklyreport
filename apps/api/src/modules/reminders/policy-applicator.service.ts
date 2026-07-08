@@ -97,8 +97,11 @@ export class PolicyApplicatorService {
       where: { active: true },
     });
 
+    // eslint-disable-next-line no-restricted-syntax -- Side-effectful async DB loop reports per-policy outcomes; a reduce would obscure the upsert/error paths it counts.
     let created = 0;
+    // eslint-disable-next-line no-restricted-syntax -- Side-effectful async DB loop reports per-policy outcomes; a reduce would obscure the upsert/error paths it counts.
     let updated = 0;
+    // eslint-disable-next-line no-restricted-syntax -- Side-effectful async DB loop reports per-policy outcomes; a reduce would obscure the upsert/error paths it counts.
     let skipped = 0;
 
     for (const policy of policies) {
