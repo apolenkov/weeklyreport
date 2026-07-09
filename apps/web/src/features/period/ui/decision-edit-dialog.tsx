@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
+import { RecordDialogFooter } from "../../../shared/ui/record-dialog-footer";
 import type {
   DecisionEntry,
   Product,
@@ -51,6 +52,7 @@ interface DecisionEditDialogProps {
   readonly defaultProductId?: string;
   readonly onSave: (next: DecisionEntry) => void;
   readonly onCancel: () => void;
+  readonly onDelete?: () => void;
 }
 
 /**
@@ -75,6 +77,7 @@ function DecisionEditDialogContent({
   defaultProductId,
   onSave,
   onCancel,
+  onDelete,
 }: DecisionEditDialogProps) {
   const isCreate = decision === null;
 
@@ -396,23 +399,13 @@ function DecisionEditDialogContent({
           </div>
         </div>
 
-        <div className="mt-5 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[40px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isDeadEnd}
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[40px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Save Decision
-          </button>
-        </div>
+        <RecordDialogFooter
+          saveLabel="Save Decision"
+          onCancel={onCancel}
+          onSave={handleSave}
+          onDelete={onDelete}
+          saveDisabled={isDeadEnd}
+        />
       </div>
     </div>,
     document.body,

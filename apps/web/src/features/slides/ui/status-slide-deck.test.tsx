@@ -8,6 +8,8 @@ import { StatusSlideDeck } from "./status-slide-deck";
 type Item = ReportSectionReadModel["items"][number];
 type Risk = ReportSectionReadModel["risks"][number];
 
+const STABLE_ID = "stable-item-1";
+
 const itemIds = (() => {
   const counter = { value: 0 };
   return () => {
@@ -279,5 +281,52 @@ describe("StatusSlideDeck — by-product grid article", () => {
       />,
     );
     expect(screen.getByText("No slides available")).toBeInTheDocument();
+  });
+
+  it("passes row activation through the lead deck", () => {
+    const slide = buildSectionSlideModel(
+      makeSection({ items: [item({ stableId: STABLE_ID })] }),
+    );
+    const onRowActivate = vi.fn();
+    render(
+      <StatusSlideDeck
+        slides={[slide]}
+        selectedIndex={0}
+        onSelect={vi.fn()}
+        mode="lead"
+        onRowActivate={onRowActivate}
+      />,
+    );
+
+    fireEvent.doubleClick(
+      screen.getByRole("button", { name: "Edit In progress: own item" }),
+    );
+
+    expect(onRowActivate).toHaveBeenCalledWith({
+      kind: "item",
+      stableId: STABLE_ID,
+    });
+  });
+
+  it("does not pass row activation through the head deck", () => {
+    const slide = buildSectionSlideModel(
+      makeSection({ items: [item({ stableId: STABLE_ID })] }),
+    );
+    const onRowActivate = vi.fn();
+    render(
+      <StatusSlideDeck
+        slides={[slide]}
+        selectedIndex={0}
+        onSelect={vi.fn()}
+        mode="head"
+        onRowActivate={onRowActivate}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Edit In progress: own item" }),
+    ).not.toBeInTheDocument();
+    fireEvent.doubleClick(screen.getByText("own item"));
+    expect(onRowActivate).not.toHaveBeenCalled();
   });
 });

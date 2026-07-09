@@ -8,6 +8,7 @@ import type { SectionSlideModel } from "../model/section-slide-utils";
 import { DeckFullscreenOverlay } from "./deck-fullscreen-overlay";
 import { HeadSlideCarousel } from "./head-slide-carousel";
 import { SlideArticle } from "./slide-article";
+import type { SlideRowActivateHandler } from "./slide-article-rows";
 
 interface StatusSlideDeckProps {
   readonly slides: readonly SectionSlideModel[];
@@ -16,6 +17,7 @@ interface StatusSlideDeckProps {
   readonly mode: "lead" | "head";
   readonly toolbar?: ReactNode;
   readonly heroControls?: ReactNode;
+  readonly onRowActivate?: SlideRowActivateHandler;
 }
 
 function selectedSlide(
@@ -53,6 +55,7 @@ export function StatusSlideDeck({
   mode,
   toolbar,
   heroControls,
+  onRowActivate,
 }: StatusSlideDeckProps) {
   const slide = selectedSlide(slides, selectedIndex);
   const canGoPrev = selectedIndex > 0;
@@ -146,6 +149,7 @@ export function StatusSlideDeck({
                   key={`${slide.id}:${String(slide.pageIndex ?? 0)}`}
                   slide={slide}
                   heroControls={heroControls}
+                  onRowActivate={onRowActivate}
                 />
               </div>
             ) : (
