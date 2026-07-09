@@ -60,7 +60,7 @@
 - [x] 3.1 Update `openspec/specs/architecture-refactor-backlog/spec.md` and the
       matching change delta with actual post-slice `lead-form.tsx` LOC evidence.
   - Updated durable backlog and change delta with post-slice evidence:
-    `lead-form.tsx` landed at 1486 LOC after starting this slice at 1858 LOC.
+    `lead-form.tsx` landed at 1485 LOC after starting this slice at 1858 LOC.
 - [x] 3.2 Run focused tests:
       `cd apps/web && pnpm exec vitest run src/features/report-sections/ui/lead-form.test.tsx src/features/report-sections/ui/lead-form-visibility.test.tsx src/hooks/use-lead-form-autosave.test.tsx`.
   - Ran focused Vitest coverage including the three required existing files plus
