@@ -23,7 +23,11 @@ version owner moved behind a tested feature-local hook (landed with the file at
 `refactor-lead-form-write-actions`: submit/revoke/reopen/fill-from command
 orchestration, dialog/error state, write invalidation, and optimistic-lock
 command-time version reads moved behind a tested feature-local hook (landed
-with the file at 1858 LOC; it stood at 2036 when the slice started). The
+with the file at 1858 LOC; it stood at 2036 when the slice started). The fourth
+slice is `refactor-lead-form-draft-merges`: product/activity/item/risk/decision
+presentation-to-draft merge commands, item move commands, blocker routing, and
+quick-add item saves moved behind a tested feature-local boundary (landed with
+the file at 1486 LOC; it stood at 1858 when the slice started). The
 decomposition target itself stays open; the deferred `ReportDataCoordinator` /
 `FormStateManager` objects MUST NOT be built outside a future grilled change of
 their own.
@@ -35,7 +39,8 @@ their own.
   target
 - **AND** it lists the landed slices (first: `refactor-lead-mappers`; second:
   `refactor-lead-form-draft-orchestration`; third:
-  `refactor-lead-form-write-actions`) and marks the remaining decomposition as
+  `refactor-lead-form-write-actions`; fourth:
+  `refactor-lead-form-draft-merges`) and marks the remaining decomposition as
   needing its own grilled refactor change before work starts
 
 #### Scenario: a later slice starts
