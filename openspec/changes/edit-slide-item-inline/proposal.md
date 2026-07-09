@@ -31,6 +31,6 @@ On the slide view a lead sees a finished, readable picture of the week — but f
 
 ## Impact
 
-- `apps/web/src/components/slides/` — row interaction, dialog host in `LeadSlidesClient`.
-- Reuses `apps/web/src/components/lead/` record editors + existing save/delete mutations (stableId lineage preserved — consumers must keep treating stableId as client-authoritative).
+- `apps/web/src/features/slides/` — row interaction, dialog host in `LeadSlidesClient`.
+- Reuses the current feature-owned record editors (`features/report-sections` for items, `features/review` for risks, `features/period` for decisions) plus existing save/delete mutations (stableId lineage preserved — consumers must keep treating stableId as client-authoritative).
 - Tests: slides unit tests + a jsdom dialog test; e2e catalog untouched (no new route).

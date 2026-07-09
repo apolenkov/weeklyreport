@@ -13,5 +13,5 @@
 
 ## 3. Verification
 
-- [ ] 3.1 Full web unit suite, `pnpm typecheck`, `pnpm exec eslint apps/web/src/components/slides --max-warnings 0`.
+- [ ] 3.1 Full web unit suite, `pnpm typecheck`, `pnpm exec eslint apps/web/src/features/slides --max-warnings 0` plus focused ESLint on every touched editor feature file.
 - [ ] 3.2 Live-verify on :3000: edit + delete an item from the slide; confirm foreign row and submitted section stay inert.
