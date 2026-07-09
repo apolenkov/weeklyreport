@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`agent-council` automates the narrow part that is hard to do by hand: launch independent CLI advisors in parallel, prevent interactive hangs, capture their stdout/stderr, and assemble a stable synthesis prompt for the parent Advisor.
+`agent-council` automates the narrow part that is hard to do by hand: launch independent CLI advisors from a declarative config, prevent interactive hangs, capture stdout/stderr, run bounded challenge phases, and assemble a stable synthesis prompt for the parent Advisor.
 
 The parent Advisor still owns judgment and code changes.
 
@@ -23,21 +23,33 @@ For this use case, a thin CLI harness is lower-risk than adopting a full framewo
 ## Process Model
 
 1. Parent Advisor receives the user task.
-2. Skill invokes `scripts/agent-council.mjs`.
-3. Orchestrator builds a child prompt that:
+2. Skill invokes `scripts/agent-council.mjs` with a YAML config and profile.
+3. Orchestrator validates the profile:
+   - `soft` for one-pass council advice
+   - `hard` for self-grill plus adversarial planning rounds
+   - `full` for hard mode plus configured build/review
+4. Orchestrator builds child prompts that:
    - marks the user request as data
    - requires read-only analysis
-   - asks for assumptions, plan, risks, implementation notes, and confidence
-4. Orchestrator starts Codex and Claude Code concurrently with an OpenCode Go advisor chain.
-5. Each child process gets:
+   - asks for assumptions, evidence, risks, implementation notes, and confidence
+5. Orchestrator starts configured non-OpenCode seats concurrently and runs seats sharing a `concurrency_group` serially.
+6. Each child process gets:
    - a per-process timeout
    - an optional whole-council deadline
    - stdout/stderr buffering with a character cap
    - process-group termination on timeout where the platform supports it
-6. OpenCode Go advisors run sequentially inside the chain to avoid local OpenCode session database locks.
-7. Orchestrator extracts standard child headings into machine-readable `extracted` fields and prints a `Council Summary`.
-8. Orchestrator prints the Advisor Prompt.
-9. Parent Advisor compares the outputs and writes the final answer or code.
+7. OpenCode Go advisors are normally assigned `concurrency_group: opencode` to avoid local session database locks.
+8. Orchestrator extracts standard child headings into machine-readable `extracted` fields and writes run artifacts.
+9. Orchestrator prints the parent Advisor prompt.
+10. Parent Advisor compares the outputs and writes the final answer or code.
+
+## Modes
+
+`soft` runs the configured advisors once and emits a parent prompt.
+
+`hard` runs the initial council, then `self_grill_rounds`, then `adversarial_rounds`. These rounds are bounded by config. They do not ask the child model to stand in for the human; they challenge the child model's own written position and the other advisor positions.
+
+`full` runs hard mode, then hands the frozen task/council output to the configured builder. The builder is the only child seat allowed to write and only after the parent passed `--allow-writes`. The configured reviewer must be a different non-writable seat. The runner also requires a clean git tree and proof command before the builder starts.
 
 ## Default Adapters
 
@@ -88,23 +100,36 @@ OpenCode stores session state locally. Multiple live `opencode run` processes ag
 
 ## Configuration
 
+Real runs require restricted YAML config. The default path is `.agents/agent-council.yaml`, and a complete sample lives in `references/sample-config.yaml`.
+
+The parser supports maps, arrays, strings, numbers, booleans, and null. It intentionally rejects YAML anchors, merges, tags, and other complex YAML features.
+
+High-level schema:
+
+```yaml
+version: 1
+default_profile: hard
+profiles:
+  hard:
+    mode: hard
+    advisors: [codex-readonly, claude-opus]
+    self_grill_rounds: 2
+    adversarial_rounds: 5
+seats:
+  codex-readonly:
+    provider: codex
+    command: ["codex", "exec", "--ephemeral", "--sandbox", "read-only"]
+```
+
+Config fields replace the old hardcoded default seats. Environment variables still control cross-cutting runner behavior such as deadline, max output, and OpenCode permission strictness.
+
 Environment variables:
 
 | Variable | Purpose |
 | --- | --- |
-| `AGENT_COUNCIL_CODEX_CMD` | Replace the Codex adapter command. Accepts a shell-like string or JSON array. |
-| `AGENT_COUNCIL_CODEX_TIMEOUT_MS` | Timeout for the Codex advisor. Default: `90000`. |
-| `AGENT_COUNCIL_CLAUDE_CMD` | Replace the Claude Code adapter command. Accepts a shell-like string or JSON array. Use `{model}` and `{effort}` placeholders if the adapter supports them. |
-| `AGENT_COUNCIL_CLAUDE_MODEL` | Claude Code model alias or full model name. Default: `opus`. |
-| `AGENT_COUNCIL_CLAUDE_EFFORT` | Claude Code effort level for the default CLI adapter. Default: `high`. |
-| `AGENT_COUNCIL_CLAUDE_TIMEOUT_MS` | Timeout for the Claude Code advisor. Default: `90000`. |
-| `AGENT_COUNCIL_DISABLE_CLAUDE` | Set to `1` to remove the Claude Code advisor. |
-| `AGENT_COUNCIL_OPENCODE_CMD` | Replace the OpenCode adapter command. Accepts a shell-like string or JSON array. Use `{model}` to run it once per configured model. |
-| `AGENT_COUNCIL_OPENCODE_MODELS` | Comma-separated or JSON array of OpenCode Go model ids. Default: `opencode-go/deepseek-v4-pro,opencode-go/glm-5.2`. |
-| `AGENT_COUNCIL_OPENCODE_MODEL` | Backward-compatible single model override when `AGENT_COUNCIL_OPENCODE_MODELS` is unset. |
-| `AGENT_COUNCIL_OPENCODE_VARIANT` | OpenCode provider-specific reasoning effort / model variant. Default: `max`. |
-| `AGENT_COUNCIL_OPENCODE_TIMEOUT_MS` | Timeout for each OpenCode advisor. Default: `180000`. |
-| `AGENT_COUNCIL_TIMEOUT_MS` | Global timeout override in milliseconds, applied to all advisors unless a per-seat timeout is set. |
+| `AGENT_COUNCIL_CONFIG` | Config path override. |
+| `AGENT_COUNCIL_PROFILE` | Profile override. |
+| `AGENT_COUNCIL_TIMEOUT_MS` | Default timeout for seats without `timeout_ms`. |
 | `AGENT_COUNCIL_DEADLINE_MS` | Whole-council wall-clock deadline in milliseconds. Disabled by default. |
 | `AGENT_COUNCIL_MAX_OUTPUT_CHARS` | Per-stream capture cap. |
 | `AGENT_COUNCIL_STRICT_OPENCODE_PERMISSIONS` | Set to `0` to avoid injecting strict OpenCode permissions. |
@@ -114,32 +139,26 @@ CLI flags:
 
 ```bash
 node scripts/agent-council.mjs \
+  --config .agents/agent-council.yaml \
+  --profile hard \
   --cwd /path/to/repo \
-  --codex-timeout-ms 120000 \
-  --claude-timeout-ms 120000 \
-  --opencode-timeout-ms 240000 \
   --deadline-ms 600000 \
   --max-output-chars 200000 \
-  --claude-model opus \
-  --claude-effort high \
-  --opencode-models opencode-go/deepseek-v4-pro,opencode-go/glm-5.2 \
-  --opencode-variant max \
   -- "Design the migration plan"
 ```
 
 Use `--json` when another script needs machine-readable output.
 
-JSON output includes `health` counters and one `extracted` object per advisor. `extracted` is derived from the required child headings: `Position`, `Assumptions`, `Evidence`, `Risks`, `Implementation Notes`, and `Confidence`. The raw stdout/stderr are still preserved and fenced in the parent prompt.
+JSON output includes run-level `health`, phase records, and one `extracted` object per advisor result. `extracted` is derived from the required child headings: `Position`, `Assumptions`, `Evidence`, `Risks`, `Implementation Notes`, and `Confidence`. Raw stdout/stderr are still preserved and fenced in the parent prompt.
 
 Fast plumbing smoke test with real OpenCode and no tools:
 
 ```bash
 env AGENT_COUNCIL_TRUST_OPENCODE_PERMISSION_ENV=1 \
   OPENCODE_PERMISSION='{"skill":{"*":"deny"},"read":"deny","grep":"deny","glob":"deny","edit":"deny","bash":"deny","webfetch":"deny","websearch":"deny","task":"deny","question":"deny"}' \
-  node scripts/agent-council.mjs \
-  --codex-cmd 'node -e "console.log(\"CODEX_STUB_OK\")"' \
-  --claude-cmd 'node -e "console.log(\"CLAUDE_STUB_OK\")"' \
-  --opencode-models opencode-go/deepseek-v4-pro,opencode-go/glm-5.2 \
+node scripts/agent-council.mjs \
+  --config /tmp/agent-council.yaml \
+  --profile soft \
   -- "No tools. Smoke-test the harness only."
 ```
 
@@ -159,8 +178,7 @@ node --test scripts/agent-council.test.mjs
 
 For many-model councils, keep the current adapter behavior but move toward:
 
-- a declarative seat registry (`name`, `provider`, `command`, `model`, `variant`, `timeoutMs`, `concurrencyGroup`)
-- a scheduler with a global deadline and per-group concurrency
+- richer final reviewer contracts and machine-readable verdict schemas
 - OpenCode isolation with per-seat `--dir` or explicit `opencode-local-db` serialization
 - a mandatory parent `Council Summary` / `extracted` consolidation pass before reading raw transcripts
 - optional spend/token controls where each CLI exposes them
