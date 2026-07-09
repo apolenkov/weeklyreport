@@ -35,9 +35,8 @@ Non-goals:
 
 ### Modified Capabilities
 
-- None. The durable `architecture-refactor-backlog` spec will be updated during
-  implementation/archive with actual post-slice LOC evidence, rather than a
-  pre-implementation estimate.
+- `architecture-refactor-backlog`: Records this as the third grilled
+  lead-form decomposition slice with actual post-slice LOC evidence.
 
 ## Impact
 

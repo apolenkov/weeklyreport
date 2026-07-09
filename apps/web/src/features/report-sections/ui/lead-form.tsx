@@ -3,25 +3,15 @@
 
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { Separator } from "@customreport/ui/components/ui/separator";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { User, Users } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import { useFullscreen } from "../../../hooks/use-fullscreen";
 import { useRecordVisibility } from "../../../hooks/use-record-visibility";
-import {
-  computeCoupling,
-  validateCoupling,
-} from "../../../hooks/use-status-risk";
 import { deriveActivityAlarmFloor } from "../../../lib/activity-alarm";
 import { deriveActivityBucket } from "../../../lib/activity-buckets";
-import {
-  invalidateDashboard,
-  invalidateLeadForm,
-  invalidateLeadHistory,
-} from "../../../lib/cache-keys";
 import { crossAuthorContentFetchEnabled } from "../../../lib/cross-author-content-gate";
 import {
   markCompletePatch,
@@ -30,7 +20,6 @@ import {
   pauseItemPatch,
 } from "../../../lib/lead-item-actions";
 import { SessionContext } from "../../../lib/session-provider";
-import { isConflictError } from "../../../lib/trpc";
 import { useTRPC } from "../../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
@@ -95,6 +84,7 @@ import {
   UnifiedActivitySection,
 } from "./unified-activity-section";
 import { useLeadFormDraftOrchestration } from "./use-lead-form-draft-orchestration";
+import { useLeadFormWriteActions } from "./use-lead-form-write-actions";
 
 interface LeadFormProps {
   /**
@@ -508,7 +498,6 @@ export function LeadForm({
   });
 
   // ---- Local UI + draft state ----
-  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const {
     autosave,
     draftPayload,
@@ -526,99 +515,40 @@ export function LeadForm({
     refetchSection: byPeriodQ.refetch,
   });
 
-  // ---- Mutations ----
-  const submitMut = useMutation(
-    trpc.reports.submit.mutationOptions({
-      onSuccess: (saved) => {
-        // submit returns the persisted read model; sync the bumped version so a
-        // follow-up write carries it (single source of truth).
-        setVersionSafe(saved.version);
-        invalidateLeadForm(qc, trpc);
-        invalidateLeadHistory(qc, trpc);
-        setIsSubmitted(true);
-        setShowSubmitConfirm(false);
-        toast.success("Report submitted");
-      },
-      onError: (err: unknown) => {
-        // A stale-version 409 means another writer advanced the section: refetch
-        // + surface rather than a generic toast.
-        if (isConflictError(err)) {
-          handleConflict();
-          return;
-        }
-        // Surface server-side errors as a toast; submitSectionSchema no
-        // longer enforces a per-field "needs at least one priority" rule,
-        // so we drop the field-targeted scroll/inline-error path that used
-        // to handle priorities.too_small. Generic message covers the rest.
-        if (err instanceof Error) {
-          toast.error(err.message);
-        } else {
-          toast.error("Submit failed");
-        }
-      },
-    }),
-  );
+  const writeActionSubmitContextRef = useRef<{
+    draftPayload: typeof draftPayload;
+    products: readonly Product[];
+    ownRisks: readonly RiskEntry[];
+  }>({ draftPayload: null, products: [], ownRisks: [] });
 
-  const revokeMut = useMutation(
-    trpc.leadForm.revoke.mutationOptions({
-      onSuccess: () => {
-        invalidateLeadForm(qc, trpc);
-        invalidateDashboard(qc, trpc);
-        invalidateLeadHistory(qc, trpc);
-        setIsSubmitted(false);
-        toast.success("Section unlocked");
-      },
-      onError: (err: unknown) => {
-        const msg = err instanceof Error ? err.message : "Revoke failed";
-        toast.error(msg);
-      },
-    }),
-  );
-
-  // M6: Lead-side request to reopen a submitted section. Backend already
-  // exists (leadForm.requestReopen) — this just wires the UI. Local
-  // dialog state lives next to the mutation so failure messages can be
-  // surfaced inline rather than only in a toast.
-  const [showReopenDialog, setShowReopenDialog] = useState(false);
-  const [reopenError, setReopenError] = useState<string | null>(null);
-  const [showRevokeDialog, setShowRevokeDialog] = useState(false);
-  const requestReopenMut = useMutation(
-    trpc.leadForm.requestReopen.mutationOptions({
-      onSuccess: () => {
-        setShowReopenDialog(false);
-        setReopenError(null);
-        // reopen-request-lifecycle (D4): refresh byPeriod so the now-pending
-        // request flips canRequestReopen to false and hides the control.
-        invalidateLeadForm(qc, trpc);
-        toast.success("Reopen request sent to Head");
-      },
-      onError: (err: unknown) => {
-        const msg =
-          err instanceof Error ? err.message : "Reopen request failed";
-        setReopenError(msg);
-      },
-    }),
-  );
-
-  const fillFromMut = useMutation(
-    trpc.leadForm.fillFrom.mutationOptions({
-      onSuccess: () => {
-        // fillFrom returns a copy summary, not the read model, so the bumped
-        // target version arrives via this refetch → the re-seed effect's
-        // setVersionSafe, not a response field.
-        invalidateLeadForm(qc, trpc);
-        toast.success("Form filled from selected period");
-      },
-      onError: (err: unknown) => {
-        if (isConflictError(err)) {
-          handleConflict();
-          return;
-        }
-        const msg = err instanceof Error ? err.message : "Fill from failed";
-        toast.error(msg);
-      },
-    }),
-  );
+  const {
+    confirmRevoke,
+    fillFromMut,
+    handleConfirmSubmit,
+    handleFillFrom,
+    handleRequestReopen,
+    handleRevoke,
+    handleSubmit,
+    openReopenDialog,
+    closeReopenDialog,
+    reopenError,
+    requestReopenMut,
+    revokeMut,
+    setShowRevokeDialog,
+    setShowSubmitConfirm,
+    showReopenDialog,
+    showRevokeDialog,
+    showSubmitConfirm,
+    submitMut,
+  } = useLeadFormWriteActions({
+    sectionIdForActions,
+    autosaveDirty: autosave.dirty,
+    getSubmitContext: () => writeActionSubmitContextRef.current,
+    versionRef,
+    setVersionSafe,
+    setIsSubmitted,
+    handleConflict,
+  });
 
   // simplify-stage-status-interaction (D4): stages the lead left unset (null
   // traffic) auto-promote to On Track at submit, warned first. stageStatuses
@@ -762,6 +692,7 @@ export function LeadForm({
   const ownNextWeekItems: KanbanItem[] = data.nextWeekItems as KanbanItem[];
   const ownRisks: RiskEntry[] = data.risks as RiskEntry[];
   const ownDecisions: DecisionEntry[] = data.decisions as DecisionEntry[];
+  writeActionSubmitContextRef.current = { draftPayload, products, ownRisks };
 
   // The interactive pill's alarm floor re-derived from the LIVE draft risks
   // (the server-baked alarmFloor goes stale the moment a draft risk is added
@@ -1185,109 +1116,6 @@ export function LeadForm({
   const handleCurrentWeekItemsChange = makeItemsChangeHandler("current");
   const handleNextWeekItemsChange = makeItemsChangeHandler("next");
 
-  // ---- Action handlers ----
-  function handleSubmit() {
-    // F4: only check risks that will actually be submitted (same filter as
-    // sectionToDraftPayload). Empty/unsaved rows must not falsely block submit.
-    // 7c.5: scope to OWN risks — foreign records are a read-only lens and must
-    // never affect the lead's submit gating (view-only, D4b).
-    const committedRisks = ownRisks.filter(
-      (r) => r.text.trim().length > 0 && r.mitigation.trim().length > 0,
-    );
-    const coupling = computeCoupling(products, committedRisks);
-    const { missing } = validateCoupling(coupling);
-    if (missing.length > 0) {
-      toast.error(
-        "Specify stages for at-risk/blocked products in Risks & Blockers.",
-      );
-      return;
-    }
-    setShowSubmitConfirm(true);
-  }
-
-  function handleConfirmSubmit() {
-    if (!draftPayload) return;
-    // submitSectionSchema requires every projectStatus to have a non-null
-    // status. Coerce undefined -> green optimistically; the server will
-    // reject if any are still invalid and toast the error.
-    const projectStatuses = draftPayload.projectStatuses.map((p) => ({
-      projectId: p.projectId,
-      status: p.status ?? ("green" as const),
-    }));
-    // activity-first-class: submitSectionSchema tightens activityStatuses[].status
-    // to non-null too. Coerce an untouched status to green (seeding default);
-    // the server floors it by the activity's own risks/blockers on read.
-    const activityStatuses = (draftPayload.activityStatuses ?? []).map((a) => ({
-      activityId: a.activityId,
-      status: a.status ?? ("green" as const),
-      note: a.note ?? null,
-    }));
-    // simplify-stage-status-interaction (D4): auto-promote any own stage the
-    // lead left unset (null traffic) to On Track (green), mirroring the
-    // null->green project/activity coercion above. The confirm dialog warned
-    // about the null count first, so the promotion is announced, not silent.
-    //
-    // A stale red/yellow own-stage status also collapses to green here: under
-    // the one-source model a persisted stage severity is never legitimate
-    // (severity lives in risks; handleRisksChange never writes a derived status;
-    // the chip only authors on-track/empty), so any red/yellow is a legacy
-    // orphan the read model already renders as On Track. Collapsing it on submit
-    // writes the value the display already shows — the design's "next save
-    // writes the collapsed value" — instead of re-persisting a ghost severity.
-    const stageStatuses = (draftPayload.stageStatuses ?? []).map((s) => ({
-      ...s,
-      status:
-        s.status == null || s.status === "red" || s.status === "yellow"
-          ? ("green" as const)
-          : s.status,
-    }));
-    submitMut.mutate({
-      ...draftPayload,
-      // Current revision read synchronously — never a stale closure, so a submit
-      // right after an autosave bump carries the post-bump version (no self-409).
-      version: versionRef.current,
-      projectStatuses,
-      activityStatuses,
-      stageStatuses,
-      confirmed: true,
-    });
-  }
-
-  function handleRevoke() {
-    setShowRevokeDialog(true);
-  }
-
-  function confirmRevoke() {
-    setShowRevokeDialog(false);
-    if (!sectionIdForActions) return;
-    revokeMut.mutate({ reportSectionId: sectionIdForActions });
-  }
-
-  function handleRequestReopen(reason: string | undefined) {
-    if (!sectionIdForActions) return;
-    requestReopenMut.mutate({
-      reportSectionId: sectionIdForActions,
-      ...(reason ? { reason } : {}),
-    });
-  }
-
-  function handleFillFrom(sourceSectionId: string) {
-    if (!sectionIdForActions) return;
-    if (
-      autosave.dirty &&
-      !window.confirm("You have unsaved changes. Continue and overwrite?")
-    ) {
-      return;
-    }
-    fillFromMut.mutate({
-      targetSectionId: sectionIdForActions,
-      sourceSectionId,
-      // Current revision of the TARGET, read synchronously (guardrail: not a
-      // stale closure after an autosave bump).
-      version: versionRef.current,
-    });
-  }
-
   function handleToggleAll() {
     setGroupExpanded((prev) => !prev);
   }
@@ -1482,10 +1310,7 @@ export function LeadForm({
                 <button
                   type="button"
                   className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={() => {
-                    setReopenError(null);
-                    setShowReopenDialog(true);
-                  }}
+                  onClick={openReopenDialog}
                   disabled={requestReopenMut.isPending}
                   title="Ask Head to unlock this section"
                 >
@@ -2014,10 +1839,7 @@ export function LeadForm({
         pending={requestReopenMut.isPending}
         error={reopenError}
         onConfirm={handleRequestReopen}
-        onCancel={() => {
-          setShowReopenDialog(false);
-          setReopenError(null);
-        }}
+        onCancel={closeReopenDialog}
       />
 
       <ConfirmDeleteDialog

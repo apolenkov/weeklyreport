@@ -7,7 +7,14 @@
 
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
@@ -713,6 +720,79 @@ describe("LeadForm mutation wiring", () => {
     );
   });
 
+  it("fillFrom sends the current target version after an autosave bump", async () => {
+    const sourceSectionId = "99999999-9999-4999-8999-999999999999";
+    const { Wrapper, captured } = buildHarness({
+      myHistory: [
+        {
+          sectionId: SECTION_ID,
+          reportId: REPORT_ID,
+          periodStart: new Date("2026-06-15T00:00:00Z"),
+          periodEnd: new Date("2026-06-21T00:00:00Z"),
+          reportStatus: "open",
+          sectionStatus: "draft",
+          submittedAt: null,
+          publishedAt: null,
+        },
+        {
+          sectionId: sourceSectionId,
+          reportId: "99999999-9999-4999-8999-999999999990",
+          periodStart: new Date("2026-06-08T00:00:00Z"),
+          periodEnd: new Date("2026-06-14T00:00:00Z"),
+          reportStatus: "published",
+          sectionStatus: "submitted",
+          submittedAt: new Date("2026-06-13T10:00:00Z"),
+          publishedAt: new Date("2026-06-14T10:00:00Z"),
+        },
+      ],
+    });
+    captured["leadForm.fillFrom"].mutationFn.mockResolvedValue({
+      success: true,
+      copiedItems: 1,
+    });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
+
+    const saveDraftOpts = captured["reports.saveDraft"].lastOptions as {
+      onSuccess?: (saved: unknown) => void;
+    };
+    act(() => {
+      saveDraftOpts.onSuccess?.({ version: 5 });
+    });
+
+    const documentActions = screen.getByRole("group", {
+      name: "Document actions",
+    });
+    act(() => {
+      within(documentActions)
+        .getByRole("button", {
+          name: "Fill from most recent submitted period",
+        })
+        .click();
+    });
+    const dialog = await screen.findByRole("dialog", {
+      name: "Confirm fill from previous",
+    });
+    act(() => {
+      within(dialog).getByRole("button", { name: "Replace & Fill" }).click();
+    });
+
+    await waitFor(() =>
+      expect(captured["leadForm.fillFrom"].mutationFn).toHaveBeenCalled(),
+    );
+    expect(
+      captured["leadForm.fillFrom"].mutationFn.mock.calls.at(0)?.[0],
+    ).toEqual({
+      targetSectionId: SECTION_ID,
+      sourceSectionId,
+      version: 5,
+    });
+  });
+
   it("toolbar renders the inert version-history ComingSoon control", async () => {
     // defer-versions-coming-soon: the version-history UI is removed; the
     // toolbar slot carries a disabled ComingSoon control instead.
@@ -794,6 +874,91 @@ describe("LeadForm mutation wiring", () => {
     expect(
       screen.queryByRole("button", { name: /Request Reopen/i }),
     ).toBeNull();
+  });
+
+  it("reopen request preserves payload, inline error, success reset, and invalidation", async () => {
+    const { Wrapper, captured, queryClient } = buildHarness({
+      sectionStatus: "submitted",
+    });
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const pendingReopen = new Promise<never>(() => undefined);
+    captured["leadForm.requestReopen"].mutationFn.mockReturnValue(
+      pendingReopen,
+    );
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+
+    const requestReopenButton = await screen.findByRole("button", {
+      name: /Request Reopen/i,
+    });
+    act(() => {
+      requestReopenButton.click();
+    });
+    const dialog = await screen.findByRole("dialog", {
+      name: "Request Reopen dialog",
+    });
+    fireEvent.change(within(dialog).getByLabelText(/Reason/i), {
+      target: { value: "  Need to add a carry-over  " },
+    });
+    act(() => {
+      within(dialog).getByRole("button", { name: "Send Request" }).click();
+    });
+
+    await waitFor(() =>
+      expect(captured["leadForm.requestReopen"].mutationFn).toHaveBeenCalled(),
+    );
+    expect(
+      captured["leadForm.requestReopen"].mutationFn.mock.calls.at(0)?.[0],
+    ).toEqual({
+      reportSectionId: SECTION_ID,
+      reason: "Need to add a carry-over",
+    });
+
+    const reopenOpts = captured["leadForm.requestReopen"]
+      .lastOptions as MutationCallbacks;
+    act(() => {
+      reopenOpts.onError?.(new Error("Request already pending"));
+    });
+    expect(screen.getByText("Request already pending")).toBeInTheDocument();
+
+    act(() => {
+      reopenOpts.onSuccess?.();
+    });
+    expect(toast.success).toHaveBeenCalledWith("Reopen request sent to Head");
+    expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Request Reopen dialog" }),
+      ).toBeNull(),
+    );
+    expect(screen.queryByText("Request already pending")).toBeNull();
+  });
+
+  it("revoke success preserves invalidations and success toast", async () => {
+    const { Wrapper, captured, queryClient } = buildHarness({
+      sectionStatus: "submitted",
+    });
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await waitFor(() =>
+      expect(captured["leadForm.revoke"].lastOptions).toBeDefined(),
+    );
+
+    const revokeOpts = captured["leadForm.revoke"]
+      .lastOptions as MutationCallbacks;
+    act(() => {
+      revokeOpts.onSuccess?.();
+    });
+
+    expect(toast.success).toHaveBeenCalledWith("Section unlocked");
+    expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(4);
   });
 
   it("draft: Submit is a document action; view mode + agent review are context controls", async () => {
