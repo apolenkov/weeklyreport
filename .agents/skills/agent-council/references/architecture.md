@@ -172,7 +172,10 @@ Local self-tests without real LLM calls:
 
 ```bash
 node --test scripts/agent-council.test.mjs
+node --test scripts/agent-council.e2e.test.mjs
 ```
+
+The E2E test runs the public CLI in `full` mode against a clean temporary git repo. It uses stub child commands, but exercises config loading, clean-tree gating, stdin prompt delivery to the builder, proof command execution, reviewer invocation, and artifact writing.
 
 ## Scaling Direction
 
