@@ -11,7 +11,10 @@ import {
   SlideLegend,
   SlidePriorityStrip,
 } from "./slide-article-header";
-import { StageLegend } from "./slide-article-rows";
+import {
+  type SlideRowActivateHandler,
+  StageLegend,
+} from "./slide-article-rows";
 
 /**
  * The one slide article for the whole deck (lead sections AND the head's own
@@ -23,9 +26,11 @@ import { StageLegend } from "./slide-article-rows";
 export function SlideArticle({
   slide,
   heroControls,
+  onRowActivate,
 }: {
   readonly slide: SectionSlideModel;
   readonly heroControls?: ReactNode;
+  readonly onRowActivate?: SlideRowActivateHandler;
 }) {
   const grid = slide.grid;
 
@@ -64,6 +69,7 @@ export function SlideArticle({
             key={card.id}
             card={card}
             authorsById={authorsById}
+            onRowActivate={onRowActivate}
           />
         ))}
         {grid.products.length === 0 && (

@@ -154,6 +154,44 @@ describe("buildSlideGridModel — status marks and columns", () => {
     });
     expect(model.counters).toEqual({ current: 1, risks: 0, priorities: 0 });
   });
+
+  it("adds editable refs only to own rows with stable lineage", () => {
+    const model = buildSlideGridModel({
+      section: section({
+        items: [item({ stableId: "item-stable-1" })],
+        risks: [risk({ stableId: "risk-stable-1" })],
+        decisions: [decision({ stableId: "decision-stable-1" })],
+      }),
+      foreign: [
+        foreignRow({
+          items: [
+            {
+              id: "foreign-item-1",
+              projectId: "p1",
+              type: "current",
+              text: "foreign item",
+              workflowStatus: "in_progress",
+              stageNames: [],
+            },
+          ],
+        }),
+      ],
+    });
+    const cols = productLevelOf(cardOf(model, "p1")).columns;
+    expect(cols.current[0]?.editableRef).toEqual({
+      kind: "item",
+      stableId: "item-stable-1",
+    });
+    expect(cols.risks[0]?.editableRef).toEqual({
+      kind: "risk",
+      stableId: "risk-stable-1",
+    });
+    expect(cols.decisions[0]?.editableRef).toEqual({
+      kind: "decision",
+      stableId: "decision-stable-1",
+    });
+    expect(cols.current[1]?.editableRef).toBeUndefined();
+  });
 });
 
 describe("buildSlideGridModel — sorting and author series", () => {

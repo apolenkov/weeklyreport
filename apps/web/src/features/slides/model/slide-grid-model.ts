@@ -27,6 +27,8 @@ export type {
   GridColumnKey,
   GridColumns,
   GridRow,
+  GridRowEditableRef,
+  GridRowKind,
   GridTone,
   SlideTrafficStatus,
 } from "./slide-grid-rows";

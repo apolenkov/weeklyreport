@@ -1,9 +1,16 @@
 import { Check, ChevronsRight, Pause } from "lucide-react";
-import { useRef } from "react";
+import { type KeyboardEvent, useRef } from "react";
 
 import { useSdlcTooltip } from "../../../shared/ui/sdlc-tooltip";
 import { STAGE_ICONS } from "../../report-sections/model/stage-chip-config";
-import type { GridAuthor, GridRow, GridTone } from "../model/slide-grid-model";
+import type {
+  GridAuthor,
+  GridRow,
+  GridRowEditableRef,
+  GridTone,
+} from "../model/slide-grid-model";
+
+export type SlideRowActivateHandler = (ref: GridRowEditableRef) => void;
 
 /** Hover/focus handlers wiring an element to the singleton slide tooltip. */
 function useHoverTooltip<T extends HTMLElement = HTMLSpanElement>(
@@ -173,12 +180,25 @@ function ItemRow({
   row,
   author,
   showStages,
+  onRowActivate,
 }: {
   readonly row: GridRow;
   readonly author: GridAuthor | undefined;
   readonly showStages: boolean;
+  readonly onRowActivate?: SlideRowActivateHandler;
 }) {
   const srLabel = TONE_SR_LABEL[row.tone];
+  const editableRef = row.editableRef;
+  const activatable = editableRef !== undefined && onRowActivate !== undefined;
+  const activate = () => {
+    if (editableRef === undefined) return;
+    onRowActivate?.(editableRef);
+  };
+  const handleKeyDown = (event: KeyboardEvent<HTMLSpanElement>) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    activate();
+  };
   // Every row is the same two-line card (short text still occupies two lines,
   // longer text clamps to an ellipsis). Hover shows the status plus the full
   // text — unconditionally, so a clamped row never hides its tail behind the
@@ -186,19 +206,37 @@ function ItemRow({
   const statusTooltip = useHoverTooltip<HTMLLIElement>(
     `${row.hoverLabel}\n${row.text}`,
   );
+  const content = (
+    <>
+      <AuthorBadge author={author} show={row.showAuthorBadge} />
+      {showStages && <StageWatermarks stageNames={row.stageNames} />}
+      {row.text}
+      <ToneMark tone={row.tone} />
+      {srLabel !== null && <span className="sr-only">{srLabel}</span>}
+    </>
+  );
   return (
     <li
       {...statusTooltip}
       className={`min-w-0 rounded-md border px-2 py-1 text-[13px] leading-[1.3] ${TONE_BORDER[row.tone]}`}
     >
       {/* min-h = 2 lines at 13px x 1.3 line-height. */}
-      <span className="line-clamp-2 min-h-[34px] whitespace-normal break-words">
-        <AuthorBadge author={author} show={row.showAuthorBadge} />
-        {showStages && <StageWatermarks stageNames={row.stageNames} />}
-        {row.text}
-        <ToneMark tone={row.tone} />
-        {srLabel !== null && <span className="sr-only">{srLabel}</span>}
-      </span>
+      {activatable ? (
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label={`Edit ${row.hoverLabel}: ${row.text}`}
+          onDoubleClick={activate}
+          onKeyDown={handleKeyDown}
+          className="line-clamp-2 min-h-[34px] cursor-pointer whitespace-normal break-words rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"
+        >
+          {content}
+        </span>
+      ) : (
+        <span className="line-clamp-2 min-h-[34px] whitespace-normal break-words">
+          {content}
+        </span>
+      )}
     </li>
   );
 }
@@ -210,11 +248,13 @@ export function SlideCell({
   authorsById,
   showStages,
   label,
+  onRowActivate,
 }: {
   readonly rows: readonly GridRow[];
   readonly authorsById: ReadonlyMap<string, GridAuthor>;
   readonly showStages: boolean;
   readonly label: string;
+  readonly onRowActivate?: SlideRowActivateHandler;
 }) {
   if (rows.length === 0) {
     return (
@@ -234,6 +274,7 @@ export function SlideCell({
           row={row}
           author={authorsById.get(row.authorId)}
           showStages={showStages}
+          onRowActivate={onRowActivate}
         />
       ))}
     </ul>

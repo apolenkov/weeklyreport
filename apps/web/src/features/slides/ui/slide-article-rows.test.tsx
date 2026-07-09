@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { SdlcTooltipProvider } from "../../../shared/ui/sdlc-tooltip";
 import type {
@@ -46,6 +46,66 @@ describe("SlideCell row hover", () => {
     const tooltip = await screen.findByTestId("sdlc-tooltip");
     expect(tooltip.textContent).toContain("Paused");
     expect(tooltip.textContent).toContain(ROW.text);
+  });
+
+  it("activates editable rows on double-click and Enter", () => {
+    const onRowActivate = vi.fn();
+    const editableRow: GridRow = {
+      ...ROW,
+      editableRef: { kind: "item", stableId: "item-stable-1" },
+    };
+    render(
+      <SdlcTooltipProvider>
+        <SlideCell
+          rows={[editableRow]}
+          authorsById={authorsById}
+          showStages={false}
+          label="Current work"
+          onRowActivate={onRowActivate}
+        />
+      </SdlcTooltipProvider>,
+    );
+    const button = screen.getByRole("button", { name: /edit paused/i });
+    fireEvent.doubleClick(button);
+    fireEvent.keyDown(button, { key: "Enter" });
+    expect(onRowActivate).toHaveBeenCalledTimes(2);
+    expect(onRowActivate).toHaveBeenNthCalledWith(1, {
+      kind: "item",
+      stableId: "item-stable-1",
+    });
+  });
+
+  it("keeps rows inert when the activation handler or editable ref is absent", () => {
+    const onRowActivate = vi.fn();
+    const editableRow: GridRow = {
+      ...ROW,
+      editableRef: { kind: "item", stableId: "item-stable-1" },
+    };
+    const { rerender } = render(
+      <SdlcTooltipProvider>
+        <SlideCell
+          rows={[editableRow]}
+          authorsById={authorsById}
+          showStages={false}
+          label="Current work"
+        />
+      </SdlcTooltipProvider>,
+    );
+    expect(screen.queryByRole("button")).toBeNull();
+
+    rerender(
+      <SdlcTooltipProvider>
+        <SlideCell
+          rows={[ROW]}
+          authorsById={authorsById}
+          showStages={false}
+          label="Current work"
+          onRowActivate={onRowActivate}
+        />
+      </SdlcTooltipProvider>,
+    );
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(onRowActivate).not.toHaveBeenCalled();
   });
 });
 
