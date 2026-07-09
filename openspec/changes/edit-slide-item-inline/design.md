@@ -2,7 +2,7 @@
 
 ## Context
 
-The lead slide grid (`slide-article*.tsx`) is display-only: `GridRow` carries `id`/`stableId`-derived row ids but no record kind or back-reference to the editable record. The lead Edit form already owns field editors and save/delete mutations for items, risks and decisions (`apps/web/src/components/lead/`), with editability enforced by section status and ownership. `saveSection` delete-recreates rows, so any dialog must key edits by `stableId` lineage, not raw PK.
+The lead slide grid (`apps/web/src/features/slides/ui/slide-article*.tsx`) is display-only: `GridRow` carries `id`/`stableId`-derived row ids but no record kind or back-reference to the editable record. The lead Edit form already owns field editors and save/delete mutations for items, risks and decisions (currently split across `apps/web/src/features/report-sections/`, `apps/web/src/features/review/`, and `apps/web/src/features/period/`), with editability enforced by section status and ownership. `saveSection` delete-recreates rows, so any dialog must key edits by `stableId` lineage, not raw PK.
 
 ## Goals / Non-Goals
 
