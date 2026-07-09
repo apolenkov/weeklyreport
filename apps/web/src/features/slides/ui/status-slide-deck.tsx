@@ -139,8 +139,8 @@ export function StatusSlideDeck({
             ) : null}
 
             {isLead ? (
-              /* Keying by slide id + page remounts the article on navigation —
-                 the Summary/Product state never leaks to another page. */
+              /* Keying by slide id + page remounts the article on navigation,
+                 resetting any article-local state for the next page. */
               <div className="overflow-x-auto">
                 <SlideArticle
                   key={`${slide.id}:${String(slide.pageIndex ?? 0)}`}

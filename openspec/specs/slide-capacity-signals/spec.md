@@ -1,8 +1,9 @@
-# slide-capacity-signals Specification
-
 ## Purpose
 
-TBD - created by archiving change add-slide-capacity-signals. Update Purpose after archive.
+Slide capacity signals are non-blocking advisories for places where CustomReport
+can warn an admin before creating overloaded ownership. Slide presentation
+capacity is not handled here: by-product slides are auto-height and governed by
+`lead-slide-by-product-grid`.
 
 ## Requirements
 
@@ -21,18 +22,3 @@ The admin product-assignment UI MUST surface a non-blocking advisory of how many
 - **WHEN** an admin selects a Lead Owner who owns fewer than `MAX_PRODUCTS_PER_LEAD` active products
 - **THEN** no over-capacity advisory is shown (a plain count hint MAY still be shown)
 - **AND** saving proceeds normally
-
-### Requirement: Record sections surface an advisory when a section may not fit the slide
-
-A lead-facing record section (current / next / risks / decisions) MUST show a non-blocking advisory when any single product's record count WITHIN that section exceeds `SLIDE_SECTION_SOFT_CAP` (exported from `@customreport/shared`, value 5), warning that that product may not present cleanly on the slide. The count unit is per-(product × section), matching the slide's per-product quadrant — NOT the section total — because the sections render the whole cross-product list and group by product internally; the advisory therefore attaches to the affected product GROUP within the section, not to the single section-level Add control. The advisory MUST NOT block adding records — the lead can always add more, and the slide is intended to degrade gracefully; the exact advisory wording is pending the `fix-lead-slide-quadrant-overflow` overflow DIRECTION (weak under scroll, wrong under split/continuation). `SLIDE_SECTION_SOFT_CAP` is a tunable heuristic count, NOT a measured pixel-fit and NOT the Product-scope grid's `MAX_VISIBLE_ITEMS`.
-
-#### Scenario: a product exceeds the soft cap within a section
-
-- **WHEN** a lead has more than `SLIDE_SECTION_SOFT_CAP` records for ONE product in one section
-- **THEN** a quiet advisory attached to that product's group within the section warns it may not fit cleanly on the slide
-- **AND** the lead can still add further records (the advisory never blocks the action)
-
-#### Scenario: every product under the soft cap
-
-- **WHEN** no product exceeds `SLIDE_SECTION_SOFT_CAP` records in a section
-- **THEN** no slide-fit advisory is shown for that section

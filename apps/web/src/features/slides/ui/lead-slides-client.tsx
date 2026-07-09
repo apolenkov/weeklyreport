@@ -229,10 +229,15 @@ export function LeadSlidesClient({
     );
   }
 
-  // The former deck-level Own/Product scope toggle is gone: the slide article
-  // owns the Summary/Product mode now (redesign-lead-slide-by-product-grid).
   return (
-    <div ref={deckRef}>
+    <div
+      ref={deckRef}
+      className={
+        isFullscreen
+          ? "h-screen overflow-auto bg-[var(--color-background)] p-4"
+          : undefined
+      }
+    >
       <ReportSlides
         slides={slides}
         selectedIndex={selectedIndex}

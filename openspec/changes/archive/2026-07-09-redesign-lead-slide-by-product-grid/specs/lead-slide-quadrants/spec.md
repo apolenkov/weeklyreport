@@ -24,8 +24,8 @@
 
 ### Requirement: Product chips scope the slide and content refills the frame
 
-**Reason**: Chip scoping survives as Product mode of the new layout; the "refills the fixed frame" half is obsolete under auto-height.
-**Migration**: See `lead-slide-by-product-grid` — "Summary and Product modes share one layout".
+**Reason**: Shell-owned Product/Leads scoping survives through the new layout; the "refills the fixed frame" half is obsolete under auto-height.
+**Migration**: See `lead-slide-by-product-grid` — "Product and lead scopes reuse the same article layout".
 
 ### Requirement: The framed lead slide fills its frame on any content change
 
