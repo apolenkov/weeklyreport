@@ -6,21 +6,10 @@ import { Separator } from "@customreport/ui/components/ui/separator";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { User, Users } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useFullscreen } from "../../../hooks/use-fullscreen";
-import {
-  stableStringify,
-  useLeadFormAutosave,
-} from "../../../hooks/use-lead-form-autosave";
 import { useRecordVisibility } from "../../../hooks/use-record-visibility";
 import {
   computeCoupling,
@@ -85,7 +74,6 @@ import {
   ownedStagesForProject,
 } from "../model/lead-form";
 import { formatDateRange, isoWeekNumber } from "../model/lead-history";
-import { sectionToDraftPayload } from "../model/lead-section-draft-payload";
 import type {
   DecisionEntry,
   KanbanItem,
@@ -106,6 +94,7 @@ import {
   type UnifiedActivityEntry,
   UnifiedActivitySection,
 } from "./unified-activity-section";
+import { useLeadFormDraftOrchestration } from "./use-lead-form-draft-orchestration";
 
 interface LeadFormProps {
   /**
@@ -237,7 +226,7 @@ function CollapseIcon() {
   );
 }
 
-export { sectionToDraftPayload };
+export { sectionToDraftPayload } from "../model/lead-section-draft-payload";
 
 type StageStatusValue = "green" | "yellow" | "red" | null;
 
@@ -520,61 +509,22 @@ export function LeadForm({
 
   // ---- Local UI + draft state ----
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-
-  // Draft mirror of the raw API section. Saving + submitting use this; child
-  // edits merge field-level changes back by id while preserving every required
-  // schema field that the lossy Lead* mappers drop (owner/impact/etc).
-  const [draftSection, setDraftSection] =
-    useState<ReportSectionReadModel | null>(null);
-  const lastServerDraftKeyRef = useRef<string | null>(null);
-
-  // Optimistic-lock row revision of the loaded section. The component is the
-  // single source of truth: `version` (state) drives the autosave prop, while
-  // `versionRef` gives submit/fillFrom a synchronous read that can't go stale
-  // behind a render. Both move together via setVersionSafe. The version is NOT
-  // part of any content key, so a bump never marks the form dirty.
-  const [version, setVersion] = useState(1);
-  const versionRef = useRef(1);
-  const setVersionSafe = useCallback((next: number) => {
-    versionRef.current = next;
-    setVersion(next);
-  }, []);
-
-  // Re-seed local state whenever the server-side section changes (initial load
-  // or post-mutation invalidation). React Query can hand this component a new
-  // object reference for the same server payload while a local autosave is
-  // pending; compare the stable draft payload key so that refetch noise does
-  // not wipe unsaved dialog edits before the debounce fires.
-  useEffect(() => {
-    const section = byPeriodQ.data?.section;
-    if (!section) return;
-
-    // Sync the optimistic-lock version on every load/refetch — including when
-    // the content key is unchanged (a concurrent writer may have advanced only
-    // the revision). Done before the early return; version is not in the key,
-    // so this never marks the form dirty nor triggers a reseed on its own.
-    setVersionSafe(section.version);
-
-    const serverDraftKey = stableStringify(sectionToDraftPayload(section));
-    setIsSubmitted(section.status === "submitted");
-
-    if (lastServerDraftKeyRef.current === serverDraftKey) return;
-    lastServerDraftKeyRef.current = serverDraftKey;
-    setDraftSection(section);
-  }, [byPeriodQ.data?.section, setVersionSafe]);
-
-  // A concurrent writer advanced this section since it was loaded (stale-version
-  // CONFLICT). Pull the latest revision + content and tell the lead loudly: the
-  // refetch reseeds the form to the server's current state, replacing unsaved
-  // edits — surfaced via toast rather than discarded silently. The lead then
-  // re-applies and saves against the new version.
-  const handleConflict = useCallback(() => {
-    void byPeriodQ.refetch();
-    toast.error(
-      "This section was changed elsewhere. Reloaded the latest version — re-apply your changes and save again.",
-    );
-  }, [byPeriodQ]);
+  const {
+    autosave,
+    draftPayload,
+    draftSection,
+    handleConflict,
+    isSubmitted,
+    setDraftSection,
+    setIsSubmitted,
+    setVersionSafe,
+    versionRef,
+  } = useLeadFormDraftOrchestration({
+    serverSection: byPeriodQ.data?.section,
+    sectionIdForActions,
+    serverReadOnly: byPeriodQ.data ? byPeriodQ.data.readOnly : true,
+    refetchSection: byPeriodQ.refetch,
+  });
 
   // ---- Mutations ----
   const submitMut = useMutation(
@@ -670,12 +620,6 @@ export function LeadForm({
     }),
   );
 
-  // ---- Build draft payload ----
-  const draftPayload = useMemo(
-    () => (draftSection ? sectionToDraftPayload(draftSection) : null),
-    [draftSection],
-  );
-
   // simplify-stage-status-interaction (D4): stages the lead left unset (null
   // traffic) auto-promote to On Track at submit, warned first. stageStatuses
   // only carries the lead's OWN stages, so a null entry is a genuinely unset
@@ -715,31 +659,6 @@ export function LeadForm({
     week: "current" | "next";
     seq: number;
   } | null>(null);
-
-  // Compute readOnly early (before hook; the autosave hook needs it). When
-  // data isn't ready, treat as readOnly (autosave disabled).
-  const isReadOnlyEarly =
-    isSubmitted || (byPeriodQ.data ? byPeriodQ.data.readOnly : true);
-
-  // Compute the baseline key from the *server-side* section so the autosave
-  // hook treats freshly-loaded data as already-saved (no dirty flicker).
-  const initialSavedKey = useMemo(() => {
-    if (!byPeriodQ.data?.section) return null;
-    return stableStringify(sectionToDraftPayload(byPeriodQ.data.section));
-  }, [byPeriodQ.data]);
-
-  // Autosave wiring — runs unconditionally to keep hook order stable.
-  const autosave = useLeadFormAutosave({
-    reportSectionId: sectionIdForActions || null,
-    payload: draftPayload,
-    // isReadOnlyEarly already subsumes isSubmitted (it is one of its OR
-    // operands), so !isReadOnlyEarly implies !isSubmitted.
-    enabled: !isReadOnlyEarly && draftSection !== null,
-    initialSavedKey,
-    version,
-    onVersionChange: setVersionSafe,
-    onConflict: handleConflict,
-  });
 
   // 35-07: set document.title to surface the addressed week in the browser
   // tab. Format: "Week 19, May 4-10 - CustomReport". Resolved from the
