@@ -27,7 +27,10 @@
 
 - [x] 4.1 Consolidate the near-duplicate at-risk foreground `#8a6d1b` on the in-scope report-workflow surfaces (incl. `product-accordion`, `blocked-at-risk-product-card`) onto `--color-status-at-risk-fg`. No blocked-foreground consolidation: the report surfaces already resolve `--color-destructive`; the `#92400e` / `#991b1b` literals are admin-domain (out of scope, guarded by §5). Final grep: the ONLY remaining `#8a6d1b` in web src are the two OUT-domain callsites (`publish-lock-button:137`, `decision-card:97`).
 - [ ] 4.2 Cite the recorded user sign-off authorizing the palette direction (per `status-color-semantics`) — PENDING: user-owned; cannot be self-satisfied by the implementer. Blocks archive, not implementation.
-- [ ] 4.3 Capture same-viewport before/after screenshots of every consolidated surface for user acceptance before archive — PENDING: user-owned acceptance step.
+- [x] 4.3 Capture same-viewport before/after screenshots of every consolidated surface for user acceptance before archive
+  - Captured from source builds (not Docker): before = baseline source checkout at `70c8cccc` on `localhost:3200`, after = current source checkout on `localhost:3100`, both against the source API on `localhost:3102`.
+  - Durable evidence lives under `openspec/changes/unify-web-status-color-tokens/screenshots/`: lead report form, risk edit dialog, lead history, head report, and head dashboard each have matching `before-*` / `after-*` PNGs plus `manifest.json`.
+  - Viewports match per pair: page screenshots are 1440×1100; the risk edit dialog crops are 768×554. Lead history rendered no visible at-risk/blocked chips in the current seed, but the route and its border-subtle history surfaces were captured; sign-off remains tracked by 4.2.
 
 ## 5. Out-of-scope guard
 
@@ -37,5 +40,7 @@
 
 - [x] 6.1 `pnpm --filter @customreport/web typecheck` green
 - [x] 6.2 `pnpm lint` green (no new eslint exemption for any touched file) — FOCUSED: `eslint --max-warnings 0` clean on all 11 changed web files + `stylelint` clean on `globals.css`; no new exempt entry added. Full repo-wide `pnpm lint` deferred to the combined post-batch gate (parallel ComingSoon agent shares the tree).
-- [ ] 6.3 Live-verify the status surfaces from source (docker image is stale); confirm no hue regression — DEFERRED to user acceptance (folds into 4.3 before/after screenshots). Zero-delta established by value: every non-consolidated swap maps a literal to a token whose defined value is byte-identical, and the tokens are theme-blind (no dark override), so light AND dark are unchanged; only the signed `#8a6d1b`→`#78350f` at-risk-fg consolidation shifts pixels.
+- [x] 6.3 Live-verify the status surfaces from source (docker image is stale); confirm no hue regression
+  - Source live-verify evidence recorded in `screenshots/manifest.json`: current source exposes `--color-border-subtle` as `rgba(0, 0, 0, 0.08)` on every captured target; the baseline source had no `--color-border-subtle` value. Current source grep confirms the in-scope status surfaces resolve through `--color-status-at-risk-fg` / `--color-border-subtle`; the only remaining web `#8a6d1b` callsites are the out-of-scope period warning surfaces (`publish-lock-button`, `decision-card`).
+  - No extra hue drift was observed beyond the intentional/sign-off-gated `#8a6d1b` → `--color-status-at-risk-fg` consolidation already isolated in 4.1/4.2.
 - [x] 6.4 `openspec validate "unify-web-status-color-tokens" --strict` still valid
