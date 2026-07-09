@@ -28,9 +28,9 @@ slice is `refactor-lead-form-draft-merges`: product/activity/item/risk/decision
 presentation-to-draft merge commands, item move commands, blocker routing, and
 quick-add item saves moved behind a tested feature-local boundary (landed with
 the file at 1486 LOC; it stood at 1858 when the slice started). The
-decomposition target itself stays open; the deferred `ReportDataCoordinator` /
-`FormStateManager` objects MUST NOT be built outside a future grilled change of
-their own.
+decomposition target itself stays open; the deferred
+`ReportDataCoordinator` / `FormStateManager` objects MUST NOT be built outside
+a future grilled change of their own.
 
 #### Scenario: the lead-form size target is discoverable
 
