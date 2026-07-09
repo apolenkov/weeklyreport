@@ -6,7 +6,7 @@ The current presentation deck splits a lead's story across a 2×2 quadrant grid 
 
 ## What Changes
 
-- One new slide article component renders every deck slide (lead sections AND the head's own section) as: header (worst-status pill, owner name, counters, "N of M products on track" chip, Summary/Product toggle), priority-card strip, a single column-header row (Current work / Next focus / Risks / Decisions), then one card per product with product-level and per-project 4-column subsections.
+- One new slide article component renders every deck slide (lead sections AND the head's own section) as: header (worst-status pill, owner name, counters, "N of M products on track" chip, deck-owned controls), priority-card strip, a single column-header row (Current work / Next focus / Risks / Decisions), then one card per product with product-level and per-project 4-column subsections.
 - **BREAKING (internal)**: `LeadUnifiedSlide`, `LeadProductGrid`, `LeadSlideHero`, `HeadSlideArticle`, `SlideFitAdvisory`, and `SLIDE_SECTION_SOFT_CAP` are deleted in the same change; their tests go with them.
 - Canvas becomes auto-height (max-width 1088px, min-width ~900px, min-height 680px, no clipping; fullscreen scrolls), reversing the fixed-frame/scroll-only decision of 2026-06-21.
 - Layout comes from the mock; all colors stay inside the existing token system. Author identity uses a deterministic ~6-token cycle (lead first); author badge renders only on the first row of a consecutive same-author series.
@@ -16,14 +16,15 @@ The current presentation deck splits a lead's story across a 2×2 quadrant grid 
 
 ### New Capabilities
 
-- `lead-slide-by-product-grid`: the unified by-product slide — header, priority strip, shared column grid, product cards, item anatomy (author/priority/status badges, SDLC watermark icons), legend, canvas geometry, Summary/Product modes.
+- `lead-slide-by-product-grid`: the unified by-product slide — header, priority strip, shared column grid, product cards, item anatomy (author/priority/status badges, SDLC watermark icons), legend, canvas geometry, and shell-owned Product/Leads scoping.
 
 ### Modified Capabilities
 
-- `lead-slide-quadrants`: all quadrant-layout requirements are REMOVED — superseded by the new capability (product chips scoping survives inside Product mode).
+- `lead-slide-quadrants`: all quadrant-layout requirements are REMOVED — superseded by the new capability (shell-owned Product/Leads scoping survives through the shared article).
+- `lead-product-grid-alignment`: the separate Product-mode card-grid requirement is REMOVED because `LeadProductGrid` is deleted; Product scope now feeds the shared article.
 - `head-slide-density`: framed 2×2 section-card requirements are REMOVED; the head's own slide renders via the unified article. Deck carousel/navigation requirements stay.
 - `slide-capacity-signals`: the record-section "may not fit the slide" advisory requirement is REMOVED (auto-height makes it meaningless). The admin per-lead product-count advisory stays.
-- `status-slide-rendering`: the Decisions vertical-overflow constraint is REMOVED (auto-height); density-token requirements are updated to reference the new article. Mine/Everyone visibility and fullscreen-exit requirements stay.
+- `status-slide-rendering`: the Decisions vertical-overflow constraint and stale deleted-surface density/scope requirements are REMOVED (auto-height). Mine/Everyone visibility and fullscreen-exit requirements stay.
 
 ## Non-goals
 
@@ -32,4 +33,4 @@ The current presentation deck splits a lead's story across a 2×2 quadrant grid 
 
 ## Impact
 
-- `apps/web/src/components/slides/*` (new article + deletions), `apps/web/src/components/lead/slide-fit-advisory.tsx` (deleted), `packages/shared` (`SLIDE_SECTION_SOFT_CAP` removal), consumers: head present, viewer present, lead slides surface. No API/DB changes.
+- `apps/web/src/features/slides/*` (new article + deletions), lead form slide-fit advisory call sites (deleted), `packages/shared` (`SLIDE_SECTION_SOFT_CAP` removal), consumers: head present, viewer present, lead slides surface. No API/DB changes.

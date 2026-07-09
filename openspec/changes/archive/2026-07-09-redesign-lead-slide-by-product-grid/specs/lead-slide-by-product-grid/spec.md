@@ -4,7 +4,7 @@
 
 ### Requirement: One slide article renders every deck slide
 
-Every slide in the status deck (each lead's section AND the head's own section) MUST render through the single by-product slide article in `apps/web/src/components/slides/status-slide-deck.tsx`, on all three consuming surfaces: head present mode, viewer present mode, and the lead slides surface. The deck MUST NOT keep a separate head-slide layout.
+The status deck MUST render every slide (each lead's section AND the head's own section) through the single by-product slide article in `apps/web/src/features/slides/ui/status-slide-deck.tsx`, on all three consuming surfaces: head present mode, viewer present mode, and the lead slides surface. The deck MUST NOT keep a separate head-slide layout.
 
 #### Scenario: head section slide uses the same layout
 
@@ -27,7 +27,7 @@ The slide MUST present, top to bottom: the header row, the priority-card strip, 
 
 ### Requirement: Header summarizes the owner's period
 
-The header MUST show: a worst-status pill derived from all product statuses on the slide; the owner's name; counters for current items, risks, and priorities; a "N of M products on track" chip that uses the alert tint while N < M and the neutral/positive treatment when N = M; and the Summary/Product mode toggle. All colors MUST come from existing design tokens.
+The header MUST show: a worst-status pill derived from all product statuses on the slide; the owner's name; counters for current items, risks, and priorities; and a "N of M products on track" chip that uses the alert tint while N < M and the neutral/positive treatment when N = M. Deck-owned controls MAY render at the end of the header, but mode/scope ownership stays outside the article. All colors MUST come from existing design tokens.
 
 #### Scenario: worst status wins the pill
 
@@ -116,7 +116,7 @@ An item row MUST show, in order: the author initials badge, an optional priority
 
 ### Requirement: Stage watermarks and cell ordering follow the canonical stage order
 
-Item rows at product level MUST show their SDLC stages as low-opacity watermark icons absolutely positioned at the row's bottom-right, one icon per stage, reusing `STAGE_ICONS` (`apps/web/src/components/lead/stage-chip-config.ts`) with the stage name in a `title` tooltip; rows inside project subsections render without stage icons. Rows within a cell MUST sort by the item's first stage's index in `STAGE_NAMES` (`packages/shared/src/schemas/stage-names.ts`), then by author with the lead first; the sort MUST be stable.
+Item rows at product level MUST show their SDLC stages as low-opacity watermark icons absolutely positioned at the row's bottom-right, one icon per stage, reusing `STAGE_ICONS` (`apps/web/src/features/report-sections/model/stage-chip-config.ts`) with the stage name in a `title` tooltip; rows inside project subsections render without stage icons. Rows within a cell MUST sort by the item's first stage's index in `STAGE_NAMES` (`packages/shared/src/schemas/stage-names.ts`), then by author with the lead first; the sort MUST be stable.
 
 #### Scenario: multi-stage item
 
@@ -137,16 +137,16 @@ The slide footer MUST render a legend listing each contributor: initials badge i
 - **WHEN** a legend entry's author has no `authorRole`
 - **THEN** the entry shows only the badge and name
 
-### Requirement: Summary and Product modes share one layout
+### Requirement: Product and lead scopes reuse the same article layout
 
-The mode toggle MUST offer Summary (all products) and Product (one product). Product mode MUST reuse the existing product-chip strip: selecting a chip scopes the same grid to that product; re-selecting the active chip returns to Summary. No separate Product layout exists.
+Consuming shells MUST own Product/Leads scope selection instead of introducing a second article layout. In Product scope, the deck groups sections into one slide per product. In Leads scope, the deck renders one slide per lead section. Both scopes MUST feed the same `SlideArticle` layout and MUST NOT introduce a separate Product-mode card grid.
 
-#### Scenario: scoping to one product
+#### Scenario: scoping to products
 
-- **WHEN** the user activates Product mode and selects a product chip
-- **THEN** the slide renders only that product's card with the identical grid layout
+- **WHEN** the head or viewer surface is in Product scope
+- **THEN** each active slide renders through the same by-product article layout
 
-#### Scenario: unscoping
+#### Scenario: scoping to leads
 
-- **WHEN** the active chip is selected again
-- **THEN** the slide returns to all products
+- **WHEN** the head or viewer surface is in Leads scope
+- **THEN** each active slide renders through the same article layout, with no separate lead-specific article

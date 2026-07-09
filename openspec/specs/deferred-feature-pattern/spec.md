@@ -62,7 +62,7 @@ The agent-review deferred placeholder MUST render exactly once on every on-scree
 
 - **WHEN** a user views the lead slides, the head slide deck, or the head report shell
 - **THEN** each surface still renders exactly one `AgentReviewComingSoon` control, with no surface rendering two
-- **AND** the head report shell toolbar mounts the control in form mode only, because in slides mode the head slide article (`apps/web/src/components/slides/status-slide-deck.tsx`) already carries the surface's single placeholder
+- **AND** the head report shell toolbar mounts the control in form mode only, because in slides mode the head slide article (`apps/web/src/features/slides/ui/status-slide-deck.tsx`) already carries the surface's single placeholder
 
 ### Requirement: Agent-Review Placeholder Is Absent From Print And List Surfaces
 

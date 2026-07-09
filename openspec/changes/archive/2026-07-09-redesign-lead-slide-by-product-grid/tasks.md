@@ -2,7 +2,7 @@
 
 ## 1. Pure view model (TDD)
 
-- [x] 1.1 Create `apps/web/src/components/slides/slide-grid-model.ts` (+ rows/cells/foreign split) + `slide-grid-model.test.ts`: `buildSlideGridModel` — products (with no-data collapse flag) → product-level + project subsections → per-column rows.
+- [x] 1.1 Create `apps/web/src/features/slides/model/slide-grid-model.ts` (+ rows/cells/foreign split) + `slide-grid-model.test.ts`: `buildSlideGridModel` — products (with no-data collapse flag) → product-level + project subsections → per-column rows.
 - [x] 1.2 Cell sorting: first stage's `STAGE_NAMES` index, then author (lead first), stable; unit tests incl. stage-less legacy rows.
 - [x] 1.3 Author color assignment: deterministic ≤6-token cycle, lead first, stable across renders.
 - [x] 1.4 Author series collapsing: consecutive same-author rows per cell → `showAuthorBadge` flags; tests.
@@ -14,7 +14,7 @@
 - [x] 2.1 Build `SlideArticle` (slide-article.tsx + header/grid/rows subfiles): header, priority strip, single column-header row, product cards, legend; tokens only, no raw hex.
 - [x] 2.2 Canvas geometry: centered max-w 1088 / min-w ~900 / min-h 680 via tokens, auto-height, no clipping; deck wrapper scrolls horizontally.
 - [x] 2.3 Item row: initials badge (+spacer variant), optional P-badge, wrapping text, status badge, blocker row highlight (Risks only, right edge flush), stage watermark icons via `STAGE_ICONS` with `title` tooltips (product-level rows only).
-- [x] 2.4 Summary/Product toggle wired to existing chips; re-click unscopes.
+- [x] 2.4 Shell-owned Product/Leads scope feeds the same `SlideArticle`; no separate Product-mode grid remains.
 - [x] 2.5 a11y: DOM order = visual column order; RTL tests for render contract (badges, series collapse, empty cell "—", collapsed no-data product, legend role suffix) — covered in status-slide-deck.test.tsx.
 
 ## 3. Deck integration
@@ -31,5 +31,10 @@
 ## 5. Verify
 
 - [x] 5.1 Full gate: `pnpm --filter @customreport/api db:generate && pnpm typecheck && pnpm lint && pnpm test` (FULL web suite — no folder scoping).
-- [ ] 5.2 Live-verify from source (`pnpm --filter @customreport/web dev`): lead deck, head present, viewer present; dense seed for auto-height; fullscreen scroll; Product mode scoping.
+- [x] 5.2 Live-verify from source (`pnpm --filter @customreport/web dev`): lead deck, head present, viewer present; dense seed for auto-height; fullscreen scroll; Product mode scoping.
+  - Verified against source servers on `localhost:3100/3102` with active report `a0000000-0000-4000-8000-000000000001`: lead `/lead/report/<id>?mode=slides`, head `/head/report/<id>/present` → `?mode=slides`, viewer `/reports/<id>/present` → `?mode=slides`.
+  - Dense lead slide auto-height: article `1088x963` in a `900px` viewport, no clipping (`document.scrollHeight=1292`); mobile `390px` viewport uses horizontal deck scroll (`scrollWidth=900`, `clientWidth=358`).
+  - Fullscreen scroll fixed and verified: fullscreen root `overflowY=auto`, `clientHeight=720`, `scrollHeight=995`, programmatic scroll reached `scrollTop=275`; Esc hint rendered.
+  - Product scoping verified on head shell: default Product scope renders `scope` absent; selecting Leads sets `?scope=lead`, selecting Product removes it again.
+  - Screenshots captured under `/tmp/customreport-lead-slides.png`, `/tmp/customreport-head-present-product.png`, `/tmp/customreport-head-present-leads.png`, `/tmp/customreport-viewer-present.png`, `/tmp/customreport-lead-mobile.png`, `/tmp/customreport-lead-fullscreen-scroll-fixed.png`.
 - [x] 5.3 UI-string check on changed files: `grep -nE '[а-яА-Я]'` — hits only in data/comments/tests.

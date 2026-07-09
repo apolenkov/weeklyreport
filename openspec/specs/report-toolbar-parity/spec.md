@@ -14,7 +14,7 @@ the lead, head, and viewer report surfaces uses `ReportToolbar`
 (`apps/web/src/components/report-shell/report-toolbar.tsx`) — not
 through per-surface bespoke containers. This covers the lead form
 (`apps/web/src/components/lead/lead-form.tsx`), the head review shell
-(`apps/web/src/components/head/head-report-shell.tsx`), the new viewer
+(`apps/web/src/features/report-sections/ui/head-report-shell.tsx`), the new viewer
 report shell (the read-only analogue of the head shell consumed by
 `/reports/[reportId]`), and the shared report page
 (`apps/web/src/components/weekly-report/weekly-report-page.tsx`)
