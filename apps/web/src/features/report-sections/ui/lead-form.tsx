@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- the literal-union cast on severity is required by tsc (without it the ternary widens to string, TS2322), but ESLint's program flags it redundant; wave-6c-ii */
 "use client";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
 import { Separator } from "@customreport/ui/components/ui/separator";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { User, Users } from "lucide-react";
@@ -13,12 +12,6 @@ import { useRecordVisibility } from "../../../hooks/use-record-visibility";
 import { deriveActivityAlarmFloor } from "../../../lib/activity-alarm";
 import { deriveActivityBucket } from "../../../lib/activity-buckets";
 import { crossAuthorContentFetchEnabled } from "../../../lib/cross-author-content-gate";
-import {
-  markCompletePatch,
-  moveToCurrentWeekPatch,
-  moveToNextWeekPatch,
-  pauseItemPatch,
-} from "../../../lib/lead-item-actions";
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
@@ -48,7 +41,6 @@ import { RequestReopenDialog } from "../../period/ui/request-reopen-dialog";
 import { LeadReviewFeedback } from "../../review/ui/lead-review-feedback";
 import { LeadSlidesClient } from "../../slides/ui/lead-slides-client";
 import { SlideFullscreenButton } from "../../slides/ui/slide-fullscreen-button";
-import type { ItemWorkflowStatus as MapperItemWorkflowStatus } from "../model/item-status";
 import {
   applyCrossAuthorStageOverrides,
   buildCrossAuthorStageMap,
@@ -59,7 +51,6 @@ import {
 import {
   mapLeadFormData,
   mapLeadReviewFeedback,
-  normalizeStageName,
   ownedStagesForProject,
 } from "../model/lead-form";
 import { formatDateRange, isoWeekNumber } from "../model/lead-history";
@@ -70,19 +61,16 @@ import type {
   ReportPeriod,
   RiskEntry,
 } from "../model/mock-data";
-import { stageStatusToTraffic } from "../model/traffic-light";
 import { ItemEditDialog } from "./item-edit-dialog";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
-import {
-  LeadFormSyncBridge,
-  type RiskPrefillRequest,
-} from "./lead-form-sync-bridge";
+import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
 import { NextWeekSection } from "./next-week-section";
-import { QuickAddButton, type QuickAddKind } from "./quick-add-button";
+import { QuickAddButton } from "./quick-add-button";
 import {
   type UnifiedActivityEntry,
   UnifiedActivitySection,
 } from "./unified-activity-section";
+import { useLeadFormDraftMerges } from "./use-lead-form-draft-merges";
 import { useLeadFormDraftOrchestration } from "./use-lead-form-draft-orchestration";
 import { useLeadFormWriteActions } from "./use-lead-form-write-actions";
 
@@ -218,18 +206,7 @@ function CollapseIcon() {
 
 export { sectionToDraftPayload } from "../model/lead-section-draft-payload";
 
-type StageStatusValue = "green" | "yellow" | "red" | null;
-
 const NO_PRODUCTS_ASSIGNED_MESSAGE = "No products assigned — contact admin";
-
-function aggregateTrafficLight(
-  stages: readonly { status?: StageStatusValue }[],
-): StageStatusValue {
-  if (stages.some((stage) => stage.status === "red")) return "red";
-  if (stages.some((stage) => stage.status === "yellow")) return "yellow";
-  if (stages.some((stage) => stage.status === "green")) return "green";
-  return null;
-}
 
 /**
  * scope-lead-report-to-own-contribution (7c.1): the lead form's Record
@@ -550,6 +527,42 @@ export function LeadForm({
     handleConflict,
   });
 
+  const draftMergeContextRef = useRef<{
+    products: readonly Product[];
+    currentWeekItems: readonly KanbanItem[];
+    nextWeekItems: readonly KanbanItem[];
+  }>({ products: [], currentWeekItems: [], nextWeekItems: [] });
+
+  const {
+    currentWeekAddSignal,
+    decisionsAddSignal,
+    handleActivityRaiseRequiresRisk,
+    handleActivityStatusChange,
+    handleAddCurrentWeekItem,
+    handleAddDecision,
+    handleAddNextWeekItem,
+    handleAddRisk,
+    handleCurrentWeekItemsChange,
+    handleDecisionsChange,
+    handleMarkComplete,
+    handleMoveToCurrentWeek,
+    handleMoveToNextWeek,
+    handleNextWeekItemsChange,
+    handlePauseItem,
+    handleProductsChange,
+    handleQuickAdd,
+    handleQuickAddCancel,
+    handleQuickAddSave,
+    handleRisksChange,
+    nextWeekAddSignal,
+    quickAddItem,
+    riskPrefill,
+    risksAddSignal,
+  } = useLeadFormDraftMerges({
+    setDraftSection,
+    getLoadedContext: () => draftMergeContextRef.current,
+  });
+
   // simplify-stage-status-interaction (D4): stages the lead left unset (null
   // traffic) auto-promote to On Track at submit, warned first. stageStatuses
   // only carries the lead's OWN stages, so a null entry is a genuinely unset
@@ -571,24 +584,6 @@ export function LeadForm({
   // groupExpanded; AccordionSection mirrors the new value into its local
   // state. Individual sections may then drift again via clicks.
   const [groupExpanded, setGroupExpanded] = useState(true);
-  const [currentWeekAddSignal, setCurrentWeekAddSignal] = useState(0);
-  const [nextWeekAddSignal, setNextWeekAddSignal] = useState(0);
-  const [risksAddSignal, setRisksAddSignal] = useState(0);
-  const [decisionsAddSignal, setDecisionsAddSignal] = useState(0);
-  // A one-shot risk-prefill for the quick-add "Blocker" entry and the item
-  // dialog's alarm gesture — routed to the risk create dialog via the sync
-  // bridge so a "Blocker" opens pre-set to severity blocked (product + stage
-  // when known), instead of the pipeline-derived at-risk default.
-  const [riskPrefill, setRiskPrefill] = useState<RiskPrefillRequest | null>(
-    null,
-  );
-  // Quick-add item dialog host (current-item / next-item only). Risk, blocker,
-  // and decision quick-adds ride the existing section add-signals instead; `seq`
-  // remounts the dialog per open so its state re-seeds.
-  const [quickAddItem, setQuickAddItem] = useState<{
-    week: "current" | "next";
-    seq: number;
-  } | null>(null);
 
   // 35-07: set document.title to surface the addressed week in the browser
   // tab. Format: "Week 19, May 4-10 - CustomReport". Resolved from the
@@ -726,6 +721,7 @@ export function LeadForm({
     ...ownNextWeekItems,
     ...mapForeignItems(foreignContentRows, productNameById, "next"),
   ];
+  draftMergeContextRef.current = { products, currentWeekItems, nextWeekItems };
   const risks: RiskEntry[] = [
     ...ownRisks,
     ...mapForeignRisks(foreignContentRows, productNameById),
@@ -849,373 +845,8 @@ export function LeadForm({
   const stagesForProduct = (productId: string) =>
     ownedStagesForProject(draftSection, productId);
 
-  // ---- onChange merge handlers ----
-  // Decisions: merge text edits / additions / deletions back into raw section
-  // by id, preserving owner/impact/deadline/resolvedAt fields the mapper drops
-  // for existing rows. Newly-added rows (ids unseen in `prev`) are appended
-  // with safe schema defaults (owner/impact default to '' — the safeText
-  // helper accepts empty strings).
-  function handleDecisionsChange(next: DecisionEntry[]) {
-    setDraftSection((prev) => {
-      if (!prev) return prev;
-      const existingById = new Map(
-        prev.decisions.flatMap((d) => (d.id ? [[d.id, d] as const] : [])),
-      );
-      // Strip foreign entries — they are read-only and must not bleed into the draft.
-      const editableDecisions = next.filter((d) => !d.foreign);
-      const merged = editableDecisions.map((d) => {
-        const existing = existingById.get(d.id);
-        const deadline = d.deadline ? new Date(d.deadline) : null;
-        // activity-first-class: XOR parent — an activity-parented decision clears
-        // productId and carries no stage; a product row keeps today's shape.
-        // Parity with the item/risk merge handlers — without it a decision the
-        // lead scopes to an activity is saved parent-less and fails the server
-        // XOR rule, rejecting the whole section save.
-        const parentFields = d.activityId
-          ? {
-              productId: null,
-              activityId: d.activityId,
-              stageIds: [] as string[],
-            }
-          : {
-              productId: d.productId || null,
-              activityId: null,
-              stageIds: d.stageIds,
-            };
-        if (existing) {
-          return {
-            ...existing,
-            ...parentFields,
-            text: d.text,
-            owner: d.owner,
-            impact: d.impact,
-            deadline,
-            stageName: null,
-          };
-        }
-        return {
-          id: d.id,
-          ...parentFields,
-          text: d.text,
-          owner: d.owner,
-          impact: d.impact,
-          deadline,
-          resolvedAt: null,
-          stageName: null,
-        };
-      });
-      // The section list round-trips activity-parented decisions too (they
-      // render in the Decisions section under their activity), so `merged` IS
-      // the full set — re-appending a preserved copy would duplicate them.
-      return { ...prev, decisions: merged };
-    });
-  }
-
-  function handleProductsChange(next: Product[]) {
-    setDraftSection((prev) => {
-      if (!prev) return prev;
-      const nextStageStatusByKey = new Map<string, StageStatusValue>();
-      for (const p of next) {
-        for (const s of p.stages) {
-          if (s.ownership !== "mine") continue;
-          nextStageStatusByKey.set(
-            `${p.id}::${normalizeStageName(s.stageName)}`,
-            stageStatusToTraffic(s.status),
-          );
-        }
-      }
-      const merged = prev.projects.map((ps) => {
-        const ownedStages = (ps.ownedStages ?? []).map((stage) => {
-          const key = `${ps.projectId}::${normalizeStageName(stage.stageName)}`;
-          if (!nextStageStatusByKey.has(key)) return stage;
-          return {
-            ...stage,
-            status: nextStageStatusByKey.get(key) ?? null,
-          };
-        });
-        return {
-          ...ps,
-          ownedStages,
-          trafficLight: aggregateTrafficLight(ownedStages),
-        };
-      });
-      return { ...prev, projects: merged };
-    });
-  }
-
-  // Activity weekly status: the seeded activities are identity-stable (no
-  // add/remove in the form), so the change handler is a pure per-id status
-  // update on the draft mirror — autosave picks it up via sectionToDraftPayload.
-  function handleActivityStatusChange(
-    activityId: string,
-    status: "green" | "yellow" | "red",
-  ) {
-    setDraftSection((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        activities: prev.activities.map((activity) =>
-          activity.activityId === activityId
-            ? { ...activity, status }
-            : activity,
-        ),
-      };
-    });
-  }
-
-  function handleRisksChange(next: RiskEntry[]) {
-    setDraftSection((prev) => {
-      if (!prev) return prev;
-      // Merge presentation risks back into raw section. RiskEntry now
-      // carries impact + mitigation (filled by the modal-edit dialog), so
-      // we propagate all three text fields onto raw rows.
-      // Strip foreign entries — they are read-only and must not bleed into the draft.
-      const editableRisks = next.filter((r) => !r.foreign);
-      const existingById = new Map(
-        prev.risks.flatMap((r) => (r.id ? [[r.id, r] as const] : [])),
-      );
-      const merged = editableRisks.map((r) => {
-        const existing = r.id ? existingById.get(r.id) : undefined;
-        // activity-first-class: XOR parent — an activity-parented row clears
-        // projectId and carries no stage; a product row keeps today's shape.
-        const parentFields = r.activityId
-          ? {
-              projectId: null,
-              activityId: r.activityId,
-              stageIds: [] as string[],
-            }
-          : {
-              projectId: r.productId,
-              activityId: null,
-              stageIds: r.stageIds,
-            };
-        if (existing) {
-          return {
-            ...existing,
-            ...parentFields,
-            risk: r.text,
-            impact: r.impact,
-            mitigation: r.mitigation,
-            severity: r.severity,
-            stageName: null,
-          };
-        }
-        return {
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- draft rows lack a persisted id at runtime despite the non-null form-row type
-          id: r.id ?? `tmp-${crypto.randomUUID()}`,
-          ...parentFields,
-          risk: r.text,
-          impact: r.impact,
-          mitigation: r.mitigation,
-          severity: r.severity,
-          stageName: null,
-        };
-      });
-      // The section list round-trips activity-parented risks too (they render
-      // in the Risks section under their activity), so `merged` IS the full
-      // set — re-appending a preserved copy would duplicate them.
-      return { ...prev, risks: merged };
-    });
-  }
-
-  // Items: the section emits a presentation `KanbanItem[]` for one type
-  // (current or next). Merge it back into raw `draftSection.items` while
-  // preserving cross-type entries.
-  //
-  // The presentation `status` is the inverse of `workflowToItemStatus` — a
-  // direct enum round-trip since rework-item-status-model. A displayed
-  // `blocked` is the risk-derived overlay, never persisted: it round-trips to
-  // the in-flight progress value.
-  function statusToRawFields(status: KanbanItem["status"]): {
-    workflowStatus: MapperItemWorkflowStatus;
-  } {
-    switch (status) {
-      case "completed":
-        return { workflowStatus: "done" };
-      case "planned":
-        return { workflowStatus: "planned" };
-      case "paused":
-        return { workflowStatus: "paused" };
-      case "postponed":
-        return { workflowStatus: "postponed" };
-      case "blocked":
-      case "in-progress":
-        return { workflowStatus: "in_progress" };
-    }
-  }
-
-  function makeItemsChangeHandler(itemType: "current" | "next") {
-    return (next: KanbanItem[]) => {
-      // Strip foreign entries — they are read-only and must not bleed into the draft.
-      const editableItems = next.filter((kb) => !kb.foreign);
-      setDraftSection((prev) => {
-        if (!prev) return prev;
-        const existingById = new Map(
-          prev.items.flatMap((it) =>
-            it.type === itemType && it.id ? [[it.id, it] as const] : [],
-          ),
-        );
-        const mergedTyped = editableItems.map((kb) => {
-          const raw = statusToRawFields(kb.status);
-          const existing = existingById.get(kb.id);
-          // activity-first-class: XOR parent — an activity-parented row clears
-          // projectId and carries no stage; a product row keeps today's shape.
-          const parentFields = kb.activityId
-            ? {
-                projectId: null,
-                activityId: kb.activityId,
-                stageIds: [] as string[],
-              }
-            : {
-                projectId: kb.productId,
-                activityId: null,
-                stageIds: kb.stageIds,
-              };
-          // require-paused-item-reason: keep the reason only while the row is
-          // paused, so leaving pause (any other status) clears it.
-          const pausedReason =
-            raw.workflowStatus === "paused" ? (kb.pausedReason ?? null) : null;
-          if (existing) {
-            return {
-              ...existing,
-              ...parentFields,
-              text: kb.text,
-              workflowStatus: raw.workflowStatus,
-              stageName: null,
-              // F1: carry the priority rank from the dialog into the draft so
-              // autosave persists it (was silently dropped here).
-              priorityRank: kb.priorityRank ?? null,
-              pausedReason,
-            };
-          }
-          return {
-            id: kb.id,
-            ...parentFields,
-            type: itemType,
-            text: kb.text,
-            // Schema requires safeText({min:1}) on tag; UI doesn't expose a
-            // tag picker so we seed a default that survives validation.
-            tag: "general",
-            workflowStatus: raw.workflowStatus,
-            carriedOver: false,
-            stageName: null,
-            priorityRank: kb.priorityRank ?? null,
-            pausedReason,
-          };
-        });
-        // Keep all items of the OTHER type unchanged; replace this type with
-        // the merged set. The section round-trips activity-parented items of
-        // this type too (they render under their activity lane), so keeping a
-        // separate copy of them would duplicate them.
-        const others = prev.items.filter((it) => it.type !== itemType);
-        return { ...prev, items: [...others, ...mergedTyped] };
-      });
-    };
-  }
-
-  const handleCurrentWeekItemsChange = makeItemsChangeHandler("current");
-  const handleNextWeekItemsChange = makeItemsChangeHandler("next");
-
   function handleToggleAll() {
     setGroupExpanded((prev) => !prev);
-  }
-
-  // ---- Per-item move actions ----
-  // Both mutate the EXISTING draft row in place — same object id, same
-  // durable stableId (`...item` spread) — never a delete-recreate that mints
-  // a new identity, so C1 comment anchors survive the move (ADR 0015 /
-  // stable-record-identity). Autosave picks the change up like any edit.
-  function updateDraftItemInPlace(
-    itemId: string,
-    patch: Partial<ReportSectionReadModel["items"][number]>,
-  ) {
-    setDraftSection((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        items: prev.items.map((item) =>
-          item.id === itemId ? { ...item, ...patch } : item,
-        ),
-      };
-    });
-  }
-
-  function handleMarkComplete(itemId: string) {
-    updateDraftItemInPlace(itemId, markCompletePatch());
-  }
-
-  function handleMoveToNextWeek(itemId: string) {
-    updateDraftItemInPlace(itemId, moveToNextWeekPatch());
-  }
-
-  function handleMoveToCurrentWeek(itemId: string) {
-    updateDraftItemInPlace(itemId, moveToCurrentWeekPatch());
-  }
-
-  function handlePauseItem(itemId: string, reason: string) {
-    updateDraftItemInPlace(itemId, pauseItemPatch(reason));
-  }
-
-  // Route "set blocked" through blocker (risk) creation, prefilled — never a
-  // free blocked item status. Shared by the quick-add "Blocker" entry (no
-  // product/stage), the item dialog's alarm gesture (product + stage), and an
-  // activity pill's unbacked raise (activity parent, no product/stage).
-  function routeToBlocker(prefill: {
-    productId: string;
-    stageIds: string[];
-    severity: "at-risk" | "blocked";
-    activityId?: string;
-  }) {
-    setRiskPrefill((prev) => ({ signal: (prev?.signal ?? 0) + 1, ...prefill }));
-  }
-
-  // An activity pill's unbacked At Risk/Blocked click: never persist the
-  // status — open risk creation scoped to the activity instead. The pill
-  // floors itself from the saved risk (deriveActivityAlarmFloor overlay).
-  function handleActivityRaiseRequiresRisk(
-    activityId: string,
-    severity: "at-risk" | "blocked",
-  ) {
-    routeToBlocker({ productId: "", stageIds: [], severity, activityId });
-  }
-
-  // ---- Quick-add ----
-  // One picker, five entries, all routed to the EXISTING per-type dialogs.
-  // record-status-derived-from-risk: a "blocker" is a blocked-severity RISK, not
-  // a free-blocked item — it opens the risk dialog pre-set to severity blocked
-  // via the sync-bridge prefill. A plain "risk" bumps the section add-signal;
-  // decision bumps its own; the current/next item kinds open the form-level host.
-  function handleQuickAdd(kind: QuickAddKind) {
-    if (kind === "blocker") {
-      routeToBlocker({
-        productId: products[0]?.id ?? "",
-        stageIds: [],
-        severity: "blocked",
-      });
-      return;
-    }
-    if (kind === "risk") {
-      setRisksAddSignal((value) => value + 1);
-      return;
-    }
-    if (kind === "decision") {
-      setDecisionsAddSignal((value) => value + 1);
-      return;
-    }
-    setQuickAddItem((prev) => ({
-      week: kind === "next-item" ? "next" : "current",
-      seq: (prev?.seq ?? 0) + 1,
-    }));
-  }
-
-  function handleQuickAddSave(next: KanbanItem) {
-    if (!quickAddItem) return;
-    if (quickAddItem.week === "next") {
-      handleNextWeekItemsChange([...nextWeekItems, next]);
-    } else {
-      handleCurrentWeekItemsChange([...currentWeekItems, next]);
-    }
-    setQuickAddItem(null);
   }
 
   // Autosave indicator label — 4-state badge.
@@ -1580,9 +1211,7 @@ export function LeadForm({
                         <button
                           type="button"
                           className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                          onClick={() =>
-                            setCurrentWeekAddSignal((value) => value + 1)
-                          }
+                          onClick={handleAddCurrentWeekItem}
                           disabled={products.length === 0}
                           title={
                             products.length > 0
@@ -1626,9 +1255,7 @@ export function LeadForm({
                         <button
                           type="button"
                           className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                          onClick={() =>
-                            setNextWeekAddSignal((value) => value + 1)
-                          }
+                          onClick={handleAddNextWeekItem}
                           disabled={products.length === 0}
                           title={
                             products.length > 0
@@ -1677,7 +1304,7 @@ export function LeadForm({
                     <button
                       type="button"
                       className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                      onClick={() => setRisksAddSignal((value) => value + 1)}
+                      onClick={handleAddRisk}
                       disabled={products.length === 0}
                       title={
                         products.length > 0
@@ -1712,7 +1339,7 @@ export function LeadForm({
                   <button
                     type="button"
                     className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                    onClick={() => setDecisionsAddSignal((value) => value + 1)}
+                    onClick={handleAddDecision}
                   >
                     + Add Decision
                   </button>
@@ -1831,7 +1458,7 @@ export function LeadForm({
         ownPeriodRanks={ownPeriodRanks}
         risks={risks}
         onSave={handleQuickAddSave}
-        onCancel={() => setQuickAddItem(null)}
+        onCancel={handleQuickAddCancel}
       />
 
       <RequestReopenDialog

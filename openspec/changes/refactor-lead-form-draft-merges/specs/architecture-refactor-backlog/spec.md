@@ -20,9 +20,9 @@ command-time version reads moved behind a tested feature-local hook (landed
 with the file at 1858 LOC; it stood at 2036 when the slice started). The fourth
 slice is `refactor-lead-form-draft-merges`: product/activity/item/risk/decision
 presentation-to-draft merge commands, item move commands, blocker routing, and
-quick-add item saves moved behind a tested feature-local boundary (actual
-post-slice LOC evidence MUST be recorded before archive; it started at 1858
-LOC). The decomposition target itself stays open; the deferred
+quick-add item saves moved behind a tested feature-local boundary (landed with
+the file at 1486 LOC; it stood at 1858 when the slice started). The
+decomposition target itself stays open; the deferred
 `ReportDataCoordinator` / `FormStateManager` objects MUST NOT be built outside
 a future grilled change of their own.
 
