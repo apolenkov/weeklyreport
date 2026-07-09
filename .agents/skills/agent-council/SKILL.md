@@ -75,6 +75,15 @@ By default each run writes to `.agent-council/runs/<run-id>/`:
 
 Keep these as machine-local runtime artifacts. The packaged skill is the tracked source of truth.
 
+## Verification
+
+Run the deterministic harness tests without real LLM calls:
+
+```bash
+node --test .agents/skills/agent-council/scripts/agent-council.test.mjs
+node --test .agents/skills/agent-council/scripts/agent-council.e2e.test.mjs
+```
+
 ## References
 
 - Sample config: [references/sample-config.yaml](references/sample-config.yaml)
