@@ -19,7 +19,7 @@ import type {
   GridSubsection,
   SlideTrafficStatus,
 } from "../model/slide-grid-model";
-import { SlideCell } from "./slide-article-rows";
+import { SlideCell, type SlideRowActivateHandler } from "./slide-article-rows";
 
 /** The one shared 4-column template — identical in the header row and every
  * subsection so columns align vertically across the whole slide. Current/Next
@@ -127,9 +127,11 @@ function SubsectionHeader({
 function SubsectionRow({
   subsection,
   authorsById,
+  onRowActivate,
 }: {
   readonly subsection: GridSubsection;
   readonly authorsById: ReadonlyMap<string, GridAuthor>;
+  readonly onRowActivate?: SlideRowActivateHandler;
 }) {
   // A record-less subsection (status-only project) collapses to its header —
   // a 4-column row of em-dashes says nothing the status dot doesn't.
@@ -146,6 +148,7 @@ function SubsectionRow({
               authorsById={authorsById}
               showStages={subsection.showStages}
               label={label}
+              onRowActivate={onRowActivate}
             />
           ))}
         </div>
@@ -160,9 +163,11 @@ function SubsectionRow({
 export function SlideProductCard({
   card,
   authorsById,
+  onRowActivate,
 }: {
   readonly card: GridProductCard;
   readonly authorsById: ReadonlyMap<string, GridAuthor>;
+  readonly onRowActivate?: SlideRowActivateHandler;
 }) {
   if (card.noData) {
     return (
@@ -193,6 +198,7 @@ export function SlideProductCard({
           key={subsection.id}
           subsection={subsection}
           authorsById={authorsById}
+          onRowActivate={onRowActivate}
         />
       ))}
     </section>

@@ -20,6 +20,13 @@ export type GridTone =
   | "paused"
   | "postponed";
 
+export type GridRowKind = "item" | "risk" | "decision";
+
+export interface GridRowEditableRef {
+  readonly kind: GridRowKind;
+  readonly stableId: string;
+}
+
 export interface GridAuthor {
   readonly id: string;
   readonly name: string;
@@ -41,6 +48,7 @@ export interface GridRow {
    * pairs this status with the full row text (which the row itself clamps). */
   readonly hoverLabel: string;
   readonly stageNames: readonly string[];
+  readonly editableRef?: GridRowEditableRef;
 }
 
 export interface GridColumns {
@@ -136,6 +144,12 @@ const rowId = (
   index: number,
 ): string => id ?? stableId ?? `${kind}-${String(index)}`;
 
+const editableRef = (
+  kind: GridRowKind,
+  stableId: string | null | undefined,
+): { readonly editableRef: GridRowEditableRef } | Record<string, never> =>
+  stableId == null ? {} : { editableRef: { kind, stableId } };
+
 export interface ToneEntry {
   readonly tone: GridTone;
   readonly hoverLabel: string;
@@ -172,6 +186,7 @@ export function buildOwnItemRow(
     tone,
     hoverLabel,
     stageNames: sortStageNames(item.stageIds ?? []),
+    ...editableRef("item", item.stableId),
   };
 }
 
@@ -189,6 +204,7 @@ export function buildOwnRiskRow(
     tone: blocked ? "blocked" : "at-risk",
     hoverLabel: blocked ? "Blocked" : "At risk",
     stageNames: sortStageNames(risk.stageIds ?? []),
+    ...editableRef("risk", risk.stableId),
   };
 }
 
@@ -206,6 +222,7 @@ export function buildOwnDecisionRow(
     tone: "note",
     hoverLabel: "Decision",
     stageNames: sortStageNames(decision.stageIds ?? []),
+    ...editableRef("decision", decision.stableId),
   };
 }
 
