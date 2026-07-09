@@ -614,6 +614,53 @@ describe("LeadForm mutation wiring", () => {
     expect(screen.queryByText(/Pending|Saving/i)).not.toBeNull();
   });
 
+  it("same-payload refetch preserves unsaved local draft edits", async () => {
+    let serverVersion = 1;
+    const { Wrapper, queryClient } = buildHarness({
+      byPeriodQueryFn: () =>
+        Promise.resolve({
+          section: { ...makeSection(), version: serverVersion },
+          readOnly: false,
+          canRequestReopen: false,
+          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
+        }),
+    });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
+
+    const editableChip = screen.getAllByRole("button").find((button) => {
+      const label = button.getAttribute("aria-label") ?? "";
+      return (
+        /^(Planning|Analysis|Design|Development|Testing|DevOps|Support): (on-track|empty)/.test(
+          label,
+        ) && button.getAttribute("aria-disabled") !== "true"
+      );
+    }) as HTMLButtonElement | undefined;
+    expect(editableChip).toBeDefined();
+    act(() => {
+      expectDefined(editableChip).click();
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Pending|Saving/i)).not.toBeNull(),
+    );
+
+    // React Query may refetch the same server payload while the local debounce
+    // is still pending. That refetch must update the held version but must not
+    // reseed the draft mirror and erase the unsaved edit.
+    serverVersion = 2;
+    await act(async () => {
+      await queryClient.invalidateQueries();
+    });
+
+    expect(screen.queryByText("Autosaved")).toBeNull();
+    expect(screen.queryByText(/Pending|Saving/i)).not.toBeNull();
+  });
+
   it("fillFrom success: invalidates leadForm, fires toast.success", async () => {
     const { Wrapper, captured, queryClient } = buildHarness();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
