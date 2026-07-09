@@ -18,7 +18,6 @@ import { toast } from "sonner";
 
 import { useFullscreen } from "../../../hooks/use-fullscreen";
 import {
-  type DraftSaveContent,
   stableStringify,
   useLeadFormAutosave,
 } from "../../../hooks/use-lead-form-autosave";
@@ -86,6 +85,7 @@ import {
   ownedStagesForProject,
 } from "../model/lead-form";
 import { formatDateRange, isoWeekNumber } from "../model/lead-history";
+import { sectionToDraftPayload } from "../model/lead-section-draft-payload";
 import type {
   DecisionEntry,
   KanbanItem,
@@ -237,118 +237,7 @@ function CollapseIcon() {
   );
 }
 
-/**
- * Build a `draftSaveSchema`-compatible payload from the raw API section. The
- * raw shape carries every field the schema requires (owner/impact on
- * decisions, tag/workflowStatus on items, etc.) so this round-trips cleanly.
- *
- * Exported for a focused unit test: the durable `stableId` round-trip is
- * load-bearing — drop it here and every save re-mints record identity.
- */
-export function sectionToDraftPayload(
-  section: ReportSectionReadModel,
-): DraftSaveContent {
-  // Drop rows whose required text fields are empty or whitespace-only. The
-  // server's safeText({min:1}) Zod refinement rejects them, which would
-  // otherwise produce "Save failed" toast every time the user clicks
-  // "+ Add Risk/Decision/Item" before typing. Empty rows live only in
-  // local UI state until the user fills them in; once any required field
-  // becomes non-empty the row joins the autosave payload.
-  const hasText = (s: string | null | undefined) =>
-    typeof s === "string" && s.trim().length > 0;
-  return {
-    reportSectionId: section.reportSectionId,
-    status: "draft",
-    projectStatuses: section.projects.map((p) => ({
-      projectId: p.projectId,
-      status: p.trafficLight ?? undefined,
-    })),
-    stageStatuses: section.projects.flatMap((p) =>
-      (p.ownedStages ?? []).map((stage) => ({
-        projectId: p.projectId,
-        stageId: stage.stageId,
-        status: stage.status ?? null,
-      })),
-    ),
-    // Activity-status slice: round-trip every seeded activity so the server's
-    // delete-recreate rewrites the full set (ids come from the seeded read
-    // model, never minted client-side).
-    activityStatuses: section.activities.map((activity) => ({
-      activityId: activity.activityId,
-      status: activity.status,
-      note: activity.note ?? null,
-    })),
-    items: section.items
-      .filter((it) => hasText(it.text))
-      .map((it) => ({
-        id: it.id,
-        // Round-trip the durable lineage key so saveSection preserves identity
-        // instead of re-minting. Undefined for a brand-new row (the server mints
-        // it); the merge handlers keep it via `...existing` for edited rows.
-        stableId: it.stableId,
-        // activity-first-class: XOR parent — exactly one of projectId /
-        // activityId is set. The write schema superRefine enforces it and the
-        // conditional stage rule (≥1 stage for a product, none for an activity).
-        projectId: it.projectId ?? null,
-        activityId: it.activityId ?? null,
-        type: it.type,
-        text: it.text,
-        tag: it.tag,
-        workflowStatus: it.workflowStatus,
-        carriedOver: it.carriedOver,
-        // enforce-item-decision-stage-schema: the write schema demands ≥1 stage
-        // for a PRODUCT parent (mirrors risks); an activity-parented row carries
-        // an empty stage set. The read model stays tolerant of stage-less legacy
-        // rows; sending [] for a product row fails server-side validation loudly
-        // until the lead sets a stage.
-        stageIds: it.stageIds ?? [],
-        // F1: include priorityRank in the autosave payload (was omitted, so the
-        // dialog's rank never reached the backend → "doesn't save").
-        priorityRank: it.priorityRank ?? null,
-        // require-paused-item-reason: round-trip the pause reason so it survives
-        // the save; cleared when the item leaves the paused status.
-        pausedReason:
-          it.workflowStatus === "paused" ? (it.pausedReason ?? null) : null,
-      })),
-    risks: section.risks
-      .filter((r) => hasText(r.risk) && hasText(r.mitigation))
-      .map((r) => ({
-        id: r.id,
-        stableId: r.stableId,
-        // activity-first-class: XOR parent (see items above).
-        projectId: r.projectId ?? null,
-        activityId: r.activityId ?? null,
-        risk: r.risk,
-        impact: r.impact,
-        mitigation: r.mitigation,
-        severity: r.severity,
-        // require-risk-stage: the write schema demands ≥1 stage for a PRODUCT
-        // parent; an activity-parented risk carries an empty stage set. The read
-        // model stays tolerant of stage-less legacy rows; sending [] for a
-        // product row fails server-side validation loudly until reseeded.
-        stageIds: r.stageIds ?? [],
-      })),
-    decisions: section.decisions
-      .filter((d) => hasText(d.text) && hasText(d.owner) && hasText(d.impact))
-      .map((d) => ({
-        id: d.id,
-        stableId: d.stableId,
-        text: d.text,
-        owner: d.owner,
-        deadline: d.deadline ?? null,
-        impact: d.impact,
-        resolvedAt: d.resolvedAt ?? null,
-        // enforce-item-decision-stage-schema: mirror risks/items — the write
-        // schema demands ≥1 stage for a PRODUCT parent; an activity-parented
-        // decision carries an empty stage set. [] for a stage-less legacy
-        // product row fails server-side validation loudly until reseeded.
-        stageIds: d.stageIds ?? [],
-        // activity-first-class: XOR parent — productId OR activityId (Decision 6).
-        productId: d.productId ?? null,
-        activityId: d.activityId ?? null,
-      })),
-  };
-}
+export { sectionToDraftPayload };
 
 type StageStatusValue = "green" | "yellow" | "red" | null;
 
