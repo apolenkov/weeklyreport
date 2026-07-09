@@ -34,12 +34,10 @@ objects MUST NOT be built outside a future grilled change of their own.
 
 #### Scenario: a later slice starts
 
-- **WHEN** an agent or maintainer picks up further lead-form
-  decomposition work
-- **THEN** a grilled OpenSpec change exists for that slice before any
-  code is written
-- **AND** the change cites the updated LOC evidence from the previous
-  slice
+- **WHEN** an agent or maintainer picks up further lead-form decomposition work
+- **THEN** a grilled OpenSpec change exists for that slice before any code is
+  written
+- **AND** the change cites the updated LOC evidence from the previous slice
 
 ### Requirement: The client permission model is a recorded centralization target
 
