@@ -515,6 +515,54 @@ test("headings inside code fences are ignored by extraction", () => {
   assert.equal(body.results[0].extracted.complete, true);
 });
 
+test("an unclosed code fence does not swallow the child's real trailing sections", () => {
+  const output = [
+    "## Position",
+    "REAL",
+    "",
+    "## Assumptions",
+    "None",
+    "",
+    "## Evidence",
+    "Here is a snippet I forgot to close:",
+    "```js",
+    "const x = 1;",
+    "",
+    "## Risks",
+    "None",
+    "",
+    "## Implementation Notes",
+    "Keep",
+    "",
+    "## Confidence",
+    "High",
+  ].join("\n");
+  const temp = makeTempConfig(configWithProfiles({
+    profiles: `
+  soft:
+    mode: soft
+    advisors: [sloppy]
+    artifacts_dir: "${escapeYaml(tempArtifactsDir())}"
+`,
+    seats: `
+  sloppy:
+    provider: custom
+    command: ${commandYaml(command(["node", "-e", `console.log(${JSON.stringify(output)})`]))}
+    timeout_ms: 5000
+`,
+  }));
+  const result = runCouncil(["--json", "--config", temp.configPath, "--profile", "soft", "--", "unclosed fence"]);
+
+  assert.equal(result.status, 0, result.stderr);
+  const body = JSON.parse(result.stdout);
+
+  // The fence never closes, so its content must NOT be masked; the sections after it
+  // are the child's real answer.
+  assert.equal(body.results[0].extracted.complete, true);
+  assert.equal(body.results[0].extracted.position, "REAL");
+  assert.equal(body.results[0].extracted.confidence, "High");
+});
+
 test("child-authored position text cannot forge structure in the parent prompt", () => {
   const temp = makeTempConfig(configWithProfiles({
     profiles: `

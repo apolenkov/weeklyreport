@@ -1362,19 +1362,22 @@ function runShellCapture({ command, cwd, deadlineAt: deadline, maxOutputChars, t
     shell: true,
     timeout: effectiveTimeoutMs,
   });
-  const timedOut = result.error?.code === "ETIMEDOUT" || result.signal === "SIGKILL";
+  // spawnSync sets error.code === "ETIMEDOUT" ONLY on the timeout kill; an output overflow
+  // (ENOBUFS) or an OOM kill also arrives as signal SIGKILL, so keying on the signal would
+  // misreport those as timeouts and send the reader to raise --proof-timeout-ms in vain.
+  const timedOut = result.error?.code === "ETIMEDOUT";
+  const note = timedOut
+    ? `[agent-council: proof command timed out after ${effectiveTimeoutMs} ms]`
+    : result.error?.code === "ENOBUFS"
+      ? "[agent-council: proof command output exceeded the capture buffer and was killed]"
+      : "";
 
   return {
     command,
     durationMs: Date.now() - startedAt,
     exitCode: result.status,
     signal: result.signal,
-    stderr: truncateText(
-      timedOut
-        ? `${result.stderr || ""}\n[agent-council: proof command killed after ${effectiveTimeoutMs} ms]`
-        : result.stderr || "",
-      maxOutputChars,
-    ),
+    stderr: truncateText(note ? `${result.stderr || ""}\n${note}` : result.stderr || "", maxOutputChars),
     stdout: truncateText(result.stdout || "", maxOutputChars),
     timedOut,
   };
@@ -1803,30 +1806,37 @@ function inlineSafe(value, maxChars) {
     .slice(0, maxChars);
 }
 
-// Replaces fenced lines with same-length blanks so match indices stay valid against the
-// original text.
+// Blanks only lines inside a CLOSED code fence (same length, so match indices stay valid
+// against the original text). An unclosed fence is left intact: masking to end-of-text
+// would swallow the real trailing sections when a child forgets a closing fence.
 function maskFencedRegions(text) {
   const fencePattern = /^\s*(`{3,}|~{3,})/;
+  const lines = text.split("\n");
+  const masked = new Array(lines.length).fill(false);
+  let openIndex = -1;
   let fence = "";
 
-  return text
-    .split("\n")
-    .map((line) => {
-      const opener = line.match(fencePattern)?.[1];
+  for (let index = 0; index < lines.length; index += 1) {
+    const opener = lines[index].match(fencePattern)?.[1];
 
-      if (!fence && opener) {
+    if (openIndex < 0) {
+      if (opener) {
+        openIndex = index;
         fence = opener;
-        return " ".repeat(line.length);
       }
+      continue;
+    }
 
-      if (fence && opener && opener[0] === fence[0] && opener.length >= fence.length) {
-        fence = "";
-        return " ".repeat(line.length);
+    if (opener && opener[0] === fence[0] && opener.length >= fence.length) {
+      for (let inside = openIndex; inside <= index; inside += 1) {
+        masked[inside] = true;
       }
+      openIndex = -1;
+      fence = "";
+    }
+  }
 
-      return fence ? " ".repeat(line.length) : line;
-    })
-    .join("\n");
+  return lines.map((line, index) => (masked[index] ? " ".repeat(line.length) : line)).join("\n");
 }
 
 function parseRestrictedYaml(text) {
@@ -2335,12 +2345,28 @@ function gitStatusPorcelain(cwd, ignorePrefix = "") {
     .join("\n");
 }
 
+// `git status --porcelain -z` NUL-separates records, but a rename/copy record (X of R or
+// C) is followed by a SECOND NUL field carrying the source path. Splitting naively would
+// turn that source path into a phantom entry.
 function porcelainEntries(stdout) {
-  return stdout
-    .split("\0")
-    .filter(Boolean)
-    .map((record) => ({ code: record.slice(0, 2), path: record.slice(3) }))
-    .filter((entry) => entry.path);
+  const fields = stdout.split("\0").filter(Boolean);
+  const entries = [];
+
+  for (let index = 0; index < fields.length; index += 1) {
+    const record = fields[index];
+    const code = record.slice(0, 2);
+    const path = record.slice(3);
+
+    if (path) {
+      entries.push({ code, path });
+    }
+
+    if (code[0] === "R" || code[0] === "C") {
+      index += 1; // consume the source-path field
+    }
+  }
+
+  return entries;
 }
 
 function isIgnoredPath(path, ignorePrefix) {
@@ -2366,11 +2392,15 @@ function captureReviewBaseline(cwd) {
 function gitDiffForReview(cwd, maxOutputChars, ignorePrefix = "", baseline = "") {
   const base = baseline || captureReviewBaseline(cwd);
   const shortBase = base === EMPTY_TREE_SHA ? "empty tree (no commits yet)" : base.slice(0, 12);
+  // Exclude the council's own artifacts from the tracked diff too, not just the untracked
+  // section — a builder that runs `git add -A && git commit` would otherwise commit them
+  // and show them to the reviewer as its own work.
+  const pathspec = ignorePrefix ? ["--", ".", `:(exclude)${ignorePrefix}`] : [];
   const sections = [
     `## git diff --stat vs ${shortBase}`,
-    section(runGit(cwd, ["diff", base, "--stat"], { maxOutputChars })),
+    section(runGit(cwd, ["diff", base, "--stat", ...pathspec], { maxOutputChars })),
     `## git diff vs ${shortBase}`,
-    section(runGit(cwd, ["diff", base], { maxOutputChars })),
+    section(runGit(cwd, ["diff", base, ...pathspec], { maxOutputChars })),
     "## untracked files",
     untrackedDiff(cwd, maxOutputChars, ignorePrefix),
   ];
