@@ -2,6 +2,7 @@
 
 import type { ComponentProps } from "react";
 
+import { isLead } from "../../../lib/role-predicates";
 import { DocumentActionGroup } from "../../../shared/ui/report-shell/report-toolbar";
 import { SaveNowButton } from "../../../shared/ui/report-shell/save-now-button";
 import { VersionComingSoonControl } from "../../admin/ui/version-coming-soon";
@@ -118,20 +119,18 @@ export function LeadFormHeaderActions({
             server-computed `canRequestReopen` flag — hidden when the period
             is published/archived or a request is already pending. The client
             does NOT reconstruct the lifecycle policy. */}
-        {isSubmitted &&
-          currentUser.authorRole === "lead" &&
-          canRequestReopen && (
-            <button
-              type="button"
-              className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={writeActions.openReopenDialog}
-              disabled={writeActions.requestReopenMut.isPending}
-              title="Ask Head to unlock this section"
-            >
-              Request Reopen
-            </button>
-          )}
-        {isSubmitted && currentUser.authorRole !== "lead" && (
+        {isSubmitted && isLead(currentUser.authorRole) && canRequestReopen && (
+          <button
+            type="button"
+            className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={writeActions.openReopenDialog}
+            disabled={writeActions.requestReopenMut.isPending}
+            title="Ask Head to unlock this section"
+          >
+            Request Reopen
+          </button>
+        )}
+        {isSubmitted && !isLead(currentUser.authorRole) && (
           <button
             type="button"
             className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"

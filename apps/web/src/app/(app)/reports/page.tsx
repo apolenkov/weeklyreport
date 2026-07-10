@@ -14,6 +14,12 @@ import {
   mapCompiledHistoryEntries,
   mapHistoryEntries,
 } from "../../../features/report-sections/model/lead-history";
+import {
+  isHead,
+  isHeadLike,
+  isLead as isLeadRole,
+  isViewer,
+} from "../../../lib/role-predicates";
 import { useSession } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
 import { SearchInput } from "../../../shared/ui/search-input";
@@ -36,16 +42,15 @@ export default function ReportsPage() {
   const trpc = useTRPC();
 
   const role = user?.role ?? null;
-  const isLead = role === "lead";
-  const usesCompiledHistory =
-    role === "head" || role === "viewer" || role === "admin";
+  const isLead = isLeadRole(role);
+  const usesCompiledHistory = isHeadLike(role) || isViewer(role);
   // viewer-report-surface-parity: the viewer searches published,
   // group-scoped content.
   const searchScope = isLead
     ? "mine"
-    : role === "head" || role === "admin"
+    : isHeadLike(role)
       ? "all"
-      : role === "viewer"
+      : isViewer(role)
         ? "published"
         : null;
 
@@ -107,9 +112,9 @@ export default function ReportsPage() {
       : false;
   const subtitle = isLead
     ? "Your report history."
-    : role === "head"
+    : isHead(role)
       ? "Compiled group report history."
-      : role === "viewer"
+      : isViewer(role)
         ? "Published report history."
         : "Compiled report history.";
   const summaryTitle = isLead ? "My History Summary" : "History Summary";
@@ -139,7 +144,7 @@ export default function ReportsPage() {
                     placeholder={
                       isLead
                         ? "Search my reports…"
-                        : role === "viewer"
+                        : isViewer(role)
                           ? "Search published reports…"
                           : "Search reports and products…"
                     }
