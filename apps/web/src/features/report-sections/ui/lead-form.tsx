@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useFullscreen } from "../../../hooks/use-fullscreen";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import { AccordionSection } from "../../../shared/ui/report-shell/accordion-section";
 import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../../../shared/ui/report-shell/archive-toggle";
 import {
@@ -17,14 +16,10 @@ import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle
 import { SdlcTooltipProvider } from "../../../shared/ui/sdlc-tooltip";
 import { VersionComingSoonControl } from "../../admin/ui/version-coming-soon";
 import { PdfExportComingSoonControl } from "../../pdf-export/ui/pdf-export-coming-soon";
-import { ActivityStatusSection } from "../../period/ui/activity-status-section";
-import { CurrentWeekSection } from "../../period/ui/current-week-section";
-import { DecisionsSection } from "../../period/ui/decisions-section";
 import { FillFromButton } from "../../period/ui/fill-from-button";
 import { PeriodNavigator } from "../../period/ui/period-navigator";
 import { RequestReopenDialog } from "../../period/ui/request-reopen-dialog";
 import type { CrossAuthorEntry } from "../../period/ui/sdlc-pipeline";
-import { LeadReviewFeedback } from "../../review/ui/lead-review-feedback";
 import { LeadSlidesClient } from "../../slides/ui/lead-slides-client";
 import { SlideFullscreenButton } from "../../slides/ui/slide-fullscreen-button";
 import {
@@ -34,21 +29,12 @@ import {
 import { formatDateRange, isoWeekNumber } from "../model/lead-history";
 import type { KanbanItem, Product, RiskEntry } from "../model/mock-data";
 import { ItemEditDialog } from "./item-edit-dialog";
-import {
-  AlertIcon,
-  CalendarIcon,
-  ChatIcon,
-  CollapseIcon,
-  GridIcon,
-  NextWeekIcon,
-} from "./lead-form-icons";
+import { LeadFormEditSections } from "./lead-form-edit-sections";
+import { CollapseIcon } from "./lead-form-icons";
 import { buildLeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
-import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
-import { NextWeekSection } from "./next-week-section";
 import { QuickAddButton } from "./quick-add-button";
 import { RecordVisibilityToggle } from "./record-visibility-toggle";
-import { UnifiedActivitySection } from "./unified-activity-section";
 import { useLeadFormData } from "./use-lead-form-data";
 import { useLeadFormDraftMerges } from "./use-lead-form-draft-merges";
 import { useLeadFormDraftOrchestration } from "./use-lead-form-draft-orchestration";
@@ -76,8 +62,6 @@ interface LeadFormProps {
 }
 
 export { sectionToDraftPayload } from "../model/lead-section-draft-payload";
-
-const NO_PRODUCTS_ASSIGNED_MESSAGE = "No products assigned — contact admin";
 
 export function LeadForm({
   reportId: pinnedReportId,
@@ -193,32 +177,10 @@ export function LeadForm({
     nextWeekItems: readonly KanbanItem[];
   }>({ products: [], currentWeekItems: [], nextWeekItems: [] });
 
-  const {
-    currentWeekAddSignal,
-    decisionsAddSignal,
-    handleActivityRaiseRequiresRisk,
-    handleActivityStatusChange,
-    handleAddCurrentWeekItem,
-    handleAddDecision,
-    handleAddNextWeekItem,
-    handleAddRisk,
-    handleCurrentWeekItemsChange,
-    handleDecisionsChange,
-    handleMarkComplete,
-    handleMoveToCurrentWeek,
-    handleMoveToNextWeek,
-    handleNextWeekItemsChange,
-    handlePauseItem,
-    handleProductsChange,
-    handleQuickAdd,
-    handleQuickAddCancel,
-    handleQuickAddSave,
-    handleRisksChange,
-    nextWeekAddSignal,
-    quickAddItem,
-    riskPrefill,
-    risksAddSignal,
-  } = useLeadFormDraftMerges({
+  // Kept as ONE object: LeadFormEditSections/LeadFormItemSections consume it
+  // wholesale (the grouped-prop contract); LeadForm reads only the quick-add
+  // trio for the dialog host below.
+  const merges = useLeadFormDraftMerges({
     setDraftSection,
     getLoadedContext: () => draftMergeContextRef.current,
   });
@@ -289,32 +251,10 @@ export function LeadForm({
   }
 
   // Loaded display derivations live behind the pure feature-local view-model
-  // boundary (lead-form-loaded-view-model). LeadForm keeps route/query/
-  // session/visibility setup, draft, write-action, and draft-merge
-  // orchestration, and rendering.
-  const {
-    activityCards,
-    activityOptions,
-    canRequestReopen,
-    currentUser,
-    currentWeekItems,
-    decisions,
-    fillFromLocked,
-    hasArchivedPeriods,
-    isReadOnly,
-    nextWeekItems,
-    ownCurrentWeekItems,
-    ownDecisions,
-    ownNextWeekItems,
-    ownPeriodRanks,
-    ownRisks,
-    products,
-    publishedLockedDecisionIds,
-    publishedLockedItemIds,
-    risks,
-    unifiedEntries,
-    visiblePeriods,
-  } = buildLeadFormLoadedViewModel({
+  // boundary (lead-form-loaded-view-model). Kept as ONE object: the section
+  // stack (LeadFormEditSections) consumes it wholesale; LeadForm destructures
+  // only what the header/toolbar/dialog chrome reads.
+  const viewModel = buildLeadFormLoadedViewModel({
     active: activeData ?? draftSection,
     draftSection,
     serverReadOnly: byPeriodData.readOnly,
@@ -330,6 +270,25 @@ export function LeadForm({
     selectedPeriodId,
     showArchivePeriods,
   });
+  const {
+    activityOptions,
+    canRequestReopen,
+    currentUser,
+    currentWeekItems,
+    decisions,
+    fillFromLocked,
+    hasArchivedPeriods,
+    isReadOnly,
+    nextWeekItems,
+    ownCurrentWeekItems,
+    ownDecisions,
+    ownNextWeekItems,
+    ownPeriodRanks,
+    ownRisks,
+    products,
+    risks,
+    visiblePeriods,
+  } = viewModel;
 
   // review-acknowledgement (§8): reviewer comments on this lead's OWN records,
   // read from the authoritative SERVER section (not the editable `draftSection`,
@@ -467,7 +426,7 @@ export function LeadForm({
                 in both edit and slides mode so it never disappears. */}
             {!isReadOnly && (
               <QuickAddButton
-                onPick={handleQuickAdd}
+                onPick={merges.handleQuickAdd}
                 disabled={products.length === 0}
               />
             )}
@@ -602,265 +561,18 @@ export function LeadForm({
             visibilityHydrated={visibilityHydrated}
           />
         ) : (
-          // Split-view: at xl the edit form (left) sits beside a live slide
-          // preview (right) fed from the same draftSection — one source, no
-          // extra fetch. Below xl it stays single-column; ?mode=slides handles
-          // the standalone deck.
-          <div className="min-w-0 space-y-6">
-            {/* review-acknowledgement (§8): reviewer feedback on a returned
-                section surfaces read-only above the editable content, so the
-                lead sees what to fix before resubmitting. Self-suppresses when
-                there is none. */}
-            <LeadReviewFeedback records={reviewFeedback} />
-            <LeadFormSyncBridge.Provider
-              products={products}
-              activities={activityOptions}
-              risks={ownRisks}
-              onProductsChange={handleProductsChange}
-              onRisksChange={handleRisksChange}
-              readOnly={isReadOnly}
-              stagesForProduct={stagesForProduct}
-              {...(draftSection.authorName
-                ? { sectionAuthorName: draftSection.authorName }
-                : {})}
-              risksAddSignal={risksAddSignal}
-              crossAuthors={crossAuthorEntries}
-              // lead-mine-hide-unowned-stages: until the persisted visibility is
-              // hydrated, render the full grid ("everyone") to avoid a flash that
-              // briefly hides foreign/vacant chips when the restored value is
-              // "everyone" (the gated content fetch is likewise hydration-guarded).
-              visibilityMode={
-                visibilityHydrated ? recordVisibility : "everyone"
-              }
-              displayRisks={risks}
-              externalRiskPrefill={riskPrefill}
-            >
-              <AccordionSection
-                groupExpanded={groupExpanded}
-                testId="lead-section-product-status"
-                icon={<GridIcon />}
-                title="Product Status"
-                badge={`${products.length} assigned products`}
-                subtitle="Assigned stages are highlighted. Blocked and at-risk stages link to the context you need to resolve them."
-              >
-                <LeadFormSyncBridge.Pipeline />
-              </AccordionSection>
-
-              {/* Project Activities — stage-less units beside products.
-                  Self-suppresses when the author has no attached activities
-                  (attachment is admin-provisioned, so there is no add here). */}
-              {draftSection.activities.length > 0 && (
-                <AccordionSection
-                  groupExpanded={groupExpanded}
-                  testId="lead-section-activities"
-                  icon={<GridIcon />}
-                  title="Project Activities"
-                  badge={`${draftSection.activities.length} attached activities`}
-                  subtitle="Weekly status for activities you are attached to. Activities carry no SDLC stage and never affect product health."
-                >
-                  <ActivityStatusSection
-                    activities={activityCards}
-                    readOnly={isReadOnly}
-                    onStatusChange={handleActivityStatusChange}
-                    onRaiseRequiresRisk={handleActivityRaiseRequiresRisk}
-                  />
-                </AccordionSection>
-              )}
-
-              {/* Items: classic Current/Next two-section format by default;
-                  the opt-in unified by-state view when the org flag is on
-                  (a pure projection — physical Item.type is untouched). */}
-              {unifiedView ? (
-                <AccordionSection
-                  groupExpanded={groupExpanded}
-                  testId="lead-section-unified"
-                  icon={<CalendarIcon />}
-                  title="Activity"
-                  badge={`${currentWeekItems.length + nextWeekItems.length} items`}
-                  subtitle="Current and next week items in one list, grouped by state. Use + Add to create records."
-                >
-                  <UnifiedActivitySection
-                    entries={unifiedEntries}
-                    risks={risks}
-                    readOnly={isReadOnly}
-                    onWeekItemsChange={(week, items) =>
-                      week === "current"
-                        ? handleCurrentWeekItemsChange(items)
-                        : handleNextWeekItemsChange(items)
-                    }
-                    currentUserName={currentUser.name}
-                    products={products}
-                    stagesForProduct={stagesForProduct}
-                    ownPeriodRanks={ownPeriodRanks}
-                    publishedLockedIds={publishedLockedItemIds}
-                    onMarkComplete={handleMarkComplete}
-                    onMoveToNextWeek={handleMoveToNextWeek}
-                  />
-                </AccordionSection>
-              ) : (
-                <>
-                  {/* Current Week */}
-                  <AccordionSection
-                    groupExpanded={groupExpanded}
-                    testId="lead-section-current-week"
-                    icon={<CalendarIcon />}
-                    title="Current Week"
-                    badge={`${currentWeekItems.length} items`}
-                    subtitle="Work completed or still in progress this week, grouped by product and SDLC stage."
-                    actions={
-                      !isReadOnly ? (
-                        <button
-                          type="button"
-                          className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                          onClick={handleAddCurrentWeekItem}
-                          disabled={products.length === 0}
-                          title={
-                            products.length > 0
-                              ? `Add item to ${products[0]?.name}`
-                              : NO_PRODUCTS_ASSIGNED_MESSAGE
-                          }
-                        >
-                          + Add Item
-                        </button>
-                      ) : null
-                    }
-                  >
-                    <CurrentWeekSection
-                      items={currentWeekItems}
-                      risks={risks}
-                      readOnly={isReadOnly}
-                      onItemsChange={handleCurrentWeekItemsChange}
-                      currentUserName={currentUser.name}
-                      products={products}
-                      activities={activityOptions}
-                      stagesForProduct={stagesForProduct}
-                      ownPeriodRanks={ownPeriodRanks}
-                      addSignal={currentWeekAddSignal}
-                      publishedLockedIds={publishedLockedItemIds}
-                      onMarkComplete={handleMarkComplete}
-                      onMoveToNextWeek={handleMoveToNextWeek}
-                      onPauseItem={handlePauseItem}
-                    />
-                  </AccordionSection>
-
-                  {/* Next Week */}
-                  <AccordionSection
-                    groupExpanded={groupExpanded}
-                    testId="lead-section-next-week"
-                    icon={<NextWeekIcon />}
-                    title="Next Week"
-                    badge={`${nextWeekItems.length} items`}
-                    subtitle="Planned work for the next reporting week, scoped to product and SDLC stage."
-                    actions={
-                      !isReadOnly ? (
-                        <button
-                          type="button"
-                          className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                          onClick={handleAddNextWeekItem}
-                          disabled={products.length === 0}
-                          title={
-                            products.length > 0
-                              ? `Add item to ${products[0]?.name}`
-                              : NO_PRODUCTS_ASSIGNED_MESSAGE
-                          }
-                        >
-                          + Add Item
-                        </button>
-                      ) : null
-                    }
-                  >
-                    <NextWeekSection
-                      items={nextWeekItems}
-                      risks={risks}
-                      readOnly={isReadOnly}
-                      onItemsChange={handleNextWeekItemsChange}
-                      currentUserName={currentUser.name}
-                      products={products}
-                      activities={activityOptions}
-                      stagesForProduct={stagesForProduct}
-                      ownPeriodRanks={ownPeriodRanks}
-                      addSignal={nextWeekAddSignal}
-                      publishedLockedIds={publishedLockedItemIds}
-                      onMoveToCurrentWeek={handleMoveToCurrentWeek}
-                    />
-                  </AccordionSection>
-                </>
-              )}
-
-              {/* Risks & Blockers */}
-              <AccordionSection
-                groupExpanded={groupExpanded}
-                testId="lead-section-risks"
-                icon={<AlertIcon />}
-                title="Risks & Blockers"
-                titleColor="var(--color-destructive)"
-                badge={`${risks.length}`}
-                badgeStyle={{
-                  background: "var(--color-status-blocked-bg)",
-                  color: "var(--color-destructive)",
-                }}
-                subtitle="Risks and blockers that need attention, with impact, mitigation, and affected stages."
-                actions={
-                  !isReadOnly ? (
-                    <button
-                      type="button"
-                      className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                      onClick={handleAddRisk}
-                      disabled={products.length === 0}
-                      title={
-                        products.length > 0
-                          ? undefined
-                          : NO_PRODUCTS_ASSIGNED_MESSAGE
-                      }
-                    >
-                      + Add Risk
-                    </button>
-                  ) : null
-                }
-              >
-                <LeadFormSyncBridge.Risks />
-              </AccordionSection>
-            </LeadFormSyncBridge.Provider>
-
-            {/* Decisions */}
-            <AccordionSection
-              groupExpanded={groupExpanded}
-              testId="lead-section-decisions"
-              icon={<ChatIcon />}
-              title="Decisions"
-              titleColor="var(--color-starbucks-accent)"
-              badge={`${decisions.length}`}
-              badgeStyle={{
-                background: "var(--color-success)",
-                color: "var(--color-starbucks-accent)",
-              }}
-              subtitle="Decisions that need leadership attention, with owner, impact, and affected stages."
-              actions={
-                !isReadOnly ? (
-                  <button
-                    type="button"
-                    className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                    onClick={handleAddDecision}
-                  >
-                    + Add Decision
-                  </button>
-                ) : null
-              }
-            >
-              <DecisionsSection
-                decisions={decisions}
-                readOnly={isReadOnly}
-                onChange={handleDecisionsChange}
-                currentUserName={currentUser.name}
-                stagesForProduct={stagesForProduct}
-                products={products}
-                activities={activityOptions}
-                defaultProductId={products[0]?.id}
-                addSignal={decisionsAddSignal}
-                publishedLockedIds={publishedLockedDecisionIds}
-              />
-            </AccordionSection>
-          </div>
+          <LeadFormEditSections
+            viewModel={viewModel}
+            merges={merges}
+            draftSection={draftSection}
+            reviewFeedback={reviewFeedback}
+            groupExpanded={groupExpanded}
+            unifiedView={unifiedView}
+            stagesForProduct={stagesForProduct}
+            recordVisibility={recordVisibility}
+            visibilityHydrated={visibilityHydrated}
+            crossAuthorEntries={crossAuthorEntries}
+          />
         )}
       </form>
 
@@ -947,19 +659,19 @@ export function LeadForm({
           quick-adds open the dialogs the sections already host (a blocker rides
           the severity-blocked risk prefill). */}
       <ItemEditDialog
-        key={`quick-add-${quickAddItem?.seq ?? 0}`}
-        open={quickAddItem !== null}
+        key={`quick-add-${merges.quickAddItem?.seq ?? 0}`}
+        open={merges.quickAddItem !== null}
         item={null}
         products={products}
         activities={activityOptions}
-        week={quickAddItem?.week ?? "current"}
+        week={merges.quickAddItem?.week ?? "current"}
         currentUserName={currentUser.name}
         defaultProductId={products[0]?.id}
         stagesForProduct={stagesForProduct}
         ownPeriodRanks={ownPeriodRanks}
         risks={risks}
-        onSave={handleQuickAddSave}
-        onCancel={handleQuickAddCancel}
+        onSave={merges.handleQuickAddSave}
+        onCancel={merges.handleQuickAddCancel}
       />
 
       <RequestReopenDialog
