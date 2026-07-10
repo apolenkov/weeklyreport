@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- the literal-union cast on severity is required by tsc (without it the ternary widens to string, TS2322), but ESLint's program flags it redundant; wave-6c-ii */
 "use client";
 
 import { Separator } from "@customreport/ui/components/ui/separator";
@@ -9,8 +8,6 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import { useFullscreen } from "../../../hooks/use-fullscreen";
 import { useRecordVisibility } from "../../../hooks/use-record-visibility";
-import { deriveActivityAlarmFloor } from "../../../lib/activity-alarm";
-import { deriveActivityBucket } from "../../../lib/activity-buckets";
 import { crossAuthorContentFetchEnabled } from "../../../lib/cross-author-content-gate";
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
@@ -42,34 +39,18 @@ import { LeadReviewFeedback } from "../../review/ui/lead-review-feedback";
 import { LeadSlidesClient } from "../../slides/ui/lead-slides-client";
 import { SlideFullscreenButton } from "../../slides/ui/slide-fullscreen-button";
 import {
-  applyCrossAuthorStageOverrides,
-  buildCrossAuthorStageMap,
-  mapForeignDecisions,
-  mapForeignItems,
-  mapForeignRisks,
-} from "../model/lead-cross-author";
-import {
-  mapLeadFormData,
   mapLeadReviewFeedback,
   ownedStagesForProject,
 } from "../model/lead-form";
 import { formatDateRange, isoWeekNumber } from "../model/lead-history";
-import type {
-  DecisionEntry,
-  KanbanItem,
-  Product,
-  ReportPeriod,
-  RiskEntry,
-} from "../model/mock-data";
+import type { KanbanItem, Product, RiskEntry } from "../model/mock-data";
 import { ItemEditDialog } from "./item-edit-dialog";
+import { buildLeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
 import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
 import { NextWeekSection } from "./next-week-section";
 import { QuickAddButton } from "./quick-add-button";
-import {
-  type UnifiedActivityEntry,
-  UnifiedActivitySection,
-} from "./unified-activity-section";
+import { UnifiedActivitySection } from "./unified-activity-section";
 import { useLeadFormDraftMerges } from "./use-lead-form-draft-merges";
 import { useLeadFormDraftOrchestration } from "./use-lead-form-draft-orchestration";
 import { useLeadFormWriteActions } from "./use-lead-form-write-actions";
@@ -635,15 +616,47 @@ export function LeadForm({
     return <LeadFormSkeleton />;
   }
 
-  // Map raw draft state -> Lead* presentation shapes for existing children.
-  const data = mapLeadFormData({
+  // Loaded display derivations live behind the pure feature-local view-model
+  // boundary (lead-form-loaded-view-model). LeadForm keeps route/query/
+  // session/visibility setup, draft, write-action, and draft-merge
+  // orchestration, and rendering.
+  const {
+    activityCards,
+    activityOptions,
+    canRequestReopen,
+    currentUser,
+    currentWeekItems,
+    decisions,
+    fillFromLocked,
+    hasArchivedPeriods,
+    isReadOnly,
+    nextWeekItems,
+    ownCurrentWeekItems,
+    ownDecisions,
+    ownNextWeekItems,
+    ownPeriodRanks,
+    ownRisks,
+    products,
+    publishedLockedDecisionIds,
+    publishedLockedItemIds,
+    risks,
+    unifiedEntries,
+    visiblePeriods,
+  } = buildLeadFormLoadedViewModel({
     active: activeQ.data ?? draftSection,
-    byPeriod: {
-      section: draftSection,
-      readOnly: byPeriodQ.data.readOnly,
-      canRequestReopen: byPeriodQ.data.canRequestReopen,
-    },
+    draftSection,
+    serverReadOnly: byPeriodQ.data.readOnly,
+    canRequestReopen: byPeriodQ.data.canRequestReopen,
+    publishedLineage: byPeriodQ.data.publishedLineage,
     history: historyQ.data,
+    crossAuthors: crossAuthorsQ.data ?? [],
+    foreignContent: crossAuthorContentQ.data,
+    isEveryone,
+    visibilityHydrated,
+    isForeignSlidesDeck,
+    isSubmitted,
+    selectedPeriodId,
+    showArchivePeriods,
   });
 
   // review-acknowledgement (§8): reviewer comments on this lead's OWN records,
@@ -652,192 +665,8 @@ export function LeadForm({
   // returned (draft) section's feedback is never silent.
   const reviewFeedback = mapLeadReviewFeedback(byPeriodQ.data.section);
 
-  // F8 / unassigned-stage-reporting-exclusion: enrich foreign-owned (locked)
-  // stages with cross-author initials + risk-derived status. crossAuthorsQ.data
-  // has { projectId, stageNames, authorInitials, stages } per shared product. A
-  // stage in the product's stageSet not owned by the current user arrives as
-  // ownership:"locked" with a null assignee (from buildStageGrid); this override
-  // fills that lead's initials and risk-derived color. No foreign
-  // item/risk/decision text is read here.
-  //
-  // 7c.4: the foreign stage CHIPS show only in Everyone. In Mine only we skip
-  // the override so co-owners' stages stay hidden. Product
-  // HEALTH stays honest in BOTH states — it derives from `crossAuthorEntries`
-  // (the always-fetched status read) inside SdlcPipeline, independent of these
-  // chips (D4d).
-  const crossAuthorStageMap = buildCrossAuthorStageMap(
-    crossAuthorsQ.data ?? [],
-  );
-  const products: Product[] = (
-    isEveryone
-      ? applyCrossAuthorStageOverrides(data.products, crossAuthorStageMap)
-      : data.products
-  ) as Product[];
-
-  // activity-first-class: the author's attached activities offered as record
-  // parents in the item/risk dialogs (id + display name only).
-  const activityOptions: readonly { id: string; name: string }[] =
-    draftSection.activities.map((a) => ({
-      id: a.activityId,
-      name: a.activityName,
-    }));
-
-  const ownCurrentWeekItems: KanbanItem[] =
-    data.currentWeekItems as KanbanItem[];
-  const ownNextWeekItems: KanbanItem[] = data.nextWeekItems as KanbanItem[];
-  const ownRisks: RiskEntry[] = data.risks as RiskEntry[];
-  const ownDecisions: DecisionEntry[] = data.decisions as DecisionEntry[];
   writeActionSubmitContextRef.current = { draftPayload, products, ownRisks };
-
-  // The interactive pill's alarm floor re-derived from the LIVE draft risks
-  // (the server-baked alarmFloor goes stale the moment a draft risk is added
-  // or removed — no refetch mid-edit). Activity twin of the stage chips'
-  // applyRiskSeverityFloor; read-only surfaces keep the server value.
-  const activityCards = data.activityCards.map((card) => ({
-    ...card,
-    alarmFloor: deriveActivityAlarmFloor(card.activityId, ownRisks),
-  }));
-
-  // 7c.4: Everyone merges co-owners' full records READ-ONLY on top of the
-  // lead's own records, from the gated full-content read. Mine only renders
-  // own records only (no full-content fetch). The merge is view-only: the
-  // draft-merge handlers strip every `.foreign` row, so it never reaches the
-  // submission (D4b).
-  const productNameById = new Map(products.map((p) => [p.id, p.name]));
-  // close-slides-visibility-tails (tail 1, belt-and-suspenders): also gate the
-  // consume site on !isForeignSlidesDeck so foreign rows are excluded at BOTH
-  // the fetch and the merge — robust even if this memo is ever reused outside
-  // the edit-render branch. After the fetch gate the data is already empty on a
-  // foreign deck; this makes the invariant explicit rather than incidental.
-  const foreignContentRows =
-    isEveryone && visibilityHydrated && !isForeignSlidesDeck
-      ? (crossAuthorContentQ.data ?? [])
-      : [];
-  const currentWeekItems: KanbanItem[] = [
-    ...ownCurrentWeekItems,
-    ...mapForeignItems(foreignContentRows, productNameById, "current"),
-  ];
-  const nextWeekItems: KanbanItem[] = [
-    ...ownNextWeekItems,
-    ...mapForeignItems(foreignContentRows, productNameById, "next"),
-  ];
   draftMergeContextRef.current = { products, currentWeekItems, nextWeekItems };
-  const risks: RiskEntry[] = [
-    ...ownRisks,
-    ...mapForeignRisks(foreignContentRows, productNameById),
-  ];
-  const decisions: DecisionEntry[] = [
-    ...ownDecisions,
-    ...mapForeignDecisions(foreignContentRows, productNameById),
-  ];
-
-  /**
-   * All priority ranks already assigned to own (non-foreign) items for the
-   * entire period (current + next week). Passed to each week section so the
-   * ItemEditDialog can disable taken ranks in the picker. Foreign items are
-   * intentionally excluded — they are read-only and cannot be edited.
-   */
-  const ownPeriodRanks: readonly number[] = [
-    ...ownCurrentWeekItems,
-    ...ownNextWeekItems,
-  ]
-    .map((i) => i.priorityRank)
-    .filter((r): r is number => r != null);
-
-  // Resolve-not-delete (ADR 0015): translate the server's published lineage
-  // (durable stableIds) into the presentation row ids currently on screen, so
-  // the cards can mark locked records and withhold Delete. Advisory only —
-  // the save-path guard on the server is the enforcement point.
-  const publishedLineage = byPeriodQ.data.publishedLineage;
-  const lockedItemLineage = new Set(publishedLineage.itemStableIds);
-  const lockedDecisionLineage = new Set(publishedLineage.decisionStableIds);
-  const publishedLockedItemIds: ReadonlySet<string> = new Set(
-    draftSection.items.flatMap((item) =>
-      item.id && item.stableId && lockedItemLineage.has(item.stableId)
-        ? [item.id]
-        : [],
-    ),
-  );
-  const publishedLockedDecisionIds: ReadonlySet<string> = new Set(
-    draftSection.decisions.flatMap((decision) =>
-      decision.id &&
-      decision.stableId &&
-      lockedDecisionLineage.has(decision.stableId)
-        ? [decision.id]
-        : [],
-    ),
-  );
-
-  // A reopened period's section still carries published-lineage records, so the
-  // server's fillFrom guard rejects every source (PUBLISHED_RECORD_LOCKED).
-  // Mirror the RAW lineage check here to disable the control instead of
-  // offering an action that always fails; the server guard stays the
-  // enforcement point.
-  const fillFromLocked =
-    publishedLineage.itemStableIds.length > 0 ||
-    publishedLineage.decisionStableIds.length > 0;
-
-  // Unified by-state entries: each displayed item plus its derived bucket
-  // (deriveActivityBucket over the RAW persisted fields — a pure projection;
-  // Item.type storage is untouched). Foreign read-only rows have no raw row
-  // in the draft, so their bucket derives from the presentation status.
-  const rawItemById = new Map(
-    draftSection.items.flatMap((item) =>
-      item.id ? [[item.id, item] as const] : [],
-    ),
-  );
-  const toUnifiedEntry = (
-    item: KanbanItem,
-    week: "current" | "next",
-  ): UnifiedActivityEntry => {
-    const raw = item.foreign === true ? undefined : rawItemById.get(item.id);
-    if (raw) {
-      return {
-        item,
-        week,
-        bucket: deriveActivityBucket({
-          type: raw.type,
-          workflowStatus: raw.workflowStatus,
-          carriedOver: raw.carriedOver,
-        }),
-      };
-    }
-    const bucket =
-      item.status === "completed"
-        ? "done"
-        : item.status === "paused"
-          ? "paused"
-          : item.status === "postponed"
-            ? "deferred"
-            : item.status === "planned"
-              ? "planned-next"
-              : "in-progress";
-    return { item, week, bucket };
-  };
-  const unifiedEntries: UnifiedActivityEntry[] = [
-    ...currentWeekItems.map((item) => toUnifiedEntry(item, "current")),
-    ...nextWeekItems.map((item) => toUnifiedEntry(item, "next")),
-  ];
-
-  const periods: ReportPeriod[] = data.periods as ReportPeriod[];
-  const currentUser = data.currentUser;
-  const selectedPeriod = periods.find(
-    (period) => period.id === selectedPeriodId && period.id !== "",
-  );
-  const hasArchivedPeriods = periods.some((period) => period.archived);
-  const visibleNonArchivedPeriods = periods.filter(
-    (period) => !period.archived,
-  );
-  const visiblePeriods =
-    !hasArchivedPeriods ||
-    showArchivePeriods ||
-    visibleNonArchivedPeriods.length === 0
-      ? periods
-      : selectedPeriod?.archived
-        ? [...visibleNonArchivedPeriods, selectedPeriod]
-        : visibleNonArchivedPeriods;
-
-  const isReadOnly = data.readOnly || isSubmitted;
 
   // 35-04: per-project stages-the-lead-owns selector. Forwarded into the
   // Item / Risk / Decision dialogs so the SDLC stage dropdown is scoped per
@@ -937,7 +766,7 @@ export function LeadForm({
                 does NOT reconstruct the lifecycle policy. */}
             {isSubmitted &&
               currentUser.authorRole === "lead" &&
-              data.canRequestReopen && (
+              canRequestReopen && (
                 <button
                   type="button"
                   className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
