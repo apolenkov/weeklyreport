@@ -27,14 +27,14 @@ with the file at 1858 LOC; it stood at 2036 when the slice started). The fourth
 slice is `refactor-lead-form-draft-merges`: product/activity/item/risk/decision
 presentation-to-draft merge commands, item move commands, blocker routing, and
 quick-add item saves moved behind a tested feature-local boundary (landed with
-the file at 1485 LOC; it stood at 1858 when the slice started). The fifth
-slice is `refactor-lead-form-loaded-view-model`: loaded display derivations for
+the file at 1485 LOC; it stood at 1858 when the slice started). The fifth slice
+is `refactor-lead-form-loaded-view-model`: loaded display derivations for
 cross-author products, own/foreign rows, activity cards, unified entries,
-published-lineage locks, visible periods, and read-only affordances moved
-behind a tested feature-local boundary (landed with the file at 1314 LOC; it
-stood at 1485 when the slice started). The decomposition target itself stays
-open; the deferred `ReportDataCoordinator` / `FormStateManager` objects MUST
-NOT be built outside a future grilled change of their own.
+published-lineage locks, visible periods, and read-only affordances moved behind
+a tested feature-local boundary (landed with the file at 1314 LOC; it stood at
+1485 when the slice started). The decomposition target
+itself stays open; the deferred `ReportDataCoordinator` / `FormStateManager`
+objects MUST NOT be built outside a future grilled change of their own.
 
 #### Scenario: the lead-form size target is discoverable
 
