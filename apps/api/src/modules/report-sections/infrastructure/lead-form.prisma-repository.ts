@@ -1,4 +1,7 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type {
+  ReportSectionReadModel,
+  TrafficLightStatus,
+} from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
@@ -37,7 +40,7 @@ function normalizeStageName(stageName: string): string {
 }
 
 /** API traffic-light enum; null = no data / untouched stage. */
-type StageTrafficStatus = "green" | "yellow" | "red" | null;
+type StageTrafficStatus = TrafficLightStatus | null;
 
 @Injectable()
 export class LeadFormPrismaRepository implements LeadFormRepository {
@@ -511,7 +514,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     });
 
     // Persisted-traffic lookup: "authorId::projectId::stageId" → green/yellow/red.
-    const statusMap = new Map<string, "green" | "yellow" | "red">();
+    const statusMap = new Map<string, TrafficLightStatus>();
     // Per-author covering risks, grouped by projectId for the stage match.
     const risksByAuthor = new Map<
       string,
@@ -726,7 +729,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       // derivation as the status-only read. The author's stage assignments on
       // shared products (collected above) define which chips exist; the
       // section's persisted statuses provide the empty/non-empty base.
-      const persistedStatus = new Map<string, "green" | "yellow" | "red">();
+      const persistedStatus = new Map<string, TrafficLightStatus>();
       for (const ss of section.stageStatuses) {
         if (ss.status !== null) {
           persistedStatus.set(`${ss.projectId}::${ss.stageId}`, ss.status);

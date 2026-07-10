@@ -662,6 +662,9 @@ describe("enum schemas", () => {
   it("trafficLightStatusSchema rejects unknown value", () => {
     expect(trafficLightStatusSchema.safeParse("blue").success).toBe(false);
     expect(trafficLightStatusSchema.safeParse("").success).toBe(false);
+    // "amber" exists in this repo only as a Tailwind color token — it has
+    // never been a status value (traffic-light-status-type spec).
+    expect(trafficLightStatusSchema.safeParse("amber").success).toBe(false);
   });
 
   it("itemTypeSchema accepts current/next", () => {

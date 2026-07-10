@@ -2,6 +2,7 @@
 // SEEDED server-side set, an omitted slice keeps the seeded values, and an
 // unattached activityId is a hard reject (the delete-recreate never trusts
 // client-supplied ids — same gap class as stage ownership).
+import type { TrafficLightStatus } from "@customreport/shared";
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
@@ -80,7 +81,7 @@ function createRepository(
 function draftPayload(
   activityStatuses?: {
     activityId: string;
-    status?: "green" | "yellow" | "red" | null;
+    status?: TrafficLightStatus | null;
     note?: string | null;
   }[],
 ) {

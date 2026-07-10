@@ -1,3 +1,4 @@
+import type { TrafficLightStatus } from "@customreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
@@ -192,7 +193,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
         stageNames: string[];
       }[];
       /** Persisted stage-traffic status for the co-lead on Dev. */
-      persistedDevStatus?: "green" | "yellow" | "red" | null;
+      persistedDevStatus?: TrafficLightStatus | null;
     } = {},
   ) {
     const coLead = await prisma.user.create({

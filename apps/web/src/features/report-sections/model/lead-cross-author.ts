@@ -16,6 +16,7 @@
  *     name. Drives the `mapForeign*` content mappers below.
  */
 
+import type { TrafficLightStatus } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 
 import {
@@ -31,11 +32,7 @@ import {
   normalizeStageName,
   stageNamesMatch,
 } from "./lead-form";
-import {
-  type StageStatus,
-  type TrafficLightStatus,
-  trafficToStageStatus,
-} from "./traffic-light";
+import { type StageStatus, trafficToStageStatus } from "./traffic-light";
 
 // ---- Structural input mirrors (query-row subsets) ----
 

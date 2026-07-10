@@ -1,3 +1,4 @@
+import type { TrafficLightStatus } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -38,10 +39,7 @@ function renderSection(
   cards: readonly LeadActivityCard[],
   opts?: {
     readOnly?: boolean;
-    onStatusChange?: (
-      activityId: string,
-      status: "green" | "yellow" | "red",
-    ) => void;
+    onStatusChange?: (activityId: string, status: TrafficLightStatus) => void;
     onRaiseRequiresRisk?: (
       activityId: string,
       severity: "at-risk" | "blocked",

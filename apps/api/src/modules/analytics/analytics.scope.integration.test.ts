@@ -1,3 +1,4 @@
+import type { TrafficLightStatus } from "@customreport/shared";
 import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -60,7 +61,7 @@ describe("Analytics day-range matching (integration)", () => {
     periodEnd: string;
     createdAt?: string;
     sectionStatus: "submitted" | "draft";
-    projectStatus?: "green" | "yellow" | "red";
+    projectStatus?: TrafficLightStatus;
     risks?: number;
   }): Promise<void> {
     await prisma.report.create({

@@ -1,4 +1,7 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type {
+  ReportSectionReadModel,
+  TrafficLightStatus,
+} from "@customreport/shared";
 
 export class LeadFormDomainError extends Error {
   constructor(message: string) {
@@ -127,20 +130,7 @@ export interface LeadFormRepository {
   getCrossAuthors(
     reportId: string,
     userId: string,
-  ): Promise<
-    {
-      projectId: string;
-      projectName: string;
-      authorId: string;
-      authorInitials: string;
-      authorShortName: string;
-      stageNames: string[];
-      stages: {
-        stageName: string;
-        status: "green" | "yellow" | "red" | null;
-      }[];
-    }[]
-  >;
+  ): Promise<CrossAuthorStatusRow[]>;
   /**
    * Full foreign section content (item / risk / decision text + the owning
    * author's full name + risk-derived foreign stage chips) for products the
@@ -171,6 +161,24 @@ export interface LeadFormRepository {
 }
 
 /**
+ * The status-only cross-author row: initials + risk-derived per-stage status,
+ * no record text. The strictly-more-sensitive full-content read is
+ * `CrossAuthorSectionRow` below.
+ */
+export interface CrossAuthorStatusRow {
+  projectId: string;
+  projectName: string;
+  authorId: string;
+  authorInitials: string;
+  authorShortName: string;
+  stageNames: string[];
+  stages: {
+    stageName: string;
+    status: TrafficLightStatus | null;
+  }[];
+}
+
+/**
  * Foreign section content scoped to products the caller co-owns. Revives the
  * pre-`scope-lead-report-to-own-contribution` shape and adds a risk-derived
  * per-stage `stages[]` projection so the "Everyone" lens can render foreign
@@ -187,7 +195,7 @@ export interface CrossAuthorSectionRow {
   stages: {
     projectId: string;
     stageName: string;
-    status: "green" | "yellow" | "red" | null;
+    status: TrafficLightStatus | null;
   }[];
   items: {
     id: string;

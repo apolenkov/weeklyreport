@@ -1,4 +1,7 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type {
+  ReportSectionReadModel,
+  TrafficLightStatus,
+} from "@customreport/shared";
 
 import type { ItemWorkflowStatus } from "../model/item-status";
 import { normalizeStageName } from "../model/lead-form";
@@ -11,7 +14,7 @@ import type {
 import { stageStatusToTraffic } from "../model/traffic-light";
 
 type DraftSection = ReportSectionReadModel;
-type StageStatusValue = "green" | "yellow" | "red" | null;
+type StageStatusValue = TrafficLightStatus | null;
 const WORKFLOW_STATUS_BY_ITEM_STATUS = {
   completed: "done",
   planned: "planned",
@@ -67,7 +70,7 @@ export function mergeProductDraft(
 export function mergeActivityStatusDraft(
   section: DraftSection,
   activityId: string,
-  status: "green" | "yellow" | "red",
+  status: TrafficLightStatus,
 ): DraftSection {
   return {
     ...section,

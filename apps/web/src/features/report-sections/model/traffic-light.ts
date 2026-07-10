@@ -3,12 +3,14 @@
  * with the UI presentation enum (on-track/at-risk/blocked/empty).
  *
  * The mapper is intentionally self-contained and does NOT import from
- * mock-data.ts -- it owns canonical type aliases for both sides so that
+ * mock-data.ts or any UI module; the color side comes from the shared
+ * traffic-light SSOT and the presentation side stays owned here, so
  * downstream consumers can depend on the mapper layer without coupling
  * to a particular UI module.
  */
 
-export type TrafficLightStatus = "green" | "yellow" | "red";
+import type { TrafficLightStatus } from "@customreport/shared";
+
 export type StageStatus = "on-track" | "at-risk" | "blocked" | "empty";
 
 /**

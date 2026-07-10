@@ -1,3 +1,4 @@
+import type { TrafficLightStatus } from "@customreport/shared";
 import {
   AlertTriangle,
   ArrowRight,
@@ -75,14 +76,14 @@ export function SlideColumnHeaderRow() {
   );
 }
 
-const STATUS_STRIPE: Record<"green" | "yellow" | "red", string> = {
+const STATUS_STRIPE: Record<TrafficLightStatus, string> = {
   green: "border-l-4 border-l-[var(--color-chip-on-track-border)]",
   yellow: "border-l-4 border-l-[var(--color-status-dot-at-risk)]",
   red: "border-l-4 border-l-[var(--color-destructive)]",
 };
 
 /** Traffic light → canonical status for the dot map lookup (D6). */
-function trafficDotStatus(status: "green" | "yellow" | "red"): CanonicalStatus {
+function trafficDotStatus(status: TrafficLightStatus): CanonicalStatus {
   if (status === "red") return "blocked";
   if (status === "yellow") return "at-risk";
   return "on-track";

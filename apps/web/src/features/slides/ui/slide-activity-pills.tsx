@@ -1,5 +1,7 @@
 "use client";
 
+import type { TrafficLightStatus } from "@customreport/shared";
+
 import {
   type CanonicalStatus,
   statusDotClassName,
@@ -7,7 +9,7 @@ import {
 } from "../../../lib/status-presentation";
 import type { SlideActivityPill } from "../model/section-slide-utils";
 
-type PillStatus = "green" | "yellow" | "red" | "empty";
+type PillStatus = TrafficLightStatus | "empty";
 
 // Worst-first so blocked activities read first on the status slide.
 const GROUP_ORDER: readonly PillStatus[] = ["red", "yellow", "green", "empty"];

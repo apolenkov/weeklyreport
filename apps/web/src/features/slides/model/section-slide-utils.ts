@@ -1,3 +1,4 @@
+import type { TrafficLightStatus } from "@customreport/shared";
 import type {
   ActivityLiveRow,
   ReportSectionReadModel,
@@ -28,7 +29,7 @@ export interface SlideReadinessItem {
   readonly required: boolean;
 }
 
-export type SlideStageStatus = "green" | "yellow" | "red" | null;
+export type SlideStageStatus = TrafficLightStatus | null;
 
 export interface SlideStage {
   readonly id: string;
@@ -771,7 +772,7 @@ type OwnedStage = NonNullable<
 const SHARED_PRODUCT_ID = "shared-context";
 const SHARED_PRODUCT_NAME = CROSS_PRODUCT_LABEL;
 
-const TRAFFIC_RANK: Record<"green" | "yellow" | "red", number> = {
+const TRAFFIC_RANK: Record<TrafficLightStatus, number> = {
   green: 0,
   yellow: 1,
   red: 2,
