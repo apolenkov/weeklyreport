@@ -9,6 +9,10 @@ import { ActivityStatusSection } from "../../period/ui/activity-status-section";
 import { DecisionsSection } from "../../period/ui/decisions-section";
 import type { CrossAuthorEntry } from "../../period/ui/sdlc-pipeline";
 import { LeadReviewFeedback } from "../../review/ui/lead-review-feedback";
+import {
+  mapLeadReviewFeedback,
+  ownedStagesForProject,
+} from "../model/lead-form";
 import { AlertIcon, ChatIcon, GridIcon } from "./lead-form-icons";
 import {
   LeadFormItemSections,
@@ -27,10 +31,10 @@ interface LeadFormEditSectionsProps {
   readonly viewModel: LeadFormLoadedViewModel;
   readonly merges: LeadFormDraftMerges;
   readonly draftSection: ReportSectionReadModel;
-  readonly reviewFeedback: ComponentProps<typeof LeadReviewFeedback>["records"];
+  /** The authoritative SERVER section — reviewer feedback derives from it. */
+  readonly serverSection: ReportSectionReadModel;
   readonly groupExpanded: boolean;
   readonly unifiedView: boolean;
-  readonly stagesForProduct: SyncBridgeProviderProps["stagesForProduct"];
   readonly recordVisibility: RecordVisibility;
   readonly visibilityHydrated: boolean;
   readonly crossAuthorEntries: CrossAuthorEntry[];
@@ -47,14 +51,22 @@ export function LeadFormEditSections({
   viewModel,
   merges,
   draftSection,
-  reviewFeedback,
+  serverSection,
   groupExpanded,
   unifiedView,
-  stagesForProduct,
   recordVisibility,
   visibilityHydrated,
   crossAuthorEntries,
 }: LeadFormEditSectionsProps) {
+  // review-acknowledgement (§8): reviewer comments on this lead's OWN records,
+  // read from the authoritative SERVER section (not the editable draft, whose
+  // in-place edits could drop the joined comments).
+  const reviewFeedback = mapLeadReviewFeedback(serverSection);
+  // 35-04: per-project stages-the-lead-owns selector, forwarded into the
+  // record dialogs so the SDLC stage dropdown is scoped per project.
+  const stagesForProduct: SyncBridgeProviderProps["stagesForProduct"] = (
+    productId,
+  ) => ownedStagesForProject(draftSection, productId);
   const {
     activityCards,
     activityOptions,
