@@ -11,9 +11,9 @@ import type {
   ReminderPolicy,
   ReportingGroup,
   ReportPeriod,
+  ReportStatus,
   StageAssignment,
 } from "@customreport/shared";
-import type { ReportStatus } from "@prisma/client";
 
 export class AdminAccessError extends Error {
   constructor(message: string) {

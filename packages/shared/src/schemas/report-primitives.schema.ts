@@ -92,6 +92,11 @@ export function addItemTypeStatusIssue(
 export const riskSeveritySchema = z.enum(["at-risk", "blocked"]);
 export const reportSectionStatusSchema = z.enum(["draft", "submitted"]);
 export const reportStatusSchema = z.enum(["draft", "published"]);
+/**
+ * The single source of truth for the report status value (report-status-type
+ * spec). The two literals live only here; consumers import this type.
+ */
+export type ReportStatus = z.infer<typeof reportStatusSchema>;
 export const periodStatusSchema = z.enum(["open", "published", "reopened"]);
 
 /**

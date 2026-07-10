@@ -1,3 +1,4 @@
+import type { ReportStatus } from "@customreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -64,7 +65,7 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
 
   async function createReport(
     id: string,
-    status: "draft" | "published",
+    status: ReportStatus,
     periodStatus: "open" | "published" | "reopened",
     periodStart: string,
   ): Promise<void> {

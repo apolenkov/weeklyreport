@@ -303,6 +303,9 @@ export type SeedReport = {
   deadline: string;
   weekLabel: string;
   periodStatus: "open" | "published" | "reopened";
+  // Literal mirror of the shared ReportStatus SSOT (report-status-type):
+  // the prisma seed toolchain (tsconfig.prisma.json) cannot resolve
+  // workspace packages, so this one file keeps the two literals inline.
   status: "draft" | "published";
   publishedAt?: string;
 };

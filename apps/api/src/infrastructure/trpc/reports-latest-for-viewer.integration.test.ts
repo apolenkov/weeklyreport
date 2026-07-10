@@ -1,4 +1,4 @@
-import type { UserSession } from "@customreport/shared";
+import type { ReportStatus, UserSession } from "@customreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
@@ -44,7 +44,7 @@ describe("reports.latestForViewer (integration)", () => {
 
   async function createReport(
     id: string,
-    status: "draft" | "published",
+    status: ReportStatus,
     periodStatus: "open" | "published" | "reopened",
     periodStart: string,
   ): Promise<void> {

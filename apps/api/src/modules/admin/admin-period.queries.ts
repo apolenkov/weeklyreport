@@ -1,5 +1,8 @@
-import type { PeriodState, PeriodStatus } from "@customreport/shared";
-import type { ReportStatus } from "@prisma/client";
+import type {
+  PeriodState,
+  PeriodStatus,
+  ReportStatus,
+} from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { PeriodRowFromRepo } from "./admin.service";
