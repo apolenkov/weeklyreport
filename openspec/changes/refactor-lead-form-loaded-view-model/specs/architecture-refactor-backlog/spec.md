@@ -3,8 +3,8 @@
 ### Requirement: The lead-form god component is a recorded decomposition target
 
 The backlog MUST record that
-`apps/web/src/features/report-sections/ui/lead-form.tsx` (1858 LOC after
-`refactor-lead-form-write-actions` on 2026-07-09; 250-line `max-lines`
+`apps/web/src/features/report-sections/ui/lead-form.tsx` (1314 LOC after
+`refactor-lead-form-loaded-view-model` on 2026-07-10; 250-line `max-lines`
 standard) is a decomposition target being reduced in recorded slices, each
 captured as its own grilled refactor change before work starts. The first slice
 is `refactor-lead-mappers`: the pure cross-author and snapshot derivations
@@ -25,8 +25,8 @@ the file at 1485 LOC; it stood at 1858 when the slice started). The fifth slice
 is `refactor-lead-form-loaded-view-model`: loaded display derivations for
 cross-author products, own/foreign rows, activity cards, unified entries,
 published-lineage locks, visible periods, and read-only affordances moved behind
-a tested feature-local boundary (actual post-slice LOC evidence MUST be
-recorded before archive; it started at 1485 LOC). The decomposition target
+a tested feature-local boundary (landed with the file at 1314 LOC; it stood at
+1485 when the slice started). The decomposition target
 itself stays open; the deferred `ReportDataCoordinator` / `FormStateManager`
 objects MUST NOT be built outside a future grilled change of their own.
 
