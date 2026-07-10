@@ -42,4 +42,4 @@
 - [ ] 3.3 Run scoped lint on changed web files with `--max-warnings 0`.
 - [ ] 3.4 Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm format:check`,
       `git diff --check`, `openspec validate refactor-lead-form-data-loading
-  --strict`, and `openspec validate --all --strict`.
+--strict`, and `openspec validate --all --strict`.
