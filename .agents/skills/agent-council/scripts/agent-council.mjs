@@ -128,6 +128,9 @@ Options:
   --dry-run                   Build prompts and command metadata without running advisors.
   --validate-config           Validate config and exit.
   --print-sample-config       Print a complete sample config and exit.
+  --setup-config              Write a recommended config to --config path and exit.
+  --setup-preset <name>       Setup preset. Supported: opencode. Default: opencode.
+  --force                     Allow --setup-config to overwrite an existing config.
   -h, --help                  Show this help.
 
 Environment:
@@ -152,6 +155,11 @@ const main = async () => {
 
   if (options.printSampleConfig) {
     process.stdout.write(SAMPLE_CONFIG);
+    return;
+  }
+
+  if (options.setupConfig) {
+    await writeSetupConfig(options);
     return;
   }
 
@@ -272,6 +280,7 @@ function parseArgs(argv) {
       ? parsePositiveInt(process.env.AGENT_COUNCIL_DEADLINE_MS, 0, "AGENT_COUNCIL_DEADLINE_MS")
       : 0,
     dryRun: false,
+    force: false,
     help: false,
     json: false,
     maxOutputChars: parsePositiveInt(
@@ -285,6 +294,8 @@ function parseArgs(argv) {
     prompt: "",
     proofCmd: "",
     runId: "",
+    setupConfig: false,
+    setupPreset: "opencode",
     timeoutMs: globalEnvTimeoutMs ?? DEFAULT_TIMEOUT_MS,
     validateConfig: false,
   };
@@ -332,6 +343,11 @@ function parseArgs(argv) {
       continue;
     }
 
+    if (arg === "--force") {
+      options.force = true;
+      continue;
+    }
+
     if (arg === "--json") {
       options.json = true;
       continue;
@@ -353,6 +369,16 @@ function parseArgs(argv) {
 
     if (arg === "--print-sample-config") {
       options.printSampleConfig = true;
+      continue;
+    }
+
+    if (arg === "--setup-config") {
+      options.setupConfig = true;
+      continue;
+    }
+
+    if (arg === "--setup-preset") {
+      options.setupPreset = requireValue(argv, (index += 1), "--setup-preset");
       continue;
     }
 
@@ -414,7 +440,7 @@ async function loadConfig(configPath) {
   } catch (error) {
     if (error?.code === "ENOENT") {
       throw new Error(
-        `Config required: ${configPath} not found. Run with --print-sample-config and save it as ${DEFAULT_CONFIG_PATH}, or pass --config <path>.`,
+        `Config required: ${configPath} not found. Run with --setup-config to create ${DEFAULT_CONFIG_PATH}, run with --print-sample-config and save it manually, or pass --config <path>.`,
       );
     }
 
@@ -422,6 +448,37 @@ async function loadConfig(configPath) {
   }
 
   return parseRestrictedYaml(text);
+}
+
+async function writeSetupConfig(options) {
+  const configText = setupConfigForPreset(options.setupPreset);
+  const targetPath = resolve(options.cwd, options.configPath);
+
+  try {
+    await readFile(targetPath, "utf8");
+
+    if (!options.force) {
+      throw new Error(`Config already exists: ${targetPath}. Pass --force to overwrite it.`);
+    }
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      throw error;
+    }
+  }
+
+  await mkdir(dirname(targetPath), { recursive: true });
+  await writeFile(targetPath, configText, "utf8");
+  process.stdout.write(
+    `agent-council config written: ${targetPath} (preset: ${options.setupPreset})\n`,
+  );
+}
+
+function setupConfigForPreset(preset) {
+  if (preset === "opencode") {
+    return SAMPLE_CONFIG;
+  }
+
+  throw new Error(`Unknown setup preset: ${preset}. Supported presets: opencode.`);
 }
 
 function resolveConfig(config, options) {
