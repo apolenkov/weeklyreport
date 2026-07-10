@@ -28,7 +28,7 @@ Hard mode plus a configured writable builder and a different configured read-onl
 The exact command used to invoke one council advisor. Adapter commands are configurable because CLI products change their flags and local aliases vary.
 
 **Read-Only Council Run**:
-A council run where children may inspect and reason but must not modify repository state. Soft and hard modes are read-only by contract: the runner refuses to start when a `write_mode` seat is listed as an advisor or final reviewer. The runner cannot police what a seat's own command grants itself, so a seat's adapter flags must match its declared role.
+A council run where children may inspect and reason but must not modify repository state. Soft and hard modes are read-only by contract: the runner refuses to start when a `write_mode` seat is listed as an advisor. The runner cannot police what a seat's own command grants itself, so a seat's adapter flags must match its declared role.
 
 **Writable Builder**:
 The explicit `builder` seat in full mode. It is the only child seat that may write, and only after `--allow-writes`, clean-tree, and proof-command gates pass. The clean-tree gate is re-checked immediately before the builder launches, ignoring the council's own artifacts directory.

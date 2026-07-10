@@ -31,6 +31,92 @@ test("sample config prints and validates as restricted YAML", () => {
   assert.match(validated.stdout, /agent-council config ok: soft \(soft\)/);
 });
 
+test("printed sample config matches references/sample-config.yaml byte for byte", () => {
+  const printed = runCouncil(["--print-sample-config"]);
+  assert.equal(printed.status, 0, printed.stderr);
+
+  const referencePath = resolve(dirname(scriptPath), "../references/sample-config.yaml");
+  assert.equal(printed.stdout, readFileSync(referencePath, "utf8"));
+});
+
+test("unknown root key is rejected with a nearest-key suggestion", () => {
+  const temp = makeTempConfig(`version: 1
+default_profil: soft
+profiles:
+  soft:
+    mode: soft
+    advisors: [one]
+seats:
+  one:
+    provider: custom
+    command: ["true"]
+`);
+  const result = runCouncil(["--config", temp.configPath, "--validate-config"]);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Unknown key config\.default_profil\. Did you mean default_profile\?/);
+});
+
+test("misspelled profile key is rejected instead of silently dropping rounds", () => {
+  const temp = makeTempConfig(configWithProfiles({
+    profiles: `
+  soft:
+    mode: hard
+    advisors: [one]
+    self_gril_rounds: 2
+`,
+    seats: `
+  one:
+    provider: custom
+    command: ["true"]
+`,
+  }));
+  const result = runCouncil(["--config", temp.configPath, "--validate-config"]);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Unknown key profiles\.soft\.self_gril_rounds\. Did you mean self_grill_rounds\?/);
+});
+
+test("misspelled seat key is rejected instead of silently dropping the timeout", () => {
+  const temp = makeTempConfig(configWithProfiles({
+    profiles: `
+  soft:
+    mode: soft
+    advisors: [one]
+`,
+    seats: `
+  one:
+    provider: custom
+    command: ["true"]
+    timeout_m: 90000
+`,
+  }));
+  const result = runCouncil(["--config", temp.configPath, "--validate-config"]);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Unknown key seats\.one\.timeout_m\. Did you mean timeout_ms\?/);
+});
+
+test("legacy final_reviewer key gets a targeted migration error", () => {
+  const temp = makeTempConfig(configWithProfiles({
+    profiles: `
+  soft:
+    mode: soft
+    advisors: [one]
+    final_reviewer: one
+`,
+    seats: `
+  one:
+    provider: custom
+    command: ["true"]
+`,
+  }));
+  const result = runCouncil(["--config", temp.configPath, "--validate-config"]);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /profiles\.soft\.final_reviewer was shipped in earlier sample configs but was never functional; delete it\./);
+});
+
 test("setup config writes a recommended OpenCode config and refuses accidental overwrite", () => {
   const repo = mkdtempSync(join(tmpdir(), "agent-council-setup-repo-"));
   const configPath = join(repo, ".agents", "agent-council.yaml");
