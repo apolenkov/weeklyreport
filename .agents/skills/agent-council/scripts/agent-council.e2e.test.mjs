@@ -107,6 +107,32 @@ test("a proof killed by output overflow is reported as overflow and fails the ru
   assert.match(result.stderr, /proof command failed/);
 });
 
+test("a reviewer that prints APPROVED then exits non-zero fails the run closed", () => {
+  const { body, result } = runFullMode({
+    reviewer: reviewerCommand({ verdict: "APPROVED", exitCode: 7 }),
+    runId: "e2e-reviewer-crash",
+    expectStatus: 1,
+  });
+
+  // The verdict text is APPROVED, but the reviewer process did not complete.
+  assert.equal(body.build.verdict, "APPROVED");
+  assert.notEqual(body.build.reviewerStatus, "ok");
+  assert.match(result.stderr, /reviewer did not complete/);
+});
+
+test("a reviewer that prints APPROVED then hangs past its timeout fails the run closed", () => {
+  const { body, result } = runFullMode({
+    reviewer: reviewerCommand({ verdict: "APPROVED", hangMs: 60000 }),
+    extraArgs: ["--timeout-ms", "800"],
+    runId: "e2e-reviewer-timeout",
+    expectStatus: 1,
+  });
+
+  assert.equal(body.build.verdict, "APPROVED");
+  assert.notEqual(body.build.reviewerStatus, "ok");
+  assert.match(result.stderr, /reviewer did not complete/);
+});
+
 test("a builder that reports BUILD: BLOCKED fails the run closed", () => {
   const { body, result } = runFullMode({
     builder: blockedBuilderCommand(),
@@ -354,8 +380,11 @@ function builderFixCommand() {
   ];
 }
 
-function reviewerCommand({ verdict = "APPROVED", trailer = "" } = {}) {
+function reviewerCommand({ verdict = "APPROVED", trailer = "", exitCode = 0, hangMs = 0 } = {}) {
   const report = [...headings("Reviewed the build", "High"), "", `VERDICT: ${verdict}`].join("\n");
+  // The verdict text is printed BEFORE the process dies/hangs, so it lands in stdout even
+  // though the reviewer never cleanly finishes — the case fail-closed must still catch.
+  const ending = hangMs ? `setTimeout(() => {}, ${hangMs});` : exitCode ? `process.exit(${exitCode});` : "";
 
   return [
     "node",
@@ -367,6 +396,7 @@ function reviewerCommand({ verdict = "APPROVED", trailer = "" } = {}) {
       "console.log('SAW_ARTIFACTS:' + String(prompt.includes('config.resolved.json')));",
       `console.log(${JSON.stringify(report)});`,
       trailer ? `console.log(${JSON.stringify(trailer)});` : "",
+      ending,
     ]
       .filter(Boolean)
       .join(" "),
