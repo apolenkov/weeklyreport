@@ -296,18 +296,46 @@ function reportRunOutcome(health, build) {
     return;
   }
 
-  if (build?.unresumable) {
-    process.stderr.write(
-      "agent-council: the reviewer asked for fixes but the builder emitted no resumable thread id; the fixes were never applied.\n",
+  for (const problem of fullModeProblems(build)) {
+    process.stderr.write(`agent-council: ${problem}\n`);
+    process.exitCode = 1;
+  }
+}
+
+// Full mode gates writes behind a builder, a proof, and a review, so its exit code must
+// fail CLOSED: a scripted caller may only treat exit 0 as "built, proven, and approved".
+// Anything else — a killed/blocked builder, a failed or timed-out proof, a REVISE or
+// unreadable verdict — is a non-zero exit with a specific reason, never a silent success.
+function fullModeProblems(build) {
+  if (!build || build.builderStatus === "dry_run") {
+    return [];
+  }
+
+  const problems = [];
+
+  if (build.builderStatus !== "ok") {
+    problems.push(`the builder did not complete (status: ${build.builderStatus}); the build is incomplete.`);
+  } else if (build.builderBlocked || !build.builderComplete) {
+    problems.push("the builder did not report BUILD: COMPLETE; treat the build as blocked.");
+  }
+
+  if (build.proof?.timedOut) {
+    problems.push("the proof command timed out; the build is unverified.");
+  } else if (build.proof && build.proof.exitCode !== 0) {
+    problems.push(`the proof command failed (exit ${build.proof.exitCode ?? "null"}); the build is unverified.`);
+  }
+
+  if (build.verdict === "UNKNOWN") {
+    problems.push("the reviewer verdict could not be read; treat the build as unreviewed.");
+  } else if (build.verdict === "REVISE") {
+    problems.push(
+      build.unresumable
+        ? "the reviewer required changes but the builder emitted no resumable thread id, so the fixes were never applied."
+        : "the reviewer required changes (VERDICT: REVISE) that the fix rounds did not resolve.",
     );
   }
 
-  if (build && build.verdict === "UNKNOWN") {
-    process.stderr.write(
-      "agent-council: the reviewer verdict could not be read; treat the build as unreviewed.\n",
-    );
-    process.exitCode = 1;
-  }
+  return problems;
 }
 
 function parseArgs(argv) {
@@ -914,6 +942,7 @@ async function runBuildPhase(context, latestPhase) {
   const threadId = extractThreadId(buildResult.stdout);
   const results = [buildResult];
   const proofs = [runProof(context, proofCmd)];
+  let lastBuilderResult = buildResult;
   let reviewerResult = await runReviewer({
     buildResult,
     context,
@@ -933,6 +962,7 @@ async function runBuildPhase(context, latestPhase) {
   ) {
     const fixResult = await runBuilderFix({ context, reviewerResult, round, threadId });
     results.push(fixResult);
+    lastBuilderResult = fixResult;
     const nextProof = runProof(context, proofCmd);
     proofs.push(nextProof);
     reviewerResult = await runReviewer({
@@ -946,6 +976,9 @@ async function runBuildPhase(context, latestPhase) {
   }
 
   const phase = {
+    builderBlocked: /BUILD:\s*BLOCKED/i.test(lastBuilderResult.stdout || ""),
+    builderComplete: /BUILD:\s*COMPLETE/i.test(lastBuilderResult.stdout || ""),
+    builderStatus: lastBuilderResult.status,
     health: buildCouncilHealth(results, Date.now() - buildStartedAt),
     kind: "build",
     label: "Build",

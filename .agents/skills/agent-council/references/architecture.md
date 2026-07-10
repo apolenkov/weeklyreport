@@ -158,7 +158,7 @@ Full mode adds `--allow-writes`, `--proof-cmd <cmd>`, and `--proof-timeout-ms <m
 
 Use `--json` when another script needs machine-readable output.
 
-Exit codes: `0` on a usable run, `1` on a usage/config error, when no advisor reached status `ok`, or when the full-mode reviewer verdict could not be read (`verdict: "UNKNOWN"`). `SIGINT` exits `130` and `SIGTERM` exits `143` after terminating every child process group.
+Exit codes: `0` on a usable run, `1` on a usage/config error or when no advisor reached status `ok`. Full mode fails CLOSED — it exits `0` only when the build is affirmatively safe: the builder completed (`BUILD: COMPLETE`, status `ok`), the final proof passed (exit 0, not timed out), and the reviewer verdict is `APPROVED`. A killed or blocked builder, a failed or timed-out proof, or a `REVISE`/unreadable verdict each exits `1` with a specific reason on stderr, so a scripted caller never mistakes an unproven or rejected build for a success. `SIGINT` exits `130` and `SIGTERM` exits `143` after terminating every child process group.
 
 JSON output includes run-level `health`, phase records, and one `extracted` object per advisor result. `extracted` is derived from the required child headings: `Position`, `Assumptions`, `Evidence`, `Risks`, `Implementation Notes`, and `Confidence`. Raw stdout/stderr are still preserved and fenced in the parent prompt.
 
