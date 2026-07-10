@@ -11,10 +11,10 @@ import type {
   ReminderPolicy,
   ReportingGroup,
   ReportPeriod,
+  ReportStatus,
   StageAssignment,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
-import type { ReportStatus } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PolicyApplicatorService } from "../reminders/index.js";

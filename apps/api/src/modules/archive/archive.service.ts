@@ -1,3 +1,4 @@
+import type { ReportStatus } from "@customreport/shared";
 import {
   type ArchiveReportDetail,
   archiveReportDetailSchema,
@@ -26,7 +27,7 @@ export class ArchiveDomainError extends Error {
  * and 'draft' (in-progress).
  */
 export interface ArchiveReadFilter {
-  status?: "draft" | "published";
+  status?: ReportStatus;
 }
 
 /**

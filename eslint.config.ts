@@ -709,6 +709,9 @@ export default defineConfig([
       "apps/api/src/modules/report-sections/domain/**/*.ts",
       "apps/api/src/modules/review/domain/**/*.ts",
       "apps/api/src/modules/publication/domain/**/*.ts",
+      // admin is a flat (non-hexagon) module; its port file joins the ban so
+      // the fixed ReportStatus leak cannot regress (report-status-type).
+      "apps/api/src/modules/admin/admin-shared.ts",
     ],
     rules: {
       "@typescript-eslint/no-restricted-imports": [

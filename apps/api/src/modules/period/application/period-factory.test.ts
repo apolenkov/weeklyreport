@@ -1,3 +1,4 @@
+import type { ReportStatus } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -37,7 +38,7 @@ interface ReportCreateData {
   periodEnd: Date;
   deadline: Date;
   periodState: "scheduled" | "open";
-  status: "draft" | "published";
+  status: ReportStatus;
   archived: boolean;
 }
 

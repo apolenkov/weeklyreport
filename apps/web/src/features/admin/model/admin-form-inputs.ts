@@ -5,6 +5,7 @@
  * contract drift (e.g. schema field renames) collects in one place.
  */
 
+import type { ReportStatus } from "@customreport/shared";
 import {
   composeName,
   type ReminderAudience,
@@ -141,7 +142,7 @@ export interface ReportPeriodFormInput {
   startDate: string; // YYYY-MM-DD
   endDate: string;
   deadline: string;
-  status?: "draft" | "published";
+  status?: ReportStatus;
 }
 
 /**
@@ -157,7 +158,7 @@ export function toReportPeriodInput(
   periodStart: Date;
   periodEnd: Date;
   deadline: Date;
-  status: "draft" | "published";
+  status: ReportStatus;
 } {
   return {
     id: existingId ?? newId(),

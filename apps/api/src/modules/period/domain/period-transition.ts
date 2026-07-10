@@ -1,4 +1,4 @@
-import type { PeriodState } from "@customreport/shared";
+import type { PeriodState, ReportStatus } from "@customreport/shared";
 
 /**
  * refactor-period-transition-writer: the single, pure source of truth for the
@@ -38,7 +38,7 @@ import type { PeriodState } from "@customreport/shared";
  */
 export interface LifecycleWrite {
   periodState?: PeriodState;
-  status?: "draft" | "published";
+  status?: ReportStatus;
   archived?: boolean;
   periodStatus?: "open" | "published" | "reopened";
   autoPublished?: boolean;
@@ -88,7 +88,7 @@ export type TransitionKind = keyof TransitionCtx;
  * the explicit `periodState` column buys us.
  */
 function legacyTuple(state: PeriodState): {
-  status: "draft" | "published";
+  status: ReportStatus;
   archived: boolean;
 } {
   switch (state) {
