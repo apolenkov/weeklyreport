@@ -325,7 +325,11 @@ function fullModeProblems(build) {
     problems.push(`the proof command failed (exit ${build.proof.exitCode ?? "null"}); the build is unverified.`);
   }
 
-  if (build.verdict === "UNKNOWN") {
+  // A reviewer that printed VERDICT: APPROVED and then crashed or timed out did not finish
+  // its review, so the verdict text cannot be trusted no matter what it says.
+  if (build.reviewerStatus && build.reviewerStatus !== "ok") {
+    problems.push(`the reviewer did not complete (status: ${build.reviewerStatus}); its verdict cannot be trusted.`);
+  } else if (build.verdict === "UNKNOWN") {
     problems.push("the reviewer verdict could not be read; treat the build as unreviewed.");
   } else if (build.verdict === "REVISE") {
     problems.push(
@@ -985,6 +989,7 @@ async function runBuildPhase(context, latestPhase) {
     proof: proofs[proofs.length - 1],
     proofs,
     results,
+    reviewerStatus: reviewerResult.status,
     threadId,
     unresumable: Boolean(!threadId && verdictOfResult(reviewerResult) === "REVISE"),
     verdict: verdictOfResult(reviewerResult),
