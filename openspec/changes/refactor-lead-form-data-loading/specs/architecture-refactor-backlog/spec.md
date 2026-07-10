@@ -3,7 +3,7 @@
 ### Requirement: The lead-form god component is a recorded decomposition target
 
 The backlog MUST record that
-`apps/web/src/features/report-sections/ui/lead-form.tsx` (975 LOC after
+`apps/web/src/features/report-sections/ui/lead-form.tsx` (986 LOC after
 `refactor-lead-form-data-loading` on 2026-07-10; 250-line `max-lines`
 standard) is a decomposition target being reduced in recorded slices, each
 captured as its own grilled refactor change before work starts. The first slice
@@ -31,7 +31,7 @@ a tested feature-local boundary (landed with the file at 1314 LOC; it stood at
 chains, record-visibility gating, foreign-content cache purges,
 canonical/head-away redirects, and query error handlers moved behind a tested
 feature-local hook, with the file-local SVG icons and record-visibility toggle
-relocated to their own modules (landed with the file at 975 LOC; it stood at
+relocated to their own modules (landed with the file at 986 LOC; it stood at
 1314 when the slice started). The decomposition target
 itself stays open; the deferred `ReportDataCoordinator` / `FormStateManager`
 objects MUST NOT be built outside a future grilled change of their own.
