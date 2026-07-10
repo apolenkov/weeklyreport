@@ -31,12 +31,21 @@ To inspect the starter without writing files:
 node "${CLAUDE_SKILL_DIR}/scripts/agent-council.mjs" --print-sample-config
 ```
 
-If `${CLAUDE_SKILL_DIR}` is unavailable (Codex/OpenCode runners do not set it), substitute the skill's install root — project-local `.agents/skills/agent-council` or user-global `~/.agents/skills/agent-council` — for any command above, e.g.:
+If `${CLAUDE_SKILL_DIR}` is unavailable (Codex/OpenCode runners do not set it), substitute the skill's install root for any command above. Project-local install:
 
 ```bash
 node .agents/skills/agent-council/scripts/agent-council.mjs --setup-config
 node .agents/skills/agent-council/scripts/agent-council.mjs --print-sample-config
 ```
+
+User-global install (see `references/architecture.md` for the install layouts):
+
+```bash
+node ~/.agents/skills/agent-council/scripts/agent-council.mjs --setup-config
+node ~/.agents/skills/agent-council/scripts/agent-council.mjs --print-sample-config
+```
+
+Either variant writes `.agents/agent-council.yaml` into the CURRENT repo (paths resolve against the working directory, not the skill's location).
 
 Save and edit the sample, then validate it:
 
