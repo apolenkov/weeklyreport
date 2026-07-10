@@ -1,17 +1,9 @@
 "use client";
 
 import { Separator } from "@customreport/ui/components/ui/separator";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { User, Users } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useFullscreen } from "../../../hooks/use-fullscreen";
-import { useRecordVisibility } from "../../../hooks/use-record-visibility";
-import { crossAuthorContentFetchEnabled } from "../../../lib/cross-author-content-gate";
-import { SessionContext } from "../../../lib/session-provider";
-import { useTRPC } from "../../../lib/trpc-context";
-import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import { AccordionSection } from "../../../shared/ui/report-shell/accordion-section";
 import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
@@ -21,10 +13,6 @@ import {
   ReportToolbar,
 } from "../../../shared/ui/report-shell/report-toolbar";
 import { SaveNowButton } from "../../../shared/ui/report-shell/save-now-button";
-import {
-  segmentClassName,
-  SegmentedToggle,
-} from "../../../shared/ui/report-shell/segmented-toggle";
 import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
 import { SdlcTooltipProvider } from "../../../shared/ui/sdlc-tooltip";
 import { VersionComingSoonControl } from "../../admin/ui/version-coming-soon";
@@ -35,6 +23,7 @@ import { DecisionsSection } from "../../period/ui/decisions-section";
 import { FillFromButton } from "../../period/ui/fill-from-button";
 import { PeriodNavigator } from "../../period/ui/period-navigator";
 import { RequestReopenDialog } from "../../period/ui/request-reopen-dialog";
+import type { CrossAuthorEntry } from "../../period/ui/sdlc-pipeline";
 import { LeadReviewFeedback } from "../../review/ui/lead-review-feedback";
 import { LeadSlidesClient } from "../../slides/ui/lead-slides-client";
 import { SlideFullscreenButton } from "../../slides/ui/slide-fullscreen-button";
@@ -45,12 +34,22 @@ import {
 import { formatDateRange, isoWeekNumber } from "../model/lead-history";
 import type { KanbanItem, Product, RiskEntry } from "../model/mock-data";
 import { ItemEditDialog } from "./item-edit-dialog";
+import {
+  AlertIcon,
+  CalendarIcon,
+  ChatIcon,
+  CollapseIcon,
+  GridIcon,
+  NextWeekIcon,
+} from "./lead-form-icons";
 import { buildLeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
 import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
 import { NextWeekSection } from "./next-week-section";
 import { QuickAddButton } from "./quick-add-button";
+import { RecordVisibilityToggle } from "./record-visibility-toggle";
 import { UnifiedActivitySection } from "./unified-activity-section";
+import { useLeadFormData } from "./use-lead-form-data";
 import { useLeadFormDraftMerges } from "./use-lead-form-draft-merges";
 import { useLeadFormDraftOrchestration } from "./use-lead-form-draft-orchestration";
 import { useLeadFormWriteActions } from "./use-lead-form-write-actions";
@@ -76,183 +75,44 @@ interface LeadFormProps {
   readonly redirectToCanonical?: boolean;
 }
 
-// SVG Icon components
-function GridIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4 flex-shrink-0"
-      stroke="var(--color-primary)"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 3h7v7H3z" />
-      <path d="M14 3h7v7h-7z" />
-      <path d="M3 14h7v7H3z" />
-      <path d="M14 14h7v7h-7z" />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4 flex-shrink-0"
-      stroke="var(--color-primary)"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  );
-}
-
-function NextWeekIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4 flex-shrink-0"
-      stroke="var(--color-primary)"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-      <path d="M12 16l3-3-3-3" />
-    </svg>
-  );
-}
-
-function AlertIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4 flex-shrink-0"
-      stroke="var(--color-destructive)"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-      <line x1="12" y1="9" x2="12" y2="13" />
-      <line x1="12" y1="17" x2="12.01" y2="17" />
-    </svg>
-  );
-}
-
-function ChatIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4 flex-shrink-0"
-      stroke="var(--color-starbucks-accent)"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-    </svg>
-  );
-}
-
-function CollapseIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3.5 w-3.5"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      aria-hidden="true"
-    >
-      <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
-    </svg>
-  );
-}
-
 export { sectionToDraftPayload } from "../model/lead-section-draft-payload";
 
 const NO_PRODUCTS_ASSIGNED_MESSAGE = "No products assigned — contact admin";
-
-/**
- * scope-lead-report-to-own-contribution (7c.1): the lead form's Record
- * visibility toggle. A two-state segmented control — "Mine only" (default) /
- * "Everyone". Lead-form only; view-only (it changes what the lead sees, never
- * what is submitted or published — D4b). English label per the repo UI-string
- * rule.
- */
-function RecordVisibilityToggle({
-  value,
-  onChange,
-  disabled = false,
-}: {
-  readonly value: "mine" | "everyone";
-  readonly onChange: (next: "mine" | "everyone") => void;
-  /**
-   * slides-record-visibility (Decision 6): on a FOREIGN-author slide deck
-   * Everyone is not offered — the toggle is forced to Mine and made inert so the
-   * current user's co-owner rows can never be merged onto another author's deck.
-   */
-  readonly disabled?: boolean;
-}) {
-  // Icon-only (User = mine, Users = everyone) so the toggle stays compact and
-  // does not crowd the period navigator; each keeps an accessible name via
-  // aria-label + tooltip.
-  const options: {
-    key: "mine" | "everyone";
-    label: string;
-    Icon: typeof User;
-  }[] = [
-    { key: "mine", label: "Mine only", Icon: User },
-    { key: "everyone", label: "Everyone", Icon: Users },
-  ];
-  return (
-    <SegmentedToggle ariaLabel="Record visibility">
-      {options.map((option) => (
-        <button
-          key={option.key}
-          type="button"
-          aria-pressed={value === option.key}
-          aria-label={option.label}
-          title={option.label}
-          disabled={disabled}
-          onClick={() => onChange(option.key)}
-          className={`btn-press ${segmentClassName(value === option.key, {
-            iconOnly: true,
-          })} disabled:cursor-not-allowed disabled:opacity-50`}
-        >
-          <option.Icon className="h-4 w-4" aria-hidden="true" />
-        </button>
-      ))}
-    </SegmentedToggle>
-  );
-}
 
 export function LeadForm({
   reportId: pinnedReportId,
   redirectToCanonical,
   mode = "edit",
 }: LeadFormProps) {
-  const trpc = useTRPC();
-  const qc = useQueryClient();
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const isSlidesMode = mode === "slides";
+  // Data-loading boundary (lead-form-data-loading): queries, enablement,
+  // visibility gating, foreign-content purges, redirects, and query error
+  // handlers. Called first so the overall hook order stays fixed.
+  const {
+    activeData,
+    activeReportId,
+    targetReportId,
+    sectionIdForActions,
+    byPeriodData,
+    refetchSection,
+    historyData,
+    unifiedView,
+    crossAuthors,
+    foreignContent,
+    recordVisibility,
+    visibilityHydrated,
+    setRecordVisibility,
+    isEveryone,
+    isForeignSlidesDeck,
+    toolbarVisibility,
+    isLoading,
+    awaitingRoleRedirect,
+    awaitingCanonicalRedirect,
+  } = useLeadFormData({
+    reportId: pinnedReportId,
+    redirectToCanonical,
+    isSlidesMode,
+  });
   // W9.A: ref shared between lead-form header (SlideFullscreenButton) and LeadSlidesClient (deck root div)
   const deckRef = useRef<HTMLDivElement>(null);
   const fullscreenToggleRef = useRef<HTMLButtonElement>(null);
@@ -266,194 +126,13 @@ export function LeadForm({
     fullscreenToggleRef,
     isSlidesMode,
   );
-  const sessionState = useContext(SessionContext);
-  const sessionRole = sessionState?.user?.role ?? null;
-  const isHeadLikeSession = sessionRole === "head" || sessionRole === "admin";
-  const shouldRouteHeadLikeAwayFromLeadForm = isHeadLikeSession;
-  const shouldDeferForSession = Boolean(sessionState?.isLoading);
-
-  // Three queries compose the lead-form view. `byPeriod` depends on
-  // identifiers from `getActive` (or — 35-07 — the pinned `reportId` from
-  // the dynamic route), so it's gated by `enabled`.
-  const activeQ = useQuery(trpc.reports.getActive.queryOptions());
-  const activeReportId = activeQ.data?.reportId ?? "";
-  const activeSectionId = activeQ.data?.reportSectionId ?? "";
-
-  // 35-07: when the page renders under `/lead/report/[reportId]`, scope the
-  // data load to the path-segment id rather than the session's active period.
-  // This lets the lead view (and bookmark) any past week of their own history.
-  const targetReportId =
-    pinnedReportId && pinnedReportId !== "" ? pinnedReportId : activeReportId;
-
-  const byPeriodQ = useQuery({
-    ...trpc.leadForm.byPeriod.queryOptions({
-      reportId: targetReportId,
-    }),
-    enabled:
-      targetReportId !== "" &&
-      !shouldRouteHeadLikeAwayFromLeadForm &&
-      !shouldDeferForSession,
-    staleTime: 30_000,
-    refetchOnWindowFocus: true,
-  });
-
-  // The section id for actions (autosave / submit / revoke) comes from the
-  // loaded section when a reportId is pinned (the active session's section
-  // id may not match the pinned report). Fall back to activeSectionId for
-  // the bare-route case until byPeriod resolves.
-  const sectionIdForActions =
-    byPeriodQ.data?.section.reportSectionId ?? activeSectionId;
-
-  const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
-
-  // Org-level presentation flag for the opt-in unified by-state view (ADR
-  // 0011). Classic two-section format is the default until the flag loads —
-  // and stays the default when it is off.
-  const viewSettingsQ = useQuery(trpc.leadForm.viewSettings.queryOptions());
-  const unifiedView = viewSettingsQ.data?.unifiedActivityView === true;
-
-  // F1: load other authors who share a product with the current user.
-  // Only relevant when viewing your own section (not a foreign-author view).
-  const crossAuthorsQ = useQuery({
-    ...trpc.leadForm.crossAuthors.queryOptions({
-      reportId: targetReportId,
-    }),
-    enabled: targetReportId !== "",
-  });
 
   // Foreign stage health for the lead's shared products. The cross-author
   // query already carries authorInitials + RISK-DERIVED per-stage status, so
   // the pipeline entries map straight from it — no foreign item/risk/decision
   // text crosses the API boundary. This status-only read is ALWAYS fetched and
   // ALWAYS drives honest product health; the toggle never gates it (D4a).
-  const crossAuthorEntries: import("../../period/ui/sdlc-pipeline").CrossAuthorEntry[] =
-    crossAuthorsQ.data ?? [];
-
-  // scope-lead-report-to-own-contribution (7c): Record visibility toggle. The
-  // key is namespaced by the signed-in user AND the loaded report so an
-  // "everyone" choice cannot bleed across users (shared browser / dev
-  // role-switcher) or across reports (D4c). The toggle is lead-form-only.
-  const currentUserId = sessionState?.user?.id ?? null;
-  const {
-    visibility: recordVisibility,
-    hydrated: visibilityHydrated,
-    setVisibility: setRecordVisibility,
-  } = useRecordVisibility(currentUserId, targetReportId);
-  const isEveryone = recordVisibility === "everyone";
-
-  // slides-record-visibility (Decision 6): the slide deck can target another
-  // author's deck via `?authorId`. On such a FOREIGN deck Everyone is not
-  // offered — force the toolbar toggle to Mine and make it inert. The deck
-  // (LeadSlidesClient) enforces the same own-deck gate independently, so this
-  // is the matching toolbar affordance, not the security boundary.
-  const slidesAuthorId = searchParams.get("authorId");
-  const isForeignSlidesDeck =
-    isSlidesMode && slidesAuthorId !== null && slidesAuthorId !== currentUserId;
-  const toolbarVisibility = isForeignSlidesDeck ? "mine" : recordVisibility;
-
-  // 7c.3: the full-content read is fetched ONLY in the Everyone state, and only
-  // AFTER the persisted toggle has hydrated — so it never fires on the
-  // pre-hydration "mine" default and then races a restored "everyone".
-  // close-slides-visibility-tails (tail 1): gate via the shared predicate, with
-  // own-deck = !isForeignSlidesDeck, so a foreign slides deck NEVER fires the
-  // read regardless of the persisted Everyone toggle (matches LeadSlidesClient).
-  const crossAuthorContentQ = useQuery({
-    ...trpc.leadForm.crossAuthorContent.queryOptions({
-      reportId: targetReportId,
-    }),
-    enabled: crossAuthorContentFetchEnabled({
-      hasReport: targetReportId !== "",
-      visibilityHydrated,
-      isEveryone,
-      isOwnDeck: !isForeignSlidesDeck,
-    }),
-  });
-
-  // 7c.6: purge the fetched foreign full content from the query cache whenever
-  // the toggle leaves Everyone OR is not yet hydrated for the current context.
-  // `enabled:false` (above) stops a refetch; removing the cached query drops
-  // the data so the merged display arrays recompute to own-only. A later return
-  // to Everyone re-fetches rather than serving stale. The purge uses the bare
-  // procedure prefix (`queryKey()`, no input) so a report switch also drops the
-  // PRIOR report's cached content, not just the current report's.
-  useEffect(() => {
-    if (isEveryone && visibilityHydrated) return;
-    qc.removeQueries({
-      queryKey: trpc.leadForm.crossAuthorContent.queryKey(),
-    });
-  }, [isEveryone, visibilityHydrated, targetReportId, qc, trpc]);
-
-  // 7c.6 (identity guard): the `crossAuthorContent` cache key is scoped by
-  // reportId only, NOT by user — so two identities on the SAME browser + same
-  // QueryClient + same report could otherwise share a cache entry. On ANY
-  // identity change (logout, role switch, authz downgrade) drop ALL cached
-  // foreign content unconditionally, so user B can never read user A's foreign
-  // records even while both sit in Everyone. The dev switcher / logout do a
-  // full reload (fresh QueryClient) today; this guard makes the invariant hold
-  // regardless of the navigation mechanism. The lead form shows all assigned
-  // products at once (no per-product selector), so identity + report purges
-  // cover every real context-switch surface.
-  useEffect(() => {
-    qc.removeQueries({
-      queryKey: trpc.leadForm.crossAuthorContent.queryKey(),
-    });
-  }, [currentUserId, sessionRole, qc, trpc]);
-
-  // 35-07: bare route → replace URL with the canonical addressed form once
-  // the active reportId is known. Skipped when:
-  //   • the page already renders under `[reportId]` (pinnedReportId set)
-  //   • there is no active period (server returned null) — the form will
-  //     show the existing empty / skeleton state.
-  useEffect(() => {
-    if (!redirectToCanonical) return;
-    if (pinnedReportId) return;
-    if (shouldRouteHeadLikeAwayFromLeadForm) return;
-    if (!activeReportId) return;
-    const next = new URLSearchParams();
-    if (isSlidesMode) next.set("mode", "slides");
-    const query = next.toString();
-    const suffix = query ? `?${query}` : "";
-    router.replace(`/lead/report/${activeReportId}${suffix}`);
-  }, [
-    redirectToCanonical,
-    pinnedReportId,
-    activeReportId,
-    isSlidesMode,
-    shouldRouteHeadLikeAwayFromLeadForm,
-    router,
-  ]);
-
-  useEffect(() => {
-    if (!shouldRouteHeadLikeAwayFromLeadForm) return;
-    const destination = pinnedReportId
-      ? `/head/report/${encodeURIComponent(pinnedReportId)}`
-      : "/head/dashboard";
-    router.replace(destination);
-  }, [pinnedReportId, router, shouldRouteHeadLikeAwayFromLeadForm]);
-
-  // Query error policy — log + toast via unified hook (design.md D1/D2).
-  useQueryErrorHandler(activeQ, {
-    event: "leadForm.activeReport.load_failed",
-    component: "LeadForm",
-    procedure: "reports.getActive",
-    context: { reportId: pinnedReportId ?? null },
-    toastPrefix: "Failed to load active report",
-  });
-
-  useQueryErrorHandler(byPeriodQ, {
-    event: "leadForm.byPeriod.load_failed",
-    component: "LeadForm",
-    procedure: "leadForm.byPeriod",
-    context: { reportId: targetReportId || null, role: sessionRole },
-    toastPrefix: "Failed to load form",
-  });
-
-  useQueryErrorHandler(historyQ, {
-    event: "leadForm.history.load_failed",
-    component: "LeadForm",
-    procedure: "reports.myHistory",
-    toastPrefix: "Failed to load history",
-  });
+  const crossAuthorEntries: CrossAuthorEntry[] = crossAuthors;
 
   // ---- Local UI + draft state ----
   const {
@@ -467,10 +146,10 @@ export function LeadForm({
     setVersionSafe,
     versionRef,
   } = useLeadFormDraftOrchestration({
-    serverSection: byPeriodQ.data?.section,
+    serverSection: byPeriodData?.section,
     sectionIdForActions,
-    serverReadOnly: byPeriodQ.data ? byPeriodQ.data.readOnly : true,
-    refetchSection: byPeriodQ.refetch,
+    serverReadOnly: byPeriodData ? byPeriodData.readOnly : true,
+    refetchSection,
   });
 
   const writeActionSubmitContextRef = useRef<{
@@ -553,12 +232,6 @@ export function LeadForm({
     (s) => s.status == null,
   ).length;
 
-  const isLoading =
-    activeQ.isLoading || byPeriodQ.isLoading || historyQ.isLoading;
-  const awaitingRoleRedirect = shouldRouteHeadLikeAwayFromLeadForm;
-  const awaitingCanonicalRedirect =
-    !!redirectToCanonical && !pinnedReportId && activeReportId !== "";
-
   // Toggle All state — must live above the early return below, otherwise
   // the hook count drifts between renders and React throws "Rendered more
   // hooks than during the previous render". Each Toggle All click flips
@@ -571,13 +244,12 @@ export function LeadForm({
   // history entry whose reportId matches the loaded section so the label
   // matches the dropdown. Restores the title on unmount.
   const titleHistoryEntry = useMemo(() => {
-    if (!byPeriodQ.data?.section.reportId || !historyQ.data) return null;
+    if (!byPeriodData?.section.reportId || !historyData) return null;
     return (
-      historyQ.data.find(
-        (h) => h.reportId === byPeriodQ.data.section.reportId,
-      ) ?? null
+      historyData.find((h) => h.reportId === byPeriodData.section.reportId) ??
+      null
     );
-  }, [byPeriodQ.data, historyQ.data]);
+  }, [byPeriodData, historyData]);
   useEffect(() => {
     if (typeof document === "undefined") return;
     if (!titleHistoryEntry) return;
@@ -592,8 +264,8 @@ export function LeadForm({
   }, [titleHistoryEntry]);
 
   const [showArchivePeriods, setShowArchivePeriods] = useState(false);
-  const selectedPeriodId = pinnedReportId || activeQ.data?.reportId || "";
-  const selectedHistoryPeriod = historyQ.data?.find(
+  const selectedPeriodId = pinnedReportId || activeData?.reportId || "";
+  const selectedHistoryPeriod = historyData?.find(
     (entry) => entry.reportId === selectedPeriodId && entry.reportId !== "",
   );
 
@@ -608,9 +280,9 @@ export function LeadForm({
     isLoading ||
     awaitingRoleRedirect ||
     awaitingCanonicalRedirect ||
-    activeQ.data === undefined ||
-    !byPeriodQ.data ||
-    !historyQ.data ||
+    activeData === undefined ||
+    !byPeriodData ||
+    !historyData ||
     !draftSection
   ) {
     return <LeadFormSkeleton />;
@@ -643,14 +315,14 @@ export function LeadForm({
     unifiedEntries,
     visiblePeriods,
   } = buildLeadFormLoadedViewModel({
-    active: activeQ.data ?? draftSection,
+    active: activeData ?? draftSection,
     draftSection,
-    serverReadOnly: byPeriodQ.data.readOnly,
-    canRequestReopen: byPeriodQ.data.canRequestReopen,
-    publishedLineage: byPeriodQ.data.publishedLineage,
-    history: historyQ.data,
-    crossAuthors: crossAuthorsQ.data ?? [],
-    foreignContent: crossAuthorContentQ.data,
+    serverReadOnly: byPeriodData.readOnly,
+    canRequestReopen: byPeriodData.canRequestReopen,
+    publishedLineage: byPeriodData.publishedLineage,
+    history: historyData,
+    crossAuthors,
+    foreignContent,
     isEveryone,
     visibilityHydrated,
     isForeignSlidesDeck,
@@ -663,7 +335,7 @@ export function LeadForm({
   // read from the authoritative SERVER section (not the editable `draftSection`,
   // whose in-place edits could drop the joined comments). Surfaced read-only so a
   // returned (draft) section's feedback is never silent.
-  const reviewFeedback = mapLeadReviewFeedback(byPeriodQ.data.section);
+  const reviewFeedback = mapLeadReviewFeedback(byPeriodData.section);
 
   writeActionSubmitContextRef.current = { draftPayload, products, ownRisks };
   draftMergeContextRef.current = { products, currentWeekItems, nextWeekItems };
@@ -825,7 +497,7 @@ export function LeadForm({
               <PeriodNavigator
                 periods={visiblePeriods}
                 showLeadSubmissionMarkers
-                leadSubmittedAt={byPeriodQ.data.section.submittedAt ?? null}
+                leadSubmittedAt={byPeriodData.section.submittedAt ?? null}
               />
               {/* Show-archived filter renders only when the lead has archived
                   periods (lead-report-controls-integrity). */}
