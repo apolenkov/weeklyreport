@@ -11,6 +11,7 @@ import {
 import {
   computeReopenEligibility,
   type CrossAuthorSectionRow,
+  type CrossAuthorStatusRow,
   LeadFormAccessError,
   LeadFormConstraintError,
   LeadFormDomainError,
@@ -287,20 +288,7 @@ export class LeadFormService {
     reportId: string,
     userId: string,
     role?: Role,
-  ): Promise<
-    {
-      projectId: string;
-      projectName: string;
-      authorId: string;
-      authorInitials: string;
-      authorShortName: string;
-      stageNames: string[];
-      stages: {
-        stageName: string;
-        status: "green" | "yellow" | "red" | null;
-      }[];
-    }[]
-  > {
+  ): Promise<CrossAuthorStatusRow[]> {
     const isHeadLike = role === "head" || role === "admin";
     if (!isHeadLike) {
       const ownSection = await this.repository.getSectionForPeriod(

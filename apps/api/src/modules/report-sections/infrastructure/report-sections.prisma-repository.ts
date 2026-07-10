@@ -1,6 +1,7 @@
 import {
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
+  type TrafficLightStatus,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
@@ -281,7 +282,7 @@ function aggregateStageTraffic(
         : null;
 }
 
-type TrafficLight = "green" | "yellow" | "red";
+type TrafficLight = TrafficLightStatus;
 
 const TRAFFIC_SEVERITY: Record<TrafficLight, number> = {
   green: 0,

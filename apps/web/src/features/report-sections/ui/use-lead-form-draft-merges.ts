@@ -1,6 +1,9 @@
 "use client";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type {
+  ReportSectionReadModel,
+  TrafficLightStatus,
+} from "@customreport/shared";
 import type { Dispatch, SetStateAction } from "react";
 import { useState } from "react";
 
@@ -62,7 +65,7 @@ export function useLeadFormDraftMerges({
 
   const handleActivityStatusChange = (
     activityId: string,
-    status: "green" | "yellow" | "red",
+    status: TrafficLightStatus,
   ) => {
     setDraftSection((prev) =>
       prev ? mergeActivityStatusDraft(prev, activityId, status) : prev,

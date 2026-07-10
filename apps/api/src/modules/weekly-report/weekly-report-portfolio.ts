@@ -1,13 +1,13 @@
-import type { PortfolioProductOverview } from "@customreport/shared";
+import type {
+  PortfolioProductOverview,
+  TrafficLightStatus,
+} from "@customreport/shared";
 
 import {
   groupScopeFilter,
   type GroupScopeOptions,
 } from "../../lib/group-scope.js";
-import {
-  computeWorstStatus,
-  type TrafficLightStatus,
-} from "../published-report-snapshot.js";
+import { computeWorstStatus } from "../published-report-snapshot.js";
 import type { WeeklyReportScopeSession } from "./weekly-report.service.js";
 
 /**

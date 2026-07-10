@@ -1,4 +1,7 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type {
+  ReportSectionReadModel,
+  TrafficLightStatus,
+} from "@customreport/shared";
 
 import type { ForeignGridRow } from "./slide-grid-foreign";
 import {
@@ -31,7 +34,7 @@ export function hasText(text: string | null | undefined): text is string {
   return typeof text === "string" && text.trim().length > 0;
 }
 
-const TRAFFIC_RANK: Record<"green" | "yellow" | "red", number> = {
+const TRAFFIC_RANK: Record<TrafficLightStatus, number> = {
   green: 0,
   yellow: 1,
   red: 2,

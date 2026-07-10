@@ -16,6 +16,7 @@ import type {
   RecordCommentView,
   ReportSectionReadModel,
 } from "@customreport/shared";
+import type { TrafficLightStatus } from "@customreport/shared";
 import {
   HOURS_PER_DAY,
   initialsFromName as sharedInitialsFromName,
@@ -37,11 +38,7 @@ import {
 import { deriveEffectiveStageStatus } from "../../../lib/stage-status";
 import { deriveItemStatus, type ItemStatus } from "./item-status";
 import { riskCoversStage } from "./stage-tags";
-import {
-  type StageStatus,
-  type TrafficLightStatus,
-  trafficToStageStatus,
-} from "./traffic-light";
+import { type StageStatus, trafficToStageStatus } from "./traffic-light";
 
 // ---- Self-contained re-declarations of presentation types ----
 //

@@ -1,5 +1,6 @@
 "use client";
 
+import type { TrafficLightStatus } from "@customreport/shared";
 import { TooltipProvider } from "@customreport/ui/components/ui/tooltip";
 
 import type {
@@ -34,7 +35,7 @@ export interface CrossAuthorEntry {
   authorInitials: string;
   stageNames: string[];
   /** Per-stage RISK-DERIVED status from the cross-author query. */
-  stages: { stageName: string; status: "green" | "yellow" | "red" | null }[];
+  stages: { stageName: string; status: TrafficLightStatus | null }[];
 }
 
 interface SdlcPipelineProps {

@@ -47,6 +47,12 @@ export const reportDate = () =>
   });
 
 export const trafficLightStatusSchema = z.enum(["green", "yellow", "red"]);
+/**
+ * The single source of truth for the traffic-light status value
+ * (traffic-light-status-type spec). The three literals live only here;
+ * consumers import this type and compose it (`| null`, `| "empty"`, …).
+ */
+export type TrafficLightStatus = z.infer<typeof trafficLightStatusSchema>;
 export const itemTypeSchema = z.enum(["current", "next"]);
 // Progress only — alarms (at-risk/blocked) derive from covering risks and are
 // never stored on an item. Per-type vocabulary below; the write superRefine in

@@ -1,5 +1,6 @@
 "use client";
 
+import type { TrafficLightStatus } from "@customreport/shared";
 import type {
   ReportSectionReadModel,
   SectionActivity,
@@ -55,7 +56,7 @@ const TONE_DOT_CLASS: Record<ActivityTone, string> = {
   empty: "bg-[var(--color-muted-foreground)] opacity-50",
 };
 
-function toTone(status: "green" | "yellow" | "red" | null): ActivityTone {
+function toTone(status: TrafficLightStatus | null): ActivityTone {
   if (status === "red") return "blocked";
   if (status === "yellow") return "at-risk";
   if (status === "green") return "on-track";

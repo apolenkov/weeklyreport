@@ -1,3 +1,4 @@
+import type { TrafficLightStatus } from "@customreport/shared";
 import {
   normalizeStageName,
   type ReportSectionReadModel,
@@ -6,7 +7,7 @@ import {
 
 import type { CrossAuthorContentRow } from "../../report-sections/model/lead-cross-author";
 
-export type SlideTrafficStatus = "green" | "yellow" | "red" | null;
+export type SlideTrafficStatus = TrafficLightStatus | null;
 
 /** Per-row frame tone: every row is a bordered two-line card; the border hue
  * IS the status — neutral (expected work), green (done), yellow (at-risk),

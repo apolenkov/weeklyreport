@@ -11,6 +11,7 @@
  * fire and a toast confirms.
  */
 
+import type { TrafficLightStatus } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -77,7 +78,7 @@ function makeWeeklyReportData(
     readonly portfolioOverview?: {
       readonly productId: string;
       readonly productName: string;
-      readonly worstStatus: "green" | "yellow" | "red" | "empty";
+      readonly worstStatus: TrafficLightStatus | "empty";
       readonly stageCount: number;
       readonly leadNames: string[];
     }[];
@@ -110,7 +111,7 @@ function makeWeeklyReportData(
       readonly activities?: {
         readonly activityId: string;
         readonly activityName: string;
-        readonly status: "green" | "yellow" | "red" | null;
+        readonly status: TrafficLightStatus | null;
         readonly note?: string | null;
       }[];
     }[];

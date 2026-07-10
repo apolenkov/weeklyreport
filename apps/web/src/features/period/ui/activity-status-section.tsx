@@ -1,10 +1,9 @@
 "use client";
 
+import type { TrafficLightStatus } from "@customreport/shared";
 import { useState } from "react";
 
 import type { LeadActivityCard } from "../../report-sections/model/lead-form";
-
-type TrafficLightStatus = "green" | "yellow" | "red";
 
 const STATUS_OPTIONS: readonly {
   readonly value: TrafficLightStatus;

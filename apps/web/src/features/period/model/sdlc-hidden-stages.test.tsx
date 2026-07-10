@@ -9,6 +9,7 @@
  * indirectly through the pipeline fixtures; these assertions pin the wording
  * for both an empty co-owner (cross-author) and an empty locked owner.
  */
+import type { TrafficLightStatus } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import type { StageAssignment } from "../../report-sections/model/mock-data";
@@ -31,7 +32,7 @@ function hiddenStage(
 
 function crossAuthor(
   stageName: string,
-  status: "green" | "yellow" | "red" | null,
+  status: TrafficLightStatus | null,
   authorInitials = "MK",
 ): CrossAuthorEntry {
   return {

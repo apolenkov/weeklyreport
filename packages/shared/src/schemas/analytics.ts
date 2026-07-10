@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { trafficLightStatusSchema } from "./report-primitives.schema";
+
 // A format regex alone accepts impossible dates (2026-02-30, 2026-13-45) that
 // then flow into `new Date(...)` and produce a wrong or Invalid Date query
 // boundary. The refine parses the value as a UTC instant and rejects anything
@@ -32,9 +34,7 @@ export type TrafficLightHistoryInput = z.infer<
   typeof trafficLightHistoryInputSchema
 >;
 
-export const trafficLightCellSchema = z
-  .enum(["green", "yellow", "red"])
-  .nullable();
+export const trafficLightCellSchema = trafficLightStatusSchema.nullable();
 export type TrafficLightCell = z.infer<typeof trafficLightCellSchema>;
 
 export const trafficLightRowSchema = z.object({

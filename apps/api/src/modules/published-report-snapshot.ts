@@ -1,3 +1,4 @@
+import type { TrafficLightStatus } from "@customreport/shared";
 import {
   type AssembledReport,
   assembledReportSchema,
@@ -137,8 +138,6 @@ export function computePortfolioOverviewFromReadSections(
 
   return { status, totals };
 }
-
-export type TrafficLightStatus = "green" | "yellow" | "red";
 
 export function buildPortfolioProductsFromSnapshotSections(
   sections: readonly ReportSectionReadModel[],
