@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -26,6 +26,35 @@ test("sample config prints and validates as restricted YAML", () => {
 
   const temp = makeTempConfig(printed.stdout);
   const validated = runCouncil(["--config", temp.configPath, "--profile", "soft", "--validate-config"]);
+
+  assert.equal(validated.status, 0, validated.stderr);
+  assert.match(validated.stdout, /agent-council config ok: soft \(soft\)/);
+});
+
+test("setup config writes a recommended OpenCode config and refuses accidental overwrite", () => {
+  const repo = mkdtempSync(join(tmpdir(), "agent-council-setup-repo-"));
+  const configPath = join(repo, ".agents", "agent-council.yaml");
+
+  const setup = runCouncil(["--cwd", repo, "--setup-config"]);
+
+  assert.equal(setup.status, 0, setup.stderr);
+  assert.match(setup.stdout, /preset: opencode/);
+  assert.match(readFileSync(configPath, "utf8"), /provider: opencode/);
+
+  const overwrite = runCouncil(["--cwd", repo, "--setup-config"]);
+
+  assert.notEqual(overwrite.status, 0);
+  assert.match(overwrite.stderr, /Pass --force to overwrite/);
+
+  const validated = runCouncil([
+    "--cwd",
+    repo,
+    "--config",
+    ".agents/agent-council.yaml",
+    "--profile",
+    "soft",
+    "--validate-config",
+  ]);
 
   assert.equal(validated.status, 0, validated.stderr);
   assert.match(validated.stdout, /agent-council config ok: soft \(soft\)/);
