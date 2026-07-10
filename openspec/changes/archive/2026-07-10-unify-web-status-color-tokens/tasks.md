@@ -19,14 +19,14 @@
 - [x] 3.3 `weekly-report/portfolio-overview-table.tsx`: at-risk/blocked cell colors → tokens (STATUS_BG, STATUS_TEXT, STATUS_ICON_TEXT; the border derives from STATUS_TEXT so it follows)
 - [x] 3.4 `lead/lead-form.tsx`: blocked accent (#fee2e2) → `--color-status-blocked-bg`
 - [x] 3.5 `lead/lead-history-list.tsx` + `lead/lead-history-sidebar.tsx`: severity chip + dot → tokens (Draft chip + `warn` stat fg → `at-risk-fg`; yellow traffic dot → `dot-at-risk`; the exact-0.08 borders → `border-subtle` per §1.1)
-- [x] 3.6 `report-shell/meta-row.tsx` + `lead/item-card-stage-tags.tsx`: stage-hint amber → at-risk tokens (comments rewritten). OPEN for sign-off: whether the stage-hint should instead read a dedicated warning token vs. at-risk — flagged per design Risks; current mapping matches pixels.
+- [x] 3.6 `report-shell/meta-row.tsx` + `lead/item-card-stage-tags.tsx`: stage-hint amber → at-risk tokens (comments rewritten). RESOLVED by the §4.2 sign-off: the stage-hint stays on the at-risk tokens (no dedicated warning token); current mapping matches pixels.
 - [x] 3.7 `weekly-report/product-accordion.tsx`: "At Risk" pill fg (#8a6d1b) → `--color-status-at-risk-fg` (added `statusAtRiskFg` to the file's CSS const)
 - [x] 3.8 `dashboard/blocked-at-risk-product-card.tsx`: SEVERITY_BADGE at-risk fg (#8a6d1b) → `--color-status-at-risk-fg` (consumer of #3 — must be consolidated before #3 lands, per design D1)
 
 ## 4. Foreground consolidation (palette gate)
 
 - [x] 4.1 Consolidate the near-duplicate at-risk foreground `#8a6d1b` on the in-scope report-workflow surfaces (incl. `product-accordion`, `blocked-at-risk-product-card`) onto `--color-status-at-risk-fg`. No blocked-foreground consolidation: the report surfaces already resolve `--color-destructive`; the `#92400e` / `#991b1b` literals are admin-domain (out of scope, guarded by §5). Final grep: the ONLY remaining `#8a6d1b` in web src are the two OUT-domain callsites (`publish-lock-button:137`, `decision-card:97`).
-- [ ] 4.2 Cite the recorded user sign-off authorizing the palette direction (per `status-color-semantics`) — PENDING: user-owned; cannot be self-satisfied by the implementer. Blocks archive, not implementation.
+- [x] 4.2 Cite the recorded user sign-off authorizing the palette direction (per `status-color-semantics`) — RECORDED 2026-07-10: Александр Поленков approved in-session ("Подтверждаю") the `#8a6d1b` → `--color-status-at-risk-fg` consolidation against the §4.3 before/after screenshot evidence, and resolved the §3.6 open question as "keep the stage-hint on at-risk tokens" (no dedicated warning token).
 - [x] 4.3 Capture same-viewport before/after screenshots of every consolidated surface for user acceptance before archive
   - Captured from source builds (not Docker): before = baseline source checkout at `70c8cccc` on `localhost:3200`, after = current source checkout on `localhost:3100`, both against the source API on `localhost:3102`.
   - Durable evidence lives under `openspec/changes/unify-web-status-color-tokens/screenshots/`: lead report form, risk edit dialog, lead history, head report, and head dashboard each have matching `before-*` / `after-*` PNGs plus `manifest.json`.
