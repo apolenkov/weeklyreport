@@ -18,7 +18,10 @@ decomposition series has been driving toward.
 - Move the document-title and archive auto-expand effects (and their
   `titleHistoryEntry` derivation) into a feature-local `useLeadFormChrome`
   hook.
-- Slim the composition root: drop now-unneeded destructures and imports.
+- Slim the composition root: consume the data-loading hook as one object,
+  extract the read-only past-period banner into a small presentational
+  component, and devolve the `reviewFeedback` / `stagesForProduct`
+  derivations into the section and dialog components that own their inputs.
 - Remove the `lead-form.tsx` `max-lines` exemption from `eslint.config.ts`;
   re-measure the cyclomatic/cognitive exemptions and remove them too if the
   file now passes (split helpers before ever re-adding an exemption).
@@ -48,8 +51,10 @@ None — this slice relocates presentation structure and chrome effects only.
 ## Impact
 
 - Affected web files: `apps/web/src/features/report-sections/ui/lead-form.tsx`,
-  two new modules (`lead-form-toolbar-controls.tsx`, `use-lead-form-chrome.ts`),
-  and `eslint.config.ts` (exemption teardown).
+  three new modules (`lead-form-toolbar-controls.tsx`, `use-lead-form-chrome.ts`,
+  `lead-form-past-period-banner.tsx`), prop-interface slimming on
+  `lead-form-edit-sections.tsx` / `lead-form-dialogs.tsx`, and
+  `eslint.config.ts` (exemption teardown).
 - No API, database, dependency, route, or product UI behavior changes.
 - Gates: focused lead-form tests, scoped ESLint with `--max-warnings 0`,
   `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm format:check`, and

@@ -69,6 +69,18 @@ alongside.
 Alternative rejected: leaving the effects inline — they are the last
 non-composition logic in the file and block the 250 target.
 
+### D2b: Slimming, as executed
+
+Reaching the standard took four recorded steps beyond the two extractions:
+the data-loading hook is consumed as one `data` object (the grouped-prop
+contract applied to LeadForm itself), the read-only past-period banner moved
+to a self-suppressing `lead-form-past-period-banner.tsx`, and the
+`reviewFeedback` / `stagesForProduct` derivations devolved into
+`LeadFormEditSections` (which receives the server section) and
+`LeadFormDialogs` (which receives the draft section) — the derivations now
+live beside the data they read. All are behavior-preserving; the end-to-end
+suites pin them.
+
 ### D3: Exemption teardown is part of the slice, not a follow-up
 
 The goal state is `eslint.config.ts` WITHOUT `lead-form.tsx` entries. After

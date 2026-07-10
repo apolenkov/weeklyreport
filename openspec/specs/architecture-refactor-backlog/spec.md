@@ -9,8 +9,8 @@ TBD - created by archiving change backlog-architecture-refactors. Update Purpose
 ### Requirement: The lead-form god component is a recorded decomposition target
 
 The backlog MUST record that
-`apps/web/src/features/report-sections/ui/lead-form.tsx` (443 LOC after
-`refactor-lead-form-dialogs-and-header` on 2026-07-10; 250-line `max-lines`
+`apps/web/src/features/report-sections/ui/lead-form.tsx` (250 LOC after
+`refactor-lead-form-toolbar-chrome` on 2026-07-10; 250-line `max-lines`
 standard) is a decomposition target being reduced in recorded slices, each
 captured as its own grilled refactor change before work starts. The first slice
 is `refactor-lead-mappers`: the pure cross-author and snapshot derivations
@@ -50,8 +50,17 @@ document-action group and the dialog cluster (submit confirmation, quick-add
 item host, request-reopen, revoke confirmation) moved into presentational
 `LeadFormHeaderActions` / `LeadFormDialogs` components consuming the loaded
 view model, draft-merge handlers, and write actions as whole objects (landed
-with the file at 443 LOC; it stood at 698 when the slice started). The
-decomposition target itself stays open; the deferred `ReportDataCoordinator` /
+with the file at 443 LOC; it stood at 698 when the slice started). The ninth
+slice is `refactor-lead-form-toolbar-chrome`: the toolbar context controls
+(period navigator, archive filter, record-visibility and view-mode toggles,
+collapse-all/fullscreen slot) moved into a presentational
+`LeadFormToolbarControls` component, the document-title and archive
+auto-expand chrome effects moved behind a feature-local `useLeadFormChrome`
+hook, and the `lead-form.tsx` ESLint exemptions were removed (landed with the
+file at 250 LOC; it stood at 443 when the slice started). With the file at
+the 250-line standard, the SIZE target of this decomposition is CLOSED; the
+slice list stays as history. The composition root remains subject to the
+repo-wide lint gates with no exemptions; the deferred `ReportDataCoordinator` /
 `FormStateManager` objects MUST NOT be built outside a future grilled change
 of their own.
 
@@ -67,8 +76,9 @@ of their own.
   `refactor-lead-form-loaded-view-model`; sixth:
   `refactor-lead-form-data-loading`; seventh:
   `refactor-lead-form-edit-sections`; eighth:
-  `refactor-lead-form-dialogs-and-header`) and marks the remaining
-  decomposition as needing its own grilled refactor change before work starts
+  `refactor-lead-form-dialogs-and-header`; ninth:
+  `refactor-lead-form-toolbar-chrome`) and records the size target as closed
+  at the standard
 
 #### Scenario: a later slice starts
 
