@@ -62,10 +62,11 @@ test("the parent prompt carries the builder's own report, not just its extracted
   assert.match(body.advisorPrompt, /- verdict: APPROVED/);
 });
 
-test("the verdict is read from the last VERDICT line even when the CLI appends trailing output", () => {
-  const { body } = runFullMode({
+test("an unresolved VERDICT: REVISE is read past a trailing line and fails the run closed", () => {
+  const { body, result } = runFullMode({
     runId: "e2e-trailing-verdict",
     reviewer: reviewerCommand({ trailer: '{"type":"turn.completed"}', verdict: "REVISE" }),
+    expectStatus: 1,
   });
 
   assert.deepEqual(
@@ -74,30 +75,59 @@ test("the verdict is read from the last VERDICT line even when the CLI appends t
   );
   assert.equal(body.build.verdict, "REVISE");
   assert.equal(body.build.proofs.length, 2);
+  // A build the reviewer never approved must not exit 0.
+  assert.match(result.stderr, /VERDICT: REVISE/);
 });
 
-test("a hanging proof command is killed by the proof timeout", () => {
+test("a hanging proof command is killed by the proof timeout and fails the run closed", () => {
   const { body, result } = runFullMode({
     extraArgs: ["--proof-timeout-ms", "500"],
     proofCmd: 'node -e "setTimeout(() => {}, 60000)"',
     runId: "e2e-proof-timeout",
+    expectStatus: 1,
   });
 
-  assert.equal(result.status, 0, result.stderr);
   assert.equal(body.build.proof.timedOut, true);
   assert.match(body.build.proof.stderr, /timed out/);
   assert.notEqual(body.build.proof.exitCode, 0);
+  // An unverified build must not exit 0.
+  assert.match(result.stderr, /proof command timed out/);
 });
 
-test("a proof killed by output overflow is reported as overflow, not a timeout", () => {
-  const { body } = runFullMode({
+test("a proof killed by output overflow is reported as overflow and fails the run closed", () => {
+  const { body, result } = runFullMode({
     // Emit far more than the 1 MB proof capture buffer to force an ENOBUFS kill.
     proofCmd: 'node -e "process.stdout.write(\'x\'.repeat(5_000_000))"',
     runId: "e2e-proof-overflow",
+    expectStatus: 1,
   });
 
   assert.equal(body.build.proof.timedOut, false);
   assert.match(body.build.proof.stderr, /exceeded the capture buffer/);
+  assert.match(result.stderr, /proof command failed/);
+});
+
+test("a builder that reports BUILD: BLOCKED fails the run closed", () => {
+  const { body, result } = runFullMode({
+    builder: blockedBuilderCommand(),
+    runId: "e2e-builder-blocked",
+    expectStatus: 1,
+  });
+
+  assert.equal(body.build.builderComplete, false);
+  assert.match(result.stderr, /BUILD: COMPLETE|blocked/);
+});
+
+test("a builder killed by its own timeout fails the run closed", () => {
+  const { body, result } = runFullMode({
+    builder: ["node", "-e", "setTimeout(() => {}, 60000)"],
+    extraArgs: ["--timeout-ms", "400"],
+    runId: "e2e-builder-timeout",
+    expectStatus: 1,
+  });
+
+  assert.notEqual(body.build.builderStatus, "ok");
+  assert.match(result.stderr, /builder did not complete/);
 });
 
 test("a reviewer diff excludes the council's own artifacts even when committed", () => {
@@ -116,6 +146,7 @@ function runFullMode({
   reviewer = reviewerCommand({ verdict: "APPROVED" }),
   proofCmd = "node -e \"process.exit(require('fs').existsSync('built.txt') ? 0 : 1)\"",
   extraArgs = [],
+  expectStatus = 0,
 }) {
   const repo = mkdtempSync(join(tmpdir(), "agent-council-e2e-repo-"));
   const configDir = mkdtempSync(join(tmpdir(), "agent-council-e2e-config-"));
@@ -154,7 +185,7 @@ function runFullMode({
     },
   );
 
-  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.status, expectStatus, result.stderr);
   return { artifactsRoot, body: JSON.parse(result.stdout), repo, result, runId };
 }
 
@@ -260,6 +291,23 @@ function committingBuilderCommand() {
       "  console.log('{\"type\":\"thread.started\",\"thread_id\":\"e2e-thread\"}');",
       `  console.log(${JSON.stringify(
         [...headings("Built and committed the requested file", "High"), "", "BUILD: COMPLETE"].join("\n"),
+      )});`,
+      "});",
+    ].join(" "),
+  ];
+}
+
+function blockedBuilderCommand() {
+  return [
+    "node",
+    "-e",
+    [
+      "let input = '';",
+      "process.stdin.on('data', (chunk) => { input += chunk; });",
+      "process.stdin.on('end', () => {",
+      "  console.log('{\"type\":\"thread.started\",\"thread_id\":\"e2e-thread\"}');",
+      `  console.log(${JSON.stringify(
+        [...headings("Could not build the requested file", "Low"), "", "BUILD: BLOCKED"].join("\n"),
       )});`,
       "});",
     ].join(" "),

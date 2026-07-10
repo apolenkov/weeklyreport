@@ -52,8 +52,10 @@ Validation refuses configs that would defeat the write gates: a `write_mode` sea
 
 The parent orchestrator is the current agent session, whether invoked from Codex or Claude Code. Build roles are never inferred: `builder` and `reviewer` must be explicit config seats and must be different.
 
-The runner exits non-zero when no advisor reached status `ok`, and when the full-mode
-reviewer's verdict could not be read. `Ctrl-C` terminates every child process group,
+The runner exits non-zero when no advisor reached status `ok`. Full mode fails closed:
+it exits 0 only when the builder completed, the proof passed, and the reviewer approved;
+a killed/blocked builder, a failed or timed-out proof, or a `REVISE`/unreadable verdict
+each exits 1 with a reason on stderr. `Ctrl-C` terminates every child process group,
 including the writable builder, and exits 130 without printing a synthesis prompt.
 
 ## Workflow
