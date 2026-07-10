@@ -6,7 +6,9 @@ The workspace MUST expose exactly one report-status contract: the
 `reportStatusSchema` Zod enum and its inferred `ReportStatus` type, exported
 from `packages/shared`. The `"draft" | "published"` literal union MUST NOT be
 re-declared elsewhere in workspace source; consumers MUST import the shared
-type. Repository PORT interfaces MUST NOT type this value with
+type. Sole exemption: the Prisma seed toolchain (`prisma/`, compiled by
+`tsconfig.prisma.json`, which cannot resolve workspace packages) keeps a
+commented literal mirror pointing at this spec. Repository PORT interfaces MUST NOT type this value with
 `@prisma/client`'s enum; infrastructure internals and the sanctioned
 Prisma-typed transaction applicators in `application/` remain free to handle
 Prisma types before mapping.
