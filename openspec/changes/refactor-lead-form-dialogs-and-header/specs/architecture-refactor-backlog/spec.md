@@ -3,7 +3,7 @@
 ### Requirement: The lead-form god component is a recorded decomposition target
 
 The backlog MUST record that
-`apps/web/src/features/report-sections/ui/lead-form.tsx` (475 LOC after
+`apps/web/src/features/report-sections/ui/lead-form.tsx` (443 LOC after
 `refactor-lead-form-dialogs-and-header` on 2026-07-10; 250-line `max-lines`
 standard) is a decomposition target being reduced in recorded slices, each
 captured as its own grilled refactor change before work starts. The first slice
@@ -44,7 +44,7 @@ document-action group and the dialog cluster (submit confirmation, quick-add
 item host, request-reopen, revoke confirmation) moved into presentational
 `LeadFormHeaderActions` / `LeadFormDialogs` components consuming the loaded
 view model, draft-merge handlers, and write actions as whole objects (landed
-with the file at 475 LOC; it stood at 698 when the slice started). The
+with the file at 443 LOC; it stood at 698 when the slice started). The
 decomposition target itself stays open; the deferred `ReportDataCoordinator` /
 `FormStateManager` objects MUST NOT be built outside a future grilled change
 of their own.
