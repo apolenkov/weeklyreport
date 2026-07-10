@@ -3,7 +3,7 @@
 ### Requirement: The lead-form god component is a recorded decomposition target
 
 The backlog MUST record that
-`apps/web/src/features/report-sections/ui/lead-form.tsx` (760 LOC after
+`apps/web/src/features/report-sections/ui/lead-form.tsx` (698 LOC after
 `refactor-lead-form-edit-sections` on 2026-07-10; 250-line `max-lines`
 standard) is a decomposition target being reduced in recorded slices, each
 captured as its own grilled refactor change before work starts. The first slice
@@ -38,7 +38,7 @@ feedback, the sync-bridge Provider with the Product Status, Activities, item,
 and Risks accordions, and the Decisions accordion — moved into presentational
 `LeadFormEditSections` / `LeadFormItemSections` components consuming the
 loaded view model and draft-merge handlers as whole objects (landed with the
-file at 760 LOC; it stood at 986 when the slice started). The decomposition
+file at 698 LOC; it stood at 986 when the slice started). The decomposition
 target itself stays open; the deferred `ReportDataCoordinator` /
 `FormStateManager` objects MUST NOT be built outside a future grilled change
 of their own.
