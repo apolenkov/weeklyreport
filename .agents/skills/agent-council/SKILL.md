@@ -31,9 +31,10 @@ To inspect the starter without writing files:
 node "${CLAUDE_SKILL_DIR}/scripts/agent-council.mjs" --print-sample-config
 ```
 
-If `${CLAUDE_SKILL_DIR}` is unavailable, run:
+If `${CLAUDE_SKILL_DIR}` is unavailable (Codex/OpenCode runners do not set it), substitute the skill's install root — project-local `.agents/skills/agent-council` or user-global `~/.agents/skills/agent-council` — for any command above, e.g.:
 
 ```bash
+node .agents/skills/agent-council/scripts/agent-council.mjs --setup-config
 node .agents/skills/agent-council/scripts/agent-council.mjs --print-sample-config
 ```
 
