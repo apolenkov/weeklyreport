@@ -3,7 +3,7 @@
 ### Requirement: The lead-form god component is a recorded decomposition target
 
 The backlog MUST record that
-`apps/web/src/features/report-sections/ui/lead-form.tsx` (245 LOC after
+`apps/web/src/features/report-sections/ui/lead-form.tsx` (250 LOC after
 `refactor-lead-form-toolbar-chrome` on 2026-07-10; 250-line `max-lines`
 standard) is a decomposition target being reduced in recorded slices, each
 captured as its own grilled refactor change before work starts. The first slice
@@ -51,7 +51,7 @@ collapse-all/fullscreen slot) moved into a presentational
 `LeadFormToolbarControls` component, the document-title and archive
 auto-expand chrome effects moved behind a feature-local `useLeadFormChrome`
 hook, and the `lead-form.tsx` ESLint exemptions were removed (landed with the
-file at 245 LOC; it stood at 443 when the slice started). With the file at or
+file at 250 LOC; it stood at 443 when the slice started). With the file at or
 under the 250-line standard, the SIZE target of this decomposition is CLOSED;
 the slice list stays as history. The composition root remains subject to the
 repo-wide lint gates with no exemptions; the deferred `ReportDataCoordinator` /
