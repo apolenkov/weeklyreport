@@ -6,6 +6,7 @@ import { useContext } from "react";
 
 import { useRecordVisibility } from "../../../hooks/use-record-visibility";
 import { crossAuthorContentFetchEnabled } from "../../../lib/cross-author-content-gate";
+import { isHeadLike } from "../../../lib/role-predicates";
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
@@ -56,7 +57,7 @@ export function useLeadFormData({
   const sessionState = useContext(SessionContext);
   const { sessionRole, currentUserId, shouldDeferForSession } =
     deriveSessionActors(sessionState);
-  const isHeadLikeSession = sessionRole === "head" || sessionRole === "admin";
+  const isHeadLikeSession = isHeadLike(sessionRole);
   const shouldRouteHeadLikeAwayFromLeadForm = isHeadLikeSession;
 
   // Three queries compose the lead-form view. `byPeriod` depends on

@@ -9,6 +9,7 @@ import {
   invalidateLeadForm,
   invalidateLeadHistory,
 } from "../../../lib/cache-keys";
+import { isHeadLike } from "../../../lib/role-predicates";
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
 import { reportHasContent } from "../../report-sections/model/report-content";
@@ -37,7 +38,7 @@ export function HeadPublishLockAction({
   const qc = useQueryClient();
   const sessionState = useContext(SessionContext);
   const currentRole = sessionState?.user?.role ?? null;
-  const canMutatePeriod = currentRole === "head" || currentRole === "admin";
+  const canMutatePeriod = isHeadLike(currentRole);
 
   const weeklyQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
 

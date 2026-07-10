@@ -1,0 +1,49 @@
+import type { Role } from "@customreport/shared";
+import { describe, expect, it } from "vitest";
+
+import {
+  isAdmin,
+  isHead,
+  isHeadLike,
+  isLead,
+  isViewer,
+} from "./role-predicates";
+
+const ROLE_STATES: readonly (Role | null)[] = [
+  "lead",
+  "head",
+  "admin",
+  "viewer",
+  null,
+];
+
+const TRUTH_TABLE: readonly {
+  name: string;
+  predicate: (role: Role | null) => boolean;
+  trueFor: readonly (Role | null)[];
+}[] = [
+  { name: "isHead", predicate: isHead, trueFor: ["head"] },
+  { name: "isAdmin", predicate: isAdmin, trueFor: ["admin"] },
+  { name: "isLead", predicate: isLead, trueFor: ["lead"] },
+  { name: "isViewer", predicate: isViewer, trueFor: ["viewer"] },
+  { name: "isHeadLike", predicate: isHeadLike, trueFor: ["head", "admin"] },
+];
+
+describe("role-predicates", () => {
+  for (const { name, predicate, trueFor } of TRUTH_TABLE) {
+    describe(name, () => {
+      for (const state of ROLE_STATES) {
+        const expected = trueFor.includes(state);
+        it(`${String(state)} -> ${String(expected)}`, () => {
+          expect(predicate(state)).toBe(expected);
+        });
+      }
+    });
+  }
+
+  it("every predicate returns false for null (loading/absent session)", () => {
+    for (const { predicate } of TRUTH_TABLE) {
+      expect(predicate(null)).toBe(false);
+    }
+  });
+});

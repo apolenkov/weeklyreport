@@ -27,6 +27,7 @@ import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 
 import { roleHomePath } from "../../../lib/role-home";
+import { isViewer } from "../../../lib/role-predicates";
 import { useSession } from "../../../lib/session-provider";
 import { webEnv } from "../../../lib/web-env";
 import { DevRoleSwitcher } from "../role-switcher";
@@ -138,7 +139,7 @@ function isActiveLink(
   // highlighted is the reported bug. History stays lit only on the bare
   // `/reports` list. Scoped to the viewer so the head/lead History-active
   // contract (lead-history-summary, lit on published-report paths) is untouched.
-  if (role === "viewer") {
+  if (isViewer(role)) {
     if (href === REPORTS_LATEST_ROUTE) {
       return pathname === REPORTS_LATEST_ROUTE || isReportDetailPath(pathname);
     }

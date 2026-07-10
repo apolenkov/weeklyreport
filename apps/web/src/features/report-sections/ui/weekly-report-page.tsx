@@ -24,6 +24,7 @@ import {
 } from "../../../lib/cache-keys";
 import { getClientErrorDetails } from "../../../lib/client-error-reporting";
 import { joinPeriodLabel } from "../../../lib/format-date";
+import { isAdmin, isHeadLike, isLead } from "../../../lib/role-predicates";
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
@@ -319,7 +320,7 @@ function isReviewEnabled(
   role: CurrentRole,
   periodStatus: LivePeriodStatus,
 ): boolean {
-  if (role === null || role === "lead") return false;
+  if (role === null || isLead(role)) return false;
   return periodStatus !== "published";
 }
 
@@ -357,15 +358,14 @@ function buildReviewModel(
   }
   const context: AccordionReviewContext = {
     currentUserId: params.currentUserId,
-    isAdmin: params.currentRole === "admin",
+    isAdmin: isAdmin(params.currentRole),
     onMutated: params.onMutated,
   };
   return {
     context,
     groups: distinctReviewGroups(reportData.leadSections),
     sections: toSectionReviewRows(reportData.leadSections),
-    isHeadOrAdmin:
-      params.currentRole === "head" || params.currentRole === "admin",
+    isHeadOrAdmin: isHeadLike(params.currentRole),
   };
 }
 
@@ -720,13 +720,13 @@ export function WeeklyReportPage({
   const focusedAuthorId = authorId ?? null;
   const sessionState = useContext(SessionContext);
   const currentRole = sessionState?.user?.role ?? null;
-  const canMutatePeriod = currentRole === "head" || currentRole === "admin";
+  const canMutatePeriod = isHeadLike(currentRole);
   // Export-PDF authz (fix-report-surface-integrity): head/admin/viewer get the
   // real export; lead is FORBIDDEN at the backend (pdfExport on leadershipProcedure)
   // and sees the inert ComingSoon control instead — never an active button that
   // would 403. The viewer's export is requester-scoped (their own published slice).
-  const canExportPdf = currentRole !== null && currentRole !== "lead";
-  const showLeadExportComingSoon = currentRole === "lead";
+  const canExportPdf = currentRole !== null && !isLead(currentRole);
+  const showLeadExportComingSoon = isLead(currentRole);
 
   // review-acknowledgement (§7): per-user, client-only accordion filter. Default
   // submitted-only; rendered (and effective) only when review is enabled — a

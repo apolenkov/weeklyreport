@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
+import { isViewer as isViewerRole } from "../../lib/role-predicates";
 import { useSession } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
 
@@ -124,7 +125,7 @@ export function SearchInput({
   const router = useRouter();
   const trpc = useTRPC();
   const { user } = useSession();
-  const isViewer = user?.role === "viewer";
+  const isViewer = isViewerRole(user?.role ?? null);
   const reactId = useId().replaceAll(":", "");
   const inputId = `${reactId}-search-input`;
   const resultsId = `${reactId}-search-results`;
