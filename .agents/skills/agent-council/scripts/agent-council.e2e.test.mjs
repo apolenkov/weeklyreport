@@ -85,7 +85,29 @@ test("a hanging proof command is killed by the proof timeout", () => {
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(body.build.proof.timedOut, true);
+  assert.match(body.build.proof.stderr, /timed out/);
   assert.notEqual(body.build.proof.exitCode, 0);
+});
+
+test("a proof killed by output overflow is reported as overflow, not a timeout", () => {
+  const { body } = runFullMode({
+    // Emit far more than the 1 MB proof capture buffer to force an ENOBUFS kill.
+    proofCmd: 'node -e "process.stdout.write(\'x\'.repeat(5_000_000))"',
+    runId: "e2e-proof-overflow",
+  });
+
+  assert.equal(body.build.proof.timedOut, false);
+  assert.match(body.build.proof.stderr, /exceeded the capture buffer/);
+});
+
+test("a reviewer diff excludes the council's own artifacts even when committed", () => {
+  const { body } = runFullMode({ builder: committingAllBuilderCommand(), runId: "e2e-artifacts-committed" });
+  const reviewer = body.build.results.find((entry) => entry.name === "reviewer");
+
+  // The builder ran `git add -A && git commit`, sweeping the run's own artifacts into the
+  // commit; they must not surface in the reviewer's diff.
+  assert.match(reviewer.stdout, /SAW_BUILT_FILE:true/);
+  assert.match(reviewer.stdout, /SAW_ARTIFACTS:false/);
 });
 
 function runFullMode({
@@ -244,6 +266,28 @@ function committingBuilderCommand() {
   ];
 }
 
+function committingAllBuilderCommand() {
+  return [
+    "node",
+    "-e",
+    [
+      "let input = '';",
+      "process.stdin.on('data', (chunk) => { input += chunk; });",
+      "process.stdin.on('end', () => {",
+      "  const cp = require('child_process');",
+      "  require('fs').writeFileSync('built.txt', 'built by e2e\\n');",
+      // -A sweeps the council's own artifacts (task.md, config.resolved.json, ...) too.
+      "  cp.execFileSync('git', ['add', '-A']);",
+      "  cp.execFileSync('git', ['commit', '-q', '-m', 'built']);",
+      "  console.log('{\"type\":\"thread.started\",\"thread_id\":\"e2e-thread\"}');",
+      `  console.log(${JSON.stringify(
+        [...headings("Committed everything, including artifacts", "High"), "", "BUILD: COMPLETE"].join("\n"),
+      )});`,
+      "});",
+    ].join(" "),
+  ];
+}
+
 function builderFixCommand() {
   return [
     "node",
@@ -272,6 +316,7 @@ function reviewerCommand({ verdict = "APPROVED", trailer = "" } = {}) {
       "const prompt = process.argv[1] || '';",
       "console.log('SAW_BUILT_FILE:' + String(prompt.includes('built.txt')));",
       "console.log('SAW_BUILT_CONTENT:' + String(prompt.includes('built by e2e')));",
+      "console.log('SAW_ARTIFACTS:' + String(prompt.includes('config.resolved.json')));",
       `console.log(${JSON.stringify(report)});`,
       trailer ? `console.log(${JSON.stringify(trailer)});` : "",
     ]
