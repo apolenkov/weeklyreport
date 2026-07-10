@@ -29,15 +29,36 @@ const REQUIRED_CHILD_SECTIONS = [
 ];
 const MODES = new Set(["soft", "hard", "full"]);
 const PROVIDERS = new Set(["codex", "claude", "opencode", "custom"]);
+const ROOT_KEYS = new Set(["version", "default_profile", "profiles", "seats"]);
+const PROFILE_KEYS = new Set([
+  "adversarial_rounds",
+  "advisors",
+  "artifacts_dir",
+  "builder",
+  "max_fix_rounds",
+  "mode",
+  "proof_cmd",
+  "proof_timeout_ms",
+  "reviewer",
+  "self_grill_rounds",
+]);
+const SEAT_KEYS = new Set([
+  "command",
+  "concurrency_group",
+  "prompt_mode",
+  "provider",
+  "resume_command",
+  "timeout_ms",
+  "write_mode",
+]);
 
 const SAMPLE_CONFIG = `version: 1
-default_profile: hard
+default_profile: soft
 
 profiles:
   soft:
     mode: soft
     advisors: [codex-readonly, claude-opus, deepseek-pro, glm]
-    final_reviewer: claude-opus
     artifacts_dir: ".agent-council/runs"
 
   hard:
@@ -45,7 +66,6 @@ profiles:
     advisors: [codex-readonly, claude-opus, deepseek-pro, glm]
     self_grill_rounds: 2
     adversarial_rounds: 5
-    final_reviewer: claude-opus
     artifacts_dir: ".agent-council/runs"
 
   full:
@@ -67,7 +87,7 @@ seats:
   claude-opus:
     provider: claude
     command: ["claude", "--print", "--output-format", "text", "--no-session-persistence", "--permission-mode", "dontAsk", "--disable-slash-commands", "--allowed-tools", "Read,Glob,Grep", "--model", "opus", "--effort", "high"]
-    timeout_ms: 90000
+    timeout_ms: 300000
 
   deepseek-pro:
     provider: opencode
@@ -612,6 +632,8 @@ function resolveConfig(config, options) {
     throw new Error("Config must be a YAML object.");
   }
 
+  assertKnownKeys(config, ROOT_KEYS, "config");
+
   if (config.version !== 1) {
     throw new Error("Config version must be 1.");
   }
@@ -666,6 +688,8 @@ function validateEveryProfile(config) {
 }
 
 function validateProfile(profileName, profile, seats) {
+  assertKnownKeys(profile, PROFILE_KEYS, `profiles.${profileName}`);
+
   if (!MODES.has(profile.mode)) {
     throw new Error(`Profile ${profileName} has invalid mode: ${profile.mode}`);
   }
@@ -681,11 +705,6 @@ function validateProfile(profileName, profile, seats) {
   for (const seatName of profile.advisors) {
     requireSeat(seats, seatName, `Profile ${profileName} advisors`);
     assertReadOnlySeat(seats, seatName, `Profile ${profileName} advisors`);
-  }
-
-  if (profile.final_reviewer) {
-    requireSeat(seats, profile.final_reviewer, `Profile ${profileName} final_reviewer`);
-    assertReadOnlySeat(seats, profile.final_reviewer, `Profile ${profileName} final_reviewer`);
   }
 
   if (profile.mode === "hard" || profile.mode === "full") {
@@ -721,6 +740,8 @@ function validateSeat(name, seat) {
   if (!isPlainObject(seat)) {
     throw new Error(`Seat ${name} must be an object.`);
   }
+
+  assertKnownKeys(seat, SEAT_KEYS, `seats.${name}`);
 
   if (!PROVIDERS.has(seat.provider)) {
     throw new Error(`Seat ${name} has invalid provider: ${seat.provider}`);
@@ -780,7 +801,6 @@ function normalizeProfile(profile) {
     advisors: profile.advisors,
     artifacts_dir: profile.artifacts_dir || DEFAULT_ARTIFACTS_DIR,
     builder: profile.builder || "",
-    final_reviewer: profile.final_reviewer || "",
     max_fix_rounds: profile.max_fix_rounds ?? 0,
     mode: profile.mode,
     proof_cmd: profile.proof_cmd || "",
@@ -794,6 +814,56 @@ function requireSeat(seats, seatName, context) {
   if (!seatName || !seats[seatName]) {
     throw new Error(`${context} references missing seat: ${seatName || "(empty)"}`);
   }
+}
+
+// Normalization substitutes defaults for missing fields, so a silently ignored
+// typo (`self_gril_rounds`, `timeout_m`) would quietly change council rigor or
+// duration while --validate-config still prints ok. Unknown keys must fail loud.
+function assertKnownKeys(object, allowedKeys, pathLabel) {
+  const unknown = Object.keys(object)
+    .filter((key) => !allowedKeys.has(key))
+    .sort();
+
+  if (unknown.length === 0) {
+    return;
+  }
+
+  const [first] = unknown;
+
+  if (first === "final_reviewer" && allowedKeys === PROFILE_KEYS) {
+    throw new Error(
+      `${pathLabel}.final_reviewer was shipped in earlier sample configs but was never functional; delete it.`,
+    );
+  }
+
+  const suggestion = nearestKey(first, allowedKeys);
+  const hint = suggestion ? ` Did you mean ${suggestion}?` : "";
+  throw new Error(`Unknown key ${pathLabel}.${first}.${hint}`);
+}
+
+function nearestKey(candidate, allowedKeys) {
+  const scored = [...allowedKeys]
+    .map((key) => ({ key, distance: editDistance(candidate, key) }))
+    .filter((entry) => entry.distance <= 2)
+    .sort((a, b) => a.distance - b.distance || a.key.localeCompare(b.key));
+
+  return scored[0]?.key ?? "";
+}
+
+function editDistance(a, b) {
+  const initialRow = Array.from({ length: b.length + 1 }, (_, i) => i);
+  const lastRow = [...a].reduce(
+    (previousRow, charA, rowIndex) =>
+      [...b].reduce((currentRow, charB, columnIndex) => {
+        const substitution = previousRow[columnIndex] + (charA === charB ? 0 : 1);
+        const deletion = previousRow[columnIndex + 1] + 1;
+        const insertion = currentRow[columnIndex] + 1;
+        return [...currentRow, Math.min(substitution, deletion, insertion)];
+      }, [rowIndex + 1]),
+    initialRow,
+  );
+
+  return lastRow[b.length];
 }
 
 // Only the full-mode builder may write, and only behind --allow-writes. Every other role

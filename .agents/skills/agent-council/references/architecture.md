@@ -23,7 +23,7 @@ For this use case, a thin CLI harness is lower-risk than adopting a full framewo
 ## Process Model
 
 1. Parent Advisor receives the user task.
-2. Skill invokes `scripts/agent-council.mjs` with a YAML config and profile.
+2. Skill invokes `.agents/skills/agent-council/scripts/agent-council.mjs` with a YAML config and profile.
 3. Orchestrator validates the profile:
    - `soft` for one-pass council advice
    - `hard` for self-grill plus adversarial planning rounds
@@ -114,8 +114,11 @@ High-level schema:
 
 ```yaml
 version: 1
-default_profile: hard
+default_profile: soft
 profiles:
+  soft:
+    mode: soft
+    advisors: [codex-readonly, claude-opus]
   hard:
     mode: hard
     advisors: [codex-readonly, claude-opus]
@@ -144,7 +147,7 @@ Environment variables:
 CLI flags:
 
 ```bash
-node scripts/agent-council.mjs \
+node .agents/skills/agent-council/scripts/agent-council.mjs \
   --config .agents/agent-council.yaml \
   --profile hard \
   --cwd /path/to/repo \
@@ -162,14 +165,14 @@ Exit codes: `0` on a usable run, `1` on a usage/config error or when no advisor 
 
 JSON output includes run-level `health`, phase records, and one `extracted` object per advisor result. `extracted` is derived from the required child headings: `Position`, `Assumptions`, `Evidence`, `Risks`, `Implementation Notes`, and `Confidence`. Raw stdout/stderr are still preserved and fenced in the parent prompt.
 
-The full-mode reviewer receives a diff built from `git diff HEAD` (or `git diff` plus `git diff --cached` before the first commit) *and* a `--no-index` diff of every untracked file, because a builder's normal output is new files. The council's own artifacts directory is excluded. A failing `git` invocation is reported inline as `[agent-council: git failed: ...]` and never presented as an empty diff.
+The full-mode reviewer receives a diff against a baseline SHA pinned before the builder starts (`HEAD`, or the empty-tree object in a repo with no commits) *and* a `--no-index` diff of every untracked file, because a builder's normal output is new files. Pinning the baseline keeps the diff stable even if the builder commits mid-run. The council's own artifacts directory is excluded. A failing `git` invocation is reported inline as `[agent-council: git failed: ...]` and never presented as an empty diff.
 
 Fast plumbing smoke test with real OpenCode and no tools:
 
 ```bash
 env AGENT_COUNCIL_TRUST_OPENCODE_PERMISSION_ENV=1 \
   OPENCODE_PERMISSION='{"skill":{"*":"deny"},"read":"deny","grep":"deny","glob":"deny","edit":"deny","bash":"deny","webfetch":"deny","websearch":"deny","task":"deny","question":"deny"}' \
-node scripts/agent-council.mjs \
+node .agents/skills/agent-council/scripts/agent-council.mjs \
   --config /tmp/agent-council.yaml \
   --profile soft \
   -- "No tools. Smoke-test the harness only."
@@ -178,14 +181,14 @@ node scripts/agent-council.mjs \
 SDK adapter availability check:
 
 ```bash
-node scripts/claude-agent-sdk-adapter.mjs --help
+node .agents/skills/agent-council/scripts/claude-agent-sdk-adapter.mjs --help
 ```
 
 Local self-tests without real LLM calls:
 
 ```bash
-node --test scripts/agent-council.test.mjs
-node --test scripts/agent-council.e2e.test.mjs
+node --test .agents/skills/agent-council/scripts/agent-council.test.mjs
+node --test .agents/skills/agent-council/scripts/agent-council.e2e.test.mjs
 ```
 
 The E2E test runs the public CLI in `full` mode against a clean temporary git repo. It uses stub child commands, but exercises config loading, clean-tree gating, stdin prompt delivery to the builder, proof command execution, reviewer invocation, and artifact writing.
@@ -194,9 +197,9 @@ The E2E test runs the public CLI in `full` mode against a clean temporary git re
 
 For many-model councils, keep the current adapter behavior but move toward:
 
-- richer final reviewer contracts and machine-readable verdict schemas
+- richer full-mode reviewer contracts and machine-readable verdict schemas
 - OpenCode isolation with per-seat `--dir` or explicit `opencode-local-db` serialization
-- a mandatory parent `Council Summary` / `extracted` consolidation pass before reading raw transcripts
+- a mandatory parent `Latest Council Summary` / `extracted` consolidation pass before reading raw transcripts
 - optional spend/token controls where each CLI exposes them
 
 ## Packaging

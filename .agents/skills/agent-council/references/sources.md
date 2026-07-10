@@ -20,6 +20,9 @@
 
 ## Local CLI Facts Verified
 
+Snapshot as of 2026-07-09. Version pins, flag inventories, and smoke outcomes below
+age with each CLI release — re-verify with each tool's `--help` before editing adapters.
+
 - `codex --version`: `codex-cli 0.142.5`
 - `codex --help`: exposes `exec`, not `rescue`
 - `codex help rescue`: returns `error: unrecognized subcommand 'rescue'`
