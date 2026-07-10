@@ -56,7 +56,7 @@ For this use case, a thin CLI harness is lower-risk than adopting a full framewo
 Codex:
 
 ```bash
-codex exec --ephemeral --sandbox read-only --color never -c model_reasoning_effort=xhigh "<prompt>"
+codex exec --ephemeral --sandbox read-only --color never "<prompt>"
 ```
 
 Claude Code:
@@ -65,10 +65,14 @@ Claude Code:
 claude --print --output-format text --no-session-persistence --permission-mode dontAsk --disable-slash-commands --allowed-tools Read,Glob,Grep --model opus --effort high "<prompt>"
 ```
 
-Optional Claude Agent SDK wrapper, when `@anthropic-ai/claude-agent-sdk` is installed in the runtime project:
+The full-mode reviewer seat uses the same read-only tool list. Granting it `Bash(...)` would make its `write_mode: false` declaration decorative — the harness enforces the role, not the seat's own tool grants.
 
-```bash
-AGENT_COUNCIL_CLAUDE_CMD='node .agents/skills/agent-council/scripts/claude-agent-sdk-adapter.mjs --model {model}'
+Optional Claude Agent SDK wrapper, when `@anthropic-ai/claude-agent-sdk` is installed in the runtime project. It is a seat command like any other — there is no env-var hook:
+
+```yaml
+  claude-sdk:
+    provider: claude
+    command: ["node", ".agents/skills/agent-council/scripts/claude-agent-sdk-adapter.mjs", "--model", "opus"]
 ```
 
 The default Claude Code CLI adapter is preferred when reasoning effort matters, because `claude --help` exposes `--effort`; the optional SDK wrapper is model-focused unless the installed SDK version documents an effort option.
@@ -94,9 +98,11 @@ The skill isolates advisors by policy and process boundary:
 - The orchestrator sets `AGENT_COUNCIL_DEPTH=1` and `AGENT_COUNCIL_PARENT_RUN_ID` for every child process and refuses to start if it sees a non-zero depth, preventing nested councils.
 - Child outputs are fenced and treated as untrusted data.
 
-This is not a security sandbox for hostile code. Run the council only in a trusted local workspace.
+This is not a security sandbox for hostile code. Run the council only in a trusted local workspace. The config is trusted input, written by the operator; child output is not. The runner does refuse the config mistakes that would silently defeat a gate — a `write_mode` seat outside the builder role, a builder that is also the reviewer, a `resume_command` without `{thread_id}` — but it cannot police what a seat's own adapter flags grant that seat.
 
-OpenCode stores session state locally. Multiple live `opencode run` processes against the same workspace can fail with `database is locked`, so this harness runs configured OpenCode models sequentially while Codex and Claude Code run in parallel.
+Child output never reaches the parent prompt unfenced. The one-line `Position` and `Confidence` summaries, which appear in metadata bullets and the summary table outside any fence, have backticks and leading heading markers stripped. Section extraction ignores headings inside code fences, so a child that echoes the prompt template cannot pass the echo off as its answer.
+
+OpenCode stores session state locally. Multiple live `opencode run` processes against the same workspace can fail with `database is locked`. Serialization is opt-in per seat: give every OpenCode seat the same `concurrency_group` (the sample config uses `opencode`), and the runner runs that group sequentially while ungrouped seats run in parallel.
 
 ## Configuration
 
@@ -144,12 +150,19 @@ node scripts/agent-council.mjs \
   --cwd /path/to/repo \
   --deadline-ms 600000 \
   --max-output-chars 200000 \
+  --run-id nightly-01 \
   -- "Design the migration plan"
 ```
 
+Full mode adds `--allow-writes`, `--proof-cmd <cmd>`, and `--proof-timeout-ms <ms>` (default 600000, also settable per profile as `proof_timeout_ms`). The proof command is bounded by that timeout and by any remaining `--deadline-ms` budget; a proof that overruns is killed and reported with `timedOut: true`. `--run-id` must be a plain path segment.
+
 Use `--json` when another script needs machine-readable output.
 
+Exit codes: `0` on a usable run, `1` on a usage/config error, when no advisor reached status `ok`, or when the full-mode reviewer verdict could not be read (`verdict: "UNKNOWN"`). `SIGINT` exits `130` and `SIGTERM` exits `143` after terminating every child process group.
+
 JSON output includes run-level `health`, phase records, and one `extracted` object per advisor result. `extracted` is derived from the required child headings: `Position`, `Assumptions`, `Evidence`, `Risks`, `Implementation Notes`, and `Confidence`. Raw stdout/stderr are still preserved and fenced in the parent prompt.
+
+The full-mode reviewer receives a diff built from `git diff HEAD` (or `git diff` plus `git diff --cached` before the first commit) *and* a `--no-index` diff of every untracked file, because a builder's normal output is new files. The council's own artifacts directory is excluded. A failing `git` invocation is reported inline as `[agent-council: git failed: ...]` and never presented as an empty diff.
 
 Fast plumbing smoke test with real OpenCode and no tools:
 
@@ -201,5 +214,14 @@ User-global install for Codex/OpenCode-compatible skill discovery:
 mkdir -p ~/.agents/skills
 cp -R .agents/skills/agent-council ~/.agents/skills/agent-council
 ```
+
+Claude Code discovers skills only from `.claude/skills`, `~/.claude/skills`, and plugins — never from `.agents/skills`. It follows symlinks, so one directory can serve both runners:
+
+```bash
+mkdir -p ~/.claude/skills
+ln -s ~/.agents/skills/agent-council ~/.claude/skills/agent-council
+```
+
+Without that link the skill is invisible in Claude Code: `/agent-council` does not exist and the script can only be run by hand.
 
 OpenCode also discovers compatible skills from `.opencode/skills`, `.claude/skills`, `.agents/skills`, and global equivalents.
