@@ -28,16 +28,19 @@ Hard mode plus a configured writable builder and a different configured read-onl
 The exact command used to invoke one council advisor. Adapter commands are configurable because CLI products change their flags and local aliases vary.
 
 **Read-Only Council Run**:
-A council run where children may inspect and reason but must not modify repository state. Soft and hard modes are read-only by contract.
+A council run where children may inspect and reason but must not modify repository state. Soft and hard modes are read-only by contract: the runner refuses to start when a `write_mode` seat is listed as an advisor or final reviewer. The runner cannot police what a seat's own command grants itself, so a seat's adapter flags must match its declared role.
 
 **Writable Builder**:
-The explicit `builder` seat in full mode. It is the only child seat that may write, and only after `--allow-writes`, clean-tree, and proof-command gates pass.
+The explicit `builder` seat in full mode. It is the only child seat that may write, and only after `--allow-writes`, clean-tree, and proof-command gates pass. The clean-tree gate is re-checked immediately before the builder launches, ignoring the council's own artifacts directory.
 
 **Advisor Prompt**:
 The prompt produced by the orchestrator after collecting child outputs. It is intended for the parent Advisor to read and synthesize, not for automatic execution by another model.
 
 **Timeout Result**:
-A normal council outcome where one advisor exceeded its time budget. The timed-out advisor is marked failed, and the remaining advisor output still participates in synthesis.
+A normal council outcome where one advisor exceeded its time budget. The advisor is recorded with status `timeout` (per-seat budget) or `deadline` (whole-council budget) — distinct from `failed` and `spawn_error` — and the remaining advisor output still participates in synthesis. When no advisor reaches status `ok`, the run exits non-zero.
+
+**Verdict**:
+The full-mode reviewer's `VERDICT: APPROVED` or `VERDICT: REVISE` line, read from the last few meaningful lines of its output. A verdict the runner cannot read is recorded as `UNKNOWN`, reported on stderr, and exits non-zero: an unreadable verdict means the build is unreviewed, not approved.
 
 **Restricted YAML**:
 The config subset parsed by the zero-dependency runner: maps, arrays, strings, numbers, booleans, and null. Anchors, merges, tags, and other YAML features are rejected.

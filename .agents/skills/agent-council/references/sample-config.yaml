@@ -60,5 +60,5 @@ seats:
   claude-reviewer:
     provider: claude
     write_mode: false
-    command: ["claude", "--print", "--output-format", "text", "--permission-mode", "dontAsk", "--allowed-tools", "Read,Glob,Grep,Bash(git *),Bash(pnpm *),Bash(node *)", "--model", "opus", "--effort", "high"]
+    command: ["claude", "--print", "--output-format", "text", "--permission-mode", "dontAsk", "--allowed-tools", "Read,Glob,Grep", "--model", "opus", "--effort", "high"]
     timeout_ms: 300000
