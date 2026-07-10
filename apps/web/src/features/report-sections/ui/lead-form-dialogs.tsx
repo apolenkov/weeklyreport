@@ -1,9 +1,11 @@
 "use client";
 
+import type { ReportSectionReadModel } from "@customreport/shared";
 import type { ComponentProps } from "react";
 
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import { RequestReopenDialog } from "../../period/ui/request-reopen-dialog";
+import { ownedStagesForProject } from "../model/lead-form";
 import { ItemEditDialog } from "./item-edit-dialog";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import type { useLeadFormDraftMerges } from "./use-lead-form-draft-merges";
@@ -26,7 +28,8 @@ interface LeadFormDialogsProps {
    * coercion can never disagree.
    */
   readonly unsetOwnStageCount: number;
-  readonly stagesForProduct: StagesForProduct;
+  /** The editable draft section — the stage selector derives from it. */
+  readonly draftSection: ReportSectionReadModel;
 }
 
 /**
@@ -39,8 +42,12 @@ export function LeadFormDialogs({
   merges,
   writeActions,
   unsetOwnStageCount,
-  stagesForProduct,
+  draftSection,
 }: LeadFormDialogsProps) {
+  // 35-04: per-project stages-the-lead-owns selector for the quick-add item
+  // dialog, scoped per project like the section-hosted dialogs.
+  const stagesForProduct: StagesForProduct = (productId) =>
+    ownedStagesForProject(draftSection, productId);
   const {
     activityOptions,
     currentUser,

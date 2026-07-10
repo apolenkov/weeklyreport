@@ -916,7 +916,6 @@ export default defineConfig([
       // unit and say why).
       "apps/api/src/infrastructure/trpc/trpc.router.ts", // single tRPC god-router; all 17 namespace sub-routers close over one RouterDeps; real fix is service-layer extraction, not a shell split
       "apps/api/src/modules/report-sections/infrastructure/lead-form.prisma-repository.ts", // one DI provider for one LeadFormRepository interface; domain separation already lives at the service layer above it
-      "apps/web/src/features/report-sections/ui/lead-form.tsx", // monolithic component shrinking slice-by-slice (986 lines after the data-loading slice); the remaining bulk is the JSX tree, next to split
       "apps/web/src/features/slides/model/section-slide-utils.ts", // core mapper buildSectionSlideModel (247 lines) + its private helpers are inseparable; extracting all else still leaves ~335 lines
     ],
     rules: { "max-lines": "off" },
@@ -971,7 +970,6 @@ export default defineConfig([
       "apps/web/src/features/dashboard/ui/dashboard-page.tsx", // orchestrator: 2 queries + shared state + 4 render branches, hook-coupled
       "apps/web/src/features/period/ui/decision-edit-dialog.tsx", // one create/edit dialog; per-field validation + conditional fields
       "apps/web/src/features/report-sections/ui/item-edit-dialog.tsx", // one form dialog; interdependent state (text/status/product/priority/stages)
-      "apps/web/src/features/report-sections/ui/lead-form.tsx", // JSX render branching (slides/edit + unified/classic + dialogs); shrinking slice-by-slice, cyclomatic 77 at 986 lines
       "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // status-card multi-branch messaging (streak/viewer/draft/risk)
       "apps/web/src/features/report-sections/ui/next-week-section.tsx", // kanban CRUD + discriminated-union dialog state + grouped columns
       "apps/web/src/features/review/ui/risk-edit-dialog.tsx", // one dialog; validation coupled to 7+ form fields; 'use no memo' race guard
@@ -998,7 +996,6 @@ export default defineConfig([
       "apps/api/src/modules/admin/period-admin.service.ts", // manual period edit + per-field audit diff (only layer with before+after)
       "apps/web/src/app/(app)/reports/page.tsx", // see cyclomatic block (same role-aware renderer)
       "apps/web/src/features/dashboard/ui/remind-lead-button.tsx", // one ConfirmState machine → label/message/icon/disabled
-      "apps/web/src/features/report-sections/ui/lead-form.tsx", // see cyclomatic block (same JSX branching)
       "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // see cyclomatic block
       "apps/web/src/features/review/ui/risks-section.tsx", // see cyclomatic block
       "apps/web/src/features/report-sections/ui/stage-chip.tsx", // see cyclomatic block
