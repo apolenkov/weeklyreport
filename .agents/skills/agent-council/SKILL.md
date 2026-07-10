@@ -16,13 +16,13 @@ Run configured child CLI agents and synthesize their output as the parent Adviso
 Real runs require restricted YAML config. The default path is `.agents/agent-council.yaml`; generate a starter with:
 
 ```bash
-node .agents/skills/agent-council/scripts/agent-council.mjs --setup-config
+node "${CLAUDE_SKILL_DIR}/scripts/agent-council.mjs" --setup-config
 ```
 
 The setup command writes the recommended `opencode` preset by default: Codex and ClaudeCode seats plus OpenCode advisor seats. Use `--force` only when intentionally replacing an existing local config:
 
 ```bash
-node .agents/skills/agent-council/scripts/agent-council.mjs --setup-config --force
+node "${CLAUDE_SKILL_DIR}/scripts/agent-council.mjs" --setup-config --force
 ```
 
 To inspect the starter without writing files:
