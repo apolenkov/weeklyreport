@@ -482,13 +482,12 @@ export default defineConfig([
       "@typescript-eslint/non-nullable-type-assertion-style": "error",
       // no-unnecessary-type-assertion: 134 firings (44 src / 90 test). The
       // autofix removed the genuinely-redundant assertions across 40 files
-      // cleanly (verified by tsc). The 9 remaining files carry a file-level
+      // cleanly (verified by tsc). The 8 remaining files carry a file-level
       // single-rule disable, NOT a removal: they hit a documented ESLint-vs-
       // tsc mismatch where ESLint's type-aware program judges an assertion
       // redundant but the app tsconfig still needs it — 8 RTL test files cast
       // `getByLabelText(...)` to a concrete element (HTMLInputElement etc.) to
-      // reach .value/.checked/.options (TS2339 without it), and lead-form.tsx
-      // casts a ternary to a literal union (TS2322 without it). File-level
+      // reach .value/.checked/.options (TS2339 without it). File-level
       // (not line) disables here are position-independent — immune to the
       // pre-commit-prettier comment-shift hazard.
       "@typescript-eslint/no-unnecessary-type-assertion": "error",
