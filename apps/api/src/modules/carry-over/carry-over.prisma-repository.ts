@@ -11,7 +11,6 @@ import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 import {
   mapPrismaToReportSection,
-  type PrismaReportSectionWithRelations,
   reportSectionFullInclude,
 } from "../report-sections/index.js";
 import {
@@ -142,11 +141,7 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
       include: reportSectionFullInclude,
     });
 
-    return rows.map((row) =>
-      mapPrismaToReportSection(
-        row as unknown as PrismaReportSectionWithRelations,
-      ),
-    );
+    return rows.map((row) => mapPrismaToReportSection(row));
   }
 
   async getTargetSections(
@@ -157,11 +152,7 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
       include: reportSectionFullInclude,
     });
 
-    return rows.map((row) =>
-      mapPrismaToReportSection(
-        row as unknown as PrismaReportSectionWithRelations,
-      ),
-    );
+    return rows.map((row) => mapPrismaToReportSection(row));
   }
 
   async saveCarryOver(

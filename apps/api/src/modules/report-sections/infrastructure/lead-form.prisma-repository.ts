@@ -63,9 +63,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       return null;
     }
 
-    return mapPrismaToReportSection(
-      row as unknown as Parameters<typeof mapPrismaToReportSection>[0],
-    );
+    return mapPrismaToReportSection(row);
   }
 
   async getSectionByIdScoped(
@@ -84,9 +82,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       return null;
     }
 
-    return mapPrismaToReportSection(
-      row as unknown as Parameters<typeof mapPrismaToReportSection>[0],
-    );
+    return mapPrismaToReportSection(row);
   }
 
   async getReportPeriodStatusForSection(
@@ -147,15 +143,12 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       return null;
     }
 
-    const section = mapPrismaToReportSection(
-      row as unknown as Parameters<typeof mapPrismaToReportSection>[0],
-    );
+    const section = mapPrismaToReportSection(row);
 
-    const report = (
-      row as unknown as { report: { periodStatus: string; archived: boolean } }
-    ).report;
-    const reopenRequests = (row as unknown as { reopenRequests: unknown[] })
-      .reopenRequests;
+    // report-section-prisma-payload: `row` is already precisely typed from
+    // its own inline `include` (report/reopenRequests need no separate
+    // narrowing cast).
+    const { report, reopenRequests } = row;
 
     // reopen-request-lifecycle (D4/G6): a 'reopened' period is editable again
     // (the whole point of the state), so it is read-write alongside 'open'.

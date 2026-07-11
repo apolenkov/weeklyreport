@@ -17,32 +17,20 @@ import {
 export const reportFullIncludeForSnapshot = {
   sections: { include: reportSectionFullInclude },
   publishedBy: true,
-} as const;
+} as const satisfies Prisma.ReportInclude;
 
-interface SnapshotSectionRow {
-  id: string;
-  projectStatuses: { status: string | null }[];
-}
-
-interface SnapshotReportRow {
-  id: string;
-  periodStart: Date;
-  periodEnd: Date;
-  deadline: Date;
-  status: string;
-  publishedAt: Date | null;
-  publishedById: string | null;
-  publishedBy: { name: string } | null;
-  sections: SnapshotSectionRow[];
-}
+// report-section-prisma-payload: derived from the generated payload so this
+// function's declared input finally matches what every real caller provides
+// (each queries `reportFullIncludeForSnapshot` verbatim before calling this).
+type SnapshotReportRow = Prisma.ReportGetPayload<{
+  include: typeof reportFullIncludeForSnapshot;
+}>;
 
 export function buildAssembledReportFromPrismaRow(
   row: SnapshotReportRow,
 ): AssembledReport {
   const sections = row.sections.map((section) =>
-    mapPrismaToReportSection(
-      section as unknown as Parameters<typeof mapPrismaToReportSection>[0],
-    ),
+    mapPrismaToReportSection(section),
   );
   // fix-published-empty-stage-risk-floor (D3 / blind-spot #7): compute the
   // top-line portfolio totals from the floored `trafficLight` of the mapped

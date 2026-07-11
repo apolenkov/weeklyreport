@@ -195,14 +195,24 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
             userId: AUTHOR_ID,
             stageId: STAGE_DEV,
             projectId: OWNED_PRODUCT,
-            project: { id: OWNED_PRODUCT, name: "CRM Portal", archived: false },
+            project: {
+              id: OWNED_PRODUCT,
+              name: "CRM Portal",
+              archived: false,
+              stageAssignments: [],
+            },
             stage: { id: STAGE_DEV, name: "Development", sortOrder: 0 },
           },
           {
             userId: AUTHOR_ID,
             stageId: STAGE_TEST,
             projectId: OWNED_PRODUCT,
-            project: { id: OWNED_PRODUCT, name: "CRM Portal", archived: false },
+            project: {
+              id: OWNED_PRODUCT,
+              name: "CRM Portal",
+              archived: false,
+              stageAssignments: [],
+            },
             stage: { id: STAGE_TEST, name: "Testing", sortOrder: 1 },
           },
         ],
@@ -222,6 +232,7 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
           priorityRank: null,
           stageNames: ["Development", "Testing"],
           project: { name: "CRM Portal" },
+          recordComments: [],
         },
       ],
       risks: [
@@ -236,6 +247,7 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
           severity: "blocked",
           stageNames: ["Development", "Testing"],
           project: { name: "CRM Portal" },
+          recordComments: [],
         },
         {
           id: "5b2fe575-86c3-422e-b7ed-5fe858cab7f7",
@@ -246,9 +258,15 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
           severity: "at-risk",
           stageNames: [],
           project: { name: "Shared Platform" },
+          recordComments: [],
         },
       ],
       decisions: [],
+      // report-section-prisma-payload: the generated payload always carries
+      // these as real (possibly empty) arrays — the mapper no longer
+      // defends against `undefined` here.
+      activityStatuses: [],
+      sectionReviews: [],
     } as unknown as PrismaReportSectionWithRelations;
   }
 
@@ -315,6 +333,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
                   id: OWNED_PRODUCT,
                   name: "CRM Portal",
                   archived: false,
+                  stageAssignments: [],
                 },
                 stage: { id: STAGE_DEV, name: "Development", sortOrder: 0 },
               },
@@ -349,9 +368,15 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
               severity: "blocked",
               stageNames: [],
               project: { name: "CRM Portal" },
+              recordComments: [],
             },
           ],
           decisions: [],
+          // report-section-prisma-payload: the generated payload always
+          // carries these as real (possibly empty) arrays — the mapper no
+          // longer defends against `undefined` here.
+          activityStatuses: [],
+          sectionReviews: [],
         },
       ],
     };

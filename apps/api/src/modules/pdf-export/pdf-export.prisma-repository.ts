@@ -11,7 +11,6 @@ import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { computePortfolioOverviewFromReadSections } from "../published-report-snapshot.js";
 import {
   mapPrismaToReportSection,
-  type PrismaReportSectionWithRelations,
   reportSectionFullInclude,
 } from "../report-sections/index.js";
 import type {
@@ -136,9 +135,7 @@ export function toAssembledReport(
   report: Prisma.ReportGetPayload<{ include: typeof reportFullInclude }>,
 ): AssembledReport {
   const sections = report.sections.map((section) =>
-    mapPrismaToReportSection(
-      section as unknown as PrismaReportSectionWithRelations,
-    ),
+    mapPrismaToReportSection(section),
   );
   // fix-published-empty-stage-risk-floor: compute the PDF top-line totals from
   // the floored `trafficLight` of the mapped sections, NOT

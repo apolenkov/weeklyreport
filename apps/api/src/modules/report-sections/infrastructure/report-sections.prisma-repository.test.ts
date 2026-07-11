@@ -3,6 +3,7 @@
 // referencing a project the section author owns no stage on contribute the
 // project's name so the lead-surface mappers never show "Unknown"/"Group"
 // for a product the system can name.
+import type { TrafficLightStatus } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { SectionVersionConflictError } from "../application/report-sections.service";
@@ -28,6 +29,8 @@ type FabricatedRow = Pick<
   | "items"
   | "risks"
   | "decisions"
+  | "activityStatuses"
+  | "sectionReviews"
 > & {
   id: string;
   reportId: string;
@@ -37,6 +40,61 @@ type FabricatedRow = Pick<
   late: boolean;
   version: number;
 };
+
+// report-section-prisma-payload: the generated payload always carries the
+// full base scalar columns for every `include`d relation (Project, Item,
+// Risk, Decision, Stage, StageAssignment, ...), not just the fields the
+// mapper reads. These factories supply honest defaults for those columns so
+// individual tests only spell out what they actually care about.
+const FIXED_TIMESTAMP = new Date("2026-01-01T00:00:00.000Z");
+
+function fullProjectScalars(
+  overrides: Partial<{ id: string; name: string; archived: boolean }> = {},
+) {
+  return {
+    id: overrides.id ?? OWNED_PROJECT,
+    name: overrides.name ?? "Owned Project",
+    archived: overrides.archived ?? false,
+    leadId: AUTHOR_ID,
+    createdAt: FIXED_TIMESTAMP,
+    updatedAt: FIXED_TIMESTAMP,
+  };
+}
+
+function fullStage(id: string, name: string, sortOrder: number) {
+  return { id, name, sortOrder, createdAt: FIXED_TIMESTAMP };
+}
+
+function fullCrossLeadAssignment(id: string, name: string, sortOrder: number) {
+  return {
+    id: `${id}-assignment`,
+    userId: AUTHOR_ID,
+    stageId: id,
+    projectId: OWNED_PROJECT,
+    createdAt: FIXED_TIMESTAMP,
+    stage: fullStage(id, name, sortOrder),
+  };
+}
+
+function fullOwnedStageAssignment(
+  overrides: {
+    project?: Partial<{ name: string; archived: boolean }>;
+    crossLeadAssignments?: ReturnType<typeof fullCrossLeadAssignment>[];
+  } = {},
+) {
+  return {
+    id: `${STAGE_ID}-owned-assignment`,
+    userId: AUTHOR_ID,
+    stageId: STAGE_ID,
+    projectId: OWNED_PROJECT,
+    createdAt: FIXED_TIMESTAMP,
+    project: {
+      ...fullProjectScalars(overrides.project),
+      stageAssignments: overrides.crossLeadAssignments ?? [],
+    },
+    stage: fullStage(STAGE_ID, "Development", 4),
+  };
+}
 
 function baseRow(overrides: Partial<FabricatedRow> = {}): FabricatedRow {
   return {
@@ -51,25 +109,16 @@ function baseRow(overrides: Partial<FabricatedRow> = {}): FabricatedRow {
       name: "Lead 1",
       role: "lead",
       id: AUTHOR_ID,
-      stageAssignments: [
-        {
-          userId: AUTHOR_ID,
-          stageId: STAGE_ID,
-          projectId: OWNED_PROJECT,
-          project: {
-            id: OWNED_PROJECT,
-            name: "Owned Project",
-            archived: false,
-          },
-          stage: { id: STAGE_ID, name: "Development", sortOrder: 4 },
-        },
-      ],
+      reportingGroupId: null,
+      stageAssignments: [fullOwnedStageAssignment()],
     },
     projectStatuses: [],
     stageStatuses: [],
     items: [],
     risks: [],
     decisions: [],
+    activityStatuses: [],
+    sectionReviews: [],
     ...overrides,
   };
 }
@@ -80,19 +129,119 @@ function mapRow(row: FabricatedRow) {
   );
 }
 
-function fabricatedRisk(
-  projectId: string,
-  project: { name: string } | undefined,
+function fullProjectStatus(overrides: {
+  projectId: string;
+  status: TrafficLightStatus | null;
+  project?: Partial<{ id: string; name: string; archived: boolean }>;
+}) {
+  return {
+    id: `${overrides.projectId}-status`,
+    reportSectionId: SECTION_ID,
+    createdAt: FIXED_TIMESTAMP,
+    updatedAt: FIXED_TIMESTAMP,
+    projectId: overrides.projectId,
+    status: overrides.status,
+    project: fullProjectScalars(overrides.project),
+  };
+}
+
+function fullItem(
+  overrides: Partial<{
+    id: string;
+    projectId: string | null;
+    activityId: string | null;
+    type: "current" | "next";
+    text: string;
+    tag: string;
+    workflowStatus: "planned" | "in_progress" | "paused" | "postponed" | "done";
+    carriedOver: boolean;
+    priorityRank: number | null;
+    stageNames: string[];
+    project: { name: string } | null;
+  }> = {},
 ) {
   return {
-    id: "77777777-7777-4777-8777-777777777777",
-    projectId,
-    risk: "Cross-stage risk",
-    impact: "Impact",
-    mitigation: "Mitigation",
-    severity: "at-risk",
-    stageNames: [],
-    project,
+    id: overrides.id ?? "88888888-8888-4888-8888-888888888888",
+    stableId: overrides.id ?? "88888888-8888-4888-8888-888888888888",
+    reportSectionId: SECTION_ID,
+    projectId: overrides.projectId ?? null,
+    activityId: overrides.activityId ?? null,
+    type: overrides.type ?? "current",
+    text: overrides.text ?? "Item",
+    tag: overrides.tag ?? "feature",
+    workflowStatus: overrides.workflowStatus ?? "in_progress",
+    carriedOver: overrides.carriedOver ?? false,
+    priorityRank: overrides.priorityRank ?? null,
+    pausedReason: null,
+    createdAt: FIXED_TIMESTAMP,
+    updatedAt: FIXED_TIMESTAMP,
+    stageNames: overrides.stageNames ?? [],
+    project: overrides.project ?? null,
+    recordComments: [],
+  };
+}
+
+function fullRisk(
+  overrides: Partial<{
+    id: string;
+    projectId: string | null;
+    activityId: string | null;
+    risk: string;
+    impact: string;
+    mitigation: string;
+    severity: string;
+    stageNames: string[];
+    project: { name: string } | null;
+  }> = {},
+) {
+  return {
+    id: overrides.id ?? "77777777-7777-4777-8777-777777777777",
+    stableId: overrides.id ?? "77777777-7777-4777-8777-777777777777",
+    reportSectionId: SECTION_ID,
+    projectId: overrides.projectId ?? null,
+    activityId: overrides.activityId ?? null,
+    risk: overrides.risk ?? "Risk",
+    impact: overrides.impact ?? "Impact",
+    mitigation: overrides.mitigation ?? "Mitigation",
+    severity: overrides.severity ?? "at-risk",
+    createdAt: FIXED_TIMESTAMP,
+    updatedAt: FIXED_TIMESTAMP,
+    stageNames: overrides.stageNames ?? [],
+    project: overrides.project ?? null,
+    recordComments: [],
+  };
+}
+
+function fullDecision(
+  overrides: Partial<{
+    id: string;
+    productId: string | null;
+    activityId: string | null;
+    text: string;
+    owner: string;
+    deadline: Date | null;
+    impact: string;
+    resolvedAt: Date | null;
+    stageNames: string[];
+    project: { name: string } | null;
+  }> = {},
+) {
+  return {
+    id: overrides.id ?? "99999999-9999-4999-8999-999999999999",
+    stableId: overrides.id ?? "99999999-9999-4999-8999-999999999999",
+    reportSectionId: SECTION_ID,
+    productId: overrides.productId ?? null,
+    activityId: overrides.activityId ?? null,
+    text: overrides.text ?? "Decision",
+    owner: overrides.owner ?? "Owner",
+    deadline: overrides.deadline ?? null,
+    impact: overrides.impact ?? "Impact",
+    resolvedAt: overrides.resolvedAt ?? null,
+    createdAt: FIXED_TIMESTAMP,
+    updatedAt: FIXED_TIMESTAMP,
+    stageNames: overrides.stageNames ?? [],
+    project: overrides.project ?? null,
+    recordComments: [],
   };
 }
 
@@ -100,7 +249,12 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
   it("emits a name-only entry for a project a risk references but the author owns no stage on", () => {
     const section = mapRow(
       baseRow({
-        risks: [fabricatedRisk(UNOWNED_PROJECT, { name: "Foreign Project" })],
+        risks: [
+          fullRisk({
+            projectId: UNOWNED_PROJECT,
+            project: { name: "Foreign Project" },
+          }),
+        ],
       }),
     );
 
@@ -116,31 +270,18 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
     const section = mapRow(
       baseRow({
         items: [
-          {
-            id: "88888888-8888-4888-8888-888888888888",
+          fullItem({
             projectId: UNOWNED_PROJECT,
-            type: "current",
             text: "Cross-stage item",
-            tag: "feature",
-            workflowStatus: "in_progress",
-            carriedOver: false,
-            priorityRank: null,
-            stageNames: [],
             project: { name: "Foreign Project" },
-          },
+          }),
         ],
         decisions: [
-          {
-            id: "99999999-9999-4999-8999-999999999999",
-            text: "Cross-stage decision",
-            owner: "Owner",
-            deadline: null,
-            impact: "Impact",
-            resolvedAt: null,
-            stageNames: [],
+          fullDecision({
             productId: UNOWNED_PROJECT,
+            text: "Cross-stage decision",
             project: { name: "Foreign Project" },
-          },
+          }),
         ],
       }),
     );
@@ -153,7 +294,12 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
   it("excludes stage-owned projects — they already carry their name in `projects`", () => {
     const section = mapRow(
       baseRow({
-        risks: [fabricatedRisk(OWNED_PROJECT, { name: "Owned Project" })],
+        risks: [
+          fullRisk({
+            projectId: OWNED_PROJECT,
+            project: { name: "Owned Project" },
+          }),
+        ],
       }),
     );
 
@@ -170,21 +316,19 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
           name: "Lead 1",
           role: "lead",
           id: AUTHOR_ID,
+          reportingGroupId: null,
           stageAssignments: [
-            {
-              userId: AUTHOR_ID,
-              stageId: STAGE_ID,
-              projectId: OWNED_PROJECT,
-              project: {
-                id: OWNED_PROJECT,
-                name: "Archived Project",
-                archived: true,
-              },
-              stage: { id: STAGE_ID, name: "Development", sortOrder: 4 },
-            },
+            fullOwnedStageAssignment({
+              project: { name: "Archived Project", archived: true },
+            }),
           ],
         },
-        risks: [fabricatedRisk(OWNED_PROJECT, { name: "Archived Project" })],
+        risks: [
+          fullRisk({
+            projectId: OWNED_PROJECT,
+            project: { name: "Archived Project" },
+          }),
+        ],
       }),
     );
 
@@ -195,9 +339,12 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
   });
 
   it("skips rows without a loaded project relation (legacy fixture shape)", () => {
+    // report-section-prisma-payload: a real DB row's nullable `project`
+    // relation surfaces as `null`, never `undefined` — this pins the honest
+    // contract (the hand-written type used to model it as optional-absent).
     const section = mapRow(
       baseRow({
-        risks: [fabricatedRisk(UNOWNED_PROJECT, undefined)],
+        risks: [fullRisk({ projectId: UNOWNED_PROJECT, project: null })],
       }),
     );
 
@@ -219,39 +366,18 @@ describe("mapPrismaToReportSection — assigned-stage set", () => {
         name: "Lead 1",
         role: "lead",
         id: AUTHOR_ID,
+        reportingGroupId: null,
         stageAssignments: [
-          {
-            userId: AUTHOR_ID,
-            stageId: STAGE_ID,
-            projectId: OWNED_PROJECT,
-            project: {
-              id: OWNED_PROJECT,
-              name: "Owned Project",
-              archived: false,
-              // The product's full assignment set across all leads.
-              stageAssignments: [
-                {
-                  stageId: STAGE_ID,
-                  stage: { id: STAGE_ID, name: "Development", sortOrder: 4 },
-                },
-                {
-                  stageId: TESTING_STAGE_ID,
-                  stage: {
-                    id: TESTING_STAGE_ID,
-                    name: "Testing",
-                    sortOrder: 5,
-                  },
-                },
-                // Duplicate Development row (e.g. a second relation read) must
-                // dedupe by stageId, not double-count.
-                {
-                  stageId: STAGE_ID,
-                  stage: { id: STAGE_ID, name: "Development", sortOrder: 4 },
-                },
-              ],
-            },
-            stage: { id: STAGE_ID, name: "Development", sortOrder: 4 },
-          },
+          fullOwnedStageAssignment({
+            // The product's full assignment set across all leads.
+            crossLeadAssignments: [
+              fullCrossLeadAssignment(STAGE_ID, "Development", 4),
+              fullCrossLeadAssignment(TESTING_STAGE_ID, "Testing", 5),
+              // Duplicate Development row (e.g. a second relation read) must
+              // dedupe by stageId, not double-count.
+              fullCrossLeadAssignment(STAGE_ID, "Development", 4),
+            ],
+          }),
         ],
       },
     });
@@ -282,9 +408,9 @@ describe("mapPrismaToReportSection — assigned-stage set", () => {
     ]);
   });
 
-  it("falls back to an empty stageSet when the project carries no assignment relation (legacy fixture)", () => {
-    // baseRow's project omits `stageAssignments` (pre-include shape); the mapper
-    // must not throw and yields an empty set (web falls back to ownedStages).
+  it("yields an empty stageSet when the project carries no cross-lead assignment", () => {
+    // baseRow's project has an empty stageAssignments array; the mapper must
+    // not throw and yields an empty set (web falls back to ownedStages).
     const project = mapRow(baseRow()).projects.find(
       (p) => p.projectId === OWNED_PROJECT,
     );
@@ -301,31 +427,22 @@ describe("mapPrismaToReportSection — assigned-stage set", () => {
 // derived `trafficLight` — while the raw per-stage `status` stays null (D4).
 describe("mapPrismaToReportSection — own-risk product floor", () => {
   function coveringRisk(severity: "blocked" | "at-risk", stageNames: string[]) {
-    return {
-      id: "77777777-7777-4777-8777-777777777777",
-      projectId: OWNED_PROJECT,
+    return fullRisk({
       risk: "Own covering risk",
       impact: "High",
       mitigation: "Mitigate",
+      projectId: OWNED_PROJECT,
       severity,
       stageNames,
       project: { name: "Owned Project" },
-    };
+    });
   }
 
   it("floors red for a covers-all blocked own risk on an owned empty stage", () => {
     const section = mapRow(
       baseRow({
         projectStatuses: [
-          {
-            projectId: OWNED_PROJECT,
-            status: "green",
-            project: {
-              id: OWNED_PROJECT,
-              name: "Owned Project",
-              archived: false,
-            },
-          },
+          fullProjectStatus({ projectId: OWNED_PROJECT, status: "green" }),
         ],
         risks: [coveringRisk("blocked", [])],
       }),
@@ -342,15 +459,7 @@ describe("mapPrismaToReportSection — own-risk product floor", () => {
     const section = mapRow(
       baseRow({
         projectStatuses: [
-          {
-            projectId: OWNED_PROJECT,
-            status: "green",
-            project: {
-              id: OWNED_PROJECT,
-              name: "Owned Project",
-              archived: false,
-            },
-          },
+          fullProjectStatus({ projectId: OWNED_PROJECT, status: "green" }),
         ],
         risks: [coveringRisk("at-risk", [])],
       }),
@@ -365,15 +474,7 @@ describe("mapPrismaToReportSection — own-risk product floor", () => {
     const section = mapRow(
       baseRow({
         projectStatuses: [
-          {
-            projectId: OWNED_PROJECT,
-            status: "red",
-            project: {
-              id: OWNED_PROJECT,
-              name: "Owned Project",
-              archived: false,
-            },
-          },
+          fullProjectStatus({ projectId: OWNED_PROJECT, status: "red" }),
         ],
         risks: [coveringRisk("at-risk", [])],
       }),
@@ -393,15 +494,7 @@ describe("mapPrismaToReportSection — own-risk product floor", () => {
     const section = mapRow(
       baseRow({
         projectStatuses: [
-          {
-            projectId: OWNED_PROJECT,
-            status: "green",
-            project: {
-              id: OWNED_PROJECT,
-              name: "Owned Project",
-              archived: false,
-            },
-          },
+          fullProjectStatus({ projectId: OWNED_PROJECT, status: "green" }),
         ],
         // Author owns Development; this blocked risk names Testing only.
         risks: [coveringRisk("blocked", ["Testing"])],
@@ -421,11 +514,16 @@ describe("mapPrismaToReportSection — own-risk product floor", () => {
 // ---------------------------------------------------------------------------
 
 describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set", () => {
-  function makeTx(updateCount: number) {
+  function makeTx(updateCount: number, reReadResult: FabricatedRow | null) {
     const noop = vi.fn(() => Promise.resolve({ count: 0 }));
     return {
       reportSection: {
         updateMany: vi.fn(() => Promise.resolve({ count: updateCount })),
+        // report-section-prisma-payload: the re-read now happens INSIDE the
+        // transaction (on `tx`, not the outer `prisma` client) — it carries
+        // the row's NEW version, so the returned model must reflect this
+        // fresh fetch rather than echoing the stale input.
+        findUnique: vi.fn(() => Promise.resolve(reReadResult)),
       },
       projectStatus: { deleteMany: noop, createMany: noop },
       stageStatus: { deleteMany: noop, createMany: noop },
@@ -447,18 +545,9 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
   }
 
   function buildRepo(updateCount: number, reReadVersion = 1) {
-    const tx = makeTx(updateCount);
+    const tx = makeTx(updateCount, baseRow({ version: reReadVersion }));
     const prisma = {
-      $transaction: vi.fn((cb: (t: typeof tx) => unknown) =>
-        Promise.resolve(cb(tx)),
-      ),
-      reportSection: {
-        // The post-commit re-read carries the row's NEW version; the returned
-        // read model must reflect this fresh fetch, not the input section.
-        findUnique: vi.fn(() =>
-          Promise.resolve(baseRow({ version: reReadVersion })),
-        ),
-      },
+      $transaction: vi.fn((cb: (t: typeof tx) => unknown) => cb(tx)),
     };
     const repo = new ReportSectionsPrismaRepository(prisma as never);
     return { repo, tx };
@@ -485,6 +574,12 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
     );
     // The compare-and-set matched, so the delete-then-recreate ran.
     expect(tx.item.deleteMany).toHaveBeenCalled();
+    // The re-read happened on `tx` (inside the transaction), never on a
+    // separate outer client.
+    expect(tx.reportSection.findUnique).toHaveBeenCalledWith({
+      where: { id: section.reportSectionId },
+      include: expect.anything() as unknown,
+    });
     // The returned read model reflects the post-increment re-read.
     expect(saved.version).toBe(4);
   });
@@ -498,6 +593,23 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
     // Conflict aborts BEFORE any deleteMany — no child rows touched.
     expect(tx.item.deleteMany).not.toHaveBeenCalled();
   });
+
+  it("concurrent deletion: an empty in-transaction re-read throws SectionVersionConflictError, not a crash", async () => {
+    // report-section-prisma-payload: this scenario is structurally
+    // unreachable in a real Postgres transaction (the delete's cascade would
+    // block on this transaction's locks), but the defensive guard must still
+    // convert a `null` re-read into the same clean conflict error the client
+    // already retries on — never crash on `null.id`.
+    const tx = makeTx(1, null);
+    const prisma = {
+      $transaction: vi.fn((cb: (t: typeof tx) => unknown) => cb(tx)),
+    };
+    const repo = new ReportSectionsPrismaRepository(prisma as never);
+
+    await expect(repo.saveSection(section, 3)).rejects.toBeInstanceOf(
+      SectionVersionConflictError,
+    );
+  });
 });
 
 // activity-first-class: the mapper keeps activity-parented records in the FLAT
@@ -508,41 +620,32 @@ describe("mapPrismaToReportSection — activity derived-status floor", () => {
   const ACTIVITY_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const LINKED_PRODUCT = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
-  const activityItem = (workflowStatus: string) => ({
-    id: "99999999-9999-4999-8999-999999999999",
-    projectId: null,
-    activityId: ACTIVITY_ID,
-    type: "current",
-    text: "Activity item",
-    tag: "feature",
-    workflowStatus,
-    carriedOver: false,
-    priorityRank: null,
-    stageNames: [],
-  });
+  const activityItem = (
+    workflowStatus: "planned" | "in_progress" | "paused" | "postponed" | "done",
+  ) =>
+    fullItem({
+      activityId: ACTIVITY_ID,
+      text: "Activity item",
+      workflowStatus,
+    });
 
-  const activityRisk = (severity: string) => ({
-    id: "77777777-7777-4777-8777-777777777777",
-    projectId: null,
-    activityId: ACTIVITY_ID,
-    risk: "Activity risk",
-    impact: "Impact",
-    mitigation: "Mitigation",
-    severity,
-    stageNames: [],
-  });
+  const activityRisk = (severity: string) =>
+    fullRisk({ activityId: ACTIVITY_ID, risk: "Activity risk", severity });
 
   const activityRow = (over: {
-    items?: unknown[];
-    risks?: unknown[];
-    storedStatus?: string | null;
-  }) =>
-    ({
-      ...baseRow({}),
+    items?: ReturnType<typeof fullItem>[];
+    risks?: ReturnType<typeof fullRisk>[];
+    storedStatus?: TrafficLightStatus | null;
+  }): FabricatedRow =>
+    baseRow({
       items: over.items ?? [],
       risks: over.risks ?? [],
       activityStatuses: [
         {
+          id: `${ACTIVITY_ID}-status`,
+          reportSectionId: SECTION_ID,
+          createdAt: FIXED_TIMESTAMP,
+          updatedAt: FIXED_TIMESTAMP,
           activityId: ACTIVITY_ID,
           status: over.storedStatus ?? "green",
           note: null,
@@ -554,7 +657,7 @@ describe("mapPrismaToReportSection — activity derived-status floor", () => {
           },
         },
       ],
-    }) as unknown as FabricatedRow;
+    });
 
   it("keeps an activity-parented item in the flat items array, product FK null", () => {
     const section = mapRow(
