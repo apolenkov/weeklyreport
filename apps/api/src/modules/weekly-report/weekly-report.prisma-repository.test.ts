@@ -262,7 +262,7 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
         },
       ],
       decisions: [],
-      // report-section-prisma-payload: the generated payload always carries
+      // the generated payload always carries
       // these as real (possibly empty) arrays — the mapper no longer
       // defends against `undefined` here.
       activityStatuses: [],
@@ -372,7 +372,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
             },
           ],
           decisions: [],
-          // report-section-prisma-payload: the generated payload always
+          // the generated payload always
           // carries these as real (possibly empty) arrays — the mapper no
           // longer defends against `undefined` here.
           activityStatuses: [],

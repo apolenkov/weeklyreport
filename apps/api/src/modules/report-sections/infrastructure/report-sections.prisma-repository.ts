@@ -31,10 +31,10 @@ import {
  * cards, ProjectStatus writes, and submit validation).
  */
 export const reportSectionFullInclude = {
-  // report-section-prisma-payload: this constant is the SINGLE contract every
-  // report-section read shares. `mapPrismaToReportSection`'s parameter type is
-  // derived from it below (`Prisma.ReportSectionGetPayload`) — a query change
-  // here changes that type for every consumer automatically.
+  // This constant is the SINGLE contract every report-section read shares.
+  // `mapPrismaToReportSection`'s parameter type is derived from it below
+  // (`Prisma.ReportSectionGetPayload`) — a query change here changes that
+  // type for every consumer automatically.
   author: {
     select: {
       name: true,
@@ -118,10 +118,10 @@ export const reportSectionFullInclude = {
 } as const satisfies Prisma.ReportSectionInclude;
 
 /**
- * report-section-prisma-payload: the report-section mapper's input, generated
- * directly from `reportSectionFullInclude` — never a hand-written mirror. A
- * query change here changes this type (and every real call site) together;
- * nothing to keep in sync by hand.
+ * The report-section mapper's input, generated directly from
+ * `reportSectionFullInclude` — never a hand-written mirror. A query change
+ * here changes this type (and every real call site) together; nothing to
+ * keep in sync by hand.
  */
 export type PrismaReportSectionWithRelations = Prisma.ReportSectionGetPayload<{
   include: typeof reportSectionFullInclude;
@@ -897,8 +897,8 @@ export class ReportSectionsPrismaRepository
           // by lineage). Atomic with the version bump above.
           await reinsertRecordComments(tx, sectionId, capturedComments);
 
-          // report-section-prisma-payload: re-read INSIDE this still-open
-          // transaction (read-your-own-writes), not after it commits. The
+          // Re-read INSIDE this still-open transaction (read-your-own-writes),
+          // not after it commits. The
           // compare-and-set above already holds this transaction's row lock
           // on THIS ReportSection; a concurrent report delete's cascade needs
           // that same row lock to proceed and blocks until this transaction
