@@ -27,7 +27,10 @@ vi.mock("../../lib/trpc-context", () => ({
   }),
 }));
 
-import { DevRoleSwitcher } from "./role-switcher";
+import type { DbRole } from "@customreport/shared";
+import { expectTypeOf } from "vitest";
+
+import { DevRoleSwitcher, ROLE_ORDER } from "./role-switcher";
 
 const SEED_USER = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -88,5 +91,15 @@ describe("DevRoleSwitcher — data-reset controls for every dev role", () => {
     ).toBeInTheDocument();
     // The role picker itself still renders — only the Data reset block is gated.
     expect(screen.getByTestId("dev-role-switcher-logout")).toBeInTheDocument();
+  });
+});
+
+describe("ROLE_ORDER — completeness pin (role-type spec)", () => {
+  it("covers every DbRole member exactly", () => {
+    // Compile-time: the hand-ordered tuple's member union must equal DbRole,
+    // so adding a role to the persistence axis is a test failure until the
+    // switcher's picker shows it.
+    expectTypeOf<(typeof ROLE_ORDER)[number]>().toEqualTypeOf<DbRole>();
+    expect(new Set(ROLE_ORDER).size).toBe(ROLE_ORDER.length);
   });
 });

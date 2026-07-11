@@ -1,5 +1,6 @@
 "use client";
 
+import type { DbRole } from "@customreport/shared";
 import { shortName } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
@@ -8,11 +9,7 @@ import { toast } from "sonner";
 import { invalidateAdmin } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
-import type {
-  MockGroup,
-  MockUser,
-  UserRole,
-} from "../../../shared/lib/admin-mock-data";
+import type { MockGroup, MockUser } from "../../../shared/lib/admin-mock-data";
 import { toAdminUserInput } from "../model/admin";
 import { TabFilter, TabHeader, TabSearch } from "./tab-header";
 
@@ -22,7 +19,7 @@ interface UserFormData {
   middleName: string;
   position: string;
   email: string;
-  role: UserRole;
+  role: DbRole;
   groupId: string;
 }
 
@@ -515,7 +512,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                   id="user-role"
                   value={form.role}
                   onChange={(e) => {
-                    const role = e.target.value as UserRole;
+                    const role = e.target.value as DbRole;
                     setForm({
                       ...form,
                       role,
@@ -634,8 +631,8 @@ export function UsersTab({ users, groups }: UsersTabProps) {
 
 // ---- Helper components ----
 
-function RoleBadge({ role }: { readonly role: UserRole }) {
-  const styles: Record<UserRole, { bg: string; text: string }> = {
+function RoleBadge({ role }: { readonly role: DbRole }) {
+  const styles: Record<DbRole, { bg: string; text: string }> = {
     lead: { bg: "var(--color-success)", text: "var(--color-primary)" },
     head: { bg: "#e8e0f0", text: "#6b21a8" },
     admin: { bg: "#fef3c7", text: "#92400e" },

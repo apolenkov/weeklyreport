@@ -1,4 +1,5 @@
 import type {
+  DbRole,
   ReportSectionReadModel,
   TrafficLightStatus,
 } from "@customreport/shared";
@@ -631,7 +632,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       {
         authorId: string;
         authorName: string;
-        authorRole: "lead" | "head" | "admin" | "viewer";
+        authorRole: DbRole;
         sharedProjectIds: Set<string>;
         stageAssignments: {
           projectId: string;

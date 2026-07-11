@@ -1,4 +1,5 @@
 import type {
+  DbRole,
   ReportSectionReadModel,
   TrafficLightStatus,
 } from "@customreport/shared";
@@ -189,7 +190,7 @@ export interface CrossAuthorSectionRow {
   authorId: string;
   authorName: string;
   /** The author's access role — the slide legend labels every author with it. */
-  authorRole: "lead" | "head" | "admin" | "viewer";
+  authorRole: DbRole;
   sharedProductIds: string[];
   /** Risk-derived foreign stage chips per shared product (covers-all aware). */
   stages: {

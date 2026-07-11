@@ -2,6 +2,7 @@
 
 import type {
   ReportSectionReadModel,
+  Role,
   WeeklyReportReadModel,
 } from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -294,7 +295,7 @@ function ToolbarExportControl({
   return null;
 }
 
-type CurrentRole = "lead" | "head" | "viewer" | "admin" | null;
+type CurrentRole = Role | null;
 type LivePeriodStatus = "open" | "published" | "reopened";
 
 interface ReviewModel {

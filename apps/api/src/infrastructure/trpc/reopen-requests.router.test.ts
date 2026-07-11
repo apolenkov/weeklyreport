@@ -1,3 +1,4 @@
+import type { Role } from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -19,8 +20,6 @@ const GROUP_ID = "99999999-9999-4999-8999-999999999999";
 const REQUEST_ID = "11111111-1111-4111-8111-111111111111";
 const SECTION_ID = "22222222-2222-4222-8222-222222222222";
 const USER_ID = "33333333-3333-4333-8333-333333333333";
-
-type Role = "head" | "admin" | "lead" | "viewer";
 
 function makeSession(role: Role) {
   return {

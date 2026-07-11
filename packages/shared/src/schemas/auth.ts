@@ -27,10 +27,12 @@ export const sessionRoleSchema = z.enum(["lead", "head", "admin", "viewer"]);
  * Display label for a role. Single source consumed by the login page, the dev
  * role-switcher, and the lead-form author mapper, so a role's label cannot
  * drift between surfaces (the head label was once "Department Head" in one copy
- * and "Head" in two others). Exhaustive on the role enum — adding a role is a
+ * and "Head" in two others). Keyed by BOTH axes — session `Role` consumers and
+ * `DbRole` consumers (the author mapper) share it, and the union keeps the map
+ * total over both if the axes ever diverge. Adding a role to either axis is a
  * compile error until it has a label.
  */
-export const ROLE_LABEL: Record<Role, string> = {
+export const ROLE_LABEL: Record<Role | DbRole, string> = {
   lead: "Lead",
   head: "Head",
   admin: "Admin",

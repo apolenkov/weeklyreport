@@ -1,3 +1,4 @@
+import type { DbRole } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
 import type { Request } from "express";
 import jwt from "jsonwebtoken";
@@ -241,7 +242,7 @@ interface RequesterUser {
   id: string;
   email: string;
   name: string;
-  role: "lead" | "head" | "admin" | "viewer";
+  role: DbRole;
   reportingGroupId: string | null;
 }
 

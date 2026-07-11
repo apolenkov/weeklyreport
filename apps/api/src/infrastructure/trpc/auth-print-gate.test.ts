@@ -1,3 +1,4 @@
+import type { Role } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
@@ -40,7 +41,7 @@ function buildCaller(ctx: {
   });
 }
 
-function makeSession(role: "lead" | "head" | "admin" | "viewer") {
+function makeSession(role: Role) {
   return {
     userId: "44444444-4444-4444-8444-444444444444",
     email: `${role}@test.local`,

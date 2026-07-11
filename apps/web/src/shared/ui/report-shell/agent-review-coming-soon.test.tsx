@@ -9,6 +9,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
+import type { Role } from "@customreport/shared";
 import { render, screen, within } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -192,9 +193,7 @@ function searchParamsOf(authorId?: string): Promise<{ authorId?: string }> {
   return Promise.resolve({ authorId });
 }
 
-function sessionOf(
-  role: "lead" | "head" | "admin" | "viewer",
-): PrintRouteContext["session"] {
+function sessionOf(role: Role): PrintRouteContext["session"] {
   return {
     userId: "44444444-4444-4444-8444-444444444444",
     email: `${role}@test.local`,

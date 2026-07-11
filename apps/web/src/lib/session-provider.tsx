@@ -1,5 +1,6 @@
 "use client";
 
+import type { Role } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 import {
   createContext,
@@ -37,7 +38,7 @@ export interface SessionUser {
   firstName?: string;
   middleName?: string | null;
   email: string;
-  role: "lead" | "head" | "viewer" | "admin";
+  role: Role;
   reportingGroupName?: string;
 }
 

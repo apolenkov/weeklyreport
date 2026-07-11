@@ -33,6 +33,9 @@ export type SeedUser = {
   middleName: string | null;
   position: string | null;
   email: string;
+  // Literal mirror of the shared role SSOT (role-type spec, DbRole): the
+  // prisma seed toolchain (tsconfig.prisma.json) cannot resolve workspace
+  // packages, so this one field keeps the four literals inline.
   role: "head" | "viewer" | "admin" | "lead";
   samlId: string;
   reportingGroupId: string | null;

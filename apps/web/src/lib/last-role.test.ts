@@ -1,6 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
+import { sessionRoleSchema } from "@customreport/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -12,8 +13,8 @@ import {
 } from "./last-role";
 
 /**
- * UFB-071 (2026-05-11): last-role storage helper tests. Pins the
- * round-trip contract, malformed-value tolerance, and SSR safety.
+ * Last-role storage helper tests: pin the round-trip contract,
+ * malformed-value tolerance, and SSR safety.
  *
  * jsdom 26 (via vitest 4) does NOT ship a working `localStorage` by
  * default; we stub a minimal in-memory implementation per test so the
@@ -90,6 +91,13 @@ describe("last-role helper", () => {
       }),
     );
     expect(readLastRole()).toBeNull();
+  });
+
+  it("round-trips every session role (role-type guard parity)", () => {
+    for (const role of sessionRoleSchema.options) {
+      writeLastRole({ ...sample, role });
+      expect(readLastRole()).toEqual({ ...sample, role });
+    }
   });
 
   it("clearLastRole removes the key", () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import type { DbRole } from "@customreport/shared";
 import { ROLE_LABEL } from "@customreport/shared";
 import { Button } from "@customreport/ui/components/ui/button";
 import {
@@ -17,10 +18,16 @@ import { useState } from "react";
 import { useTRPC } from "../../lib/trpc-context";
 import { webEnv } from "../../lib/web-env";
 
-type Role = "head" | "lead" | "admin" | "viewer";
 type DataResetVariant = "small" | "middle" | "huge" | "manual-uat";
 
-const ROLE_ORDER: Role[] = ["head", "admin", "lead", "viewer"];
+// Presentation order, hand-written on purpose (differs from the schema order).
+// Exported only for the completeness pin in its test.
+export const ROLE_ORDER = [
+  "head",
+  "admin",
+  "lead",
+  "viewer",
+] as const satisfies readonly DbRole[];
 const LOGOUT_PATH = "/auth/logout";
 
 export function DevRoleSwitcher() {
@@ -59,7 +66,7 @@ export function DevRoleSwitcher() {
     return null;
   }
 
-  const switchTo = (identity: { role: Role; email: string }) => {
+  const switchTo = (identity: { role: DbRole; email: string }) => {
     setPending(true);
     const params = new URLSearchParams({
       role: identity.role,
@@ -74,7 +81,7 @@ export function DevRoleSwitcher() {
   };
 
   const usersByRole = (usersQ.data ?? []).reduce<
-    Record<Role, { id: string; email: string; name: string; role: Role }[]>
+    Record<DbRole, { id: string; email: string; name: string; role: DbRole }[]>
   >(
     (acc, u) => {
       const r = u.role;
