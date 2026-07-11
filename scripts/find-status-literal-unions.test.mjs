@@ -94,6 +94,17 @@ test("backtick literal types fire", () => {
   assert.match(result.stdout, /TrafficLightStatus/);
 });
 
+test("z.union of z.literal chains fires for both vocabularies", () => {
+  const result = scan({
+    "a.ts": `const s = z.union([z.literal("green"), z.literal("yellow"), z.literal("red")]);`,
+    "b.ts": `const s = z.union([z.literal("draft"), z.literal("published")]);`,
+    // non-literal union members must not false-positive
+    "c.ts": `const s = z.union([z.string(), z.number()]);`,
+  });
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stdout, /2 status literal-union hit\(s\)/);
+});
+
 test("a // inside a string does not hide a union on the same line", () => {
   const result = scan({
     "a.ts": `const u = "//cdn.example.com"; type S = "green" | "yellow" | "red";`,

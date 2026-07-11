@@ -97,17 +97,26 @@ const violation = (literals) => {
 // scope (status-type-ssot-gate).
 const UNION_CHAIN = /["'`][^"'`\n]*["'`](?:\s*\|\s*["'`][^"'`\n]*["'`])+/g;
 const Z_ENUM = /z\.enum\(\s*\[([^\]]*)\]/g;
+// z.union([z.literal("green"), z.literal("yellow"), z.literal("red")]) is a
+// distinct zod idiom from z.enum and evades UNION_CHAIN (no `|` between
+// members). literalsOf() extracts the quoted values from the captured span
+// regardless of which zod call wraps them, so this is safe against
+// non-literal union members (z.string(), z.number(), ...) — they simply
+// contribute no literals and never trip `violation`.
+const Z_UNION = /z\.union\(\s*\[([^\]]*)\]/g;
 
 const lineAt = (source, index) => source.slice(0, index).split("\n").length;
 
 const scanFile = (file) => {
   const source = stripComments(fs.readFileSync(file, "utf8"));
-  return [...source.matchAll(UNION_CHAIN), ...source.matchAll(Z_ENUM)].flatMap(
-    (match) => {
-      const label = violation(literalsOf(match[0]));
-      return label ? [`  ${lineAt(source, match.index)}: ${label}`] : [];
-    },
-  );
+  return [
+    ...source.matchAll(UNION_CHAIN),
+    ...source.matchAll(Z_ENUM),
+    ...source.matchAll(Z_UNION),
+  ].flatMap((match) => {
+    const label = violation(literalsOf(match[0]));
+    return label ? [`  ${lineAt(source, match.index)}: ${label}`] : [];
+  });
 };
 
 const perFile = new Map(
