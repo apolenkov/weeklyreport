@@ -7,13 +7,12 @@
  */
 
 import type {
+  DbRole,
   ReminderAudience,
   ReminderPolicyKind,
 } from "@customreport/shared";
 
 export type { StageName } from "@customreport/shared";
-
-export type UserRole = "lead" | "head" | "admin" | "viewer";
 
 export interface MockUser {
   id: string;
@@ -27,7 +26,7 @@ export interface MockUser {
   // Admin-maintained HR job title (должность), independent of `role`.
   position: string | null;
   email: string;
-  role: UserRole;
+  role: DbRole;
   groupId: string;
   // Reporting-group display label (NOT an HR field — distinct from `position`).
   department: string;

@@ -1,3 +1,4 @@
+import type { Role } from "@customreport/shared";
 import { weeklyReportReadModelSchema } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
@@ -40,7 +41,7 @@ function makeReadModel() {
   });
 }
 
-function makeSession(role: "lead" | "head" | "admin" | "viewer") {
+function makeSession(role: Role) {
   return {
     userId: "44444444-4444-4444-8444-444444444444",
     email: `${role}@test.local`,
@@ -51,10 +52,7 @@ function makeSession(role: "lead" | "head" | "admin" | "viewer") {
   };
 }
 
-function buildCaller(
-  serviceResult: WeeklyReportServiceResult,
-  role: "lead" | "head" | "admin" | "viewer",
-) {
+function buildCaller(serviceResult: WeeklyReportServiceResult, role: Role) {
   const scopeAccessed = vi.fn();
   const auditLogger = { ...createNullAuditLogger(), scopeAccessed };
   const deps = {

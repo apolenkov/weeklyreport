@@ -84,7 +84,6 @@ export type {
   PeriodStatus,
   StageAssignment,
   StageName,
-  UserRole,
 } from "./admin-types";
 
 // ---- Helpers ----

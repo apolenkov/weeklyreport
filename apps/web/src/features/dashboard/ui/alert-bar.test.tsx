@@ -7,6 +7,7 @@
  */
 import "@testing-library/jest-dom/vitest";
 
+import type { Role } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -44,7 +45,7 @@ vi.mock("../../../lib/trpc-context", () => ({
 
 import { AlertBar } from "./alert-bar";
 
-function mockRole(role: "admin" | "head" | "lead" | "viewer" | null) {
+function mockRole(role: Role | null) {
   if (role === null) {
     useQueryMock.mockReturnValue({ data: null });
     return;

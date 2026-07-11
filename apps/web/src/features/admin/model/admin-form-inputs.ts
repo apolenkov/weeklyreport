@@ -6,13 +6,12 @@
  */
 
 import type { ReportStatus } from "@customreport/shared";
+import type { DbRole } from "@customreport/shared";
 import {
   composeName,
   type ReminderAudience,
   type ReminderPolicyKind,
 } from "@customreport/shared";
-
-import type { UserRole } from "./admin-types";
 
 /**
  * Generates a v4 UUID. The browser's `crypto.randomUUID` is required by every
@@ -40,7 +39,7 @@ export interface AdminUserFormInput {
   middleName: string;
   position: string;
   email: string;
-  role: UserRole;
+  role: DbRole;
   groupId: string;
 }
 
@@ -62,7 +61,7 @@ export function toAdminUserInput(
   firstName: string;
   middleName: string | null;
   position: string | null;
-  role: UserRole;
+  role: DbRole;
   reportingGroupId: string | null;
 } {
   const lastName = form.lastName.trim();

@@ -20,6 +20,7 @@ import {
   UserActionStatus,
 } from "@prisma/client";
 
+import type { SeedUser } from "./seed-constants.js";
 import {
   SEED_USERS,
   SEED_REPORTING_GROUPS,
@@ -45,8 +46,9 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 const ADVANCED_FINANCE_GROUP_ID = "a0000000-0000-4000-8000-000000000302";
 
-// Map seed user role string to Prisma Role enum
-function toRole(role: "head" | "viewer" | "admin" | "lead"): Role {
+// Map seed user role string to Prisma Role enum. Typed from SeedUser so the
+// seed tree keeps a single literal mirror (see SeedUser.role in seed-constants).
+function toRole(role: SeedUser["role"]): Role {
   return Role[role];
 }
 

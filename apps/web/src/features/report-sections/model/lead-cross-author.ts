@@ -16,7 +16,7 @@
  *     name. Drives the `mapForeign*` content mappers below.
  */
 
-import type { TrafficLightStatus } from "@customreport/shared";
+import type { DbRole, TrafficLightStatus } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 
 import {
@@ -62,7 +62,7 @@ export interface CrossAuthorContentRow {
   authorName: string;
   /** The author's access role — the slide legend labels every author with it.
    * Optional so frozen snapshots predating the field still parse. */
-  authorRole?: "lead" | "head" | "admin" | "viewer";
+  authorRole?: DbRole;
   items: {
     id: string;
     projectId: string;

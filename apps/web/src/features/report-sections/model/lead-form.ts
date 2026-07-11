@@ -16,7 +16,7 @@ import type {
   RecordCommentView,
   ReportSectionReadModel,
 } from "@customreport/shared";
-import type { TrafficLightStatus } from "@customreport/shared";
+import type { DbRole, TrafficLightStatus } from "@customreport/shared";
 import {
   HOURS_PER_DAY,
   initialsFromName as sharedInitialsFromName,
@@ -185,7 +185,7 @@ export interface LeadCurrentUser {
    * head/admin-only form actions like "Revoke". Driven by the read model's
    * `authorRole`.
    */
-  authorRole: "lead" | "head" | "admin" | "viewer";
+  authorRole: DbRole;
 }
 
 // ---- Helpers ----
@@ -828,8 +828,7 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
   // exposed so role-based UI gating doesn't have to reverse-engineer the label
   // string. Defaults to 'lead' when the read model omits it (legacy fixtures,
   // harness-driven tests).
-  const authorRole: "lead" | "head" | "admin" | "viewer" =
-    args.active.authorRole ?? "lead";
+  const authorRole: DbRole = args.active.authorRole ?? "lead";
   const roleLabel = ROLE_LABEL[authorRole];
 
   return {
