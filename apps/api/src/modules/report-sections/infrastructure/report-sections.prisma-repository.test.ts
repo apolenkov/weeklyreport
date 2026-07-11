@@ -41,7 +41,7 @@ type FabricatedRow = Pick<
   version: number;
 };
 
-// the generated payload always carries the
+// The generated payload always carries the
 // full base scalar columns for every `include`d relation (Project, Item,
 // Risk, Decision, Stage, StageAssignment, ...), not just the fields the
 // mapper reads. These factories supply honest defaults for those columns so
@@ -339,9 +339,9 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
   });
 
   it("skips rows without a loaded project relation (legacy fixture shape)", () => {
-    // a real DB row's nullable `project`
-    // relation surfaces as `null`, never `undefined` — this pins the honest
-    // contract (the hand-written type used to model it as optional-absent).
+    // A real DB row's nullable `project` relation surfaces as `null`, never
+    // `undefined` — this pins the honest contract (the hand-written type
+    // used to model it as optional-absent).
     const section = mapRow(
       baseRow({
         risks: [fullRisk({ projectId: UNOWNED_PROJECT, project: null })],
@@ -519,10 +519,10 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
     return {
       reportSection: {
         updateMany: vi.fn(() => Promise.resolve({ count: updateCount })),
-        // the re-read now happens INSIDE the
-        // transaction (on `tx`, not the outer `prisma` client) — it carries
-        // the row's NEW version, so the returned model must reflect this
-        // fresh fetch rather than echoing the stale input.
+        // The re-read now happens INSIDE the transaction (on `tx`, not the
+        // outer `prisma` client) — it carries the row's NEW version, so the
+        // returned model must reflect this fresh fetch rather than echoing
+        // the stale input.
         findUnique: vi.fn(() => Promise.resolve(reReadResult)),
       },
       projectStatus: { deleteMany: noop, createMany: noop },
@@ -595,11 +595,11 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
   });
 
   it("concurrent deletion: an empty in-transaction re-read throws SectionVersionConflictError, not a crash", async () => {
-    // this scenario is structurally
-    // unreachable in a real Postgres transaction (the delete's cascade would
-    // block on this transaction's locks), but the defensive guard must still
-    // convert a `null` re-read into the same clean conflict error the client
-    // already retries on — never crash on `null.id`.
+    // This scenario is structurally unreachable in a real Postgres
+    // transaction (the delete's cascade would block on this transaction's
+    // locks), but the defensive guard must still convert a `null` re-read
+    // into the same clean conflict error the client already retries on —
+    // never crash on `null.id`.
     const tx = makeTx(1, null);
     const prisma = {
       $transaction: vi.fn((cb: (t: typeof tx) => unknown) => cb(tx)),
