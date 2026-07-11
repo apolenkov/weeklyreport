@@ -734,6 +734,51 @@ export default defineConfig([
       ],
     },
   },
+  // Zone 4b — repository port-type boundary (repository-port-type-boundary
+  // spec). The explicit inventory of port-declaring files: module
+  // service/contract files whose interfaces domain code and routers consume.
+  // They must not import @prisma/client — value OR type — so no port can leak
+  // a Prisma type again (the admin-shared.ts leak fixed by report-status-type
+  // is pinned by Zone 4 above). Unlike domain/, these files may use Nest —
+  // only the Prisma boundary is banned. Sanctioned Prisma users stay OUTSIDE
+  // this list: infrastructure/**, *.prisma-repository.ts adapters,
+  // transaction applicators in application/, module query internals, and lib
+  // helpers. A new port file joins this list in the change that creates it.
+  {
+    files: [
+      "apps/api/src/modules/activity/activity.service.ts",
+      "apps/api/src/modules/analytics/analytics.service.ts",
+      "apps/api/src/modules/archive/archive.service.ts",
+      "apps/api/src/modules/carry-over/carry-over.service.ts",
+      "apps/api/src/modules/organization/organization.service.ts",
+      "apps/api/src/modules/pdf-export/pdf-export.service.ts",
+      "apps/api/src/modules/period/application/period.service.ts",
+      "apps/api/src/modules/project-activity/project-activity.service.ts",
+      "apps/api/src/modules/publication/application/publication.service.ts",
+      "apps/api/src/modules/reminders/reminders.service.ts",
+      "apps/api/src/modules/report-sections/application/report-sections.service.ts",
+      "apps/api/src/modules/review/application/review-actions.service.ts",
+      "apps/api/src/modules/review/application/review.service.ts",
+      "apps/api/src/modules/search/search.service.ts",
+      "apps/api/src/modules/telemetry/telemetry.gauges.ts",
+      "apps/api/src/modules/telemetry/telemetry.service.ts",
+      "apps/api/src/modules/weekly-report/weekly-report.service.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@prisma/client"],
+              message:
+                "Port-contract files must not import @prisma/client (value OR type): return shared or locally owned read models — Prisma stays behind infrastructure adapters and sanctioned application/ applicators (repository-port-type-boundary).",
+            },
+          ],
+        },
+      ],
+    },
+  },
   // ── Immutability regime: `let` ban for production source. ──
   // A load-bearing mutable binding — a loop counter, a lazy singleton, a running
   // accumulator a functional rewrite would only obscure — keeps its `let` behind
