@@ -898,12 +898,11 @@ export class ReportSectionsPrismaRepository
           await reinsertRecordComments(tx, sectionId, capturedComments);
 
           // Re-read INSIDE this still-open transaction (read-your-own-writes),
-          // not after it commits. The
-          // compare-and-set above already holds this transaction's row lock
-          // on THIS ReportSection; a concurrent report delete's cascade needs
-          // that same row lock to proceed and blocks until this transaction
-          // finishes — so there is no longer a post-commit gap for a delete
-          // to land in.
+          // not after it commits. The compare-and-set above already holds
+          // this transaction's row lock on THIS ReportSection; a concurrent
+          // report delete's cascade needs that same row lock to proceed and
+          // blocks until this transaction finishes — so there is no longer a
+          // post-commit gap for a delete to land in.
           const saved = await tx.reportSection.findUnique({
             where: { id: sectionId },
             include: reportSectionFullInclude,
