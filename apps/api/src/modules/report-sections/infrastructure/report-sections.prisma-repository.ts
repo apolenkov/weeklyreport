@@ -31,6 +31,10 @@ import {
  * cards, ProjectStatus writes, and submit validation).
  */
 export const reportSectionFullInclude = {
+  // report-section-prisma-payload: this constant is the SINGLE contract every
+  // report-section read shares. `mapPrismaToReportSection`'s parameter type is
+  // derived from it below (`Prisma.ReportSectionGetPayload`) — a query change
+  // here changes that type for every consumer automatically.
   author: {
     select: {
       name: true,
@@ -111,151 +115,25 @@ export const reportSectionFullInclude = {
   sectionReviews: {
     include: { reviewer: { select: { name: true } } },
   },
-} as const;
+} as const satisfies Prisma.ReportSectionInclude;
 
-export type PrismaReportSectionWithRelations = NonNullable<
-  Awaited<ReturnType<PrismaService["reportSection"]["findUnique"]>>
-> & {
-  authorId: string;
-  // late column surfaced explicitly so the mapPrismaToReportSection type
-  // narrows without an `unknown` cast.
-  late: boolean;
-  author: {
-    name: string;
-    role: string;
-    id: string;
-    stageAssignments: {
-      userId: string;
-      stageId: string;
-      projectId: string;
-      // unassigned-stage-reporting-exclusion: `project.stageAssignments` is the
-      // product's full assignment set across ALL leads (used to build the
-      // per-product `stageSet`). The author's own assignments stay the outer
-      // rows that drive `ownedStages`. Optional so legacy fixtures that pre-date
-      // the include widening still map (stageSet falls back to empty).
-      project: {
-        id: string;
-        name: string;
-        archived: boolean;
-        stageAssignments?: {
-          stageId: string;
-          stage: { id: string; name: string; sortOrder: number };
-        }[];
-      };
-      stage: { id: string; name: string; sortOrder: number };
-    }[];
-  };
-  projectStatuses: {
-    projectId: string;
-    status: string;
-    project: { id: string; name: string; archived: boolean };
-  }[];
-  stageStatuses: {
-    projectId: string;
-    stageId: string;
-    status: string | null;
-    stage: { id: string; name: string; sortOrder: number };
-  }[];
-  // Project Activity statuses, hand-written to mirror the `activityStatuses`
-  // include (the generated client AND this type must both change). Optional so
-  // unit fixtures cast via `as unknown as` that predate the include still map
-  // (the mapper falls back to `[]`); a real DB row always carries the array.
-  activityStatuses?: {
-    activityId: string;
-    status: string | null;
-    note: string | null;
-    // activity-first-class: `activityProducts` mirrors the join include (the
-    // generated client AND this type must both change). Optional so legacy
-    // fixtures that predate the include still map (mapper falls back to `[]`).
-    activity: {
-      name: string;
-      activityProducts?: { product: { id: string; name: string } }[];
-    };
-  }[];
-  // review-acknowledgement: per-section verdicts, hand-written to mirror the
-  // `sectionReviews` include (memory: the generated client include AND this
-  // type must both change). Optional so unit fixtures cast via `as unknown as`
-  // that predate the include still map (the mapper falls back to `[]`); a real
-  // DB row always carries the array.
-  sectionReviews?: SectionReviewRow[];
-  items: {
-    id: string;
-    // Durable lineage key. Optional on this hand-written row type so unit-test
-    // fixtures predating the column still satisfy it; a real DB row (NOT NULL
-    // column) always carries it, and the read model treats it as optional too.
-    stableId?: string;
-    // XOR parent: exactly one of projectId / activityId is non-null (the product
-    // FK is now nullable; an activity-parented row carries `activityId` instead).
-    // `activityId` optional so unit fixtures predating the column still map.
-    projectId: string | null;
-    activityId?: string | null;
-    type: string;
-    text: string;
-    tag: string;
-    workflowStatus: string;
-    carriedOver: boolean;
-    priorityRank: number | null;
-    // require-paused-item-reason: the lead's reason for pausing. Optional here
-    // so unit fixtures predating the column still map; null on non-paused rows.
-    pausedReason?: string | null;
-    stageNames: string[];
-    // fix-lead-surface-name-resolution: ridden along by
-    // `reportSectionFullInclude`; optional so legacy fixtures that
-    // pre-date the include widening still map (name then unresolvable).
-    project?: { name: string };
-    // review-acknowledgement: reviewer comments anchored to this item.
-    recordComments?: RecordCommentRow[];
-  }[];
-  risks: {
-    id: string;
-    stableId?: string;
-    // XOR parent (see items above).
-    projectId: string | null;
-    activityId?: string | null;
-    risk: string;
-    impact: string;
-    mitigation: string;
-    severity: string;
-    stageNames: string[];
-    project?: { name: string };
-    recordComments?: RecordCommentRow[];
-  }[];
-  decisions: {
-    id: string;
-    stableId?: string;
-    text: string;
-    owner: string;
-    deadline: Date | null;
-    impact: string;
-    resolvedAt: Date | null;
-    stageNames: string[];
-    // XOR parent (full parity — an activity owns decisions too).
-    productId: string | null;
-    activityId?: string | null;
-    project?: { name: string };
-    recordComments?: RecordCommentRow[];
-  }[];
-};
+/**
+ * report-section-prisma-payload: the report-section mapper's input, generated
+ * directly from `reportSectionFullInclude` — never a hand-written mirror. A
+ * query change here changes this type (and every real call site) together;
+ * nothing to keep in sync by hand.
+ */
+export type PrismaReportSectionWithRelations = Prisma.ReportSectionGetPayload<{
+  include: typeof reportSectionFullInclude;
+}>;
 
-// review-acknowledgement: the shape of a RecordComment row as loaded by
-// `reportSectionFullInclude` (with the author's display name joined).
-interface RecordCommentRow {
-  id: string;
-  reviewerId: string;
-  text: string;
-  createdAt: Date;
-  reviewer: { name: string };
-}
-
-// review-acknowledgement: a SectionReview row as loaded by the `sectionReviews`
-// include (author's display name joined).
-interface SectionReviewRow {
-  reviewerId: string;
-  verdict: string;
-  judgedVersion: number;
-  createdAt: Date;
-  reviewer: { name: string };
-}
+// review-acknowledgement: comment/review row shapes derived by indexed access
+// from the generated payload — never hand-mirrored, so they can't drift from
+// the include above.
+type RecordCommentRow =
+  PrismaReportSectionWithRelations["items"][number]["recordComments"][number];
+type SectionReviewRow =
+  PrismaReportSectionWithRelations["sectionReviews"][number];
 
 /** Worst-case severity rank for the per-project traffic-light aggregation (any red stage wins). */
 const TRAFFIC_LIGHT_RED_SEVERITY = 3;
@@ -523,9 +401,8 @@ export function mapPrismaToReportSection(
     status: row.status,
     submittedAt: row.submittedAt,
     // late flag stamped by submitSection when `now > Report.deadline` at
-    // submit-time. Coerced to false when Prisma row predates the migration
-    // (defensive — the column default means this should never fire in practice).
-    late: (row as { late?: boolean }).late ?? false,
+    // submit-time.
+    late: row.late,
     projects: [...assignmentsByProjectId.values()]
       .map(({ project, assignments }) => {
         const ownedStages = assignments
@@ -545,10 +422,7 @@ export function mapPrismaToReportSection(
         // (a vacant stage is excluded). The writable `ownedStages` is untouched.
         const stageSet = [
           ...new Map(
-            // `?? []` guards legacy fixtures / callers that predate the
-            // `project.stageAssignments` include; real Prisma rows always carry
-            // it. An empty set lets the web fall back to `ownedStages`.
-            (project.stageAssignments ?? []).map(
+            project.stageAssignments.map(
               (sa) =>
                 [
                   sa.stageId,
@@ -608,7 +482,7 @@ export function mapPrismaToReportSection(
       priorityRank: i.priorityRank ?? null,
       pausedReason: i.pausedReason ?? null,
       stageIds: i.stageNames.length > 0 ? i.stageNames : undefined,
-      comments: toCommentViews(i.recordComments ?? []),
+      comments: toCommentViews(i.recordComments),
     })),
     risks: row.risks.map((r) => ({
       id: r.id,
@@ -621,7 +495,7 @@ export function mapPrismaToReportSection(
       mitigation: r.mitigation,
       severity: r.severity === "blocked" ? "blocked" : "at-risk",
       stageIds: r.stageNames.length > 0 ? r.stageNames : undefined,
-      comments: toCommentViews(r.recordComments ?? []),
+      comments: toCommentViews(r.recordComments),
     })),
     decisions: row.decisions.map((d) => ({
       id: d.id,
@@ -635,20 +509,20 @@ export function mapPrismaToReportSection(
       // XOR parent (full parity — an activity owns decisions too).
       productId: d.productId ?? undefined,
       activityId: d.activityId ?? undefined,
-      comments: toCommentViews(d.recordComments ?? []),
+      comments: toCommentViews(d.recordComments),
     })),
     // Every seeded activity status, name joined, name-sorted. Seeding already
     // excludes archived activities; a row seeded before a mid-period archive
     // stays listed so the delete-recreate save never silently drops it.
     // activity-first-class: each row carries its label-only `linkedProducts` and
     // the risk/blocker-derived status floor (design decision 5).
-    activities: (row.activityStatuses ?? [])
+    activities: row.activityStatuses
       .map((status) => ({
         activityId: status.activityId,
         activityName: status.activity.name,
         status: asTraffic(status.status),
         note: status.note,
-        linkedProducts: (status.activity.activityProducts ?? [])
+        linkedProducts: status.activity.activityProducts
           .map((link) => ({
             productId: link.product.id,
             productName: link.product.name,
@@ -660,7 +534,7 @@ export function mapPrismaToReportSection(
         ),
       }))
       .sort((a, b) => a.activityName.localeCompare(b.activityName, "ru")),
-    reviews: toReviewViews(row.sectionReviews ?? [], row.version),
+    reviews: toReviewViews(row.sectionReviews, row.version),
   });
 }
 
@@ -831,9 +705,7 @@ export class ReportSectionsPrismaRepository
       return null;
     }
 
-    return mapPrismaToReportSection(
-      row as unknown as PrismaReportSectionWithRelations,
-    );
+    return mapPrismaToReportSection(row);
   }
 
   /**
@@ -866,7 +738,7 @@ export class ReportSectionsPrismaRepository
     const sectionId = section.reportSectionId;
 
     try {
-      await this.prisma.$transaction(
+      return await this.prisma.$transaction(
         async (tx) => {
           // Optimistic-concurrency compare-and-set, FIRST so a conflict aborts
           // before any deleteMany runs (no child rows are touched on conflict).
@@ -1024,6 +896,29 @@ export class ReportSectionsPrismaRepository
           // Re-anchor the captured comments onto the recreated records (matched
           // by lineage). Atomic with the version bump above.
           await reinsertRecordComments(tx, sectionId, capturedComments);
+
+          // report-section-prisma-payload: re-read INSIDE this still-open
+          // transaction (read-your-own-writes), not after it commits. The
+          // compare-and-set above already holds this transaction's row lock
+          // on THIS ReportSection; a concurrent report delete's cascade needs
+          // that same row lock to proceed and blocks until this transaction
+          // finishes — so there is no longer a post-commit gap for a delete
+          // to land in.
+          const saved = await tx.reportSection.findUnique({
+            where: { id: sectionId },
+            include: reportSectionFullInclude,
+          });
+
+          if (!saved) {
+            // Defensive only: this transaction holds the row lock it just
+            // used for the compare-and-set, so a real DB should never reach
+            // this branch.
+            throw new SectionVersionConflictError(
+              "This section was changed by another save. Reload and try again.",
+            );
+          }
+
+          return mapPrismaToReportSection(saved);
         },
         { timeout: 15_000 },
       );
@@ -1042,14 +937,5 @@ export class ReportSectionsPrismaRepository
       }
       throw error;
     }
-
-    const saved = await this.prisma.reportSection.findUnique({
-      where: { id: sectionId },
-      include: reportSectionFullInclude,
-    });
-
-    return mapPrismaToReportSection(
-      saved as unknown as PrismaReportSectionWithRelations,
-    );
   }
 }

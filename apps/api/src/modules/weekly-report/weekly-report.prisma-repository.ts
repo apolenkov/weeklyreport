@@ -288,9 +288,9 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       distinctGroupIds,
     );
 
-    const mappedSections: ReportSectionReadModel[] =
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch
-      (report.sections as any[]).map(mapPrismaToReportSection);
+    const mappedSections: ReportSectionReadModel[] = report.sections.map(
+      mapPrismaToReportSection,
+    );
     const leadSections = mappedSections.map((section) => {
       const groupId = sectionGroupIds.get(section.reportSectionId) ?? null;
       return {

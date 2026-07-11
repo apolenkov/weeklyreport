@@ -575,6 +575,39 @@ describe("buildEscalationsFromReadSections — own-risk floor side effect", () =
 // pdf-export.prisma-repository.test.ts.
 describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)", () => {
   const STAGE_NAME = "Development";
+  const FIXED_TIMESTAMP = new Date("2026-01-01T00:00:00.000Z");
+
+  // report-section-prisma-payload: `buildAssembledReportFromPrismaRow` now
+  // takes the generated `Prisma.ReportGetPayload`, which carries every base
+  // scalar column (not just the ones this test reads) — these defaults keep
+  // the fixture honest without repeating them at every call site.
+  function fullProject(name: string) {
+    return {
+      id: OWNED_PRODUCT,
+      name,
+      archived: false,
+      leadId: AUTHOR_ID,
+      createdAt: FIXED_TIMESTAMP,
+      updatedAt: FIXED_TIMESTAMP,
+    };
+  }
+
+  const fullPublishedBy = {
+    id: AUTHOR_ID,
+    createdAt: FIXED_TIMESTAMP,
+    updatedAt: FIXED_TIMESTAMP,
+    email: "head@customreport.local",
+    name: "Head",
+    lastName: "Head",
+    firstName: "Head",
+    middleName: null,
+    position: null,
+    role: "head" as const,
+    samlId: "head-saml-id",
+    reportingGroupId: null,
+    notificationOptOut: false,
+    isActive: true,
+  };
 
   function reportRow(severity: "blocked" | "at-risk") {
     return {
@@ -582,34 +615,52 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
       periodStart: new Date("2026-06-01T00:00:00Z"),
       periodEnd: new Date("2026-06-07T00:00:00Z"),
       deadline: new Date("2026-06-08T00:00:00Z"),
-      status: "published",
+      status: "published" as const,
       publishedAt: new Date("2026-06-09T00:00:00Z"),
       publishedById: AUTHOR_ID,
-      publishedBy: { name: "Head" },
+      createdAt: FIXED_TIMESTAMP,
+      updatedAt: FIXED_TIMESTAMP,
+      periodStatus: "published" as const,
+      reopenedAt: null,
+      weekLabel: null,
+      archived: false,
+      autoPublished: false,
+      autoArchived: false,
+      periodState: "published" as const,
+      publishedSnapshot: null,
+      publishedBy: fullPublishedBy,
       sections: [
         {
           id: SECTION_ID,
           reportId: REPORT_ID,
           authorId: AUTHOR_ID,
-          status: "submitted",
+          status: "submitted" as const,
           submittedAt: null,
           late: false,
           version: 1,
+          createdAt: FIXED_TIMESTAMP,
+          updatedAt: FIXED_TIMESTAMP,
+          revokedAt: null,
+          revokedBy: null,
           author: {
             name: "Alice Lead",
-            role: "lead",
+            role: "lead" as const,
             id: AUTHOR_ID,
+            reportingGroupId: null,
             stageAssignments: [
               {
+                id: `${OWNED_STAGE_ID}-assignment`,
                 userId: AUTHOR_ID,
                 stageId: OWNED_STAGE_ID,
                 projectId: OWNED_PRODUCT,
-                project: {
-                  id: OWNED_PRODUCT,
-                  name: "CRM Portal",
-                  archived: false,
+                createdAt: FIXED_TIMESTAMP,
+                project: { ...fullProject("CRM Portal"), stageAssignments: [] },
+                stage: {
+                  id: OWNED_STAGE_ID,
+                  name: STAGE_NAME,
+                  sortOrder: 4,
+                  createdAt: FIXED_TIMESTAMP,
                 },
-                stage: { id: OWNED_STAGE_ID, name: STAGE_NAME, sortOrder: 4 },
               },
             ],
           },
@@ -617,13 +668,13 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
           // submitted status), one covers-all own risk.
           projectStatuses: [
             {
+              id: `${OWNED_PRODUCT}-status`,
+              reportSectionId: SECTION_ID,
+              createdAt: FIXED_TIMESTAMP,
+              updatedAt: FIXED_TIMESTAMP,
               projectId: OWNED_PRODUCT,
-              status: "green",
-              project: {
-                id: OWNED_PRODUCT,
-                name: "CRM Portal",
-                archived: false,
-              },
+              status: "green" as const,
+              project: fullProject("CRM Portal"),
             },
           ],
           stageStatuses: [],
@@ -631,6 +682,11 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
           risks: [
             {
               id: "e421b0e4-caac-4218-9f40-d062f523b86b",
+              stableId: "e421b0e4-caac-4218-9f40-d062f523b86b",
+              reportSectionId: SECTION_ID,
+              activityId: null,
+              createdAt: FIXED_TIMESTAMP,
+              updatedAt: FIXED_TIMESTAMP,
               projectId: OWNED_PRODUCT,
               risk: "Vendor outage",
               impact: "High",
@@ -638,9 +694,12 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
               severity,
               stageNames: [],
               project: { name: "CRM Portal" },
+              recordComments: [],
             },
           ],
           decisions: [],
+          activityStatuses: [],
+          sectionReviews: [],
         },
       ],
     };
