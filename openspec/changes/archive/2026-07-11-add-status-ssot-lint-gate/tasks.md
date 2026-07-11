@@ -25,4 +25,4 @@
 ## 5. Spec sync
 
 - [x] 5.1 `openspec validate add-status-ssot-lint-gate --strict` green
-- [ ] 5.2 Sync deltas to main specs on archive (backlog MODIFIED + two new capabilities)
+- [x] 5.2 Sync deltas to main specs on archive (backlog MODIFIED + two new capabilities)
