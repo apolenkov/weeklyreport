@@ -1,11 +1,17 @@
 #!/usr/bin/env node
-// Status-SSOT literal-union detector (status-type-ssot-gate spec). The two
-// status vocabularies live ONLY in packages/shared report-primitives.schema.ts;
-// this gate fails any union type or z.enum that re-declares them elsewhere:
+// Status-SSOT literal-union detector (status-type-ssot-gate spec). The status
+// vocabularies each live in ONE declaration — green/yellow/red and
+// draft/published in packages/shared report-primitives.schema.ts, the
+// canonical presentation set in apps/web/src/lib/status-presentation.ts —
+// and this gate fails any union type or zod literal list that re-declares
+// them elsewhere:
 //   - traffic light: a literal set containing ALL of green/yellow/red
 //     (extras allowed — the three colors only ever come from the SSOT);
 //   - report status: a literal set EXACTLY {draft, published} (supersets are
-//     distinct vocabularies by traced evidence and stay a review judgment).
+//     distinct vocabularies by traced evidence and stay a review judgment);
+//   - canonical presentation: a literal set containing ALL FOUR of
+//     blocked/at-risk/on-track/empty (extras allowed; subsets like the
+//     at-risk/blocked risk-severity pair stay legal).
 //
 // Usage:
 //   node scripts/find-status-literal-unions.mjs --all            # whole tree
@@ -23,6 +29,7 @@ const argPaths = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 
 const TRAFFIC = ["green", "yellow", "red"];
 const REPORT = ["draft", "published"];
+const CANONICAL = ["blocked", "at-risk", "on-track", "empty"];
 
 // The SSOT itself, plus the documented literal mirror whose tsconfig cannot
 // resolve workspace packages (report-status-type spec carve-out). Entries are
@@ -31,6 +38,9 @@ const REPORT = ["draft", "published"];
 const ALLOWLIST = [
   "packages/shared/src/schemas/report-primitives.schema.ts",
   "prisma/seed-constants.ts",
+  // The canonical presentation vocabulary's single declaration
+  // (status-presentation-model spec).
+  "apps/web/src/lib/status-presentation.ts",
 ];
 
 const IGNORE =
@@ -87,6 +97,9 @@ const violation = (literals) => {
     set.size === REPORT.length && REPORT.every((status) => set.has(status));
   if (isExactReportStatus) {
     return "re-declares the ReportStatus union — import it from @customreport/shared (report-primitives.schema.ts)";
+  }
+  if (CANONICAL.every((status) => set.has(status))) {
+    return "re-declares the CanonicalStatus union — import it from lib/status-presentation (or the StageStatus alias)";
   }
   return null;
 };

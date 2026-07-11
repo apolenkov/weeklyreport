@@ -6,6 +6,8 @@ import type {
   SectionActivity,
 } from "@customreport/shared";
 
+import type { CanonicalStatus } from "../../../lib/status-presentation";
+
 // `linkedProducts` carries a schema default, but legacy fixtures and frozen
 // pre-activity snapshots may omit it, so tolerate its absence at the type level.
 type StripActivity = Omit<SectionActivity, "linkedProducts"> & {
@@ -27,7 +29,7 @@ interface ActivitySectionSlice {
   readonly decisions?: ReportSectionReadModel["decisions"];
 }
 
-type ActivityTone = "on-track" | "at-risk" | "blocked" | "empty";
+type ActivityTone = CanonicalStatus;
 
 interface ActivityCardModel {
   readonly key: string;

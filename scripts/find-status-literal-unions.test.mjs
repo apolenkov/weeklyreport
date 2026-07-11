@@ -115,10 +115,31 @@ test("a // inside a string does not hide a union on the same line", () => {
   assert.match(result.stdout, /3 status literal-union hit\(s\)/);
 });
 
+test("the canonical presentation vocabulary fires outside its SSOT", () => {
+  const result = scan({
+    "a.ts": `type S = "on-track" | "at-risk" | "blocked" | "empty";`,
+    "b.ts": `const s = z.enum(["blocked", "at-risk", "on-track", "empty", "extra"]);`,
+  });
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stdout, /CanonicalStatus/);
+  assert.match(result.stdout, /2 status literal-union hit\(s\)/);
+});
+
+test("canonical subsets and aliases pass", () => {
+  const result = scan({
+    // the risk-severity pair (riskSeveritySchema shape)
+    "a.ts": `const s = z.enum(["at-risk", "blocked"]);`,
+    // alias composition, no literals
+    "b.ts": `type StageStatus = CanonicalStatus;`,
+  });
+  assert.equal(result.status, 0, result.stdout);
+});
+
 test("the allowlist passes at its repo-rooted paths only", () => {
   const result = scan({
     "prisma/seed-constants.ts": `type S = { status: "draft" | "published" };`,
     "packages/shared/src/schemas/report-primitives.schema.ts": `const s = z.enum(["green", "yellow", "red"]);`,
+    "apps/web/src/lib/status-presentation.ts": `type C = "blocked" | "at-risk" | "on-track" | "empty";`,
   });
   assert.equal(result.status, 0, result.stdout);
 });
