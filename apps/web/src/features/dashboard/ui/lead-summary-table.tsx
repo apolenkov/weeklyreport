@@ -1,4 +1,4 @@
-import { MS_PER_DAY } from "@customreport/shared";
+import { MS_PER_DAY, ROLE_LABEL } from "@customreport/shared";
 
 import type { LeadInfo } from "../model/dashboard";
 import { RemindLeadButton } from "./remind-lead-button";
@@ -200,7 +200,7 @@ export function LeadSummaryTable({
                     {lead.name}
                   </span>
                   <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
-                    {lead.role}
+                    {ROLE_LABEL[lead.role]}
                   </span>
                 </div>
               </div>

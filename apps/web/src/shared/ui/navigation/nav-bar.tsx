@@ -4,6 +4,7 @@ import {
   DEFAULT_ORGANIZATION_IDENTITY,
   initials as deriveInitials,
   type Role,
+  ROLE_LABEL,
 } from "@customreport/shared";
 import { ComingSoonIconButton } from "@customreport/ui/components/coming-soon-control";
 import {
@@ -101,19 +102,6 @@ const RIGHT_RAIL_CLASS =
   "relative flex items-center justify-end gap-2.5 justify-self-end xl:w-[272px]";
 const LOGOUT_BUTTON_CLASS =
   "inline-flex h-8 w-10 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]";
-
-function getRoleLabel(role: Role): string {
-  switch (role) {
-    case "admin":
-      return "Admin";
-    case "head":
-      return "Group Head";
-    case "lead":
-      return "Lead";
-    case "viewer":
-      return "Viewer";
-  }
-}
 
 function isReportDetailPath(pathname: string): boolean {
   return /^\/reports\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
@@ -245,7 +233,7 @@ export function NavBar() {
         name: visibleUser.name,
       }) || "??"
     : "?";
-  const roleLabel = role ? getRoleLabel(role) : "";
+  const roleLabel = role ? ROLE_LABEL[role] : "";
   // Show a skeleton placeholder for the brand pill while the session query
   // is in-flight, instead of flashing the DEFAULT_ORGANIZATION_IDENTITY
   // fallback ('ORG') and then swapping to the real tenant brand ('Demo'). The
@@ -488,7 +476,7 @@ function MobileNav({
       </Sheet>
       {role && (
         <span className="text-[10px] text-[var(--color-muted-foreground)]">
-          {getRoleLabel(role)}
+          {ROLE_LABEL[role]}
         </span>
       )}
     </div>

@@ -4,7 +4,7 @@
  * derive a redirect target or dev-login URL from them.
  */
 import type { DbRole, Role } from "@customreport/shared";
-import { ROLE_HOME_PATH } from "@customreport/shared";
+import { ROLE_HOME_PATH, sessionRoleSchema } from "@customreport/shared";
 
 // The per-role display label and landing route are homed once in
 // `@customreport/shared` (web-shared-idioms) so the login page, dev
@@ -50,12 +50,7 @@ export function defaultRedirectFor(role: Role | null | undefined): string {
 }
 
 export function isRole(value: unknown): value is Role {
-  return (
-    value === "lead" ||
-    value === "head" ||
-    value === "admin" ||
-    value === "viewer"
-  );
+  return sessionRoleSchema.safeParse(value).success;
 }
 
 export function getSessionRole(value: unknown): Role | undefined {

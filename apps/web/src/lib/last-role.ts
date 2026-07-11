@@ -20,7 +20,7 @@
  * never crash the landing render.
  */
 
-import type { Role } from "@customreport/shared";
+import { type Role, sessionRoleSchema } from "@customreport/shared";
 
 export interface LastRoleRecord {
   readonly role: Role;
@@ -30,12 +30,7 @@ export interface LastRoleRecord {
 
 export const LAST_ROLE_STORAGE_KEY = "customreport:lastRole";
 
-const VALID_ROLES: ReadonlySet<Role> = new Set<Role>([
-  "lead",
-  "head",
-  "admin",
-  "viewer",
-]);
+const VALID_ROLES: ReadonlySet<Role> = new Set<Role>(sessionRoleSchema.options);
 
 function isLastRoleRecord(value: unknown): value is LastRoleRecord {
   if (!value || typeof value !== "object") return false;

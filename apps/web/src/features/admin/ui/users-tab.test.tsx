@@ -14,7 +14,13 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -244,5 +250,17 @@ describe("UsersTab — focus management (autofocus-admin-dialogs)", () => {
 
     expect(screen.queryByTestId("crud-sheet")).not.toBeInTheDocument();
     expect(document.activeElement).toBe(addBtn);
+  });
+});
+
+describe("UsersTab — role label rendering (unify-role-label-presentation)", () => {
+  it("renders the head role's badge with the shared label, not the raw token", () => {
+    const headUser: MockUser = { ...USER, id: "u2", role: "head" };
+    renderTab([headUser]);
+
+    const row = screen.getByText(headUser.email).closest("tr");
+    expect(row).not.toBeNull();
+    const badge = within(row as HTMLElement).getByText(/^Head$/);
+    expect(badge.textContent).toBe("Head");
   });
 });

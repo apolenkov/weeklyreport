@@ -28,7 +28,7 @@ const baseLeadSubmitted: LeadInfo = {
   id: "lead-1",
   initials: "AL",
   name: "Alice Lead",
-  role: "Dev Lead",
+  role: "head",
   status: "submitted",
   trafficLights: [],
   lastActivity: "2026-05-14",
@@ -47,7 +47,7 @@ const baseLeadPending: LeadInfo = {
   id: "lead-2",
   initials: "BL",
   name: "Bob Lead",
-  role: "QA Lead",
+  role: "lead",
   status: "pending",
   trafficLights: [],
   lastActivity: "Not started",
@@ -95,6 +95,19 @@ describe("LeadSummaryTable", () => {
     const bobRow = leadCard("Bob Lead");
     expect(within(bobRow).getByText("Not started")).toBeVisible();
     expect(within(bobRow).getByText("-")).toBeVisible();
+  });
+
+  it("renders the lead's role via the shared ROLE_LABEL map, not the raw token", () => {
+    const leads: LeadInfo[] = [baseLeadSubmitted, baseLeadPending];
+
+    render(<LeadSummaryTable leads={leads} />);
+
+    const aliceRow = leadCard("Alice Lead");
+    expect(within(aliceRow).getByText("Head")).toBeVisible();
+    expect(within(aliceRow).queryByText("head")).not.toBeInTheDocument();
+
+    const bobRow = leadCard("Bob Lead");
+    expect(within(bobRow).getByText("Lead")).toBeVisible();
   });
 
   describe("D6: per-lead Remind gate (head-dashboard-declutter)", () => {

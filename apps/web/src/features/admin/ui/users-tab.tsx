@@ -1,7 +1,7 @@
 "use client";
 
 import type { DbRole } from "@customreport/shared";
-import { shortName } from "@customreport/shared";
+import { ROLE_LABEL, sessionRoleSchema, shortName } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -39,11 +39,11 @@ function emptyForm(groups: readonly MockGroup[]): UserFormData {
 // role quick-filter options — declared module-level so no per-render alloc
 const ROLE_OPTIONS = [
   { value: "", label: "All roles" },
-  { value: "lead", label: "Lead" },
-  { value: "head", label: "Head" },
-  { value: "admin", label: "Admin" },
-  { value: "viewer", label: "Viewer" },
-] as const;
+  ...sessionRoleSchema.options.map((role) => ({
+    value: role,
+    label: ROLE_LABEL[role],
+  })),
+];
 
 // status quick-filter — default "active" hides deactivated users on load
 const STATUS_OPTIONS = [
@@ -642,10 +642,10 @@ function RoleBadge({ role }: { readonly role: DbRole }) {
 
   return (
     <span
-      className="inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold capitalize"
+      className="inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold"
       style={{ backgroundColor: s.bg, color: s.text }}
     >
-      {role}
+      {ROLE_LABEL[role]}
     </span>
   );
 }
