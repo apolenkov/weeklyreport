@@ -146,11 +146,12 @@ files and 6 test files re-declared the `green/yellow/red` union ("amber"
 occurs in the workspace only as Tailwind CSS classes, never as a status
 value); all now import the shared type. The TARGET IS CLOSED. The lint
 regression gate for literal-union re-declaration is ALSO CLOSED — landed by
-`add-status-ssot-lint-gate` (the `status-type-ssot-gate` spec). Remaining
-named follow-ups stay open as separate future changes: consolidating the
-presentation vocabulary's triple declaration (owned by
-`status-presentation-model`) and deduplicating `TRAFFIC_RANK` /
-`statusSeverity` ranking logic.
+`add-status-ssot-lint-gate` (the `status-type-ssot-gate` spec). The
+presentation vocabulary's triple declaration is ALSO CLOSED — consolidated
+by `unify-canonical-status-type` behind `CanonicalStatus`
+(`status-presentation-model` spec). The remaining named follow-up stays open
+as a separate future change: deduplicating `TRAFFIC_RANK` / `statusSeverity`
+ranking logic.
 
 #### Scenario: the traffic-light SSOT is discoverable
 
@@ -159,9 +160,9 @@ presentation vocabulary's triple declaration (owned by
   as the single home, records the target as closed by
   `unify-traffic-light-status-type`, and links the
   `traffic-light-status-type` spec
-- **AND** it records the lint gate as closed by `add-status-ssot-lint-gate`
-  and names the remaining deferred follow-ups (presentation-vocabulary
-  consolidation, ranking-logic dedup) as future changes
+- **AND** it records the lint gate and the presentation-vocabulary
+  consolidation as closed and names the one remaining deferred follow-up
+  (ranking-logic dedup) as a future change
 
 ### Requirement: The repository Prisma-type leak is a recorded boundary target
 
