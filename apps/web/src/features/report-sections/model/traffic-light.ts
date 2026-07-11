@@ -4,14 +4,17 @@
  *
  * The mapper is intentionally self-contained and does NOT import from
  * mock-data.ts or any UI module; the color side comes from the shared
- * traffic-light SSOT and the presentation side stays owned here, so
- * downstream consumers can depend on the mapper layer without coupling
- * to a particular UI module.
+ * traffic-light SSOT and the presentation vocabulary from its single
+ * declaration (`CanonicalStatus` in lib/status-presentation), so downstream
+ * consumers can depend on the mapper layer without coupling to a particular
+ * UI module. `StageStatus` is the feature-domain alias of that vocabulary.
  */
 
 import type { TrafficLightStatus } from "@customreport/shared";
 
-export type StageStatus = "on-track" | "at-risk" | "blocked" | "empty";
+import type { CanonicalStatus } from "../../../lib/status-presentation";
+
+export type StageStatus = CanonicalStatus;
 
 /**
  * Converts an API TrafficLightStatus (or null for "no data") into the

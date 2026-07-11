@@ -5,7 +5,11 @@
 
 // ---- Type Definitions ----
 
-export type StageStatus = "on-track" | "at-risk" | "blocked" | "empty";
+// The vocabulary is declared once (`CanonicalStatus` in lib/status-presentation);
+// this re-export keeps the historical import path for stage-grid consumers.
+import type { StageStatus } from "./traffic-light";
+
+export type { StageStatus } from "./traffic-light";
 
 // unassigned-stage-reporting-exclusion: "unassigned" is gone — a stage is the
 // lead's own ("mine") or another lead's ("locked", read-only). A stage with no

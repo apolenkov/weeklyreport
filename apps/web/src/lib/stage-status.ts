@@ -1,13 +1,16 @@
-import type { StageStatus } from "../features/report-sections/model/traffic-light";
+import type { CanonicalStatus } from "./status-presentation";
 
-const PRECEDENCE: Record<StageStatus, number> = {
+const PRECEDENCE: Record<CanonicalStatus, number> = {
   blocked: 3,
   "at-risk": 2,
   "on-track": 1,
   empty: 0,
 };
 
-function moreSevere(current: StageStatus, candidate: StageStatus): StageStatus {
+function moreSevere(
+  current: CanonicalStatus,
+  candidate: CanonicalStatus,
+): CanonicalStatus {
   return PRECEDENCE[candidate] > PRECEDENCE[current] ? candidate : current;
 }
 
@@ -45,11 +48,11 @@ function moreSevere(current: StageStatus, candidate: StageStatus): StageStatus {
  *   traffic-only data (no backing risk) is affected.
  */
 export function deriveEffectiveStageStatus(
-  explicit: StageStatus,
+  explicit: CanonicalStatus,
   risks: readonly { severity?: string }[],
   items: readonly { workflowStatus: string }[],
-): StageStatus {
-  const riskBest = risks.reduce<StageStatus>(
+): CanonicalStatus {
+  const riskBest = risks.reduce<CanonicalStatus>(
     (best, r) =>
       moreSevere(best, r.severity === "blocked" ? "blocked" : "at-risk"),
     "empty",
