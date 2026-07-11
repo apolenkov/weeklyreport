@@ -25,22 +25,34 @@ const TRAFFIC = ["green", "yellow", "red"];
 const REPORT = ["draft", "published"];
 
 // The SSOT itself, plus the documented literal mirror whose tsconfig cannot
-// resolve workspace packages (report-status-type spec carve-out).
+// resolve workspace packages (report-status-type spec carve-out). Entries are
+// repo-root-relative and matched by full resolved path, so a same-named file
+// elsewhere in the tree is NOT exempt.
 const ALLOWLIST = [
   "packages/shared/src/schemas/report-primitives.schema.ts",
   "prisma/seed-constants.ts",
 ];
 
 const IGNORE =
-  /(^|\/)(node_modules|dist|\.next[^/]*|coverage|build|openspec\/changes\/archive)\//;
+  /(^|\/)(node_modules|dist|\.git|\.turbo|\.next[^/]*|coverage|build|test-results|playwright-report|openspec\/changes\/archive)\//;
 // Tests ARE covered (the gate is hollow otherwise) — only generated and
 // vendored trees are skipped.
 const isScannable = (f) =>
   /\.(ts|tsx)$/.test(f) && !/\.d\.ts$/.test(f) && !IGNORE.test(f);
 
+// realpath both sides so symlinked segments (macOS /var -> /private/var, or a
+// symlinked repo checkout) cannot make the same file compare unequal.
+const realOrResolved = (p) => {
+  try {
+    return fs.realpathSync(p);
+  } catch {
+    return path.resolve(p);
+  }
+};
+
 const isAllowlisted = (f) => {
-  const normalized = path.resolve(f).split(path.sep).join("/");
-  return ALLOWLIST.some((entry) => normalized.endsWith(`/${entry}`));
+  const resolved = realOrResolved(f);
+  return ALLOWLIST.some((entry) => resolved === realOrResolved(entry));
 };
 
 const walk = (d) =>
@@ -50,23 +62,21 @@ const walk = (d) =>
     return e.isDirectory() ? walk(p) : [p];
   });
 
-const files = (
-  ALL
-    ? ["apps", "packages", "prisma", "e2e"]
-        .filter((d) => fs.existsSync(d))
-        .flatMap(walk)
-    : argPaths
-).filter((f) => isScannable(f) && !isAllowlisted(f));
+const files = (ALL ? walk(".") : argPaths).filter(
+  (f) => isScannable(f) && !isAllowlisted(f),
+);
 
 // Judge code only: block comments and line comments carry no declarations.
-// The `[^:]` guard keeps `https://...` inside string literals intact.
+// A `//` counts as a line comment only at line start or after whitespace, so
+// `https://…`, protocol-relative `"//cdn…"`, and `"src//deep"` inside string
+// literals stay intact.
 const stripComments = (source) =>
   source
     .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
-    .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+    .replace(/(^|\s)\/\/[^\n]*/g, "$1");
 
 const literalsOf = (span) =>
-  [...span.matchAll(/["']([^"'\n]*)["']/g)].map((m) => m[1]);
+  [...span.matchAll(/["'`]([^"'`\n]*)["'`]/g)].map((m) => m[1]);
 
 const violation = (literals) => {
   const set = new Set(literals);
@@ -81,10 +91,11 @@ const violation = (literals) => {
   return null;
 };
 
-// A union chain: two or more string literals joined by `|` (newlines legal),
-// or a z.enum literal list. Array `as const` declarations are value lists,
-// not type re-declarations, and stay out of scope (status-type-ssot-gate).
-const UNION_CHAIN = /["'][^"'\n]*["'](?:\s*\|\s*["'][^"'\n]*["'])+/g;
+// A union chain: two or more string literals joined by `|` (newlines legal,
+// backtick literal types included), or a z.enum literal list. Array `as const`
+// declarations are value lists, not type re-declarations, and stay out of
+// scope (status-type-ssot-gate).
+const UNION_CHAIN = /["'`][^"'`\n]*["'`](?:\s*\|\s*["'`][^"'`\n]*["'`])+/g;
 const Z_ENUM = /z\.enum\(\s*\[([^\]]*)\]/g;
 
 const lineAt = (source, index) => source.slice(0, index).split("\n").length;

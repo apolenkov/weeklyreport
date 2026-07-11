@@ -22,7 +22,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:prisma:typecheck": "tsc --project tsconfig.prisma.json --noEmit",
-    "lint:status-literal-unions": "node scripts/find-status-literal-unions.mjs --all",
+    "lint:status-literal-unions": "node --test scripts/find-status-literal-unions.test.mjs && node scripts/find-status-literal-unions.mjs --all",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:e2e:integration": "pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.integration.config.ts",
