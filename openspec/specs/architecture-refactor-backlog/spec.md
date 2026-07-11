@@ -106,16 +106,12 @@ exported type names (four declarations — `UserRole` was doubled) and the
 remaining inline unions (12 declarations across 11 production files, 8 unit
 fixtures) — to the shared per-axis types (`Role` session / `DbRole`
 persistence, `role-type` spec), pinned by a `DbRole`↔Prisma identity test
-and guard parity tests. Named follow-ups stay open as separate future
-changes: (i) role-label drift (nav renders "Group Head" beside
-`ROLE_LABEL.head` "Head"; users-tab duplicates option labels; RoleBadge
-displays the raw token; dashboard widens roles to `string`); (ii) the api
-auth bridge seams (`roles.guard.ts` validates session roles with the DB
-schema; provisioning/dev-login internals type with Prisma `Role`);
-(iii) deriving `isRole`/`VALID_ROLES` from `sessionRoleSchema.options`,
-merged with the standing literal-union lint-gate follow-up; (iv) dev-email
-value centralization (web map, api map, seed users); (v) catalog role-token
-validation and stale landing prose.
+and guard parity tests. The five follow-ups it named are now all closed:
+(i) role-label drift and (iii) schema-derived membership checks were closed
+by `unify-role-label-presentation` (2026-07-11); (ii) the api auth bridge
+seams, (iv) dev-email value centralization, and (v) catalog role-token
+validation plus stale landing prose were closed by
+`finish-role-vocabulary-followups`.
 
 #### Scenario: the permission-model centralization is discoverable
 
@@ -131,7 +127,8 @@ validation and stale landing prose.
 - **WHEN** a maintainer searches for the role type contract
 - **THEN** the backlog names the two shared axis types and the `role-type`
   spec, records the vocabulary target as closed by `unify-role-type`, and
-  names the five deferred follow-ups as future changes
+  records all five follow-ups as closed by `unify-role-label-presentation`
+  and `finish-role-vocabulary-followups`
 
 ### Requirement: The traffic-light value is a recorded single-source-of-truth target
 
