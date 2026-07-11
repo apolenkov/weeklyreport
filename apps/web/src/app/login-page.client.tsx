@@ -225,7 +225,7 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
               AUTH_STUB
                 ? lastRole
                   ? devLoginHref(lastRole.role, lastRole.email)
-                  : "/auth/dev-login?role=admin&email=admin@customreport.local&redirect=%2Fadmin"
+                  : devLoginHref("admin", DEV_EMAIL_FOR_ROLE.admin)
                 : ssoHref
             }
             className="flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-4 font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-white transition-[background-color,opacity,transform] hover:bg-[var(--color-primary)] hover:-translate-y-px active:translate-y-0 active:opacity-90"

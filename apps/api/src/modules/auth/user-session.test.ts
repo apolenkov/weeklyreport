@@ -15,7 +15,7 @@ const failIfProvisioned: ProvisionLeadWorkspace = vi.fn(() => {
 });
 
 /**
- * Phase 32-C / H-01 — admin SAML login regression test.
+ * Admin SAML login regression test.
  *
  * Pre-fix: `buildUserSession` cast `profile.role as 'lead' | 'head' | 'viewer'`
  * before passing it to `prisma.user.create`. Prisma's `Role` enum was
@@ -23,10 +23,10 @@ const failIfProvisioned: ProvisionLeadWorkspace = vi.fn(() => {
  * threw "Invalid enum value" on first admin SAML login.
  *
  * Post-fix: Prisma `Role` enum now includes `admin`, the cast is gone,
- * `SamlProfile.role` is typed as `Role`, and the session round-trips the
+ * `SamlProfile.role` is typed as `DbRole`, and the session round-trips the
  * 'admin' role through to UserSession.
  */
-describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
+describe("buildUserSession — admin SAML login", () => {
   function fakePrisma(opts: {
     existingUser?: {
       id: string;
