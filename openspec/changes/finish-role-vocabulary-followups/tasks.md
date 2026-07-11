@@ -35,8 +35,12 @@
 - [x] 2.5 `prisma/seed-simple.ts`: import the same 4 constants from
       `seed-constants.ts`; replace its 4 matching literal emails. Its other 10
       users and its independent `FINANCE_GROUP` topology are untouched
-- [x] 2.6 No drift-guard test added (a mismatch between the shared map and a
-      seeded email already 404s loudly in `resolveDevLoginIdentity`)
+- [x] 2.6 No drift-guard test added. An **unseeded** mapped email fails
+      clearly — `resolveDevLoginIdentity` returns `null`. A mapped email that
+      resolves to the _wrong existing_ seeded user is not caught: the login
+      resync at `user-session.ts` overwrites that user's role with the
+      requested role. Dev/UAT DBs are disposable and reseeded via `migrate
+  reset`, so this is an acceptable risk, not a 404
 
 ## 3. Catalog role-token validation + landing-doc sync (follow-up v)
 

@@ -21,3 +21,19 @@ string.
   human checklist renderer (`render-checklist.mjs`) surface the failure
   instead of silently treating the row as having no role or an empty access
   list
+
+## MODIFIED Requirements
+
+### Requirement: The catalog is documentation, not a new test runner
+
+The catalog MUST be stored as `.yaml` catalog documents under `e2e/catalog/`,
+one per module. Automation MUST grow the existing native `@playwright/test`
+and Vitest suites; a BDD runner MUST NOT be introduced, to avoid a second
+competing test framework in the repo.
+
+#### Scenario: automation reuses the existing harness
+
+- **WHEN** a catalog scenario is automated
+- **THEN** the resulting test is added to the existing `e2e/` Playwright suite or
+  a Vitest suite
+- **AND** no BDD-runner dependency is added to the workspace
