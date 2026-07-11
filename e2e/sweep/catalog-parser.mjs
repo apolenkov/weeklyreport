@@ -11,6 +11,24 @@
 // the catalog identically.
 // ============================================================================
 
+// Mirrors the shared `Role`/`DbRole` union (role-type spec). This tree's own
+// tsconfig has no workspace resolution and this file is plain .mjs, so the
+// four tokens are an inline literal — the same carve-out the role-vocabulary
+// unification already uses for e2e fixtures.
+const CANONICAL_ROLES = ["lead", "head", "admin", "viewer"];
+
+// A malformed role token is a corrupt catalog, not a warning: it silently
+// produces an empty/wrong access set for every route in the file, which both
+// consumers (the blocking drift gate and the human checklist) would then
+// render as if the role legitimately has no access anywhere.
+function assertValidRole(role, context) {
+  if (!CANONICAL_ROLES.includes(role)) {
+    throw new Error(
+      `Invalid role token "${role}" in ${context} — must be one of: ${CANONICAL_ROLES.join(", ")}`,
+    );
+  }
+}
+
 // Inverse of the generator's `yamlStr` (always double-quoted, \\ and \" escaped).
 export function unquote(raw) {
   const trimmed = raw.trim();
@@ -30,6 +48,7 @@ export function parseCatalog(text) {
   const roleMatch = /^role:\s*(\S+)\s*$/m.exec(text);
   if (!roleMatch) return null;
   const role = roleMatch[1];
+  assertValidRole(role, "top-level role:");
 
   const routes = [];
   let route = null;
@@ -50,6 +69,9 @@ export function parseCatalog(text) {
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean);
+      for (const accessRole of route.access) {
+        assertValidRole(accessRole, `access: [...] for route ${route.route}`);
+      }
       continue;
     }
     const idMatch = /^\s*-\s*id:\s*(\S+)\s*$/.exec(line);

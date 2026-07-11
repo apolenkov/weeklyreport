@@ -1,5 +1,10 @@
-import { ROLE_HOME_PATH, roleSchema } from "@customreport/shared";
-import type { PrismaClient, Role } from "@prisma/client";
+import type { DbRole } from "@customreport/shared";
+import {
+  DEV_LOGIN_EMAIL_BY_ROLE,
+  ROLE_HOME_PATH,
+  roleSchema,
+} from "@customreport/shared";
+import type { PrismaClient } from "@prisma/client";
 import type {
   Express,
   NextFunction,
@@ -23,16 +28,9 @@ const HTTP_NOT_FOUND = 404;
 // forbids that flag under NODE_ENV=production) — nothing here reaches
 // production. Its resync-vs-create-only role is fixed in auth-module-layering.
 
-const DEV_LOGIN_EMAIL_BY_ROLE: Record<Role, string> = {
-  head: "head@customreport.local",
-  lead: "lead1@customreport.local",
-  admin: "admin@customreport.local",
-  viewer: "viewer@customreport.local",
-};
-
-const DEV_LOGIN_DEFAULT_ROLE: Role = "head";
+const DEV_LOGIN_DEFAULT_ROLE: DbRole = "head";
 // The dev SAML-login shortcut signs in as admin (no real Keycloak locally).
-const DEV_SAML_LOGIN_ROLE: Role = "admin";
+const DEV_SAML_LOGIN_ROLE: DbRole = "admin";
 
 export interface DevLoginDeps {
   prisma: PrismaClient;
@@ -105,7 +103,7 @@ function handleDevSamlLoginRedirect(
 // than fabricating a phantom user from hardcoded defaults.
 export async function resolveDevLoginIdentity(
   prisma: PrismaClient,
-  role: Role,
+  role: DbRole,
   query: Request["query"],
 ): Promise<SamlProfile | null> {
   const email = readQueryParam(query.email) ?? DEV_LOGIN_EMAIL_BY_ROLE[role];

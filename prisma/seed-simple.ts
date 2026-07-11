@@ -51,6 +51,12 @@ import {
 } from "@prisma/client";
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 import { assertSeedCoverage } from "./seed-coverage-check.js";
+import {
+  ADMIN_EMAIL,
+  HEAD_EMAIL,
+  LEAD_1_EMAIL,
+  VIEWER_EMAIL,
+} from "./seed-constants.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -409,7 +415,7 @@ async function main() {
     data: [
       {
         id: HEAD_ID,
-        email: "head@customreport.local",
+        email: HEAD_EMAIL,
         name: "Климов Антон Сергеевич",
         lastName: "Климов",
         firstName: "Антон",
@@ -421,7 +427,7 @@ async function main() {
       },
       {
         id: VIEWER_ID,
-        email: "viewer@customreport.local",
+        email: VIEWER_EMAIL,
         name: "Власова Дарья Игоревна",
         lastName: "Власова",
         firstName: "Дарья",
@@ -433,7 +439,7 @@ async function main() {
       },
       {
         id: ADMIN_ID,
-        email: "admin@customreport.local",
+        email: ADMIN_EMAIL,
         name: "Баленков Михаил Владимирович",
         lastName: "Баленков",
         firstName: "Михаил",
@@ -445,7 +451,7 @@ async function main() {
       },
       {
         id: LEAD_1,
-        email: "lead1@customreport.local",
+        email: LEAD_1_EMAIL,
         name: "Иванов Василий Петрович",
         lastName: "Иванов",
         firstName: "Василий",

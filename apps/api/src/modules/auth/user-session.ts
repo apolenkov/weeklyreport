@@ -1,5 +1,5 @@
-import type { UserSession } from "@customreport/shared";
-import type { PrismaClient, Role } from "@prisma/client";
+import type { DbRole, UserSession } from "@customreport/shared";
+import type { PrismaClient } from "@prisma/client";
 
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 
@@ -11,7 +11,7 @@ export interface SamlProfile {
   samlId: string;
   email: string;
   displayName: string;
-  role: Role;
+  role: DbRole;
 }
 
 // Seam for provisioning a lead's workspace at login, wired in the composition
