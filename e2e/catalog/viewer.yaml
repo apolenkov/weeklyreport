@@ -12,7 +12,7 @@ routes:
         intent: "Viewer authenticates and is directed to the published reports list"
         given: "Viewer is on the landing page without an active session"
         when: "the viewer signs in (via SSO in production or dev-login in dev mode)"
-        then: "the session is established and the page auto-redirects to /reports?tab=published (the viewer's default landing after login)"
+        then: "the session is established and the page auto-redirects to /reports/latest (the viewer's default landing after login)"
         note: "UX-16 (Phase 35-08): role-aware default landing. In production, the SSO button targets /auth/saml/login. In dev mode (AUTH_STUB=true), the button targets /auth/dev-login with role=viewer and the default email viewer@customreport.local. The redirect is deterministic and role-scoped—no viewer-specific form or choice on this page."
   - route: /reports
     access: [viewer]

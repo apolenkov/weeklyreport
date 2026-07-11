@@ -34,6 +34,19 @@ import { loginByCookie } from "./helpers/dev-auth";
 
 type Role = "lead" | "head" | "admin" | "viewer";
 
+// This tree's isolated tsconfig has no workspace resolution, so the canonical
+// set is an inline literal (same carve-out as catalog-parser.mjs) rather than
+// importing `sessionRoleSchema` from @customreport/shared.
+const CANONICAL_ROLES: readonly Role[] = ["lead", "head", "admin", "viewer"];
+
+function assertValidRole(role: string, context: string): asserts role is Role {
+  if (!(CANONICAL_ROLES as readonly string[]).includes(role)) {
+    throw new Error(
+      `Invalid role token "${role}" in ${context} — must be one of: ${CANONICAL_ROLES.join(", ")}`,
+    );
+  }
+}
+
 type CatalogRoute = {
   route: string;
   access?: Role[];
@@ -111,7 +124,8 @@ function parseCatalog(text: string): Catalog | null {
   if (!roleMatch) {
     return null;
   }
-  const role = roleMatch[1] as Role;
+  const role = roleMatch[1];
+  assertValidRole(role, "top-level role:");
 
   const lines = text.split("\n");
   const routes: CatalogRoute[] = [];
@@ -129,10 +143,16 @@ function parseCatalog(text: string): Catalog | null {
       }
       const accessMatch = /^\s*access:\s*\[(.*)\]\s*$/.exec(lines[j]);
       if (accessMatch) {
-        access = accessMatch[1]
+        const tokens = accessMatch[1]
           .split(",")
           .map((token) => token.trim())
-          .filter(Boolean) as Role[];
+          .filter(Boolean);
+        for (const token of tokens) {
+          assertValidRole(token, `access: [...] for route ${routeMatch[1]}`);
+        }
+        // Every element was just validated against CANONICAL_ROLES above (throws
+        // on any mismatch), so this narrowing is runtime-checked, not a raw cast.
+        access = tokens as Role[];
         break;
       }
     }

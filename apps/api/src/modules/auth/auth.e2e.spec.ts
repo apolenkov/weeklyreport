@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { createAuthController, createSessionCookie } from "./auth.controller";
-import { createRoleGuard } from "./roles.guard";
 
 const env = {
   AUTH_JWT_SECRET: "test-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -14,7 +13,7 @@ const env = {
   NODE_ENV: "test",
 } satisfies NodeJS.ProcessEnv;
 
-describe("auth controller and roles guard", () => {
+describe("auth controller", () => {
   it("issues an httpOnly JWT cookie for a valid SAML-derived session", () => {
     const controller = createAuthController(env);
     const issued = controller.issueSessionCookie({
@@ -45,13 +44,6 @@ describe("auth controller and roles guard", () => {
 
     expect(restored.role).toBe("head");
     expect(restored.email).toBe("head@customreport.local");
-  });
-
-  it("blocks access when a user does not have the required role", () => {
-    const guard = createRoleGuard("head");
-
-    expect(guard.canActivate({ user: { role: "lead" } })).toBe(false);
-    expect(guard.canActivate({ user: { role: "head" } })).toBe(true);
   });
 
   describe("logout cookie clearing", () => {

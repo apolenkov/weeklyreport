@@ -30,11 +30,12 @@ const APP_VERSION = webEnv.appVersion();
  * Role-aware default landing.
  *
  * Role → default landing:
- *   - lead          → /lead/report
- *   - head | admin  → /head/dashboard
- *   - viewer        → /reports/latest  (the Status entry; per viewer-live-status
- *                     the viewer is a status observer, so lands on the current
- *                     Status report, not the History list)
+ *   - lead   → /lead/report
+ *   - head   → /head/dashboard
+ *   - admin  → /admin
+ *   - viewer → /reports/latest  (the Status entry; per viewer-live-status
+ *              the viewer is a status observer, so lands on the current
+ *              Status report, not the History list)
  *
  * Authentication path:
  *   1. Read auth.me.

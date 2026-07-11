@@ -55,6 +55,21 @@ export const ROLE_HOME_PATH: Record<Role, string> = {
   viewer: "/reports/latest",
 };
 
+/**
+ * Seeded dev-mode login email per role — the ONLY home for this map. Both the
+ * api dev-login fallback (`?email=` unset) and the web landing page's dev
+ * role-switcher grid read it, so the two tiers cannot list a different email
+ * for the same role. Dev/UAT-only: real SSO users never hit this map, and
+ * `resolveDevLoginIdentity` (api) 404s loudly if a listed email is not
+ * actually seeded — no silent fallback to a phantom user.
+ */
+export const DEV_LOGIN_EMAIL_BY_ROLE: Record<DbRole, string> = {
+  lead: "lead1@customreport.local",
+  head: "head@customreport.local",
+  admin: "admin@customreport.local",
+  viewer: "viewer@customreport.local",
+};
+
 export const userSessionSchema = z.object({
   userId: z.uuid(),
   email: z.email(),

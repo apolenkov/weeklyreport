@@ -12,7 +12,7 @@ routes:
         intent: "Auto-redirect authenticated user to role-appropriate home"
         given: "User has an active session with a valid role"
         when: "Page loads and auth.me resolves with a role"
-        then: "Page redirects (via window.location.replace) to the role's default route: lead → /lead/report, head|admin → /admin, viewer → /reports?tab=published. Redirect is skipped if AUTH_STUB=true or stay=1 query param is set"
+        then: "Page redirects (via window.location.replace) to the role's default route: lead → /lead/report, head → /head/dashboard, admin → /admin, viewer → /reports/latest. Redirect is skipped if AUTH_STUB=true or stay=1 query param is set"
         note: "Redirect is automatic and non-interactive; happens only in production mode (not in AUTH_STUB dev mode)"
       - id: user-sign-in-with-sso
         intent: "Initiate corporate SSO sign-in"

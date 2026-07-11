@@ -19,6 +19,17 @@ export const HEAD_USER_ID = "a0000000-0000-4000-8000-000000000099";
 export const VIEWER_USER_ID = "a0000000-0000-4000-8000-000000000098";
 export const ADMIN_USER_ID = "a0000000-0000-4000-8000-000000000097";
 
+// The 4 canonical dev-login role emails (mirrors the shared
+// `DEV_LOGIN_EMAIL_BY_ROLE` in packages/shared/src/schemas/auth.ts — this
+// prisma toolchain's isolated tsconfig.prisma.json cannot resolve workspace
+// packages, so this is a literal, not an import). Every seed script that
+// creates these 4 canonical users (seed.ts via SEED_USERS below, and
+// seed-simple.ts) reads from here instead of re-typing the strings.
+export const HEAD_EMAIL = "head@customreport.local";
+export const VIEWER_EMAIL = "viewer@customreport.local";
+export const ADMIN_EMAIL = "admin@customreport.local";
+export const LEAD_1_EMAIL = "lead1@customreport.local";
+
 export const ACTIVE_REPORT_ID = "a0000000-0000-4000-8000-000000000001";
 export const PUBLISHED_REPORT_ID = "a0000000-0000-4000-8000-000000000002";
 export const DEFAULT_REPORTING_GROUP_ID =
@@ -72,7 +83,7 @@ export const SEED_REPORTING_GROUPS: readonly SeedReportingGroup[] = [
 export const SEED_USERS: readonly SeedUser[] = [
   {
     id: HEAD_USER_ID,
-    email: "head@customreport.local",
+    email: HEAD_EMAIL,
     name: "Кедров Антон Сергеевич",
     lastName: "Кедров",
     firstName: "Антон",
@@ -84,7 +95,7 @@ export const SEED_USERS: readonly SeedUser[] = [
   },
   {
     id: VIEWER_USER_ID,
-    email: "viewer@customreport.local",
+    email: VIEWER_EMAIL,
     name: "Вязова Дарья Игоревна",
     lastName: "Вязова",
     firstName: "Дарья",
@@ -96,7 +107,7 @@ export const SEED_USERS: readonly SeedUser[] = [
   },
   {
     id: ADMIN_USER_ID,
-    email: "admin@customreport.local",
+    email: ADMIN_EMAIL,
     name: "Берёзов Михаил Владимирович",
     lastName: "Берёзов",
     firstName: "Михаил",
@@ -108,7 +119,7 @@ export const SEED_USERS: readonly SeedUser[] = [
   },
   {
     id: "a0000000-0000-4000-8000-000000000011",
-    email: "lead1@customreport.local",
+    email: LEAD_1_EMAIL,
     name: "Иванов Василий Петрович",
     lastName: "Иванов",
     firstName: "Василий",
