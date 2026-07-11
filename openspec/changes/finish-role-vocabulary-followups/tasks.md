@@ -40,7 +40,7 @@
       resolves to the _wrong existing_ seeded user is not caught: the login
       resync at `user-session.ts` overwrites that user's role with the
       requested role. Dev/UAT DBs are disposable and reseeded via `migrate
-  reset`, so this is an acceptable risk, not a 404
+reset`, so this is an acceptable risk, not a 404
 
 ## 3. Catalog role-token validation + landing-doc sync (follow-up v)
 
