@@ -53,17 +53,6 @@ export interface BlockedAtRiskItem {
   description: string;
 }
 
-export interface ArchiveReport {
-  id: string;
-  weekLabel: string;
-  dateRange: string;
-  status: "active" | "published" | "draft";
-  submissionLabel: string;
-  productCount: number;
-  riskCount: number;
-  decisionCount: number;
-}
-
 // ---- Weekly Report Types ----
 
 export interface PortfolioProduct {
@@ -321,49 +310,6 @@ export const MOCK_BLOCKED_AT_RISK: BlockedAtRiskItem[] = [
     assignee: "Igor V.",
     description:
       "\u0417\u0430\u0434\u0435\u0440\u0436\u043A\u0430 \u0442\u043E\u043A\u0435\u043D\u043E\u0432 \u0434\u0438\u0437\u0430\u0439\u043D\u0430, \u0440\u0438\u0441\u043A \u0441\u0434\u0432\u0438\u0433\u0430 \u0441\u043F\u0440\u0438\u043D\u0442\u0430",
-  },
-];
-
-export const MOCK_ARCHIVE: ArchiveReport[] = [
-  {
-    id: "w16",
-    weekLabel: "Week 16",
-    dateRange: "Apr 14\u201320",
-    status: "active",
-    submissionLabel: "4/6 submitted",
-    productCount: 12,
-    riskCount: 6,
-    decisionCount: 2,
-  },
-  {
-    id: "w15",
-    weekLabel: "Week 15",
-    dateRange: "Apr 7\u201313",
-    status: "published",
-    submissionLabel: "6/6 submitted",
-    productCount: 6,
-    riskCount: 1,
-    decisionCount: 0,
-  },
-  {
-    id: "w14",
-    weekLabel: "Week 14",
-    dateRange: "Mar 31\u2013Apr 6",
-    status: "published",
-    submissionLabel: "6/6 submitted",
-    productCount: 5,
-    riskCount: 0,
-    decisionCount: 0,
-  },
-  {
-    id: "w13",
-    weekLabel: "Week 13",
-    dateRange: "Mar 24\u201330",
-    status: "published",
-    submissionLabel: "5/6 submitted",
-    productCount: 5,
-    riskCount: 2,
-    decisionCount: 0,
   },
 ];
 

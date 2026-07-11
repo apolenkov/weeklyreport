@@ -96,7 +96,6 @@ export interface ArchiveReport {
   id: string;
   weekLabel: string;
   dateRange: string;
-  status: "active" | "published" | "draft";
   submissionLabel: string;
   productCount: number;
   riskCount: number;
@@ -118,7 +117,6 @@ export function mapArchiveSummary(
       summary.periodStart,
       summary.periodEnd,
     ),
-    status: "published",
     // Submission counts aren't on ArchiveReportSummary at v5.0.
     submissionLabel: "",
     productCount: 0,
