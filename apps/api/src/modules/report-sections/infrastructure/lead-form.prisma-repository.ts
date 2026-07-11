@@ -145,9 +145,8 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
 
     const section = mapPrismaToReportSection(row);
 
-    // report-section-prisma-payload: `row` is already precisely typed from
-    // its own inline `include` (report/reopenRequests need no separate
-    // narrowing cast).
+    // `row` is already precisely typed from its own inline `include`
+    // (report/reopenRequests need no separate narrowing cast).
     const { report, reopenRequests } = row;
 
     // reopen-request-lifecycle (D4/G6): a 'reopened' period is editable again

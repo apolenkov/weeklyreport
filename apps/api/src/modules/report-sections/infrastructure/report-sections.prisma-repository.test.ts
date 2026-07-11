@@ -41,7 +41,7 @@ type FabricatedRow = Pick<
   version: number;
 };
 
-// report-section-prisma-payload: the generated payload always carries the
+// the generated payload always carries the
 // full base scalar columns for every `include`d relation (Project, Item,
 // Risk, Decision, Stage, StageAssignment, ...), not just the fields the
 // mapper reads. These factories supply honest defaults for those columns so
@@ -339,7 +339,7 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
   });
 
   it("skips rows without a loaded project relation (legacy fixture shape)", () => {
-    // report-section-prisma-payload: a real DB row's nullable `project`
+    // a real DB row's nullable `project`
     // relation surfaces as `null`, never `undefined` — this pins the honest
     // contract (the hand-written type used to model it as optional-absent).
     const section = mapRow(
@@ -519,7 +519,7 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
     return {
       reportSection: {
         updateMany: vi.fn(() => Promise.resolve({ count: updateCount })),
-        // report-section-prisma-payload: the re-read now happens INSIDE the
+        // the re-read now happens INSIDE the
         // transaction (on `tx`, not the outer `prisma` client) — it carries
         // the row's NEW version, so the returned model must reflect this
         // fresh fetch rather than echoing the stale input.
@@ -595,7 +595,7 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
   });
 
   it("concurrent deletion: an empty in-transaction re-read throws SectionVersionConflictError, not a crash", async () => {
-    // report-section-prisma-payload: this scenario is structurally
+    // this scenario is structurally
     // unreachable in a real Postgres transaction (the delete's cascade would
     // block on this transaction's locks), but the defensive guard must still
     // convert a `null` re-read into the same clean conflict error the client

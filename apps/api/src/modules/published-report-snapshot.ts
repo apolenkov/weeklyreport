@@ -19,9 +19,9 @@ export const reportFullIncludeForSnapshot = {
   publishedBy: true,
 } as const satisfies Prisma.ReportInclude;
 
-// report-section-prisma-payload: derived from the generated payload so this
-// function's declared input finally matches what every real caller provides
-// (each queries `reportFullIncludeForSnapshot` verbatim before calling this).
+// Derived from the generated payload so this function's declared input
+// finally matches what every real caller provides (each queries
+// `reportFullIncludeForSnapshot` verbatim before calling this).
 type SnapshotReportRow = Prisma.ReportGetPayload<{
   include: typeof reportFullIncludeForSnapshot;
 }>;

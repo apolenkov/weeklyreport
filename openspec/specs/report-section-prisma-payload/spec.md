@@ -40,8 +40,10 @@ cast a nullable Prisma result directly into the mapper.
 
 #### Scenario: a concurrent report deletion races a section save
 
-- **WHEN** an admin deletes the section's report between the save
-  transaction's writes and its completion
-- **THEN** the cascade-delete's lock acquisition on the just-written rows
-  blocks until the save transaction commits, so the re-read inside that
-  transaction always finds the row it just wrote
+- **WHEN** an admin deletes the section's report while a section save is
+  in progress
+- **THEN** the save transaction's leading compare-and-set already holds
+  this `ReportSection` row's write lock for the transaction's duration, so
+  the delete's cascade — which needs that same row lock to proceed — blocks
+  until the save transaction commits, and the in-transaction re-read always
+  finds the row it just wrote

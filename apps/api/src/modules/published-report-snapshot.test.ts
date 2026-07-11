@@ -577,7 +577,7 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
   const STAGE_NAME = "Development";
   const FIXED_TIMESTAMP = new Date("2026-01-01T00:00:00.000Z");
 
-  // report-section-prisma-payload: `buildAssembledReportFromPrismaRow` now
+  // `buildAssembledReportFromPrismaRow` now
   // takes the generated `Prisma.ReportGetPayload`, which carries every base
   // scalar column (not just the ones this test reads) — these defaults keep
   // the fixture honest without repeating them at every call site.
