@@ -359,6 +359,16 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     ).toBeNull();
   });
 
+  it("renders the head role's identity label from the shared ROLE_LABEL map", () => {
+    setRole("head");
+    const { container } = render(<NavBar />);
+
+    const identity = container.querySelector('[data-testid="nav-identity"]');
+
+    expect(identity?.textContent).toContain("Head");
+    expect(identity?.textContent).not.toContain("Group Head");
+  });
+
   it("null session (still loading) renders NO role-gated links", () => {
     setRole(null);
     const { container } = render(<NavBar />);

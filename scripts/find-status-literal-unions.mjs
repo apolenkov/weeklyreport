@@ -1,17 +1,22 @@
 #!/usr/bin/env node
-// Status-SSOT literal-union detector (status-type-ssot-gate spec). The status
-// vocabularies each live in ONE declaration — green/yellow/red and
-// draft/published in packages/shared report-primitives.schema.ts, the
-// canonical presentation set in apps/web/src/lib/status-presentation.ts —
-// and this gate fails any union type or zod literal list that re-declares
-// them elsewhere:
+// Status-SSOT literal-union detector (status-type-ssot-gate spec). Each
+// vocabulary lives in ONE declaration — green/yellow/red and draft/published
+// in packages/shared report-primitives.schema.ts, the canonical presentation
+// set in apps/web/src/lib/status-presentation.ts, the role vocabulary in
+// packages/shared schemas/auth.ts — and this gate fails any union type or zod
+// literal list that re-declares one elsewhere:
 //   - traffic light: a literal set containing ALL of green/yellow/red
 //     (extras allowed — the three colors only ever come from the SSOT);
 //   - report status: a literal set EXACTLY {draft, published} (supersets are
 //     distinct vocabularies by traced evidence and stay a review judgment);
 //   - canonical presentation: a literal set containing ALL FOUR of
 //     blocked/at-risk/on-track/empty (extras allowed; subsets like the
-//     at-risk/blocked risk-severity pair stay legal).
+//     at-risk/blocked risk-severity pair stay legal);
+//   - role: a literal set containing ALL FOUR of lead/head/admin/viewer
+//     (extras allowed; the role-type spec's own exemptions — runtime
+//     validators/presentation lists enumerating VALUES while typing from
+//     shared, the Prisma seed toolchain, the e2e tree, catalog YAML — stay
+//     legal since they never re-declare the TYPE).
 //
 // Usage:
 //   node scripts/find-status-literal-unions.mjs --all            # whole tree
@@ -30,6 +35,7 @@ const argPaths = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const TRAFFIC = ["green", "yellow", "red"];
 const REPORT = ["draft", "published"];
 const CANONICAL = ["blocked", "at-risk", "on-track", "empty"];
+const ROLE = ["lead", "head", "admin", "viewer"];
 
 // The SSOT itself, plus the documented literal mirror whose tsconfig cannot
 // resolve workspace packages (report-status-type spec carve-out). Entries are
@@ -41,6 +47,14 @@ const ALLOWLIST = [
   // The canonical presentation vocabulary's single declaration
   // (status-presentation-model spec).
   "apps/web/src/lib/status-presentation.ts",
+  // The role vocabulary's single declaration, both axes (role-type spec).
+  "packages/shared/src/schemas/auth.ts",
+  // e2e's isolated tsconfig cannot resolve @customreport/shared (no `paths`
+  // mapping) — the role-type spec names "the e2e tree" as a self-contained
+  // exemption from the re-declaration rule.
+  "e2e/integration/fixtures.ts",
+  "e2e/sweep/catalog-sweep.spec.ts",
+  "e2e/sweep/helpers/dev-auth.ts",
 ];
 
 const IGNORE =
@@ -100,6 +114,9 @@ const violation = (literals) => {
   }
   if (CANONICAL.every((status) => set.has(status))) {
     return "re-declares the CanonicalStatus union — import it from lib/status-presentation (or the StageStatus alias)";
+  }
+  if (ROLE.every((role) => set.has(role))) {
+    return "re-declares the Role/DbRole union — import it from @customreport/shared (schemas/auth.ts)";
   }
   return null;
 };

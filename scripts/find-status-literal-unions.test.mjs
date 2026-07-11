@@ -140,6 +140,27 @@ test("the allowlist passes at its repo-rooted paths only", () => {
     "prisma/seed-constants.ts": `type S = { status: "draft" | "published" };`,
     "packages/shared/src/schemas/report-primitives.schema.ts": `const s = z.enum(["green", "yellow", "red"]);`,
     "apps/web/src/lib/status-presentation.ts": `type C = "blocked" | "at-risk" | "on-track" | "empty";`,
+    "packages/shared/src/schemas/auth.ts": `const s = z.enum(["lead", "head", "admin", "viewer"]);`,
+  });
+  assert.equal(result.status, 0, result.stdout);
+});
+
+test("the role vocabulary fires outside its SSOT", () => {
+  const result = scan({
+    "a.ts": `type R = "lead" | "head" | "admin" | "viewer";`,
+    "b.ts": `const s = z.enum(["viewer", "admin", "head", "lead", "extra"]);`,
+  });
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stdout, /Role\/DbRole/);
+  assert.match(result.stdout, /2 status literal-union hit\(s\)/);
+});
+
+test("role subsets and value lists pass", () => {
+  const result = scan({
+    // a narrower subset (e.g. a leadership-only check) stays legal
+    "a.ts": `type Leadership = "head" | "admin";`,
+    // a value list (as const), not a type re-declaration
+    "b.ts": `const ROLES = ["lead", "head", "admin", "viewer"] as const;`,
   });
   assert.equal(result.status, 0, result.stdout);
 });

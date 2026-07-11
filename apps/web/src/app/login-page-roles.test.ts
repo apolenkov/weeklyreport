@@ -4,10 +4,9 @@ import { describe, expect, it } from "vitest";
 import { getSessionRole, isRole } from "./login-page-roles";
 
 /**
- * Guard-parity pins for the role-type spec: the login page's runtime guards
- * keep literal values (deliberately not derived from the schema), so these
- * tests are what fails if `sessionRoleSchema` ever gains a member the guards
- * do not accept.
+ * Guard-parity pins for the role-type spec: `isRole` derives its accepted
+ * set from `sessionRoleSchema` directly, so these tests mainly pin the
+ * derivation's behavior for non-role inputs.
  */
 describe("isRole", () => {
   it("accepts every session role (role-type guard parity)", () => {

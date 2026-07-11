@@ -21,6 +21,7 @@
 
 import type {
   ArchiveReportSummary,
+  DbRole,
   PaginatedResult,
   SubmissionDashboardRow,
   WeeklyReportReadModel,
@@ -50,7 +51,7 @@ export interface LeadInfo {
   id: string;
   initials: string;
   name: string;
-  role: string;
+  role: DbRole;
   status: LeadStatus;
   trafficLights: TrafficLight[];
   lastActivity: string;
