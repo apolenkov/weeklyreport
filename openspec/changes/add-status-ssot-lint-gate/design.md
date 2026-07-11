@@ -65,14 +65,14 @@ Design grilled with Codex to consensus (two rounds, 2026-07-11).
    violations cannot be locally suppressed.
 4. **Port boundary = explicit file inventory in Zone 4.** No `*.port.ts`
    naming convention exists; an honest explicit list beats a vague glob.
-   The Zone 4 ban (already banning `@prisma/client` value AND type) grows
-   from `admin-shared.ts` to the port-declaring service/contract files
-   (activity, analytics, archive, carry-over, organization, pdf-export,
-   period, project-activity, publication, reminders, report-sections — incl.
-   `lead-form-shared.ts` — review incl. `review-actions`, search, telemetry
-   incl. gauges, weekly-report). The exact list is pinned at implementation
-   time by grepping for port-interface definitions; every listed file is
-   Prisma-clean today, so the extension is behavior-neutral.
+   A dedicated Zone 4b bans `@prisma/client` (value AND type — but not Nest,
+   which these files legally use) in the port-declaring service/contract
+   files: activity, analytics, archive, carry-over, organization, pdf-export,
+   period, project-activity, publication, reminders, report-sections, review
+   incl. `review-actions`, search, telemetry incl. gauges, weekly-report.
+   `lead-form-shared.ts` needs no Zone 4b entry — it lives under the stricter
+   Zone 4 `report-sections/domain/**` glob. Every listed file is Prisma-clean
+   today, so the extension is behavior-neutral.
 5. **Dead vocabulary removal over allowlisting.** `ArchiveReport.status`
    (model + mock duplicate + `MOCK_ARCHIVE`) is deleted on traced evidence;
    composing `ReportStatus | "active"` would preserve a field nothing reads.

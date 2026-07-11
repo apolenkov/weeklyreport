@@ -12,10 +12,9 @@
  * - `lastWeekSubmitted` / `lastWeekTotal` have no equivalent in any v5.0 read
  *   model, so they default to 0/0 (the KPI card just renders "0/0").
  * - `archive.list` returns `ArchiveReportSummary[]` (via `PaginatedResult`).
- *   The summary is leaner than the mock `ArchiveReport`: no week label,
- *   submission count, product count, risk count, or decision count. Synthesize
- *   weekLabel / dateRange from `periodStart`/`periodEnd`; default the rest to
- *   0/empty.
+ *   The summary carries no week label, submission count, product count, risk
+ *   count, or decision count. Synthesize weekLabel / dateRange from
+ *   `periodStart`/`periodEnd`; default the rest to 0/empty.
  * - The `PendingLead` type in mock-data is just `string[]` (lead names) — we
  *   produce that directly.
  */

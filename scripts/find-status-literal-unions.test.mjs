@@ -18,7 +18,10 @@ const scan = (fixtures) => {
     writeFileSync(p, content);
     return p;
   });
+  // cwd = fixture root so allowlist entries resolve against it, mirroring how
+  // the real gate resolves them against the repo root.
   return spawnSync(process.execPath, [scriptPath, ...paths], {
+    cwd: dir,
     encoding: "utf8",
   });
 };
@@ -83,12 +86,37 @@ test("comments do not fire", () => {
   assert.equal(result.status, 0, result.stdout);
 });
 
-test("the allowlist passes by path suffix", () => {
+test("backtick literal types fire", () => {
+  const result = scan({
+    "a.ts": "type S = `green` | `yellow` | `red`;",
+  });
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stdout, /TrafficLightStatus/);
+});
+
+test("a // inside a string does not hide a union on the same line", () => {
+  const result = scan({
+    "a.ts": `const u = "//cdn.example.com"; type S = "green" | "yellow" | "red";`,
+    "b.ts": `const g = "src//deep"; type S = "draft" | "published";`,
+    "c.ts": `const h = "https://x.dev"; type S = "green" | "yellow" | "red";`,
+  });
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stdout, /3 status literal-union hit\(s\)/);
+});
+
+test("the allowlist passes at its repo-rooted paths only", () => {
   const result = scan({
     "prisma/seed-constants.ts": `type S = { status: "draft" | "published" };`,
     "packages/shared/src/schemas/report-primitives.schema.ts": `const s = z.enum(["green", "yellow", "red"]);`,
   });
   assert.equal(result.status, 0, result.stdout);
+});
+
+test("a same-named file elsewhere is NOT allowlisted", () => {
+  const result = scan({
+    "apps/api/prisma/seed-constants.ts": `type S = "draft" | "published";`,
+  });
+  assert.equal(result.status, 1, result.stdout);
 });
 
 test("declaration files and ignored trees are skipped", () => {
