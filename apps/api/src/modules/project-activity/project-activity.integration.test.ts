@@ -324,6 +324,44 @@ describe("ProjectActivity (integration)", () => {
     expect(saved.activities).toEqual([]);
   });
 
+  it("dedupes a repository create whose linkedProductIds repeats an id (no P2002)", async () => {
+    const newActivityId = "b0000000-0000-4000-a000-00000000000a";
+    const created = await repo.create({
+      name: "Ops rotation",
+      groupId: groupA,
+      // Bypasses the shared schema's uniqueness refine — the repository must
+      // still not collide with the (activityId, productId) unique constraint.
+      linkedProductIds: [productId, productId],
+      jiraAccounts: [],
+    });
+    expect(created.linkedProducts).toEqual([
+      { productId, productName: "CRM Portal" },
+    ]);
+    // The id is server-generated; the seeded activityId is untouched.
+    expect(created.id).not.toBe(newActivityId);
+  });
+
+  it("skips a repository update whose linkedProductIds repeats a new id (no P2002)", async () => {
+    const otherProductId = "b0000000-0000-4000-a000-00000000000b";
+    await prisma.project.create({
+      data: { id: otherProductId, name: "Billing Service", leadId: leadA },
+    });
+
+    const updated = await repo.update({
+      id: activityId,
+      name: "Jira triage duty",
+      groupId: groupA,
+      // A repeated not-yet-linked id lands twice in the add branch; the
+      // createMany must skip the duplicate rather than raise P2002.
+      linkedProductIds: [otherProductId, otherProductId],
+      jiraAccounts: [],
+    });
+
+    expect(updated.linkedProducts).toEqual([
+      { productId: otherProductId, productName: "Billing Service" },
+    ]);
+  });
+
   it("rejects a group move while attachments exist and allows it after detaching", async () => {
     const service = new ProjectActivityService(repo);
     const groupB = "b0000000-0000-4000-a000-000000000009";

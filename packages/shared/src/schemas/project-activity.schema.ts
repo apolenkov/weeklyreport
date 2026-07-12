@@ -34,7 +34,15 @@ export const projectActivityCreateSchema = z.object({
   name: safeText({ max: 200 }),
   groupId: z.uuid(),
   // activity-first-class: 0..N product links (was a single nullable projectId).
-  linkedProductIds: z.array(z.uuid()).max(MAX_LINKED_PRODUCTS).default([]),
+  // Reject an in-payload duplicate at the wire boundary so it never reaches the
+  // ProjectActivityProduct @@unique([activityId, productId]) constraint as a 500.
+  linkedProductIds: z
+    .array(z.uuid())
+    .max(MAX_LINKED_PRODUCTS)
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: "linkedProductIds must not contain duplicates",
+    })
+    .default([]),
   jiraAccounts: z
     .array(safeText({ max: MAX_JIRA_ACCOUNT_LENGTH }))
     .max(MAX_JIRA_ACCOUNTS)
