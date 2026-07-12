@@ -164,9 +164,12 @@ export class PeriodAdminService {
   }
 
   /**
-   * Manual archive — flips both the legacy
-   * `archived` boolean and the new `periodState` enum to `'archived'`
-   * in a single write so the two-state-machine invariant is preserved.
+   * Manual archive — flips both the legacy `archived` boolean and the new
+   * `periodState` enum to `'archived'` in a single guarded write so the
+   * two-state-machine invariant is preserved. The repository's compare-and-set
+   * fails closed on a concurrent writer: an already-archived period surfaces its
+   * `AdminPeriodAlreadyArchivedError` (→ CONFLICT) here rather than a silent
+   * success, so a reopen racing the archive is mutually exclusive from this side.
    */
   async archivePeriod(periodId: string): Promise<{ success: true }> {
     if (!this.repository.archivePeriod) {

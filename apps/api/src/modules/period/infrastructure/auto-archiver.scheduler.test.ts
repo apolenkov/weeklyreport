@@ -33,7 +33,7 @@ describe("AutoArchiverScheduler", () => {
     const prisma = {
       report: {
         findMany: vi.fn(),
-        update: vi.fn(),
+        updateMany: vi.fn(),
       },
     };
     const admin = {
@@ -65,7 +65,7 @@ describe("AutoArchiverScheduler", () => {
         findMany: vi
           .fn()
           .mockResolvedValue([{ id: "rep-old-1" }, { id: "rep-old-2" }]),
-        update: vi.fn().mockResolvedValue({}),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     };
     const admin = {
@@ -88,11 +88,12 @@ describe("AutoArchiverScheduler", () => {
       archived: true,
       periodIds: ["rep-old-1", "rep-old-2"],
     });
-    expect(prisma.report.update).toHaveBeenCalledTimes(2);
-    // UFB-053: writer flips legacy `archived` + new `periodState` + 51-A
-    // `autoArchived` audit flag in a single update.
-    expect(prisma.report.update).toHaveBeenNthCalledWith(1, {
-      where: { id: "rep-old-1" },
+    expect(prisma.report.updateMany).toHaveBeenCalledTimes(2);
+    // The writer flips legacy `archived` + new `periodState` + the
+    // `autoArchived` audit flag in a single guarded write that re-asserts the
+    // candidate predicates, so a reopen racing the scan window loses cleanly.
+    expect(prisma.report.updateMany).toHaveBeenNthCalledWith(1, {
+      where: { id: "rep-old-1", archived: false, periodStatus: "published" },
       data: {
         archived: true,
         periodState: "archived",
@@ -107,11 +108,48 @@ describe("AutoArchiverScheduler", () => {
     });
   });
 
+  it("lost-race: a candidate reopened between scan and write (updateMany count=0) is skipped — no audit, not reported archived", async () => {
+    const prisma = {
+      report: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([{ id: "rep-reopened" }, { id: "rep-old" }]),
+        updateMany: vi
+          .fn()
+          .mockResolvedValueOnce({ count: 0 })
+          .mockResolvedValueOnce({ count: 1 }),
+      },
+    };
+    const admin = {
+      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+    };
+    const audit = {
+      ...createNullAuditLogger(),
+      periodAutoArchive: vi.fn(),
+    };
+
+    const scheduler = new AutoArchiverScheduler(
+      asAny(prisma),
+      asAny(admin),
+      asAny(audit),
+    );
+
+    const result = await scheduler.runOnce(new Date("2026-06-15T00:15:00Z"));
+
+    expect(result).toEqual({ archived: true, periodIds: ["rep-old"] });
+    expect(audit.periodAutoArchive).toHaveBeenCalledTimes(1);
+    expect(audit.periodAutoArchive).toHaveBeenCalledWith({
+      periodId: "rep-old",
+      from: "published",
+      to: "archived",
+    });
+  });
+
   it("excludes-reopened: candidate query filters out periodState='open' so a reopened period past its cutoff is never auto-archived", async () => {
     const prisma = {
       report: {
         findMany: vi.fn().mockResolvedValue([]),
-        update: vi.fn(),
+        updateMany: vi.fn(),
       },
     };
     const admin = {
@@ -150,7 +188,7 @@ describe("AutoArchiverScheduler", () => {
     const prisma = {
       report: {
         findMany: vi.fn().mockResolvedValue([]),
-        update: vi.fn(),
+        updateMany: vi.fn(),
       },
     };
     const admin = {
@@ -170,7 +208,7 @@ describe("AutoArchiverScheduler", () => {
     const result = await scheduler.runOnce(new Date("2026-06-15T00:15:00Z"));
 
     expect(result).toEqual({ archived: true, periodIds: [] });
-    expect(prisma.report.update).not.toHaveBeenCalled();
+    expect(prisma.report.updateMany).not.toHaveBeenCalled();
     expect(audit.periodAutoArchive).not.toHaveBeenCalled();
   });
 });

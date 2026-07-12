@@ -3,6 +3,7 @@ import type { PeriodState, PeriodStatus } from "@customreport/shared";
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { buildTransition, isOpenBoundaryConflict } from "../period/index.js";
 import {
+  AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
 } from "./admin-shared.js";
@@ -151,19 +152,42 @@ export async function updatePeriodManual(
 }
 
 /**
- * Manual archive. Writes both the legacy `archived` boolean and the
- * new `periodState='archived'` atomically so the two-state-machine
- * invariant holds even when the auto-archiver scheduler hasn't run yet.
+ * Manual archive. A guarded `updateMany` makes the write mutually exclusive
+ * with a concurrent head reopen from the archive side of the race: only a
+ * still-published, not-yet-archived row transitions, and a zero-row match fails
+ * closed rather than re-writing the row unconditionally. Writes both the legacy
+ * `archived` boolean and the new `periodState='archived'` from the transition
+ * builder in that single statement, so the two-state-machine invariant holds
+ * even when the auto-archiver scheduler hasn't run yet.
+ *
+ * The predicate excludes `periodStatus: "reopened"` alongside `archived: false`
+ * so it shares the reopen compare-and-set's discriminator column: a reopen that
+ * wins the row first flips `periodStatus` to `reopened`, which drops this
+ * archive to zero rows — without it, a reopen-then-archive interleaving would
+ * leave an archived period whose sections the reopen had already reset to draft.
+ * It deliberately does NOT require `periodStatus: "published"`: head/admin
+ * archive is unbounded by period status (product decision — the head is
+ * trusted), so scheduled/open periods stay archivable; only the reopened state
+ * — whose archive would freeze just-reset draft sections either way — is
+ * refused.
  */
 export async function archivePeriod(
   prisma: PrismaService,
   periodId: string,
 ): Promise<void> {
-  await prisma.report.update({
-    where: { id: periodId },
-    // refactor-period-transition-writer: archive field set from the builder.
+  const { count } = await prisma.report.updateMany({
+    where: {
+      id: periodId,
+      archived: false,
+      periodStatus: { not: "reopened" },
+    },
     data: buildTransition("archive", {}),
   });
+  if (count === 0) {
+    throw new AdminPeriodAlreadyArchivedError(
+      `Period ${periodId} can no longer be archived — it was already archived or reopened by a concurrent action.`,
+    );
+  }
 }
 
 /**

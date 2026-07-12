@@ -50,6 +50,22 @@ export class AdminPeriodNotFoundError extends Error {
 }
 
 /**
+ * Thrown by the guarded manual `archivePeriod` when its
+ * `{ id, archived: false, periodStatus: "published" }` compare-and-set matches
+ * zero rows — a concurrent writer archived or reopened the period inside the
+ * read→write window. A state conflict on an existing resource (the row moved
+ * off archivable-published, not missing), so the tRPC error-mapper renders it
+ * CONFLICT. Fail-closed: the manual archive write is no longer unconditional,
+ * so a reopen racing an archive is mutually exclusive from the archive side too.
+ */
+export class AdminPeriodAlreadyArchivedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminPeriodAlreadyArchivedError";
+  }
+}
+
+/**
  * Thrown by `attachProductToGroup` when the product already belongs to a
  * DIFFERENT reporting group. A state conflict (the product exists and is owned
  * elsewhere), so the tRPC error-mapper renders it CONFLICT; the message names
