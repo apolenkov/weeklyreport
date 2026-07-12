@@ -9,6 +9,7 @@ import {
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
 import { CarryOverPrismaRepository } from "./carry-over.prisma-repository";
+import { CarryOverConflictError } from "./carry-over.service";
 
 describe("CarryOverPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
@@ -578,5 +579,205 @@ describe("CarryOverPrismaRepository (integration)", () => {
     });
     expect(all).toHaveLength(1);
     expect(expectDefined(all[0]).id).toBe(winnerId);
+  });
+
+  it("resolves the source/target race to the winner's recorded rows, never inserting the phantom caller's records", async () => {
+    const targetReport = await prisma.report.create({
+      data: {
+        id: TEST_IDS.targetReport,
+        periodStart: new Date("2026-04-14"),
+        periodEnd: new Date("2026-04-20"),
+        deadline: new Date("2026-04-18"),
+        status: "draft",
+      },
+    });
+    const targetSection = await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.lead.id,
+        status: "draft",
+      },
+    });
+
+    const dedupeKey = `${testData.report.id}:${targetReport.id}`;
+    // A winner already committed an execution (+ record) for this exact
+    // source/target pair, so the in-transaction findFirst (keyed on
+    // source/target) matches it and the loser must resolve to its rows.
+    const winnerId = crypto.randomUUID();
+    const winnerRecordId = crypto.randomUUID();
+    const winnerTargetItemId = crypto.randomUUID();
+    await prisma.carryOverExecution.create({
+      data: {
+        id: winnerId,
+        sourceReportId: testData.report.id,
+        targetReportId: targetReport.id,
+        dedupeKey,
+        status: "completed",
+        records: {
+          create: [
+            {
+              id: winnerRecordId,
+              sourceItemId: crypto.randomUUID(),
+              targetItemId: winnerTargetItemId,
+              recordType: "item",
+            },
+          ],
+        },
+      },
+    });
+
+    const phantomExecution = {
+      id: crypto.randomUUID(),
+      sourceReportId: testData.report.id,
+      targetReportId: targetReport.id,
+      dedupeKey,
+      status: "completed" as const,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      carriedItemCount: 1,
+      carriedDecisionCount: 0,
+    };
+    const phantomRecords = [
+      {
+        id: crypto.randomUUID(),
+        sourceReportId: testData.report.id,
+        targetReportId: targetReport.id,
+        sourceItemId: crypto.randomUUID(),
+        targetItemId: crypto.randomUUID(),
+        sourceDecisionId: null,
+        targetDecisionId: null,
+        status: "completed" as const,
+        carriedAt: new Date(),
+      },
+    ];
+    const targetSectionReadModel = {
+      reportSectionId: targetSection.id,
+      reportId: targetReport.id,
+      authorId: testData.lead.id,
+      authorName: "Test Lead 1",
+      version: 1,
+      status: "draft" as const,
+      submittedAt: null,
+      projects: [],
+      items: [],
+      risks: [],
+      decisions: [],
+      priorities: [],
+      activities: [],
+    };
+
+    const result = await repo.saveCarryOver(phantomExecution, phantomRecords, [
+      targetSectionReadModel,
+    ]);
+
+    // Returns the winner's execution and record, not the phantom caller's.
+    expect(result.execution.id).toBe(winnerId);
+    expect(result.records).toHaveLength(1);
+    expect(expectDefined(result.records[0]).id).toBe(winnerRecordId);
+    expect(expectDefined(result.records[0]).targetItemId).toBe(
+      winnerTargetItemId,
+    );
+
+    // The phantom records were never inserted against the uncommitted id —
+    // only the winner's single execution and record survive.
+    const allExecutions = await prisma.carryOverExecution.findMany();
+    expect(allExecutions).toHaveLength(1);
+    expect(expectDefined(allExecutions[0]).id).toBe(winnerId);
+    const allRecords = await prisma.carryOverRecord.findMany();
+    expect(allRecords).toHaveLength(1);
+    expect(expectDefined(allRecords[0]).id).toBe(winnerRecordId);
+  });
+
+  it("aborts without writing when the target period stopped being editable before the write", async () => {
+    // The target is archived — no longer editable. The service's
+    // pre-transaction check is bypassed here (repo called directly), so this
+    // exercises the in-transaction re-check that closes the TOCTOU window.
+    const targetReport = await prisma.report.create({
+      data: {
+        id: TEST_IDS.targetReport,
+        periodStart: new Date("2026-04-14"),
+        periodEnd: new Date("2026-04-20"),
+        deadline: new Date("2026-04-18"),
+        status: "draft",
+        archived: true,
+      },
+    });
+    const targetSection = await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.lead.id,
+        status: "draft",
+      },
+    });
+
+    const execution = {
+      id: crypto.randomUUID(),
+      sourceReportId: testData.report.id,
+      targetReportId: targetReport.id,
+      dedupeKey: `${testData.report.id}:${targetReport.id}`,
+      status: "completed" as const,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      carriedItemCount: 1,
+      carriedDecisionCount: 0,
+    };
+    const records = [
+      {
+        id: crypto.randomUUID(),
+        sourceReportId: testData.report.id,
+        targetReportId: targetReport.id,
+        sourceItemId: crypto.randomUUID(),
+        targetItemId: crypto.randomUUID(),
+        sourceDecisionId: null,
+        targetDecisionId: null,
+        status: "completed" as const,
+        carriedAt: new Date(),
+      },
+    ];
+    // A carriable item in the read model proves the abort rolls back the
+    // section-row writes too, not just the execution insert.
+    const targetSectionReadModel = {
+      reportSectionId: targetSection.id,
+      reportId: targetReport.id,
+      authorId: testData.lead.id,
+      authorName: "Test Lead 1",
+      version: 1,
+      status: "draft" as const,
+      submittedAt: null,
+      projects: [],
+      items: [
+        {
+          id: crypto.randomUUID(),
+          projectId: testData.project.id,
+          type: "current" as const,
+          text: "Would have been carried",
+          tag: "feature",
+          workflowStatus: "in_progress" as const,
+          carriedOver: true,
+        },
+      ],
+      risks: [],
+      decisions: [],
+      priorities: [],
+      activities: [],
+    };
+
+    await expect(
+      repo.saveCarryOver(execution, records, [targetSectionReadModel]),
+    ).rejects.toThrow(CarryOverConflictError);
+
+    // Nothing was written: no execution, no record, no carried item/decision.
+    expect(await prisma.carryOverExecution.count()).toBe(0);
+    expect(await prisma.carryOverRecord.count()).toBe(0);
+    expect(
+      await prisma.item.count({
+        where: { reportSectionId: targetSection.id },
+      }),
+    ).toBe(0);
+    expect(
+      await prisma.decision.count({
+        where: { reportSectionId: targetSection.id },
+      }),
+    ).toBe(0);
   });
 });
