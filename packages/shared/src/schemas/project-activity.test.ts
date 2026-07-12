@@ -4,6 +4,7 @@ import {
   projectActivityCreateSchema,
   projectActivityLeadEdgeSchema,
   projectActivitySchema,
+  projectActivityUpdateSchema,
 } from "./project-activity.schema";
 import {
   draftSaveSchema,
@@ -13,6 +14,7 @@ import { validateActivityStatuses } from "./section-validation.schema";
 
 const GROUP_ID = "11111111-1111-4111-8111-111111111111";
 const PRODUCT_ID = "22222222-2222-4222-8222-222222222222";
+const OTHER_PRODUCT_ID = "2222aaaa-2222-4222-8222-2222222222aa";
 const ACTIVITY_ID = "33333333-3333-4333-8333-333333333333";
 const OTHER_ACTIVITY_ID = "44444444-4444-4444-8444-444444444444";
 const LEAD_ID = "55555555-5555-4555-8555-555555555555";
@@ -48,6 +50,50 @@ describe("projectActivitySchema", () => {
     });
     expect(parsed.linkedProductIds).toEqual([PRODUCT_ID]);
     expect(parsed.jiraAccounts).toEqual(["OPS", "SUP-billing"]);
+  });
+
+  it("rejects a create whose linkedProductIds repeats a product id", () => {
+    const result = projectActivityCreateSchema.safeParse({
+      name: "Ops rotation",
+      groupId: GROUP_ID,
+      linkedProductIds: [PRODUCT_ID, PRODUCT_ID],
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe(
+      "linkedProductIds must not contain duplicates",
+    );
+  });
+
+  it("accepts a create whose linkedProductIds are unique", () => {
+    const result = projectActivityCreateSchema.safeParse({
+      name: "Ops rotation",
+      groupId: GROUP_ID,
+      linkedProductIds: [PRODUCT_ID, OTHER_PRODUCT_ID],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an update whose linkedProductIds repeats a product id", () => {
+    const result = projectActivityUpdateSchema.safeParse({
+      id: ACTIVITY_ID,
+      name: "Ops rotation",
+      groupId: GROUP_ID,
+      linkedProductIds: [PRODUCT_ID, PRODUCT_ID],
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe(
+      "linkedProductIds must not contain duplicates",
+    );
+  });
+
+  it("accepts an update whose linkedProductIds are unique", () => {
+    const result = projectActivityUpdateSchema.safeParse({
+      id: ACTIVITY_ID,
+      name: "Ops rotation",
+      groupId: GROUP_ID,
+      linkedProductIds: [PRODUCT_ID, OTHER_PRODUCT_ID],
+    });
+    expect(result.success).toBe(true);
   });
 
   it("requires both sides of the attach/detach edge", () => {

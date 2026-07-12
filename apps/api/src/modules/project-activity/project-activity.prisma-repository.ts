@@ -79,12 +79,16 @@ export class ProjectActivityPrismaRepository
     jiraAccounts: string[];
   }): Promise<ProjectActivity> {
     const { linkedProductIds, ...data } = input;
+    // Defense-in-depth for any caller that bypasses the shared schema's
+    // uniqueness refine: dedupe before seeding the join rows so an in-payload
+    // repeat never collides with the (activityId, productId) unique constraint.
+    const uniqueProductIds = [...new Set(linkedProductIds)];
     const row = await this.prisma.projectActivity.create({
       data: {
         ...data,
         // activity-first-class: seed the label-only join rows in the same write.
         activityProducts: {
-          create: linkedProductIds.map((productId) => ({ productId })),
+          create: uniqueProductIds.map((productId) => ({ productId })),
         },
       },
       include: activityInclude,
@@ -121,6 +125,9 @@ export class ProjectActivityPrismaRepository
       if (toAdd.length > 0) {
         await tx.projectActivityProduct.createMany({
           data: toAdd.map((productId) => ({ activityId: id, productId })),
+          // Defense-in-depth for a caller that bypasses the shared schema's
+          // uniqueness refine: an in-payload repeat cannot raise P2002 here.
+          skipDuplicates: true,
         });
       }
       return tx.projectActivity.findUniqueOrThrow({
