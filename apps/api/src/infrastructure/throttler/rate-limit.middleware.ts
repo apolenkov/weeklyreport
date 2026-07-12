@@ -12,6 +12,7 @@ const TEST_MODE_LIMIT_PER_MINUTE = 1000;
 const AUTH_LIMIT_PER_MINUTE = 5;
 const TRPC_LIMIT_PER_MINUTE = 200;
 const VITALS_LIMIT_PER_MINUTE = 60;
+const CLIENT_LOGS_LIMIT_PER_MINUTE = 60;
 
 /**
  * Rate-limit middleware factory.
@@ -20,11 +21,16 @@ const VITALS_LIMIT_PER_MINUTE = 60;
  *   - /auth/*           → strict (login brute-force protection)
  *   - /trpc/*           → permissive (legitimate query traffic shouldn't trip)
  *   - /api/web-vitals   → moderate (bounds the public, unauthenticated beacon)
- *   - else              → not limited here (already covered by upstream/edge proxy)
+ *   - /api/client-logs  → moderate (bounds the public, unauthenticated log forwarder)
+ *   - else              → not limited here
+ *
+ * Every public ingress surface is keyed per IP by a limiter built here; a route
+ * the Caddyfile does not match gets no edge-proxy mitigation, so it must carry
+ * its own bucket rather than rely on the proxy.
  *
  * Test-mode bumps every bucket to 1000/min so E2E suites that fire
  * 10+ rapid logins in one spec don't flake. Production keeps the
- * documented values (5 / 200 / 60 per minute per IP).
+ * documented values (5 / 200 / 60 / 60 per minute per IP).
  */
 export function createRateLimits(options: {
   logger: AppLogger;
@@ -33,6 +39,7 @@ export function createRateLimits(options: {
   authLimiter: RequestHandler;
   trpcLimiter: RequestHandler;
   vitalsLimiter: RequestHandler;
+  clientLogsLimiter: RequestHandler;
 } {
   const { logger, isTest } = options;
 
@@ -92,5 +99,15 @@ export function createRateLimits(options: {
     message: "vitals",
   });
 
-  return { authLimiter, trpcLimiter, vitalsLimiter };
+  // The client-log forwarder is a public, unauthenticated ingress the Caddyfile
+  // does not match, so it carries its own per-IP bucket. A page emits a small
+  // bounded burst of log batches; 60/min/IP covers that and caps a log-flood
+  // against the shared app.log. Shares rateLimitHitsTotal via "client-logs".
+  const clientLogsLimiter = rateLimit({
+    ...baseConfig,
+    limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : CLIENT_LOGS_LIMIT_PER_MINUTE,
+    message: "client-logs",
+  });
+
+  return { authLimiter, trpcLimiter, vitalsLimiter, clientLogsLimiter };
 }

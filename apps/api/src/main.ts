@@ -51,6 +51,7 @@ import type { EnvConfig } from "./infrastructure/config/env.schema";
 import { validateEnv } from "./infrastructure/config/env.schema";
 import { SentryExceptionFilter } from "./infrastructure/filters/sentry-exception.filter";
 import { httpRequestDurationSeconds } from "./infrastructure/metrics/metrics.registry";
+import { TRPC_MAX_BODY_BYTES } from "./infrastructure/http/ingress-limits";
 import { CorrelationIdMiddleware } from "./infrastructure/middleware/correlation-id.middleware";
 import { PrismaService } from "./infrastructure/prisma/prisma.service";
 import { createRateLimits } from "./infrastructure/throttler/rate-limit.middleware";
@@ -273,6 +274,15 @@ async function bootstrap() {
     },
   );
 
+  // Per-IP limiters for every public ingress surface. Built once here so the
+  // client-logs forwarder below is guarded ahead of its terminating handler;
+  // the /trpc and /api/web-vitals limiters are mounted further down.
+  const { authLimiter, trpcLimiter, vitalsLimiter, clientLogsLimiter } =
+    createRateLimits({
+      logger,
+      isTest: env.NODE_ENV === "test" || env.AUTH_DEV_MODE,
+    });
+
   // Browser → server log forwarder. Captures console.error/warn,
   // window.onerror, unhandledrejection from the web app and writes them to
   // the same rotating app.log so all debug data lives in one file.
@@ -281,6 +291,10 @@ async function bootstrap() {
     env.NODE_ENV === "development" || env.CLIENT_LOG_FORWARDING === "true";
   app.use(
     CLIENT_LOGS_ROUTE,
+    // Rate-limit before the JSON parse and the terminating handler so an
+    // unauthenticated caller cannot flood the shared app.log. `trust proxy: 1`
+    // makes req.ip the real client, so this keys per client, not per proxy hop.
+    clientLogsLimiter,
     express.json({ limit: "128kb" }),
     (req: express.Request, res: express.Response) => {
       if (!clientLogsEnabled) {
@@ -424,19 +438,18 @@ async function bootstrap() {
     pdfDir,
   });
 
-  // Rate-limit /trpc with the permissive bucket. The /auth limiter
+  // Rate-limit /trpc with the permissive bucket (built above). The /auth limiter
   // is mounted further down with mountAuthRoutes (it needs to wrap the
-  // /auth/* routes the auth module registers).
-  const { authLimiter, trpcLimiter, vitalsLimiter } = createRateLimits({
-    logger,
-    isTest: env.NODE_ENV === "test" || env.AUTH_DEV_MODE,
-  });
+  // /auth/* routes the auth module registers). `maxBodySize` bounds the tRPC
+  // ingress with an explicit, auditable cap instead of the adapter default —
+  // an oversized mutation body is rejected with 413 before the procedure runs.
   expressApp.use(
     "/trpc",
     trpcLimiter,
     trpcExpress.createExpressMiddleware({
       router: appRouter,
       createContext: createContextFactory(app, logger),
+      maxBodySize: TRPC_MAX_BODY_BYTES,
     }),
   );
 
