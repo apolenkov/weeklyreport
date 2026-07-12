@@ -455,3 +455,65 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
     expect(addCalls).toHaveLength(0);
   });
 });
+
+// -----------------------------------------------------------------------
+// A synchronous enqueue throw (Redis down) must NOT leave a committed `queued`
+// row with no job: the execution is marked `failed`, and the throw does not
+// propagate past the recipient boundary so the scheduler tick continues.
+// -----------------------------------------------------------------------
+
+describe("requestReminderExecution — enqueue failure is recorded, not swallowed", () => {
+  function buildRepoCapturingFailures(failures: [string, string][]) {
+    return {
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async getRule(ruleId: string) {
+        return ruleId === activeRule.id ? structuredClone(activeRule) : null;
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async findExecutionByDedupeKey() {
+        return null;
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async insertExecutionOnConflict(candidate: AdminReminderExecution) {
+        return { execution: candidate, inserted: true };
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async markExecutionFailed(executionId: string, errorMessage: string) {
+        failures.push([executionId, errorMessage]);
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async saveExecution(execution: AdminReminderExecution) {
+        return structuredClone(execution);
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async getExecution() {
+        return null;
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async listExecutions() {
+        return [];
+      },
+    } satisfies RemindersRepository;
+  }
+
+  it("marks the execution failed (not queued) and does not rethrow", async () => {
+    const failures: [string, string][] = [];
+    const repository = buildRepoCapturingFailures(failures);
+    const queue = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      add: async () => {
+        throw new Error("Redis unavailable");
+      },
+    };
+    const service = new RemindersService(repository, undefined, queue);
+
+    const result = await service.requestReminderExecution(
+      activeRule.id,
+      "lead@test.local",
+    );
+
+    expect(result.status).toBe("failed");
+    expect(result.errorMessage).toBe("Redis unavailable");
+    expect(failures).toEqual([[result.id, "Redis unavailable"]]);
+  });
+});

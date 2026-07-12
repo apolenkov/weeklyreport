@@ -8,11 +8,12 @@ import {
 import type { ClsService } from "nestjs-cls";
 
 import type { JobEnqueuer } from "../../infrastructure/bullmq/job-enqueuer.js";
-import {
-  captureJobTraceContext,
-  resolveCorrelationId,
-} from "../../infrastructure/bullmq/worker-observability.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
+import {
+  type EnqueueContext,
+  enqueueOrMarkFailed,
+  reEnqueueStuck,
+} from "./reminders-enqueue.js";
 import type { EscalationGroupDigest } from "./reminders-escalation-grouping.js";
 
 export class ReminderDomainError extends Error {
@@ -44,6 +45,36 @@ export interface RemindersRepository {
   insertExecutionOnConflict?(
     execution: AdminReminderExecution,
   ): Promise<{ execution: AdminReminderExecution; inserted: boolean }>;
+  /**
+   * Atomic `queued → sending` compare-and-set. Returns true only when THIS
+   * call wins the transition out of `queued`; a caller that finds it already
+   * `sending`/`sent`/`failed` gets false and must send nothing. Enforced in the
+   * write itself (a guarded `updateMany`), so a retry or a duplicate worker
+   * cannot both claim the same execution.
+   *
+   * Optional on the port because the in-memory test doubles predate it; the
+   * production `RemindersPrismaRepository` always provides it.
+   */
+  transitionExecutionToSending?(executionId: string): Promise<boolean>;
+  /**
+   * Terminal `failed` write with an error message, guarded to the non-terminal
+   * states so it can never overwrite a row that already reached `sent`.
+   * Optional for the same reason as the sibling atomic methods.
+   */
+  markExecutionFailed?(
+    executionId: string,
+    errorMessage: string,
+  ): Promise<void>;
+  /**
+   * Reverses the `queued → sending` claim so a retryable send failure can be
+   * re-claimed by the next BullMQ attempt instead of being stranded. Guarded
+   * to `sending` in the write itself, so it is a no-op against a row that has
+   * already reached `sent`/`failed`.
+   *
+   * Optional on the port because the in-memory test doubles predate it; the
+   * production `RemindersPrismaRepository` always provides it.
+   */
+  releaseExecutionClaim?(executionId: string): Promise<void>;
   getExecution(executionId: string): Promise<AdminReminderExecution | null>;
   listExecutions(ruleId: string): Promise<AdminReminderExecution[]>;
 }
@@ -201,21 +232,76 @@ export class RemindersService {
 
     // Enqueue only after the insert has committed AND only for the caller that
     // inserted the row, so a redundant concurrent tick enqueues nothing.
-    if (this.emailQueue) {
-      await this.emailQueue.add(
-        "send",
-        {
-          ...buildQueuePayload(execution, recipientEmail, rule, payload),
-          ...captureJobTraceContext(resolveCorrelationId(this.cls)),
-        },
-        { attempts: 3, backoff: { type: "exponential", delay: 5000 } },
-      );
-      this.logger.info("enqueued email reminder job", {
-        executionId: execution.id,
-      });
-    }
+    if (!this.emailQueue) return execution;
+    return enqueueOrMarkFailed(
+      this.enqueueContext(this.emailQueue),
+      execution,
+      recipientEmail,
+      rule,
+      payload,
+    );
+  }
 
-    return execution;
+  private enqueueContext(queue: JobEnqueuer): EnqueueContext {
+    return {
+      queue,
+      cls: this.cls,
+      logger: this.logger,
+      markExecutionFailed: this.repository.markExecutionFailed?.bind(
+        this.repository,
+      ),
+    };
+  }
+
+  /**
+   * Compare-and-set claim used by the email-reminder worker before any send:
+   * true only when this caller moved the row `queued → sending`. A false result
+   * means a retry, a duplicate worker, or an admin manual retry already claimed
+   * (or completed) the execution and the worker must send nothing.
+   */
+  async claimExecutionForSending(executionId: string): Promise<boolean> {
+    if (!this.repository.transitionExecutionToSending) {
+      throw new ReminderDomainError(
+        "Repository does not support the compare-and-set send claim.",
+      );
+    }
+    return this.repository.transitionExecutionToSending(executionId);
+  }
+
+  /** Record a terminal `failed` state after a send error. */
+  async markReminderFailed(
+    executionId: string,
+    errorMessage: string,
+  ): Promise<void> {
+    await this.repository.markExecutionFailed?.(executionId, errorMessage);
+  }
+
+  /**
+   * Undo a `queued → sending` claim after a retryable dispatch failure, so
+   * the next BullMQ attempt's `claimExecutionForSending` can re-claim and
+   * actually resend the row instead of finding it permanently stuck.
+   */
+  async releaseExecutionClaim(executionId: string): Promise<void> {
+    await this.repository.releaseExecutionClaim?.(executionId);
+  }
+
+  /**
+   * Reaper path: re-enqueue an execution stranded in `queued` (its enqueue
+   * never happened). Idempotent against the original job and the send guard.
+   */
+  async reEnqueueStuckExecution(
+    execution: AdminReminderExecution,
+  ): Promise<void> {
+    if (!this.emailQueue) return;
+    const rule = await this.repository.getRule(execution.ruleId);
+    if (!rule) {
+      this.logger.warn("reaper: rule missing for stuck execution", {
+        executionId: execution.id,
+        ruleId: execution.ruleId,
+      });
+      return;
+    }
+    await reEnqueueStuck(this.enqueueContext(this.emailQueue), execution, rule);
   }
 
   /**
@@ -296,47 +382,4 @@ export class RemindersService {
 
     return { items: page, nextCursor };
   }
-}
-
-/**
- * Build the BullMQ `send` payload for an execution. The deadline and escalation
- * payloads carry the rich template fields plus the brand snapshot; the legacy
- * (no-payload) path emits the plain-text shape the worker's legacy branch
- * renders.
- */
-function buildQueuePayload(
-  execution: AdminReminderExecution,
-  recipientEmail: string,
-  rule: AdminReminderRule,
-  payload?: ReminderExecutionPayload,
-): Record<string, unknown> {
-  if (payload?.kind === "deadline") {
-    return {
-      executionId: execution.id,
-      recipientEmail,
-      kind: "deadline",
-      leadName: payload.leadName,
-      reportPeriod: payload.reportPeriod,
-      deadlineIso: payload.deadlineIso,
-      sectionUrl: payload.sectionUrl,
-      organization: payload.organization,
-    };
-  }
-  if (payload?.kind === "escalation") {
-    return {
-      executionId: execution.id,
-      recipientEmail,
-      kind: "escalation",
-      headName: payload.headName,
-      cycleDate: payload.cycleDate,
-      reportPeriod: payload.reportPeriod,
-      lateLeads: payload.lateLeads,
-      organization: payload.organization,
-    };
-  }
-  return {
-    executionId: execution.id,
-    recipientEmail,
-    reportPeriod: rule.reportId ?? "",
-  };
 }

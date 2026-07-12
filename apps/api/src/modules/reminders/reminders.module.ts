@@ -8,6 +8,7 @@ import { OrganizationModule } from "../organization/index.js";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository";
 import { RemindersScheduler } from "./reminders.scheduler";
 import { RemindersService } from "./reminders.service";
+import { RemindersReaperScheduler } from "./reminders-reaper.scheduler";
 
 @Module({
   // `OrganizationModule` exposes `OrganizationService` so the scheduler can
@@ -30,6 +31,8 @@ import { RemindersService } from "./reminders.service";
     },
     // Hourly @Cron deadline reminder dispatcher.
     RemindersScheduler,
+    // Periodic @Cron sweep that re-enqueues executions stranded in `queued`.
+    RemindersReaperScheduler,
   ],
   exports: [RemindersService],
 })

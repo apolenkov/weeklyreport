@@ -190,7 +190,11 @@ describe("RemindersService — contract tests", () => {
           recipientEmail,
           reportPeriod: activeRule.reportId,
         },
-        { attempts: 3, backoff: { type: "exponential", delay: 5000 } },
+        {
+          attempts: 3,
+          backoff: { type: "exponential", delay: 5000 },
+          jobId: execution.id,
+        },
       );
     });
 

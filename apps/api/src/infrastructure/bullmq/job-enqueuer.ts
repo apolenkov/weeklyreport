@@ -18,4 +18,7 @@ export interface JobEnqueuer {
 export interface JobEnqueueOptions {
   attempts?: number;
   backoff?: { type: string; delay: number };
+  // Deterministic job id: BullMQ ignores a second `add` carrying an id already
+  // present, so a reaper re-enqueue dedups against a late-arriving original.
+  jobId?: string;
 }

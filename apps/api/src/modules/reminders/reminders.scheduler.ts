@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
 import { requireEnv } from "../../lib/env.js";
@@ -34,6 +34,8 @@ const ISO_DATE_LENGTH = 10;
  */
 @Injectable()
 export class RemindersScheduler {
+  private readonly logger = new Logger(RemindersScheduler.name);
+
   constructor(
     private readonly service: RemindersService,
     private readonly repository: RemindersPrismaRepository,
@@ -42,6 +44,13 @@ export class RemindersScheduler {
     // exactly once, not 6 times.
     private readonly organizationService: OrganizationService,
   ) {}
+
+  private logDispatchFailure(recipientEmail: string, error: unknown): void {
+    this.logger.error("reminder dispatch failed for recipient", {
+      recipientEmail,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   // CronExpression.EVERY_HOUR === '0 * * * *' — fires at the top of every hour.
   // The same tick handles deadline (T-24h) and escalation (T+2h).
@@ -92,15 +101,21 @@ export class RemindersScheduler {
       if (recipient.notificationOptOut) {
         continue;
       }
-      await this.service.requestReminderExecution(rule.id, recipient.email, {
-        kind: "deadline",
-        cycleDate,
-        leadName: recipient.name,
-        reportPeriod: rule.reportPeriodLabel,
-        deadlineIso,
-        sectionUrl,
-        organization,
-      });
+      // Per-recipient isolation: one recipient's failure is logged and skipped
+      // so the loop still processes the remaining recipients of this tick.
+      try {
+        await this.service.requestReminderExecution(rule.id, recipient.email, {
+          kind: "deadline",
+          cycleDate,
+          leadName: recipient.name,
+          reportPeriod: rule.reportPeriodLabel,
+          deadlineIso,
+          sectionUrl,
+          organization,
+        });
+      } catch (error: unknown) {
+        this.logDispatchFailure(recipient.email, error);
+      }
     }
   }
 
@@ -112,14 +127,19 @@ export class RemindersScheduler {
     // notifies the head — it ignores notificationOptOut.
     const cycleDate = rule.fireAt.toISOString().slice(0, ISO_DATE_LENGTH);
     for (const group of rule.groups) {
-      await this.service.requestReminderExecution(rule.id, group.head.email, {
-        kind: "escalation",
-        cycleDate,
-        headName: group.head.name,
-        reportPeriod: rule.reportPeriodLabel,
-        lateLeads: group.lateLeads,
-        organization,
-      });
+      // Per-recipient isolation: one head's failure never aborts the tick.
+      try {
+        await this.service.requestReminderExecution(rule.id, group.head.email, {
+          kind: "escalation",
+          cycleDate,
+          headName: group.head.name,
+          reportPeriod: rule.reportPeriodLabel,
+          lateLeads: group.lateLeads,
+          organization,
+        });
+      } catch (error: unknown) {
+        this.logDispatchFailure(group.head.email, error);
+      }
     }
   }
 }

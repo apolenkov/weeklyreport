@@ -23,7 +23,7 @@ CREATE TYPE "ItemWorkflowStatus" AS ENUM ('planned', 'in_progress', 'paused', 'p
 CREATE TYPE "PdfExportStatus" AS ENUM ('pending', 'completed', 'failed');
 
 -- CreateEnum
-CREATE TYPE "ReminderExecutionStatus" AS ENUM ('pending', 'sent', 'failed');
+CREATE TYPE "ReminderExecutionStatus" AS ENUM ('pending', 'sending', 'sent', 'failed');
 
 -- CreateEnum
 CREATE TYPE "CarryOverStatus" AS ENUM ('completed');
