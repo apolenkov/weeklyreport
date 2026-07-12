@@ -176,6 +176,135 @@ describe("RemindersPrismaRepository (integration)", () => {
     expect(rows).toHaveLength(1);
   });
 
+  it("transitionExecutionToSending claims a queued row exactly once", async () => {
+    await repo.saveExecution(baseExecution(TEST_IDS.reminderExec1, "cas-1"));
+
+    const first = await repo.transitionExecutionToSending(
+      TEST_IDS.reminderExec1,
+    );
+    const second = await repo.transitionExecutionToSending(
+      TEST_IDS.reminderExec1,
+    );
+
+    // Exactly one caller wins the queued → sending transition.
+    expect(first).toBe(true);
+    expect(second).toBe(false);
+
+    // The claim is durable and reads back as `sending`.
+    const reread = await repo.getExecution(TEST_IDS.reminderExec1);
+    expect(reread?.status).toBe("sending");
+  });
+
+  it("transitionExecutionToSending does not claim an already-sent row", async () => {
+    await repo.saveExecution({
+      ...baseExecution(TEST_IDS.reminderExec1, "cas-2"),
+      status: "sent",
+      sentAt: new Date("2026-04-11T09:00:05.000Z"),
+    });
+
+    const claimed = await repo.transitionExecutionToSending(
+      TEST_IDS.reminderExec1,
+    );
+
+    expect(claimed).toBe(false);
+    const reread = await repo.getExecution(TEST_IDS.reminderExec1);
+    expect(reread?.status).toBe("sent");
+  });
+
+  it("releaseExecutionClaim flips a sending row back to the claimable status", async () => {
+    await repo.saveExecution(
+      baseExecution(TEST_IDS.reminderExec1, "release-1"),
+    );
+    const claimed = await repo.transitionExecutionToSending(
+      TEST_IDS.reminderExec1,
+    );
+    expect(claimed).toBe(true);
+
+    await repo.releaseExecutionClaim(TEST_IDS.reminderExec1);
+
+    // Released back to the pre-claim status, so a retry's
+    // transitionExecutionToSending can claim it again.
+    const reclaimed = await repo.transitionExecutionToSending(
+      TEST_IDS.reminderExec1,
+    );
+    expect(reclaimed).toBe(true);
+  });
+
+  it("releaseExecutionClaim is a no-op against an already-sent row", async () => {
+    await repo.saveExecution({
+      ...baseExecution(TEST_IDS.reminderExec1, "release-2"),
+      status: "sent",
+      sentAt: new Date("2026-04-11T09:00:05.000Z"),
+    });
+
+    await repo.releaseExecutionClaim(TEST_IDS.reminderExec1);
+
+    const reread = await repo.getExecution(TEST_IDS.reminderExec1);
+    expect(reread?.status).toBe("sent");
+  });
+
+  it("markExecutionFailed records a terminal failure but never clobbers a sent row", async () => {
+    await repo.saveExecution(baseExecution(TEST_IDS.reminderExec1, "fail-1"));
+    await repo.markExecutionFailed(TEST_IDS.reminderExec1, "SMTP refused");
+
+    const failed = await repo.getExecution(TEST_IDS.reminderExec1);
+    expect(failed?.status).toBe("failed");
+    expect(failed?.errorMessage).toBe("SMTP refused");
+
+    // A late failure write must not overwrite a row that already reached sent.
+    await repo.saveExecution({
+      ...baseExecution(TEST_IDS.reminderExec2, "fail-2"),
+      status: "sent",
+      sentAt: new Date("2026-04-11T09:00:05.000Z"),
+    });
+    await repo.markExecutionFailed(TEST_IDS.reminderExec2, "too late");
+    const stillSent = await repo.getExecution(TEST_IDS.reminderExec2);
+    expect(stillSent?.status).toBe("sent");
+  });
+
+  it("listStuckQueuedExecutions returns old queued rows and excludes sending / fresh rows", async () => {
+    const cutoff = new Date("2026-04-11T12:00:00.000Z");
+    const old = new Date("2026-04-11T09:00:00.000Z");
+    // Created after the cutoff → within the window, not yet stranded.
+    const fresh = new Date("2026-04-11T12:30:00.000Z");
+
+    // Stranded queued row, old enough to reap.
+    await prisma.reminderExecution.create({
+      data: {
+        id: TEST_IDS.reminderExec1,
+        ruleId: TEST_IDS.reminderRule,
+        dedupeKey: "stuck-queued",
+        status: "pending",
+        createdAt: old,
+      },
+    });
+    // In-flight send: old, but intentionally NOT reclaimed.
+    await prisma.reminderExecution.create({
+      data: {
+        id: TEST_IDS.reminderExec2,
+        ruleId: TEST_IDS.reminderRule,
+        dedupeKey: "stuck-sending",
+        status: "sending",
+        createdAt: old,
+      },
+    });
+    // Freshly queued: within the window, not yet stranded.
+    await prisma.reminderExecution.create({
+      data: {
+        id: "a0000000-0000-4000-a000-0000000000f5",
+        ruleId: TEST_IDS.reminderRule,
+        dedupeKey: "fresh-queued",
+        status: "pending",
+        createdAt: fresh,
+      },
+    });
+
+    const stuck = await repo.listStuckQueuedExecutions(cutoff);
+
+    expect(stuck).toHaveLength(1);
+    expect(expectDefined(stuck[0]).id).toBe(TEST_IDS.reminderExec1);
+  });
+
   it("escalation resolves the late lead's group head for an unpublished period", async () => {
     // publishedBy is null on the seed report — the old publisher-based path
     // would drop this digest entirely.

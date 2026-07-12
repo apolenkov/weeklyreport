@@ -51,7 +51,10 @@ const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
 
 function createMockRemindersService() {
   return {
+    claimExecutionForSending: vi.fn().mockResolvedValue(true),
     markReminderSent: vi.fn().mockResolvedValue(undefined),
+    markReminderFailed: vi.fn().mockResolvedValue(undefined),
+    releaseExecutionClaim: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -80,8 +83,16 @@ interface EmailReminderJobData {
   reportPeriod: string;
 }
 
-function createMockJob(data: EmailReminderJobData): Job<EmailReminderJobData> {
-  return { data } as Job<EmailReminderJobData>;
+function createMockJob(
+  data: EmailReminderJobData,
+  attemptsMade = 0,
+  attempts = 3,
+): Job<EmailReminderJobData> {
+  return {
+    data,
+    attemptsMade,
+    opts: { attempts },
+  } as Job<EmailReminderJobData>;
 }
 
 // Test seam — `processJob` is `private` on the class, but tests need to invoke
@@ -194,10 +205,63 @@ describe("EmailReminderProcessor.processJob", () => {
     expect(mockReminders.markReminderSent).toHaveBeenCalledWith("exec-1");
   });
 
-  it("does not mark sent if sendMail throws", async () => {
+  it("does not mark sent if sendMail throws, and records a failed terminal state on the final attempt", async () => {
     const mockReminders = createMockRemindersService();
     const mockEmail = createMockEmailService();
     mockEmail.sendMail.mockRejectedValue(new Error("SMTP connection refused"));
+
+    const processor = new EmailReminderProcessor(
+      mockReminders as never,
+      mockEmail,
+      STUB_ENV,
+    );
+    // attemptsMade=2 with attempts=3 is the final (3rd) attempt.
+    const job = createMockJob(defaultJobData, 2, 3);
+
+    await expect(
+      (processor as unknown as ProcessorTestSeam).processJob(job),
+    ).rejects.toThrow("SMTP connection refused");
+
+    expect(mockReminders.markReminderSent).not.toHaveBeenCalled();
+    expect(mockReminders.markReminderFailed).toHaveBeenCalledWith(
+      "exec-1",
+      "SMTP connection refused",
+    );
+    expect(mockReminders.releaseExecutionClaim).not.toHaveBeenCalled();
+  });
+
+  // Transient dispatch failure with retries remaining must release the claim
+  // (not mark failed) so the next BullMQ attempt can re-claim and resend.
+  it("releases the claim (not markReminderFailed) when a non-final attempt's dispatch fails", async () => {
+    const mockReminders = createMockRemindersService();
+    const mockEmail = createMockEmailService();
+    mockEmail.sendMail.mockRejectedValue(new Error("SMTP connection refused"));
+
+    const processor = new EmailReminderProcessor(
+      mockReminders as never,
+      mockEmail,
+      STUB_ENV,
+    );
+    // attemptsMade=0 with attempts=3 is the first of three attempts.
+    const job = createMockJob(defaultJobData, 0, 3);
+
+    await expect(
+      (processor as unknown as ProcessorTestSeam).processJob(job),
+    ).rejects.toThrow("SMTP connection refused");
+
+    expect(mockReminders.releaseExecutionClaim).toHaveBeenCalledWith("exec-1");
+    expect(mockReminders.markReminderFailed).not.toHaveBeenCalled();
+  });
+
+  // If dispatch succeeds but the follow-up markReminderSent write throws
+  // (e.g. a transient DB error), the email was already delivered: the row
+  // must stay `sending`, not be marked failed or have its claim released.
+  it("leaves the row sending (no failed mark, no claim release) when markReminderSent throws after a successful dispatch", async () => {
+    const mockReminders = createMockRemindersService();
+    mockReminders.markReminderSent.mockRejectedValue(
+      new Error("DB write timed out"),
+    );
+    const mockEmail = createMockEmailService();
 
     const processor = new EmailReminderProcessor(
       mockReminders as never,
@@ -208,8 +272,47 @@ describe("EmailReminderProcessor.processJob", () => {
 
     await expect(
       (processor as unknown as ProcessorTestSeam).processJob(job),
-    ).rejects.toThrow("SMTP connection refused");
+    ).rejects.toThrow("DB write timed out");
 
+    expect(mockReminders.markReminderFailed).not.toHaveBeenCalled();
+    expect(mockReminders.releaseExecutionClaim).not.toHaveBeenCalled();
+  });
+
+  // Compare-and-set short-circuit: a retry (or duplicate worker, or admin
+  // job.retry()) whose execution is no longer `queued` loses the claim and MUST
+  // send nothing — the guard against double-delivery.
+  it("short-circuits without sending when the execution is already claimed", async () => {
+    const mockReminders = createMockRemindersService();
+    mockReminders.claimExecutionForSending.mockResolvedValue(false);
+    const mockEmail = createMockEmailService();
+    const processor = new EmailReminderProcessor(
+      mockReminders as never,
+      mockEmail,
+      STUB_ENV,
+    );
+    const job = createMockJob(defaultJobData);
+
+    await (processor as unknown as ProcessorTestSeam).processJob(job);
+
+    expect(mockEmail.sendMail).not.toHaveBeenCalled();
+    expect(mockEmail.sendMailMultipart).not.toHaveBeenCalled();
     expect(mockReminders.markReminderSent).not.toHaveBeenCalled();
+  });
+
+  it("claims the execution before sending", async () => {
+    const mockReminders = createMockRemindersService();
+    const mockEmail = createMockEmailService();
+    const processor = new EmailReminderProcessor(
+      mockReminders as never,
+      mockEmail,
+      STUB_ENV,
+    );
+    const job = createMockJob(defaultJobData);
+
+    await (processor as unknown as ProcessorTestSeam).processJob(job);
+
+    expect(mockReminders.claimExecutionForSending).toHaveBeenCalledWith(
+      "exec-1",
+    );
   });
 });

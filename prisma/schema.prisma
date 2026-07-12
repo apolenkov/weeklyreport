@@ -871,6 +871,7 @@ enum PdfExportStatus {
 
 enum ReminderExecutionStatus {
   pending
+  sending
   sent
   failed
 }

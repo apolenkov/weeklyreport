@@ -98,8 +98,51 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
   }
 
   protected async processJob(job: Job<EmailReminderJobData>): Promise<void> {
-    const data = job.data;
+    const { executionId } = job.data;
 
+    // Compare-and-set the execution `queued → sending` before any SMTP work.
+    // A retry, a duplicate worker, or an admin `job.retry()` that finds the row
+    // already claimed loses the transition and acks without sending — the guard
+    // against double-delivery.
+    const claimed =
+      await this.remindersService.claimExecutionForSending(executionId);
+    if (!claimed) {
+      this.logger.info("email-reminder short-circuit: execution not queued", {
+        executionId,
+      });
+      return;
+    }
+
+    try {
+      await this.dispatchEmail(job.data);
+    } catch (error: unknown) {
+      // Dispatch failed — the send never happened, so the row must not stay
+      // permanently `sending`. On the final attempt there is no retry left to
+      // re-claim it, so `failed` is terminal and correct. On any earlier
+      // attempt, release the claim back to the pre-claim status so BullMQ's
+      // retry can call claimExecutionForSending again and actually resend;
+      // marking it `failed` here would defeat the retry (the CAS only
+      // matches the pre-claim status).
+      const message = error instanceof Error ? error.message : String(error);
+      const attemptsUsed = job.attemptsMade + 1;
+      const maxAttempts = job.opts.attempts ?? 1;
+      if (attemptsUsed >= maxAttempts) {
+        await this.remindersService.markReminderFailed(executionId, message);
+      } else {
+        await this.remindersService.releaseExecutionClaim(executionId);
+      }
+      throw error;
+    }
+
+    // Outside the try/catch on purpose: if this throws, the send already
+    // succeeded and the row should stay `sending` rather than being marked
+    // `failed` (which would invite a duplicate resend) or `sent` (which
+    // would be a lie if the write never lands). `sending` here reads as
+    // "delivered, persistence unconfirmed — needs investigation."
+    await this.remindersService.markReminderSent(executionId);
+  }
+
+  private async dispatchEmail(data: EmailReminderJobData): Promise<void> {
     // null is a valid value ("use env default"); a missing adminService
     // (test-time DI fallback) skips the lookup entirely.
     const fromOverride = this.adminService
@@ -163,7 +206,5 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
         fromOverride,
       );
     }
-
-    await this.remindersService.markReminderSent(data.executionId);
   }
 }

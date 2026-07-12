@@ -717,3 +717,48 @@ describe("RemindersScheduler — NOTIF-05 opt-out (Phase 29-05)", () => {
     expect(queueAdds[0]?.data.kind).toBe("escalation");
   });
 });
+
+/* ------------------------------------------------------------------ */
+/*  Per-recipient isolation: one recipient's failure never aborts the tick */
+/* ------------------------------------------------------------------ */
+
+describe("RemindersScheduler — per-recipient isolation", () => {
+  it("continues to the remaining recipients when one dispatch throws", async () => {
+    const recipients = [
+      { userId: "u1", email: "first@test.local", name: "First" },
+      { userId: "u2", email: "boom@test.local", name: "Boom" },
+      { userId: "u3", email: "third@test.local", name: "Third" },
+    ];
+    const fakeRepository = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
+      findDueDeadlineRules: vi.fn(async () => [
+        dueRuleFromRecipients(recipients),
+      ]),
+      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
+      findDueEscalationRules: vi.fn(async () => []),
+    };
+    const attempted: string[] = [];
+    const serviceStub = {
+      requestReminderExecution: vi.fn((_ruleId: string, email: string) => {
+        attempted.push(email);
+        return email === "boom@test.local"
+          ? Promise.reject(new Error("dispatch exploded"))
+          : Promise.resolve({ id: email });
+      }),
+    };
+    const scheduler = new RemindersScheduler(
+      serviceStub as unknown as RemindersService,
+      fakeRepository as never,
+      fakeOrganizationService,
+    );
+
+    await scheduler.runOnce(new Date("2026-04-19T16:00:00.000Z"));
+
+    // All three recipients attempted; the middle throw did not abort the loop.
+    expect(attempted).toEqual([
+      "first@test.local",
+      "boom@test.local",
+      "third@test.local",
+    ]);
+  });
+});

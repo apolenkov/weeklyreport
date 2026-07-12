@@ -17,17 +17,24 @@ import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 /** Length of an ISO calendar date (`YYYY-MM-DD`) after `toISOString().slice(0, n)`. */
 const ISO_DATE_LENGTH = 10;
 
+// Domain `queued` persists as the Prisma `pending` enum value; every other
+// status (including the in-flight `sending` claim) shares its name across the
+// two vocabularies.
 const execStatusToDb: Record<string, string> = {
   queued: "pending",
+  sending: "sending",
   sent: "sent",
   failed: "failed",
 };
 
 const dbExecStatusToDomain: Record<string, AdminReminderExecution["status"]> = {
   pending: "queued",
+  sending: "sending",
   sent: "sent",
   failed: "failed",
 };
+
+type PrismaExecStatus = "pending" | "sending" | "sent" | "failed";
 
 /** Map a domain execution to the Prisma row written on create/insert. */
 export function toExecutionCreateData(
@@ -37,7 +44,7 @@ export function toExecutionCreateData(
     id: execution.id,
     ruleId: execution.ruleId,
     dedupeKey: execution.dedupeKey,
-    status: (execStatusToDb[execution.status] ?? "pending") as "pending",
+    status: (execStatusToDb[execution.status] ?? "pending") as PrismaExecStatus,
     sentAt: execution.sentAt,
     error: execution.errorMessage,
   };
@@ -45,12 +52,12 @@ export function toExecutionCreateData(
 
 /** Map a domain execution's status to the Prisma row written on update. */
 export function toExecutionUpdateData(execution: AdminReminderExecution): {
-  status: "pending" | "sent" | "failed";
+  status: PrismaExecStatus;
   sentAt: Date | null;
   error: string | null;
 } {
   return {
-    status: (execStatusToDb[execution.status] ?? "pending") as "pending",
+    status: (execStatusToDb[execution.status] ?? "pending") as PrismaExecStatus,
     sentAt: execution.sentAt,
     error: execution.errorMessage,
   };

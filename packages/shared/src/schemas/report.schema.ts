@@ -191,6 +191,7 @@ export const adminReminderRuleSchema = z.object({
 
 export const adminReminderExecutionStatusSchema = z.enum([
   "queued",
+  "sending",
   "sent",
   "failed",
 ]);
