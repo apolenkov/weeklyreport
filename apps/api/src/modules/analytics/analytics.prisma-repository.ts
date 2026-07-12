@@ -16,6 +16,7 @@ import type { AnalyticsRepository } from "./analytics.service.js";
 import {
   collectComparisonCells,
   collectProjectNames,
+  groupReportsByLabel,
   isoDateOnly,
   nextUtcDay,
   startOfUtcDay,
@@ -46,6 +47,12 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
     const scope = groupScopeFilter(session, "reportSection");
     const scoped = Object.keys(scope).length > 0;
     const leadFilter = input.leadId ? { authorId: input.leadId } : {};
+    // The same predicate gates BOTH which reports qualify (`where.sections.some`)
+    // and which sections are aggregated (`include.sections.where`): a leadId
+    // that reaches only the report qualifier still returns every in-scope lead's
+    // sections, so it must land on the include too.
+    const sectionWhere = { ...leadFilter, ...scope };
+    const hasSectionWhere = scoped || Boolean(input.leadId);
 
     const reports = await this.prisma.report.findMany({
       where: {
@@ -56,13 +63,11 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
         periodEnd: { lt: nextUtcDay(input.periodTo) },
         // Drop periods with no in-scope (and, if filtered, no matching-lead)
         // section. Omitted only when neither a scope nor a lead filter applies.
-        ...(scoped || input.leadId
-          ? { sections: { some: { ...leadFilter, ...scope } } }
-          : {}),
+        ...(hasSectionWhere ? { sections: { some: sectionWhere } } : {}),
       },
       include: {
         sections: {
-          ...(scoped ? { where: scope } : {}),
+          ...(hasSectionWhere ? { where: sectionWhere } : {}),
           include: {
             projectStatuses: { include: { project: true } },
           },
@@ -78,10 +83,7 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
     // Multiple reports can map to one date-label (a republished period, or two
     // periods differing only by periodStart), so aggregate per label instead of
     // reading the first match and dropping the rest.
-    const reportsByLabel = reports.reduce((acc, r) => {
-      const label = isoDateOnly(r.periodEnd);
-      return acc.set(label, [...(acc.get(label) ?? []), r]);
-    }, new Map<string, (typeof reports)[number][]>());
+    const reportsByLabel = groupReportsByLabel(reports);
 
     const projectMap = collectProjectNames(reports, input.projectId);
 
@@ -125,14 +127,29 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       orderBy: { periodEnd: "asc" },
     });
 
-    return reports.map((r) => ({
-      periodLabel: isoDateOnly(r.periodEnd),
-      leads: r.sections.map((s) => ({
-        leadId: s.authorId,
-        leadName: s.author.name,
-        submittedSections: 1,
-      })),
-    }));
+    // Group by period label so a republished period (two reports sharing a
+    // label) yields one row with both reports' leads, not a duplicate series
+    // point — parity with trafficLightHistory's per-label aggregation.
+    const reportsByLabel = groupReportsByLabel(reports);
+
+    return Array.from(reportsByLabel.entries()).map(([periodLabel, group]) => {
+      // One entry per lead within the label: a lead submitted in BOTH the
+      // original and the republished report of the same period must count
+      // once, or the row overstates that lead's velocity.
+      const byLead = new Map(
+        group
+          .flatMap((r) => r.sections)
+          .map((s) => [
+            s.authorId,
+            {
+              leadId: s.authorId,
+              leadName: s.author.name,
+              submittedSections: 1,
+            },
+          ]),
+      );
+      return { periodLabel, leads: [...byLead.values()] };
+    });
   }
 
   async periodComparison(

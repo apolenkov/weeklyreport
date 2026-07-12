@@ -62,14 +62,25 @@ const PREFIX_VELOCITY = "customreport:analytics:lead-velocity:v2:";
 const PREFIX_COMPARISON = "customreport:analytics:period-comparison:v2:";
 
 /**
- * Stable JSON.stringify with sorted keys so equivalent inputs hit the same
- * cache key regardless of property order in the call site.
+ * Stable serialization with keys sorted at EVERY nesting depth, so equivalent
+ * inputs hit the same cache key regardless of property order. A top-level-keys
+ * replacer array (`JSON.stringify(value, keys)`) whitelists those keys at every
+ * depth, silently dropping any nested key absent at the top level — this
+ * recurses instead, so nested cache-key inputs hash correctly.
  */
-function stableHash(value: unknown): string {
+export function stableHash(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
-  // eslint-disable-next-line sonarjs/no-alphabetical-sort -- stable cache-key hashing; localeCompare would break determinism across locales
-  const keys = Object.keys(value).sort();
-  return JSON.stringify(value, keys);
+  if (Array.isArray(value)) return `[${value.map(stableHash).join(",")}]`;
+  return stableHashObject(value as Record<string, unknown>);
+}
+
+function stableHashObject(record: Record<string, unknown>): string {
+  const entries = Object.keys(record)
+    // eslint-disable-next-line sonarjs/no-alphabetical-sort -- stable cache-key hashing; localeCompare would break determinism across locales
+    .sort()
+    .filter((key) => record[key] !== undefined)
+    .map((key) => `${JSON.stringify(key)}:${stableHash(record[key])}`);
+  return `{${entries.join(",")}}`;
 }
 
 export class AnalyticsService {

@@ -255,6 +255,32 @@ describe("Analytics day-range matching (integration)", () => {
     const finalDay = velocity.find((p) => p.periodLabel === "2026-05-31");
     expect(finalDay?.leads.map((l) => l.leadId)).toContain(DR_LEAD);
   });
+
+  it("leadVelocity collapses a republished period into one row", async () => {
+    await makePublishedReport({
+      id: "c0000000-0000-4000-8000-000000000701",
+      sectionId: "c0000000-0000-4000-8000-000000000702",
+      periodStart: "2026-05-04",
+      periodEnd: "2026-05-10T08:00:00.000Z",
+      sectionStatus: "submitted",
+    });
+    await makePublishedReport({
+      id: "c0000000-0000-4000-8000-000000000703",
+      sectionId: "c0000000-0000-4000-8000-000000000704",
+      periodStart: "2026-05-04",
+      periodEnd: "2026-05-10T20:00:00.000Z",
+      sectionStatus: "submitted",
+    });
+
+    const velocity = await repo.leadVelocity(MAY, adminDR);
+    const rows = velocity.filter((p) => p.periodLabel === "2026-05-10");
+    // Two reports share the 2026-05-10 label — grouping yields ONE row, and a
+    // lead submitted in BOTH the original and the republish counts ONCE in it
+    // (not one entry per report, which would overstate that lead's velocity).
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.leads).toHaveLength(1);
+    expect(rows[0]?.leads[0]?.leadId).toBe(DR_LEAD);
+  });
 });
 
 describe("Analytics group scoping (integration)", () => {
@@ -347,6 +373,19 @@ describe("Analytics group scoping (integration)", () => {
 
   it("trafficLightHistory returns only the group-A project", async () => {
     const result = await repo.trafficLightHistory(HISTORY_INPUT, headA);
+    const ids = result.rows.map((r) => r.projectId);
+    expect(ids).toContain(testData.project.id);
+    expect(ids).not.toContain(PROJECT_B);
+  });
+
+  it("trafficLightHistory with a leadId set aggregates only that lead's projects", async () => {
+    // Admin session: no group scope, so the lead filter is the ONLY predicate —
+    // it must scope which sections aggregate, not just which reports qualify.
+    const adminA: UserSession = { ...headA, role: "admin" };
+    const result = await repo.trafficLightHistory(
+      { ...HISTORY_INPUT, leadId: testData.lead.id },
+      adminA,
+    );
     const ids = result.rows.map((r) => r.projectId);
     expect(ids).toContain(testData.project.id);
     expect(ids).not.toContain(PROJECT_B);
