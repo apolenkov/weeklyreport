@@ -1,8 +1,6 @@
 import {
   type AssembledReport,
   assembledReportSchema,
-  type DraftSavePayload,
-  draftSaveSchema,
   type PortfolioOverview,
   type ReportSectionReadModel,
   type UserSession,
@@ -15,10 +13,11 @@ import {
 import { type AppLogger, createNullLogger } from "../../../lib/logger";
 
 /**
- * Fire-and-forget post-publish ingestion seam. Unit tests default to a
- * no-op so the 200+ existing tests stay green. Errors thrown by the port
- * are swallowed by the publish path — the publish must succeed even when
- * a downstream consumer is degraded.
+ * Post-publish ingestion seam. The enqueue is awaited and any error it throws
+ * is swallowed by the publish path — the publish must succeed even when a
+ * downstream consumer is degraded, but it is NOT detached (awaiting keeps the
+ * rejection handled and test timing deterministic). Unit tests default to a
+ * no-op so the 200+ existing tests stay green.
  *
  * The original AI/RAG consumer was removed; the seam is kept so a rebuilt
  * pipeline — or any other async consumer — can re-wire without touching
@@ -54,9 +53,9 @@ export class PublicationArchivedError extends Error {
 /**
  * Thrown by `getAssembledReport` when the requested report row is absent. A
  * missing resource, so the tRPC error-mapper renders it NOT_FOUND (distinct
- * from `PublicationAccessError` → CONFLICT). Its three in-service callers
- * (`publishReport`, `publishAuto`, `updateSectionForReview`) propagate it, so a
- * missing report surfaces as NOT_FOUND instead of a false 500.
+ * from `PublicationAccessError` → CONFLICT). Its in-service callers
+ * (`publishReport`, `publishAuto`) propagate it, so a missing report surfaces
+ * as NOT_FOUND instead of a false 500.
  */
 export class PublicationNotFoundError extends Error {
   constructor(message: string) {
@@ -97,13 +96,6 @@ export type PublishReportOutcome =
 
 export interface PublicationRepository {
   getAssembledReport(activeReportId: string): Promise<AssembledReport | null>;
-  /**
-   * Persist the assembled report through the `open` (draft save) transition.
-   * The manual publish path uses {@link publishAssembledReport} and the auto
-   * path uses {@link saveAutoPublishedReport}, so neither publish writer can be
-   * reached without its compare-and-set guard.
-   */
-  saveAssembledReport(report: AssembledReport): Promise<AssembledReport>;
   /**
    * Publish the assembled report through a guarded `periodStatus != "published"`
    * compare-and-set. Keys on `periodStatus` (NOT legacy `status`), so a reopened
@@ -222,46 +214,6 @@ export class PublicationService {
     });
   }
 
-  async updateSectionForReview(
-    activeReportId: string,
-    input: DraftSavePayload,
-  ): Promise<AssembledReport> {
-    const parsedInput = draftSaveSchema.parse(input);
-    const report = await this.getAssembledReport(activeReportId);
-
-    if (report.status === "published") {
-      throw new PublicationAccessError("Published reports are immutable.");
-    }
-
-    const nextSections = report.sections.map((section) => {
-      if (section.reportSectionId !== parsedInput.reportSectionId) {
-        return section;
-      }
-
-      return {
-        ...section,
-        projects: section.projects.map((project) => ({
-          ...project,
-          trafficLight:
-            parsedInput.projectStatuses.find(
-              (status) => status.projectId === project.projectId,
-            )?.status ?? null,
-        })),
-        items: parsedInput.items,
-        risks: parsedInput.risks,
-        decisions: parsedInput.decisions,
-      };
-    });
-
-    return this.repository.saveAssembledReport(
-      assembledReportSchema.parse({
-        ...report,
-        portfolioOverview: buildPortfolioOverview(nextSections),
-        sections: nextSections,
-      }),
-    );
-  }
-
   async publishReport(
     activeReportId: string,
     session: UserSession,
@@ -311,8 +263,9 @@ export class PublicationService {
       from: outcome.priorPeriodStatus,
       to: "published",
     });
-    // Enqueue ingestion AFTER metrics are emitted — an ingestion failure must
-    // never block telemetry or the response.
+    // Enqueue ingestion AFTER metrics are emitted. The enqueue is awaited and
+    // its errors are swallowed, so an ingestion failure never blocks telemetry
+    // or the response — the publish still returns even when the hook is degraded.
     await this.enqueueIngestion(outcome.report);
     return outcome.report;
   }
@@ -376,8 +329,9 @@ export class PublicationService {
       from: "open",
       to: "published",
     });
-    // Fire-and-forget ingestion enqueue AFTER metrics — auto-publishes feed the
-    // same queue as manual publishes, and ingestion must never block telemetry.
+    // Ingestion enqueue AFTER metrics — auto-publishes feed the same queue as
+    // manual publishes. The enqueue is awaited and its errors are swallowed, so
+    // a degraded hook never blocks telemetry or the response.
     await this.enqueueIngestion(result.report);
     return { published: true, report: result.report };
   }

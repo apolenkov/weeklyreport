@@ -107,6 +107,36 @@ describe("PublicationPrismaRepository (integration)", () => {
     });
   });
 
+  it("publishAssembledReport freezes the snapshot from a fresh in-transaction re-read (captures a lead edit committed after assemble)", async () => {
+    // The head assembles the publish payload (pre-read), THEN a lead commits a
+    // section edit before the publish write lands. The frozen snapshot MUST
+    // reflect the edit: it is built from a fresh in-transaction re-read, never
+    // from the earlier assemble-read. On the pre-change non-transactional path
+    // the snapshot froze the stale pre-read bytes and lost the edit forever.
+    const payload = await publishPayload(testData.head.id);
+    expect(expectDefined(payload.sections[0]).status).toBe("draft");
+
+    await prisma.reportSection.update({
+      where: { id: testData.section.id },
+      data: {
+        status: "submitted",
+        submittedAt: new Date("2026-04-11T09:00:00.000Z"),
+      },
+    });
+
+    const outcome = await repo.publishAssembledReport(payload);
+    expect(outcome.status).toBe("transitioned");
+
+    const reloaded = await prisma.report.findUnique({
+      where: { id: testData.report.id },
+    });
+    expect(expectDefined(reloaded).publishedSnapshot).toMatchObject({
+      sections: [{ status: "submitted" }],
+    });
+    // The returned report and the frozen snapshot are the same fresh bytes.
+    expect(expectDefined(outcome.report.sections[0]).status).toBe("submitted");
+  });
+
   it("publishAssembledReport republishes a reopened period (prior status reopened)", async () => {
     // A reopened period keeps the legacy tuple (status="published") but flips
     // periodStatus to "reopened". The guard keys on periodStatus, so it stays

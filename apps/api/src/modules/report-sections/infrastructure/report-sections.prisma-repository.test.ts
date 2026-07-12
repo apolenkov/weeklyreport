@@ -517,6 +517,10 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
   function makeTx(updateCount: number, reReadResult: FabricatedRow | null) {
     const noop = vi.fn(() => Promise.resolve({ count: 0 }));
     return {
+      // The publish/save row lock (SELECT ... FOR UPDATE on the parent
+      // report) runs before the version compare-and-set; an open period lets
+      // these characterizations exercise the version lock itself.
+      $queryRaw: vi.fn(() => Promise.resolve([{ periodStatus: "open" }])),
       reportSection: {
         updateMany: vi.fn(() => Promise.resolve({ count: updateCount })),
         // The re-read now happens INSIDE the transaction (on `tx`, not the

@@ -1,5 +1,6 @@
 import type { AssembledReport } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { publishCompareAndSet } from "../../../lib/publish-compare-and-set.js";
@@ -14,6 +15,33 @@ import type {
   PublicationRepository,
   PublishReportOutcome,
 } from "../application/publication.service";
+
+/**
+ * Re-read the just-published row through the SAME transaction client and freeze
+ * its `publishedSnapshot` as a second statement inside that transaction. Both
+ * publish writers build the immutable snapshot from this fresh in-transaction
+ * read (never from an earlier separate round-trip), so a lead section-save that
+ * commits between the assemble-read and the publish write is captured. `update`
+ * cannot carry an `include`, hence the read-back; keeping it inside the
+ * transaction keeps the lifecycle state and the snapshot atomic. Returns the
+ * assembled report built from that same read, so the frozen snapshot and the
+ * returned report are the same bytes.
+ */
+async function freezeSnapshotInTx(
+  tx: Prisma.TransactionClient,
+  reportId: string,
+): Promise<AssembledReport> {
+  const row = await tx.report.findUniqueOrThrow({
+    where: { id: reportId },
+    include: reportFullIncludeForSnapshot,
+  });
+  const snapshot = buildAssembledReportFromPrismaRow(row);
+  await tx.report.update({
+    where: { id: reportId },
+    data: { publishedSnapshot: toPublishedSnapshotJson(snapshot) },
+  });
+  return snapshot;
+}
 
 @Injectable()
 export class PublicationPrismaRepository implements PublicationRepository {
@@ -32,22 +60,6 @@ export class PublicationPrismaRepository implements PublicationRepository {
     }
 
     return buildAssembledReportFromPrismaRow(row);
-  }
-
-  async saveAssembledReport(report: AssembledReport): Promise<AssembledReport> {
-    // Draft-save path only (e.g. a section-update through
-    // PublicationService.updateSectionForReview, which rejects already-published
-    // reports). The lifecycle field set comes from the single transition builder
-    // via the `open` transition, never hand-assembled here. Manual publish goes
-    // through `publishAssembledReport` and the auto path through
-    // `saveAutoPublishedReport`, so neither publish writer can be reached here
-    // without its compare-and-set guard.
-    await this.prisma.report.update({
-      where: { id: report.reportId },
-      data: { ...buildTransition("open", {}) },
-    });
-
-    return this.readAssembled(report.reportId);
   }
 
   async publishAssembledReport(
@@ -71,31 +83,44 @@ export class PublicationPrismaRepository implements PublicationRepository {
       };
     }
 
-    // Shared compare-and-set: the guarded predicate lets exactly one of two
-    // concurrent publishes win, and the zero-row match is disambiguated (raced
-    // vs archived) by a direct re-read through the base client — this path has
-    // NO surrounding transaction, so single-statement execution is its only
-    // atomicity. The lifecycle field set (single transition-writer invariant)
-    // AND the snapshot therefore ride the SAME guarded `updateMany` `data`.
-    const outcome = await publishCompareAndSet(this.prisma, report.reportId, {
-      ...this.publishLifecycle(report, false),
-      publishedSnapshot: toPublishedSnapshotJson(report),
+    // Capture the prior status here, where the fast-path guard above has
+    // narrowed it to a publishable state; TS discards that narrowing across the
+    // transaction closure below.
+    const priorPeriodStatus = before.periodStatus;
+
+    return this.prisma.$transaction(async (tx) => {
+      // Shared compare-and-set inside the transaction, mirroring
+      // PeriodPrismaRepository.publishPeriod: the guarded predicate lets exactly
+      // one of two concurrent publishes win, and the zero-row match is
+      // disambiguated (raced vs archived) by a re-read through this same `tx`.
+      // The lifecycle field set (single transition-writer invariant) is the
+      // helper's `data`; the snapshot is frozen below from a fresh
+      // in-transaction re-read, never from the earlier assemble-read.
+      const outcome = await publishCompareAndSet(
+        tx,
+        report.reportId,
+        this.publishLifecycle(report, false),
+      );
+
+      if (outcome === "raced") {
+        return {
+          status: "raced",
+          report: await this.readAssembled(report.reportId),
+        };
+      }
+      if (outcome === "archived") {
+        return {
+          status: "archived",
+          report: await this.readAssembled(report.reportId),
+        };
+      }
+
+      return {
+        status: "transitioned",
+        priorPeriodStatus,
+        report: await freezeSnapshotInTx(tx, report.reportId),
+      };
     });
-
-    const saved = await this.readAssembled(report.reportId);
-
-    if (outcome === "raced") {
-      return { status: "raced", report: saved };
-    }
-    if (outcome === "archived") {
-      return { status: "archived", report: saved };
-    }
-
-    return {
-      status: "transitioned",
-      priorPeriodStatus: before.periodStatus,
-      report: saved,
-    };
   }
 
   private async readAssembled(reportId: string): Promise<AssembledReport> {
@@ -114,38 +139,30 @@ export class PublicationPrismaRepository implements PublicationRepository {
   async saveAutoPublishedReport(
     report: AssembledReport,
   ): Promise<AutoPublishResult> {
-    // Compare-and-set: the candidate-query `archived:false` filter cannot cover
-    // a period archived BETWEEN selection and this write (the `archive`
-    // transition leaves `status="draft"`, so neither the candidate filter nor a
-    // `status="published"` idempotency check rejects it). Scoping the write to
-    // rows still `status="draft"` and `archived=false` is the only point that
-    // closes the race — a zero-row match means the row was archived or already
-    // published after selection, and is skipped without a write.
-    const { count } = await this.prisma.report.updateMany({
-      where: { id: report.reportId, status: "draft", archived: false },
-      data: {
-        ...this.publishLifecycle(report, true),
-        publishedSnapshot: toPublishedSnapshotJson(report),
-      },
+    return this.prisma.$transaction(async (tx) => {
+      // Compare-and-set: the candidate-query `archived:false` filter cannot
+      // cover a period archived BETWEEN selection and this write (the `archive`
+      // transition leaves `status="draft"`, so neither the candidate filter nor
+      // a `status="published"` idempotency check rejects it). Scoping the write
+      // to rows still `status="draft"` and `archived=false` is the only point
+      // that closes the race — a zero-row match means the row was archived or
+      // already published after selection, and is skipped without a write. The
+      // snapshot is frozen from a fresh in-transaction re-read as a second
+      // statement, so its bytes reflect the latest committed state.
+      const { count } = await tx.report.updateMany({
+        where: { id: report.reportId, status: "draft", archived: false },
+        data: this.publishLifecycle(report, true),
+      });
+
+      if (count === 0) {
+        return { published: false };
+      }
+
+      return {
+        published: true,
+        report: await freezeSnapshotInTx(tx, report.reportId),
+      };
     });
-
-    if (count === 0) {
-      return { published: false };
-    }
-
-    const saved = await this.prisma.report.findUnique({
-      where: { id: report.reportId },
-      include: reportFullIncludeForSnapshot,
-    });
-
-    if (!saved) {
-      throw new Error(`Report ${report.reportId} was not found after save.`);
-    }
-
-    return {
-      published: true,
-      report: buildAssembledReportFromPrismaRow(saved),
-    };
   }
 
   /**

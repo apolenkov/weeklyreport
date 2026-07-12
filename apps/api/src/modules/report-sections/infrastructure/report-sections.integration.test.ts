@@ -488,6 +488,45 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     });
   });
 
+  // The repository-level backstop behind the service gate: saveSection's
+  // transaction locks the parent report row (SELECT ... FOR UPDATE) and fails
+  // closed on a published period, so even a caller that bypassed (or raced)
+  // the service-level periodStatus check can never rewrite a published
+  // report's live rows or interleave with a publish snapshot freeze.
+  describe("publish/save mutual exclusion (repo-level row lock)", () => {
+    it("fails a direct repository save closed on a published report, touching no child rows", async () => {
+      const section = await repo.getSectionById(testData.section.id);
+      if (!section) {
+        throw new Error("seed section missing");
+      }
+
+      await prisma.report.update({
+        where: { id: testData.report.id },
+        data: {
+          status: "published",
+          periodStatus: "published",
+          periodState: "published",
+        },
+      });
+      const itemsBefore = await prisma.item.findMany({
+        where: { reportSectionId: testData.section.id },
+        select: { id: true },
+        orderBy: { id: "asc" },
+      });
+
+      await expect(repo.saveSection(section, section.version)).rejects.toThrow(
+        "Cannot edit sections of a published report.",
+      );
+
+      const itemsAfter = await prisma.item.findMany({
+        where: { reportSectionId: testData.section.id },
+        select: { id: true },
+        orderBy: { id: "asc" },
+      });
+      expect(itemsAfter).toEqual(itemsBefore);
+    });
+  });
+
   // introduce-durable-record-identity: a record's stableId must outlive
   // saveSection's delete-recreate (the PK id is re-minted every write) and be
   // minted once for a brand-new record. These go through the real DB so the

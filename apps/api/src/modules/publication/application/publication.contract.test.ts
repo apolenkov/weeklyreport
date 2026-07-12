@@ -1,12 +1,10 @@
 import type {
   AssembledReport,
-  DraftSavePayload,
   ReportSectionReadModel,
   UserSession,
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   PublicationAccessError,
   type PublicationRepository,
@@ -96,12 +94,6 @@ function createRepository(
       if (activeReportId !== currentReport?.reportId) {
         return null;
       }
-
-      return structuredClone(currentReport);
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
-    async saveAssembledReport(nextReport: AssembledReport) {
-      currentReport = structuredClone(nextReport);
 
       return structuredClone(currentReport);
     },
@@ -478,31 +470,12 @@ describe("PublicationService — contract tests", () => {
   /* ---------------------------------------------------------------- */
 
   describe("publishReport — regression", () => {
-    it("publish sets status to published and makes report immutable (REV-011)", async () => {
+    it("publish sets status to published (REV-011)", async () => {
       const report = makeReport({ sections: [sectionAlpha] });
       const service = new PublicationService(createRepository(report));
 
       const published = await service.publishReport(reportId, headSession);
       expect(published.status).toBe("published");
-
-      // Attempt to update a section after publish — should be immutable
-      const update = {
-        reportSectionId: sectionAlpha.reportSectionId,
-        version: 1,
-        status: "draft" as const,
-        projectStatuses: [
-          {
-            projectId: expectDefined(sectionAlpha.projects[0]).projectId,
-            status: "green" as const,
-          },
-        ],
-        items: [],
-        risks: [],
-        decisions: [],
-      };
-      await expect(
-        service.updateSectionForReview(reportId, update),
-      ).rejects.toThrow("Published reports are immutable.");
     });
 
     it("re-publish of already published report rejected (REV-012)", async () => {
@@ -532,156 +505,6 @@ describe("PublicationService — contract tests", () => {
       expect(names).toContain("Alpha Lead");
       expect(names).toContain("Bravo Lead");
       expect(names).toContain("Charlie Lead");
-    });
-  });
-
-  /* ---------------------------------------------------------------- */
-  /*  updateSectionForReview                                           */
-  /* ---------------------------------------------------------------- */
-
-  describe("updateSectionForReview", () => {
-    it("updates matching section traffic lights", async () => {
-      const report = makeReport({
-        sections: [sectionAlpha, sectionBravo],
-      });
-
-      const update: DraftSavePayload = {
-        reportSectionId: sectionAlpha.reportSectionId,
-        version: 1,
-        status: "draft",
-        projectStatuses: [
-          {
-            projectId: expectDefined(sectionAlpha.projects[0]).projectId,
-            status: "red",
-          },
-        ],
-        items: [],
-        risks: [],
-        decisions: [],
-      };
-
-      const service = new PublicationService(createRepository(report));
-      const result = await service.updateSectionForReview(reportId, update);
-
-      const updatedSection = result.sections.find(
-        (s) => s.reportSectionId === sectionAlpha.reportSectionId,
-      );
-
-      expect(updatedSection?.projects[0]?.trafficLight).toBe("red");
-    });
-
-    it("throws PublicationAccessError when report published", async () => {
-      const report = makeReport({
-        status: "published",
-        publishedAt: new Date("2026-04-10T16:00:00.000Z"),
-        publishedById: headSession.userId,
-        publishedByName: headSession.name,
-        sections: [sectionAlpha],
-      });
-
-      const update: DraftSavePayload = {
-        reportSectionId: sectionAlpha.reportSectionId,
-        version: 1,
-        status: "draft",
-        projectStatuses: [
-          {
-            projectId: expectDefined(sectionAlpha.projects[0]).projectId,
-            status: "yellow",
-          },
-        ],
-        items: [],
-        risks: [],
-        decisions: [],
-      };
-
-      const service = new PublicationService(createRepository(report));
-
-      await expect(
-        service.updateSectionForReview(reportId, update),
-      ).rejects.toBeInstanceOf(PublicationAccessError);
-
-      await expect(
-        service.updateSectionForReview(reportId, update),
-      ).rejects.toThrow("Published reports are immutable.");
-    });
-
-    it("leaves non-matching sections unchanged", async () => {
-      const report = makeReport({
-        sections: [sectionAlpha, sectionBravo],
-      });
-
-      const update: DraftSavePayload = {
-        reportSectionId: sectionAlpha.reportSectionId,
-        version: 1,
-        status: "draft",
-        projectStatuses: [
-          {
-            projectId: expectDefined(sectionAlpha.projects[0]).projectId,
-            status: "red",
-          },
-        ],
-        items: [
-          {
-            projectId: expectDefined(sectionAlpha.projects[0]).projectId,
-            type: "current",
-            text: "Updated item",
-            tag: "feature",
-            workflowStatus: "in_progress",
-            stageIds: ["Development"],
-          },
-        ],
-        risks: [],
-        decisions: [],
-      };
-
-      const service = new PublicationService(createRepository(report));
-      const result = await service.updateSectionForReview(reportId, update);
-
-      const unchangedSection = result.sections.find(
-        (s) => s.reportSectionId === sectionBravo.reportSectionId,
-      );
-
-      // Bravo section should still have its original traffic light
-      expect(unchangedSection?.projects[0]?.trafficLight).toBe("yellow");
-      expect(unchangedSection?.items).toEqual(sectionBravo.items);
-    });
-
-    it("recalculates portfolio overview after update", async () => {
-      // Start: Alpha = green, Bravo = yellow => portfolio should be yellow
-      const report = makeReport({
-        sections: [sectionAlpha, sectionBravo],
-      });
-
-      // Verify initial state: green + yellow => yellow
-      const service = new PublicationService(createRepository(report));
-      const initial = await service.getAssembledReport(reportId);
-      expect(initial.portfolioOverview.status).toBe("yellow");
-
-      // Update Alpha from green to red
-      const update: DraftSavePayload = {
-        reportSectionId: sectionAlpha.reportSectionId,
-        version: 1,
-        status: "draft",
-        projectStatuses: [
-          {
-            projectId: expectDefined(sectionAlpha.projects[0]).projectId,
-            status: "red",
-          },
-        ],
-        items: [],
-        risks: [],
-        decisions: [],
-      };
-
-      const result = await service.updateSectionForReview(reportId, update);
-
-      // After update: Alpha = red, Bravo = yellow => portfolio should be red
-      expect(result.portfolioOverview.status).toBe("red");
-      expect(result.portfolioOverview.totals).toEqual({
-        green: 0,
-        yellow: 1,
-        red: 1,
-      });
     });
   });
 });
