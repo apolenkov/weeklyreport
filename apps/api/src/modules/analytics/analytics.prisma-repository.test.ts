@@ -13,6 +13,7 @@ import { AnalyticsPrismaRepository } from "./analytics.prisma-repository";
  */
 
 const GROUP = "a0000000-0000-4000-8000-0000000group-g";
+const LEAD = "d0000000-0000-4000-8000-0000000000d1";
 const SCOPE = { author: { reportingGroupId: { in: [GROUP] } } };
 
 const headG: UserSession = {
@@ -59,6 +60,30 @@ describe("AnalyticsPrismaRepository group scoping", () => {
     const arg = findMany.mock.calls[0]?.[0] as ReportQueryArg;
     expect(arg.include.sections.where).toEqual(SCOPE);
     expect(arg.where.sections).toEqual({ some: SCOPE });
+  });
+
+  it("trafficLightHistory carries a leadId filter into the aggregated sections", async () => {
+    const { repo, findMany } = makeRepo();
+    // Admin session: no group scope, so the ONLY predicate is the lead filter —
+    // it must reach include.sections.where (aggregation), not just the report
+    // qualifier. Without the fix, include.sections.where stays undefined.
+    await repo.trafficLightHistory(
+      { ...HISTORY_INPUT, leadId: LEAD },
+      adminSession,
+    );
+
+    const arg = findMany.mock.calls[0]?.[0] as ReportQueryArg;
+    expect(arg.include.sections.where).toEqual({ authorId: LEAD });
+    expect(arg.where.sections).toEqual({ some: { authorId: LEAD } });
+  });
+
+  it("trafficLightHistory combines a leadId filter with the group scope", async () => {
+    const { repo, findMany } = makeRepo();
+    await repo.trafficLightHistory({ ...HISTORY_INPUT, leadId: LEAD }, headG);
+
+    const arg = findMany.mock.calls[0]?.[0] as ReportQueryArg;
+    expect(arg.include.sections.where).toEqual({ authorId: LEAD, ...SCOPE });
+    expect(arg.where.sections).toEqual({ some: { authorId: LEAD, ...SCOPE } });
   });
 
   it("trafficLightHistory leaves the included sections unfiltered for admin", async () => {
@@ -210,5 +235,36 @@ describe("AnalyticsPrismaRepository deterministic tie-break", () => {
     expect(forward).toBe(reversed);
     // The greater id wins the final tie-break.
     expect(forward).toBe("red");
+  });
+});
+
+/**
+ * A republished period is two published reports sharing a `periodEnd` calendar
+ * day. leadVelocity groups by that label, so both reports' leads land in ONE row
+ * instead of emitting a duplicate series point per report.
+ */
+describe("AnalyticsPrismaRepository leadVelocity period-label grouping", () => {
+  it("collapses two reports sharing a period label into one row", async () => {
+    const findMany = vi.fn().mockResolvedValue([
+      {
+        periodEnd: new Date("2026-04-21T08:00:00.000Z"),
+        sections: [{ authorId: "lead-one", author: { name: "Lead One" } }],
+      },
+      {
+        periodEnd: new Date("2026-04-21T20:00:00.000Z"),
+        sections: [{ authorId: "lead-two", author: { name: "Lead Two" } }],
+      },
+    ]);
+    const prisma = { report: { findMany } } as unknown as PrismaService;
+    const repo = new AnalyticsPrismaRepository(prisma);
+
+    const out = await repo.leadVelocity(HISTORY_INPUT, adminSession);
+
+    expect(out).toHaveLength(1);
+    expect(out[0]?.periodLabel).toBe("2026-04-21");
+    expect(out[0]?.leads.map((l) => l.leadId)).toEqual([
+      "lead-one",
+      "lead-two",
+    ]);
   });
 });

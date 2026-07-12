@@ -5,6 +5,7 @@ import {
   type AnalyticsCachePort,
   type AnalyticsRepository,
   AnalyticsService,
+  stableHash,
 } from "./analytics.service.js";
 
 function makeCache(): {
@@ -265,5 +266,23 @@ describe("AnalyticsService.periodComparison", () => {
     );
 
     expect(periodComparison).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("stableHash", () => {
+  it("hashes a nested object independent of its key order", () => {
+    const a = { periodFrom: "2026-04-01", nested: { x: 1, y: 2 } };
+    const b = { nested: { y: 2, x: 1 }, periodFrom: "2026-04-01" };
+
+    expect(stableHash(a)).toBe(stableHash(b));
+  });
+
+  it("distinguishes two inputs differing only in a nested value", () => {
+    // The old top-level-keys replacer whitelisted "outer" at every depth, so
+    // both nested objects serialized to `{}` and these hashed identically.
+    const a = { outer: { count: 1 } };
+    const b = { outer: { count: 2 } };
+
+    expect(stableHash(a)).not.toBe(stableHash(b));
   });
 });

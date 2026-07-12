@@ -69,6 +69,22 @@ export function laterReport<T extends PeriodStamped>(a: T, b: T): T {
   return comparePeriodThenCreated(a, b) >= 0 ? a : b;
 }
 
+/**
+ * Group reports by their UTC date-only period label. Multiple reports can share
+ * one label (a republished period, or two periods differing only by
+ * periodStart), so callers aggregate per label instead of assuming one report
+ * per label. Insertion order follows the input, so a periodEnd-ascending query
+ * yields ascending labels.
+ */
+export function groupReportsByLabel<T extends { periodEnd: Date }>(
+  reports: readonly T[],
+): Map<string, T[]> {
+  return reports.reduce((byLabel, report) => {
+    const label = isoDateOnly(report.periodEnd);
+    return byLabel.set(label, [...(byLabel.get(label) ?? []), report]);
+  }, new Map<string, T[]>());
+}
+
 interface ProjectStatusRow {
   projectId: string;
   status: TrafficLightCell;
