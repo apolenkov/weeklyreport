@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { MockSettings } from "../../../shared/lib/admin-mock-data";
 import {
@@ -14,8 +14,24 @@ export function NotificationsSubTab({
   readonly serverSettings: MockSettings;
 }) {
   const [draft, setDraft] = useState<MockSettings>(serverSettings);
-  useEffect(() => setDraft(serverSettings), [serverSettings]);
-  const updateSettingsMut = useUpdateSettingsMut("Notification settings");
+  const [isDirty, setIsDirty] = useState(false);
+
+  // Reseed the draft only from FRESH server data: skip while dirty (a
+  // background refetch must not overwrite an in-progress edit) and skip data
+  // already seeded — otherwise the dirty flag's post-save flip re-fires this
+  // effect while the parent still passes the pre-save settings and the
+  // just-typed field flickers back to the old value.
+  const lastSeeded = useRef<MockSettings>(serverSettings);
+  useEffect(() => {
+    if (!isDirty && serverSettings !== lastSeeded.current) {
+      lastSeeded.current = serverSettings;
+      setDraft(serverSettings);
+    }
+  }, [serverSettings, isDirty]);
+
+  const updateSettingsMut = useUpdateSettingsMut("Notification settings", () =>
+    setIsDirty(false),
+  );
 
   // The wire schema accepts null (clear) or a valid email; we keep the input
   // as a string and translate empty → null on save. UI guard: a non-empty
@@ -53,13 +69,14 @@ export function NotificationsSubTab({
           autoComplete="off"
           placeholder="reports@example.com"
           value={draft.notificationFromEmail ?? ""}
-          onChange={(e) =>
+          onChange={(e) => {
+            setIsDirty(true);
             setDraft({
               ...draft,
               notificationFromEmail:
                 e.target.value === "" ? null : e.target.value,
-            })
-          }
+            });
+          }}
           className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
         />
         {!looksLikeEmail && (
