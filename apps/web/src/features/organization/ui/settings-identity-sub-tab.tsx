@@ -1,12 +1,15 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
-import { CheckIcon } from "../../../shared/ui/settings-tab-shared";
+import {
+  CheckIcon,
+  revalidateOrgLandingPage,
+} from "../../../shared/ui/settings-tab-shared";
 
 const MAX_SHORT_NAME_LENGTH = 16;
 const MAX_FULL_NAME_LENGTH = 200;
@@ -19,23 +22,29 @@ export function IdentitySubTab() {
 
   const [shortName, setShortName] = useState("");
   const [fullName, setFullName] = useState("");
+  const [isDirty, setIsDirty] = useState(false);
 
-  // Re-seed the form whenever the source query revalidates so a successful
-  // save (which triggers invalidateAdmin) is reflected in the inputs.
+  // Re-seed the form only from FRESH server data: skip while the form is
+  // dirty (a background refetch must not overwrite an in-progress edit) and
+  // skip data already seeded — otherwise the dirty flag's post-save flip
+  // re-fires this effect while the query cache still holds the pre-save
+  // values and the just-typed field flickers back to the old value.
+  const lastSeeded = useRef<typeof orgQ.data>(undefined);
   useEffect(() => {
-    if (orgQ.data) {
+    if (orgQ.data && !isDirty && orgQ.data !== lastSeeded.current) {
+      lastSeeded.current = orgQ.data;
       setShortName(orgQ.data.shortName);
       setFullName(orgQ.data.fullName);
     }
-  }, [orgQ.data]);
+  }, [orgQ.data, isDirty]);
 
   const updateOrgMut = useMutation(
     trpc.admin.updateOrganization.mutationOptions({
       onSuccess: async () => {
+        setIsDirty(false);
         invalidateAdmin(qc, trpc);
-        // A9: invalidate landing page cache after org name change
-        await fetch("/api/revalidate-org", { method: "POST" });
         toast.success("Organization identity saved");
+        await revalidateOrgLandingPage();
       },
       onError: (err) => {
         toast.error(err.message);
@@ -85,7 +94,10 @@ export function IdentitySubTab() {
           autoComplete="off"
           maxLength={16}
           value={shortName}
-          onChange={(e) => setShortName(e.target.value)}
+          onChange={(e) => {
+            setIsDirty(true);
+            setShortName(e.target.value);
+          }}
           className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
         />
         <div className="mt-1 flex items-center justify-between text-xs">
@@ -118,7 +130,10 @@ export function IdentitySubTab() {
           autoComplete="off"
           maxLength={200}
           value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
+          onChange={(e) => {
+            setIsDirty(true);
+            setFullName(e.target.value);
+          }}
           className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
         />
         <div className="mt-1 flex items-center justify-between text-xs">
