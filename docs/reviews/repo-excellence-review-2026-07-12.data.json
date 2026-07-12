@@ -1,0 +1,1235 @@
+{
+  "unitsReviewed": 68,
+  "dimensionsAudited": 7,
+  "coverage": {
+    "totalSourceFiles": 571,
+    "coveredFiles": 571,
+    "excludedGlobs": [
+      "**/*.test.*",
+      "**/*.spec.*",
+      "**/__tests__/**",
+      "**/__snapshots__/**",
+      "**/*.d.ts",
+      "**/generated/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/*.json",
+      "**/*.md",
+      "**/*.toml",
+      "**/*.pem"
+    ],
+    "note": "571 = git ls-files under the 5 roots minus test/spec/snapshot/d.ts/generated/dist/build AND minus non-source config/docs/cert files (*.json, *.md, *.toml, *.pem — e.g. package.json, README.md, migration_lock.toml, SAML test fixtures). 62 review units were built by walking the same directory listing; every remaining file was assigned to exactly one unit by explicit path or whole-directory reference. Units run larger than the ~25-file target in a few dense areas (report-sections/period ui, admin) — these were split into 2-4 sibling units rather than left oversized. Confidence: high for directory-level assignment; not re-verified file-by-file against the 571 count beyond the grep totals shown above."
+  },
+  "presenceConfirmed": 98,
+  "configConfirmed": 14,
+  "confirmedCount": 112,
+  "backlog": [
+    {
+      "id": "BL-01",
+      "title": "report-sections write gates read the legacy status column, breaking reopen and leaving submit unguarded",
+      "priority": "P0",
+      "subsystem": "api/report-sections",
+      "files": [
+        "apps/api/src/modules/report-sections/application/report-sections.service.ts"
+      ],
+      "summary": "saveDraft blocks all editing on a REOPENED period because it gates on the legacy Report.status (still 'published' after reopen) instead of periodStatus, so autosave 400s on every reopened section — the reopen feature is functionally dead. Separately, submitSection has NO published/period guard at all (unlike saveDraft), so a lead can POST leadForm.submit against a published report's section and delete-recreate its items/risks/decisions, bypassing the read-only lock and diverging live rows from the frozen snapshot.",
+      "recommendation": "Introduce one shared period-status lookup (getReportPeriodStatusForSection, as fillFrom already uses) and gate BOTH saveDraft and submitSection on periodStatus: reject only when periodStatus==='published' (allow 'open'/'reopened'). Add the already-submitted guard to submit for parity. Add integration tests: reopened-period autosave succeeds; submit against a published section is rejected.",
+      "blastRadius": "Every lead editing flow: reopen is unusable today (rs-1), and the published read-only lock is bypassable on the submit path (rs-2). Shares the getReportStatus/legacy-tuple root cause.",
+      "relatedFindingIds": [
+        "rs-1 (report-sections.service.ts:243)",
+        "rs-2 (report-sections.service.ts:296)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-02",
+      "title": "Period reopen races a concurrent archive and corrupts the dual-state invariant",
+      "priority": "P0",
+      "subsystem": "api/period",
+      "files": [
+        "apps/api/src/modules/period/infrastructure/period.prisma-repository.ts",
+        "apps/api/src/modules/period/domain/period-transition.ts",
+        "apps/api/src/modules/period/period.service.ts"
+      ],
+      "summary": "reopenPeriod writes the transition with an unconditional update(where:{id}) and no archived/periodStatus predicate; the service's archived guard is a TOCTOU pre-check read in an earlier round-trip. A head-reopen racing an admin/auto archive (both unconditional writes, no config gate) yields archived=true+periodState='open' (editable-archived, exactly what the auto-archiver warns against) or an archived period whose sections were silently reset to draft. The sibling publish path already closes this identical race via publishCompareAndSet.",
+      "recommendation": "Route reopen through a guarded compare-and-set mirroring publishCompareAndSet: tx.report.updateMany({where:{id, archived:false, periodStatus:'published'}, data: buildTransition('reopen')}) and treat count===0 as a fail-closed domain error; gate the section-reset updateMany on the same success.",
+      "blastRadius": "Load-bearing period-dual-state invariant with no DB backstop; corruption is silent under two-actor interactive races. Narrow timing window but config-independent and reachable.",
+      "relatedFindingIds": [
+        "period-reopen-archive-race (period.prisma-repository.ts:128-134)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-03",
+      "title": "lead-form read paths leak cross-group and non-product-scoped content",
+      "priority": "P0",
+      "subsystem": "api/report-sections (authz)",
+      "files": [
+        "apps/api/src/modules/report-sections/application/lead-form.service.ts",
+        "apps/api/src/modules/report-sections/domain/lead-form-cross-author-scope.ts"
+      ],
+      "summary": "Two confidentiality breaks on reachable protectedProcedures. (1) leadForm.byPeriod treats head as god-mode: isHeadLike short-circuits the scope gate, honoring any client-supplied requestedAuthorId with no group filter on getSectionForPeriod, so a head reads any lead's full section across reporting-group boundaries (cross-group BOLA) — inconsistent with every sibling head surface which IS group-scoped. (2) filterSectionToSharedProducts spreads activities and reviews through unfiltered, so a co-lead sharing one product sees the section author's entire activity slice (statuses+free-text notes), disclosing strictly more than the curated 'Everyone' lens the file's own invariant promises.",
+      "recommendation": "Gate the head branch of getByPeriod with groupScopeFilter(session,'reportSection') — assert the target section is in the head's group before honoring requestedAuthorId; keep admin unconditional; fix the misleading 'group-scoped elsewhere' comment. In filterSectionToSharedProducts, set activities:[] and drop reviews (or filter activities by linkedProducts∩sharedProductIds) so the cross-author lens never exceeds the Everyone lens.",
+      "blastRadius": "Cross-group/cross-author information disclosure, client-triggerable via authorId input. Read-only (no write sibling) but both are genuine confidentiality boundaries.",
+      "relatedFindingIds": [
+        "authz-leadform-byperiod-head-crossgroup (lead-form.service.ts:231-249)",
+        "rs-3 (lead-form-cross-author-scope.ts:94)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-04",
+      "title": "Carry-over transaction is non-idempotent: FK crash on race plus permanently dropped items",
+      "priority": "P0",
+      "subsystem": "api/carry-over",
+      "files": [
+        "apps/api/src/modules/carry-over/carry-over.prisma-repository.ts",
+        "apps/api/src/modules/carry-over/carry-over.service.ts"
+      ],
+      "summary": "saveCarryOver's guard is half-implemented: when a concurrent carry-over already committed it skips execution.create but still runs the records createMany keyed on the un-created execution.id, throwing an unhandled P2003 (isUniqueViolation matches P2002 only). Worse, the losing transaction's carried items/decisions are never retried — the outer dedupe check short-circuits after the winner commits — so they are silently and permanently dropped. Every login is a trigger site. Also a TOCTOU: the period-editability guard is read outside the write transaction and never re-validated inside it.",
+      "recommendation": "In the existing-found branch, re-read and return the existing execution+records instead of inserting against a phantom executionId (make the guard truly idempotent). Re-read TargetReportState inside the saveCarryOver transaction and abort if no longer editable.",
+      "blastRadius": "Silent data loss of carried-over report content on concurrent triggers; masked today only because the auto path swallows errors as warn logs.",
+      "relatedFindingIds": [
+        "carry-over-1 (carry-over.prisma-repository.ts:167-198)",
+        "carry-over-2 (carry-over.service.ts:126-132)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-05",
+      "title": "Review verdict is recorded as current against a version the reviewer never saw",
+      "priority": "P0",
+      "subsystem": "api/review",
+      "files": [
+        "apps/api/src/modules/review/application/review-actions.service.ts",
+        "apps/api/src/modules/review/infrastructure/review-actions.prisma-repository.ts"
+      ],
+      "summary": "verdict() records judgedVersion from the freshly re-read server context.version, not the client-judged input.version, and the optimistic expectedVersion lock gates only the changes_requested un-submit — never the verdict record and never approved. If a lead re-submits (bumping version N→N+1, status still submitted) in the gap between the reviewer opening the report and clicking Approve, the approval is stamped judgedVersion=N+1 → isCurrent=true, so the head sees 'approved, current' for content the reviewer never reviewed. Reachable via ordinary UI latency, not a microsecond race.",
+      "recommendation": "Record judgedVersion from input.version and enforce the expectedVersion optimistic lock on the verdict write for BOTH approved and changes_requested, rejecting with a conflict when input.version !== context.version. Add a test for the re-submit-during-window interleaving.",
+      "blastRadius": "Corrupts the head-facing review signal (approve/needs-changes) on a normal-latency path; violates the schema's documented version contract.",
+      "relatedFindingIds": ["rev-1 (review-actions.service.ts:177-190)"],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-06",
+      "title": "Prod API image bakes Playwright 1.59.1 browsers while the workspace runs 1.61.0 — PDF export cannot launch Chromium",
+      "priority": "P0",
+      "subsystem": "deploy/pdf-export",
+      "files": [
+        "Dockerfile.api",
+        "apps/api/src/infrastructure/bullmq/pdf-export.processor.ts",
+        "apps/api/package.json"
+      ],
+      "summary": "Dockerfile.api pins mcr.microsoft.com/playwright:v1.59.1-noble with PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1, but package.json/lockfile resolve playwright@1.61.0, and the processor imports {chromium} and calls chromium.launch(). Playwright resolves a version-pinned Chromium revision directory; 1.61.0 looks for a revision the 1.59.1 image doesn't ship and download is disabled, so launch throws 'Executable doesn't exist' — PDF export is broken in the built prod image while unit/e2e (which run their own playwright install) stay green and hide it.",
+      "recommendation": "Bump the base image tag to v1.61.0-noble (or pin playwright back to 1.59.x) and keep the image tag and the playwright dependency in lockstep, since the browser revision is version-coupled and in-image download is disabled.",
+      "blastRadius": "PDF export (a shipped deliverable) fails on every job in the prod image; deploy blocker not caught by CI.",
+      "relatedFindingIds": ["supply-chain-1 (Dockerfile.api:7-9)"],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-07",
+      "title": "Print template renders a perpetual spinner on query error; the PDF worker captures it as a completed, checksummed export",
+      "priority": "P0",
+      "subsystem": "web/print + api/pdf-export",
+      "files": [
+        "apps/web/src/app/print/[reportId]/print-report-template.tsx",
+        "apps/api/src/infrastructure/bullmq/pdf-export.processor.ts"
+      ],
+      "summary": "On a tRPC query error (or no-period sentinel) the print template has no error/empty state — it returns LoadingShell forever (only a toast, invisible headless). The worker waits for networkidle, then page.pdf() snapshots the spinner and markExportCompleted records it with a valid sha256. Any transient API error during export silently yields a corrupt 'Loading…' PDF marked as a successful deliverable, with no failure signal to worker or requester.",
+      "recommendation": "Render a distinct terminal error state (not LoadingShell) on isError/no-period, and give the worker a positive readiness contract to assert before page.pdf() — a stable ready sentinel/data-attribute the processor checks, and an error marker that fails the job instead of exporting the spinner.",
+      "blastRadius": "Corrupt PDF deliverables passed off as successful on any transient error during export.",
+      "relatedFindingIds": [
+        "web-app-print-1 (print-report-template.tsx:484-503)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-08",
+      "title": "Publication write path assembles the immutable snapshot outside a transaction and (on one branch) discards section edits entirely",
+      "priority": "P1",
+      "subsystem": "api/publication",
+      "files": [
+        "apps/api/src/modules/publication/infrastructure/publication.prisma-repository.ts",
+        "apps/api/src/modules/publication/application/publication.service.ts"
+      ],
+      "summary": "publishAssembledReport/saveAutoPublishedReport write toPublishedSnapshotJson(report) from an assemble-read taken at an earlier, separate round-trip with no surrounding $transaction, so a lead section-save committing between the read and the CAS write is excluded from the permanently-frozen snapshot forever; the sibling period.publishPeriod re-reads inside the tx and is safe. Separately, saveAssembledReport writes only lifecycle scalars and re-reads the unchanged row, silently discarding all edits updateSectionForReview computed (latent — no production procedure wires that path yet). The ingestion seam is also documented 'fire-and-forget' three times but is awaited.",
+      "recommendation": "Wrap publish CAS + snapshot build in a $transaction and re-read the row via the tx client (mirror period.prisma-repository.ts), or collapse to a single publish writer. Either make saveAssembledReport persist the section aggregate or delete the unreachable updateSectionForReview path. Fix the fire-and-forget comments or truly detach the hook.",
+      "blastRadius": "Auto-publisher and review.publish are live consumers of the non-atomic snapshot path; edits can be silently missing from the frozen published report.",
+      "relatedFindingIds": [
+        "DI-01 (publication.prisma-repository.ts:53-149)",
+        "pub-1 (publication.prisma-repository.ts:45-50)",
+        "pub-2 (publication.service.ts:316)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-09",
+      "title": "Reminder delivery is non-transactional: duplicate emails on retry and executions stuck queued with no reaper",
+      "priority": "P1",
+      "subsystem": "api/reminders + bullmq",
+      "files": [
+        "apps/api/src/infrastructure/bullmq/email-reminder.processor.ts",
+        "apps/api/src/modules/reminders/reminders.service.ts"
+      ],
+      "summary": "Two reliability gaps around the send/write boundary. (1) processJob sends the email BEFORE markReminderSent; if the post-send write throws, BullMQ retries and re-sends — the recipient gets the reminder twice. (2) requestReminderExecution commits the ReminderExecution row as 'queued' BEFORE emailQueue.add(); if the enqueue throws or the pod dies, the row+dedupeKey are burned for the cycle, no job exists, and no reaper re-enqueues 'queued' rows — the recipient silently never gets that reminder.",
+      "recommendation": "Make the send idempotent (mark 'sending'/check status before send, short-circuit if already sent) and adopt an outbox/reaper: on enqueue failure mark 'failed', and add a scheduler sweep that re-enqueues 'queued' executions with no processed job past a timeout.",
+      "blastRadius": "Duplicate or missing internal deadline/escalation emails; self-heals next cycle but each incident hits a real recipient.",
+      "relatedFindingIds": [
+        "bullmq-1 (email-reminder.processor.ts:100-168)",
+        "reminders-1 (reminders.service.ts:204)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-10",
+      "title": "Admin snapshot restore drops ReportingGroup.headUserId",
+      "priority": "P1",
+      "subsystem": "api/admin",
+      "files": ["apps/api/src/modules/admin/admin-snapshot-write.queries.ts"],
+      "summary": "upsertGroups writes only id/name/description/archived — headUserId is omitted from BOTH create and update. A fresh-DB snapshot import silently loses every group's head assignment (FK defaults null); a restore into an existing DB never applies a snapshot's changed headUserId either. The value is confirmed load-bearing (round-tripped by getSnapshot, written by the targeted saveReportingGroup). Likely omitted because groups upsert before users, so the User FK isn't present yet on create.",
+      "recommendation": "After upsertUsers, run a second pass over snapshot.groups to set headUserId (FK targets now exist), or reorder so heads are written once users are present.",
+      "blastRadius": "Whole-snapshot restore/import loses group-head assignments — a data-integrity gap on the documented AdminSnapshot use case.",
+      "relatedFindingIds": [
+        "admin-queries-1 (admin-snapshot-write.queries.ts:10-38)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-11",
+      "title": "Public /api/client-logs writes to shared app.log with no auth and no rate limit",
+      "priority": "P1",
+      "subsystem": "api/bootstrap (security)",
+      "files": ["apps/api/src/main.ts"],
+      "summary": "The public /api/client-logs forwarder is mounted with only express.json({limit:'128kb'}) and terminates the request without next(), so the later vitalsLimiter/trpcLimiter and any Nest ThrottlerGuard never apply. When clientLogsEnabled (dev default true; prod when CLIENT_LOG_FORWARDING=true) any unauthenticated caller can POST unbounded request counts, each writing up to 100 log lines into the shared rotating app.log — a log-flood/IO DoS. Its sibling public beacon /api/web-vitals IS rate-limited.",
+      "recommendation": "Gate /api/client-logs behind a per-IP limiter (reuse the createRateLimits pattern used for web-vitals), registered before the handler.",
+      "blastRadius": "Log-flood/IO DoS on the shared app.log; default-off in prod and behind Caddy, so a hardening gap rather than catastrophic.",
+      "relatedFindingIds": ["api-trpc-bootstrap-1 (main.ts:282-325)"],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-12",
+      "title": "Analytics query correctness: ineffective leadId filter, missing period-label dedup, unsafe nested cache hash",
+      "priority": "P1",
+      "subsystem": "api/analytics",
+      "files": [
+        "apps/api/src/modules/analytics/analytics.prisma-repository.ts",
+        "apps/api/src/modules/analytics/analytics.service.ts"
+      ],
+      "summary": "Three correctness issues. (1) trafficLightHistory's leadId is spread only into where.sections.some (report qualification), not include.sections.where, so a leadId-filtered call still returns every in-scope lead's project statuses — a silently-ineffective filter (within already-authorized scope, so not a leak). (2) leadVelocity maps reports 1:1 with no periodLabel grouping, unlike the sibling trafficLightHistory, producing duplicate chart rows for a republished period. (3) stableHash passes a top-level key list as the JSON.stringify replacer, which whitelists at every depth — nested keys are silently dropped, so any future nested cache-key input would collide (latent, all schemas flat today).",
+      "recommendation": "Spread leadFilter into include.sections.where and add a test asserting only the target lead's projects appear; group leadVelocity by periodLabel (extract a shared helper with trafficLightHistory); replace stableHash with a recursively-sorting stable-stringify.",
+      "blastRadius": "Wrong analytics results (extra leads, duplicate series) on the trends surface; stableHash is a latent cache-collision landmine in a shared primitive.",
+      "relatedFindingIds": [
+        "analytics api-1 (analytics.prisma-repository.ts:48-70)",
+        "analytics api-2 (analytics.prisma-repository.ts:100-136)",
+        "analytics api-3 (analytics.service.ts:68-73)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-13",
+      "title": "wipe-manual-uat omits the project-activity tables, aborting the whole transactional wipe+reseed on any used DB",
+      "priority": "P1",
+      "subsystem": "prisma/scripts",
+      "files": ["prisma/wipe-manual-uat.ts"],
+      "summary": "The delete map omits projectActivity/projectActivityLead/projectActivityProduct/activityStatus. ProjectActivity→ReportingGroup and ProjectActivityProduct→Project are RESTRICT, so project.deleteMany and reportingGroup.deleteMany fail with FK violations whenever activity rows exist, and the single $transaction rolls back entirely — the reset reseeds nothing. seed-simple already wipes these in FK-safe order; this script predates the activity feature.",
+      "recommendation": "Insert activityStatus→projectActivityLead→projectActivityProduct→projectActivity deletes between the section/item deletes and the project/group deletes (mirror seed-simple), or switch to reset-hard.ts's pg_tables TRUNCATE CASCADE approach which is immune to list drift.",
+      "blastRadius": "Dev/UAT reseed tooling fully broken on any real dataset; prod-guarded and transactional so no partial corruption.",
+      "relatedFindingIds": ["prisma-scripts-1 (wipe-manual-uat.ts:174-202)"],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-14",
+      "title": "Redis readiness client has no fail-fast options, so /health/ready hangs when Redis is down",
+      "priority": "P1",
+      "subsystem": "api/health (observability)",
+      "files": ["apps/api/src/infrastructure/health/redis.health.ts"],
+      "summary": "The readiness Redis client omits maxRetriesPerRequest, enableOfflineQueue:false, and an 'error' listener, so with ioredis defaults (retry forever, offline-queue on) a ping() issued while Redis is down is queued and never rejects — the terminus check hangs instead of returning DOWN, and reconnect errors spam raw stderr. The sibling read-through-cache client sets exactly these options; this indicator is the outlier.",
+      "recommendation": "Mirror the cache client: maxRetriesPerRequest:1, enableOfflineQueue:false, and this.redis.on('error', () => undefined).",
+      "blastRadius": "Readiness probe defeated during a Redis outage (hangs rather than failing over); reachable on a real infra fault.",
+      "relatedFindingIds": [
+        "api-infra-observability-1 (redis.health.ts:19-23)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-15",
+      "title": "Trends page pins its query window to hardcoded 2026 bounds — every chart goes blank after 2026",
+      "priority": "P1",
+      "subsystem": "web/reports",
+      "files": ["apps/web/src/app/(app)/reports/trends/page.tsx"],
+      "summary": "PERIOD_FROM='2026-01-01'/PERIOD_TO='2026-12-31' feed trafficLightHistory and leadVelocity unchanged. In 2027 both return zero rows (seed dates are run-date-relative), history/velocity render null, periodPair resolves null and disables the comparison query too — the whole page is blank. An inline comment already acknowledges pinned pairs go stale, but the fix was applied only to the inner comparison pair, not the outer year window.",
+      "recommendation": "Derive the window from the current date (rolling 12-month span) or from the analytics data's own min/max period, matching the dynamic-pair rationale already documented.",
+      "blastRadius": "Time-bomb: the entire trends page silently empties once the wall clock leaves 2026.",
+      "relatedFindingIds": [
+        "trends-hardcoded-year-window (trends/page.tsx:50-91)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-16",
+      "title": "Org identity settings form clobbers unsaved edits and reports success on a failed revalidate",
+      "priority": "P1",
+      "subsystem": "web/organization",
+      "files": [
+        "apps/web/src/features/organization/ui/settings-identity-sub-tab.tsx",
+        "apps/web/src/shared/ui/settings-tab-shared.tsx"
+      ],
+      "summary": "Two correctness gaps. (1) A useEffect re-seeds shortName/fullName from orgQ.data on every data change with no dirty guard; with refetchOnWindowFocus+30s staleTime, an admin's in-progress edits are overwritten if the singleton org record changed server-side during a focus-loss window. (2) The /api/revalidate-org fetch has no .ok check and no try/catch, and toast.success fires unconditionally — a failed revalidation still shows 'saved', while a thrown fetch surfaces as an unhandled rejection and the success toast never fires. Same pattern in the notifications sub-tab.",
+      "recommendation": "Only reseed when data changes AND the form is not dirty (compare against a lastSavedRef / gate on !isDirty). Check response.ok, wrap in try/catch, and on revalidate failure keep the 'saved' toast but add a distinct revalidation-failed toast/log.",
+      "blastRadius": "Lost unsaved form input on a concurrency race; false success signal about landing-page freshness.",
+      "relatedFindingIds": [
+        "org-1-refetch-clobber (settings-identity-sub-tab.tsx:25)",
+        "org-2-fetch-not-checked (settings-identity-sub-tab.tsx:37)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-17",
+      "title": "Duplicate ids in linkedProductIds surface as an opaque 500 instead of a clean 400",
+      "priority": "P1",
+      "subsystem": "api/project-activity",
+      "files": [
+        "apps/api/src/modules/project-activity/project-activity.prisma-repository.ts",
+        "packages/shared/src/schemas/project-activity.schema.ts"
+      ],
+      "summary": "create/update map linkedProductIds into activityProducts with no dedup and no skipDuplicates; ProjectActivityProduct is @@unique([activityId,productId]). The wire schema bounds only array length, the service checks only existence, and the error mapper has no P2002 row — so a repeated-id payload throws P2002 and falls through to INTERNAL_SERVER_ERROR.",
+      "recommendation": "Dedupe at the schema boundary (.refine(ids => new Set(ids).size === ids.length)) so it rejects as a 400 before Prisma; optionally dedupe in the repo and add skipDuplicates:true to the update createMany as defense in depth.",
+      "blastRadius": "Malformed activity payloads return an opaque 500; no corruption but poor error contract on a normal write path.",
+      "relatedFindingIds": [
+        "PA-1 (project-activity.prisma-repository.ts:87-124)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-18",
+      "title": "Published-read cross-group audit signal is derived from the live scoped list, missing snapshot-only cross-group data",
+      "priority": "P1",
+      "subsystem": "api/weekly-report (authz-audit)",
+      "files": [
+        "apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts"
+      ],
+      "summary": "On the published branch, the scopeAccessed cross-group signal intersects surfaced snapshot products with the LIVE projects query (archived:false + current GroupProduct edge). A product delivered to the viewer via the frozen snapshot but since archived, or whose GroupProduct edge was removed, drops out of the intersection → no audit event, even though portfolioOverview still delivers it. The router only audits when productIds.length>0.",
+      "recommendation": "Compute the published-path cross-group signal from the products actually surfaced in the snapshot (their owner group frozen at publish time), not from the intersection with the live archived:false/current-edge list. Requires carrying owner-group in the snapshot section projects.",
+      "blastRadius": "Audit-trail completeness gap: cross-group access via published snapshot can go unrecorded (not an access-control bypass — the viewer is authorized).",
+      "relatedFindingIds": ["wr-01 (weekly-report.prisma-repository.ts:205)"],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-19",
+      "title": "Reminder-policy backfill ignores the policy timezone and overwrites DST-correct fireAt with UTC-offset math",
+      "priority": "P1",
+      "subsystem": "prisma/scripts + reminders",
+      "files": [
+        "prisma/backfill-policy-rules.ts",
+        "apps/api/src/modules/reminders/policy-applicator.service.ts"
+      ],
+      "summary": "backfill computeFireAt adds offsetMinutes to the raw UTC deadline with the _tz argument unused, diverging from the live PolicyApplicatorService.computeFireAt (luxon zone-aware, DST-correct). The upsert's update clause overwrites fireAt on every run, and the script's docstring calls re-running 'safe', so any admin-configured DST-observing policy.timezone gets its fireAt silently corrupted by a rerun. Latent today only because the seeded timezone is Europe/Moscow (no DST).",
+      "recommendation": "Compute fireAt zone-aware identically to PolicyApplicatorService (luxon setZone(policy.timezone)); factor the math into a shared pure helper both sides import so the SSOT docstring claim holds.",
+      "blastRadius": "Corrupts scheduled reminder fire times for any DST-observing policy on backfill rerun.",
+      "relatedFindingIds": [
+        "prisma-scripts-3 (backfill-policy-rules.ts:43-49)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-20",
+      "title": "Caddy @api matcher omits /api/*, routing the API beacon through a second web-container hop",
+      "priority": "P1",
+      "subsystem": "deploy/caddy",
+      "files": ["deploy/caddy/Caddyfile", "apps/web/next.config.ts"],
+      "summary": "@api lists /trpc,/auth,/health,/admin/queues,/pdfs but not /api, so the API-served POST /api/web-vitals falls through to web:3000 and only reaches the API via the Next.js /api rewrite — a second proxy hop. That also violates the trust-proxy:1 single-hop assumption (main.ts), so vitalsLimiter's per-client keying and the beacon's availability degrade.",
+      "recommendation": "Add /api /api/* to the @api matcher in both Caddyfile and Caddyfile.staging so /api/* is fronted directly by the API over one trusted hop; the Next.js /api rewrite then stays a dev-only convenience.",
+      "blastRadius": "Beacon coupled to web-container availability and mis-keyed rate limiting in prod.",
+      "relatedFindingIds": ["deploy-01 (Caddyfile:34)"],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-21",
+      "title": "Dockerfile.web bakes dev-auth + dev-role-switcher NEXT_PUBLIC defaults into the prod bundle",
+      "priority": "P1",
+      "subsystem": "deploy/config-secrets",
+      "files": ["Dockerfile.web", "docker-compose.prod.yml"],
+      "summary": "ARG NEXT_PUBLIC_AUTH_STUB=true and NEXT_PUBLIC_DEV_ROLE_SWITCHER=true are inlined into the client bundle in the builder stage and only neutralized by docker-compose.prod.yml's build.args. Any build not via that specific compose file (direct docker build, CI, base docker-compose.yml, registry rebuild) ships a NODE_ENV=production image with the auth stub and dev role switcher live; NEXT_PUBLIC_* is build-time inlined and cannot be corrected at runtime.",
+      "recommendation": "Make the safe values the Dockerfile defaults (AUTH_STUB=false, DEV_ROLE_SWITCHER=false) and have dev/compose override to true, so an un-argumented prod build fails safe.",
+      "blastRadius": "A production-labeled image can ship with dev auth bypass baked in.",
+      "relatedFindingIds": ["deploy-02 (Dockerfile.web:34)"],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-22",
+      "title": "List surfaces derive empty-state and count from the unfiltered source, contradicting the rendered filtered list",
+      "priority": "P1",
+      "subsystem": "web/admin + review",
+      "files": [
+        "apps/web/src/features/admin/ui/action-log-tab.tsx",
+        "apps/web/src/features/review/ui/reopen-tab.tsx"
+      ],
+      "summary": "Same bug in two components. Action-log: the count badge ('N loaded') and empty-state message key off the unfiltered rows while the table renders visibleRows (proof rows + search filtered) — a page of all-proof rows shows 'No actions match the search.' with no search typed and '20 loaded' beside 0 rows. Reopen-tab: the empty-state gates on the pre-search requests.length while the list maps filteredRequests, so a search matching nothing renders a blank panel with the header still claiming N requests.",
+      "recommendation": "Base both the empty-state branch and the count on the filtered/visible list; distinguish 'no rows at all' from 'no rows for search' and render a 'no results for <query>' state.",
+      "blastRadius": "Misleading empty states and counts on two admin/head list surfaces via ordinary search.",
+      "relatedFindingIds": [
+        "action-log-empty-state-wrong-source (action-log-tab.tsx:109)",
+        "web-features-review-1 (reopen-tab.tsx:132-173)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-23",
+      "title": "Lead slides deck never clamps selectedIndex, rendering a false 'No slides available'",
+      "priority": "P1",
+      "subsystem": "web/slides",
+      "files": ["apps/web/src/features/slides/ui/lead-slides-client.tsx"],
+      "summary": "selectedIndex is a useState(0) passed straight to the deck with no resync when leadSlides.slides shrinks (active-period rollover or background refetch dropping own-section pages below the current page). The only call site passes no key, so the component doesn't remount and a stale selectedIndex >= slides.length makes selectedSlide() undefined → false 'No slides available'. The sibling HeadSlidesClient has the exact clamp effect.",
+      "recommendation": "Add the HeadSlidesClient clamp: an effect keyed on [selectedIndex, slides.length] that resets to 0 (or clamps to length-1) when the index falls out of range.",
+      "blastRadius": "False-empty deck for multi-page lead reports on a data shrink; narrow trigger but user-facing.",
+      "relatedFindingIds": ["lead-slides-client-1 (lead-slides-client.tsx:48)"],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-24",
+      "title": "DI factories construct services without APP_LOGGER, silently dropping operational logs in prod",
+      "priority": "P2",
+      "subsystem": "api/observability",
+      "files": [
+        "apps/api/src/modules/admin/admin.module.ts",
+        "apps/api/src/modules/pdf-export/pdf-export.module.ts",
+        "apps/api/src/modules/reminders/reminders.module.ts"
+      ],
+      "summary": "AdminService, PdfExportService, and RemindersService are all wired with logger=undefined and fall back to a no-op NullLogger, so their info/debug operational lines (period create/update/delete, snapshot, enqueue, dedup, mark-sent) never reach logs/traces in prod. ConfigModule already exports APP_LOGGER and period.module.ts injects it — the established pattern is simply not applied here. (PDF-export failure visibility is preserved separately by the worker's own real logger + metric, so only info-level lines are lost.)",
+      "recommendation": "Inject APP_LOGGER into each factory (useFactory: (deps..., logger) => new Service(..., logger); inject: [..., APP_LOGGER]), mirroring period.module.ts.",
+      "blastRadius": "Operational-log blindness across admin, PDF-export, and reminder subsystems in production (audit envelope is separate and unaffected).",
+      "relatedFindingIds": [
+        "admin-null-logger-prod (admin.module.ts:23-27)",
+        "pdf-export-null-logger (pdf-export.module.ts:16)",
+        "reminders-3 (reminders.module.ts:20)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-25",
+      "title": "Product config read from process.env with silent fallbacks instead of the validated EnvConfig",
+      "priority": "P2",
+      "subsystem": "api/config",
+      "files": [
+        "apps/api/src/infrastructure/bullmq/pdf-export.processor.ts",
+        "apps/api/src/infrastructure/prisma/prisma.service.ts",
+        "apps/api/src/infrastructure/bullmq/bullmq-options.ts",
+        "apps/api/src/infrastructure/config/env.schema.ts"
+      ],
+      "summary": "Several sites bypass the injected EnvConfig and read process.env directly, violating the repo's no-fallback rule. Most impactful: pdf-export.processor reads PDF_OUTPUT_DIR ?? './storage/pdfs' (required in schema), so an unset value silently writes PDFs to a directory the static mount doesn't serve instead of failing loud. prisma.service reads LOG_LEVEL ?? 'info'; bullmq-options reads BULLMQ_PREFIX directly. Also, APP_BASE_URL/FRONTEND_URL/PDF_BASE_URL comments claim they prevent localhost in prod but no superRefine fence enforces it.",
+      "recommendation": "Read each from the injected/validated EnvConfig and drop the ?? defaults; store env as an instance field where the constructor already receives it. Either add a prod superRefine that the base URLs are non-localhost/https, or soften the comments to state operator responsibility.",
+      "blastRadius": "Silent config divergence (worst: PDFs written where nothing serves them); maintainability/no-fallback debt.",
+      "relatedFindingIds": [
+        "bullmq-2 (pdf-export.processor.ts:112)",
+        "api-infra-observability-2 (prisma.service.ts:105)",
+        "bullmq-3 (bullmq-options.ts:11-14)",
+        "api-config-security-2 (env.schema.ts:21-24)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-26",
+      "title": "Several dialogs and the period listbox ship half-built keyboard/focus a11y instead of the shared primitive",
+      "priority": "P2",
+      "subsystem": "web/shared-ui + admin + period",
+      "files": [
+        "apps/web/src/shared/ui/confirm-delete-dialog.tsx",
+        "apps/web/src/features/admin/ui/users-tab.tsx",
+        "apps/web/src/features/period/ui/fill-from-confirm-dialog.tsx",
+        "apps/web/src/features/report-sections/ui/quick-add-button.tsx",
+        "apps/web/src/shared/ui/report-shell/accordion-section.tsx",
+        "apps/web/src/features/period/model/use-period-listbox-nav.ts"
+      ],
+      "summary": "Cluster of keyboard/focus a11y gaps against the repo's own useDialogFocus/ARIA conventions. ConfirmDeleteDialog (used by 11 delete surfaces) hand-rolls Escape-only with no Tab trap or focus restore, so Shift+Tab escapes behind the backdrop. UsersTab's delete modal and FillFromConfirmDialog have no Escape/backdrop-dismiss/focus-trap at all, unlike their siblings. quick-add advertises aria-haspopup='menu' over a role='group'; accordion-section renders two aria-expanded toggles with no aria-controls; the period listbox never scrolls the active option into view so keyboard highlight disappears below the fold.",
+      "recommendation": "Route the hand-rolled dialogs through the shared useDialogFocus / ConfirmDeleteDialog; add scrollIntoView({block:'nearest'}) on activeIdx change for the listbox; fix aria-haspopup to match the popup role and add aria-controls to the accordion panel.",
+      "blastRadius": "Keyboard/screen-reader users across delete confirmations, quick-add, accordions, and period navigation; no functional break.",
+      "relatedFindingIds": [
+        "confirm-delete-dialog F1 (confirm-delete-dialog.tsx:71)",
+        "users-tab F1 (users-tab.tsx:593-627)",
+        "fill-from-confirm-dialog F1 (fill-from-confirm-dialog.tsx:26)",
+        "WRS-01 (quick-add-button.tsx:78)",
+        "accordion-section rs-2 (accordion-section.tsx:54-99)",
+        "web-features-period-model-1 (use-period-listbox-nav.ts:116-127)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-27",
+      "title": "Web navigation/query perf: full-reload anchors, duplicate serial auth.me gate, per-product N+1",
+      "priority": "P2",
+      "subsystem": "web/perf",
+      "files": [
+        "apps/web/src/app/(app)/admin/page.tsx",
+        "apps/web/src/app/(app)/head/report/layout.tsx",
+        "apps/web/src/features/admin/ui/group-products-editor.tsx"
+      ],
+      "summary": "Three avoidable-work items. Desktop admin tab pills use raw <a href> (full page reload, lost client state) while the mobile picker does router.push. head/report/layout nests a RoleGate with the identical role set as its parent, adding a second serial uncached auth.me round-trip on every report render with zero added protection. group-products-editor fires one admin.listProductGroups per active product (useQueries) on every dialog open — an N+1 fan-out growing with the catalog.",
+      "recommendation": "Replace the admin anchor with next/link/router.push; delete the redundant nested RoleGate (parent already gates the subtree); add a batched ownership endpoint (listProductGroupOwnership) and drop the per-product useQueries fan-out.",
+      "blastRadius": "Perf/UX degradation that scales with catalog size and every report-route render; no correctness impact.",
+      "relatedFindingIds": [
+        "admin-page F1 (admin/page.tsx:60)",
+        "web-head-routes-01 (head/report/layout.tsx:11-13)",
+        "group-products-editor-n-plus-1 (group-products-editor.tsx:99)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-28",
+      "title": "Search ts_headline runs on every WHERE-matching row, not just the post-LIMIT survivors",
+      "priority": "P2",
+      "subsystem": "api/search",
+      "files": ["apps/api/src/modules/search/search.prisma-repository.ts"],
+      "summary": "Each UNION-ALL chunk places ts_headline(full document) in the SELECT list of a subquery bounded only by ORDER BY rank LIMIT perType. With no index supporting the rank ORDER BY, Postgres projects ts_headline (an expensive document re-parse) for every row matching the tsvector predicate, then sorts and limits — so a common Russian token matching thousands of rows computes thousands of headlines per request instead of the ≤limit returned. The class comment justifies the design by the post-LIMIT output size, which doesn't cover the pre-LIMIT cost.",
+      "recommendation": "Rank+LIMIT first over id/document/rank, then apply ts_headline in an outer projection over the ≤perType survivors; behavior-preserving (verify identical output with EXPLAIN ANALYZE).",
+      "blastRadius": "Search latency scales with match count; modest at current volume but a real hot-path cost.",
+      "relatedFindingIds": [
+        "api-module-search-1 (search.prisma-repository.ts:147)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-29",
+      "title": "Web model type-SSOT drift: presentation types imported from mock/legacy modules mask real drift",
+      "priority": "P2",
+      "subsystem": "web/models",
+      "files": [
+        "apps/web/src/features/dashboard/ui/kpi-cards.tsx",
+        "apps/web/src/features/report-sections/model/lead-form.ts",
+        "apps/web/src/features/admin/model/reminders-tab-format.ts"
+      ],
+      "summary": "Three type-boundary breaks that compile only by structural accident. KpiCards imports KpiData from the legacy dashboard-mock-data module instead of model/dashboard, so a real-model field change wouldn't error. LeadKanbanItem drops the pausedReason its declared mirror KanbanItem carries; the mapper attaches it anyway and only an `as KanbanItem[]` cast re-types it downstream, so dropping the mapper line would type-check clean. Three reminders model files import MockReminder/MockReminderPolicy from shared/lib/admin-mock-data instead of the self-contained admin-types, contradicting the module's documented boundary and duplicating the kind/audience union.",
+      "recommendation": "Point each import at the real domain model (model/dashboard, ./admin-types) and add the missing pausedReason field to LeadKanbanItem so the mapper output is type-checked, removing the `as` cast.",
+      "blastRadius": "Same 'cast masks real drift' class already tracked for Prisma types; silent divergence on future field changes.",
+      "relatedFindingIds": [
+        "dash-1 (kpi-cards.tsx:3)",
+        "RS-MODEL-1 (lead-form.ts:79-100)",
+        "reminders-tab-format-2 (reminders-tab-format.ts:18)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-30",
+      "title": "section-save projectStatuses/stageStatuses arrays lack the payload size bound their siblings carry",
+      "priority": "P2",
+      "subsystem": "shared/schemas",
+      "files": ["packages/shared/src/schemas/section.schema.ts"],
+      "summary": "In draftSaveSchema, items/risks/decisions/activityStatuses all carry .max(MAX_RECORDS_PER_SECTION_SAVE) but projectStatuses and stageStatuses do not; submitSectionSchema's projectStatuses override is also unbounded. This is a live tRPC input reachable by any lead, so it bypasses the intended pathological-array guard (and feeds an O(projects*statuses) server scan).",
+      "recommendation": "Add .max(MAX_RECORDS_PER_SECTION_SAVE) to projectStatuses and stageStatuses in draftSaveSchema and to the submitSectionSchema override, matching the other arrays.",
+      "blastRadius": "Defense-in-depth gap on a client-controlled input; arrays are naturally bounded by real assignments so low exploitability.",
+      "relatedFindingIds": [
+        "shared-schemas-core-1 (section.schema.ts:229-230)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-31",
+      "title": "Dead code: unwired duplicate reminders router plus unused web helpers/validators",
+      "priority": "P2",
+      "subsystem": "api/reminders + web",
+      "files": [
+        "apps/api/src/modules/reminders/reminders.router.ts",
+        "apps/web/src/server/auth/session.ts",
+        "apps/web/src/features/admin/model/admin.ts",
+        "apps/web/src/features/slides/model/section-slide-utils.ts",
+        "apps/api/src/modules/pdf-export/pdf-export.prisma-repository.ts"
+      ],
+      "summary": "reminders.router.ts is an orphaned, lower-safety duplicate of the real scoped reminder endpoints (zero production references; the actual procedures live inline in trpc.router.ts with scope checks). session.ts's parseSessionPayload/extractSessionToken validators are dead while the two decoders that should use them blind-cast. admin.ts isoWeekLabel + 2 constants are unused. section-slide-utils' foreign-item `blocked: workflowStatus==='blocked'` check is always-false dead code. pdf-export markExportCompleted's checksum arg is never persisted (no column) and every read hardcodes null.",
+      "recommendation": "Delete reminders.router.ts (and its test block) or wire it through the same scope helpers; delete or wire up the session validators, isoWeekLabel, and the dead blocked check; either add a checksum column and persist/read it or drop the checksum param from the contract.",
+      "blastRadius": "Dead/misleading code, one lower-safety duplicate of an authz-scoped surface; no live bug.",
+      "relatedFindingIds": [
+        "reminders-2 (reminders.router.ts:1)",
+        "web-lib-auth-session-1 (session.ts:18)",
+        "admin isoWeekLabel-1 (admin.ts:101)",
+        "slides F1 (section-slide-utils.ts:874-875)",
+        "pdf-export-checksum-not-persisted (pdf-export.prisma-repository.ts:126)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-32",
+      "title": "Prod tracing effectively off: 0.1 non-ParentBased sampling and no OTLP endpoint/collector",
+      "priority": "P2",
+      "subsystem": "deploy/observability",
+      "files": [
+        "docker-compose.prod.yml",
+        "apps/api/src/infrastructure/otel/otel.bootstrap.ts"
+      ],
+      "summary": "docker-compose.prod.yml sets OTEL_SDK_DISABLED and OTEL_TRACES_SAMPLER_ARG=0.1 but no OTEL_EXPORTER_OTLP_ENDPOINT, and ships no collector (otel-lgtm is a dev overlay), so decideOtelBootstrap returns no-endpoint and the SDK silently no-ops in prod while two OTEL_* vars read as 'configured'. Even if enabled, 0.1 head-based TraceIdRatioBased (not ParentBased) drops ~90% of traces and re-dices browser-sampled traceparents, breaking browser→api correlation for a low-volume internal tool.",
+      "recommendation": "Provision a prod collector and set OTEL_EXPORTER_OTLP_ENDPOINT; set the sampler to 1.0 (or tail-based at a collector) given the low volume, and wrap in ParentBasedSampler to honor upstream browser decisions. Raise the 'otel sdk disabled' boot log to warn so an untraced prod is loud.",
+      "blastRadius": "Distributed traces are the exact blind spot for 'why did the report hang' incidents; currently absent in prod.",
+      "relatedFindingIds": [
+        "OBS-3 (docker-compose.prod.yml:168)",
+        "OBS-1 (docker-compose.prod.yml:169)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-33",
+      "title": "Recipient email (PII) written verbatim to logs against the codebase's userId-not-email policy",
+      "priority": "P2",
+      "subsystem": "api/observability",
+      "files": [
+        "apps/api/src/modules/reminders/reminders.service.ts",
+        "apps/api/src/infrastructure/bullmq/email-reminder.processor.ts",
+        "apps/api/src/lib/logger.ts"
+      ],
+      "summary": "reminders.service and email-reminder.processor log raw recipientEmail; logger.ts has no redaction layer, so it flows to stdout, rotating files, and OTLP/Loki. This contradicts the deliberate design elsewhere (tRPC middleware uses describeShape to avoid leaking email; the audit logger logs userId, never email).",
+      "recommendation": "Drop recipientEmail from these log calls (executionId+ruleId already identify the record) or hash/mask it, and add a redaction helper in logger.ts so PII fields cannot reach the sinks.",
+      "blastRadius": "PII in centralized logs; policy inconsistency rather than an exploit.",
+      "relatedFindingIds": ["OBS-2 (reminders.service.ts:200)"],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-34",
+      "title": "No server-side merge gate: CI is dispatch-only with zero runners; pre-push is a bypassable subset",
+      "priority": "P2",
+      "subsystem": "ci-cd",
+      "files": [".github/workflows/ci.yml", ".husky/pre-push"],
+      "summary": "CI runs on workflow_dispatch only, has never executed, and the repo has 0 runners; branch protection/rulesets are 403 on this private free-tier repo — so a red tree can be pushed straight to main with no server-side backstop. The sole active gate, pre-push, runs only typecheck/lint/format/catalog/unit — it omits integration, e2e, migrate-reset drift, docker build, uat:audit, and visual regression (which live only in the dormant CI) — and silently no-ops when CI=true or SKIP_PREPUSH=1 is set. Documented as an accepted MVP posture.",
+      "recommendation": "For a production point: provision a runner, add on:pull_request/push:[main], and enable required status checks (GitHub Pro / public / self-hosted). Interim: fold the cheap deterministic gates (uat:audit, migrate-reset against local Postgres) into pre-push, and gate the skip on an explicit hook-specific flag only (not the ambient CI var).",
+      "blastRadius": "Whole-repo merge safety rests on bypassable developer-machine discipline.",
+      "relatedFindingIds": [
+        "cicd-02 (ci.yml)",
+        "cicd-03 (pre-push:18-33)",
+        "cicd-01 (ci.yml:7-8)",
+        "cicd-04 (pre-push:13-16)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-35",
+      "title": "TelegramProcessor hand-rolls the raw-Worker lifecycle and duplicates its job-options constant",
+      "priority": "P2",
+      "subsystem": "api/telegram",
+      "files": [
+        "apps/api/src/modules/telegram/telegram.queue.ts",
+        "apps/api/src/infrastructure/trpc/trpc.router.ts"
+      ],
+      "summary": "TelegramProcessor reimplements onModuleInit/onModuleDestroy/new Worker/.on('failed') by hand instead of extending RawBullMqProcessor like its two siblings — the only new Worker() call outside the base class — so future base fixes (e.g. a Worker 'error' listener) silently won't apply to Telegram. Separately, TELEGRAM_OUTBOUND_JOB_OPTS exists specifically to prevent retry-policy drift but has zero production consumers; testTelegramSend hard-codes an identical inline copy.",
+      "recommendation": "Make TelegramProcessor extend RawBullMqProcessor<TelegramOutboundJobData>, supplying queueName/spanName/processJob/onJobFailed; import and spread TELEGRAM_OUTBOUND_JOB_OPTS in testTelegramSend instead of duplicating the literal.",
+      "blastRadius": "Architecture drift — base-class hardening won't reach Telegram; anti-drift constant provides no protection today.",
+      "relatedFindingIds": [
+        "telegram-1 (telegram.queue.ts:61)",
+        "telegram-2 (trpc.router.ts:1136)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-36",
+      "title": "Canonical seed never produces paused/postponed items and never runs the coverage guard",
+      "priority": "P2",
+      "subsystem": "prisma/scripts",
+      "files": ["prisma/seed.ts", "prisma/seed-coverage-check.ts"],
+      "summary": "prisma.config.ts targets seed.ts for migrate/db:seed, but seed.ts's workflowCycle is only [in_progress,done,...] and hardcodes next-week=planned/history=done — it never emits paused or postponed. assertSeedCoverage (REQUIRED_STATUSES includes paused/postponed) is called only by seed-simple/seed-demo, never seed.ts, so the default dev/test DB silently omits those states and the guard meant to catch exactly this is wired to the wrong seed.",
+      "recommendation": "Add at least one paused and one postponed item to seed.ts's active period and call assertSeedCoverage(prisma,'seed') at the end of main(); or narrow REQUIRED_STATUSES and document the divergence.",
+      "blastRadius": "Out-of-the-box dataset never exercises paused/postponed UI treatments; invariant silently unenforced on the default path.",
+      "relatedFindingIds": ["prisma-scripts-2 (seed.ts:607-615)"],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-37",
+      "title": "Auth/session hardening: CSRF-able logout, stateless-logout window, over-broad revalidate, unchecked logout redirect",
+      "priority": "P2",
+      "subsystem": "api/auth + web",
+      "files": [
+        "apps/api/src/modules/auth/auth.routes.ts",
+        "apps/web/src/app/api/revalidate-org/route.ts",
+        "apps/web/src/shared/ui/navigation/nav-bar.tsx"
+      ],
+      "summary": "Bounded auth/session gaps. POST /auth/logout has no CSRF/origin check, so a cross-site auto-submit can force-logout a victim (session DoS). Logout clears the cookie but never revokes the JWT, so an exfiltrated token stays valid until its 1h exp (standard stateless tradeoff). /api/revalidate-org checks only session truthiness (any role) yet purges the whole app's ISR cache — broader than its admin-only intended caller. nav-bar logout ignores the fetch result and unconditionally redirects, so a failed logout can leave the cookie valid.",
+      "recommendation": "Add an Origin/Referer or CSRF-token check to /auth/logout; gate revalidate-org to admin role; check response.ok on the nav-bar logout before redirecting. Accept+document the 1h stateless-logout window (per-session revocation needs jti tracking).",
+      "blastRadius": "Low-impact internal-staff threat model: session DoS and cache thrash, not takeover or data exposure.",
+      "relatedFindingIds": [
+        "api-module-auth-1 (auth.routes.ts:167)",
+        "api-module-auth-2 (auth.routes.ts:92)",
+        "revalidate-org F2 (revalidate-org/route.ts:11)",
+        "nav-bar F2 (nav-bar.tsx:364)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-38",
+      "title": "Documented-deferred production hardening: enforce CSP, distributed rate-limit store, image digest pinning",
+      "priority": "P2",
+      "subsystem": "deploy/security",
+      "files": [
+        "deploy/caddy/Caddyfile",
+        "apps/api/src/infrastructure/throttler/rate-limit.middleware.ts",
+        "Dockerfile.api",
+        "Dockerfile.web"
+      ],
+      "summary": "Three recorded pre-production hardening TODOs. The prod CSP ships as Content-Security-Policy-Report-Only with no report-uri — it enforces nothing and collects nothing, and it's the only CSP layer. The auth/trpc/vitals limiters use per-process MemoryStore (no Redis), so the 5/min auth brute-force window resets on restart and multiplies by replica count if ever scaled out. Base images are pinned by mutable tag, not @sha256 digest (explicit TODO deferred to the CSP flip).",
+      "recommendation": "Track the CSP flip to enforcing (with report-uri) as a release blocker; back the limiters with rate-limit-redis over the existing ioredis, or pin+document the single-instance assumption; resolve @sha256 digests for all three base images at the CSP-flip milestone.",
+      "blastRadius": "Latent hardening gaps that bite at horizontal scale-out or on a re-pushed base tag; single-instance/behind-Caddy today.",
+      "relatedFindingIds": [
+        "config-secrets-1 (Caddyfile:69-70)",
+        "api-config-security-1 (rate-limit.middleware.ts:74-93)",
+        "supply-chain-2 (Dockerfile.api:4-7)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-39",
+      "title": "Test-coverage gaps on the two most logic-bearing / security-relevant repository paths",
+      "priority": "P2",
+      "subsystem": "api/testing",
+      "files": [
+        "apps/api/src/modules/activity/activity.prisma-repository.integration.test.ts",
+        "apps/api/src/modules/archive/archive.prisma-repository.ts"
+      ],
+      "summary": "getLiveActivity's three most logic-bearing branches (no-section 'draft' case, draft-first sort comparator, multi-source lastEditAt max) are never exercised — fixtures always give both leads a section and assert only reportId/rows.length/leadId. The archive group-scoped section filter (sectionScopeWhere + filterSnapshotSections, an authz-isolation path wired in production for lead/head) has zero tests: every existing test calls the repo with no scoped session, so a regression breaking cross-group section isolation would go uncaught.",
+      "recommendation": "Add activity cases: a lead with no ReportSection (status='draft', itemCount=0, lastEditAt=null) and mixed draft/submitted leads pinning sort+lastEditAt. Add an archive test publishing sections from two groups and asserting a scoped lead/head sees only their group's sections (and recomputed portfolioOverview) on both snapshot-hit and fallback paths.",
+      "blastRadius": "Silent regressions possible on activity aggregation and, more seriously, cross-group archive isolation.",
+      "relatedFindingIds": [
+        "activity-1 (activity.prisma-repository.integration.test.ts:79-84)",
+        "archive-1 (archive.prisma-repository.ts:171)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-40",
+      "title": "Admin stage-assignment reassign races on its unique constraint",
+      "priority": "P2",
+      "subsystem": "api/admin",
+      "files": ["apps/api/src/modules/admin/admin-group.queries.ts"],
+      "summary": "saveStageAssignment does findFirst-then-create/update with no handling of the @@unique([stageId,projectId]); two concurrent calls both see existing==null, both create, and the second raises P2002 which no mapper converts — surfacing as a raw 500 instead of the intended idempotent update.",
+      "recommendation": "Use prisma.stageAssignment.upsert keyed on the composite unique (stageId_projectId) so reassign is atomic and idempotent.",
+      "blastRadius": "Low-probability single-admin surface; worst case a 500, no corruption.",
+      "relatedFindingIds": ["admin-queries-3 (admin-group.queries.ts:93-113)"],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-41",
+      "title": "CarryOver tables (and two review FKs) have no supporting index on cascade/FK columns",
+      "priority": "P2",
+      "subsystem": "prisma/schema",
+      "files": ["prisma/schema.prisma"],
+      "summary": "CarryOverExecution declares only dedupeKey @unique; CarryOverRecord has no index at all, so its executionId FK (ON DELETE CASCADE) and the two RESTRICT report FKs are unindexed — deleting an execution forces a sequential scan to cascade. SectionReview.reviewerId and ReviewAcknowledgement.groupId are similarly uncovered by a leftmost index. Inconsistent with the rest of the schema, which indexes its FK/cascade columns.",
+      "recommendation": "Add @@index([executionId]) to CarryOverRecord and @@index on the CarryOverExecution report FKs (plus reviewerId/groupId on the review tables) so cascades and relation reads are index-backed.",
+      "blastRadius": "Minor at current row counts; tightens lock scope and matches schema convention.",
+      "relatedFindingIds": ["prisma-1 (schema.prisma:600-624)"],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-42",
+      "title": "Micro-perf: request-path org upsert write-herd, serial reminderPolicy count, published-read over-fetch",
+      "priority": "P3",
+      "subsystem": "api/perf",
+      "files": [
+        "apps/api/src/infrastructure/trpc/trpc.session-hydration.ts",
+        "apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts"
+      ],
+      "summary": "hydrateOrganization does a Prisma upsert (a write) on the authenticated read hot path with no in-flight dedup, so every 5s TTL-expiry window lets concurrent cold requests each fire their own upsert against the singleton PK. In weekly-report, reminderPolicy.count is awaited as a third serial round-trip after the Promise.all despite depending only on the already-available report.deadline, and the published branch always includes project.stageAssignments though it's consumed only on the live branch.",
+      "recommendation": "Seed the singleton org row at boot and use findUnique on the hydration read path; fold reminderPolicy.count into the existing Promise.all; fetch stageAssignments only for the live path (or select just id + lead.reportingGroupId for the published cross-group computation).",
+      "blastRadius": "Avoidable writes/round-trips/over-fetch on hot read paths; no correctness impact.",
+      "relatedFindingIds": [
+        "api-trpc-bootstrap-2 (trpc.session-hydration.ts:81-95)",
+        "wr-02 (weekly-report.prisma-repository.ts:205)",
+        "wr-03 (weekly-report.prisma-repository.ts:180)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-43",
+      "title": "Archaeology-style phase/ticket tags in comments and test titles (comment-hygiene)",
+      "priority": "P3",
+      "subsystem": "cross-cutting",
+      "files": [
+        "apps/api/src/modules/telemetry/telemetry.service.test.ts",
+        "apps/web/src/features/analytics/ui/charts.test.tsx",
+        "apps/web/src/styles/app.css",
+        "apps/web/src/styles/pulse.css"
+      ],
+      "summary": "Banned change-log/ticket/phase refs per CLAUDE.md comment-hygiene: telemetry test describe blocks 'Phase 52-C (UFB-054)'; charts.test 'CONTEXT D-3'; app.css 'SDLC-1 (Phase 33-04)' and 'D-27/D-36'; pulse.css 'Phase 58' and 'UFB-062'.",
+      "recommendation": "Strip the phase/ticket prefixes, keeping only the load-bearing rationale (and the load-bearing 2026-06-23 removal date in pulse.css).",
+      "blastRadius": "Cosmetic; mechanical rename/delete.",
+      "relatedFindingIds": [
+        "telemetry-archaeology-comments (telemetry.service.test.ts:42)",
+        "analytics-2 (charts.test.tsx:125)",
+        "archaeology-sdlc-phase-ref-app-css (app.css:159)",
+        "archaeology-d-ticket-ref-app-css (app.css:200)",
+        "archaeology-phase-ref-pulse-css (pulse.css:5)",
+        "archaeology-ufb-ref-pulse-css (pulse.css:73)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-44",
+      "title": "Duplicated types/constants that should be centralized (SSOT hygiene)",
+      "priority": "P3",
+      "subsystem": "cross-cutting",
+      "files": [
+        "apps/api/src/modules/email/templates/escalation.template.tsx",
+        "apps/web/src/features/analytics/ui/lead-velocity.chart.tsx",
+        "apps/web/src/features/report-sections/ui/use-slide-inline-editor.tsx",
+        "apps/web/src/app/login-page.client.tsx"
+      ],
+      "summary": "Verbatim duplication that risks silent drift. OrganizationBrand {shortName,fullName} is hand-declared 3x (two email templates + the reminder job) although packages/shared already owns organizationPublicSchema. The 6-color chart palette + ChartSeries/ChartData are byte-duplicated across the two analytics charts. Three getActive{Item,Risk,Decision}Record discriminators are byte-duplicated across two slides files. The dev-login role picker hardcodes ['lead','head','admin','viewer'] twice instead of roleSchema.options.",
+      "recommendation": "Export one shared OrganizationBrand (from packages/shared), hoist COLORS/chart types to a shared analytics module, export the discriminators from the dialogs file and import them, and derive the login role list from roleSchema.options.",
+      "blastRadius": "Cosmetic; drift risk on future field/palette/role additions.",
+      "relatedFindingIds": [
+        "email-orgbrand-duplication (escalation.template.tsx:38)",
+        "analytics web-1 (lead-velocity.chart.tsx:14-21)",
+        "WRS-02 (use-slide-inline-editor.tsx:52)",
+        "web-app-auth-login-1 (login-page.client.tsx:168)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-45",
+      "title": "Web polish: minor react/correctness lows across lead-form, dialogs, period, hooks, utils",
+      "priority": "P3",
+      "subsystem": "web/misc",
+      "files": [
+        "apps/web/src/hooks/use-pause-reason.ts",
+        "apps/web/src/features/report-sections/ui/item-edit-dialog.tsx",
+        "apps/web/src/features/report-sections/ui/lead-form-header-actions.tsx",
+        "apps/web/src/features/report-sections/ui/lead-form-toolbar-controls.tsx",
+        "apps/web/src/shared/ui/report-shell/save-now-button.tsx",
+        "apps/web/src/features/dashboard/ui/alert-bar.tsx",
+        "apps/web/src/features/period/ui/periods-tab-dialog.tsx",
+        "apps/web/src/features/period/ui/periods-action-icon-row.tsx",
+        "apps/web/src/lib/use-cursor-pagination.ts",
+        "apps/web/src/lib/web-vitals.ts",
+        "apps/web/src/features/admin/ui/products-tab.tsx"
+      ],
+      "summary": "Batch of low-severity, self-contained correctness/react nits: usePauseReason calls onPause inside a useState updater (StrictMode double-fire trap); item-edit-dialog focuses an unrelated checkbox when only pausedReason is invalid; autosave badge renders the error state on success-green; ViewModeToggle slides fallback points at the edit route; save-now-button's stale 'Saved' check can mask a subsequent error for ~1.5s; alert-bar keys a list by display name (collision); periods-tab clearing end/deadline is a silent no-op save; periods delete-button guard mirrors only half the server condition (enabled delete on reopened periods that the server rejects); use-cursor-pagination clobbers a factory-set enabled; web-vitals dynamic import has no .catch; products-tab Save lacks a blank-name gate.",
+      "recommendation": "Fix each per its finding: move onPause out of the updater; target #item-paused-reason; switch the badge to a destructive variant on error; make the slides fallback carry ?mode=slides; clear showSaved when state leaves 'saved'; key alert-bar by id/index; make cleared end/deadline explicit null or required; mirror the full delete guard; only override enabled when the caller supplies it; add .catch to the import; add a canSave name gate.",
+      "blastRadius": "Individually minor UX/edge-case issues; batchable cleanup.",
+      "relatedFindingIds": [
+        "web-hooks-1 (use-pause-reason.ts:29)",
+        "item-edit-dialog F2 (item-edit-dialog.tsx:538-543)",
+        "lead-form-ui-1 (lead-form-header-actions.tsx:52-64)",
+        "lead-form-ui-2 (lead-form-toolbar-controls.tsx:134-140)",
+        "save-now-button rs-1 (save-now-button.tsx:59-70)",
+        "dash-2 (alert-bar.tsx:79)",
+        "web-period-ui-p2-2 (periods-tab-dialog.tsx:113)",
+        "web-period-ui-p2-1 (periods-action-icon-row.tsx:94)",
+        "web-lib-utils-1 (use-cursor-pagination.ts:107-116)",
+        "web-lib-utils-2 (web-vitals.ts:8)",
+        "products-tab F2 (products-tab.tsx:447-460)"
+      ],
+      "alreadyTracked": false
+    },
+    {
+      "id": "BL-46",
+      "title": "Stale/misleading comments and cosmetic strings (comment hygiene, non-archaeology)",
+      "priority": "P3",
+      "subsystem": "cross-cutting",
+      "files": [
+        "prisma/schema.prisma",
+        "apps/api/src/modules/admin/admin-period-lifecycle.ts",
+        "apps/api/src/infrastructure/trpc/trpc.context.ts",
+        "apps/web/src/shared/ui/forbidden-page.tsx",
+        "apps/web/src/app/print/[reportId]/print-report-template.tsx",
+        "apps/web/src/app/(app)/lead/report/[reportId]/preview/page.tsx",
+        "apps/web/src/features/organization/ui/settings-identity-sub-tab.tsx",
+        "apps/api/src/modules/reminders/reminders-escalation-grouping.ts"
+      ],
+      "summary": "Comments/strings that misstate current behavior or are cosmetically off. schema.prisma AppSettings/Organization comments claim the init migration seeds/updates singleton rows, but the squashed migration has zero DML (seed.ts provisions them). admin-period-lifecycle comment claims manual periods skip the PolicyApplicator, but the repo wrapper applies it. trpc.context's synthetic PDF-export userId isn't a valid UUID yet the adjacent comment asserts it satisfies uuid (harmless — columns are TEXT). ForbiddenPage's 403 tells prod users to use the dev-only role switcher that won't exist. Minor: print footer shows a raw ISO timestamp; preview 'Back to form' href skips encodeURIComponent (sibling encodes); org maxLength duplicates the length constants; escalation digest renders 'Report <uuid> section' as sectionTitle.",
+      "recommendation": "Correct the schema/lifecycle/context comments to current truth; make the 403 guidance env-agnostic; format the print timestamp; encodeURIComponent the preview href; reference MAX_*_LENGTH constants in maxLength/counter; drop or replace the fabricated escalation sectionTitle.",
+      "blastRadius": "Cosmetic/documentation; the 403 copy actively misdirects a denied prod user (slightly higher UX weight but still copy-only).",
+      "relatedFindingIds": [
+        "prisma-2 (schema.prisma:680)",
+        "admin-queries-2 (admin-period-lifecycle.ts:44)",
+        "api-trpc-bootstrap-3 (trpc.context.ts:41)",
+        "web-shared-ui-role-guards-1 (forbidden-page.tsx:36-38)",
+        "web-app-print-2 (print-report-template.tsx:522)",
+        "web-app-lead-routes-1 (preview/page.tsx:51)",
+        "org-4-magic-maxlength-duplication (settings-identity-sub-tab.tsx:86)",
+        "reminders-4 (reminders-escalation-grouping.ts:80)"
+      ],
+      "alreadyTracked": false
+    }
+  ],
+  "stats": {
+    "totalFindings": 92,
+    "allVerdictReal": true,
+    "backlogItems": 46,
+    "byPriority": {
+      "P0": 7,
+      "P1": 16,
+      "P2": 18,
+      "P3": 5
+    },
+    "alreadyTracked": 0,
+    "notes": "openspec list = no active changes; the two existing backlog specs cover only lead-form decomposition, role-vocabulary/predicate unification, traffic-light SSOT, the Prisma-payload cast boundary, HOT-ZONE characterization-test policy, the single action-log `any` escape hatch, and Biome sequencing — none overlap these findings. P0 = reachable security/data-loss/broken-correctness/deploy-blocker (reopen status-gate, reopen/archive race, cross-group+cross-author leaks, carry-over idempotency, review-verdict version race, Playwright prod PDF break, print-spinner-as-PDF). Clustering merged the 3 DI null-logger findings, the 4 env-fallback findings, the 6 keyboard/focus-a11y findings, the 3 web-nav-perf findings, the 3 type-drift findings, the 4 CI/CD findings, and the archaeology/duplication/comment lows into single items."
+  },
+  "council": [
+    {
+      "member": "codex",
+      "available": false,
+      "falsePositives": [],
+      "missed": [],
+      "notes": "codex exec timed out after the full 600s watchdog window with no \"item.completed\" line produced (grep against the captured output returned empty). The process was killed by the watchdog. No JSON verdict was obtained from the model — this is a tooling/timeout failure, not a review result."
+    },
+    {
+      "member": "kimi",
+      "available": false,
+      "falsePositives": [],
+      "missed": [],
+      "notes": "opencode run -m opencode-go/kimi-k2.7-code timed out after the full 900s watchdog / 10-minute Bash cap with no output — the grep on the output file returned nothing (process was killed before producing any '\"type\":\"text\"' line). No JSON was ever printed, so there is nothing to parse. This matches the known council-workflow-opencode-timeouts pattern (Kimi via opencode-go can blow past long watchdogs on large prompts). Recommend retrying with a smaller/scoped prompt, running detached with a longer poll, or falling back to a different council member for this backlog review."
+    },
+    {
+      "member": "qwen",
+      "available": true,
+      "falsePositives": [],
+      "missed": [
+        {
+          "title": "Caddyfile.staging ships no HSTS and no CSP at all (not even Report-Only)",
+          "severity": "Medium",
+          "area": "deploy/security",
+          "evidence": "deploy/caddy/Caddyfile.staging:56-61 — header block carries X-Content-Type-Options, X-Frame-Options, Referrer-Policy but omits Strict-Transport-Security and Content-Security-Policy entirely; the prod Caddyfile carries both (lines 63, 70)",
+          "suggestion": "Mirror the prod HSTS directive and the CSP-Report-Only line into Caddyfile.staging so staging cannot silently drift below the prod security-header floor; track the enforcing flip in both files together."
+        },
+        {
+          "title": "Redis noeviction + 256 MB cap: BullMQ write-path OOM is a cascading outage, not a shed",
+          "severity": "High",
+          "area": "deploy/infra",
+          "evidence": "docker-compose.prod.yml:85-92 — redis command sets --maxmemory-policy noeviction; deploy.resources.limits.memory: 256M. When the cap is hit, every write command (LPUSH for enqueue, HSET for status, ZADD for delayed) returns OOM — BullMQ jobs cannot be enqueued, started, completed, or failed; PDF export and email reminders both halt with no graceful degradation.",
+          "suggestion": "Switch to allkeys-lru or volatile-lru so BullMQ's ephemeral keys can be evicted under pressure (job data is re-derivable from the DB execution rows already tracked by BL-09); add a Prometheus redis_memory_used_bytes / redis_memory_max_bytes alert at 80%; or raise the cap and pair with a DLQ reaper."
+        },
+        {
+          "title": "tRPC express adapter has no request-body size bound",
+          "severity": "Medium",
+          "area": "api/security",
+          "evidence": "apps/api/src/main.ts:434-441 — trpcExpress.createExpressMiddleware mounted with no maxBodySize option; grep for bodyLimit/maxBodyLength across apps/api/src/infrastructure/trpc returns zero hits. The /api/client-logs sibling explicitly sets express.json({limit:'128kb'}) (main.ts:284); tRPC relies on the adapter's undocumented default.",
+          "suggestion": "Pass maxBodySize (e.g. 256 * 1024) to createExpressMiddleware, or mount express.json({limit:'256kb'}) before the tRPC middleware so the limit is explicit and auditable; add a test that a 1 MB mutation payload is rejected with 413."
+        },
+        {
+          "title": "PgBouncer healthcheck verifies TCP only, not the query path through to Postgres",
+          "severity": "Low",
+          "area": "deploy/observability",
+          "evidence": "docker-compose.prod.yml:62-71 — pgbouncer healthcheck runs pg_isready -h 127.0.0.1 -p 5432 which succeeds on a listening socket even when pgbouncer cannot reach postgres (e.g. postgres overloaded, auth misconfigured, pool exhausted). The api container's /health/ready then reports UP while every Prisma query times out.",
+          "suggestion": "Replace the pgbouncer healthcheck with a real SELECT 1 through pgbouncer (e.g. psql or a tiny pg_isready-equivalent that executes a query) so the probe fails when the query path is broken, not just the TCP path."
+        },
+        {
+          "title": "Dockerfile.api HEALTHCHECK probes /health/live but compose overrides with /health/ready — standalone docker run ships a liveness-only posture",
+          "severity": "Low",
+          "area": "deploy/health",
+          "evidence": "Dockerfile.api:74-75 bakes wget http://localhost:3001/health/live; docker-compose.prod.yml:203-207 overrides to /health/ready. A bare docker run (e.g. ECS task definition, Kubernetes pod spec that doesn't override) uses the baked liveness probe, which passes even when DB/Redis/BullMQ are down — the container reports healthy while unable to serve.",
+          "suggestion": "Either bake /health/ready into the Dockerfile (and accept the longer start-period for standalone runs) or document explicitly that orchestrators MUST override the healthcheck to /health/ready; the current silent divergence is a footgun for any non-compose deployment."
+        },
+        {
+          "title": "Staging Caddyfile omits /api from @api matcher — same double-hop gap as BL-20",
+          "severity": "Medium",
+          "area": "deploy/caddy",
+          "evidence": "deploy/caddy/Caddyfile.staging:31-33 — @api path list is identical to the prod Caddyfile (no /api /api/*); BL-20's recommendation already names both files but the finding evidence cites only the prod Caddyfile:34",
+          "suggestion": "Already covered by BL-20's recommendation; call out explicitly that the staging file needs the same fix so it isn't missed in a partial remediation."
+        }
+      ],
+      "notes": "No false positives found. Qwen spot-checked BL-01 (report-sections.prisma-repository.ts:671-678), BL-02 (period-transition.apply.ts:31-34), BL-06 (package.json:57 vs Dockerfile.api:7), BL-11 (main.ts:282-325 vs vitalsLimiter at main.ts:447), BL-14 (redis.health.ts:19-22), BL-15 (trends/page.tsx:50-51), BL-20 (Caddyfile:34), BL-21 (Dockerfile.web:34-35) against real code and confirmed all claims. Missed items are orthogonal deploy/infra gaps (staging header drift, Redis noeviction OOM risk, tRPC body-size limit, pgbouncer shallow healthcheck, Dockerfile vs compose healthcheck path divergence, staging Caddyfile /api matcher gap) rather than contradictions of listed items."
+    },
+    {
+      "member": "glm",
+      "available": true,
+      "falsePositives": [
+        {
+          "id": "BL-15",
+          "reason": "Spot-checked apps/web/src/app/(app)/reports/trends/page.tsx cited line range; the 2026-01-01 to 2026-12-31 window is still valid today (env says 2026-07-12). The page works correctly now. The P1 rating overstates a 6-month-out time-bomb that only disables a dev-only trends view on a repo with no production point yet; severity is better P2/P3."
+        }
+      ],
+      "missed": [
+        {
+          "title": "docker-compose.prod.yml service images pinned by mutable tag, not @sha256 digest (BL-38 omits compose services)",
+          "severity": "Medium",
+          "area": "deploy/supply-chain",
+          "evidence": "docker-compose.prod.yml:14 (postgres:15-alpine), :42 (edoburu/pgbouncer:1.22.1-p2), :84 (redis:7-alpine), :286 (caddy:2.8-alpine); no `@sha256:` digest pinning present",
+          "suggestion": "Pin all four compose service images to @sha256 digests at the CSP-flip milestone alongside the already-tracked Dockerfile.* base images (BL-38). PgBouncer tag drift to a 1.23.x point release silently changes transaction-pool semantics; postgres point releases can shift WAL/vacuum behavior. Mirror the existing `docker buildx imagetools inspect` TODO pattern from Dockerfile.api/Dockerfile.web."
+        },
+        {
+          "title": "env.schema does not enforce KEYCLOAK_SAML_* when AUTH_DEV_MODE=false in production",
+          "severity": "Low",
+          "area": "api/config",
+          "evidence": "apps/api/src/infrastructure/config/env.schema.ts:54-57 marks KEYCLOAK_SAML_CALLBACK_URL / ENTRY_POINT / ISSUER / CERT all `.optional()`; superRefine (lines 134-178) rejects AUTH_DEV_MODE=true in prod but never requires KEYCLOAK_SAML_* when AUTH_DEV_MODE=false. saml.strategy.ts requireEnv enforces at first SAML login (per comment line 51-53) — a bare prod boot without SAML env boots cleanly, then fails late on first auth.",
+          "suggestion": "Add a superRefine branch: when `data.NODE_ENV === 'production' && !data.AUTH_DEV_MODE`, require all four KEYCLOAK_SAML_* fields or fail boot loud. Mirrors the existing SMTP_HOST/SMTP_FROM enforcement in the same superRefine block. Docker-compose.prod.yml's `:?required` shell syntax masks this for the canonical compose path, but a non-compose prod launch would late-fail."
+        }
+      ],
+      "notes": "Verified backlog claims spot-checked: BL-01 confirmed (report-sections.service.ts:243 gates saveDraft on legacy getReportStatus from prisma-repository.ts:671; submitSection at :275-312 has no period/published guard); BL-05 confirmed (review-actions.service.ts:182 records judgedVersion from context.version not input.version); BL-06 confirmed (pnpm-lock.yaml resolves playwright@1.61.0; Dockerfile.api:7 pins v1.59.1-noble base; package.json:57 declares playwright ^1.61.0 in dependencies, not devDeps, so it survives prod prune); BL-07 confirmed (print template :485-502 returns LoadingShell on isError and on no-period sentinel with no terminal error state); BL-20 confirmed (Caddyfile @api matcher at line 34 lists only /trpc /auth /health /admin/queues /pdfs — no /api); BL-21 confirmed (Dockerfile.web:34-35 defaults ARG NEXT_PUBLIC_AUTH_STUB=true and DEV_ROLE_SWITCHER=true; only docker-compose.prod.yml overrides them); BL-32 confirmed (no OTEL_EXPORTER_OTLP_ENDPOINT in compose-prod, otel.bootstrap no-ops); BL-34 confirmed (ci.yml:8 workflow_dispatch only, runs-on ubuntu-latest documented for when runners exist). No false-positive pattern was definitively confirmed among the 10+ items checked — they all reproduce against the cited source. Audit time-boxed; coverage limited to spot-checks of BL-01/05/06/07/20/21/25/32/34/38 plus env-schema + compose service image inspection and tRPC publicProcedure enumeration. dev.listUsers (trpc.router.ts:420) is runtime-guarded against AUTH_DEV_MODE===true (line 421) so not an unauth leak."
+    }
+  ],
+  "recommendedChanges": [
+    {
+      "changeId": "fix-report-section-write-gates",
+      "title": "Гейтить saveDraft+submit по periodStatus: оживить reopen, закрыть обход submit",
+      "priority": "P0",
+      "scope": "api/report-sections — один общий period-status lookup, reject только published (BL-01)"
+    },
+    {
+      "changeId": "guard-period-reopen-cas",
+      "title": "reopen через guarded compare-and-set, fail-closed",
+      "priority": "P0",
+      "scope": "api/period — updateMany с archived:false/periodStatus:published, count===0 → domain error (BL-02)"
+    },
+    {
+      "changeId": "close-leadform-read-leaks",
+      "title": "Закрыть cross-group/cross-author утечки на lead-form read",
+      "priority": "P0",
+      "scope": "api/report-sections authz — groupScopeFilter на head byPeriod, сузить cross-author линзу (BL-03)"
+    },
+    {
+      "changeId": "idempotent-carry-over",
+      "title": "Сделать carry-over транзакцию идемпотентной",
+      "priority": "P0",
+      "scope": "api/carry-over — existing-ветка возвращает существующую execution, re-валидация в tx (BL-04)"
+    },
+    {
+      "changeId": "review-verdict-version-lock",
+      "title": "judgedVersion из input + optimistic lock на оба вердикта",
+      "priority": "P0",
+      "scope": "api/review — enforce expectedVersion на approved и changes_requested (BL-05)"
+    },
+    {
+      "changeId": "sync-playwright-prod-image",
+      "title": "Синхронизировать тег образа Playwright и зависимость",
+      "priority": "P0",
+      "scope": "deploy/pdf-export — Dockerfile.api v1.61.0-noble либо откат playwright к 1.59.x (BL-06)"
+    },
+    {
+      "changeId": "print-error-state-and-pdf-readiness",
+      "title": "Терминальное error-state print + ready-контракт воркера",
+      "priority": "P0",
+      "scope": "web/print + api/pdf-export — не LoadingShell на ошибке, воркер ждёт ready-sentinel (BL-07)"
+    },
+    {
+      "changeId": "dockerfile-web-fail-safe-auth-defaults",
+      "title": "Fail-safe дефолты dev-auth/role-switcher в Dockerfile.web",
+      "priority": "P0",
+      "scope": "deploy/config-secrets — безопасные значения дефолт, dev/compose override (BL-21)"
+    },
+    {
+      "changeId": "atomic-publish-snapshot",
+      "title": "Собирать published-снапшот внутри транзакции",
+      "priority": "P1",
+      "scope": "api/publication — CAS+snapshot в $transaction с re-read; удалить unreachable saveAssembledReport (BL-08)"
+    },
+    {
+      "changeId": "reliable-reminder-delivery",
+      "title": "Идемпотентный send + outbox/reaper для reminders",
+      "priority": "P1",
+      "scope": "api/reminders+bullmq — mark sending до send, reaper для зависших queued (BL-09)"
+    },
+    {
+      "changeId": "redis-write-path-resilience",
+      "title": "Политика вытеснения Redis + алерт памяти + DLQ-reaper",
+      "priority": "P1",
+      "scope": "deploy/infra — allkeys-lru/volatile-lru, алерт 80%, DLQ (CN-01, консилиум/Qwen)"
+    },
+    {
+      "changeId": "rate-limit-public-endpoints",
+      "title": "Rate-limit /api/client-logs + bound тела tRPC",
+      "priority": "P1",
+      "scope": "api/security — per-IP limiter перед handler, maxBodySize на tRPC-адаптере (BL-11, CN-02)"
+    },
+    {
+      "changeId": "caddy-api-routing-and-staging-headers",
+      "title": "/api/* в @api обоих Caddyfile + HSTS/CSP в staging",
+      "priority": "P1",
+      "scope": "deploy/caddy — единый хоп для beacon, staging не ниже прод-floor (BL-20, CN-03)"
+    },
+    {
+      "changeId": "fix-analytics-query-correctness",
+      "title": "Analytics: leadId-фильтр, period-label dedup, stable-stringify",
+      "priority": "P1",
+      "scope": "api/analytics — leadFilter в include.where, группировка velocity, рекурсивный hash (BL-12)"
+    },
+    {
+      "changeId": "fix-wipe-uat-activity-tables",
+      "title": "Чистить project-activity в wipe-manual-uat",
+      "priority": "P1",
+      "scope": "prisma/scripts — activity-удаления в FK-порядке или TRUNCATE CASCADE (BL-13)"
+    },
+    {
+      "changeId": "redis-health-failfast",
+      "title": "Fail-fast опции readiness Redis-клиента",
+      "priority": "P1",
+      "scope": "api/health — maxRetriesPerRequest:1, enableOfflineQueue:false, on('error') (BL-14)"
+    },
+    {
+      "changeId": "dynamic-trends-window",
+      "title": "Окно trends из текущей даты/данных вместо жёсткого 2026",
+      "priority": "P1",
+      "scope": "web/reports — rolling 12 мес. или min/max периода (BL-15; severity дискутируется GLM)"
+    },
+    {
+      "changeId": "fix-org-settings-form-safety",
+      "title": "dirty-guard re-seed + проверка revalidate в org-форме",
+      "priority": "P1",
+      "scope": "web/organization — re-seed при !isDirty, response.ok + отдельный fail-toast (BL-16)"
+    },
+    {
+      "changeId": "dedup-linked-products",
+      "title": "Дедуп linkedProductIds на границе схемы",
+      "priority": "P1",
+      "scope": "api/project-activity — .refine уникальность → 400 вместо 500 (BL-17)"
+    },
+    {
+      "changeId": "fix-published-crossgroup-audit",
+      "title": "Cross-group audit от snapshot-продуктов, не live-списка",
+      "priority": "P1",
+      "scope": "api/weekly-report — нести owner-group в снапшоте секций (BL-18)"
+    },
+    {
+      "changeId": "fix-policy-backfill-timezone",
+      "title": "Zone-aware fireAt в backfill через общий helper",
+      "priority": "P1",
+      "scope": "prisma/scripts+reminders — luxon setZone идентично PolicyApplicatorService (BL-19)"
+    },
+    {
+      "changeId": "fix-list-empty-state-source",
+      "title": "Empty-state и count от filtered в двух списках",
+      "priority": "P1",
+      "scope": "web/admin+review — различать нет-строк и нет-по-поиску (BL-22)"
+    },
+    {
+      "changeId": "clamp-lead-slides-index",
+      "title": "Клампить selectedIndex в lead-slides",
+      "priority": "P1",
+      "scope": "web/slides — эффект на [selectedIndex, slides.length] как HeadSlidesClient (BL-23)"
+    },
+    {
+      "changeId": "admin-snapshot-head-restore",
+      "title": "Восстанавливать ReportingGroup.headUserId при restore",
+      "priority": "P1",
+      "scope": "api/admin — второй проход по groups после upsertUsers (BL-10)"
+    },
+    {
+      "changeId": "inject-app-logger-di",
+      "title": "APP_LOGGER в DI-фабрики admin/pdf/reminders",
+      "priority": "P2",
+      "scope": "api/observability — useFactory с inject APP_LOGGER как period.module (BL-24)"
+    },
+    {
+      "changeId": "env-config-no-fallback-sweep",
+      "title": "Читать конфиг из EnvConfig, форсить SAML-env в проде",
+      "priority": "P2",
+      "scope": "api/config — снять ?? дефолты, superRefine на KEYCLOAK_SAML_* (BL-25, CN-05)"
+    },
+    {
+      "changeId": "deploy-observability-and-tracing",
+      "title": "Прод-коллектор+OTLP, ParentBased sampler, глубокие healthcheck'и",
+      "priority": "P2",
+      "scope": "deploy/observability — включить трейсинг, pgbouncer SELECT-1, единый health-путь (BL-32, CN-04)"
+    },
+    {
+      "changeId": "redact-pii-logs",
+      "title": "Убрать/маскировать email в логах + redaction-helper",
+      "priority": "P2",
+      "scope": "api/observability — executionId/ruleId вместо recipientEmail (BL-33)"
+    },
+    {
+      "changeId": "server-side-merge-gate",
+      "title": "Серверный merge-gate: раннер + required checks",
+      "priority": "P2",
+      "scope": "ci-cd — on:pull_request/push, сложить дешёвые гейты в pre-push (BL-34)"
+    },
+    {
+      "changeId": "prod-security-hardening",
+      "title": "CSP→enforcing, redis-backed limiters, @sha256 digest",
+      "priority": "P2",
+      "scope": "deploy/security — включить CSP+report-uri, digest Dockerfile+compose-сервисов (BL-38)"
+    },
+    {
+      "changeId": "auth-session-hardening",
+      "title": "CSRF-check logout, admin-gate revalidate, ok-check redirect",
+      "priority": "P2",
+      "scope": "api/auth+web — Origin-check, сузить revalidate-org, проверять logout (BL-37)"
+    },
+    {
+      "changeId": "bound-section-save-arrays",
+      "title": ".max() на projectStatuses/stageStatuses",
+      "priority": "P2",
+      "scope": "shared/schemas — довести до паритета с прочими массивами (BL-30)"
+    },
+    {
+      "changeId": "search-headline-post-limit",
+      "title": "ts_headline только на post-LIMIT survivors",
+      "priority": "P2",
+      "scope": "api/search — rank+LIMIT в подзапросе, headline во внешней проекции (BL-28)"
+    },
+    {
+      "changeId": "carry-over-fk-indexes",
+      "title": "Индексы на cascade/FK-колонки CarryOver+review",
+      "priority": "P2",
+      "scope": "prisma/schema — @@index на executionId, report-FK, reviewerId, groupId (BL-41)"
+    },
+    {
+      "changeId": "stage-assignment-upsert",
+      "title": "Атомарный upsert stage-assignment по composite unique",
+      "priority": "P2",
+      "scope": "api/admin — заменить findFirst-then-create/update (BL-40)"
+    },
+    {
+      "changeId": "telegram-processor-baseclass",
+      "title": "TelegramProcessor через RawBullMqProcessor + общая job-options",
+      "priority": "P2",
+      "scope": "api/telegram — убрать ручной Worker lifecycle, спред константы (BL-35)"
+    },
+    {
+      "changeId": "web-type-ssot-drift",
+      "title": "Импорты на реальные domain-модели, снять as-каст",
+      "priority": "P2",
+      "scope": "web/models — model/dashboard, admin-types, добавить pausedReason (BL-29)"
+    },
+    {
+      "changeId": "web-nav-and-query-perf",
+      "title": "next/link, снять дубль RoleGate, batched ownership",
+      "priority": "P2",
+      "scope": "web/perf — убрать full-reload anchor и N+1 fan-out (BL-27)"
+    },
+    {
+      "changeId": "a11y-dialog-listbox-cluster",
+      "title": "Общий useDialogFocus + scrollIntoView + ARIA-фиксы",
+      "priority": "P2",
+      "scope": "web/shared-ui+admin+period — маршрутизировать hand-rolled диалоги (BL-26)"
+    },
+    {
+      "changeId": "remove-dead-code",
+      "title": "Удалить/подключить осиротевший код",
+      "priority": "P2",
+      "scope": "api/reminders+web — dead reminders-router, session-валидаторы, dead-ветки (BL-31)"
+    },
+    {
+      "changeId": "seed-coverage-paused-postponed",
+      "title": "seed.ts даёт paused/postponed + assertSeedCoverage",
+      "priority": "P2",
+      "scope": "prisma/scripts — покрыть invariant на дефолтном seed-пути (BL-36)"
+    },
+    {
+      "changeId": "test-coverage-activity-archive",
+      "title": "Тесты getLiveActivity ветки + archive cross-group isolation",
+      "priority": "P2",
+      "scope": "api/testing — no-section draft, sort/lastEditAt, scoped archive (BL-39)"
+    },
+    {
+      "changeId": "micro-perf-hot-paths",
+      "title": "Убрать write-herd/serial-count/over-fetch на hot-path",
+      "priority": "P3",
+      "scope": "api/perf — findUnique org, fold count в Promise.all, узкий select (BL-42)"
+    },
+    {
+      "changeId": "comment-hygiene-archaeology",
+      "title": "Снять Phase/UFB/SDLC-теги из комментариев и тестов",
+      "priority": "P3",
+      "scope": "cross-cutting — оставить load-bearing rationale (BL-43)"
+    },
+    {
+      "changeId": "centralize-duplicated-types",
+      "title": "Централизовать OrganizationBrand, палитру, role-list",
+      "priority": "P3",
+      "scope": "cross-cutting — экспорт из shared, derive из roleSchema.options (BL-44)"
+    },
+    {
+      "changeId": "web-polish-lows",
+      "title": "Пачка мелких react/correctness-фиксов",
+      "priority": "P3",
+      "scope": "web/misc — usePauseReason, autosave badge, slides-fallback и др. (BL-45)"
+    },
+    {
+      "changeId": "fix-stale-comments",
+      "title": "Привести комментарии/403-copy к текущей правде",
+      "priority": "P3",
+      "scope": "cross-cutting — env-agnostic 403, корректные schema/lifecycle комментарии (BL-46)"
+    }
+  ]
+}
