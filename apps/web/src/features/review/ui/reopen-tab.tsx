@@ -87,7 +87,7 @@ export function ReopenTab() {
       <TabHeader
         title="Reopen Requests"
         description="Leads ask for permission to edit a submitted section."
-        count={`${requests.length} requests`}
+        count={`${filteredRequests.length} requests`}
         search={
           <TabSearch
             value={search}
@@ -129,13 +129,17 @@ export function ReopenTab() {
         </div>
       )}
 
-      {!listQuery.isPending && !listQuery.isError && requests.length === 0 && (
-        <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
-          {filter === "pending"
-            ? "No pending reopen requests."
-            : "Nothing here yet."}
-        </div>
-      )}
+      {!listQuery.isPending &&
+        !listQuery.isError &&
+        filteredRequests.length === 0 && (
+          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
+            {requests.length > 0
+              ? "No requests match the search."
+              : filter === "pending"
+                ? "No pending reopen requests."
+                : "Nothing here yet."}
+          </div>
+        )}
 
       <ul className="space-y-3">
         {filteredRequests.map((r) => (
