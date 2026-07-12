@@ -59,6 +59,13 @@ export interface LeadFormRepository {
     sectionId: string,
     scope: Record<string, unknown>,
   ): Promise<ReportSectionReadModel | null>;
+  /**
+   * The reporting group id of a user, or null when the user has none. The head
+   * cross-author read uses it to bound a client-supplied `requestedAuthorId` to
+   * the head's own single reporting group before the target section is returned
+   * (a head is a single-group role; admin never consults this).
+   */
+  getUserReportingGroupId(userId: string): Promise<string | null>;
   getSectionForPeriod(
     reportId: string,
     userId: string,
@@ -70,6 +77,28 @@ export interface LeadFormRepository {
      * needs to compute `canRequestReopen` without a second read. `archived`
      * is the explicit `Report` flag, NOT a `periodStatus` value.
      */
+    reopenFacts: ReopenEligibilityFacts;
+  } | null>;
+  /**
+   * Atomic, group-scoped twin of {@link getSectionForPeriod} for the head
+   * cross-author read. Returns the `authorId` section on `reportId` ONLY if
+   * the author's reporting group currently contains `peerUserId`, evaluated
+   * as a single relation predicate in the SAME query as the read — the group
+   * membership and the section come from one snapshot, so a group
+   * reassignment concurrent with the read cannot slip a cross-group section
+   * out (unlike a separate pre-check followed by an unscoped read, which
+   * leaves a window between the two statements). `assertHeadTargetInGroup`
+   * remains the fast pre-check for a clear 403 message; this method is the
+   * enforcement. A `peerUserId` with no reporting group never matches and
+   * yields null (fail closed).
+   */
+  getSectionForPeriodAsGroupPeer(
+    reportId: string,
+    authorId: string,
+    peerUserId: string,
+  ): Promise<{
+    section: ReportSectionReadModel;
+    readOnly: boolean;
     reopenFacts: ReopenEligibilityFacts;
   } | null>;
   /**
