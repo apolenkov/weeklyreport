@@ -181,6 +181,85 @@ describe("review-actions (integration)", () => {
     });
   });
 
+  async function bumpVersion(next: number) {
+    await prisma.reportSection.update({
+      where: { id: testData.section.id },
+      data: { version: next },
+    });
+  }
+
+  async function sectionReviewCount(): Promise<number> {
+    return prisma.sectionReview.count({
+      where: { reportSectionId: testData.section.id },
+    });
+  }
+
+  describe("verdict version lock", () => {
+    it("rejects an approved verdict whose judged version is stale and writes no row", async () => {
+      await setSubmitted();
+      // A lead re-submit bumped the section 1 → 2 after the reviewer opened it.
+      await bumpVersion(2);
+
+      await expect(
+        repo.postVerdict({
+          sectionId: testData.section.id,
+          reviewerId: testData.head.id,
+          verdict: "approved",
+          judgedVersion: 1,
+          expectedVersion: 1,
+          currentStatus: "submitted",
+        }),
+      ).rejects.toMatchObject({ name: "ReviewVersionConflictError" });
+
+      expect(await sectionReviewCount()).toBe(0);
+    });
+
+    it("rejects a changes_requested verdict on a re-submitted section and leaves it submitted", async () => {
+      await setSubmitted();
+      await bumpVersion(2);
+
+      await expect(
+        repo.postVerdict({
+          sectionId: testData.section.id,
+          reviewerId: testData.head.id,
+          verdict: "changes_requested",
+          judgedVersion: 1,
+          expectedVersion: 1,
+          currentStatus: "submitted",
+        }),
+      ).rejects.toMatchObject({ name: "ReviewVersionConflictError" });
+
+      expect(await sectionReviewCount()).toBe(0);
+      const after = expectDefined(
+        await prisma.reportSection.findUnique({
+          where: { id: testData.section.id },
+        }),
+      );
+      expect(after.status).toBe("submitted");
+      expect(after.submittedAt).not.toBeNull();
+    });
+
+    it("records a verdict on the current version with judgedVersion === input.version", async () => {
+      await setSubmitted();
+      const result = await repo.postVerdict({
+        sectionId: testData.section.id,
+        reviewerId: testData.head.id,
+        verdict: "approved",
+        judgedVersion: 1,
+        expectedVersion: 1,
+        currentStatus: "submitted",
+      });
+      expect(result.unsubmitted).toBe(false);
+
+      const review = expectDefined(
+        await prisma.sectionReview.findFirst({
+          where: { reportSectionId: testData.section.id },
+        }),
+      );
+      expect(review.judgedVersion).toBe(1);
+    });
+  });
+
   describe("verdict staleness (read model)", () => {
     it("reads current on the judged version and stale after a re-save bumps version", async () => {
       await setSubmitted();

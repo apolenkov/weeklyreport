@@ -35,7 +35,10 @@ import {
   ReportSectionDomainError,
   SectionVersionConflictError,
 } from "../../modules/report-sections/application/report-sections.service.js";
-import { ReviewAccessError } from "../../modules/review/application/review.service.js";
+import {
+  ReviewAccessError,
+  ReviewVersionConflictError,
+} from "../../modules/review/application/review.service.js";
 import { WeeklyReportDomainError } from "../../modules/weekly-report/weekly-report.service.js";
 import { mapDomainError } from "./trpc.error-mapper.js";
 
@@ -406,6 +409,11 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       code: "FORBIDDEN",
     },
     {
+      name: "ReviewVersionConflictError",
+      make: () => new ReviewVersionConflictError("m"),
+      code: "CONFLICT",
+    },
+    {
       name: "AdminAccessError",
       make: () => new AdminAccessError("m"),
       code: "FORBIDDEN",
@@ -519,7 +527,7 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
 
   it("covers every domain error class the mapper imports", () => {
     // Guards against a class being added to the mapper without a row here.
-    expect(cases).toHaveLength(23);
+    expect(cases).toHaveLength(24);
   });
 });
 

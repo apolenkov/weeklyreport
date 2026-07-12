@@ -31,6 +31,17 @@ export class ReviewConstraintError extends Error {
   }
 }
 
+// A verdict's optimistic version lock lost to a concurrent lead re-submit: the
+// version the reviewer judged no longer matches the section's current version,
+// so the verdict is rejected without writing a row → CONFLICT, letting the
+// client reload the current version and re-decide.
+export class ReviewVersionConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ReviewVersionConflictError";
+  }
+}
+
 /**
  * Dashboard reads honour group-scope visibility.
  * The repository receives the requester's session so it can spread
