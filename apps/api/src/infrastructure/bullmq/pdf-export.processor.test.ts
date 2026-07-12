@@ -85,6 +85,7 @@ vi.mock("node:crypto", () => ({
 // ---------------------------------------------------------------------------
 
 import { createHash } from "node:crypto";
+import { writeFileSync } from "node:fs";
 
 import { Worker } from "bullmq";
 import { chromium } from "playwright";
@@ -138,6 +139,10 @@ function setupMocks() {
   const mockPage = {
     goto: vi.fn().mockResolvedValue(undefined),
     pdf: vi.fn().mockResolvedValue(Buffer.from("pdf-bytes")),
+    // Readiness gate: default to the "ready" marker so the happy path proceeds.
+    waitForSelector: vi.fn().mockResolvedValue({
+      getAttribute: vi.fn().mockResolvedValue("ready"),
+    }),
   };
 
   // AUTH-05 (Phase 28-02): processor now creates a context first then a page so
@@ -283,6 +288,47 @@ describe("PdfExportProcessor.processJob", () => {
       "pdf-export step complete",
       expect.objectContaining({ step: "page.pdf" }),
     );
+  });
+
+  it("captures only after the print page reaches the ready marker", async () => {
+    const { mockPage } = setupMocks();
+    const mockService = createMockPdfExportService();
+    const processor = new PdfExportProcessor(mockService as never, STUB_ENV);
+    const job = createMockJob({
+      reportId: "report-1",
+      jobId: "job-1",
+      authToken: "fake-jwt",
+    });
+
+    await (processor as unknown as ProcessorTestSeam).processJob(job);
+
+    expect(mockPage.waitForSelector).toHaveBeenCalledWith(
+      '[data-print-state="ready"], [data-print-state="error"]',
+      { state: "attached", timeout: 30_000 },
+    );
+  });
+
+  it("throws and skips capture when the print page settles into the error state", async () => {
+    silenceStderr();
+    const { mockPage } = setupMocks();
+    mockPage.waitForSelector.mockResolvedValue({
+      getAttribute: vi.fn().mockResolvedValue("error"),
+    });
+    const mockService = createMockPdfExportService();
+    const processor = new PdfExportProcessor(mockService as never, STUB_ENV);
+    const job = createMockJob({
+      reportId: "report-1",
+      jobId: "job-1",
+      authToken: "fake-jwt",
+    });
+
+    await expect(
+      (processor as unknown as ProcessorTestSeam).processJob(job),
+    ).rejects.toThrow(/ready state/i);
+
+    expect(mockPage.pdf).not.toHaveBeenCalled();
+    expect(writeFileSync).not.toHaveBeenCalled();
+    expect(mockService.markExportCompleted).not.toHaveBeenCalled();
   });
 
   it("closes browser in finally block even if page.goto throws", async () => {

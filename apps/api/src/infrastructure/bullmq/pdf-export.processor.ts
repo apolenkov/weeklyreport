@@ -6,7 +6,7 @@ import { performance } from "node:perf_hooks";
 import { Injectable } from "@nestjs/common";
 import { type Job } from "bullmq";
 import type { ClsService } from "nestjs-cls";
-import { chromium } from "playwright";
+import { chromium, type Page } from "playwright";
 
 import { requireEnv } from "../../lib/env.js";
 import type { AppLogger } from "../../lib/logger.js";
@@ -21,6 +21,21 @@ import {
 // Cap the render navigation so a hung print page fails the job instead of
 // pinning a Chromium tab (and its Redis lock) indefinitely.
 const PAGE_GOTO_TIMEOUT_MS = 60_000;
+
+// Cap how long the worker waits for the print template's terminal render marker
+// after network idle before failing the job.
+const PRINT_READY_TIMEOUT_MS = 30_000;
+
+// Shared contract with the web print template
+// (apps/web/src/app/print/[reportId]/print-report-template.tsx): it stamps
+// data-print-state on the root of each render branch. The worker captures only
+// the "ready" branch, so a loading spinner or terminal error page is never
+// checksummed as a completed export. These strings MUST stay in sync with the
+// template's PRINT_STATE tokens.
+const PRINT_STATE_ATTR = "data-print-state";
+const PRINT_STATE_READY = "ready";
+const READY_OR_ERROR_SELECTOR =
+  '[data-print-state="ready"], [data-print-state="error"]';
 
 interface PdfExportJobData extends JobTraceContext {
   reportId: string;
@@ -103,6 +118,10 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
           timeout: PAGE_GOTO_TIMEOUT_MS,
         }),
       );
+      // Positive readiness gate: capture, write, and mark-completed run only once
+      // the template reports "ready" — a spinner or error page throws instead,
+      // routing through onJobFailed → markExportFailed.
+      await this.assertPrintReady(page, jobId);
       const pdfBuffer = await this.timed(jobId, "page.pdf", () =>
         page.pdf({ format: "A4", printBackground: true }),
       );
@@ -125,6 +144,26 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
       );
     } finally {
       await browser.close();
+    }
+  }
+
+  /**
+   * Wait for the print template's terminal render marker after network idle and
+   * assert it is "ready". Throws when the "error" marker is present or when no
+   * terminal marker appears within the timeout, so a failed render fails the job.
+   */
+  private async assertPrintReady(page: Page, jobId: string): Promise<void> {
+    const marker = await this.timed(jobId, "wait.ready", () =>
+      page.waitForSelector(READY_OR_ERROR_SELECTOR, {
+        state: "attached",
+        timeout: PRINT_READY_TIMEOUT_MS,
+      }),
+    );
+    const state = await marker.getAttribute(PRINT_STATE_ATTR);
+    if (state !== PRINT_STATE_READY) {
+      throw new Error(
+        `print render did not reach ready state (${PRINT_STATE_ATTR}="${state ?? "unknown"}")`,
+      );
     }
   }
 

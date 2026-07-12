@@ -29,6 +29,18 @@ const BORDER_LIGHT = "1px solid #e5e7eb";
 const TEXT_SECONDARY = "rgba(0,0,0,0.58)";
 const TEXT_PRIMARY = "rgba(0,0,0,0.87)";
 
+/**
+ * Render-outcome tokens stamped on the root of each branch as `data-print-state`.
+ * The headless PDF worker matches these exact strings to decide whether the page
+ * is safe to capture, so they are a cross-file contract with
+ * apps/api/src/infrastructure/bullmq/pdf-export.processor.ts and MUST stay in sync.
+ */
+const PRINT_STATE = {
+  loading: "loading",
+  error: "error",
+  ready: "ready",
+} as const;
+
 interface Props {
   reportId: string;
 }
@@ -456,21 +468,42 @@ function LeadSection({ report }: { report: ProductReport }) {
   );
 }
 
+const SHELL_STYLE = {
+  backgroundColor: "#ffffff",
+  color: TEXT_PRIMARY,
+  fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
+  fontSize: "12px",
+  maxWidth: "210mm",
+  margin: "0 auto",
+  padding: "24px",
+} as const;
+
 function LoadingShell({ reportId }: { reportId: string }) {
   return (
     <main
-      style={{
-        backgroundColor: "#ffffff",
-        color: TEXT_PRIMARY,
-        fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
-        fontSize: "12px",
-        maxWidth: "210mm",
-        margin: "0 auto",
-        padding: "24px",
-      }}
+      data-print-state={PRINT_STATE.loading}
+      style={SHELL_STYLE}
       aria-busy="true"
     >
       <p style={{ color: TEXT_SECONDARY }}>Loading report {reportId} …</p>
+    </main>
+  );
+}
+
+/**
+ * Terminal error state — a query failure or the no-period sentinel. Distinct from
+ * LoadingShell so the render outcome is visible on the page (not only a toast) and
+ * so the PDF worker sees data-print-state="error" instead of a perpetual spinner.
+ */
+function ErrorShell({ reportId }: { reportId: string }) {
+  return (
+    <main data-print-state={PRINT_STATE.error} style={SHELL_STYLE} role="alert">
+      <h1 style={{ margin: "0 0 8px", fontSize: "16px", color: "#c82014" }}>
+        Report could not be rendered
+      </h1>
+      <p style={{ color: TEXT_SECONDARY }}>
+        Report {reportId} failed to load and cannot be exported.
+      </p>
     </main>
   );
 }
@@ -492,14 +525,20 @@ export function PrintReportTemplate({ reportId }: Props) {
     }
   }, [weeklyQ.isError, weeklyQ.error]);
 
+  // A terminal query error (retries exhausted) is a distinct, visible failure —
+  // never a perpetual spinner — so the worker's readiness gate can detect it.
+  if (weeklyQ.isError) {
+    return <ErrorShell reportId={reportId} />;
+  }
+
   if (weeklyQ.isLoading || !weeklyQ.data) {
     return <LoadingShell reportId={reportId} />;
   }
 
-  // No-period sentinel — this page always has a reportId, so this
-  // branch should not occur in practice, but guard for type safety.
+  // No-period sentinel — this page always has a reportId, so this branch should
+  // not occur in practice; surface it as the terminal error state, not a spinner.
   if (weeklyQ.data.status === "no-period") {
-    return <LoadingShell reportId={reportId} />;
+    return <ErrorShell reportId={reportId} />;
   }
 
   const view = mapWeeklyReport(weeklyQ.data);
@@ -545,6 +584,7 @@ export function PrintReportTemplate({ reportId }: Props) {
       />
 
       <main
+        data-print-state={PRINT_STATE.ready}
         style={{
           backgroundColor: "#ffffff",
           color: TEXT_PRIMARY,
