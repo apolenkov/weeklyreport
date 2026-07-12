@@ -3,7 +3,10 @@ import type { Queue } from "bullmq";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EnvConfig } from "../config/env.schema";
-import { dlqFailedTotal } from "../metrics/metrics.registry.js";
+import {
+  dlqFailedTotal,
+  redisMemoryUsedBytes,
+} from "../metrics/metrics.registry.js";
 import { DLQMonitorService } from "./dlq-monitor.service.js";
 import type { QueueRegistry } from "./queue-registry.js";
 
@@ -77,5 +80,69 @@ describe("DLQMonitorService.recordTerminalFailure", () => {
     await seam().recordTerminalFailure("pdf-export", queue, "job-2", "retry");
 
     expect(inc).not.toHaveBeenCalled();
+  });
+});
+
+// REDIS_MAXMEMORY_BYTES = 200mb; 80% of it is the warn boundary.
+const REDIS_CAP_BYTES = 209_715_200;
+const MEM_ENV = {
+  REDIS_HOST: "localhost",
+  REDIS_PORT: 6379,
+  REDIS_MAXMEMORY_BYTES: REDIS_CAP_BYTES,
+} as EnvConfig;
+
+interface MemSeam {
+  checkRedisMemory(): Promise<void>;
+}
+
+// Fake QueueRegistry whose shared connection reports the given used_memory via
+// an INFO reply shaped like the real Redis memory section.
+function registryReporting(usedMemory: number): QueueRegistry {
+  const info = vi
+    .fn()
+    .mockResolvedValue(
+      `# Memory\r\nused_memory:${usedMemory}\r\nused_memory_rss:${usedMemory + 1}\r\n`,
+    );
+  return {
+    get: vi.fn().mockReturnValue({ client: Promise.resolve({ info }) }),
+  } as unknown as QueueRegistry;
+}
+
+function memSeam(registry: QueueRegistry): MemSeam {
+  return new DLQMonitorService(registry, MEM_ENV) as unknown as MemSeam;
+}
+
+describe("DLQMonitorService.checkRedisMemory", () => {
+  beforeEach(() => {
+    vi.spyOn(Logger.prototype, "warn").mockImplementation(() => {
+      /* silence */
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("publishes the gauge and stays quiet below 80% of the cap", async () => {
+    const set = vi.spyOn(redisMemoryUsedBytes, "set");
+    const warn = vi.spyOn(Logger.prototype, "warn");
+    const used = Math.floor(REDIS_CAP_BYTES * 0.5);
+
+    await memSeam(registryReporting(used)).checkRedisMemory();
+
+    expect(set).toHaveBeenCalledExactlyOnceWith(used);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("publishes the gauge and warns at or above 80% of the cap", async () => {
+    const set = vi.spyOn(redisMemoryUsedBytes, "set");
+    const warn = vi.spyOn(Logger.prototype, "warn");
+    const used = Math.floor(REDIS_CAP_BYTES * 0.85);
+
+    await memSeam(registryReporting(used)).checkRedisMemory();
+
+    expect(set).toHaveBeenCalledExactlyOnceWith(used);
+    expect(warn).toHaveBeenCalledOnce();
+    expect(warn.mock.calls[0]?.[0]).toContain("[redis-mem]");
   });
 });

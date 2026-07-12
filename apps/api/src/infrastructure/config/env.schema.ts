@@ -59,6 +59,12 @@ export const envSchema = z
     // Redis (BullMQ)
     REDIS_HOST: z.string(),
     REDIS_PORT: z.coerce.number().int().positive(),
+    // Redis memory cap in bytes. Required with no default: the DLQ monitor's
+    // memory-usage alert threshold is derived from it, so the value MUST track
+    // the `--maxmemory` set for the redis container in docker-compose.prod.yml
+    // (209715200 = 200mb). A silent default would decouple the alert from the
+    // real cap and let usage climb toward the OOM-kill point unnoticed.
+    REDIS_MAXMEMORY_BYTES: z.coerce.number().int().positive(),
     BULLMQ_PREFIX: z.string().optional(),
     // DLQ alert threshold consumed only by DLQMonitorService. Genuinely
     // optional: absent → the service applies its named DEFAULT_THRESHOLD const,
