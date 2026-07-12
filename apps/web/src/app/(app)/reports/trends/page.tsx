@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 
 import { latestPeriodPair } from "../../../../lib/analytics-periods";
+import { deriveTrendsWindow } from "../../../../lib/trends-window";
 import { useTRPC } from "../../../../lib/trpc-context";
 
 /**
@@ -47,9 +48,6 @@ function ChartSkeleton() {
   return <div className="h-64 w-full animate-pulse rounded-md bg-muted/50" />;
 }
 
-const PERIOD_FROM = "2026-01-01";
-const PERIOD_TO = "2026-12-31";
-
 function isTrafficLightHistoryOutput(
   value: unknown,
 ): value is TrafficLightHistoryOutput {
@@ -77,16 +75,21 @@ function isPeriodComparisonOutput(
 
 export default function TrendsPage() {
   const trpc = useTRPC();
+  // Anchor the window on the current date instead of pinning absolute calendar
+  // bounds: the seed generates period-end dates relative to the run date and
+  // real reports keep advancing, so a fixed window eventually excludes every
+  // row and empties the charts.
+  const { periodFrom, periodTo } = deriveTrendsWindow(new Date());
   const history = useQuery(
     trpc.analytics.trafficLightHistory.queryOptions({
-      periodFrom: PERIOD_FROM,
-      periodTo: PERIOD_TO,
+      periodFrom,
+      periodTo,
     }),
   );
   const velocity = useQuery(
     trpc.analytics.leadVelocity.queryOptions({
-      periodFrom: PERIOD_FROM,
-      periodTo: PERIOD_TO,
+      periodFrom,
+      periodTo,
     }),
   );
   // Compare the two most recent periods rather than fixed dates: the seed
@@ -99,8 +102,8 @@ export default function TrendsPage() {
   const periodPair = latestPeriodPair(historyData?.periods ?? []);
   const comparison = useQuery({
     ...trpc.analytics.periodComparison.queryOptions({
-      periodA: periodPair?.periodA ?? PERIOD_FROM,
-      periodB: periodPair?.periodB ?? PERIOD_TO,
+      periodA: periodPair?.periodA ?? periodFrom,
+      periodB: periodPair?.periodB ?? periodTo,
     }),
     enabled: periodPair !== null,
   });
