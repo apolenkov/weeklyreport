@@ -678,6 +678,22 @@ export class ReportSectionsPrismaRepository
   }
 
   /**
+   * Canonical period status of the section's report, keyed on the section id —
+   * the single lookup both write-path gates read. Selects `report.periodStatus`
+   * so the reopen-editable states (`open` / `reopened`) are distinguished from
+   * the legacy `Report.status` column, which reopen leaves at `published`.
+   */
+  async getReportPeriodStatusForSection(
+    sectionId: string,
+  ): Promise<string | null> {
+    const row = await this.prisma.reportSection.findUnique({
+      where: { id: sectionId },
+      select: { report: { select: { periodStatus: true } } },
+    });
+    return row?.report.periodStatus ?? null;
+  }
+
+  /**
    * Deadline-aware report lookup used by the submitSection grace-period gate.
    * Returns null when the report does not exist so the service can no-op the
    * gate without ad-hoc try/catch.

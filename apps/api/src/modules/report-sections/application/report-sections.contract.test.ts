@@ -69,7 +69,7 @@ const writeItems = baseSection.items.map((it) => ({
 
 function createRepository(
   section: ReportSectionReadModel,
-  reportStatus = "draft",
+  periodStatus = "open",
 ): ReportSectionsRepository {
   let currentSection = structuredClone(section);
 
@@ -83,7 +83,11 @@ function createRepository(
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReportSectionsRepository contract (no awaitable work in the stub)
     async getReportStatus() {
-      return reportStatus;
+      return "draft";
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReportSectionsRepository contract (no awaitable work in the stub)
+    async getReportPeriodStatusForSection() {
+      return periodStatus;
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReportSectionsRepository contract (no awaitable work in the stub)
     async getPublishedLineage() {
@@ -293,7 +297,7 @@ describe("ReportSectionsService — saveDraft error paths", () => {
     });
   });
 
-  it("rejects when report is published", async () => {
+  it("rejects when the period is published", async () => {
     const service = new ReportSectionsService(
       createRepository(baseSection, "published"),
     );

@@ -60,6 +60,14 @@ export interface ReportSectionsRepository {
   ): Promise<ReportSectionReadModel | null>;
   getReportStatus(reportId: string): Promise<string | null>;
   /**
+   * Canonical period status of the section's report, keyed on the section id.
+   * Both write paths decide editability from this — never the legacy
+   * `Report.status` column — so reopen editing works and the published lock
+   * still holds. Mirrors the lead-form port's identically named lookup, so the
+   * two surfaces read one shared query shape.
+   */
+  getReportPeriodStatusForSection(sectionId: string): Promise<string | null>;
+  /**
    * Deadline-aware variant. Returns `null` when the
    * report does not exist (caller treats that as "no gate to enforce").
    * Kept optional so legacy in-memory test repositories that predate the
@@ -236,11 +244,11 @@ export class ReportSectionsService {
     const section = await this.getActiveSection(parsedInput.reportSectionId);
     this.assertCanEditSection(section, actorUserId);
 
-    const reportStatus = await this.repository.getReportStatus(
-      section.reportId,
+    const periodStatus = await this.repository.getReportPeriodStatusForSection(
+      section.reportSectionId,
     );
 
-    if (reportStatus === "published") {
+    if (periodStatus === "published") {
       throw new ReportSectionDomainError(
         "SECTION_ALREADY_SUBMITTED",
         "Cannot edit sections of a published report.",
@@ -279,6 +287,21 @@ export class ReportSectionsService {
     const parsedInput = submitSectionSchema.parse(input);
     const section = await this.getActiveSection(parsedInput.reportSectionId);
     this.assertCanEditSection(section, actorUserId);
+
+    // Gate the destructive delete-recreate on the canonical period status, not
+    // the legacy Report.status column. A section can sit in `draft` under a
+    // published period (publishing never flips section statuses), and submitting
+    // it would rewrite the live rows the frozen snapshot no longer matches.
+    const periodStatus = await this.repository.getReportPeriodStatusForSection(
+      section.reportSectionId,
+    );
+
+    if (periodStatus === "published") {
+      throw new ReportSectionDomainError(
+        "SECTION_ALREADY_SUBMITTED",
+        "Cannot submit sections of a published report.",
+      );
+    }
 
     // Deadline gate runs BEFORE the content validator so a past-deadline
     // submission with !allowLateSubmissions
