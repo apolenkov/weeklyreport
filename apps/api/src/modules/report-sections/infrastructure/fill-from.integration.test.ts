@@ -72,7 +72,18 @@ function createMockRepository(
       return { itemStableIds: [], decisionStableIds: [] };
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
+    async getUserReportingGroupId() {
+      return null;
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
     async getSectionForPeriod() {
+      return null;
+    },
+    // getByPeriod's head cross-read is untested here (fill-from never calls
+    // it) — mirror getSectionForPeriod's unused shape so the port is honestly
+    // implemented rather than a stub that always returns the unscoped value.
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
+    async getSectionForPeriodAsGroupPeer() {
       return null;
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)

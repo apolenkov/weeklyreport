@@ -73,7 +73,9 @@ function createMockRepository(
   return {
     getSectionById: vi.fn().mockResolvedValue(null),
     getSectionByIdScoped: vi.fn().mockResolvedValue(null),
+    getUserReportingGroupId: vi.fn().mockResolvedValue(null),
     getSectionForPeriod: vi.fn().mockResolvedValue(null),
+    getSectionForPeriodAsGroupPeer: vi.fn().mockResolvedValue(null),
     getSectionReopenContext: vi.fn().mockResolvedValue(null),
     getReportPeriodStatusForSection: vi.fn().mockResolvedValue("open"),
     getPublishedLineage: vi
@@ -738,9 +740,13 @@ describe("LeadFormService — getByPeriod", () => {
       authorName: "Lead 2",
     };
     const repo = createMockRepository({
-      getSectionForPeriod: vi
+      // the head-cross read goes through the atomic group-scoped method, not
+      // the unscoped getSectionForPeriod.
+      getSectionForPeriodAsGroupPeer: vi
         .fn()
         .mockResolvedValue(forPeriod(otherAuthorSection, false)),
+      // the head and its target share a reporting group → in-group read
+      getUserReportingGroupId: vi.fn().mockResolvedValue(HEAD_GROUP_ID),
     });
     const service = new LeadFormService(repo);
 
@@ -752,9 +758,10 @@ describe("LeadFormService — getByPeriod", () => {
     );
 
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
-    expect(repo.getSectionForPeriod).toHaveBeenCalledWith(
+    expect(repo.getSectionForPeriodAsGroupPeer).toHaveBeenCalledWith(
       REPORT_ID,
       OTHER_USER_ID,
+      AUTHOR_ID,
     );
     expect(result.section.authorId).toBe(OTHER_USER_ID);
     expect(result.readOnly).toBe(true);
@@ -841,6 +848,10 @@ describe("LeadFormService — getByPeriod", () => {
 const UNSHARED_PROJECT_ID = "44444444-4444-4444-8444-555555555555";
 const STAGE_BUILD = "55555555-5555-4555-8555-555555555551";
 const STAGE_TEST = "55555555-5555-4555-8555-555555555552";
+// A head and its in-group target share this reporting group; the cross-group
+// target below lives in a different one.
+const HEAD_GROUP_ID = "66666666-6666-4666-8666-666666666661";
+const OTHER_GROUP_ID = "66666666-6666-4666-8666-666666666662";
 
 // A foreign section (authored by OTHER_USER_ID) on TWO products: PROJECT_ID is
 // shared with the viewer, UNSHARED_PROJECT_ID is the author's alone.
@@ -976,7 +987,19 @@ function crossAuthorRepo(
           false,
         ),
       ),
+    // The head-cross branch reads via this atomic, group-scoped method
+    // instead — same fixture data, keyed the same way by `authorId`.
+    getSectionForPeriodAsGroupPeer: vi
+      .fn()
+      .mockImplementation((_reportId: string, authorId: string) =>
+        authorId === OTHER_USER_ID
+          ? forPeriod(foreignSectionWithTwoProducts(), false)
+          : null,
+      ),
     getSharedNonArchivedProductIds: vi.fn().mockResolvedValue([PROJECT_ID]),
+    // Default: the head (AUTHOR_ID) and every target live in the same group, so
+    // a head cross-author read is in-group. Cross-group cases override this.
+    getUserReportingGroupId: vi.fn().mockResolvedValue(HEAD_GROUP_ID),
     ...overrides,
   });
 }
@@ -1054,6 +1077,66 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
     expect(section.referencedProjects ?? []).toEqual([]);
   });
 
+  it("empties activities and drops reviews, keeping shared items/risks/decisions", async () => {
+    const withActivitiesAndReviews: ReportSectionReadModel = {
+      ...foreignSectionWithTwoProducts(),
+      activities: [
+        {
+          activityId: "77777777-7777-4777-8777-777777777771",
+          activityName: "Sensitive activity",
+          status: "red",
+          note: "Confidential note",
+          linkedProducts: [],
+          derivedStatus: null,
+        },
+      ],
+      reviews: [
+        {
+          reviewerId: "88888888-8888-4888-8888-888888888881",
+          verdict: "approved",
+          judgedVersion: 1,
+          isCurrent: true,
+          createdAt: new Date("2026-04-06T12:00:00Z"),
+        },
+      ],
+    };
+    const repo = crossAuthorRepo({
+      getSectionForPeriod: vi
+        .fn()
+        .mockImplementation((_reportId: string, authorId: string) =>
+          forPeriod(
+            authorId === OTHER_USER_ID
+              ? withActivitiesAndReviews
+              : structuredClone(draftSection),
+            false,
+          ),
+        ),
+    });
+    const service = new LeadFormService(repo);
+
+    const { section } = await service.getByPeriod(
+      REPORT_ID,
+      AUTHOR_ID,
+      "lead",
+      OTHER_USER_ID,
+    );
+
+    // the section author's per-activity status + free-text notes and per-section
+    // reviews are stripped — the co-lead lens never exceeds the Everyone lens
+    expect(section.activities).toEqual([]);
+    expect(section.reviews).toBeUndefined();
+    const serialized = JSON.stringify(section);
+    expect(serialized).not.toContain("Confidential note");
+    expect(serialized).not.toContain("Sensitive activity");
+    // shared-product records survive, still product-scoped
+    expect(section.items.map((i) => i.text).sort()).toEqual([
+      "Shared current",
+      "Shared next",
+    ]);
+    expect(section.risks.map((r) => r.risk)).toEqual(["Shared risk"]);
+    expect(section.decisions.map((d) => d.text)).toEqual(["Shared decision"]);
+  });
+
   it("returns the full section for the author's own read (no filter)", async () => {
     const service = new LeadFormService(crossAuthorRepo());
 
@@ -1067,7 +1150,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
     expect(readOnly).toBe(false);
   });
 
-  it("returns the full section for a head cross-author read (no filter)", async () => {
+  it("returns the full section for an in-group head cross-author read (no filter)", async () => {
     const repo = crossAuthorRepo();
     const service = new LeadFormService(repo);
 
@@ -1085,6 +1168,94 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
     // group-scoped read never consults product co-ownership
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getSharedNonArchivedProductIds).not.toHaveBeenCalled();
+    // the head's cross-author read IS bounded to its own reporting group
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.getUserReportingGroupId).toHaveBeenCalledWith(OTHER_USER_ID);
+    // the atomic group-scoped read is what actually loaded the section
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.getSectionForPeriodAsGroupPeer).toHaveBeenCalledWith(
+      REPORT_ID,
+      OTHER_USER_ID,
+      AUTHOR_ID,
+    );
+  });
+
+  it("rejects a head cross-author read for a target in another reporting group", async () => {
+    const repo = crossAuthorRepo({
+      getUserReportingGroupId: vi
+        .fn()
+        .mockImplementation((userId: string) =>
+          Promise.resolve(
+            userId === OTHER_USER_ID ? OTHER_GROUP_ID : HEAD_GROUP_ID,
+          ),
+        ),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.getByPeriod(REPORT_ID, AUTHOR_ID, "head", OTHER_USER_ID),
+    ).rejects.toThrow(LeadFormAccessError);
+
+    // the pre-check rejected before the atomic group-scoped read ever ran
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.getSectionForPeriodAsGroupPeer).not.toHaveBeenCalled();
+  });
+
+  it("closes the TOCTOU: refuses the read even when the pre-check's group snapshot is stale", async () => {
+    // Simulates a group reassignment racing the read: `assertHeadTargetInGroup`
+    // (a separate query) still sees the OLD, matching group and passes — but
+    // the atomic `getSectionForPeriodAsGroupPeer` re-evaluates membership in
+    // the SAME statement as the section load and now sees the target has
+    // moved out of the head's group, so it returns null. The scoped read, not
+    // the pre-check, is what must fail this closed.
+    const repo = crossAuthorRepo({
+      getUserReportingGroupId: vi.fn().mockResolvedValue(HEAD_GROUP_ID),
+      getSectionForPeriodAsGroupPeer: vi.fn().mockResolvedValue(null),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.getByPeriod(REPORT_ID, AUTHOR_ID, "head", OTHER_USER_ID),
+    ).rejects.toThrow(LeadFormAccessError);
+    await expect(
+      service.getByPeriod(REPORT_ID, AUTHOR_ID, "head", OTHER_USER_ID),
+    ).rejects.toThrow("Cannot read a section outside your reporting group.");
+
+    // the pre-check DID pass (same group, per the stale snapshot above) — the
+    // rejection came from the atomic read itself, proving it re-checks the
+    // group rather than trusting the pre-check's result.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.getSectionForPeriodAsGroupPeer).toHaveBeenCalledWith(
+      REPORT_ID,
+      OTHER_USER_ID,
+      AUTHOR_ID,
+    );
+  });
+
+  it("lets an admin read a cross-group target (god-mode preserved)", async () => {
+    const repo = crossAuthorRepo({
+      getUserReportingGroupId: vi
+        .fn()
+        .mockImplementation((userId: string) =>
+          Promise.resolve(
+            userId === OTHER_USER_ID ? OTHER_GROUP_ID : HEAD_GROUP_ID,
+          ),
+        ),
+    });
+    const service = new LeadFormService(repo);
+
+    const { section } = await service.getByPeriod(
+      REPORT_ID,
+      AUTHOR_ID,
+      "admin",
+      OTHER_USER_ID,
+    );
+
+    expect(section.authorId).toBe(OTHER_USER_ID);
+    expect(section.projects).toHaveLength(2);
+    // admin is global — the group check is never consulted
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.getUserReportingGroupId).not.toHaveBeenCalled();
   });
 
   it("denies the read for archived-only sharing and falls back to the own section", async () => {

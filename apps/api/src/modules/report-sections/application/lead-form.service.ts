@@ -5,7 +5,9 @@ import {
   customreportReopenRequestsTotal,
 } from "../../../infrastructure/metrics/metrics.registry.js";
 import {
+  assertHeadTargetInGroup,
   filterSectionToSharedProducts,
+  readSectionForByPeriod,
   resolveCrossAuthorScope,
 } from "../domain/lead-form-cross-author-scope";
 import {
@@ -231,7 +233,8 @@ export class LeadFormService {
     const isHeadLike = role === "head" || role === "admin";
     // One shared non-archived set gates AND scopes the lead cross-author read
     // (null = not a granted cross-author read, including archived-only sharing
-    // or no report access). The head/admin branch is group-scoped elsewhere.
+    // or no report access). The head branch is group-scoped just below; admin
+    // is global by design.
     const sharedScope = await resolveCrossAuthorScope(
       this.repository,
       reportId,
@@ -239,20 +242,33 @@ export class LeadFormService {
       role,
       requestedAuthorId,
     );
+    // A head is a single-group role: it may read another author's section only
+    // inside its own reporting group. `requestedAuthorId` reaches here from a
+    // client URL param, so bound it before the target section is loaded. admin
+    // is exempt (global). A head's own read and a lead's genuine cross-author
+    // shared read never enter this branch.
+    const isHeadCrossRead =
+      role === "head" &&
+      requestedAuthorId !== undefined &&
+      requestedAuthorId !== userId;
+    if (isHeadCrossRead) {
+      await assertHeadTargetInGroup(this.repository, userId, requestedAuthorId);
+    }
     const sectionAuthorId =
       requestedAuthorId !== undefined && (isHeadLike || sharedScope !== null)
         ? requestedAuthorId
         : userId;
-    const result = await this.repository.getSectionForPeriod(
+    // `assertHeadTargetInGroup` above is only the fast pre-check (defense in
+    // depth); `readSectionForByPeriod` is the actual enforcement — its
+    // head-cross branch re-evaluates group membership in the SAME query as
+    // the section load, closing the race the pre-check alone leaves open.
+    const result = await readSectionForByPeriod(
+      this.repository,
       reportId,
       sectionAuthorId,
+      userId,
+      isHeadCrossRead,
     );
-
-    if (!result) {
-      throw new LeadFormDomainError(
-        `No section found for user in report ${reportId}.`,
-      );
-    }
 
     // A lead cross-author read returns only the records on products the two
     // leads share; the own-section and head/admin reads return the full section.

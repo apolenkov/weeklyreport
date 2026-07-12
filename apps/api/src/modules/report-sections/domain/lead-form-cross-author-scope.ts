@@ -1,6 +1,11 @@
 import type { ReportSectionReadModel, Role } from "@customreport/shared";
 
-import type { LeadFormRepository } from "./lead-form-shared";
+import {
+  LeadFormAccessError,
+  LeadFormDomainError,
+  type LeadFormRepository,
+  type ReopenEligibilityFacts,
+} from "./lead-form-shared";
 
 /**
  * Lead cross-author read scoping: resolving the shared-product scope for a
@@ -47,6 +52,71 @@ export async function resolveCrossAuthorScope(
 }
 
 /**
+ * Bound a head's cross-author read to its own reporting group. A head is a
+ * single-group role, so it may read another author's section only when that
+ * author shares the head's group. `targetAuthorId` reaches the caller from a
+ * client URL param, so resolve both groups and reject a cross-group target with
+ * a 403-equivalent access error before any section is loaded. A head with no
+ * group (null) is rejected too (fail closed). admin never calls this — it reads
+ * globally.
+ */
+export async function assertHeadTargetInGroup(
+  repository: LeadFormRepository,
+  headUserId: string,
+  targetAuthorId: string,
+): Promise<void> {
+  const [headGroupId, targetGroupId] = await Promise.all([
+    repository.getUserReportingGroupId(headUserId),
+    repository.getUserReportingGroupId(targetAuthorId),
+  ]);
+  if (headGroupId === null || targetGroupId !== headGroupId) {
+    throw new LeadFormAccessError(
+      "Cannot read a section outside your reporting group.",
+    );
+  }
+}
+
+/**
+ * The `getByPeriod` section load, branching on `isHeadCrossRead`: a head's
+ * cross-author read goes through the atomic, group-scoped
+ * `getSectionForPeriodAsGroupPeer` (the group predicate is evaluated in the
+ * same query as the read, so `assertHeadTargetInGroup`'s separate pre-check
+ * cannot be raced by a concurrent group reassignment); every other caller
+ * keeps the unscoped `getSectionForPeriod`. A null result on the head-cross
+ * path is `LeadFormAccessError` (fail closed, no existence leak); elsewhere
+ * it is the generic `LeadFormDomainError`.
+ */
+export async function readSectionForByPeriod(
+  repository: LeadFormRepository,
+  reportId: string,
+  sectionAuthorId: string,
+  userId: string,
+  isHeadCrossRead: boolean,
+): Promise<{
+  section: ReportSectionReadModel;
+  readOnly: boolean;
+  reopenFacts: ReopenEligibilityFacts;
+}> {
+  const result = isHeadCrossRead
+    ? await repository.getSectionForPeriodAsGroupPeer(
+        reportId,
+        sectionAuthorId,
+        userId,
+      )
+    : await repository.getSectionForPeriod(reportId, sectionAuthorId);
+  if (!result) {
+    throw isHeadCrossRead
+      ? new LeadFormAccessError(
+          "Cannot read a section outside your reporting group.",
+        )
+      : new LeadFormDomainError(
+          `No section found for user in report ${reportId}.`,
+        );
+  }
+  return result;
+}
+
+/**
  * Scope a foreign section's product-keyed collections to the products the
  * viewer co-owns. Every product-scoped collection the read model exposes is
  * filtered: items (current and next week), risks, decisions, and the `projects`
@@ -59,6 +129,13 @@ export async function resolveCrossAuthorScope(
  * it and it is kept. An activity-parented item/risk/decision carries a null
  * product FK and IS dropped here (this lens is product-scoped). Section-identity
  * fields (status, version, author, submittedAt) are preserved unchanged.
+ *
+ * Ceiling: this shared-product lens never exposes a field the curated Everyone
+ * lens (`CrossAuthorSectionRow`) omits. `activities` (per-activity status +
+ * free-text notes) and `reviews` are on this read model but absent from the
+ * Everyone lens, so they are stripped — `activities` emptied (the read model
+ * requires the array), `reviews` dropped — rather than passed through the
+ * spread.
  */
 export function filterSectionToSharedProducts(
   section: ReportSectionReadModel,
@@ -91,5 +168,16 @@ export function filterSectionToSharedProducts(
   const referencedProjects = section.referencedProjects?.filter((rp) =>
     referencedIds.has(rp.projectId),
   );
-  return { ...section, items, risks, decisions, projects, referencedProjects };
+  // Strip the fields the Everyone lens omits before the spread carries them:
+  // `reviews` is dropped as a rest sibling, `activities` is re-set to empty.
+  const { activities, reviews, ...rest } = section;
+  return {
+    ...rest,
+    items,
+    risks,
+    decisions,
+    projects,
+    referencedProjects,
+    activities: [],
+  };
 }

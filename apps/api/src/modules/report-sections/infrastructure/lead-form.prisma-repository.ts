@@ -5,6 +5,7 @@ import type {
 } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
@@ -42,6 +43,27 @@ function normalizeStageName(stageName: string): string {
 
 /** API traffic-light enum; null = no data / untouched stage. */
 type StageTrafficStatus = TrafficLightStatus | null;
+
+/**
+ * Shared Prisma include for `getSectionForPeriod` and its group-scoped twin
+ * `getSectionForPeriodAsGroupPeer` — one contract, so a query change (e.g. a
+ * new reopen-lifecycle field) lands in both reads together.
+ */
+const sectionForPeriodInclude = {
+  ...reportSectionFullInclude,
+  report: { select: { periodStatus: true, archived: true } },
+  // reopen-request-lifecycle (D4/D5): does this section already hold a
+  // pending reopen request? Drives `canRequestReopen` (one-pending rule).
+  reopenRequests: {
+    where: { status: "pending" },
+    select: { id: true },
+    take: 1,
+  },
+} as const satisfies Prisma.ReportSectionInclude;
+
+type SectionForPeriodRow = Prisma.ReportSectionGetPayload<{
+  include: typeof sectionForPeriodInclude;
+}>;
 
 @Injectable()
 export class LeadFormPrismaRepository implements LeadFormRepository {
@@ -116,37 +138,25 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     });
   }
 
-  async getSectionForPeriod(
-    reportId: string,
-    userId: string,
-  ): Promise<{
+  async getUserReportingGroupId(userId: string): Promise<string | null> {
+    const row = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { reportingGroupId: true },
+    });
+    return row?.reportingGroupId ?? null;
+  }
+
+  /**
+   * Shared mapping for `getSectionForPeriod` and `getSectionForPeriodAsGroupPeer`
+   * — both queries share the same `sectionForPeriodInclude`, so the row shape
+   * and the derived `readOnly`/`reopenFacts` are computed exactly once.
+   */
+  private mapSectionForPeriodRow(row: SectionForPeriodRow): {
     section: ReportSectionReadModel;
     readOnly: boolean;
     reopenFacts: ReopenEligibilityFacts;
-  } | null> {
-    const row = await this.prisma.reportSection.findUnique({
-      where: { reportId_authorId: { reportId, authorId: userId } },
-      include: {
-        ...reportSectionFullInclude,
-        report: { select: { periodStatus: true, archived: true } },
-        // reopen-request-lifecycle (D4/D5): does this section already hold a
-        // pending reopen request? Drives `canRequestReopen` (one-pending rule).
-        reopenRequests: {
-          where: { status: "pending" },
-          select: { id: true },
-          take: 1,
-        },
-      },
-    });
-
-    if (!row) {
-      return null;
-    }
-
+  } {
     const section = mapPrismaToReportSection(row);
-
-    // `row` is already precisely typed from its own inline `include`
-    // (report/reopenRequests need no separate narrowing cast).
     const { report, reopenRequests } = row;
 
     // reopen-request-lifecycle (D4/G6): a 'reopened' period is editable again
@@ -164,6 +174,64 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     };
 
     return { section, readOnly, reopenFacts };
+  }
+
+  async getSectionForPeriod(
+    reportId: string,
+    userId: string,
+  ): Promise<{
+    section: ReportSectionReadModel;
+    readOnly: boolean;
+    reopenFacts: ReopenEligibilityFacts;
+  } | null> {
+    const row = await this.prisma.reportSection.findUnique({
+      where: { reportId_authorId: { reportId, authorId: userId } },
+      include: sectionForPeriodInclude,
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    return this.mapSectionForPeriodRow(row);
+  }
+
+  /**
+   * Atomic head cross-author read: returns the section only if, in the SAME
+   * query snapshot, the author's reporting group currently contains
+   * `peerUserId`. `assertHeadTargetInGroup` (two separate group lookups) stays
+   * the fast pre-check for a clear 403 message, but it reads the group
+   * membership in a separate statement — a concurrent reassignment between
+   * that check and an unscoped section read could slip a cross-group section
+   * through. Folding the group predicate into this one `findFirst` closes that
+   * window: the membership and the section come from one atomic read, so
+   * there is no gap for the group to change in. A peer with no reporting group
+   * (`reportingGroupId: null`) fails the relation filter and yields null —
+   * fail closed with no separate null-check needed.
+   */
+  async getSectionForPeriodAsGroupPeer(
+    reportId: string,
+    authorId: string,
+    peerUserId: string,
+  ): Promise<{
+    section: ReportSectionReadModel;
+    readOnly: boolean;
+    reopenFacts: ReopenEligibilityFacts;
+  } | null> {
+    const row = await this.prisma.reportSection.findFirst({
+      where: {
+        reportId,
+        authorId,
+        author: { reportingGroup: { users: { some: { id: peerUserId } } } },
+      },
+      include: sectionForPeriodInclude,
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    return this.mapSectionForPeriodRow(row);
   }
 
   async getSectionReopenContext(
