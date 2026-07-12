@@ -42,6 +42,7 @@ import {
   ReviewAccessError,
   ReviewConstraintError,
   ReviewNotFoundError,
+  ReviewVersionConflictError,
 } from "../../modules/review/application/review.service.js";
 import { WeeklyReportDomainError } from "../../modules/weekly-report/weekly-report.service.js";
 
@@ -69,6 +70,11 @@ const DOMAIN_ERROR_CODES: readonly (readonly [
   [ReviewAccessError, "FORBIDDEN"],
   [ReviewNotFoundError, "NOT_FOUND"],
   [ReviewConstraintError, "BAD_REQUEST"],
+  // A verdict's version lock lost to a concurrent lead re-submit — a
+  // concurrency clash, not a validation failure — CONFLICT (409) so the client
+  // reloads the current version and re-decides, mirroring
+  // SectionVersionConflictError on the section-write path.
+  [ReviewVersionConflictError, "CONFLICT"],
   [AdminAccessError, "FORBIDDEN"],
   [ReportSectionAccessError, "FORBIDDEN"],
   [LeadFormAccessError, "FORBIDDEN"],

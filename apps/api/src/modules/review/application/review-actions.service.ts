@@ -46,7 +46,8 @@ export interface PostVerdictParams {
   verdict: ReviewVerdict;
   // The section version this verdict judges (its `version` at verdict time).
   judgedVersion: number;
-  // The client-loaded version, guarding the un-submit optimistic lock.
+  // The reviewer-judged version; the verdict write's optimistic lock rejects a
+  // stale value for either verdict value.
   expectedVersion: number;
   currentStatus: string;
 }
@@ -178,14 +179,15 @@ export class ReviewActionsService {
       sectionId: input.reportSectionId,
       reviewerId: session.userId,
       verdict: input.verdict,
-      // Judge the CURRENT version; a later re-submit bumps it and auto-stales.
-      judgedVersion: context.version,
+      // Record the version the reviewer judged; the repository's version lock
+      // rejects a stale judgement, so this never stamps a version they never saw.
+      judgedVersion: input.version,
       expectedVersion: input.version,
       currentStatus: context.status,
     });
     return reviewVerdictResultSchema.parse({
       verdict: input.verdict,
-      judgedVersion: context.version,
+      judgedVersion: input.version,
       unsubmitted,
     });
   }

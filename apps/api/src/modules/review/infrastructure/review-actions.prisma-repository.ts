@@ -6,6 +6,7 @@ import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { applyRevokeTransition } from "../../report-sections/index.js";
+import { ReviewVersionConflictError } from "../application/review.service.js";
 import type {
   PostVerdictParams,
   RecordAnchor,
@@ -184,6 +185,24 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
     params: PostVerdictParams,
   ): Promise<{ unsubmitted: boolean }> {
     return this.prisma.$transaction(async (tx) => {
+      // Version lock for BOTH verdict values, taken as a guarded WRITE rather
+      // than a plain read: the no-op update row-locks the section for the rest
+      // of this transaction, so a concurrent lead re-submit either committed
+      // first (this predicate then matches zero rows) or blocks until this tx
+      // commits — a plain findUnique under READ COMMITTED would leave a window
+      // where a re-submit lands between the check and the upsert below. A
+      // zero-row match rejects the verdict, so no stale-version SectionReview
+      // row is ever written (the tx rolls back).
+      const { count } = await tx.reportSection.updateMany({
+        where: { id: params.sectionId, version: params.expectedVersion },
+        data: { version: params.expectedVersion },
+      });
+      if (count === 0) {
+        throw new ReviewVersionConflictError(
+          "The section changed since you opened it; reload and re-decide.",
+        );
+      }
+
       await tx.sectionReview.upsert({
         where: {
           reportSectionId_reviewerId: {
