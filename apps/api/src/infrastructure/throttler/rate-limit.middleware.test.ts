@@ -81,16 +81,16 @@ describe("rate-limit middleware — trust-proxy IP resolution", () => {
 });
 
 // Read the rateLimitHitsTotal counter for one bucket; absent → 0.
-async function vitalsBucketHits(): Promise<number> {
+async function bucketHits(bucket: string): Promise<number> {
   const metric = await rateLimitHitsTotal.get();
-  const entry = metric.values.find((v) => v.labels.bucket === "vitals");
+  const entry = metric.values.find((v) => v.labels.bucket === bucket);
   return entry?.value ?? 0;
 }
 
-function postStatus(port: number): Promise<number> {
+function postStatus(port: number, path: string): Promise<number> {
   return new Promise<number>((resolve, reject) => {
     const clientReq = request(
-      { host: "127.0.0.1", port, path: "/api/web-vitals", method: "POST" },
+      { host: "127.0.0.1", port, path, method: "POST" },
       (res) => {
         res.resume();
         res.on("end", () => {
@@ -127,11 +127,11 @@ describe("rate-limit middleware — vitals limiter budget", () => {
     });
     const { port } = server.address() as AddressInfo;
 
-    const before = await vitalsBucketHits();
+    const before = await bucketHits("vitals");
     try {
       const statuses: number[] = [];
       for (let i = 0; i < 61; i += 1) {
-        statuses.push(await postStatus(port));
+        statuses.push(await postStatus(port, "/api/web-vitals"));
       }
       expect(statuses.slice(0, 60).every((s) => s === 204)).toBe(true);
       expect(statuses[60]).toBe(429);
@@ -143,6 +143,58 @@ describe("rate-limit middleware — vitals limiter budget", () => {
       });
     }
 
-    expect(await vitalsBucketHits()).toBeGreaterThan(before);
+    expect(await bucketHits("vitals")).toBeGreaterThan(before);
+  });
+});
+
+describe("rate-limit middleware — client-logs limiter budget", () => {
+  it("exposes a clientLogsLimiter handler from the factory", () => {
+    const { clientLogsLimiter } = createRateLimits({
+      logger: silentLogger,
+      isTest: true,
+    });
+    expect(typeof clientLogsLimiter).toBe("function");
+  });
+
+  it("returns 429 over budget and increments the client-logs bucket", async () => {
+    // Production budget (isTest=false) is 60/min; fire one past it from a single
+    // loopback client so the whole burst shares one keyGenerator bucket.
+    const app = express();
+    app.disable("x-powered-by");
+    app.set("trust proxy", 1);
+    const { clientLogsLimiter } = createRateLimits({
+      logger: silentLogger,
+      isTest: false,
+    });
+    app.use("/api/client-logs", clientLogsLimiter);
+    app.post("/api/client-logs", (_req, res) => {
+      res.sendStatus(204);
+    });
+
+    const server = app.listen(0);
+    await new Promise<void>((resolve) => {
+      server.once("listening", () => {
+        resolve();
+      });
+    });
+    const { port } = server.address() as AddressInfo;
+
+    const before = await bucketHits("client-logs");
+    try {
+      const statuses: number[] = [];
+      for (let i = 0; i < 61; i += 1) {
+        statuses.push(await postStatus(port, "/api/client-logs"));
+      }
+      expect(statuses.slice(0, 60).every((s) => s === 204)).toBe(true);
+      expect(statuses[60]).toBe(429);
+    } finally {
+      await new Promise<void>((resolve) => {
+        server.close(() => {
+          resolve();
+        });
+      });
+    }
+
+    expect(await bucketHits("client-logs")).toBeGreaterThan(before);
   });
 });

@@ -8,9 +8,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const apiUrl = requireApiUrl();
   try {
     const body = await req.text();
+    // Pass the edge proxy's client-IP chain through to the API: its
+    // per-IP client-logs limiter (trust proxy: 1) keys on X-Forwarded-For,
+    // and without this hop-through every browser lands in one shared bucket
+    // keyed by this server's address — one noisy client would 429 everyone.
+    const forwardedFor = req.headers.get("x-forwarded-for");
     const res = await fetch(`${apiUrl}/api/client-logs`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(forwardedFor === null ? {} : { "X-Forwarded-For": forwardedFor }),
+      },
       body,
     });
     return new NextResponse(null, { status: res.status });
