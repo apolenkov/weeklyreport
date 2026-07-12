@@ -35,6 +35,7 @@ export type { AdminRepository, PeriodRowFromRepo } from "./admin-shared";
 export {
   AdminAccessError,
   AdminGroupProductConflictError,
+  AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
 } from "./admin-shared";

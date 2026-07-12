@@ -82,13 +82,28 @@ export class AutoArchiverScheduler {
     const archivedIds: string[] = [];
     for (const candidate of candidates) {
       try {
-        // refactor-period-transition-writer: the autoArchive transition writes
-        // the legacy `archived` boolean, the new `periodState` column, and the
-        // `autoArchived` audit flag as one atomic row-level field set.
-        await this.prisma.report.update({
-          where: { id: candidate.id },
+        // The autoArchive transition writes the legacy `archived` boolean, the
+        // new `periodState` column, and the `autoArchived` audit flag as one
+        // atomic row-level field set. The write re-asserts the candidate
+        // predicates: a head can reopen a period between the candidate scan and
+        // this write, and an unconditional update would then archive a row
+        // whose sections the reopen just reset to draft. `periodStatus` is the
+        // discriminator column the reopen compare-and-set flips, so a reopen
+        // that wins the window drops this write to zero rows.
+        const { count } = await this.prisma.report.updateMany({
+          where: {
+            id: candidate.id,
+            archived: false,
+            periodStatus: "published",
+          },
           data: buildTransition("autoArchive", {}),
         });
+        if (count === 0) {
+          this.logger.log(
+            `auto-archive skipped period=${candidate.id}: reopened or archived by a concurrent writer`,
+          );
+          continue;
+        }
         this.logger.log(`auto-archive period=${candidate.id}`);
         this.auditLogger.periodAutoArchive({
           periodId: candidate.id,

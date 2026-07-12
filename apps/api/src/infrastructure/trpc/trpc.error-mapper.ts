@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import {
   AdminAccessError,
   AdminGroupProductConflictError,
+  AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
 } from "../../modules/admin/admin.service.js";
@@ -99,6 +100,10 @@ const DOMAIN_ERROR_CODES: readonly (readonly [
   // Manual period edit on a missing reportId → NOT_FOUND (distinct
   // from the overlap BAD_REQUEST) so the admin UI shows a row-removed state.
   [AdminPeriodNotFoundError, "NOT_FOUND"],
+  // A manual archive whose guarded compare-and-set lost to a concurrent writer
+  // is a state conflict on an existing (already-archived) row → CONFLICT, not a
+  // silent success.
+  [AdminPeriodAlreadyArchivedError, "CONFLICT"],
   // An out-of-scope or archived period-lifecycle target is an authorization
   // denial → FORBIDDEN; a missing report → NOT_FOUND. Two classes because they
   // map to different codes. PeriodAccessError stays unmapped on purpose — its

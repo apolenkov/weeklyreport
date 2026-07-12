@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { publishCompareAndSet } from "../../../lib/publish-compare-and-set.js";
+import { reopenCompareAndSet } from "../../../lib/reopen-compare-and-set.js";
 import { AdminPeriodOverlapError } from "../../admin/index.js";
 import {
   buildAssembledReportFromPrismaRow,
@@ -13,8 +14,8 @@ import type {
   PeriodRepository,
   PublishPeriodOutcome,
 } from "../application/period.service.js";
+import { PeriodScopeError } from "../application/period.service.js";
 import { isOpenBoundaryConflict } from "../application/period-factory.js";
-import { applyTransition } from "../application/period-transition.apply.js";
 import { buildTransition } from "../domain/period-transition.js";
 
 @Injectable()
@@ -128,11 +129,34 @@ export class PeriodPrismaRepository implements PeriodRepository {
   async reopenPeriod(reportId: string): Promise<void> {
     try {
       await this.prisma.$transaction(async (tx) => {
-        // refactor-period-transition-writer: the reopen transition encodes the
-        // intentional asymmetry (periodState→'open', periodStatus→'reopened',
-        // legacy tuple untouched) and stamps reopenedAt. See period-transition.ts.
-        await applyTransition(tx, reportId, "reopen", { now: new Date() });
+        // Guarded compare-and-set: only a still-published, non-archived row
+        // reopens. `archived: false` plus `periodStatus: "published"` are the
+        // single point that closes the reopen-versus-archive race, so an
+        // archive that lands after the service pre-check cannot be reopened.
+        // The complete reopen field set (the intentional asymmetry — periodState
+        // →'open', periodStatus→'reopened', legacy tuple untouched, reopenedAt
+        // stamped) comes from the transition builder.
+        const outcome = await reopenCompareAndSet(
+          tx,
+          reportId,
+          buildTransition("reopen", { now: new Date() }),
+        );
 
+        if (outcome !== "transitioned") {
+          // Fail closed: a zero-row match means an archive won the row, or the
+          // period is no longer published (already reopened). Raise the same
+          // domain error the service pre-checks raise (→ FORBIDDEN) and reset
+          // no sections — an archived period must never be left with its
+          // sections silently reset to draft.
+          throw new PeriodScopeError(
+            outcome === "archived"
+              ? "Archived periods cannot be reopened."
+              : "Only published periods can be reopened.",
+          );
+        }
+
+        // Gated on the transition: only the winning reopen resets its submitted
+        // sections, inside this same transaction so state + reset stay atomic.
         await tx.reportSection.updateMany({
           where: {
             reportId,
