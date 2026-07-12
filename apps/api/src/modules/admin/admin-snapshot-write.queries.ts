@@ -37,6 +37,22 @@ async function upsertGroups(
   }
 }
 
+async function applyGroupHeads(
+  tx: Prisma.TransactionClient,
+  groups: AdminSnapshot["groups"],
+): Promise<void> {
+  // Runs AFTER upsertUsers so every referenced head's User row exists.
+  // upsertGroups creates/updates the group rows first but deliberately omits
+  // headUserId: groups precede users in the payload, so on create the head's
+  // User row does not exist yet and the FK would fail.
+  for (const group of groups) {
+    await tx.reportingGroup.update({
+      where: { id: group.id },
+      data: { headUserId: group.headUserId ?? null },
+    });
+  }
+}
+
 async function upsertUsers(
   tx: Prisma.TransactionClient,
   users: AdminSnapshot["users"],
@@ -196,6 +212,9 @@ export async function saveSnapshot(
       (await ensureFallbackReportingGroup(tx));
 
     await upsertUsers(tx, snapshot.users, fallbackReportingGroupId);
+    // Apply group head assignments now that every head's User row exists;
+    // upsertGroups only wrote name/description/archived.
+    await applyGroupHeads(tx, snapshot.groups);
     await upsertProjects(tx, snapshot.projects);
     const periods = await upsertPeriods(tx, snapshot.periods);
     await upsertReminderRules(tx, snapshot.reminderRules, currentRules);

@@ -339,6 +339,78 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(restored.periodStatus).toBe("published");
   });
 
+  // -------------------------------------------------------------------
+  // admin-snapshot-head-restore: the whole-snapshot restore path must apply
+  // each group's `headUserId`. upsertGroups writes name/description/archived
+  // only (a group may be upserted before its head's User row exists), so a
+  // second pass after upsertUsers sets the head assignments.
+  // -------------------------------------------------------------------
+
+  it("restores a group's headUserId from the snapshot (admin-snapshot-head-restore)", async () => {
+    const snapshot = await repo.getSnapshot();
+    // Point the seeded group at the head user (a valid head candidate).
+    const groups = snapshot.groups.map((g) =>
+      g.id === TEST_IDS.group ? { ...g, headUserId: testData.head.id } : g,
+    );
+
+    await repo.saveSnapshot({ ...snapshot, groups });
+
+    const restored = await repo.getSnapshot();
+    const group = expectDefined(
+      restored.groups.find((g) => g.id === TEST_IDS.group),
+    );
+    expect(group.headUserId).toBe(testData.head.id);
+  });
+
+  it("clears a previously-headed group's headUserId to null on restore (admin-snapshot-head-restore)", async () => {
+    // Seed a head on the live group first.
+    await prisma.reportingGroup.update({
+      where: { id: TEST_IDS.group },
+      data: { headUserId: testData.head.id },
+    });
+
+    const snapshot = await repo.getSnapshot();
+    const groups = snapshot.groups.map((g) =>
+      g.id === TEST_IDS.group ? { ...g, headUserId: null } : g,
+    );
+
+    await repo.saveSnapshot({ ...snapshot, groups });
+
+    const restored = await repo.getSnapshot();
+    const group = expectDefined(
+      restored.groups.find((g) => g.id === TEST_IDS.group),
+    );
+    expect(group.headUserId).toBeNull();
+  });
+
+  it("applies a changed headUserId into an existing DB on restore (admin-snapshot-head-restore)", async () => {
+    // Start with the head user leading the group, in the live DB.
+    await prisma.reportingGroup.update({
+      where: { id: TEST_IDS.group },
+      data: { headUserId: testData.head.id },
+    });
+
+    // Promote the lead to a head-eligible role so it can lead the group, then
+    // capture the snapshot with the new head assignment.
+    await prisma.user.update({
+      where: { id: testData.lead.id },
+      data: { role: "head" },
+    });
+
+    const snapshot = await repo.getSnapshot();
+    const groups = snapshot.groups.map((g) =>
+      g.id === TEST_IDS.group ? { ...g, headUserId: testData.lead.id } : g,
+    );
+
+    await repo.saveSnapshot({ ...snapshot, groups });
+
+    const restored = await repo.getSnapshot();
+    const group = expectDefined(
+      restored.groups.find((g) => g.id === TEST_IDS.group),
+    );
+    expect(group.headUserId).toBe(testData.lead.id);
+  });
+
   it("attachProductToGroup rejects moving a product from another group (UAT v7)", async () => {
     await prisma.groupProduct.deleteMany({});
     const leadGroupId = expectDefined(testData.lead.reportingGroupId);
