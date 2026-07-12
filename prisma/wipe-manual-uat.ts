@@ -184,6 +184,15 @@ async function main() {
         projectStatus: (await tx.projectStatus.deleteMany({})).count,
         reopenRequest: (await tx.reopenRequest.deleteMany({})).count,
         reportSection: (await tx.reportSection.deleteMany({})).count,
+        // Statuses reference their activity; ProjectActivity.groupId and
+        // ProjectActivityProduct.productId are RESTRICT, so every activity row
+        // must drop before reportingGroup/project below or those deletes FK-fail.
+        activityStatus: (await tx.activityStatus.deleteMany({})).count,
+        projectActivityLead: (await tx.projectActivityLead.deleteMany({}))
+          .count,
+        projectActivityProduct: (await tx.projectActivityProduct.deleteMany({}))
+          .count,
+        projectActivity: (await tx.projectActivity.deleteMany({})).count,
         pdfExportJob: (await tx.pdfExportJob.deleteMany({})).count,
         carryOverRecord: (await tx.carryOverRecord.deleteMany({})).count,
         carryOverExecution: (await tx.carryOverExecution.deleteMany({})).count,
