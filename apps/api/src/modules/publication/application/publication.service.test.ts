@@ -1,8 +1,4 @@
-import type {
-  AssembledReport,
-  DraftSavePayload,
-  UserSession,
-} from "@customreport/shared";
+import type { AssembledReport, UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -11,7 +7,6 @@ import {
 } from "../../../infrastructure/metrics/metrics.registry.js";
 import {
   type AutoPublishResult,
-  PublicationAccessError,
   PublicationArchivedError,
   type PublicationRepository,
   PublicationService,
@@ -127,12 +122,6 @@ function createRepository(report: AssembledReport): PublicationRepository {
       return structuredClone(currentReport);
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
-    async saveAssembledReport(nextReport: AssembledReport) {
-      currentReport = structuredClone(nextReport);
-
-      return structuredClone(currentReport);
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
     async publishAssembledReport(nextReport: AssembledReport) {
       if (currentPeriodStatus === "published") {
         return {
@@ -172,30 +161,6 @@ function expectPublished(result: AutoPublishResult): AssembledReport {
   return result.report;
 }
 
-const reviewUpdate: DraftSavePayload = {
-  reportSectionId: "11111111-1111-4111-8111-111111111111",
-  version: 1,
-  status: "draft",
-  projectStatuses: [
-    {
-      projectId: "44444444-4444-4444-8444-444444444444",
-      status: "yellow",
-    },
-  ],
-  items: [
-    {
-      projectId: "44444444-4444-4444-8444-444444444444",
-      type: "current",
-      text: "Reviewed current week update",
-      tag: "feature",
-      workflowStatus: "in_progress",
-      stageIds: ["Development"],
-    },
-  ],
-  risks: [],
-  decisions: [],
-};
-
 describe("PublicationService", () => {
   it("returns the assembled report for the active report", async () => {
     const service = new PublicationService(createRepository(assembledReport));
@@ -220,20 +185,7 @@ describe("PublicationService", () => {
     });
   });
 
-  it("allows section review updates before publish", async () => {
-    const service = new PublicationService(createRepository(assembledReport));
-    const updatedReport = await service.updateSectionForReview(
-      reportId,
-      reviewUpdate,
-    );
-
-    expect(updatedReport.sections[0]?.projects[0]?.trafficLight).toBe("yellow");
-    expect(updatedReport.sections[0]?.items[0]?.text).toBe(
-      "Reviewed current week update",
-    );
-  });
-
-  it("publishes once and rejects further review changes", async () => {
+  it("publishes and stamps head attribution", async () => {
     const service = new PublicationService(createRepository(assembledReport));
 
     const published = await service.publishReport(reportId, headSession);
@@ -241,10 +193,6 @@ describe("PublicationService", () => {
     expect(published.status).toBe("published");
     expect(published.publishedById).toBe(headSession.userId);
     expect(published.publishedAt).toBeInstanceOf(Date);
-
-    await expect(
-      service.updateSectionForReview(reportId, reviewUpdate),
-    ).rejects.toBeInstanceOf(PublicationAccessError);
   });
 
   // UFB-049 / Phase 50-B: scheduler-driven auto-publish bypasses session

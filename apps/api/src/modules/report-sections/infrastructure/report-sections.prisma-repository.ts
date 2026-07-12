@@ -756,6 +756,29 @@ export class ReportSectionsPrismaRepository
     try {
       return await this.prisma.$transaction(
         async (tx) => {
+          // Publish/save mutual exclusion: lock the parent report row FIRST
+          // (same lock order as the publish transaction, which updates Report
+          // before reading sections — consistent ordering, no deadlock). A
+          // concurrent publish either committed already (this locking read
+          // then sees periodStatus="published" and the save fails closed
+          // before any child delete runs) or blocks on this row lock until
+          // the save commits — so a snapshot freeze can never interleave a
+          // half-saved section, and a published report's live rows can never
+          // be rewritten by a save whose service-level gate read a stale
+          // status.
+          const gate = await tx.$queryRaw<
+            { periodStatus: string }[]
+          >`SELECT "periodStatus" FROM "Report" WHERE "id" = ${section.reportId} FOR UPDATE`;
+          if (
+            gate[0]?.periodStatus !== "open" &&
+            gate[0]?.periodStatus !== "reopened"
+          ) {
+            throw new ReportSectionDomainError(
+              "SECTION_ALREADY_SUBMITTED",
+              "Cannot edit sections of a published report.",
+            );
+          }
+
           // Optimistic-concurrency compare-and-set, FIRST so a conflict aborts
           // before any deleteMany runs (no child rows are touched on conflict).
           // `expectedVersion` is the client-loaded version threaded through the
