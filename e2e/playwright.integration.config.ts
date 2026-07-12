@@ -98,6 +98,7 @@ export default defineConfig({
         // env.schema requires these (no defaults); the SDK stays off for e2e.
         REDIS_HOST: process.env.REDIS_HOST ?? "localhost",
         REDIS_PORT: process.env.REDIS_PORT ?? "6379",
+        REDIS_MAXMEMORY_BYTES: process.env.REDIS_MAXMEMORY_BYTES ?? "209715200",
         OTEL_SDK_DISABLED: "true",
         OTEL_TRACES_SAMPLER_ARG: "0",
         HEAP_HEALTH_THRESHOLD_BYTES: "1610612736",

@@ -43,6 +43,18 @@ export const dlqFailedTotal = new Counter({
 });
 
 /**
+ * Current Redis `used_memory` (bytes), refreshed each DLQ-monitor poll from
+ * `INFO memory`. Graphed against the configured `REDIS_MAXMEMORY_BYTES` cap so
+ * the slow unbounded-growth failure mode is visible before the container's
+ * memory limit OOM-kills redis-server; the monitor also warns past 80% of cap.
+ */
+export const redisMemoryUsedBytes = new Gauge({
+  name: "cr_redis_memory_used_bytes",
+  help: "Current Redis used_memory in bytes, sampled once per DLQ-monitor poll",
+  registers: [metricsRegistry],
+});
+
+/**
  * Every rate-limit response increments this counter,
  * tagged by bucket (auth | trpc). Lets ops see a brute-force attempt as
  * a spike before the rate-limit log line scrolls off.

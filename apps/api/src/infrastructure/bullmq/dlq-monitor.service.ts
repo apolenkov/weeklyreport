@@ -3,7 +3,10 @@ import { Injectable, Logger } from "@nestjs/common";
 import { type Queue, QueueEvents } from "bullmq";
 
 import type { EnvConfig } from "../config/env.schema";
-import { dlqFailedTotal } from "../metrics/metrics.registry.js";
+import {
+  dlqFailedTotal,
+  redisMemoryUsedBytes,
+} from "../metrics/metrics.registry.js";
 import { getBullMQOptions } from "./bullmq-options";
 import {
   QUEUE_NAMES,
@@ -13,6 +16,28 @@ import {
 
 const DEFAULT_THRESHOLD = 5;
 const POLL_INTERVAL_MS = 60_000;
+// Warn once usage reaches this fraction of REDIS_MAXMEMORY_BYTES, leaving an
+// operator time to act before Redis hits its own cap (and, above that, the
+// container OOM-kill).
+const REDIS_MEMORY_WARN_RATIO = 0.8;
+const REDIS_MEMORY_WARN_PERCENT = 80;
+// Any registry queue's shared connection can serve the INFO probe; the queues
+// all point at the same Redis instance.
+const MEMORY_PROBE_QUEUE = QUEUE_NAMES[0];
+
+/**
+ * Parse `used_memory` (bytes) from a Redis `INFO` reply. Returns null when the
+ * field is absent or non-numeric so the caller can log rather than set a bogus
+ * gauge value. The anchored `used_memory:` match excludes sibling fields like
+ * `used_memory_rss:` / `used_memory_peak:`.
+ */
+function parseUsedMemoryBytes(info: string): number | null {
+  const match = /^used_memory:(\d+)/m.exec(info);
+  if (!match) return null;
+  const [, raw] = match;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
 
 /**
  * DLQ monitor. Two responsibilities:
@@ -65,6 +90,7 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     const threshold = this.env.DLQ_ALERT_THRESHOLD ?? DEFAULT_THRESHOLD;
     this.pollTimer = setInterval(() => {
       void this.checkThresholds(threshold);
+      void this.checkRedisMemory();
     }, POLL_INTERVAL_MS);
     // Don't keep the event loop alive on shutdown.
     this.pollTimer.unref();
@@ -129,6 +155,36 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
           `[dlq] threshold check failed for ${name}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
+    }
+  }
+
+  /**
+   * Sample Redis `used_memory` via the shared registry connection, publish it
+   * to the `cr_redis_memory_used_bytes` gauge, and warn once per poll when
+   * usage crosses REDIS_MEMORY_WARN_RATIO of the configured cap. Reuses an
+   * existing queue connection rather than opening a new Redis client.
+   */
+  private async checkRedisMemory(): Promise<void> {
+    try {
+      const client = await this.registry.get(MEMORY_PROBE_QUEUE).client;
+      const used = parseUsedMemoryBytes(await client.info());
+      if (used === null) {
+        this.logger.warn(
+          "[redis-mem] used_memory absent from INFO reply — skipping this poll",
+        );
+        return;
+      }
+      redisMemoryUsedBytes.set(used);
+      const cap = this.env.REDIS_MAXMEMORY_BYTES;
+      if (used >= cap * REDIS_MEMORY_WARN_RATIO) {
+        this.logger.warn(
+          `[redis-mem] used_memory=${used}B has crossed ${REDIS_MEMORY_WARN_PERCENT}% of cap=${cap}B — Redis nearing its memory limit`,
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        `[redis-mem] memory poll failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }

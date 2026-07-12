@@ -16,6 +16,7 @@ const COMPLETE = {
   AUTH_JWT_SECRET: "a-production-secret-at-least-32-chars",
   REDIS_HOST: "localhost",
   REDIS_PORT: "6379",
+  REDIS_MAXMEMORY_BYTES: "209715200",
   OTEL_SDK_DISABLED: "false",
   OTEL_TRACES_SAMPLER_ARG: "0.1",
   PDF_BASE_URL: "https://app.example.com",
@@ -43,6 +44,7 @@ describe("envSchema — no defaults, every product var required", () => {
     "AUTH_JWT_SECRET",
     "REDIS_HOST",
     "REDIS_PORT",
+    "REDIS_MAXMEMORY_BYTES",
     "OTEL_SDK_DISABLED",
     "OTEL_TRACES_SAMPLER_ARG",
     "PDF_BASE_URL",
@@ -78,6 +80,18 @@ describe("envSchema — no defaults, every product var required", () => {
         envSchema.safeParse({
           ...COMPLETE,
           HEAP_HEALTH_THRESHOLD_BYTES: value,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each(["0", "-1", "1.5", "not-a-number"] as const)(
+    "rejects a non-positive-integer REDIS_MAXMEMORY_BYTES (%s)",
+    (value) => {
+      expect(
+        envSchema.safeParse({
+          ...COMPLETE,
+          REDIS_MAXMEMORY_BYTES: value,
         }).success,
       ).toBe(false);
     },

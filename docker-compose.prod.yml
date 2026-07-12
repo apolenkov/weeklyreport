@@ -87,6 +87,8 @@ services:
         "redis-server",
         "--maxmemory-policy",
         "noeviction",
+        "--maxmemory",
+        "200mb",
         "--appendonly",
         "yes",
       ]
@@ -149,6 +151,10 @@ services:
       DIRECT_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/customreport
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      # Must match the redis `--maxmemory 200mb` above; the DLQ monitor derives
+      # its 80%-of-cap memory alert from this value. Kept a literal (not an
+      # overridable interpolation) so the two cannot drift.
+      REDIS_MAXMEMORY_BYTES: 209715200
       PORT: 3001
       NODE_ENV: production
       FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL must be set}

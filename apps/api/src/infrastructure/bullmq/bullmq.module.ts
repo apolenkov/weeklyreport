@@ -1,11 +1,19 @@
 import { BullModule } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
+import type { DefaultJobOptions } from "bullmq";
 
 import { ConfigModule, ENV_CONFIG } from "../config/config.module.js";
 import type { EnvConfig } from "../config/env.schema";
 import { getBullMQOptions } from "./bullmq-options";
 import { DLQMonitorService } from "./dlq-monitor.service.js";
 import { QueueRegistry } from "./queue-registry.js";
+
+// Bounded completed/failed retention shared by the pdf-export and
+// email-reminder queues, matching telegram-outbound's TELEGRAM_OUTBOUND_JOB_OPTS.
+const BOUNDED_RETENTION_JOB_OPTS: DefaultJobOptions = {
+  removeOnComplete: { count: 100 },
+  removeOnFail: { count: 500 },
+};
 
 /**
  * BullMQ infrastructure module.
@@ -27,10 +35,19 @@ import { QueueRegistry } from "./queue-registry.js";
       inject: [ENV_CONFIG],
       useFactory: (env: EnvConfig) => getBullMQOptions(env),
     }),
-    BullModule.registerQueue({ name: "pdf-export" }),
-    BullModule.registerQueue({ name: "email-reminder" }),
-    // telegram-outbound is seeds-only until the bot activates; `attempts: 3` is
-    // set per-job at enqueue time, not on the queue.
+    // Bound completed/failed retention so job hashes don't accumulate in Redis
+    // without limit (AOF persists them). Mirrors the per-job retention
+    // telegram-outbound already sets via TELEGRAM_OUTBOUND_JOB_OPTS.
+    BullModule.registerQueue({
+      name: "pdf-export",
+      defaultJobOptions: BOUNDED_RETENTION_JOB_OPTS,
+    }),
+    BullModule.registerQueue({
+      name: "email-reminder",
+      defaultJobOptions: BOUNDED_RETENTION_JOB_OPTS,
+    }),
+    // telegram-outbound is seeds-only until the bot activates; `attempts: 3` and
+    // equivalent retention are set per-job at enqueue time, not on the queue.
     BullModule.registerQueue({ name: "telegram-outbound" }),
   ],
   providers: [
