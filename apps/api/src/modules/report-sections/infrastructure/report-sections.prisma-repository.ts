@@ -57,6 +57,11 @@ export const reportSectionFullInclude = {
               stageAssignments: {
                 include: { stage: true },
               },
+              // The product's natural owner group — its lead's reporting group.
+              // Frozen onto each `projects[]` entry so the published-snapshot
+              // read can decide cross-group access from the snapshot's own data
+              // rather than a live re-query.
+              lead: { select: { reportingGroupId: true } },
             },
           },
           stage: true,
@@ -461,6 +466,9 @@ export function mapPrismaToReportSection(
           }),
           ownedStages,
           stageSet,
+          // Freeze the product's owner group so a published-snapshot read can
+          // detect cross-group access without a live project re-query.
+          ownerGroupId: project.lead.reportingGroupId ?? null,
         };
       })
       .sort((a, b) => a.projectName.localeCompare(b.projectName, "ru")),

@@ -309,6 +309,15 @@ export const projectReadModelSchema = z.object({
    * only, no foreign chips).
    */
   stageSet: z.array(stageSetEntrySchema).optional(),
+  /**
+   * The product's natural owner group — its lead's `reportingGroupId`,
+   * frozen into every section's `projects[]` entry at snapshot-build time so
+   * the published read can decide cross-group access from the snapshot's own
+   * data instead of a live re-query. Optional so frozen snapshots and fixtures
+   * that pre-date this field still parse; missing/null means "unknown owner"
+   * and is NEVER treated as cross-group.
+   */
+  ownerGroupId: z.uuid().nullable().optional(),
 });
 
 // fix-lead-surface-name-resolution: name-only entry for a project that a

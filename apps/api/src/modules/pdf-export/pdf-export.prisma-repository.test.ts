@@ -49,6 +49,7 @@ function reportRow(severity: "blocked" | "at-risk") {
                 name: "CRM Portal",
                 archived: false,
                 stageAssignments: [],
+                lead: { reportingGroupId: null },
               },
               stage: { id: OWNED_STAGE_ID, name: STAGE_NAME, sortOrder: 4 },
             },

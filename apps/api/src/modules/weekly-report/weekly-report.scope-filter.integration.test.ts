@@ -283,9 +283,15 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
     }
 
     /** Flip the report to published with a snapshot containing one section
-     *  authored by lead A that reports on the given products. */
+     *  authored by lead A that reports on the given products. Each product
+     *  carries the `ownerGroupId` frozen into the snapshot at publish time —
+     *  the only source the published read uses to decide cross-group access. */
     async function publishWithSnapshot(
-      surfacedProducts: { projectId: string; projectName: string }[],
+      surfacedProducts: {
+        projectId: string;
+        projectName: string;
+        ownerGroupId: string | null;
+      }[],
     ) {
       await prisma.reportSection.create({
         data: {
@@ -323,7 +329,9 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
                 status: "submitted",
                 submittedAt: null,
                 projects: surfacedProducts.map((project) => ({
-                  ...project,
+                  projectId: project.projectId,
+                  projectName: project.projectName,
+                  ownerGroupId: project.ownerGroupId,
                   trafficLight: "green",
                 })),
                 items: [],
@@ -378,7 +386,11 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
       // emitting scopeAccessed would be a false audit-trail entry.
       await createCrossGroupProduct();
       await publishWithSnapshot([
-        { projectId: PROJECT_ID, projectName: "Group A Platform" },
+        {
+          projectId: PROJECT_ID,
+          projectName: "Group A Platform",
+          ownerGroupId: GROUP_A_ID,
+        },
       ]);
 
       const result = expectDefined(
@@ -394,8 +406,16 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
     it("published period: signal present when the snapshot DOES surface the cross-group product", async () => {
       await createCrossGroupProduct();
       await publishWithSnapshot([
-        { projectId: PROJECT_ID, projectName: "Group A Platform" },
-        { projectId: CROSS_PROJECT_ID, projectName: "Cross Group Product" },
+        {
+          projectId: PROJECT_ID,
+          projectName: "Group A Platform",
+          ownerGroupId: GROUP_A_ID,
+        },
+        {
+          projectId: CROSS_PROJECT_ID,
+          projectName: "Cross Group Product",
+          ownerGroupId: GROUP_B_ID,
+        },
       ]);
 
       const result = expectDefined(
@@ -409,6 +429,100 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
         productIds: [CROSS_PROJECT_ID],
         groupIds: [GROUP_B_ID],
       });
+    });
+
+    it("published period: cross-group product archived AFTER publish still triggers the signal", async () => {
+      // The snapshot delivered the product to head A; archiving the live row
+      // afterwards drops it from the `archived: false` live query. Sourcing the
+      // signal from the frozen snapshot keeps it named — the pre-fix live
+      // intersection would have silently lost it.
+      await createCrossGroupProduct();
+      await publishWithSnapshot([
+        {
+          projectId: PROJECT_ID,
+          projectName: "Group A Platform",
+          ownerGroupId: GROUP_A_ID,
+        },
+        {
+          projectId: CROSS_PROJECT_ID,
+          projectName: "Cross Group Product",
+          ownerGroupId: GROUP_B_ID,
+        },
+      ]);
+      await prisma.project.update({
+        where: { id: CROSS_PROJECT_ID },
+        data: { archived: true },
+      });
+
+      const result = expectDefined(
+        await repo.getWeeklyReport(REPORT_ID, session("head", GROUP_A_ID)),
+      );
+
+      // The caller still receives the product via the snapshot…
+      expect(
+        result.readModel.portfolioOverview.map((p) => p.productId),
+      ).toContain(CROSS_PROJECT_ID);
+      // …so the audit signal must still name it.
+      expect(result.crossGroup).toEqual({
+        productIds: [CROSS_PROJECT_ID],
+        groupIds: [GROUP_B_ID],
+      });
+    });
+
+    it("published period: cross-group GroupProduct edge removed AFTER publish still triggers the signal", async () => {
+      // The edge that made the product visible to head A is gone from the live
+      // tables, so the scoped live query no longer returns it — but the
+      // snapshot still delivers it, so the signal must still fire.
+      await createCrossGroupProduct();
+      await publishWithSnapshot([
+        {
+          projectId: PROJECT_ID,
+          projectName: "Group A Platform",
+          ownerGroupId: GROUP_A_ID,
+        },
+        {
+          projectId: CROSS_PROJECT_ID,
+          projectName: "Cross Group Product",
+          ownerGroupId: GROUP_B_ID,
+        },
+      ]);
+      await prisma.groupProduct.deleteMany({
+        where: { productId: CROSS_PROJECT_ID },
+      });
+
+      const result = expectDefined(
+        await repo.getWeeklyReport(REPORT_ID, session("head", GROUP_A_ID)),
+      );
+
+      expect(
+        result.readModel.portfolioOverview.map((p) => p.productId),
+      ).toContain(CROSS_PROJECT_ID);
+      expect(result.crossGroup).toEqual({
+        productIds: [CROSS_PROJECT_ID],
+        groupIds: [GROUP_B_ID],
+      });
+    });
+
+    it("published period: an own-group-only read emits no signal and delivers the snapshot products unchanged (regression)", async () => {
+      await createCrossGroupProduct();
+      await publishWithSnapshot([
+        {
+          projectId: PROJECT_ID,
+          projectName: "Group A Platform",
+          ownerGroupId: GROUP_A_ID,
+        },
+      ]);
+
+      const result = expectDefined(
+        await repo.getWeeklyReport(REPORT_ID, session("head", GROUP_A_ID)),
+      );
+
+      expect(result.crossGroup).toBeNull();
+      // The delivered read model is exactly the snapshot's own-group product —
+      // no live cross-group product leaks in, none is dropped.
+      expect(
+        result.readModel.portfolioOverview.map((p) => p.productId),
+      ).toEqual([PROJECT_ID]);
     });
   });
 });
