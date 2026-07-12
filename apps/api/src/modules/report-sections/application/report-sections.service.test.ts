@@ -81,6 +81,10 @@ function createRepository(
     async getReportStatus() {
       return "draft";
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<string | null>); no awaitable work in stub
+    async getReportPeriodStatusForSection() {
+      return "open";
+    },
     // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
     async getPublishedLineage() {
       return { itemStableIds: [], decisionStableIds: [] };
@@ -230,11 +234,10 @@ describe("ReportSectionsService", () => {
   });
 
   describe("saveDraft — published report guard", () => {
-    it("rejects editing a section when the report is published", async () => {
+    it("rejects editing a section when the period is published", async () => {
       const repo = createRepository(baseSection);
-      // Override getReportStatus to return 'published'
-      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository.getReportStatus contract (Promise<string | null>); no awaitable work in stub
-      repo.getReportStatus = async () => "published";
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository.getReportPeriodStatusForSection contract (Promise<string | null>); no awaitable work in stub
+      repo.getReportPeriodStatusForSection = async () => "published";
 
       const service = new ReportSectionsService(repo);
 
@@ -259,9 +262,9 @@ describe("ReportSectionsService", () => {
       });
     });
 
-    it("allows editing when the report is still a draft", async () => {
+    it("allows editing when the period is open", async () => {
       const repo = createRepository(baseSection);
-      // getReportStatus already returns 'draft' by default
+      // getReportPeriodStatusForSection already returns 'open' by default.
       const service = new ReportSectionsService(repo);
 
       const saved = await service.saveDraft({
@@ -283,13 +286,44 @@ describe("ReportSectionsService", () => {
       expect(saved.projects[0]?.trafficLight).toBe("green");
     });
 
-    it("calls getReportStatus with the correct reportId", async () => {
+    it("allows editing on a reopened period even while the legacy status reads published", async () => {
+      const repo = createRepository(baseSection);
+      // The reopen transition leaves the legacy Report.status at 'published'
+      // while flipping the canonical periodStatus to 'reopened'. The gate must
+      // follow periodStatus, so the divergent legacy value must not block.
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository.getReportStatus contract (Promise<string | null>); no awaitable work in stub
+      repo.getReportStatus = async () => "published";
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository.getReportPeriodStatusForSection contract (Promise<string | null>); no awaitable work in stub
+      repo.getReportPeriodStatusForSection = async () => "reopened";
+
+      const service = new ReportSectionsService(repo);
+
+      const saved = await service.saveDraft({
+        reportSectionId: baseSection.reportSectionId,
+        version: 1,
+        status: "draft",
+        projectStatuses: [
+          {
+            projectId: expectDefined(baseSection.projects[0]).projectId,
+            status: "green",
+          },
+        ],
+        items: writeItems,
+        risks: [],
+        decisions: [],
+      });
+
+      expect(saved.status).toBe("draft");
+      expect(saved.projects[0]?.trafficLight).toBe("green");
+    });
+
+    it("reads editability via getReportPeriodStatusForSection keyed on the section id", async () => {
       const repo = createRepository(baseSection);
       const calls: string[] = [];
-      const originalGetReportStatus = repo.getReportStatus.bind(repo);
-      repo.getReportStatus = async (reportId: string) => {
-        calls.push(reportId);
-        return originalGetReportStatus(reportId);
+      const original = repo.getReportPeriodStatusForSection.bind(repo);
+      repo.getReportPeriodStatusForSection = async (sectionId: string) => {
+        calls.push(sectionId);
+        return original(sectionId);
       };
 
       const service = new ReportSectionsService(repo);
@@ -309,7 +343,7 @@ describe("ReportSectionsService", () => {
         decisions: [],
       });
 
-      expect(calls).toEqual([baseSection.reportId]);
+      expect(calls).toEqual([baseSection.reportSectionId]);
     });
 
     it("rejects saveDraft on an already-submitted section", async () => {
@@ -346,6 +380,66 @@ describe("ReportSectionsService", () => {
         code: "SECTION_ALREADY_SUBMITTED",
         message: "Submitted sections are read-only.",
       });
+    });
+  });
+
+  describe("submitSection — published period guard", () => {
+    const greenSection: ReportSectionReadModel = {
+      ...baseSection,
+      status: "draft",
+      submittedAt: null,
+      projects: [
+        { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
+      ],
+    };
+
+    const submitPayload = {
+      reportSectionId: baseSection.reportSectionId,
+      version: 1,
+      status: "draft" as const,
+      confirmed: true as const,
+      projectStatuses: [
+        {
+          projectId: expectDefined(baseSection.projects[0]).projectId,
+          status: "green" as const,
+        },
+      ],
+      items: writeItems,
+      risks: [],
+      decisions: [],
+    };
+
+    it("rejects submitting a draft section on a published period", async () => {
+      const repo = createRepository(greenSection);
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository.getReportPeriodStatusForSection contract (Promise<string | null>); no awaitable work in stub
+      repo.getReportPeriodStatusForSection = async () => "published";
+
+      const service = new ReportSectionsService(repo);
+
+      await expect(service.submitSection(submitPayload)).rejects.toMatchObject({
+        code: "SECTION_ALREADY_SUBMITTED",
+        message: "Cannot submit sections of a published report.",
+      });
+    });
+
+    it("succeeds submitting a draft section on an open period", async () => {
+      const service = new ReportSectionsService(createRepository(greenSection));
+
+      const saved = await service.submitSection(submitPayload);
+
+      expect(saved.status).toBe("submitted");
+    });
+
+    it("succeeds submitting a draft section on a reopened period", async () => {
+      const repo = createRepository(greenSection);
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository.getReportPeriodStatusForSection contract (Promise<string | null>); no awaitable work in stub
+      repo.getReportPeriodStatusForSection = async () => "reopened";
+
+      const service = new ReportSectionsService(repo);
+
+      const saved = await service.submitSection(submitPayload);
+
+      expect(saved.status).toBe("submitted");
     });
   });
 
@@ -692,6 +786,10 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
       async getReportStatus() {
         return "draft";
       },
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<string | null>); no awaitable work in stub
+      async getReportPeriodStatusForSection() {
+        return "open";
+      },
       // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
       async getReportMeta() {
         return { status: "draft", deadline: opts.deadline };
@@ -869,6 +967,10 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
       // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<string | null>); no awaitable work in stub
       async getReportStatus() {
         return "draft";
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<string | null>); no awaitable work in stub
+      async getReportPeriodStatusForSection() {
+        return "open";
       },
       // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
       async getReportMeta() {

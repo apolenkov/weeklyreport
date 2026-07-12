@@ -67,6 +67,10 @@ function createRepository(
       return "draft";
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
+    async getReportPeriodStatusForSection() {
+      return "open";
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
     async getPublishedLineage() {
       return { itemStableIds: [], decisionStableIds: [] };
     },

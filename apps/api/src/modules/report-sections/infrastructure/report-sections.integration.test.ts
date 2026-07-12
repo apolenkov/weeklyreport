@@ -633,4 +633,113 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
       expect(expectDefined(updated.items[0]).text).toBe("svc item edited");
     });
   });
+
+  // Both lead write paths gate on the canonical periodStatus, never the legacy
+  // Report.status column. The reopen transition leaves Report.status at
+  // "published" while flipping periodStatus, so a save on a reopened period must
+  // succeed; a submit on a published period must be rejected before the
+  // destructive delete-recreate touches the live rows.
+  describe("period-status write gates", () => {
+    it("saveDraft persists on a reopened period even though the legacy status reads published", async () => {
+      await assignLeadToProject();
+      await prisma.report.update({
+        where: { id: testData.report.id },
+        data: { status: "published", periodStatus: "reopened" },
+      });
+
+      const service = new ReportSectionsService(repo);
+      const saved = await service.saveDraft({
+        reportSectionId: testData.section.id,
+        version: 1,
+        status: "draft",
+        projectStatuses: [],
+        stageStatuses: [],
+        items: [],
+        risks: [],
+        decisions: [],
+      });
+
+      expect(saved.version).toBe(2);
+    });
+
+    it("submitSection on a published period is rejected and leaves the child rows unchanged", async () => {
+      await assignLeadToProject();
+      await prisma.projectStatus.create({
+        data: {
+          reportSectionId: testData.section.id,
+          projectId: testData.project.id,
+          status: "green",
+        },
+      });
+      const item = await prisma.item.create({
+        data: {
+          reportSectionId: testData.section.id,
+          projectId: testData.project.id,
+          type: "current",
+          text: "Live item",
+          tag: "feature",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+        },
+      });
+      const risk = await prisma.risk.create({
+        data: {
+          reportSectionId: testData.section.id,
+          projectId: testData.project.id,
+          risk: "Live risk",
+          impact: "High",
+          mitigation: "Mitigate",
+        },
+      });
+      const decision = await prisma.decision.create({
+        data: {
+          reportSectionId: testData.section.id,
+          productId: testData.project.id,
+          text: "Live decision",
+          owner: "Owner",
+          impact: "Medium",
+        },
+      });
+
+      await prisma.report.update({
+        where: { id: testData.report.id },
+        data: { periodStatus: "published" },
+      });
+
+      const service = new ReportSectionsService(repo);
+      await expect(
+        service.submitSection({
+          reportSectionId: testData.section.id,
+          version: 1,
+          status: "draft",
+          confirmed: true,
+          projectStatuses: [
+            { projectId: testData.project.id, status: "green" },
+          ],
+          items: [],
+          risks: [],
+          decisions: [],
+          stageStatuses: [
+            { projectId: testData.project.id, stageId, status: "green" },
+          ],
+        }),
+      ).rejects.toMatchObject({
+        code: "SECTION_ALREADY_SUBMITTED",
+        message: "Cannot submit sections of a published report.",
+      });
+
+      // saveSection delete-recreates every child row with a fresh PK, so the
+      // ORIGINAL PKs surviving proves the destructive write never ran — a
+      // "rows still exist" check would also pass a delete-recreate.
+      expect(
+        await prisma.item.findUnique({ where: { id: item.id } }),
+      ).not.toBeNull();
+      expect(
+        await prisma.risk.findUnique({ where: { id: risk.id } }),
+      ).not.toBeNull();
+      expect(
+        await prisma.decision.findUnique({ where: { id: decision.id } }),
+      ).not.toBeNull();
+    });
+  });
 });
