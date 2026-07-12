@@ -1,6 +1,6 @@
 "use client";
 
-import { type RefObject, useRef, useState } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 
 import { useFullscreen } from "../../../hooks/use-fullscreen";
 import { useSlideInlineEditor } from "../../report-sections/ui/use-slide-inline-editor";
@@ -68,6 +68,14 @@ export function LeadSlidesClient({
     canInlineEdit: leadSlides.canInlineEdit,
     refetchSection: leadSlides.refetchSection,
   });
+
+  useEffect(() => {
+    // Two-sided clamp: a shrink strands the index past the end, and an
+    // ArrowRight on an EMPTY deck stores -1 (Math.min(length-1, ...)), which a
+    // one-sided upper-bound check would accept forever once slides arrive.
+    if (selectedIndex >= 0 && selectedIndex < leadSlides.slides.length) return;
+    setSelectedIndex(0);
+  }, [selectedIndex, leadSlides.slides.length]);
 
   if (leadSlides.isLoading) {
     return <SlideSkeleton />;

@@ -78,7 +78,9 @@ export function HeadSlidesClient({
   }, [weeklyQ.data, activityQ.data, scope, enableActivity]);
 
   useEffect(() => {
-    if (selectedIndex < slides.length) return;
+    // Two-sided clamp — see lead-slides-client: a negative index from an
+    // empty-deck arrow press must reset too, not just an out-of-range one.
+    if (selectedIndex >= 0 && selectedIndex < slides.length) return;
     setSelectedIndex(0);
   }, [selectedIndex, slides.length]);
 
