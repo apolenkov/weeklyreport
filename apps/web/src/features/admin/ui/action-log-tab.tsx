@@ -49,10 +49,18 @@ export function ActionLogTab() {
   );
 
   const rows = pagination.items;
+  // Proof rows are internal noise this view never shows, so every message and
+  // count derives from the user's data: nonProofRows decides true-empty vs
+  // search-miss (a page of only proof rows IS an empty log to the user), and
+  // the search then narrows nonProofRows into what the table renders.
+  const nonProofRows = useMemo(
+    () =>
+      rows.filter(
+        (row) => !row.correlationId.startsWith("manual-action-log-proof"),
+      ),
+    [rows],
+  );
   const visibleRows = useMemo(() => {
-    const nonProofRows = rows.filter(
-      (row) => !row.correlationId.startsWith("manual-action-log-proof"),
-    );
     const needle = search.trim().toLowerCase();
     if (!needle) return nonProofRows;
     return nonProofRows.filter((row) =>
@@ -69,7 +77,7 @@ export function ActionLogTab() {
         .toLowerCase()
         .includes(needle),
     );
-  }, [rows, search]);
+  }, [nonProofRows, search]);
 
   return (
     <div className="space-y-4" data-testid="action-log-tab">
@@ -79,7 +87,7 @@ export function ActionLogTab() {
         count={
           pagination.isLoading
             ? "Loading…"
-            : `${rows.length} loaded${pagination.hasNextPage ? "+" : ""}`
+            : `${visibleRows.length} loaded${pagination.hasNextPage ? "+" : ""}`
         }
         search={
           <TabSearch
@@ -110,7 +118,7 @@ export function ActionLogTab() {
         !pagination.isError &&
         visibleRows.length === 0 && (
           <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
-            {rows.length === 0
+            {nonProofRows.length === 0
               ? "No actions recorded yet."
               : "No actions match the search."}
           </div>
