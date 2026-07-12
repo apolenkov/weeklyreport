@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { computeCrossGroupSignal } from "./cross-group-signal";
+import {
+  computeCrossGroupSignal,
+  computeCrossGroupSignalFromSnapshotProjects,
+} from "./cross-group-signal";
 import type { WeeklyReportScopeSession } from "./weekly-report.service";
 
 /**
@@ -110,6 +113,90 @@ describe("computeCrossGroupSignal", () => {
 
     expect(
       computeCrossGroupSignal(groupless, [project(PRODUCT_1, GROUP_B)]),
+    ).toBeNull();
+  });
+});
+
+/**
+ * The snapshot-sourced sibling used on the published-read path: it reads
+ * `ownerGroupId` frozen into the snapshot instead of a live `lead` relation,
+ * so a product surfaced by the snapshot stays eligible for the signal even
+ * after its live row is archived or its GroupProduct edge is removed.
+ */
+describe("computeCrossGroupSignalFromSnapshotProjects", () => {
+  function snapshotProject(projectId: string, ownerGroupId?: string | null) {
+    return { projectId, ownerGroupId };
+  }
+
+  it("flags a snapshot product whose frozen owner group is not the caller's", () => {
+    const signal = computeCrossGroupSignalFromSnapshotProjects(headA, [
+      snapshotProject(PRODUCT_1, GROUP_B),
+    ]);
+
+    expect(signal).toEqual({ productIds: [PRODUCT_1], groupIds: [GROUP_B] });
+  });
+
+  it("collapses multiple cross-group products in one section into a single deduped signal", () => {
+    const signal = computeCrossGroupSignalFromSnapshotProjects(headA, [
+      snapshotProject(PRODUCT_1, GROUP_B),
+      snapshotProject(PRODUCT_2, GROUP_B),
+    ]);
+
+    expect(signal).toEqual({
+      productIds: [PRODUCT_1, PRODUCT_2],
+      groupIds: [GROUP_B],
+    });
+  });
+
+  it("dedupes a product that surfaces in two sections into one entry", () => {
+    const signal = computeCrossGroupSignalFromSnapshotProjects(headA, [
+      snapshotProject(PRODUCT_1, GROUP_B),
+      snapshotProject(PRODUCT_1, GROUP_B),
+    ]);
+
+    expect(signal).toEqual({ productIds: [PRODUCT_1], groupIds: [GROUP_B] });
+  });
+
+  it("excludes a product the caller's own group owns", () => {
+    const signal = computeCrossGroupSignalFromSnapshotProjects(headA, [
+      snapshotProject(PRODUCT_1, GROUP_A),
+    ]);
+
+    expect(signal).toBeNull();
+  });
+
+  it("returns null for admin sessions", () => {
+    const admin: WeeklyReportScopeSession = {
+      userId: "00000000-0000-4000-a000-0000000000f2",
+      role: "admin",
+    };
+
+    expect(
+      computeCrossGroupSignalFromSnapshotProjects(admin, [
+        snapshotProject(PRODUCT_1, GROUP_B),
+      ]),
+    ).toBeNull();
+  });
+
+  it("returns null when the session carries no allowed groups (empty scope)", () => {
+    const groupless: WeeklyReportScopeSession = {
+      userId: "00000000-0000-4000-a000-0000000000f4",
+      role: "head",
+    };
+
+    expect(
+      computeCrossGroupSignalFromSnapshotProjects(groupless, [
+        snapshotProject(PRODUCT_1, GROUP_B),
+      ]),
+    ).toBeNull();
+  });
+
+  it("never treats a missing or null frozen owner as cross-group", () => {
+    expect(
+      computeCrossGroupSignalFromSnapshotProjects(headA, [
+        snapshotProject(PRODUCT_1),
+        snapshotProject(PRODUCT_2, null),
+      ]),
     ).toBeNull();
   });
 });

@@ -91,6 +91,7 @@ function fullOwnedStageAssignment(
     project: {
       ...fullProjectScalars(overrides.project),
       stageAssignments: overrides.crossLeadAssignments ?? [],
+      lead: { reportingGroupId: null },
     },
     stage: fullStage(STAGE_ID, "Development", 4),
   };
@@ -357,6 +358,45 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
 // display metadata. The writable `ownedStages` stays the author's own stages, so
 // the write path (handleProductsChange skips non-mine chips; sectionToDraftPayload
 // and saveSection persist from ownedStages only) can never write a foreign stage.
+describe("mapPrismaToReportSection — ownerGroupId freeze", () => {
+  it("stamps each project entry with the PRODUCT lead's reporting group, not the section author's", () => {
+    const assignment = fullOwnedStageAssignment();
+    const row = baseRow({
+      author: {
+        name: "Lead 1",
+        role: "lead",
+        id: AUTHOR_ID,
+        // The section author's own group differs from the product owner's —
+        // a stamp that read the author's group would leak through here.
+        reportingGroupId: "e0000000-0000-4000-a000-0000000000a1",
+        stageAssignments: [
+          {
+            ...assignment,
+            project: {
+              ...assignment.project,
+              lead: {
+                reportingGroupId: "e0000000-0000-4000-a000-0000000000b2",
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    const mapped = mapRow(row);
+
+    expect(mapped.projects[0]?.ownerGroupId).toBe(
+      "e0000000-0000-4000-a000-0000000000b2",
+    );
+  });
+
+  it("freezes a null ownerGroupId for a product whose lead has no group", () => {
+    const mapped = mapRow(baseRow());
+
+    expect(mapped.projects[0]?.ownerGroupId).toBeNull();
+  });
+});
+
 describe("mapPrismaToReportSection — assigned-stage set", () => {
   // A row where the author owns Development, and the product also carries a
   // Testing assignment held by ANOTHER lead.

@@ -16,7 +16,10 @@ import {
   reportSectionFullInclude,
 } from "../report-sections/index.js";
 import { isDesignatedReviewer } from "../review/index.js";
-import { computeCrossGroupSignal } from "./cross-group-signal.js";
+import {
+  computeCrossGroupSignal,
+  computeCrossGroupSignalFromSnapshotProjects,
+} from "./cross-group-signal.js";
 import type {
   WeeklyReportRepository,
   WeeklyReportRepositoryResult,
@@ -223,21 +226,17 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
         (section) => section.status === "submitted",
       ).length;
 
-      // D1: on a published period the read model is built from the
-      // snapshot, not from the live project rows — so the audit signal
-      // must only name products the caller actually receives. Intersect
-      // the live rows with the snapshot-surfaced product ids before
-      // computing the signal; otherwise a GroupProduct edge added after
-      // publish would emit scopeAccessed for data absent from the
-      // response (false audit-trail entry for every viewer read).
-      const surfacedProductIds = new Set(
-        leadSections.flatMap((section) =>
-          section.projects.map((project) => project.projectId),
-        ),
-      );
-      const crossGroup = computeCrossGroupSignal(
+      // On a published period the read model is built from the frozen
+      // snapshot, not from the live project rows — so the audit signal is
+      // derived from each surfaced product's owner group as frozen INTO the
+      // snapshot, never a live re-query. A product delivered via the snapshot
+      // but since archived, or whose GroupProduct edge was since removed, would
+      // drop out of the live query yet still reach the caller; sourcing the
+      // signal from the snapshot keeps it named. The live `projects` query is
+      // unused on this branch.
+      const crossGroup = computeCrossGroupSignalFromSnapshotProjects(
         session,
-        projects.filter((project) => surfacedProductIds.has(project.id)),
+        leadSections.flatMap((section) => section.projects),
       );
 
       return {

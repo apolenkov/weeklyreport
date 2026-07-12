@@ -654,7 +654,11 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
                 stageId: OWNED_STAGE_ID,
                 projectId: OWNED_PRODUCT,
                 createdAt: FIXED_TIMESTAMP,
-                project: { ...fullProject("CRM Portal"), stageAssignments: [] },
+                project: {
+                  ...fullProject("CRM Portal"),
+                  stageAssignments: [],
+                  lead: { reportingGroupId: null },
+                },
                 stage: {
                   id: OWNED_STAGE_ID,
                   name: STAGE_NAME,
