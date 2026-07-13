@@ -64,6 +64,7 @@ import {
   SearchAuthorizationError,
   type SearchService,
 } from "../../modules/search/search.service.js";
+import { TELEGRAM_OUTBOUND_JOB_OPTS } from "../../modules/telegram/telegram.queue.js";
 import type { TelemetryService } from "../../modules/telemetry/telemetry.service.js";
 import type { WeeklyReportService } from "../../modules/weekly-report/weekly-report.service.js";
 import { captureJobTraceContext } from "../bullmq/worker-observability.js";
@@ -1133,12 +1134,7 @@ export function createAppRouter(deps: RouterDeps) {
                 text: input.text,
                 ...captureJobTraceContext(ctx.correlationId),
               },
-              {
-                attempts: 3,
-                backoff: { type: "exponential", delay: 5000 },
-                removeOnComplete: { count: 100 },
-                removeOnFail: { count: 500 },
-              },
+              { ...TELEGRAM_OUTBOUND_JOB_OPTS },
             );
             return { jobId: job.id ?? null };
           } catch (error) {

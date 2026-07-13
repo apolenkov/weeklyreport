@@ -6,32 +6,26 @@
 // is `admin.testTelegramSend`, which is admin-only and proves the wiring
 // without needing a real bot.
 //
-// Worker shape mirrors EmailReminderProcessor deliberately:
-//   - raw `new Worker(...)` on OnModuleInit, not @Processor — works around
-//     the @nestjs/bullmq 11 + NestJS 11 DiscoveryService DI bug.
-//   - structured-JSON failure log on the `failed` event so the existing
-//     log dashboard surfaces telegram-outbound errors uniformly.
+// Lifecycle (raw `new Worker(...)`, trace/CLS wrapping, shutdown, and the
+// structured-JSON `failed`-event log) is inherited from `RawBullMqProcessor`,
+// the shared base its two siblings (`EmailReminderProcessor`,
+// `PdfExportProcessor`) also extend; this file supplies only the queue name,
+// span name, dispatch handler, failure hook, and concurrency override.
 // Retries are configured at job-enqueue time (`attempts: 3`) so the queue
 // itself stays generic.
 
-import {
-  Inject,
-  Injectable,
-  type OnModuleDestroy,
-  type OnModuleInit,
-} from "@nestjs/common";
-import { type Job, Worker } from "bullmq";
+import { Injectable } from "@nestjs/common";
+import { type Job, type WorkerOptions } from "bullmq";
 import type { ClsService } from "nestjs-cls";
 
-import { getBullMQOptions } from "../../infrastructure/bullmq/bullmq-options";
+import { RawBullMqProcessor } from "../../infrastructure/bullmq/raw-bullmq-processor.js";
 import {
   extractTraceId,
   type JobTraceContext,
-  runInJobTraceContext,
 } from "../../infrastructure/bullmq/worker-observability.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
-import { type AppLogger, createNullLogger } from "../../lib/logger.js";
-import { TELEGRAM_ADAPTER, type TelegramAdapter } from "./telegram.adapter.js";
+import type { AppLogger } from "../../lib/logger.js";
+import type { TelegramAdapter } from "./telegram.adapter.js";
 
 /**
  * Job-data shape for `telegram-outbound`. Kept intentionally minimal — the
@@ -59,45 +53,30 @@ export const TELEGRAM_OUTBOUND_JOB_OPTS = {
 };
 
 @Injectable()
-export class TelegramProcessor implements OnModuleInit, OnModuleDestroy {
-  private worker: Worker<TelegramOutboundJobData> | undefined;
-  private readonly logger: AppLogger;
+export class TelegramProcessor extends RawBullMqProcessor<TelegramOutboundJobData> {
+  protected readonly queueName = TELEGRAM_OUTBOUND_QUEUE_NAME;
+  protected readonly spanName = "telegram-outbound.process";
 
+  // Constructed by the module's useFactory (never by Nest's reflective DI) —
+  // a param-decorator @Inject here would also break the web tsconfig's
+  // es-decorators pass, so the adapter arrives as a plain constructor arg.
   constructor(
-    @Inject(TELEGRAM_ADAPTER) private readonly adapter: TelegramAdapter,
-    private readonly env: EnvConfig,
+    private readonly adapter: TelegramAdapter,
+    env: EnvConfig,
     logger?: AppLogger,
-    private readonly cls?: ClsService,
+    cls?: ClsService,
   ) {
-    this.logger = logger ?? createNullLogger();
+    super(env, logger, cls);
   }
 
-  onModuleInit(): void {
-    this.worker = new Worker<TelegramOutboundJobData>(
-      TELEGRAM_OUTBOUND_QUEUE_NAME,
-      async (job: Job<TelegramOutboundJobData>) => {
-        await runInJobTraceContext(
-          job.data,
-          "telegram-outbound.process",
-          this.cls,
-          () => this.processJob(job),
-        );
-      },
-      {
-        ...getBullMQOptions(this.env),
-        // Modest concurrency — Telegram per-bot rate limit is 30 msg/s in
-        // private chats; seeds-only path only sees admin smoke tests, so
-        // 2 in-flight is plenty.
-        concurrency: 2,
-      },
-    );
-
-    this.worker.on("failed", (job, error) => {
-      this.logFailure(job, error);
-    });
+  // Modest concurrency — Telegram per-bot rate limit is 30 msg/s in private
+  // chats; seeds-only path only sees admin smoke tests, so 2 in-flight is
+  // plenty.
+  protected override extraWorkerOptions(): Partial<WorkerOptions> {
+    return { concurrency: 2 };
   }
 
-  private logFailure(
+  protected onJobFailed(
     job: Job<TelegramOutboundJobData> | undefined,
     error: Error,
   ): void {
@@ -114,11 +93,7 @@ export class TelegramProcessor implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  async onModuleDestroy(): Promise<void> {
-    await this.worker?.close();
-  }
-
-  private async processJob(job: Job<TelegramOutboundJobData>): Promise<void> {
+  protected async processJob(job: Job<TelegramOutboundJobData>): Promise<void> {
     const { chatId, text } = job.data;
     const result = await this.adapter.send(chatId, text);
     if (!result.ok) {
