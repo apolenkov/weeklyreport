@@ -33,15 +33,20 @@ export const projectActivitySchema = z.object({
 export const projectActivityCreateSchema = z.object({
   name: safeText({ max: 200 }),
   groupId: z.uuid(),
-  // activity-first-class: 0..N product links (was a single nullable projectId).
-  // Reject an in-payload duplicate at the wire boundary so it never reaches the
-  // ProjectActivityProduct @@unique([activityId, productId]) constraint as a 500.
+  // 0..N label-only product links. Reject an in-payload duplicate at the wire
+  // boundary so it never reaches the ProjectActivityProduct
+  // @@unique([activityId, productId]) constraint as a 500. Postgres's `uuid`
+  // type is case-insensitive, so the uniqueness check compares lowercased ids
+  // and the parsed output is normalized to lowercase — the canonical form every
+  // downstream comparison operates on.
   linkedProductIds: z
     .array(z.uuid())
     .max(MAX_LINKED_PRODUCTS)
-    .refine((ids) => new Set(ids).size === ids.length, {
-      message: "linkedProductIds must not contain duplicates",
-    })
+    .refine(
+      (ids) => new Set(ids.map((id) => id.toLowerCase())).size === ids.length,
+      { message: "linkedProductIds must not contain duplicates" },
+    )
+    .transform((ids) => ids.map((id) => id.toLowerCase()))
     .default([]),
   jiraAccounts: z
     .array(safeText({ max: MAX_JIRA_ACCOUNT_LENGTH }))

@@ -64,6 +64,45 @@ describe("projectActivitySchema", () => {
     );
   });
 
+  it("rejects a create whose linkedProductIds repeat a product id in a different case", () => {
+    const result = projectActivityCreateSchema.safeParse({
+      name: "Ops rotation",
+      groupId: GROUP_ID,
+      linkedProductIds: [OTHER_PRODUCT_ID.toUpperCase(), OTHER_PRODUCT_ID],
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe(
+      "linkedProductIds must not contain duplicates",
+    );
+  });
+
+  it("normalizes an uppercase linkedProductId to lowercase", () => {
+    const parsed = projectActivityCreateSchema.parse({
+      name: "Ops rotation",
+      groupId: GROUP_ID,
+      linkedProductIds: [OTHER_PRODUCT_ID.toUpperCase()],
+    });
+    expect(parsed.linkedProductIds).toEqual([OTHER_PRODUCT_ID]);
+  });
+
+  it("normalizes an uppercase linkedProductId to lowercase on update too", () => {
+    const parsed = projectActivityUpdateSchema.parse({
+      id: ACTIVITY_ID,
+      name: "Ops rotation",
+      groupId: GROUP_ID,
+      linkedProductIds: [OTHER_PRODUCT_ID.toUpperCase()],
+    });
+    expect(parsed.linkedProductIds).toEqual([OTHER_PRODUCT_ID]);
+  });
+
+  it("defaults linkedProductIds to an empty array when absent", () => {
+    const parsed = projectActivityCreateSchema.parse({
+      name: "Ops rotation",
+      groupId: GROUP_ID,
+    });
+    expect(parsed.linkedProductIds).toEqual([]);
+  });
+
   it("accepts a create whose linkedProductIds are unique", () => {
     const result = projectActivityCreateSchema.safeParse({
       name: "Ops rotation",

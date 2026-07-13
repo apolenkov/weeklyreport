@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 import type { MockSettings } from "../../../shared/lib/admin-mock-data";
 import {
   CheckIcon,
   useUpdateSettingsMut,
 } from "../../../shared/ui/settings-tab-shared";
+import { useServerSeededDraft } from "../../../shared/ui/use-server-seeded-draft";
 import { PeriodBaseFields } from "./settings-periods-fields-base";
 import { PeriodCycleFields } from "./settings-periods-fields-cycle";
 
@@ -15,8 +14,8 @@ export function PeriodsSubTab({
 }: {
   readonly serverSettings: MockSettings;
 }) {
-  const [draft, setDraft] = useState<MockSettings>(serverSettings);
-  useEffect(() => setDraft(serverSettings), [serverSettings]);
+  const { draft, setDraft, markClean } =
+    useServerSeededDraft<MockSettings>(serverSettings);
   const updateSettingsMut = useUpdateSettingsMut("Period policy");
 
   function handleSave() {
@@ -28,20 +27,23 @@ export function PeriodsSubTab({
     // Periods sub-tab. Each field below has a live consumer (the period-creator
     // / auto-publisher / auto-archiver schedulers and the request-path
     // late-submission and reopen gates).
-    updateSettingsMut.mutate({
-      autoCreatePeriods: draft.autoCreatePeriods,
-      defaultDeadlineDays: draft.defaultDeadlineDays,
-      periodLengthDays: draft.periodLengthDays,
-      workingDays: draft.workingDays,
-      gracePeriodHours: draft.gracePeriodHours,
-      allowLateSubmissions: draft.allowLateSubmissions,
-      autoPublishAfterDeadline: draft.autoPublishAfterDeadline,
-      autoArchiveWeeksAfterPublish: draft.autoArchiveWeeksAfterPublish,
-      deadlineTime: draft.deadlineTime,
-      allowReopenAfterPublish: draft.allowReopenAfterPublish,
-      reopenWindowHours: draft.reopenWindowHours,
-      unifiedActivityView: draft.unifiedActivityView,
-    });
+    updateSettingsMut.mutate(
+      {
+        autoCreatePeriods: draft.autoCreatePeriods,
+        defaultDeadlineDays: draft.defaultDeadlineDays,
+        periodLengthDays: draft.periodLengthDays,
+        workingDays: draft.workingDays,
+        gracePeriodHours: draft.gracePeriodHours,
+        allowLateSubmissions: draft.allowLateSubmissions,
+        autoPublishAfterDeadline: draft.autoPublishAfterDeadline,
+        autoArchiveWeeksAfterPublish: draft.autoArchiveWeeksAfterPublish,
+        deadlineTime: draft.deadlineTime,
+        allowReopenAfterPublish: draft.allowReopenAfterPublish,
+        reopenWindowHours: draft.reopenWindowHours,
+        unifiedActivityView: draft.unifiedActivityView,
+      },
+      { onSuccess: () => markClean() },
+    );
   }
 
   const isSaving = updateSettingsMut.isPending;
