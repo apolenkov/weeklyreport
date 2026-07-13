@@ -40,6 +40,7 @@ import {
   DEFAULT_REPORTING_GROUP_ID,
 } from "./seed-constants.js";
 import { assertNonProdDestructive } from "./_destructive-guard.js";
+import { assertSeedCoverage } from "./seed-coverage-check.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -610,6 +611,14 @@ async function main() {
     ItemWorkflowStatus.in_progress,
     ItemWorkflowStatus.done,
   ];
+  // One current item resolves to `paused` and one next item to `postponed` so
+  // the canonical dataset carries every stored Progress state on each reseed —
+  // assertSeedCoverage at the end of main() fails the run loudly if either is
+  // ever dropped. Both land on LEAD_1's section so a single dev-login surfaces
+  // both treatments; pausedReason stays unset (the UI enforces it only at the
+  // point of pausing, matching seed-simple.ts and seed-demo.ts).
+  const PAUSED_CURRENT_ITEM = { leadIndex: 1, itemIndex: 3 } as const;
+  const POSTPONED_NEXT_ITEM = { leadIndex: 1, itemIndex: 0 } as const;
   const tagCycle = ["feature", "bugfix", "infra", "ops"];
   const stageNameFor = (seed: number) =>
     SEED_STAGES[seed % SEED_STAGES.length]?.name ?? "Development";
@@ -716,6 +725,11 @@ async function main() {
     for (let i = 0; i < texts.current.length; i++) {
       const product = products[i % products.length]!;
       const id = itemId("1", cfg.leadIndex, itemSeq++);
+      const currentStatus =
+        cfg.leadIndex === PAUSED_CURRENT_ITEM.leadIndex &&
+        i === PAUSED_CURRENT_ITEM.itemIndex
+          ? ItemWorkflowStatus.paused
+          : workflowCycle[i % workflowCycle.length]!;
       await prisma.item.upsert({
         where: { id },
         update: {
@@ -724,7 +738,7 @@ async function main() {
           type: ItemType.current,
           text: texts.current[i]!,
           tag: tagCycle[i % tagCycle.length]!,
-          workflowStatus: workflowCycle[i % workflowCycle.length]!,
+          workflowStatus: currentStatus,
           stageNames: [stageNameFor(cfg.leadIndex + i)],
         },
         create: {
@@ -734,7 +748,7 @@ async function main() {
           type: ItemType.current,
           text: texts.current[i]!,
           tag: tagCycle[i % tagCycle.length]!,
-          workflowStatus: workflowCycle[i % workflowCycle.length]!,
+          workflowStatus: currentStatus,
           stageNames: [stageNameFor(cfg.leadIndex + i)],
         },
       });
@@ -744,6 +758,11 @@ async function main() {
     for (let i = 0; i < texts.next.length; i++) {
       const product = products[i % products.length]!;
       const id = itemId("1", cfg.leadIndex, itemSeq++);
+      const nextStatus =
+        cfg.leadIndex === POSTPONED_NEXT_ITEM.leadIndex &&
+        i === POSTPONED_NEXT_ITEM.itemIndex
+          ? ItemWorkflowStatus.postponed
+          : ItemWorkflowStatus.planned;
       await prisma.item.upsert({
         where: { id },
         update: {
@@ -752,7 +771,7 @@ async function main() {
           type: ItemType.next,
           text: texts.next[i]!,
           tag: tagCycle[i % tagCycle.length]!,
-          workflowStatus: ItemWorkflowStatus.planned,
+          workflowStatus: nextStatus,
           stageNames: [stageNameFor(cfg.leadIndex + i + 3)],
         },
         create: {
@@ -762,7 +781,7 @@ async function main() {
           type: ItemType.next,
           text: texts.next[i]!,
           tag: tagCycle[i % tagCycle.length]!,
-          workflowStatus: ItemWorkflowStatus.planned,
+          workflowStatus: nextStatus,
           stageNames: [stageNameFor(cfg.leadIndex + i + 3)],
         },
       });
@@ -1415,6 +1434,8 @@ async function main() {
       `${reminderRules.length} reminder rules, ` +
       `2 viewer group accesses, 1 reopen request, 1 action log`,
   );
+
+  await assertSeedCoverage(prisma, "seed");
 }
 
 void main()
