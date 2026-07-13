@@ -11,7 +11,9 @@
  *   OTEL_EXPORTER_OTLP_ENDPOINT  - traces shipped to {endpoint}/v1/traces;
  *                                  unset → SDK doesn't start
  *   OTEL_SDK_DISABLED=true       - hard kill switch (overrides everything)
- *   OTEL_TRACES_SAMPLER_ARG=0.1  - probability sampler ratio (default 0.1)
+ *   OTEL_TRACES_SAMPLER_ARG=1.0  - root-span probability sampler ratio
+ *                                  (default 1.0), wrapped in ParentBased so a
+ *                                  sampled-in parent trace is always honored
  *
  * The `start()` call is synchronous; shutdown on SIGTERM flushes pending
  * spans. Errors during start are non-fatal — the api boots even if the
@@ -34,7 +36,10 @@ import {
   LoggerProvider,
 } from "@opentelemetry/sdk-logs";
 import { NodeSDK } from "@opentelemetry/sdk-node";
-import { TraceIdRatioBasedSampler } from "@opentelemetry/sdk-trace-base";
+import {
+  ParentBasedSampler,
+  TraceIdRatioBasedSampler,
+} from "@opentelemetry/sdk-trace-base";
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
@@ -52,7 +57,7 @@ export type OtelBootstrapResult =
   | { started: false; reason: "disabled-flag" }
   | { started: false; reason: "no-endpoint" };
 
-const DEFAULT_TRACES_SAMPLING_RATIO = 0.1;
+const DEFAULT_TRACES_SAMPLING_RATIO = 1.0;
 
 export function decideOtelBootstrap(
   env: NodeJS.ProcessEnv = process.env,
@@ -118,7 +123,13 @@ export function startOtel(
 
   sdk = new NodeSDK({
     resource,
-    sampler: new TraceIdRatioBasedSampler(decision.samplingRatio),
+    // ParentBased so a sampled-in parent (e.g. a browser-originated trace)
+    // is always kept at the api hop; only root spans consult the ratio.
+    // A bare ratio sampler re-dices every span and can drop the api's span
+    // from a trace the browser already decided to keep.
+    sampler: new ParentBasedSampler({
+      root: new TraceIdRatioBasedSampler(decision.samplingRatio),
+    }),
     traceExporter: new OTLPTraceExporter({ url: `${base}/v1/traces` }),
     // correlate-errors-to-traces: adopt the browser's trace id on inbound
     // requests so a browser-originated call shares one id with the api.

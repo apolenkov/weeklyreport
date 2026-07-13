@@ -12,6 +12,12 @@
 # Grafana login: admin / admin  →  http://localhost:3003
 
 services:
+  # Composing this overlay is what turns api tracing ON: it supplies the
+  # collector endpoint the base prod compose deliberately leaves unset.
+  api:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-lgtm:4318
+
   otel-lgtm:
     image: grafana/otel-lgtm:latest
     ports:
