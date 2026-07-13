@@ -4,6 +4,13 @@ name: CI
 # (actions/runners total=0 on 2026-05-15). Automatic PR/push triggers
 # leave checks queued forever, so CI stays manual until a runner is
 # provisioned. Local pre-push gates remain the active quality gate.
+#
+# Pre-production-point requirement (openspec/specs/ci-merge-gate, 2026-07-13):
+# before the repo reaches its first production point a runner MUST be
+# provisioned and this trigger MUST expand to
+#   on: { pull_request, push: { branches: [main] } }
+# with required status checks enabled on main. Until then the dispatch-only
+# posture is an accepted, tracked interim state, not a permanent design.
 on:
   workflow_dispatch:
 
