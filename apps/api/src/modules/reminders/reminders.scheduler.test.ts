@@ -12,6 +12,7 @@ import {
   type RemindersRepository,
   RemindersService,
 } from "./reminders.service";
+import { unusedRemindersScopeStubs } from "./reminders-scope.repository-stub.js";
 
 // UFB-047 / Phase 49-01: stub OrganizationService used by the scheduler
 // to snapshot the brand identity onto every BullMQ job. Tests drive
@@ -71,6 +72,7 @@ function createServiceRepo(): RemindersRepository {
   const executions = new Map<string, AdminReminderExecution>();
 
   return {
+    ...unusedRemindersScopeStubs(),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async getRule(rid) {
       return rid === activeRule.id ? structuredClone(activeRule) : null;
@@ -357,6 +359,7 @@ describe("RemindersScheduler — NOTIF-02 escalation dispatch (Phase 29-05)", ()
   function makeEscalationServiceRepo(): RemindersRepository {
     const executions = new Map<string, AdminReminderExecution>();
     return {
+      ...unusedRemindersScopeStubs(),
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
       async getRule(rid) {
         return rid === escalationRuleId
@@ -675,6 +678,7 @@ describe("RemindersScheduler — NOTIF-05 opt-out (Phase 29-05)", () => {
       policyId: null,
     };
     const escalationServiceRepo: RemindersRepository = {
+      ...unusedRemindersScopeStubs(),
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
       async getRule(rid) {
         return rid === due.id ? structuredClone(escalationActiveRule) : null;

@@ -10,21 +10,21 @@ import type { ClsService } from "nestjs-cls";
 
 import type { JobEnqueuer } from "../../infrastructure/bullmq/job-enqueuer.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
+import { ReminderDomainError, ReminderScopeError } from "./reminders.errors.js";
 import {
   type EnqueueContext,
   enqueueOrMarkFailed,
   reEnqueueStuck,
 } from "./reminders-enqueue.js";
 import type { EscalationGroupDigest } from "./reminders-escalation-grouping.js";
+import {
+  type RemindersScopeRepository,
+  RemindersScopeService,
+} from "./reminders-scope.service.js";
 
-export class ReminderDomainError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ReminderDomainError";
-  }
-}
+export { ReminderDomainError, ReminderScopeError };
 
-export interface RemindersRepository {
+export interface RemindersRepository extends RemindersScopeRepository {
   getRule(ruleId: string): Promise<AdminReminderRule | null>;
   findExecutionByDedupeKey(
     dedupeKey: string,
@@ -159,6 +159,12 @@ export type ReminderExecutionPayload =
 export class RemindersService {
   private readonly logger: AppLogger;
   private readonly emailQueue: JobEnqueuer | null;
+  /**
+   * Scope-authorization + dispatch surface for the reminders.* procedures
+   * (see `RemindersScopeService`). Composed, not inherited, so the router
+   * calls `remindersService.scope.authorizeExecute(...)` etc. directly.
+   */
+  readonly scope: RemindersScopeService;
 
   constructor(
     private readonly repository: RemindersRepository,
@@ -168,6 +174,9 @@ export class RemindersService {
   ) {
     this.logger = logger ?? createNullLogger();
     this.emailQueue = emailQueue ?? null;
+    this.scope = new RemindersScopeService(repository, (ruleId, email) =>
+      this.requestReminderExecution(ruleId, email),
+    );
   }
 
   /**

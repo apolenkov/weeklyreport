@@ -32,7 +32,6 @@ import {
   searchQueryInputSchema,
   submitSectionSchema,
   trafficLightHistoryInputSchema,
-  type UserSession,
 } from "@customreport/shared";
 import type { PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
@@ -92,8 +91,6 @@ const DEFAULT_RESEED_TIMEOUT_MS =
 const RESEED_OUTPUT_TAIL_LINES = 15;
 const RESEED_STDERR_TAIL_LENGTH = 500;
 const RESEED_VARIANT_MANUAL_UAT = "manual-uat";
-
-const REMINDER_RULE_OUT_OF_SCOPE_MESSAGE = "reminder-rule-out-of-scope";
 
 const WEEKLY_REPORT_LOAD_LOG_PHASE = "weekly-report.load";
 const WEEKLY_REPORT_GET_PROCEDURE = "weeklyReport.get";
@@ -233,123 +230,6 @@ function requireReviewActions(deps: RouterDeps): ReviewActionsService {
     });
   }
   return deps.reviewActionsService;
-}
-
-/**
- * A reminder rule's only group link is `rule.report -> section.author group`.
- * Resolve the rule's report id, rejecting a missing rule or a rule with no
- * report — a non-admin caller cannot be scoped against it, so it is out of
- * reach (FORBIDDEN, fail-closed).
- */
-async function resolveScopedReminderReportId(
-  prisma: PrismaClient,
-  ruleId: string,
-): Promise<string> {
-  const rule = await prisma.reminderRule.findUnique({
-    where: { id: ruleId },
-    select: { reportId: true },
-  });
-  if (!rule?.reportId) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: REMINDER_RULE_OUT_OF_SCOPE_MESSAGE,
-    });
-  }
-  return rule.reportId;
-}
-
-/**
- * The rule is in scope iff its report carries at least one section whose author
- * is in the caller's group. The scope fragment filters on `author`, so it is
- * applied via `AND` to avoid clobbering any sibling `author` predicate.
- */
-async function assertReportHasInScopeSection(
-  prisma: PrismaClient,
-  session: UserSession,
-  reportId: string,
-): Promise<void> {
-  const section = await prisma.reportSection.findFirst({
-    where: { reportId, AND: [groupScopeFilter(session, "reportSection")] },
-    select: { id: true },
-  });
-  if (!section) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: REMINDER_RULE_OUT_OF_SCOPE_MESSAGE,
-    });
-  }
-}
-
-/**
- * The recipient of a manual execution must be an in-scope draft-section author
- * on the rule's report — not an arbitrary address (closes the open-mailer hole).
- */
-async function assertDraftRecipientInScope(
-  prisma: PrismaClient,
-  session: UserSession,
-  reportId: string,
-  recipientEmail: string,
-): Promise<void> {
-  const section = await prisma.reportSection.findFirst({
-    where: {
-      reportId,
-      status: "draft",
-      author: { email: recipientEmail },
-      AND: [groupScopeFilter(session, "reportSection")],
-    },
-    select: { id: true },
-  });
-  if (!section) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "reminder-recipient-out-of-scope",
-    });
-  }
-}
-
-/**
- * The set of recipient emails a non-admin caller may see in a rule's execution
- * history: every in-scope section author on the rule's report, plus the
- * caller's own email (escalation digests are addressed to the head themself).
- * Rejects a rule whose report has no in-scope section (out of reach).
- */
-async function resolveInScopeRecipientEmails(
-  prisma: PrismaClient,
-  session: UserSession,
-  ruleId: string,
-): Promise<ReadonlySet<string>> {
-  const reportId = await resolveScopedReminderReportId(prisma, ruleId);
-  const sections = await prisma.reportSection.findMany({
-    where: { reportId, AND: [groupScopeFilter(session, "reportSection")] },
-    select: { author: { select: { email: true } } },
-  });
-  if (sections.length === 0) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: REMINDER_RULE_OUT_OF_SCOPE_MESSAGE,
-    });
-  }
-  return new Set([...sections.map((s) => s.author.email), session.email]);
-}
-
-/**
- * A single-lead dispatch is authorized against the `User` row, not a section —
- * an in-scope lead may have no section yet, which a section check could not
- * distinguish from an out-of-scope lead. Admin's empty scope fragment matches
- * any user (god-mode).
- */
-async function assertLeadInScope(
-  prisma: PrismaClient,
-  session: UserSession,
-  leadId: string,
-): Promise<void> {
-  const lead = await prisma.user.findFirst({
-    where: { id: leadId, ...groupScopeFilter(session, "user") },
-    select: { id: true },
-  });
-  if (!lead) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "lead-out-of-scope" });
-  }
 }
 
 export function createAppRouter(deps: RouterDeps) {
@@ -1877,23 +1757,11 @@ export function createAppRouter(deps: RouterDeps) {
         )
         .mutation(async ({ input, ctx }) => {
           try {
-            if (ctx.session.role !== "admin") {
-              const reportId = await resolveScopedReminderReportId(
-                deps.prisma,
-                input.ruleId,
-              );
-              await assertReportHasInScopeSection(
-                deps.prisma,
-                ctx.session,
-                reportId,
-              );
-              await assertDraftRecipientInScope(
-                deps.prisma,
-                ctx.session,
-                reportId,
-                input.recipientEmail,
-              );
-            }
+            await deps.remindersService.scope.authorizeExecute(
+              ctx.session,
+              input.ruleId,
+              input.recipientEmail,
+            );
             return await deps.remindersService.requestReminderExecution(
               input.ruleId,
               input.recipientEmail,
@@ -1921,13 +1789,10 @@ export function createAppRouter(deps: RouterDeps) {
             // is resolved here and applied inside the service BEFORE pagination
             // so out-of-scope rows cannot consume page size or drive nextCursor.
             const recipientAllowlist =
-              ctx.session.role === "admin"
-                ? null
-                : await resolveInScopeRecipientEmails(
-                    deps.prisma,
-                    ctx.session,
-                    ruleId,
-                  );
+              await deps.remindersService.scope.resolveExecutionsRecipientAllowlist(
+                ctx.session,
+                ruleId,
+              );
 
             return await deps.remindersService.listExecutions(
               ruleId,
@@ -1973,100 +1838,12 @@ export function createAppRouter(deps: RouterDeps) {
                 message: "report-not-active",
               });
             }
-            // `activeReportId` is the globally-newest draft, NOT group-bounded, so
-            // it alone does not prove the report is in the caller's scope. Require
-            // an in-scope section on the report BEFORE resolving any rule, so an
-            // out-of-scope report fails closed uniformly (with or without a
-            // matching rule) and cannot be used to probe rule existence. Admin
-            // (groupScopeFilter -> {}) is unaffected.
-            if (ctx.session.role !== "admin") {
-              await assertReportHasInScopeSection(
-                deps.prisma,
-                ctx.session,
-                input.reportId,
-              );
-            }
-            // A single-lead dispatch is authorized against the lead's User row
-            // (group scope), not a section — preserving the no-section success
-            // state below for an in-scope lead with no draft yet.
-            if (input.leadId !== undefined) {
-              await assertLeadInScope(deps.prisma, ctx.session, input.leadId);
-            }
-            const rule = await deps.prisma.reminderRule.findFirst({
-              where: {
-                reportId: input.reportId,
-                status: "active",
-                ...(input.ruleId ? { id: input.ruleId } : {}),
-              },
-              orderBy: { fireAt: "asc" },
-            });
-            if (!rule) {
-              return {
-                dispatched: 0,
-                alreadySent: 0,
-                skipped: 0,
-                reason: "no-active-rule",
-              };
-            }
-            const draftSections = await deps.prisma.reportSection.findMany({
-              where: {
-                reportId: input.reportId,
-                status: "draft",
-                ...(input.leadId ? { authorId: input.leadId } : {}),
-                // Bulk dispatch only reaches the caller's own group's authors.
-                ...groupScopeFilter(ctx.session, "reportSection"),
-              },
-              include: {
-                author: { select: { email: true, notificationOptOut: true } },
-              },
-            });
-            if (input.leadId !== undefined && draftSections.length === 0) {
-              return {
-                dispatched: 0,
-                alreadySent: 0,
-                skipped: 0,
-                reason: "no-matching-section",
-              };
-            }
-            // Race-safe attribution: call the service
-            // first — it atomically inserts via the dedupeKey @unique index,
-            // so two concurrent clicks never produce two emails. Then read
-            // the execution back and compare `createdAt` to the call's
-            // start. If it lies inside the call window it is genuinely new,
-            // otherwise the service deduplicated against a prior dispatch.
-            // A pre-read + service call would reintroduce a TOCTOU race where
-            // both concurrent callers see `existing === null` and both
-            // increment `dispatched`, mis-reporting the counter even
-            // though only one email actually went out.
-            const fireAtIso = rule.fireAt.toISOString();
-            // eslint-disable-next-line no-restricted-syntax -- Race-safe dispatch accounting must stay beside the async dedupe call; a reducer would hide the TOCTOU boundary.
-            let dispatched = 0;
-            // eslint-disable-next-line no-restricted-syntax -- Race-safe dispatch accounting must stay beside the async dedupe call; a reducer would hide the TOCTOU boundary.
-            let alreadySent = 0;
-            // eslint-disable-next-line no-restricted-syntax -- Race-safe dispatch accounting must stay beside the async dedupe call; a reducer would hide the TOCTOU boundary.
-            let skipped = 0;
-            for (const sec of draftSections) {
-              if (sec.author.notificationOptOut) {
-                skipped++;
-                continue;
-              }
-              const dedupeKey = `${rule.id}:${fireAtIso}:${sec.author.email}`;
-              const beforeMs = Date.now();
-              await deps.remindersService.requestReminderExecution(
-                rule.id,
-                sec.author.email,
-              );
-              const after = await deps.prisma.reminderExecution.findUnique({
-                where: { dedupeKey },
-                select: { createdAt: true },
-              });
-              if (after && after.createdAt.getTime() >= beforeMs) {
-                dispatched++;
-              } else {
-                alreadySent++;
-              }
-            }
-            return { dispatched, alreadySent, skipped };
+            return await deps.remindersService.scope.dispatchPendingReminders(
+              ctx.session,
+              input.reportId,
+              input.ruleId,
+              input.leadId,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }

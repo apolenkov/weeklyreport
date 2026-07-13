@@ -26,7 +26,10 @@ import {
   PublicationArchivedError,
   PublicationNotFoundError,
 } from "../../modules/publication/application/publication.service.js";
-import { ReminderDomainError } from "../../modules/reminders/reminders.service.js";
+import {
+  ReminderDomainError,
+  ReminderScopeError,
+} from "../../modules/reminders/reminders.service.js";
 import {
   LeadFormAccessError,
   LeadFormConstraintError,
@@ -99,6 +102,10 @@ const DOMAIN_ERROR_CODES: readonly (readonly [
   // CarryOverDomainError validation failures below (which stay BAD_REQUEST).
   [CarryOverConflictError, "CONFLICT"],
   [ReminderDomainError, "BAD_REQUEST"],
+  // Per-group scope rejection on a reminders namespace procedure (rule,
+  // recipient, or lead out of the caller's group) → FORBIDDEN, mirroring
+  // every other *AccessError/*ScopeError row in this table.
+  [ReminderScopeError, "FORBIDDEN"],
   [CarryOverDomainError, "BAD_REQUEST"],
   // Manual period overlap is terminal (a retry re-overlaps) →
   // BAD_REQUEST, so the "already exists for these dates" toast flows verbatim.
