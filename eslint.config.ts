@@ -943,9 +943,6 @@ export default defineConfig([
       // Long-tail (300-500): each is one cohesive concern where a split would
       // shed few lines at a clarity cost — exempt, not churn.
       "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // tRPC instance + all procedure builders share the private `t` binding
-      "apps/web/src/features/review/ui/risk-edit-dialog.tsx", // one dialog: state + validation + render
-      "apps/web/src/features/report-sections/ui/item-edit-dialog.tsx", // one create/edit dialog; shell + content coupled
-      "apps/web/src/features/period/ui/decision-edit-dialog.tsx", // one create/edit dialog; XOR parent picker + per-field validation + conditional stage step — parity with item/risk-edit-dialog (shared helpers already extracted)
       "apps/web/src/features/report-sections/ui/lead-form-sync-bridge.tsx", // one context bridge wiring sync to two consumers
       "apps/web/src/shared/ui/navigation/nav-bar.tsx", // one role-aware nav widget; MobileNav/coming-soon have no external consumers
       "apps/web/src/features/dashboard/ui/dashboard-page.tsx", // one head-dashboard page; private load-issue helper only
@@ -1008,11 +1005,8 @@ export default defineConfig([
     files: [
       "apps/web/src/app/(app)/reports/page.tsx", // role-aware history renderer; 5 roles × distinct query/filter/label paths
       "apps/web/src/features/admin/ui/admin-panel.tsx", // 9-tab dispatch + skeleton/loaded gating; only ~3 pts extractable
-      "apps/web/src/features/period/ui/decision-edit-dialog.tsx", // one create/edit dialog; per-field validation + conditional fields
-      "apps/web/src/features/report-sections/ui/item-edit-dialog.tsx", // one form dialog; interdependent state (text/status/product/priority/stages)
       "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // status-card multi-branch messaging (streak/viewer/draft/risk)
       "apps/web/src/features/report-sections/ui/next-week-section.tsx", // kanban CRUD + discriminated-union dialog state + grouped columns
-      "apps/web/src/features/review/ui/risk-edit-dialog.tsx", // one dialog; validation coupled to 7+ form fields; 'use no memo' race guard
       "apps/web/src/features/review/ui/risks-section.tsx", // 3 dialog states across handlers + JSX; prior split broke behavior
       "apps/web/src/features/report-sections/ui/stage-chip.tsx", // interactive chip; dropdown/status/clear/popover entangled via hooks
       "apps/web/src/shared/ui/navigation/nav-bar.tsx", // role-based link filtering + session/hydration across layout slots
