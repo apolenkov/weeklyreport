@@ -63,6 +63,13 @@ export function LeadFormHeaderActions({
             ? "⚠ Save failed"
             : "Autosaved";
 
+  // The badge shares the green success treatment for every non-error state; an
+  // error must not read as a success, so it takes a destructive variant.
+  const autosaveBadgeClassName =
+    autosave.state === "error"
+      ? "bg-[var(--color-status-blocked-bg)] text-[var(--color-destructive)]"
+      : "bg-[var(--color-success)] text-[var(--color-primary)]";
+
   return (
     <header className="flex flex-wrap items-center justify-between gap-4">
       <div className="flex min-w-0 flex-wrap items-center gap-3">
@@ -84,7 +91,9 @@ export function LeadFormHeaderActions({
               ✓ Submitted
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
+            <span
+              className={`inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-1 text-xs font-semibold ${autosaveBadgeClassName}`}
+            >
               {autosaveLabel}
             </span>
           ))}

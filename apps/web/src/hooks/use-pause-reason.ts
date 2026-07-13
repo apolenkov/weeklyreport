@@ -14,8 +14,7 @@ interface PauseReasonPrompt<TItem> {
 }
 
 /**
- * require-paused-item-reason: owns the pause-reason prompt lifecycle for a
- * board section. Kept out of the section component so the section stays under
+ * Owns the pause-reason prompt lifecycle for a board section. Kept out of the section component so the section stays under
  * the file-size cap and the prompt state is unit-testable in isolation. The
  * `onPause` persist callback is invoked with the confirmed reason.
  */
@@ -28,12 +27,13 @@ export function usePauseReason<TItem extends { id: string }>(
   const cancel = useCallback(() => setPending(null), []);
   const confirm = useCallback(
     (reason: string) => {
-      setPending((current) => {
-        if (current) onPause?.(current.id, reason);
-        return null;
-      });
+      // The persist side effect stays out of the setPending updater: React MAY
+      // invoke a state updater more than once for one transition (Strict Mode's
+      // double-render check), which would double-fire the mutation.
+      if (pending) onPause?.(pending.id, reason);
+      setPending(null);
     },
-    [onPause],
+    [pending, onPause],
   );
 
   return { pending, request, confirm, cancel };
