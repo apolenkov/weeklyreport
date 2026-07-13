@@ -5,6 +5,8 @@ import {
   ENV_CONFIG,
 } from "../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
+import { APP_LOGGER } from "../../lib/audit-logger.js";
+import type { AppLogger } from "../../lib/logger.js";
 import { PolicyApplicatorService } from "../reminders/index.js";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
 import { AdminService } from "./admin.service";
@@ -22,8 +24,9 @@ import { SessionRevocationService } from "./session-revocation.service";
     AdminPrismaRepository,
     {
       provide: AdminService,
-      useFactory: (repo: AdminPrismaRepository) => new AdminService(repo),
-      inject: [AdminPrismaRepository],
+      useFactory: (repo: AdminPrismaRepository, logger: AppLogger) =>
+        new AdminService(repo, logger),
+      inject: [AdminPrismaRepository, APP_LOGGER],
     },
     // The service builds its own ioredis client from the validated env when
     // no test client is injected; the factory passes only env so the redis
