@@ -31,7 +31,7 @@ const readVersion = (label, file, pattern) => {
 const imageTag = readVersion(
   "Playwright base image tag",
   "Dockerfile.api",
-  /mcr\.microsoft\.com\/playwright:v(\d+\.\d+\.\d+)-noble\s+AS\s+base/,
+  /mcr\.microsoft\.com\/playwright:v(\d+\.\d+\.\d+)-noble(?:@sha256:[0-9a-f]{64})?\s+AS\s+base/,
 );
 
 // The version the apps/api importer actually resolves — read from the
