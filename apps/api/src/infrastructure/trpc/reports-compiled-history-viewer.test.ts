@@ -6,24 +6,31 @@ import { createNullLogger } from "../../lib/logger.js";
 import { createAppRouter } from "./trpc.router.js";
 
 /**
- * viewer-live-status (task 3.1 / Decision 5): `compiledHistory` is a shared
- * `anyRoleProcedure`, so the viewer-only `periodStatus = "published"` History
- * filter MUST be role-conditional. It applies to BOTH the list query and the
- * archive-count query (else the list and the count disagree for the viewer), so
- * a reopened period (legacy `status="published"`, `periodStatus="reopened"`) is
- * never shown to the viewer as a gate-rejected broken link — while head and lead
- * History stay unchanged (a reopened period still listed + counted).
+ * viewer-live-status (task 3.1 / Decision 5): `reports.compiledHistory`
+ * delegates to `WeeklyReportService.compiledHistory`, resolving
+ * `input?.includeArchive ?? false` and threading the caller's session
+ * through. The viewer-only `periodStatus="published"` filter this test used
+ * to pin at the router level now lives where the query is issued — see
+ * `WeeklyReportPrismaRepository.getCompiledHistory`'s coverage in
+ * `weekly-report.prisma-repository.test.ts`.
  */
 
-const GROUP_A = "a1111111-1111-4111-8111-111111111111";
+const viewerSession: UserSession = {
+  userId: "c3333333-3333-4333-8333-333333333333",
+  email: "viewer@test.local",
+  name: "Viewer",
+  role: "viewer",
+  viewerGroupAccess: ["a1111111-1111-4111-8111-111111111111"],
+  activeReportId: null,
+  activeReportSectionId: null,
+};
 
 function buildCaller(
-  findMany: ReturnType<typeof vi.fn>,
-  count: ReturnType<typeof vi.fn>,
+  compiledHistory: ReturnType<typeof vi.fn>,
   session: UserSession,
 ) {
   const deps = {
-    prisma: { report: { findMany, count } },
+    weeklyReportService: { compiledHistory },
   } as unknown as Parameters<typeof createAppRouter>[0];
   return createAppRouter(deps).createCaller({
     session,
@@ -35,80 +42,29 @@ function buildCaller(
   });
 }
 
-const viewerSession: UserSession = {
-  userId: "c3333333-3333-4333-8333-333333333333",
-  email: "viewer@test.local",
-  name: "Viewer",
-  role: "viewer",
-  viewerGroupAccess: [GROUP_A],
-  activeReportId: null,
-  activeReportSectionId: null,
-};
-
-const headSession: UserSession = {
-  userId: "e5555555-5555-4555-8555-555555555555",
-  email: "head@test.local",
-  name: "Head",
-  role: "head",
-  viewerGroupAccess: [],
-  activeReportId: null,
-  activeReportSectionId: null,
-};
-
-const leadSession: UserSession = {
-  userId: "d4444444-4444-4444-8444-444444444444",
-  email: "lead@test.local",
-  name: "Lead",
-  role: "lead",
-  reportingGroupId: GROUP_A,
-  viewerGroupAccess: [],
-  activeReportId: null,
-  activeReportSectionId: null,
-};
-
-describe("reports.compiledHistory — viewer published-only History filter (task 3.1)", () => {
-  interface QueryArg {
-    where: Record<string, unknown>;
-  }
-
-  it("applies periodStatus='published' to BOTH the list and archive-count for a viewer", async () => {
-    const findMany = vi.fn((_q: QueryArg) => Promise.resolve([] as never[]));
-    const count = vi.fn((_q: QueryArg) => Promise.resolve(0));
-    const caller = buildCaller(findMany, count, viewerSession);
-
-    await caller.reports.compiledHistory({ includeArchive: true });
-
-    const listWhere = findMany.mock.calls[0]?.[0].where;
-    const countWhere = count.mock.calls[0]?.[0].where;
-    expect(listWhere).toMatchObject({ periodStatus: "published" });
-    expect(countWhere).toMatchObject({ periodStatus: "published" });
-  });
-
-  it("does NOT apply the periodStatus filter for a head (non-regression)", async () => {
-    const findMany = vi.fn((_q: QueryArg) => Promise.resolve([] as never[]));
-    const count = vi.fn((_q: QueryArg) => Promise.resolve(0));
-    const caller = buildCaller(findMany, count, headSession);
-
-    await caller.reports.compiledHistory({ includeArchive: true });
-
-    expect(findMany.mock.calls[0]?.[0].where).not.toHaveProperty(
-      "periodStatus",
+describe("reports.compiledHistory — router delegation", () => {
+  it("forwards the session and resolved includeArchive to the service", async () => {
+    const compiledHistory = vi.fn(() =>
+      Promise.resolve({ entries: [], archiveCount: 0 }),
     );
-    expect(count.mock.calls[0]?.[0].where).not.toHaveProperty("periodStatus");
+    const caller = buildCaller(compiledHistory, viewerSession);
+
+    const result = await caller.reports.compiledHistory({
+      includeArchive: true,
+    });
+
+    expect(result).toEqual({ entries: [], archiveCount: 0 });
+    expect(compiledHistory).toHaveBeenCalledWith(viewerSession, true);
   });
 
-  it("does NOT apply the periodStatus filter for a lead (non-regression)", async () => {
-    const findMany = vi.fn((_q: QueryArg) => Promise.resolve([] as never[]));
-    const count = vi.fn((_q: QueryArg) => Promise.resolve(0));
-    const caller = buildCaller(findMany, count, leadSession);
+  it("defaults includeArchive to false when the input is omitted", async () => {
+    const compiledHistory = vi.fn(() =>
+      Promise.resolve({ entries: [], archiveCount: 0 }),
+    );
+    const caller = buildCaller(compiledHistory, viewerSession);
 
-    await caller.reports.compiledHistory({ includeArchive: true });
+    await caller.reports.compiledHistory();
 
-    const listWhere = findMany.mock.calls[0]?.[0].where;
-    expect(listWhere).not.toHaveProperty("periodStatus");
-    // Lead History scopes sections by author, unchanged.
-    expect(listWhere).toMatchObject({
-      sections: { some: { authorId: leadSession.userId } },
-    });
+    expect(compiledHistory).toHaveBeenCalledWith(viewerSession, false);
   });
 });

@@ -5,6 +5,7 @@ import {
   type DraftSaveValidationError,
   MS_PER_HOUR,
   MS_PER_SECOND,
+  type MyHistoryEntry,
   type PeriodStatus,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
@@ -23,6 +24,10 @@ import {
   customreportSectionSubmissionLatencySeconds,
 } from "../../../infrastructure/metrics/metrics.registry.js";
 import { createServiceLogger } from "../../../lib/logger-service.js";
+import {
+  buildMyHistoryEntries,
+  type MyHistorySectionRow,
+} from "../domain/my-history.js";
 import { findPublishedRecordViolation } from "../domain/published-record-guard.js";
 import { mergeSection } from "../domain/report-section-merge.js";
 
@@ -97,6 +102,13 @@ export interface ReportSectionsRepository {
     section: ReportSectionReadModel,
     expectedVersion: number,
   ): Promise<ReportSectionReadModel>;
+  /**
+   * Every section authored by `authorId`, newest reporting-period first
+   * (`report.periodStart desc`, `createdAt` stable tiebreak) — the raw rows
+   * behind `ReportSectionsService.myHistory`. See `buildMyHistoryEntries`
+   * for why this ordering must match `compiledHistory`.
+   */
+  getMyHistoryRows(authorId: string): Promise<readonly MyHistorySectionRow[]>;
 }
 
 // DI token binding the ReportSectionsRepository port to its adapter at the
@@ -366,5 +378,17 @@ export class ReportSectionsService {
       late,
     });
     return saved;
+  }
+
+  /**
+   * The lead's own section history — every section they authored, newest
+   * reporting-period first. Pure post-processing (traffic-light folding,
+   * distinct-product counting, last-edit resolution) lives in
+   * `buildMyHistoryEntries`; this method only threads the repository rows
+   * through it.
+   */
+  async myHistory(authorId: string): Promise<MyHistoryEntry[]> {
+    const sections = await this.repository.getMyHistoryRows(authorId);
+    return buildMyHistoryEntries(sections);
   }
 }

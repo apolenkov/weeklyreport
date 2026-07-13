@@ -101,6 +101,11 @@ function createSpyRepository(
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
     getLatestPublishedId: vi.fn(async () => null),
     getLatestPublishedNonArchivedId: vi.fn(() => Promise.resolve(null)),
+    getCompiledHistory: vi.fn(() =>
+      Promise.resolve({ reports: [], archiveCount: 0 }),
+    ),
+    getVisibleReportId: vi.fn(() => Promise.resolve(null)),
+    getLatestPublishedVisibleId: vi.fn(() => Promise.resolve(null)),
   };
 }
 

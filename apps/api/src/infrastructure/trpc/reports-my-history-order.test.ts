@@ -5,16 +5,17 @@ import { createNullLogger } from "../../lib/logger.js";
 import { createAppRouter } from "./trpc.router.js";
 
 /**
- * lead-history-and-submit-label (item 2): `reports.myHistory` MUST order
- * entries by reporting-period chronology (`report.periodStart desc`), NOT by
- * the section row's `createdAt` — `createdAt` is insertion time, unrelated to
- * the period a report covers. This keeps the lead history newest-period-first
- * and matches `compiledHistory`, so the summary-rail streak stays honest.
+ * lead-history-and-submit-label (item 2): `reports.myHistory` delegates to
+ * `ReportSectionsService.myHistory`, threading the caller's userId through.
+ * The `report.periodStart desc` ordering guarantee this test used to pin at
+ * the router level now lives where the query is issued — see
+ * `ReportSectionsPrismaRepository.getMyHistoryRows`'s coverage in
+ * `report-sections.prisma-repository.test.ts`.
  */
 
-function buildLeadCaller(findMany: ReturnType<typeof vi.fn>) {
+function buildLeadCaller(myHistory: ReturnType<typeof vi.fn>) {
   const deps = {
-    prisma: { reportSection: { findMany } },
+    reportSectionsService: { myHistory },
   } as unknown as Parameters<typeof createAppRouter>[0];
   return createAppRouter(deps).createCaller({
     session: {
@@ -33,19 +34,17 @@ function buildLeadCaller(findMany: ReturnType<typeof vi.fn>) {
   });
 }
 
-describe("reports.myHistory — ordering", () => {
-  it("orders by report.periodStart desc, with createdAt as the stable tiebreak", async () => {
-    const findMany = vi.fn(() => Promise.resolve([]));
-    const caller = buildLeadCaller(findMany);
+describe("reports.myHistory — router delegation", () => {
+  it("forwards the caller's userId to the service and returns its result", async () => {
+    const myHistory = vi.fn(() => Promise.resolve([]));
+    const caller = buildLeadCaller(myHistory);
 
     const result = await caller.reports.myHistory();
 
     expect(result).toEqual([]);
-    expect(findMany).toHaveBeenCalledTimes(1);
-    expect(findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        orderBy: [{ report: { periodStart: "desc" } }, { createdAt: "desc" }],
-      }),
+    expect(myHistory).toHaveBeenCalledTimes(1);
+    expect(myHistory).toHaveBeenCalledWith(
+      "44444444-4444-4444-8444-444444444444",
     );
   });
 });

@@ -95,6 +95,10 @@ function createRepository(
 
       return structuredClone(currentSection);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
+    async getMyHistoryRows() {
+      return [];
+    },
   };
 }
 
@@ -803,6 +807,10 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
         currentSection = structuredClone(next);
         return structuredClone(currentSection);
       },
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
+      async getMyHistoryRows() {
+        return [];
+      },
     };
   }
 
@@ -984,6 +992,10 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
       async saveSection(next) {
         current = structuredClone(next);
         return structuredClone(current);
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
+      async getMyHistoryRows() {
+        return [];
       },
     };
   }

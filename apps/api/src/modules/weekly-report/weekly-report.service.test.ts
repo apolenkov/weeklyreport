@@ -125,6 +125,11 @@ function createSpyRepository(
     getLatestPublishedNonArchivedId: vi.fn(() =>
       Promise.resolve(latestPublishedNonArchivedId),
     ),
+    getCompiledHistory: vi.fn(() =>
+      Promise.resolve({ reports: [], archiveCount: 0 }),
+    ),
+    getVisibleReportId: vi.fn(() => Promise.resolve(null)),
+    getLatestPublishedVisibleId: vi.fn(() => Promise.resolve(null)),
   };
 }
 
@@ -498,6 +503,18 @@ function createCrossGroupRepository(
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
     async getLatestPublishedNonArchivedId() {
+      return null;
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
+    async getCompiledHistory() {
+      return { reports: [], archiveCount: 0 };
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
+    async getVisibleReportId() {
+      return null;
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
+    async getLatestPublishedVisibleId() {
       return null;
     },
   };

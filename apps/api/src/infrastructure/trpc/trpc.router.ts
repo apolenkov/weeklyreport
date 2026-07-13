@@ -7,14 +7,11 @@ import {
   adminUserSchema,
   appSettingsUpdateSchema,
   compiledHistoryInputSchema,
-  compiledHistoryResultSchema,
   DEFAULT_ORGANIZATION_IDENTITY,
   draftSaveSchema,
   groupProductEdgeInputSchema,
-  latestForViewerReportSchema,
   leadVelocityInputSchema,
   MS_PER_MINUTE,
-  myHistoryEntrySchema,
   organizationUpdateSchema,
   paginationInputSchema,
   periodComparisonInputSchema,
@@ -37,7 +34,7 @@ import {
   trafficLightHistoryInputSchema,
   type UserSession,
 } from "@customreport/shared";
-import type { Prisma, PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import type { Queue } from "bullmq";
 import { z } from "zod";
@@ -552,101 +549,7 @@ export function createAppRouter(deps: RouterDeps) {
       }),
 
       myHistory: protectedProcedure.query(async ({ ctx }) => {
-        const sections = await deps.prisma.reportSection.findMany({
-          where: { authorId: ctx.session.userId },
-          // Order by reporting-period chronology (newest period first), NOT by
-          // the section row's insertion time — `createdAt` is unrelated to the
-          // period a report covers (seeds insert in one run). This matches the
-          // `compiledHistory` ordering so both reads of the history surface
-          // agree, and keeps the summary-rail streak (which assumes
-          // newest-period-first) honest. `createdAt` is the stable tiebreak.
-          orderBy: [{ report: { periodStart: "desc" } }, { createdAt: "desc" }],
-          include: {
-            report: {
-              select: {
-                id: true,
-                periodStart: true,
-                periodEnd: true,
-                status: true,
-                archived: true,
-                publishedAt: true,
-              },
-            },
-            items: {
-              select: { projectId: true, updatedAt: true, priorityRank: true },
-            },
-            risks: {
-              select: { projectId: true, updatedAt: true },
-            },
-            decisions: {
-              select: { productId: true, updatedAt: true },
-            },
-            projectStatuses: {
-              select: { projectId: true, status: true, updatedAt: true },
-            },
-            stageStatuses: {
-              select: { projectId: true, updatedAt: true },
-            },
-          },
-        });
-
-        return myHistoryEntrySchema.array().parse(
-          sections.map((s) => {
-            const trafficLights = { green: 0, yellow: 0, red: 0 };
-            for (const row of s.projectStatuses) {
-              if (row.status === "green") trafficLights.green += 1;
-              if (row.status === "yellow") trafficLights.yellow += 1;
-              if (row.status === "red") trafficLights.red += 1;
-            }
-
-            const productIds = new Set<string>();
-            for (const row of s.projectStatuses) productIds.add(row.projectId);
-            for (const row of s.stageStatuses) productIds.add(row.projectId);
-            // activity-first-class: activity-parented rows carry a null product
-            // FK and contribute no product id to the distinct-product count.
-            for (const row of s.items)
-              if (row.projectId) productIds.add(row.projectId);
-            for (const row of s.risks)
-              if (row.projectId) productIds.add(row.projectId);
-            for (const row of s.decisions)
-              if (row.productId) productIds.add(row.productId);
-
-            const editDates = [
-              s.updatedAt,
-              ...s.items.map((row) => row.updatedAt),
-              ...s.risks.map((row) => row.updatedAt),
-              ...s.decisions.map((row) => row.updatedAt),
-              ...s.projectStatuses.map((row) => row.updatedAt),
-              ...s.stageStatuses.map((row) => row.updatedAt),
-            ];
-            const lastEditAt = editDates.reduce(
-              (latest, date) => (date > latest ? date : latest),
-              editDates[0],
-            );
-
-            return {
-              sectionId: s.id,
-              reportId: s.report.id,
-              periodStart: s.report.periodStart,
-              periodEnd: s.report.periodEnd,
-              reportStatus: s.report.status,
-              sectionStatus: s.status,
-              archived: s.report.archived,
-              submittedAt: s.submittedAt,
-              publishedAt: s.report.publishedAt,
-              createdAt: s.createdAt,
-              updatedAt: s.updatedAt,
-              lastEditAt,
-              itemCount: s.items.length,
-              riskCount: s.risks.length,
-              decisionCount: s.decisions.length,
-              priorityCount: s.items.filter((i) => i.priorityRank != null)
-                .length,
-              productCount: productIds.size,
-              trafficLights,
-            };
-          }),
-        );
+        return deps.reportSectionsService.myHistory(ctx.session.userId);
       }),
 
       compiledHistory: anyRoleProcedure
@@ -654,131 +557,10 @@ export function createAppRouter(deps: RouterDeps) {
         .query(async ({ input, ctx }) => {
           try {
             const includeArchive = input?.includeArchive ?? false;
-            const sectionScope: Prisma.ReportSectionWhereInput =
-              ctx.session.role === "lead"
-                ? { authorId: ctx.session.userId }
-                : groupScopeFilter(ctx.session, "reportSection");
-            const visibleSectionWhere: Prisma.ReportWhereInput = {
-              sections: { some: sectionScope },
-            };
-            // viewer-live-status (task 3.1 / Decision 5): the viewer read gate is
-            // published-or-current, so a reopened period (legacy
-            // `status="published"`, `periodStatus="reopened"`) would otherwise be
-            // listed in the viewer's History as a gate-rejected broken link.
-            // Narrow the VIEWER History to `periodStatus="published"` only. This
-            // MUST be viewer-only — `compiledHistory` is a shared
-            // `anyRoleProcedure`, and an unconditional filter would silently drop
-            // reopened periods from head/lead History (a non-goal). Applied to
-            // BOTH `listWhere` and `archiveCountWhere` so the list and the
-            // archive count agree for the viewer.
-            const viewerPeriodFilter: Prisma.ReportWhereInput =
-              ctx.session.role === "viewer"
-                ? { periodStatus: "published" as const }
-                : {};
-            const listWhere: Prisma.ReportWhereInput = {
-              status: "published" as const,
-              ...(includeArchive ? {} : { archived: false }),
-              ...viewerPeriodFilter,
-              ...visibleSectionWhere,
-            };
-            const archiveCountWhere: Prisma.ReportWhereInput = {
-              status: "published" as const,
-              archived: true,
-              ...viewerPeriodFilter,
-              ...visibleSectionWhere,
-            };
-
-            const [reports, archiveCount] = await Promise.all([
-              deps.prisma.report.findMany({
-                where: listWhere,
-                orderBy: { periodStart: "desc" },
-                take: 100,
-                include: {
-                  publishedBy: { select: { name: true } },
-                  sections: {
-                    where: sectionScope,
-                    select: {
-                      items: {
-                        select: { projectId: true, priorityRank: true },
-                      },
-                      risks: { select: { projectId: true } },
-                      decisions: { select: { productId: true } },
-                      projectStatuses: {
-                        select: { projectId: true, status: true },
-                      },
-                      stageStatuses: { select: { projectId: true } },
-                    },
-                  },
-                },
-              }),
-              deps.prisma.report.count({ where: archiveCountWhere }),
-            ]);
-
-            const entries = reports
-              .filter((report) => report.sections.length > 0)
-              .map((report) => {
-                const trafficLights = { green: 0, yellow: 0, red: 0 };
-                const productIds = new Set<string>();
-                // eslint-disable-next-line no-restricted-syntax -- Compiled-history folds counters and product ids in one scoped pass; split reductions would rescan nested rows and obscure the shared filter.
-                let itemCount = 0;
-                // eslint-disable-next-line no-restricted-syntax -- Compiled-history folds counters and product ids in one scoped pass; split reductions would rescan nested rows and obscure the shared filter.
-                let riskCount = 0;
-                // eslint-disable-next-line no-restricted-syntax -- Compiled-history folds counters and product ids in one scoped pass; split reductions would rescan nested rows and obscure the shared filter.
-                let decisionCount = 0;
-                // eslint-disable-next-line no-restricted-syntax -- Compiled-history folds counters and product ids in one scoped pass; split reductions would rescan nested rows and obscure the shared filter.
-                let priorityCount = 0;
-
-                for (const section of report.sections) {
-                  itemCount += section.items.length;
-                  riskCount += section.risks.length;
-                  decisionCount += section.decisions.length;
-                  priorityCount += section.items.filter(
-                    (i) => i.priorityRank != null,
-                  ).length;
-
-                  for (const row of section.projectStatuses) {
-                    productIds.add(row.projectId);
-                    if (row.status === "green") trafficLights.green += 1;
-                    if (row.status === "yellow") trafficLights.yellow += 1;
-                    if (row.status === "red") trafficLights.red += 1;
-                  }
-                  for (const row of section.stageStatuses) {
-                    productIds.add(row.projectId);
-                  }
-                  // activity-first-class: activity-parented rows carry a null
-                  // product FK and contribute no product id here.
-                  for (const row of section.items) {
-                    if (row.projectId) productIds.add(row.projectId);
-                  }
-                  for (const row of section.risks) {
-                    if (row.projectId) productIds.add(row.projectId);
-                  }
-                  for (const row of section.decisions) {
-                    if (row.productId) productIds.add(row.productId);
-                  }
-                }
-
-                return {
-                  reportId: report.id,
-                  periodStart: report.periodStart,
-                  periodEnd: report.periodEnd,
-                  publishedAt: report.publishedAt,
-                  archived: report.archived,
-                  publishedByName: report.publishedBy?.name ?? "Unknown",
-                  trafficLights,
-                  itemCount,
-                  riskCount,
-                  decisionCount,
-                  priorityCount,
-                  sectionCount: report.sections.length,
-                  productCount: productIds.size,
-                };
-              });
-
-            return compiledHistoryResultSchema.parse({
-              entries,
-              archiveCount,
-            });
+            return await deps.weeklyReportService.compiledHistory(
+              ctx.session,
+              includeArchive,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -795,47 +577,7 @@ export function createAppRouter(deps: RouterDeps) {
       // `compiledHistory`; a lead resolves their own authored sections.
       latestForViewer: anyRoleProcedure.query(async ({ ctx }) => {
         try {
-          const sectionScope: Prisma.ReportSectionWhereInput =
-            ctx.session.role === "lead"
-              ? { authorId: ctx.session.userId }
-              : groupScopeFilter(ctx.session, "reportSection");
-
-          // Decision 0: one source of truth, through the service (the router
-          // has no repository handle).
-          const currentEditableId =
-            await deps.weeklyReportService.getCurrentEditableId();
-
-          if (currentEditableId) {
-            const currentVisible = await deps.prisma.report.findFirst({
-              where: {
-                id: currentEditableId,
-                sections: { some: sectionScope },
-              },
-              select: { id: true },
-            });
-            if (currentVisible) {
-              return latestForViewerReportSchema.parse({
-                reportId: currentVisible.id,
-              });
-            }
-          }
-
-          // Fallback: newest viewer-visible published report (group-scoped).
-          // `id desc` is a deterministic tiebreak so two published reports
-          // sharing a `periodStart` resolve to a stable id (same rationale as
-          // getCurrentEditableId — Decision 3).
-          const published = await deps.prisma.report.findFirst({
-            where: {
-              periodStatus: "published" as const,
-              sections: { some: sectionScope },
-            },
-            orderBy: [{ periodStart: "desc" }, { id: "desc" }],
-            select: { id: true },
-          });
-
-          return latestForViewerReportSchema.parse({
-            reportId: published?.id ?? null,
-          });
+          return await deps.weeklyReportService.latestForViewer(ctx.session);
         } catch (error) {
           throw mapDomainError(error);
         }
