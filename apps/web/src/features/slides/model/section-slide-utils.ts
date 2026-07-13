@@ -869,10 +869,12 @@ export function crossAuthorContentToSlideForeign(
   const decisions: { projectId: string; text: string }[] = [];
   for (const ca of rows) {
     for (const item of ca.items) {
+      // Items carry progress only — alarms live on risks (rework-item-status-model),
+      // so a foreign item is never blocked.
       const row = {
         projectId: item.projectId,
         text: item.text,
-        blocked: item.workflowStatus === "blocked",
+        blocked: false,
       };
       if (item.type === "current") currentItems.push(row);
       else if (item.type === "next") nextItems.push(row);

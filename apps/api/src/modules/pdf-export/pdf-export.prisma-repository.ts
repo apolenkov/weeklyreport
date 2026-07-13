@@ -65,6 +65,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
         // callers (workers, scripts) so the column stays NOT NULL.
         requestedBy: requestedBy ?? "system",
         filePath: job.artifactUrl,
+        checksum: job.checksum,
         error: null,
       },
     });
@@ -90,6 +91,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
       data: {
         status: (pdfStatusToDb[job.status] ?? "pending") as "pending",
         filePath: job.artifactUrl,
+        checksum: job.checksum,
         error: null,
       },
     });
@@ -111,6 +113,7 @@ function toExportJob(row: {
   reportId: string;
   status: string;
   filePath: string | null;
+  checksum: string | null;
   error: string | null;
   requestedBy: string;
   createdAt: Date;
@@ -123,7 +126,7 @@ function toExportJob(row: {
       status: dbStatusToDomain[row.status] ?? "queued",
       requestedAt: row.createdAt,
       completedAt: row.status === "completed" ? row.updatedAt : null,
-      checksum: null,
+      checksum: row.checksum,
       templateVersion: "phase-2-pdf-v1",
       artifactUrl: row.filePath,
     }),

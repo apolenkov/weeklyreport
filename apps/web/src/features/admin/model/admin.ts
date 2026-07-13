@@ -40,7 +40,7 @@ import type {
   ReportingGroup,
   ReportPeriod,
 } from "@customreport/shared";
-import { DAYS_PER_WEEK, MS_PER_DAY, STAGE_NAMES } from "@customreport/shared";
+import { STAGE_NAMES } from "@customreport/shared";
 
 import { formatPeriodLabel } from "../../../lib/format-date";
 import type {
@@ -90,26 +90,6 @@ export type {
 
 function emptyStageGrid(): StageAssignment[] {
   return STAGE_NAMES.map((stage) => ({ stage, assigneeId: null }));
-}
-
-// ISO-8601 weeks are Thursday-anchored: shifting a date to "this week's
-// Thursday" needs a Sun=7 day number and a +4 offset from Monday.
-const ISO_WEEK_SUNDAY_AS_SEVEN = DAYS_PER_WEEK;
-const ISO_WEEK_THURSDAY_OFFSET = 4;
-
-/** Returns ISO week label like "Week 17" given a Date in the UTC range. */
-function isoWeekLabel(date: Date): string {
-  // ISO week number per ISO-8601: thursday-anchored.
-  const d = new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  );
-  const dayNum = d.getUTCDay() || ISO_WEEK_SUNDAY_AS_SEVEN;
-  d.setUTCDate(d.getUTCDate() + ISO_WEEK_THURSDAY_OFFSET - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const week = Math.ceil(
-    ((d.getTime() - yearStart.getTime()) / MS_PER_DAY + 1) / DAYS_PER_WEEK,
-  );
-  return `Week ${week}`;
 }
 
 // "YYYY-MM-DD" — length of an ISO date-only prefix.
@@ -297,5 +277,4 @@ export const __testing = {
   mapProject,
   mapUser,
   mapGroup,
-  isoWeekLabel,
 };

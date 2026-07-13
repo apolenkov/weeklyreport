@@ -24,6 +24,7 @@ import { resolve } from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { config as loadEnv } from "dotenv";
+import { DateTime } from "luxon";
 import pg from "pg";
 
 import { assertNonProdDestructive } from "./_destructive-guard.js";
@@ -40,12 +41,22 @@ const DATABASE_URL: string = (() => {
   return raw;
 })();
 
+// Kept in sync BY HAND with PolicyApplicatorService.computeFireAt in
+// apps/api/src/modules/reminders/policy-applicator.service.ts: the prisma
+// toolchain's isolated tsconfig.prisma.json cannot import apps/api or
+// packages/shared (same constraint as prisma/seed-constants.ts), so the zone-
+// aware math is duplicated here. Both shift the UTC deadline into the policy's
+// zone, add the exact-duration offset, and convert back to UTC.
 function computeFireAt(
   deadline: Date,
   offsetMinutes: number,
-  _tz: string, // timezone-aware scheduling uses minute offset from UTC deadline
+  tz: string,
 ): Date {
-  return new Date(deadline.getTime() + offsetMinutes * 60 * 1000);
+  return DateTime.fromJSDate(deadline, { zone: "utc" })
+    .setZone(tz)
+    .plus({ minutes: offsetMinutes })
+    .toUTC()
+    .toJSDate();
 }
 
 function policyAppliesTo(
