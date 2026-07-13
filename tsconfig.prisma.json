@@ -7,7 +7,9 @@
     "skipLibCheck": true,
     "noEmit": true,
     "paths": {
-      "luxon": ["./apps/api/node_modules/luxon"]
+      // luxon ships no bundled types; point the typecheck at its @types
+      // declarations. Runtime resolution is tsx's job (it ignores these paths).
+      "luxon": ["./apps/api/node_modules/@types/luxon"]
     }
   },
   "include": ["prisma/**/*.ts"]

@@ -527,6 +527,7 @@ model PdfExportJob {
   reportId    String
   status      PdfExportStatus @default(pending)
   filePath    String?
+  checksum    String?
   error       String?
   requestedBy String
   createdAt   DateTime        @default(now())

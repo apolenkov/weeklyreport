@@ -264,6 +264,7 @@ CREATE TABLE "PdfExportJob" (
     "reportId" TEXT NOT NULL,
     "status" "PdfExportStatus" NOT NULL DEFAULT 'pending',
     "filePath" TEXT,
+    "checksum" TEXT,
     "error" TEXT,
     "requestedBy" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

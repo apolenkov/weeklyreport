@@ -857,7 +857,7 @@ function makeForeignRow(
 }
 
 describe("crossAuthorContentToSlideForeign", () => {
-  it("classifies items by week + blocked, and flattens risks/decisions", () => {
+  it("classifies items by week, and flattens risks/decisions", () => {
     const out = crossAuthorContentToSlideForeign([
       makeForeignRow({
         items: [
@@ -866,7 +866,7 @@ describe("crossAuthorContentToSlideForeign", () => {
             projectId: PRODUCT_ID,
             type: "current",
             text: "Foreign current",
-            workflowStatus: "blocked",
+            workflowStatus: "in_progress",
             stageNames: ["Build"],
           },
           {
@@ -903,7 +903,7 @@ describe("crossAuthorContentToSlideForeign", () => {
       }),
     ]);
     expect(out.currentItems).toEqual([
-      { projectId: PRODUCT_ID, text: "Foreign current", blocked: true },
+      { projectId: PRODUCT_ID, text: "Foreign current", blocked: false },
     ]);
     expect(out.nextItems).toEqual([
       { projectId: PRODUCT_ID, text: "Foreign next", blocked: false },

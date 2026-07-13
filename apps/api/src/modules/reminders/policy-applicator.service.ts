@@ -11,8 +11,9 @@ import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
  * Lifecycle:
  *   - admin.savePeriod creates a Report row → applyToPeriod(report) is
  *     called AFTER the create transaction commits
- *   - prisma/backfill-policy-rules.ts iterates over open periods and
- *     calls applyToPeriod for each, idempotently
+ *   - prisma/backfill-policy-rules.ts iterates over open periods with its
+ *     own inline upsert (it cannot import this service — isolated prisma
+ *     tsconfig) applying the same validity gate and fireAt math
  *   - the @Cron scheduler keeps querying ReminderRule directly
  *
  * Validity gate: a policy applies to a period only if
@@ -32,11 +33,16 @@ export class PolicyApplicatorService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * DST-correct fireAt math. The deadline is stored as UTC; we shift it
-   * into the policy's TZ first so adding `offsetMinutes` (almost always
-   * negative, e.g. -1440 for T-24h) lands in the same wall-clock window
-   * the lead expects in their local calendar. Then back to UTC for the
-   * DB column.
+   * fireAt math. The deadline is stored as UTC; we shift it into the policy's
+   * zone, add `offsetMinutes` (almost always negative, e.g. -1440 for T-24h)
+   * as an exact-duration span on that zoned instant, then convert back to UTC
+   * for the DB column. This is precise-minute arithmetic, not calendar
+   * wall-clock preservation: an offset that straddles a DST transition lands
+   * `offsetMinutes` of real elapsed time from the deadline, so the local
+   * wall-clock hour can shift by the DST delta.
+   *
+   * Kept in sync BY HAND with prisma/backfill-policy-rules.ts's computeFireAt:
+   * the prisma toolchain's isolated tsconfig cannot import this service.
    */
   computeFireAt(deadline: Date, offsetMinutes: number, tz: string): Date {
     return DateTime.fromJSDate(deadline, { zone: "utc" })

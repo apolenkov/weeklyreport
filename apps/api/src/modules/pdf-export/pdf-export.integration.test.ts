@@ -78,20 +78,22 @@ describe("PdfExportPrismaRepository (integration)", () => {
       artifactUrl: null,
     });
 
-    // Update the job to completed
+    // Update the job to completed, carrying a checksum.
+    const completedChecksum = "sha256:deadbeef";
     const updated = await repo.saveExportJob({
       jobId: TEST_IDS.pdfJob2,
       reportId: testData.report.id,
       status: "completed" as const,
       requestedAt: new Date(),
       completedAt: new Date(),
-      checksum: null,
+      checksum: completedChecksum,
       templateVersion: "phase-2-pdf-v1",
       artifactUrl: "/exports/report-2026-04-07.pdf",
     });
 
     expect(updated.status).toBe("completed");
     expect(updated.artifactUrl).toBe("/exports/report-2026-04-07.pdf");
+    expect(updated.checksum).toBe(completedChecksum);
 
     // Verify in database
     const dbJob = await prisma.pdfExportJob.findUnique({
@@ -101,6 +103,11 @@ describe("PdfExportPrismaRepository (integration)", () => {
     expect(expectDefined(dbJob).filePath).toBe(
       "/exports/report-2026-04-07.pdf",
     );
+    expect(expectDefined(dbJob).checksum).toBe(completedChecksum);
+
+    // The checksum round-trips through a fresh read, not just the write path.
+    const reread = await repo.getExportJob(TEST_IDS.pdfJob2);
+    expect(expectDefined(reread).checksum).toBe(completedChecksum);
   });
 });
 

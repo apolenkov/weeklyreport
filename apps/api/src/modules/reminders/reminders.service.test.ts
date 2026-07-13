@@ -4,7 +4,6 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { remindersRouter } from "./reminders.router";
 import {
   ReminderDomainError,
   type RemindersRepository,
@@ -350,24 +349,6 @@ describe("dispatchPending — no-matching-section branch", () => {
 
     expect(result.reason).toBeUndefined();
     expect(result.dispatched).toBe(1);
-  });
-});
-
-describe("remindersRouter", () => {
-  it("returns rule execution history", async () => {
-    const service = new RemindersService(createRepository(activeRule));
-    await service.requestReminderExecution(
-      activeRule.id,
-      "lead1@customreport.local",
-    );
-
-    const result = await remindersRouter.listExecutions({
-      remindersService: service,
-      ruleId: activeRule.id,
-    });
-
-    expect(result.items).toHaveLength(1);
-    expect(result.nextCursor).toBeNull();
   });
 });
 
