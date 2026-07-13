@@ -7,8 +7,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import type { KanbanItem } from "../model/mock-data";
 import type { ItemColumn } from "../model/next-week-columns";
+import type { KanbanItem } from "../model/types";
 import { ActivityLanesBlock } from "./activity-lanes-block";
 
 function laneItem(id: string): KanbanItem {

@@ -8,7 +8,7 @@ import {
   Server,
 } from "lucide-react";
 
-import type { StageStatus } from "./mock-data";
+import type { StageStatus } from "./types";
 
 // align-pipeline-arrows (D1): shared height token — chip button and the
 // arrow wrapper in sdlc-pipeline.tsx both use this value so their midlines

@@ -36,142 +36,37 @@ import {
   isoWeekNumber as sharedIsoWeekNumber,
 } from "../../../lib/format-date";
 import { deriveEffectiveStageStatus } from "../../../lib/stage-status";
-import { deriveItemStatus, type ItemStatus } from "./item-status";
+import { deriveItemStatus } from "./item-status";
 import { riskCoversStage } from "./stage-tags";
-import { type StageStatus, trafficToStageStatus } from "./traffic-light";
+import { trafficToStageStatus } from "./traffic-light";
+import type {
+  DecisionEntry,
+  KanbanItem,
+  PriorityEntry,
+  Product,
+  ReportPeriod,
+  RiskEntry,
+  StageAssignment,
+  StageOwnership,
+} from "./types";
 
-// ---- Self-contained re-declarations of presentation types ----
+// ---- Lead* aliases ----
 //
-// Mirrors the sibling `./mock-data.ts` so consumers can depend on this barrel
-// rather than importing a value from `mock-data.ts`.
+// Aliases of the canonical read-model types in ./types, with lead-mapper
+// -specific tightenings (e.g. required fields the mapper always populates).
 
-// unassigned-stage-reporting-exclusion: the "unassigned" category is gone. A
-// stage is either the lead's own ("mine") or assigned to another lead on the
-// product ("locked", read-only). A stage with NO assignment is excluded from
-// the grid entirely, so it never reaches a chip.
-export type LeadStageOwnership = "mine" | "locked";
-
-export interface LeadStageAssignment {
-  stageName: string;
-  status: StageStatus;
-  ownership: LeadStageOwnership;
-  assignee: string | null;
-  tooltip?: string;
-  /**
-   * fix-report-surface-integrity: true when an OWN non-empty risk
-   * EXPLICITLY names this stage (strict — `stageIds` non-empty and matching). A
-   * covers-all (`stageIds: []`) or legacy stage-less risk does NOT set it. Feeds
-   * own-input completeness so a deliberately risk-staged stage counts, while the
-   * raw `status` stays untouched for the chip's risk-covered-vs-status distinction.
-   */
-  coveredByOwnRisk?: boolean;
-}
-
-export interface LeadProduct {
-  id: string;
-  name: string;
-  overallStatus: StageStatus;
-  stages: LeadStageAssignment[];
-  riskSummary?: string;
-  riskCount?: number;
-}
-
-export interface LeadKanbanItem {
-  id: string;
-  productId: string;
-  productName: string;
-  /**
-   * activity-first-class: parent activity id (XOR with productId). Set only for
-   * activity-parented rows, which render under the activity card, never a
-   * product column. `productId` is empty for these rows.
-   */
-  activityId?: string | null;
-  /** Display name of the parent activity when `activityId` is set. */
-  activityName?: string;
-  /** @deprecated Use stageIds. Kept for display back-compat via splitStageNames. */
-  stageName?: string;
-  /** Stage selection as an array of stage names. */
-  stageIds?: string[];
-  status: ItemStatus;
-  text: string;
-  author: string;
-  /** Priority rank carried through so the edit dialog can bind it (null = unranked). */
+export type LeadStageOwnership = StageOwnership;
+export type LeadStageAssignment = StageAssignment;
+export type LeadProduct = Product;
+/** Mapper guarantees: priorityRank and pausedReason are always populated (null = absent). */
+export type LeadKanbanItem = KanbanItem & {
   priorityRank: number | null;
-  /** Mirrors `KanbanItem.pausedReason` (model/mock-data.ts): set only on a paused row. */
   pausedReason: string | null;
-}
-
-export interface LeadRiskEntry {
-  id: string;
-  productId: string;
-  productName: string;
-  /** Parent activity id (XOR with productId); `productId` is empty when set. */
-  activityId?: string | null;
-  /** Display name of the parent activity when `activityId` is set. */
-  activityName?: string;
-  /** @deprecated Use stageIds. Kept for display back-compat via splitStageNames. */
-  stageName?: string;
-  /** Stage selection as an array of stage names. */
-  stageIds?: string[];
-  severity: "at-risk" | "blocked";
-  /** The user-controlled "what is the risk" text (= raw `risk` field). */
-  text: string;
-  /** Schema-required impact narrative; surfaced in the edit dialog. */
-  impact: string;
-  /** Schema-required mitigation narrative; surfaced in the edit dialog. */
-  mitigation: string;
-}
-
-export interface LeadDecisionEntry {
-  id: string;
-  productId: string;
-  productName: string;
-  /** Parent activity id (XOR with productId); `productId` is empty when set. */
-  activityId?: string | null;
-  /** Display name of the parent activity when `activityId` is set. */
-  activityName?: string;
-  text: string;
-  /** Schema-required owner (responsible person). */
-  owner: string;
-  /** Schema-required impact narrative. */
-  impact: string;
-  /** Optional deadline (ISO yyyy-mm-dd string) — null when not set. */
-  deadline: string | null;
-  /** @deprecated Use stageIds. Kept for display back-compat via splitStageNames. */
-  stageName?: string;
-  /** Stage selection as an array of stage names. */
-  stageIds?: string[];
-}
-
-export interface LeadPriorityEntry {
-  rank: number;
-  text: string;
-  /** @deprecated Use stageIds. Kept for display back-compat via splitStageNames. */
-  stageName?: string;
-  /** Stage selection as an array of stage names. */
-  stageIds?: string[];
-  /** Product this priority is scoped to. */
-  productId?: string;
-  productName?: string;
-}
-
-export interface LeadReportPeriod {
-  id: string;
-  /**
-   * The source section id for this period (the lead's section within that
-   * historical report). Required by `leadForm.fillFrom` which routes by
-   * section, not report. Sourced from `MyHistoryEntry.sectionId`.
-   */
-  sourceSectionId: string;
-  weekLabel: string;
-  dateRange: string;
-  isCurrent: boolean;
-  isSubmitted: boolean;
-  archived?: boolean;
-  itemCount?: number;
-  riskCount?: number;
-  productCount?: number;
-}
+};
+export type LeadRiskEntry = RiskEntry;
+export type LeadDecisionEntry = DecisionEntry;
+export type LeadPriorityEntry = PriorityEntry;
+export type LeadReportPeriod = ReportPeriod;
 
 export interface LeadCurrentUser {
   name: string;

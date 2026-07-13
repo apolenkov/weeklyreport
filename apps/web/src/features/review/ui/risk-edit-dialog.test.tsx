@@ -14,7 +14,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Product, RiskEntry } from "../../report-sections/model/mock-data";
+import type { Product, RiskEntry } from "../../report-sections/model/types";
 import { RiskEditDialog } from "./risk-edit-dialog";
 
 const products: Product[] = [

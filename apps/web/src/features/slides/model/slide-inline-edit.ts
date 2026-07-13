@@ -11,7 +11,7 @@ import type {
   KanbanItem,
   Product,
   RiskEntry,
-} from "../../report-sections/model/mock-data";
+} from "../../report-sections/model/types";
 import type { GridRowEditableRef } from "./slide-grid-rows";
 
 export type SlideInlineEditRecord =

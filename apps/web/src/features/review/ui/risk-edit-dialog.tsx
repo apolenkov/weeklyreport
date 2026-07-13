@@ -5,12 +5,12 @@ import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
 import { RecordDialogFooter } from "../../../shared/ui/record-dialog-footer";
-import type { Product, RiskEntry } from "../../report-sections/model/mock-data";
 import { resolveRecordParent } from "../../report-sections/model/record-parent";
 import {
   canonicalStageIds,
   canonicalStageName,
 } from "../../report-sections/model/stage-tags";
+import type { Product, RiskEntry } from "../../report-sections/model/types";
 import {
   type ParentActivityOption,
   ParentPicker,

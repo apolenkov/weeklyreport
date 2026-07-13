@@ -2,12 +2,12 @@
 
 import { useCallback, useRef } from "react";
 
+import { riskCoversStage } from "../features/report-sections/model/stage-tags";
 import type {
   Product,
   RiskEntry,
   StageStatus,
-} from "../features/report-sections/model/mock-data";
-import { riskCoversStage } from "../features/report-sections/model/stage-tags";
+} from "../features/report-sections/model/types";
 
 // ---------------------------------------------------------------------------
 // Status <-> Risk coupling (pure, render-time derivation)

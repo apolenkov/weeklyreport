@@ -8,7 +8,7 @@ import {
   type ActivityBucket,
 } from "../../../lib/activity-buckets";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import type { KanbanItem, Product, RiskEntry } from "../model/mock-data";
+import type { KanbanItem, Product, RiskEntry } from "../model/types";
 import { ItemCard } from "./item-card";
 import { ItemEditDialog } from "./item-edit-dialog";
 

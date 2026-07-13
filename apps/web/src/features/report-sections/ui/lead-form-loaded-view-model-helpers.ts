@@ -16,7 +16,7 @@ import type {
   Product,
   ReportPeriod,
   RiskEntry,
-} from "../model/mock-data";
+} from "../model/types";
 import type { UnifiedActivityEntry } from "./unified-activity-section";
 
 type SectionItem = ReportSectionReadModel["items"][number];

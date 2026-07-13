@@ -19,7 +19,7 @@ import {
 } from "../../../lib/session-provider";
 import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
-import type { KanbanItem } from "../../report-sections/model/mock-data";
+import type { KanbanItem } from "../../report-sections/model/types";
 import { LeadSlidesClient } from "./lead-slides-client";
 
 const SECTION_ID = "11111111-1111-4111-8111-111111111111";

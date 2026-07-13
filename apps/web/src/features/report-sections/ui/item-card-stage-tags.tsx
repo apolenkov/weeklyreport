@@ -1,5 +1,5 @@
-import type { KanbanItem } from "../model/mock-data";
 import { canonicalStageName, splitStageNames } from "../model/stage-tags";
+import type { KanbanItem } from "../model/types";
 
 export interface ItemCardStageTags {
   stageTags: string[];

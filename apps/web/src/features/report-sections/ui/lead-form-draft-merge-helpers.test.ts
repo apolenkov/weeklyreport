@@ -5,7 +5,7 @@ import type {
   KanbanItem,
   Product,
   RiskEntry,
-} from "../model/mock-data";
+} from "../model/types";
 import {
   mergeActivityStatusDraft,
   mergeDecisionDraft,

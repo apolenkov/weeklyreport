@@ -3,7 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useId, useMemo } from "react";
 
-import type { ReportPeriod } from "../../report-sections/model/mock-data";
+import type { ReportPeriod } from "../../report-sections/model/types";
 import { usePeriodListboxNav } from "../model/use-period-listbox-nav";
 import {
   ArchivedBadge,

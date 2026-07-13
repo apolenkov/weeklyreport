@@ -7,18 +7,18 @@ import { deriveItemAlarmFromRisks } from "../../../lib/item-alarm";
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
 import { RecordDialogFooter } from "../../../shared/ui/record-dialog-footer";
 import { RecordStageStep } from "../../period/ui/record-stage-step";
-import type {
-  ItemStatus,
-  KanbanItem,
-  Product,
-  RiskEntry,
-} from "../model/mock-data";
 import { resolveRecordParent } from "../model/record-parent";
 import {
   computeEffectiveStageIds,
   isZeroOwnedStageDeadEnd,
 } from "../model/stage-ownership";
 import { canonicalStageIds } from "../model/stage-tags";
+import type {
+  ItemStatus,
+  KanbanItem,
+  Product,
+  RiskEntry,
+} from "../model/types";
 import {
   type ParentActivityOption,
   ParentPicker,

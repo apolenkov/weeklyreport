@@ -12,7 +12,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { KanbanItem, Product, RiskEntry } from "../model/mock-data";
+import type { KanbanItem, Product, RiskEntry } from "../model/types";
 import { ItemEditDialog } from "./item-edit-dialog";
 
 const products: Product[] = [

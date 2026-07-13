@@ -7,15 +7,15 @@ import { useEditableListDialog } from "../../../hooks/use-editable-list-dialog";
 import { usePauseReason } from "../../../hooks/use-pause-reason";
 import { useScrollFade } from "../../../hooks/use-scroll-fade";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import type {
-  KanbanItem,
-  Product,
-  RiskEntry,
-} from "../../report-sections/model/mock-data";
 import {
   isBoardEmpty,
   splitItemBoard,
 } from "../../report-sections/model/next-week-columns";
+import type {
+  KanbanItem,
+  Product,
+  RiskEntry,
+} from "../../report-sections/model/types";
 import { ActivityLanesBlock } from "../../report-sections/ui/activity-lanes-block";
 import { BoardColumnHeader } from "../../report-sections/ui/board-column-header";
 import { BoardEmptyState } from "../../report-sections/ui/board-empty-state";

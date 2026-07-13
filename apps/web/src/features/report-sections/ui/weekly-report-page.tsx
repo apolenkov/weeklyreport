@@ -57,8 +57,8 @@ import {
   SubmissionFilterToggle,
 } from "../../review/ui/submission-filter";
 import { formatDateRange, isoWeekNumber } from "../model/lead-history";
-import type { ReportPeriod } from "../model/mock-data";
 import { reportHasContent } from "../model/report-content";
+import type { ReportPeriod } from "../model/types";
 import {
   type LeadOverviewRow,
   mapWeeklyReport,

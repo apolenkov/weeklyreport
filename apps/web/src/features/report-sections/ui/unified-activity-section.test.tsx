@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { KanbanItem } from "../model/mock-data";
+import type { KanbanItem } from "../model/types";
 import {
   type UnifiedActivityEntry,
   UnifiedActivitySection,

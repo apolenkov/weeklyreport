@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type {
   Product,
   StageStatus,
-} from "../features/report-sections/model/mock-data";
+} from "../features/report-sections/model/types";
 import { expectDefined } from "../test-utils/expect-defined.js";
 import { useStatusRiskSync } from "./use-status-risk";
 
