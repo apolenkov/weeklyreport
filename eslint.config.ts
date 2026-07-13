@@ -945,7 +945,6 @@ export default defineConfig([
       "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // tRPC instance + all procedure builders share the private `t` binding
       "apps/api/src/modules/admin/period-admin.service.ts", // one Admin period-lifecycle service class
       "apps/api/src/modules/report-sections/infrastructure/report-sections.prisma-repository.ts", // one Prisma persistence layer; include/type/mapper/class coupled
-      "apps/web/src/features/admin/ui/groups-tab.tsx", // one CRUD tab; dialogs share one state machine
       "apps/web/src/features/admin/ui/products-tab.tsx", // one CRUD screen; private icon helpers only
       "apps/web/src/features/review/ui/risk-edit-dialog.tsx", // one dialog: state + validation + render
       "apps/web/src/features/report-sections/ui/item-edit-dialog.tsx", // one create/edit dialog; shell + content coupled
