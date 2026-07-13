@@ -6,14 +6,15 @@
 # internal CA (self-signed cert chain).
 #
 # Routes:
-#   /trpc/*, /auth/*, /health/*, /admin/queues*, /pdfs/* -> api:3001
+#   /api/web-vitals*, /api/client-logs*, /trpc/*, /auth/*, /health/*,
+#   /admin/queues*, /pdfs/*                                        -> api:3001
+#   (other /api/* stay on web:3000 — Next.js route handlers own them)
 #   (/metrics is deliberately NOT routed at the public edge — see @api below)
 #   /                                                              -> web:3000
 #
 # WebSocket upgrade for tRPC subscriptions: caddy v2 forwards Upgrade headers
 # automatically when the client requests it; no extra directive needed.
 ################################################################################
-
 {
 	# Let's Encrypt account email (set via env in docker-compose.prod.yml).
 	email {$CADDY_ACME_EMAIL}
@@ -31,7 +32,10 @@
 	# /metrics is intentionally absent: it must not be reachable from the public
 	# edge. Prometheus scrapes it over the internal compose network (api:3001).
 	@api {
-		path /trpc /trpc/* /auth /auth/* /health /health/* /admin/queues /admin/queues/* /pdfs /pdfs/*
+		# Only the API-OWNED /api prefixes route here: a blanket /api/* would
+	# steal Next.js-only route handlers (e.g. /api/revalidate-org runs
+	# revalidatePath inside the web container and has no backend twin).
+	path /api/web-vitals /api/web-vitals/* /api/client-logs /api/client-logs/* /trpc /trpc/* /auth /auth/* /health /health/* /admin/queues /admin/queues/* /pdfs /pdfs/*
 	}
 	handle @api {
 		reverse_proxy api:3001 {
