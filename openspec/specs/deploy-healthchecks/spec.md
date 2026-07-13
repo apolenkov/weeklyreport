@@ -54,4 +54,3 @@ during its own startup window.
   `start_period`
 - **THEN** the healthcheck does not flip the container to `unhealthy`
   before that window elapses
-  </content>
