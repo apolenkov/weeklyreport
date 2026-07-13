@@ -3,7 +3,7 @@
  */
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -91,6 +91,69 @@ describe("DevRoleSwitcher — data-reset controls for every dev role", () => {
     ).toBeInTheDocument();
     // The role picker itself still renders — only the Data reset block is gated.
     expect(screen.getByTestId("dev-role-switcher-logout")).toBeInTheDocument();
+  });
+});
+
+describe("DevRoleSwitcher — logout honesty", () => {
+  const fetchMock = vi.fn();
+  let assignedHref: string | undefined;
+  const realLocation = window.location;
+
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER = "true";
+    useQueryMock.mockReset();
+    useMutationMock.mockReset();
+    assignedHref = undefined;
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("alert", vi.fn());
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        set href(value: string) {
+          assignedHref = value;
+        },
+      },
+    });
+  });
+
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER;
+    fetchMock.mockReset();
+    vi.unstubAllGlobals();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: realLocation,
+    });
+  });
+
+  it("does not redirect and re-enables controls when logout responds non-OK", async () => {
+    primeHooks("admin");
+    fetchMock.mockResolvedValue({ ok: false });
+    const user = userEvent.setup();
+
+    render(<DevRoleSwitcher />);
+    await user.click(screen.getByTestId("dev-role-switcher-trigger"));
+    await user.click(screen.getByTestId("dev-role-switcher-logout"));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(assignedHref).toBeUndefined();
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("dev-role-switcher-trigger"),
+      ).not.toBeDisabled(),
+    );
+  });
+
+  it("redirects home when logout responds OK", async () => {
+    primeHooks("admin");
+    fetchMock.mockResolvedValue({ ok: true });
+    const user = userEvent.setup();
+
+    render(<DevRoleSwitcher />);
+    await user.click(screen.getByTestId("dev-role-switcher-trigger"));
+    await user.click(screen.getByTestId("dev-role-switcher-logout"));
+
+    await waitFor(() => expect(assignedHref).toBe("/"));
   });
 });
 

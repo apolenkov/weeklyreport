@@ -325,7 +325,6 @@ describe("ProjectActivity (integration)", () => {
   });
 
   it("dedupes a repository create whose linkedProductIds repeats an id (no P2002)", async () => {
-    const newActivityId = "b0000000-0000-4000-a000-00000000000a";
     const created = await repo.create({
       name: "Ops rotation",
       groupId: groupA,
@@ -337,8 +336,21 @@ describe("ProjectActivity (integration)", () => {
     expect(created.linkedProducts).toEqual([
       { productId, productName: "CRM Portal" },
     ]);
-    // The id is server-generated; the seeded activityId is untouched.
-    expect(created.id).not.toBe(newActivityId);
+  });
+
+  it("dedupes a repository create whose linkedProductIds repeats a case-variant id (no P2002)", async () => {
+    const created = await repo.create({
+      name: "Ops rotation upper",
+      groupId: groupA,
+      // Postgres's `uuid` type is case-insensitive: an upper/lower pair of the
+      // same id must dedupe to one join row rather than collide on the
+      // (activityId, productId) unique constraint.
+      linkedProductIds: [productId.toUpperCase(), productId],
+      jiraAccounts: [],
+    });
+    expect(created.linkedProducts).toEqual([
+      { productId, productName: "CRM Portal" },
+    ]);
   });
 
   it("skips a repository update whose linkedProductIds repeats a new id (no P2002)", async () => {

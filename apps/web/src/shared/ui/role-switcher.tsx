@@ -29,6 +29,23 @@ export const ROLE_ORDER = [
   "viewer",
 ] as const satisfies readonly DbRole[];
 const LOGOUT_PATH = "/auth/logout";
+const LOGOUT_FAILED_MESSAGE =
+  "Logout failed — still signed in. Check the API and try again.";
+
+// Redirect only after the server confirms the logout — a non-ok response or a
+// rejected fetch leaves the visitor signed in, so run `onStay` and hold on the
+// current page instead of navigating as though logout had succeeded.
+function logoutThenRedirect(href: string, onStay: () => void): void {
+  void fetch(LOGOUT_PATH, { method: "POST", credentials: "include" })
+    .then((response) => {
+      if (response.ok) {
+        window.location.href = href;
+      } else {
+        onStay();
+      }
+    })
+    .catch(onStay);
+}
 
 export function DevRoleSwitcher() {
   const [pending, setPending] = useState(false);
@@ -42,18 +59,19 @@ export function DevRoleSwitcher() {
     staleTime: 60_000,
   });
 
+  // On a failed logout, re-enable the controls (dev-only widget: a cheap alert
+  // matches the reseed-error style) so the visitor can retry.
+  const stayLoggedIn = () => {
+    setPending(false);
+    alert(LOGOUT_FAILED_MESSAGE);
+  };
+  const logoutThen = (href: string) => logoutThenRedirect(href, stayLoggedIn);
+
   // Hooks must run unconditionally — guard the gate below.
   const wipeAndReseedMut = useMutation(
     trpc.dev.wipeAndReseed.mutationOptions({
-      onSuccess: () => {
-        // Logout then redirect to landing so the next role pick starts clean.
-        void fetch(LOGOUT_PATH, {
-          method: "POST",
-          credentials: "include",
-        }).finally(() => {
-          window.location.href = "/";
-        });
-      },
+      // Logout then redirect to landing so the next role pick starts clean.
+      onSuccess: () => logoutThen("/"),
       onError: (error) => {
         setPending(false);
         // dev-only widget: cheap alert is fine, we don't ship this in prod
@@ -72,12 +90,7 @@ export function DevRoleSwitcher() {
       role: identity.role,
       email: identity.email,
     });
-    void fetch(LOGOUT_PATH, {
-      method: "POST",
-      credentials: "include",
-    }).finally(() => {
-      window.location.href = `/auth/dev-login?${params.toString()}`;
-    });
+    logoutThen(`/auth/dev-login?${params.toString()}`);
   };
 
   const usersByRole = (usersQ.data ?? []).reduce<
@@ -93,13 +106,9 @@ export function DevRoleSwitcher() {
     { head: [], admin: [], lead: [], viewer: [] },
   );
 
-  const logout = async () => {
+  const logout = () => {
     setPending(true);
-    try {
-      await fetch(LOGOUT_PATH, { method: "POST", credentials: "include" });
-    } finally {
-      window.location.href = "/";
-    }
+    logoutThen("/");
   };
 
   const reseed = (variant: DataResetVariant) => {
@@ -192,9 +201,7 @@ export function DevRoleSwitcher() {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onSelect={() => {
-              void logout();
-            }}
+            onSelect={() => logout()}
             data-testid="dev-role-switcher-logout"
           >
             Logout

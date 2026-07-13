@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 import type { MockSettings } from "../../../shared/lib/admin-mock-data";
 import {
   CheckIcon,
   useUpdateSettingsMut,
 } from "../../../shared/ui/settings-tab-shared";
+import { useServerSeededDraft } from "../../../shared/ui/use-server-seeded-draft";
 import { TIMEZONE_OPTIONS } from "../model/timezone-options";
 
 export function RemindersSubTab({
@@ -14,8 +13,8 @@ export function RemindersSubTab({
 }: {
   readonly serverSettings: MockSettings;
 }) {
-  const [draft, setDraft] = useState<MockSettings>(serverSettings);
-  useEffect(() => setDraft(serverSettings), [serverSettings]);
+  const { draft, setDraft, markClean } =
+    useServerSeededDraft<MockSettings>(serverSettings);
   const updateSettingsMut = useUpdateSettingsMut("Reminder defaults");
 
   function handleSave() {
@@ -24,9 +23,10 @@ export function RemindersSubTab({
     // kind/audience pairing, so a default audience can no longer preselect
     // anything. This surface omits the control so it can't lie; dropping the
     // column + Zod field is a deferred follow-up.
-    updateSettingsMut.mutate({
-      defaultTimezone: draft.defaultTimezone,
-    });
+    updateSettingsMut.mutate(
+      { defaultTimezone: draft.defaultTimezone },
+      { onSuccess: () => markClean() },
+    );
   }
   const isSaving = updateSettingsMut.isPending;
 

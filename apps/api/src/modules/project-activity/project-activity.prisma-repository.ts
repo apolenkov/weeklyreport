@@ -80,9 +80,13 @@ export class ProjectActivityPrismaRepository
   }): Promise<ProjectActivity> {
     const { linkedProductIds, ...data } = input;
     // Defense-in-depth for any caller that bypasses the shared schema's
-    // uniqueness refine: dedupe before seeding the join rows so an in-payload
-    // repeat never collides with the (activityId, productId) unique constraint.
-    const uniqueProductIds = [...new Set(linkedProductIds)];
+    // uniqueness refine: dedupe case-insensitively (Postgres's `uuid` type is
+    // case-insensitive) before seeding the join rows so an in-payload repeat —
+    // byte-identical or case-variant — never collides with the
+    // (activityId, productId) unique constraint.
+    const uniqueProductIds = [
+      ...new Set(linkedProductIds.map((id) => id.toLowerCase())),
+    ];
     const row = await this.prisma.projectActivity.create({
       data: {
         ...data,
@@ -114,9 +118,13 @@ export class ProjectActivityPrismaRepository
         select: { productId: true },
       });
       const existingIds = new Set(existing.map((link) => link.productId));
-      const nextIds = new Set(linkedProductIds);
+      // Lowercase the submitted ids before reconciling against the DB's
+      // (already-lowercase) ids so a case-variant of a linked id is treated as
+      // the same link, not a remove-then-add churn or a P2002.
+      const normalizedIds = linkedProductIds.map((id) => id.toLowerCase());
+      const nextIds = new Set(normalizedIds);
       const toRemove = [...existingIds].filter((p) => !nextIds.has(p));
-      const toAdd = linkedProductIds.filter((p) => !existingIds.has(p));
+      const toAdd = normalizedIds.filter((p) => !existingIds.has(p));
       if (toRemove.length > 0) {
         await tx.projectActivityProduct.deleteMany({
           where: { activityId: id, productId: { in: toRemove } },
