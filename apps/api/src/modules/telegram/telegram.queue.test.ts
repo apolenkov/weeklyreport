@@ -38,12 +38,12 @@ class TestProcessor extends TelegramProcessor {
   ): void {
     (
       this as unknown as {
-        logFailure(
+        onJobFailed(
           job: Job<TelegramOutboundJobData> | undefined,
           error: Error,
         ): void;
       }
-    ).logFailure(job, error);
+    ).onJobFailed(job, error);
   }
 }
 
