@@ -3,8 +3,8 @@ import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
-import type { MockReminderPolicy } from "../../../shared/lib/admin-mock-data";
 import { toReminderPolicyInput } from "./admin";
+import type { MockReminderPolicy } from "./admin-types";
 import { isoFromDate } from "./reminders-tab-format";
 
 export function toggledPayload(policy: MockReminderPolicy) {

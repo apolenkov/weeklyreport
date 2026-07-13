@@ -13,7 +13,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { KpiData } from "../../../shared/lib/dashboard-mock-data";
+import type { KpiData } from "../model/dashboard";
 import { KpiCards } from "./kpi-cards";
 
 const baseData: KpiData = {

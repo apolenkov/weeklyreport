@@ -12,10 +12,7 @@ import {
 
 import { MONTHS_SHORT } from "../../../lib/format-date";
 import { pluralize } from "../../../lib/pluralize";
-import type {
-  MockReminder,
-  MockReminderPolicy,
-} from "../../../shared/lib/admin-mock-data";
+import type { MockReminder, MockReminderPolicy } from "./admin-types";
 
 const ISO_DATE_LENGTH = 10;
 const MAX_HOUR_OFFSET_DAYS = 2;

@@ -132,8 +132,8 @@ export function buildLeadFormLoadedViewModel(
     name: activity.activityName,
   }));
 
-  const ownCurrentWeekItems = data.currentWeekItems as KanbanItem[];
-  const ownNextWeekItems = data.nextWeekItems as KanbanItem[];
+  const ownCurrentWeekItems: KanbanItem[] = data.currentWeekItems;
+  const ownNextWeekItems: KanbanItem[] = data.nextWeekItems;
   const ownRisks = data.risks as RiskEntry[];
   const ownDecisions = data.decisions as DecisionEntry[];
 
