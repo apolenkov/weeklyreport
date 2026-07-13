@@ -37,6 +37,28 @@ interface LogEntry {
   [key: string]: unknown;
 }
 
+/**
+ * Context keys whose values are personal data and must never reach a log sink.
+ * Matched by exact key name so a new PII field is opted in by adding it here,
+ * not by a fragile substring heuristic.
+ */
+const PII_CONTEXT_KEYS: ReadonlySet<string> = new Set(["recipientEmail"]);
+const REDACTION_MARKER = "[redacted]";
+
+/**
+ * Returns a shallow copy of `context` with every PII-shaped key's value
+ * replaced by the redaction marker. Pure: the input object is not mutated.
+ */
+function redactPiiContext(
+  context: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(context).map(([key, value]) =>
+      PII_CONTEXT_KEYS.has(key) ? [key, REDACTION_MARKER] : [key, value],
+    ),
+  );
+}
+
 const LEVEL_PRIORITY: Record<LogLevel, number> = {
   debug: 0,
   info: 1,
@@ -170,13 +192,17 @@ class AppLoggerImpl implements AppLogger {
       return;
     }
 
+    const mergedContext = redactPiiContext({
+      ...this.baseContext,
+      ...context,
+    });
+
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
       message,
       correlationId: this.resolveCorrelationId(),
-      ...this.baseContext,
-      ...context,
+      ...mergedContext,
     };
 
     const span = trace.getActiveSpan();
@@ -209,8 +235,7 @@ class AppLoggerImpl implements AppLogger {
         correlationId: entry.correlationId,
         ...(entry.traceId ? { traceId: entry.traceId } : {}),
         ...(entry.spanId ? { spanId: entry.spanId } : {}),
-        ...this.baseContext,
-        ...context,
+        ...mergedContext,
       },
     });
   }
