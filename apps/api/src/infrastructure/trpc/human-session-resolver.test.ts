@@ -53,6 +53,8 @@ function makePrisma(opts: PrismaStubOptions = {}): PrismaService {
       findUnique: () => Promise.resolve(null),
     },
     organization: {
+      findUnique: () =>
+        Promise.resolve({ shortName: "PEO", fullName: "Product Team" }),
       upsert: () =>
         Promise.resolve({ shortName: "PEO", fullName: "Product Team" }),
     },

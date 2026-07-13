@@ -29,6 +29,12 @@ function makePrismaStub() {
     // defaults so the dev-session branches resolve without touching a real
     // database.
     organization: {
+      findUnique: vi.fn(() =>
+        Promise.resolve({
+          shortName: "PEO",
+          fullName: "Product Engineering & Operations",
+        }),
+      ),
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async Prisma upsert contract (no awaitable work in the stub)
       upsert: vi.fn(async () => ({
         shortName: "PEO",

@@ -384,6 +384,32 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     };
   }
 
+  // A published report row carrying a valid (parseable) snapshot, so
+  // getWeeklyReport takes the snapshot render path — the branch that reads
+  // nothing from the live project rows.
+  function makePublishedReportRow() {
+    return {
+      ...makeReportRow(),
+      periodStatus: "published",
+      publishedSnapshot: {
+        reportId: REPORT_ID,
+        periodStart: "2026-04-14T00:00:00.000Z",
+        periodEnd: "2026-04-18T00:00:00.000Z",
+        deadline: "2026-04-17T15:00:00.000Z",
+        status: "published",
+        publishedAt: null,
+        publishedById: null,
+        publishedByName: null,
+        portfolioOverview: {
+          status: "green",
+          totals: { green: 0, yellow: 0, red: 0 },
+        },
+        sections: [],
+      },
+      sections: [],
+    };
+  }
+
   function createRepository() {
     const prisma = {
       report: {
@@ -435,7 +461,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     expect(untouched?.worstStatus).toBeNull();
   });
 
-  it("dispatches the leadUsers and projects queries concurrently", async () => {
+  it("dispatches leadUsers, projects, and the reminder-policy count concurrently", async () => {
     let releaseUsers: (rows: { id: string }[]) => void = () => {
       /* set below */
     };
@@ -444,11 +470,12 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     });
     const userFindMany = vi.fn().mockReturnValue(usersPending);
     const projectFindMany = vi.fn().mockResolvedValue([]);
+    const reminderPolicyCount = vi.fn().mockResolvedValue(0);
     const prisma = {
       report: { findUnique: vi.fn().mockResolvedValue(makeReportRow()) },
       user: { findMany: userFindMany },
       project: { findMany: projectFindMany },
-      reminderPolicy: { count: vi.fn().mockResolvedValue(0) },
+      reminderPolicy: { count: reminderPolicyCount },
     } as unknown as PrismaService;
     const repository = new WeeklyReportPrismaRepository(prisma);
 
@@ -457,12 +484,53 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     // Promise.all dispatch runs, without resolving the leadUsers query.
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    // Projects were dispatched even though leadUsers is still unresolved —
-    // proving Promise.all, not a sequential await chain.
+    // All three reads were dispatched even though leadUsers is still
+    // unresolved — proving Promise.all, not a sequential await chain. The
+    // reminder-policy count in particular must be part of the batch, not a
+    // subsequent serial await (which would stay unreached while users pend).
     expect(userFindMany).toHaveBeenCalledOnce();
     expect(projectFindMany).toHaveBeenCalledOnce();
+    expect(reminderPolicyCount).toHaveBeenCalledOnce();
 
     releaseUsers([{ id: AUTHOR_ID }]);
     await pending;
+  });
+
+  it("includes stageAssignments on the live path and skips the projects query entirely on the published-snapshot path", async () => {
+    const projectFindManyLive = vi.fn().mockResolvedValue([]);
+    const livePrisma = {
+      report: { findUnique: vi.fn().mockResolvedValue(makeReportRow()) },
+      user: { findMany: vi.fn().mockResolvedValue([]) },
+      project: { findMany: projectFindManyLive },
+      reminderPolicy: { count: vi.fn().mockResolvedValue(0) },
+    } as unknown as PrismaService;
+    await new WeeklyReportPrismaRepository(livePrisma).getWeeklyReport(
+      REPORT_ID,
+    );
+
+    const liveInclude = projectFindManyLive.mock.calls[0]?.[0] as {
+      include: { stageAssignments?: unknown; lead: unknown };
+    };
+    // The live (non-published) path feeds buildPortfolioOverview, so it must
+    // fetch the (relatively heavy) stageAssignments join.
+    expect(liveInclude.include.stageAssignments).toBe(true);
+
+    const projectFindManyPublished = vi.fn().mockResolvedValue([]);
+    const publishedPrisma = {
+      report: {
+        findUnique: vi.fn().mockResolvedValue(makePublishedReportRow()),
+      },
+      user: { findMany: vi.fn().mockResolvedValue([]) },
+      project: { findMany: projectFindManyPublished },
+      reminderPolicy: { count: vi.fn().mockResolvedValue(0) },
+    } as unknown as PrismaService;
+    await new WeeklyReportPrismaRepository(publishedPrisma).getWeeklyReport(
+      REPORT_ID,
+    );
+
+    // The published-snapshot path reads nothing from the live project rows,
+    // so the query must not run at all — every signal (cross-group audit,
+    // portfolio, escalations) comes from the frozen snapshot.
+    expect(projectFindManyPublished).not.toHaveBeenCalled();
   });
 });
