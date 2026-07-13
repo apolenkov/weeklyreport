@@ -6,12 +6,12 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type {
   MockPeriod,
   MockReminder,
   MockReminderPolicy,
-} from "../../../shared/lib/admin-mock-data";
-import { createMockTRPC } from "../../../test-utils/mock-trpc";
+} from "../model/admin-types";
 import { RemindersTab } from "./reminders-tab";
 
 const toastSuccess: (...args: unknown[]) => void = vi.fn();

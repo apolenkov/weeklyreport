@@ -4,12 +4,9 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { pluralize } from "../../../lib/pluralize";
-import type {
-  MockReminder,
-  MockReminderPolicy,
-} from "../../../shared/lib/admin-mock-data";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import { toReminderPolicyInput } from "../model/admin";
+import type { MockReminder, MockReminderPolicy } from "../model/admin-types";
 import {
   emptyPolicyForm,
   type PolicyFormState,
