@@ -3,8 +3,8 @@
 import type { ReactNode } from "react";
 
 import type { CreateSeed } from "../../../hooks/use-editable-list-dialog";
-import type { KanbanItem } from "../model/mock-data";
 import type { ItemColumn } from "../model/next-week-columns";
+import type { KanbanItem } from "../model/types";
 import { BoardColumnHeader } from "./board-column-header";
 
 const MAX_LANE_COLUMNS = 3;

@@ -16,7 +16,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import type { KanbanItem, RiskEntry } from "../model/mock-data";
+import type { KanbanItem, RiskEntry } from "../model/types";
 import { ItemCard } from "./item-card";
 
 const BASE_ITEM: KanbanItem = {

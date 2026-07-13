@@ -7,13 +7,13 @@ import {
 } from "@customreport/ui/components/ui/tooltip";
 import { Lock } from "lucide-react";
 
-import type { StageAssignment, StageStatus } from "../model/mock-data";
 import {
   STAGE_CHIP_BOX_HEIGHT,
   STAGE_ICONS,
   STATUS_CONFIG,
 } from "../model/stage-chip-config";
 import { stageShortLabel } from "../model/stage-tags";
+import type { StageAssignment, StageStatus } from "../model/types";
 
 const ASSIGNEE_FONT_WEIGHT_MINE = 600;
 const ASSIGNEE_FONT_WEIGHT_OTHER = 400;

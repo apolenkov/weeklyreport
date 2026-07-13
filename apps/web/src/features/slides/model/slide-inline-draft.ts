@@ -4,7 +4,7 @@ import type {
   DecisionEntry,
   KanbanItem,
   RiskEntry,
-} from "../../report-sections/model/mock-data";
+} from "../../report-sections/model/types";
 import type { GridRowEditableRef } from "./slide-grid-rows";
 
 type SectionItem = ReportSectionReadModel["items"][number];

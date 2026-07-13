@@ -10,7 +10,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { Product } from "../../report-sections/model/mock-data";
+import type { Product } from "../../report-sections/model/types";
 import { getProductCardStyle, SdlcPipeline } from "./sdlc-pipeline";
 
 // ---- Unit: getProductCardStyle (health-only, always solid) ----

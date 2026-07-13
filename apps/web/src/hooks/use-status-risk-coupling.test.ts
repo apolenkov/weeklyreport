@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type {
   Product,
   RiskEntry,
-} from "../features/report-sections/model/mock-data";
+} from "../features/report-sections/model/types";
 import { computeCoupling, validateCoupling } from "./use-status-risk";
 
 function makeProduct(

@@ -17,8 +17,8 @@ import { deriveEffectiveStageStatus } from "../../../lib/stage-status";
 import type { CrossAuthorEntry } from "../../period/ui/sdlc-pipeline";
 import { SdlcPipeline } from "../../period/ui/sdlc-pipeline";
 import { RisksSection } from "../../review/ui/risks-section";
-import type { Product, RiskEntry, StageStatus } from "../model/mock-data";
 import { riskCoversStage } from "../model/stage-tags";
+import type { Product, RiskEntry, StageStatus } from "../model/types";
 
 /**
  * Own non-empty risks of `productId` that cover `stageName`

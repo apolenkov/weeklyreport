@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { KanbanItem, Product } from "./mock-data";
 import { buildItemColumns, splitItemBoard } from "./next-week-columns";
+import type { KanbanItem, Product } from "./types";
 
 const PRODUCTS: Product[] = [
   { id: "p1", name: "Portal", overallStatus: "on-track", stages: [] },

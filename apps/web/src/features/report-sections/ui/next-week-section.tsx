@@ -2,8 +2,8 @@
 
 import { useEditableListDialog } from "../../../hooks/use-editable-list-dialog";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import type { KanbanItem, Product, RiskEntry } from "../model/mock-data";
 import { isBoardEmpty, splitItemBoard } from "../model/next-week-columns";
+import type { KanbanItem, Product, RiskEntry } from "../model/types";
 import { ActivityLanesBlock } from "./activity-lanes-block";
 import { BoardColumnHeader } from "./board-column-header";
 import { ItemCard } from "./item-card";

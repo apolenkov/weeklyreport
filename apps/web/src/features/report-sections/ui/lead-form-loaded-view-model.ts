@@ -21,7 +21,7 @@ import type {
   Product,
   ReportPeriod,
   RiskEntry,
-} from "../model/mock-data";
+} from "../model/types";
 import {
   buildUnifiedEntries,
   filterVisiblePeriods,
@@ -116,14 +116,12 @@ export function buildLeadFormLoadedViewModel(
   // stages. In Mine only the override is skipped so co-owners' stages stay
   // hidden. Product HEALTH stays honest in BOTH states — it derives from the
   // always-fetched status read inside SdlcPipeline, independent of these chips.
-  const products = (
-    input.isEveryone
-      ? applyCrossAuthorStageOverrides(
-          data.products,
-          buildCrossAuthorStageMap(input.crossAuthors),
-        )
-      : data.products
-  ) as Product[];
+  const products = input.isEveryone
+    ? applyCrossAuthorStageOverrides(
+        data.products,
+        buildCrossAuthorStageMap(input.crossAuthors),
+      )
+    : data.products;
 
   // activity-first-class: the author's attached activities offered as record
   // parents in the item/risk dialogs (id + display name only).
@@ -134,8 +132,8 @@ export function buildLeadFormLoadedViewModel(
 
   const ownCurrentWeekItems: KanbanItem[] = data.currentWeekItems;
   const ownNextWeekItems: KanbanItem[] = data.nextWeekItems;
-  const ownRisks = data.risks as RiskEntry[];
-  const ownDecisions = data.decisions as DecisionEntry[];
+  const ownRisks = data.risks;
+  const ownDecisions = data.decisions;
 
   // The interactive pill's alarm floor re-derived from the LIVE draft risks
   // (the server-baked alarmFloor goes stale the moment a draft risk is added

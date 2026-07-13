@@ -1,5 +1,5 @@
-import type { KanbanItem, Product } from "./mock-data";
 import { splitStageNames } from "./stage-tags";
+import type { KanbanItem, Product } from "./types";
 
 /**
  * Column model for the Next Week board: one column per assigned product so

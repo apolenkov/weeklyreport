@@ -3,7 +3,7 @@ import { act, renderHook } from "@testing-library/react";
 import type { SetStateAction } from "react";
 import { describe, expect, it } from "vitest";
 
-import type { KanbanItem, Product } from "../model/mock-data";
+import type { KanbanItem, Product } from "../model/types";
 import { useLeadFormDraftMerges } from "./use-lead-form-draft-merges";
 
 const REPORT_SECTION_ID = "11111111-1111-4111-8111-111111111111";

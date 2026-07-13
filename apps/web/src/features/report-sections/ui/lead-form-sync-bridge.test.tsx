@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Product, RiskEntry } from "../model/mock-data";
+import type { Product, RiskEntry } from "../model/types";
 import {
   LeadFormSyncBridge,
   type RiskPrefillRequest,

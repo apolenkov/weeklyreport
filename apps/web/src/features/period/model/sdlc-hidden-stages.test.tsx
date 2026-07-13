@@ -12,7 +12,7 @@
 import type { TrafficLightStatus } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import type { StageAssignment } from "../../report-sections/model/mock-data";
+import type { StageAssignment } from "../../report-sections/model/types";
 import type { CrossAuthorEntry } from "../ui/sdlc-pipeline";
 import {
   foreignOwnersForProduct,

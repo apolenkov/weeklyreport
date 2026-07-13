@@ -18,7 +18,7 @@ import {
   formatDateRange,
   isoWeekNumber,
 } from "../../report-sections/model/lead-history";
-import type { ReportPeriod } from "../../report-sections/model/mock-data";
+import type { ReportPeriod } from "../../report-sections/model/types";
 import { WeeklyReportPage } from "../../report-sections/ui/weekly-report-page";
 import { WeeklyReportSkeleton } from "../../report-sections/ui/weekly-report-skeleton";
 import { HeadSlidesClient } from "../../slides/ui/head-slides-client";

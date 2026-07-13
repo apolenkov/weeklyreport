@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { useFullscreen } from "../../../hooks/use-fullscreen";
 import { SdlcTooltipProvider } from "../../../shared/ui/sdlc-tooltip";
 import { LeadSlidesClient } from "../../slides/ui/lead-slides-client";
-import type { KanbanItem, Product, RiskEntry } from "../model/mock-data";
+import type { KanbanItem, Product, RiskEntry } from "../model/types";
 import { LeadFormDialogs } from "./lead-form-dialogs";
 import { LeadFormEditSections } from "./lead-form-edit-sections";
 import { LeadFormHeaderActions } from "./lead-form-header-actions";

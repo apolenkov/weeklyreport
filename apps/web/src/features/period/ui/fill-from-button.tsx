@@ -3,7 +3,7 @@
 import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import type { ReportPeriod } from "../../report-sections/model/mock-data";
+import type { ReportPeriod } from "../../report-sections/model/types";
 import { FillFromConfirmDialog } from "./fill-from-confirm-dialog";
 import { FillFromDropdownPanel } from "./fill-from-dropdown-panel";
 

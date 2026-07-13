@@ -1,7 +1,7 @@
 import type { RefObject } from "react";
 import { createPortal } from "react-dom";
 
-import type { ReportPeriod } from "../../report-sections/model/mock-data";
+import type { ReportPeriod } from "../../report-sections/model/types";
 
 function SearchIcon() {
   return (

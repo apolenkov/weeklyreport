@@ -4,10 +4,7 @@ import { Fragment } from "react";
 
 import { useEditableListDialog } from "../../../hooks/use-editable-list-dialog";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import type {
-  DecisionEntry,
-  Product,
-} from "../../report-sections/model/mock-data";
+import type { DecisionEntry, Product } from "../../report-sections/model/types";
 import type { ParentActivityOption } from "../../report-sections/ui/product-picker";
 import { DecisionCard } from "./decision-card";
 import { DecisionEditDialog } from "./decision-edit-dialog";

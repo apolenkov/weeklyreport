@@ -26,7 +26,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname,
 }));
 
-import type { ReportPeriod } from "../../report-sections/model/mock-data";
+import type { ReportPeriod } from "../../report-sections/model/types";
 import { PeriodNavigator } from "./period-navigator";
 
 const PERIODS: ReportPeriod[] = [

@@ -1,6 +1,6 @@
 "use client";
 
-import type { Product } from "../model/mock-data";
+import type { Product } from "../model/types";
 
 export type RecordParentKind = "product" | "activity";
 

@@ -21,7 +21,7 @@ import { PeriodNavigator } from "../../period/ui/period-navigator";
 import { HeadSlidesClient } from "../../slides/ui/head-slides-client";
 import { SlideSkeleton } from "../../slides/ui/slide-skeleton";
 import { formatDateRange, isoWeekNumber } from "../model/lead-history";
-import type { ReportPeriod } from "../model/mock-data";
+import type { ReportPeriod } from "../model/types";
 import { WeeklyReportPage } from "./weekly-report-page";
 import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 

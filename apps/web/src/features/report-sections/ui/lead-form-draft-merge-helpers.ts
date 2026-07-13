@@ -5,13 +5,13 @@ import type {
 
 import type { ItemWorkflowStatus } from "../model/item-status";
 import { normalizeStageName } from "../model/lead-form";
+import { stageStatusToTraffic } from "../model/traffic-light";
 import type {
   DecisionEntry,
   KanbanItem,
   Product,
   RiskEntry,
-} from "../model/mock-data";
-import { stageStatusToTraffic } from "../model/traffic-light";
+} from "../model/types";
 
 type DraftSection = ReportSectionReadModel;
 type StageStatusValue = TrafficLightStatus | null;

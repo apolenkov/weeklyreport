@@ -7,7 +7,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { SdlcTooltipProvider } from "../../../shared/ui/sdlc-tooltip";
-import type { RiskEntry } from "../../report-sections/model/mock-data";
+import type { RiskEntry } from "../../report-sections/model/types";
 import { RisksSection } from "./risks-section";
 
 const baseRisk: RiskEntry = {

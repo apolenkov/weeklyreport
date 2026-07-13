@@ -12,7 +12,7 @@ import {
   STATUS_BADGE,
   type StatusBadge,
 } from "../model/item-card-style";
-import type { ItemStatus, KanbanItem, RiskEntry } from "../model/mock-data";
+import type { ItemStatus, KanbanItem, RiskEntry } from "../model/types";
 import { ItemCardBadges } from "./item-card-badges";
 import {
   deriveItemCardStageTags,

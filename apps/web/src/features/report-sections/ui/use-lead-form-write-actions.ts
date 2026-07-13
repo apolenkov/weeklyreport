@@ -16,7 +16,7 @@ import {
 import { isConflictError } from "../../../lib/trpc";
 import { useTRPC } from "../../../lib/trpc-context";
 import type { sectionToDraftPayload } from "../model/lead-section-draft-payload";
-import type { Product, RiskEntry } from "../model/mock-data";
+import type { Product, RiskEntry } from "../model/types";
 
 type DraftPayload = ReturnType<typeof sectionToDraftPayload>;
 

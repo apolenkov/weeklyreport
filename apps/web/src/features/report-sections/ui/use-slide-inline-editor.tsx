@@ -26,7 +26,7 @@ import {
 } from "../../slides/model/slide-inline-edit";
 import type { mapLeadFormData } from "../model/lead-form";
 import { sectionToDraftPayload } from "../model/lead-section-draft-payload";
-import type { DecisionEntry, KanbanItem, RiskEntry } from "../model/mock-data";
+import type { DecisionEntry, KanbanItem, RiskEntry } from "../model/types";
 import {
   getActiveDecisionRecord,
   getActiveItemRecord,

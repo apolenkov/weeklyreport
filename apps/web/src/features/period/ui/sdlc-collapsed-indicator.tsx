@@ -6,11 +6,11 @@ import {
   TooltipTrigger,
 } from "@customreport/ui/components/ui/tooltip";
 
-import type { StageStatus } from "../../report-sections/model/mock-data";
 import {
   STAGE_CHIP_BOX_HEIGHT,
   STATUS_CONFIG,
 } from "../../report-sections/model/stage-chip-config";
+import type { StageStatus } from "../../report-sections/model/types";
 
 // lead-pipeline-mine-reveal-and-own-stage-label (affordance 2): in Mine mode the
 // filter hides foreign-owned and vacant chips. This small inert indicator near

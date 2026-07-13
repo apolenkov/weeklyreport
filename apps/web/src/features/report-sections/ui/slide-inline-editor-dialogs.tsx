@@ -10,7 +10,7 @@ import type {
   toDialogProducts,
   toDialogRisks,
 } from "../../slides/model/slide-inline-edit";
-import type { DecisionEntry, KanbanItem, RiskEntry } from "../model/mock-data";
+import type { DecisionEntry, KanbanItem, RiskEntry } from "../model/types";
 import { ItemEditDialog } from "./item-edit-dialog";
 
 export type SlideInlineEditRecord = NonNullable<
