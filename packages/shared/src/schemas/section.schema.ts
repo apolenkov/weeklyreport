@@ -226,8 +226,13 @@ export const draftSaveSchema = z.object({
   // loaded. The repository compare-and-sets on it and 409s a stale write.
   version: z.number().int().min(1),
   status: reportSectionStatusSchema.default("draft"),
-  projectStatuses: z.array(projectStatusInputSchema),
-  stageStatuses: z.array(stageStatusInputSchema).default([]),
+  projectStatuses: z
+    .array(projectStatusInputSchema)
+    .max(MAX_RECORDS_PER_SECTION_SAVE),
+  stageStatuses: z
+    .array(stageStatusInputSchema)
+    .max(MAX_RECORDS_PER_SECTION_SAVE)
+    .default([]),
   // Activity-status slice beside projectStatuses. Defaulted so pre-existing
   // clients (and fixtures) that omit it keep saving; the server then keeps
   // the seeded statuses unchanged.
@@ -247,17 +252,20 @@ export const submitSectionSchema = draftSaveSchema.extend({
   // "at least one product OR activity" and "every attached activity has a status"
   // checks are server-authoritative in validateSubmitInput (schema tightening
   // alone cannot catch an OMITTED attached activity).
-  projectStatuses: z.array(
-    projectStatusInputSchema.extend({
-      status: trafficLightStatusSchema,
-    }),
-  ),
+  projectStatuses: z
+    .array(
+      projectStatusInputSchema.extend({
+        status: trafficLightStatusSchema,
+      }),
+    )
+    .max(MAX_RECORDS_PER_SECTION_SAVE),
   activityStatuses: z
     .array(
       activityStatusInputSchema.extend({
         status: trafficLightStatusSchema,
       }),
     )
+    .max(MAX_RECORDS_PER_SECTION_SAVE)
     .default([]),
 });
 
