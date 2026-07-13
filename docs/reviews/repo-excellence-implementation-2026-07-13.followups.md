@@ -91,17 +91,22 @@ silently.
   checks is the recorded pre-production-point requirement
   (openspec/specs/ci-merge-gate).
 
-### Discipline backlog (separate sessions, manual per-folder)
+### Discipline backlog — CLOSED 2026-07-13 (evening session)
 
-- Exemption teardown: ~8 of the 27 documented lint exemptions are genuinely
-  shrinkable (users-tab, groups-tab, period-admin.service,
-  report-sections.prisma-repository, metrics.registry, …). Do manually, one
-  folder per session — the automated rollout was evaluated and rejected
-  (2026-07-07).
-- A few UI-layer files still import Mock\* types from the mock module
-  (reminders-tab.tsx, policy-row.tsx + test) instead of the feature's
-  admin-types boundary — the model files were repointed; the UI consumers
-  are the cheap remainder.
+- Deferred-seam batch landed as `close-deferred-ux-seams` (settings
+  dirty-guard, role-switcher logout honesty, case-insensitive
+  linkedProductIds); logger flake was already retried-guarded.
+- Exemption teardown done: 8 dead entries removed by probe (`ed0c41e`),
+  then users-tab (`236b2d39`), groups-tab (`9ad57029`), products-tab
+  (`80340442`), period-admin.service (`a62c8d00`, both exemptions),
+  report-sections.prisma-repository (`4aad92fc`) refactored below budgets.
+  ConfirmDeleteDialog upgraded to role=alertdialog app-wide. The remaining
+  exemption entries are the adjudicated-permanent set (fixtures, generated
+  bundle, one-off scripts, trpc god-router, cohesive dialogs) — do not
+  re-litigate without new evidence.
+- Mock\* import boundary remainder repointed (`389ee8c`).
+- metrics.registry keeps its no-magic-numbers exemption by design (bucket
+  boundaries ARE the content); it is under the max-lines budget.
 
 ## Verification posture
 
