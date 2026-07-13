@@ -70,7 +70,13 @@ ENV NODE_ENV=production
 # EXPOSE/HEALTHCHECK must match the runtime bind port (PORT=3001); a plain
 # `docker run` with the baked healthcheck would otherwise report permanently
 # unhealthy.
+# Probe /health/ready (DB + Redis + BullMQ + memory) — the same endpoint the
+# compose override targets — so a standalone `docker run` is checked as deeply
+# as a compose-orchestrated container and cannot report healthy on liveness
+# alone while unable to serve a query. start-period is 60s (matching compose)
+# so the normal migrate + tRPC bootstrap window doesn't flap a standalone
+# container through unhealthy before its dependencies are reachable.
 EXPOSE 3001
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-  CMD wget -qO- http://localhost:3001/health/live || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD wget -qO- http://localhost:3001/health/ready || exit 1
 CMD ["node", "dist/apps/api/src/main.js"]

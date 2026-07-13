@@ -67,11 +67,18 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # Query-path probe: run a real SELECT through pgbouncer's own listener
+    # (127.0.0.1:5432, the path client traffic takes) so the check fails when
+    # pgbouncer cannot actually reach and query Postgres — not merely when its
+    # TCP listener accepts connections. pg_isready alone would report healthy
+    # while every pooled query timed out. $$ passes the literal $ to the
+    # container shell so DB_* resolve from the service environment, not at
+    # compose-parse time.
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -h 127.0.0.1 -p 5432 -U customreport -d customreport",
+          'PGPASSWORD="$$DB_PASSWORD" psql -h 127.0.0.1 -p 5432 -U "$$DB_USER" -d "$$DB_NAME" -w -tAc ''SELECT 1'' >/dev/null 2>&1 || exit 1',
         ]
       interval: 10s
       timeout: 5s
@@ -218,10 +225,12 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      # 38-01: ready (DB+Redis+BullMQ+memory) instead of live (memory only)
-      # so the api container marks healthy only when actually serving.
-      # start_period bumped 30→60s so first migration + tRPC bootstrap
-      # doesn't flap the loop.
+      # Same /health/ready endpoint the image now bakes in by default; this
+      # override exists only to tune the intervals (a faster 15s loop, 5s
+      # timeout) for the compose network, not because the endpoint differs.
+      # /health/ready checks DB + Redis + BullMQ + memory, so the container
+      # marks healthy only when actually serving; start_period 60s spans the
+      # first migration + tRPC bootstrap so they don't flap the loop.
       test:
         [
           "CMD-SHELL",
