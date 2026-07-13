@@ -1,6 +1,14 @@
 # Production Docker Compose configuration.
 # Usage: docker compose -f docker-compose.prod.yml up -d
 #
+# Tracing is OFF unless the operator supplies a collector explicitly (no
+# baked-in default — a default endpoint would report "started" while
+# exporting into a nonexistent host, losing every trace silently). To ship
+# traces, compose the observability overlay, which sets the endpoint:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d
+# or export OTEL_EXPORTER_OTLP_ENDPOINT for an external managed collector.
+# With the endpoint absent the api boots without traces and says so at warn.
+#
 # Differences from docker-compose.yml:
 # - No bind mounts (images are self-contained)
 # - Restart policies on all services
@@ -172,7 +180,15 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       LOG_DIR: /app/logs
       OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
-      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-0.1}
+      # NO default endpoint on purpose (repo rule: no silent defaults for
+      # product config): tracing is ON only when the operator supplies the
+      # collector explicitly — compose the observability overlay (which sets
+      # it) or export OTEL_EXPORTER_OTLP_ENDPOINT for a managed collector.
+      # Absent -> the api boots with tracing OFF and says so at warn level;
+      # a baked-in default would report "started" while exporting into a
+      # nonexistent host, losing every trace silently.
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
       # /health/ready heap threshold (bytes) — required, no schema default.
       # Set to ~75% of the api container memory limit.
       HEAP_HEALTH_THRESHOLD_BYTES: ${HEAP_HEALTH_THRESHOLD_BYTES:?set to ~75% of api container memory}

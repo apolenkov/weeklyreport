@@ -178,7 +178,9 @@ async function bootstrap() {
       samplingRatio: otelDecision.samplingRatio,
     });
   } else {
-    logger.info("otel sdk disabled", {
+    // warn, not info: a prod boot with tracing off must stand out in the log
+    // stream rather than blend into routine startup lines.
+    logger.warn("otel sdk disabled", {
       phase: "otel",
       reason: otelDecision.reason,
     });
