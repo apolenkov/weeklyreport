@@ -1,0 +1,225 @@
+import {
+  type AdminUpdatePeriodManualResult,
+  adminUpdatePeriodManualResultSchema,
+  type AppSettings,
+  MS_PER_DAY,
+  MS_PER_HOUR,
+  type PeriodListBucket,
+  type PeriodListItem,
+  periodListItemSchema,
+  type PeriodState,
+} from "@customreport/shared";
+
+import { AdminAccessError, type PeriodRowFromRepo } from "./admin-shared";
+
+/** Length of an ISO calendar date (`YYYY-MM-DD`) after `toISOString().slice(0, n)`. */
+const ISO_DATE_LENGTH = 10;
+
+/** The mutable columns of a Report's period envelope. */
+export interface PeriodEnvelope {
+  periodStart: Date;
+  periodEnd: Date;
+  deadline: Date;
+  weekLabel: string | null;
+}
+
+/** Incoming PATCH: any subset of the envelope; a missing key means "leave as-is". */
+export interface PeriodPatchInput {
+  periodStart?: Date;
+  periodEnd?: Date;
+  deadline?: Date;
+  weekLabel?: string | null;
+}
+
+/** The write payload — only the keys whose value actually changed. */
+export type PeriodPatchData = PeriodPatchInput;
+
+/** Per-field `(before, after)` snapshots of changed columns. */
+export type PeriodPatchDiff = Partial<{
+  periodStart: { from: Date; to: Date };
+  periodEnd: { from: Date; to: Date };
+  deadline: { from: Date; to: Date };
+  weekLabel: { from: string | null; to: string | null };
+}>;
+
+const dateEntry = (
+  from: Date,
+  to: Date | undefined,
+): { from: Date; to: Date } | null =>
+  to !== undefined && to.getTime() !== from.getTime() ? { from, to } : null;
+
+// weekLabel: explicit `null` is an allowed value (clear). Structural equality
+// (`null === null`, `'foo' === 'foo'`) drops an unchanged-label PATCH.
+const labelEntry = (
+  from: string | null,
+  to: string | null | undefined,
+): { from: string | null; to: string | null } | null =>
+  to !== undefined && to !== from ? { from, to } : null;
+
+/**
+ * Diff an incoming PATCH against the current row. Returns the `data` payload
+ * carrying ONLY the keys whose new value differs from the existing row (equal-
+ * value writes are dropped) plus the matching per-field `diff`. An empty `data`
+ * means the input was a no-op — the caller skips the write and the audit envelope.
+ */
+export function computePeriodPatch(
+  existing: PeriodEnvelope,
+  input: PeriodPatchInput,
+): { data: PeriodPatchData; diff: PeriodPatchDiff } {
+  const start = dateEntry(existing.periodStart, input.periodStart);
+  const end = dateEntry(existing.periodEnd, input.periodEnd);
+  const deadline = dateEntry(existing.deadline, input.deadline);
+  const label = labelEntry(existing.weekLabel, input.weekLabel);
+
+  const data: PeriodPatchData = {
+    ...(start && { periodStart: start.to }),
+    ...(end && { periodEnd: end.to }),
+    ...(deadline && { deadline: deadline.to }),
+    ...(label && { weekLabel: label.to }),
+  };
+  const diff: PeriodPatchDiff = {
+    ...(start && { periodStart: start }),
+    ...(end && { periodEnd: end }),
+    ...(deadline && { deadline }),
+    ...(label && { weekLabel: label }),
+  };
+  return { data, diff };
+}
+
+/**
+ * A published period's date envelope is frozen content — reject envelope edits
+ * the same way `deleteReport` rejects deleting a published period. `weekLabel`
+ * (a cosmetic label) stays editable, and a non-published period is unaffected;
+ * reopening reverts `periodState` to open and unblocks the edit.
+ */
+export function assertEnvelopeEditable(
+  periodState: PeriodState,
+  data: { periodStart?: Date; periodEnd?: Date; deadline?: Date },
+): void {
+  const envelopeEdit =
+    data.periodStart !== undefined ||
+    data.periodEnd !== undefined ||
+    data.deadline !== undefined;
+  if (periodState === "published" && envelopeEdit) {
+    throw new AdminAccessError(
+      "Cannot edit a published period's dates. Reopen it first if needed.",
+    );
+  }
+}
+
+/**
+ * Default `periodEnd`: `periodStart + (periodLengthDays - 1)` calendar days at
+ * end-of-day (23:59:59.999 UTC), so an N-day period spans N inclusive calendar
+ * dates from any chosen start day.
+ */
+export const defaultPeriodEnd = (
+  periodStart: Date,
+  periodLengthDays: number,
+): Date =>
+  new Date(
+    periodStart.getTime() +
+      (periodLengthDays - 1) * MS_PER_DAY +
+      (MS_PER_DAY - 1),
+  );
+
+/**
+ * `deadlineTime` is "HH:MM"; `computeDeadline` takes an hour integer, so we strip
+ * minutes (the scheduler does the same — its hardcoded `18` matches "18:00").
+ * Sub-hour granularity would need both this and the scheduler updated together.
+ */
+export const deadlineHourFromSetting = (deadlineTime: string): number =>
+  Number(deadlineTime.split(":").at(0) ?? "18");
+
+/**
+ * Resolve the virtual buckets `'active' | 'archive'` to a concrete set of
+ * `PeriodState` values. The active bucket excludes `archived` and
+ * `published-out-of-reopen-window` (the published rows the UI treats as
+ * effectively archived even before the auto-archiver runs); the archive
+ * bucket is the inverse. Both `published` rows route to the active bucket —
+ * the post-fetch `canReopen` derivation surfaces the out-of-window ones in the
+ * archive section without a second query. Strict server-side bucketing, if ever
+ * wanted, belongs at this seam. A concrete state passes through as itself.
+ */
+export function resolveBucketStates(bucket: PeriodListBucket): PeriodState[] {
+  switch (bucket) {
+    case "active":
+      return ["scheduled", "open", "published"];
+    case "archive":
+      return ["archived"];
+    case "scheduled":
+    case "open":
+    case "published":
+    case "archived":
+      return [bucket];
+    default: {
+      const _exhaustive: never = bucket;
+      throw new Error(`Unknown period bucket: ${String(_exhaustive)}`);
+    }
+  }
+}
+
+/**
+ * Derive a `PeriodListItem` from a raw repo row: `canReopen` (published, within
+ * the reopen window, and policy-enabled) and `canArchive` (any not-yet-archived
+ * published period — the auto-archiver handles the deferred path; manual archive
+ * is the head's escape hatch) are precomputed so the UI needs no policy rules.
+ */
+export function toPeriodListItem(
+  row: PeriodRowFromRepo,
+  settings: Pick<AppSettings, "allowReopenAfterPublish" | "reopenWindowHours">,
+  now: number,
+): PeriodListItem {
+  const canReopen =
+    row.periodState === "published" &&
+    settings.allowReopenAfterPublish &&
+    row.publishedAt !== null &&
+    row.publishedAt.getTime() + settings.reopenWindowHours * MS_PER_HOUR > now;
+  const canArchive = row.periodState === "published" && !row.archived;
+  return periodListItemSchema.parse({
+    id: row.id,
+    periodStart: row.periodStart,
+    periodEnd: row.periodEnd,
+    deadline: row.deadline,
+    publishedAt: row.publishedAt,
+    periodState: row.periodState,
+    periodStatus: row.periodStatus,
+    archived: row.archived,
+    autoPublished: row.autoPublished,
+    autoArchived: row.autoArchived,
+    submittedCount: row.submittedCount,
+    totalCount: row.totalCount,
+    weekLabel: row.weekLabel,
+    canReopen,
+    canArchive,
+  });
+}
+
+/** Canonical `updatePeriodManual` result shape shared by the no-op and write paths. */
+export function toUpdateManualResult(row: {
+  id: string;
+  periodStart: Date;
+  periodEnd: Date;
+  deadline: Date;
+  periodState: PeriodState;
+  weekLabel: string | null;
+}): AdminUpdatePeriodManualResult {
+  return adminUpdatePeriodManualResultSchema.parse({
+    periodId: row.id,
+    periodStart: row.periodStart,
+    periodEnd: row.periodEnd,
+    deadline: row.deadline,
+    periodState: row.periodState,
+    weekLabel: row.weekLabel,
+  });
+}
+
+/** Friendly overlap error pointing at the blocking row's admin-visible dates. */
+export const overlapMessage = (conflict: {
+  periodStart: Date;
+  periodEnd: Date;
+}): string =>
+  `A period already exists for these dates: ${conflict.periodStart
+    .toISOString()
+    .slice(0, ISO_DATE_LENGTH)}…${conflict.periodEnd
+    .toISOString()
+    .slice(0, ISO_DATE_LENGTH)}.`;

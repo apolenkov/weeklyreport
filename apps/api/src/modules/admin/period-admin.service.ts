@@ -7,15 +7,11 @@ import {
   adminSnapshotSchema,
   type AdminUpdatePeriodManualInput,
   type AdminUpdatePeriodManualResult,
-  adminUpdatePeriodManualResultSchema,
   adminUpdatePeriodManualSchema,
   type AppSettings,
   appSettingsSchema,
-  MS_PER_DAY,
-  MS_PER_HOUR,
   type PeriodListBucket,
   type PeriodListItem,
-  periodListItemSchema,
   type PeriodState,
   type ReportPeriod,
   reportPeriodSchema,
@@ -30,11 +26,20 @@ import {
   AdminPeriodOverlapError,
   type AdminRepository,
 } from "./admin-shared";
+import {
+  assertEnvelopeEditable,
+  computePeriodPatch,
+  deadlineHourFromSetting,
+  defaultPeriodEnd,
+  overlapMessage,
+  type PeriodPatchDiff,
+  resolveBucketStates,
+  toPeriodListItem,
+  toUpdateManualResult,
+} from "./period-admin.envelope.js";
 
 const DEFAULT_PERIOD_LIST_LIMIT = 50;
 const MAX_PERIOD_LIST_LIMIT = 200;
-/** Length of an ISO calendar date (`YYYY-MM-DD`) after `toISOString().slice(0, n)`. */
-const ISO_DATE_LENGTH = 10;
 
 /**
  * Owns the period lifecycle surface: the Admin Periods tab read/archive
@@ -74,44 +79,11 @@ export class PeriodAdminService {
   // -----------------------------------------------------------------
 
   /**
-   * Resolve the virtual buckets `'active' | 'archive'` to a concrete
-   * set of `PeriodState` values. The active bucket excludes `archived`
-   * and `published-out-of-reopen-window` (the published rows that the
-   * UI treats as effectively archived even before the auto-archiver
-   * runs). The archive bucket is the inverse.
-   *
-   * Currently both `published` rows are routed to the active bucket;
-   * the post-fetch derivation of `canReopen` lets the UI surface the
-   * out-of-window rows in the archive section without a second query.
-   * If 51-D wants strict server-side bucketing, this is the seam.
-   */
-  private resolveBucketStates(bucket: PeriodListBucket): PeriodState[] {
-    switch (bucket) {
-      case "active":
-        return ["scheduled", "open", "published"];
-      case "archive":
-        return ["archived"];
-      case "scheduled":
-      case "open":
-      case "published":
-      case "archived":
-        return [bucket];
-      default: {
-        const _exhaustive: never = bucket;
-        throw new Error(`Unknown period bucket: ${String(_exhaustive)}`);
-      }
-    }
-  }
-
-  /**
-   * Paginated period list filtered by lifecycle
-   * bucket. Returns rows with server-precomputed `canReopen` (driven
-   * by `AppSettings.allowReopenAfterPublish` + `reopenWindowHours`)
-   * and `canArchive` so the UI doesn't need to know the policy rules.
-   *
-   * The hot path uses the `(periodState, periodStart desc)` composite
-   * index added in 51-C; submission-progress counts come from a single
-   * grouped query against `ReportSection`.
+   * Paginated period list filtered by lifecycle bucket. Returns rows with
+   * server-precomputed `canReopen` / `canArchive` (see `toPeriodListItem`) so
+   * the UI doesn't need to know the policy rules. The hot path uses the
+   * `(periodState, periodStart desc)` composite index; submission-progress
+   * counts come from a single grouped query against `ReportSection`.
    */
   async listPeriodsByState(input: {
     bucket: PeriodListBucket;
@@ -120,47 +92,18 @@ export class PeriodAdminService {
     if (!this.repository.listPeriodsByState) {
       return [];
     }
-    const states = this.resolveBucketStates(input.bucket);
     const limit = Math.min(
       Math.max(input.limit ?? DEFAULT_PERIOD_LIST_LIMIT, 1),
       MAX_PERIOD_LIST_LIMIT,
     );
     const settings = await this.getSettings();
     const rows = await this.repository.listPeriodsByState({
-      states,
+      states: resolveBucketStates(input.bucket),
       limit,
     });
 
     const now = Date.now();
-    return rows.map((row) => {
-      const canReopen =
-        row.periodState === "published" &&
-        settings.allowReopenAfterPublish &&
-        row.publishedAt !== null &&
-        row.publishedAt.getTime() + settings.reopenWindowHours * MS_PER_HOUR >
-          now;
-      // Archive is allowed for any not-yet-archived published period;
-      // the auto-archiver handles the deferred "weeks-after-publish"
-      // path. Manual archive is the head's escape hatch.
-      const canArchive = row.periodState === "published" && !row.archived;
-      return periodListItemSchema.parse({
-        id: row.id,
-        periodStart: row.periodStart,
-        periodEnd: row.periodEnd,
-        deadline: row.deadline,
-        publishedAt: row.publishedAt,
-        periodState: row.periodState,
-        periodStatus: row.periodStatus,
-        archived: row.archived,
-        autoPublished: row.autoPublished,
-        autoArchived: row.autoArchived,
-        submittedCount: row.submittedCount,
-        totalCount: row.totalCount,
-        weekLabel: row.weekLabel,
-        canReopen,
-        canArchive,
-      });
-    });
+    return rows.map((row) => toPeriodListItem(row, settings, now));
   }
 
   /**
@@ -224,31 +167,17 @@ export class PeriodAdminService {
     const now = options.now ?? new Date();
 
     // -- Defaults -------------------------------------------------------
-    // periodEnd defaults to (periodStart + periodLengthDays - 1) at the
-    // very end of that day (23:59:59.999 UTC). The manual path accepts
-    // any calendar start day; the scheduler remains the only Monday-anchored
-    // creator.
+    // The manual path accepts any calendar start day; the scheduler remains
+    // the only Monday-anchored creator.
     const periodEnd =
       input.periodEnd ??
-      new Date(
-        input.periodStart.getTime() +
-          (settings.periodLengthDays - 1) * MS_PER_DAY +
-          (MS_PER_DAY - 1),
-      );
+      defaultPeriodEnd(input.periodStart, settings.periodLengthDays);
 
     if (periodEnd.getTime() < input.periodStart.getTime()) {
       throw new AdminPeriodOverlapError(
         `periodEnd (${periodEnd.toISOString()}) is before periodStart (${input.periodStart.toISOString()}).`,
       );
     }
-
-    // deadlineTime is "HH:MM"; computeDeadline takes an hour integer. We
-    // strip minutes (the scheduler already does — its hardcoded `18`
-    // matches the default "18:00"). When future plans add sub-hour
-    // granularity, both this call site and the scheduler should be
-    // updated together.
-    const hourStr = settings.deadlineTime.split(":").at(0);
-    const deadlineHour = Number(hourStr ?? "18");
 
     const deadline =
       input.deadline ??
@@ -257,7 +186,7 @@ export class PeriodAdminService {
         settings.defaultDeadlineDays,
         settings.workingDays,
         settings.defaultTimezone,
-        deadlineHour,
+        deadlineHourFromSetting(settings.deadlineTime),
       );
 
     // -- Overlap gate ---------------------------------------------------
@@ -267,13 +196,7 @@ export class PeriodAdminService {
         periodEnd,
       });
       if (conflict) {
-        throw new AdminPeriodOverlapError(
-          `A period already exists for these dates: ${conflict.periodStart
-            .toISOString()
-            .slice(0, ISO_DATE_LENGTH)}…${conflict.periodEnd
-            .toISOString()
-            .slice(0, ISO_DATE_LENGTH)}.`,
-        );
+        throw new AdminPeriodOverlapError(overlapMessage(conflict));
       }
     }
 
@@ -308,27 +231,6 @@ export class PeriodAdminService {
       deadline: created.deadline,
       periodState: created.periodState,
     });
-  }
-
-  /**
-   * A published period's date envelope is frozen content — reject envelope edits
-   * the same way `deleteReport` rejects deleting a published period. `weekLabel`
-   * (a cosmetic label) stays editable, and a non-published period is unaffected;
-   * reopening reverts `periodState` to open and unblocks the edit.
-   */
-  private assertEnvelopeEditable(
-    periodState: PeriodState,
-    data: { periodStart?: Date; periodEnd?: Date; deadline?: Date },
-  ): void {
-    const envelopeEdit =
-      data.periodStart !== undefined ||
-      data.periodEnd !== undefined ||
-      data.deadline !== undefined;
-    if (periodState === "published" && envelopeEdit) {
-      throw new AdminAccessError(
-        "Cannot edit a published period's dates. Reopen it first if needed.",
-      );
-    }
   }
 
   /**
@@ -367,12 +269,7 @@ export class PeriodAdminService {
      * matched the existing row); the router treats an empty diff as
      * "skip audit envelope".
      */
-    diff: Partial<{
-      periodStart: { from: Date; to: Date };
-      periodEnd: { from: Date; to: Date };
-      deadline: { from: Date; to: Date };
-      weekLabel: { from: string | null; to: string | null };
-    }>;
+    diff: PeriodPatchDiff;
   }> {
     if (
       !this.repository.updatePeriodManual ||
@@ -391,74 +288,20 @@ export class PeriodAdminService {
     }
 
     // -- Compute the actual diff ---------------------------------------
-    // Build a `data` payload that contains ONLY the keys whose new value
-    // actually differs from the current row. Equal-value writes are
-    // dropped so the audit envelope only carries real changes (matches
-    // the no-op contract in the docstring above).
-    const data: {
-      periodStart?: Date;
-      periodEnd?: Date;
-      deadline?: Date;
-      weekLabel?: string | null;
-    } = {};
-    const diff: Partial<{
-      periodStart: { from: Date; to: Date };
-      periodEnd: { from: Date; to: Date };
-      deadline: { from: Date; to: Date };
-      weekLabel: { from: string | null; to: string | null };
-    }> = {};
-
-    if (
-      input.periodStart !== undefined &&
-      input.periodStart.getTime() !== existing.periodStart.getTime()
-    ) {
-      data.periodStart = input.periodStart;
-      diff.periodStart = { from: existing.periodStart, to: input.periodStart };
-    }
-    if (
-      input.periodEnd !== undefined &&
-      input.periodEnd.getTime() !== existing.periodEnd.getTime()
-    ) {
-      data.periodEnd = input.periodEnd;
-      diff.periodEnd = { from: existing.periodEnd, to: input.periodEnd };
-    }
-    if (
-      input.deadline !== undefined &&
-      input.deadline.getTime() !== existing.deadline.getTime()
-    ) {
-      data.deadline = input.deadline;
-      diff.deadline = { from: existing.deadline, to: input.deadline };
-    }
-    // weekLabel: explicit `null` is an allowed value (clear). Compare on
-    // structural equality (`null === null`, `'foo' === 'foo'`) so an
-    // unchanged-label PATCH is dropped from the diff.
-    if (
-      input.weekLabel !== undefined &&
-      input.weekLabel !== existing.weekLabel
-    ) {
-      data.weekLabel = input.weekLabel;
-      diff.weekLabel = { from: existing.weekLabel, to: input.weekLabel };
-    }
+    // `data` carries ONLY the keys whose new value differs from the current
+    // row; equal-value writes are dropped so the audit envelope reflects the
+    // no-op contract in the docstring above.
+    const { data, diff } = computePeriodPatch(existing, input);
 
     // -- No-op short-circuit -------------------------------------------
     if (Object.keys(data).length === 0) {
       // Return the existing row unchanged so the web layer's cache echo
       // stays consistent with a real edit. Diff is empty → router skips
       // the audit envelope.
-      return {
-        result: adminUpdatePeriodManualResultSchema.parse({
-          periodId: existing.id,
-          periodStart: existing.periodStart,
-          periodEnd: existing.periodEnd,
-          deadline: existing.deadline,
-          periodState: existing.periodState,
-          weekLabel: existing.weekLabel,
-        }),
-        diff,
-      };
+      return { result: toUpdateManualResult(existing), diff };
     }
 
-    this.assertEnvelopeEditable(existing.periodState, data);
+    assertEnvelopeEditable(existing.periodState, data);
 
     // -- Overlap gate (only when an envelope key changed) --------------
     const envelopeChanged =
@@ -479,13 +322,7 @@ export class PeriodAdminService {
         excludeId: input.reportId,
       });
       if (conflict) {
-        throw new AdminPeriodOverlapError(
-          `A period already exists for these dates: ${conflict.periodStart
-            .toISOString()
-            .slice(0, ISO_DATE_LENGTH)}…${conflict.periodEnd
-            .toISOString()
-            .slice(0, ISO_DATE_LENGTH)}.`,
-        );
+        throw new AdminPeriodOverlapError(overlapMessage(conflict));
       }
     }
 
@@ -499,17 +336,7 @@ export class PeriodAdminService {
       data,
     });
 
-    return {
-      result: adminUpdatePeriodManualResultSchema.parse({
-        periodId: updated.id,
-        periodStart: updated.periodStart,
-        periodEnd: updated.periodEnd,
-        deadline: updated.deadline,
-        periodState: updated.periodState,
-        weekLabel: updated.weekLabel,
-      }),
-      diff,
-    };
+    return { result: toUpdateManualResult(updated), diff };
   }
 
   /**
@@ -534,7 +361,7 @@ export class PeriodAdminService {
   }
 
   /**
-   * A27: delete a period (Report row) and cascade-delete all child rows.
+   * Delete a period (Report row) and cascade-delete all child rows.
    * Guard: cannot delete published periods. Throws `AdminAccessError` if the
    * period is published; maps to FORBIDDEN via trpc.error-mapper.
    */

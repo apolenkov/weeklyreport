@@ -943,7 +943,6 @@ export default defineConfig([
       // Long-tail (300-500): each is one cohesive concern where a split would
       // shed few lines at a clarity cost — exempt, not churn.
       "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // tRPC instance + all procedure builders share the private `t` binding
-      "apps/api/src/modules/admin/period-admin.service.ts", // one Admin period-lifecycle service class
       "apps/api/src/modules/report-sections/infrastructure/report-sections.prisma-repository.ts", // one Prisma persistence layer; include/type/mapper/class coupled
       "apps/web/src/features/review/ui/risk-edit-dialog.tsx", // one dialog: state + validation + render
       "apps/web/src/features/report-sections/ui/item-edit-dialog.tsx", // one create/edit dialog; shell + content coupled
@@ -1031,7 +1030,6 @@ export default defineConfig([
     files: [
       "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // start/finish request logging + error capture in one lifecycle closure
       "apps/api/src/infrastructure/trpc/trpc.router.ts", // wipeAndReseed dispatch + compiledHistory 5-loop accumulator
-      "apps/api/src/modules/admin/period-admin.service.ts", // manual period edit + per-field audit diff (only layer with before+after)
       "apps/web/src/app/(app)/reports/page.tsx", // see cyclomatic block (same role-aware renderer)
       "apps/web/src/features/dashboard/ui/remind-lead-button.tsx", // one ConfirmState machine → label/message/icon/disabled
       "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // see cyclomatic block
