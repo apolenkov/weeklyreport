@@ -952,7 +952,6 @@ export default defineConfig([
       "apps/web/src/features/report-sections/ui/item-edit-dialog.tsx", // one create/edit dialog; shell + content coupled
       "apps/web/src/features/period/ui/decision-edit-dialog.tsx", // one create/edit dialog; XOR parent picker + per-field validation + conditional stage step — parity with item/risk-edit-dialog (shared helpers already extracted)
       "apps/web/src/features/report-sections/ui/lead-form-sync-bridge.tsx", // one context bridge wiring sync to two consumers
-      "apps/web/src/features/slides/ui/status-slide-deck.tsx", // one navigable slide-deck widget
       "apps/web/src/shared/ui/navigation/nav-bar.tsx", // one role-aware nav widget; MobileNav/coming-soon have no external consumers
       "apps/web/src/features/dashboard/ui/dashboard-page.tsx", // one head-dashboard page; private load-issue helper only
       "apps/web/src/features/report-sections/ui/product-accordion.tsx", // one accordion for one ProductReport
@@ -982,7 +981,6 @@ export default defineConfig([
       // One-off operational scripts (cf. the max-lines exempt for
       // wipe-manual-uat and the globally-ignored seeds).
       "prisma/reset-hard.ts",
-      "prisma/backfill-policy-rules.ts",
       "prisma/wipe-manual-uat.ts",
       // Vendored shadcn/ui primitive bundle (generated upstream code; editing
       // it creates drift against the shadcn source).
@@ -1015,7 +1013,6 @@ export default defineConfig([
     files: [
       "apps/web/src/app/(app)/reports/page.tsx", // role-aware history renderer; 5 roles × distinct query/filter/label paths
       "apps/web/src/features/admin/ui/admin-panel.tsx", // 9-tab dispatch + skeleton/loaded gating; only ~3 pts extractable
-      "apps/web/src/features/dashboard/ui/dashboard-page.tsx", // orchestrator: 2 queries + shared state + 4 render branches, hook-coupled
       "apps/web/src/features/period/ui/decision-edit-dialog.tsx", // one create/edit dialog; per-field validation + conditional fields
       "apps/web/src/features/report-sections/ui/item-edit-dialog.tsx", // one form dialog; interdependent state (text/status/product/priority/stages)
       "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // status-card multi-branch messaging (streak/viewer/draft/risk)
@@ -1024,8 +1021,6 @@ export default defineConfig([
       "apps/web/src/features/review/ui/risks-section.tsx", // 3 dialog states across handlers + JSX; prior split broke behavior
       "apps/web/src/features/report-sections/ui/stage-chip.tsx", // interactive chip; dropdown/status/clear/popover entangled via hooks
       "apps/web/src/shared/ui/navigation/nav-bar.tsx", // role-based link filtering + session/hydration across layout slots
-      "apps/web/src/features/slides/ui/head-slides-client.tsx", // guard clauses (loading/error/data) + scope-driven slide build
-      "apps/web/src/features/slides/ui/lead-slides-client.tsx", // hooks + shared state + loading/error/empty returns drive the deck lifecycle
       "apps/web/src/features/slides/model/section-slide-utils.ts", // 4 domain transforms; branch count inherent to the data they model
       "apps/web/src/features/report-sections/ui/product-accordion.tsx", // 6 status-aware sections; uniform accordion pattern
       "apps/web/src/features/report-sections/ui/weekly-report-page.tsx", // role-aware state machine: query status + publish + filter + grouping
@@ -1039,8 +1034,6 @@ export default defineConfig([
     files: [
       "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // start/finish request logging + error capture in one lifecycle closure
       "apps/api/src/infrastructure/trpc/trpc.router.ts", // wipeAndReseed dispatch + compiledHistory 5-loop accumulator
-      "apps/api/src/modules/admin/admin-settings.queries.ts", // 19-field schema→update mapping; complexity is schema width, not branching
-      "apps/api/src/modules/admin/admin-snapshot-write.queries.ts", // role-aware user upsert + FK-guarded deletion
       "apps/api/src/modules/admin/period-admin.service.ts", // manual period edit + per-field audit diff (only layer with before+after)
       "apps/web/src/app/(app)/reports/page.tsx", // see cyclomatic block (same role-aware renderer)
       "apps/web/src/features/dashboard/ui/remind-lead-button.tsx", // one ConfirmState machine → label/message/icon/disabled
@@ -1048,7 +1041,6 @@ export default defineConfig([
       "apps/web/src/features/review/ui/risks-section.tsx", // see cyclomatic block
       "apps/web/src/features/report-sections/ui/stage-chip.tsx", // see cyclomatic block
       "apps/web/src/features/slides/model/section-slide-utils.ts", // see cyclomatic block
-      "apps/web/src/features/slides/ui/status-slide-deck.tsx", // lead/head modes + sidebar/control/fallback render branches
       "apps/web/src/features/report-sections/ui/product-accordion.tsx", // see cyclomatic block
       "apps/web/uat-suite/inventory.mjs", // classify() must stay inline (runs inside page.evaluate) + multi-phase report IIFE
     ],
