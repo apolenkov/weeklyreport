@@ -8,7 +8,8 @@
 // toast fired, row never persisted, no UI surfaced it).
 //
 // Run:
-//   node apps/web/uat-suite/mutation-audit.mjs
+//   node apps/web/uat-suite/mutation-audit.mjs                    # audit + refresh mutation-audit.md
+//   node apps/web/uat-suite/mutation-audit.mjs --check            # gate mode: audit only, writes nothing
 //   node apps/web/uat-suite/mutation-audit.mjs --update-allowlist
 
 import { execFileSync } from "node:child_process";
@@ -78,8 +79,18 @@ function gripCount(needle) {
       },
     );
     return out.split("\n").filter(Boolean).length;
-  } catch {
-    return 0;
+  } catch (error) {
+    // rg exits 1 for "no matches" — that is a real zero. Anything else
+    // (binary missing, bad invocation, exit >= 2) must fail the audit loudly:
+    // a gate that silently counts 0 on a broken tool passes vacuously.
+    if (error && typeof error === "object" && error.status === 1) {
+      return 0;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(
+      `[mutation-audit] FAIL: ripgrep invocation broke: ${message}`,
+    );
+    process.exit(2);
   }
 }
 
@@ -131,6 +142,10 @@ if (existsSync(ALLOWLIST_PATH)) {
 }
 
 const updateMode = process.argv.includes("--update-allowlist");
+// Gate mode (pre-push): evaluate and exit-code only — never touch the tree.
+// A gate that rewrites a tracked report dirties every push and races
+// parallel sessions; report refreshes stay an explicit, deliberate run.
+const checkMode = process.argv.includes("--check");
 if (updateMode) {
   for (const a of blackHoles) {
     if (!allowlist[a.procedure]) {
@@ -195,7 +210,9 @@ if (partial.length > 0) {
   lines.push("");
 }
 
-writeFileSync(OUTPUT_MD, lines.join("\n"));
+if (!checkMode) {
+  writeFileSync(OUTPUT_MD, lines.join("\n"));
+}
 
 console.log(`mutations: ${mutations.length}, queries: ${queries.length}`);
 console.log(
@@ -215,4 +232,4 @@ if (unexpectedBlackHoles.length > 0 && !updateMode) {
   process.exit(1);
 }
 
-console.log(`wrote ${OUTPUT_MD}`);
+console.log(checkMode ? "[mutation-audit] check passed" : `wrote ${OUTPUT_MD}`);

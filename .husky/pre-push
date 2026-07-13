@@ -2,16 +2,21 @@
 
 # pre-push hook — mirrors the cheap, deterministic, no-services CI jobs
 # before a push leaves the machine: typecheck + lint + format:check +
-# catalog drift + unit tests. Heavier jobs (E2E, migrate-reset, docker
-# build) stay for the server-side gate. Skipped automatically in CI (the
-# workflow runs the same suite). Skip locally with `SKIP_PREPUSH=1 git push`.
+# catalog drift + mutation-consumer audit + unit tests. Heavier jobs (E2E,
+# migrate-reset, docker build) stay for the server-side gate. Skip locally
+# with `SKIP_PREPUSH=1 git push`.
+#
+# The skip condition is hook-specific on purpose: this hook only fires on
+# `git push`, which ci.yml never performs, so keying off the ambient CI=true
+# was redundant — and a silent-bypass footgun: any unrelated tool that sets
+# CI=true would disable the only active merge gate.
 #
 # set -e aborts on the first failing gate: the commands are unchained, so
 # without it only the last command's exit status reaches git and a failing
 # early gate would be masked by a later passing one.
 
-if [ "$CI" = "true" ] || [ "$SKIP_PREPUSH" = "1" ]; then
-  echo "[pre-push] skipped (CI=$CI, SKIP_PREPUSH=$SKIP_PREPUSH)"
+if [ "$SKIP_PREPUSH" = "1" ]; then
+  echo "[pre-push] skipped (SKIP_PREPUSH=$SKIP_PREPUSH)"
   exit 0
 fi
 
@@ -28,6 +33,9 @@ pnpm format:check
 
 echo "[pre-push] catalog drift gate…"
 pnpm catalog:check
+
+echo "[pre-push] mutation-consumer audit…"
+pnpm uat:audit --check
 
 echo "[pre-push] running unit tests…"
 pnpm test
