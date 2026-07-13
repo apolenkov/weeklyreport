@@ -19,7 +19,7 @@
 
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f
     environment:
       POSTGRES_USER: customreport
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
@@ -47,7 +47,11 @@ services:
   # via DIRECT_URL (DDL needs session-mode). Pool sized for ~20 concurrent
   # backend connections supporting ~100 client connections from the API.
   pgbouncer:
-    image: edoburu/pgbouncer:1.22.1-p2
+    # 1.22.1-p0 is the NEWEST 1.22.1 packaging revision published on Docker
+    # Hub (registry-verified: the -p2 tag this file used to name was never
+    # published — it could not be pulled, so this pin is a correction, not a
+    # downgrade). Digest-pinned per the supply-chain floor.
+    image: edoburu/pgbouncer:1.22.1-p0@sha256:7f39cf2f872c8d9a0bb0e6a5440c3bf5814036eccf284102870ab08e2603a2c7
     environment:
       DB_USER: customreport
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
@@ -96,7 +100,7 @@ services:
         max-file: "3"
 
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     command:
       [
         "redis-server",
@@ -314,10 +318,15 @@ services:
   # when CADDY_SITE_ADDRESS resolves publicly; swap deploy/caddy/Caddyfile
   # for Caddyfile.staging if you need caddy's internal CA instead.
   caddy:
-    image: caddy:2.8-alpine
+    image: caddy:2.8-alpine@sha256:af32e97399febea808609119bb21544d0265c58a02836576e32a2d082c262c17
     environment:
       CADDY_SITE_ADDRESS: ${CADDY_SITE_ADDRESS:?CADDY_SITE_ADDRESS must be set (e.g. customreport.example.com or http://localhost)}
       CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL:-}
+      # Collector URL the enforcing CSP header POSTs each violation report to
+      # (a Sentry/Bugsink security endpoint or a same-origin sink). Required, no
+      # default: an enforcing CSP with an unset report target would drop every
+      # violation silently.
+      CADDY_CSP_REPORT_URI: ${CADDY_CSP_REPORT_URI:?CADDY_CSP_REPORT_URI must be set (CSP violation-report collector URL)}
     volumes:
       - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

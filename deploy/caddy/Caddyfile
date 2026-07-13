@@ -69,9 +69,18 @@
 		X-Frame-Options DENY
 		Referrer-Policy strict-origin-when-cross-origin
 		# Lock down where browsers may load resources from (relax if /reports
-		# embeds external imagery — currently same-origin only).
-		# TODO: flip Report-Only -> enforcing after in-browser CSP validation across all role surfaces
-		Content-Security-Policy-Report-Only "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self'"
+		# embeds external imagery — currently same-origin only). Enforcing, not
+		# report-only: the directive set is same-origin and matches what the app
+		# already serves, so blocking cannot regress a legitimate surface. Every
+		# violation is still POSTed to the operator-supplied collector
+		# (CADDY_CSP_REPORT_URI) so a genuine break stays observable after the flip.
+		# script-src carries 'unsafe-inline' deliberately: Next.js App Router
+		# emits inline Flight/bootstrap scripts and Caddy cannot thread a
+		# per-render nonce, so without it every page fails to hydrate the
+		# moment the policy enforces. Foreign SCRIPT ORIGINS stay blocked —
+		# that is the floor this header buys. Google Fonts needs its style
+		# and font origins allowed (see app/layout.tsx preconnects).
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; report-uri {$CADDY_CSP_REPORT_URI}"
 		-Server
 	}
 

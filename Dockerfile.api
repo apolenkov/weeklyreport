@@ -1,10 +1,7 @@
 # Stage 1: Base with pnpm, turbo, and Playwright browsers.
 # Keep all API stages on the same glibc-based image so dev/prod PDF export
 # can launch Chromium and native node modules are built for the runner OS.
-# TODO: pin @sha256:<digest> — resolve via
-# `docker buildx imagetools inspect mcr.microsoft.com/playwright:v1.61.0-noble`
-# at build/deploy (no registry access here). Deferred with the CSP flip.
-FROM mcr.microsoft.com/playwright:v1.61.0-noble AS base
+FROM mcr.microsoft.com/playwright:v1.61.0-noble@sha256:57b65fdc9ceabe0ef613124c7bbe2babcf9362c4d85e382fe3b03604e84b428a AS base
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
