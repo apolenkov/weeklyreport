@@ -171,6 +171,26 @@ function collectItemErrors(args: {
   return errors;
 }
 
+/**
+ * The first invalid control in DOM order — text, then the stage fieldset,
+ * then the paused-reason field. A later error must never steal focus past an
+ * earlier one (a pausedReason error does not outrank a missing stage).
+ */
+function firstInvalidControl(
+  next: { text?: string; stageIds?: string; pausedReason?: string },
+  surface: HTMLElement | null,
+): HTMLElement | null {
+  if (next.text) return document.getElementById("item-text");
+  if (next.stageIds) {
+    return (
+      surface?.querySelector<HTMLElement>('fieldset input[type="checkbox"]') ??
+      null
+    );
+  }
+  if (next.pausedReason) return document.getElementById("item-paused-reason");
+  return null;
+}
+
 interface CoverageArgs {
   readonly isActivityParent: boolean;
   readonly productId: string;
@@ -533,14 +553,9 @@ function ItemEditDialogContent({
     }
     if (Object.keys(next).length > 0) {
       setErrors(next);
-      // Move focus to the first invalid control so the error is discoverable by
-      // keyboard/screen-reader users instead of leaving focus on Save.
-      const firstInvalid = next.text
-        ? document.getElementById("item-text")
-        : dialogSurfaceRef.current?.querySelector<HTMLElement>(
-            'fieldset input[type="checkbox"]',
-          );
-      firstInvalid?.focus();
+      // Move focus to the first invalid control so the error is discoverable
+      // by keyboard/screen-reader users instead of leaving focus on Save.
+      firstInvalidControl(next, dialogSurfaceRef.current)?.focus();
       return;
     }
     // activity-first-class: an activity parent yields an activity-parented row
