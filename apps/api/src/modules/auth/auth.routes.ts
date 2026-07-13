@@ -89,10 +89,56 @@ function createSamlCallbackHandler(deps: AuthRouteDeps): RequestHandler {
   };
 }
 
-function createLogoutHandler(
-  deps: Pick<AuthRouteDeps, "auditLogger" | "env">,
+const HTTP_FORBIDDEN = 403;
+
+/**
+ * Every frontend origin logout accepts, as serialized URL origins. Browsers
+ * send the Origin header in bare origin form (scheme://host[:port], never a
+ * trailing slash or path), while FRONTEND_URL/FRONTEND_URLS are full URLs —
+ * comparing the raw strings 403s every legitimate logout the moment the env
+ * carries a trailing slash, and ignoring FRONTEND_URLS breaks logout for any
+ * secondary CORS-whitelisted origin. Unparseable entries are dropped
+ * (fail closed).
+ */
+export function deriveLogoutOrigins(
+  frontendUrl: string,
+  frontendUrlsCsv: string | undefined,
+): ReadonlySet<string> {
+  const toOrigin = (value: string): string | null => {
+    try {
+      return new URL(value).origin;
+    } catch {
+      return null;
+    }
+  };
+  return new Set(
+    [frontendUrl, ...(frontendUrlsCsv?.split(",") ?? [])]
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .map(toOrigin)
+      .filter((origin): origin is string => origin !== null),
+  );
+}
+
+export function createLogoutHandler(
+  deps: Pick<AuthRouteDeps, "auditLogger" | "env"> & {
+    allowedOrigins: ReadonlySet<string>;
+  },
 ): RequestHandler {
   return (request: Request, res: Response) => {
+    // Reject a cross-site auto-submit logout: a present Origin header must be
+    // one of the configured frontend origins. A missing Origin (same-origin
+    // form POST, server-to-server) passes through, matching revalidate-org's
+    // CSRF rule.
+    const requestOrigin = request.headers.origin;
+    if (
+      requestOrigin !== undefined &&
+      !deps.allowedOrigins.has(requestOrigin)
+    ) {
+      res.status(HTTP_FORBIDDEN).json({ error: "Forbidden" });
+      return;
+    }
+
     // Emit logout audit using whatever session shape was attached upstream.
     // With no session, fall back to userId='anonymous' / role=null (not a fake
     // "unknown" literal) so SIEM rules keyed on the Role enum or null see the
@@ -164,5 +210,11 @@ export function mountAuthRoutes(
     createSamlCallbackHandler(deps),
   );
 
-  expressApp.post("/auth/logout", createLogoutHandler(deps));
+  expressApp.post(
+    "/auth/logout",
+    createLogoutHandler({
+      ...deps,
+      allowedOrigins: deriveLogoutOrigins(frontendUrl, env.FRONTEND_URLS),
+    }),
+  );
 }

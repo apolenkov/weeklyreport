@@ -362,14 +362,14 @@ export function NavBar() {
                 <button
                   type="button"
                   onClick={() => {
-                    // Fire-and-forget logout: navigate home once the request
-                    // settles (resolve or reject). `.finally` keeps the
-                    // redirect on both paths; `void` marks the void-slot intent.
+                    // Redirect home only after the server confirms logout. A
+                    // non-OK response or a rejected request leaves the session
+                    // cookie intact, so staying on the page is the honest state.
                     void fetch("/auth/logout", {
                       method: "POST",
                       credentials: "include",
-                    }).finally(() => {
-                      window.location.href = "/";
+                    }).then((response) => {
+                      if (response.ok) window.location.href = "/";
                     });
                   }}
                   data-testid="nav-logout"
