@@ -86,3 +86,20 @@ export function scopeWhere(
   if (Object.keys(scope).length === 0) return undefined;
   return scope;
 }
+
+/**
+ * Section-visibility scope shared by `compiledHistory` and `latestForViewer`:
+ * a lead sees only their own authored sections (`authorId`), every other role
+ * gets the group-scope fragment. Distinct from `scopeWhere`, which has no
+ * lead/authorId special case.
+ */
+export function historySectionScope(
+  session: WeeklyReportScopeSession,
+): Record<string, unknown> {
+  return session.role === "lead"
+    ? { authorId: session.userId }
+    : groupScopeFilter(
+        session as Parameters<typeof groupScopeFilter>[0],
+        "reportSection",
+      );
+}

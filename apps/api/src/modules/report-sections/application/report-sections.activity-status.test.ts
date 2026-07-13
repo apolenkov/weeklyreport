@@ -79,6 +79,10 @@ function createRepository(
       currentSection = structuredClone(nextSection);
       return structuredClone(currentSection);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
+    async getMyHistoryRows() {
+      return [];
+    },
   };
 }
 

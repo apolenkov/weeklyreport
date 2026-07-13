@@ -744,3 +744,29 @@ describe("mapPrismaToReportSection — activity derived-status floor", () => {
     expect(section.activities[0]?.derivedStatus).toBe("green");
   });
 });
+
+/**
+ * lead-history-and-submit-label (item 2): `getMyHistoryRows` MUST order
+ * entries by reporting-period chronology (`report.periodStart desc`), NOT by
+ * the section row's `createdAt` — `createdAt` is insertion time, unrelated to
+ * the period a report covers. This keeps the lead history newest-period-first
+ * and matches `compiledHistory`, so the summary-rail streak stays honest.
+ */
+describe("ReportSectionsPrismaRepository.getMyHistoryRows — ordering", () => {
+  it("orders by report.periodStart desc, with createdAt as the stable tiebreak", async () => {
+    const findMany = vi.fn(() => Promise.resolve([]));
+    const prisma = { reportSection: { findMany } };
+    const repository = new ReportSectionsPrismaRepository(prisma as never);
+
+    const result = await repository.getMyHistoryRows(AUTHOR_ID);
+
+    expect(result).toEqual([]);
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { authorId: AUTHOR_ID },
+        orderBy: [{ report: { periodStart: "desc" } }, { createdAt: "desc" }],
+      }),
+    );
+  });
+});

@@ -1,7 +1,13 @@
 import type {
+  CompiledHistoryResult,
+  LatestForViewerReport,
   Role,
   UserSession,
   WeeklyReportReadModel,
+} from "@customreport/shared";
+import {
+  compiledHistoryResultSchema,
+  latestForViewerReportSchema,
 } from "@customreport/shared";
 
 /**
@@ -29,6 +35,10 @@ export type WeeklyReportServiceResult =
     });
 
 import { createServiceLogger } from "../../lib/logger-service.js";
+import {
+  buildCompiledHistoryEntries,
+  type CompiledHistoryReportRow,
+} from "./compiled-history.js";
 
 export class WeeklyReportDomainError extends Error {
   constructor(message: string) {
@@ -89,6 +99,37 @@ export interface WeeklyReportRepository {
    * published period even when a newer published row has been archived.
    */
   getLatestPublishedNonArchivedId(): Promise<string | null>;
+  /**
+   * Report rows behind `WeeklyReportService.compiledHistory`, scoped by
+   * `session` (lead → own authored sections, else group scope) and
+   * `includeArchive`. Returns the raw report+section rows plus the separate
+   * archive count; `buildCompiledHistoryEntries` does the pure post-processing.
+   */
+  getCompiledHistory(
+    session: WeeklyReportScopeSession,
+    includeArchive: boolean,
+  ): Promise<{
+    readonly reports: readonly CompiledHistoryReportRow[];
+    readonly archiveCount: number;
+  }>;
+  /**
+   * Resolve `reportId` to itself when it has a `session`-visible section
+   * (`sections.some(sectionScope)`), else `null`. Used by `latestForViewer`'s
+   * exact-id visibility check on the current editable period — it must NOT
+   * search older editable periods, only confirm or reject this exact id.
+   */
+  getVisibleReportId(
+    reportId: string,
+    session: WeeklyReportScopeSession,
+  ): Promise<string | null>;
+  /**
+   * The newest `published` report id visible to `session`
+   * (`sections.some(sectionScope)`, deterministic `periodStart desc, id
+   * desc`), or null. `latestForViewer`'s published fallback.
+   */
+  getLatestPublishedVisibleId(
+    session: WeeklyReportScopeSession,
+  ): Promise<string | null>;
 }
 
 export class WeeklyReportService {
@@ -204,5 +245,54 @@ export class WeeklyReportService {
 
     this.logger.info("weekly report fetched", { reportId: resolvedId, role });
     return { status: "active", ...readModel, crossGroup };
+  }
+
+  /**
+   * The compiled report History surface, scoped by `session` and
+   * `includeArchive`. Pure post-processing (traffic-light folding, counts,
+   * distinct-product counting) lives in `buildCompiledHistoryEntries`; this
+   * method only threads the repository rows through it.
+   */
+  async compiledHistory(
+    session: WeeklyReportScopeSession,
+    includeArchive: boolean,
+  ): Promise<CompiledHistoryResult> {
+    const { reports, archiveCount } = await this.repository.getCompiledHistory(
+      session,
+      includeArchive,
+    );
+    return compiledHistoryResultSchema.parse({
+      entries: buildCompiledHistoryEntries(reports),
+      archiveCount,
+    });
+  }
+
+  /**
+   * viewer-live-status (task 1.1): resolve the **Status target** for the
+   * `/reports/latest` redirect. The target is the current editable period
+   * (Decision 0) when that period has a `session`-visible section, else the
+   * newest visible `published` report, else `null`. It must NOT search older
+   * editable periods — `getVisibleReportId` checks only the exact current id.
+   */
+  async latestForViewer(
+    session: WeeklyReportScopeSession,
+  ): Promise<LatestForViewerReport> {
+    const currentEditableId = await this.getCurrentEditableId();
+
+    if (currentEditableId) {
+      const currentVisible = await this.repository.getVisibleReportId(
+        currentEditableId,
+        session,
+      );
+      if (currentVisible) {
+        return latestForViewerReportSchema.parse({ reportId: currentVisible });
+      }
+    }
+
+    const published =
+      await this.repository.getLatestPublishedVisibleId(session);
+    return latestForViewerReportSchema.parse({
+      reportId: published ?? null,
+    });
   }
 }

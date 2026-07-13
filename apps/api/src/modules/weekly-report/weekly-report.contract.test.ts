@@ -126,6 +126,18 @@ function createRepository(
     async getLatestPublishedNonArchivedId() {
       return null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
+    async getCompiledHistory() {
+      return { reports: [], archiveCount: 0 };
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
+    async getVisibleReportId() {
+      return null;
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
+    async getLatestPublishedVisibleId() {
+      return null;
+    },
   };
 }
 

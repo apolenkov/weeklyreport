@@ -13,8 +13,10 @@ import {
   type ReportSectionsRepository,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
+import type { MyHistorySectionRow } from "../domain/my-history.js";
 import { reportSectionFullInclude } from "./report-sections.include";
 import { mapPrismaToReportSection } from "./report-sections.mappers";
+import { queryMyHistoryRows } from "./report-sections.my-history-query.js";
 import {
   captureRecordComments,
   reinsertRecordComments,
@@ -333,5 +335,9 @@ export class ReportSectionsPrismaRepository
       }
       throw error;
     }
+  }
+
+  getMyHistoryRows(authorId: string): Promise<readonly MyHistorySectionRow[]> {
+    return queryMyHistoryRows(this.prisma, authorId);
   }
 }

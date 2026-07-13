@@ -532,3 +532,200 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     expect(projectFindManyPublished).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * viewer-live-status (task 3.1 / Decision 5): `compiledHistory` is shared
+ * across roles, so the viewer-only `periodStatus = "published"` History
+ * filter MUST be role-conditional. It applies to BOTH the list query and the
+ * archive-count query (else the list and the count disagree for the viewer),
+ * so a reopened period (legacy `status="published"`, `periodStatus="reopened"`)
+ * is never shown to the viewer as a gate-rejected broken link — while head and
+ * lead History stay unchanged (a reopened period still listed + counted).
+ */
+describe("WeeklyReportPrismaRepository.getCompiledHistory", () => {
+  interface QueryArg {
+    where: Record<string, unknown>;
+  }
+
+  const GROUP_A = "a1111111-1111-4111-8111-111111111111";
+
+  function createHistoryRepository(
+    findMany: ReturnType<typeof vi.fn>,
+    count: ReturnType<typeof vi.fn>,
+  ) {
+    const prisma = {
+      report: { findMany, count },
+    } as unknown as PrismaService;
+    return new WeeklyReportPrismaRepository(prisma);
+  }
+
+  const viewerSession = {
+    userId: "c3333333-3333-4333-8333-333333333333",
+    role: "viewer" as const,
+    viewerGroupAccess: [GROUP_A],
+  };
+  const headSession = {
+    userId: "e5555555-5555-4555-8555-555555555555",
+    role: "head" as const,
+    viewerGroupAccess: [],
+  };
+  const leadSession = {
+    userId: "d4444444-4444-4444-8444-444444444444",
+    role: "lead" as const,
+    reportingGroupId: GROUP_A,
+    viewerGroupAccess: [],
+  };
+
+  it("applies periodStatus='published' to BOTH the list and archive-count for a viewer", async () => {
+    const findMany = vi.fn((_q: QueryArg) => Promise.resolve([] as never[]));
+    const count = vi.fn((_q: QueryArg) => Promise.resolve(0));
+    const repository = createHistoryRepository(findMany, count);
+
+    await repository.getCompiledHistory(viewerSession, true);
+
+    const listWhere = findMany.mock.calls[0]?.[0].where;
+    const countWhere = count.mock.calls[0]?.[0].where;
+    expect(listWhere).toMatchObject({ periodStatus: "published" });
+    expect(countWhere).toMatchObject({ periodStatus: "published" });
+  });
+
+  it("does NOT apply the periodStatus filter for a head (non-regression)", async () => {
+    const findMany = vi.fn((_q: QueryArg) => Promise.resolve([] as never[]));
+    const count = vi.fn((_q: QueryArg) => Promise.resolve(0));
+    const repository = createHistoryRepository(findMany, count);
+
+    await repository.getCompiledHistory(headSession, true);
+
+    expect(findMany.mock.calls[0]?.[0].where).not.toHaveProperty(
+      "periodStatus",
+    );
+    expect(count.mock.calls[0]?.[0].where).not.toHaveProperty("periodStatus");
+  });
+
+  it("does NOT apply the periodStatus filter for a lead (non-regression)", async () => {
+    const findMany = vi.fn((_q: QueryArg) => Promise.resolve([] as never[]));
+    const count = vi.fn((_q: QueryArg) => Promise.resolve(0));
+    const repository = createHistoryRepository(findMany, count);
+
+    await repository.getCompiledHistory(leadSession, true);
+
+    const listWhere = findMany.mock.calls[0]?.[0].where;
+    expect(listWhere).not.toHaveProperty("periodStatus");
+    // Lead History scopes sections by author, unchanged.
+    expect(listWhere).toMatchObject({
+      sections: { some: { authorId: leadSession.userId } },
+    });
+  });
+});
+
+/**
+ * viewer-live-status (task 1.3): `latestForViewer` resolves the **Status
+ * target** for the `/reports/latest` redirect. The resolver MUST:
+ *   - target the current editable id (Decision 0) when that exact report has
+ *     a viewer-visible section;
+ *   - NOT search older editable periods — fall to the published path instead;
+ *   - otherwise resolve the newest viewer-visible `published` report
+ *     (`sections.some(sectionScope)`, `periodStart desc`);
+ *   - return `null` when nothing qualifies.
+ */
+describe("WeeklyReportPrismaRepository.getVisibleReportId / getLatestPublishedVisibleId", () => {
+  const GROUP_A = "a1111111-1111-4111-8111-111111111111";
+  const CURRENT_ID = "b2222222-2222-4222-8222-222222222222";
+  const LEAD_ID = "d4444444-4444-4444-8444-444444444444";
+
+  function createLookupRepository(findFirst: ReturnType<typeof vi.fn>) {
+    const prisma = { report: { findFirst } } as unknown as PrismaService;
+    return new WeeklyReportPrismaRepository(prisma);
+  }
+
+  const viewerSession = {
+    userId: "c3333333-3333-4333-8333-333333333333",
+    role: "viewer" as const,
+    viewerGroupAccess: [GROUP_A],
+  };
+
+  it("getVisibleReportId checks the exact id, group-scoped", async () => {
+    const findFirst = vi.fn(() => Promise.resolve({ id: CURRENT_ID }));
+    const repository = createLookupRepository(findFirst);
+
+    const result = await repository.getVisibleReportId(
+      CURRENT_ID,
+      viewerSession,
+    );
+
+    expect(result).toBe(CURRENT_ID);
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: CURRENT_ID,
+          sections: {
+            some: { author: { reportingGroupId: { in: [GROUP_A] } } },
+          },
+        },
+        select: { id: true },
+      }),
+    );
+  });
+
+  it("getLatestPublishedVisibleId resolves the newest visible published report, group-scoped", async () => {
+    const PUBLISHED_ID = "f6666666-6666-4666-8666-666666666666";
+    const findFirst = vi.fn(() => Promise.resolve({ id: PUBLISHED_ID }));
+    const repository = createLookupRepository(findFirst);
+
+    const result = await repository.getLatestPublishedVisibleId(viewerSession);
+
+    expect(result).toBe(PUBLISHED_ID);
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          periodStatus: "published",
+          sections: {
+            some: { author: { reportingGroupId: { in: [GROUP_A] } } },
+          },
+        },
+        orderBy: [{ periodStart: "desc" }, { id: "desc" }],
+        select: { id: true },
+      }),
+    );
+  });
+
+  it("a viewer with no granted groups yields a zero-row section filter", async () => {
+    const findFirst = vi.fn(() => Promise.resolve(null));
+    const repository = createLookupRepository(findFirst);
+
+    await repository.getLatestPublishedVisibleId({
+      ...viewerSession,
+      viewerGroupAccess: [],
+    });
+
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          periodStatus: "published",
+          sections: { some: { id: { in: [] } } },
+        },
+      }),
+    );
+  });
+
+  it("a lead resolves their own authored sections, not a group filter", async () => {
+    const findFirst = vi.fn(() => Promise.resolve(null));
+    const repository = createLookupRepository(findFirst);
+
+    await repository.getLatestPublishedVisibleId({
+      userId: LEAD_ID,
+      role: "lead" as const,
+      reportingGroupId: GROUP_A,
+      viewerGroupAccess: [],
+    });
+
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          periodStatus: "published",
+          sections: { some: { authorId: LEAD_ID } },
+        },
+      }),
+    );
+  });
+});
