@@ -1,3 +1,16 @@
+## Resolution — REFUTED (2026-07-13, do not implement)
+
+Empirically disproved on live Postgres before landing: with 5000 matching
+~5KB rows, the single-level query (2896ms), the proposed nested form
+(3033ms), and a baseline with NO ts_headline at all (2946ms) are
+indistinguishable. PostgreSQL has postponed expensive/set-returning target
+list evaluation past Sort/Limit since 9.6, so ts_headline already runs only
+for the LIMIT survivors in the existing query — the restructure is a
+functional no-op that adds nesting. The measured cost lives in recomputing
+to_tsvector over large documents for the WHERE recheck + ts_rank; if search
+latency ever matters, the real remedy is a stored/generated tsvector column,
+not headline deferral.
+
 ## Why
 
 Wave 2 / P2 from the 2026-07-12 repo-excellence review (docs/reviews/repo-excellence-review-2026-07-12.md).
