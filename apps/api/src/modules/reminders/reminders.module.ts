@@ -4,6 +4,9 @@ import type { Queue } from "bullmq";
 import { ClsService } from "nestjs-cls";
 
 import { BullMQModule } from "../../infrastructure/bullmq/bullmq.module";
+import { ConfigModule } from "../../infrastructure/config/config.module.js";
+import { APP_LOGGER } from "../../lib/audit-logger.js";
+import type { AppLogger } from "../../lib/logger.js";
 import { OrganizationModule } from "../organization/index.js";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository";
 import { RemindersScheduler } from "./reminders.scheduler";
@@ -13,18 +16,20 @@ import { RemindersReaperScheduler } from "./reminders-reaper.scheduler";
 @Module({
   // `OrganizationModule` exposes `OrganizationService` so the scheduler can
   // snapshot the brand identity onto every BullMQ job.
-  imports: [BullMQModule, OrganizationModule],
+  imports: [BullMQModule, OrganizationModule, ConfigModule],
   providers: [
     RemindersPrismaRepository,
     {
       provide: RemindersService,
       useFactory: (
         repo: RemindersPrismaRepository,
+        logger: AppLogger,
         queue: Queue,
         cls: ClsService,
-      ) => new RemindersService(repo, undefined, queue, cls),
+      ) => new RemindersService(repo, logger, queue, cls),
       inject: [
         RemindersPrismaRepository,
+        APP_LOGGER,
         getQueueToken("email-reminder"),
         ClsService,
       ],
