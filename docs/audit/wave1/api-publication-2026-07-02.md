@@ -52,4 +52,3 @@ Already good: minimal, single-purpose wiring; the ingestion-hook removal note is
 ## Killed by verification
 
 - `publication.service.ts` 280-313: claim that the `publishReport` outcome-handling block "carries five separate over-3-line comments (281-283, 287-292, 294-298, 301-304, 310-311)" — refuted by recount. 3 of the 5 cited comments are WITHIN the allowed <=3-line non-obvious-WHY budget (281-283 is exactly 3 lines, 295-297 is exactly 3 lines, 310-311 is 2 lines). Only 288-291 and 301-304 exceed it, each by a single line, and both carry genuinely non-obvious correctness rationale (fail-closed on archived-in-window; counter-inflation on redundant/failed writes) that the branch names do not express. The finding's core factual claim (five over-budget comments) is wrong and the residual two are borderline-allowed WHY comments.
-  </content>

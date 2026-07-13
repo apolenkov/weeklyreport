@@ -56,4 +56,3 @@ scope for this flat/no-move slice.
   A future cross-module facade extraction (Migration slice 6) could relocate
   `session-revocation.service.ts` if/when an api `auth` module is introduced — not proposed
   here.
-  </content>

@@ -74,5 +74,3 @@ instead of redirecting as though logout had succeeded.
   request fails outright
 - **THEN** the browser does not navigate away
 - **AND** the session cookie remains whatever it was before the click
-  </content>
-  </invoke>
