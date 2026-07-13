@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { composeName, type ReminderPolicy } from "@customreport/shared";
 import {
   afterAll,
@@ -217,6 +219,42 @@ describe("AdminPrismaRepository (integration)", () => {
 
     const after = await repo.listProductGroups(testData.project.id);
     expect(after.map((g) => g.id)).not.toContain(leadGroupId);
+  });
+
+  it("listProductGroupOwnership resolves owners for many products in one call", async () => {
+    await prisma.groupProduct.deleteMany({});
+    const leadGroupId = expectDefined(testData.lead.reportingGroupId);
+    const unownedId = randomUUID();
+    await prisma.project.create({
+      data: {
+        id: unownedId,
+        name: "Unowned integration product",
+        leadId: testData.lead.id,
+      },
+    });
+
+    await repo.attachProductToGroup({
+      groupId: leadGroupId,
+      productId: testData.project.id,
+    });
+
+    const ownership = await repo.listProductGroupOwnership([
+      testData.project.id,
+      unownedId,
+    ]);
+
+    // One entry per requested id, in request order; owned product carries its
+    // group, unowned product carries null (never omitted).
+    expect(ownership.map((row) => row.productId)).toEqual([
+      testData.project.id,
+      unownedId,
+    ]);
+    const owned = ownership.find(
+      (row) => row.productId === testData.project.id,
+    );
+    expect(owned?.group?.id).toBe(leadGroupId);
+    const unowned = ownership.find((row) => row.productId === unownedId);
+    expect(unowned?.group).toBeNull();
   });
 
   // -------------------------------------------------------------------

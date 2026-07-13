@@ -9,7 +9,10 @@ import {
 } from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { AdminGroupProductConflictError } from "./admin-shared.js";
+import {
+  AdminGroupProductConflictError,
+  type ProductGroupOwnership,
+} from "./admin-shared.js";
 
 /**
  * Group ↔ Product M:M edge mutations + reads.
@@ -100,4 +103,31 @@ export async function listProductGroups(
     orderBy: { group: { name: "asc" } },
   });
   return rows.map((row) => reportingGroupSchema.parse(row.group));
+}
+
+/**
+ * Batched owning-group lookup for many products in one query. Resolves the
+ * single owning group (a product belongs to at most one group) for every
+ * requested id, so the "products attached" editor answers ownership for the
+ * whole catalog without one round-trip per product. Every requested id is
+ * present in the result; `group` is `null` when the product is unowned.
+ */
+export async function listProductGroupOwnership(
+  prisma: PrismaService,
+  productIds: readonly string[],
+): Promise<ProductGroupOwnership[]> {
+  const rows = await prisma.groupProduct.findMany({
+    where: { productId: { in: [...productIds] } },
+    include: { group: { select: { id: true, name: true } } },
+  });
+  const ownerByProductId = new Map(
+    rows.map((row) => [
+      row.productId,
+      { id: row.group.id, name: row.group.name },
+    ]),
+  );
+  return productIds.map((productId) => ({
+    productId,
+    group: ownerByProductId.get(productId) ?? null,
+  }));
 }

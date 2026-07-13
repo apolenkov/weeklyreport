@@ -1706,6 +1706,21 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
+      // Batched owning-group lookup: one query resolves the owning group for
+      // every requested product, so the "products attached" editor no longer
+      // fans out one listProductGroups call per active product.
+      listProductGroupOwnership: adminProcedure
+        .input(z.object({ productId: z.array(z.uuid()) }))
+        .query(async ({ input }) => {
+          try {
+            return await deps.adminService.listProductGroupOwnership(
+              input.productId,
+            );
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
       // BullMQ DLQ count — failed-jobs set of the
       // email-reminder queue. adminProcedure (admin/head only).
       // Returns { count: 0 } when the Queue handle is absent (e.g. unit test

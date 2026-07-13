@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   AdminPanel,
   AdminTabsMobileSelect,
@@ -48,7 +50,7 @@ export default async function AdminPage({ searchParams }: Props) {
             </h1>
           </div>
 
-          {/* native select on mobile, anchor tab list on sm+ */}
+          {/* native select on mobile, client-side link tab list on sm+ */}
           <AdminTabsMobileSelect activeTab={activeTab} />
 
           {/* pill row matching mockup s7. Active = filled
@@ -57,7 +59,7 @@ export default async function AdminPage({ searchParams }: Props) {
           <nav aria-label="Admin tabs" className="hidden sm:block">
             <div className="flex gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] p-1 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
               {tabs.map((t) => (
-                <a
+                <Link
                   key={t}
                   href={`/admin?tab=${t}`}
                   className={`relative flex items-center gap-1.5 rounded-[var(--radius-pill)] px-4 py-2 text-[13px] font-semibold capitalize tracking-normal transition-colors ${
@@ -75,7 +77,7 @@ export default async function AdminPage({ searchParams }: Props) {
                   ) : (
                     t
                   )}
-                </a>
+                </Link>
               ))}
             </div>
           </nav>

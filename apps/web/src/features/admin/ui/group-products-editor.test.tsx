@@ -3,17 +3,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MockProduct } from "../../../shared/lib/admin-mock-data";
 
-// Mock @tanstack/react-query — useQuery for the listing, useMutation
+// Mock @tanstack/react-query — two useQuery calls (attached-products list
+// and the batched ownership lookup, routed by queryKey), the useMutation
 // pair for attach/detach, and useQueryClient for the invalidation call.
-const useQueryMock = vi.fn();
-const useQueriesMock = vi.fn();
+const attachedQueryMock = vi.fn();
+const ownershipQueryMock = vi.fn();
 const attachMutate = vi.fn();
 const detachMutate = vi.fn();
 const invalidate = vi.fn();
 
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: (opts: unknown): unknown => useQueryMock(opts),
-  useQueries: (opts: unknown): unknown => useQueriesMock(opts),
+  useQuery: (opts: { queryKey?: readonly string[] }): unknown =>
+    (opts.queryKey ?? []).includes("listProductGroupOwnership")
+      ? ownershipQueryMock(opts)
+      : attachedQueryMock(opts),
   useMutation: (opts: { mutationKey?: readonly string[] }) => {
     // Discriminate attach vs detach by the mutation key that the tRPC
     // mock provides below. The trpc-context mock returns a stable key
@@ -46,15 +49,13 @@ vi.mock("../../../lib/trpc-context", () => ({
           input.groupId,
         ],
       },
-      listProductGroups: {
-        queryOptions: (input: { productId: string }) => ({
-          queryKey: ["admin", "listProductGroups", input.productId],
+      listProductGroupOwnership: {
+        queryOptions: (input: { productId: readonly string[] }) => ({
+          queryKey: ["admin", "listProductGroupOwnership", input.productId],
         }),
-        queryKey: (input: { productId: string }) => [
-          "admin",
-          "listProductGroups",
-          input.productId,
-        ],
+        pathFilter: () => ({
+          queryKey: ["admin", "listProductGroupOwnership"],
+        }),
       },
       attachProductToGroup: {
         mutationOptions: () => ({ mutationKey: ["attachProductToGroup"] }),
@@ -99,14 +100,14 @@ describe("GroupProductsEditor — UFB-054 (Phase 56-C)", () => {
     attachMutate.mockReset();
     detachMutate.mockReset();
     invalidate.mockReset();
-    useQueriesMock.mockReset();
-    useQueriesMock.mockImplementation((opts: { queries: readonly unknown[] }) =>
-      opts.queries.map(() => ({ isLoading: false, data: [] })),
-    );
+    attachedQueryMock.mockReset();
+    ownershipQueryMock.mockReset();
+    // Default: no product is owned by any group; individual tests override.
+    ownershipQueryMock.mockReturnValue({ isLoading: false, data: [] });
   });
 
   it("renders a loading indicator while the attached-list query is in flight", () => {
-    useQueryMock.mockReturnValue({ isLoading: true, data: undefined });
+    attachedQueryMock.mockReturnValue({ isLoading: true, data: undefined });
     render(
       <GroupProductsEditor
         groupId={GROUP_ID}
@@ -117,7 +118,7 @@ describe("GroupProductsEditor — UFB-054 (Phase 56-C)", () => {
   });
 
   it("renders one checkbox per active product, hiding archived ones", () => {
-    useQueryMock.mockReturnValue({ isLoading: false, data: [] });
+    attachedQueryMock.mockReturnValue({ isLoading: false, data: [] });
     render(
       <GroupProductsEditor
         groupId={GROUP_ID}
@@ -131,7 +132,7 @@ describe("GroupProductsEditor — UFB-054 (Phase 56-C)", () => {
   });
 
   it("checks already-attached products and unchecks the rest", () => {
-    useQueryMock.mockReturnValue({
+    attachedQueryMock.mockReturnValue({
       isLoading: false,
       data: [
         {
@@ -156,7 +157,7 @@ describe("GroupProductsEditor — UFB-054 (Phase 56-C)", () => {
   });
 
   it("toggling an unchecked product calls attachProductToGroup with the (groupId, productId) tuple", () => {
-    useQueryMock.mockReturnValue({ isLoading: false, data: [] });
+    attachedQueryMock.mockReturnValue({ isLoading: false, data: [] });
     render(<GroupProductsEditor groupId={GROUP_ID} products={[PRODUCT_A]} />);
     const a = screen.getByLabelText(/Toggle Платформа интеграций/);
     fireEvent.click(a);
@@ -168,20 +169,17 @@ describe("GroupProductsEditor — UFB-054 (Phase 56-C)", () => {
   });
 
   it("locks products already attached to another group and shows the owning group", () => {
-    useQueryMock.mockReturnValue({ isLoading: false, data: [] });
-    useQueriesMock.mockImplementation(
-      (opts: { queries: readonly { queryKey?: readonly string[] }[] }) =>
-        opts.queries.map((query) => {
-          if (query.queryKey?.includes(PRODUCT_B.id)) {
-            return {
-              isLoading: false,
-              data: [{ id: "group-other", name: "Platform Group" }],
-            };
-          }
-
-          return { isLoading: false, data: [] };
-        }),
-    );
+    attachedQueryMock.mockReturnValue({ isLoading: false, data: [] });
+    ownershipQueryMock.mockReturnValue({
+      isLoading: false,
+      data: [
+        { productId: PRODUCT_A.id, group: null },
+        {
+          productId: PRODUCT_B.id,
+          group: { id: "group-other", name: "Platform Group" },
+        },
+      ],
+    });
 
     render(
       <GroupProductsEditor
@@ -203,7 +201,7 @@ describe("GroupProductsEditor — UFB-054 (Phase 56-C)", () => {
   });
 
   it("toggling an already-checked product calls detachProductFromGroup", () => {
-    useQueryMock.mockReturnValue({
+    attachedQueryMock.mockReturnValue({
       isLoading: false,
       data: [
         {
@@ -226,7 +224,7 @@ describe("GroupProductsEditor — UFB-054 (Phase 56-C)", () => {
   });
 
   it("renders an empty-state message when there are no active products", () => {
-    useQueryMock.mockReturnValue({ isLoading: false, data: [] });
+    attachedQueryMock.mockReturnValue({ isLoading: false, data: [] });
     render(<GroupProductsEditor groupId={GROUP_ID} products={[]} />);
     expect(screen.getByText(/No active products yet/i)).toBeInTheDocument();
   });

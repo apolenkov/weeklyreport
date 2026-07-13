@@ -173,6 +173,11 @@ describe("admin group-product contract (UFB-054, Phase 56-B)", () => {
     const proc = getProcedure(router, "admin.listProductGroups");
     expect(isAdminProcedure(proc)).toBe(true);
   });
+
+  it("exposes admin.listProductGroupOwnership as an adminProcedure", () => {
+    const proc = getProcedure(router, "admin.listProductGroupOwnership");
+    expect(isAdminProcedure(proc)).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
