@@ -24,6 +24,10 @@ const COMPLETE = {
   PDF_EXPORT_JWT_SECRET: "a-production-pdf-secret-at-least-32-chars",
   SMTP_HOST: "smtp.example.com",
   SMTP_FROM: "noreply@example.com",
+  KEYCLOAK_SAML_CALLBACK_URL: "https://app.example.com/auth/saml/callback",
+  KEYCLOAK_SAML_ENTRY_POINT: "https://idp.example.com/saml/sso",
+  KEYCLOAK_SAML_ISSUER: "customreport",
+  KEYCLOAK_SAML_CERT: "MIIC-fake-cert-material",
   HEAP_HEALTH_THRESHOLD_BYTES: "1610612736",
 } as const;
 
@@ -190,6 +194,57 @@ describe("envSchema — production fences", () => {
 
   it("allows absent SMTP_HOST/SMTP_FROM outside production", () => {
     const { SMTP_HOST: _host, SMTP_FROM: _from, ...without } = COMPLETE;
+    const result = envSchema.safeParse({
+      ...without,
+      NODE_ENV: "development",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  // SAML config is required in production once dev-login is off, mirroring the
+  // SMTP fence. The four vars stay optional in the object shape so dev-login
+  // boots without an IdP; the fence lives entirely in superRefine.
+  it.each([
+    "KEYCLOAK_SAML_CALLBACK_URL",
+    "KEYCLOAK_SAML_ENTRY_POINT",
+    "KEYCLOAK_SAML_ISSUER",
+    "KEYCLOAK_SAML_CERT",
+  ] as const)("requires %s in production when AUTH_DEV_MODE=false", (key) => {
+    const { [key]: _omit, ...without } = COMPLETE;
+    const result = envSchema.safeParse(without);
+    expect(result.success).toBe(false);
+  });
+
+  it("names the missing SAML var in the production issue path", () => {
+    const { KEYCLOAK_SAML_ISSUER: _omit, ...without } = COMPLETE;
+    const result = envSchema.safeParse(without);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const paths = result.error.issues.map((issue) => issue.path.join("."));
+      expect(paths).toContain("KEYCLOAK_SAML_ISSUER");
+    }
+  });
+
+  it("rejects whitespace-only SAML vars in production", () => {
+    const result = envSchema.safeParse({
+      ...COMPLETE,
+      KEYCLOAK_SAML_ISSUER: " ".repeat(3),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts production with all four SAML vars set", () => {
+    expect(envSchema.safeParse(COMPLETE).success).toBe(true);
+  });
+
+  it("allows absent SAML vars outside production", () => {
+    const {
+      KEYCLOAK_SAML_CALLBACK_URL: _cb,
+      KEYCLOAK_SAML_ENTRY_POINT: _ep,
+      KEYCLOAK_SAML_ISSUER: _iss,
+      KEYCLOAK_SAML_CERT: _cert,
+      ...without
+    } = COMPLETE;
     const result = envSchema.safeParse({
       ...without,
       NODE_ENV: "development",

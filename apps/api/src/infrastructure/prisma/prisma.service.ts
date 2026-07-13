@@ -55,7 +55,7 @@ export class PrismaService
   private readonly pool: pg.Pool;
   private readonly poolConfig: ResolvedPoolConfig;
 
-  constructor(env: EnvConfig) {
+  constructor(private readonly env: EnvConfig) {
     const poolConfig: ResolvedPoolConfig = {
       max: env.DB_POOL_MAX ?? DEFAULT_DB_POOL_MAX,
       idleTimeoutMillis:
@@ -102,7 +102,7 @@ export class PrismaService
     // PrismaLogEventEmitter structural cast (see above) because Prisma 7's
     // Client type narrows $on differently depending on the constructor's `log`
     // shape and TypeScript can't always reconcile the two.
-    const debugEnabled = (process.env.LOG_LEVEL ?? "info") === "debug";
+    const debugEnabled = this.env.LOG_LEVEL === "debug";
     const self = this as unknown as PrismaLogEventEmitter;
 
     self.$on?.(

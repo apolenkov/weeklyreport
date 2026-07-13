@@ -128,7 +128,7 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
 
       // Resolve to an absolute path so the API's static /pdfs mount and this
       // worker write to the same directory regardless of the process cwd.
-      const outputDir = resolve(process.env.PDF_OUTPUT_DIR ?? "./storage/pdfs");
+      const outputDir = resolve(this.env.PDF_OUTPUT_DIR);
       mkdirSync(outputDir, { recursive: true });
 
       const filePath = join(outputDir, `${jobId}.pdf`);

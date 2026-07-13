@@ -93,9 +93,14 @@ import { chromium } from "playwright";
 import type { EnvConfig } from "../config/env.schema";
 import { PdfExportProcessor } from "./pdf-export.processor.js";
 
-// The processor reads env only in onModuleInit (mocked away here); a minimal
-// stub satisfies the constructor for the processJob-focused tests.
-const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
+// Minimal stub for the constructor plus the keys processJob reads directly
+// (PDF_OUTPUT_DIR feeds resolve() on the capture path — a missing value is a
+// crash, not a fallback, by design).
+const STUB_ENV = {
+  REDIS_HOST: "localhost",
+  REDIS_PORT: 6379,
+  PDF_OUTPUT_DIR: "./storage/pdfs-test",
+} as EnvConfig;
 
 // ---------------------------------------------------------------------------
 // Helpers
