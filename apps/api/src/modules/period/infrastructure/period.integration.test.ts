@@ -1,4 +1,8 @@
-import type { UserSession } from "@customreport/shared";
+import type {
+  PeriodStatus,
+  ReportStatus,
+  UserSession,
+} from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -37,8 +41,8 @@ const headSession: UserSession = {
 
 interface SpyReport {
   id: string;
-  status: string;
-  periodStatus: string;
+  status: ReportStatus;
+  periodStatus: PeriodStatus;
   publishedAt: Date | null;
   /** Defaults to false in `getReportById` when a fixture omits it. */
   archived?: boolean;
@@ -113,7 +117,7 @@ function createSpyRepository(
 
 describe("PeriodService — integration (publish lifecycle)", () => {
   it("publish sets periodStatus to published and records timestamp", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -142,7 +146,7 @@ describe("PeriodService — integration (publish lifecycle)", () => {
   });
 
   it("publish fails with PeriodAccessError if already published", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -165,7 +169,7 @@ describe("PeriodService — integration (publish lifecycle)", () => {
   });
 
   it("reopen resets periodStatus from published to reopened", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -190,7 +194,7 @@ describe("PeriodService — integration (publish lifecycle)", () => {
   });
 
   it("reopen fails with PeriodAccessError if not published", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -213,7 +217,7 @@ describe("PeriodService — integration (publish lifecycle)", () => {
   });
 
   it("publish after reopen succeeds (reopened -> published)", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -269,7 +273,7 @@ describe("PeriodService — integration (publish lifecycle)", () => {
   });
 
   it("publish records the userId via repository call", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {

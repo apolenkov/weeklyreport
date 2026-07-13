@@ -1,4 +1,8 @@
-import type { UserSession } from "@customreport/shared";
+import type {
+  PeriodStatus,
+  ReportStatus,
+  UserSession,
+} from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
@@ -35,8 +39,8 @@ const headSession: UserSession = {
 
 interface MockReport {
   id: string;
-  status: string;
-  periodStatus: string;
+  status: ReportStatus;
+  periodStatus: PeriodStatus;
   publishedAt: Date | null;
   /** Defaults to false in `getReportById` when a fixture omits it. */
   archived?: boolean;

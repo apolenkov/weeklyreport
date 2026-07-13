@@ -83,7 +83,7 @@ function buildRepo(overrides: RepoOverrides = {}) {
     ),
     deleteComment: vi.fn(() => Promise.resolve()),
     getVerdictContext: vi.fn(() =>
-      Promise.resolve(
+      Promise.resolve<VerdictContext>(
         overrides.verdictContext ?? {
           version: 3,
           status: "submitted",
