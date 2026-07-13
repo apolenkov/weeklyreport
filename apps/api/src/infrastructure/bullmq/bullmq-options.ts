@@ -8,14 +8,14 @@ export function getBullMQConnectionOptions(env: EnvConfig) {
   };
 }
 
-export function getBullMQPrefix(): string | undefined {
-  const prefix = process.env.BULLMQ_PREFIX?.trim();
+export function getBullMQPrefix(env: EnvConfig): string | undefined {
+  const prefix = env.BULLMQ_PREFIX?.trim();
   return prefix ? prefix : undefined;
 }
 
 export function getBullMQOptions(env: EnvConfig) {
   return {
     connection: getBullMQConnectionOptions(env),
-    prefix: getBullMQPrefix(),
+    prefix: getBullMQPrefix(env),
   };
 }

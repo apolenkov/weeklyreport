@@ -180,6 +180,29 @@ export const envSchema = z
           path: ["SMTP_FROM"],
         });
       }
+      // SAML/Keycloak must be configured in production once dev-login is off.
+      // The vars stay `.optional()` in the object shape (dev-login boots
+      // without an IdP); without this fence a prod boot with AUTH_DEV_MODE=false
+      // and no SAML env succeeds and looks healthy until the first login, when
+      // saml.strategy.ts's own requireEnv fails late. A whitespace-only value
+      // is unusable, so it counts as absent here.
+      if (!data.AUTH_DEV_MODE) {
+        const samlKeys = [
+          "KEYCLOAK_SAML_CALLBACK_URL",
+          "KEYCLOAK_SAML_ENTRY_POINT",
+          "KEYCLOAK_SAML_ISSUER",
+          "KEYCLOAK_SAML_CERT",
+        ] as const;
+        samlKeys
+          .filter((key) => !data[key]?.trim())
+          .forEach((key) => {
+            ctx.addIssue({
+              code: "custom",
+              message: `${key} is required when NODE_ENV=production and AUTH_DEV_MODE=false`,
+              path: [key],
+            });
+          });
+      }
     }
   });
 

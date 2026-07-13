@@ -25,7 +25,7 @@ export abstract class RawBullMqProcessor<TData extends JobTraceContext>
   protected readonly logger: AppLogger;
 
   constructor(
-    private readonly env: EnvConfig,
+    protected readonly env: EnvConfig,
     logger: AppLogger | undefined,
     protected readonly cls: ClsService | undefined,
   ) {
