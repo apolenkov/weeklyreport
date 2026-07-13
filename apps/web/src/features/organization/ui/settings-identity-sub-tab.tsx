@@ -1,5 +1,6 @@
 "use client";
 
+import { MAX_SHORT_NAME_LENGTH } from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -11,7 +12,6 @@ import {
   revalidateOrgLandingPage,
 } from "../../../shared/ui/settings-tab-shared";
 
-const MAX_SHORT_NAME_LENGTH = 16;
 const MAX_FULL_NAME_LENGTH = 200;
 
 export function IdentitySubTab() {
@@ -92,7 +92,7 @@ export function IdentitySubTab() {
           name="org-short-name"
           type="text"
           autoComplete="off"
-          maxLength={16}
+          maxLength={MAX_SHORT_NAME_LENGTH}
           value={shortName}
           onChange={(e) => {
             setIsDirty(true);
@@ -102,7 +102,7 @@ export function IdentitySubTab() {
         />
         <div className="mt-1 flex items-center justify-between text-xs">
           <span className="text-[var(--color-muted-foreground)]">
-            Shown in the nav-bar brand pill (max 16 chars).
+            Shown in the nav-bar brand pill (max {MAX_SHORT_NAME_LENGTH} chars).
           </span>
           <span
             className={
@@ -111,7 +111,7 @@ export function IdentitySubTab() {
                 : "text-[var(--color-muted-foreground)]"
             }
           >
-            {shortName.length}/16
+            {shortName.length}/{MAX_SHORT_NAME_LENGTH}
           </span>
         </div>
       </div>

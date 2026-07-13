@@ -33,9 +33,8 @@ export function ForbiddenPage({ requiredRoles, homeHref }: ForbiddenPageProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            This page is reserved for the {rolesLabel} role. Switch role from
-            the dev role switcher in the top navigation to continue, or head
-            back to the dashboard.
+            This page is reserved for the {rolesLabel} role. Head back to the
+            dashboard to continue.
           </p>
           <Button asChild>
             <Link href={homeHref}>Go to dashboard</Link>

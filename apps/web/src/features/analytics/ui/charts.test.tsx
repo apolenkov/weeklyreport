@@ -122,7 +122,7 @@ describe("PeriodComparisonChart", () => {
     expect(screen.getByText(/no comparison data/i)).toBeInTheDocument();
   });
 
-  it("renders null cells as em-dash and zero cells as 0 (CONTEXT D-3)", () => {
+  it("renders null cells as em-dash and zero cells as 0", () => {
     render(
       <PeriodComparisonChart
         rows={[

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const MAX_SHORT_NAME_LENGTH = 16;
+export const MAX_SHORT_NAME_LENGTH = 16;
 const MAX_FULL_NAME_LENGTH = 200;
 
 /**

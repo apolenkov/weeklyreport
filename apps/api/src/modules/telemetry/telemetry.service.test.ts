@@ -39,7 +39,7 @@ function buildRepo(
   };
 }
 
-describe("TelemetryService — Phase 52-C (UFB-054)", () => {
+describe("TelemetryService", () => {
   it("composes the canonical summary shape from the repository ports", async () => {
     const service = new TelemetryService(buildRepo());
     const summary = await service.getSummary();

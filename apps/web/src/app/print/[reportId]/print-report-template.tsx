@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 import { mapWeeklyReport } from "../../../features/report-sections/model/weekly-report";
 import { formatClientErrorMessage } from "../../../lib/client-error-reporting";
-import { joinPeriodLabel } from "../../../lib/format-date";
+import { formatDateTime, joinPeriodLabel } from "../../../lib/format-date";
 import { useTRPC } from "../../../lib/trpc-context";
 import type {
   PortfolioProduct,
@@ -558,7 +558,7 @@ export function PrintReportTemplate({ reportId }: Props) {
     view.period.weekLabel,
     view.period.dateRange,
   );
-  const now = new Date().toISOString();
+  const generatedAt = formatDateTime(new Date());
 
   return (
     <>
@@ -758,7 +758,7 @@ export function PrintReportTemplate({ reportId }: Props) {
             color: "rgba(0,0,0,0.38)",
           }}
         >
-          Generated {now} — Report ID: {reportId}
+          Generated {generatedAt} — Report ID: {reportId}
         </footer>
       </main>
     </>

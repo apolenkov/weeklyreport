@@ -322,6 +322,7 @@ describe("RemindersPrismaRepository (integration)", () => {
     expect(rule?.groups).toHaveLength(1);
     expect(rule?.groups[0]?.head.email).toBe(testData.head.email);
     expect(rule?.groups[0]?.lateLeads).toHaveLength(1);
+    expect(rule?.groups[0]?.lateLeads[0]?.sectionTitle).toBe("Test Group");
   });
 
   it("escalation: head-less group produces no digest", async () => {

@@ -122,6 +122,7 @@ export class RemindersPrismaRepository implements RemindersRepository {
                     name: true,
                     reportingGroup: {
                       select: {
+                        name: true,
                         head: {
                           select: {
                             id: true,

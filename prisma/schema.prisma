@@ -38,7 +38,7 @@ model User {
   publishedReports        Report[]                @relation("PublishedBy")
   authoredReportSections  ReportSection[]         @relation("ReportSectionAuthor")
   stageAssignments        StageAssignment[]
-  // UFB-039 back-relations
+  // Back-relations for group headship and viewer-group access.
   ledGroups               ReportingGroup[]        @relation("GroupHead")
   viewerGroupAccess       ViewerGroupAccess[]     @relation("ViewerGroupAccessViewer")
   // review-acknowledgement back-relations. A user authors acknowledgement
@@ -46,9 +46,9 @@ model User {
   reviewAcknowledgements  ReviewAcknowledgement[] @relation("ReviewAckUser")
   sectionReviews          SectionReview[]         @relation("SectionReviewReviewer")
   recordComments          RecordComment[]         @relation("RecordCommentReviewer")
-  // UFB-056 / Phase 55-1: optional 1:1 inverse to the Telegram binding
-  // row. Nullable because Telegram is opt-in — most users never bind a
-  // chat. Cascade is intentional on the binding side (drop the row when
+  // Optional 1:1 inverse to the Telegram binding row. Nullable because
+  // Telegram is opt-in — most users never bind a chat. Cascade is
+  // intentional on the binding side (drop the row when
   // the user is removed); on the User side we keep this as a plain
   // back-relation with no `onDelete` because Users don't need to know
   // about the binding's existence to be deleted.
@@ -64,7 +64,7 @@ model ReportingGroup {
   name                   String
   description            String?
   archived               Boolean                 @default(false)
-  // UFB-039: optional FK to the User (role=head or role=admin) who runs
+  // Optional FK to the User (role=head or role=admin) who runs
   // this reporting group. Nullable because freshly-created groups may not
   // have a leader assigned yet; a UI guard nudges admins to set one.
   // Application-level invariant (not DB CHECK): the referenced User's role
@@ -77,7 +77,7 @@ model ReportingGroup {
   viewerAccess           ViewerGroupAccess[]
   // review-acknowledgement: group-level seen receipts for this group's report.
   reviewAcknowledgements ReviewAcknowledgement[]
-  // UFB-054 / Phase 56-A: explicit M:M edge to Project (products owned by
+  // Explicit M:M edge to Project (products owned by
   // this group). Inverse of GroupProduct.group. See `GroupProduct` model.
   groupProducts          GroupProduct[]
   // Project Activities owned by this group (authoritative `groupId`).
@@ -87,7 +87,7 @@ model ReportingGroup {
   @@index([headUserId])
 }
 
-// UFB-039: viewer↔group M:M access table. A viewer (e.g. Дарья) can be
+// Viewer↔group M:M access table. A viewer (e.g. Дарья) can be
 // granted visibility into N reporting groups; admins manage rows here from
 // the Users tab. head/admin/lead do NOT use this table — their visibility
 // is derived from User.reportingGroupId (head) or full access (admin) or
@@ -144,7 +144,7 @@ model Project {
   risks            Risk[]
   stageStatuses    StageStatus[]
   stageAssignments StageAssignment[]
-  // UFB-054 / Phase 56-A: explicit M:M edge to ReportingGroup. Inverse of
+  // Explicit M:M edge to ReportingGroup. Inverse of
   // GroupProduct.product. Left untouched on backfill; existing read paths
   // that derive group via `lead.reportingGroupId` continue to work.
   groupProducts    GroupProduct[]
@@ -199,29 +199,28 @@ model Report {
   periodStatus           PeriodStatus            @default(open)
   reopenedAt             DateTime?
   weekLabel              String?
-  // UFB-049 / Phase 50-B: lifecycle flag set by the auto-archiver scheduler
+  // Lifecycle flag set by the auto-archiver scheduler
   // when `AppSettings.autoArchiveWeeksAfterPublish > 0` AND
   // `publishedAt + weeks * 7d < now`. Existing rows backfill to false via
   // the migration default. Indexed alongside periodStart so the archive
   // dashboard's "last N un-archived" query stays cheap.
   archived               Boolean                 @default(false)
-  // UFB-051 / Phase 51-A: lifecycle audit flags surfaced by the period
-  // state-machine. `autoPublished` is set true when AutoPublisher (50-B
-  // cron) flips status=draft→published at deadline+grace (vs an explicit
-  // head action). `autoArchived` mirrors that for AutoArchiver. Both
-  // ship as nullable-friendly defaults (`false`) so existing rows
-  // backfill cleanly via the migration default. Consumers (state-machine
-  // dashboard, admin audit feed) arrive in 51-B / 51-C.
+  // Lifecycle audit flags surfaced by the period state-machine.
+  // `autoPublished` is set true when the auto-publish scheduler flips
+  // status=draft→published at deadline+grace (vs an explicit head
+  // action). `autoArchived` mirrors that for the auto-archive scheduler.
+  // Both default to `false` so existing rows backfill cleanly via the
+  // migration default.
   autoPublished          Boolean                 @default(false)
   autoArchived           Boolean                 @default(false)
-  // UFB-053 / Phase 51-C: explicit lifecycle state column. The legacy
+  // Explicit lifecycle state column. The legacy
   // `status` + `archived` + `periodStatus` tuple is preserved (one-release
   // compatibility window) and writers update both the new column and the
   // old fields atomically. Backfill is OPEN | PUBLISHED | ARCHIVED; the
   // SCHEDULED state is reserved for future periods minted by the
   // PeriodCreator scheduler (no historical row backfills to SCHEDULED).
   // Index mirrors the legacy `(status, periodStart)` shape so the
-  // archive/dashboard read paths can swap in 51-B without an index gap.
+  // archive/dashboard read paths can migrate without an index gap.
   // Note: `PeriodState` and `PeriodStatus` are intentionally separate
   // state machines — `periodStatus` carries the reopen flavour
   // (open/published/reopened, no archived); `periodState` carries the
@@ -229,7 +228,7 @@ model Report {
   // On reopen we revert `periodState` to `open` while flipping
   // `periodStatus` to `reopened` (Open Question — documented in SUMMARY).
   periodState            PeriodState             @default(open)
-  // Phase 65 / D-6: immutable publish-time read model for archive and
+  // Immutable publish-time read model for archive and
   // director-facing published views. Reopen/draft edits after publication
   // must not mutate the published output until the next publish writes a
   // replacement snapshot.
@@ -270,7 +269,7 @@ model ReportSection {
   version          Int                 @default(1)
   revokedAt        DateTime?
   revokedBy        String?
-  // UFB-049 / Phase 50-B: stamped true by submitSection when
+  // Stamped true by submitSection when
   // `now > Report.deadline` (regardless of grace-period). Used by head
   // dashboard + lead form to render a "late" badge. Existing rows
   // backfill to false via the migration default.
@@ -560,11 +559,11 @@ model ReminderRule {
   @@index([policyId])
 }
 
-// UFB-036: ReminderPolicy is a parameterized template that ReminderRule rows
+// ReminderPolicy is a parameterized template that ReminderRule rows
 // reference. One policy declares (kind, offsetMinutes, timezone, audience)
 // and acts as the source-of-truth for every concrete rule scheduled against
-// a report. Phase 44-01 introduces the model with nullable FK; later plans
-// flip the FK to NOT NULL once Period.create wires the policy in.
+// a report. The FK is nullable for now; a future change flips it to NOT
+// NULL once Period.create wires the policy in.
 model ReminderPolicy {
   id            String           @id @default(uuid())
   kind          ReminderRuleKind
@@ -682,10 +681,11 @@ model ReopenRequest {
   @@index([reviewedById])
 }
 
-// UFB-048 (Phase 48-B): AppSettings expansion. Nine new org-wide knobs that
-// the admin can flip without a redeploy. All fields have SQL defaults so the
-// existing singleton row is updated in-place by the migration without manual
-// data migration. Semantics:
+// Org-wide knobs the admin can flip without a redeploy. Most columns carry a
+// SQL default (notificationFromEmail is nullable with no default; updatedAt
+// is Prisma-managed via `@updatedAt`); the init migration ships no DML, so
+// the singleton row itself is provisioned by `prisma/seed.ts` (which upserts
+// `id='singleton'`) and the defaults fill any column the seed omits. Semantics:
 //   - workingDays            : metadata-only in v1 (UI hint); deadline math
 //                              stays Mon-Fri until a future scheduler change.
 //   - gracePeriodHours +
@@ -696,7 +696,7 @@ model ReopenRequest {
 //   - autoPublishAfterDeadline: scheduler will fire at (deadline + grace);
 //                              missing sections render «Не сдал» placeholder.
 //                              Logic deferred — 48-B persists the toggle only.
-// UFB-047 / Phase 49-01: legacy `departmentName` column dropped from this
+// The legacy `departmentName` column was dropped from this
 // model. Brand identity (short + full name) lives on the `Organization`
 // singleton below; readers consume it via `OrganizationService.getPublic()`
 // or the per-request `auth.me.organization` hydration on the wire.
@@ -713,14 +713,14 @@ model AppSettings {
   allowLateSubmissions         Boolean          @default(true)
   autoPublishAfterDeadline     Boolean          @default(false)
   autoArchiveWeeksAfterPublish Int              @default(0)
-  // UFB-051 / Phase 51-A: period-cycle expansion. Org-wide knobs for the
+  // Period-cycle expansion. Org-wide knobs for the
   // manual-creation deadline default (deadlineTime, HH:MM in defaultTimezone)
   // and publish/reopen gating (allowReopenAfterPublish, reopenWindowHours).
-  // All carry SQL defaults so the singleton row updates in-place without a
-  // manual data migration. Wire schema mirrors these via `appSettingsSchema`
-  // defaults in packages/shared.
+  // All carry SQL defaults, so adding them needs no data-migration backfill;
+  // the singleton row is still provisioned by `prisma/seed.ts`. Wire schema
+  // mirrors these via `appSettingsSchema` defaults in packages/shared.
   //
-  // UFB-068: periodCadence (the "weekly"/"bi-weekly" radio) was removed —
+  // periodCadence (the "weekly"/"bi-weekly" radio) was removed —
   // a dead column the schedulers never read. Period length is expressed
   // solely by periodLengthDays.
   //
@@ -738,13 +738,13 @@ model AppSettings {
   updatedAt                    DateTime         @updatedAt
 }
 
-// UFB-047 (Phase 48-A): organization identity singleton. shortName is the
-// compact brand string rendered in the nav-bar / page chrome (≤16 chars);
-// fullName is the long-form description used on the landing hero and in PDF
-// report headers. Singleton invariant enforced at the application layer via
-// `id='singleton'` upsert — not a DB CHECK constraint. Migration seeds the
-// row with Demo / Example Software Department; admins can override via
-// Settings → Identity tab.
+// Organization identity singleton. shortName is the compact brand string
+// rendered in the nav-bar / page chrome (≤16 chars); fullName is the
+// long-form description used on the landing hero and in PDF report headers.
+// Singleton invariant enforced at the application layer via `id='singleton'`
+// upsert — not a DB CHECK constraint. `prisma/seed.ts` provisions the row
+// with Demo / Example Software Department (the init migration ships no
+// DML); admins can override via Settings → Identity tab.
 model Organization {
   id        String   @id @default("singleton")
   shortName String
@@ -895,7 +895,7 @@ enum PeriodStatus {
   reopened
 }
 
-// UFB-053 / Phase 51-C: explicit Period lifecycle enum that replaces the
+// Explicit Period lifecycle enum that replaces the
 // implicit (status × archived × periodStatus) tuple. Lowercase to match the
 // `ReportStatus`/`PeriodSection`/`PeriodStatus` precedent in this schema
 // (the screaming-snake enums are categorically different — they carry
@@ -924,7 +924,7 @@ enum ReminderAudience {
   HEAD_OF_LATE
 }
 
-// UFB-048 (Phase 48-B): the org «working days» policy surfaced in AppSettings.
+// The org «working days» policy surfaced in AppSettings.
 // It DOES drive deadline calculation: `computeDeadline` (apps/api/src/lib/
 // business-date.ts) selects the business-day set from this policy — mon-fri = 5
 // days, mon-sat = 6, mon-sun = 7 — and is called with `settings.workingDays`
@@ -943,8 +943,8 @@ enum ReminderRuleStatus {
   paused
 }
 
-// UFB-056 / Phase 55-1: TelegramBinding — opt-in link between a CustomReport
-// User and a Telegram `chat_id`. Seeds-only scaffolding for Phase 55: the
+// TelegramBinding — opt-in link between a CustomReport
+// User and a Telegram `chat_id`. Scaffolding: the
 // table is created so a future bot can persist /start handshakes without
 // another migration, but no producer writes to it yet. `lastSeenAt` carries
 // the most-recent inbound message timestamp once the real bot lands;

@@ -48,7 +48,7 @@ export default async function LeadReportPreviewPage({ params }: Props) {
             <div className="flex items-center gap-3">
               <AgentReviewComingSoon compact />
               <Link
-                href={`/lead/report/${reportId}`}
+                href={`/lead/report/${encodeURIComponent(reportId)}`}
                 className="rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
               >
                 ← Back to form

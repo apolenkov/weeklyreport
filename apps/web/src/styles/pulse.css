@@ -2,7 +2,7 @@
  * Landing hero styling for the «Weekly Report» wordmark + static column.
  *
  * Aesthetic direction: refined editorial-industrial. Corporate SaaS but
- * calm. Originally the Phase 58 «Your PULSE?» rebrand with a breathing
+ * calm. Originally the «Your PULSE?» rebrand with a breathing
  * wordmark and an ECG heartbeat trace; the decorative pulse motif was
  * removed 2026-06-23, so the hero is now fully static (the only motion
  * left is the JS-toggled tagline fade on `.pulse-tagline`).
@@ -70,7 +70,7 @@
   -webkit-text-fill-color: transparent;
 }
 
-/* ───── Tagline under PulseMark (UFB-062: cycling with fade) ───── */
+/* ───── Tagline under PulseMark (cycling with fade) ───── */
 
 .pulse-tagline {
   font-family: "Lexend", "Source Sans 3", system-ui, sans-serif;
