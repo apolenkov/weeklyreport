@@ -149,12 +149,13 @@ ships.
 A Settings sub-tab form MUST NOT overwrite an in-progress edit when its
 local draft state is reseeded from a server query: the reseed MUST run only
 when the form is not currently dirty (no unsaved local changes since the
-last seed or save). After the settings mutation itself succeeds and its
-post-save landing-page revalidation (`/api/revalidate-org`) fails or throws,
-the UI MUST still report the settings save as successful (the underlying
-data write already happened) AND MUST surface a distinct
-revalidation-failure signal, so a stale landing-page cache is never reported
-as a fully clean save.
+last seed or save). This applies to every draft-holding Settings sub-tab —
+Identity, Notifications, Periods, and Reminders. After the settings mutation
+itself succeeds and its post-save landing-page revalidation
+(`/api/revalidate-org`) fails or throws, the UI MUST still report the
+settings save as successful (the underlying data write already happened)
+AND MUST surface a distinct revalidation-failure signal, so a stale
+landing-page cache is never reported as a fully clean save.
 
 #### Scenario: Background refetch does not clobber an in-progress edit
 
@@ -172,6 +173,15 @@ as a fully clean save.
 - **THEN** the admin's unsaved input is not overwritten by the refetched
   server value
 
+#### Scenario: Background refetch does not clobber unsaved Periods or Reminders edits
+
+- **WHEN** an admin is mid-edit in any Settings → Periods field (e.g.
+  deadline days, grace period) or the Settings → Reminders default-timezone
+  select, has not yet saved, and the settings query refetches in the
+  background
+- **THEN** the admin's unsaved input is not overwritten by the refetched
+  server value
+
 #### Scenario: Save succeeds while landing-page revalidation fails
 
 - **WHEN** an admin saves the Identity or Notifications sub-tab, the
@@ -186,9 +196,9 @@ as a fully clean save.
 
 #### Scenario: A legitimate server-side change reseeds a clean form
 
-- **WHEN** the Identity or Notifications sub-tab form has no unsaved edits
-  (freshly loaded, or right after its own save completed) and the source
-  query's data changes
+- **WHEN** any draft-holding Settings sub-tab form (Identity, Notifications,
+  Periods, Reminders) has no unsaved edits (freshly loaded, or right after
+  its own save completed) and the source query's data changes
 - **THEN** the form fields update to reflect the new server values
 
 ### Requirement: Admin Tab Strip Navigates Client-Side
