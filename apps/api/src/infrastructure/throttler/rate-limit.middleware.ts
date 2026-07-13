@@ -1,8 +1,16 @@
 import { MS_PER_SECOND } from "@customreport/shared";
 import type { RequestHandler } from "express";
-import rateLimit, { ipKeyGenerator, type Options } from "express-rate-limit";
+import rateLimit, {
+  ipKeyGenerator,
+  type Options,
+  type Store,
+} from "express-rate-limit";
+import Redis from "ioredis";
+import { type RedisReply, RedisStore } from "rate-limit-redis";
 
 import type { AppLogger } from "../../lib/logger";
+import type { EnvConfig } from "../config/env.schema";
+import { buildRedisConnectionOptions } from "../config/redis-connection";
 import { rateLimitHitsTotal } from "../metrics/metrics.registry.js";
 
 const HTTP_TOO_MANY_REQUESTS = 429;
@@ -13,6 +21,43 @@ const AUTH_LIMIT_PER_MINUTE = 5;
 const TRPC_LIMIT_PER_MINUTE = 200;
 const VITALS_LIMIT_PER_MINUTE = 60;
 const CLIENT_LOGS_LIMIT_PER_MINUTE = 60;
+
+/**
+ * Shared ioredis client backing the rate-limit stores. Host/port come from the
+ * single `buildRedisConnectionOptions` builder — never raw `process.env` — so a
+ * missing var fails at the boot fence. `lazyConnect` keeps boot from blocking on
+ * Redis, and the error listener suppresses unhandled-rejection noise on a blip.
+ */
+function buildStoreClient(
+  env: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT"> | undefined,
+): Redis | undefined {
+  if (!env) {
+    return undefined;
+  }
+  const client = new Redis({
+    ...buildRedisConnectionOptions(env),
+    lazyConnect: true,
+    maxRetriesPerRequest: 1,
+    enableOfflineQueue: false,
+  });
+  client.on("error", () => undefined);
+  return client;
+}
+
+/**
+ * One `RedisStore` per limiter, keyed under a distinct `rl:<bucket>:` prefix so
+ * the four per-IP buckets never share a counter, while all reuse the single
+ * client above. Redis-backed hit counts survive a process restart and are
+ * shared across replicas, closing the `5 × N` brute-force window MemoryStore
+ * leaves open.
+ */
+function redisStoreFor(client: Redis, bucket: string): RedisStore {
+  return new RedisStore({
+    prefix: `rl:${bucket}:`,
+    sendCommand: (...args: string[]): Promise<RedisReply> =>
+      client.call(...(args as [string, ...string[]])) as Promise<RedisReply>,
+  });
+}
 
 /**
  * Rate-limit middleware factory.
@@ -35,18 +80,35 @@ const CLIENT_LOGS_LIMIT_PER_MINUTE = 60;
 export function createRateLimits(options: {
   logger: AppLogger;
   isTest: boolean;
+  env?: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT">;
+  redis?: Redis;
 }): {
   authLimiter: RequestHandler;
   trpcLimiter: RequestHandler;
   vitalsLimiter: RequestHandler;
   clientLogsLimiter: RequestHandler;
 } {
-  const { logger, isTest } = options;
+  const { logger, isTest, env, redis } = options;
+
+  // Production backs every bucket with Redis so its window survives a restart.
+  // `isTest` (E2E/dev) and the env-less unit budget suite keep the per-process
+  // MemoryStore — neither may require a live Redis. A caller MAY inject its own
+  // `redis` (integration tests own the client's lifecycle); otherwise the client
+  // is built once from `env` and shared across the four stores below.
+  const client = isTest ? undefined : (redis ?? buildStoreClient(env));
+  const storeFor = (bucket: string): Store | undefined =>
+    client ? redisStoreFor(client, bucket) : undefined;
 
   const baseConfig: Partial<Options> = {
     windowMs: 60_000,
     standardHeaders: "draft-7",
     legacyHeaders: false,
+    // Fail OPEN on a store outage: with the Redis-backed stores below, the
+    // library default (false) would rethrow store errors and turn a Redis
+    // blip into a full 500-outage for every request behind the limiter —
+    // rate limiting is a shield, not a dependency. Unlimited-but-up beats
+    // down; the blip itself still surfaces via the redis health indicator.
+    passOnStoreError: true,
     // Wrap the IP through `ipKeyGenerator` from
     // express-rate-limit so IPv6 addresses are normalised by /64 prefix.
     // Without it, the library emits the ERR_ERL_KEY_GEN_IPV6 advisory
@@ -82,12 +144,14 @@ export function createRateLimits(options: {
     ...baseConfig,
     limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : AUTH_LIMIT_PER_MINUTE,
     message: "auth",
+    store: storeFor("auth"),
   });
 
   const trpcLimiter = rateLimit({
     ...baseConfig,
     limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : TRPC_LIMIT_PER_MINUTE,
     message: "trpc",
+    store: storeFor("trpc"),
   });
 
   // A real page emits a handful of vitals per navigation; 60/min/IP comfortably
@@ -97,6 +161,7 @@ export function createRateLimits(options: {
     ...baseConfig,
     limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : VITALS_LIMIT_PER_MINUTE,
     message: "vitals",
+    store: storeFor("vitals"),
   });
 
   // The client-log forwarder is a public, unauthenticated ingress the Caddyfile
@@ -107,6 +172,7 @@ export function createRateLimits(options: {
     ...baseConfig,
     limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : CLIENT_LOGS_LIMIT_PER_MINUTE,
     message: "client-logs",
+    store: storeFor("client-logs"),
   });
 
   return { authLimiter, trpcLimiter, vitalsLimiter, clientLogsLimiter };

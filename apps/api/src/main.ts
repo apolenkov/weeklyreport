@@ -283,6 +283,7 @@ async function bootstrap() {
     createRateLimits({
       logger,
       isTest: env.NODE_ENV === "test" || env.AUTH_DEV_MODE,
+      env,
     });
 
   // Browser → server log forwarder. Captures console.error/warn,
