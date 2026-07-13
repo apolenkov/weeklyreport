@@ -112,6 +112,19 @@ const makeRisks = (count: number) =>
 const makeDecisions = (count: number) =>
   Array.from({ length: count }, () => validDecision());
 
+const makeProjectStatuses = (count: number) =>
+  Array.from({ length: count }, () => ({
+    projectId: uuid(),
+    status: "green" as const,
+  }));
+
+const makeStageStatuses = (count: number) =>
+  Array.from({ length: count }, () => ({
+    projectId: uuid(),
+    stageId: uuid(),
+    status: "green" as const,
+  }));
+
 // ---------------------------------------------------------------------------
 // Group 1: draftSaveSchema boundaries
 // ---------------------------------------------------------------------------
@@ -160,6 +173,36 @@ describe("draftSaveSchema", () => {
 
   it("rejects decisions array with 101 elements", () => {
     const draft = { ...validDraft(), decisions: makeDecisions(101) };
+    const result = draftSaveSchema.safeParse(draft);
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts projectStatuses array with 100 elements (at boundary)", () => {
+    const draft = {
+      ...validDraft(),
+      projectStatuses: makeProjectStatuses(100),
+    };
+    const result = draftSaveSchema.safeParse(draft);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects projectStatuses array with 101 elements", () => {
+    const draft = {
+      ...validDraft(),
+      projectStatuses: makeProjectStatuses(101),
+    };
+    const result = draftSaveSchema.safeParse(draft);
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts stageStatuses array with 100 elements (at boundary)", () => {
+    const draft = { ...validDraft(), stageStatuses: makeStageStatuses(100) };
+    const result = draftSaveSchema.safeParse(draft);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects stageStatuses array with 101 elements", () => {
+    const draft = { ...validDraft(), stageStatuses: makeStageStatuses(101) };
     const result = draftSaveSchema.safeParse(draft);
     expect(result.success).toBe(false);
   });
@@ -582,6 +625,27 @@ describe("submitSectionSchema", () => {
 
   it("requires confirmed to be true", () => {
     const submit = { ...validSubmit(), confirmed: false };
+    const result = submitSectionSchema.safeParse(submit);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects projectStatuses array with 101 elements", () => {
+    const submit = {
+      ...validSubmit(),
+      projectStatuses: makeProjectStatuses(101),
+    };
+    const result = submitSectionSchema.safeParse(submit);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects activityStatuses array with 101 elements on submit (the extend override must keep the bound)", () => {
+    const submit = {
+      ...validSubmit(),
+      activityStatuses: Array.from({ length: 101 }, () => ({
+        activityId: uuid(),
+        status: "green" as const,
+      })),
+    };
     const result = submitSectionSchema.safeParse(submit);
     expect(result.success).toBe(false);
   });
