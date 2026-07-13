@@ -19,6 +19,14 @@ describe("ActivityPrismaRepository (integration)", () => {
   const leadB = "a0000000-0000-4000-a000-000000000405";
   const reportId = "a0000000-0000-4000-a000-000000000406";
 
+  const headSession: UserSession = {
+    userId: headA,
+    email: "head-a@test.local",
+    name: "Head A",
+    role: "head",
+    reportingGroupId: groupA,
+  };
+
   beforeAll(() => {
     repo = new ActivityPrismaRepository(prisma as never);
   });
@@ -138,5 +146,183 @@ describe("ActivityPrismaRepository (integration)", () => {
     expect(result.reportId).toBe(reportId);
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0]?.leadId).toBe(leadA);
+  });
+
+  it("reads a lead with no section as draft with zero activity and null lastEditAt", async () => {
+    // A lead in the caller's group who has not started a section for the
+    // current report — the no-section branch that maps to a synthetic draft row.
+    const leadNoSection = "a0000000-0000-4000-a000-000000000410";
+    await prisma.user.create({
+      data: {
+        id: leadNoSection,
+        email: "lead-nosection@test.local",
+        name: "Lead NoSection",
+        lastName: "Lead",
+        firstName: "NoSection",
+        role: "lead",
+        samlId: "lead-nosection",
+        reportingGroupId: groupA,
+      },
+    });
+
+    const result = await repo.getLiveActivity(headSession);
+
+    const row = result.rows.find((r) => r.leadId === leadNoSection);
+    expect(row).toBeDefined();
+    expect(row?.reportSectionId).toBeNull();
+    expect(row?.status).toBe("draft");
+    expect(row?.itemCount).toBe(0);
+    expect(row?.riskCount).toBe(0);
+    expect(row?.decisionCount).toBe(0);
+    expect(row?.lastEditAt).toBeNull();
+  });
+
+  it("sorts a draft-status lead before a submitted-status lead regardless of name or record recency", async () => {
+    // A submitted-status lead whose name sorts BEFORE the seeded draft lead
+    // ("AAA…" < "Lead A") and whose item is edited later than any draft record.
+    // The draft lead must still come first: status dominates both the alpha
+    // tiebreaker and record recency.
+    const leadSubmitted = "a0000000-0000-4000-a000-000000000411";
+    const projectSubmitted = "a0000000-0000-4000-a000-000000000413";
+    await prisma.user.create({
+      data: {
+        id: leadSubmitted,
+        email: "lead-submitted@test.local",
+        name: "AAA Submitted",
+        lastName: "Submitted",
+        firstName: "AAA",
+        role: "lead",
+        samlId: "lead-submitted",
+        reportingGroupId: groupA,
+      },
+    });
+    await prisma.project.create({
+      data: {
+        id: projectSubmitted,
+        name: "Submitted Project",
+        leadId: leadSubmitted,
+      },
+    });
+    const submittedSection = await prisma.reportSection.create({
+      data: { reportId, authorId: leadSubmitted, status: "submitted" },
+    });
+    await prisma.item.create({
+      data: {
+        reportSectionId: submittedSection.id,
+        projectId: projectSubmitted,
+        type: "current",
+        text: "Late-edited submitted item",
+        tag: "feature",
+        workflowStatus: "done",
+        updatedAt: new Date("2026-06-01T10:00:00.000Z"),
+      },
+    });
+
+    const result = await repo.getLiveActivity(headSession);
+
+    const draftIndex = result.rows.findIndex((r) => r.leadId === leadA);
+    const submittedIndex = result.rows.findIndex(
+      (r) => r.leadId === leadSubmitted,
+    );
+    expect(draftIndex).toBeGreaterThanOrEqual(0);
+    expect(submittedIndex).toBeGreaterThan(draftIndex);
+    expect(result.rows[draftIndex]?.status).toBe("draft");
+    expect(result.rows[submittedIndex]?.status).toBe("submitted");
+  });
+
+  it("computes lastEditAt as the max across the LEAD's own records — a later reviewer comment does not count", async () => {
+    // Section timestamp is the EARLIEST; each child record is progressively
+    // later, so lastEditAt must resolve to the latest record's timestamp, not
+    // the section's own updatedAt. The reviewer comment is deliberately the
+    // MOST RECENT timestamp of all: live activity tracks the lead's editing,
+    // so a repository that leaked comments into the max would fail this test.
+    const leadMulti = "a0000000-0000-4000-a000-000000000420";
+    const projectMulti = "a0000000-0000-4000-a000-000000000421";
+    const sectionUpdatedAt = new Date("2026-05-05T10:00:00.000Z");
+    const itemUpdatedAt = new Date("2026-05-06T10:00:00.000Z");
+    const riskUpdatedAt = new Date("2026-05-07T10:00:00.000Z");
+    const decisionUpdatedAt = new Date("2026-05-09T10:00:00.000Z");
+    const commentAt = new Date("2026-05-12T10:00:00.000Z");
+
+    await prisma.user.create({
+      data: {
+        id: leadMulti,
+        email: "lead-multi@test.local",
+        name: "Lead Multi",
+        lastName: "Lead",
+        firstName: "Multi",
+        role: "lead",
+        samlId: "lead-multi",
+        reportingGroupId: groupA,
+      },
+    });
+    await prisma.project.create({
+      data: { id: projectMulti, name: "Multi Project", leadId: leadMulti },
+    });
+    const section = await prisma.reportSection.create({
+      data: {
+        reportId,
+        authorId: leadMulti,
+        status: "draft",
+        updatedAt: sectionUpdatedAt,
+      },
+    });
+    const item = await prisma.item.create({
+      data: {
+        reportSectionId: section.id,
+        projectId: projectMulti,
+        type: "current",
+        text: "Multi item",
+        tag: "feature",
+        workflowStatus: "done",
+        updatedAt: itemUpdatedAt,
+      },
+    });
+    await prisma.risk.create({
+      data: {
+        reportSectionId: section.id,
+        projectId: projectMulti,
+        risk: "Multi risk",
+        impact: "High",
+        mitigation: "Mitigate",
+        severity: "at-risk",
+        updatedAt: riskUpdatedAt,
+      },
+    });
+    await prisma.decision.create({
+      data: {
+        reportSectionId: section.id,
+        productId: projectMulti,
+        text: "Multi decision",
+        owner: "Owner",
+        impact: "High",
+        updatedAt: decisionUpdatedAt,
+      },
+    });
+    await prisma.recordComment.create({
+      data: {
+        reviewerId: headA,
+        itemId: item.id,
+        text: "Reviewer note",
+        createdAt: commentAt,
+        updatedAt: commentAt,
+      },
+    });
+
+    const result = await repo.getLiveActivity(headSession);
+
+    const row = result.rows.find((r) => r.leadId === leadMulti);
+    expect(row).toBeDefined();
+    // Max is the decision timestamp — later than the section's own updatedAt
+    // and every other LEAD record; the even-later reviewer comment is
+    // excluded from the recency signal by design.
+    expect(row?.lastEditAt?.getTime()).toBe(decisionUpdatedAt.getTime());
+    expect(row?.lastEditAt?.getTime()).toBeLessThan(commentAt.getTime());
+    expect(row?.lastEditAt?.getTime()).toBeGreaterThan(
+      sectionUpdatedAt.getTime(),
+    );
+    expect(row?.itemCount).toBe(1);
+    expect(row?.riskCount).toBe(1);
+    expect(row?.decisionCount).toBe(1);
   });
 });

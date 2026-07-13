@@ -6,10 +6,12 @@ import {
   createTestPrisma,
   disconnectTestPrisma,
   seedTestData,
+  TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
 import { PeriodPrismaRepository } from "../period/infrastructure/period.prisma-repository.js";
 import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";
 import { ArchivePrismaRepository } from "./archive.prisma-repository";
+import type { ArchiveScopeSession } from "./archive.service.js";
 import { encodeArchiveCursor } from "./archive-cursor.js";
 
 describe("ArchivePrismaRepository (integration)", () => {
@@ -405,5 +407,187 @@ describe("ArchivePrismaRepository (integration)", () => {
     await expect(
       repo.listArchiveReports({ limit: 2, cursor: malformed }),
     ).rejects.toThrow("Malformed archive pagination cursor");
+  });
+
+  const groupBId = "a0000000-0000-4000-a000-000000000b01";
+  const leadBId = "a0000000-0000-4000-a000-000000000b02";
+  const sessionA: ArchiveScopeSession = {
+    role: "lead",
+    reportingGroupId: TEST_IDS.group,
+  };
+  const sessionB: ArchiveScopeSession = {
+    role: "head",
+    reportingGroupId: groupBId,
+  };
+
+  /**
+   * Attaches a second reporting group (B) to the seeded report so its sections
+   * span two groups: group A (the seeded lead's section) reads GREEN, group B
+   * reads RED (a blocked, covers-all risk on group B's owned stage). A scoped
+   * read must see only its own group's section and portfolio.
+   */
+  async function seedCrossGroupSections(): Promise<{ sectionBId: string }> {
+    const projectBId = "a0000000-0000-4000-a000-000000000b03";
+    const stageAId = "a0000000-0000-4000-a000-000000000b04";
+    const stageBId = "a0000000-0000-4000-a000-000000000b05";
+
+    await prisma.reportingGroup.create({
+      data: { id: groupBId, name: "Group B", description: null },
+    });
+    await prisma.user.create({
+      data: {
+        id: leadBId,
+        email: "lead-b-archive@test.local",
+        name: "Lead B Archive",
+        lastName: "Lead",
+        firstName: "B",
+        role: "lead",
+        samlId: "lead-b-archive",
+        reportingGroupId: groupBId,
+      },
+    });
+    await prisma.project.create({
+      data: { id: projectBId, name: "Project B", leadId: leadBId },
+    });
+    const sectionB = await prisma.reportSection.create({
+      data: {
+        reportId: testData.report.id,
+        authorId: leadBId,
+        status: "submitted",
+      },
+    });
+    await prisma.stage.createMany({
+      data: [
+        { id: stageAId, name: "Stage A", sortOrder: 1 },
+        { id: stageBId, name: "Stage B", sortOrder: 2 },
+      ],
+    });
+
+    // Group A: owned stage + a green ProjectStatus, no covering risk → green.
+    await prisma.stageAssignment.create({
+      data: {
+        userId: testData.lead.id,
+        projectId: testData.project.id,
+        stageId: stageAId,
+      },
+    });
+    await prisma.projectStatus.create({
+      data: {
+        reportSectionId: testData.section.id,
+        projectId: testData.project.id,
+        status: "green",
+      },
+    });
+
+    // Group B: owned stage floored by a blocked, covers-all own risk → red.
+    await prisma.stageAssignment.create({
+      data: { userId: leadBId, projectId: projectBId, stageId: stageBId },
+    });
+    await prisma.risk.create({
+      data: {
+        reportSectionId: sectionB.id,
+        projectId: projectBId,
+        risk: "Blocking risk",
+        impact: "High",
+        mitigation: "None",
+        severity: "blocked",
+        stageNames: [],
+      },
+    });
+
+    return { sectionBId: sectionB.id };
+  }
+
+  it("snapshot path: a group-scoped session reads only its own group's sections and portfolio", async () => {
+    const { sectionBId } = await seedCrossGroupSections();
+    // Publish to persist a snapshot spanning BOTH groups, then archive it.
+    await periodRepo.publishPeriod(testData.report.id, testData.head.id);
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { archived: true, periodState: "archived" },
+    });
+
+    const detailA = await repo.getArchiveReport(
+      testData.report.id,
+      undefined,
+      sessionA,
+    );
+    expect(detailA).not.toBeNull();
+    expect(expectDefined(detailA).report.sections).toHaveLength(1);
+    expect(
+      expectDefined(expectDefined(detailA).report.sections[0]).reportSectionId,
+    ).toBe(testData.section.id);
+    expect(expectDefined(detailA).report.portfolioOverview.status).toBe(
+      "green",
+    );
+    expect(expectDefined(detailA).summary.portfolioStatus).toBe("green");
+
+    // The list path recomputes the summary from the same scoped snapshot.
+    const listA = await repo.listArchiveReports(undefined, undefined, sessionA);
+    expect(
+      expectDefined(listA.items.find((r) => r.reportId === testData.report.id))
+        .portfolioStatus,
+    ).toBe("green");
+
+    // Symmetric: a session scoped to group B sees only group B's red section.
+    const detailB = await repo.getArchiveReport(
+      testData.report.id,
+      undefined,
+      sessionB,
+    );
+    expect(expectDefined(detailB).report.sections).toHaveLength(1);
+    expect(
+      expectDefined(expectDefined(detailB).report.sections[0]).reportSectionId,
+    ).toBe(sectionBId);
+    expect(expectDefined(detailB).report.portfolioOverview.status).toBe("red");
+  });
+
+  it("fallback path: a group-scoped session reads only its own group's sections and portfolio", async () => {
+    const { sectionBId } = await seedCrossGroupSections();
+    // Published + archived WITHOUT publishPeriod → no snapshot → the read takes
+    // the loadFallbackGraphs / scoped-sections-include path.
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        status: "published",
+        publishedAt: new Date("2026-04-12T10:00:00.000Z"),
+        publishedById: testData.head.id,
+        archived: true,
+      },
+    });
+
+    const detailA = await repo.getArchiveReport(
+      testData.report.id,
+      undefined,
+      sessionA,
+    );
+    expect(detailA).not.toBeNull();
+    expect(expectDefined(detailA).report.sections).toHaveLength(1);
+    expect(
+      expectDefined(expectDefined(detailA).report.sections[0]).reportSectionId,
+    ).toBe(testData.section.id);
+    expect(expectDefined(detailA).report.portfolioOverview.status).toBe(
+      "green",
+    );
+
+    // The list path here has no snapshot, so it exercises loadFallbackGraphs
+    // with the same section scope.
+    const listA = await repo.listArchiveReports(undefined, undefined, sessionA);
+    expect(
+      expectDefined(listA.items.find((r) => r.reportId === testData.report.id))
+        .portfolioStatus,
+    ).toBe("green");
+
+    // Symmetric: group B's fallback graph load returns only its red section.
+    const detailB = await repo.getArchiveReport(
+      testData.report.id,
+      undefined,
+      sessionB,
+    );
+    expect(expectDefined(detailB).report.sections).toHaveLength(1);
+    expect(
+      expectDefined(expectDefined(detailB).report.sections[0]).reportSectionId,
+    ).toBe(sectionBId);
+    expect(expectDefined(detailB).report.portfolioOverview.status).toBe("red");
   });
 });
