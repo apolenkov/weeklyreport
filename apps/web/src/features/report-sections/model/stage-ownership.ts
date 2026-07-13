@@ -1,7 +1,6 @@
 // lead-form-stage-access-integrity: the client-side dead-end helpers shared by
-// the item and decision dialogs. They mirror the risk dialog's own local copies
-// (owned by fix-risk-stage-integrity-impl, not editable here) so all three
-// record dialogs treat a zero-owned-stage product identically. The server guard
+// the item, risk and decision dialogs, so all three record dialogs treat a
+// zero-owned-stage product identically. The server guard
 // (`validateStageOwnership`) is the real guarantee; this is convenience UX.
 
 /**
