@@ -1,4 +1,9 @@
-import { MS_PER_HOUR, type UserSession } from "@customreport/shared";
+import {
+  MS_PER_HOUR,
+  type PeriodStatus,
+  type ReportStatus,
+  type UserSession,
+} from "@customreport/shared";
 
 import {
   customreportPeriodStateTransitionsTotal,
@@ -52,8 +57,8 @@ export type PublishPeriodOutcome =
 export interface PeriodRepository {
   getReportById(reportId: string): Promise<{
     id: string;
-    status: string;
-    periodStatus: string;
+    status: ReportStatus;
+    periodStatus: PeriodStatus;
     publishedAt: Date | null;
     archived: boolean;
   } | null>;
@@ -215,7 +220,7 @@ export class PeriodService {
    */
   private async emitPublishSideEffects(
     reportId: string,
-    priorStatus: string,
+    priorStatus: PeriodStatus,
   ): Promise<void> {
     customreportReportsSubmittedTotal.inc({ state: "published" });
     customreportPeriodStateTransitionsTotal.inc({

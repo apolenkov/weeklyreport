@@ -1,4 +1,8 @@
-import { type ReportSectionReadModel } from "@customreport/shared";
+import {
+  type PeriodStatus,
+  type ReportSectionReadModel,
+  type ReportStatus,
+} from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
@@ -22,7 +26,7 @@ export class ReportSectionsPrismaRepository
 {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getReportStatus(reportId: string): Promise<string | null> {
+  async getReportStatus(reportId: string): Promise<ReportStatus | null> {
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
       select: { status: true },
@@ -39,7 +43,7 @@ export class ReportSectionsPrismaRepository
    */
   async getReportPeriodStatusForSection(
     sectionId: string,
-  ): Promise<string | null> {
+  ): Promise<PeriodStatus | null> {
     const row = await this.prisma.reportSection.findUnique({
       where: { id: sectionId },
       select: { report: { select: { periodStatus: true } } },
@@ -54,7 +58,7 @@ export class ReportSectionsPrismaRepository
    */
   async getReportMeta(
     reportId: string,
-  ): Promise<{ status: string; deadline: Date } | null> {
+  ): Promise<{ status: ReportStatus; deadline: Date } | null> {
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
       select: { status: true, deadline: true },

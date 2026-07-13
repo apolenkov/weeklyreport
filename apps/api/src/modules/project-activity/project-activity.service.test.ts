@@ -1,4 +1,4 @@
-import type { ProjectActivity } from "@customreport/shared";
+import type { DbRole, ProjectActivity } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -19,7 +19,7 @@ interface Fixture {
   activities?: ProjectActivity[];
   groups?: string[];
   products?: string[];
-  users?: Record<string, { role: string; reportingGroupId: string | null }>;
+  users?: Record<string, { role: DbRole; reportingGroupId: string | null }>;
 }
 
 function makeActivity(

@@ -1,5 +1,7 @@
 import {
+  type PeriodStatus,
   type RecordCommentView,
+  type ReportSectionStatus,
   type ReviewAcknowledgementView,
   reviewAcknowledgementViewSchema,
   type ReviewCommentInput,
@@ -34,9 +36,9 @@ export interface RecordAnchor {
 // lifecycle it belongs to.
 export interface VerdictContext {
   version: number;
-  status: string;
+  status: ReportSectionStatus;
   groupId: string | null;
-  periodStatus: string;
+  periodStatus: PeriodStatus;
   archived: boolean;
 }
 
@@ -49,7 +51,7 @@ export interface PostVerdictParams {
   // The reviewer-judged version; the verdict write's optimistic lock rejects a
   // stale value for either verdict value.
   expectedVersion: number;
-  currentStatus: string;
+  currentStatus: ReportSectionStatus;
 }
 
 export interface ReviewActionsRepository {

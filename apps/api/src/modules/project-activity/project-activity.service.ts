@@ -1,4 +1,5 @@
 import type {
+  DbRole,
   ProjectActivity,
   ProjectActivityArchiveInput,
   ProjectActivityCreateInput,
@@ -45,7 +46,7 @@ export interface ProjectActivityRepository {
   productExists(productId: string): Promise<boolean>;
   getLeadContext(
     leadId: string,
-  ): Promise<{ role: string; reportingGroupId: string | null } | null>;
+  ): Promise<{ role: DbRole; reportingGroupId: string | null } | null>;
 }
 
 /**

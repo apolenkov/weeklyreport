@@ -2,6 +2,7 @@ import {
   type CarryOverExecution,
   carryOverExecutionSchema,
   type CarryOverRecord,
+  type PeriodStatus,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
 } from "@customreport/shared";
@@ -42,7 +43,7 @@ export interface CarryOverResult {
  * archive path does not force `periodStatus` — so both must be read.
  */
 export interface TargetReportState {
-  periodStatus: "open" | "published" | "reopened";
+  periodStatus: PeriodStatus;
   archived: boolean;
 }
 

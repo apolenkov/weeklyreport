@@ -1,4 +1,5 @@
 import {
+  type DbRole,
   type ProjectActivity,
   type ProjectActivityLeadEdge,
   projectActivitySchema,
@@ -207,7 +208,7 @@ export class ProjectActivityPrismaRepository
 
   async getLeadContext(
     leadId: string,
-  ): Promise<{ role: string; reportingGroupId: string | null } | null> {
+  ): Promise<{ role: DbRole; reportingGroupId: string | null } | null> {
     const user = await this.prisma.user.findUnique({
       where: { id: leadId },
       select: { role: true, reportingGroupId: true },

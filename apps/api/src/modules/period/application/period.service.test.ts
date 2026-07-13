@@ -1,4 +1,8 @@
-import type { UserSession } from "@customreport/shared";
+import type {
+  PeriodStatus,
+  ReportStatus,
+  UserSession,
+} from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -52,8 +56,8 @@ const archivedReportId = "44444444-4444-4444-8444-444444444444";
 
 interface SpyReport {
   id: string;
-  status: string;
-  periodStatus: string;
+  status: ReportStatus;
+  periodStatus: PeriodStatus;
   publishedAt: Date | null;
   /** Defaults to false in `getReportById` when a fixture omits it. */
   archived?: boolean;
@@ -131,7 +135,7 @@ function createSpyRepository(
 
 describe("PeriodService — publishPeriod (unit)", () => {
   it("calls repository.publishPeriod with correct args", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -159,7 +163,7 @@ describe("PeriodService — publishPeriod (unit)", () => {
   });
 
   it("returns the reportId in the success result", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -200,7 +204,7 @@ describe("PeriodService — publishPeriod (unit)", () => {
   });
 
   it("does not call repository when period is already published", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -225,7 +229,7 @@ describe("PeriodService — publishPeriod (unit)", () => {
   });
 
   it("publish-then-reopen-then-publish cycle works", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -257,7 +261,7 @@ describe("PeriodService — publishPeriod (unit)", () => {
   });
 
   it("invalidates analytics cache on successful publish (ANAL-01)", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -282,7 +286,7 @@ describe("PeriodService — publishPeriod (unit)", () => {
   });
 
   it("does NOT invalidate analytics cache when publish fails", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -309,7 +313,7 @@ describe("PeriodService — publishPeriod (unit)", () => {
   });
 
   it("different reports are independent", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -356,7 +360,7 @@ describe("PeriodService — publishPeriod (unit)", () => {
 
 describe("PeriodService — reopenPeriod (unit)", () => {
   it("calls repository.reopenPeriod with correct reportId", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -381,7 +385,7 @@ describe("PeriodService — reopenPeriod (unit)", () => {
   });
 
   it("does not call repository when period is not published", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -404,7 +408,7 @@ describe("PeriodService — reopenPeriod (unit)", () => {
   });
 
   it("invalidates analytics cache on successful reopen (ANAL-01)", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -429,7 +433,7 @@ describe("PeriodService — reopenPeriod (unit)", () => {
   });
 
   it("double reopen of a reopened period fails", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -462,7 +466,7 @@ describe("PeriodService — reopenPeriod (unit)", () => {
 
 describe("PeriodService — reopen policy gate (UFB-052)", () => {
   it("throws PeriodAccessError when allowReopenAfterPublish=false", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -490,7 +494,7 @@ describe("PeriodService — reopen policy gate (UFB-052)", () => {
 
   it("throws PeriodAccessError when reopen window has expired", async () => {
     const publishedAt = new Date(Date.now() - 100 * 3_600_000); // 100h ago
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -518,7 +522,7 @@ describe("PeriodService — reopen policy gate (UFB-052)", () => {
 
   it("allows reopen within the window", async () => {
     const publishedAt = new Date(Date.now() - 2 * 3_600_000); // 2h ago
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -543,7 +547,7 @@ describe("PeriodService — reopen policy gate (UFB-052)", () => {
   });
 
   it("a permissive policy (allow + zero window) permits reopen", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -592,7 +596,7 @@ async function getCounterValue(
 
 describe("PeriodService — manual-publish telemetry", () => {
   it("increments reportsSubmittedTotal once on successful publish of an open period", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -622,7 +626,7 @@ describe("PeriodService — manual-publish telemetry", () => {
   });
 
   it("increments periodStateTransitionsTotal with from:open on successful publish", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -654,7 +658,7 @@ describe("PeriodService — manual-publish telemetry", () => {
   });
 
   it("increments periodStateTransitionsTotal with from:reopened when re-publishing a reopened period", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [
         reportId,
         {
@@ -841,7 +845,7 @@ function reopenedReport(id: string, archived = false): SpyReport {
 describe("PeriodService — publish target scope", () => {
   it("head publishes the active editable period", async () => {
     const repo = createSpyRepository(
-      new Map([[reportId, openReport(reportId)]]),
+      new Map<string, SpyReport>([[reportId, openReport(reportId)]]),
     );
     const service = new PeriodService(
       repo,
@@ -865,7 +869,7 @@ describe("PeriodService — publish target scope", () => {
     // reportId is the resolved active editable id (inserted first); otherReportId
     // is an older editable period the head must not be able to target.
     const repo = createSpyRepository(
-      new Map([
+      new Map<string, SpyReport>([
         [reportId, openReport(reportId)],
         [otherReportId, openReport(otherReportId)],
       ]),
@@ -884,7 +888,7 @@ describe("PeriodService — publish target scope", () => {
 
   it("lets an admin publish an arbitrary non-archived editable id", async () => {
     const repo = createSpyRepository(
-      new Map([
+      new Map<string, SpyReport>([
         [reportId, openReport(reportId)],
         [otherReportId, openReport(otherReportId)],
       ]),
@@ -907,7 +911,9 @@ describe("PeriodService — publish target scope", () => {
 
   it("rejects an archived target for a head", async () => {
     const repo = createSpyRepository(
-      new Map([[archivedReportId, openReport(archivedReportId, true)]]),
+      new Map<string, SpyReport>([
+        [archivedReportId, openReport(archivedReportId, true)],
+      ]),
     );
     const service = new PeriodService(
       repo,
@@ -923,7 +929,9 @@ describe("PeriodService — publish target scope", () => {
 
   it("rejects an archived target for an admin", async () => {
     const repo = createSpyRepository(
-      new Map([[archivedReportId, openReport(archivedReportId, true)]]),
+      new Map<string, SpyReport>([
+        [archivedReportId, openReport(archivedReportId, true)],
+      ]),
     );
     const service = new PeriodService(
       repo,
@@ -991,7 +999,7 @@ describe("PeriodService — publish target scope", () => {
 describe("PeriodService — reopen target scope", () => {
   it("head reopens the latest published non-archived period", async () => {
     const repo = createSpyRepository(
-      new Map([[reportId, publishedReport(reportId)]]),
+      new Map<string, SpyReport>([[reportId, publishedReport(reportId)]]),
     );
     const service = new PeriodService(
       repo,
@@ -1008,7 +1016,7 @@ describe("PeriodService — reopen target scope", () => {
 
   it("rejects a head reopening a stale published id (not the latest)", async () => {
     const repo = createSpyRepository(
-      new Map([
+      new Map<string, SpyReport>([
         [reportId, publishedReport(reportId)],
         [otherReportId, publishedReport(otherReportId)],
       ]),
@@ -1028,7 +1036,7 @@ describe("PeriodService — reopen target scope", () => {
 
   it("lets an admin reopen an arbitrary non-archived published id", async () => {
     const repo = createSpyRepository(
-      new Map([
+      new Map<string, SpyReport>([
         [reportId, publishedReport(reportId)],
         [otherReportId, publishedReport(otherReportId)],
       ]),
@@ -1047,7 +1055,9 @@ describe("PeriodService — reopen target scope", () => {
 
   it("rejects an archived published target for a head", async () => {
     const repo = createSpyRepository(
-      new Map([[archivedReportId, publishedReport(archivedReportId, true)]]),
+      new Map<string, SpyReport>([
+        [archivedReportId, publishedReport(archivedReportId, true)],
+      ]),
     );
     const service = new PeriodService(
       repo,
@@ -1063,7 +1073,9 @@ describe("PeriodService — reopen target scope", () => {
 
   it("rejects an archived published target for an admin", async () => {
     const repo = createSpyRepository(
-      new Map([[archivedReportId, publishedReport(archivedReportId, true)]]),
+      new Map<string, SpyReport>([
+        [archivedReportId, publishedReport(archivedReportId, true)],
+      ]),
     );
     const service = new PeriodService(
       repo,
@@ -1084,7 +1096,7 @@ describe("PeriodService — reopen target scope", () => {
     // THAT id succeeds — proving the resolver diverges from getLatestPublishedId
     // and the archived guard does not block the older non-archived period.
     const repo = createSpyRepository(
-      new Map([
+      new Map<string, SpyReport>([
         [reportId, publishedReport(reportId, true)],
         [otherReportId, publishedReport(otherReportId, false)],
       ]),
@@ -1151,7 +1163,7 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
     // open and — inserted first — is what getCurrentEditableId resolves. A head
     // reopens N and must be able to republish it; a strict equality check against
     // the current editable (N+1) would brick this legitimate reopen→republish flow.
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [otherReportId, openReport(otherReportId)],
       [reportId, publishedReport(reportId)],
     ]);
@@ -1181,7 +1193,7 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
     // otherReportId is already reopened; reportId is the latest published
     // non-archived target. Allowing this reopen would let a head walk back
     // through history and republish each older period — forbidden for a non-admin.
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [otherReportId, reopenedReport(otherReportId)],
       [reportId, publishedReport(reportId)],
     ]);
@@ -1199,7 +1211,7 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
   });
 
   it("lets an admin reopen a second period while another is reopened (recovery path)", async () => {
-    const reports = new Map([
+    const reports = new Map<string, SpyReport>([
       [otherReportId, reopenedReport(otherReportId)],
       [reportId, publishedReport(reportId)],
     ]);
@@ -1224,7 +1236,7 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
 describe("PeriodService — publish reopened-target scope", () => {
   it("lets a head publish the single active reopened period (its own)", async () => {
     const repo = createSpyRepository(
-      new Map([[reportId, reopenedReport(reportId)]]),
+      new Map<string, SpyReport>([[reportId, reopenedReport(reportId)]]),
     );
     const service = new PeriodService(
       repo,
@@ -1247,7 +1259,7 @@ describe("PeriodService — publish reopened-target scope", () => {
     // — only reachable via an admin reopen of a historical period. A head must
     // not be able to publish it (the closed bypass).
     const repo = createSpyRepository(
-      new Map([
+      new Map<string, SpyReport>([
         [reportId, reopenedReport(reportId)],
         [otherReportId, reopenedReport(otherReportId)],
       ]),
@@ -1266,7 +1278,7 @@ describe("PeriodService — publish reopened-target scope", () => {
 
   it("lets an admin publish any reopened target (reopen→fix→republish preserved)", async () => {
     const repo = createSpyRepository(
-      new Map([
+      new Map<string, SpyReport>([
         [reportId, reopenedReport(reportId)],
         [otherReportId, reopenedReport(otherReportId)],
       ]),

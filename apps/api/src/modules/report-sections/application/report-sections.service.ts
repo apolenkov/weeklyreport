@@ -5,8 +5,10 @@ import {
   type DraftSaveValidationError,
   MS_PER_HOUR,
   MS_PER_SECOND,
+  type PeriodStatus,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
+  type ReportStatus,
   type SubmitSectionInput,
   type SubmitSectionPayload,
   submitSectionSchema,
@@ -58,7 +60,7 @@ export interface ReportSectionsRepository {
   getSectionById(
     reportSectionId: string,
   ): Promise<ReportSectionReadModel | null>;
-  getReportStatus(reportId: string): Promise<string | null>;
+  getReportStatus(reportId: string): Promise<ReportStatus | null>;
   /**
    * Canonical period status of the section's report, keyed on the section id.
    * Both write paths decide editability from this — never the legacy
@@ -66,7 +68,9 @@ export interface ReportSectionsRepository {
    * still holds. Mirrors the lead-form port's identically named lookup, so the
    * two surfaces read one shared query shape.
    */
-  getReportPeriodStatusForSection(sectionId: string): Promise<string | null>;
+  getReportPeriodStatusForSection(
+    sectionId: string,
+  ): Promise<PeriodStatus | null>;
   /**
    * Deadline-aware variant. Returns `null` when the
    * report does not exist (caller treats that as "no gate to enforce").
@@ -77,7 +81,7 @@ export interface ReportSectionsRepository {
    */
   getReportMeta?(
     reportId: string,
-  ): Promise<{ status: string; deadline: Date } | null>;
+  ): Promise<{ status: ReportStatus; deadline: Date } | null>;
   /**
    * Resolve which of the section's CURRENT item/decision lineages (stableIds)
    * have appeared in a published report — the delete-lock reference set

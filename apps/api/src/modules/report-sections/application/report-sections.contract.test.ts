@@ -1,4 +1,7 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type {
+  PeriodStatus,
+  ReportSectionReadModel,
+} from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
@@ -69,7 +72,7 @@ const writeItems = baseSection.items.map((it) => ({
 
 function createRepository(
   section: ReportSectionReadModel,
-  periodStatus = "open",
+  periodStatus: PeriodStatus = "open",
 ): ReportSectionsRepository {
   let currentSection = structuredClone(section);
 

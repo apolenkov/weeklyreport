@@ -1,3 +1,4 @@
+import type { PeriodStatus, ReportStatus } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
@@ -30,8 +31,8 @@ export class PeriodPrismaRepository implements PeriodRepository {
 
   async getReportById(reportId: string): Promise<{
     id: string;
-    status: string;
-    periodStatus: string;
+    status: ReportStatus;
+    periodStatus: PeriodStatus;
     publishedAt: Date | null;
     archived: boolean;
   } | null> {
