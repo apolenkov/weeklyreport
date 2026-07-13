@@ -761,6 +761,40 @@ describe("AdminPrismaRepository (integration)", () => {
     );
   });
 
+  it("saveStageAssignment resolves two concurrent reassigns atomically, leaving one row (stage-assignment-upsert)", async () => {
+    // Both callers target the same stage/project pair with different assignees.
+    // The old findFirst-then-create raced: both saw no row, both created, and
+    // the loser raised a raw P2002. The composite-unique upsert must instead
+    // resolve to a single row with one of the two assignees.
+    const stage = await prisma.stage.create({
+      data: { id: "a0000000-0000-4000-a000-000000000700", name: "Test Stage" },
+    });
+
+    const [first, second] = await Promise.all([
+      repo.saveStageAssignment({
+        userId: testData.head.id,
+        stageId: stage.id,
+        projectId: testData.project.id,
+      }),
+      repo.saveStageAssignment({
+        userId: testData.lead.id,
+        stageId: stage.id,
+        projectId: testData.project.id,
+      }),
+    ]);
+
+    expect(first.stageId).toBe(stage.id);
+    expect(second.stageId).toBe(stage.id);
+
+    const rows = await prisma.stageAssignment.findMany({
+      where: { stageId: stage.id, projectId: testData.project.id },
+    });
+    expect(rows).toHaveLength(1);
+    expect([testData.head.id, testData.lead.id]).toContain(
+      expectDefined(rows[0]).userId,
+    );
+  });
+
   it("upsertPeriod that CREATES a period runs the post-commit applicator (5.6)", async () => {
     const applyToPeriod = vi.fn(() =>
       Promise.resolve({ created: 0, updated: 0, skipped: 0 }),

@@ -7,6 +7,7 @@ import {
 import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { isUniqueViolation } from "../../lib/prisma-unique-violation";
 
 /**
  * ReportingGroup + StageAssignment domain queries. `ensureFallbackReportingGroup`
@@ -82,35 +83,56 @@ export async function archiveReportingGroup(
   return reportingGroupSchema.parse(row);
 }
 
+interface StageAssignmentInput {
+  readonly userId: string;
+  readonly stageId: string;
+  readonly projectId: string;
+}
+
+const STAGE_ASSIGNMENT_RELATIONS = {
+  stage: { select: { name: true } },
+  user: { select: { name: true } },
+} satisfies Prisma.StageAssignmentInclude;
+
+/**
+ * Writes the assignment idempotently against the `stageId_projectId` unique
+ * constraint. A reassign only ever changes the assignee, so `update` touches
+ * `userId` only. Prisma's `upsert` on this secondary compound key is not a
+ * native `INSERT ... ON CONFLICT`, so two concurrent first-assigns of the same
+ * pair still race the constraint; the loser catches its own P2002 and resolves
+ * to the update path rather than surfacing a raw 500.
+ */
+async function upsertStageAssignmentRow(
+  prisma: PrismaService,
+  data: StageAssignmentInput,
+) {
+  const where = {
+    stageId_projectId: { stageId: data.stageId, projectId: data.projectId },
+  };
+  try {
+    return await prisma.stageAssignment.upsert({
+      where,
+      create: data,
+      update: { userId: data.userId },
+      include: STAGE_ASSIGNMENT_RELATIONS,
+    });
+  } catch (error) {
+    if (!isUniqueViolation(error, { columns: ["stageId", "projectId"] })) {
+      throw error;
+    }
+    return prisma.stageAssignment.update({
+      where,
+      data: { userId: data.userId },
+      include: STAGE_ASSIGNMENT_RELATIONS,
+    });
+  }
+}
+
 export async function saveStageAssignment(
   prisma: PrismaService,
-  data: {
-    userId: string;
-    stageId: string;
-    projectId: string;
-  },
+  data: StageAssignmentInput,
 ): Promise<StageAssignment> {
-  const existing = await prisma.stageAssignment.findFirst({
-    where: { stageId: data.stageId, projectId: data.projectId },
-    select: { id: true },
-  });
-
-  const row = existing
-    ? await prisma.stageAssignment.update({
-        where: { id: existing.id },
-        data: { userId: data.userId },
-        include: {
-          stage: { select: { name: true } },
-          user: { select: { name: true } },
-        },
-      })
-    : await prisma.stageAssignment.create({
-        data,
-        include: {
-          stage: { select: { name: true } },
-          user: { select: { name: true } },
-        },
-      });
+  const row = await upsertStageAssignmentRow(prisma, data);
 
   return stageAssignmentSchema.parse({
     id: row.id,
