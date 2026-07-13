@@ -13,7 +13,6 @@
 #
 # Or override CADDY_FILE in your .env to point at this path.
 ################################################################################
-
 {
 	# Caddy's internal CA: self-signed root cert installed automatically in
 	# caddy_data volume. Trust it on the client by importing the root from
@@ -29,7 +28,10 @@
 	# /metrics is intentionally absent: it must not be reachable from the public
 	# edge. Prometheus scrapes it over the internal compose network (api:3001).
 	@api {
-		path /trpc /trpc/* /auth /auth/* /health /health/* /admin/queues /admin/queues/* /pdfs /pdfs/*
+		# Only the API-OWNED /api prefixes route here: a blanket /api/* would
+	# steal Next.js-only route handlers (e.g. /api/revalidate-org runs
+	# revalidatePath inside the web container and has no backend twin).
+	path /api/web-vitals /api/web-vitals/* /api/client-logs /api/client-logs/* /trpc /trpc/* /auth /auth/* /health /health/* /admin/queues /admin/queues/* /pdfs /pdfs/*
 	}
 	handle @api {
 		reverse_proxy api:3001 {
@@ -54,9 +56,14 @@
 	}
 
 	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
 		Referrer-Policy strict-origin-when-cross-origin
+		# Lock down where browsers may load resources from (relax if /reports
+		# embeds external imagery — currently same-origin only).
+		# TODO: flip Report-Only -> enforcing after in-browser CSP validation across all role surfaces
+		Content-Security-Policy-Report-Only "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self'"
 		-Server
 	}
 
