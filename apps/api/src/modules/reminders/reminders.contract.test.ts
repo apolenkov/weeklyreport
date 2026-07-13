@@ -11,6 +11,7 @@ import {
   type RemindersRepository,
   RemindersService,
 } from "./reminders.service";
+import { unusedRemindersScopeStubs } from "./reminders-scope.repository-stub.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -44,6 +45,7 @@ function createRepository(...rules: AdminReminderRule[]): RemindersRepository {
   const executions = new Map<string, AdminReminderExecution>();
 
   return {
+    ...unusedRemindersScopeStubs(),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async getRule(ruleId: string) {
       const found = rules.find((r) => r.id === ruleId);

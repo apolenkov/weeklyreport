@@ -9,6 +9,7 @@ import {
   type RemindersRepository,
   RemindersService,
 } from "./reminders.service";
+import { unusedRemindersScopeStubs } from "./reminders-scope.repository-stub.js";
 
 const activeRule: AdminReminderRule = {
   id: "66666666-6666-4666-8666-666666666666",
@@ -32,6 +33,7 @@ function createRepository(initialRule: AdminReminderRule): RemindersRepository {
   const executions = new Map<string, AdminReminderExecution>();
 
   return {
+    ...unusedRemindersScopeStubs(),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async findExecutionByDedupeKey(dedupeKey: string) {
       for (const execution of executions.values()) {
@@ -371,6 +373,7 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
       errorMessage: null,
     };
     const repository = {
+      ...unusedRemindersScopeStubs(),
       // eslint-disable-next-line @typescript-eslint/require-await -- stub
       async getRule(ruleId: string) {
         return ruleId === activeRule.id ? structuredClone(activeRule) : null;
@@ -446,6 +449,7 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
 describe("requestReminderExecution — enqueue failure is recorded, not swallowed", () => {
   function buildRepoCapturingFailures(failures: [string, string][]) {
     return {
+      ...unusedRemindersScopeStubs(),
       // eslint-disable-next-line @typescript-eslint/require-await -- stub
       async getRule(ruleId: string) {
         return ruleId === activeRule.id ? structuredClone(activeRule) : null;

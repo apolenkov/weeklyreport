@@ -1,6 +1,7 @@
 import {
   type AdminReminderExecution,
   type AdminReminderRule,
+  type UserSession,
 } from "@customreport/shared";
 import { Injectable, Logger } from "@nestjs/common";
 
@@ -10,15 +11,27 @@ import {
   type DueEscalationRule,
   type RemindersRepository,
 } from "./reminders.service.js";
-import { buildEscalationGroups } from "./reminders-escalation-grouping.js";
 import {
-  formatPeriodLabel,
+  queryDueDeadlineRules,
+  queryDueEscalationRules,
+} from "./reminders-due-rules.prisma-query.js";
+import {
   isDedupeKeyConflict,
   toExecutionCreateData,
   toExecutionDomain,
   toExecutionUpdateData,
   toRuleDomain,
 } from "./reminders-row-mappers.js";
+import {
+  queryActiveRuleForDispatch,
+  queryDraftSectionsForDispatch,
+  queryExecutionCreatedAt,
+  queryInScopeDraftSectionId,
+  queryInScopeLeadId,
+  queryInScopeSectionAuthorEmails,
+  queryInScopeSectionId,
+  queryRuleReportId,
+} from "./reminders-scope.prisma-query.js";
 
 @Injectable()
 export class RemindersPrismaRepository implements RemindersRepository {
@@ -26,146 +39,77 @@ export class RemindersPrismaRepository implements RemindersRepository {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Returns active deadline rules whose fireAt is in the past,
-   * pre-resolved with the recipient leads (those whose ReportSection for
-   * the rule's reportId is still 'draft' status). Rules without a reportId
-   * are skipped — they have no concrete deadline to remind about.
-   */
-  async findDueDeadlineRules(now: Date): Promise<DueDeadlineRule[]> {
-    const rules = await this.prisma.reminderRule.findMany({
-      where: {
-        status: "active",
-        kind: "deadline",
-        fireAt: { lte: now },
-        reportId: { not: null },
-      },
-      include: {
-        report: {
-          select: {
-            id: true,
-            periodStart: true,
-            periodEnd: true,
-            sections: {
-              where: { status: "draft" },
-              select: {
-                authorId: true,
-                author: {
-                  select: {
-                    id: true,
-                    email: true,
-                    name: true,
-                    notificationOptOut: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    return rules.flatMap((rule) => {
-      const report = rule.report;
-      if (!report) return [];
-      // author is a required section relation, always present.
-      const recipients = report.sections.map((s) => ({
-        userId: s.author.id,
-        email: s.author.email,
-        name: s.author.name,
-        notificationOptOut: s.author.notificationOptOut,
-      }));
-      if (recipients.length === 0) return [];
-      return [
-        {
-          id: rule.id,
-          reportId: report.id,
-          fireAt: rule.fireAt,
-          reportPeriodLabel: formatPeriodLabel(
-            report.periodStart,
-            report.periodEnd,
-          ),
-          recipients,
-        },
-      ];
-    });
+  findDueDeadlineRules(now: Date): Promise<DueDeadlineRule[]> {
+    return queryDueDeadlineRules(this.prisma, now);
   }
 
-  /**
-   * Active escalation rules whose fireAt has passed, fanned out per reporting-
-   * group head. Each late lead (a section still in `draft` for the rule's
-   * report at T+2h) is routed to its group's active head (role head/admin,
-   * `isActive`); leads whose group has no resolvable active head are logged and
-   * dropped. Resolution is independent of `Report.publishedBy` — escalation
-   * fires while leads are still in `draft`, before any publish.
-   */
-  async findDueEscalationRules(now: Date): Promise<DueEscalationRule[]> {
-    const rules = await this.prisma.reminderRule.findMany({
-      where: {
-        status: "active",
-        kind: "escalation",
-        fireAt: { lte: now },
-        reportId: { not: null },
-      },
-      include: {
-        report: {
-          select: {
-            id: true,
-            periodStart: true,
-            periodEnd: true,
-            deadline: true,
-            sections: {
-              where: { status: "draft" },
-              select: {
-                author: {
-                  select: {
-                    name: true,
-                    reportingGroup: {
-                      select: {
-                        name: true,
-                        head: {
-                          select: {
-                            id: true,
-                            email: true,
-                            name: true,
-                            isActive: true,
-                            role: true,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+  findDueEscalationRules(now: Date): Promise<DueEscalationRule[]> {
+    return queryDueEscalationRules(this.prisma, now, this.logger);
+  }
 
-    return rules.flatMap((rule) => {
-      const report = rule.report;
-      if (!report) return [];
-      const { groups, unresolved } = buildEscalationGroups(report);
-      for (const leadName of unresolved) {
-        this.logger.warn(
-          `escalation: no active group head for late lead "${leadName}" on report ${report.id}; digest skipped`,
-        );
-      }
-      if (groups.length === 0) return [];
-      return [
-        {
-          id: rule.id,
-          reportId: report.id,
-          fireAt: rule.fireAt,
-          reportPeriodLabel: formatPeriodLabel(
-            report.periodStart,
-            report.periodEnd,
-          ),
-          groups,
-        },
-      ];
-    });
+  // --- Scope authorization + dispatch (reminders namespace) — thin
+  // delegates to reminders-scope.prisma-query.ts's verbatim query fns. ---
+
+  getRuleReportId(ruleId: string): Promise<string | null> {
+    return queryRuleReportId(this.prisma, ruleId);
+  }
+
+  findInScopeSectionId(
+    session: UserSession,
+    reportId: string,
+  ): Promise<string | null> {
+    return queryInScopeSectionId(this.prisma, session, reportId);
+  }
+
+  findInScopeDraftSectionId(
+    session: UserSession,
+    reportId: string,
+    recipientEmail: string,
+  ): Promise<string | null> {
+    return queryInScopeDraftSectionId(
+      this.prisma,
+      session,
+      reportId,
+      recipientEmail,
+    );
+  }
+
+  listInScopeSectionAuthorEmails(
+    session: UserSession,
+    reportId: string,
+  ): Promise<string[]> {
+    return queryInScopeSectionAuthorEmails(this.prisma, session, reportId);
+  }
+
+  findInScopeLeadId(
+    session: UserSession,
+    leadId: string,
+  ): Promise<string | null> {
+    return queryInScopeLeadId(this.prisma, session, leadId);
+  }
+
+  findActiveRuleForDispatch(
+    reportId: string,
+    ruleId?: string,
+  ): Promise<{ id: string; fireAt: Date } | null> {
+    return queryActiveRuleForDispatch(this.prisma, reportId, ruleId);
+  }
+
+  findDraftSectionsForDispatch(
+    session: UserSession,
+    reportId: string,
+    leadId?: string,
+  ): Promise<{ email: string; notificationOptOut: boolean }[]> {
+    return queryDraftSectionsForDispatch(
+      this.prisma,
+      session,
+      reportId,
+      leadId,
+    );
+  }
+
+  findExecutionCreatedAt(dedupeKey: string): Promise<Date | null> {
+    return queryExecutionCreatedAt(this.prisma, dedupeKey);
   }
 
   async getRule(ruleId: string): Promise<AdminReminderRule | null> {
