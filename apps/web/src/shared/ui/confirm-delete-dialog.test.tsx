@@ -1,18 +1,19 @@
 /**
- * VA-0a regression: a11y assertions for ConfirmDeleteDialog.
+ * a11y assertions for ConfirmDeleteDialog.
  *
- * Covers the high-priority unit-rtl rows from the verify-a11y catalog
- * (openspec/changes/verify-a11y-recommended-flip/design.md):
- *  - Escape key calls onCancel (document-level keydown handler)
+ *  - Escape key calls onCancel (via the shared useDialogFocus primitive)
  *  - Cancel button click calls onCancel
  *  - Backdrop (role=presentation) click calls onCancel
  *  - Inner dialog click does NOT call onCancel (stopPropagation guard)
  *  - Backdrop div has role="presentation"
  *  - Inner dialog has correct ARIA attributes
- *  - Destructive confirm button receives focus on open (rAF-deferred)
+ *  - The first focusable control (Cancel) receives focus on open
+ *  - Tab is trapped within the dialog (Shift+Tab from the first control wraps)
+ *  - Focus returns to the trigger when the dialog closes
  */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
@@ -103,11 +104,61 @@ describe("ConfirmDeleteDialog — a11y regression (VA-0a)", () => {
     }
   });
 
-  it("destructive confirm button receives focus on open (rAF-deferred autoFocus)", async () => {
+  it("the first focusable control (Cancel) receives focus on open", async () => {
     renderDialog({ confirmLabel: "Delete" });
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /delete/i })).toHaveFocus();
+      expect(screen.getByRole("button", { name: /cancel/i })).toHaveFocus();
     });
+  });
+
+  it("traps Tab: Shift+Tab from the first control wraps to the last", async () => {
+    renderDialog({ confirmLabel: "Delete" });
+
+    const cancel = screen.getByRole("button", { name: /cancel/i });
+    const confirm = screen.getByRole("button", { name: /delete/i });
+    await waitFor(() => {
+      expect(cancel).toHaveFocus();
+    });
+
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+
+    expect(confirm).toHaveFocus();
+  });
+
+  it("returns focus to the trigger when the dialog closes", async () => {
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button
+            type="button"
+            data-testid="trigger"
+            onClick={() => setOpen(true)}
+          >
+            Open
+          </button>
+          <ConfirmDeleteDialog
+            {...defaultProps}
+            open={open}
+            onCancel={() => setOpen(false)}
+          />
+        </>
+      );
+    }
+
+    render(<Harness />);
+    const trigger = screen.getByTestId("trigger");
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    // The primitive pulled focus into the dialog (onto Cancel).
+    await waitFor(() => {
+      expect(trigger).not.toHaveFocus();
+    });
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(trigger).toHaveFocus();
   });
 });

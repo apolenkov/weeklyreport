@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import { RotatingChevron } from "./rotating-chevron";
 
@@ -39,6 +39,10 @@ export function AccordionSection({
   children,
 }: AccordionSectionProps) {
   const [expanded, setExpanded] = useState(defaultOpen);
+  // Stable id on the collapsible panel so both toggles can point their
+  // aria-controls at it; derived from testId when present, else a unique id.
+  const generatedId = useId();
+  const panelId = testId ? `${testId}-panel` : generatedId;
 
   useEffect(() => {
     if (groupExpanded === undefined) return;
@@ -56,6 +60,7 @@ export function AccordionSection({
           className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
           onClick={() => setExpanded(!expanded)}
           aria-expanded={expanded}
+          aria-controls={panelId}
         >
           <div className="min-w-0">
             <div className="flex items-center gap-3">
@@ -93,6 +98,7 @@ export function AccordionSection({
             onClick={() => setExpanded(!expanded)}
             aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
             aria-expanded={expanded}
+            aria-controls={panelId}
           >
             <RotatingChevron expanded={expanded} />
           </button>
@@ -100,6 +106,7 @@ export function AccordionSection({
       </div>
 
       <div
+        id={panelId}
         className="grid transition-[grid-template-rows] duration-300"
         style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
       >

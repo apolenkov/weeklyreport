@@ -219,6 +219,39 @@ describe("PeriodNavigator (lead)", () => {
       expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
       expect(push).not.toHaveBeenCalled();
     });
+
+    it("Escape closes the listbox and restores focus to the trigger", () => {
+      render(<PeriodNavigator periods={PERIODS} />);
+      const trigger = getTrigger();
+      trigger.focus();
+      fireEvent.click(trigger);
+      expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+      fireEvent.keyDown(trigger, { key: "Escape" });
+
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+      expect(document.activeElement).toBe(trigger);
+    });
+
+    it("scrolls the active option into view on ArrowDown", () => {
+      // scrollIntoView is a global no-op stub (jsdom omits it); spy on it so
+      // the hook's keep-active-option-visible effect is observable.
+      const scrollIntoView = vi
+        .spyOn(Element.prototype, "scrollIntoView")
+        .mockImplementation(() => undefined);
+      try {
+        render(<PeriodNavigator periods={PERIODS} />);
+        const trigger = getTrigger();
+        fireEvent.click(trigger);
+        scrollIntoView.mockClear();
+
+        fireEvent.keyDown(trigger, { key: "ArrowDown" });
+
+        expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+      } finally {
+        scrollIntoView.mockRestore();
+      }
+    });
   });
 
   // ---- Selection state reflected on the trigger ----
