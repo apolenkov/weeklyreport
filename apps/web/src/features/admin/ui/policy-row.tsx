@@ -1,9 +1,6 @@
 "use client";
 
-import type {
-  MockReminder,
-  MockReminderPolicy,
-} from "../../../shared/lib/admin-mock-data";
+import type { MockReminder, MockReminderPolicy } from "../model/admin-types";
 import {
   describeRecipient,
   formatPolicyTiming,
