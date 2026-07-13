@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  useMutation,
-  useQueries,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { toast } from "sonner";
 
@@ -51,18 +46,21 @@ export function GroupProductsEditor({
 
   const attachMut = useMutation(
     trpc.admin.attachProductToGroup.mutationOptions({
-      onSuccess: async (_data, variables) => {
+      onSuccess: async () => {
         // Attach may be a reassign: a product has one owning group, so it
         // moves from old group to new group. Invalidate ALL listGroupProducts
         // queries so the old group's list also refreshes, not just the
-        // current group.
+        // current group, plus the batched ownership read so the lock state
+        // reflects the new edge.
         await Promise.all([
           qc.invalidateQueries(trpc.admin.listGroupProducts.pathFilter()),
-          qc.invalidateQueries({
-            queryKey: trpc.admin.listProductGroups.queryKey({
-              productId: variables.productId,
-            }),
-          }),
+          qc.invalidateQueries(
+            trpc.admin.listProductGroupOwnership.pathFilter(),
+          ),
+          // The per-product listProductGroups query still backs the Products
+          // tab's ownership chips — dropping its invalidation leaves those
+          // chips showing the pre-reassign owner.
+          qc.invalidateQueries(trpc.admin.listProductGroups.pathFilter()),
         ]);
       },
       onError: (err) => {
@@ -73,16 +71,15 @@ export function GroupProductsEditor({
 
   const detachMut = useMutation(
     trpc.admin.detachProductFromGroup.mutationOptions({
-      onSuccess: async (_data, variables) => {
+      onSuccess: async () => {
         await Promise.all([
           qc.invalidateQueries({
             queryKey: trpc.admin.listGroupProducts.queryKey({ groupId }),
           }),
-          qc.invalidateQueries({
-            queryKey: trpc.admin.listProductGroups.queryKey({
-              productId: variables.productId,
-            }),
-          }),
+          qc.invalidateQueries(
+            trpc.admin.listProductGroupOwnership.pathFilter(),
+          ),
+          qc.invalidateQueries(trpc.admin.listProductGroups.pathFilter()),
         ]);
       },
       onError: (err) => {
@@ -96,22 +93,30 @@ export function GroupProductsEditor({
     [products],
   );
 
-  const productGroupsQueries = useQueries({
-    queries: activeProducts.map((product) =>
-      trpc.admin.listProductGroups.queryOptions({ productId: product.id }),
-    ),
+  const activeProductIds = useMemo(
+    () => activeProducts.map((product) => product.id),
+    [activeProducts],
+  );
+
+  // Single batched ownership read for every active product, replacing the
+  // per-product listProductGroups fan-out. Skipped when there are no active
+  // products (the empty-list branch renders instead).
+  const ownershipQuery = useQuery({
+    ...trpc.admin.listProductGroupOwnership.queryOptions({
+      productId: activeProductIds,
+    }),
+    enabled: activeProductIds.length > 0,
   });
 
   const owningGroupByProductId = useMemo(() => {
     const map = new Map<string, { id: string; name: string }>();
-
-    activeProducts.forEach((product, index) => {
-      const owner = productGroupsQueries[index]?.data?.[0];
-      if (owner) map.set(product.id, { id: owner.id, name: owner.name });
-    });
-
+    for (const entry of ownershipQuery.data ?? []) {
+      if (entry.group) map.set(entry.productId, entry.group);
+    }
     return map;
-  }, [activeProducts, productGroupsQueries]);
+  }, [ownershipQuery.data]);
+
+  const ownershipLoading = ownershipQuery.isLoading;
 
   const isPending = attachMut.isPending || detachMut.isPending;
 
@@ -158,10 +163,9 @@ export function GroupProductsEditor({
           className="max-h-40 space-y-1 overflow-y-auto pr-1"
           data-testid="group-products-list"
         >
-          {activeProducts.map((product, index) => {
+          {activeProducts.map((product) => {
             const checked = attachedIds.has(product.id);
             const owner = owningGroupByProductId.get(product.id);
-            const ownershipLoading = productGroupsQueries[index]?.isLoading;
             const lockedByOtherGroup = Boolean(
               owner && owner.id !== groupId && !checked,
             );

@@ -20,7 +20,7 @@ import type {
 } from "@customreport/shared";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger";
-import type { AdminRepository } from "./admin-shared";
+import type { AdminRepository, ProductGroupOwnership } from "./admin-shared";
 import { PeriodAdminService } from "./period-admin.service";
 import { ProjectAdminService } from "./project-admin.service";
 import { ReminderAdminService } from "./reminder-admin.service";
@@ -31,7 +31,11 @@ import { SnapshotAdminService } from "./snapshot-admin.service";
 // after the decomposition (code-quality-modernization, Wave 3). The error
 // classes have exactly one definition (in `admin-shared.ts`) so `instanceof`
 // checks in the tRPC error-mapper stay valid.
-export type { AdminRepository, PeriodRowFromRepo } from "./admin-shared";
+export type {
+  AdminRepository,
+  PeriodRowFromRepo,
+  ProductGroupOwnership,
+} from "./admin-shared";
 export {
   AdminAccessError,
   AdminGroupProductConflictError,
@@ -218,5 +222,11 @@ export class AdminService {
 
   listProductGroups(productId: string): Promise<ReportingGroup[]> {
     return this.projectAdmin.listProductGroups(productId);
+  }
+
+  listProductGroupOwnership(
+    productIds: readonly string[],
+  ): Promise<ProductGroupOwnership[]> {
+    return this.projectAdmin.listProductGroupOwnership(productIds);
   }
 }

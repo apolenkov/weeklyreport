@@ -218,6 +218,23 @@ export interface AdminRepository {
   detachProductFromGroup?(input: GroupProductEdgeInput): Promise<void>;
   listGroupProducts?(groupId: string): Promise<AdminProject[]>;
   listProductGroups?(productId: string): Promise<ReportingGroup[]>;
+  // batched owning-group lookup for the "products attached" editor.
+  // One query resolves the single owning group for every requested product,
+  // replacing the per-product listProductGroups fan-out. Optional to match
+  // the other group-product entries so in-memory test repos keep compiling.
+  listProductGroupOwnership?(
+    productIds: readonly string[],
+  ): Promise<ProductGroupOwnership[]>;
+}
+
+/**
+ * One product's owning reporting group, or `null` when the product belongs to
+ * no group. The batched ownership read returns one entry per requested
+ * product id so the caller can key a lookup without re-deriving absence.
+ */
+export interface ProductGroupOwnership {
+  productId: string;
+  group: { id: string; name: string } | null;
 }
 
 /**

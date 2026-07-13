@@ -18,7 +18,11 @@ import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PolicyApplicatorService } from "../reminders/index.js";
-import type { AdminRepository, PeriodRowFromRepo } from "./admin.service";
+import type {
+  AdminRepository,
+  PeriodRowFromRepo,
+  ProductGroupOwnership,
+} from "./admin.service";
 import * as entityWriteQueries from "./admin-entity-write.queries";
 import * as groupQueries from "./admin-group.queries";
 import * as groupProductQueries from "./admin-group-product.queries";
@@ -266,5 +270,14 @@ export class AdminPrismaRepository implements AdminRepository {
 
   listProductGroups(productId: string): Promise<ReportingGroup[]> {
     return groupProductQueries.listProductGroups(this.prisma, productId);
+  }
+
+  listProductGroupOwnership(
+    productIds: readonly string[],
+  ): Promise<ProductGroupOwnership[]> {
+    return groupProductQueries.listProductGroupOwnership(
+      this.prisma,
+      productIds,
+    );
   }
 }

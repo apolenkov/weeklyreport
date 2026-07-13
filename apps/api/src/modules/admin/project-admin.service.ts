@@ -13,7 +13,7 @@ import {
 } from "@customreport/shared";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger";
-import type { AdminRepository } from "./admin-shared";
+import type { AdminRepository, ProductGroupOwnership } from "./admin-shared";
 
 /**
  * Owns projects, reporting groups, stage assignments, and the
@@ -150,5 +150,19 @@ export class ProjectAdminService {
     if (!this.repository.listProductGroups) return [];
     const rows = await this.repository.listProductGroups(productId);
     return rows.map((row) => reportingGroupSchema.parse(row));
+  }
+
+  /**
+   * Batched owning-group lookup for the admin Groups tab's «Products
+   * attached» editor. One repository query resolves the single owning group
+   * for every requested product, replacing the per-product
+   * `listProductGroups` fan-out. Falls back to an empty list when the repo
+   * predates the batched read, mirroring `listProductGroups`.
+   */
+  async listProductGroupOwnership(
+    productIds: readonly string[],
+  ): Promise<ProductGroupOwnership[]> {
+    if (!this.repository.listProductGroupOwnership) return [];
+    return this.repository.listProductGroupOwnership(productIds);
   }
 }
