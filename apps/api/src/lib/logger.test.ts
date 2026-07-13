@@ -109,6 +109,45 @@ describe("createAppLogger", () => {
     expect(parsed.path).toBe("/api");
   });
 
+  it("redacts PII-shaped context keys at every sink", async () => {
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const logger = createAppLogger({ logDir, service: "redact-test" });
+
+    logger.info("creating reminder execution", {
+      ruleId: "rule-1",
+      recipientEmail: "person@example.com",
+    });
+
+    const parsed = JSON.parse(
+      expectDefined(stdoutSpy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
+    expect(parsed.recipientEmail).toBe("[redacted]");
+    expect(parsed.ruleId).toBe("rule-1");
+
+    await flush();
+
+    const line = readFileSync(join(logDir, "app.log"), "utf-8").trim();
+    expect(line).not.toContain("person@example.com");
+    const fileParsed = JSON.parse(line) as Record<string, unknown>;
+    expect(fileParsed.recipientEmail).toBe("[redacted]");
+  });
+
+  it("leaves a context with no PII-shaped keys unchanged", () => {
+    const spy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const logger = createAppLogger();
+
+    logger.info("creating reminder execution", {
+      ruleId: "rule-2",
+      executionId: "exec-9",
+    });
+
+    const parsed = JSON.parse(
+      expectDefined(spy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
+    expect(parsed.ruleId).toBe("rule-2");
+    expect(parsed.executionId).toBe("exec-9");
+  });
+
   it("writes log entries asynchronously to <logDir>/app.log", async () => {
     vi.spyOn(process.stdout, "write").mockReturnValue(true);
     const logger = createAppLogger({ logDir, service: "file-test" });

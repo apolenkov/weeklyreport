@@ -89,7 +89,6 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     const traceId = job ? extractTraceId(job.data) : undefined;
     this.logger.error("email-reminder job failed", {
       executionId: job?.data.executionId,
-      recipientEmail: job?.data.recipientEmail,
       attempt: job?.attemptsMade,
       ...(correlationId ? { correlationId } : {}),
       ...(traceId ? { traceId } : {}),

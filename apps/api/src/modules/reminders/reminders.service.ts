@@ -221,14 +221,15 @@ export class RemindersService {
     const { execution, inserted } = await this.recordExecution(candidate);
 
     if (!inserted) {
+      // dedupeKey embeds recipientEmail for uniqueness; logging it would leak
+      // that address, so ruleId is the identifier we surface here.
       this.logger.debug("deduplicated reminder execution", {
-        dedupeKey,
         ruleId,
       });
       return adminReminderExecutionSchema.parse(execution);
     }
 
-    this.logger.info("creating reminder execution", { ruleId, recipientEmail });
+    this.logger.info("creating reminder execution", { ruleId });
 
     // Enqueue only after the insert has committed AND only for the caller that
     // inserted the row, so a redundant concurrent tick enqueues nothing.
