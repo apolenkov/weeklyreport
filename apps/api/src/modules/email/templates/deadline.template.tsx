@@ -1,3 +1,4 @@
+import type { OrganizationBrand } from "@customreport/shared";
 import type * as React from "react";
 import {
   Body,
@@ -20,17 +21,6 @@ import {
  * lives next to the component so multipart emails carry both halves —
  * corporate spam filters score multipart > HTML-only.
  */
-/**
- * Brand identity threaded into the template props.
- * The BullMQ enqueue path snapshots `OrganizationService.getPublic()` into
- * the job data, so the worker re-renders with whatever the org row said at
- * enqueue time (immune to mid-flight admin edits of the brand strings).
- */
-export interface OrganizationBrand {
-  shortName: string;
-  fullName: string;
-}
-
 export interface DeadlineEmailProps {
   leadName: string;
   reportPeriod: string; // human-readable e.g. "2026-W17" or "2026-04-13 to 2026-04-19"

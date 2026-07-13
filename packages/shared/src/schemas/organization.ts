@@ -69,6 +69,15 @@ export type OrganizationUpdate = z.infer<typeof organizationUpdateSchema>;
 export type OrganizationPublic = z.infer<typeof organizationPublicSchema>;
 
 /**
+ * Brand identity (`{shortName, fullName}`) threaded into email templates and
+ * their BullMQ job payloads. Structurally the public projection — the enqueue
+ * path snapshots `OrganizationService.getPublic()` into the job data, so the
+ * worker re-renders with whatever the org row said at enqueue time, immune to
+ * mid-flight admin edits of the brand strings.
+ */
+export type OrganizationBrand = z.infer<typeof organizationPublicSchema>;
+
+/**
  * Generic fallback for the organization identity. Must NOT hard-code any
  * tenant's brand — doing so leaks one tenant's identity into a system meant
  * to be deployable for any organization.

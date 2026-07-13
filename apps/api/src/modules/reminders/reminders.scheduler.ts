@@ -1,14 +1,11 @@
+import type { OrganizationBrand } from "@customreport/shared";
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
 import { requireEnv } from "../../lib/env.js";
 import { OrganizationService } from "../organization/index.js";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository";
-import type {
-  DueDeadlineRule,
-  DueEscalationRule,
-  ReminderOrganization,
-} from "./reminders.service";
+import type { DueDeadlineRule, DueEscalationRule } from "./reminders.service";
 import { RemindersService } from "./reminders.service";
 
 /** Length of an ISO calendar date (`YYYY-MM-DD`) after `toISOString().slice(0, n)`. */
@@ -75,7 +72,7 @@ export class RemindersScheduler {
     }
 
     const orgPublic = await this.organizationService.getPublic();
-    const organization: ReminderOrganization = {
+    const organization: OrganizationBrand = {
       shortName: orgPublic.shortName,
       fullName: orgPublic.fullName,
     };
@@ -91,7 +88,7 @@ export class RemindersScheduler {
 
   private async dispatchRule(
     rule: DueDeadlineRule,
-    organization: ReminderOrganization,
+    organization: OrganizationBrand,
   ): Promise<void> {
     const cycleDate = rule.fireAt.toISOString().slice(0, ISO_DATE_LENGTH); // YYYY-MM-DD UTC
     const sectionUrl = buildSectionUrl(rule.reportId);
@@ -121,7 +118,7 @@ export class RemindersScheduler {
 
   private async dispatchEscalation(
     rule: DueEscalationRule,
-    organization: ReminderOrganization,
+    organization: OrganizationBrand,
   ): Promise<void> {
     // One digest email per (rule, group head) per cycle. Escalation always
     // notifies the head — it ignores notificationOptOut.

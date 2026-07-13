@@ -1,3 +1,4 @@
+import type { OrganizationBrand } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 import { type Job, type WorkerOptions } from "bullmq";
 import type { ClsService } from "nestjs-cls";
@@ -13,11 +14,6 @@ import {
   extractTraceId,
   type JobTraceContext,
 } from "./worker-observability.js";
-
-interface ReminderOrganizationJob {
-  shortName: string;
-  fullName: string;
-}
 
 // Legacy (kind absent) jobs pre-date the template renderer and send plaintext
 // with a hardcoded brand; deadline/escalation jobs render react-email templates
@@ -37,7 +33,7 @@ type EmailReminderJobData = JobTraceContext &
         reportPeriod: string;
         deadlineIso: string;
         sectionUrl: string;
-        organization: ReminderOrganizationJob;
+        organization: OrganizationBrand;
       }
     | {
         executionId: string;
@@ -51,7 +47,7 @@ type EmailReminderJobData = JobTraceContext &
           sectionTitle: string;
           deadlineIso: string;
         }[];
-        organization: ReminderOrganizationJob;
+        organization: OrganizationBrand;
       }
   );
 

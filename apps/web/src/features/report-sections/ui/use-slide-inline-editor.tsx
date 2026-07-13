@@ -28,11 +28,10 @@ import type { mapLeadFormData } from "../model/lead-form";
 import { sectionToDraftPayload } from "../model/lead-section-draft-payload";
 import type { DecisionEntry, KanbanItem, RiskEntry } from "../model/mock-data";
 import {
-  type SlideInlineDecisionRecord,
+  getActiveDecisionRecord,
+  getActiveItemRecord,
+  getActiveRiskRecord,
   SlideInlineEditorDialogs,
-  type SlideInlineEditRecord,
-  type SlideInlineItemRecord,
-  type SlideInlineRiskRecord,
 } from "./slide-inline-editor-dialogs";
 
 type LeadSlideFormData = NonNullable<ReturnType<typeof mapLeadFormData>>;
@@ -47,24 +46,6 @@ interface UseSlideInlineEditorArgs {
 interface SlideInlineEditor {
   readonly onRowActivate?: (ref: GridRowEditableRef) => void;
   readonly dialogs: ReactNode;
-}
-
-function getActiveItemRecord(
-  record: SlideInlineEditRecord | null,
-): SlideInlineItemRecord | null {
-  return record?.kind === "item" ? record : null;
-}
-
-function getActiveRiskRecord(
-  record: SlideInlineEditRecord | null,
-): SlideInlineRiskRecord | null {
-  return record?.kind === "risk" ? record : null;
-}
-
-function getActiveDecisionRecord(
-  record: SlideInlineEditRecord | null,
-): SlideInlineDecisionRecord | null {
-  return record?.kind === "decision" ? record : null;
 }
 
 export function useSlideInlineEditor({

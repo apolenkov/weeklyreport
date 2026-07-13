@@ -1,3 +1,4 @@
+import type { OrganizationBrand } from "@customreport/shared";
 import type * as React from "react";
 import {
   Body,
@@ -29,15 +30,6 @@ export interface LateLead {
   readonly leadName: string;
   readonly sectionTitle: string;
   readonly deadlineIso: string;
-}
-
-/**
- * See {@link DeadlineEmailProps.organization} — brand strings flow through
- * the BullMQ payload rather than being hardcoded in the template.
- */
-export interface OrganizationBrand {
-  shortName: string;
-  fullName: string;
 }
 
 export interface EscalationEmailProps {
