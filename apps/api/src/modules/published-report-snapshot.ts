@@ -8,11 +8,9 @@ import {
 } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
-import {
-  deriveEffectiveProductStatus,
-  mapPrismaToReportSection,
-  reportSectionFullInclude,
-} from "./report-sections/infrastructure/report-sections.prisma-repository";
+import { reportSectionFullInclude } from "./report-sections/infrastructure/report-sections.include";
+import { mapPrismaToReportSection } from "./report-sections/infrastructure/report-sections.mappers";
+import { deriveEffectiveProductStatus } from "./report-sections/infrastructure/report-sections.status-derivation";
 
 export const reportFullIncludeForSnapshot = {
   sections: { include: reportSectionFullInclude },

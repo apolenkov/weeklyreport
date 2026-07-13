@@ -943,7 +943,6 @@ export default defineConfig([
       // Long-tail (300-500): each is one cohesive concern where a split would
       // shed few lines at a clarity cost — exempt, not churn.
       "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // tRPC instance + all procedure builders share the private `t` binding
-      "apps/api/src/modules/report-sections/infrastructure/report-sections.prisma-repository.ts", // one Prisma persistence layer; include/type/mapper/class coupled
       "apps/web/src/features/review/ui/risk-edit-dialog.tsx", // one dialog: state + validation + render
       "apps/web/src/features/report-sections/ui/item-edit-dialog.tsx", // one create/edit dialog; shell + content coupled
       "apps/web/src/features/period/ui/decision-edit-dialog.tsx", // one create/edit dialog; XOR parent picker + per-field validation + conditional stage step — parity with item/risk-edit-dialog (shared helpers already extracted)

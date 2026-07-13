@@ -26,10 +26,8 @@ import {
   reopenBlockedMessage,
   ReopenRequestError,
 } from "../domain/lead-form-shared";
-import {
-  mapPrismaToReportSection,
-  reportSectionFullInclude,
-} from "./report-sections.prisma-repository";
+import { reportSectionFullInclude } from "./report-sections.include";
+import { mapPrismaToReportSection } from "./report-sections.mappers";
 
 /**
  * Mirrors `normalizeStageName` in apps/web/src/lib/mappers/lead-form.ts — the

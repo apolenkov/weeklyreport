@@ -1,0 +1,125 @@
+import { Prisma } from "@prisma/client";
+
+// review-acknowledgement: a reviewer comment lifted out of the DB just before
+// saveSection delete-recreates its anchor record, keyed by the record's DURABLE
+// lineage (stableId + kind) rather than the volatile PK that the recreate
+// re-mints. Re-inserted against the new PK for every lineage that survives the
+// save — see the comment-transfer note on saveSection.
+type RecordKind = "item" | "risk" | "decision";
+export interface CapturedComment {
+  stableId: string;
+  kind: RecordKind;
+  reviewerId: string;
+  text: string;
+  createdAt: Date;
+}
+
+const lineageKey = (kind: RecordKind, stableId: string): string =>
+  `${kind}::${stableId}`;
+
+/**
+ * Read every RecordComment anchored to a record in this section, tagged with
+ * its anchor's `stableId` + kind, BEFORE the child rows are deleted (the
+ * delete cascades the comments away). One join per anchor kind; exactly one
+ * relation is set per comment.
+ */
+export async function captureRecordComments(
+  tx: Prisma.TransactionClient,
+  sectionId: string,
+): Promise<CapturedComment[]> {
+  const comments = await tx.recordComment.findMany({
+    where: {
+      OR: [
+        { item: { reportSectionId: sectionId } },
+        { risk: { reportSectionId: sectionId } },
+        { decision: { reportSectionId: sectionId } },
+      ],
+    },
+    select: {
+      reviewerId: true,
+      text: true,
+      createdAt: true,
+      item: { select: { stableId: true } },
+      risk: { select: { stableId: true } },
+      decision: { select: { stableId: true } },
+    },
+  });
+
+  return comments.flatMap((comment) => {
+    const anchor = comment.item
+      ? ({ kind: "item", stableId: comment.item.stableId } as const)
+      : comment.risk
+        ? ({ kind: "risk", stableId: comment.risk.stableId } as const)
+        : comment.decision
+          ? ({ kind: "decision", stableId: comment.decision.stableId } as const)
+          : null;
+    if (!anchor) return [];
+    return [
+      {
+        stableId: anchor.stableId,
+        kind: anchor.kind,
+        reviewerId: comment.reviewerId,
+        text: comment.text,
+        createdAt: comment.createdAt,
+      },
+    ];
+  });
+}
+
+/**
+ * Re-anchor captured comments onto the freshly recreated records. Records are
+ * matched by lineage (stableId + kind); a comment whose lineage is gone (its
+ * record was dropped from the payload this save) is NOT re-inserted, so it
+ * hard-dies exactly when the record it flagged is genuinely removed. Runs
+ * inside saveSection's transaction, so it is atomic with the version bump.
+ */
+export async function reinsertRecordComments(
+  tx: Prisma.TransactionClient,
+  sectionId: string,
+  captured: readonly CapturedComment[],
+): Promise<void> {
+  if (captured.length === 0) return;
+
+  const [items, risks, decisions] = await Promise.all([
+    tx.item.findMany({
+      where: { reportSectionId: sectionId },
+      select: { id: true, stableId: true },
+    }),
+    tx.risk.findMany({
+      where: { reportSectionId: sectionId },
+      select: { id: true, stableId: true },
+    }),
+    tx.decision.findMany({
+      where: { reportSectionId: sectionId },
+      select: { id: true, stableId: true },
+    }),
+  ]);
+
+  const idByLineage = new Map<string, string>();
+  for (const row of items)
+    idByLineage.set(lineageKey("item", row.stableId), row.id);
+  for (const row of risks)
+    idByLineage.set(lineageKey("risk", row.stableId), row.id);
+  for (const row of decisions)
+    idByLineage.set(lineageKey("decision", row.stableId), row.id);
+
+  const data = captured.flatMap((comment) => {
+    const newRecordId = idByLineage.get(
+      lineageKey(comment.kind, comment.stableId),
+    );
+    if (newRecordId === undefined) return [];
+    return [
+      {
+        reviewerId: comment.reviewerId,
+        text: comment.text,
+        // Preserve the original authoring timestamp across the recreate.
+        createdAt: comment.createdAt,
+        itemId: comment.kind === "item" ? newRecordId : null,
+        riskId: comment.kind === "risk" ? newRecordId : null,
+        decisionId: comment.kind === "decision" ? newRecordId : null,
+      },
+    ];
+  });
+
+  if (data.length > 0) await tx.recordComment.createMany({ data });
+}
