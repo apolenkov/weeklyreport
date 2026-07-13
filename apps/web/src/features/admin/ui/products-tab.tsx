@@ -1,22 +1,26 @@
 "use client";
 
-import { MAX_PRODUCTS_PER_LEAD } from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
-import { useDialogFocus } from "../../../lib/use-dialog-focus";
 import type {
   MockProduct,
   MockUser,
 } from "../../../shared/lib/admin-mock-data";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
+import { PlusIcon } from "../../../shared/ui/icons";
 import { SearchInput } from "../../../shared/ui/search-input";
 import { toAdminProjectInput } from "../model/admin";
-import { ProductGroupChips } from "./product-group-chips";
-import { StageAssignmentEditor } from "./stage-assignment-editor";
+import {
+  EMPTY_PRODUCT_FORM,
+  formFromProduct,
+  type ProductFormData,
+} from "../model/product-form";
+import { ProductEditDialog } from "./product-edit-dialog";
+import { ProductsTable } from "./products-table";
 import { TabHeader, TabSearch } from "./tab-header";
 
 interface ProductsTabProps {
@@ -38,26 +42,12 @@ export function ProductsTab({
   const [editingProduct, setEditingProduct] = useState<MockProduct | null>(
     null,
   );
-  const [formName, setFormName] = useState("");
-  const [formLeadId, setFormLeadId] = useState("");
+  const [form, setForm] = useState<ProductFormData>(EMPTY_PRODUCT_FORM);
   const [pendingArchive, setPendingArchive] = useState<MockProduct | null>(
     null,
   );
   // local name filter (distinct from the global SearchInput deep-link)
   const [localSearch, setLocalSearch] = useState("");
-
-  // Save the trigger element so the shared focus primitive can restore focus
-  // to it when the dialog closes (Escape, Cancel, backdrop, save success).
-  const dialogTriggerRef = useRef<HTMLElement | null>(null);
-  const dialogSurfaceRef = useRef<HTMLDivElement>(null);
-
-  // Focus trap + Escape-to-close + restore-to-trigger via the shared primitive.
-  useDialogFocus({
-    open: showDialog,
-    onClose: () => setShowDialog(false),
-    containerRef: dialogSurfaceRef,
-    triggerRef: dialogTriggerRef,
-  });
 
   useEffect(() => {
     if (!productFilter) return;
@@ -114,38 +104,30 @@ export function ProductsTab({
   );
 
   function openAdd() {
-    dialogTriggerRef.current = document.activeElement as HTMLElement;
     setEditingProduct(null);
-    setFormName("");
-    setFormLeadId(leads[0]?.id ?? "");
+    setForm({ ...EMPTY_PRODUCT_FORM, leadId: leads[0]?.id ?? "" });
     setShowDialog(true);
   }
 
   function openEdit(product: MockProduct) {
-    dialogTriggerRef.current = document.activeElement as HTMLElement;
     setEditingProduct(product);
-    setFormName(product.name);
-    setFormLeadId(product.leadOwnerId);
+    setForm(formFromProduct(product));
     setShowDialog(true);
   }
 
   function handleSave() {
-    const lead = getUserById(formLeadId);
+    const lead = getUserById(form.leadId);
     saveProjectMut.mutate(
       toAdminProjectInput(
         {
-          name: formName,
-          leadOwnerId: formLeadId,
+          name: form.name,
+          leadOwnerId: form.leadId,
           leadName: lead?.name,
           archived: editingProduct?.status === "archived",
         },
         editingProduct?.id,
       ),
     );
-  }
-
-  function handleArchive(productId: string) {
-    deleteProjectMut.mutate({ projectId: productId });
   }
 
   function handleRestore(product: MockProduct) {
@@ -163,13 +145,9 @@ export function ProductsTab({
     );
   }
 
-  function requestArchive(product: MockProduct) {
-    setPendingArchive(product);
-  }
-
   function confirmArchive() {
     if (!pendingArchive) return;
-    handleArchive(pendingArchive.id);
+    deleteProjectMut.mutate({ projectId: pendingArchive.id });
     setPendingArchive(null);
   }
 
@@ -194,9 +172,9 @@ export function ProductsTab({
   const leadProductCount = useMemo(
     () =>
       products.filter(
-        (p) => p.leadOwnerId === formLeadId && p.status === "active",
+        (p) => p.leadOwnerId === form.leadId && p.status === "active",
       ).length,
-    [products, formLeadId],
+    [products, form.leadId],
   );
 
   const isSaving = saveProjectMut.isPending;
@@ -254,219 +232,35 @@ export function ProductsTab({
           </div>
         )}
 
-        {/* Products list (table-like structure) */}
-        <div className="space-y-3" data-testid="products-table">
-          {activeProducts.map((product) => {
-            const owner = getUserById(product.leadOwnerId);
-            const assignedCount = stageCountByProject.get(product.id) ?? 0;
-            const isExpanded = expandedId === product.id;
-
-            return (
-              <div
-                key={product.id}
-                className="rounded-[var(--radius)] border border-[var(--color-border)] bg-white transition-shadow hover:shadow-sm"
-              >
-                <div className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedId(isExpanded ? null : product.id)
-                      }
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-                      aria-label={`${isExpanded ? "Collapse" : "Expand"} stage assignments for ${product.name}`}
-                      aria-expanded={isExpanded}
-                    >
-                      <ChevronIcon expanded={isExpanded} />
-                    </button>
-                    <div className="flex flex-col gap-1">
-                      <div>
-                        <span className="text-sm font-semibold text-[var(--color-foreground)]">
-                          {product.name}
-                        </span>
-                        <span className="ml-2 text-xs text-[var(--color-muted-foreground)]">
-                          Owner: {owner?.name ?? "Unknown"}
-                        </span>
-                      </div>
-                      {/* read-only Groups chips showing which
-                          ReportingGroups own this product via the explicit
-                          GroupProduct edge. Editing lives in the Groups tab. */}
-                      <ProductGroupChips productId={product.id} />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-[var(--color-muted-foreground)]">
-                      {assignedCount}/7 stages
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => openEdit(product)}
-                      className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)]"
-                      aria-label={`Edit ${product.name}`}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => requestArchive(product)}
-                      disabled={isArchiving}
-                      className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[rgba(0,0,0,0.2)] hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-50"
-                      aria-label={`Archive ${product.name}`}
-                    >
-                      Archive
-                    </button>
-                  </div>
-                </div>
-
-                {/* Stage assignments (expandable) */}
-                <div
-                  className="grid transition-[grid-template-rows] duration-300"
-                  style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
-                >
-                  <div className="min-h-0 overflow-hidden">
-                    <div className="border-t border-[var(--color-border)] px-4 pb-4">
-                      {isExpanded && (
-                        <StageAssignmentEditor
-                          projectId={product.id}
-                          projectName={product.name}
-                          leads={leads}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Archived products */}
-        {archivedProducts.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-[var(--color-muted-foreground)]">
-              Archived ({archivedProducts.length})
-            </h3>
-            {archivedProducts.map((product) => (
-              <div
-                key={product.id}
-                className="flex items-center justify-between rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3"
-              >
-                <span className="text-sm text-[var(--color-muted-foreground)]">
-                  {product.name}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleRestore(product)}
-                  disabled={isSaving}
-                  className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label={`Restore ${product.name}`}
-                >
-                  Restore
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        <ProductsTable
+          activeProducts={activeProducts}
+          archivedProducts={archivedProducts}
+          getUserById={getUserById}
+          stageCountByProject={stageCountByProject}
+          leads={leads}
+          expandedId={expandedId}
+          onToggleExpand={(id) =>
+            setExpandedId((current) => (current === id ? null : id))
+          }
+          onEdit={openEdit}
+          onArchive={setPendingArchive}
+          onRestore={handleRestore}
+          isArchiving={isArchiving}
+          isSaving={isSaving}
+        />
       </div>
 
-      {/* Add/Edit Dialog */}
       {showDialog && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
-          onClick={() => setShowDialog(false)}
-          role="presentation"
-        >
-          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop close-propagation; no keyboard equivalent needed (dialog closes via Escape + Cancel button) */}
-          <div
-            ref={dialogSurfaceRef}
-            className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
-            role="dialog"
-            aria-modal="true"
-            aria-label={editingProduct ? "Edit product" : "Add product"}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-              {editingProduct ? "Edit Product" : "Add Product"}
-            </h3>
-            <div className="mt-4 space-y-4">
-              <div>
-                <label
-                  htmlFor="product-name"
-                  className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-                >
-                  Product Name
-                </label>
-                <input
-                  id="product-name"
-                  type="text"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
-                  autoFocus
-                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="product-lead"
-                  className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-                >
-                  Lead Owner
-                </label>
-                <select
-                  id="product-lead"
-                  value={formLeadId}
-                  onChange={(e) => setFormLeadId(e.target.value)}
-                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-                >
-                  {leads.map((lead) => (
-                    <option key={lead.id} value={lead.id}>
-                      {lead.name}
-                    </option>
-                  ))}
-                </select>
-                <p
-                  className="mt-1.5 text-xs text-[var(--color-muted-foreground)]"
-                  data-testid="lead-product-count"
-                >
-                  {leadProductCount} of {MAX_PRODUCTS_PER_LEAD} products
-                </p>
-                {leadProductCount >= MAX_PRODUCTS_PER_LEAD ? (
-                  <p
-                    role="note"
-                    data-testid="lead-product-overcap"
-                    className="mt-1 text-xs font-medium text-[var(--color-status-at-risk-fg)]"
-                  >
-                    At or above the recommended {MAX_PRODUCTS_PER_LEAD}-product
-                    limit — you can still save.
-                  </p>
-                ) : null}
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowDialog(false)}
-                disabled={isSaving}
-                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={isSaving}
-                className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isSaving
-                  ? "Saving…"
-                  : editingProduct
-                    ? "Save Changes"
-                    : "Add Product"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ProductEditDialog
+          editingProduct={editingProduct}
+          form={form}
+          onFormChange={setForm}
+          leads={leads}
+          leadProductCount={leadProductCount}
+          isSaving={isSaving}
+          onSave={handleSave}
+          onClose={() => setShowDialog(false)}
+        />
       )}
 
       <ConfirmDeleteDialog
@@ -481,41 +275,5 @@ export function ProductsTab({
         onCancel={() => setPendingArchive(null)}
       />
     </>
-  );
-}
-
-// ---- Helper icons ----
-
-function PlusIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-}
-
-function ChevronIcon({ expanded }: { readonly expanded: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-4 w-4 transition-transform duration-200"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      style={{ transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}
-    >
-      <path d="M9 18l6-6-6-6" />
-    </svg>
   );
 }
