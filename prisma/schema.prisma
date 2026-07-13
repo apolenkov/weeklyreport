@@ -249,6 +249,7 @@ model Report {
   // It only lands via `prisma migrate reset` (deploy skips the same-named init).
 
   @@index([periodStart(sort: Desc)])
+  @@index([publishedById])
   @@index([status, periodStart(sort: Desc)])
   @@index([archived, periodStart(sort: Desc)])
   @@index([periodState, periodStart(sort: Desc)])
@@ -608,6 +609,9 @@ model CarryOverExecution {
   sourceReport   Report            @relation("CarryOverSource", fields: [sourceReportId], references: [id])
   targetReport   Report            @relation("CarryOverTarget", fields: [targetReportId], references: [id])
   records        CarryOverRecord[]
+
+  @@index([sourceReportId])
+  @@index([targetReportId])
 }
 
 model CarryOverRecord {
@@ -621,6 +625,8 @@ model CarryOverRecord {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   execution        CarryOverExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@index([executionId])
 }
 
 model Stage {
@@ -765,6 +771,7 @@ model ReviewAcknowledgement {
 
   @@unique([userId, reportId, groupId])
   @@index([reportId, groupId])
+  @@index([groupId])
 }
 
 // review-acknowledgement: a per-section verdict by a designated reviewer.
@@ -785,6 +792,7 @@ model SectionReview {
 
   @@unique([reportSectionId, reviewerId])
   @@index([reportSectionId])
+  @@index([reviewerId])
 }
 
 // review-acknowledgement: a reviewer comment anchored to exactly one concrete

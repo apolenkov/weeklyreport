@@ -492,6 +492,9 @@ CREATE INDEX "Report_archived_periodStart_idx" ON "Report"("archived", "periodSt
 -- CreateIndex
 CREATE INDEX "Report_periodState_periodStart_idx" ON "Report"("periodState", "periodStart" DESC);
 
+-- CreateIndex
+CREATE INDEX "Report_publishedById_idx" ON "Report"("publishedById");
+
 -- period-dual-state (C2 / A24/A21): at most ONE open Report per reporting
 -- boundary. Prisma cannot express a partial unique index (the WHERE predicate),
 -- so it is hand-written here (mirrors ReopenRequest_one_pending_per_section).
@@ -619,6 +622,15 @@ CREATE INDEX "ReminderExecution_status_idx" ON "ReminderExecution"("status");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "CarryOverExecution_dedupeKey_key" ON "CarryOverExecution"("dedupeKey");
+
+-- CreateIndex
+CREATE INDEX "CarryOverExecution_sourceReportId_idx" ON "CarryOverExecution"("sourceReportId");
+
+-- CreateIndex
+CREATE INDEX "CarryOverExecution_targetReportId_idx" ON "CarryOverExecution"("targetReportId");
+
+-- CreateIndex
+CREATE INDEX "CarryOverRecord_executionId_idx" ON "CarryOverRecord"("executionId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Stage_name_key" ON "Stage"("name");
@@ -821,8 +833,14 @@ CREATE TABLE "RecordComment" (
 -- CreateIndex
 CREATE UNIQUE INDEX "ReviewAcknowledgement_userId_reportId_groupId_key" ON "ReviewAcknowledgement"("userId", "reportId", "groupId");
 CREATE INDEX "ReviewAcknowledgement_reportId_groupId_idx" ON "ReviewAcknowledgement"("reportId", "groupId");
+
+-- CreateIndex
+CREATE INDEX "ReviewAcknowledgement_groupId_idx" ON "ReviewAcknowledgement"("groupId");
 CREATE UNIQUE INDEX "SectionReview_reportSectionId_reviewerId_key" ON "SectionReview"("reportSectionId", "reviewerId");
 CREATE INDEX "SectionReview_reportSectionId_idx" ON "SectionReview"("reportSectionId");
+
+-- CreateIndex
+CREATE INDEX "SectionReview_reviewerId_idx" ON "SectionReview"("reviewerId");
 CREATE INDEX "RecordComment_itemId_idx" ON "RecordComment"("itemId");
 CREATE INDEX "RecordComment_riskId_idx" ON "RecordComment"("riskId");
 CREATE INDEX "RecordComment_decisionId_idx" ON "RecordComment"("decisionId");
