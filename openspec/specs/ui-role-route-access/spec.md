@@ -79,3 +79,46 @@ not a rendered wall.
 - **WHEN** the session role is in `allowedRoles`
 - **THEN** the children render unchanged, with no extra wrapper element
   around them
+
+### Requirement: A Nested Role Gate MUST NOT Duplicate an Ancestor's Role Set
+
+A `RoleGate` placed on a nested layout or page MUST NOT specify the exact
+same `allowedRoles` set as an ancestor layout's `RoleGate` already covering
+that route. An identical nested gate adds a second serial session check on
+every render of the subtree without narrowing access, since any visitor the
+ancestor gate would deny never reaches the nested gate in the first place.
+A nested `RoleGate` is only justified when it narrows the ancestor's allowed
+role set (a strict subset) for that specific subtree.
+
+#### Scenario: A route segment relies on its ancestor's gate
+
+- **GIVEN** an ancestor layout's `RoleGate` already restricts a route
+  subtree to `["head", "admin"]`
+- **WHEN** a nested layout or page under that subtree needs no narrower
+  restriction
+- **THEN** the nested segment renders its children directly, with no
+  additional `RoleGate` wrapping the same role set
+
+#### Scenario: A route segment narrows access for its own subtree
+
+- **GIVEN** an ancestor layout's `RoleGate` restricts a route subtree to
+  `["head", "admin"]`
+- **WHEN** one nested segment within that subtree must be restricted further
+  (a strict subset, e.g. `["admin"]` only)
+- **THEN** that segment MAY wrap its children in its own `RoleGate` with the
+  narrower `allowedRoles`, since it changes the effective access set
+
+### Requirement: ForbiddenPage copy stays environment-agnostic
+
+`ForbiddenPage`'s body copy MUST NOT reference an affordance that only
+exists in some environments (such as a dev-only role switcher). The copy
+MUST read correctly for a denied visitor regardless of whether the app is
+running in dev, UAT, or production.
+
+#### Scenario: A denied visitor in production sees only real affordances
+
+- **WHEN** a role fails a route's gate and `ForbiddenPage` renders
+- **THEN** the body copy names the required role and offers the "go to
+  dashboard" link
+- **AND** the copy does not tell the visitor to use a dev-only role switcher
+  or any other affordance that may not exist in the running environment

@@ -37,10 +37,11 @@ obtain its `host` and `port` by spreading `buildRedisConnectionOptions(env)`,
 and MUST NOT inline `requireEnv(process.env, "REDIS_HOST")` or
 `Number(requireEnv(process.env, "REDIS_PORT"))`. The consumers are
 `bullmq-options.ts` (`getBullMQConnectionOptions`), `redis.health.ts`,
-`session-revocation.service.ts`, `analytics.cache.ts`, and
-`telemetry.cache.ts`. A consumer MAY add its own resilience flags
-(`lazyConnect`, `maxRetriesPerRequest`, `enableOfflineQueue`) alongside the
-spread, because those differ per consumer and are not env-derived.
+`session-revocation.service.ts`, `analytics.cache.ts`, `telemetry.cache.ts`,
+and `rate-limit.middleware.ts` (the `rate-limit-redis` store's ioredis
+client). A consumer MAY add its own resilience flags (`lazyConnect`,
+`maxRetriesPerRequest`, `enableOfflineQueue`) alongside the spread, because
+those differ per consumer and are not env-derived.
 
 #### Scenario: A consumer builds its connection from the helper
 
@@ -50,11 +51,19 @@ spread, because those differ per consumer and are not env-derived.
 
 #### Scenario: No consumer re-reads process.env for host or port
 
-- **WHEN** the five named consumers are searched for Redis connection reads
+- **WHEN** the six named consumers are searched for Redis connection reads
 - **THEN** none contains `requireEnv(process.env, "REDIS_HOST")` or
   `Number(requireEnv(process.env, "REDIS_PORT"))`
 - **AND** each resilience flag value that existed before the change is unchanged
   after it (behavior-preserving)
+
+#### Scenario: The rate-limit Redis store builds its client from the helper
+
+- **WHEN** `rate-limit.middleware.ts` constructs the ioredis client backing
+  its `RedisStore`
+- **THEN** its `host`/`port` come from `buildRedisConnectionOptions(env)`
+- **AND** it reads neither `process.env.REDIS_HOST` nor
+  `process.env.REDIS_PORT` directly
 
 ### Requirement: A missing REDIS_HOST or REDIS_PORT MUST fail boot loud
 
@@ -78,3 +87,32 @@ exactly one place the fields are consumed and no place a fallback can reappear.
 - **WHEN** `validateEnv()` runs with `REDIS_PORT` set to `"not-a-number"`
 - **THEN** validation fails on path `REDIS_PORT` (via `z.coerce.number().int().positive()`)
 - **AND** boot aborts before any Redis connection is constructed
+
+### Requirement: The readiness Redis client MUST fail fast
+
+The `RedisHealthIndicator` ioredis client MUST set `maxRetriesPerRequest: 1`
+and a bounded `commandTimeout` (2s), and MUST install a no-op `error` listener,
+(the offline queue stays ENABLED: with `lazyConnect`, disabling it rejects the
+first ping while the client is still connecting — a deterministic false "down"
+at process start against a healthy Redis),
+matching the `read-through-cache.ts` and `session-revocation.service.ts`
+clients. This bounds how long a `ping()` issued during a Redis outage can
+stay queued before rejecting, and prevents ioredis's unhandled `error`
+events from being dumped to raw stderr.
+
+#### Scenario: Ping rejects promptly during a Redis outage
+
+- **WHEN** Redis is unreachable and `RedisHealthIndicator.isHealthy("redis")`
+  calls `this.redis.ping()`
+- **THEN** the ping rejects after at most one retry attempt, not after
+  ioredis's default ~20 reconnect attempts
+- **AND** `isHealthy` still returns a `down` `HealthIndicatorResult` from its
+  existing catch block
+
+#### Scenario: A Redis outage produces no unhandled error dump
+
+- **WHEN** the ioredis client underlying `RedisHealthIndicator` emits an
+  `error` event during a reconnect attempt
+- **THEN** the no-op `error` listener consumes it
+- **AND** no raw ioredis error is written to stderr outside the health
+  indicator's own `down()` result
