@@ -8,6 +8,7 @@ exports[`AccordionSection > snapshot: AccordionSection with actions (two Chevron
     class="flex w-full items-center justify-between gap-3 p-5 transition-colors hover:bg-[var(--color-surface-hover)]"
   >
     <button
+      aria-controls="_r_b_"
       aria-expanded="true"
       class="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
       type="button"
@@ -37,6 +38,7 @@ exports[`AccordionSection > snapshot: AccordionSection with actions (two Chevron
       </button>
     </div>
     <button
+      aria-controls="_r_b_"
       aria-expanded="true"
       aria-label="Collapse Tasks"
       class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-pill)] transition-colors hover:bg-white"
@@ -64,6 +66,7 @@ exports[`AccordionSection > snapshot: AccordionSection with actions (two Chevron
   </div>
   <div
     class="grid transition-[grid-template-rows] duration-300"
+    id="_r_b_"
     style="grid-template-rows: 1fr;"
   >
     <div
@@ -90,6 +93,7 @@ exports[`AccordionSection > snapshot: AccordionSection with no actions 1`] = `
     class="flex w-full items-center justify-between gap-3 p-5 transition-colors hover:bg-[var(--color-surface-hover)]"
   >
     <button
+      aria-controls="_r_a_"
       aria-expanded="true"
       class="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
       type="button"
@@ -130,6 +134,7 @@ exports[`AccordionSection > snapshot: AccordionSection with no actions 1`] = `
   </div>
   <div
     class="grid transition-[grid-template-rows] duration-300"
+    id="_r_a_"
     style="grid-template-rows: 1fr;"
   >
     <div

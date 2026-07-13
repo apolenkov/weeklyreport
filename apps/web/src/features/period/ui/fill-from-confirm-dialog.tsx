@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { createPortal } from "react-dom";
 
+import { useDialogFocus } from "../../../lib/use-dialog-focus";
 import type { ReportPeriod } from "../../report-sections/model/mock-data";
 
 interface FillFromConfirmDialogProps {
@@ -22,14 +24,27 @@ export function FillFromConfirmDialog({
   onConfirm,
   onCancel,
 }: FillFromConfirmDialogProps) {
+  const surfaceRef = useRef<HTMLDivElement>(null);
+
+  // Escape-to-close, Tab-trap, and focus-restore-to-trigger via the shared
+  // primitive; the backdrop click shares the same `onCancel` close path.
+  useDialogFocus({ open, onClose: onCancel, containerRef: surfaceRef });
+
   if (!open || typeof document === "undefined") return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
+      onClick={onCancel}
+      role="presentation"
+    >
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop-close propagation for inside clicks; no keyboard equivalent needed */}
       <div
+        ref={surfaceRef}
         className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
         aria-label="Confirm fill from previous"
+        onClick={(e) => e.stopPropagation()}
       >
         <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
           Fill from {selectedPeriod?.weekLabel}?

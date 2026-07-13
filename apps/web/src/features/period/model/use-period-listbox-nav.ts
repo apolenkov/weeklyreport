@@ -7,6 +7,8 @@ import {
   useState,
 } from "react";
 
+import { useDialogFocus } from "../../../lib/use-dialog-focus";
+
 const SWIPE_THRESHOLD_PX = 50;
 // Gap between the trigger and the portaled listbox panel.
 const PERIOD_PANEL_GAP_PX = 4;
@@ -53,10 +55,17 @@ export function usePeriodListboxNav({
     width: number;
   } | null>(null);
 
-  const closeAndRefocus = useCallback(() => {
-    setOpen(false);
-    triggerRef.current?.focus();
-  }, []);
+  // Combobox pattern: focus stays on the trigger and the active option is
+  // tracked via aria-activedescendant, so only the primitive's Escape-to-close
+  // and focus-restore-to-trigger apply — containerRef points at the trigger
+  // (never the panel) so focus is never pulled into the option list, and the
+  // panel has no focusable descendants for the Tab-trap to act on.
+  useDialogFocus({
+    open,
+    onClose: () => setOpen(false),
+    containerRef: triggerRef,
+    triggerRef,
+  });
 
   const selectOption = useCallback(
     (periodId: string) => {
@@ -64,9 +73,9 @@ export function usePeriodListboxNav({
       // semantics). This also keeps a single-option fallback navigator inert
       // so a head urlBuilder never jumps a viewer/lead surface to /head/report.
       if (periodId !== selectedPeriodId) navigateTo(periodId);
-      closeAndRefocus();
+      setOpen(false);
     },
-    [navigateTo, closeAndRefocus, selectedPeriodId],
+    [navigateTo, selectedPeriodId],
   );
 
   // Position the panel via portal to escape the toolbar's overflow clip.
@@ -107,13 +116,21 @@ export function usePeriodListboxNav({
     if (open) setActiveIdx(currentIndex);
   }, [open, currentIndex]);
 
+  // Keep the active option visible: scroll it into view whenever the highlight
+  // moves (Arrow/Home/End), so keyboard navigation never runs off the panel's
+  // visible edge. block: "nearest" no-ops when the option is already visible,
+  // so hover-driven activeIdx changes don't jerk the panel.
+  useEffect(() => {
+    if (!open) return;
+    document
+      .getElementById(`${optionIdPrefix}${activeIdx}`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [open, activeIdx, optionIdPrefix]);
+
   function handleListKeyDown(
     e: ReactKeyboardEvent<HTMLButtonElement | HTMLDivElement>,
   ) {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      closeAndRefocus();
-    } else if (e.key === "ArrowDown") {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       setActiveIdx((i) => Math.min(i + 1, periodOptionIds.length - 1));
     } else if (e.key === "ArrowUp") {

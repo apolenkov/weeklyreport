@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
+import { useDialogFocus } from "../../lib/use-dialog-focus";
+
 interface ConfirmDeleteDialogProps {
   /** Open/close state — caller owns this. */
   readonly open: boolean;
@@ -49,8 +51,12 @@ interface ConfirmDeleteDialogProps {
  * so the UX is identical and the parent sections only need to track
  * `pendingDelete` state, not the modal lifecycle.
  *
- * Keyboard: Escape cancels; Enter confirms (focus is set on the
- * destructive button on open). Click on the overlay also cancels.
+ * Keyboard: Escape cancels and Tab is trapped within the dialog via the
+ * shared `useDialogFocus` primitive; Enter confirms only while the
+ * destructive button holds focus. Click on the overlay also cancels.
+ * Initial focus deliberately lands on Cancel (the first focusable), per the
+ * ARIA alertdialog practice of focusing the LEAST destructive action — a
+ * reflexive Enter must never delete.
  *
  * Rendered through a portal to document.body so it escapes any
  * `overflow:hidden` ancestor and always sits above the form.
@@ -67,38 +73,27 @@ export function ConfirmDeleteDialog({
   onCancel,
 }: ConfirmDeleteDialogProps) {
   const confirmRef = useRef<HTMLButtonElement | null>(null);
+  const surfaceRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    // Focus the destructive button on open so Enter confirms and a
-    // user with keyboard-only navigation can act immediately. Defer
-    // one frame so the portal has mounted.
-    const id = requestAnimationFrame(() => {
-      confirmRef.current?.focus();
-    });
-    return () => cancelAnimationFrame(id);
-  }, [open]);
+  // Escape-to-close, Tab-trap, and focus-restore-to-trigger all come from the
+  // shared primitive; backdrop click and the Cancel button share the same
+  // `onCancel` close path.
+  useDialogFocus({ open, onClose: onCancel, containerRef: surfaceRef });
 
   useEffect(() => {
     if (!open) return;
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onCancel();
-      } else if (
-        e.key === "Enter" &&
-        document.activeElement === confirmRef.current
-      ) {
-        // Only fire on Enter when the destructive button is focused —
-        // otherwise the same key in the underlying form would also
-        // confirm a delete the user didn't mean.
+      // Confirm on Enter only while the destructive button holds focus —
+      // otherwise the same key in the underlying form would confirm a
+      // delete the user didn't mean.
+      if (e.key === "Enter" && document.activeElement === confirmRef.current) {
         e.preventDefault();
         onConfirm();
       }
     }
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [open, onCancel, onConfirm]);
+  }, [open, onConfirm]);
 
   if (!open || typeof document === "undefined") return null;
 
@@ -110,6 +105,7 @@ export function ConfirmDeleteDialog({
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop-close propagation for inside clicks; no keyboard equivalent needed */}
       <div
+        ref={surfaceRef}
         className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"

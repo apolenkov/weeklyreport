@@ -75,7 +75,9 @@ export function QuickAddButton({
         className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
         onClick={() => setOpen((prev) => !prev)}
         disabled={disabled}
-        aria-haspopup="menu"
+        // Disclosure pattern: aria-expanded alone is correct for a
+        // role="group" popup — any aria-haspopup value here lies to AT
+        // ("true" is spec-equivalent to "menu", and this is not a menu).
         aria-expanded={open}
         title="Quick-add a record"
       >

@@ -5,6 +5,19 @@ import { ItemEditDialog } from "./item-edit-dialog";
 import { QuickAddButton } from "./quick-add-button";
 
 describe("QuickAddButton", () => {
+  it("the trigger carries no aria-haspopup — a role='group' popup is a disclosure, not a menu", () => {
+    render(<QuickAddButton onPick={vi.fn()} />);
+    const trigger = screen.getByRole("button", { name: "+ Add" });
+    // The popup is a role="group", so the trigger must not claim "menu" —
+    // "true" advertises a popup without contradicting the group role.
+    expect(trigger).not.toHaveAttribute("aria-haspopup");
+    fireEvent.click(trigger);
+    expect(
+      screen.getByRole("group", { name: "Quick-add record type" }),
+    ).toBeInTheDocument();
+    expect(trigger).not.toHaveAttribute("aria-haspopup", "menu");
+  });
+
   it("opens a five-option type picker", () => {
     render(<QuickAddButton onPick={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "+ Add" }));

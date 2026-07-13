@@ -77,6 +77,10 @@ export function UsersTab({ users, groups }: UsersTabProps) {
   // to it when the dialog closes (Escape, Cancel, backdrop, save success).
   const dialogTriggerRef = useRef<HTMLElement | null>(null);
   const dialogSurfaceRef = useRef<HTMLDivElement>(null);
+  // Same primitive for the delete-confirmation modal: its own surface and the
+  // row's delete button captured as the focus-restore target.
+  const deleteTriggerRef = useRef<HTMLElement | null>(null);
+  const deleteSurfaceRef = useRef<HTMLDivElement>(null);
 
   const activeGroups = useMemo(
     () => groups.filter((group) => !group.archived),
@@ -110,6 +114,15 @@ export function UsersTab({ users, groups }: UsersTabProps) {
     onClose: () => setShowDialog(false),
     containerRef: dialogSurfaceRef,
     triggerRef: dialogTriggerRef,
+  });
+
+  // Escape-to-close, Tab-trap, backdrop-dismiss, and focus-restore for the
+  // delete-confirmation modal, which previously had none of these.
+  useDialogFocus({
+    open: deleteTarget !== null,
+    onClose: () => setDeleteTarget(null),
+    containerRef: deleteSurfaceRef,
+    triggerRef: deleteTriggerRef,
   });
 
   const saveUserMut = useMutation(
@@ -375,7 +388,10 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                       )}
                       <button
                         type="button"
-                        onClick={() => setDeleteTarget(user)}
+                        onClick={(e) => {
+                          deleteTriggerRef.current = e.currentTarget;
+                          setDeleteTarget(user);
+                        }}
                         className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[rgba(200,32,20,0.3)] hover:bg-red-50"
                         aria-label={`Delete ${user.name}`}
                       >
@@ -591,12 +607,19 @@ export function UsersTab({ users, groups }: UsersTabProps) {
 
       {/* Delete Confirmation */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
+          onClick={() => setDeleteTarget(null)}
+          role="presentation"
+        >
+          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop-close propagation for inside clicks; no keyboard equivalent needed */}
           <div
+            ref={deleteSurfaceRef}
             className="animate-scale-in mx-4 w-full max-w-sm rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
             role="alertdialog"
             aria-modal="true"
             aria-label="Confirm delete"
+            onClick={(e) => e.stopPropagation()}
           >
             <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
               Delete User?
