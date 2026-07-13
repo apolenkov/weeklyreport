@@ -63,3 +63,69 @@ that no group-B data is returned.
 - **WHEN** the regression test calls a tRPC procedure for group B reports while authenticated as a group-A user
 - **THEN** the call rejects with a 403-equivalent error
 - **AND** the response contains no rows from group B
+
+### Requirement: Head Cross-Author Lead-Form Reads Enforce Group Scope
+
+A head-role read of another author's lead-form section MUST be bounded to the
+head's own reporting group before the target section is returned, even when the
+target author is supplied by the client (`requestedAuthorId`) and resolved by
+author-keyed `findUnique` rather than a guarded list method. The
+service MUST assert the target author's reporting group is within the head's
+allowed group ids (equivalently, `groupScopeFilter(session, "reportSection")`)
+and MUST reject a cross-group target with a 403-equivalent access error,
+returning no section rows. The `admin` role is exempt and reads
+unconditionally.
+
+#### Scenario: Head requests a section in another reporting group
+
+- **WHEN** a head calls the by-period lead-form read with a `requestedAuthorId`
+  whose author belongs to a different reporting group
+- **THEN** the request is rejected with a 403-equivalent access error
+- **AND** no section rows for the other group's author are returned
+
+#### Scenario: Head requests a section in its own reporting group
+
+- **WHEN** a head calls the by-period lead-form read with a `requestedAuthorId`
+  whose author belongs to the head's own reporting group
+- **THEN** the target author's full section is returned
+
+#### Scenario: Admin requests any author's section
+
+- **WHEN** an admin calls the by-period lead-form read with any
+  `requestedAuthorId`
+- **THEN** the group scope is not applied and the target author's full section
+  is returned
+
+### Requirement: Regression Test Covers Archive Cross-Group Section Isolation
+
+The archive repository's group-scoped section filter MUST have regression
+test coverage proving that a lead or head session scoped to one reporting
+group reads only that group's sections from a report whose sections span
+multiple groups, on BOTH the snapshot-hit read path and the no-snapshot
+fallback read path. A test suite where every existing archive repository
+call omits a scoped session MUST NOT be considered sufficient coverage for
+this filter.
+
+#### Scenario: scoped session reads only its group's sections from a published snapshot
+
+- **GIVEN** a published, archived report whose sections span reporting group
+  A and reporting group B, with a persisted `publishedSnapshot`
+- **WHEN** the archive repository is called with a session scoped to group A
+- **THEN** the returned sections and recomputed `portfolioOverview` reflect
+  only group A's records, with no group-B data present
+
+#### Scenario: scoped session reads only its group's sections on the fallback path
+
+- **GIVEN** a published, archived report whose sections span reporting group
+  A and reporting group B, with no persisted `publishedSnapshot`
+- **WHEN** the archive repository is called with a session scoped to group A
+- **THEN** the fallback graph load returns only group A's sections, and the
+  returned `portfolioOverview` reflects only group A's records
+
+#### Scenario: the filter is symmetric across groups
+
+- **GIVEN** the same multi-group report as above
+- **WHEN** the archive repository is called with a session scoped to group B
+  instead of group A
+- **THEN** the returned sections and `portfolioOverview` reflect only group
+  B's records
