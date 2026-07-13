@@ -10,7 +10,7 @@
 export { ensureLeadSection } from "./application/ensure-lead-section.js";
 export { applyRevokeTransition } from "./application/revoke-transition.js";
 export {
-  mapPrismaToReportSection,
   type PrismaReportSectionWithRelations,
   reportSectionFullInclude,
-} from "./infrastructure/report-sections.prisma-repository.js";
+} from "./infrastructure/report-sections.include.js";
+export { mapPrismaToReportSection } from "./infrastructure/report-sections.mappers.js";
