@@ -76,18 +76,28 @@ async function hydrateOrganization(
 ): Promise<UserSession> {
   const now = Date.now();
   if (!orgCache || orgCache.expiresAt < now) {
-    // Seed defaults are generic — concrete tenant brand stays
-    // in the seed file / admin-edited Organization row, never in code.
-    const row = await prisma.organization.upsert({
+    // Read-only on the happy path: the singleton row is seeded at migration,
+    // so every cache-miss refresh is a primary-key lookup, never a write. The
+    // fallback (row unexpectedly absent) is an upsert — not a create — so two
+    // concurrent cold reads collapse to a no-op update instead of racing into
+    // a P2002. Seed defaults are generic; concrete tenant brand stays in the
+    // seed file / admin-edited Organization row, never in code.
+    const existing = await prisma.organization.findUnique({
       where: { id: "singleton" },
-      create: {
-        id: "singleton",
-        shortName: DEFAULT_ORGANIZATION_IDENTITY.shortName,
-        fullName: DEFAULT_ORGANIZATION_IDENTITY.fullName,
-      },
-      update: {},
       select: { shortName: true, fullName: true },
     });
+    const row =
+      existing ??
+      (await prisma.organization.upsert({
+        where: { id: "singleton" },
+        create: {
+          id: "singleton",
+          shortName: DEFAULT_ORGANIZATION_IDENTITY.shortName,
+          fullName: DEFAULT_ORGANIZATION_IDENTITY.fullName,
+        },
+        update: {},
+        select: { shortName: true, fullName: true },
+      }));
     orgCache = {
       value: { shortName: row.shortName, fullName: row.fullName },
       expiresAt: now + ORG_CACHE_TTL_MS,

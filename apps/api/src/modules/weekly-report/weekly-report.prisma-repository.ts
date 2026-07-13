@@ -170,21 +170,47 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       return null;
     }
 
-    // The lead roster and the project portfolio are independent reads; dispatch
-    // them concurrently so the hot report path pays one round-trip, not two.
-    const [leadUsers, projects] = await Promise.all([
+    // Parse the frozen snapshot before the reads below: it decides whether the
+    // published render path runs, and that path reads nothing from the live
+    // `projects` rows — so the projects query can skip the heavy
+    // `stageAssignments` join whenever the snapshot will render. A published
+    // report whose snapshot is null/unparseable falls through to the live
+    // path, hence the join is keyed on the actual render condition, not on
+    // `periodStatus` alone.
+    const snapshot = parsePublishedSnapshot(report.publishedSnapshot);
+    const useSnapshot =
+      snapshot !== null && report.periodStatus === "published";
+
+    // Three independent reads, dispatched concurrently (the count needs only
+    // `report.deadline`, already in hand). The live project portfolio is
+    // skipped OUTRIGHT on the snapshot render path — that branch reads every
+    // signal from the frozen snapshot and never touches these rows.
+    const [leadUsers, projects, activePolicyCount] = await Promise.all([
       this.prisma.user.findMany({
         where: { role: "lead", ...userScope },
         select: { id: true },
       }),
-      // D1: add lead.reportingGroupId to detect cross-group products.
-      // The thin extra select adds one column to an already-fetched row —
-      // no extra round-trip.
-      this.prisma.project.findMany({
-        where: { archived: false, ...projectScope },
-        include: {
-          stageAssignments: true,
-          lead: { select: { reportingGroupId: true } },
+      useSnapshot
+        ? []
+        : this.prisma.project.findMany({
+            where: { archived: false, ...projectScope },
+            include: {
+              lead: { select: { reportingGroupId: true } },
+              stageAssignments: true,
+            },
+          }),
+      // canSendReminder is driven by ReminderPolicy validity windows, not by
+      // per-report ReminderRule presence. The UI signal `hasActiveReminderRule`
+      // keeps its wire-format name to avoid a cross-cutting rename, but its
+      // semantics are: "∃ at least one active ReminderPolicy whose validity
+      // window covers this Report.deadline". The policy-driven scheduler
+      // materialises ReminderRule rows lazily, so gating on per-period rule
+      // existence would mis-match it.
+      this.prisma.reminderPolicy.count({
+        where: {
+          active: true,
+          validFrom: { lte: report.deadline },
+          OR: [{ validUntil: null }, { validUntil: { gte: report.deadline } }],
         },
       }),
     ]);
@@ -198,22 +224,6 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     // frontends read `auth.me.organization.fullName`, so this API path does
     // not touch `AppSettings` here.
 
-    // canSendReminder is driven by ReminderPolicy validity windows, not by
-    // per-report ReminderRule presence. The UI signal `hasActiveReminderRule`
-    // keeps its wire-format name to avoid a cross-cutting rename, but its
-    // semantics are: "∃ at least one active ReminderPolicy whose validity
-    // window covers this Report.deadline". The policy-driven scheduler
-    // materialises ReminderRule rows lazily, so gating on per-period rule
-    // existence would mis-match it.
-    const activePolicyCount = await this.prisma.reminderPolicy.count({
-      where: {
-        active: true,
-        validFrom: { lte: report.deadline },
-        OR: [{ validUntil: null }, { validUntil: { gte: report.deadline } }],
-      },
-    });
-
-    const snapshot = parsePublishedSnapshot(report.publishedSnapshot);
     if (snapshot && report.periodStatus === "published") {
       const scopedSnapshot = filterSnapshotSections(
         snapshot,

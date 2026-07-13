@@ -46,6 +46,12 @@ function makePrismaStub() {
     // returning. PDF-export-token paths short-circuit before hitting this
     // stub, but the regular-JWT regression test does exercise it.
     organization: {
+      findUnique: vi.fn(() =>
+        Promise.resolve({
+          shortName: "Demo",
+          fullName: "Example Software Department",
+        }),
+      ),
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma repository contract (no awaitable work in the stub)
       upsert: vi.fn(async () => ({
         shortName: "Demo",
@@ -265,6 +271,12 @@ function makeRequesterPrisma(user: RequesterUser | null) {
       findUnique: vi.fn(async () => ({ name: "Software Development" })),
     },
     organization: {
+      findUnique: vi.fn(() =>
+        Promise.resolve({
+          shortName: "Demo",
+          fullName: "Example Software Department",
+        }),
+      ),
       // eslint-disable-next-line @typescript-eslint/require-await -- async Prisma contract; stub has no awaitable work
       upsert: vi.fn(async () => ({
         shortName: "Demo",

@@ -102,6 +102,8 @@ function makePrisma(opts: PrismaStubOptions = {}): PrismaService {
     reportSection: { findFirst: () => Promise.resolve(null) },
     reportingGroup: { findUnique: () => Promise.resolve(null) },
     organization: {
+      findUnique: () =>
+        Promise.resolve({ shortName: "Demo", fullName: "Product Team" }),
       upsert: () =>
         Promise.resolve({ shortName: "Demo", fullName: "Product Team" }),
     },
