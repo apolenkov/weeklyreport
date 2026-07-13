@@ -35,7 +35,7 @@ export interface EscalationReport {
   sections: {
     author: {
       name: string;
-      reportingGroup: { head: EscalationHead | null } | null;
+      reportingGroup: { name: string; head: EscalationHead | null } | null;
     };
   }[];
 }
@@ -77,7 +77,10 @@ export function buildEscalationGroups(report: EscalationReport): {
     }
     const lateLead = {
       leadName: author.name,
-      sectionTitle: `Report ${report.id} section`,
+      // The lead's reporting group names their section in the digest; a
+      // resolved head guarantees the group is present, so the fallback only
+      // guards the type.
+      sectionTitle: author.reportingGroup?.name ?? "Untitled section",
       deadlineIso: report.deadline.toISOString(),
     };
     const existing = byHead.get(head.userId);

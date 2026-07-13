@@ -11,7 +11,7 @@ interface Props {
 }
 
 /**
- * UFB-NEW-A34: resolves the current lead's userId from auth.me and renders
+ * Resolves the current lead's userId from auth.me and renders
  * WeeklyReportPage.
  *
  * Scope (driver-findings-2026-06-11 finding 2): the preview shows the lead's

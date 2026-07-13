@@ -42,9 +42,10 @@ export async function openBoundaryGuarded<T>(
  * Mint a Report row with the supplied dates + initial state.
  * Mirrors `PeriodCreatorScheduler.runOnce`'s bare `report.create` —
  * `status` defaults to 'draft' and `periodStatus` defaults to 'open'
- * at the DB layer (see schema.prisma defaults). No PolicyApplicator
- * call here — the scheduler also skips it (pre-existing gap); fixing
- * both paths is deferred.
+ * at the DB layer (see schema.prisma defaults). This function only
+ * writes the row; the reminder rules are materialized by the caller —
+ * `AdminPrismaRepository.createPeriodManual` invokes `applyToPeriod`
+ * after this create commits.
  */
 export async function createPeriodManual(
   prisma: PrismaService,

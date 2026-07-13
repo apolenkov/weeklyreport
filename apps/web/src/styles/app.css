@@ -156,7 +156,7 @@
   }
 }
 
-/* SDLC-1 (Phase 33-04): pulsing red dot anchored to risk-summary chips so the
+/* Pulsing red dot anchored to risk-summary chips so the
    eye is drawn to active blockers without the user having to read the label.
    Used inline via `style={{ animation: 'risk-pulse 1.6s ease-in-out infinite' }}`
    in sdlc-pipeline.tsx. Lives outside @layer utilities because @keyframes can
@@ -197,7 +197,7 @@ body:has([role="dialog"]) [data-testid="dev-role-switcher-trigger"] {
 
 /* Keep the Agentation devtools panel just below the top navigation (not at
    the bottom of the viewport). Nav bar height ≈ 64px; 4.5rem ≈ 72px gives a
-   small gap. D-27/D-36: box.y must be < 200px. The selector is intentionally
+   small gap. box.y must be < 200px. The selector is intentionally
    doubled to outrank the panel's own single-class rule by specificity, so no
    forced override is needed. */
 .styles-module__toolbar___wNsdK.styles-module__toolbar___wNsdK {
