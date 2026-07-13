@@ -97,6 +97,8 @@ export interface LeadKanbanItem {
   author: string;
   /** Priority rank carried through so the edit dialog can bind it (null = unranked). */
   priorityRank: number | null;
+  /** Mirrors `KanbanItem.pausedReason` (model/mock-data.ts): set only on a paused row. */
+  pausedReason: string | null;
 }
 
 export interface LeadRiskEntry {

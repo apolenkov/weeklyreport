@@ -255,8 +255,10 @@ export function mapForeignItems(
           ),
           text: i.text,
           author: shortNameFromName(ca.authorName),
-          // Foreign (read-only) items never surface a priority control.
+          // Foreign (read-only) items never surface a priority control, and
+          // the cross-author read model carries no paused metadata.
           priorityRank: null,
+          pausedReason: null,
           authorId: ca.authorId,
           foreign: true,
         }),
