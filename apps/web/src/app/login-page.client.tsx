@@ -3,6 +3,7 @@
 import {
   DEFAULT_ORGANIZATION_IDENTITY,
   type OrganizationPublic,
+  sessionRoleSchema,
 } from "@customreport/shared";
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
@@ -165,7 +166,7 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
       className="mt-2 grid grid-cols-2 gap-1.5"
       data-testid="last-role-switcher"
     >
-      {(["lead", "head", "admin", "viewer"] as const).map((role) => (
+      {sessionRoleSchema.options.map((role) => (
         <li key={role}>
           <a
             href={devLoginHref(role, DEV_EMAIL_FOR_ROLE[role])}
@@ -290,11 +291,9 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
                 >
                   <Skeleton className="h-3.5 w-40" />
                   <div className="mt-2 grid grid-cols-2 gap-1.5">
-                    {(["lead", "head", "admin", "viewer"] as const).map(
-                      (role) => (
-                        <Skeleton key={role} className="h-[30px] rounded" />
-                      ),
-                    )}
+                    {sessionRoleSchema.options.map((role) => (
+                      <Skeleton key={role} className="h-[30px] rounded" />
+                    ))}
                   </div>
                 </div>
               ) : lastRole ? (

@@ -10,6 +10,8 @@ import {
 } from "@customreport/ui/components/ui/chart";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
+import { type ChartData, type ChartSeries, COLORS } from "./chart-palette";
+
 // Status levels: red=1, yellow=2, green=3. Domain max leaves headroom above green.
 const STATUS_LEVEL_GREEN = 3;
 const STATUS_LEVEL_TICKS = [1, 2, STATUS_LEVEL_GREEN];
@@ -28,21 +30,6 @@ const STATUS_TO_VALUE: Record<Exclude<TrafficLightCell, null>, number> = {
   yellow: 2,
   red: 1,
 };
-
-const COLORS = [
-  "#15803d",
-  "#2563eb",
-  "#9333ea",
-  "#0891b2",
-  "#c2410c",
-  "#a21caf",
-];
-
-interface ChartSeries {
-  readonly dataKey: string;
-  readonly name: string;
-}
-type ChartData = Record<string, number | string | null>;
 
 /**
  * Pivot history rows into recharts data points keyed by the stable `projectId`

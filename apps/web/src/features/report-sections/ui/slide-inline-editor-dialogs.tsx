@@ -47,19 +47,19 @@ interface SlideInlineEditorDialogsProps {
   readonly onCancelDelete: () => void;
 }
 
-function getActiveItemRecord(
+export function getActiveItemRecord(
   record: SlideInlineEditRecord | null,
 ): SlideInlineItemRecord | null {
   return record?.kind === "item" ? record : null;
 }
 
-function getActiveRiskRecord(
+export function getActiveRiskRecord(
   record: SlideInlineEditRecord | null,
 ): SlideInlineRiskRecord | null {
   return record?.kind === "risk" ? record : null;
 }
 
-function getActiveDecisionRecord(
+export function getActiveDecisionRecord(
   record: SlideInlineEditRecord | null,
 ): SlideInlineDecisionRecord | null {
   return record?.kind === "decision" ? record : null;

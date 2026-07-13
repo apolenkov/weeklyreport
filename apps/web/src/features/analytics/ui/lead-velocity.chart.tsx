@@ -7,24 +7,11 @@ import {
 } from "@customreport/ui/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts";
 
+import { type ChartData, type ChartSeries, COLORS } from "./chart-palette";
+
 /**
  * Stacked-bar of submitted-section counts per lead per period.
  */
-
-const COLORS = [
-  "#15803d",
-  "#2563eb",
-  "#9333ea",
-  "#0891b2",
-  "#c2410c",
-  "#a21caf",
-];
-
-interface ChartSeries {
-  readonly dataKey: string;
-  readonly name: string;
-}
-type ChartData = Record<string, number | string>;
 
 /**
  * Pivot velocity rows into recharts data points keyed by the stable `leadId`

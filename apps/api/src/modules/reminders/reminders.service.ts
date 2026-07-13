@@ -2,6 +2,7 @@ import {
   type AdminReminderExecution,
   adminReminderExecutionSchema,
   type AdminReminderRule,
+  type OrganizationBrand,
   type PaginatedResult,
   type PaginationInput,
 } from "@customreport/shared";
@@ -128,11 +129,6 @@ export interface DueEscalationRule {
  * snapshot, so a mid-flight admin edit of the brand strings does NOT
  * affect already-queued emails (one fewer race to debug).
  */
-export interface ReminderOrganization {
-  shortName: string;
-  fullName: string;
-}
-
 export interface DeadlineReminderPayload {
   kind: "deadline";
   cycleDate: string; // ISO YYYY-MM-DD UTC of the fireAt deadline
@@ -140,7 +136,7 @@ export interface DeadlineReminderPayload {
   reportPeriod: string;
   deadlineIso: string;
   sectionUrl: string;
-  organization: ReminderOrganization;
+  organization: OrganizationBrand;
 }
 
 export interface EscalationReminderPayload {
@@ -153,7 +149,7 @@ export interface EscalationReminderPayload {
     sectionTitle: string;
     deadlineIso: string;
   }[];
-  organization: ReminderOrganization;
+  organization: OrganizationBrand;
 }
 
 export type ReminderExecutionPayload =
