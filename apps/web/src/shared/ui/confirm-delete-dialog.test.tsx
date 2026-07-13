@@ -67,7 +67,7 @@ describe("ConfirmDeleteDialog — a11y regression (VA-0a)", () => {
     const onCancel = vi.fn();
     renderDialog({ onCancel });
 
-    fireEvent.click(screen.getByRole("dialog"));
+    fireEvent.click(screen.getByRole("alertdialog"));
 
     expect(onCancel).not.toHaveBeenCalled();
   });
@@ -83,7 +83,7 @@ describe("ConfirmDeleteDialog — a11y regression (VA-0a)", () => {
   it("inner dialog div has correct ARIA attributes", () => {
     renderDialog();
 
-    const dialog = screen.getByRole("dialog");
+    const dialog = screen.getByRole("alertdialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(dialog).toHaveAttribute("aria-labelledby", "confirm-delete-title");
     expect(dialog).toHaveAttribute(

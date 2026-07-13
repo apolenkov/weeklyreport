@@ -107,7 +107,7 @@ export function ConfirmDeleteDialog({
       <div
         ref={surfaceRef}
         className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
-        role="dialog"
+        role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-delete-title"
         aria-describedby="confirm-delete-preview"

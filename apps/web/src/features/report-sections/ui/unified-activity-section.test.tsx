@@ -97,7 +97,7 @@ describe("UnifiedActivitySection", () => {
     const deferredCard = findCardByText("Item i-deferred");
     fireEvent.click(within(deferredCard).getByLabelText("Delete"));
     fireEvent.click(
-      within(screen.getByRole("dialog")).getByRole("button", {
+      within(screen.getByRole("alertdialog")).getByRole("button", {
         name: "Delete",
       }),
     );

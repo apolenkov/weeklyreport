@@ -446,7 +446,7 @@ describe("RemindersTab — permanent delete", () => {
 
     await user.click(screen.getByTestId(`remove-${policyDeadline.id}`));
 
-    const dialog = screen.getByRole("dialog");
+    const dialog = screen.getByRole("alertdialog");
     expect(within(dialog).getByText(/Delete reminder\?/i)).toBeInTheDocument();
     expect(
       within(dialog).getByText(/permanently deletes the reminder/i),
@@ -488,7 +488,7 @@ describe("RemindersTab — copy says 'Reminder', never 'policy'", () => {
     await user.click(screen.getByTestId("new-policy-button"));
     expect(screen.getByTestId("policy-form")).toBeInTheDocument();
     await user.click(screen.getByTestId(`remove-${policyDeadline.id}`));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
 
     // Visible text — no "polic" anywhere on screen (testids are not text).
     expect(document.body.textContent.toLowerCase()).not.toContain("polic");

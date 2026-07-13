@@ -262,7 +262,7 @@ describe("PublishLockButton (Phase 22 — plan 22-05)", () => {
       expect(screen.getByText(/reopen this period\?/i)).toBeInTheDocument();
 
       // Click the dialog container itself (stopPropagation prevents backdrop close).
-      const dialog = screen.getByRole("dialog");
+      const dialog = screen.getByRole("alertdialog");
       await userEvent.click(dialog);
 
       // Dialog must still be visible and onReopen must NOT have fired.
