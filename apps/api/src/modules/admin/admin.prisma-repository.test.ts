@@ -6,8 +6,10 @@ import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { PolicyApplicatorService } from "../reminders/policy-applicator.service";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
 import {
+  AdminGroupProductConflictError,
   AdminPeriodOverlapError,
   AdminReopenRequestNotFoundError,
+  AdminUserConflictError,
 } from "./admin-shared";
 
 /**
@@ -169,6 +171,118 @@ describe("AdminPrismaRepository period writers — open-boundary P2002 translati
 
     await expect(repo.createPeriodManual(INPUT)).rejects.toThrow(
       "connection reset",
+    );
+  });
+});
+
+/**
+ * The live admin writers translate unique races at the Prisma boundary. Product
+ * attach resolves the winning edge when it is idempotent and reports competing
+ * ownership as a domain conflict; user creation reports either identity index
+ * as the same domain conflict.
+ */
+describe("AdminPrismaRepository entity writers — P2002 race handling", () => {
+  const PRODUCT_INPUT = {
+    groupId: "a0000000-0000-4000-8000-000000000301",
+    productId: "a0000000-0000-4000-8000-000000000201",
+  };
+  const WINNING_EDGE = {
+    id: "a0000000-0000-4000-8000-000000000401",
+    ...PRODUCT_INPUT,
+    createdAt: new Date("2026-07-15T10:00:00.000Z"),
+  };
+  const USER_INPUT = {
+    id: "a0000000-0000-4000-8000-000000000101",
+    email: "identity@test.local",
+    name: "Identity User",
+    lastName: "Identity",
+    firstName: "User",
+    middleName: null,
+    position: null,
+    role: "viewer" as const,
+    reportingGroupId: null,
+    isActive: true,
+  };
+
+  function uniqueViolation(
+    target: string,
+  ): Prisma.PrismaClientKnownRequestError {
+    return new Prisma.PrismaClientKnownRequestError(
+      "Unique constraint failed",
+      { code: "P2002", clientVersion: "test", meta: { target } },
+    );
+  }
+
+  it("attachProductToGroup returns the concurrent winner for the same group", async () => {
+    const prisma = {
+      groupProduct: {
+        findUnique: vi
+          .fn()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(WINNING_EDGE),
+        create: vi.fn(() =>
+          Promise.reject(uniqueViolation("GroupProduct_productId_key")),
+        ),
+      },
+    } as unknown as PrismaService;
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(repo.attachProductToGroup(PRODUCT_INPUT)).resolves.toEqual(
+      WINNING_EDGE,
+    );
+  });
+
+  it("attachProductToGroup reports a concurrent winner in another group", async () => {
+    const otherGroupId = "a0000000-0000-4000-8000-000000000302";
+    const prisma = {
+      groupProduct: {
+        findUnique: vi
+          .fn()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({ ...WINNING_EDGE, groupId: otherGroupId }),
+        create: vi.fn(() =>
+          Promise.reject(uniqueViolation("GroupProduct_productId_key")),
+        ),
+      },
+      reportingGroup: {
+        findUnique: vi.fn(() => Promise.resolve({ name: "Other Group" })),
+      },
+    } as unknown as PrismaService;
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(
+      repo.attachProductToGroup(PRODUCT_INPUT),
+    ).rejects.toBeInstanceOf(AdminGroupProductConflictError);
+  });
+
+  it.each(["User_email_key", "User_samlId_key"])(
+    "upsertUser translates a %s collision to AdminUserConflictError",
+    async (target) => {
+      const prisma = {
+        user: {
+          upsert: vi.fn(() => Promise.reject(uniqueViolation(target))),
+        },
+      } as unknown as PrismaService;
+      const repo = new AdminPrismaRepository(prisma);
+
+      await expect(repo.upsertUser(USER_INPUT)).rejects.toBeInstanceOf(
+        AdminUserConflictError,
+      );
+    },
+  );
+
+  it("attachProductToGroup re-throws a non-P2002 error unchanged", async () => {
+    const original = new Error("connection reset");
+    const prisma = {
+      groupProduct: {
+        findUnique: vi.fn(() => Promise.resolve(null)),
+        create: vi.fn(() => Promise.reject(original)),
+      },
+    } as unknown as PrismaService;
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(repo.attachProductToGroup(PRODUCT_INPUT)).rejects.toBe(
+      original,
     );
   });
 });

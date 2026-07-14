@@ -9,6 +9,7 @@ import {
 } from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { isUniqueViolation } from "../../lib/prisma-unique-violation";
 import {
   AdminGroupProductConflictError,
   type ProductGroupOwnership,
@@ -17,6 +18,23 @@ import {
 /**
  * Group ↔ Product M:M edge mutations + reads.
  */
+
+/**
+ * Reject ownership moves with the current group name so the admin can resolve
+ * the conflict explicitly instead of silently moving the product.
+ */
+async function throwProductOwnershipConflict(
+  prisma: PrismaService,
+  groupId: string,
+): Promise<never> {
+  const currentGroup = await prisma.reportingGroup.findUnique({
+    where: { id: groupId },
+    select: { name: true },
+  });
+  throw new AdminGroupProductConflictError(
+    `Product is already attached to ${currentGroup?.name ?? "another group"}. Detach it there before attaching it to another group.`,
+  );
+}
 
 /**
  * Strict one-group-per-product attach. If the product already belongs
@@ -28,25 +46,37 @@ export async function attachProductToGroup(
   prisma: PrismaService,
   input: GroupProductEdgeInput,
 ): Promise<GroupProduct> {
-  const row = await prisma.$transaction(async (tx) => {
-    const existing = await tx.groupProduct.findUnique({
-      where: { productId: input.productId },
-    });
-    if (existing?.groupId === input.groupId) return existing;
-    if (existing) {
-      const currentGroup = await tx.reportingGroup.findUnique({
-        where: { id: existing.groupId },
-        select: { name: true },
-      });
-      throw new AdminGroupProductConflictError(
-        `Product is already attached to ${currentGroup?.name ?? "another group"}. Detach it there before attaching it to another group.`,
-      );
-    }
-    return tx.groupProduct.create({
+  const existing = await prisma.groupProduct.findUnique({
+    where: { productId: input.productId },
+  });
+  if (existing?.groupId === input.groupId) {
+    return groupProductSchema.parse(existing);
+  }
+  if (existing) {
+    return throwProductOwnershipConflict(prisma, existing.groupId);
+  }
+
+  try {
+    const row = await prisma.groupProduct.create({
       data: { groupId: input.groupId, productId: input.productId },
     });
-  });
-  return groupProductSchema.parse(row);
+    return groupProductSchema.parse(row);
+  } catch (error) {
+    if (!isUniqueViolation(error, { columns: ["productId"] })) throw error;
+
+    const winner = await prisma.groupProduct.findUnique({
+      where: { productId: input.productId },
+    });
+    if (winner?.groupId === input.groupId) {
+      return groupProductSchema.parse(winner);
+    }
+    if (winner) {
+      return throwProductOwnershipConflict(prisma, winner.groupId);
+    }
+    throw new AdminGroupProductConflictError(
+      "Product ownership changed concurrently. Refresh and try again.",
+    );
+  }
 }
 
 /**

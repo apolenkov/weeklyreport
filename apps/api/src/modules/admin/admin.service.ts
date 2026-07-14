@@ -64,6 +64,7 @@ export {
   AdminPeriodOverlapError,
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,
+  AdminUserConflictError,
 } from "./admin-shared";
 
 /**
