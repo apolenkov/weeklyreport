@@ -6,32 +6,15 @@ import {
   adminUpdatePeriodManualSchema,
   adminUserSchema,
   appSettingsUpdateSchema,
-  compiledHistoryInputSchema,
-  DEFAULT_ORGANIZATION_IDENTITY,
-  draftSaveSchema,
   groupProductEdgeInputSchema,
-  leadVelocityInputSchema,
   MS_PER_MINUTE,
   organizationUpdateSchema,
   paginationInputSchema,
-  periodComparisonInputSchema,
   periodListBucketSchema,
-  projectActivityArchiveSchema,
-  projectActivityCreateSchema,
-  projectActivityLeadEdgeSchema,
-  projectActivityUpdateSchema,
   queueNameSchema,
   reminderPolicySchema,
   reportingGroupSchema,
   reportPeriodSchema,
-  reviewAcknowledgeInputSchema,
-  reviewCommentInputSchema,
-  reviewDeleteCommentInputSchema,
-  reviewListAcknowledgementsInputSchema,
-  reviewVerdictInputSchema,
-  searchQueryInputSchema,
-  submitSectionSchema,
-  trafficLightHistoryInputSchema,
 } from "@customreport/shared";
 import type { PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
@@ -39,7 +22,6 @@ import type { Queue } from "bullmq";
 import { z } from "zod";
 
 import { isTelegramConfigured } from "../../lib/env.js";
-import { groupScopeFilter } from "../../lib/group-scope.js";
 import type { ActivityService } from "../../modules/activity/activity.service.js";
 import type { ActionLogService } from "../../modules/admin/action-log.service.js";
 import { AdminService } from "../../modules/admin/admin.service.js";
@@ -57,22 +39,32 @@ import type { LeadFormService } from "../../modules/report-sections/application/
 import type { ReportSectionsService } from "../../modules/report-sections/application/report-sections.service.js";
 import type { ReviewService } from "../../modules/review/application/review.service.js";
 import type { ReviewActionsService } from "../../modules/review/application/review-actions.service.js";
-import {
-  SearchAuthorizationError,
-  type SearchService,
-} from "../../modules/search/search.service.js";
+import { type SearchService } from "../../modules/search/search.service.js";
 import { TELEGRAM_OUTBOUND_JOB_OPTS } from "../../modules/telegram/telegram.queue.js";
 import type { TelemetryService } from "../../modules/telemetry/telemetry.service.js";
 import type { WeeklyReportService } from "../../modules/weekly-report/weekly-report.service.js";
 import { captureJobTraceContext } from "../bullmq/worker-observability.js";
 import type { EnvConfig } from "../config/env.schema";
+import { createActivityRouter } from "./routers/activity.router.js";
+import { createAnalyticsRouter } from "./routers/analytics.router.js";
+import { createArchiveRouter } from "./routers/archive.router.js";
+import { createAuthRouter } from "./routers/auth.router.js";
+import { createLeadFormRouter } from "./routers/lead-form.router.js";
+import { createOrganizationRouter } from "./routers/organization.router.js";
+import { createPdfExportRouter } from "./routers/pdf-export.router.js";
+import { createPeriodRouter } from "./routers/period.router.js";
+import { createProjectActivityRouter } from "./routers/project-activity.router.js";
+import { createRemindersRouter } from "./routers/reminders.router.js";
+import { createReportsRouter } from "./routers/reports.router.js";
+import { createReviewRouter } from "./routers/review.router.js";
+import { createSearchRouter } from "./routers/search.router.js";
+import { createTelemetryRouter } from "./routers/telemetry.router.js";
+import { createWeeklyReportRouter } from "./routers/weekly-report.router.js";
 import { clearOrgCache } from "./trpc.context.js";
 import { mapDomainError } from "./trpc.error-mapper.js";
 import {
   adminProcedure,
-  anyRoleProcedure,
   headProcedure,
-  leadershipProcedure,
   protectedProcedure,
   publicProcedure,
   router,
@@ -92,14 +84,9 @@ const RESEED_OUTPUT_TAIL_LINES = 15;
 const RESEED_STDERR_TAIL_LENGTH = 500;
 const RESEED_VARIANT_MANUAL_UAT = "manual-uat";
 
-const WEEKLY_REPORT_LOAD_LOG_PHASE = "weekly-report.load";
-const WEEKLY_REPORT_GET_PROCEDURE = "weeklyReport.get";
-
 const MAX_PERIOD_LIST_LIMIT = 200;
 const MAX_FAILED_JOBS_LIMIT = 200;
 const MAX_REOPEN_NOTE_LENGTH = 500;
-const DEFAULT_EXECUTION_LIST_LIMIT = 20;
-const MAX_REOPEN_REASON_LENGTH = 500;
 
 interface RouterDeps {
   prisma: PrismaClient;
@@ -223,22 +210,6 @@ interface RouterDeps {
 }
 
 /**
- * review-acknowledgement: resolve the review-actions service or fail loudly.
- * Optional on `RouterDeps` only so role-coverage fixtures build with `{}` deps;
- * a real boot always wires it, so `undefined` here is a config bug, not a
- * user-reachable state.
- */
-function requireReviewActions(deps: RouterDeps): ReviewActionsService {
-  if (!deps.reviewActionsService) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Review actions service is not configured.",
-    });
-  }
-  return deps.reviewActionsService;
-}
-
-/**
  * drain-admin-router: resolve the action-log service or fail loudly.
  * Optional on `RouterDeps` only so role-coverage fixtures build with `{}`
  * deps; a real boot always wires it, so `undefined` here is a config bug.
@@ -256,55 +227,10 @@ function requireActionLogService(deps: RouterDeps): ActionLogService {
 export function createAppRouter(deps: RouterDeps) {
   return router({
     // === Auth namespace ===
-    auth: router({
-      me: publicProcedure.query(({ ctx }) => {
-        // ctx.session is UserSession | null; null means unauthenticated.
-        // Returning null lets the client distinguish "loaded, no session"
-        // from "still loading" without throwing — preventing the 401
-        // interceptor from triggering an immediate redirect on every load.
-        //
-        // `session.organization` is hydrated by the
-        // context factory (mirrors viewerGroupAccess pattern) so the web
-        // chrome can render the brand without a second round-trip.
-        return ctx.session;
-      }),
-      // fix-report-surface-integrity: the `/print` web route
-      // gate needs the one bit `me` cannot give it — whether the inbound
-      // cookie verified as a PDF-export-scoped JWT (`ctx.isPdfExport`) and the
-      // bound `reportId` (`ctx.pdfReportId`). For a `requestedBy` PDF token the
-      // synthetic session IS the requester's real session, so the session
-      // alone cannot tell the PDF worker apart from that human; only these two
-      // context flags discriminate. `publicProcedure` (not pdfExport-guarded),
-      // so the worker token reaches it; returns the session too so the gate
-      // reads the cookie once and branches worker / human-redirect / login.
-      printGate: publicProcedure.query(({ ctx }) => {
-        return {
-          session: ctx.session,
-          isPdfExport: ctx.isPdfExport,
-          pdfReportId: ctx.pdfReportId,
-        };
-      }),
-    }),
+    auth: createAuthRouter(),
 
     // === Organization namespace ===
-    // Public read-only surface for the anonymous landing page. Returns
-    // only the `{ shortName, fullName }` pair — no timestamps, no ids —
-    // so future schema fields cannot leak unintentionally to the public.
-    org: router({
-      getPublic: publicProcedure.query(async () => {
-        try {
-          if (!deps.organizationService) {
-            // Fallback for in-memory test fixtures. Generic
-            // identity — the concrete tenant brand lives in the seed
-            // file / admin-edited Organization row, never here.
-            return DEFAULT_ORGANIZATION_IDENTITY;
-          }
-          return await deps.organizationService.getPublic();
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-    }),
+    org: createOrganizationRouter(deps),
 
     // === Dev namespace (only mounted when AUTH_DEV_MODE=true) ===
     // Surfaces wipe/reseed shortcuts for the in-page DevRoleSwitcher widget
@@ -434,264 +360,13 @@ export function createAppRouter(deps: RouterDeps) {
     }),
 
     // === Reports namespace ===
-    reports: router({
-      getActive: protectedProcedure.query(async ({ ctx }) => {
-        try {
-          if (!ctx.session.activeReportSectionId) {
-            return null;
-          }
-
-          return await deps.reportSectionsService.getActiveSection(
-            ctx.session.activeReportSectionId,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-
-      myHistory: protectedProcedure.query(async ({ ctx }) => {
-        return deps.reportSectionsService.myHistory(ctx.session.userId);
-      }),
-
-      compiledHistory: anyRoleProcedure
-        .input(compiledHistoryInputSchema.optional())
-        .query(async ({ input, ctx }) => {
-          try {
-            const includeArchive = input?.includeArchive ?? false;
-            return await deps.weeklyReportService.compiledHistory(
-              ctx.session,
-              includeArchive,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      // viewer-live-status (task 1.1): resolve the **Status target** for the
-      // `/reports/latest` redirect. The target is the current editable period
-      // (Decision 0 — the exact id the read gate authorizes) when that period
-      // has a viewer-visible section, else the newest viewer-visible published
-      // report, else `null` (empty state). It must NOT search older editable
-      // periods: the gate authorizes only the current editable id, so routing to
-      // an older editable report would land on a target the gate rejects.
-      // `sections.some(sectionScope)` reuses the same group filter as
-      // `compiledHistory`; a lead resolves their own authored sections.
-      latestForViewer: anyRoleProcedure.query(async ({ ctx }) => {
-        try {
-          return await deps.weeklyReportService.latestForViewer(ctx.session);
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-
-      saveDraft: protectedProcedure
-        .input(draftSaveSchema)
-        .mutation(async ({ input, ctx }) => {
-          try {
-            return await deps.reportSectionsService.saveDraft(
-              input,
-              ctx.session.userId,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      submit: protectedProcedure
-        .input(submitSectionSchema)
-        .mutation(async ({ input, ctx }) => {
-          try {
-            return await deps.reportSectionsService.submitSection(
-              input,
-              ctx.session.userId,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-    }),
+    reports: createReportsRouter(deps),
 
     // === Review namespace ===
-    review: router({
-      // review.dashboard is headProcedure — defense-in-depth: only heads (and
-      // admins, aliased) see the submission dashboard.
-      dashboard: headProcedure.query(async ({ ctx }) => {
-        try {
-          // Resolve the current editable period from the DB through the shared
-          // current-editable resolver (newest non-archived open/reopened period,
-          // periodStart <= now, ordered periodStart desc then id desc) instead
-          // of ctx.session.activeReportId (baked into the JWT at login, can be
-          // stale). assembledReport and publish resolve through the same method,
-          // so all three agree on the target period; the archived:false filter
-          // and id-desc tiebreak keep the pick non-arbitrary.
-          const reportId =
-            await deps.weeklyReportService.getCurrentEditableId();
-
-          if (!reportId) {
-            return [];
-          }
-
-          return await deps.reviewService.getSubmissionDashboard(
-            reportId,
-            ctx.session,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-
-      assembledReport: headProcedure.query(async () => {
-        try {
-          const reportId =
-            await deps.weeklyReportService.getCurrentEditableId();
-
-          if (!reportId) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "No active period.",
-            });
-          }
-
-          return await deps.publicationService.getAssembledReport(reportId);
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-
-      publish: headProcedure.mutation(async ({ ctx }) => {
-        try {
-          const reportId =
-            await deps.weeklyReportService.getCurrentEditableId();
-
-          if (!reportId) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "No active period to publish.",
-            });
-          }
-
-          return await deps.publicationService.publishReport(
-            reportId,
-            ctx.session,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-
-      // review-acknowledgement: all on `leadershipProcedure` (head + admin +
-      // viewer; lead excluded) so `role-coverage-gate` stays green; the
-      // per-group scope + reviewer designation are enforced in the service.
-
-      // Group-level "seen" receipt — any access-holder (scope check only).
-      acknowledge: leadershipProcedure
-        .input(reviewAcknowledgeInputSchema)
-        .mutation(async ({ input, ctx }) => {
-          try {
-            return await requireReviewActions(deps).acknowledge(
-              ctx.session,
-              input,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      // Who has acknowledged the group's report this period (head surface).
-      acknowledgements: leadershipProcedure
-        .input(reviewListAcknowledgementsInputSchema)
-        .query(async ({ input, ctx }) => {
-          try {
-            return await requireReviewActions(deps).listAcknowledgements(
-              ctx.session,
-              input,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      // Per-record comment — designated reviewer for the record's group.
-      comment: leadershipProcedure
-        .input(reviewCommentInputSchema)
-        .mutation(async ({ input, ctx }) => {
-          try {
-            return await requireReviewActions(deps).comment(ctx.session, input);
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      deleteComment: leadershipProcedure
-        .input(reviewDeleteCommentInputSchema)
-        .mutation(async ({ input, ctx }) => {
-          try {
-            return await requireReviewActions(deps).deleteComment(
-              ctx.session,
-              input,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      // Per-section verdict; `changes_requested` auto-un-submits, race-safe.
-      verdict: leadershipProcedure
-        .input(reviewVerdictInputSchema)
-        .mutation(async ({ input, ctx }) => {
-          try {
-            return await requireReviewActions(deps).verdict(ctx.session, input);
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-    }),
+    review: createReviewRouter(deps),
 
     // === PDF Export namespace ===
-    pdfExport: router({
-      // fix-report-surface-integrity: Export-PDF is gated by
-      // `leadershipProcedure` (head + admin + viewer). Lead is EXCLUDED and
-      // gets FORBIDDEN — a lead is the data subject of the report, not an
-      // exporter; the lead UI surfaces a ComingSoon control instead of firing
-      // the export. request + status share the same gate so a permitted caller
-      // can both fire the job and poll its status. The PDF render is
-      // REQUESTER-SCOPED: the worker token carries the requester's userId and
-      // the print page renders under their rebuilt session, so each role's PDF
-      // matches their in-app view (head/admin → full report, viewer → their
-      // slice). Viewer export is safe because the empty-PDF fix gives the viewer
-      // a non-empty, scoped render.
-      request: leadershipProcedure
-        .input(z.object({ reportId: z.uuid() }))
-        .mutation(async ({ input, ctx }) => {
-          try {
-            // Thread session userId so the pdf_export_jobs row
-            // attributes the request to the requester, not 'system'.
-            return await deps.pdfExportService.requestPdfExport(
-              input.reportId,
-              ctx.session.userId,
-              undefined,
-              // Role label for
-              // customreport_pdf_export_requests_total{role}.
-              ctx.session.role,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      status: leadershipProcedure
-        .input(z.object({ jobId: z.uuid() }))
-        .query(async ({ input, ctx }) => {
-          try {
-            return await deps.pdfExportService.getPdfExportStatus(
-              input.jobId,
-              ctx.session.userId,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-    }),
+    pdfExport: createPdfExportRouter(deps),
 
     // === Admin namespace ===
     admin: router({
@@ -1479,666 +1154,34 @@ export function createAppRouter(deps: RouterDeps) {
     }),
 
     // === Archive namespace ===
-    // archive.list / archive.detail use anyRoleProcedure
-    // because heads, leads, admins, and viewers all consume this surface but
-    // with different row visibility. The Prisma `where` filter at the service
-    // layer (driven by ctx.session.role) is the actual gate — viewers can
-    // only ever see published reports.
-    archive: router({
-      list: anyRoleProcedure
-        .input(paginationInputSchema.optional())
-        .query(async ({ input, ctx }) => {
-          try {
-            return await deps.archiveService.listArchiveReports(
-              input,
-              ctx.session.role,
-              ctx.session,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      detail: anyRoleProcedure
-        .input(z.object({ reportId: z.uuid() }))
-        .query(async ({ input, ctx }) => {
-          try {
-            const detail = await deps.archiveService.getArchiveReport(
-              input.reportId,
-              ctx.session.role,
-              ctx.session,
-            );
-            // Probe detection — non-admin fetched a report but group
-            // scope filtered out all sections. May false-positive on reports
-            // that genuinely have no sections; acceptable given the low rate
-            // of empty published reports in this domain.
-            if (
-              ctx.session.role !== "admin" &&
-              detail.report.sections.length === 0
-            ) {
-              ctx.auditLogger.scopeDenied({
-                userId: ctx.session.userId,
-                role: ctx.session.role,
-                ip: ctx.ip,
-                attemptedScope: "reportSection",
-                resourceId: input.reportId,
-              });
-            }
-            return detail;
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      /**
-       * Head-only mutation to move a published report into the archive.
-       * Sets `archived=true` on the Report row via adminService.archivePeriod
-       * (which uses Report.id — "period" and "report" are the same table).
-       * After this call the report appears in archive.list and is no longer
-       * shown in the "recently published" surface.
-       */
-      archiveReport: headProcedure
-        .input(z.object({ reportId: z.uuid() }))
-        .mutation(async ({ input }) => {
-          try {
-            await deps.adminService.archivePeriod(input.reportId);
-            return { success: true as const };
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      /**
-       * Head-only mutation to un-archive a report (move back to
-       * "published but not archived"). Sets `archived=false` via
-       * adminService.unarchivePeriod and removes it from archive.list.
-       */
-      unarchiveReport: headProcedure
-        .input(z.object({ reportId: z.uuid() }))
-        .mutation(async ({ input }) => {
-          try {
-            await deps.adminService.unarchivePeriod(input.reportId);
-            return { success: true as const };
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-    }),
+    archive: createArchiveRouter(deps),
 
     // === Reminders namespace ===
-    reminders: router({
-      execute: headProcedure
-        .input(
-          z.object({
-            ruleId: z.uuid(),
-            recipientEmail: z.email(),
-          }),
-        )
-        .mutation(async ({ input, ctx }) => {
-          try {
-            await deps.remindersService.scope.authorizeExecute(
-              ctx.session,
-              input.ruleId,
-              input.recipientEmail,
-            );
-            return await deps.remindersService.requestReminderExecution(
-              input.ruleId,
-              input.recipientEmail,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      listExecutions: headProcedure
-        .input(
-          z
-            .object({ ruleId: z.uuid() })
-            .extend(paginationInputSchema.partial().shape),
-        )
-        .query(async ({ input, ctx }) => {
-          try {
-            const { ruleId, cursor, limit } = input;
-            const pagination =
-              cursor || limit
-                ? { cursor, limit: limit ?? DEFAULT_EXECUTION_LIST_LIMIT }
-                : undefined;
-
-            // Non-admins see only their group's recipient rows. The allowlist
-            // is resolved here and applied inside the service BEFORE pagination
-            // so out-of-scope rows cannot consume page size or drive nextCursor.
-            const recipientAllowlist =
-              await deps.remindersService.scope.resolveExecutionsRecipientAllowlist(
-                ctx.session,
-                ruleId,
-              );
-
-            return await deps.remindersService.listExecutions(
-              ruleId,
-              pagination,
-              recipientAllowlist,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      // Manual "Send Reminder" trigger from the head dashboard alert bar.
-      // Resolves the active reminder rule + draft-section authors server-side
-      // (the client never sees lead emails) and dispatches one execution per
-      // pending lead via the existing dedupe-keyed pipeline.
-      dispatchPending: headProcedure
-        .input(
-          z.object({
-            reportId: z.uuid(),
-            ruleId: z.uuid().optional(),
-            // Scope dispatch to a single lead so the
-            // Head Dashboard Remind button can ping one author without
-            // exposing emails to the client. When undefined, falls back to
-            // the original "every draft author" behaviour used by the
-            // bulk AlertBar action.
-            leadId: z.uuid().optional(),
-          }),
-        )
-        .output(
-          z.object({
-            dispatched: z.number().int().nonnegative(),
-            alreadySent: z.number().int().nonnegative(),
-            skipped: z.number().int().nonnegative(),
-            reason: z.string().optional(),
-          }),
-        )
-        .mutation(async ({ input, ctx }) => {
-          try {
-            const activeReportId = ctx.session.activeReportId;
-            if (!activeReportId || activeReportId !== input.reportId) {
-              throw new TRPCError({
-                code: "FORBIDDEN",
-                message: "report-not-active",
-              });
-            }
-            return await deps.remindersService.scope.dispatchPendingReminders(
-              ctx.session,
-              input.reportId,
-              input.ruleId,
-              input.leadId,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-    }),
+    reminders: createRemindersRouter(deps),
 
     // === Period lifecycle namespace (v4.0) ===
-    period: router({
-      publish: headProcedure
-        .input(z.object({ reportId: z.uuid() }))
-        .mutation(async ({ input, ctx }) => {
-          try {
-            return await deps.periodService.publishPeriod(
-              input.reportId,
-              ctx.session,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      reopen: headProcedure
-        .input(z.object({ reportId: z.uuid() }))
-        .mutation(async ({ input, ctx }) => {
-          try {
-            return await deps.periodService.reopenPeriod(
-              input.reportId,
-              ctx.session,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-    }),
+    period: createPeriodRouter(deps),
 
     // === Weekly Report namespace (v4.0) ===
-    // weeklyReport.get uses anyRoleProcedure because
-    // viewers, leads, heads, and admins all consume this surface. The
-    // service layer scopes the read to published periods for viewers.
-    weeklyReport: router({
-      get: anyRoleProcedure
-        .input(z.object({ reportId: z.uuid().optional() }).optional())
-        .query(async ({ input, ctx }) => {
-          const requestedReportId = input?.reportId ?? null;
-          try {
-            const result = await deps.weeklyReportService.getWeeklyReport(
-              input?.reportId,
-              ctx.session.role,
-              ctx.session,
-            );
-            // No-period is a normal 200 response, not an error path.
-            if (result.status === "no-period") {
-              ctx.logger.info("weekly report: no active period", {
-                phase: WEEKLY_REPORT_LOAD_LOG_PHASE,
-                procedure: WEEKLY_REPORT_GET_PROCEDURE,
-                userId: ctx.session.userId,
-                role: ctx.session.role,
-                requestedReportId,
-              });
-              // crossGroup is an internal audit signal — strip before sending.
-              const { crossGroup: _crossGroup, ...publicResult } = result;
-              return publicResult;
-            }
-            // Emit scopeAccessed once when a non-admin read surfaces
-            // cross-group products. crossGroup is internal — strip before return.
-            const { crossGroup, ...publicResult } = result;
-            if (
-              crossGroup !== null &&
-              ctx.session.role !== "admin" &&
-              crossGroup.productIds.length > 0
-            ) {
-              ctx.auditLogger.scopeAccessed({
-                userId: ctx.session.userId,
-                role: ctx.session.role,
-                ip: ctx.ip,
-                accessedScope: "weeklyReport.project",
-                productIds: crossGroup.productIds,
-                groupIds: crossGroup.groupIds,
-                resourceId: result.reportId,
-              });
-            }
-            ctx.logger.info("weekly report load succeeded", {
-              phase: WEEKLY_REPORT_LOAD_LOG_PHASE,
-              procedure: WEEKLY_REPORT_GET_PROCEDURE,
-              userId: ctx.session.userId,
-              role: ctx.session.role,
-              requestedReportId,
-              resolvedReportId: result.reportId,
-              periodStatus: result.periodStatus,
-              submissionCount: result.submissionCount,
-              totalLeads: result.totalLeads,
-            });
-            return publicResult;
-          } catch (error) {
-            const errorInfo =
-              error instanceof Error
-                ? { name: error.name, message: error.message }
-                : { name: typeof error, message: String(error) };
-            const logFailure =
-              errorInfo.name === "WeeklyReportDomainError"
-                ? ctx.logger.warn.bind(ctx.logger)
-                : ctx.logger.error.bind(ctx.logger);
-            logFailure("weekly report load failed", {
-              phase: WEEKLY_REPORT_LOAD_LOG_PHASE,
-              procedure: WEEKLY_REPORT_GET_PROCEDURE,
-              userId: ctx.session.userId,
-              role: ctx.session.role,
-              requestedReportId,
-              error: errorInfo,
-            });
-            throw mapDomainError(error);
-          }
-        }),
-    }),
+    weeklyReport: createWeeklyReportRouter(deps),
 
     // === Lead Form namespace (v4.0) ===
-    leadForm: router({
-      // Org-wide lead-form presentation flags. Read-only slice of AppSettings
-      // (admin-managed via admin.updateSettings, like every other setting);
-      // exposed to every authenticated role so the lead form can pick classic
-      // vs unified view.
-      viewSettings: protectedProcedure.query(async () => {
-        try {
-          const settings = await deps.adminService.getSettings();
-          return { unifiedActivityView: settings.unifiedActivityView };
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-
-      byPeriod: protectedProcedure
-        .input(
-          z.object({
-            reportId: z.uuid(),
-            authorId: z.uuid().optional(),
-          }),
-        )
-        .query(async ({ input, ctx }) => {
-          try {
-            const form = await deps.leadFormService.getByPeriod(
-              input.reportId,
-              ctx.session.userId,
-              ctx.session.role,
-              input.authorId,
-            );
-            ctx.logger.info("lead form load succeeded", {
-              phase: "lead-form.load",
-              procedure: "leadForm.byPeriod",
-              userId: ctx.session.userId,
-              role: ctx.session.role,
-              reportId: input.reportId,
-              requestedAuthorId: input.authorId ?? null,
-              resolvedAuthorId: form.section.authorId,
-              readOnly: form.readOnly,
-            });
-            return form;
-          } catch (error) {
-            const errorInfo =
-              error instanceof Error
-                ? { name: error.name, message: error.message }
-                : { name: typeof error, message: String(error) };
-            const logFailure =
-              errorInfo.name === "LeadFormDomainError"
-                ? ctx.logger.warn.bind(ctx.logger)
-                : ctx.logger.error.bind(ctx.logger);
-            logFailure("lead form load failed", {
-              phase: "lead-form.load",
-              procedure: "leadForm.byPeriod",
-              userId: ctx.session.userId,
-              role: ctx.session.role,
-              reportId: input.reportId,
-              requestedAuthorId: input.authorId ?? null,
-              error: errorInfo,
-            });
-            throw mapDomainError(error);
-          }
-        }),
-
-      fillFrom: protectedProcedure
-        .input(
-          z.object({
-            targetSectionId: z.uuid(),
-            sourceSectionId: z.uuid(),
-            // Optimistic-concurrency expected version of the TARGET section.
-            version: z.number().int().min(1),
-          }),
-        )
-        .mutation(async ({ input, ctx }) => {
-          try {
-            return await deps.leadFormService.fillFrom(
-              input.targetSectionId,
-              input.sourceSectionId,
-              ctx.session.userId,
-              input.version,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      // TODO(versions-v2): the version-history procedures (versions,
-      // restoreVersion, getVersion, createSnapshot, setVersionPinned) are
-      // deferred; re-add them when versions-v2 is designed.
-
-      revoke: headProcedure
-        .input(z.object({ reportSectionId: z.uuid() }))
-        .mutation(async ({ input, ctx }) => {
-          try {
-            // scope-leadform-revoke-authz: object-level authz — a head may only
-            // revoke a section authored in its own group (admin scope is {}).
-            // Mirrors the respondReopenRequest scoped re-load.
-            return await deps.leadFormService.revokeSubmission(
-              input.reportSectionId,
-              ctx.session.userId,
-              groupScopeFilter(ctx.session, "reportSection"),
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      revokeAllSubmitted: headProcedure
-        .input(z.object({ reportId: z.uuid() }))
-        .mutation(async ({ input, ctx }) => {
-          try {
-            // scope-leadform-revoke-authz: bulk revoke is bounded to the head's
-            // own group inside a multi-group report (admin scope is {} → global).
-            return await deps.leadFormService.revokeAllSubmitted(
-              input.reportId,
-              ctx.session.userId,
-              groupScopeFilter(ctx.session, "reportSection"),
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      requestReopen: protectedProcedure
-        .input(
-          z.object({
-            reportSectionId: z.uuid(),
-            reason: z.string().max(MAX_REOPEN_REASON_LENGTH).optional(),
-          }),
-        )
-        .mutation(async ({ input, ctx }) => {
-          try {
-            return await deps.leadFormService.requestReopen(
-              input.reportSectionId,
-              ctx.session.userId,
-              input.reason,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      crossAuthors: protectedProcedure
-        .input(z.object({ reportId: z.uuid() }))
-        .query(async ({ input, ctx }) => {
-          try {
-            return await deps.leadFormService.getCrossAuthors(
-              input.reportId,
-              ctx.session.userId,
-              ctx.session.role,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      // scope-lead-report-to-own-contribution — the lead form's
-      // "Everyone" visibility lens. Full foreign content, gated by report
-      // access AND product co-ownership for ALL callers (no head/admin
-      // bypass); the role is intentionally NOT passed.
-      crossAuthorContent: protectedProcedure
-        .input(z.object({ reportId: z.uuid() }))
-        .query(async ({ input, ctx }) => {
-          try {
-            return await deps.leadFormService.getCrossAuthorContent(
-              input.reportId,
-              ctx.session.userId,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-    }),
+    leadForm: createLeadFormRouter(deps),
 
     // === Analytics namespace ===
-    // These procedures use anyRoleProcedure because heads, leads, admins, and
-    // viewers all consume trend data. The repository layer enforces the
-    // published-only floor (PUBLISHED_FLOOR mirrors archive.prisma-repository
-    // pattern), so viewer sessions only ever see published-period rows.
-    analytics: router({
-      trafficLightHistory: anyRoleProcedure
-        .input(trafficLightHistoryInputSchema)
-        .query(async ({ input, ctx }) => {
-          try {
-            return await deps.analyticsService.trafficLightHistory(
-              input,
-              ctx.session,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-      leadVelocity: anyRoleProcedure
-        .input(leadVelocityInputSchema)
-        .query(async ({ input, ctx }) => {
-          try {
-            return await deps.analyticsService.leadVelocity(input, ctx.session);
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-      periodComparison: anyRoleProcedure
-        .input(periodComparisonInputSchema)
-        .query(async ({ input, ctx }) => {
-          try {
-            return await deps.analyticsService.periodComparison(
-              input,
-              ctx.session,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-    }),
+    analytics: createAnalyticsRouter(deps),
 
     // === Search namespace ===
-    // Full-text search across Item / Risk / Decision / Project. The service
-    // layer validates the input and gates `scope='all'` to head/admin via
-    // SearchAuthorizationError; the router maps that to FORBIDDEN.
-    //
-    // protectedProcedure (any authenticated user) is the right baseline:
-    // every authenticated session can search their own content
-    // (`scope='mine'`); the role check inside the service is the gate that
-    // matters. anyRoleProcedure would be equivalent here but the simpler
-    // protectedProcedure mirrors the rest of the search-style read paths.
-    search: router({
-      query: protectedProcedure
-        .input(searchQueryInputSchema)
-        .query(async ({ input, ctx }) => {
-          try {
-            return await deps.searchService.query(input, ctx.session);
-          } catch (error) {
-            if (error instanceof SearchAuthorizationError) {
-              ctx.auditLogger.scopeDenied({
-                userId: ctx.session.userId,
-                role: ctx.session.role,
-                ip: ctx.ip,
-                attemptedScope: "search",
-                resourceId: input.q,
-              });
-              throw new TRPCError({
-                code: "FORBIDDEN",
-                message: error.message,
-              });
-            }
-            throw mapDomainError(error);
-          }
-        }),
-    }),
+    search: createSearchRouter(deps),
 
     // === Activity namespace ===
-    // Live activity feed for the head/admin dashboard "Активность за
-    // текущий период" panel. headProcedure — only heads (and admins,
-    // aliased) consume the per-lead status snapshot.
-    activity: router({
-      live: headProcedure.query(async ({ ctx }) => {
-        try {
-          return await deps.activityService.getLiveActivity(ctx.session);
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-    }),
+    activity: createActivityRouter(deps),
 
     // === Project Activity namespace ===
-    // Admin provisioning of Project Activities — stage-less, group-scoped
-    // reporting units beside products, with M:M lead attachment. Deliberately
-    // NOT under `activity.*` (that namespace is the live-status feed above).
-    // All procedures ride the canonical adminProcedure chain; attachment-group
-    // and reference validation live in ProjectActivityService.
-    projectActivity: router({
-      list: adminProcedure.query(async () => {
-        try {
-          return await deps.projectActivityService.list();
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-
-      create: adminProcedure
-        .input(projectActivityCreateSchema)
-        .mutation(async ({ input }) => {
-          try {
-            return await deps.projectActivityService.create(input);
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      update: adminProcedure
-        .input(projectActivityUpdateSchema)
-        .mutation(async ({ input }) => {
-          try {
-            return await deps.projectActivityService.update(input);
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      archive: adminProcedure
-        .input(projectActivityArchiveSchema)
-        .mutation(async ({ input }) => {
-          try {
-            return await deps.projectActivityService.archive(input);
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      attachLead: adminProcedure
-        .input(projectActivityLeadEdgeSchema)
-        .mutation(async ({ input }) => {
-          try {
-            await deps.projectActivityService.attachLead(input);
-            return { success: true as const };
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      detachLead: adminProcedure
-        .input(projectActivityLeadEdgeSchema)
-        .mutation(async ({ input }) => {
-          try {
-            await deps.projectActivityService.detachLead(input);
-            return { success: true as const };
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-    }),
+    projectActivity: createProjectActivityRouter(deps),
 
     // === Telemetry namespace ===
-    // Product-KPI surface for the in-app dashboard card. Authorised by
-    // `leadershipProcedure` (head + admin + viewer); lead role is denied
-    // because lead is the data subject of these KPIs, not a consumer.
-    // Cached for 60s in Redis (see TelemetryCache); a Redis outage
-    // degrades to direct queries.
-    telemetry: router({
-      summary: leadershipProcedure.query(async () => {
-        try {
-          if (!deps.telemetryService) {
-            // Test-fixture mode (createAppRouter({}) for role-coverage
-            // harnesses). Return a zero-shape payload that still parses
-            // the shared schema so the role-coverage harness can hit
-            // the surface without a 500.
-            return {
-              reportsThisPeriod: 0,
-              onTimeRatio: null,
-              activeLeads: 0,
-              lateSections: 0,
-              pendingReopens: 0,
-              pdfExportsLast7d: 0,
-              sparkline: [] as number[],
-            };
-          }
-          return await deps.telemetryService.getSummary();
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-    }),
+    telemetry: createTelemetryRouter(deps),
   });
 }
 
