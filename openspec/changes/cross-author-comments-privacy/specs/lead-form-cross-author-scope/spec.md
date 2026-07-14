@@ -13,7 +13,9 @@ MUST NOT carry per-record `comments` (reviewer id, reviewer name, comment
 text, created timestamp) on any retained `items`, `risks`, or `decisions`
 row — `CrossAuthorSectionRow` declares no `comments` field on any of its
 record types, so a retained record's `comments` MUST be stripped the same
-way `activities`/`reviews` are, not passed through unfiltered. A co-lead who
+way `activities`/`reviews` are, not passed through unfiltered. A retained
+item's `pausedReason` (the author's free-text pause rationale, absent from
+`CrossAuthorSectionRow.items`) MUST be stripped the same way. A co-lead who
 shares one product MUST see no more than the Everyone lens discloses for
 that section.
 
@@ -40,4 +42,5 @@ that section.
 - **WHEN** the co-lead reads that section through the shared-product lens
 - **THEN** every retained item, risk, and decision has its `comments`
   stripped (empty or absent)
+- **AND** every retained item has its `pausedReason` stripped
 - **AND** reviewer identity and comment text are not disclosed to the co-lead
