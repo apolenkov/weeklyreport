@@ -13,6 +13,7 @@ import type {
   ReportPeriod,
   ReportStatus,
   StageAssignment,
+  UserSession,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
@@ -20,8 +21,14 @@ import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PolicyApplicatorService } from "../reminders/index.js";
 import type {
   AdminRepository,
+  DecideReopenRequestInput,
+  ListReopenRequestsInput,
   PeriodRowFromRepo,
   ProductGroupOwnership,
+  ReopenDecisionOutcome,
+  ReopenRequestRow,
+  StageAssignmentCountRow,
+  StageRow,
 } from "./admin.service";
 import * as entityWriteQueries from "./admin-entity-write.queries";
 import * as groupQueries from "./admin-group.queries";
@@ -29,6 +36,7 @@ import * as groupProductQueries from "./admin-group-product.queries";
 import * as periodQueries from "./admin-period.queries";
 import * as periodLifecycle from "./admin-period-lifecycle";
 import * as policyQueries from "./admin-reminder-policy.queries";
+import * as reopenQueries from "./admin-reopen-request-lifecycle.js";
 import * as settingsQueries from "./admin-settings.queries";
 import * as snapshotQueries from "./admin-snapshot.queries";
 import * as snapshotWriteQueries from "./admin-snapshot-write.queries";
@@ -279,5 +287,45 @@ export class AdminPrismaRepository implements AdminRepository {
       this.prisma,
       productIds,
     );
+  }
+
+  // ---- Deactivate/activate user, integrations status, stage catalogue ----
+
+  deactivateUser(userId: string): Promise<void> {
+    return entityWriteQueries.deactivateUser(this.prisma, userId);
+  }
+
+  activateUser(userId: string): Promise<void> {
+    return entityWriteQueries.activateUser(this.prisma, userId);
+  }
+
+  countActiveTelegramBindings(): Promise<number> {
+    return settingsQueries.countActiveTelegramBindings(this.prisma);
+  }
+
+  listStages(): Promise<StageRow[]> {
+    return groupQueries.listStages(this.prisma);
+  }
+
+  listStageAssignmentCounts(): Promise<StageAssignmentCountRow[]> {
+    return groupQueries.listStageAssignmentCounts(this.prisma);
+  }
+
+  // ---- Reopen-request lifecycle ----
+
+  listReopenRequests(
+    input: ListReopenRequestsInput,
+  ): Promise<ReopenRequestRow[]> {
+    return reopenQueries.listReopenRequests(this.prisma, input);
+  }
+
+  countPendingReopenRequests(session: UserSession): Promise<number> {
+    return reopenQueries.countPendingReopenRequests(this.prisma, session);
+  }
+
+  decideReopenRequest(
+    input: DecideReopenRequestInput,
+  ): Promise<ReopenDecisionOutcome> {
+    return reopenQueries.decideReopenRequest(this.prisma, input);
   }
 }

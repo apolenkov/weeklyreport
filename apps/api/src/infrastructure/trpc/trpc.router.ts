@@ -41,6 +41,7 @@ import { z } from "zod";
 import { isTelegramConfigured } from "../../lib/env.js";
 import { groupScopeFilter } from "../../lib/group-scope.js";
 import type { ActivityService } from "../../modules/activity/activity.service.js";
+import type { ActionLogService } from "../../modules/admin/action-log.service.js";
 import { AdminService } from "../../modules/admin/admin.service.js";
 import type { JobsService } from "../../modules/admin/jobs.service.js";
 import type { SessionRevocationService } from "../../modules/admin/session-revocation.service.js";
@@ -65,7 +66,6 @@ import type { TelemetryService } from "../../modules/telemetry/telemetry.service
 import type { WeeklyReportService } from "../../modules/weekly-report/weekly-report.service.js";
 import { captureJobTraceContext } from "../bullmq/worker-observability.js";
 import type { EnvConfig } from "../config/env.schema";
-import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
 import { clearOrgCache } from "./trpc.context.js";
 import { mapDomainError } from "./trpc.error-mapper.js";
 import {
@@ -96,7 +96,6 @@ const WEEKLY_REPORT_LOAD_LOG_PHASE = "weekly-report.load";
 const WEEKLY_REPORT_GET_PROCEDURE = "weeklyReport.get";
 
 const MAX_PERIOD_LIST_LIMIT = 200;
-const DEFAULT_ACTION_LOG_LIMIT = 20;
 const MAX_FAILED_JOBS_LIMIT = 200;
 const MAX_REOPEN_NOTE_LENGTH = 500;
 const DEFAULT_EXECUTION_LIST_LIMIT = 20;
@@ -214,6 +213,13 @@ interface RouterDeps {
    * the Redis fast-path (sessions expire naturally via JWT TTL).
    */
   sessionRevocationService?: SessionRevocationService;
+  /**
+   * Queryable in-app mutation-audit history — `admin.actionLog.list`.
+   * Optional so role-coverage test fixtures that build the router with `{}`
+   * deps stay compiling; a real boot always wires it (see
+   * `requireActionLogService` below).
+   */
+  actionLogService?: ActionLogService;
 }
 
 /**
@@ -230,6 +236,21 @@ function requireReviewActions(deps: RouterDeps): ReviewActionsService {
     });
   }
   return deps.reviewActionsService;
+}
+
+/**
+ * drain-admin-router: resolve the action-log service or fail loudly.
+ * Optional on `RouterDeps` only so role-coverage fixtures build with `{}`
+ * deps; a real boot always wires it, so `undefined` here is a config bug.
+ */
+function requireActionLogService(deps: RouterDeps): ActionLogService {
+  if (!deps.actionLogService) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Action log service is not configured.",
+    });
+  }
+  return deps.actionLogService;
 }
 
 export function createAppRouter(deps: RouterDeps) {
@@ -713,15 +734,7 @@ export function createAppRouter(deps: RouterDeps) {
       integrationsStatus: adminProcedure.query(async () => {
         try {
           const configured = isTelegramConfigured(deps.env);
-          const bindings = await deps.prisma.telegramBinding.count({
-            where: { active: true },
-          });
-          return {
-            telegram: {
-              configured,
-              bindings,
-            },
-          };
+          return await deps.adminService.integrationsStatus(configured);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -1153,12 +1166,9 @@ export function createAppRouter(deps: RouterDeps) {
         .input(z.object({ userId: z.uuid() }))
         .mutation(async ({ input }) => {
           try {
-            await deps.prisma.user.update({
-              where: { id: input.userId },
-              data: { isActive: false },
-            });
+            const result = await deps.adminService.deactivateUser(input.userId);
             await deps.sessionRevocationService?.revokeSession(input.userId);
-            return { success: true as const };
+            return result;
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -1173,12 +1183,9 @@ export function createAppRouter(deps: RouterDeps) {
         .input(z.object({ userId: z.uuid() }))
         .mutation(async ({ input }) => {
           try {
-            await deps.prisma.user.update({
-              where: { id: input.userId },
-              data: { isActive: true },
-            });
+            const result = await deps.adminService.activateUser(input.userId);
             await deps.sessionRevocationService?.restoreSession(input.userId);
-            return { success: true as const };
+            return result;
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -1247,11 +1254,7 @@ export function createAppRouter(deps: RouterDeps) {
       // stages that already have an assignment row for the project.
       listStages: adminProcedure.query(async () => {
         try {
-          const rows = await deps.prisma.stage.findMany({
-            orderBy: { sortOrder: "asc" },
-            select: { id: true, name: true, sortOrder: true },
-          });
-          return rows;
+          return await deps.adminService.listStages();
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -1262,14 +1265,7 @@ export function createAppRouter(deps: RouterDeps) {
       // without loading every assignment row.
       listStageAssignmentCounts: adminProcedure.query(async () => {
         try {
-          const rows = await deps.prisma.stageAssignment.groupBy({
-            by: ["projectId"],
-            _count: { _all: true },
-          });
-          return rows.map((r) => ({
-            projectId: r.projectId,
-            count: r._count._all,
-          }));
+          return await deps.adminService.listStageAssignmentCounts();
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -1367,35 +1363,7 @@ export function createAppRouter(deps: RouterDeps) {
           .input(paginationInputSchema.optional())
           .query(async ({ input }) => {
             try {
-              const limit = input?.limit ?? DEFAULT_ACTION_LOG_LIMIT;
-              const cursor = input?.cursor;
-              const rows = await deps.prisma.userActionLog.findMany({
-                take: limit + 1,
-                skip: cursor ? 1 : 0,
-                cursor: cursor ? { id: cursor } : undefined,
-                orderBy: { createdAt: "desc" },
-              });
-              const hasMore = rows.length > limit;
-              const items = rows.slice(0, limit);
-              const nextCursor = hasMore
-                ? (items[items.length - 1]?.id ?? null)
-                : null;
-              return {
-                items: items.map((row) => ({
-                  id: row.id,
-                  userId: row.userId,
-                  role: row.role,
-                  procedure: row.procedure,
-                  targetId: row.targetId,
-                  status: row.status,
-                  reason: row.reason,
-                  ip: row.ip,
-                  correlationId: row.correlationId,
-                  durationMs: row.durationMs,
-                  createdAt: row.createdAt.toISOString(),
-                })),
-                nextCursor,
-              };
+              return await requireActionLogService(deps).list(input);
             } catch (error) {
               throw mapDomainError(error);
             }
@@ -1471,52 +1439,10 @@ export function createAppRouter(deps: RouterDeps) {
         )
         .query(async ({ input, ctx }) => {
           try {
-            const status = input?.status ?? "pending";
-            const statusFilter = status === "all" ? {} : { status };
-            // reopen-request-lifecycle: a head sees only its own group's
-            // requests; admin is global ({}). The scope fragment is a
-            // ReportSectionWhereInput, so it nests UNDER reportSection — these
-            // are ReopenRequest queries, not ReportSection queries.
-            const scope = groupScopeFilter(ctx.session, "reportSection");
-            const rows = await deps.prisma.reopenRequest.findMany({
-              where: { ...statusFilter, reportSection: scope },
-              orderBy: { createdAt: "desc" },
-              take: 100,
-              include: {
-                requestedBy: { select: { id: true, name: true, email: true } },
-                reviewedBy: { select: { id: true, name: true, email: true } },
-                reportSection: {
-                  include: {
-                    report: {
-                      select: {
-                        id: true,
-                        weekLabel: true,
-                        periodStart: true,
-                        periodEnd: true,
-                      },
-                    },
-                  },
-                },
-              },
+            return await deps.adminService.listReopenRequests({
+              status: input?.status,
+              session: ctx.session,
             });
-            return rows.map((r) => ({
-              id: r.id,
-              reportSectionId: r.reportSectionId,
-              reason: r.reason,
-              status: r.status,
-              reviewNote: r.reviewNote,
-              reviewedAt: r.reviewedAt?.toISOString() ?? null,
-              createdAt: r.createdAt.toISOString(),
-              requestedBy: r.requestedBy,
-              reviewedBy: r.reviewedBy,
-              sectionStatus: r.reportSection.status,
-              report: {
-                id: r.reportSection.report.id,
-                weekLabel: r.reportSection.report.weekLabel,
-                periodStart: r.reportSection.report.periodStart.toISOString(),
-                periodEnd: r.reportSection.report.periodEnd.toISOString(),
-              },
-            }));
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -1532,113 +1458,13 @@ export function createAppRouter(deps: RouterDeps) {
         )
         .mutation(async ({ input, ctx }) => {
           try {
-            // reopen-request-lifecycle: scoped re-load — a head cannot
-            // decide an out-of-group request by passing its id (the scoped
-            // findFirst finds nothing → reject). Admin scope is {} (global).
-            const scope = groupScopeFilter(ctx.session, "reportSection");
-            const req = await deps.prisma.reopenRequest.findFirst({
-              where: { id: input.id, reportSection: scope },
-              select: { id: true, reportSectionId: true },
+            return await deps.adminService.respondReopenRequest({
+              id: input.id,
+              decision: input.decision,
+              note: input.note,
+              decidedBy: ctx.session.userId,
+              session: ctx.session,
             });
-            if (!req) {
-              throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "Reopen request not found.",
-              });
-            }
-
-            const reviewNote = input.note?.trim() ? input.note.trim() : null;
-            const decidedBy = ctx.session.userId;
-
-            // reopen-request-lifecycle: the decision is race-safe against a
-            // second decider (head + admin can both act). The status re-check
-            // and the section flip happen inside ONE transaction via conditional
-            // updateMany; only the row-count-1 winner takes effect.
-            const outcome = await deps.prisma.$transaction(async (tx) => {
-              const decided = await tx.reopenRequest.updateMany({
-                where: { id: req.id, status: "pending" },
-                data: {
-                  status: input.decision,
-                  reviewedById: decidedBy,
-                  reviewedAt: new Date(),
-                  reviewNote,
-                },
-              });
-              // Loser of a concurrent decision: nothing changed.
-              if (decided.count === 0) {
-                return { kind: "already-processed" as const };
-              }
-
-              if (input.decision === "rejected") {
-                return {
-                  kind: "decided" as const,
-                  decision: "rejected" as const,
-                };
-              }
-
-              // Approve = flip the section back to draft so the lead can edit
-              // again, but ONLY if it is still submitted. A separate revoke can
-              // have flipped it to draft while the request stayed pending.
-              const flipped = await tx.reportSection.updateMany({
-                where: { id: req.reportSectionId, status: "submitted" },
-                data: {
-                  status: "draft",
-                  submittedAt: null,
-                  revokedAt: new Date(),
-                  revokedBy: decidedBy,
-                },
-              });
-              if (flipped.count === 0) {
-                // Stale approve: the section was already reopened elsewhere.
-                // Make the request terminal (rejected + auto-note) so it leaves
-                // the pending queue, flip nothing, and skew NO funnel metric —
-                // an auto-close is not a real decision (the funnel stays
-                // requested/approved/rejected).
-                await tx.reopenRequest.update({
-                  where: { id: req.id },
-                  data: {
-                    status: "rejected",
-                    reviewedById: decidedBy,
-                    reviewedAt: new Date(),
-                    reviewNote:
-                      "Auto-closed: the section was already reopened.",
-                  },
-                });
-                return { kind: "stale" as const };
-              }
-
-              return {
-                kind: "decided" as const,
-                decision: "approved" as const,
-              };
-            });
-
-            // Loser of a concurrent decision: changed nothing. A 409 CONFLICT
-            // is the honest code (the request slipped out from under this call);
-            // no funnel metric.
-            if (outcome.kind === "already-processed") {
-              throw new TRPCError({
-                code: "CONFLICT",
-                message: "Already processed.",
-              });
-            }
-            // Stale auto-close: the request is now terminal and out of the
-            // pending queue; report it without skewing the funnel.
-            if (outcome.kind === "stale") {
-              return {
-                success: true as const,
-                decision: "rejected" as const,
-                staleAutoClosed: true as const,
-              };
-            }
-            // Only a winning, real decision increments the
-            // funnel, AFTER the transaction commits.
-            customreportReopenRequestsTotal.inc({ state: outcome.decision });
-            return {
-              success: true as const,
-              decision: outcome.decision,
-              staleAutoClosed: false as const,
-            };
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -1646,13 +1472,7 @@ export function createAppRouter(deps: RouterDeps) {
 
       pendingReopenCount: headProcedure.query(async ({ ctx }) => {
         try {
-          // reopen-request-lifecycle: same group scope as the list — a
-          // head counts only its own group's pending requests; admin global.
-          const scope = groupScopeFilter(ctx.session, "reportSection");
-          const count = await deps.prisma.reopenRequest.count({
-            where: { status: "pending", reportSection: scope },
-          });
-          return { count };
+          return await deps.adminService.pendingReopenCount(ctx.session);
         } catch (error) {
           throw mapDomainError(error);
         }

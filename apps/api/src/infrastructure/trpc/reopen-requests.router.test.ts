@@ -4,14 +4,19 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
+import { AdminPrismaRepository } from "../../modules/admin/admin.prisma-repository.js";
+import { AdminService } from "../../modules/admin/admin.service.js";
 import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
 import { createAppRouter } from "./trpc.router.js";
 
 /**
  * reopen-request-lifecycle: the three reopen procedures (list / respond /
  * count) are gated to headProcedure (ADR 0008), group-scoped (D8), and the
- * decision is race-safe (D6). These run against a mock Prisma so the gate, the
- * where-clause shape, and the race branches are exercised without a DB. The
+ * decision is race-safe (D6). drain-admin-router moved the persistence behind
+ * `AdminService` (backed by `AdminPrismaRepository`); this suite drives the
+ * router → service → repository seam against a mock Prisma so the gate, the
+ * where-clause shape (still asserted at the repository boundary the
+ * adapter issues), and the race branches are exercised without a DB. The
  * DB-level guarantees (the partial unique index, real concurrency) live in the
  * integration suite.
  */
@@ -74,7 +79,18 @@ function buildCaller(
       Promise.resolve(cb(tx)),
     ),
   };
-  const deps = { prisma } as unknown as Parameters<typeof createAppRouter>[0];
+  // drain-admin-router: the router now delegates to AdminService, backed by
+  // AdminPrismaRepository — same mock `prisma`, so every existing assertion
+  // (where-clause shape, tx branch, funnel metric) still exercises the same
+  // Prisma calls, just through the real production seam instead of the
+  // router touching `deps.prisma` directly.
+  const adminService = new AdminService(
+    new AdminPrismaRepository(prisma as never),
+  );
+  const deps = {
+    prisma,
+    adminService,
+  } as unknown as Parameters<typeof createAppRouter>[0];
   const caller = createAppRouter(deps).createCaller({
     session: makeSession(role),
     logger: createNullLogger(),

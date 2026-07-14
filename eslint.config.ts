@@ -747,6 +747,7 @@ export default defineConfig([
   {
     files: [
       "apps/api/src/modules/activity/activity.service.ts",
+      "apps/api/src/modules/admin/action-log.service.ts",
       "apps/api/src/modules/analytics/analytics.service.ts",
       "apps/api/src/modules/archive/archive.service.ts",
       "apps/api/src/modules/carry-over/carry-over.service.ts",

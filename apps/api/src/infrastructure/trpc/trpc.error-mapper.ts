@@ -6,6 +6,8 @@ import {
   AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
+  AdminReopenRequestAlreadyProcessedError,
+  AdminReopenRequestNotFoundError,
 } from "../../modules/admin/admin.service.js";
 import { ArchiveDomainError } from "../../modules/archive/archive.service.js";
 import {
@@ -117,6 +119,11 @@ const DOMAIN_ERROR_CODES: readonly (readonly [
   // is a state conflict on an existing (already-archived) row → CONFLICT, not a
   // silent success.
   [AdminPeriodAlreadyArchivedError, "CONFLICT"],
+  // A scoped re-load that finds no matching pending reopen request → NOT_FOUND.
+  [AdminReopenRequestNotFoundError, "NOT_FOUND"],
+  // The race-safe decide transaction's loser (zero rows matched the
+  // compare-and-set) — a state conflict on an existing resource → CONFLICT.
+  [AdminReopenRequestAlreadyProcessedError, "CONFLICT"],
   // An out-of-scope or archived period-lifecycle target is an authorization
   // denial → FORBIDDEN; a missing report → NOT_FOUND. Two classes because they
   // map to different codes. PeriodAccessError stays unmapped on purpose — its

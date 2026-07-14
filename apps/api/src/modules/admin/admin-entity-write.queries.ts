@@ -95,6 +95,28 @@ export async function removeUser(
   }
 }
 
+/** Set `isActive=false`. Session revocation is the caller's job. */
+export async function deactivateUser(
+  prisma: PrismaService,
+  userId: string,
+): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { isActive: false },
+  });
+}
+
+/** Set `isActive=true`. Session restoration is the caller's job. */
+export async function activateUser(
+  prisma: PrismaService,
+  userId: string,
+): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { isActive: true },
+  });
+}
+
 export async function upsertProject(
   prisma: PrismaService,
   project: AdminProject,

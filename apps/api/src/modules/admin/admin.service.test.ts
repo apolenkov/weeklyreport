@@ -4,7 +4,7 @@ import type {
   StageAssignment,
   UserSession,
 } from "@customreport/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createAppRouter } from "../../infrastructure/trpc/trpc.router.js";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
@@ -16,6 +16,7 @@ import {
   type AdminRepository,
   AdminService,
 } from "./admin.service";
+import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
 
 const adminSession: UserSession = {
   userId: "00000000-0000-4000-8000-0000000000ad",
@@ -127,6 +128,7 @@ function createRepository(
   const assignments = new Map<string, StageAssignment>();
 
   return {
+    ...unusedAdminRepositoryStubs(),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async getSnapshot() {
       return structuredClone(currentSnapshot);
@@ -1884,5 +1886,52 @@ describe("AdminService — updatePeriodManual (UFB-067)", () => {
         deadline: new Date("2026-05-10T15:00:00.000Z"),
       }),
     ).rejects.toThrow(/not implemented/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// drain-admin-router: deactivate/activate, integrations status, stage
+// catalogue, reopen-request lifecycle — thin AdminService delegation to the
+// repository's new required methods.
+// ---------------------------------------------------------------------------
+
+describe("AdminService — deactivate/activate, integrations, stages", () => {
+  it("deactivateUser delegates to the repository and reports success", async () => {
+    const repo = createRepository(initialSnapshot) as AdminRepository & {
+      deactivateUser: ReturnType<typeof vi.fn>;
+    };
+    const service = new AdminService(repo);
+
+    await expect(service.deactivateUser("user-1")).resolves.toEqual({
+      success: true,
+    });
+    expect(repo.deactivateUser).toHaveBeenCalledWith("user-1");
+  });
+
+  it("activateUser delegates to the repository and reports success", async () => {
+    const repo = createRepository(initialSnapshot) as AdminRepository & {
+      activateUser: ReturnType<typeof vi.fn>;
+    };
+    const service = new AdminService(repo);
+
+    await expect(service.activateUser("user-1")).resolves.toEqual({
+      success: true,
+    });
+    expect(repo.activateUser).toHaveBeenCalledWith("user-1");
+  });
+
+  it("integrationsStatus combines the caller-resolved `configured` flag with the repository binding count", async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+
+    await expect(service.integrationsStatus(true)).resolves.toEqual({
+      telegram: { configured: true, bindings: 0 },
+    });
+  });
+
+  it("listStages and listStageAssignmentCounts delegate to the repository", async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+
+    await expect(service.listStages()).resolves.toEqual([]);
+    await expect(service.listStageAssignmentCounts()).resolves.toEqual([]);
   });
 });
