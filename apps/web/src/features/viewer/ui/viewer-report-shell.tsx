@@ -12,8 +12,8 @@ import { ReportToolbar } from "../../../shared/ui/report-shell/report-toolbar";
 import { ScopeToggle } from "../../../shared/ui/report-shell/scope-toggle";
 import { useReportShellUrlState } from "../../../shared/ui/report-shell/use-report-shell-url-state";
 import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
-import { ExportPdfButton } from "../../pdf-export/ui/export-pdf-button";
-import { PeriodNavigator } from "../../period/ui/period-navigator";
+import { ExportPdfButton } from "../../pdf-export";
+import { PeriodNavigator } from "../../period";
 import {
   formatDateRange,
   isoWeekNumber,

@@ -120,9 +120,10 @@ const apiCrossModuleZones = apiModules.map((moduleName) => ({
 }));
 
 // One zone per web slice: files under features/S may import from features/ only
-// within their own slice, plus the grandfathered cross-slice edges below. ALL
-// populated slices are enforced (boundaries flip #33); any NEW slice-to-slice
-// coupling not in the allowlist is a lint error.
+// within their own slice, through a sibling's index.ts barrel, or via a still-
+// grandfathered raw path below. ALL populated slices are enforced (boundaries
+// flip #33); any NEW slice-to-slice coupling not through a barrel or the
+// allowlist is a lint error.
 const webFeaturesDir = "apps/web/src/features";
 const webSlices = [
   "admin",
@@ -139,39 +140,42 @@ const webSlices = [
   "viewer",
 ] as const;
 // Grandfathered cross-slice edges: pre-existing couplings between slices that
-// the boundary rule allows explicitly — forbid a slice reaching into a NEW
-// sibling, grandfather the pairs it already touches. `except` is slice-granular,
-// so an entry permits any import between that pair — finer per-file enforcement
-// is a separate mechanism, out of scope.
+// still reach a sibling's internals directly rather than through its index.ts
+// barrel — forbid a slice reaching into a NEW sibling, grandfather the raw
+// paths it already touches. Each pair shrinks as it migrates to the barrel
+// mechanism below (mirrors apiCrossModuleZones); `except` is slice-granular,
+// so an entry permits any raw import between that pair — finer per-file
+// enforcement is a separate mechanism, out of scope.
 const webSliceGrandfatheredExcept: Partial<
   Record<(typeof webSlices)[number], readonly string[]>
 > = {
-  // admin settings tabs reach organization (reporting-group forms), period
-  // (report-period forms), and review (reminder/verdict presentation).
-  admin: ["organization", "period", "review"],
-  // dashboard-page consumes review's section-review-rows + SectionReviewStrip;
-  // its own mappers read report-sections' lead-status + traffic-light.
-  dashboard: ["review", "report-sections"],
-  // period lifecycle controls reach admin (settings context) and report-sections
-  // (the assembled-report body they gate publish/reopen on).
-  period: ["admin", "report-sections"],
+  // dashboard-page's own mappers read report-sections' lead-status +
+  // traffic-light.
+  dashboard: ["report-sections"],
+  // period's assembled-report body gates publish/reopen — report-sections only.
+  period: ["report-sections"],
   // report-sections is the assembled-report hub: it composes admin, pdf-export,
   // period, review, and slides surfaces into the rendered report.
   "report-sections": ["admin", "pdf-export", "period", "review", "slides"],
-  // review surfaces sit on top of admin context and the report-sections body.
-  review: ["admin", "report-sections"],
+  // review's report-sections body sits underneath its review surfaces.
+  review: ["report-sections"],
   // the slide deck reads report-sections' cross-author mappers + stage helpers to
   // build its grid model.
   slides: ["report-sections"],
-  // the viewer report shell reuses pdf-export, period, report-sections, and the
-  // slide deck UI.
-  viewer: ["pdf-export", "period", "report-sections", "slides"],
+  // the viewer report shell reuses report-sections and the slide deck UI.
+  viewer: ["report-sections", "slides"],
 };
 const webCrossSliceZones = webSlices.map((sliceName) => ({
   target: `${webFeaturesDir}/${sliceName}`,
   from: webFeaturesDir,
-  except: [sliceName, ...(webSliceGrandfatheredExcept[sliceName] ?? [])],
-  message: `web slice boundary: '${sliceName}' may not import another slice's internals (restructure-directory-architecture).`,
+  except: [
+    sliceName,
+    ...webSlices
+      .filter((sibling) => sibling !== sliceName)
+      .map((sibling) => `${sibling}/index.ts`),
+    ...(webSliceGrandfatheredExcept[sliceName] ?? []),
+  ],
+  message: `web slice boundary: '${sliceName}' may reach a sibling slice only through its index.ts barrel or a still-grandfathered raw path (restructure-directory-architecture).`,
 }));
 
 export default defineConfig([

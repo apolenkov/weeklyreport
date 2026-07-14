@@ -21,7 +21,7 @@ vi.mock("../../../lib/trpc-context", () => ({
   }),
 }));
 
-import { ReopenTabLabel } from "../../review/ui/reopen-tab-label";
+import { ReopenTabLabel } from "../../review";
 import { JobsTabLabel } from "./jobs-tab-label";
 
 describe("admin tab alert labels", () => {
