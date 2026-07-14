@@ -7,7 +7,6 @@ import {
   adminUserSchema,
   appSettingsUpdateSchema,
   groupProductEdgeInputSchema,
-  MS_PER_MINUTE,
   organizationUpdateSchema,
   paginationInputSchema,
   periodListBucketSchema,
@@ -49,6 +48,7 @@ import { createActivityRouter } from "./routers/activity.router.js";
 import { createAnalyticsRouter } from "./routers/analytics.router.js";
 import { createArchiveRouter } from "./routers/archive.router.js";
 import { createAuthRouter } from "./routers/auth.router.js";
+import { createDevRouter } from "./routers/dev.router.js";
 import { createLeadFormRouter } from "./routers/lead-form.router.js";
 import { createOrganizationRouter } from "./routers/organization.router.js";
 import { createPdfExportRouter } from "./routers/pdf-export.router.js";
@@ -62,27 +62,7 @@ import { createTelemetryRouter } from "./routers/telemetry.router.js";
 import { createWeeklyReportRouter } from "./routers/weekly-report.router.js";
 import { clearOrgCache } from "./trpc.context.js";
 import { mapDomainError } from "./trpc.error-mapper.js";
-import {
-  adminProcedure,
-  headProcedure,
-  protectedProcedure,
-  publicProcedure,
-  router,
-} from "./trpc.middleware.js";
-
-// dev.wipeAndReseed: child-process timeout per seed tier — larger tiers write
-// more rows and need more wall-clock room.
-const MANUAL_UAT_RESEED_TIMEOUT_MINUTES = 1;
-const HUGE_RESEED_TIMEOUT_MINUTES = 5;
-const DEFAULT_RESEED_TIMEOUT_MINUTES = 2;
-const MANUAL_UAT_RESEED_TIMEOUT_MS =
-  MANUAL_UAT_RESEED_TIMEOUT_MINUTES * MS_PER_MINUTE;
-const HUGE_RESEED_TIMEOUT_MS = HUGE_RESEED_TIMEOUT_MINUTES * MS_PER_MINUTE;
-const DEFAULT_RESEED_TIMEOUT_MS =
-  DEFAULT_RESEED_TIMEOUT_MINUTES * MS_PER_MINUTE;
-const RESEED_OUTPUT_TAIL_LINES = 15;
-const RESEED_STDERR_TAIL_LENGTH = 500;
-const RESEED_VARIANT_MANUAL_UAT = "manual-uat";
+import { adminProcedure, headProcedure, router } from "./trpc.middleware.js";
 
 const MAX_PERIOD_LIST_LIMIT = 200;
 const MAX_FAILED_JOBS_LIMIT = 200;
@@ -233,131 +213,7 @@ export function createAppRouter(deps: RouterDeps) {
     org: createOrganizationRouter(deps),
 
     // === Dev namespace (only mounted when AUTH_DEV_MODE=true) ===
-    // Surfaces wipe/reseed shortcuts for the in-page DevRoleSwitcher widget
-    // so a presenter can reset demo state between recordings without
-    // dropping into a terminal. Each mutation refuses to do anything when
-    // AUTH_DEV_MODE is unset, so accidental deploys of this file to a
-    // production runtime cannot wipe real data.
-    dev: router({
-      // Lists every seeded user so a dev-mode login picker can show all of
-      // them (not just the 3 hardcoded role buckets). publicProcedure so
-      // the picker works before any session exists.
-      listUsers: publicProcedure.query(async () => {
-        if (process.env.AUTH_DEV_MODE !== "true") {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Dev mode is not enabled",
-          });
-        }
-        const users = await deps.prisma.user.findMany({
-          select: { id: true, email: true, name: true, role: true },
-          orderBy: [{ role: "asc" }, { name: "asc" }],
-        });
-        return users;
-      }),
-
-      // Any authenticated role may reset demo data — this is a dev-only test
-      // affordance (double-gated: dev router mount + the AUTH_DEV_MODE check
-      // below), not a production admin capability.
-      wipeAndReseed: protectedProcedure
-        .input(
-          z.object({
-            variant: z
-              .enum(["small", "middle", "huge", RESEED_VARIANT_MANUAL_UAT])
-              .default("small"),
-          }),
-        )
-        .mutation(async ({ input }) => {
-          if (process.env.AUTH_DEV_MODE !== "true") {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message: "Dev mode is not enabled",
-            });
-          }
-          // Run Prisma reset as a child process so "wipe & reseed" is a
-          // real clean-slate operation in Docker too. The Prisma config
-          // applies migrations; then we run the requested seed explicitly.
-          const { execSync } = await import("node:child_process");
-          const reset = "pnpm exec prisma migrate reset --force";
-          // Tiers mirror the package.json seed scripts: small/huge run the
-          // tiered demo writer; middle delegates to the standalone seed-simple.
-          const seedDemo = (tier: "small" | "huge") =>
-            `pnpm --dir apps/api exec tsx ../../prisma/seed-demo.ts ${tier}`;
-          const middleSeed =
-            "pnpm --dir apps/api exec tsx ../../prisma/seed-simple.ts";
-          const manualUatWipe =
-            "pnpm --dir apps/api exec tsx ../../prisma/wipe-manual-uat.ts";
-          const seedFor = (variant: "small" | "middle" | "huge") =>
-            variant === "middle" ? middleSeed : seedDemo(variant);
-          const script =
-            input.variant === RESEED_VARIANT_MANUAL_UAT
-              ? manualUatWipe
-              : `${reset} && ${seedFor(input.variant)}`;
-          // Resolve repo root in both dev TS execution and built dist images.
-          // Built Docker paths include dist/apps/api/src/... so a fixed
-          // relative hop from import.meta.url can land under /app/apps. Prefer
-          // the real cwd/workspace candidates and verify by schema existence.
-          const fs = await import("node:fs");
-          const path = await import("node:path");
-          const url = await import("node:url");
-          const __filename = url.fileURLToPath(import.meta.url);
-          const repoRootCandidates = [
-            deps.env.CUSTOMREPORT_REPO_ROOT,
-            process.cwd(),
-            path.resolve(process.cwd(), "../.."),
-            path.resolve(path.dirname(__filename), "../../../../.."),
-          ].filter((candidate): candidate is string => Boolean(candidate));
-          const repoRoot = repoRootCandidates.find((candidate) =>
-            fs.existsSync(path.join(candidate, "prisma/schema.prisma")),
-          );
-          if (!repoRoot) {
-            throw new TRPCError({
-              code: "INTERNAL_SERVER_ERROR",
-              message: "Reseed failed: repository root was not found",
-            });
-          }
-          try {
-            const stdout = execSync(script, {
-              cwd: repoRoot,
-              encoding: "utf8",
-              env: {
-                ...process.env,
-                PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
-              },
-              timeout:
-                input.variant === RESEED_VARIANT_MANUAL_UAT
-                  ? MANUAL_UAT_RESEED_TIMEOUT_MS
-                  : input.variant === "huge"
-                    ? HUGE_RESEED_TIMEOUT_MS
-                    : DEFAULT_RESEED_TIMEOUT_MS,
-            });
-            return {
-              ok: true,
-              variant: input.variant,
-              output: stdout
-                .split("\n")
-                .slice(-RESEED_OUTPUT_TAIL_LINES)
-                .join("\n"),
-            };
-          } catch (error) {
-            const stderrRaw =
-              error instanceof Error && "stderr" in error
-                ? (error as { stderr?: unknown }).stderr
-                : undefined;
-            const stderr =
-              typeof stderrRaw === "string"
-                ? stderrRaw
-                : Buffer.isBuffer(stderrRaw)
-                  ? stderrRaw.toString("utf8")
-                  : "";
-            throw new TRPCError({
-              code: "INTERNAL_SERVER_ERROR",
-              message: `Reseed failed: ${error instanceof Error ? error.message : String(error)}\n${stderr.slice(-RESEED_STDERR_TAIL_LENGTH)}`,
-              cause: error instanceof Error ? error : undefined,
-            });
-          }
-        }),
-    }),
+    dev: createDevRouter(deps),
 
     // === Reports namespace ===
     reports: createReportsRouter(deps),
