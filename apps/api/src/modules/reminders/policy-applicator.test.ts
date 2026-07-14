@@ -325,4 +325,28 @@ describe("PolicyApplicatorService.applyToPeriod", () => {
     expect(result.created).toBe(1);
     expect(result.skipped).toBe(1);
   });
+
+  it("re-throws an unexpected Prisma error and aborts later policies", async () => {
+    const unexpectedError = new Error("Database connection lost");
+    const policyC: StubPolicy = { ...policyA, id: "policy-c" };
+    const upsert = vi.fn().mockRejectedValue(unexpectedError);
+    const prisma = {
+      reminderPolicy: {
+        findMany: vi.fn().mockResolvedValue([policyA, policyC]),
+      },
+      reminderRule: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        upsert,
+      },
+    } as never;
+    const svc = new PolicyApplicatorService(prisma);
+
+    await expect(
+      svc.applyToPeriod({
+        id: "report-1",
+        deadline: new Date("2026-06-01T18:00:00.000Z"),
+      }),
+    ).rejects.toBe(unexpectedError);
+    expect(upsert).toHaveBeenCalledTimes(1);
+  });
 });

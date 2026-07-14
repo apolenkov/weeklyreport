@@ -26,12 +26,31 @@ export const reminderPolicyKindSchema = z.enum([
   "follow_up",
 ]);
 
+// Resolvability probe rather than an Intl.supportedValuesOf allowlist: the
+// allowlist omits "UTC"/"GMT"/"Etc/*" aliases, which are valid zones the app
+// itself offers and defaults to. DateTimeFormat construction accepts exactly
+// the zones the runtime can resolve and throws on garbage ("UTC+3", "MSK").
+const isResolvableTimeZone = (timezone: string): boolean => {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const reminderPolicySchema = z
   .object({
     id: z.uuid(),
     kind: reminderPolicyKindSchema,
     offsetMinutes: z.number().int(),
-    timezone: z.string().min(1),
+    timezone: z
+      .string()
+      .min(1)
+      .refine(
+        isResolvableTimeZone,
+        "timezone must be a valid IANA time zone identifier",
+      ),
     audience: reminderAudienceSchema,
     active: z.boolean(),
     /**
