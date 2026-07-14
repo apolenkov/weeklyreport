@@ -5,9 +5,8 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
-// Cross-slice: this dispatch container composes the period and review slices.
-import { PeriodsTab } from "../../period/ui/periods-tab";
-import { ReopenTab } from "../../review/ui/reopen-tab";
+import { PeriodsTab } from "../../period";
+import { ReopenTab } from "../../review";
 import { mapAdminSettings, mapAdminSnapshot } from "../model/admin";
 import { ActionLogTab } from "./action-log-tab";
 import { AdminTabSkeleton } from "./admin-skeleton";

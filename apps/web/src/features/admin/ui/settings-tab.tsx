@@ -10,12 +10,12 @@ import {
 import { ComingSoonTooltip } from "@customreport/ui/components/ui/tooltip";
 
 import type { MockSettings } from "../../../shared/lib/admin-mock-data";
-// Cross-slice: the settings shell composes the organization and period slices.
-// Becomes sibling-barrel imports once those slices register (paired lead/ change).
-import { IdentitySubTab } from "../../organization/ui/settings-identity-sub-tab";
-import { IntegrationsSubTab } from "../../organization/ui/settings-integrations-sub-tab";
-import { NotificationsSubTab } from "../../organization/ui/settings-notifications-sub-tab";
-import { PeriodsSubTab } from "../../period/ui/settings-periods-sub-tab";
+import {
+  IdentitySubTab,
+  IntegrationsSubTab,
+  NotificationsSubTab,
+} from "../../organization";
+import { PeriodsSubTab } from "../../period";
 import { RemindersSubTab } from "./settings-reminders-sub-tab";
 import { TabHeader } from "./tab-header";
 
