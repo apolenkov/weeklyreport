@@ -9,11 +9,8 @@ import {
   shortNameFromName,
 } from "@customreport/shared";
 
-import {
-  deriveLeadStatus,
-  type LeadStatus,
-} from "../../report-sections/model/lead-status";
-import { trafficToStageStatus } from "../../report-sections/model/traffic-light";
+import type { LeadStatus } from "../../report-sections";
+import { deriveLeadStatus, trafficToStageStatus } from "../../report-sections";
 import type { LeadInfo, ProductStatus, TrafficLight } from "./dashboard";
 import {
   countActivityRecords,
