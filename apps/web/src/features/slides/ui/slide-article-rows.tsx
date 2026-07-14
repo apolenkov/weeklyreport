@@ -2,7 +2,7 @@ import { Check, ChevronsRight, Pause } from "lucide-react";
 import { type KeyboardEvent, useRef } from "react";
 
 import { useSdlcTooltip } from "../../../shared/ui/sdlc-tooltip";
-import { STAGE_ICONS } from "../../report-sections/model/stage-chip-config";
+import { STAGE_ICONS } from "../../report-sections";
 import type {
   GridAuthor,
   GridRow,

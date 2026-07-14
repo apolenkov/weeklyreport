@@ -1,17 +1,15 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
 import type {
+  DecisionEntry,
+  KanbanItem,
   LeadDecisionEntry,
   LeadKanbanItem,
   LeadRiskEntry,
   MappedLeadForm,
-} from "../../report-sections/model/lead-form";
-import type {
-  DecisionEntry,
-  KanbanItem,
   Product,
   RiskEntry,
-} from "../../report-sections/model/types";
+} from "../../report-sections";
 import type { GridRowEditableRef } from "./slide-grid-rows";
 
 export type SlideInlineEditRecord =

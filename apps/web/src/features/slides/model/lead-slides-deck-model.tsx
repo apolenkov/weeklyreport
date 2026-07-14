@@ -1,6 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
-import type { CrossAuthorContentRow } from "../../report-sections/model/lead-cross-author";
+import type { CrossAuthorContentRow } from "../../report-sections";
 import {
   applyForeignProductHealth,
   buildSectionSlideModel,

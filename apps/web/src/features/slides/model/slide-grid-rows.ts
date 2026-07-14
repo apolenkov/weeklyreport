@@ -5,7 +5,7 @@ import {
   STAGE_NAMES,
 } from "@customreport/shared";
 
-import type { CrossAuthorContentRow } from "../../report-sections/model/lead-cross-author";
+import type { CrossAuthorContentRow } from "../../report-sections";
 
 export type SlideTrafficStatus = TrafficLightStatus | null;
 

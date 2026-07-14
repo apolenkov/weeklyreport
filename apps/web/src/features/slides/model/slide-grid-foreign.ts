@@ -1,4 +1,4 @@
-import type { CrossAuthorContentRow } from "../../report-sections/model/lead-cross-author";
+import type { CrossAuthorContentRow } from "../../report-sections";
 import {
   type GridColumnKey,
   type GridRow,
