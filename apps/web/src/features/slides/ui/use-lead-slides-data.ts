@@ -9,7 +9,7 @@ import { crossAuthorContentFetchEnabled } from "../../../lib/cross-author-conten
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
-import { mapLeadFormData } from "../../report-sections/model/lead-form";
+import { mapLeadFormData } from "../../report-sections";
 import {
   buildLeadSlidePeriodOptions,
   resolveLeadSlideReportId,

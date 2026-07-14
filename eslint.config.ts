@@ -153,9 +153,6 @@ const webSliceGrandfatheredExcept: Partial<
   period: ["report-sections"],
   // review's report-sections body sits underneath its review surfaces.
   review: ["report-sections"],
-  // the slide deck reads report-sections' cross-author mappers + stage helpers to
-  // build its grid model.
-  slides: ["report-sections"],
 };
 const webCrossSliceZones = webSlices.map((sliceName) => ({
   target: `${webFeaturesDir}/${sliceName}`,

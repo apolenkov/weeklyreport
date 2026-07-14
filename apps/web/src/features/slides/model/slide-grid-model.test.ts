@@ -1,7 +1,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import type { CrossAuthorContentRow } from "../../report-sections/model/lead-cross-author";
+import type { CrossAuthorContentRow } from "../../report-sections";
 import {
   buildSlideGridModel,
   collectStageNames,

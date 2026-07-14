@@ -3,7 +3,7 @@
 import { type RefObject, useEffect, useRef, useState } from "react";
 
 import { useFullscreen } from "../../../hooks/use-fullscreen";
-import { useSlideInlineEditor } from "../../report-sections/ui/use-slide-inline-editor";
+import { useSlideInlineEditor } from "../../report-sections";
 import {
   DeckFullscreenOverlay,
   DeckToolbarControls,

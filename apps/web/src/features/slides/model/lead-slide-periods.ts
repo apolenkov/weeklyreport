@@ -1,9 +1,6 @@
 import type { MyHistoryEntry } from "@customreport/shared";
 
-import {
-  formatDateRange,
-  isoWeekNumber,
-} from "../../report-sections/model/lead-history";
+import { formatDateRange, isoWeekNumber } from "../../report-sections";
 
 export interface LeadSlidePeriodOption {
   readonly reportId: string;

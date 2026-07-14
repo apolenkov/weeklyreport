@@ -6,12 +6,12 @@ import type {
 import { shortNameFromName } from "@customreport/shared";
 
 import { deriveEffectiveStageStatus } from "../../../lib/stage-status";
-import type { CrossAuthorContentRow } from "../../report-sections/model/lead-cross-author";
-import { riskCoversStage } from "../../report-sections/model/stage-tags";
+import type { CrossAuthorContentRow } from "../../report-sections";
 import {
+  riskCoversStage,
   stageStatusToTraffic,
   trafficToStageStatus,
-} from "../../report-sections/model/traffic-light";
+} from "../../report-sections";
 import { buildSlideGridModel, type SlideGridModel } from "./slide-grid-model";
 
 const PERCENT_MAX = 100;
