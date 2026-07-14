@@ -16,25 +16,22 @@ import { buildTransition } from "../domain/period-transition.js";
 /** The `report` delegate methods the scheduled→open flip needs. */
 type FlipReportDelegate = Pick<
   PrismaClient["report"],
-  "findMany" | "update" | "findFirst"
+  "findMany" | "updateMany" | "findFirst"
 >;
 
 /**
  * Flip every due `scheduled` row (its `periodStart` has been reached) to
- * `open`, ONE ROW AT A TIME in a deterministic `(periodStart, id)` order. The
- * partial unique index `Report_one_open_per_boundary` constrains this UPDATE,
- * so a row whose boundary another writer already opened — or a sibling
- * scheduled row that this loop opened a moment earlier — raises `P2002`.
- * Processing sequentially makes recovery a single rule: the first row on a
- * boundary commits open, and any later row that collides re-reads, finds the
- * now-open row, and is left scheduled (never deleted) and logged. So exactly
- * one row per boundary opens and the boundary is never left without an open
- * period. A non-`P2002` error aborts the tick (re-thrown unchanged).
+ * `open`, one row at a time in deterministic `(periodStart, id)` order. Each
+ * write re-asserts `periodState: "scheduled"`, so a concurrent lifecycle
+ * transition wins instead of being overwritten; a zero-row result is logged
+ * and skipped. The partial unique boundary index independently protects the
+ * update from a competing open row. That `P2002` is recovered by re-reading and
+ * logging the winner, while any unrelated error aborts the tick unchanged.
  */
 export async function flipDueScheduledToOpen(
   report: FlipReportDelegate,
   now: Date,
-  logger: Pick<Logger, "warn">,
+  logger: Pick<Logger, "log" | "warn">,
 ): Promise<void> {
   const due = await report.findMany({
     where: { periodState: "scheduled", periodStart: { lte: now } },
@@ -47,10 +44,16 @@ export async function flipDueScheduledToOpen(
       // refactor-period-transition-writer: the open transition writes the full
       // field set (periodState='open' + the draft/false legacy tuple the
       // scheduled row already carries).
-      await report.update({
-        where: { id: row.id },
+      const { count } = await report.updateMany({
+        where: { id: row.id, periodState: "scheduled" },
         data: buildTransition("open", {}),
       });
+      if (count === 0) {
+        logger.log(
+          `scheduled→open skipped period=${row.id}: transitioned away from scheduled by a concurrent writer`,
+        );
+        continue;
+      }
     } catch (error) {
       if (!isOpenBoundaryConflict(error)) throw error;
 

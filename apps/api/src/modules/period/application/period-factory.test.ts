@@ -70,7 +70,7 @@ function makePrisma(opts: {
     .fn()
     .mockImplementation((args: { where: { status?: string } }) =>
       // The by-bounds find filters on status:"draft"; the race re-read filters
-      // on periodState:"open" (no status key).
+      // on the live period states (no status key).
       args.where.status === "draft"
         ? (opts.existing ?? null)
         : (opts.raced ?? null),
@@ -174,6 +174,42 @@ describe("ensureCurrentPeriod", () => {
 
     expect(result).toMatchObject({ created: false, reportId: "period-winner" });
     expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it("concurrent scheduled create re-reads and returns the scheduled winner", async () => {
+    const raced: PeriodRow = {
+      id: "period-scheduled-winner",
+      periodStart: new Date(EXPECTED_PERIOD_START),
+      periodEnd: new Date(EXPECTED_PERIOD_END),
+      deadline: new Date(EXPECTED_DEADLINE),
+      periodState: "scheduled",
+    };
+    const { client, findFirst } = makePrisma({
+      createThrows: P2002_OPEN_BOUNDARY,
+      raced,
+    });
+
+    const result = await ensureCurrentPeriod(
+      client,
+      ANCHOR_MONDAY,
+      new Date("2026-05-10T09:00:00.000Z"),
+      SETTINGS,
+    );
+
+    expect(result).toMatchObject({
+      created: false,
+      reportId: "period-scheduled-winner",
+      periodState: "scheduled",
+    });
+    expect(findFirst).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: {
+          periodStart: new Date(EXPECTED_PERIOD_START),
+          periodEnd: new Date(EXPECTED_PERIOD_END),
+          periodState: { in: ["scheduled", "open"] },
+        },
+      }),
+    );
   });
 
   it("re-throws a non-boundary error from create", async () => {

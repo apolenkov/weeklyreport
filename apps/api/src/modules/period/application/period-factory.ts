@@ -33,9 +33,10 @@ import {
 const DEADLINE_HOUR = 18;
 
 // The partial unique index `Report_one_open_per_boundary` (schema/init
-// migration) — `ON (periodStart, periodEnd) WHERE periodState='open'` — is the
-// constraint two racing creators collide on. Lives in raw SQL, so Prisma's
-// P2002 `meta.target` may surface either the index name or the field list.
+// migration) constrains `(periodStart, periodEnd)` across both `scheduled` and
+// `open` rows, so racing creators cannot persist two live pre-published rows.
+// It lives in raw SQL, so Prisma's P2002 `meta.target` may surface either the
+// index name or the field list.
 const OPEN_BOUNDARY_INDEX = "Report_one_open_per_boundary";
 
 /** Settings the factory reads; a structural subset of {@link AppSettings}. */
@@ -123,9 +124,10 @@ export function isOpenBoundaryConflict(error: unknown): boolean {
  *   while keeping still-future ones, since the reminders scheduler fires any
  *   active rule whose `fireAt` is already past (no elapsed-`fireAt` guard) and a
  *   stale active rule would blast on the next tick.
- * - Concurrent creators collide on the `Report_one_open_per_boundary` partial
- *   unique index; the loser catches that one P2002, re-reads, and returns the
- *   winner's row. Any other error re-throws.
+ * - The partial unique index permits at most one row per boundary across the
+ *   `scheduled` and `open` states. Concurrent creators collide on that index;
+ *   the loser catches its P2002, re-reads, and returns the winner's row in
+ *   either state. Any other error re-throws.
  */
 export async function ensureCurrentPeriod(
   prisma: { report: ReportDelegate },
@@ -219,9 +221,13 @@ export async function ensureCurrentPeriod(
     if (!isOpenBoundaryConflict(error)) throw error;
 
     // Another creator won the race; the winner's applyToPeriod runs in its own
-    // call, so we only re-read and return the now-existing open row.
+    // call, so we only re-read and return its scheduled or open row.
     const won = await prisma.report.findFirst({
-      where: { periodStart, periodEnd, periodState: "open" },
+      where: {
+        periodStart,
+        periodEnd,
+        periodState: { in: ["scheduled", "open"] },
+      },
       select: SELECT_PERIOD,
     });
     if (!won) throw error;
