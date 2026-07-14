@@ -12,9 +12,10 @@ import { isOpenBoundaryConflict } from "../application/period-factory.js";
 /**
  * period-uniqueness: proves the hand-written partial unique index
  * `Report_one_open_per_boundary` (init migration) actually has teeth against a
- * real database — at most one open Report per `(periodStart, periodEnd)`, while
- * closed periods on the same boundary are exempt. Excluded from the unit run
- * (`*.integration.test.ts`); needs the `_test` DB that carries the index.
+ * real database — at most one scheduled or open Report per `(periodStart,
+ * periodEnd)`, while closed periods on the same boundary are exempt. Excluded
+ * from the unit run (`*.integration.test.ts`); needs the `_test` DB that carries
+ * the index.
  */
 describe("Report_one_open_per_boundary partial unique index (integration)", () => {
   const prisma = createTestPrisma();
@@ -40,6 +41,20 @@ describe("Report_one_open_per_boundary partial unique index (integration)", () =
         deadline,
         status: "draft",
         periodState: "open",
+        periodStatus: "open",
+        archived: false,
+      },
+    });
+  }
+
+  function createScheduledReport() {
+    return prisma.report.create({
+      data: {
+        periodStart,
+        periodEnd,
+        deadline,
+        status: "draft",
+        periodState: "scheduled",
         periodStatus: "open",
         archived: false,
       },
@@ -85,6 +100,27 @@ describe("Report_one_open_per_boundary partial unique index (integration)", () =
     expect(known.meta?.target).toBeUndefined();
   });
 
+  it("rejects one of two concurrent scheduled Reports on the same boundary", async () => {
+    const errors = await Promise.all([
+      captureError(createScheduledReport),
+      captureError(createScheduledReport),
+    ]);
+
+    expect(errors.filter((error) => error === undefined)).toHaveLength(1);
+    const error = errors.find((candidate) => candidate !== undefined);
+    expect(error).toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
+    const known = error as Prisma.PrismaClientKnownRequestError;
+    expect(known.code).toBe("P2002");
+    expect(isOpenBoundaryConflict(known)).toBe(true);
+    expect(
+      isUniqueViolation(known, {
+        index: "Report_one_open_per_boundary",
+        columns: ["periodStart", "periodEnd"],
+      }),
+    ).toBe(true);
+    expect(known.meta?.target).toBeUndefined();
+  });
+
   it("allows a closed (published) period to share a boundary with a new open one", async () => {
     await prisma.report.create({
       data: {
@@ -98,8 +134,8 @@ describe("Report_one_open_per_boundary partial unique index (integration)", () =
       },
     });
 
-    // The partial index only constrains periodState='open', so a new open
-    // period on the same boundary as a published one is NOT blocked.
+    // The partial index only constrains live pre-published states, so a new open
+    // period on the same boundary as a published one is not blocked.
     await expect(createOpenReport()).resolves.toMatchObject({
       periodState: "open",
     });

@@ -496,16 +496,16 @@ CREATE INDEX "Report_periodState_periodStart_idx" ON "Report"("periodState", "pe
 -- CreateIndex
 CREATE INDEX "Report_publishedById_idx" ON "Report"("publishedById");
 
--- period-dual-state (C2 / A24/A21): at most ONE open Report per reporting
--- boundary. Prisma cannot express a partial unique index (the WHERE predicate),
--- so it is hand-written here (mirrors ReopenRequest_one_pending_per_section).
+-- At most one scheduled or open Report may occupy a reporting boundary. Prisma
+-- cannot express a partial unique index (the WHERE predicate), so it is
+-- hand-written here (mirrors ReopenRequest_one_pending_per_section).
 -- Published/archived rows for the same boundary are unconstrained. This is the
 -- durable guarantee behind the period factory's concurrent-create race guard:
--- two simultaneous lead logins (or a login racing the period-creator cron) both
--- pass the find step, one create wins, the other gets P2002 and re-reads.
+-- two simultaneous creators can pass the find step, but only one live
+-- pre-published row persists; the loser gets P2002 and re-reads the winner.
 CREATE UNIQUE INDEX "Report_one_open_per_boundary"
   ON "Report"("periodStart", "periodEnd")
-  WHERE "periodState" = 'open';
+  WHERE "periodState" IN ('open', 'scheduled');
 
 -- CreateIndex
 CREATE INDEX "ReportSection_authorId_idx" ON "ReportSection"("authorId");

@@ -46,10 +46,8 @@ interface StubPrisma {
   report: {
     findFirst: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
-    // period-uniqueness: the SCHEDULED→OPEN flip now reads the due scheduled
-    // rows and flips them one at a time (was a single bulk updateMany).
     findMany: ReturnType<typeof vi.fn>;
-    update: ReturnType<typeof vi.fn>;
+    updateMany: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -94,7 +92,7 @@ function makePrismaStub(opts: {
       // is "no due scheduled rows" — the flip is a no-op. The flip's own
       // recovery is covered by the focused flipDueScheduledToOpen tests below.
       findMany: vi.fn().mockResolvedValue([]),
-      update: vi.fn().mockResolvedValue(undefined),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
   };
 }
@@ -371,26 +369,70 @@ function openBoundaryP2002(): Prisma.PrismaClientKnownRequestError {
 
 interface FlipReportStub {
   findMany: ReturnType<typeof vi.fn>;
-  update: ReturnType<typeof vi.fn>;
+  updateMany: ReturnType<typeof vi.fn>;
   findFirst: ReturnType<typeof vi.fn>;
 }
 
 describe("flipDueScheduledToOpen", () => {
   const now = new Date("2026-05-12T00:05:00.000Z");
 
+  it("opens a row that is still scheduled via the governed transition", async () => {
+    const report: FlipReportStub = {
+      findMany: vi
+        .fn()
+        .mockResolvedValue([{ id: "s1", periodStart: W, periodEnd: W_END }]),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      findFirst: vi.fn(),
+    };
+    const logger = { log: vi.fn(), warn: vi.fn() };
+
+    await flipDueScheduledToOpen(asAny(report), now, logger);
+
+    expect(report.updateMany).toHaveBeenCalledWith({
+      where: { id: "s1", periodState: "scheduled" },
+      data: { periodState: "open", status: "draft", archived: false },
+    });
+    expect(logger.log).not.toHaveBeenCalled();
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it("logs and skips a row concurrently transitioned away from scheduled", async () => {
+    const report: FlipReportStub = {
+      findMany: vi
+        .fn()
+        .mockResolvedValue([{ id: "s1", periodStart: W, periodEnd: W_END }]),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+      findFirst: vi.fn(),
+    };
+    const logger = { log: vi.fn(), warn: vi.fn() };
+
+    await flipDueScheduledToOpen(asAny(report), now, logger);
+
+    expect(report.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "s1", periodState: "scheduled" },
+      }),
+    );
+    expect(logger.log).toHaveBeenCalledWith(
+      expect.stringContaining("transitioned away from scheduled"),
+    );
+    expect(report.findFirst).not.toHaveBeenCalled();
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
   it("(a) a boundary another writer already opened is skipped, the duplicate scheduled row is left + logged", async () => {
     const report: FlipReportStub = {
       findMany: vi
         .fn()
         .mockResolvedValue([{ id: "s1", periodStart: W, periodEnd: W_END }]),
-      update: vi.fn().mockRejectedValue(openBoundaryP2002()),
+      updateMany: vi.fn().mockRejectedValue(openBoundaryP2002()),
       findFirst: vi.fn().mockResolvedValue({ id: "open-existing" }),
     };
-    const warn = vi.fn();
+    const logger = { log: vi.fn(), warn: vi.fn() };
 
-    await flipDueScheduledToOpen(asAny(report), now, { warn });
+    await flipDueScheduledToOpen(asAny(report), now, logger);
 
-    expect(report.update).toHaveBeenCalledTimes(1);
+    expect(report.updateMany).toHaveBeenCalledTimes(1);
     // recovery re-read keys on the boundary + periodState='open'
     expect(report.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -398,8 +440,10 @@ describe("flipDueScheduledToOpen", () => {
         select: { id: true },
       }),
     );
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("already open"));
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining("already open"),
+    );
   });
 
   it("(b) two scheduled rows on one boundary → exactly one opens, the other is left scheduled + logged", async () => {
@@ -409,30 +453,34 @@ describe("flipDueScheduledToOpen", () => {
         { id: "s2", periodStart: W, periodEnd: W_END },
       ]),
       // s1 flips first (commits); s2 then collides on the now-open boundary.
-      update: vi
+      updateMany: vi
         .fn()
-        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({ count: 1 })
         .mockRejectedValueOnce(openBoundaryP2002()),
       // the re-read after s2's P2002 finds s1, now open.
       findFirst: vi.fn().mockResolvedValue({ id: "s1" }),
     };
-    const warn = vi.fn();
+    const logger = { log: vi.fn(), warn: vi.fn() };
 
-    await flipDueScheduledToOpen(asAny(report), now, { warn });
+    await flipDueScheduledToOpen(asAny(report), now, logger);
 
     // Deterministic order: s1 then s2; exactly one update committed.
-    expect(report.update).toHaveBeenCalledTimes(2);
-    expect(report.update).toHaveBeenNthCalledWith(
+    expect(report.updateMany).toHaveBeenCalledTimes(2);
+    expect(report.updateMany).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ where: { id: "s1" } }),
+      expect.objectContaining({
+        where: { id: "s1", periodState: "scheduled" },
+      }),
     );
-    expect(report.update).toHaveBeenNthCalledWith(
+    expect(report.updateMany).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ where: { id: "s2" } }),
+      expect.objectContaining({
+        where: { id: "s2", periodState: "scheduled" },
+      }),
     );
     // The duplicate (s2) is reported, never deleted.
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("s2"));
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("s2"));
   });
 
   it("re-throws a non-P2002 error (the tick aborts rather than silently swallowing)", async () => {
@@ -440,12 +488,15 @@ describe("flipDueScheduledToOpen", () => {
       findMany: vi
         .fn()
         .mockResolvedValue([{ id: "s1", periodStart: W, periodEnd: W_END }]),
-      update: vi.fn().mockRejectedValue(new Error("db down")),
+      updateMany: vi.fn().mockRejectedValue(new Error("db down")),
       findFirst: vi.fn(),
     };
 
     await expect(
-      flipDueScheduledToOpen(asAny(report), now, { warn: vi.fn() }),
+      flipDueScheduledToOpen(asAny(report), now, {
+        log: vi.fn(),
+        warn: vi.fn(),
+      }),
     ).rejects.toThrow("db down");
     // No recovery re-read on an unrelated error.
     expect(report.findFirst).not.toHaveBeenCalled();
