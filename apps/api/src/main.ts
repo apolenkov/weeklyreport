@@ -62,6 +62,7 @@ import type { AppLogger } from "./lib/logger";
 import { createAppLogger } from "./lib/logger";
 import { NestAppLoggerAdapter } from "./lib/nest-app-logger.adapter";
 import { ActivityService } from "./modules/activity/activity.service";
+import { ActionLogService } from "./modules/admin/action-log.service";
 import { AdminService } from "./modules/admin/admin.service";
 import { JobsService } from "./modules/admin/jobs.service";
 import { SessionRevocationService } from "./modules/admin/session-revocation.service";
@@ -387,6 +388,7 @@ async function bootstrap() {
     publicationService: app.get(PublicationService),
     pdfExportService: app.get(PdfExportService),
     adminService: app.get(AdminService),
+    actionLogService: app.get(ActionLogService),
     organizationService: app.get(OrganizationService),
     remindersService: app.get(RemindersService),
     archiveService: app.get(ArchiveService),

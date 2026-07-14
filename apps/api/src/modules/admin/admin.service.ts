@@ -17,13 +17,26 @@ import type {
   ReportingGroup,
   ReportPeriod,
   StageAssignment,
+  UserSession,
 } from "@customreport/shared";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger";
-import type { AdminRepository, ProductGroupOwnership } from "./admin-shared";
+import type {
+  AdminRepository,
+  ProductGroupOwnership,
+  StageAssignmentCountRow,
+  StageRow,
+} from "./admin-shared";
+import type { ReopenRequestListItem } from "./period-admin.envelope";
 import { PeriodAdminService } from "./period-admin.service";
 import { ProjectAdminService } from "./project-admin.service";
 import { ReminderAdminService } from "./reminder-admin.service";
+import type {
+  ListReopenRequestsArgs,
+  RespondReopenRequestArgs,
+  RespondReopenRequestResult,
+} from "./reopen-request-admin.service";
+import { ReopenRequestAdminService } from "./reopen-request-admin.service";
 import { SnapshotAdminService } from "./snapshot-admin.service";
 
 // Re-export the error classes and shared types from their original module
@@ -33,8 +46,15 @@ import { SnapshotAdminService } from "./snapshot-admin.service";
 // checks in the tRPC error-mapper stay valid.
 export type {
   AdminRepository,
+  DecideReopenRequestInput,
+  ListReopenRequestsInput,
   PeriodRowFromRepo,
   ProductGroupOwnership,
+  ReopenDecisionOutcome,
+  ReopenRequestRow,
+  ReopenRequestStatusFilter,
+  StageAssignmentCountRow,
+  StageRow,
 } from "./admin-shared";
 export {
   AdminAccessError,
@@ -42,13 +62,16 @@ export {
   AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
+  AdminReopenRequestAlreadyProcessedError,
+  AdminReopenRequestNotFoundError,
 } from "./admin-shared";
 
 /**
- * Thin delegating facade over four focused admin services
+ * Thin delegating facade over five focused admin services
  * (`SnapshotAdminService`, `ProjectAdminService`, `ReminderAdminService`,
- * `PeriodAdminService`). Decomposed in code-quality-modernization (Wave 3);
- * the public method surface, signatures, and behavior are unchanged.
+ * `PeriodAdminService`, `ReopenRequestAdminService`). Decomposed in
+ * code-quality-modernization (Wave 3); the public method surface,
+ * signatures, and behavior are unchanged.
  *
  * The sub-services are constructed internally from the same repository +
  * logger so callers (the tRPC router, integration tests doing
@@ -60,6 +83,7 @@ export class AdminService {
   private readonly projectAdmin: ProjectAdminService;
   private readonly reminderAdmin: ReminderAdminService;
   private readonly periodAdmin: PeriodAdminService;
+  private readonly reopenRequestAdmin: ReopenRequestAdminService;
 
   constructor(repository: AdminRepository, logger?: AppLogger) {
     this.logger = logger ?? createNullLogger();
@@ -67,6 +91,10 @@ export class AdminService {
     this.projectAdmin = new ProjectAdminService(repository, this.logger);
     this.reminderAdmin = new ReminderAdminService(repository, this.logger);
     this.periodAdmin = new PeriodAdminService(repository, this.logger);
+    this.reopenRequestAdmin = new ReopenRequestAdminService(
+      repository,
+      this.logger,
+    );
   }
 
   /** Get application settings singleton. */
@@ -228,5 +256,51 @@ export class AdminService {
     productIds: readonly string[],
   ): Promise<ProductGroupOwnership[]> {
     return this.projectAdmin.listProductGroupOwnership(productIds);
+  }
+
+  // -----------------------------------------------------------------
+  // Deactivate/activate user, integrations status, stage catalogue
+  // -----------------------------------------------------------------
+
+  deactivateUser(userId: string): Promise<{ success: true }> {
+    return this.snapshotAdmin.deactivateUser(userId);
+  }
+
+  activateUser(userId: string): Promise<{ success: true }> {
+    return this.snapshotAdmin.activateUser(userId);
+  }
+
+  integrationsStatus(
+    configured: boolean,
+  ): Promise<{ telegram: { configured: boolean; bindings: number } }> {
+    return this.snapshotAdmin.integrationsStatus(configured);
+  }
+
+  listStages(): Promise<StageRow[]> {
+    return this.projectAdmin.listStages();
+  }
+
+  listStageAssignmentCounts(): Promise<StageAssignmentCountRow[]> {
+    return this.projectAdmin.listStageAssignmentCounts();
+  }
+
+  // -----------------------------------------------------------------
+  // Reopen-request lifecycle (reopen-request-lifecycle, ADR 0008)
+  // -----------------------------------------------------------------
+
+  listReopenRequests(
+    input: ListReopenRequestsArgs,
+  ): Promise<ReopenRequestListItem[]> {
+    return this.reopenRequestAdmin.listReopenRequests(input);
+  }
+
+  pendingReopenCount(session: UserSession): Promise<{ count: number }> {
+    return this.reopenRequestAdmin.pendingReopenCount(session);
+  }
+
+  respondReopenRequest(
+    input: RespondReopenRequestArgs,
+  ): Promise<RespondReopenRequestResult> {
+    return this.reopenRequestAdmin.respondReopenRequest(input);
   }
 }

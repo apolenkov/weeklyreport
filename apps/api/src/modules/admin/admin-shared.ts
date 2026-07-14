@@ -11,8 +11,10 @@ import type {
   ReminderPolicy,
   ReportingGroup,
   ReportPeriod,
+  ReportSectionStatus,
   ReportStatus,
   StageAssignment,
+  UserSession,
 } from "@customreport/shared";
 
 export class AdminAccessError extends Error {
@@ -75,6 +77,32 @@ export class AdminGroupProductConflictError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "AdminGroupProductConflictError";
+  }
+}
+
+/**
+ * Thrown by `respondReopenRequest` when the scoped re-load finds no matching
+ * pending request — either the id is unknown or it belongs to a group outside
+ * the deciding head's scope (admin scope is global, so this path is
+ * head-only in practice). Maps to NOT_FOUND.
+ */
+export class AdminReopenRequestNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminReopenRequestNotFoundError";
+  }
+}
+
+/**
+ * Thrown by `respondReopenRequest` when the race-safe conditional update
+ * matches zero rows — a concurrent decider (head + admin can both act) already
+ * resolved the request. A state conflict on an existing resource, so the
+ * tRPC error-mapper renders it CONFLICT.
+ */
+export class AdminReopenRequestAlreadyProcessedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminReopenRequestAlreadyProcessedError";
   }
 }
 
@@ -225,7 +253,102 @@ export interface AdminRepository {
   listProductGroupOwnership?(
     productIds: readonly string[],
   ): Promise<ProductGroupOwnership[]>;
+  // -----------------------------------------------------------------
+  // Deactivate/activate user, integrations status, stage catalogue,
+  // reopen-request lifecycle (drain-admin-router). Required — every
+  // AdminRepository double gets an explicit stub (see
+  // `unusedAdminRepositoryStubs` in admin-repository-unused-stubs.ts).
+  // -----------------------------------------------------------------
+  /** Flip `User.isActive=false`. Session revocation stays the caller's job. */
+  deactivateUser(userId: string): Promise<void>;
+  /** Flip `User.isActive=true`. Session restoration stays the caller's job. */
+  activateUser(userId: string): Promise<void>;
+  /** Count of `TelegramBinding` rows with `active=true`, for the Settings → Integrations sub-tab. */
+  countActiveTelegramBindings(): Promise<number>;
+  /** Full SDLC stage catalogue, ordered by `sortOrder`. */
+  listStages(): Promise<StageRow[]>;
+  /** Per-project `StageAssignment` counts (single grouped query). */
+  listStageAssignmentCounts(): Promise<StageAssignmentCountRow[]>;
+  /** Group-scoped reopen-request list for the Admin Panel / head dashboard. */
+  listReopenRequests(
+    input: ListReopenRequestsInput,
+  ): Promise<ReopenRequestRow[]>;
+  /** Group-scoped pending-reopen count. */
+  countPendingReopenRequests(session: UserSession): Promise<number>;
+  /**
+   * The full race-safe decision: scoped re-load + the compare-and-set
+   * transaction. Throws {@link AdminReopenRequestNotFoundError} when the
+   * scoped re-load finds nothing.
+   */
+  decideReopenRequest(
+    input: DecideReopenRequestInput,
+  ): Promise<ReopenDecisionOutcome>;
 }
+
+export type ReopenRequestStatusFilter =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "all";
+
+export interface ListReopenRequestsInput {
+  status: ReopenRequestStatusFilter;
+  session: UserSession;
+}
+
+export interface DecideReopenRequestInput {
+  id: string;
+  decision: "approved" | "rejected";
+  reviewNote: string | null;
+  decidedBy: string;
+  session: UserSession;
+}
+
+export interface StageRow {
+  id: string;
+  name: string;
+  sortOrder: number;
+}
+
+export interface StageAssignmentCountRow {
+  projectId: string;
+  count: number;
+}
+
+/**
+ * One reopen-request row, joined with requester/reviewer identity and the
+ * owning section's report envelope — the shape the Admin Panel "Reopen
+ * Requests" tab and the head dashboard card render directly.
+ */
+export interface ReopenRequestRow {
+  id: string;
+  reportSectionId: string;
+  reason: string | null;
+  status: "pending" | "approved" | "rejected";
+  reviewNote: string | null;
+  reviewedAt: Date | null;
+  createdAt: Date;
+  requestedBy: { id: string; name: string; email: string };
+  reviewedBy: { id: string; name: string; email: string } | null;
+  sectionStatus: ReportSectionStatus;
+  report: {
+    id: string;
+    weekLabel: string | null;
+    periodStart: Date;
+    periodEnd: Date;
+  };
+}
+
+/**
+ * Outcome of the race-safe decision transaction. `already-processed` is the
+ * loser of a concurrent decision (zero rows matched the compare-and-set);
+ * `stale` is a winning approve whose section was already reopened elsewhere
+ * (auto-closed to rejected); `decided` is a real decision.
+ */
+export type ReopenDecisionOutcome =
+  | { kind: "already-processed" }
+  | { kind: "stale" }
+  | { kind: "decided"; decision: "approved" | "rejected" };
 
 /**
  * One product's owning reporting group, or `null` when the product belongs to

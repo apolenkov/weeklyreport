@@ -2,6 +2,7 @@ import type { PeriodState } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { mapDomainError } from "../../infrastructure/trpc/trpc.error-mapper.js";
+import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
 import { AdminAccessError, type AdminRepository } from "./admin-shared.js";
 import { PeriodAdminService } from "./period-admin.service.js";
 
@@ -64,6 +65,7 @@ function createRepository(row: SeedRow): AdminRepository & {
   };
 
   return {
+    ...unusedAdminRepositoryStubs(),
     getSnapshot: unused,
     saveSnapshot: unused,
     upsertUser: unused,

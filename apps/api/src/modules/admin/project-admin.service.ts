@@ -13,7 +13,12 @@ import {
 } from "@customreport/shared";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger";
-import type { AdminRepository, ProductGroupOwnership } from "./admin-shared";
+import type {
+  AdminRepository,
+  ProductGroupOwnership,
+  StageAssignmentCountRow,
+  StageRow,
+} from "./admin-shared";
 
 /**
  * Owns projects, reporting groups, stage assignments, and the
@@ -164,5 +169,23 @@ export class ProjectAdminService {
   ): Promise<ProductGroupOwnership[]> {
     if (!this.repository.listProductGroupOwnership) return [];
     return this.repository.listProductGroupOwnership(productIds);
+  }
+
+  /**
+   * Full SDLC stage catalogue. Used by the Stage Assignment editor so it can
+   * render *every* stage (including unassigned ones), not just the stages
+   * that already have an assignment row for the project.
+   */
+  listStages(): Promise<StageRow[]> {
+    return this.repository.listStages();
+  }
+
+  /**
+   * Per-project assignment count for the products-tab "X/7 stages" header.
+   * Light query (single GROUP BY) so we can render the count without
+   * loading every assignment row.
+   */
+  listStageAssignmentCounts(): Promise<StageAssignmentCountRow[]> {
+    return this.repository.listStageAssignmentCounts();
   }
 }

@@ -1,11 +1,14 @@
-import type { PeriodState } from "@customreport/shared";
+import type { PeriodState, UserSession } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { PolicyApplicatorService } from "../reminders/policy-applicator.service";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
-import { AdminPeriodOverlapError } from "./admin-shared";
+import {
+  AdminPeriodOverlapError,
+  AdminReopenRequestNotFoundError,
+} from "./admin-shared";
 
 /**
  * Reminder-parity regression: the admin manual create path
@@ -167,5 +170,297 @@ describe("AdminPrismaRepository period writers — open-boundary P2002 translati
     await expect(repo.createPeriodManual(INPUT)).rejects.toThrow(
       "connection reset",
     );
+  });
+});
+
+/**
+ * drain-admin-router: the admin namespace's remaining inline `deps.prisma.*`
+ * call sites — deactivate/activate, integrations status, stage catalogue,
+ * and the reopen-request lifecycle. The group-scope where-clause pinning
+ * that used to live at the router level (reopen-requests.router.test.ts)
+ * relocates here, at the repository boundary that now issues the query.
+ */
+describe("AdminPrismaRepository — deactivate/activate, integrations, stages", () => {
+  it("deactivateUser sets isActive=false", async () => {
+    const update = vi.fn(() => Promise.resolve({}));
+    const repo = new AdminPrismaRepository({
+      user: { update },
+    } as unknown as PrismaService);
+
+    await repo.deactivateUser("user-1");
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      data: { isActive: false },
+    });
+  });
+
+  it("activateUser sets isActive=true", async () => {
+    const update = vi.fn(() => Promise.resolve({}));
+    const repo = new AdminPrismaRepository({
+      user: { update },
+    } as unknown as PrismaService);
+
+    await repo.activateUser("user-1");
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      data: { isActive: true },
+    });
+  });
+
+  it("countActiveTelegramBindings counts only active=true rows", async () => {
+    const count = vi.fn(() => Promise.resolve(3));
+    const repo = new AdminPrismaRepository({
+      telegramBinding: { count },
+    } as unknown as PrismaService);
+
+    await expect(repo.countActiveTelegramBindings()).resolves.toBe(3);
+    expect(count).toHaveBeenCalledWith({ where: { active: true } });
+  });
+
+  it("listStages orders by sortOrder asc", async () => {
+    const findMany = vi.fn((..._args: unknown[]) => Promise.resolve([]));
+    const repo = new AdminPrismaRepository({
+      stage: { findMany },
+    } as unknown as PrismaService);
+
+    await repo.listStages();
+
+    expect(findMany).toHaveBeenCalledWith({
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, name: true, sortOrder: true },
+    });
+  });
+
+  it("listStageAssignmentCounts maps the groupBy rows", async () => {
+    const groupBy = vi.fn(() =>
+      Promise.resolve([{ projectId: "p1", _count: { _all: 4 } }]),
+    );
+    const repo = new AdminPrismaRepository({
+      stageAssignment: { groupBy },
+    } as unknown as PrismaService);
+
+    await expect(repo.listStageAssignmentCounts()).resolves.toEqual([
+      { projectId: "p1", count: 4 },
+    ]);
+  });
+});
+
+describe("AdminPrismaRepository — reopen-request lifecycle (reopen-request-lifecycle, ADR 0008)", () => {
+  const headSession: UserSession = {
+    userId: "head-1",
+    email: "head@test.local",
+    name: "Head",
+    role: "head",
+    reportingGroupId: "group-1",
+    viewerGroupAccess: ["group-1"],
+    activeReportId: null,
+    activeReportSectionId: null,
+  };
+  const adminSession: UserSession = { ...headSession, role: "admin" };
+
+  it("listReopenRequests scopes a head to its own group", async () => {
+    const findMany = vi.fn((..._args: unknown[]) => Promise.resolve([]));
+    const repo = new AdminPrismaRepository({
+      reopenRequest: { findMany },
+    } as unknown as PrismaService);
+
+    await repo.listReopenRequests({ status: "pending", session: headSession });
+
+    const call = findMany.mock.calls[0]?.[0] as { where?: unknown };
+    expect(call.where).toEqual({
+      status: "pending",
+      reportSection: { author: { reportingGroupId: { in: ["group-1"] } } },
+    });
+  });
+
+  it("listReopenRequests is global ({} scope) for admin", async () => {
+    const findMany = vi.fn((..._args: unknown[]) => Promise.resolve([]));
+    const repo = new AdminPrismaRepository({
+      reopenRequest: { findMany },
+    } as unknown as PrismaService);
+
+    await repo.listReopenRequests({
+      status: "pending",
+      session: adminSession,
+    });
+
+    const call = findMany.mock.calls[0]?.[0] as { where?: unknown };
+    expect(call.where).toEqual({
+      status: "pending",
+      reportSection: {},
+    });
+  });
+
+  it("listReopenRequests: status='all' drops the status filter", async () => {
+    const findMany = vi.fn((..._args: unknown[]) => Promise.resolve([]));
+    const repo = new AdminPrismaRepository({
+      reopenRequest: { findMany },
+    } as unknown as PrismaService);
+
+    await repo.listReopenRequests({ status: "all", session: adminSession });
+
+    const call = findMany.mock.calls[0]?.[0] as { where?: unknown };
+    expect(call.where).toEqual({ reportSection: {} });
+  });
+
+  it("countPendingReopenRequests scopes a head to its own group", async () => {
+    const count = vi.fn(() => Promise.resolve(2));
+    const repo = new AdminPrismaRepository({
+      reopenRequest: { count },
+    } as unknown as PrismaService);
+
+    await expect(repo.countPendingReopenRequests(headSession)).resolves.toBe(2);
+    expect(count).toHaveBeenCalledWith({
+      where: {
+        status: "pending",
+        reportSection: { author: { reportingGroupId: { in: ["group-1"] } } },
+      },
+    });
+  });
+
+  it("decideReopenRequest throws NotFound when the scoped re-load finds nothing", async () => {
+    const repo = new AdminPrismaRepository({
+      reopenRequest: { findFirst: vi.fn(() => Promise.resolve(null)) },
+    } as unknown as PrismaService);
+
+    await expect(
+      repo.decideReopenRequest({
+        id: "req-1",
+        decision: "approved",
+        reviewNote: null,
+        decidedBy: "head-1",
+        session: headSession,
+      }),
+    ).rejects.toBeInstanceOf(AdminReopenRequestNotFoundError);
+  });
+
+  it("decideReopenRequest: a loser of a concurrent decision reports already-processed", async () => {
+    const tx = {
+      reopenRequest: {
+        updateMany: vi.fn(() => Promise.resolve({ count: 0 })),
+      },
+    };
+    const repo = new AdminPrismaRepository({
+      reopenRequest: {
+        findFirst: vi.fn(() =>
+          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
+        ),
+      },
+      $transaction: vi.fn((cb: (t: typeof tx) => unknown) =>
+        Promise.resolve(cb(tx)),
+      ),
+    } as unknown as PrismaService);
+
+    await expect(
+      repo.decideReopenRequest({
+        id: "req-1",
+        decision: "approved",
+        reviewNote: null,
+        decidedBy: "head-1",
+        session: headSession,
+      }),
+    ).resolves.toEqual({ kind: "already-processed" });
+  });
+
+  it("decideReopenRequest: a winning approve flips the section", async () => {
+    const tx = {
+      reopenRequest: {
+        updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
+      },
+      reportSection: {
+        updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
+      },
+    };
+    const repo = new AdminPrismaRepository({
+      reopenRequest: {
+        findFirst: vi.fn(() =>
+          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
+        ),
+      },
+      $transaction: vi.fn((cb: (t: typeof tx) => unknown) =>
+        Promise.resolve(cb(tx)),
+      ),
+    } as unknown as PrismaService);
+
+    await expect(
+      repo.decideReopenRequest({
+        id: "req-1",
+        decision: "approved",
+        reviewNote: null,
+        decidedBy: "head-1",
+        session: headSession,
+      }),
+    ).resolves.toEqual({ kind: "decided", decision: "approved" });
+    expect(tx.reportSection.updateMany).toHaveBeenCalledWith({
+      where: { id: "sec-1", status: "submitted" },
+      data: expect.objectContaining({ status: "draft" }) as unknown,
+    });
+  });
+
+  it("decideReopenRequest: a stale approve auto-closes to rejected", async () => {
+    const tx = {
+      reopenRequest: {
+        updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
+        update: vi.fn(() => Promise.resolve({})),
+      },
+      reportSection: {
+        updateMany: vi.fn(() => Promise.resolve({ count: 0 })),
+      },
+    };
+    const repo = new AdminPrismaRepository({
+      reopenRequest: {
+        findFirst: vi.fn(() =>
+          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
+        ),
+      },
+      $transaction: vi.fn((cb: (t: typeof tx) => unknown) =>
+        Promise.resolve(cb(tx)),
+      ),
+    } as unknown as PrismaService);
+
+    await expect(
+      repo.decideReopenRequest({
+        id: "req-1",
+        decision: "approved",
+        reviewNote: null,
+        decidedBy: "head-1",
+        session: headSession,
+      }),
+    ).resolves.toEqual({ kind: "stale" });
+    expect(tx.reopenRequest.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("decideReopenRequest: a reject skips the section flip entirely", async () => {
+    const tx = {
+      reopenRequest: {
+        updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
+      },
+      reportSection: {
+        updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
+      },
+    };
+    const repo = new AdminPrismaRepository({
+      reopenRequest: {
+        findFirst: vi.fn(() =>
+          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
+        ),
+      },
+      $transaction: vi.fn((cb: (t: typeof tx) => unknown) =>
+        Promise.resolve(cb(tx)),
+      ),
+    } as unknown as PrismaService);
+
+    await expect(
+      repo.decideReopenRequest({
+        id: "req-1",
+        decision: "rejected",
+        reviewNote: null,
+        decidedBy: "head-1",
+        session: headSession,
+      }),
+    ).resolves.toEqual({ kind: "decided", decision: "rejected" });
+    expect(tx.reportSection.updateMany).not.toHaveBeenCalled();
   });
 });

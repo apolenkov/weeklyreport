@@ -6,6 +6,7 @@ import type {
 import { describe, expect, it } from "vitest";
 
 import { type AdminRepository, AdminService } from "./admin.service";
+import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
 
 /* ------------------------------------------------------------------ */
 /*  Constants & defaults                                               */
@@ -87,6 +88,7 @@ function createRepository(
   };
 
   return {
+    ...unusedAdminRepositoryStubs(),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async getSnapshot() {
       return structuredClone(currentSnapshot);

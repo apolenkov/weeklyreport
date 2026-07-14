@@ -53,4 +53,37 @@ export class SnapshotAdminService {
     await this.repository.removeUser(userId);
     return this.getSnapshot();
   }
+
+  /**
+   * Deactivate a user — sets `isActive=false`. Session revocation (the Redis
+   * fast-path so an in-flight JWT is rejected immediately) is the caller's
+   * job; this method only flips the durable flag.
+   */
+  async deactivateUser(userId: string): Promise<{ success: true }> {
+    await this.repository.deactivateUser(userId);
+    return { success: true };
+  }
+
+  /**
+   * Re-activate a user — sets `isActive=true`. Session restoration is the
+   * caller's job.
+   */
+  async activateUser(userId: string): Promise<{ success: true }> {
+    await this.repository.activateUser(userId);
+    return { success: true };
+  }
+
+  /**
+   * External-integrations status bundle for the Settings → Integrations
+   * sub-tab. v1 carries Telegram only. Telegram is considered «active» only
+   * when both the API has `TG_BOT_TOKEN` set (the `configured` flag,
+   * resolved by the caller from env) AND at least one TelegramBinding row
+   * has `active=true`. Either gate failing keeps the badge muted.
+   */
+  async integrationsStatus(
+    configured: boolean,
+  ): Promise<{ telegram: { configured: boolean; bindings: number } }> {
+    const bindings = await this.repository.countActiveTelegramBindings();
+    return { telegram: { configured, bindings } };
+  }
 }

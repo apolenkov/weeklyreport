@@ -8,9 +8,14 @@ import {
   type PeriodListItem,
   periodListItemSchema,
   type PeriodState,
+  type ReportSectionStatus,
 } from "@customreport/shared";
 
-import { AdminAccessError, type PeriodRowFromRepo } from "./admin-shared";
+import {
+  AdminAccessError,
+  type PeriodRowFromRepo,
+  type ReopenRequestRow,
+} from "./admin-shared";
 
 /** Length of an ISO calendar date (`YYYY-MM-DD`) after `toISOString().slice(0, n)`. */
 const ISO_DATE_LENGTH = 10;
@@ -211,6 +216,50 @@ export function toUpdateManualResult(row: {
     periodState: row.periodState,
     weekLabel: row.weekLabel,
   });
+}
+
+/** Wire shape of one reopen-request row for the Admin Panel / head dashboard. */
+export interface ReopenRequestListItem {
+  id: string;
+  reportSectionId: string;
+  reason: string | null;
+  status: "pending" | "approved" | "rejected";
+  reviewNote: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  requestedBy: { id: string; name: string; email: string };
+  reviewedBy: { id: string; name: string; email: string } | null;
+  sectionStatus: ReportSectionStatus;
+  report: {
+    id: string;
+    weekLabel: string | null;
+    periodStart: string;
+    periodEnd: string;
+  };
+}
+
+/** Serialize a repository reopen-request row to its wire shape (Date → ISO string). */
+export function toReopenRequestListItem(
+  row: ReopenRequestRow,
+): ReopenRequestListItem {
+  return {
+    id: row.id,
+    reportSectionId: row.reportSectionId,
+    reason: row.reason,
+    status: row.status,
+    reviewNote: row.reviewNote,
+    reviewedAt: row.reviewedAt?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
+    requestedBy: row.requestedBy,
+    reviewedBy: row.reviewedBy,
+    sectionStatus: row.sectionStatus,
+    report: {
+      id: row.report.id,
+      weekLabel: row.report.weekLabel,
+      periodStart: row.report.periodStart.toISOString(),
+      periodEnd: row.report.periodEnd.toISOString(),
+    },
+  };
 }
 
 /** Friendly overlap error pointing at the blocking row's admin-visible dates. */

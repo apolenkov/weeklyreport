@@ -8,6 +8,8 @@ import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import { APP_LOGGER } from "../../lib/audit-logger.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { PolicyApplicatorService } from "../reminders/index.js";
+import { ActionLogPrismaRepository } from "./action-log.prisma-repository";
+import { ActionLogService } from "./action-log.service";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
 import { AdminService } from "./admin.service";
 import { SessionRevocationService } from "./session-revocation.service";
@@ -37,7 +39,14 @@ import { SessionRevocationService } from "./session-revocation.service";
         new SessionRevocationService(undefined, env),
       inject: [ENV_CONFIG],
     },
+    ActionLogPrismaRepository,
+    {
+      provide: ActionLogService,
+      useFactory: (repo: ActionLogPrismaRepository) =>
+        new ActionLogService(repo),
+      inject: [ActionLogPrismaRepository],
+    },
   ],
-  exports: [AdminService, SessionRevocationService],
+  exports: [AdminService, SessionRevocationService, ActionLogService],
 })
 export class AdminModule {}

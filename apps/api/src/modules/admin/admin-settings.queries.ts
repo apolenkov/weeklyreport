@@ -72,6 +72,13 @@ export async function getSettings(prisma: PrismaService): Promise<AppSettings> {
   return rowToAppSettings(row);
 }
 
+/** Count of active `TelegramBinding` rows, for the Settings → Integrations sub-tab. */
+export async function countActiveTelegramBindings(
+  prisma: PrismaService,
+): Promise<number> {
+  return prisma.telegramBinding.count({ where: { active: true } });
+}
+
 export async function updateSettings(
   prisma: PrismaService,
   data: Partial<AppSettings>,

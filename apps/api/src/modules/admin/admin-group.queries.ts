@@ -175,3 +175,32 @@ export async function listStageAssignments(
     }),
   );
 }
+
+/**
+ * Full SDLC stage catalogue. Used by the Stage Assignment editor so it can
+ * render *every* stage (including unassigned ones), not just the stages that
+ * already have an assignment row for the project.
+ */
+export async function listStages(
+  prisma: PrismaService,
+): Promise<{ id: string; name: string; sortOrder: number }[]> {
+  return prisma.stage.findMany({
+    orderBy: { sortOrder: "asc" },
+    select: { id: true, name: true, sortOrder: true },
+  });
+}
+
+/**
+ * Per-project assignment count for the products-tab "X/7 stages" header.
+ * Light query (single GROUP BY) so we can render the count without loading
+ * every assignment row.
+ */
+export async function listStageAssignmentCounts(
+  prisma: PrismaService,
+): Promise<{ projectId: string; count: number }[]> {
+  const rows = await prisma.stageAssignment.groupBy({
+    by: ["projectId"],
+    _count: { _all: true },
+  });
+  return rows.map((r) => ({ projectId: r.projectId, count: r._count._all }));
+}
