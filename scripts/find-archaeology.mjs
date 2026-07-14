@@ -74,11 +74,20 @@ const commentPart = (line) => {
 // .only/.skip/.each/x*/f* variants) — the one string-literal shape archaeology
 // reliably hides in, since it renders in the reporter output the way a
 // comment never does. Grabs the first quoted literal on the call line.
+// The .each curried form puts the title in a SECOND call — same-line
+// `it.each(tbl)("title", …)` or, after a multi-line table, a continuation
+// line shaped `])("title", …)` — so those two shapes get their own patterns.
+const TEST_TITLE_PATTERNS = [
+  /\b[xf]?(?:describe|it|test|context)(?:\.\w+)*\s*\(\s*(['"`])((?:\\.|(?!\1).)*)\1/,
+  /\b[xf]?(?:describe|it|test)\.each\s*\([^)]*\)\s*\(\s*(['"`])((?:\\.|(?!\1).)*)\1/,
+  /^[\s\]}]*\)\s*\(\s*(['"`])((?:\\.|(?!\1).)*)\1/,
+];
 const testTitlePart = (line) => {
-  const m = line.match(
-    /\b[xf]?(?:describe|it|test|context)(?:\.\w+)*\s*\(\s*(['"`])((?:\\.|(?!\1).)*)\1/,
-  );
-  return m ? m[2] : null;
+  for (const pattern of TEST_TITLE_PATTERNS) {
+    const m = line.match(pattern);
+    if (m) return m[2];
+  }
+  return null;
 };
 
 const IGNORE =
