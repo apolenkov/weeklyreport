@@ -37,23 +37,55 @@ interface AuthRouteDeps {
   env: NodeJS.ProcessEnv;
 }
 
+function rejectSamlAssertion(
+  deps: Pick<AuthRouteDeps, "auditLogger" | "frontendUrl">,
+  req: Request,
+  res: Response,
+): void {
+  deps.auditLogger.loginFail({
+    userId: "anonymous",
+    role: null,
+    ip: req.ip ?? "unknown",
+    reason: "invalid_assertion",
+  });
+  loginAttemptsTotal.inc({ method: "saml", outcome: "fail" });
+  res.redirect(`${deps.frontendUrl}/auth/error?reason=invalid_assertion`);
+}
+
+export function createSamlAuthenticationCallback(
+  deps: Pick<AuthRouteDeps, "auditLogger" | "frontendUrl">,
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): passport.AuthenticateCallback {
+  return (error, user) => {
+    if (error || !user) {
+      rejectSamlAssertion(deps, req, res);
+      return;
+    }
+    req.user = user;
+    next();
+  };
+}
+
+function createSamlAuthenticationHandler(deps: AuthRouteDeps): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const authenticate = passport.authenticate(
+      "saml",
+      { session: false },
+      createSamlAuthenticationCallback(deps, req, res, next),
+    ) as RequestHandler;
+    authenticate(req, res, next);
+  };
+}
+
 function createSamlCallbackHandler(deps: AuthRouteDeps): RequestHandler {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const profile = req.user as SamlProfile | undefined;
 
       if (!profile) {
-        // SAML callback hit without a passport-attached profile — emit
-        // login-fail even when role/userId are unknown so the audit trail
-        // still captures the attempt.
-        deps.auditLogger.loginFail({
-          userId: "anonymous",
-          role: null,
-          ip: req.ip ?? "unknown",
-          reason: "invalid_assertion",
-        });
-        loginAttemptsTotal.inc({ method: "saml", outcome: "fail" });
-        res.redirect(`${deps.frontendUrl}/auth/error?reason=invalid_assertion`);
+        rejectSamlAssertion(deps, req, res);
         return;
       }
 
@@ -203,10 +235,7 @@ export function mountAuthRoutes(
     "/auth/saml/callback",
     express.urlencoded({ extended: false }),
     passport.initialize(),
-    passport.authenticate("saml", {
-      session: false,
-      failureRedirect: `${frontendUrl}/auth/error?reason=invalid_assertion`,
-    }) as RequestHandler,
+    createSamlAuthenticationHandler(deps),
     createSamlCallbackHandler(deps),
   );
 
