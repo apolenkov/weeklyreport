@@ -1137,6 +1137,63 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
     expect(section.decisions.map((d) => d.text)).toEqual(["Shared decision"]);
   });
 
+  it("strips reviewer comments from every retained shared-product record", async () => {
+    const reviewerComment = {
+      id: "99999999-9999-4999-8999-999999999991",
+      reviewerId: "99999999-9999-4999-8999-999999999992",
+      reviewerName: "Private Reviewer",
+      text: "Private review feedback",
+      createdAt: new Date("2026-04-06T12:00:00Z"),
+    };
+    const foreignSection = foreignSectionWithTwoProducts();
+    const sectionWithComments: ReportSectionReadModel = {
+      ...foreignSection,
+      items: foreignSection.items.map((row) => ({
+        ...row,
+        comments: [{ ...reviewerComment }],
+      })),
+      risks: foreignSection.risks.map((row) => ({
+        ...row,
+        comments: [{ ...reviewerComment }],
+      })),
+      decisions: foreignSection.decisions.map((row) => ({
+        ...row,
+        comments: [{ ...reviewerComment }],
+      })),
+    };
+    const repo = crossAuthorRepo({
+      getSectionForPeriod: vi
+        .fn()
+        .mockImplementation((_reportId: string, authorId: string) =>
+          forPeriod(
+            authorId === OTHER_USER_ID
+              ? sectionWithComments
+              : structuredClone(draftSection),
+            false,
+          ),
+        ),
+    });
+    const service = new LeadFormService(repo);
+
+    const { section } = await service.getByPeriod(
+      REPORT_ID,
+      AUTHOR_ID,
+      "lead",
+      OTHER_USER_ID,
+    );
+    const retainedRows = [
+      ...section.items,
+      ...section.risks,
+      ...section.decisions,
+    ];
+    const serialized = JSON.stringify(section);
+
+    expect(retainedRows).toHaveLength(4);
+    expect(retainedRows.every((row) => !("comments" in row))).toBe(true);
+    expect(serialized).not.toContain(reviewerComment.reviewerName);
+    expect(serialized).not.toContain(reviewerComment.text);
+  });
+
   it("returns the full section for the author's own read (no filter)", async () => {
     const service = new LeadFormService(crossAuthorRepo());
 

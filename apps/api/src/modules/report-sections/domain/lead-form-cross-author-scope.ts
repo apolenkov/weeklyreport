@@ -132,10 +132,11 @@ export async function readSectionForByPeriod(
  *
  * Ceiling: this shared-product lens never exposes a field the curated Everyone
  * lens (`CrossAuthorSectionRow`) omits. `activities` (per-activity status +
- * free-text notes) and `reviews` are on this read model but absent from the
- * Everyone lens, so they are stripped — `activities` emptied (the read model
- * requires the array), `reviews` dropped — rather than passed through the
- * spread.
+ * free-text notes), `reviews`, per-record `comments`, and the item
+ * `pausedReason` free text are on this read model but absent from the Everyone
+ * lens, so they are stripped — `activities` emptied (the read model requires
+ * the array), `reviews` dropped, and comments/pausedReason omitted from
+ * retained rows — rather than passed through the spread.
  */
 export function filterSectionToSharedProducts(
   section: ReportSectionReadModel,
@@ -144,19 +145,19 @@ export function filterSectionToSharedProducts(
   // activity-first-class: this lens is product-scoped — an activity-parented
   // item/risk (null product FK) is on no shared product and is dropped, the
   // same way a non-shared-product decision is.
-  const items = section.items.filter(
-    (i) => i.projectId != null && sharedProductIds.has(i.projectId),
-  );
-  const risks = section.risks.filter(
-    (r) => r.projectId != null && sharedProductIds.has(r.projectId),
-  );
+  const items = section.items
+    .filter((i) => i.projectId != null && sharedProductIds.has(i.projectId))
+    .map(stripItemAuthorPrivateFields);
+  const risks = section.risks
+    .filter((r) => r.projectId != null && sharedProductIds.has(r.projectId))
+    .map(stripRecordComments);
   // Mirror getCrossAuthorContent's `sharedIds.has(d.productId)`: a cross-author
   // co-lead view drops every decision not on a shared product — INCLUDING a
   // null-productId (cross-cutting/group) decision — so this byPeriod lens
   // discloses exactly what the curated Everyone lens does, never more.
-  const decisions = section.decisions.filter(
-    (d) => d.productId != null && sharedProductIds.has(d.productId),
-  );
+  const decisions = section.decisions
+    .filter((d) => d.productId != null && sharedProductIds.has(d.productId))
+    .map(stripRecordComments);
   const projects = section.projects.filter((p) =>
     sharedProductIds.has(p.projectId),
   );
@@ -180,4 +181,20 @@ export function filterSectionToSharedProducts(
     referencedProjects,
     activities: [],
   };
+}
+
+/** Reviewer feedback belongs to the section author and is outside the co-lead lens. */
+function stripRecordComments<T extends { comments?: unknown }>(
+  row: T,
+): Omit<T, "comments"> {
+  const { comments, ...restOfRow } = row;
+  return restOfRow;
+}
+
+/** An item's pause rationale is the author's free text; the Everyone lens omits it. */
+function stripItemAuthorPrivateFields<
+  T extends { comments?: unknown; pausedReason?: unknown },
+>(row: T): Omit<T, "comments" | "pausedReason"> {
+  const { comments, pausedReason, ...restOfRow } = row;
+  return restOfRow;
 }
