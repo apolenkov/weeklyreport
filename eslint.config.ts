@@ -948,7 +948,6 @@ export default defineConfig([
       "apps/web/src/shared/ui/navigation/nav-bar.tsx", // one role-aware nav widget; MobileNav/coming-soon have no external consumers
       "apps/web/src/features/dashboard/ui/dashboard-page.tsx", // one head-dashboard page; private load-issue helper only
       "apps/web/src/features/report-sections/ui/product-accordion.tsx", // one accordion for one ProductReport
-      "apps/web/src/features/report-sections/ui/weekly-report-page.tsx", // one page: data load + 3 mutations + render
       "apps/web/src/features/period/ui/current-week-section.tsx", // 255 lines: FSD relocation forced two model imports to multi-line (longer paths), tipping it 5 over; content unchanged from its <=250 pre-move form. Candidate for a small extraction.
       "apps/web/src/features/report-sections/model/lead-form.ts", // one LeadForm mapping pipeline; types-out alone stays >300, further split fragments it
       // God-files (700+), permanent-exempt: a namespace split is mechanically
@@ -1013,7 +1012,6 @@ export default defineConfig([
       "apps/web/src/shared/ui/navigation/nav-bar.tsx", // role-based link filtering + session/hydration across layout slots
       "apps/web/src/features/slides/model/section-slide-utils.ts", // 4 domain transforms; branch count inherent to the data they model
       "apps/web/src/features/report-sections/ui/product-accordion.tsx", // 6 status-aware sections; uniform accordion pattern
-      "apps/web/src/features/report-sections/ui/weekly-report-page.tsx", // role-aware state machine: query status + publish + filter + grouping
     ],
     rules: { complexity: "off" },
   },
