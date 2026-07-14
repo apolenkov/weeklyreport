@@ -8,7 +8,7 @@ import { assertRole } from "./role";
 // Unit tests target `assertRole` — the pure role-check contract.
 // The tRPC middleware adapter (buildRoleMiddleware, api) is exercised at
 // integration level via apps/api/src/infrastructure/trpc/trpc.middleware.test.ts
-// (existing headProcedure scenarios) plus the AUTH-03 default-deny coverage
+// (existing headProcedure scenarios) plus the default-deny coverage
 // test. assertRole is what enforces the actual UNAUTHORIZED / FORBIDDEN
 // semantics — testing it directly keeps coverage tight and decoupled from
 // tRPC internals.

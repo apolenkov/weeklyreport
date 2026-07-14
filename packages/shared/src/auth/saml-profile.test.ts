@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { SamlProfileSchema } from "./saml-profile";
 
-describe("SamlProfileSchema (AUTH-02 / structured-user-name: role-free)", () => {
+describe("SamlProfileSchema (structured-user-name: role-free)", () => {
   it("parses a valid profile (no role attribute)", () => {
     const result = SamlProfileSchema.parse({
       nameID: "u-1",

@@ -11,7 +11,7 @@ function buildStubRouter() {
   return createAppRouter(stubDeps);
 }
 
-describe("admin.integrationsStatus + admin.testTelegramSend (Phase 55 / UFB-056)", () => {
+describe("admin.integrationsStatus + admin.testTelegramSend", () => {
   it("exposes admin.integrationsStatus as a leaf procedure", () => {
     const router = buildStubRouter();
     const procedures = (

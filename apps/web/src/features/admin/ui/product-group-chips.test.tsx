@@ -24,7 +24,7 @@ import { ProductGroupChips } from "./product-group-chips";
 
 const PRODUCT_ID = "22222222-2222-4222-8222-2222222222a1";
 
-describe("ProductGroupChips — UFB-054 (Phase 56-C)", () => {
+describe("ProductGroupChips", () => {
   it("renders a loading hint while the query is in flight", () => {
     useQueryMock.mockReturnValue({ isLoading: true, data: undefined });
     render(<ProductGroupChips productId={PRODUCT_ID} />);

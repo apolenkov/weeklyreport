@@ -58,7 +58,7 @@ function createSpyLogger(): AppLogger {
   return logger;
 }
 
-describe("TelegramProcessor (Phase 55 / UFB-056)", () => {
+describe("TelegramProcessor", () => {
   it("forwards chatId + text to the injected adapter", async () => {
     const adapter = new MockTelegramAdapter();
     const proc = new TestProcessor(adapter, STUB_ENV);

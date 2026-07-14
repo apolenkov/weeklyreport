@@ -373,7 +373,7 @@ describe("ArchiveService — contract tests", () => {
       expect(() => archiveReportDetailSchema.parse(result)).not.toThrow();
     });
 
-    it("returns report with sections sorted by authorName (ARC-010 P0)", async () => {
+    it("returns report with sections sorted by authorName", async () => {
       const reportId = "22222222-2222-4222-8222-222222222222";
       const sectionZ: ReportSectionReadModel = {
         ...sectionLead1,
@@ -396,7 +396,7 @@ describe("ArchiveService — contract tests", () => {
       expect(names).toContain("Zulu Lead");
     });
 
-    it("unpublished reports are not in archive (ARC-012 P0)", async () => {
+    it("unpublished reports are not in archive", async () => {
       // The archive service only lists published reports from repository
       // If repo returns empty (because no published), list should be empty
       const repo = createInMemoryRepository([], new Map());

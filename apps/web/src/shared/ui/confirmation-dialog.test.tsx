@@ -205,7 +205,7 @@ describe("ConfirmationDialog", () => {
     expect(trigger).toHaveFocus();
 
     rerender(<Harness open={true} />);
-    // Focus moved into the dialog (Cancel button), off the trigger.
+    // Focus lands on the dialog's Cancel button, off the trigger.
     expect(trigger).not.toHaveFocus();
 
     rerender(<Harness open={false} />);

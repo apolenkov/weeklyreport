@@ -157,7 +157,7 @@ describe("email-dispatch integration (P8)", () => {
     const message = await pollForMessage(recipient);
 
     expect(message).not.toBeNull();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- intentional non-null assertion (migrated from eslint-disable)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- non-null asserted right after an explicit not-null check
     const msg = message!;
 
     // Recipient
@@ -215,7 +215,7 @@ describe("email-dispatch integration (P8)", () => {
 
     const message = await pollForMessage(headRecipient);
     expect(message).not.toBeNull();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- intentional non-null assertion (migrated from eslint-disable)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- non-null asserted right after an explicit not-null check
     const msg = message!;
 
     expect(msg.To.some((a) => a.Address === headRecipient)).toBe(true);

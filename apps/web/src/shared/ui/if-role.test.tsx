@@ -39,7 +39,7 @@ function mockMe(role: string | null) {
   });
 }
 
-describe("IfRole — Phase 48-C role-guard wrapper", () => {
+describe("IfRole — role-guard wrapper", () => {
   beforeEach(() => {
     useQueryMock.mockReset();
   });

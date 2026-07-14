@@ -271,7 +271,7 @@ describe("business-date: computeDeadline", () => {
 });
 
 /**
- * Phase 32-M7 / M-07 — UTC-stable week-boundary calc.
+ * UTC-stable week-boundary calc.
  *
  * Pre-fix: getCurrentWeekBounds used local-time setDate/setHours, which
  * drifts across DST transitions and varies by host TZ (Docker default is
@@ -281,11 +281,8 @@ describe("business-date: computeDeadline", () => {
  * Post-fix: bounds are computed entirely with Date.UTC() — same input
  * Date produces the same Monday 00:00:00 UTC and Sunday 23:59:59.999 UTC
  * regardless of process.env.TZ.
- *
- * refactor-auth-exemplary-layering: moved here with the function from
- * `modules/auth/auth.routes.test.ts`.
  */
-describe("getCurrentWeekBounds — UTC-stable week boundaries (Phase 32-M7 / M-07)", () => {
+describe("getCurrentWeekBounds — UTC-stable week boundaries", () => {
   it("returns Monday 00:00:00 UTC and Sunday 23:59:59.999 UTC for a mid-week date", () => {
     // Wednesday 2026-04-29 12:34:56 UTC — week is Mon 2026-04-27 .. Sun 2026-05-03
     const wed = new Date("2026-04-29T12:34:56.000Z");
@@ -361,13 +358,13 @@ describe("getCurrentWeekBounds — UTC-stable week boundaries (Phase 32-M7 / M-0
 });
 
 /**
- * UFB-048 / Phase 50-A — periodLengthDays setting drives `periodEnd`.
+ * periodLengthDays setting drives `periodEnd`.
  *
- * Pre-50-A: `periodEnd` was always Monday + 6 days (Mon-Sun = 7-day week).
- * Post-50-A: `getCurrentWeekBounds(date, settings.periodLengthDays)`
+ * Before this setting existed, `periodEnd` was always Monday + 6 days
+ * (Mon-Sun = 7-day week). Now `getCurrentWeekBounds(date, settings.periodLengthDays)`
  * recomputes `periodEnd` so admin can switch to e.g. 14-day cycles.
  */
-describe("getCurrentWeekBounds — periodLengthDays override (Phase 50-A)", () => {
+describe("getCurrentWeekBounds — periodLengthDays override", () => {
   it("computes periodEnd = periodStart + (length - 1) days at 23:59:59.999 UTC for length=14", () => {
     // Thursday 2026-04-30 — Monday anchor is 2026-04-27, +13 days = 2026-05-10.
     const thu = new Date("2026-04-30T09:00:00.000Z");

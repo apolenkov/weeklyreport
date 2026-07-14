@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { assertNoDevAuthInProduction } from "./dev-auth-fence";
 
-describe("assertNoDevAuthInProduction (Phase 29-04 / AUTH-01 boot fence)", () => {
+describe("assertNoDevAuthInProduction (boot fence)", () => {
   it("throws when NODE_ENV=production AND AUTH_DEV_MODE=true", () => {
     expect(() =>
       assertNoDevAuthInProduction({

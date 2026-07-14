@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { PublishLockButton } from "./publish-lock-button";
 
-describe("PublishLockButton (Phase 22 — plan 22-05)", () => {
+describe("PublishLockButton", () => {
   it('renders "Publish & Lock" when periodStatus is open', () => {
     render(
       <PublishLockButton

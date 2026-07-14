@@ -244,9 +244,9 @@ describe("RemindersService — contract tests", () => {
     });
   });
 
-  // P0/P1 Regression — execution edge cases (REM-001..012)
+  // Regression — execution edge cases
   describe("requestReminderExecution — regression", () => {
-    it("execution has correct scheduledFor from rule.fireAt (REM-001)", async () => {
+    it("execution has correct scheduledFor from rule.fireAt", async () => {
       const service = new RemindersService(createRepository(activeRule));
       const execution = await service.requestReminderExecution(
         activeRule.id,
@@ -259,7 +259,7 @@ describe("RemindersService — contract tests", () => {
       );
     });
 
-    it("execution has correct reportId from rule (REM-001)", async () => {
+    it("execution has correct reportId from rule", async () => {
       const service = new RemindersService(createRepository(activeRule));
       const execution = await service.requestReminderExecution(
         activeRule.id,
@@ -280,7 +280,7 @@ describe("RemindersService — contract tests", () => {
       expect(execution.errorMessage).toBeNull();
     });
 
-    it("different recipients create different executions (REM-002 dedup by email)", async () => {
+    it("different recipients create different executions (dedup by email)", async () => {
       const service = new RemindersService(createRepository(activeRule));
 
       const exec1 = await service.requestReminderExecution(

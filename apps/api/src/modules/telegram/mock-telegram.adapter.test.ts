@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MockTelegramAdapter } from "./mock-telegram.adapter";
 
-describe("MockTelegramAdapter (Phase 55 / UFB-056)", () => {
+describe("MockTelegramAdapter", () => {
   let writeSpy: MockInstance<typeof process.stderr.write>;
 
   beforeEach(() => {

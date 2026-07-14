@@ -36,7 +36,7 @@ describe("roleSchema", () => {
     expect(roleSchema.safeParse("viewer").success).toBe(true);
   });
 
-  it('accepts "admin" — Phase 32-C / H-01 widened DB Role enum to include admin', () => {
+  it('accepts "admin"', () => {
     expect(roleSchema.safeParse("admin").success).toBe(true);
   });
 
@@ -99,10 +99,10 @@ describe("userSessionSchema — required fields", () => {
 });
 
 // ---------------------------------------------------------------------------
-// userSessionSchema — nullable JWT fields (BUG-009)
+// userSessionSchema — nullable JWT fields
 // ---------------------------------------------------------------------------
 
-describe("userSessionSchema — nullable JWT fields (BUG-009)", () => {
+describe("userSessionSchema — nullable JWT fields", () => {
   it("accepts activeReportId as null", () => {
     const session = { ...validSession(), activeReportId: null };
     const result = userSessionSchema.safeParse(session);

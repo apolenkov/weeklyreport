@@ -748,7 +748,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
 });
 
 // ---------------------------------------------------------------------------
-// UFB-049 / Phase 50-B: submitSection deadline gate (grace + late matrix)
+// submitSection deadline gate (grace + late matrix)
 //
 // Combinations under test:
 //
@@ -764,7 +764,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
 //   └──────────────────────┴──────────────────────┴───────────────────────┘
 // ---------------------------------------------------------------------------
 
-describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
+describe("ReportSectionsService — deadline gate", () => {
   function createGracedRepository(opts: {
     section?: ReportSectionReadModel;
     deadline: Date;
@@ -930,11 +930,11 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
   });
 });
 
-// Phase 52-A (UFB-054): product-telemetry counters/histogram. Verifies the
+// product-telemetry counters/histogram. Verifies the
 // submit path bumps `customreport_sections_submitted_total{late}` with the
 // stamped label, and observes a positive value in the latency histogram
 // when submission lands AFTER the deadline.
-describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
+describe("ReportSectionsService — product telemetry", () => {
   function buildRepo(deadline: Date): ReportSectionsRepository {
     const section: ReportSectionReadModel = {
       reportSectionId: "11111111-1111-4111-8111-111111111111",
@@ -1100,7 +1100,7 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
 async function counterValue(
   counter: {
     get(): Promise<{
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record (migrated from eslint-disable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record shape
       values: { value: number; labels: Record<string, any> }[];
     }>;
   },

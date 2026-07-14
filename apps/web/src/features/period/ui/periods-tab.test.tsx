@@ -110,11 +110,11 @@ function renderTab(args?: {
     },
     { path: ["admin", "archivePeriod"], mutation: true },
     { path: ["admin", "unarchivePeriod"], mutation: true },
-    // UFB-063: admin.createPeriodManual mutation surface.
+    // admin.createPeriodManual mutation surface.
     { path: ["admin", "createPeriodManual"], mutation: true },
-    // UFB-067: edit-period mutation surface used by the row-level Edit icon.
+    // Edit-period mutation surface used by the row-level Edit icon.
     { path: ["admin", "updatePeriodManual"], mutation: true },
-    // A27 (UAT-v7 2026-05-12): delete period (draft/scheduled only).
+    // Delete period (draft/scheduled only).
     { path: ["admin", "deleteReport"], mutation: true },
     { path: ["period", "publish"], mutation: true },
     { path: ["period", "reopen"], mutation: true },
@@ -133,7 +133,7 @@ function renderTab(args?: {
   captured["admin.deleteReport"].mutationFn.mockResolvedValue({
     success: true,
   });
-  // UFB-063: createPeriodManual server returns the new row's shape.
+  // createPeriodManual server returns the new row's shape.
   captured["admin.createPeriodManual"].mutationFn.mockResolvedValue({
     periodId: "11111111-1111-4111-8111-111111111199",
     periodStart: new Date("2026-05-18T00:00:00Z"),
@@ -141,7 +141,7 @@ function renderTab(args?: {
     deadline: new Date("2026-05-22T15:00:00Z"),
     periodState: "scheduled",
   });
-  // UFB-067: updatePeriodManual server returns the updated row.
+  // updatePeriodManual server returns the updated row.
   captured["admin.updatePeriodManual"].mutationFn.mockResolvedValue({
     periodId: "11111111-1111-4111-8111-111111111102",
     periodStart: new Date("2026-05-04T00:00:00Z"),
@@ -173,7 +173,7 @@ function renderTab(args?: {
 
 // ----- tests ---------------------------------------------------------
 
-describe("PeriodsTab (UFB-052 / Phase 51-B)", () => {
+describe("PeriodsTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -237,8 +237,8 @@ describe("PeriodsTab (UFB-052 / Phase 51-B)", () => {
     });
   });
 
-  // UFB-067: inline icons replaced the kebab dropdown. Tests assert the
-  // icon visibility directly without opening a menu.
+  // Row actions render as inline icons, not a kebab dropdown. Tests assert
+  // the icon visibility directly without opening a menu.
 
   it("inline icons: published-fresh row shows Edit + Reopen + Archive", async () => {
     renderTab();
@@ -353,7 +353,7 @@ describe("PeriodsTab (UFB-052 / Phase 51-B)", () => {
     });
   });
 
-  it("UFB-067: kebab dropdown is gone — no action-menu-trigger-* in DOM", async () => {
+  it("kebab dropdown is gone — no action-menu-trigger-* in DOM", async () => {
     renderTab();
     await waitFor(() => {
       expect(
@@ -409,10 +409,10 @@ describe("PeriodsTab (UFB-052 / Phase 51-B)", () => {
 });
 
 // ---------------------------------------------------------------------
-// UFB-063: «New period» button + dialog + portal-anchored kebab
+// «New period» button + dialog
 // ---------------------------------------------------------------------
 
-describe("PeriodsTab — «New period» dialog (UFB-063)", () => {
+describe("PeriodsTab — «New period» dialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -476,15 +476,15 @@ describe("PeriodsTab — «New period» dialog (UFB-063)", () => {
     });
   });
 
-  // UFB-067: portal test removed — the kebab dropdown is gone (icons are
-  // inline now), and there is no dropdown to portal anywhere.
+  // Row actions are inline icons, not a dropdown, so there is nothing to
+  // portal and no portal test here.
 });
 
 // ---------------------------------------------------------------------
-// UFB-067: «Edit period» dialog (mode='edit') + inline-icon Edit action
+// «Edit period» dialog (mode='edit') + inline-icon Edit action
 // ---------------------------------------------------------------------
 
-describe("PeriodsTab — «Edit period» dialog (UFB-067)", () => {
+describe("PeriodsTab — «Edit period» dialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

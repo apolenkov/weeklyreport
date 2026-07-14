@@ -195,9 +195,9 @@ describe("PublicationService", () => {
     expect(published.publishedAt).toBeInstanceOf(Date);
   });
 
-  // UFB-049 / Phase 50-B: scheduler-driven auto-publish bypasses session
-  // attribution. publishedById stays null and publishedByName='system' so
-  // the head dashboard can show a "auto-published" badge by comparing.
+  // Scheduler-driven auto-publish bypasses session attribution.
+  // publishedById stays null and publishedByName='system' so the head
+  // dashboard can show a "auto-published" badge by comparing.
   it("publishAuto stamps system attribution (publishedById=null)", async () => {
     const service = new PublicationService(createRepository(assembledReport));
 
@@ -222,9 +222,9 @@ describe("PublicationService", () => {
     expect(second.publishedAt).toEqual(first.publishedAt);
   });
 
-  // Phase 52-A (UFB-054): product-telemetry counters bump exactly once per
-  // successful publish, for both the manual and auto paths. Both paths use
-  // `state='published'` so the funnel rolls up cleanly.
+  // Product-telemetry counters bump exactly once per successful publish,
+  // for both the manual and auto paths. Both paths use `state='published'`
+  // so the funnel rolls up cleanly.
   it("publishReport increments product KPI counters once on success", async () => {
     const service = new PublicationService(createRepository(assembledReport));
     const submittedBefore = await getCounterValue(
@@ -431,7 +431,7 @@ describe("PublicationService", () => {
 async function getCounterValue(
   counter: {
     get(): Promise<{
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record (migrated from eslint-disable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record shape
       values: { value: number; labels: Record<string, any> }[];
     }>;
   },

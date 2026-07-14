@@ -17,7 +17,7 @@ import {
 import { createAppRouter } from "../trpc.router.js";
 
 // ---------------------------------------------------------------------------
-// AUTH-03 default-deny coverage gate (Phase 27 / Plan 04).
+// Default-deny coverage gate.
 //
 // Walks `appRouter._def.procedures` and asserts every leaf procedure was
 // constructed via one of the five recognised base procedures:
@@ -26,7 +26,7 @@ import { createAppRouter } from "../trpc.router.js";
 //   - leadProcedure
 //   - headProcedure
 //   - viewerProcedure
-//   - adminProcedure   (UFB-038: admin-only, no longer a head alias)
+//   - adminProcedure   (admin-only, not a head alias)
 //
 // Detection strategy: each tRPC procedure carries `_def.middlewares` — an
 // array whose first slot is the shared `loggingMiddleware` reference and
@@ -183,7 +183,7 @@ export function findUncoveredProcedures(router: {
   return offending;
 }
 
-describe("AUTH-03 default-deny coverage gate", () => {
+describe("default-deny coverage gate", () => {
   it("every AppRouter leaf procedure uses one of the five recognised role bases", () => {
     // Build the AppRouter with stub deps — we never invoke any procedure here,
     // we only inspect _def.middlewares identity. The deps shape is satisfied

@@ -470,7 +470,7 @@ describe("PublicationService — contract tests", () => {
   /* ---------------------------------------------------------------- */
 
   describe("publishReport — regression", () => {
-    it("publish sets status to published (REV-011)", async () => {
+    it("publish sets status to published", async () => {
       const report = makeReport({ sections: [sectionAlpha] });
       const service = new PublicationService(createRepository(report));
 
@@ -478,7 +478,7 @@ describe("PublicationService — contract tests", () => {
       expect(published.status).toBe("published");
     });
 
-    it("re-publish of already published report rejected (REV-012)", async () => {
+    it("re-publish of already published report rejected", async () => {
       const report = makeReport({
         status: "published",
         publishedAt: new Date("2026-04-10T16:00:00.000Z"),
@@ -493,7 +493,7 @@ describe("PublicationService — contract tests", () => {
       ).rejects.toThrow("Report has already been published.");
     });
 
-    it("published report includes all lead sections data (REV-020)", async () => {
+    it("published report includes all lead sections data", async () => {
       const report = makeReport({
         sections: [sectionAlpha, sectionBravo, sectionCharlie],
       });

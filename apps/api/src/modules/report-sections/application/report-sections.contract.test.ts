@@ -780,7 +780,7 @@ describe("ReportSectionsService — edge cases", () => {
 });
 
 // ---------------------------------------------------------------------------
-// P0/P1 Regression — traffic light statuses (LEAD-060)
+// Regression — traffic light statuses
 // ---------------------------------------------------------------------------
 
 describe("ReportSectionsService — traffic light all valid statuses", () => {
@@ -826,7 +826,7 @@ describe("ReportSectionsService — traffic light all valid statuses", () => {
 });
 
 // ---------------------------------------------------------------------------
-// P1 Regression — items with varied tag/workflowStatus combos (LEAD-070)
+// Regression — items with varied tag/workflowStatus combos
 // ---------------------------------------------------------------------------
 
 describe("ReportSectionsService — item tag and workflowStatus combinations", () => {
@@ -872,7 +872,7 @@ describe("ReportSectionsService — item tag and workflowStatus combinations", (
 });
 
 // ---------------------------------------------------------------------------
-// P0 Regression — submit double-submit idempotency (LEAD-050)
+// Regression — submit double-submit idempotency
 // ---------------------------------------------------------------------------
 
 describe("ReportSectionsService — double submit rejected", () => {
@@ -889,7 +889,7 @@ describe("ReportSectionsService — double submit rejected", () => {
     });
   });
 
-  it("saveDraft after submit is rejected (LEAD-051)", async () => {
+  it("saveDraft after submit is rejected", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await service.submitSection(validSubmit());
@@ -901,7 +901,7 @@ describe("ReportSectionsService — double submit rejected", () => {
 });
 
 // ---------------------------------------------------------------------------
-// P1 Regression — Zod validation for risks and decisions (LEAD-080, LEAD-085)
+// Regression — Zod validation for risks and decisions
 // ---------------------------------------------------------------------------
 
 describe("ReportSectionsService — risk/decision Zod validation", () => {

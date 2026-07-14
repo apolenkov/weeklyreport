@@ -3,9 +3,8 @@ import { describe, expect, it } from "vitest";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { renderEmail } from "./render-template";
 
-// UFB-047 / Phase 49-01: brand snapshot now travels with every Phase-28+
-// payload. The renderer reads it; the BullMQ enqueue path snapshots it
-// from `OrganizationService.getPublic()`.
+// A brand snapshot travels with every email payload. The renderer reads
+// it; the BullMQ enqueue path snapshots it from `OrganizationService.getPublic()`.
 const organization = {
   shortName: "PEO",
   fullName: "Product Engineering & Operations",
@@ -57,8 +56,8 @@ describe('renderEmail — kind="deadline"', () => {
   });
 });
 
-// NOTIF-02 (Phase 29-05): T+2h escalation digest renders all late leads
-// into ONE multipart email — never one email per lead.
+// T+2h escalation digest renders all late leads into ONE multipart email —
+// never one email per lead.
 describe('renderEmail — kind="escalation"', () => {
   const escalationProps = {
     headName: "Department Head",

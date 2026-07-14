@@ -9,17 +9,16 @@ import {
 } from "../test-utils/prisma-test-helper";
 
 /**
- * TD-02 / Phase 46-05 follow-up: live-Prisma cross-group visibility matrix.
+ * Live-Prisma cross-group visibility matrix.
  *
  * Seeds two groups (A and B), one section per group, one admin, one viewer.
  * Verifies that each role sees exactly the rows it should via groupScopeFilter
  * fragments spread into real Prisma queries.
  *
- * Covers the "~20% extra confidence" gap noted in 46-05-SUMMARY: we already
- * had unit-level helper tests + service-spy tests; this adds a layer that
- * catches schema drift or Prisma relation-path renames.
+ * This complements the unit-level helper tests + service-spy tests with a
+ * layer that catches schema drift or Prisma relation-path renames.
  */
-describe("group-scope visibility matrix (integration, TD-02)", () => {
+describe("group-scope visibility matrix (integration)", () => {
   const prisma = createTestPrisma();
 
   // Stable UUIDs for this test file (prefix 'c' to avoid collision with TEST_IDS).

@@ -95,7 +95,7 @@ function createMockRepository(
 }
 
 // ---------------------------------------------------------------------------
-// revokeSubmission (API-03)
+// revokeSubmission
 // ---------------------------------------------------------------------------
 
 describe("LeadFormService — revokeSubmission", () => {
@@ -469,7 +469,7 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
 });
 
 // ---------------------------------------------------------------------------
-// revokeAllSubmitted (SC-165)
+// revokeAllSubmitted
 // ---------------------------------------------------------------------------
 
 describe("LeadFormService — revokeAllSubmitted", () => {
@@ -511,7 +511,7 @@ describe("LeadFormService — revokeAllSubmitted", () => {
 });
 
 // ---------------------------------------------------------------------------
-// fillFrom (API-07)
+// fillFrom
 // ---------------------------------------------------------------------------
 
 describe("LeadFormService — fillFrom", () => {
@@ -611,7 +611,7 @@ describe("LeadFormService — fillFrom", () => {
 });
 
 // ---------------------------------------------------------------------------
-// getByPeriod (API-10)
+// getByPeriod
 // ---------------------------------------------------------------------------
 
 // reopen-request-lifecycle helpers: build the repo return shapes that now
@@ -1206,7 +1206,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
     // (a separate query) still sees the OLD, matching group and passes — but
     // the atomic `getSectionForPeriodAsGroupPeer` re-evaluates membership in
     // the SAME statement as the section load and now sees the target has
-    // moved out of the head's group, so it returns null. The scoped read, not
+    // is outside the head's group, so it returns null. The scoped read, not
     // the pre-check, is what must fail this closed.
     const repo = crossAuthorRepo({
       getUserReportingGroupId: vi.fn().mockResolvedValue(HEAD_GROUP_ID),
@@ -1385,7 +1385,7 @@ describe("computeReopenEligibility", () => {
 });
 
 // ---------------------------------------------------------------------------
-// requestReopen (API-04) — period-lifecycle guard (D4)
+// requestReopen — period-lifecycle guard
 // ---------------------------------------------------------------------------
 
 describe("LeadFormService — requestReopen", () => {
@@ -1546,7 +1546,7 @@ describe("LeadFormService — requestReopen", () => {
 async function getCounterValue(
   counter: {
     get(): Promise<{
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record (migrated from eslint-disable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record shape
       values: { value: number; labels: Record<string, any> }[];
     }>;
   },

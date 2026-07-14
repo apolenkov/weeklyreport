@@ -7,7 +7,7 @@ import {
 } from "./organization.service";
 
 /**
- * UFB-047 / Phase 48-A: contract tests for OrganizationService.
+ * Contract tests for OrganizationService.
  *
  * The service is a thin wrapper around the repository — its value is
  * zod-validating both the read and write paths so the wire shape cannot

@@ -21,7 +21,7 @@ describe("roleSchema", () => {
     expect(roleSchema.safeParse("viewer").success).toBe(true);
   });
 
-  it('accepts "admin" — Phase 32-C / H-01 widened DB Role enum to include admin', () => {
+  it('accepts "admin"', () => {
     expect(roleSchema.safeParse("admin").success).toBe(true);
   });
 

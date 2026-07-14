@@ -260,7 +260,7 @@ describe("PeriodService — publishPeriod (unit)", () => {
     expect(repo.publishPeriod).toHaveBeenCalledTimes(2);
   });
 
-  it("invalidates analytics cache on successful publish (ANAL-01)", async () => {
+  it("invalidates analytics cache on successful publish", async () => {
     const reports = new Map<string, SpyReport>([
       [
         reportId,
@@ -407,7 +407,7 @@ describe("PeriodService — reopenPeriod (unit)", () => {
     expect(repo.reopenPeriod).not.toHaveBeenCalled();
   });
 
-  it("invalidates analytics cache on successful reopen (ANAL-01)", async () => {
+  it("invalidates analytics cache on successful reopen", async () => {
     const reports = new Map<string, SpyReport>([
       [
         reportId,
@@ -461,10 +461,10 @@ describe("PeriodService — reopenPeriod (unit)", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  UFB-052 (Phase 51-B): reopen-policy gate                           */
+/*  reopen-policy gate                                                 */
 /* ------------------------------------------------------------------ */
 
-describe("PeriodService — reopen policy gate (UFB-052)", () => {
+describe("PeriodService — reopen policy gate", () => {
   it("throws PeriodAccessError when allowReopenAfterPublish=false", async () => {
     const reports = new Map<string, SpyReport>([
       [

@@ -208,8 +208,9 @@ describe("mapLeadProducts", () => {
   });
 
   it("collapses a persisted at-risk/blocked stage with no covering risk to on-track", () => {
-    // rethink-pipeline-state-vs-completeness (supersedes PRJ-2 "explicit wins"):
-    // a stale persisted severity that no risk backs can no longer survive.
+    // A stale persisted severity that no risk backs cannot survive: status
+    // always derives from the current covering risk, never from what was
+    // last saved.
     const section = baseSection({
       projects: [
         {
@@ -237,7 +238,7 @@ describe("mapLeadProducts", () => {
     expect(mapLeadProducts(baseSection())).toEqual([]);
   });
 
-  it("renders all 7 stages as `mine` when the lead owns every stage on the project (BUG-143 reproducer)", () => {
+  it("renders all 7 stages as `mine` when the lead owns every stage on the project", () => {
     // The user-reported bug: assigning the lead to all 7 SDLC stages on
     // the Products admin tab should surface every stage as `mine` on
     // /lead/report. Pre-35-04 the synthesized grid only ever marked
@@ -285,11 +286,9 @@ describe("mapLeadProducts", () => {
     expect(product?.stages).toHaveLength(0);
   });
 
-  it("a covering risk floors a stale persisted on-track status (unify-risk-stage-status D1, supersedes PRJ-2)", () => {
-    // The PRJ-2 test that lived here pinned the opposite: risks were
-    // disconnected so explicit chip status always won. D1 re-connects the
-    // derivation — a chip can never show on-track while a non-empty
-    // covering risk exists, on any surface fed by this mapper.
+  it("a covering risk floors a stale persisted on-track status", () => {
+    // A chip can never show on-track while a non-empty covering risk
+    // exists, on any surface fed by this mapper.
     const section = baseSection({
       projects: [
         {
@@ -766,7 +765,7 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
     const mapped = mapLeadRisks(section).at(0);
     expect(mapped?.productName).toBe("CRM");
     expect(mapped?.severity).toBe("blocked");
-    // Phase 22+: text holds raw `risk` only; impact/mitigation surface as
+    // `text` holds raw `risk` only; impact/mitigation surface as
     // separate fields in the edit dialog (avoids double-concat on save).
     expect(mapped?.text).toBe("OAuth delay");
     expect(mapped?.impact).toBe("SSO slips");

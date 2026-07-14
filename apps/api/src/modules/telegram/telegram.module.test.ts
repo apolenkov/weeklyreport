@@ -7,7 +7,7 @@ import { selectTelegramAdapter } from "./telegram.module";
 const envWithToken = (TG_BOT_TOKEN?: string): EnvConfig =>
   ({ TG_BOT_TOKEN }) as EnvConfig;
 
-describe("selectTelegramAdapter (Phase 55 / UFB-056)", () => {
+describe("selectTelegramAdapter", () => {
   it("returns MockTelegramAdapter when TG_BOT_TOKEN is unset", () => {
     const adapter = selectTelegramAdapter(envWithToken(undefined));
     expect(adapter).toBeInstanceOf(MockTelegramAdapter);

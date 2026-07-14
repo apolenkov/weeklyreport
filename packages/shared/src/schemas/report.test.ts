@@ -613,7 +613,7 @@ describe("submitSectionSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects submit with no traffic light status (BUG-020)", () => {
+  it("rejects submit with no traffic light status", () => {
     const submit = {
       ...validSubmit(),
       projectStatuses: [{ projectId: PROJECT_UUID }],
@@ -769,10 +769,10 @@ describe("enum schemas", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 8: carryOverStatusSchema (BUG-006)
+// Group 8: carryOverStatusSchema
 // ---------------------------------------------------------------------------
 
-describe("carryOverStatusSchema (BUG-006)", () => {
+describe("carryOverStatusSchema", () => {
   it('accepts "completed"', () => {
     expect(carryOverStatusSchema.safeParse("completed").success).toBe(true);
   });
@@ -798,10 +798,10 @@ describe("carryOverStatusSchema (BUG-006)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 9: Date validation — reportDate() (BUG-016)
+// Group 9: Date validation — reportDate()
 // ---------------------------------------------------------------------------
 
-describe("reportDate via assembledReportSchema (BUG-016)", () => {
+describe("reportDate via assembledReportSchema", () => {
   const validAssembled = () => ({
     reportId: uuid(),
     periodStart: "2026-04-01",
@@ -1261,10 +1261,10 @@ describe("periodStatusSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 14b: periodStateSchema (UFB-053 / Phase 51-C)
+// Group 14b: periodStateSchema
 // ---------------------------------------------------------------------------
 
-describe("periodStateSchema (UFB-053)", () => {
+describe("periodStateSchema", () => {
   it('accepts "scheduled"', () => {
     expect(periodStateSchema.safeParse("scheduled").success).toBe(true);
   });
@@ -1357,10 +1357,10 @@ describe("periodStateSchema (UFB-053)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 14c: periodListBucketSchema + periodListItemSchema (UFB-052 / Phase 51-B)
+// Group 14c: periodListBucketSchema + periodListItemSchema
 // ---------------------------------------------------------------------------
 
-describe("periodListBucketSchema (UFB-052)", () => {
+describe("periodListBucketSchema", () => {
   it.each(["active", "archive", "scheduled", "open", "published", "archived"])(
     "accepts %s",
     (bucket) => {
@@ -1377,7 +1377,7 @@ describe("periodListBucketSchema (UFB-052)", () => {
   });
 });
 
-describe("periodListItemSchema (UFB-052)", () => {
+describe("periodListItemSchema", () => {
   const baseRow = {
     id: randomUUID(),
     periodStart: "2026-05-11",
@@ -1587,13 +1587,13 @@ describe("appSettingsSchema", () => {
   });
 
   // -------------------------------------------------------------------
-  // UFB-048 (Phase 48-B): 9 new configurable fields. Each has `.default()`
-  // so the original 2-key fixture above still parses; these tests assert
-  // the defaults are applied AND that the new constraints reject garbage.
-  // (Phase 49-01: legacy `departmentName` field removed from this schema.)
+  // 9 new configurable fields. Each has `.default()` so the original
+  // 2-key fixture above still parses; these tests assert the defaults
+  // are applied AND that the new constraints reject garbage.
+  // (Legacy `departmentName` field removed from this schema.)
   // -------------------------------------------------------------------
 
-  it("UFB-048: applies defaults for the 9 new fields when omitted", () => {
+  it("applies defaults for the 9 new fields when omitted", () => {
     const result = appSettingsSchema.safeParse({
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
@@ -1611,7 +1611,7 @@ describe("appSettingsSchema", () => {
     expect(result.data.autoArchiveWeeksAfterPublish).toBe(0);
   });
 
-  it("UFB-048: rejects periodLengthDays out of [1..31]", () => {
+  it("rejects periodLengthDays out of [1..31]", () => {
     expect(
       appSettingsSchema.safeParse({
         autoCreatePeriods: false,
@@ -1628,7 +1628,7 @@ describe("appSettingsSchema", () => {
     ).toBe(false);
   });
 
-  it("UFB-048: rejects unknown workingDays enum value", () => {
+  it("rejects unknown workingDays enum value", () => {
     expect(
       appSettingsSchema.safeParse({
         autoCreatePeriods: false,
@@ -1638,7 +1638,7 @@ describe("appSettingsSchema", () => {
     ).toBe(false);
   });
 
-  it("UFB-048: rejects gracePeriodHours out of [0..168]", () => {
+  it("rejects gracePeriodHours out of [0..168]", () => {
     expect(
       appSettingsSchema.safeParse({
         autoCreatePeriods: false,
@@ -1655,7 +1655,7 @@ describe("appSettingsSchema", () => {
     ).toBe(false);
   });
 
-  it("UFB-048: rejects autoArchiveWeeksAfterPublish > 52", () => {
+  it("rejects autoArchiveWeeksAfterPublish > 52", () => {
     expect(
       appSettingsSchema.safeParse({
         autoCreatePeriods: false,
@@ -1665,7 +1665,7 @@ describe("appSettingsSchema", () => {
     ).toBe(false);
   });
 
-  it("UFB-048: accepts notificationFromEmail null and a valid address", () => {
+  it("accepts notificationFromEmail null and a valid address", () => {
     expect(
       appSettingsSchema.safeParse({
         autoCreatePeriods: false,
@@ -1682,7 +1682,7 @@ describe("appSettingsSchema", () => {
     ).toBe(true);
   });
 
-  it("UFB-048: rejects malformed notificationFromEmail", () => {
+  it("rejects malformed notificationFromEmail", () => {
     expect(
       appSettingsSchema.safeParse({
         autoCreatePeriods: false,
@@ -1692,7 +1692,7 @@ describe("appSettingsSchema", () => {
     ).toBe(false);
   });
 
-  it("UFB-048: rejects unknown defaultReminderAudience", () => {
+  it("rejects unknown defaultReminderAudience", () => {
     expect(
       appSettingsSchema.safeParse({
         autoCreatePeriods: false,
@@ -1703,12 +1703,12 @@ describe("appSettingsSchema", () => {
   });
 
   // -------------------------------------------------------------------
-  // UFB-051 (Phase 51-A): 8 new period-cycle fields on AppSettings.
-  // Same pattern as the 48-B block above — each has `.default()` so
-  // partial PATCH payloads keep working and constraints reject garbage.
+  // 8 new period-cycle fields on AppSettings. Same pattern as the block
+  // above — each has `.default()` so partial PATCH payloads keep working
+  // and constraints reject garbage.
   // -------------------------------------------------------------------
 
-  it("UFB-051: applies defaults for the period-cycle fields when omitted", () => {
+  it("applies defaults for the period-cycle fields when omitted", () => {
     const result = appSettingsSchema.safeParse({
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
@@ -1720,7 +1720,7 @@ describe("appSettingsSchema", () => {
     expect(result.data.reopenWindowHours).toBe(72);
   });
 
-  it("UFB-051: rejects malformed deadlineTime (must be HH:MM 24h)", () => {
+  it("rejects malformed deadlineTime (must be HH:MM 24h)", () => {
     // Hour out of range
     expect(
       appSettingsSchema.safeParse({
@@ -1762,11 +1762,11 @@ describe("appSettingsSchema", () => {
     ).toBe(true);
   });
 
-  // UFB-068: periodCadence removed — no validation test needed.
-  // admin-settings-surface-cleanup: firstDayOfWeek / deadlineDayOfWeek /
-  // maxOpenPeriods / requireAllSectionsToPublish removed — bounds tests dropped.
+  // periodCadence removed — no validation test needed.
+  // firstDayOfWeek / deadlineDayOfWeek / maxOpenPeriods /
+  // requireAllSectionsToPublish removed — bounds tests dropped.
 
-  it("UFB-051: rejects reopenWindowHours out of [0..168]", () => {
+  it("rejects reopenWindowHours out of [0..168]", () => {
     expect(
       appSettingsSchema.safeParse({
         autoCreatePeriods: false,
@@ -2074,10 +2074,10 @@ describe("escalationSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// UFB-054 (Phase 56): GroupProduct schemas
+// GroupProduct schemas
 // ---------------------------------------------------------------------------
 
-describe("groupProductSchema (UFB-054)", () => {
+describe("groupProductSchema", () => {
   it("accepts a well-formed row and coerces createdAt to Date", () => {
     const row = groupProductSchema.parse({
       id: uuid(),
@@ -2108,7 +2108,7 @@ describe("groupProductSchema (UFB-054)", () => {
   });
 });
 
-describe("groupProductEdgeInputSchema (UFB-054)", () => {
+describe("groupProductEdgeInputSchema", () => {
   it("accepts a {groupId, productId} pair of uuids", () => {
     const groupId = uuid();
     const productId = uuid();

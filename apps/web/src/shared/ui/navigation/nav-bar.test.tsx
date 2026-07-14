@@ -24,9 +24,9 @@ vi.mock("../../../lib/session-provider", () => ({
   useSession: () => useSessionMock() as SessionState,
 }));
 
-// Phase 33-04: NavBar now reads the active period via tRPC for the right-rail
-// badge. Tests don't exercise that surface — stub the proxy to a minimal
-// object that satisfies `trpc.weeklyReport.get.queryOptions(...)` calls.
+// NavBar reads the active period via tRPC for the right-rail badge. Tests
+// don't exercise that surface — stub the proxy to a minimal object that
+// satisfies `trpc.weeklyReport.get.queryOptions(...)` calls.
 vi.mock("../../../lib/trpc-context", () => ({
   useTRPC: () => ({
     weeklyReport: {
@@ -54,9 +54,9 @@ function setRole(role: Role | null): void {
   if (role === null) {
     useSessionMock.mockReturnValue({
       user: null,
-      // UFB-047 / Phase 48-A: nav-bar consumes `organization.shortName`.
-      // For the "unauthenticated" case there is no session and thus no
-      // org — the consumer falls back to the seeded 'PEO' default.
+      // nav-bar consumes `organization.shortName`. For the
+      // "unauthenticated" case there is no session and thus no org — the
+      // consumer falls back to the seeded 'PEO' default.
       organization: null,
       isLoading: true,
       isAuthenticated: false,
@@ -70,8 +70,8 @@ function setRole(role: Role | null): void {
         role,
         reportingGroupName: "Core Development",
       },
-      // UFB-047 / Phase 48-A: realistic org hydration so the nav-bar
-      // renders the brand strings consistently with the runtime.
+      // Realistic org hydration so the nav-bar renders the brand strings
+      // consistently with the runtime.
       organization: {
         shortName: "PEO",
         fullName: "Product Engineering & Operations",
@@ -115,7 +115,7 @@ function expectInactiveLink(container: HTMLElement, href: string): void {
   ).toHaveLength(0);
 }
 
-describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
+describe("NavBar — role-aware visibility", () => {
   beforeEach(() => {
     useSessionMock.mockReset();
     setRoute("/lead/report");
@@ -206,7 +206,7 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkMissing(container, "/admin");
   });
 
-  it("head does NOT see /admin link (UFB-038)", () => {
+  it("head does NOT see /admin link", () => {
     setRole("head");
     const { container } = render(<NavBar />);
     expectLinkMissing(container, "/admin");
@@ -379,8 +379,8 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
 
   it("hidden links are absent from the DOM (filtered before render — not CSS-hidden)", () => {
     // T0 invariant from the plan: queryByText returning null is the proof.
-    // Critical for AUTH-06 — a hostile viewer who reads the rendered HTML must
-    // see no enumeration of /admin or /head routes.
+    // Critical: a hostile viewer who reads the rendered HTML must see no
+    // enumeration of /admin or /head routes.
     setRole("viewer");
     const { container } = render(<NavBar />);
     expectLinkMissing(container, "/admin");

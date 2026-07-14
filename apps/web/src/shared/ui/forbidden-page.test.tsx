@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { ForbiddenPage } from "./forbidden-page";
 
-describe("ForbiddenPage (AUTH-07)", () => {
+describe("ForbiddenPage", () => {
   it("renders the page-unavailable heading", () => {
     render(
       <ForbiddenPage requiredRoles={["head"]} homeHref="/head/dashboard" />,

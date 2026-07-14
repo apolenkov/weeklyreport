@@ -207,7 +207,7 @@ describe("HeadReportShell — agent-review placeholder per mode", () => {
 
 // head-toolbar-parity pin: the review page owns exactly ONE period toolbar
 // (the shared ReportToolbar). The shell composes it and passes it into
-// WeeklyReportPage's `toolbar` slot (design D2), which renders it below the
+// WeeklyReportPage's `toolbar` slot, which renders it below the
 // real page header row — the companion pin in weekly-report-page.test.tsx
 // verifies the slot replaces the inner context bar AND follows the header.
 describe("HeadReportShell — single shared toolbar (head-toolbar-parity)", () => {

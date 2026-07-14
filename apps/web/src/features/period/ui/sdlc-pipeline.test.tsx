@@ -138,7 +138,7 @@ describe("SdlcPipeline — D1 live stripe color from own stages", () => {
   });
 });
 
-// The left edge is now ALWAYS solid — the completeness dash moved to a
+// The left edge is ALWAYS solid — the completeness dash lives in a
 // separate right-side affordance (see the dedicated block below).
 describe("SdlcPipeline — left edge is always solid", () => {
   it("never dashes the left edge even with an unfilled own stage", () => {

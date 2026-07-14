@@ -199,7 +199,7 @@ describe("mapAdminSnapshot", () => {
     expect(period?.deadline).toBe("2026-04-18");
   });
 
-  it("maps reminder status active->true, paused->false (PITFALLS Pitfall 1)", () => {
+  it("maps reminder status active->true, paused->false", () => {
     const snapshot = makeSnapshot();
     const active = mapReminder(expectDefined(snapshot.reminderRules[0]));
     const paused = mapReminder(expectDefined(snapshot.reminderRules[1]));
@@ -264,11 +264,10 @@ describe("mapAdminSettings", () => {
       unifiedActivityView: true,
     });
     const mapped = mapAdminSettings(api);
-    // UFB-048 (Phase 48-B): the wire schema applies defaults for the 9 new
-    // fields; the mapper passes them through 1:1. Asserting the full shape
-    // catches future drift between MockSettings and AppSettings.
-    // UFB-047 / Phase 49-01: legacy `departmentName` removed from both
-    // sides of the mapper.
+    // The wire schema applies defaults for the 9 new fields; the mapper
+    // passes them through 1:1. Asserting the full shape catches future
+    // drift between MockSettings and AppSettings. `departmentName` is not
+    // part of the shape on either side of the mapper.
     expect(mapped).toStrictEqual({
       autoCreatePeriods: false,
       defaultDeadlineDays: 3,
@@ -278,7 +277,7 @@ describe("mapAdminSettings", () => {
       allowLateSubmissions: true,
       autoPublishAfterDeadline: false,
       autoArchiveWeeksAfterPublish: 0,
-      // UFB-051 period-cycle knobs default-fall-through.
+      // Period-cycle knobs default-fall-through.
       deadlineTime: "18:00",
       allowReopenAfterPublish: true,
       reopenWindowHours: 72,
@@ -289,8 +288,8 @@ describe("mapAdminSettings", () => {
     });
   });
 
-  // UFB-048 (Phase 48-B): explicit round-trip of the 9 new fields.
-  it("UFB-048: round-trips the 9 new AppSettings fields", () => {
+  // Explicit round-trip of the 9 new fields.
+  it("round-trips the 9 new AppSettings fields", () => {
     const api: AppSettings = appSettingsSchema.parse({
       autoCreatePeriods: true,
       defaultDeadlineDays: 5,
@@ -316,9 +315,8 @@ describe("mapAdminSettings", () => {
     expect(mapped.autoArchiveWeeksAfterPublish).toBe(8);
   });
 
-  // UFB-051 (Phase 51-A): round-trip the period-cycle knobs through
-  // the wire → MockSettings mapper. UFB-068 removed periodCadence.
-  it("UFB-051: round-trips the period-cycle fields", () => {
+  // Round-trip the period-cycle knobs through the wire → MockSettings mapper.
+  it("round-trips the period-cycle fields", () => {
     const api: AppSettings = appSettingsSchema.parse({
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,

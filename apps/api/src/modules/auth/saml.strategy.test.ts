@@ -23,9 +23,9 @@ const baseOptions = {
 const devOptions: SamlStrategyOptions = { ...baseOptions, devMode: true };
 const prodOptions: SamlStrategyOptions = { ...baseOptions, devMode: false };
 
-describe("verifySamlProfile (AUTH-02)", () => {
+describe("verifySamlProfile", () => {
   describe("devMode=true (legacy fallback preserved)", () => {
-    it("missing role defaults to viewer (Phase 26 ergonomics)", () => {
+    it("missing role defaults to viewer", () => {
       const result = verifySamlProfile(devOptions, {
         nameID: "u-1",
         email: "u@example.com",

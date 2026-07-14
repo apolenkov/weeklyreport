@@ -216,7 +216,7 @@ describe("Coming-Soon controls render the amber badge through the Radix portal",
   );
 });
 
-describe("every tooltip control migrated to the shared Radix wrapper (source scan)", () => {
+describe("every tooltip control uses the shared Radix wrapper (source scan)", () => {
   // Holidays-only scope: the five button controls now compose the shared
   // ComingSoonIconButton/ComingSoonControl primitive (verified by its unit test
   // below), so they can no longer drift. Holidays keeps its own inert-span

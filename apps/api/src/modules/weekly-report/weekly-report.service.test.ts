@@ -218,7 +218,7 @@ describe("WeeklyReportService — unit tests", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  AUTH-04 viewer scoping (Phase 28-01)                                */
+/*  viewer scoping                                                     */
 /* ------------------------------------------------------------------ */
 
 describe("WeeklyReportService — viewer-live-status published-or-current gate (task 2.3)", () => {
@@ -460,7 +460,7 @@ describe("WeeklyReportService — viewer-live-status published-or-current gate (
     });
   });
 
-  it("undefined role keeps legacy contract (no scoping; preserves pre-AUTH-04 callers)", async () => {
+  it("undefined role keeps legacy contract (no scoping; preserves callers predating role-based scoping)", async () => {
     const draft = makeWeeklyReport({ periodStatus: "open" });
     const reports = new Map([[reportId, draft]]);
     const service = new WeeklyReportService(createSpyRepository(reports));

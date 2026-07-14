@@ -48,8 +48,8 @@ describe("SessionProvider + useSession", () => {
 
     expect(result.current).toEqual({
       user: null,
-      // UFB-047 / Phase 48-A: SessionState exposes an `organization` slot
-      // hydrated from the API. Loading/unauthenticated states carry null.
+      // SessionState exposes an `organization` slot hydrated from the API.
+      // Loading/unauthenticated states carry null.
       organization: null,
       isLoading: true,
       isAuthenticated: false,
@@ -83,7 +83,7 @@ describe("SessionProvider + useSession", () => {
     });
   });
 
-  it("hydrates organization onto SessionState when auth.me carries it (UFB-047)", () => {
+  it("hydrates organization onto SessionState when auth.me carries it", () => {
     useQueryMock.mockReturnValue({
       data: {
         userId: "a0000000-0000-4000-8000-000000000099",

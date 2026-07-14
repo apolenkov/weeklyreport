@@ -9,7 +9,7 @@ import {
 } from "../../../modules/auth/saml.strategy.js";
 
 // ---------------------------------------------------------------------------
-// AUTH-02 contract test (structured-user-name): the SAML assertion no longer
+// Contract test (structured-user-name): the SAML assertion no longer
 // carries a role. verifySamlProfile defaults EVERY provisioned user to viewer
 // (least privilege); roles are admin-assigned afterwards. This test pins that
 // posture through the full SAML → JWT → ctx.session.role pipeline: regardless
@@ -52,7 +52,7 @@ function buildSession(profile: {
   };
 }
 
-describe("AUTH-02: SAML profile → JWT → session.role round-trip (role-free)", () => {
+describe("SAML profile → JWT → session.role round-trip (role-free)", () => {
   it("an asserted head role is ignored — the session round-trips as viewer", () => {
     const verified = verifySamlProfile(prodOptions, {
       nameID: "u-head",

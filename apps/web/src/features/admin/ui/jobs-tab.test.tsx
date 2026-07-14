@@ -1,5 +1,5 @@
 /**
- * Phase 35-06 — JobsTab wiring test.
+ * JobsTab wiring test.
  *
  * Strategy mirrors weekly-report-page.test.tsx: stub the tRPC proxy and
  * intercept `admin.jobs.listFailed.queryOptions` / `admin.jobs.retryFailed
@@ -260,7 +260,7 @@ describe("JobsTab — JobsSkeleton a11y attributes (VA-0a)", () => {
   });
 });
 
-describe("JobsTab — Phase 35-06 BullMQ DLQ admin UI", () => {
+describe("JobsTab — BullMQ DLQ admin UI", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

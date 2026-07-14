@@ -219,7 +219,7 @@ describe("tRPC auth middleware", () => {
   // P0 Regression — AUTH tRPC middleware scenarios
   // -----------------------------------------------------------------------
 
-  it("protectedProcedure with null session throws UNAUTHORIZED (AUTH-038 P0)", async () => {
+  it("protectedProcedure with null session throws UNAUTHORIZED", async () => {
     await expect(nullCaller.protectedRoute()).rejects.toMatchObject(
       expect.objectContaining({ code: "UNAUTHORIZED" }) as Record<
         string,

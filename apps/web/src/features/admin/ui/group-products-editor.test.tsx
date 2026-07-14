@@ -95,7 +95,7 @@ const PRODUCT_ARCHIVED: MockProduct = {
   status: "archived",
 };
 
-describe("GroupProductsEditor — UFB-054 (Phase 56-C)", () => {
+describe("GroupProductsEditor", () => {
   beforeEach(() => {
     attachMutate.mockReset();
     detachMutate.mockReset();

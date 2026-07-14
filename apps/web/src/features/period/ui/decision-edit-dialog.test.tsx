@@ -132,7 +132,7 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
     });
   });
 
-  it("saves selected stageIds with the decision payload (UFB-014)", () => {
+  it("saves selected stageIds with the decision payload", () => {
     const onSave = vi.fn();
     render(
       <DecisionEditDialog
@@ -165,7 +165,7 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
     });
   });
 
-  it("restores existing stageIds when editing a decision (UFB-014)", () => {
+  it("restores existing stageIds when editing a decision", () => {
     render(
       <DecisionEditDialog
         open={true}

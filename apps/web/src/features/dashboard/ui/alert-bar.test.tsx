@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * Phase 48-C (UFB-038 / UFB-040): regression coverage for the dashboard
- * alert-bar. The "Configure reminders" link is admin-only; head/lead/viewer
+ * Regression coverage for the dashboard alert-bar. The "Configure
+ * reminders" link is admin-only; head/lead/viewer
  * sessions should never see it even when canSendReminder=false.
  */
 import "@testing-library/jest-dom/vitest";
@@ -123,7 +123,7 @@ describe("VA-0b: AlertBar snapshots", () => {
   });
 });
 
-describe("AlertBar — Phase 48-C role gating", () => {
+describe("AlertBar — role gating", () => {
   it("renders the Configure reminders link for admin when canSendReminder=false", () => {
     mockRole("admin");
 

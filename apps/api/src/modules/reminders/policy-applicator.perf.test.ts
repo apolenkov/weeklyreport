@@ -1,5 +1,5 @@
 /**
- * TD-05 / Phase 47 — PolicyApplicatorService fan-out performance test.
+ * PolicyApplicatorService fan-out performance test.
  *
  * Verifies that applyToPeriod completes within an acceptable wall-clock
  * budget when a large number of active policies are in scope. Uses a
@@ -62,7 +62,7 @@ function makePrismaStub(policyCount: number) {
 // Performance tests
 // ---------------------------------------------------------------------------
 
-describe("TD-05: PolicyApplicatorService fan-out performance", () => {
+describe("PolicyApplicatorService fan-out performance", () => {
   // retry: a wall-clock budget on a loaded machine (turbo runs 4 package
   // suites in parallel) flakes without a real regression; a genuine slowdown
   // fails all 3 attempts.

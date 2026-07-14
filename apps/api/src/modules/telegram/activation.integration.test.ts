@@ -1,5 +1,5 @@
 /**
- * Phase 55 — Telegram activation integration test scaffold (W3.2).
+ * Telegram activation integration test scaffold.
  *
  * Skipped in CI unless TG_BOT_TOKEN env is set. Provides the one-flag-flip
  * gate for activating the real Telegram bot adapter: set TG_BOT_TOKEN and

@@ -14,8 +14,8 @@ import {
 } from "./reminders.service";
 import { unusedRemindersScopeStubs } from "./reminders-scope.repository-stub.js";
 
-// UFB-047 / Phase 49-01: stub OrganizationService used by the scheduler
-// to snapshot the brand identity onto every BullMQ job. Tests drive
+// Stub OrganizationService used by the scheduler to snapshot the brand
+// identity onto every BullMQ job. Tests drive
 // through the public `getPublic()` surface; the in-memory stub returns a
 // deterministic shape so payload assertions can match `[PEO]` subjects.
 const fakeOrganizationService = {
@@ -116,7 +116,7 @@ function createServiceRepo(): RemindersRepository {
 /*  Tests                                                               */
 /* ------------------------------------------------------------------ */
 
-describe("RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)", () => {
+describe("RemindersScheduler — deadline reminder dispatch", () => {
   let queueAdds: { name: string; data: Record<string, unknown> }[];
   let fakeQueue: { add: ReturnType<typeof vi.fn> };
 
@@ -314,11 +314,11 @@ describe("RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)", () => {
 });
 
 // -----------------------------------------------------------------------
-// NOTIF-02 (Phase 29-05): T+2h escalation digest dispatch.
+// T+2h escalation digest dispatch.
 // One digest email per (rule, head) per cycle; idempotent across re-ticks.
 // -----------------------------------------------------------------------
 
-describe("RemindersScheduler — NOTIF-02 escalation dispatch (Phase 29-05)", () => {
+describe("RemindersScheduler — escalation dispatch", () => {
   const escalationRuleId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
   const escalationActiveRule: AdminReminderRule = {
     id: escalationRuleId,
@@ -571,11 +571,11 @@ describe("RemindersScheduler — NOTIF-02 escalation dispatch (Phase 29-05)", ()
 });
 
 // -----------------------------------------------------------------------
-// NOTIF-05 (Phase 29-05): per-user opt-out for kind='deadline' only.
-// kind='escalation' bypasses the flag entirely.
+// Per-user opt-out for kind='deadline' only. kind='escalation' bypasses
+// the flag entirely.
 // -----------------------------------------------------------------------
 
-describe("RemindersScheduler — NOTIF-05 opt-out (Phase 29-05)", () => {
+describe("RemindersScheduler — opt-out", () => {
   let queueAdds: { name: string; data: Record<string, unknown> }[];
   let fakeQueue: { add: ReturnType<typeof vi.fn> };
 
@@ -637,8 +637,8 @@ describe("RemindersScheduler — NOTIF-05 opt-out (Phase 29-05)", () => {
 
   it("escalation digest IGNORES head.notificationOptOut (heads always notified)", async () => {
     // The DueEscalationRule type does not even carry an opt-out flag for the
-    // head — by design, NOTIF-05 contract is "escalation bypasses opt-out".
-    // This test verifies the dispatch path emits regardless.
+    // head — by design, escalation always bypasses opt-out. This test
+    // verifies the dispatch path emits regardless.
     const due: DueEscalationRule = {
       id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
       reportId,
