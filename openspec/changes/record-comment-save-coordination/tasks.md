@@ -3,7 +3,7 @@
 - [ ] 1.1 `review-actions.prisma-repository.ts`: wrap anchor resolution +
       `prisma.recordComment.create` in a single `$transaction`
 - [ ] 1.2 Inside that transaction, either take the same `Report` row `FOR
-  UPDATE` lock `saveSection` takes, or perform a `ReportSection.version`
+UPDATE` lock `saveSection` takes, or perform a `ReportSection.version`
       compare-and-set against the version the caller last saw
 - [ ] 1.3 Resolve the anchor by the record's stableId lineage instead of the
       raw PK, matching `captureRecordComments`'s lookup strategy
