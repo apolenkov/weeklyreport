@@ -1,6 +1,9 @@
 "use client";
 
-import type { DraftSavePayload } from "@customreport/shared";
+import type {
+  DraftSavePayload,
+  ReportSectionReadModel,
+} from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -55,6 +58,11 @@ export interface UseLeadFormAutosaveArgs {
    * pushes each bump back so submit/fillFrom carry the current value.
    */
   readonly onVersionChange: (version: number) => void;
+  /** Reports the server-confirmed section together with the payload it persisted. */
+  readonly onSaved?: (
+    section: ReportSectionReadModel,
+    payload: DraftSaveContent,
+  ) => void;
   /**
    * Called when a save is rejected as a stale-version CONFLICT (409). The
    * caller refetches this section and surfaces it; when provided, the hook
@@ -95,7 +103,14 @@ export function stableStringify(value: unknown): string {
 export function useLeadFormAutosave(
   args: UseLeadFormAutosaveArgs,
 ): AutosaveSnapshot {
-  const { reportSectionId, payload, enabled, version, onVersionChange } = args;
+  const {
+    reportSectionId,
+    payload,
+    enabled,
+    version,
+    onVersionChange,
+    onSaved,
+  } = args;
   const debounceMs = args.debounceMs ?? DEFAULT_DEBOUNCE_MS;
   const initialSavedKey = args.initialSavedKey ?? null;
   const onConflict = args.onConflict;
@@ -114,6 +129,7 @@ export function useLeadFormAutosave(
 
   const lastSavedRef = useRef<string>("");
   const inFlightRef = useRef<string>("");
+  const inFlightPayloadRef = useRef<DraftSaveContent | null>(null);
   // The section id the in-flight save was actually sent to, captured at mutate
   // time. `onSuccess` stamps the confirmed baseline only when this still equals
   // the current section — otherwise the lead navigated away while the save was
@@ -155,6 +171,9 @@ export function useLeadFormAutosave(
         if (inFlightSectionRef.current === reportSectionIdRef.current) {
           lastSavedRef.current = inFlightRef.current;
         }
+        if (inFlightPayloadRef.current !== null) {
+          onSaved?.(saved, inFlightPayloadRef.current);
+        }
         setState("saved");
         setLastSavedAt(new Date());
         invalidateLeadForm(qc, trpc);
@@ -170,6 +189,7 @@ export function useLeadFormAutosave(
           if (queued !== null && queuedKey !== lastSavedRef.current) {
             setState("saving");
             inFlightRef.current = queuedKey;
+            inFlightPayloadRef.current = queued;
             inFlightSectionRef.current = queued.reportSectionId;
             // Fire-and-forget: the mutation's own onSuccess/onError drive the
             // result and the next drain. `mutate` (not `mutateAsync`) so no
@@ -246,6 +266,7 @@ export function useLeadFormAutosave(
       }
       setState("saving");
       inFlightRef.current = payloadKey;
+      inFlightPayloadRef.current = current;
       inFlightSectionRef.current = reportSectionId;
       mutateRef.current({
         ...current,
@@ -312,6 +333,7 @@ export function useLeadFormAutosave(
 
     setState("saving");
     inFlightRef.current = currentKey;
+    inFlightPayloadRef.current = current;
     inFlightSectionRef.current = sectionId;
     await mutateAsyncRef.current({
       ...current,

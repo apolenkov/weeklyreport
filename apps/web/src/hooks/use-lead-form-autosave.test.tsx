@@ -274,7 +274,7 @@ describe("useLeadFormAutosave", () => {
     expect(result.current.state).toBe("idle");
   });
 
-  it('on mutation error transitions to state="error" and calls toast.error', async () => {
+  it("keeps a rejected save dirty and surfaces the server error", async () => {
     const { wrapper } = buildHarness({
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async mutationFn contract; throws synchronously but must satisfy Promise<unknown> return type
       mutationFn: async () => {
@@ -300,6 +300,7 @@ describe("useLeadFormAutosave", () => {
 
     expect(result.current.state).toBe("error");
     expect(toast.error).toHaveBeenCalledWith("Network down");
+    expect(result.current.dirty).toBe(true);
   });
 
   it("after an error the form stays dirty and the next edit retries the save", async () => {
