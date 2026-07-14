@@ -73,18 +73,22 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
     };
 
     if (job?.data.jobId) {
-      void this.pdfExportService
-        .markExportFailed(job.data.jobId, error.message)
-        .catch((markError: unknown) => {
-          this.logger.error("pdf-export failed-state update failed", {
-            jobId: job.data.jobId,
-            ...correlation,
-            error:
-              markError instanceof Error
-                ? markError.message
-                : String(markError),
+      const attemptsUsed = job.attemptsMade + 1;
+      const maxAttempts = job.opts.attempts ?? 1;
+      if (attemptsUsed >= maxAttempts) {
+        void this.pdfExportService
+          .markExportFailed(job.data.jobId, error.message)
+          .catch((markError: unknown) => {
+            this.logger.error("pdf-export failed-state update failed", {
+              jobId: job.data.jobId,
+              ...correlation,
+              error:
+                markError instanceof Error
+                  ? markError.message
+                  : String(markError),
+            });
           });
-        });
+      }
     }
 
     this.logger.error("pdf-export job failed", {

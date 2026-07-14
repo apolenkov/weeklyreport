@@ -1,4 +1,8 @@
-import type { AssembledReport, PdfExportJob } from "@customreport/shared";
+import type {
+  AssembledReport,
+  PdfExportJob,
+  UserSession,
+} from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
@@ -15,6 +19,19 @@ import {
 
 const reportId = "22222222-2222-4222-8222-222222222222";
 const unknownReportId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const requesterSession: UserSession = {
+  userId: "00000000-0000-4000-8000-00000000aaaa",
+  email: "head@test.local",
+  name: "Head",
+  role: "head",
+  activeReportId: reportId,
+  activeReportSectionId: null,
+  reportingGroupId: "00000000-0000-4000-8000-000000000301",
+};
+
+function sessionFor(userId: string): UserSession {
+  return { ...requesterSession, userId };
+}
 
 const publishedReport: AssembledReport = {
   reportId,
@@ -44,10 +61,17 @@ const draftReport: AssembledReport = {
 // In-memory repository
 // ---------------------------------------------------------------------------
 
-function createRepository(report: AssembledReport | null): PdfExportRepository {
+function createRepository(
+  report: AssembledReport | null,
+  canRead = true,
+): PdfExportRepository {
   const jobs = new Map<string, PdfExportJobRecord>();
 
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in the stub)
+    async canReadReport() {
+      return canRead;
+    },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in the stub)
     async getPublishedReport(id: string) {
       if (id === report?.reportId) {
@@ -99,7 +123,7 @@ describe("PdfExportService — contract tests", () => {
   describe("requestPdfExport", () => {
     it("creates a job for a published report", async () => {
       const service = new PdfExportService(createRepository(publishedReport));
-      const job = await service.requestPdfExport(reportId);
+      const job = await service.requestPdfExport(reportId, requesterSession);
 
       expect(job).toBeDefined();
       expect(job.reportId).toBe(reportId);
@@ -113,31 +137,31 @@ describe("PdfExportService — contract tests", () => {
       const service = new PdfExportService(createRepository(publishedReport));
 
       await expect(
-        service.requestPdfExport(unknownReportId),
+        service.requestPdfExport(unknownReportId, requesterSession),
       ).rejects.toBeInstanceOf(PdfExportDomainError);
 
-      await expect(service.requestPdfExport(unknownReportId)).rejects.toThrow(
-        "PDF export requires a published report.",
-      );
+      await expect(
+        service.requestPdfExport(unknownReportId, requesterSession),
+      ).rejects.toThrow("PDF export requires a published report.");
     });
 
     // 3. requestPdfExport — throws when report status is draft (not published)
     it("throws PdfExportDomainError when report is a draft", async () => {
       const service = new PdfExportService(createRepository(draftReport));
 
-      await expect(service.requestPdfExport(reportId)).rejects.toBeInstanceOf(
-        PdfExportDomainError,
-      );
+      await expect(
+        service.requestPdfExport(reportId, requesterSession),
+      ).rejects.toBeInstanceOf(PdfExportDomainError);
 
-      await expect(service.requestPdfExport(reportId)).rejects.toThrow(
-        "PDF export requires a published report.",
-      );
+      await expect(
+        service.requestPdfExport(reportId, requesterSession),
+      ).rejects.toThrow("PDF export requires a published report.");
     });
 
     // 4. requestPdfExport — created job has status 'queued'
     it('creates a job with status "queued"', async () => {
       const service = new PdfExportService(createRepository(publishedReport));
-      const job = await service.requestPdfExport(reportId);
+      const job = await service.requestPdfExport(reportId, requesterSession);
 
       expect(job.status).toBe("queued");
     });
@@ -156,7 +180,7 @@ describe("PdfExportService — contract tests", () => {
           mockQueue,
         );
 
-        const job = await service.requestPdfExport(reportId);
+        const job = await service.requestPdfExport(reportId, requesterSession);
 
         expect(mockQueue.add).toHaveBeenCalledTimes(1);
         expect(mockQueue.add).toHaveBeenCalledWith(
@@ -180,7 +204,7 @@ describe("PdfExportService — contract tests", () => {
     // 6. requestPdfExport — works without queue (null queue)
     it("works without a queue (null queue)", async () => {
       const service = new PdfExportService(createRepository(publishedReport));
-      const job = await service.requestPdfExport(reportId);
+      const job = await service.requestPdfExport(reportId, requesterSession);
 
       expect(job).toBeDefined();
       expect(job.status).toBe("queued");
@@ -189,9 +213,23 @@ describe("PdfExportService — contract tests", () => {
     // 7. requestPdfExport — sets templateVersion to 'phase-2-pdf-v1'
     it('sets templateVersion to "phase-2-pdf-v1"', async () => {
       const service = new PdfExportService(createRepository(publishedReport));
-      const job = await service.requestPdfExport(reportId);
+      const job = await service.requestPdfExport(reportId, requesterSession);
 
       expect(job.templateVersion).toBe("phase-2-pdf-v1");
+    });
+
+    it("rejects a cross-group request before enqueue", async () => {
+      const queue = createMockQueue();
+      const service = new PdfExportService(
+        createRepository(publishedReport, false),
+        undefined,
+        queue,
+      );
+
+      await expect(
+        service.requestPdfExport(reportId, requesterSession),
+      ).rejects.toThrow("PDF export is not available for this caller.");
+      expect(queue.add).not.toHaveBeenCalled();
     });
   });
 
@@ -199,7 +237,7 @@ describe("PdfExportService — contract tests", () => {
   describe("requestPdfExport — job lifecycle", () => {
     it("export job transitions: queued -> completed", async () => {
       const service = new PdfExportService(createRepository(publishedReport));
-      const job = await service.requestPdfExport(reportId);
+      const job = await service.requestPdfExport(reportId, requesterSession);
       expect(job.status).toBe("queued");
 
       const completed = await service.markExportCompleted(
@@ -214,17 +252,20 @@ describe("PdfExportService — contract tests", () => {
     it("export job failure marks status as failed", async () => {
       const repo = createRepository(publishedReport);
       const service = new PdfExportService(repo);
-      const job = await service.requestPdfExport(reportId);
+      const job = await service.requestPdfExport(reportId, requesterSession);
 
       await service.markExportFailed(job.jobId, "Browser crashed");
 
-      const fetched = await service.getPdfExportStatus(job.jobId);
+      const fetched = await service.getPdfExportStatus(
+        job.jobId,
+        requesterSession.userId,
+      );
       expect(fetched.status).toBe("failed");
     });
 
     it("created job has correct reportId and templateVersion", async () => {
       const service = new PdfExportService(createRepository(publishedReport));
-      const job = await service.requestPdfExport(reportId);
+      const job = await service.requestPdfExport(reportId, requesterSession);
 
       expect(job.reportId).toBe(reportId);
       expect(job.templateVersion).toBe("phase-2-pdf-v1");
@@ -239,9 +280,15 @@ describe("PdfExportService — contract tests", () => {
   describe("getPdfExportStatus", () => {
     it("returns the job when found", async () => {
       const service = new PdfExportService(createRepository(publishedReport));
-      const created = await service.requestPdfExport(reportId);
+      const created = await service.requestPdfExport(
+        reportId,
+        requesterSession,
+      );
 
-      const fetched = await service.getPdfExportStatus(created.jobId);
+      const fetched = await service.getPdfExportStatus(
+        created.jobId,
+        requesterSession.userId,
+      );
 
       expect(fetched.jobId).toBe(created.jobId);
       expect(fetched.reportId).toBe(reportId);
@@ -252,7 +299,10 @@ describe("PdfExportService — contract tests", () => {
       const service = new PdfExportService(createRepository(publishedReport));
       const ownerId = "00000000-0000-4000-8000-00000000aaaa";
       const otherId = "00000000-0000-4000-8000-00000000bbbb";
-      const created = await service.requestPdfExport(reportId, ownerId);
+      const created = await service.requestPdfExport(
+        reportId,
+        sessionFor(ownerId),
+      );
 
       await expect(
         service.getPdfExportStatus(created.jobId, otherId),
@@ -265,12 +315,12 @@ describe("PdfExportService — contract tests", () => {
       const missingJobId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
       await expect(
-        service.getPdfExportStatus(missingJobId),
+        service.getPdfExportStatus(missingJobId, requesterSession.userId),
       ).rejects.toBeInstanceOf(PdfExportDomainError);
 
-      await expect(service.getPdfExportStatus(missingJobId)).rejects.toThrow(
-        `PDF export job ${missingJobId} was not found.`,
-      );
+      await expect(
+        service.getPdfExportStatus(missingJobId, requesterSession.userId),
+      ).rejects.toThrow(`PDF export job ${missingJobId} was not found.`);
     });
   });
 
@@ -278,7 +328,7 @@ describe("PdfExportService — contract tests", () => {
   describe("markExportCompleted", () => {
     it('sets status to "completed" with artifactUrl and checksum', async () => {
       const service = new PdfExportService(createRepository(publishedReport));
-      const queued = await service.requestPdfExport(reportId);
+      const queued = await service.requestPdfExport(reportId, requesterSession);
 
       const completed = await service.markExportCompleted(
         queued.jobId,
@@ -294,7 +344,7 @@ describe("PdfExportService — contract tests", () => {
     // 11. markExportCompleted — sets completedAt timestamp
     it("sets completedAt timestamp", async () => {
       const service = new PdfExportService(createRepository(publishedReport));
-      const queued = await service.requestPdfExport(reportId);
+      const queued = await service.requestPdfExport(reportId, requesterSession);
 
       const before = new Date();
       const completed = await service.markExportCompleted(
@@ -326,7 +376,7 @@ describe("PdfExportService — contract tests", () => {
       };
 
       const service = new PdfExportService(repo);
-      const queued = await service.requestPdfExport(reportId);
+      const queued = await service.requestPdfExport(reportId, requesterSession);
 
       await service.markExportFailed(queued.jobId, "Playwright timeout");
 

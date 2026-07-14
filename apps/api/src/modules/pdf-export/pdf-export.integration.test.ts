@@ -1,3 +1,4 @@
+import type { UserSession } from "@customreport/shared";
 import jwt from "jsonwebtoken";
 import {
   afterAll,
@@ -180,7 +181,16 @@ describe("cookie seam — service against real Prisma repo", () => {
     } as never;
 
     const service = new PdfExportService(repo, undefined, fakeQueue);
-    await service.requestPdfExport(testData.report.id, testData.head.id);
+    const session: UserSession = {
+      userId: testData.head.id,
+      email: testData.head.email,
+      name: testData.head.name,
+      role: testData.head.role,
+      activeReportId: testData.report.id,
+      activeReportSectionId: null,
+      reportingGroupId: testData.head.reportingGroupId ?? undefined,
+    };
+    await service.requestPdfExport(testData.report.id, session);
 
     expect(enqueued).toHaveLength(1);
     expect(expectDefined(enqueued[0]).data.reportId).toBe(testData.report.id);
@@ -195,5 +205,50 @@ describe("cookie seam — service against real Prisma repo", () => {
     // requester so the export is scoped to their in-app view (not an empty
     // viewer session). buildPdfExportSession in trpc.context rebuilds this user.
     expect(decoded.requestedBy).toBe(testData.head.id);
+  });
+
+  it("rejects a published report outside the caller's group before enqueue", async () => {
+    const testData = await seedTestData(prisma);
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        status: "published",
+        publishedAt: new Date("2026-04-15T10:00:00.000Z"),
+        publishedById: testData.head.id,
+      },
+    });
+    const otherGroup = await prisma.reportingGroup.create({
+      data: {
+        name: "Other Group",
+        description: "Outside the report scope",
+      },
+    });
+    const otherHead = await prisma.user.create({
+      data: {
+        email: "other-head@test.local",
+        name: "Other Head",
+        lastName: "Other",
+        firstName: "Head",
+        role: "head",
+        samlId: "other-head-test",
+        reportingGroupId: otherGroup.id,
+      },
+    });
+    const session: UserSession = {
+      userId: otherHead.id,
+      email: otherHead.email,
+      name: otherHead.name,
+      role: otherHead.role,
+      activeReportId: testData.report.id,
+      activeReportSectionId: null,
+      reportingGroupId: otherGroup.id,
+    };
+    const queue = { add: vi.fn() };
+    const service = new PdfExportService(repo, undefined, queue);
+
+    await expect(
+      service.requestPdfExport(testData.report.id, session),
+    ).rejects.toThrow("PDF export is not available for this caller.");
+    expect(queue.add).not.toHaveBeenCalled();
   });
 });

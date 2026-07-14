@@ -1,22 +1,21 @@
-import { type PdfExportJob, pdfExportJobSchema } from "@customreport/shared";
+import {
+  type PdfExportJob,
+  pdfExportJobSchema,
+  type UserSession,
+} from "@customreport/shared";
 
 import { PdfExportService } from "./pdf-export.service";
 
 export interface PdfExportRouterRequestContext {
   pdfExportService: PdfExportService;
   reportId: string;
-  /**
-   * Session userId of the head requesting the export.
-   * Optional for parity with the bare service call; tRPC callers should
-   * always supply `ctx.session.userId`.
-   */
-  requestedBy?: string;
+  session: UserSession;
 }
 
 export interface PdfExportRouterStatusContext {
   pdfExportService: PdfExportService;
   jobId: string;
-  requestedBy?: string;
+  requestedBy: string;
 }
 
 export const pdfExportRouter = {
@@ -24,10 +23,7 @@ export const pdfExportRouter = {
     ctx: PdfExportRouterRequestContext,
   ): Promise<PdfExportJob> {
     return pdfExportJobSchema.parse(
-      await ctx.pdfExportService.requestPdfExport(
-        ctx.reportId,
-        ctx.requestedBy,
-      ),
+      await ctx.pdfExportService.requestPdfExport(ctx.reportId, ctx.session),
     );
   },
   async getPdfExportStatus(
