@@ -6,7 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { HistoryEntry } from "../../report-sections/model/lead-history";
+import type { HistoryEntry } from "../../report-sections";
 import { LeadHistorySidebar } from "./lead-history-sidebar";
 
 function makeEntry(

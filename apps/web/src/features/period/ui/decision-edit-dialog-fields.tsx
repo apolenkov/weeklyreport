@@ -3,12 +3,12 @@
 import type { Ref } from "react";
 
 import { RecordTextareaField } from "../../../shared/ui/record-textarea-field";
-import type { Product } from "../../report-sections/model/types";
-import {
-  type ParentActivityOption,
-  ParentPicker,
-  type RecordParent,
-} from "../../report-sections/ui/product-picker";
+import type {
+  ParentActivityOption,
+  Product,
+  RecordParent,
+} from "../../report-sections";
+import { ParentPicker } from "../../report-sections";
 import { RecordStageStep } from "./record-stage-step";
 
 interface DecisionEditDialogFieldsProps {

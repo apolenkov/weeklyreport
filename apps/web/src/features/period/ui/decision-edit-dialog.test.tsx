@@ -14,7 +14,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { DecisionEntry, Product } from "../../report-sections/model/types";
+import type { DecisionEntry, Product } from "../../report-sections";
 import { DecisionEditDialog } from "./decision-edit-dialog";
 
 const products: Product[] = [

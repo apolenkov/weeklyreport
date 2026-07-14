@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
-import type { ReportPeriod } from "../../report-sections/model/types";
+import type { ReportPeriod } from "../../report-sections";
 
 interface FillFromConfirmDialogProps {
   readonly open: boolean;

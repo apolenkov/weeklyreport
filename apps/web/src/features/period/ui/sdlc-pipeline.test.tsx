@@ -10,7 +10,8 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { Product } from "../../report-sections/model/types";
+import type { Product } from "../../report-sections";
+import { STAGE_CHIP_BOX_HEIGHT } from "../../report-sections";
 import { getProductCardStyle, SdlcPipeline } from "./sdlc-pipeline";
 
 // ---- Unit: getProductCardStyle (health-only, always solid) ----
@@ -539,8 +540,6 @@ describe("SdlcPipeline — 4.3 co-lead blocked locked chip: initials, no counts"
 // - stages row is top-aligned (items-start)
 // - each [arrow, chip] cell is top-aligned (items-start)
 // - arrow wrapper carries STAGE_CHIP_BOX_HEIGHT as inline height
-
-import { STAGE_CHIP_BOX_HEIGHT } from "../../report-sections/model/stage-chip-config";
 
 /**
  * Locate the stages row: the flex-wrap div that also carries justify-center

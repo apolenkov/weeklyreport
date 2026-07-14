@@ -1,6 +1,9 @@
-import { canonicalStageIds } from "../../report-sections/model/stage-tags";
-import type { DecisionEntry, Product } from "../../report-sections/model/types";
-import type { ParentActivityOption } from "../../report-sections/ui/product-picker";
+import type {
+  DecisionEntry,
+  ParentActivityOption,
+  Product,
+} from "../../report-sections";
+import { canonicalStageIds } from "../../report-sections";
 
 export interface DecisionFieldErrors {
   text?: string;

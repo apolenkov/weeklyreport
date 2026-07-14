@@ -1,11 +1,11 @@
 import { LockBadge } from "../../../shared/ui/report-shell/lock-badge";
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
-import { FOREIGN_ENTRY_OPACITY } from "../../report-sections/model/item-card-style";
+import type { DecisionEntry } from "../../report-sections";
 import {
   canonicalStageName,
+  FOREIGN_ENTRY_OPACITY,
   splitStageNames,
-} from "../../report-sections/model/stage-tags";
-import type { DecisionEntry } from "../../report-sections/model/types";
+} from "../../report-sections";
 import { PublishedRecordMarker } from "./item-card-actions";
 
 function EditIcon() {

@@ -7,20 +7,16 @@ import { useEditableListDialog } from "../../../hooks/use-editable-list-dialog";
 import { usePauseReason } from "../../../hooks/use-pause-reason";
 import { useScrollFade } from "../../../hooks/use-scroll-fade";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
+import type { KanbanItem, Product, RiskEntry } from "../../report-sections";
 import {
+  ActivityLanesBlock,
+  BoardColumnHeader,
+  BoardEmptyState,
   isBoardEmpty,
+  ItemCard,
+  ItemEditDialog,
   splitItemBoard,
-} from "../../report-sections/model/next-week-columns";
-import type {
-  KanbanItem,
-  Product,
-  RiskEntry,
-} from "../../report-sections/model/types";
-import { ActivityLanesBlock } from "../../report-sections/ui/activity-lanes-block";
-import { BoardColumnHeader } from "../../report-sections/ui/board-column-header";
-import { BoardEmptyState } from "../../report-sections/ui/board-empty-state";
-import { ItemCard } from "../../report-sections/ui/item-card";
-import { ItemEditDialog } from "../../report-sections/ui/item-edit-dialog";
+} from "../../report-sections";
 import { PauseReasonDialog } from "./pause-reason-dialog";
 
 const MAX_GRID_COLUMNS = 3;
