@@ -22,7 +22,7 @@ export interface TelemetryRouterDeps {
 
 export function createTelemetryRouter(deps: TelemetryRouterDeps) {
   return router({
-    summary: leadershipProcedure.query(async () => {
+    summary: leadershipProcedure.query(async ({ ctx }) => {
       try {
         if (!deps.telemetryService) {
           // Test-fixture mode (createAppRouter({}) for role-coverage
@@ -39,7 +39,7 @@ export function createTelemetryRouter(deps: TelemetryRouterDeps) {
             sparkline: [] as number[],
           };
         }
-        return await deps.telemetryService.getSummary();
+        return await deps.telemetryService.getSummary(ctx.session);
       } catch (error) {
         throw mapDomainError(error);
       }

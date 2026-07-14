@@ -84,19 +84,16 @@ export interface WeeklyReportRepository {
    */
   getCurrentEditableId(): Promise<string | null>;
   /**
-   * viewer-live-status: the newest `published` report id (deterministic
-   * `periodStart desc`, then `id desc`), or null. Used to resolve the viewer's
-   * default report (no `reportId`) consistently with the published-or-current
-   * gate — the editable part comes from `getCurrentEditableId`, the fallback
-   * from here, so the resolved default is always a period the gate accepts.
+   * The newest `published` report id, including archived reports
+   * (deterministic `periodStart desc`, then `id desc`), or null.
    */
   getLatestPublishedId(): Promise<string | null>;
   /**
    * The newest non-archived `published` report id (deterministic `periodStart
    * desc, id desc`), or null. Mirrors `getLatestPublishedId` but adds the
    * `archived: false` filter, so it is the head's reopen authz target and
-   * published-fallback default — a head can reopen the newest non-archived
-   * published period even when a newer published row has been archived.
+   * published-fallback default for leadership readers — the default remains
+   * usable even when a newer published row has been archived.
    */
   getLatestPublishedNonArchivedId(): Promise<string | null>;
   /**
@@ -148,14 +145,9 @@ export class WeeklyReportService {
   }
 
   /**
-   * viewer-live-status: resolve the default report when the caller passes no
-   * `reportId`. For a viewer it MUST be a period the published-or-current gate
-   * accepts — the current editable period (from the same source the gate uses)
-   * else the newest published — otherwise the resolved default could be a period
-   * the gate then rejects (a self-inflicted 404). `getActiveReportId` is NOT
-   * used for viewers: its editable query has no `archived` filter and a
-   * published fallback, so it can diverge from `getCurrentEditableId` and pick an
-   * archived-open or different tied period the gate rejects.
+   * Resolve the default report when the caller passes no `reportId`. Leadership
+   * readers use the current editable period, else the newest non-archived
+   * published period, so their default cannot land on an archived report.
    *
    * The head resolves through the SAME lifecycle resolvers the publish/reopen
    * authz uses (`getCurrentEditableId` else `getLatestPublishedNonArchivedId`),
@@ -168,7 +160,7 @@ export class WeeklyReportService {
     if (role === "viewer") {
       return (
         (await this.repository.getCurrentEditableId()) ??
-        (await this.repository.getLatestPublishedId())
+        (await this.repository.getLatestPublishedNonArchivedId())
       );
     }
     if (role === "head") {

@@ -1,6 +1,8 @@
-import type { TelemetrySummary } from "@customreport/shared";
+import type { TelemetrySummary, UserSession } from "@customreport/shared";
 import { telemetrySummarySchema } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
+
+import { scopeDiscriminator } from "../../lib/group-scope.js";
 
 /** Number of trailing periods shown on the KPI card's sparkline. */
 const SPARKLINE_PERIOD_COUNT = 4;
@@ -13,21 +15,21 @@ const SPARKLINE_PERIOD_COUNT = 4;
  */
 export interface TelemetryRepository {
   /** Count of Report rows in the most recently created period (any status). */
-  reportsThisPeriodCount(): Promise<number>;
+  reportsThisPeriodCount(session: UserSession): Promise<number>;
   /** Distinct lead authors who submitted in the most recent published period. */
-  activeLeadsLastPublishedPeriod(): Promise<number>;
+  activeLeadsLastPublishedPeriod(session: UserSession): Promise<number>;
   /** Sections with `late=true AND status='submitted'` in the last published period. */
-  lateSectionsLastPublishedPeriod(): Promise<number>;
+  lateSectionsLastPublishedPeriod(session: UserSession): Promise<number>;
   /** Reopen requests still in `pending` state across all periods. */
-  pendingReopenCount(): Promise<number>;
+  pendingReopenCount(session: UserSession): Promise<number>;
   /** PDF export rows created in the last 7 days. */
-  pdfExportsLast7d(): Promise<number>;
+  pdfExportsLast7d(session: UserSession): Promise<number>;
   /**
    * On-time ratio (`late=false / total submitted`) per published period,
    * oldest → newest, up to `n` entries. Periods without submitted
    * sections are filtered out by the caller.
    */
-  onTimeRatioPerPeriod(n: number): Promise<number[]>;
+  onTimeRatioPerPeriod(n: number, session: UserSession): Promise<number[]>;
 }
 
 /**
@@ -58,15 +60,17 @@ export class TelemetryService {
 
   /**
    * Returns the leadership-readable KPI bundle for the `/dashboard`
-   * card. Cached for 60 seconds (key `summary:v1`) so a hot dashboard
-   * refresh from multiple viewers does not stampede the database. The
-   * cache key embeds a version suffix so schema additions can invalidate
-   * cleanly via a bump.
+   * card. Cached for 60 seconds within the caller's group-scope partition so
+   * a hot dashboard refresh does not stampede the database or reuse another
+   * group's aggregate. The key embeds a version suffix so schema additions
+   * can invalidate cleanly via a bump.
    */
-  async getSummary(): Promise<TelemetrySummary> {
-    return this.cache.getOrCompute<TelemetrySummary>("summary:v1", async () => {
+  async getSummary(session: UserSession): Promise<TelemetrySummary> {
+    const cacheKey = `summary:v1:${scopeDiscriminator(session)}`;
+    return this.cache.getOrCompute<TelemetrySummary>(cacheKey, async () => {
       const sparkline = await this.repository.onTimeRatioPerPeriod(
         SPARKLINE_PERIOD_COUNT,
+        session,
       );
       // Headline ratio = the freshest single period only (the last sparkline
       // entry). This is a DIFFERENT window from the Prometheus
@@ -84,11 +88,11 @@ export class TelemetryService {
         pendingReopens,
         pdfExportsLast7d,
       ] = await Promise.all([
-        this.repository.reportsThisPeriodCount(),
-        this.repository.activeLeadsLastPublishedPeriod(),
-        this.repository.lateSectionsLastPublishedPeriod(),
-        this.repository.pendingReopenCount(),
-        this.repository.pdfExportsLast7d(),
+        this.repository.reportsThisPeriodCount(session),
+        this.repository.activeLeadsLastPublishedPeriod(session),
+        this.repository.lateSectionsLastPublishedPeriod(session),
+        this.repository.pendingReopenCount(session),
+        this.repository.pdfExportsLast7d(session),
       ]);
 
       return telemetrySummarySchema.parse({

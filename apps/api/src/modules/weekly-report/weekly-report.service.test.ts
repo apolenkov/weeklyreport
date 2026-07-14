@@ -401,14 +401,18 @@ describe("WeeklyReportService — viewer-live-status published-or-current gate (
   });
 
   // viewer + NO reportId + no current editable period → falls back to the newest
-  // published (a gate-accepted period), NOT getActiveReportId's editable query.
-  it("viewer no-reportId falls back to the latest published when no current editable", async () => {
+  // non-archived published report, NOT either archived-inclusive resolver.
+  it("viewer no-reportId falls back to the latest non-archived published report", async () => {
     const published = makeWeeklyReport({ periodStatus: "published" });
     const reports = new Map([[reportId, published]]);
-    const service = new WeeklyReportService(
-      // no current editable; latest published → reportId
-      createSpyRepository(reports, null, null, reportId),
+    const repo = createSpyRepository(
+      reports,
+      activeReportId,
+      null,
+      activeReportId,
+      reportId,
     );
+    const service = new WeeklyReportService(repo);
 
     const result = await service.getWeeklyReport(undefined, "viewer");
 
@@ -416,6 +420,10 @@ describe("WeeklyReportService — viewer-live-status published-or-current gate (
     if (result.status !== "active") throw new Error("expected active");
     expect(result.periodStatus).toBe("published");
     expect(result.reportId).toBe(reportId);
+    expect(repo.getCurrentEditableId).toHaveBeenCalledOnce();
+    expect(repo.getLatestPublishedNonArchivedId).toHaveBeenCalledOnce();
+    expect(repo.getLatestPublishedId).not.toHaveBeenCalled();
+    expect(repo.getActiveReportId).not.toHaveBeenCalled();
   });
 
   // viewer + NO reportId + nothing to show → no-period sentinel (never a 404).

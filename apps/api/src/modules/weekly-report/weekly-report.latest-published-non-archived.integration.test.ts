@@ -7,6 +7,7 @@ import {
   disconnectTestPrisma,
 } from "../../test-utils/prisma-test-helper";
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
+import { WeeklyReportService } from "./weekly-report.service";
 
 /**
  * Real-Prisma coverage for `getLatestPublishedNonArchivedId()` — the head's
@@ -120,6 +121,24 @@ describe("WeeklyReportPrismaRepository.getLatestPublishedNonArchivedId (integrat
     await expect(
       repository.getLatestPublishedNonArchivedId(),
     ).resolves.toBeNull();
+  });
+
+  it("does not resolve an archived-only published report as the viewer default", async () => {
+    await createReport(
+      ARCHIVED_PUBLISHED,
+      "published",
+      "2026-05-18T00:00:00.000Z",
+      true,
+    );
+
+    const service = new WeeklyReportService(repository);
+    await expect(service.getWeeklyReport(undefined, "viewer")).resolves.toEqual(
+      {
+        status: "no-period",
+        report: null,
+        crossGroup: null,
+      },
+    );
   });
 
   it("breaks a same-periodStart tie deterministically by id desc", async () => {
