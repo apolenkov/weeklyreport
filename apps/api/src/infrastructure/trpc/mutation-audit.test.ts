@@ -1,3 +1,4 @@
+import type { UserSession } from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -5,20 +6,15 @@ import { z } from "zod";
 import type { AuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
 import {
+  adminProcedure,
   leadProcedure,
   protectedProcedure,
   router,
 } from "./trpc.middleware.js";
 
 /**
- * 36-02 mutation-audit middleware tests.
- *
- * Asserts the middleware:
- *   - emits exactly one `mutation` event per authenticated mutation
- *   - skips queries
- *   - skips auth.* (covered by login events)
- *   - emits status=fail with reason on TRPCError
- *   - extracts `target` from common input id keys
+ * Covers mutation-audit emission, bypasses, failures, target extraction, and
+ * persistence.
  */
 
 function makeAuditSpy(): {
@@ -33,16 +29,9 @@ function makeAuditSpy(): {
     roleDenied: vi.fn(),
     scopeDenied: vi.fn(),
     mutation,
-    // The policy helpers are not exercised here (they're verified by
-    // audit-logger.test.ts and the router-level wiring), but the mock has
-    // to satisfy the AuditLogger interface.
     policySave: vi.fn(),
     policyRemove: vi.fn(),
-    // organizationUpdate not exercised here either.
     organizationUpdate: vi.fn(),
-    // period auto-* events fired only by the schedulers, not the tRPC
-    // mutation path — exercised by audit-logger.test.ts. Stubbed here to
-    // satisfy the interface.
     periodAutoCreate: vi.fn(),
     periodAutoPublish: vi.fn(),
     periodAutoArchive: vi.fn(),
@@ -71,6 +60,23 @@ const leadSession = {
   activeReportSectionId: "s1",
 };
 
+const adminSession = {
+  userId: "admin-1",
+  email: "admin@test.com",
+  name: "Admin User",
+  role: "admin" as const,
+  activeReportId: null,
+  activeReportSectionId: null,
+};
+
+const userTargetMutation = adminProcedure
+  .input(z.object({ userId: z.uuid() }))
+  .mutation(() => "ok");
+
+const groupProductTargetMutation = adminProcedure
+  .input(z.object({ groupId: z.uuid(), productId: z.uuid() }))
+  .mutation(() => "ok");
+
 const auditTestRouter = router({
   // Mutation with sectionId in input — target should be extracted.
   saveDraft: leadProcedure
@@ -93,19 +99,38 @@ const auditTestRouter = router({
       .input(z.object({ id: z.string() }))
       .mutation(() => "auth-ok"),
   }),
+  admin: router({
+    deactivateUser: userTargetMutation,
+    activateUser: userTargetMutation,
+    deleteUser: userTargetMutation,
+    attachProductToGroup: groupProductTargetMutation,
+    detachProductFromGroup: groupProductTargetMutation,
+  }),
 });
 
-describe("36-02 mutation-audit middleware", () => {
+function makeAuditCaller(auditLogger: AuditLogger, session: UserSession) {
+  return auditTestRouter.createCaller({
+    session,
+    logger: nullLogger,
+    auditLogger,
+    ip: TEST_IP,
+    isPdfExport: false,
+    pdfReportId: null,
+  });
+}
+
+function expectAuditTarget(
+  mutation: ReturnType<typeof vi.fn>,
+  procedure: string,
+  target: string,
+): void {
+  expect(mutation.mock.calls[0]?.[0]).toMatchObject({ procedure, target });
+}
+
+describe("mutation-audit middleware", () => {
   it("emits exactly one mutation event on a successful authenticated mutation", async () => {
     const { audit, mutation } = makeAuditSpy();
-    const caller = auditTestRouter.createCaller({
-      session: leadSession,
-      logger: nullLogger,
-      auditLogger: audit,
-      ip: TEST_IP,
-      isPdfExport: false,
-      pdfReportId: null,
-    });
+    const caller = makeAuditCaller(audit, leadSession);
 
     await caller.saveDraft({ sectionId: "sec-42", text: "hi" });
 
@@ -157,14 +182,7 @@ describe("36-02 mutation-audit middleware", () => {
 
   it("emits status=fail with reason when the mutation throws", async () => {
     const { audit, mutation } = makeAuditSpy();
-    const caller = auditTestRouter.createCaller({
-      session: leadSession,
-      logger: nullLogger,
-      auditLogger: audit,
-      ip: TEST_IP,
-      isPdfExport: false,
-      pdfReportId: null,
-    });
+    const caller = makeAuditCaller(audit, leadSession);
 
     await expect(caller.failingMutation({ id: "thing-1" })).rejects.toThrow();
 
@@ -182,14 +200,7 @@ describe("36-02 mutation-audit middleware", () => {
 
   it("does NOT emit a mutation event for a query", async () => {
     const { audit, mutation } = makeAuditSpy();
-    const caller = auditTestRouter.createCaller({
-      session: leadSession,
-      logger: nullLogger,
-      auditLogger: audit,
-      ip: TEST_IP,
-      isPdfExport: false,
-      pdfReportId: null,
-    });
+    const caller = makeAuditCaller(audit, leadSession);
 
     await caller.queryRoute();
 
@@ -198,17 +209,39 @@ describe("36-02 mutation-audit middleware", () => {
 
   it("skips auth.* mutations", async () => {
     const { audit, mutation } = makeAuditSpy();
-    const caller = auditTestRouter.createCaller({
-      session: leadSession,
-      logger: nullLogger,
-      auditLogger: audit,
-      ip: TEST_IP,
-      isPdfExport: false,
-      pdfReportId: null,
-    });
+    const caller = makeAuditCaller(audit, leadSession);
 
     await caller.auth.fakeMutation({ id: "b" });
 
     expect(mutation).not.toHaveBeenCalled();
   });
+
+  it.each(["deactivateUser", "activateUser", "deleteUser"] as const)(
+    "extracts userId for admin.%s",
+    async (procedure) => {
+      const { audit, mutation } = makeAuditSpy();
+      const caller = makeAuditCaller(audit, adminSession);
+      const userId = "00000000-0000-4000-8000-000000000001";
+
+      await caller.admin[procedure]({ userId });
+
+      expectAuditTarget(mutation, `admin.${procedure}`, userId);
+    },
+  );
+
+  it.each(["attachProductToGroup", "detachProductFromGroup"] as const)(
+    "prefers productId for admin.%s",
+    async (procedure) => {
+      const { audit, mutation } = makeAuditSpy();
+      const caller = makeAuditCaller(audit, adminSession);
+      const input = {
+        groupId: "00000000-0000-4000-8000-000000000002",
+        productId: "00000000-0000-4000-8000-000000000003",
+      };
+
+      await caller.admin[procedure](input);
+
+      expectAuditTarget(mutation, `admin.${procedure}`, input.productId);
+    },
+  );
 });
