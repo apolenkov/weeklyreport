@@ -8,6 +8,7 @@ import {
   AdminPeriodOverlapError,
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,
+  AdminUserConflictError,
 } from "../../modules/admin/admin.service.js";
 import { ArchiveDomainError } from "../../modules/archive/archive.service.js";
 import {
@@ -135,6 +136,8 @@ const DOMAIN_ERROR_CODES: readonly (readonly [
   // map-domain-errors: product owned by another group, terminal until the admin
   // detaches it → CONFLICT.
   [AdminGroupProductConflictError, "CONFLICT"],
+  // An email or SAML identity collision is an existing-resource conflict.
+  [AdminUserConflictError, "CONFLICT"],
   // Project Activity admin writes: a missing activity/group/product/lead is
   // NOT_FOUND; a business-rule violation (group mismatch, non-lead attach,
   // archived target) is BAD_REQUEST.

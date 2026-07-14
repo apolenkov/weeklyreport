@@ -81,6 +81,18 @@ export class AdminGroupProductConflictError extends Error {
 }
 
 /**
+ * Thrown when user creation collides with an existing email or SAML identity.
+ * The identity already exists, so the tRPC error-mapper renders the collision
+ * as CONFLICT rather than treating it as a validation failure.
+ */
+export class AdminUserConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminUserConflictError";
+  }
+}
+
+/**
  * Thrown by `respondReopenRequest` when the scoped re-load finds no matching
  * pending request — either the id is unknown or it belongs to a group outside
  * the deciding head's scope (admin scope is global, so this path is

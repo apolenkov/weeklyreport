@@ -8,8 +8,10 @@ import {
 import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { isUniqueViolation } from "../../lib/prisma-unique-violation";
 import type { PolicyApplicatorService } from "../reminders/index.js";
 import { ensureFallbackReportingGroup } from "./admin-group.queries";
+import { AdminUserConflictError } from "./admin-shared.js";
 import { resolveLifecycle } from "./snapshot-lifecycle.js";
 
 /**
@@ -45,31 +47,38 @@ export async function upsertUser(
     firstName: user.firstName,
     middleName: user.middleName,
   });
-  await prisma.user.upsert({
-    where: { id: user.id },
-    create: {
-      id: user.id,
-      email: user.email,
-      name,
-      lastName: user.lastName,
-      firstName: user.firstName,
-      middleName: user.middleName,
-      position: user.position,
-      role: user.role,
-      samlId: user.email,
-      reportingGroupId,
-    },
-    update: {
-      email: user.email,
-      name,
-      lastName: user.lastName,
-      firstName: user.firstName,
-      middleName: user.middleName,
-      position: user.position,
-      role: user.role,
-      reportingGroupId,
-    },
-  });
+  try {
+    await prisma.user.upsert({
+      where: { id: user.id },
+      create: {
+        id: user.id,
+        email: user.email,
+        name,
+        lastName: user.lastName,
+        firstName: user.firstName,
+        middleName: user.middleName,
+        position: user.position,
+        role: user.role,
+        samlId: user.email,
+        reportingGroupId,
+      },
+      update: {
+        email: user.email,
+        name,
+        lastName: user.lastName,
+        firstName: user.firstName,
+        middleName: user.middleName,
+        position: user.position,
+        role: user.role,
+        reportingGroupId,
+      },
+    });
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    throw new AdminUserConflictError(
+      "A user with this email or SAML identity already exists.",
+    );
+  }
 }
 
 export async function removeUser(

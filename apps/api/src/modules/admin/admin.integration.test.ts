@@ -20,6 +20,7 @@ import {
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
+import { AdminUserConflictError } from "./admin-shared";
 
 describe("AdminPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
@@ -219,6 +220,26 @@ describe("AdminPrismaRepository (integration)", () => {
 
     const after = await repo.listProductGroups(testData.project.id);
     expect(after.map((g) => g.id)).not.toContain(leadGroupId);
+  });
+
+  it("attachProductToGroup resolves two concurrent first-attaches to one row", async () => {
+    await prisma.groupProduct.deleteMany({});
+    const input = {
+      groupId: expectDefined(testData.lead.reportingGroupId),
+      productId: testData.project.id,
+    };
+
+    const [first, second] = await Promise.all([
+      repo.attachProductToGroup(input),
+      repo.attachProductToGroup(input),
+    ]);
+
+    expect(second.id).toBe(first.id);
+    const rows = await prisma.groupProduct.findMany({
+      where: { productId: input.productId },
+    });
+    expect(rows).toHaveLength(1);
+    expect(expectDefined(rows[0]).id).toBe(first.id);
   });
 
   it("listProductGroupOwnership resolves owners for many products in one call", async () => {
@@ -638,6 +659,74 @@ describe("AdminPrismaRepository (integration)", () => {
     );
     expect(row.name).toBe(expected);
     expect(row.name).not.toBe("TOTALLY WRONG DISPLAY NAME");
+  });
+
+  it("upsertUser preserves samlId when an admin changes the email", async () => {
+    const id = "a0000000-0000-4000-a000-0000000000ab";
+    const originalEmail = "create-only-identity@test.local";
+    const user = {
+      id,
+      email: originalEmail,
+      name: "Create Only",
+      lastName: "Create",
+      firstName: "Only",
+      middleName: null,
+      position: null,
+      role: "viewer" as const,
+      reportingGroupId: null,
+      isActive: true,
+    };
+
+    await repo.upsertUser(user);
+    const created = expectDefined(
+      await prisma.user.findUnique({ where: { id } }),
+    );
+
+    await repo.upsertUser({ ...user, email: "updated-email@test.local" });
+
+    const updated = expectDefined(
+      await prisma.user.findUnique({ where: { id } }),
+    );
+    expect(updated.email).toBe("updated-email@test.local");
+    expect(updated.samlId).toBe(created.samlId);
+    expect(updated.samlId).toBe(originalEmail);
+  });
+
+  it("upsertUser reports one typed conflict for concurrent identity creation", async () => {
+    const email = "concurrent-identity@test.local";
+    const user = {
+      email,
+      name: "Concurrent Identity",
+      lastName: "Concurrent",
+      firstName: "Identity",
+      middleName: null,
+      position: null,
+      role: "viewer" as const,
+      reportingGroupId: null,
+      isActive: true,
+    };
+    const results = await Promise.allSettled([
+      repo.upsertUser({
+        ...user,
+        id: "a0000000-0000-4000-a000-0000000000ac",
+      }),
+      repo.upsertUser({
+        ...user,
+        id: "a0000000-0000-4000-a000-0000000000ad",
+      }),
+    ]);
+
+    expect(results.filter(({ status }) => status === "fulfilled")).toHaveLength(
+      1,
+    );
+    const rejected = expectDefined(
+      results.find(({ status }) => status === "rejected"),
+    );
+    expect(rejected.status).toBe("rejected");
+    if (rejected.status === "rejected") {
+      expect(rejected.reason).toBeInstanceOf(AdminUserConflictError);
+    }
+    expect(await prisma.user.count({ where: { email } })).toBe(1);
   });
 
   it("a concurrently-inserted user survives an unrelated targeted edit (5.4)", async () => {
