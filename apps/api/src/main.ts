@@ -389,6 +389,11 @@ async function bootstrap() {
     pdfExportService: app.get(PdfExportService),
     adminService: app.get(AdminService),
     actionLogService: app.get(ActionLogService),
+    // Without this the deactivate/activate revoked-set fast path is dead code:
+    // the procedures call `deps.sessionRevocationService?.` and silently no-op.
+    // The DI instance shares the Redis revoked set with the context factory's
+    // own instance, so a revocation lands where `isUserAccessBarred` reads.
+    sessionRevocationService: app.get(SessionRevocationService),
     organizationService: app.get(OrganizationService),
     remindersService: app.get(RemindersService),
     archiveService: app.get(ArchiveService),
