@@ -1,9 +1,15 @@
+import type { UserSession } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
 import type { Request } from "express";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../lib/logger";
-import { clearOrgCache, createContextFactory } from "./trpc.context";
+import {
+  clearOrgCache,
+  createContextFactory,
+  type HumanSessionDeps,
+  resolveHumanSession,
+} from "./trpc.context";
 
 /**
  * Contract tests for the four dev-mode flag combinations.
@@ -66,6 +72,70 @@ function makeReqWithRequestId(requestId: string): { req: Request } {
   } as unknown as Request;
   return { req };
 }
+
+const HUMAN_SESSION: UserSession = {
+  userId: "user-1",
+  email: "user@example.com",
+  name: "Test User",
+  role: "head",
+  activeReportId: "report-1",
+  activeReportSectionId: null,
+};
+
+function makeHumanSessionDeps(prisma: unknown): HumanSessionDeps {
+  return {
+    verifySessionToken: vi.fn(() => HUMAN_SESSION),
+    sessionRevocation: {
+      isRevoked: vi.fn(() => Promise.resolve(false)),
+    },
+    prisma: prisma as HumanSessionDeps["prisma"],
+  };
+}
+
+describe("resolveHumanSession", () => {
+  it("resolves to null when token verification throws", async () => {
+    const verificationError = new Error("token verification failed");
+    const deps = {
+      ...makeHumanSessionDeps({}),
+      verifySessionToken: vi.fn(() => {
+        throw verificationError;
+      }),
+    };
+
+    await expect(
+      resolveHumanSession("invalid-token", deps),
+    ).resolves.toBeNull();
+  });
+
+  it("propagates hydration errors", async () => {
+    const hydrationError = new Error("section lookup failed");
+    const prisma = {
+      user: {
+        findUnique: vi.fn(() => Promise.resolve({ isActive: true })),
+      },
+      reportSection: {
+        findFirst: vi.fn(() => Promise.reject(hydrationError)),
+      },
+    };
+
+    await expect(
+      resolveHumanSession("valid-token", makeHumanSessionDeps(prisma)),
+    ).rejects.toBe(hydrationError);
+  });
+
+  it("propagates access-bar check errors", async () => {
+    const accessError = new Error("user lookup failed");
+    const prisma = {
+      user: {
+        findUnique: vi.fn(() => Promise.reject(accessError)),
+      },
+    };
+
+    await expect(
+      resolveHumanSession("valid-token", makeHumanSessionDeps(prisma)),
+    ).rejects.toBe(accessError);
+  });
+});
 
 describe("createContextFactory — dev-mode flag matrix", () => {
   const ORIGINAL_AUTH_JWT_SECRET = process.env.AUTH_JWT_SECRET;

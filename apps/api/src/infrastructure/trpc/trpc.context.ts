@@ -173,7 +173,8 @@ export interface HumanSessionDeps {
  * revocation fast path, and the Prisma `isActive` check — followed by the
  * per-request hydration the rest of the app relies on (notably
  * `viewerGroupAccess`, which group-scope authz reads and which is NOT in the
- * JWT). Returns null for any invalid / revoked / deactivated token.
+ * JWT). Returns null for any invalid / revoked / deactivated token; errors from
+ * access checks or hydration propagate.
  *
  * Deliberately does NOT accept the PDF-export worker token or the dev-mode
  * synthetic session that the full `createContext` chain falls back to: a caller
@@ -190,21 +191,24 @@ export async function resolveHumanSession(
   token: string,
   deps: HumanSessionDeps,
 ): Promise<UserSession | null> {
-  try {
-    const session = deps.verifySessionToken(token);
-    if (
-      await isUserAccessBarred(
-        session.userId,
-        deps.prisma,
-        deps.sessionRevocation,
-      )
-    ) {
+  const session = (() => {
+    try {
+      return deps.verifySessionToken(token);
+    } catch {
       return null;
     }
-    return await hydrateSession(session, deps.prisma);
-  } catch {
+  })();
+  if (!session) return null;
+  if (
+    await isUserAccessBarred(
+      session.userId,
+      deps.prisma,
+      deps.sessionRevocation,
+    )
+  ) {
     return null;
   }
+  return hydrateSession(session, deps.prisma);
 }
 
 export function createContextFactory(
