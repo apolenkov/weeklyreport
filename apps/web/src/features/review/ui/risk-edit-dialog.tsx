@@ -3,8 +3,11 @@
 import { createPortal } from "react-dom";
 
 import { RecordDialogFooter } from "../../../shared/ui/record-dialog-footer";
-import type { Product, RiskEntry } from "../../report-sections/model/types";
-import type { ParentActivityOption } from "../../report-sections/ui/product-picker";
+import type {
+  ParentActivityOption,
+  Product,
+  RiskEntry,
+} from "../../report-sections";
 import { RiskEditDialogFields } from "./risk-edit-dialog-fields";
 import type { RiskSeverity } from "./risk-edit-dialog-helpers";
 import { useRiskEditDialog } from "./use-risk-edit-dialog";

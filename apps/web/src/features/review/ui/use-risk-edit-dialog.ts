@@ -1,17 +1,18 @@
 import { useMemo, useRef, useState } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
-import { resolveRecordParent } from "../../report-sections/model/record-parent";
-import {
-  computeEffectiveStageIds,
-  isZeroOwnedStageDeadEnd,
-} from "../../report-sections/model/stage-ownership";
-import { canonicalStageIds } from "../../report-sections/model/stage-tags";
-import type { Product, RiskEntry } from "../../report-sections/model/types";
 import type {
   ParentActivityOption,
+  Product,
   RecordParent,
-} from "../../report-sections/ui/product-picker";
+  RiskEntry,
+} from "../../report-sections";
+import {
+  canonicalStageIds,
+  computeEffectiveStageIds,
+  isZeroOwnedStageDeadEnd,
+  resolveRecordParent,
+} from "../../report-sections";
 import {
   collectRiskErrors,
   computeInitialStageIds,

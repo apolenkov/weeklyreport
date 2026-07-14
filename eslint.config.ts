@@ -151,8 +151,6 @@ const webSliceGrandfatheredExcept: Partial<
 > = {
   // period's assembled-report body gates publish/reopen — report-sections only.
   period: ["report-sections"],
-  // review's report-sections body sits underneath its review surfaces.
-  review: ["report-sections"],
 };
 const webCrossSliceZones = webSlices.map((sliceName) => ({
   target: `${webFeaturesDir}/${sliceName}`,

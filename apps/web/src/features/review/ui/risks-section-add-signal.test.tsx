@@ -16,7 +16,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { MOCK_PRODUCTS } from "../../report-sections/model/mock-data";
+import { MOCK_PRODUCTS } from "../../report-sections";
 import { RisksSection } from "./risks-section";
 
 const products = MOCK_PRODUCTS.slice(0, 1);
