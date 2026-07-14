@@ -76,6 +76,6 @@
 - [ ] 6.1 `pnpm --filter @customreport/api db:generate`
 - [ ] 6.2 `pnpm typecheck && pnpm lint && pnpm test`
 - [ ] 6.3 Metrics scrape check: boot the API from source, `curl
-  localhost:3001/metrics`, confirm `cr_queue_depth` and
+localhost:3001/metrics`, confirm `cr_queue_depth` and
       `cr_dlq_failed_current` appear
 - [ ] 6.4 `openspec validate observability-metrics-gaps --strict`

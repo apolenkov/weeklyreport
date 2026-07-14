@@ -4,7 +4,7 @@
       `currentPeriodId?: string` to `PeriodNavigatorProps`, documented as
       taking precedence over the `pathname` regex when supplied
 - [ ] 1.2 Update the `currentIndex` memo to resolve `pathReportId ??
-  currentPeriodId ?? null` (prop wins when both would apply; explicit
+currentPeriodId ?? null` (prop wins when both would apply; explicit
       wins over inference) before falling back to index `0`
 - [ ] 1.3 `apps/web/src/features/period/ui/period-navigator.test.tsx`: add a
       case with a pathname that does not match the regex (e.g.

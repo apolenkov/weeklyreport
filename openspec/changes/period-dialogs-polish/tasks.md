@@ -6,7 +6,7 @@
 - [ ] 1.2 `apps/web/src/features/period/ui/fill-from-dropdown-panel.tsx`:
       accept `previousPeriodId` prop; change the "Previous" badge/highlight
       condition from `idx === 0` (filtered array) to `p.id ===
-  previousPeriodId`
+previousPeriodId`
 - [ ] 1.3 Confirm behavior when the true previous period is filtered out of
       the search results entirely — no period should show the "Previous"
       badge in that state
