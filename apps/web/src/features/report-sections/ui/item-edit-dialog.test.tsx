@@ -288,7 +288,7 @@ describe("ItemEditDialog — T-D12 save+reopen status reset", () => {
   });
 });
 
-describe("ItemEditDialog — P-RANK-01 unique rank picker", () => {
+describe("ItemEditDialog — unique rank picker", () => {
   it("disables taken ranks in the select while keeping the own current rank selectable", () => {
     const item: KanbanItem = {
       id: "item-rank",
@@ -378,7 +378,7 @@ describe("ItemEditDialog — P-RANK-01 unique rank picker", () => {
   });
 });
 
-describe("ItemEditDialog — UFB-014 stageIds", () => {
+describe("ItemEditDialog — stageIds", () => {
   it("saves selected stageIds from the create dialog", () => {
     const onSave = vi.fn();
     render(

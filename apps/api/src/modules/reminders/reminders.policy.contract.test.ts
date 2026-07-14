@@ -2,7 +2,7 @@ import { reminderPolicySchema } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 /**
- * UFB-036 (Phase 44-05): wire-format contract tests for ReminderPolicy.
+ * Wire-format contract tests for ReminderPolicy.
  *
  * These tests pin the zod schema on the wire boundary so a malicious
  * admin client cannot drift the audience/kind enums or smuggle an
@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
  * other reminder contract tests so test discovery picks them up under
  * the same `reminders/` glob.
  */
-describe("reminderPolicySchema (Phase 44-05)", () => {
+describe("reminderPolicySchema", () => {
   const baseId = "11111111-1111-4111-8111-111111111111";
   const validFrom = new Date("2026-05-01T00:00:00.000Z");
   const validUntil = new Date("2026-12-31T23:59:59.000Z");

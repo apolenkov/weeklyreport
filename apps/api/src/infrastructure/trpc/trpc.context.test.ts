@@ -6,7 +6,7 @@ import { createNullLogger } from "../../lib/logger";
 import { clearOrgCache, createContextFactory } from "./trpc.context";
 
 /**
- * AUTH-01 / Phase 28-02 contract tests for the four flag combinations.
+ * Contract tests for the four dev-mode flag combinations.
  *
  * These tests exercise `createContextFactory` directly with a mocked INestApp
  * and a fake express Request — no real Postgres, no real Prisma. The goal is
@@ -24,8 +24,8 @@ function makePrismaStub() {
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async Prisma findFirst contract (no awaitable work in the stub)
       findFirst: vi.fn(async () => null),
     },
-    // UFB-047 / Phase 48-A: context factory hydrates `session.organization`
-    // from the singleton Organization row. The stub returns the seeded
+    // Context factory hydrates `session.organization` from the singleton
+    // Organization row. The stub returns the seeded
     // defaults so the dev-session branches resolve without touching a real
     // database.
     organization: {
@@ -67,7 +67,7 @@ function makeReqWithRequestId(requestId: string): { req: Request } {
   return { req };
 }
 
-describe("createContextFactory — AUTH-01 dev-mode flag matrix (Phase 28-02)", () => {
+describe("createContextFactory — dev-mode flag matrix", () => {
   const ORIGINAL_AUTH_JWT_SECRET = process.env.AUTH_JWT_SECRET;
 
   beforeEach(() => {

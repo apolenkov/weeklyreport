@@ -97,9 +97,9 @@ const initialSnapshot: AdminSnapshot = {
   policies: [],
 };
 
-// UFB-048 (Phase 48-B): AppSettings expanded with 9 new knobs.
-// UFB-047 / Phase 49-01: legacy `departmentName` field removed.
-// UFB-051 period-cycle knobs (deadlineTime, allowReopenAfterPublish,
+// AppSettings carries 9 knobs beyond the legacy fields.
+// The legacy `departmentName` field was removed.
+// Period-cycle knobs (deadlineTime, allowReopenAfterPublish,
 // reopenWindowHours) mirror the SQL defaults.
 const defaultSettings: AppSettings = {
   autoCreatePeriods: false,
@@ -320,7 +320,7 @@ describe("AdminService", () => {
     expect(archived.archived).toBe(true);
   });
 
-  it("UFB-042: persists headUserId round-trip on upsertReportingGroup", async () => {
+  it("persists headUserId round-trip on upsertReportingGroup", async () => {
     const service = new AdminService(createRepository(initialSnapshot));
     const groupId = "99999999-9999-4999-8999-000000042000";
     const leaderId = "00000000-0000-4000-8000-000000000099";
@@ -396,7 +396,7 @@ describe("AdminService", () => {
   // P0/P1 Regression — ADM scenarios
   // -----------------------------------------------------------------------
 
-  describe("getSnapshot — regression (ADM-010)", () => {
+  describe("getSnapshot — regression", () => {
     it("returns snapshot with all entity types", async () => {
       const fullSnapshot: AdminSnapshot = {
         users: [
@@ -480,8 +480,8 @@ describe("AdminService", () => {
     });
   });
 
-  describe("upsertUser — regression (ADM-020, ADM-021)", () => {
-    it("creates a new user (ADM-020)", async () => {
+  describe("upsertUser — regression", () => {
+    it("creates a new user", async () => {
       const service = new AdminService(createRepository(initialSnapshot));
 
       const result = await service.upsertUser({
@@ -503,7 +503,7 @@ describe("AdminService", () => {
       ).toBeDefined();
     });
 
-    it("updates existing user by ID (ADM-021)", async () => {
+    it("updates existing user by ID", async () => {
       const service = new AdminService(createRepository(initialSnapshot));
 
       // First add the user
@@ -575,8 +575,8 @@ describe("AdminService", () => {
     });
   });
 
-  describe("upsertProject — regression (ADM-030)", () => {
-    it("creates a new project (ADM-030)", async () => {
+  describe("upsertProject — regression", () => {
+    it("creates a new project", async () => {
       const service = new AdminService(createRepository(initialSnapshot));
 
       const result = await service.upsertProject({
@@ -615,8 +615,8 @@ describe("AdminService", () => {
     });
   });
 
-  describe("upsertReminderRule — regression (ADM-040)", () => {
-    it("creates a new reminder rule with kind/fireAt/status fields (ADM-040)", async () => {
+  describe("upsertReminderRule — regression", () => {
+    it("creates a new reminder rule with kind/fireAt/status fields", async () => {
       const service = new AdminService(createRepository(initialSnapshot));
 
       const result = await service.upsertReminderRule({
@@ -860,7 +860,7 @@ describe("admin.snapshot (live adminProcedure)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// getSettings / updateSettings (API-11)
+// getSettings / updateSettings
 // ---------------------------------------------------------------------------
 
 describe("AdminService — settings", () => {
@@ -871,8 +871,8 @@ describe("AdminService — settings", () => {
     expect(result).toEqual(defaultSettings);
   });
 
-  // UFB-048 (Phase 48-B): the 9 new fields round-trip through partial update.
-  it("UFB-048: round-trips the 9 new AppSettings fields", async () => {
+  // the 9 new fields round-trip through partial update.
+  it("round-trips the 9 new AppSettings fields", async () => {
     const service = new AdminService(createRepository(initialSnapshot));
 
     const result = await service.updateSettings({
@@ -929,7 +929,7 @@ describe("AdminService — settings", () => {
 });
 
 // ---------------------------------------------------------------------------
-// saveStageAssignment / deleteStageAssignment / listStageAssignments (API-12)
+// saveStageAssignment / deleteStageAssignment / listStageAssignments
 // ---------------------------------------------------------------------------
 
 describe("AdminService — stage assignments", () => {
@@ -997,7 +997,7 @@ describe("AdminService — stage assignments", () => {
 });
 
 // ---------------------------------------------------------------------------
-// UFB-052 (Phase 51-B): listPeriodsByState + archivePeriod + unarchivePeriod
+// listPeriodsByState + archivePeriod + unarchivePeriod
 // ---------------------------------------------------------------------------
 
 import type { PeriodRowFromRepo } from "./admin.service";
@@ -1071,7 +1071,7 @@ function makePeriodAwareRepository(
   };
 }
 
-describe("AdminService — listPeriodsByState (UFB-052)", () => {
+describe("AdminService — listPeriodsByState", () => {
   it("returns empty when repository does not implement the method", async () => {
     const service = new AdminService(createRepository(initialSnapshot));
     const result = await service.listPeriodsByState({ bucket: "active" });
@@ -1185,7 +1185,7 @@ describe("AdminService — listPeriodsByState (UFB-052)", () => {
   });
 });
 
-describe("AdminService — archivePeriod / unarchivePeriod (UFB-052)", () => {
+describe("AdminService — archivePeriod / unarchivePeriod", () => {
   it("archivePeriod flips state + archived on the in-memory row", async () => {
     const open = periodFixture(PERIOD_ID_OPEN, "open");
     const repo = makePeriodAwareRepository([open]);
@@ -1218,10 +1218,10 @@ describe("AdminService — archivePeriod / unarchivePeriod (UFB-052)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// UFB-054 (Phase 56-B): Group ↔ Product M:M surface
+// Group <-> Product M:M surface
 // ---------------------------------------------------------------------------
 
-describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
+describe("AdminService — Group <-> Product M:M", () => {
   const GROUP_A = "11111111-1111-4111-8111-111111111aaa";
   const GROUP_B = "11111111-1111-4111-8111-111111111bbb";
   const PRODUCT_X = "22222222-2222-4222-8222-2222222222a1";
@@ -1426,7 +1426,7 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// UFB-063: createPeriodManual — admin escape hatch
+// createPeriodManual — admin escape hatch
 // ---------------------------------------------------------------------------
 
 function makeCreatePeriodRepository(opts: {
@@ -1507,7 +1507,7 @@ function makeCreatePeriodRepository(opts: {
   };
 }
 
-describe("AdminService — createPeriodManual (UFB-063)", () => {
+describe("AdminService — createPeriodManual", () => {
   it("happy path: mints a period with the supplied non-Monday periodStart", async () => {
     const repo = makeCreatePeriodRepository({});
     const service = new AdminService(repo);
@@ -1643,7 +1643,7 @@ describe("AdminService — createPeriodManual (UFB-063)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// UFB-067: updatePeriodManual — admin escape hatch for in-place edits
+// updatePeriodManual — admin escape hatch for in-place edits
 // ---------------------------------------------------------------------------
 
 interface EditableRow {
@@ -1684,7 +1684,7 @@ function makeUpdatePeriodRepository(opts: {
     ...base,
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async findOverlappingPeriod(input) {
-      // Half-open intersect + optional self-exclusion (UFB-067).
+      // Half-open intersect + optional self-exclusion.
       const hit = [...rows.values()]
         .filter((row) => (input.excludeId ? row.id !== input.excludeId : true))
         .filter(
@@ -1754,7 +1754,7 @@ function defaultEditSeed(): EditableRow[] {
   ];
 }
 
-describe("AdminService — updatePeriodManual (UFB-067)", () => {
+describe("AdminService — updatePeriodManual", () => {
   it("happy path: applies the diff and returns the updated row", async () => {
     const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
     const service = new AdminService(repo);

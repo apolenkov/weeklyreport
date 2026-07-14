@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339); wave-6c-ii */
 /**
- * UFB-047 / Phase 48-A — SettingsTab Identity sub-tab test.
+ * SettingsTab Identity sub-tab test.
  *
  * Strategy mirrors jobs-tab.test.tsx: stub the tRPC proxy and intercept
  * `admin.getOrganization.queryOptions` / `admin.updateOrganization
@@ -36,7 +36,7 @@ vi.mock("sonner", () => ({
 import type { MockSettings } from "../../../shared/lib/admin-mock-data";
 import { SettingsTab } from "./settings-tab";
 
-// UFB-056 / Phase 55-5: Telegram integration status shape returned by
+// Telegram integration status shape returned by
 // `admin.integrationsStatus`. Default to «not configured, 0 bindings» so
 // tests that don't care about Integrations don't have to opt out.
 interface IntegrationStub {
@@ -104,9 +104,9 @@ function renderSettings(
   return { qc };
 }
 
-// UFB-048 (Phase 48-B): MockSettings expanded with 9 new fields. Defaults
-// here mirror the SQL defaults so the Periods / Reminders / Notifications
-// sub-tabs render with realistic initial state.
+// MockSettings covers 9 fields beyond the base pair. Defaults here mirror
+// the SQL defaults so the Periods / Reminders / Notifications sub-tabs
+// render with realistic initial state.
 const baseSettings: MockSettings = {
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
@@ -116,7 +116,7 @@ const baseSettings: MockSettings = {
   allowLateSubmissions: true,
   autoPublishAfterDeadline: false,
   autoArchiveWeeksAfterPublish: 0,
-  // UFB-051 defaults — mirror SQL.
+  // Period-cycle defaults — mirror SQL.
   deadlineTime: "18:00",
   allowReopenAfterPublish: true,
   reopenWindowHours: 72,
@@ -126,7 +126,7 @@ const baseSettings: MockSettings = {
   notificationFromEmail: null,
 };
 
-describe("SettingsTab — Identity sub-tab (UFB-047 / Phase 48-A)", () => {
+describe("SettingsTab — Identity sub-tab", () => {
   beforeEach(() => {
     toastSuccess.mockReset();
     toastError.mockReset();
@@ -136,8 +136,8 @@ describe("SettingsTab — Identity sub-tab (UFB-047 / Phase 48-A)", () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
 
-    // Tab triggers all visible — Identity active by default. UFB-056
-    // (Phase 55-5) added the fifth «Integrations» tab.
+    // Tab triggers all visible — Identity active by default, including
+    // the fifth «Integrations» tab.
     expect(screen.getByRole("tab", { name: /identity/i })).toBeTruthy();
     expect(screen.getByRole("tab", { name: /periods/i })).toBeTruthy();
     expect(screen.getByRole("tab", { name: /reminders/i })).toBeTruthy();
@@ -278,12 +278,12 @@ describe("SettingsTab — Identity sub-tab (UFB-047 / Phase 48-A)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// UFB-048 (Phase 48-B): Periods / Reminders / Notifications sub-tabs.
+// Periods / Reminders / Notifications sub-tabs.
 // Each test follows the same shape: switch to the sub-tab, mutate one field,
 // click Save, assert the mutation was called with the merged PATCH payload.
 // ---------------------------------------------------------------------------
 
-describe("SettingsTab — UFB-048 Periods sub-tab (Phase 48-B)", () => {
+describe("SettingsTab — Periods sub-tab (new fields)", () => {
   beforeEach(() => {
     toastSuccess.mockReset();
     toastError.mockReset();
@@ -342,15 +342,15 @@ describe("SettingsTab — UFB-048 Periods sub-tab (Phase 48-B)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// UFB-051: Periods sub-tab period-cycle inputs (deadline-time default +
-// reopen gating). admin-settings-surface-cleanup removed the four
-// consumer-less inputs (firstDayOfWeek, deadlineDayOfWeek, maxOpenPeriods,
-// requireAllSectionsToPublish). Tests assert: (1) the remaining inputs render
-// with seeded values, (2) edits flow to the updateSettings PATCH payload,
-// (3) «reopen window» greys out when «allow reopen» is off.
+// Periods sub-tab period-cycle inputs (deadline-time default + reopen
+// gating). The four consumer-less inputs (firstDayOfWeek, deadlineDayOfWeek,
+// maxOpenPeriods, requireAllSectionsToPublish) were removed. Tests assert:
+// (1) the remaining inputs render with seeded values, (2) edits flow to the
+// updateSettings PATCH payload, (3) «reopen window» greys out when «allow
+// reopen» is off.
 // ---------------------------------------------------------------------------
 
-describe("SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)", () => {
+describe("SettingsTab — Periods sub-tab (period-cycle inputs)", () => {
   beforeEach(() => {
     toastSuccess.mockReset();
     toastError.mockReset();
@@ -440,7 +440,7 @@ describe("SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)", () => {
   });
 });
 
-describe("SettingsTab — UFB-048 Reminders sub-tab (Phase 48-B)", () => {
+describe("SettingsTab — Reminders sub-tab", () => {
   beforeEach(() => {
     toastSuccess.mockReset();
     toastError.mockReset();
@@ -459,8 +459,8 @@ describe("SettingsTab — UFB-048 Reminders sub-tab (Phase 48-B)", () => {
     expect(tzSelect.value).toBe("Europe/Moscow");
     fireEvent.change(tzSelect, { target: { value: "Asia/Yekaterinburg" } });
 
-    // The Reminder type preset now owns the kind/audience pairing (design D7),
-    // so the inert "Default audience" control was removed — it must not render.
+    // The Reminder type preset owns the kind/audience pairing, so the inert
+    // "Default audience" control must not render.
     expect(
       screen.queryByLabelText(/default audience/i),
     ).not.toBeInTheDocument();
@@ -479,7 +479,7 @@ describe("SettingsTab — UFB-048 Reminders sub-tab (Phase 48-B)", () => {
   });
 });
 
-describe("SettingsTab — UFB-048 Notifications sub-tab (Phase 48-B)", () => {
+describe("SettingsTab — Notifications sub-tab", () => {
   beforeEach(() => {
     toastSuccess.mockReset();
     toastError.mockReset();
@@ -529,9 +529,9 @@ describe("SettingsTab — UFB-048 Notifications sub-tab (Phase 48-B)", () => {
   });
 });
 
-// ─── UFB-056 / Phase 55-5: Integrations sub-tab (A11) ────────────────────
+// ─── Integrations sub-tab ────────────────────
 
-describe("SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)", () => {
+describe("SettingsTab — Integrations sub-tab", () => {
   // integrations-card-element-label: the messaging card names the roadmapped
   // channel "Element" with a Coming-Soon badge. It renders NO live messaging
   // status — the configured/bindings rows were removed because they read live

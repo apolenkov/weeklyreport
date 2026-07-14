@@ -162,8 +162,8 @@ describe("LeadFormSyncBridge", () => {
     expect(screen.getAllByText("CRM Platform").length).toBeGreaterThanOrEqual(
       1,
     );
-    // Risk preview card surfaces the risk text (no inline textarea anymore — Phase 22+ moved
-    // editing into RiskEditDialog; the main UI shows a read-only preview).
+    // Risk preview card surfaces the risk text (no inline textarea — editing
+    // happens in RiskEditDialog; the main UI shows a read-only preview).
     expect(screen.getByText("pre-existing")).toBeInTheDocument();
   });
 
@@ -248,8 +248,8 @@ describe("LeadFormSyncBridge", () => {
     });
     await user.click(editBtn);
 
-    // Dialog renders with the existing risk text in a textbox (Phase 22+ moved
-    // editing here so impact/mitigation can be validated together).
+    // Dialog renders with the existing risk text in a textbox (editing
+    // happens here so impact/mitigation can be validated together).
     const textbox = await screen.findByDisplayValue("OAuth delay");
     expect(textbox).toBeInTheDocument();
   });

@@ -171,16 +171,16 @@ describe("AdminPrismaRepository (integration)", () => {
   });
 
   // -------------------------------------------------------------------
-  // UFB-054 (Phase 56-B): Group ↔ Product M:M repository methods
+  // Group <-> Product M:M repository methods
   //
   // The seeded `lead` user belongs to `group`; the seeded `project` is
-  // led by that user. After the 56-A backfill there is one auto-created
-  // `GroupProduct` row mapping the seeded group to the seeded project.
-  // These tests assert the four explicit-mutation methods behave
-  // idempotently against that real baseline.
+  // led by that user. The backfill auto-creates one `GroupProduct` row
+  // mapping the seeded group to the seeded project. These tests assert
+  // the four explicit-mutation methods behave idempotently against that
+  // real baseline.
   // -------------------------------------------------------------------
 
-  it("attachProductToGroup is idempotent and detach removes the edge (UFB-054)", async () => {
+  it("attachProductToGroup is idempotent and detach removes the edge", async () => {
     // The seed test cleanDatabase wipes GroupProduct too if the helper
     // is up to date; we explicitly cleanup edges for this scenario.
     await prisma.groupProduct.deleteMany({});

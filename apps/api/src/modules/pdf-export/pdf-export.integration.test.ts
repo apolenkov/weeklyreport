@@ -112,14 +112,14 @@ describe("PdfExportPrismaRepository (integration)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// AUTH-05 cookie seam (CC-1) — Phase 28-02.
+// Cookie seam.
 //
 // Integration-shaped guard that exercises the service against the real Prisma
 // repository with AUTH_DEV_MODE=false / AUTH_DEV_MODE_ALLOW_TEST=true.
 //
 // Strict end-to-end (BullMQ + Playwright bring-up) is the ceiling — out of
 // scope here because the integration harness does not stand up a real
-// browser. This test is the FLOOR per Plan 28-02 / Task 6 / Step 6.3:
+// browser. This test is the floor:
 //   1. Seed a published report.
 //   2. Call PdfExportService.requestPdfExport (real Prisma repo, fake queue).
 //   3. Assert the enqueued job carries a JWT-shaped authToken bound to the
@@ -127,7 +127,7 @@ describe("PdfExportPrismaRepository (integration)", () => {
 //      tRPC dev-fallback (asserted at the unit layer in trpc.context.test.ts).
 // ---------------------------------------------------------------------------
 
-describe("AUTH-05 cookie seam (CC-1) — service against real Prisma repo", () => {
+describe("cookie seam — service against real Prisma repo", () => {
   const prisma = createTestPrisma();
   let repo: PdfExportPrismaRepository;
 

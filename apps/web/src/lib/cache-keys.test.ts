@@ -1,8 +1,8 @@
 /**
- * Phase 22 (plan 22-05) — cache invalidation cascade verification.
+ * Cache invalidation cascade verification.
  *
- * The plan's Task 2 calls for confirming that `invalidateDashboard` cascades
- * to the queries the head's Publish & Lock flow expects to refresh:
+ * Confirms that `invalidateDashboard` cascades to the queries the head's
+ * Publish & Lock flow expects to refresh:
  *   - review.dashboard
  *   - archive.list
  *   - weeklyReport.get
@@ -47,9 +47,8 @@ function makeStubTrpc(): TRPCProxy {
     admin: {
       snapshot: { pathFilter: () => ({ tag: "admin.snapshot" }) },
       getSettings: { pathFilter: () => ({ tag: "admin.getSettings" }) },
-      // UFB-047 / Phase 48-A: invalidateAdmin also flushes the org caches
-      // so brand renames propagate immediately after a Save in the
-      // Identity tab.
+      // invalidateAdmin also flushes the org caches so brand renames
+      // propagate immediately after a Save in the Identity tab.
       getOrganization: { pathFilter: () => ({ tag: "admin.getOrganization" }) },
     },
     auth: {
@@ -106,7 +105,7 @@ describe("cache-keys helpers", () => {
     expect(spy.mock.calls[0]?.[0]).toEqual({ tag: "reports.myHistory" });
   });
 
-  it("invalidateAdmin targets admin.snapshot + admin.getSettings + org caches (UFB-047)", () => {
+  it("invalidateAdmin targets admin.snapshot + admin.getSettings + org caches", () => {
     const qc = new QueryClient();
     const spy = vi
       .spyOn(qc, "invalidateQueries")
@@ -120,8 +119,8 @@ describe("cache-keys helpers", () => {
       expect.arrayContaining([
         "admin.snapshot",
         "admin.getSettings",
-        // UFB-047 / Phase 48-A: brand rename must invalidate the org
-        // caches and the auth.me session so the chrome refreshes.
+        // Brand rename must invalidate the org caches and the auth.me
+        // session so the chrome refreshes.
         "admin.getOrganization",
         "org.getPublic",
         "auth.me",

@@ -16,7 +16,7 @@ import {
 import { LAST_ROLE_STORAGE_KEY } from "../lib/last-role";
 
 /**
- * UFB-071 (2026-05-11): landing-page last-role hint tests.
+ * Landing-page last-role hint tests.
  *
  * Coverage:
  *   - hint is hidden when no record is stored
@@ -135,7 +135,7 @@ async function loadLoginPageClient() {
 }
 
 // ---------------------------------------------------------------------------
-// CLS-01: login page skeleton prevents layout shift (fix-landing-cls-skeleton)
+// Login page skeleton prevents layout shift (CLS)
 // ---------------------------------------------------------------------------
 //
 // The last-role hint section uses lastRoleLoaded state to show a skeleton
@@ -147,7 +147,7 @@ async function loadLoginPageClient() {
 // be present with aria-hidden="true" on initial render before the useEffect
 // fires and sets lastRoleLoaded=true (which replaces it with the real hint).
 // ---------------------------------------------------------------------------
-describe("Landing page — CLS skeleton (CLS-01)", () => {
+describe("Landing page — CLS skeleton", () => {
   it("renders last-role-hint-skeleton with aria-hidden before hydration (AUTH_STUB mode)", async () => {
     // Simulate pre-hydration state: store a role hint so the section has
     // reason to render. The skeleton should still show before useEffect fires.
@@ -201,7 +201,7 @@ describe("Landing page — a11y heading (page-has-heading-one)", () => {
   });
 });
 
-describe("Landing page — last-role hint (UFB-071)", () => {
+describe("Landing page — last-role hint", () => {
   it("does not render the hint when no record is stored", async () => {
     const LoginPageClient = await loadLoginPageClient();
     render(<LoginPageClient initialOrg={STUB_ORG} />);

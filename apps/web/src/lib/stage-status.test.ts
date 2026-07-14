@@ -56,9 +56,8 @@ describe("deriveEffectiveStageStatus", () => {
   });
 
   it("collapses an explicit at-risk with no backing risk to on-track", () => {
-    // rethink-pipeline-state-vs-completeness (supersedes the PRJ-2 "explicit
-    // wins" rule): a manual at-risk that no risk backs collapses to on-track,
-    // matching the sync bridge's reset when the last covering risk is removed.
+    // A manual at-risk that no risk backs collapses to on-track, matching
+    // the sync bridge's reset when the last covering risk is removed.
     expect(deriveEffectiveStageStatus("at-risk", [], [])).toBe("on-track");
   });
 });

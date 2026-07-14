@@ -70,12 +70,23 @@ const commentPart = (line) => {
   return null;
 };
 
+// Test titles are string-literal arguments to describe/it/test (and their
+// .only/.skip/.each/x*/f* variants) — the one string-literal shape archaeology
+// reliably hides in, since it renders in the reporter output the way a
+// comment never does. Grabs the first quoted literal on the call line.
+const testTitlePart = (line) => {
+  const m = line.match(
+    /\b[xf]?(?:describe|it|test|context)(?:\.\w+)*\s*\(\s*(['"`])((?:\\.|(?!\1).)*)\1/,
+  );
+  return m ? m[2] : null;
+};
+
 const IGNORE =
   /(^|\/)(node_modules|dist|\.next[^/]*|coverage|openspec\/changes\/archive)\//;
-const isProdSource = (f) =>
+const isTestSource = (f) => /\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f);
+const isScannable = (f) =>
   /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f) &&
-  !/\.(test|spec)\./.test(f) &&
-  !/(^|\/)(e2e|__tests__|__mocks__)\//.test(f) &&
+  !/(^|\/)(e2e|__mocks__)\//.test(f) &&
   !IGNORE.test(f);
 
 const walk = (d) =>
@@ -89,12 +100,12 @@ const files = ALL
   ? ["apps", "packages", "prisma"]
       .filter((d) => fs.existsSync(d))
       .flatMap(walk)
-      .filter(isProdSource)
-  : argPaths.filter(isProdSource);
+      .filter(isScannable)
+  : argPaths.filter(isScannable);
 
-const firstMatch = (comment) => {
+const firstMatch = (text) => {
   for (const [rule, label] of RULES) {
-    const hit = typeof rule === "function" ? rule(comment) : rule.test(comment);
+    const hit = typeof rule === "function" ? rule(text) : rule.test(text);
     if (hit) return label;
   }
   return null;
@@ -103,14 +114,21 @@ const firstMatch = (comment) => {
 const perFile = new Map();
 for (const f of files) {
   const hits = [];
+  const testSource = isTestSource(f);
   fs.readFileSync(f, "utf8")
     .split("\n")
     .forEach((line, i) => {
       const comment = commentPart(line);
-      if (!comment) return;
-      const label = firstMatch(comment);
-      if (label)
-        hits.push(`  ${i + 1}: [${label}] ${line.trim().slice(0, 100)}`);
+      const commentLabel = comment && firstMatch(comment);
+      if (commentLabel)
+        hits.push(`  ${i + 1}: [${commentLabel}] ${line.trim().slice(0, 100)}`);
+      if (!testSource) return;
+      const title = testTitlePart(line);
+      const titleLabel = title && firstMatch(title);
+      if (titleLabel)
+        hits.push(
+          `  ${i + 1}: [${titleLabel} in test title] ${line.trim().slice(0, 100)}`,
+        );
     });
   if (hits.length) perFile.set(f, hits);
 }

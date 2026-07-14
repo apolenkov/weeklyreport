@@ -32,7 +32,7 @@ const foreignRisk: RiskEntry = {
   authorName: "Alice",
 };
 
-describe("RisksSection LockBadge (Phase 3.8)", () => {
+describe("RisksSection LockBadge", () => {
   it("foreign risk card renders LockBadge in header, not Edit/Delete", () => {
     render(
       <SdlcTooltipProvider>

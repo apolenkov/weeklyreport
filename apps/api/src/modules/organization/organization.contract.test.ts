@@ -6,7 +6,7 @@ import {
 import { describe, expect, it } from "vitest";
 
 /**
- * UFB-047 / Phase 48-A: contract tests for the Organization zod schemas.
+ * Contract tests for the Organization zod schemas.
  *
  * Boundary checks: shortName ≤ 16, fullName ≤ 200, both non-empty, id
  * locked to the literal 'singleton'. These are the invariants the rest

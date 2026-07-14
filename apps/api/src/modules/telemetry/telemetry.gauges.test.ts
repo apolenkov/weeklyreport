@@ -48,7 +48,7 @@ function buildThrowingPort(error: Error): TelemetryGaugesPort {
 
 async function gaugeValue(gauge: {
   get(): Promise<{
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record (migrated from eslint-disable)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record shape
     values: { value: number; labels: Record<string, any> }[];
   }>;
 }): Promise<number | null> {
@@ -57,7 +57,7 @@ async function gaugeValue(gauge: {
   return first?.value ?? null;
 }
 
-describe("TelemetryGauges — Phase 52-A (UFB-054)", () => {
+describe("TelemetryGauges", () => {
   it("on-time ratio gauge updates from the port at scrape time", async () => {
     const gauges = new TelemetryGauges(buildPort({ onTimeRatio: 0.85 }));
     gauges.onModuleInit();

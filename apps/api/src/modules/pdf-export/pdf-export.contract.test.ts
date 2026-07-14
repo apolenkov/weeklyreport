@@ -144,9 +144,8 @@ describe("PdfExportService — contract tests", () => {
 
     // 5. requestPdfExport — enqueues BullMQ job when queue is provided
     it("enqueues a BullMQ job when a queue is provided", async () => {
-      // AUTH-05 (Phase 28-02): the queue payload now carries an authToken
-      // signed with PDF_EXPORT_JWT_SECRET. Stub the secret for deterministic
-      // signing.
+      // The queue payload carries an authToken signed with
+      // PDF_EXPORT_JWT_SECRET. Stub the secret for deterministic signing.
       const originalSecret = process.env.PDF_EXPORT_JWT_SECRET;
       process.env.PDF_EXPORT_JWT_SECRET = "a".repeat(32);
       try {
@@ -196,9 +195,9 @@ describe("PdfExportService — contract tests", () => {
     });
   });
 
-  // P0 Regression — export job status transitions (PDF-010, PDF-011)
+  // Regression — export job status transitions
   describe("requestPdfExport — job lifecycle", () => {
-    it("export job transitions: queued -> completed (PDF-010)", async () => {
+    it("export job transitions: queued -> completed", async () => {
       const service = new PdfExportService(createRepository(publishedReport));
       const job = await service.requestPdfExport(reportId);
       expect(job.status).toBe("queued");
@@ -212,7 +211,7 @@ describe("PdfExportService — contract tests", () => {
       expect(completed.completedAt).toBeInstanceOf(Date);
     });
 
-    it("export job failure marks status as failed (PDF-011)", async () => {
+    it("export job failure marks status as failed", async () => {
       const repo = createRepository(publishedReport);
       const service = new PdfExportService(repo);
       const job = await service.requestPdfExport(reportId);
@@ -379,8 +378,8 @@ describe("PdfExportService — contract tests", () => {
       }
     });
 
-    // 15. buildAuthCookies — Phase 32-B2 (M-01): cookie is now scoped via
-    // Playwright's `url` field rather than `domain`+`secure` inference.
+    // 15. buildAuthCookies — cookie is scoped via Playwright's `url` field
+    // rather than `domain`+`secure` inference.
     // Playwright auto-derives the secure flag from the URL's protocol.
     it("passes the full PDF_BASE_URL through as the cookie url for https", () => {
       const originalBaseUrl = process.env.PDF_BASE_URL;

@@ -321,8 +321,8 @@ describe("SearchService", () => {
     ).rejects.toThrow();
   });
 
-  // TD-03: group-scope filtering tests
-  it("TD-03: head session passes own reportingGroupId as groupIds", async () => {
+  // group-scope filtering tests
+  it("head session passes own reportingGroupId as groupIds", async () => {
     const repo = createRepository((params) => {
       expect(params.groupIds).toEqual([groupA]);
       return [];
@@ -335,7 +335,7 @@ describe("SearchService", () => {
     );
   });
 
-  it("TD-03: admin session passes null groupIds (no group filter)", async () => {
+  it("admin session passes null groupIds (no group filter)", async () => {
     const repo = createRepository((params) => {
       expect(params.groupIds).toBeNull();
       return [];
@@ -348,7 +348,7 @@ describe("SearchService", () => {
     );
   });
 
-  it("TD-03: viewer with granted groups passes those groupIds", async () => {
+  it("viewer with granted groups passes those groupIds", async () => {
     const repo = createRepository((params) => {
       expect(params.groupIds).toEqual([groupA, groupB]);
       return [];
@@ -361,7 +361,7 @@ describe("SearchService", () => {
     );
   });
 
-  it("TD-03: viewer with no granted groups returns empty without calling repository", async () => {
+  it("viewer with no granted groups returns empty without calling repository", async () => {
     const spy = vi.fn(() => [] as SearchHit[]);
     const service = new SearchService(createRepository(spy));
 
@@ -432,7 +432,7 @@ describe("SearchService", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it("TD-03: head with no reportingGroupId returns empty without calling repository", async () => {
+  it("head with no reportingGroupId returns empty without calling repository", async () => {
     const spy = vi.fn(() => [] as SearchHit[]);
     const service = new SearchService(createRepository(spy));
 

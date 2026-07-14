@@ -22,7 +22,7 @@ const cases: readonly Case[] = [
   { route: "/lead/report", role: "lead", expected: true },
   { route: "/lead/history", role: "lead", expected: true },
   { route: "/reports/history", role: "lead", expected: true },
-  // head — admin segment is admin-only (D-AUTH-03 retired); head has no /admin
+  // head — admin segment is admin-only; head has no /admin
   { route: "/admin", role: "head", expected: false },
   { route: "/head/dashboard", role: "head", expected: true },
   { route: "/head/report", role: "head", expected: true },
@@ -35,7 +35,7 @@ const cases: readonly Case[] = [
   { route: "/reports/history", role: "admin", expected: true },
 ];
 
-describe("isRouteVisible — AUTH-06 role × route matrix (Phase 29-06)", () => {
+describe("isRouteVisible — role × route matrix", () => {
   for (const c of cases) {
     it(`role=${c.role} sees ${c.route} → ${c.expected}`, () => {
       expect(isRouteVisible(c.route, c.role)).toBe(c.expected);

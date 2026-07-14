@@ -8,7 +8,7 @@ import { createNullLogger } from "../../lib/logger";
 import { createContextFactory } from "./trpc.context";
 
 /**
- * Phase 32-B1 (H-04) — PDF JWT verifier path on the receiving end.
+ * PDF JWT verifier path on the receiving end.
  *
  * Asserts that:
  *   1. A valid PDF-export JWT (kind='pdf-export', reportId=X) produces a
@@ -36,15 +36,15 @@ function makePrismaStub() {
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma repository contract (no awaitable work in the stub)
       findFirst: vi.fn(async () => null),
     },
-    // A2 (UAT-v7 2026-05-12): isActive check added to createContextFactory.
+    // isActive check on createContextFactory.
     user: {
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma repository contract (no awaitable work in the stub)
       findUnique: vi.fn(async () => ({ isActive: true })),
     },
-    // UFB-047 / Phase 48-A: see trpc.context.test.ts — the regular session
-    // path hydrates `session.organization` from the singleton row before
-    // returning. PDF-export-token paths short-circuit before hitting this
-    // stub, but the regular-JWT regression test does exercise it.
+    // See trpc.context.test.ts — the regular session path hydrates
+    // `session.organization` from the singleton row before returning.
+    // PDF-export-token paths short-circuit before hitting this stub, but
+    // the regular-JWT regression test does exercise it.
     organization: {
       findUnique: vi.fn(() =>
         Promise.resolve({
@@ -79,7 +79,7 @@ const TEST_REPORT_ID = "11111111-2222-4333-8444-555555555555";
 const PDF_SECRET = "phase-32-b1-pdf-export-secret-32-chars-or-more";
 const SESSION_SECRET = "integration-test-secret-32-chars-or-more";
 
-describe("createContextFactory — Phase 32-B1 PDF JWT verifier path (H-04)", () => {
+describe("createContextFactory — PDF JWT verifier path", () => {
   beforeEach(() => {
     vi.stubEnv("AUTH_JWT_SECRET", SESSION_SECRET);
     vi.stubEnv("PDF_EXPORT_JWT_SECRET", PDF_SECRET);
@@ -213,9 +213,9 @@ describe("createContextFactory — Phase 32-B1 PDF JWT verifier path (H-04)", ()
     });
   });
 
-  it("valid PDF JWT synthetic session does NOT carry organization (Phase 32-B1 no-hydration design)", async () => {
+  it("valid PDF JWT synthetic session does NOT carry organization (no-hydration design)", async () => {
     // PDF-export synthetic sessions intentionally skip hydration
-    // (Phase 32-B1; guard middleware + groupScopeFilter own that restriction).
+    // (guard middleware + groupScopeFilter own that restriction).
     const token = jwt.sign(
       { reportId: TEST_REPORT_ID, kind: "pdf-export" },
       PDF_SECRET,
@@ -406,7 +406,7 @@ import {
   router as testTrpcRouter,
 } from "./trpc.middleware";
 
-describe("pdfExportGuard — Phase 32-B1 PDF synthetic session restrictions", () => {
+describe("pdfExportGuard — PDF synthetic session restrictions", () => {
   // We rebuild a tiny router exposing the same procedure helpers so we can
   // exercise the guard without spinning up the full app router. The
   // procedure helpers wire pdfExportGuard into the chain at module load

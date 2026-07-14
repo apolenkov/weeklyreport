@@ -116,7 +116,7 @@ describe("PdfExportService", () => {
     expect(completed.artifactUrl).toBe("/exports/report.pdf");
   });
 
-  // Phase 23-01: requestedBy session threading
+  // requestedBy session threading
   it("threads requestedBy from the session userId into createExportJob", async () => {
     const capture: { lastRequestedBy?: string } = {};
     const service = new PdfExportService(
@@ -166,10 +166,9 @@ describe("PdfExportService", () => {
     ).resolves.toMatchObject({ jobId: job.jobId });
   });
 
-  // Phase 52-A (UFB-054): role-labelled counter. Three labels exercised
-  // (head | viewer | system) confirm the optional `requestedByRole` is
-  // threaded through and the omission path defaults to 'system' (worker
-  // / cron callers).
+  // Role-labelled counter. Three labels exercised (head | viewer | system)
+  // confirm the optional `requestedByRole` is threaded through and the
+  // omission path defaults to 'system' (worker / cron callers).
   it("bumps customreport_pdf_export_requests_total{role} per call", async () => {
     const service = new PdfExportService(createRepository(publishedReport));
     const beforeHead = await getCounterValue(
@@ -216,7 +215,7 @@ describe("PdfExportService", () => {
 async function getCounterValue(
   counter: {
     get(): Promise<{
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record (migrated from eslint-disable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record shape
       values: { value: number; labels: Record<string, any> }[];
     }>;
   },
@@ -230,10 +229,10 @@ async function getCounterValue(
 }
 
 // ---------------------------------------------------------------------------
-// AUTH-05 (Phase 28-02): the 5-min PDF export JWT cookie seam.
+// The 5-min PDF export JWT cookie seam.
 // ---------------------------------------------------------------------------
 
-describe("AUTH-05 PDF export JWT signing", () => {
+describe("PDF export JWT signing", () => {
   const PDF_SECRET = "integration-test-secret-32-chars-or-more";
 
   beforeEach(() => {
@@ -435,9 +434,9 @@ describe("buildAuthCookies", () => {
     expect(cookies[0]?.httpOnly).toBe(true);
   });
 
-  // Phase 32-B2 (M-01): the cookie is now scoped via Playwright's `url`
-  // field instead of `domain`+`secure` inference. The url-based form
-  // works regardless of hostname shape (localhost, IP, behind-proxy).
+  // The cookie is scoped via Playwright's `url` field instead of
+  // `domain`+`secure` inference. The url-based form works regardless of
+  // hostname shape (localhost, IP, behind-proxy).
   it("uses PDF_BASE_URL as the cookie url verbatim (https hostname)", () => {
     const originalEnv = process.env.PDF_BASE_URL;
     process.env.PDF_BASE_URL = "https://reports.example.com";
@@ -544,7 +543,7 @@ describe("pdfExportRouter", () => {
     ).resolves.toMatchObject(completed);
   });
 
-  // Phase 23-01: ensure router fixture forwards session userId to service
+  // Ensure router fixture forwards session userId to service
   it("threads requestedBy from the router context into the service call", async () => {
     const capture: { lastRequestedBy?: string } = {};
     const service = new PdfExportService(

@@ -1,8 +1,10 @@
 # Exemplary Code Standard — rollout plan (START HERE for the UltraCode session)
 
-Status: PREP (branch `chore/exemplary-code-standard`). Nothing here is enforced
-on `main` yet — `main` stays demo-stable. The overhaul runs folder-by-folder on
-its own branches so the demo is never disrupted and any step is revertable.
+Status: LIVE on `main` — the ratchets in §2 are enforced today via
+`eslint.config.ts` and the pre-commit/pre-push hooks (see below); this doc now
+also tracks per-folder rollout of the remaining targets (fn ≤50 lines,
+cognitive complexity <10) that are not yet mechanically gated. Continue the
+rollout folder-by-folder on its own branches so any step stays revertable.
 
 Author this session (2026-06-30) from the principles the user locked while
 finishing the `auth` module. The intent: a future UltraCode session reads this
@@ -44,7 +46,10 @@ pnpm test && pnpm build` green, plus a live boot from source where a boot path
    express, within a THREE-LINE budget. Delete change-log / ticket / phase
    archaeology (`Phase 35-08`, `UFB-036`, `AUTH-08`, …) — git history holds
    that — and JSDoc blocks on app-internal functions (JSDoc is public-API-only
-   per the spec). Load-bearing rationale that exceeds the budget is RELOCATED,
+   per the spec). Enforced by `scripts/find-archaeology.mjs`, wired into
+   lint-staged on every commit (`package.json` → `lint-staged`); the detector
+   covers comments AND string literals / test titles, so archaeology can't
+   hide by moving out of a `//` comment. Load-bearing rationale that exceeds the budget is RELOCATED,
    not deleted: verify (or add) the covering `openspec/specs/` requirement or
    ADR first, then compress the comment to ≤2 lines, optionally naming the
    spec — a live spec name is a pointer, not archaeology. Sweeps touching
@@ -69,20 +74,31 @@ pnpm test && pnpm build` green, plus a live boot from source where a boot path
 
 ## 2. Hard thresholds (the WHAT — ESLint, `src` only)
 
-Tighten the existing ratchet (`eslint.config.ts`) without overstating the
-immutability regime:
+All rows below are LIVE in `eslint.config.ts` on `main` today, except
+`max-lines-per-function` and the `<10` cognitive-complexity target, which are
+explicitly called out as still unmechanized:
 
-| Area                                       | Ratified rule                                                                                                                                                                                                                                                                         |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `max-lines` (skipBlankLines, skipComments) | **250** for production source. Existing oversize files stay in the explicit exemption block until their module teardown lands.                                                                                                                                                        |
-| `max-lines-per-function`                   | **50** target, still a rollout item; do not claim it is globally enforced until the ESLint rule is active.                                                                                                                                                                            |
-| `sonarjs/cognitive-complexity`             | Global ESLint stays at the Sonar default **15** while module work ratchets hot spots toward **<10** with focused refactors.                                                                                                                                                           |
-| `complexity` (cyclomatic)                  | **20** stays. Do not lower this to 10; cognitive complexity is the readability gate.                                                                                                                                                                                                  |
-| `prefer-const` / `no-var`                  | Global `error`.                                                                                                                                                                                                                                                                       |
-| `no let`                                   | `no-restricted-syntax` bans `let` in production source (`apps/api`, `apps/web`, `packages/shared`, `packages/ui`). Tests, `src/test-utils`, seeds, e2e, and tooling stay out of scope. A load-bearing mutable binding survives only behind an inline disable with a concrete WHY.     |
-| `no-param-reassign`                        | Global `props:false` (parameter rebinding banned). `trpc.session-hydration.ts` is stricter with `props:true` because caller-owned `UserSession` mutation can leak authz/session scope.                                                                                                |
-| `functional/immutable-data`                | Enabled only for pure layers: `apps/api/src/modules/**/domain/**/*.ts` and `packages/shared/src/**/*.ts`, excluding tests, with `ignoreClasses:true` and `ignoreImmediateMutation:true`. Do not enable repo-wide; infra/UI/Prisma builders/React refs are intentionally out of scope. |
-| Per-folder/per-file exempt lists in `src`  | Explicit justified exemptions remain where the code is not yet decomposed. Removing an exemption is a done-signal for that file/module, not a license to silence the rule locally.                                                                                                    |
+| Area                                                                                                 | Ratified rule                                                                                                                                                                                                                                                                                                                                            |
+| ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `max-lines` (skipBlankLines, skipComments)                                                           | **250** for production source, enforced `error` repo-wide. Existing oversize files stay in the explicit exemption block until their module teardown lands.                                                                                                                                                                                               |
+| `max-lines-per-function`                                                                             | **50** target — NOT an active ESLint rule (no `max-lines-per-function` entry in `eslint.config.ts`). Still a rollout item; enforced only by code review until the rule is wired in.                                                                                                                                                                      |
+| `sonarjs/cognitive-complexity`                                                                       | Enforced `error` repo-wide at the Sonar default **15** (`eslint.config.ts` sonarjs block). The **<10** target is a module-teardown goal, not the configured threshold — do not claim <10 is gated until the rule's option is lowered.                                                                                                                    |
+| `complexity` (cyclomatic)                                                                            | **20**, enforced `error` repo-wide. Do not lower this to 10; cognitive complexity is the readability gate.                                                                                                                                                                                                                                               |
+| `prefer-const` / `no-var`                                                                            | Global `error`.                                                                                                                                                                                                                                                                                                                                          |
+| `no let`                                                                                             | `no-restricted-syntax` bans `let` in production source (`apps/api`, `apps/web`, `packages/shared`, `packages/ui`), enforced `error`. Tests, `src/test-utils`, seeds, e2e, and tooling stay out of scope. A load-bearing mutable binding survives only behind an inline disable with a concrete WHY.                                                      |
+| `no-param-reassign`                                                                                  | Global `props:false` (parameter rebinding banned), enforced `error`. `trpc.session-hydration.ts` is stricter with `props:true` because caller-owned `UserSession` mutation can leak authz/session scope.                                                                                                                                                 |
+| `functional/immutable-data`                                                                          | Enforced `error`, scoped to pure layers only: `apps/api/src/modules/**/domain/**/*.ts` and `packages/shared/src/**/*.ts`, excluding tests, with `ignoreClasses:true` and `ignoreImmediateMutation:true`. Not repo-wide by design; infra/UI/Prisma builders/React refs are intentionally out of scope.                                                    |
+| Import-boundary zones (hexagon domain purity, port-type boundary, api cross-module, web cross-slice) | Enforced `error` via `import-x/no-restricted-paths` and `@typescript-eslint/no-restricted-imports`, ratcheted with per-consumer allowlists that shrink monotonically; `eslint-disable` of these specific rules is banned repo-wide (`@eslint-community/eslint-comments/no-restricted-disable`), so the config allowlist is the only grandfathering path. |
+| `pnpm lint` posture                                                                                  | `--max-warnings 0` — zero errors AND zero warnings gate the pre-push hook (see below).                                                                                                                                                                                                                                                                   |
+| Per-folder/per-file exempt lists in `src`                                                            | Explicit justified exemptions remain where the code is not yet decomposed. Removing an exemption is a done-signal for that file/module, not a license to silence the rule locally.                                                                                                                                                                       |
+
+Gate wiring: `.husky/pre-commit` runs lint-staged on staged files — ESLint
+`--fix`, Prettier, `scripts/find-archaeology.mjs` (comments and string
+literals/test titles) and `scripts/find-status-literal-unions.mjs`.
+`.husky/pre-push` runs the full local gate — typecheck, `pnpm lint`,
+`format:check`, catalog drift, mutation-consumer audit, unit tests — mirroring
+CI's cheap deterministic jobs. CI (`.github/workflows/ci.yml`) is manual
+dispatch only; the local hooks are the active enforcement gate.
 
 Adopt the strict, widely-vetted presets and reconcile with Prettier:
 **airbnb-typescript**, **Google TS (`gts`)**, **Vercel/Next** rule sets. Where

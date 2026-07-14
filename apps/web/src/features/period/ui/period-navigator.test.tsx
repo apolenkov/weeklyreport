@@ -1,7 +1,7 @@
 /**
  * Tests for the lead-side <PeriodNavigator/>.
  *
- * Phase 35-07 (UX-15): nav emits path-segment URLs
+ * Nav emits path-segment URLs
  * (`/lead/report/<reportId>`) via `router.push` so each addressed period
  * has a shareable URL and the browser back button walks the period
  * history one week at a time. The legacy `?period=` query was retired.

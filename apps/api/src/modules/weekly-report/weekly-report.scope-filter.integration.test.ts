@@ -10,9 +10,8 @@ import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository"
 import type { WeeklyReportScopeSession } from "./weekly-report.service";
 
 /**
- * UFB-054 / Phase 56-D consumer migration: verify that the
- * weekly-report portfolio derives product ownership from the explicit
- * `GroupProduct` edge (Phase 56-A) rather than the implicit
+ * Verifies that the weekly-report portfolio derives product ownership from
+ * the explicit `GroupProduct` edge rather than the implicit
  * `Project.lead.reportingGroupId` path.
  *
  * Schema constraint B1 (`@@unique([productId])`) means each product
@@ -22,10 +21,8 @@ import type { WeeklyReportScopeSession } from "./weekly-report.service";
  *   - a project with NO GroupProduct row is invisible to scoped sessions;
  *   - admin session is unscoped and sees every project.
  *
- * Note: the original test expected cross-group sharing (one product in
- * two groups), but that is prevented by the B1 unique constraint
- * introduced in commit b44400b6. Updated 2026-06-11 to match the current
- * schema invariant.
+ * Cross-group sharing (one product in two groups) is not possible: the
+ * B1 unique constraint means each product belongs to exactly one group.
  */
 describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integration)", () => {
   const prisma = createTestPrisma();

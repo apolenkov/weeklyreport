@@ -1,6 +1,5 @@
 /**
- * Phase 35-07 (UX-15): tests for the addressed-URL behaviour layered on
- * top of <LeadForm/>.
+ * Tests for the addressed-URL behaviour layered on top of <LeadForm/>.
  *
  * Two paths under test:
  *
@@ -181,7 +180,7 @@ function Wrapper({ children }: { readonly children: ReactNode }) {
   return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
 }
 
-describe("LeadForm — Phase 35-07 addressable URLs", () => {
+describe("LeadForm — addressable URLs", () => {
   beforeEach(() => {
     replace.mockReset();
     push.mockReset();
@@ -262,10 +261,9 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
                 email: "head@example.test",
                 role: "head",
               },
-              // UFB-047 / Phase 48-A: SessionState now carries an
-              // organization slot. Tests that don't exercise the brand
-              // hydration set it to null — the consumer falls back to
-              // the seeded defaults.
+              // SessionState carries an organization slot. Tests that
+              // don't exercise the brand hydration set it to null — the
+              // consumer falls back to the seeded defaults.
               organization: null,
               isLoading: false,
               isAuthenticated: true,

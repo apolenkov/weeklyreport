@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppModule } from "./app.module";
 
 /**
- * Phase 32-C / M-05 — dev-auth fence on AppModule lifecycle.
+ * Dev-auth fence on AppModule lifecycle.
  *
  * Pre-fix the fence was called only inside `bootstrap()` in main.ts, which
  * meant any other consumer of `NestFactory.create(AppModule)` (e2e suite,
@@ -16,7 +16,7 @@ import { AppModule } from "./app.module";
  * AppModule directly is enough to verify the lifecycle method routes to
  * `assertNoDevAuthInProduction(process.env)`.
  */
-describe("AppModule.onApplicationBootstrap (Phase 32-C / M-05)", () => {
+describe("AppModule.onApplicationBootstrap", () => {
   const originalEnv = { ...process.env };
 
   afterEach(() => {

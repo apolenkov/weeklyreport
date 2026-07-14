@@ -6,7 +6,7 @@ import {
   telegramIntegrationStatusSchema,
 } from "./integrations";
 
-describe("telegramIntegrationStatusSchema (Phase 55 / UFB-056)", () => {
+describe("telegramIntegrationStatusSchema", () => {
   it("accepts the off-state (no token, no bindings)", () => {
     expect(
       telegramIntegrationStatusSchema.safeParse({

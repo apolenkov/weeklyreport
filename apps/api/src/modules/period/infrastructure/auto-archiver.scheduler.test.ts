@@ -17,7 +17,7 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
     defaultTimezone: "Europe/Moscow",
     defaultReminderAudience: "lead-with-draft",
     notificationFromEmail: null,
-    // UFB-051 period-cycle knobs at SQL defaults.
+    // period-cycle knobs at SQL defaults.
     deadlineTime: "18:00",
     allowReopenAfterPublish: true,
     reopenWindowHours: 72,

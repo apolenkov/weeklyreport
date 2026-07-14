@@ -1,7 +1,7 @@
 /**
  * Characterization tests for the extracted cross-author mappers
  * (refactor-lead-mappers slice). Fixtures pin today's behavior byte for
- * byte (design D5), they are NOT idealized expectations.
+ * byte, they are NOT idealized expectations.
  *
  * crossAuthorSections-based tests (mapForeignItems / mapForeignRisks /
  * mapForeignDecisions / coerceWorkflowToItemStatus) have been removed:

@@ -383,7 +383,7 @@ describe("unified-activity lifecycle (integration)", () => {
     ]);
   });
 
-  it("a carried item moved to next week continues to the following period", async () => {
+  it("a carried item advances to the following period each week", async () => {
     // Period N: one next-week item (carryable), then publish.
     await seedItem(
       testData.section.id,

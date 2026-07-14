@@ -225,8 +225,8 @@ describe("DashboardPage loading guard", () => {
 
     render(<DashboardPage />);
 
-    // The strip relocated here from the report body; it exposes the per-section
-    // verdict control for the head's at-a-glance roll-up.
+    // This strip lives on the dashboard, not the report body; it exposes the
+    // per-section verdict control for the head's at-a-glance roll-up.
     expect(
       screen.getByRole("region", { name: "Section reviews" }),
     ).toBeInTheDocument();

@@ -94,14 +94,14 @@ describe("ArchiveService", () => {
 });
 
 // ---------------------------------------------------------------------------
-// AUTH-04 (Phase 28-01): viewer-scoped read filter at the service layer.
+// Viewer-scoped read filter at the service layer.
 // Defense-in-depth: even if a future router mis-wires the procedure, the
 // service propagates a `status: 'published'` filter to the repository for
 // viewer sessions. Heads / leads / admins continue to receive an empty
 // filter (the repo's hardcoded floor still keeps them on published rows).
 // ---------------------------------------------------------------------------
 
-describe("AUTH-04 viewer scoping", () => {
+describe("viewer scoping", () => {
   function createSpyRepository(): {
     repo: ArchiveRepository;
     listSpy: ReturnType<typeof vi.fn>;

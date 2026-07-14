@@ -50,9 +50,9 @@ const initialSnapshot: AdminSnapshot = {
   policies: [],
 };
 
-// UFB-048 (Phase 48-B): AppSettings expanded with 9 new knobs.
-// UFB-047 / Phase 49-01: legacy `departmentName` field removed.
-// UFB-051 (Phase 51-A): 8 new period-cycle knobs mirror SQL defaults.
+// AppSettings carries 9 knobs beyond the legacy fields.
+// The legacy `departmentName` field was removed.
+// 8 period-cycle knobs mirror the SQL defaults.
 const defaultSettings: AppSettings = {
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,

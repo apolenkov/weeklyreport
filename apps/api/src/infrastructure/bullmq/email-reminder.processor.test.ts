@@ -66,7 +66,7 @@ function createMockEmailService() {
 }
 
 /**
- * UFB-048 / Phase 50-A: AdminService stub for from-address injection.
+ * AdminService stub for from-address injection.
  * Pass `notificationFromEmail` to control what the processor pulls in.
  */
 function createMockAdminService(notificationFromEmail: string | null = null) {
@@ -128,8 +128,8 @@ describe("EmailReminderProcessor.processJob", () => {
 
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
-    // UFB-048 / Phase 50-A: processor now forwards an optional 4th arg
-    // `from` (null when AdminService is not wired into the constructor).
+    // The processor forwards an optional 4th arg `from` (null when
+    // AdminService is not wired into the constructor).
     expect(mockEmail.sendMail).toHaveBeenCalledWith(
       "lead@test.com",
       "Reminder: Weekly Status Report Due",
@@ -138,11 +138,10 @@ describe("EmailReminderProcessor.processJob", () => {
     );
   });
 
-  // UFB-048 / Phase 50-A: when AdminService is wired and exposes a
-  // non-null notificationFromEmail, the processor must forward that
-  // value to EmailService verbatim so corporate SMTP relays see the
-  // configured From header.
-  it("forwards AppSettings.notificationFromEmail as the From override (UFB-048)", async () => {
+  // When AdminService is wired and exposes a non-null notificationFromEmail,
+  // the processor must forward that value to EmailService verbatim so
+  // corporate SMTP relays see the configured From header.
+  it("forwards AppSettings.notificationFromEmail as the From override", async () => {
     const mockReminders = createMockRemindersService();
     const mockEmail = createMockEmailService();
     const mockAdmin = createMockAdminService("alerts@corp.example.com");

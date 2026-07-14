@@ -1,14 +1,14 @@
 /**
- * 35-04 / UFB-014: the Risk dialog uses an OPTIONAL multi-stage selector
+ * The Risk dialog uses an OPTIONAL multi-stage selector
  * (`StageMultiSelect`). Options come from `stagesForProduct(productId)`
  * — the lead's StageAssignment rows.
  *
- * UFB-073 (revised): in create mode, only stages that are already
- * marked at-risk/blocked on the SDLC pipeline are pre-selected.
- * If none are flagged, the selection starts empty (= applies to all).
+ * In create mode, only stages that are already marked at-risk/blocked on
+ * the SDLC pipeline are pre-selected. If none are flagged, the selection
+ * starts empty (= applies to all).
  *
- * Phase 3.5: required stage selection (empty = validation error);
- * bidirectional severity decouple; context strip from pipeline.
+ * Required stage selection (empty = validation error); bidirectional
+ * severity decouple; context strip from pipeline.
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -50,7 +50,7 @@ describe("RiskEditDialog — compact touch floor (responsive-compact-layout)", (
   });
 });
 
-describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
+describe("RiskEditDialog - SDLC stage selector", () => {
   it("starts with empty stage selection when no stages are flagged in create mode", () => {
     const onSave = vi.fn();
     render(
@@ -121,7 +121,7 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
       />,
     );
 
-    // Phase 3.8: stage checkboxes start empty on create regardless of pipeline flags.
+    // Stage checkboxes start empty on create regardless of pipeline flags.
     expect(screen.getByRole("checkbox", { name: "Dev" })).not.toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Testing" })).not.toBeChecked();
 
@@ -293,7 +293,7 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
       />,
     );
 
-    // Phase 3.8: stage checkboxes start empty on create regardless of pipeline aliases.
+    // Stage checkboxes start empty on create regardless of pipeline aliases.
     expect(
       screen.getByRole("checkbox", { name: "Development" }),
     ).not.toBeChecked();

@@ -269,8 +269,8 @@ describe("mapDomainError", () => {
   // ReminderDomainError -> BAD_REQUEST
   // -----------------------------------------------------------------------
 
-  // UFB-063: AdminPeriodOverlapError -> BAD_REQUEST so the «period
-  // already exists» message pipes verbatim to the admin toast.
+  // AdminPeriodOverlapError -> BAD_REQUEST so the «period already exists»
+  // message pipes verbatim to the admin toast.
   describe("AdminPeriodOverlapError -> BAD_REQUEST", () => {
     it("maps overlap error to BAD_REQUEST with the original message", () => {
       const error = new AdminPeriodOverlapError(

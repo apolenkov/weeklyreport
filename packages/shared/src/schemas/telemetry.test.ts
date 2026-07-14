@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { telemetrySummarySchema } from "./telemetry";
 
-describe("telemetrySummarySchema (Phase 52 / UFB-054)", () => {
+describe("telemetrySummarySchema", () => {
   it("accepts a fully-populated summary", () => {
     const ok = telemetrySummarySchema.safeParse({
       reportsThisPeriod: 1,

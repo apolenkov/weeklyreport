@@ -96,7 +96,7 @@ describe("mapWeeklyReport", () => {
     expect(result.submissionLabel).toBe("0/0 submitted");
   });
 
-  it("surfaces reportId and periodStatus on the period object (Phase 22, plan 22-05)", () => {
+  it("surfaces reportId and periodStatus on the period object", () => {
     const result = mapWeeklyReport(baseReport({ periodStatus: "open" }));
     expect(result.period.reportId).toBe(REPORT_ID);
     expect(result.period.periodStatus).toBe("open");

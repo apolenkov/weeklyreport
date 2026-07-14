@@ -23,11 +23,11 @@ const validSession: UserSession = {
 };
 
 // ---------------------------------------------------------------------------
-// Tests — AUTH-033..036 regression scenarios
+// Tests — regression scenarios
 // ---------------------------------------------------------------------------
 
 describe("createJwtSigner — contract tests", () => {
-  it("signs and verifies a valid session (AUTH-033 P0)", () => {
+  it("signs and verifies a valid session", () => {
     const signer = createJwtSigner(TEST_ENV);
     const token = signer.signSession(validSession);
 
@@ -40,7 +40,7 @@ describe("createJwtSigner — contract tests", () => {
     expect(verified.role).toBe(validSession.role);
   });
 
-  it("expired JWT throws on verify (AUTH-034 P0)", () => {
+  it("expired JWT throws on verify", () => {
     // Sign a token that already expired
     const expiredToken = jwt.sign(
       { ...validSession },
@@ -52,7 +52,7 @@ describe("createJwtSigner — contract tests", () => {
     expect(() => signer.verifySession(expiredToken)).toThrow();
   });
 
-  it("invalid JWT (bad signature) throws on verify (AUTH-035 P0)", () => {
+  it("invalid JWT (bad signature) throws on verify", () => {
     const signer = createJwtSigner(TEST_ENV);
     const token = signer.signSession(validSession);
 

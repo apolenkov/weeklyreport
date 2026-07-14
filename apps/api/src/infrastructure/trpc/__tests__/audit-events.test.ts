@@ -10,14 +10,14 @@ import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { headProcedure, publicProcedure, router } from "../trpc.middleware.js";
 
 // ---------------------------------------------------------------------------
-// AUTH-08 audit-events end-to-end signal test (Phase 29-01).
+// Audit-events end-to-end signal test.
 //
 // Boots a viewer session against a head-only procedure, captures every
 // AppLogger emit, and asserts EXACTLY ONE role-denied envelope appears.
-// This locks the A-1 invariant: defense-in-depth means the audit signal
+// This locks the invariant that defense-in-depth means the audit signal
 // fires from inside the role-middleware factory, NOT only at controller
-// seams — so any future deny path (Phase 29-04 SAML cut-over, Phase 28-01
-// viewer-only filters) inherits the audit emit automatically.
+// seams — so any future deny path (a SAML cut-over, viewer-only filters)
+// inherits the audit emit automatically.
 // ---------------------------------------------------------------------------
 
 interface Captured {
@@ -50,7 +50,7 @@ const testRouter = router({
   headRoute: headProcedure.query(() => "head-ok"),
 });
 
-describe("AUTH-08 role-denied integration signal", () => {
+describe("role-denied integration signal", () => {
   it("a viewer call to a head-only procedure produces exactly one role-denied envelope", async () => {
     const { logger, entries } = makeCapturingLogger();
     const auditLogger: AuditLogger = createAuditLogger(logger);
@@ -86,9 +86,8 @@ describe("AUTH-08 role-denied integration signal", () => {
     });
 
     // attemptedRole carries the allowed Role | Role[] verbatim. headProcedure
-    // accepts ['head', 'admin'] (admin inherits head capabilities). The
-    // D-AUTH-03 alias adminProcedure === headProcedure was retired by
-    // UFB-038; admin endpoints now use a separate adminProcedure (admin-only).
+    // accepts ['head', 'admin'] (admin inherits head capabilities).
+    // adminProcedure is a separate procedure (admin-only), not a headProcedure alias.
     expect(audit.context?.attemptedRole).toEqual(["head", "admin"]);
 
     // Negative — no spurious login-success was emitted by the role-deny path.

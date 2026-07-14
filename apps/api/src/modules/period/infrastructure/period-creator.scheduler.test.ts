@@ -25,7 +25,7 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
     defaultTimezone: "Europe/Moscow",
     defaultReminderAudience: "lead-with-draft",
     notificationFromEmail: null,
-    // UFB-051 period-cycle knobs at SQL defaults. The creator reads
+    // period-cycle knobs at SQL defaults. The creator reads
     // `periodLengthDays` / `defaultDeadlineDays` / `workingDays`.
     deadlineTime: "18:00",
     allowReopenAfterPublish: true,
@@ -85,8 +85,8 @@ function makePrismaStub(opts: {
           periodStart: data.periodStart,
           periodEnd: data.periodEnd,
           deadline: data.deadline,
-          // UFB-053: echo the periodState the scheduler wrote so the
-          // returned shape matches the real prisma client surface.
+          // Echo the periodState the scheduler wrote so the returned shape
+          // matches the real prisma client surface.
           periodState: data.periodState,
         })),
       // period-uniqueness: the flip reads due scheduled rows then updates each.
@@ -157,7 +157,7 @@ describe("PeriodCreatorScheduler", () => {
 
     expect(result).toMatchObject({ created: true, periodId: "period-new-1" });
     expect(prisma.report.create).toHaveBeenCalledTimes(1);
-    // UFB-053: state column written on create; here periodStart is "this
+    // The state column is written on create; here periodStart is "this
     // week's Monday" which is <= now, so the period lands as 'open'.
     expect(prisma.report.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -175,7 +175,7 @@ describe("PeriodCreatorScheduler", () => {
     );
   });
 
-  it("UFB-053: runs the SCHEDULED→OPEN flip (reads due scheduled rows) at the top of the tick", async () => {
+  it("runs the SCHEDULED→OPEN flip (reads due scheduled rows) at the top of the tick", async () => {
     const prisma = makePrismaStub({
       mostRecent: {
         id: "period-future",
@@ -291,7 +291,7 @@ describe("PeriodCreatorScheduler", () => {
     expect(autoCarryOver).not.toHaveBeenCalled();
   });
 
-  it("TD-06: policyApplicator.applyToPeriod called once when period is created", async () => {
+  it("policyApplicator.applyToPeriod called once when period is created", async () => {
     const prisma = makePrismaStub({
       mostRecent: {
         id: "period-old",

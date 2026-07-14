@@ -19,7 +19,7 @@ const activeRule: AdminReminderRule = {
   timezone: "Europe/Moscow",
   status: "active",
   version: 1,
-  // UFB-036 (Phase 44-01): nullable FK back to ReminderPolicy.
+  // Nullable FK back to ReminderPolicy.
   policyId: null,
 };
 
@@ -207,10 +207,10 @@ describe("reminder rule domain mapping and deduplication", () => {
 });
 
 // -----------------------------------------------------------------------
-// NOTIF-01/04 (Phase 28-03): kind='deadline' payload ⇒ extended dedupe-key.
+// kind='deadline' payload ⇒ extended dedupe-key.
 // -----------------------------------------------------------------------
 
-describe("NOTIF-01 deadline payload — extended dedupe-key shape", () => {
+describe("deadline payload — extended dedupe-key shape", () => {
   const deadlinePayload = {
     kind: "deadline" as const,
     cycleDate: "2026-04-19",
@@ -218,7 +218,7 @@ describe("NOTIF-01 deadline payload — extended dedupe-key shape", () => {
     reportPeriod: "2026-04-13 → 2026-04-19",
     deadlineIso: "2026-04-19T15:00:00.000Z",
     sectionUrl: "http://localhost:3000/lead/report?reportId=abc",
-    // UFB-047 / Phase 49-01: brand snapshot threaded through the payload.
+    // Brand snapshot threaded through the payload.
     organization: {
       shortName: "Demo",
       fullName: "Example Software Department",

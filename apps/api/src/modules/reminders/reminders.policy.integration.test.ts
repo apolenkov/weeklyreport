@@ -10,8 +10,8 @@ import {
 import { PolicyApplicatorService } from "./policy-applicator.service";
 
 /**
- * UFB-036 (Phase 44-05): full create-policy → create-period →
- * assert-rule pipeline against the real Postgres test database.
+ * Full create-policy → create-period → assert-rule pipeline against the
+ * real Postgres test database.
  *
  * Complements the unit tests in `policy-applicator.test.ts` (which mock
  * Prisma) by exercising the actual unique index `uq_rule_report_policy`,
@@ -19,7 +19,7 @@ import { PolicyApplicatorService } from "./policy-applicator.service";
  * `ReminderAudience` enum mapping. If the schema drifts, the unit
  * tests pass but this one fails.
  */
-describe("PolicyApplicatorService (integration, Phase 44-05)", () => {
+describe("PolicyApplicatorService (integration)", () => {
   const prisma = createTestPrisma();
   let applicator: PolicyApplicatorService;
   let testData: Awaited<ReturnType<typeof seedTestData>>;

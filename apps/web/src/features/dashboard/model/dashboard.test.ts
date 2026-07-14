@@ -309,7 +309,7 @@ describe("mapDashboardData", () => {
     expect(result.pendingLeads).toEqual(["Cara L."]);
   });
 
-  // Phase 48-C (UFB-040): regression for the alert-bar pendingLeads leak.
+  // Regression for the alert-bar pendingLeads leak.
   // The mapper's pendingLeads MUST be a strict subset of the upstream
   // `review` rows (which are pre-filtered server-side via
   // groupScopeFilter(session, 'reportSection')). If the mapper ever
@@ -318,7 +318,7 @@ describe("mapDashboardData", () => {
   // a section — that would mask scope leaks at the API boundary. This test
   // pins the contract: a lead can only land in pendingLeads if their leadId
   // appears in `review`.
-  it("UFB-040: pendingLeads is a strict subset of the scoped review input", () => {
+  it("pendingLeads is a strict subset of the scoped review input", () => {
     const result = mapDashboardData({
       review: makeReview(),
       archive: makeArchive(),
@@ -336,7 +336,7 @@ describe("mapDashboardData", () => {
     }
   });
 
-  it("UFB-040: empty review (scoped-out caller) yields empty pendingLeads", () => {
+  it("empty review (scoped-out caller) yields empty pendingLeads", () => {
     const result = mapDashboardData({
       review: [],
       archive: makeArchive(),

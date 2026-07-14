@@ -561,10 +561,10 @@ describe("CarryOverService — contract tests", () => {
   });
 
   // -----------------------------------------------------------------------
-  // P0/P1 Regression — carry-over edge cases (EDGE-SM-020..024)
+  // P0/P1 Regression — carry-over edge cases
   // -----------------------------------------------------------------------
 
-  it("carry-over creates items in target section (EDGE-SM-020)", async () => {
+  it("carry-over creates items in target section", async () => {
     const target = makeTargetSection(sourceAlpha);
     expect(target.items).toHaveLength(0); // target starts empty
 
@@ -583,7 +583,7 @@ describe("CarryOverService — contract tests", () => {
     expect(result.targetSection.items.length).toBeGreaterThan(0);
   });
 
-  it("carry-over marks items as carriedOver=true (EDGE-SM-022)", async () => {
+  it("carry-over marks items as carriedOver=true", async () => {
     const target = makeTargetSection(sourceAlpha);
     const repo = createInMemoryRepository({
       sourceSections: [sourceAlpha],
@@ -604,7 +604,7 @@ describe("CarryOverService — contract tests", () => {
     expect(result.targetSection.items.every((i) => i.carriedOver)).toBe(true);
   });
 
-  it("carry-over with source having no eligible items produces 0 items (EDGE-SM-024)", async () => {
+  it("carry-over with source having no eligible items produces 0 items", async () => {
     // Source with only current items (no next items to carry)
     const sourceNoNext: ReportSectionReadModel = makeSection({
       reportSectionId: "x1x10000-x1x1-4x1x-8x1x-x1x1x1x1x1x1",

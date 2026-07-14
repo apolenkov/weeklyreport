@@ -142,8 +142,8 @@ describe("FillFromButton", () => {
 });
 
 describe("FillFromButton — a11y regression (VA-0a): aria-hidden decorative SVGs", () => {
-  // head-toolbar-parity D5: both triggers are icon-only ToolbarIconButtons;
-  // the accessible names moved from visible text to aria-labels.
+  // Both triggers are icon-only ToolbarIconButtons; their accessible names
+  // come from aria-labels, not visible text.
   it("CopyIcon svg has aria-hidden='true'", () => {
     render(<FillFromButton periods={[pastPeriod]} />);
 

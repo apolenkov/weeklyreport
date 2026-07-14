@@ -254,7 +254,7 @@ describe("ReviewService — contract tests", () => {
     expect(result.map((r) => r.leadName)).toEqual(["Андрей", "Борис", "Яков"]);
   });
 
-  it("returns correct submitted count (DASH-010)", async () => {
+  it("returns correct submitted count", async () => {
     const rows: SubmissionDashboardRow[] = [
       makeRow({
         leadId: "00000000-0000-4000-8000-000000000001",
@@ -290,7 +290,7 @@ describe("ReviewService — contract tests", () => {
     expect(result).toHaveLength(3);
   });
 
-  it("returns empty for non-matching reportId (DASH-011 edge)", async () => {
+  it("returns empty for non-matching reportId", async () => {
     const rows: SubmissionDashboardRow[] = [
       makeRow({
         leadId: "00000000-0000-4000-8000-000000000001",
@@ -307,7 +307,7 @@ describe("ReviewService — contract tests", () => {
     expect(result).toEqual([]);
   });
 
-  it("excludes non-lead roles from dashboard (DASH-015 P1)", async () => {
+  it("excludes non-lead roles from dashboard", async () => {
     const rows: SubmissionDashboardRow[] = [
       makeRow({
         leadId: "00000000-0000-4000-8000-000000000001",

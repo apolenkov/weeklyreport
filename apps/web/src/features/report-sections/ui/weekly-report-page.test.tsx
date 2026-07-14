@@ -1,5 +1,5 @@
 /**
- * Weekly Report page — Phase 22 (plan 22-05) wiring tests.
+ * Weekly Report page wiring tests.
  *
  * Strategy: mock the tRPC proxy as a stub so we can intercept
  * `period.publish.mutationOptions` / `period.reopen.mutationOptions` and the
@@ -195,7 +195,7 @@ function renderPage(
     { path: ["weeklyReport", "get"], query: data },
     { path: ["period", "publish"], mutation: true },
     { path: ["period", "reopen"], mutation: true },
-    // Phase 23-01: ExportPdfButton calls both pdfExport.request.mutationOptions
+    // ExportPdfButton calls both pdfExport.request.mutationOptions
     // and pdfExport.status.queryOptions unconditionally on every render. Mock the
     // surface here so the parent page renders without throwing — these tests do
     // not exercise PDF export behavior, they only need the mock to be structurally
@@ -263,7 +263,7 @@ function renderPage(
   return { ...renderResult, captured };
 }
 
-describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-05)", () => {
+describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -1356,8 +1356,7 @@ describe("WeeklyReportPage — review-mode split (report-review-mode HF9/HF3)", 
       screen.queryByLabelText("Add a review comment"),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(REVIEW_COMMENT_TEXT)).not.toBeInTheDocument();
-    // The roll-up strip no longer renders inside the report body (it moved to
-    // the dashboard).
+    // The roll-up strip renders on the dashboard, not inside the report body.
     expect(
       screen.queryByRole("region", { name: "Section reviews" }),
     ).not.toBeInTheDocument();

@@ -7,12 +7,12 @@ import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 // Biome recommended-flip change. See openspec/changes/verify-a11y-recommended-flip.
 
 /**
- * UFB-072 (2026-05-11): DOM-parity tests for the WeeklyReportSkeleton.
+ * DOM-parity tests for the WeeklyReportSkeleton.
  *
  * The skeleton mirrors {@link WeeklyReportPage}'s 5 top-level sections:
  *   1. page header (title + Live pill | 2 action buttons)
  *   2. period nav shell
- *   3. AI Insights card (was missing before UFB-072)
+ *   3. AI Insights card
  *   4. Portfolio overview card (sm:grid-cols-2 of 6 product cards)
  *   5. per-product accordions × 6
  *
@@ -40,7 +40,7 @@ describe("WeeklyReportSkeleton", () => {
     const root = getRoot(container);
     const headerRow = root.firstElementChild as HTMLElement;
     const rightCluster = headerRow.children[1] as HTMLElement;
-    // Two button placeholders, not three. UFB-072: real page renders
+    // Two button placeholders, not three. Real page renders
     // ExportPdfButton + PublishLockButton only.
     expect(rightCluster.children).toHaveLength(2);
   });

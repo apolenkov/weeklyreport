@@ -110,7 +110,7 @@ function createMockPdfExportService() {
   return {
     markExportCompleted: vi.fn().mockResolvedValue(undefined),
     markExportFailed: vi.fn().mockResolvedValue(undefined),
-    // AUTH-05 (Phase 28-02): processor calls buildAuthCookies before page.goto.
+    // processor calls buildAuthCookies before page.goto.
     buildAuthCookies: vi.fn().mockReturnValue([
       {
         name: "customreport_session",
@@ -150,8 +150,8 @@ function setupMocks() {
     }),
   };
 
-  // AUTH-05 (Phase 28-02): processor now creates a context first then a page so
-  // it can addCookies before navigation. Mocks must mirror that shape.
+  // The processor creates a context first then a page so it can addCookies
+  // before navigation. Mocks must mirror that shape.
   const mockContext = {
     addCookies: vi.fn().mockResolvedValue(undefined),
     newPage: vi.fn().mockResolvedValue(mockPage),
@@ -210,9 +210,8 @@ describe("PdfExportProcessor.processJob", () => {
 
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
-    // Phase 33-03: print route lives at /print/[id] (top-level, outside the
-    // (app) route group) so the print viewport doesn't inherit NavBar/DEV
-    // switcher chrome — see commit d45e5b2.
+    // Print route lives at /print/[id] (top-level, outside the (app) route
+    // group) so the print viewport doesn't inherit NavBar/DEV switcher chrome.
     expect(mockPage.goto).toHaveBeenCalledWith(
       "http://localhost:3000/print/report-1",
       { waitUntil: "networkidle", timeout: 60_000 },

@@ -84,7 +84,7 @@ describe("createAuditLogger", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
-    // Phase 32-M8 (M-08): anonymous events emit role: null (was 'unknown').
+    // Anonymous events emit role: null (was 'unknown').
     audit.loginFail({
       userId: "anonymous",
       role: null,
@@ -104,8 +104,8 @@ describe("createAuditLogger", () => {
     });
   });
 
-  // Phase 32-M8 (M-08) — anonymous events emit role: null (was 'unknown').
-  // Lock the new contract for SIEM rules tuned to "no session" vs "real
+  // Anonymous events emit role: null (was 'unknown').
+  // Lock the contract for SIEM rules tuned to "no session" vs "real
   // role" rather than a literal 'unknown' string.
   it('anonymous logout emits role: null (not the legacy "unknown" literal)', () => {
     const { logger, entries } = makeCapturingLogger();
@@ -211,8 +211,8 @@ describe("createNullAuditLogger", () => {
         resourceId: "00000000-0000-4000-8000-000000000001",
       }),
     ).not.toThrow();
-    // UFB-036 / Phase 44-05: null logger must accept the new policy
-    // helpers without throwing — same contract as the live impl.
+    // Null logger must accept the policy helpers without throwing — same
+    // contract as the live impl.
     expect(() =>
       audit.policySave({
         userId: "u",
@@ -234,7 +234,7 @@ describe("createNullAuditLogger", () => {
   });
 });
 
-describe("createAuditLogger — scopeDenied (UFB-040 / 46-05)", () => {
+describe("createAuditLogger — scopeDenied", () => {
   it("emits the {event, userId, role, ip, attemptedScope, resourceId} envelope on warn", () => {
     const calls: { level: string; meta: Record<string, unknown> }[] = [];
     const logger: AppLogger = {
@@ -276,7 +276,7 @@ describe("createAuditLogger — scopeDenied (UFB-040 / 46-05)", () => {
   });
 });
 
-describe("createAuditLogger — policySave / policyRemove (UFB-036 / 44-05)", () => {
+describe("createAuditLogger — policySave / policyRemove", () => {
   it("policySave emits {event, userId, role, ip, policyId, kind, action} on info", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
@@ -386,7 +386,7 @@ describe("createAuditLogger — policySave / policyRemove (UFB-036 / 44-05)", ()
   });
 });
 
-describe("createAuditLogger — period.auto-* (UFB-049 / 50-B)", () => {
+describe("createAuditLogger — period.auto-*", () => {
   it("periodAutoCreate emits {event, userId=system, role=null, ip=cron, periodId, dates} on info", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
@@ -396,8 +396,8 @@ describe("createAuditLogger — period.auto-* (UFB-049 / 50-B)", () => {
       periodStart: "2026-05-04T00:00:00.000Z",
       periodEnd: "2026-05-10T23:59:59.999Z",
       deadline: "2026-05-08T15:00:00.000Z",
-      // UFB-053 / Phase 51-C: state-transition payload. Fresh create has
-      // no prior state — `from = null`.
+      // State-transition payload. Fresh create has no prior state —
+      // `from = null`.
       from: null,
       to: "open",
     });
@@ -427,7 +427,7 @@ describe("createAuditLogger — period.auto-* (UFB-049 / 50-B)", () => {
     audit.periodAutoPublish({
       periodId: "00000000-0000-4000-8000-000000000051",
       missingSectionsCount: 2,
-      // UFB-053 / Phase 51-C: state-transition payload.
+      // State-transition payload.
       from: "open",
       to: "published",
     });
@@ -453,7 +453,7 @@ describe("createAuditLogger — period.auto-* (UFB-049 / 50-B)", () => {
 
     audit.periodAutoArchive({
       periodId: "00000000-0000-4000-8000-000000000052",
-      // UFB-053 / Phase 51-C: state-transition payload.
+      // State-transition payload.
       from: "published",
       to: "archived",
     });
@@ -480,7 +480,7 @@ describe("createAuditLogger — period.auto-* (UFB-049 / 50-B)", () => {
         periodStart: "s",
         periodEnd: "e",
         deadline: "d",
-        // UFB-053 / Phase 51-C: state-transition payload.
+        // State-transition payload.
         from: null,
         to: "open",
       }),
@@ -500,7 +500,7 @@ describe("createAuditLogger — period.auto-* (UFB-049 / 50-B)", () => {
         to: "archived",
       }),
     ).not.toThrow();
-    // UFB-063: noop branch for the manual-create event.
+    // Noop branch for the manual-create event.
     expect(() =>
       audit.periodManualCreate({
         userId: "admin-1",
@@ -514,7 +514,7 @@ describe("createAuditLogger — period.auto-* (UFB-049 / 50-B)", () => {
         to: "open",
       }),
     ).not.toThrow();
-    // UFB-067: noop branch for the manual-edit event.
+    // Noop branch for the manual-edit event.
     expect(() =>
       audit.periodManualEdit({
         userId: "admin-1",
@@ -538,7 +538,7 @@ describe("createAuditLogger — period.auto-* (UFB-049 / 50-B)", () => {
     ).not.toThrow();
   });
 
-  it("periodManualCreate emits {event, real-user attribution, periodId, dates} on info (UFB-063)", () => {
+  it("periodManualCreate emits {event, real-user attribution, periodId, dates} on info", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
@@ -572,7 +572,7 @@ describe("createAuditLogger — period.auto-* (UFB-049 / 50-B)", () => {
     });
   });
 
-  it("periodManualEdit emits {event, real-user attribution, changes} on info (UFB-067)", () => {
+  it("periodManualEdit emits {event, real-user attribution, changes} on info", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 

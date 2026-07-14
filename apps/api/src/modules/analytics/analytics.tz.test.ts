@@ -18,7 +18,7 @@ const session: UserSession = {
 };
 
 /**
- * ANAL-02/03 (Phase 30-02) TZ-stability gate.
+ * TZ-stability gate.
  *
  * The Prisma repository formats period labels via
  * `Date.prototype.toISOString().slice(0, 10)`. Because `toISOString` always
@@ -76,7 +76,7 @@ function noopCache(): AnalyticsCachePort {
   };
 }
 
-describe("Analytics labels are TZ-stable @ANAL-02 @ANAL-03", () => {
+describe("Analytics labels are TZ-stable", () => {
   let originalTZ: string | undefined;
 
   beforeEach(() => {

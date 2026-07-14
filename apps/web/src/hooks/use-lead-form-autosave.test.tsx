@@ -346,8 +346,8 @@ describe("useLeadFormAutosave", () => {
   });
 
   it("blocks beforeunload while dirty and releases the guard after save", async () => {
-    // D7 (defer-versions-coming-soon) / INT-07: unsaved edits must arm the
-    // beforeunload guard; a successful save must disarm it.
+    // Unsaved edits must arm the beforeunload guard; a successful save
+    // must disarm it.
     const { wrapper } = buildHarness();
     const { result } = renderHook(
       () =>
