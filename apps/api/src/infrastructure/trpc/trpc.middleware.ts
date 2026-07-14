@@ -248,8 +248,10 @@ export const loggingMiddleware = t.middleware(
  *
  * `target` extraction is best-effort: we read whichever common id key is
  * present in the input (sectionId / reportId / periodId / projectId /
- * leadId / id), without inspecting deeper structures. Mutations like
- * `period.publish` that take no id leave `target` undefined.
+ * leadId / id / userId / productId / groupId), without inspecting deeper
+ * structures. Established keys retain precedence; productId precedes groupId
+ * because the product is the entity being attached or detached. Mutations
+ * like `period.publish` that take no id leave `target` undefined.
  *
  * Outcome is success | fail; on failure, `reason` carries the error
  * message. No before/after diff is captured — Prisma-side introspection is
@@ -262,6 +264,9 @@ const TARGET_ID_KEYS = [
   "projectId",
   "leadId",
   "id",
+  "userId",
+  "productId",
+  "groupId",
 ] as const;
 
 const MAX_AUDIT_REASON_LENGTH = 500;
