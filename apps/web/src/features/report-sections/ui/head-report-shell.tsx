@@ -15,11 +15,9 @@ import {
 import { ScopeToggle } from "../../../shared/ui/report-shell/scope-toggle";
 import { useReportShellUrlState } from "../../../shared/ui/report-shell/use-report-shell-url-state";
 import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
-import { ExportPdfButton } from "../../pdf-export/ui/export-pdf-button";
-import { HeadPublishLockAction } from "../../period/ui/head-publish-lock-action";
-import { PeriodNavigator } from "../../period/ui/period-navigator";
-import { HeadSlidesClient } from "../../slides/ui/head-slides-client";
-import { SlideSkeleton } from "../../slides/ui/slide-skeleton";
+import { ExportPdfButton } from "../../pdf-export";
+import { HeadPublishLockAction, PeriodNavigator } from "../../period";
+import { HeadSlidesClient, SlideSkeleton } from "../../slides";
 import { formatDateRange, isoWeekNumber } from "../model/lead-history";
 import type { ReportPeriod } from "../model/types";
 import { WeeklyReportPage } from "./weekly-report-page";

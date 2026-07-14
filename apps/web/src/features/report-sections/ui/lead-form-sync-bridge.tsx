@@ -14,9 +14,9 @@ import { toast } from "sonner";
 
 import { useStatusRiskSync } from "../../../hooks/use-status-risk";
 import { deriveEffectiveStageStatus } from "../../../lib/stage-status";
-import type { CrossAuthorEntry } from "../../period/ui/sdlc-pipeline";
-import { SdlcPipeline } from "../../period/ui/sdlc-pipeline";
-import { RisksSection } from "../../review/ui/risks-section";
+import type { CrossAuthorEntry } from "../../period";
+import { SdlcPipeline } from "../../period";
+import { RisksSection } from "../../review";
 import { riskCoversStage } from "../model/stage-tags";
 import type { Product, RiskEntry, StageStatus } from "../model/types";
 

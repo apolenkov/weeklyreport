@@ -2,11 +2,9 @@ import type {
   PortfolioProduct,
   ProductReport,
 } from "../../../shared/lib/dashboard-mock-data";
-import { ExportPdfButton } from "../../pdf-export/ui/export-pdf-button";
-import { PdfExportComingSoonControl } from "../../pdf-export/ui/pdf-export-coming-soon";
-import { ReviewAcknowledgeBar } from "../../review/ui/review-acknowledge-bar";
-import type { ReviewMode } from "../../review/ui/review-mode-toggle";
-import { ReviewVerdictBand } from "../../review/ui/review-verdict-band";
+import { ExportPdfButton, PdfExportComingSoonControl } from "../../pdf-export";
+import type { ReviewMode } from "../../review";
+import { ReviewAcknowledgeBar, ReviewVerdictBand } from "../../review";
 import type { LeadOverviewRow } from "../model/weekly-report";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
 import { ProductAccordion } from "./product-accordion";

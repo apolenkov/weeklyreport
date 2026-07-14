@@ -2,15 +2,12 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import Link from "next/link";
 
 import type { PortfolioProduct } from "../../../shared/lib/dashboard-mock-data";
-import {
-  type ReviewMode,
-  ReviewModeToggle,
-} from "../../review/ui/review-mode-toggle";
+import type { ReviewMode, SubmissionFilter } from "../../review";
 import {
   DraftHiddenSignal,
-  type SubmissionFilter,
+  ReviewModeToggle,
   SubmissionFilterToggle,
-} from "../../review/ui/submission-filter";
+} from "../../review";
 import type { LeadOverviewRow } from "../model/weekly-report";
 import { ActivityStatusStrip } from "./activity-status-strip";
 import {

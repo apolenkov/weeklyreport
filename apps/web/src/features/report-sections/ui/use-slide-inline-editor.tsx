@@ -9,21 +9,19 @@ import { toast } from "sonner";
 import { invalidateLeadForm } from "../../../lib/cache-keys";
 import { isConflictError } from "../../../lib/trpc";
 import { useTRPC } from "../../../lib/trpc-context";
-import type { GridRowEditableRef } from "../../slides/model/slide-grid-rows";
+import type { GridRowEditableRef } from "../../slides";
 import {
   applySlideInlineDecisionEdit,
   applySlideInlineItemEdit,
   applySlideInlineRiskEdit,
   deleteSlideInlineRecord,
-} from "../../slides/model/slide-inline-draft";
-import {
   ownedStagesForProduct,
   ownPeriodRanks,
   resolveSlideInlineRecord,
   toDialogActivities,
   toDialogProducts,
   toDialogRisks,
-} from "../../slides/model/slide-inline-edit";
+} from "../../slides";
 import type { mapLeadFormData } from "../model/lead-form";
 import { sectionToDraftPayload } from "../model/lead-section-draft-payload";
 import type { DecisionEntry, KanbanItem, RiskEntry } from "../model/types";

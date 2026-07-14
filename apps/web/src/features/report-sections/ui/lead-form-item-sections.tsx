@@ -3,7 +3,7 @@
 import type { ComponentProps } from "react";
 
 import { AccordionSection } from "../../../shared/ui/report-shell/accordion-section";
-import { CurrentWeekSection } from "../../period/ui/current-week-section";
+import { CurrentWeekSection } from "../../period";
 import { CalendarIcon, NextWeekIcon } from "./lead-form-icons";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { NextWeekSection } from "./next-week-section";

@@ -6,8 +6,7 @@ import {
   DocumentActionGroup,
   ReportToolbar,
 } from "../../../shared/ui/report-shell/report-toolbar";
-import { PeriodNavigator } from "../../period/ui/period-navigator";
-import { PublishLockButton } from "../../period/ui/publish-lock-button";
+import { PeriodNavigator, PublishLockButton } from "../../period";
 import { useWeeklyReportPage } from "./use-weekly-report-page";
 import { ReportContent } from "./weekly-report-content";
 import {

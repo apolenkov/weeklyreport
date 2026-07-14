@@ -4,7 +4,7 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import type { ComponentProps } from "react";
 
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import { RequestReopenDialog } from "../../period/ui/request-reopen-dialog";
+import { RequestReopenDialog } from "../../period";
 import { ownedStagesForProject } from "../model/lead-form";
 import { ItemEditDialog } from "./item-edit-dialog";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";

@@ -1,15 +1,15 @@
 "use client";
 
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import { DecisionEditDialog } from "../../period/ui/decision-edit-dialog";
-import { RiskEditDialog } from "../../review/ui/risk-edit-dialog";
+import { DecisionEditDialog } from "../../period";
+import { RiskEditDialog } from "../../review";
 import type {
   ownPeriodRanks,
   resolveSlideInlineRecord,
   toDialogActivities,
   toDialogProducts,
   toDialogRisks,
-} from "../../slides/model/slide-inline-edit";
+} from "../../slides";
 import type { DecisionEntry, KanbanItem, RiskEntry } from "../model/types";
 import { ItemEditDialog } from "./item-edit-dialog";
 

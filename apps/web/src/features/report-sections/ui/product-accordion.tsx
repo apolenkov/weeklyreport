@@ -12,10 +12,8 @@ import type {
   ReportRisk,
 } from "../../../shared/lib/dashboard-mock-data";
 import { RotatingChevron } from "../../../shared/ui/report-shell/rotating-chevron";
-import {
-  type RecordCommentAnchor,
-  RecordComments,
-} from "../../review/ui/record-comments";
+import type { RecordCommentAnchor } from "../../review";
+import { RecordComments } from "../../review";
 import { reportHasContent } from "../model/report-content";
 
 /**

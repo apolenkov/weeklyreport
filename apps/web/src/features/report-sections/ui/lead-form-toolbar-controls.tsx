@@ -9,8 +9,8 @@ import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-rev
 import { ArchiveToggle } from "../../../shared/ui/report-shell/archive-toggle";
 import { ReportToolbar } from "../../../shared/ui/report-shell/report-toolbar";
 import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
-import { PeriodNavigator } from "../../period/ui/period-navigator";
-import { SlideFullscreenButton } from "../../slides/ui/slide-fullscreen-button";
+import { PeriodNavigator } from "../../period";
+import { SlideFullscreenButton } from "../../slides";
 import { CollapseIcon } from "./lead-form-icons";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { RecordVisibilityToggle } from "./record-visibility-toggle";
