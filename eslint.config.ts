@@ -149,9 +149,6 @@ const webSlices = [
 const webSliceGrandfatheredExcept: Partial<
   Record<(typeof webSlices)[number], readonly string[]>
 > = {
-  // dashboard-page's own mappers read report-sections' lead-status +
-  // traffic-light.
-  dashboard: ["report-sections"],
   // period's assembled-report body gates publish/reopen — report-sections only.
   period: ["report-sections"],
   // review's report-sections body sits underneath its review surfaces.
@@ -159,8 +156,6 @@ const webSliceGrandfatheredExcept: Partial<
   // the slide deck reads report-sections' cross-author mappers + stage helpers to
   // build its grid model.
   slides: ["report-sections"],
-  // the viewer report shell reuses report-sections and the slide deck UI.
-  viewer: ["report-sections", "slides"],
 };
 const webCrossSliceZones = webSlices.map((sliceName) => ({
   target: `${webFeaturesDir}/${sliceName}`,

@@ -14,15 +14,14 @@ import { useReportShellUrlState } from "../../../shared/ui/report-shell/use-repo
 import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
 import { ExportPdfButton } from "../../pdf-export";
 import { PeriodNavigator } from "../../period";
+import type { ReportPeriod } from "../../report-sections";
 import {
   formatDateRange,
   isoWeekNumber,
-} from "../../report-sections/model/lead-history";
-import type { ReportPeriod } from "../../report-sections/model/types";
-import { WeeklyReportPage } from "../../report-sections/ui/weekly-report-page";
-import { WeeklyReportSkeleton } from "../../report-sections/ui/weekly-report-skeleton";
-import { HeadSlidesClient } from "../../slides/ui/head-slides-client";
-import { SlideSkeleton } from "../../slides/ui/slide-skeleton";
+  WeeklyReportPage,
+  WeeklyReportSkeleton,
+} from "../../report-sections";
+import { HeadSlidesClient, SlideSkeleton } from "../../slides";
 
 // Module-scope so the reference is stable across renders — a fresh literal would
 // churn the hook's `buildQuery` memoization. The viewer strips the one-shot

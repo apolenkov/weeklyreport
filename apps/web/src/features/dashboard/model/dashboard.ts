@@ -31,7 +31,7 @@ import {
   formatPeriodRangeWithYear,
   formatWeekLabel,
 } from "../../../lib/format-date";
-import type { LeadStatus } from "../../report-sections/model/lead-status";
+import type { LeadStatus } from "../../report-sections";
 import { escalationToBlockedItem } from "./dashboard-escalations";
 import { buildKpiData, formatRelativeDeadline } from "./dashboard-kpi";
 import { buildLeadInfos, initialsFromName } from "./dashboard-leads";
