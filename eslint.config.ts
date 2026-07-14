@@ -929,7 +929,6 @@ export default defineConfig([
       // God-files (700+), permanent-exempt: a namespace split is mechanically
       // possible but would not improve the file (per code-style: keep the larger
       // unit and say why).
-      "apps/api/src/infrastructure/trpc/trpc.router.ts", // single tRPC god-router; all 17 namespace sub-routers close over one RouterDeps; real fix is service-layer extraction, not a shell split
       "apps/api/src/modules/report-sections/infrastructure/lead-form.prisma-repository.ts", // one DI provider for one LeadFormRepository interface; domain separation already lives at the service layer above it
       "apps/web/src/features/slides/model/section-slide-utils.ts", // core mapper buildSectionSlideModel (247 lines) + its private helpers are inseparable; extracting all else still leaves ~335 lines
     ],
@@ -997,7 +996,6 @@ export default defineConfig([
   {
     files: [
       "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // start/finish request logging + error capture in one lifecycle closure
-      "apps/api/src/infrastructure/trpc/trpc.router.ts", // wipeAndReseed dispatch + compiledHistory 5-loop accumulator
       "apps/web/src/app/(app)/reports/page.tsx", // see cyclomatic block (same role-aware renderer)
       "apps/web/src/features/dashboard/ui/remind-lead-button.tsx", // one ConfirmState machine → label/message/icon/disabled
       "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // see cyclomatic block
