@@ -46,8 +46,6 @@ import { ClsMiddleware } from "nestjs-cls";
 import { AppModule } from "./app.module";
 import { mountBullBoard } from "./infrastructure/bullmq/bull-board.module";
 import { QueueRegistry } from "./infrastructure/bullmq/queue-registry.js";
-import { ENV_CONFIG } from "./infrastructure/config/config.module";
-import type { EnvConfig } from "./infrastructure/config/env.schema";
 import { validateEnv } from "./infrastructure/config/env.schema";
 import { SentryExceptionFilter } from "./infrastructure/filters/sentry-exception.filter";
 import { httpRequestDurationSeconds } from "./infrastructure/metrics/metrics.registry";
@@ -160,10 +158,6 @@ async function bootstrap() {
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalFilters(new SentryExceptionFilter(httpAdapter));
 
-  // The validated env, resolved through the DI container so every Redis
-  // connection built at bootstrap (BullMQ queue handles, the PDF-handler and
-  // context-factory session-revocation clients) uses the centralized options.
-  const envConfig = app.get<EnvConfig>(ENV_CONFIG);
   // The single post-CLS AppLogger, resolved from the container (config.module)
   // so the audit sink (AUDIT_LOGGER) and this logger share ONE file sink —
   // no second concurrent writer on app.log.
@@ -440,7 +434,7 @@ async function bootstrap() {
       pdfDir,
       verifySessionToken: (token) =>
         pdfAuthController.verifySessionToken(token),
-      sessionRevocation: new SessionRevocationService(undefined, envConfig),
+      sessionRevocation: app.get(SessionRevocationService),
     }),
   );
   logger.info("mounted authenticated PDF download handler", {

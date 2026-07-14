@@ -130,8 +130,12 @@ interface PdfExportJobData {
   authToken: string;
 }
 
-function createMockJob(data: PdfExportJobData): Job<PdfExportJobData> {
-  return { data } as Job<PdfExportJobData>;
+function createMockJob(
+  data: PdfExportJobData,
+  attemptsMade = 0,
+  attempts = 1,
+): Job<PdfExportJobData> {
+  return { data, attemptsMade, opts: { attempts } } as Job<PdfExportJobData>;
 }
 
 // Test seam — `processJob` is `private` on the class, but tests need to invoke
@@ -368,7 +372,7 @@ describe("PdfExportProcessor.onModuleInit", () => {
     ).instances = [];
   });
 
-  it("marks the DB export job failed when BullMQ reports terminal failure", () => {
+  it("marks the DB export job failed only on the terminal attempt", () => {
     const mockService = createMockPdfExportService();
     const processor = new PdfExportProcessor(mockService as never, STUB_ENV);
 
@@ -384,12 +388,29 @@ describe("PdfExportProcessor.onModuleInit", () => {
     const failedHandler = instances.at(-1)?.handlers.failed;
     expect(failedHandler).toBeTypeOf("function");
 
+    const jobData = {
+      reportId: "report-1",
+      jobId: "job-1",
+      authToken: "fake-jwt",
+    };
+
     failedHandler?.(
-      createMockJob({
-        reportId: "report-1",
-        jobId: "job-1",
-        authToken: "fake-jwt",
-      }) as never,
+      createMockJob(jobData, 0, 3) as never,
+      new Error("browser missing") as never,
+    );
+
+    expect(mockService.markExportFailed).not.toHaveBeenCalled();
+
+    failedHandler?.(
+      createMockJob(
+        {
+          reportId: "report-1",
+          jobId: "job-1",
+          authToken: "fake-jwt",
+        },
+        2,
+        3,
+      ) as never,
       new Error("browser missing") as never,
     );
 

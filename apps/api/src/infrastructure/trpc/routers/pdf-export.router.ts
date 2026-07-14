@@ -29,7 +29,7 @@ export function createPdfExportRouter(deps: PdfExportRouterDeps) {
           // attributes the request to the requester, not 'system'.
           return await deps.pdfExportService.requestPdfExport(
             input.reportId,
-            ctx.session.userId,
+            ctx.session,
             undefined,
             // Role label for
             // customreport_pdf_export_requests_total{role}.

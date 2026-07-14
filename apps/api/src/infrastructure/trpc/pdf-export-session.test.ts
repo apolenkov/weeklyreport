@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest";
+import type { INestApplication } from "@nestjs/common";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
+import { SessionRevocationService } from "../../modules/admin/session-revocation.service";
 import { PrismaService } from "../prisma/prisma.service";
-import { buildPdfExportSession } from "./trpc.context";
+import { buildPdfExportSession, createContextFactory } from "./trpc.context";
 
 /**
  * The PDF worker rebuilds the requester's session from the `requestedBy` claim.
@@ -52,6 +55,27 @@ function makePrisma(opts: PrismaStubOptions = {}): PrismaService {
 const notRevoked = { isRevoked: () => Promise.resolve(false) };
 
 describe("buildPdfExportSession", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("resolves the DI-managed session-revocation singleton for the context factory", () => {
+    vi.stubEnv("AUTH_JWT_SECRET", "test-auth-secret-that-is-at-least-32-bytes");
+    const prisma = makePrisma();
+    const sessionRevocation = {
+      isRevoked: vi.fn(() => Promise.resolve(false)),
+    };
+    const get = vi.fn((token: unknown) =>
+      token === SessionRevocationService ? sessionRevocation : prisma,
+    );
+    const app = { get } as unknown as INestApplication;
+
+    createContextFactory(app, createNullLogger());
+
+    expect(get).toHaveBeenCalledWith(PrismaService);
+    expect(get).toHaveBeenCalledWith(SessionRevocationService);
+  });
+
   it("returns null for a deactivated requester", async () => {
     const result = await buildPdfExportSession(
       REPORT_ID,

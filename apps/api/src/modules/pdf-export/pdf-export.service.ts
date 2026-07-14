@@ -2,6 +2,7 @@ import {
   type AssembledReport,
   type PdfExportJob,
   pdfExportJobSchema,
+  type UserSession,
 } from "@customreport/shared";
 import jwt from "jsonwebtoken";
 import type { ClsService } from "nestjs-cls";
@@ -27,6 +28,7 @@ export type PdfExportJobRecord = PdfExportJob & { requestedBy: string };
 
 export interface PdfExportRepository {
   getPublishedReport(reportId: string): Promise<AssembledReport | null>;
+  canReadReport(session: UserSession, reportId: string): Promise<boolean>;
   /**
    * Persist a queued PDF export job.
    *
@@ -155,7 +157,7 @@ export class PdfExportService {
 
   async requestPdfExport(
     reportId: string,
-    requestedBy?: string,
+    session: UserSession,
     authToken?: string,
     /**
      * Requesting role for the product-telemetry
@@ -171,13 +173,15 @@ export class PdfExportService {
       throw new PdfExportDomainError("PDF export requires a published report.");
     }
 
-    this.logger.info("requesting PDF export", { reportId, requestedBy });
-    // Bump role-labelled counter before the queue enqueue. We're past the
-    // validation gate, so a successful enqueue
-    // (or queue-less test scenario) maps 1:1 to a customer-facing
-    // "export requested" event.
-    customreportPdfExportRequestsTotal.inc({
-      role: requestedByRole ?? "system",
+    if (!(await this.repository.canReadReport(session, reportId))) {
+      throw new PdfExportDomainError(
+        "PDF export is not available for this caller.",
+      );
+    }
+
+    this.logger.info("requesting PDF export", {
+      reportId,
+      requestedBy: session.userId,
     });
     const job = await this.repository.createExportJob(
       pdfExportJobSchema.parse({
@@ -190,7 +194,7 @@ export class PdfExportService {
         templateVersion: "phase-2-pdf-v1",
         artifactUrl: null,
       }),
-      requestedBy,
+      session.userId,
     );
 
     if (this.pdfQueue) {
@@ -199,7 +203,7 @@ export class PdfExportService {
       // from "head clicks Export PDF". Signed lazily so test scenarios without
       // a queue (and thus without a real worker) don't require the secret.
       const cookieToken =
-        authToken ?? this.signPdfExportToken(reportId, requestedBy);
+        authToken ?? this.signPdfExportToken(reportId, session.userId);
       await this.pdfQueue.add(
         "generate",
         {
@@ -219,16 +223,20 @@ export class PdfExportService {
       });
     }
 
+    customreportPdfExportRequestsTotal.inc({
+      role: requestedByRole ?? "system",
+    });
+
     return job;
   }
 
   async getPdfExportStatus(
     jobId: string,
-    requestedBy?: string,
+    requestedBy: string,
   ): Promise<PdfExportJob> {
     const job = await this.repository.getExportJob(jobId);
 
-    if (!job || (requestedBy && job.requestedBy !== requestedBy)) {
+    if (job?.requestedBy !== requestedBy) {
       throw new PdfExportDomainError(`PDF export job ${jobId} was not found.`);
     }
 
@@ -240,7 +248,10 @@ export class PdfExportService {
     artifactUrl: string,
     checksum: string,
   ): Promise<PdfExportJob> {
-    const job = await this.getPdfExportStatus(jobId);
+    const job = await this.repository.getExportJob(jobId);
+    if (!job) {
+      throw new PdfExportDomainError(`PDF export job ${jobId} was not found.`);
+    }
 
     this.logger.info("marking PDF export completed", { jobId });
     return this.repository.saveExportJob(

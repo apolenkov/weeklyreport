@@ -5,6 +5,8 @@ import jwt from "jsonwebtoken";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../lib/logger";
+import { SessionRevocationService } from "../../modules/admin/session-revocation.service";
+import { PrismaService } from "../prisma/prisma.service";
 import { createContextFactory } from "./trpc.context";
 
 /**
@@ -27,7 +29,7 @@ import { createContextFactory } from "./trpc.context";
  */
 
 interface MockNestApp {
-  get: () => unknown;
+  get: (token: unknown) => unknown;
 }
 
 function makePrismaStub() {
@@ -61,11 +63,29 @@ function makePrismaStub() {
   };
 }
 
-function makeApp(prisma: ReturnType<typeof makePrismaStub>): INestApplication {
-  const app: MockNestApp = {
-    get: () => prisma,
+function makeAppHarness(prisma: object): {
+  app: INestApplication;
+  get: ReturnType<typeof vi.fn>;
+  sessionRevocation: { isRevoked: ReturnType<typeof vi.fn> };
+} {
+  const sessionRevocation = {
+    isRevoked: vi.fn(() => Promise.resolve(false)),
   };
-  return app as unknown as INestApplication;
+  const get = vi.fn((token: unknown) =>
+    token === SessionRevocationService ? sessionRevocation : prisma,
+  );
+  const app: MockNestApp = {
+    get,
+  };
+  return {
+    app: app as unknown as INestApplication,
+    get,
+    sessionRevocation,
+  };
+}
+
+function makeApp(prisma: object): INestApplication {
+  return makeAppHarness(prisma).app;
 }
 
 function makeReq(cookieToken?: string): { req: Request } {
@@ -90,6 +110,15 @@ describe("createContextFactory — PDF JWT verifier path", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it("resolves the DI-managed session-revocation singleton", () => {
+    const harness = makeAppHarness(makePrismaStub());
+
+    createContextFactory(harness.app, createNullLogger());
+
+    expect(harness.get).toHaveBeenCalledWith(PrismaService);
+    expect(harness.get).toHaveBeenCalledWith(SessionRevocationService);
   });
 
   it("LEGACY PDF JWT (no requestedBy) → narrow viewer-synthetic session, isPdfExport=true, pdfReportId=X", async () => {
@@ -317,10 +346,7 @@ describe("createContextFactory — PDF JWT be-the-requester scope (empty-PDF fix
       reportingGroupId: GRANTED_GROUP_ID,
     });
 
-    const factory = createContextFactory(
-      makeApp(prisma as never),
-      createNullLogger(),
-    );
+    const factory = createContextFactory(makeApp(prisma), createNullLogger());
     const ctx = await factory(makeReq(token) as never);
 
     // The render session is the head — group-scoping yields the FULL report,
@@ -353,10 +379,7 @@ describe("createContextFactory — PDF JWT be-the-requester scope (empty-PDF fix
       reportingGroupId: null,
     });
 
-    const factory = createContextFactory(
-      makeApp(prisma as never),
-      createNullLogger(),
-    );
+    const factory = createContextFactory(makeApp(prisma), createNullLogger());
     const ctx = await factory(makeReq(token) as never);
 
     expect(ctx.session?.role).toBe("viewer");
@@ -379,10 +402,7 @@ describe("createContextFactory — PDF JWT be-the-requester scope (empty-PDF fix
     );
     const prisma = makeRequesterPrisma(null);
 
-    const factory = createContextFactory(
-      makeApp(prisma as never),
-      createNullLogger(),
-    );
+    const factory = createContextFactory(makeApp(prisma), createNullLogger());
     const ctx = await factory(makeReq(token) as never);
 
     expect(ctx.session).toBeNull();
