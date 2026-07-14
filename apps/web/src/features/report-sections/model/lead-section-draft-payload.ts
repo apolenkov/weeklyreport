@@ -57,7 +57,9 @@ export function sectionToDraftPayload(
           it.workflowStatus === "paused" ? (it.pausedReason ?? null) : null,
       })),
     risks: section.risks
-      .filter((r) => hasText(r.risk) && hasText(r.mitigation))
+      .filter(
+        (r) => hasText(r.risk) && hasText(r.impact) && hasText(r.mitigation),
+      )
       .map((r) => ({
         id: r.id,
         stableId: r.stableId,
