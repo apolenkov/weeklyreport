@@ -3,9 +3,8 @@
 import type { TrafficLightStatus } from "@customreport/shared";
 import { TooltipProvider } from "@customreport/ui/components/ui/tooltip";
 
-import { STAGE_CHIP_BOX_HEIGHT } from "../../report-sections/model/stage-chip-config";
-import type { Product, StageStatus } from "../../report-sections/model/types";
-import { StageChip } from "../../report-sections/ui/stage-chip";
+import type { Product, StageStatus } from "../../report-sections";
+import { STAGE_CHIP_BOX_HEIGHT, StageChip } from "../../report-sections";
 import {
   foreignOwnersForProduct,
   hiddenStagesEffectiveStatuses,

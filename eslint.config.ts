@@ -120,10 +120,9 @@ const apiCrossModuleZones = apiModules.map((moduleName) => ({
 }));
 
 // One zone per web slice: files under features/S may import from features/ only
-// within their own slice, through a sibling's index.ts barrel, or via a still-
-// grandfathered raw path below. ALL populated slices are enforced (boundaries
-// flip #33); any NEW slice-to-slice coupling not through a barrel or the
-// allowlist is a lint error.
+// within their own slice or through a sibling's index.ts barrel. ALL populated
+// slices are enforced (boundaries flip #33); any slice-to-slice coupling not
+// through a barrel is a lint error.
 const webFeaturesDir = "apps/web/src/features";
 const webSlices = [
   "admin",
@@ -139,19 +138,6 @@ const webSlices = [
   "telemetry",
   "viewer",
 ] as const;
-// Grandfathered cross-slice edges: pre-existing couplings between slices that
-// still reach a sibling's internals directly rather than through its index.ts
-// barrel — forbid a slice reaching into a NEW sibling, grandfather the raw
-// paths it already touches. Each pair shrinks as it migrates to the barrel
-// mechanism below (mirrors apiCrossModuleZones); `except` is slice-granular,
-// so an entry permits any raw import between that pair — finer per-file
-// enforcement is a separate mechanism, out of scope.
-const webSliceGrandfatheredExcept: Partial<
-  Record<(typeof webSlices)[number], readonly string[]>
-> = {
-  // period's assembled-report body gates publish/reopen — report-sections only.
-  period: ["report-sections"],
-};
 const webCrossSliceZones = webSlices.map((sliceName) => ({
   target: `${webFeaturesDir}/${sliceName}`,
   from: webFeaturesDir,
@@ -160,9 +146,8 @@ const webCrossSliceZones = webSlices.map((sliceName) => ({
     ...webSlices
       .filter((sibling) => sibling !== sliceName)
       .map((sibling) => `${sibling}/index.ts`),
-    ...(webSliceGrandfatheredExcept[sliceName] ?? []),
   ],
-  message: `web slice boundary: '${sliceName}' may reach a sibling slice only through its index.ts barrel or a still-grandfathered raw path (restructure-directory-architecture).`,
+  message: `web slice boundary: '${sliceName}' may reach a sibling slice only through its index.ts barrel (restructure-directory-architecture).`,
 }));
 
 export default defineConfig([

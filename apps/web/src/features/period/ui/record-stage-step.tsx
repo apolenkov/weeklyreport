@@ -1,6 +1,6 @@
 "use client";
 
-import { StageMultiSelect } from "../../report-sections/ui/stage-multi-select";
+import { StageMultiSelect } from "../../report-sections";
 
 /**
  * The product-only stage step shared by the Item and Decision dialogs: the

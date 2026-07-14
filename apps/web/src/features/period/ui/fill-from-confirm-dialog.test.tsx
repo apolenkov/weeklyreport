@@ -9,7 +9,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ReportPeriod } from "../../report-sections/model/types";
+import type { ReportPeriod } from "../../report-sections";
 import { FillFromConfirmDialog } from "./fill-from-confirm-dialog";
 
 const PERIOD: ReportPeriod = {

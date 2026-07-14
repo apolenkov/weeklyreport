@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ReportPeriod } from "../../report-sections/model/types";
+import type { ReportPeriod } from "../../report-sections";
 import { FillFromButton } from "./fill-from-button";
 
 const pastPeriod: ReportPeriod = {

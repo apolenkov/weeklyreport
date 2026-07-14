@@ -3,7 +3,7 @@
 import type { TrafficLightStatus } from "@customreport/shared";
 import { useState } from "react";
 
-import type { LeadActivityCard } from "../../report-sections/model/lead-form";
+import type { LeadActivityCard } from "../../report-sections";
 
 const STATUS_OPTIONS: readonly {
   readonly value: TrafficLightStatus;

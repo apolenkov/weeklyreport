@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import type { LeadActivityCard } from "../../report-sections/model/lead-form";
+import type { LeadActivityCard } from "../../report-sections";
 import { ActivityStatusSection } from "./activity-status-section";
 
 const ACTIVITY_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";

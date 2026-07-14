@@ -1,16 +1,17 @@
 import { useRef, useState } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
-import { resolveRecordParent } from "../../report-sections/model/record-parent";
+import type {
+  DecisionEntry,
+  ParentActivityOption,
+  Product,
+  RecordParent,
+} from "../../report-sections";
 import {
   computeEffectiveStageIds,
   isZeroOwnedStageDeadEnd,
-} from "../../report-sections/model/stage-ownership";
-import type { DecisionEntry, Product } from "../../report-sections/model/types";
-import type {
-  ParentActivityOption,
-  RecordParent,
-} from "../../report-sections/ui/product-picker";
+  resolveRecordParent,
+} from "../../report-sections";
 import {
   buildActivityDecisionSave,
   buildDecisionSaveBase,

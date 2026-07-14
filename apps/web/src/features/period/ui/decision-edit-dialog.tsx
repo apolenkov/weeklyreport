@@ -3,8 +3,11 @@
 import { createPortal } from "react-dom";
 
 import { RecordDialogFooter } from "../../../shared/ui/record-dialog-footer";
-import type { DecisionEntry, Product } from "../../report-sections/model/types";
-import type { ParentActivityOption } from "../../report-sections/ui/product-picker";
+import type {
+  DecisionEntry,
+  ParentActivityOption,
+  Product,
+} from "../../report-sections";
 import { DecisionEditDialogFields } from "./decision-edit-dialog-fields";
 import { useDecisionEditDialog } from "./use-decision-edit-dialog";
 

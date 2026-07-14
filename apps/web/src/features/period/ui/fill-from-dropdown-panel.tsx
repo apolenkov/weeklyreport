@@ -1,7 +1,7 @@
 import type { RefObject } from "react";
 import { createPortal } from "react-dom";
 
-import type { ReportPeriod } from "../../report-sections/model/types";
+import type { ReportPeriod } from "../../report-sections";
 
 function SearchIcon() {
   return (
