@@ -8,6 +8,7 @@ import type { PrismaService } from "../../infrastructure/prisma/prisma.service.j
  */
 export async function queryActiveLeadsLastPublishedPeriod(
   prisma: PrismaService,
+  sectionScope: Record<string, unknown>,
 ): Promise<number> {
   const report = await prisma.report.findFirst({
     where: { status: "published" },
@@ -16,7 +17,7 @@ export async function queryActiveLeadsLastPublishedPeriod(
   });
   if (!report) return 0;
   const rows = await prisma.reportSection.findMany({
-    where: { reportId: report.id, status: "submitted" },
+    where: { reportId: report.id, status: "submitted", ...sectionScope },
     distinct: ["authorId"],
     select: { authorId: true },
   });

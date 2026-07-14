@@ -73,7 +73,8 @@ export class TelemetryGaugesPrismaRepository implements TelemetryGaugesPort {
   }
 
   activeLeadsLastPublishedPeriod(): Promise<number> {
-    return queryActiveLeadsLastPublishedPeriod(this.prisma);
+    // Prometheus scrapes have no requester session, so this gauge is org-wide.
+    return queryActiveLeadsLastPublishedPeriod(this.prisma, {});
   }
 }
 
