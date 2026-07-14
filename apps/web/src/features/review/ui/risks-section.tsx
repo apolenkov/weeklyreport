@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { useEditableListDialog } from "../../../hooks/use-editable-list-dialog";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import type { Product, RiskEntry } from "../../report-sections/model/types";
+import type { Product, RiskEntry } from "../../report-sections";
 import { canonicalRiskStageTags, RiskCard } from "./risk-card";
 import { RiskEditDialog } from "./risk-edit-dialog";
 

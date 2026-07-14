@@ -1,6 +1,9 @@
-import { canonicalStageName } from "../../report-sections/model/stage-tags";
-import type { Product, RiskEntry } from "../../report-sections/model/types";
-import type { ParentActivityOption } from "../../report-sections/ui/product-picker";
+import type {
+  ParentActivityOption,
+  Product,
+  RiskEntry,
+} from "../../report-sections";
+import { canonicalStageName } from "../../report-sections";
 
 export type RiskSeverity = "at-risk" | "blocked";
 

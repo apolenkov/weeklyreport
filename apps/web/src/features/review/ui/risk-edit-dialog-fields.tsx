@@ -4,12 +4,12 @@ import type { Ref } from "react";
 
 import { ChoiceChipRow } from "../../../shared/ui/choice-chip-row";
 import { RecordTextareaField } from "../../../shared/ui/record-textarea-field";
-import type { Product } from "../../report-sections/model/types";
-import {
-  type ParentActivityOption,
-  ParentPicker,
-  type RecordParent,
-} from "../../report-sections/ui/product-picker";
+import type {
+  ParentActivityOption,
+  Product,
+  RecordParent,
+} from "../../report-sections";
+import { ParentPicker } from "../../report-sections";
 import type { RiskSeverity } from "./risk-edit-dialog-helpers";
 import { SEVERITY_CHOICES } from "./risk-severity-choices";
 import { RiskStageStep } from "./risk-stage-step";

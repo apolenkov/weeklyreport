@@ -1,6 +1,6 @@
 "use client";
 
-import { StageMultiSelect } from "../../report-sections/ui/stage-multi-select";
+import { StageMultiSelect } from "../../report-sections";
 import type { RiskSeverity } from "./risk-edit-dialog-helpers";
 
 /**
