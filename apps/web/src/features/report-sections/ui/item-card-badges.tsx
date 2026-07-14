@@ -1,4 +1,4 @@
-import { PublishedRecordMarker } from "../../period/ui/item-card-actions";
+import { PublishedRecordMarker } from "../../period";
 import type { StatusBadge } from "../model/item-card-style";
 
 interface ItemCardBadgesProps {

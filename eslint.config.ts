@@ -154,9 +154,6 @@ const webSliceGrandfatheredExcept: Partial<
   dashboard: ["report-sections"],
   // period's assembled-report body gates publish/reopen — report-sections only.
   period: ["report-sections"],
-  // report-sections is the assembled-report hub: it composes admin, pdf-export,
-  // period, review, and slides surfaces into the rendered report.
-  "report-sections": ["admin", "pdf-export", "period", "review", "slides"],
   // review's report-sections body sits underneath its review surfaces.
   review: ["report-sections"],
   // the slide deck reads report-sections' cross-author mappers + stage helpers to

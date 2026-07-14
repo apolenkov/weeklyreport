@@ -7,10 +7,8 @@ import type {
 import { getClientErrorDetails } from "../../../lib/client-error-reporting";
 import { isAdmin, isHeadLike, isLead } from "../../../lib/role-predicates";
 import type { ProductReport } from "../../../shared/lib/dashboard-mock-data";
-import {
-  type SectionReviewRow,
-  toSectionReviewRows,
-} from "../../review/model/section-review-rows";
+import type { SectionReviewRow } from "../../review";
+import { toSectionReviewRows } from "../../review";
 import { reportHasContent } from "../model/report-content";
 import {
   mapWeeklyReport,

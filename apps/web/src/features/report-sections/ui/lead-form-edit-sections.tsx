@@ -5,10 +5,9 @@ import type { ComponentProps } from "react";
 
 import type { RecordVisibility } from "../../../hooks/use-record-visibility";
 import { AccordionSection } from "../../../shared/ui/report-shell/accordion-section";
-import { ActivityStatusSection } from "../../period/ui/activity-status-section";
-import { DecisionsSection } from "../../period/ui/decisions-section";
-import type { CrossAuthorEntry } from "../../period/ui/sdlc-pipeline";
-import { LeadReviewFeedback } from "../../review/ui/lead-review-feedback";
+import type { CrossAuthorEntry } from "../../period";
+import { ActivityStatusSection, DecisionsSection } from "../../period";
+import { LeadReviewFeedback } from "../../review";
 import {
   mapLeadReviewFeedback,
   ownedStagesForProject,

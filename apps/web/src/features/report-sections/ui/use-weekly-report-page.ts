@@ -6,8 +6,7 @@ import { invalidateReview } from "../../../lib/cache-keys";
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
-import type { ReviewMode } from "../../review/ui/review-mode-toggle";
-import type { SubmissionFilter } from "../../review/ui/submission-filter";
+import type { ReviewMode, SubmissionFilter } from "../../review";
 import { formatDateRange, isoWeekNumber } from "../model/lead-history";
 import { useWeeklyReportMutations } from "./use-weekly-report-mutations";
 import {

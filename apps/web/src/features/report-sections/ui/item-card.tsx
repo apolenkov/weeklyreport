@@ -6,7 +6,7 @@ import {
   coveringRisksForItem,
   highestAlarmSeverity,
 } from "../../../lib/item-alarm";
-import { ItemCardActions } from "../../period/ui/item-card-actions";
+import { ItemCardActions } from "../../period";
 import {
   cardContainerStyle,
   STATUS_BADGE,
