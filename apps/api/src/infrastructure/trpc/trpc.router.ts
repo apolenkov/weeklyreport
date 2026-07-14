@@ -887,11 +887,10 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       /**
-       * Per-period reminder rules are no longer
-       * written through the admin tab. Rules are derived from
-       * `ReminderPolicy` rows by the period scheduler in 44-03+. The
-       * read path (admin.getSnapshot.reminderRules) stays as-is so the
-       * 44-04 admin UI can still visualize derived rows inline.
+       * Per-period reminder rules are not written through the admin tab:
+       * the period scheduler derives them from `ReminderPolicy` rows. The
+       * read path (admin.getSnapshot.reminderRules) stays so the admin UI
+       * can still visualize the derived rows inline.
        */
       saveReminderRule: adminProcedure
         .input(adminReminderRuleSchema)
@@ -899,7 +898,7 @@ export function createAppRouter(deps: RouterDeps) {
           throw new TRPCError({
             code: "METHOD_NOT_SUPPORTED",
             message:
-              "Per-period reminder rules are read-only as of Phase 44 (UFB-036). Use admin.savePolicy instead.",
+              "Per-period reminder rules are read-only; they derive from reminder policies. Use admin.savePolicy instead.",
           });
         }),
 
