@@ -122,11 +122,6 @@ export function buildWeeklyReportPageView(
     fullLeadGroups,
   });
 
-  const authoredProductIds = focusedAuthorId
-    ? products
-        .filter((report) => report.authorIds?.includes(focusedAuthorId))
-        .map((report) => report.id)
-    : [];
   const focusedProductId = focusedAuthorId
     ? products.find(
         (report) =>
@@ -146,8 +141,11 @@ export function buildWeeklyReportPageView(
     canMutatePeriod &&
     !canPublishReport &&
     view.period.periodStatus !== "published";
-  const scrollTargetProductId =
-    authoredProductIds.length > 0 ? authoredProductIds[0] : undefined;
+  // report-routing: the scroll target and the highlighted accordion panel
+  // must always agree — both apply the SAME content filter (reportHasContent),
+  // so a deep-link to an author whose first authored product is empty still
+  // scrolls to the content-bearing one that actually highlights.
+  const scrollTargetProductId = focusedProductId;
   // The standalone fallback navigator (when no shell-composed `toolbar` slot
   // arrives — e.g. the viewer /reports/[reportId] route) surfaces the active
   // period only; a single inert option. The shell-composed head toolbar

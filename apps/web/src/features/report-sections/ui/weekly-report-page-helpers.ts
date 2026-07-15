@@ -181,6 +181,23 @@ export const isSubmittedSection = (section: {
 }): boolean => section.status === "submitted";
 
 /**
+ * A single draft section's canonical product-content check: run the SAME
+ * per-lead grouping `mapWeeklyReportLeadGroups` uses, scoped to just this one
+ * section, so a section counts as carrying product content exactly when it
+ * would produce a non-empty group on its own — no duplicated grouping logic,
+ * no divergence from the canonical product-content rule.
+ */
+function sectionHasProductContent(
+  section: ReportSectionReadModel,
+  reportData: WeeklyReportReadModel,
+): boolean {
+  return (
+    mapWeeklyReportLeadGroups({ ...reportData, leadSections: [section] })
+      .length > 0
+  );
+}
+
+/**
  * review-acknowledgement (§7): shape the accordion BODY for the submitted/all
  * filter. `fullProducts` / `fullLeadGroups` are the truth source (header counts,
  * portfolio band, and period nav read them). When submitted-only is active we
@@ -217,21 +234,24 @@ export function buildAccordionModel(params: {
     ...reportData,
     leadSections: reportData.leadSections.filter(isSubmittedSection),
   };
-  const draftData: WeeklyReportReadModel = {
-    ...reportData,
-    leadSections: reportData.leadSections.filter(
-      (section) => !isSubmittedSection(section),
-    ),
-  };
+  const draftSections = reportData.leadSections.filter(
+    (section) => !isSubmittedSection(section),
+  );
   const products =
     mapWeeklyReport(submittedData).products.filter(reportHasContent);
   const leadGroups =
     scope === "lead"
       ? (mapWeeklyReportLeadGroups(submittedData) as LeadGroup[])
       : [];
-  // mapWeeklyReportLeadGroups drops authors whose products carry no content, so
-  // its length is exactly the count of draft sections that would show something.
-  const draftCount = mapWeeklyReportLeadGroups(draftData).length;
+  // A draft section counts toward "N in draft" when it carries product
+  // content OR activity content (mirroring hasAnyContent's product-OR-activity
+  // fold above) — an activity-only draft section must not be invisible to the
+  // count just because mapWeeklyReportLeadGroups only sees product content.
+  const draftCount = draftSections.filter(
+    (section) =>
+      sectionHasProductContent(section, reportData) ||
+      sectionHasActivityContent(section),
+  ).length;
   return {
     products,
     leadGroups,

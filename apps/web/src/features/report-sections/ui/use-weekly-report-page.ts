@@ -71,6 +71,7 @@ export function useWeeklyReportPage(
   const router = useRouter();
   const sessionState = useContext(SessionContext);
   const currentRole = sessionState?.user?.role ?? null;
+  const currentUserId = sessionState?.user?.id ?? null;
   const mutations = useWeeklyReportMutations();
 
   // review-acknowledgement (§7): per-user, client-only accordion filter. Default
@@ -140,6 +141,40 @@ export function useWeeklyReportPage(
     };
   }, [titleParts]);
 
+  // Narrows weeklyQ.data off the `no-period` / undefined variants for TS —
+  // used by the memo below and, once past the terminal-state guards, known
+  // to be loaded and active.
+  const reportData =
+    weeklyQ.data && weeklyQ.data.status !== "no-period"
+      ? weeklyQ.data
+      : undefined;
+
+  // review-acknowledgement (§7): the mapper chain is the expensive part of the
+  // derivation (scope/review/§7-filter/focus branching). Keying the memo on
+  // the data-dependent inputs only — never `reviewMode` — means a pure
+  // UI-toggle re-render (e.g. Read|Review) reuses the same view-model object
+  // instead of re-running the full chain.
+  const view = useMemo(() => {
+    if (!reportData) return null;
+    return buildWeeklyReportPageView(reportData, {
+      scope,
+      currentRole,
+      currentUserId,
+      focusedAuthorId,
+      submissionFilter,
+      onReviewMutated: () => invalidateReview(qc, trpc),
+    });
+  }, [
+    reportData,
+    scope,
+    currentRole,
+    currentUserId,
+    focusedAuthorId,
+    submissionFilter,
+    qc,
+    trpc,
+  ]);
+
   if (weeklyQ.isLoading) {
     return { kind: "loading" };
   }
@@ -151,21 +186,9 @@ export function useWeeklyReportPage(
     return { kind: "notice", notice: terminalNotice };
   }
 
-  // After the terminal-notice guard the report is loaded and active; this
-  // narrows weeklyQ.data off the `no-period` / undefined variants for TS.
-  const reportData = weeklyQ.data;
-  if (!reportData || reportData.status === "no-period") {
+  if (!view) {
     return { kind: "empty" };
   }
-
-  const view = buildWeeklyReportPageView(reportData, {
-    scope,
-    currentRole,
-    currentUserId: sessionState?.user?.id ?? null,
-    focusedAuthorId,
-    submissionFilter,
-    onReviewMutated: () => invalidateReview(qc, trpc),
-  });
 
   return {
     kind: "ready",

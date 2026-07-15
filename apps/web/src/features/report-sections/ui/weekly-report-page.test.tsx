@@ -1099,6 +1099,61 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
     });
   });
 
+  it("an activity-only draft section (no draft product content) still surfaces the 'N in draft — Show all' signal", async () => {
+    // Regression for weekly-report-view-gaps (b): draftCount used to derive
+    // from mapWeeklyReportLeadGroups alone, which only sees product content —
+    // a draft section whose only content is a touched activity was invisible
+    // to both the draft-hidden signal AND the empty-state (hasAnyContent was
+    // already activity-aware), a dead-end with no recovery affordance.
+    renderPage({
+      ...makeWeeklyReportData("open", {
+        portfolioOverview: [],
+        leadSections: [
+          {
+            reportSectionId: "77777777-7777-4777-8777-777777777771",
+            reportId: REPORT_ID,
+            authorId: AUTHOR_ID_B,
+            authorName: "Bob",
+            status: "draft",
+            submittedAt: null,
+            projects: [],
+            items: [],
+            risks: [],
+            decisions: [],
+            priorities: [],
+            activities: [
+              {
+                activityId: "88888888-8888-4888-8888-888888888881",
+                activityName: "Jira triage duty",
+                status: "red",
+                note: "Draft-only activity note",
+              },
+            ],
+          },
+        ],
+      }),
+      submissionCount: 0,
+    });
+
+    await screen.findByRole("heading", { name: /status report/i });
+
+    // The signal surfaces (not the misleading empty-state), and clicking
+    // "Show all" reveals the activity-only draft section.
+    expect(screen.getByTestId("draft-hidden-signal")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("empty-submissions-state"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("activity-status-strip"),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /show all/i }));
+    expect(
+      await screen.findByTestId("activity-status-strip"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Draft-only activity note")).toBeInTheDocument();
+  });
+
   it("a genuinely content-less period shows the true empty-state and no filter", async () => {
     renderPage({
       ...makeWeeklyReportData("open", {
