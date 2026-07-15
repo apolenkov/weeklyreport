@@ -46,7 +46,7 @@ export const reportPeriodSchema = z.object({
   autoPublished: z.boolean().optional(),
   autoArchived: z.boolean().optional(),
   publishedAt: z.coerce.date().nullable().optional(),
-  publishedById: z.string().nullable().optional(),
+  publishedById: z.uuid().nullable().optional(),
   reopenedAt: z.coerce.date().nullable().optional(),
 });
 
