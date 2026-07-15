@@ -10,8 +10,8 @@ const REPO = "/Users/wrk/work/customreport";
 // ---- the change under review (make-publish-atomic, #16) ----
 const CHANGE = {
   name: "make-publish-atomic",
-  // Explicit scope — ONLY these files are this change's work. CONTEXT.md and
-  // docs/feedback/ are concurrent parallel-session edits and must be IGNORED.
+  // Explicit scope — ONLY these files are this change's work. Concurrent
+  // parallel-session edits outside this list must be IGNORED.
   scopeTracked: [
     "apps/api/src/infrastructure/trpc/trpc.router.ts",
     "apps/api/src/modules/period/__tests__/lifecycle-write-gate.test.ts",

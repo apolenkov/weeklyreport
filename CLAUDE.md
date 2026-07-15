@@ -73,6 +73,12 @@ path must respect them and link the relevant `openspec/specs/` spec.
 
 ## Conventions
 
+- **`docs/` is curated documentation only** (index: `docs/README.md`). Session
+  artifacts — handoffs, review data dumps, run plans, pipeline scripts — go to
+  `~/work/customreport-archive/` (outside git; keep its `INDEX.md` current).
+  The pre-commit guard blocks `*.data.json`, `HANDOFF-*`, `*.js.txt` under `docs/`.
+  Harness/skill outputs must default to the archive, never to `docs/`.
+
 - **OpenSpec is the source of truth.** Read `openspec list` + `openspec/specs/`
   before changing query semantics or behavior; non-trivial work starts as a change.
 - **Deferred features leave traces.** UI → `ComingSoonBadge` on an inert control;
