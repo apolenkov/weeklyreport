@@ -156,7 +156,11 @@ export function ViewerReportShell({
   const contextControls = (
     <>
       {periods.length > 0 ? (
-        <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
+        <PeriodNavigator
+          periods={periods}
+          currentPeriodId={reportId}
+          urlBuilder={urlBuilder}
+        />
       ) : null}
       <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
       <div className="grow" aria-hidden="true" />
