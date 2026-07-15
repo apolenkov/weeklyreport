@@ -24,9 +24,8 @@ interface Entry {
 const FLUSH_MS = 2000;
 const FLUSH_AT_COUNT = 50;
 const MAX_QUEUE = 500;
+const INSTALLED_MARK = Symbol.for("customreport.client-logger.installed");
 
-// eslint-disable-next-line no-restricted-syntax -- installClientLogger patches global browser handlers exactly once; module-level lifecycle state is intentional.
-let installed = false;
 const queue: Entry[] = [];
 // eslint-disable-next-line no-restricted-syntax -- enqueue schedules the batch flush and flush clears the handle; module-level timer state is intentional.
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
@@ -72,10 +71,16 @@ async function flush() {
 }
 
 export function installClientLogger(): void {
-  if (installed) return;
+  const loggerConsole = console as Console & {
+    [INSTALLED_MARK]?: true;
+  };
+  if (loggerConsole[INSTALLED_MARK]) return;
   if (typeof window === "undefined") return;
   if (!webEnv.clientLogForwarding()) return;
-  installed = true;
+  Object.defineProperty(loggerConsole, INSTALLED_MARK, {
+    configurable: true,
+    value: true,
+  });
 
   const origError = console.error.bind(console);
   const origWarn = console.warn.bind(console);

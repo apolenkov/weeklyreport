@@ -1,7 +1,7 @@
 import type { EnvConfig } from "../infrastructure/config/env.schema";
 
 /**
- * refactor-auth-exemplary-layering: the single generic "require an env var to be
+ * the single generic "require an env var to be
  * present" helper. Replaces the per-module copies that had drifted across the
  * auth module. It is intentionally a bare presence check — callers that need a
  * stronger contract (e.g. `requireJwtSecret`'s minimum-length floor) layer that

@@ -14,10 +14,8 @@ export function PulseMark() {
       <span className="pulse-word" aria-hidden="true">
         WEEKLY
       </span>
-      <span className="pulse-line">
-        <span className="pulse-strong" aria-hidden="true">
-          REPORT
-        </span>
+      <span className="pulse-strong" aria-hidden="true">
+        REPORT
       </span>
     </div>
   );

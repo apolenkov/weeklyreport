@@ -1,7 +1,4 @@
 import {
-  type ArchiveReportSummary,
-  archiveReportSummarySchema,
-  type PaginatedResult,
   shortNameFromName,
   type SubmissionDashboardRow,
   submissionDashboardRowSchema,
@@ -24,8 +21,6 @@ const PROJECT_B = "11111111-1111-4111-8111-dd0000000002";
 const ITEM_A = "11111111-1111-4111-8111-aa0000000001";
 const ITEM_B = "11111111-1111-4111-8111-aa0000000002";
 const DECISION_A = "11111111-1111-4111-8111-ee0000000001";
-const ARCHIVE_A = "11111111-1111-4111-8111-ff0000000001";
-const ARCHIVE_B = "11111111-1111-4111-8111-ff0000000002";
 
 function makeReview(): SubmissionDashboardRow[] {
   return [
@@ -175,30 +170,6 @@ function makeWeeklyReport(
   });
 }
 
-function makeArchive(): PaginatedResult<ArchiveReportSummary> {
-  return {
-    items: [
-      archiveReportSummarySchema.parse({
-        reportId: ARCHIVE_A,
-        periodStart: "2026-04-06T00:00:00.000Z",
-        periodEnd: "2026-04-12T23:59:59.000Z",
-        publishedAt: "2026-04-13T00:00:00.000Z",
-        publishedByName: "Head Person",
-        portfolioStatus: "green",
-      }),
-      archiveReportSummarySchema.parse({
-        reportId: ARCHIVE_B,
-        periodStart: "2026-03-30T00:00:00.000Z",
-        periodEnd: "2026-04-05T23:59:59.000Z",
-        publishedAt: "2026-04-06T00:00:00.000Z",
-        publishedByName: "Head Person",
-        portfolioStatus: "yellow",
-      }),
-    ],
-    nextCursor: null,
-  };
-}
-
 describe("formatRelativeDeadline", () => {
   it('returns "Past" when the deadline has passed', () => {
     const now = new Date("2026-04-25T10:00:00.000Z");
@@ -223,7 +194,6 @@ describe("mapDashboardData", () => {
   it("produces kpi.submitted/total from weeklyReport counts (4/6 case)", () => {
     const result = mapDashboardData({
       review: makeReview(),
-      archive: makeArchive(),
       weeklyReport: makeWeeklyReport({ submissionCount: 4, totalLeads: 6 }),
       now: new Date("2026-04-17T13:00:00.000Z"),
     });
@@ -235,7 +205,6 @@ describe("mapDashboardData", () => {
     // deadline = 2026-04-17T15:00:00Z, now = 2026-04-17T13:00:00Z -> 2h
     const result = mapDashboardData({
       review: makeReview(),
-      archive: makeArchive(),
       weeklyReport: makeWeeklyReport(),
       now: new Date("2026-04-17T13:00:00.000Z"),
     });
@@ -246,7 +215,6 @@ describe("mapDashboardData", () => {
   it("does not show a countdown for a published period", () => {
     const result = mapDashboardData({
       review: makeReview(),
-      archive: makeArchive(),
       weeklyReport: makeWeeklyReport({ periodStatus: "published" }),
       now: new Date("2026-04-17T13:00:00.000Z"),
     });
@@ -256,7 +224,6 @@ describe("mapDashboardData", () => {
   it("counts blocked and at-risk escalations into KPI", () => {
     const result = mapDashboardData({
       review: makeReview(),
-      archive: makeArchive(),
       weeklyReport: makeWeeklyReport(),
       now: new Date("2026-04-17T10:00:00.000Z"),
     });
@@ -268,7 +235,6 @@ describe("mapDashboardData", () => {
   it("sums decisions across all lead sections", () => {
     const result = mapDashboardData({
       review: makeReview(),
-      archive: makeArchive(),
       weeklyReport: makeWeeklyReport(),
       now: new Date("2026-04-17T10:00:00.000Z"),
     });
@@ -278,7 +244,6 @@ describe("mapDashboardData", () => {
   it("derives lead status: 'submitted' / 'draft' / 'pending' (no section)", () => {
     const result = mapDashboardData({
       review: makeReview(),
-      archive: makeArchive(),
       weeklyReport: makeWeeklyReport(),
       now: new Date("2026-04-17T10:00:00.000Z"),
     });
@@ -302,7 +267,6 @@ describe("mapDashboardData", () => {
   it("produces pendingLeads as a string[] of pending lead names", () => {
     const result = mapDashboardData({
       review: makeReview(),
-      archive: makeArchive(),
       weeklyReport: makeWeeklyReport(),
       now: new Date("2026-04-17T10:00:00.000Z"),
     });
@@ -321,7 +285,6 @@ describe("mapDashboardData", () => {
   it("pendingLeads is a strict subset of the scoped review input", () => {
     const result = mapDashboardData({
       review: makeReview(),
-      archive: makeArchive(),
       weeklyReport: makeWeeklyReport(),
       now: new Date("2026-04-17T10:00:00.000Z"),
     });
@@ -339,7 +302,6 @@ describe("mapDashboardData", () => {
   it("empty review (scoped-out caller) yields empty pendingLeads", () => {
     const result = mapDashboardData({
       review: [],
-      archive: makeArchive(),
       weeklyReport: makeWeeklyReport(),
       now: new Date("2026-04-17T10:00:00.000Z"),
     });
@@ -351,7 +313,6 @@ describe("mapDashboardData", () => {
     // a concrete row — this test pins pure type→severity mapping.
     const result = mapDashboardData({
       review: makeReview(),
-      archive: makeArchive(),
       weeklyReport: makeWeeklyReport({
         escalations: [
           {
@@ -393,7 +354,6 @@ describe("mapDashboardData", () => {
     // shows; with a concrete blocker on the same product it is redundant noise.
     const result = mapDashboardData({
       review: makeReview(),
-      archive: makeArchive(),
       weeklyReport: makeWeeklyReport({
         escalations: [
           {
@@ -423,7 +383,6 @@ describe("mapDashboardData", () => {
     // signal, so it survives — but reads as "Flagged", never "No stage set".
     const result = mapDashboardData({
       review: makeReview(),
-      archive: makeArchive(),
       weeklyReport: makeWeeklyReport({
         escalations: [
           {
@@ -444,7 +403,6 @@ describe("mapDashboardData", () => {
   it('renders "No stage set" for an escalation with a null stage', () => {
     const result = mapDashboardData({
       review: makeReview(),
-      archive: makeArchive(),
       weeklyReport: makeWeeklyReport({
         escalations: [
           {
@@ -464,7 +422,6 @@ describe("mapDashboardData", () => {
   it("renders the resolved stage name when present", () => {
     const result = mapDashboardData({
       review: makeReview(),
-      archive: makeArchive(),
       weeklyReport: makeWeeklyReport({
         escalations: [
           {
@@ -481,24 +438,9 @@ describe("mapDashboardData", () => {
     expect(result.blockedAtRisk[0]?.stage).toBe("Development, Testing");
   });
 
-  it("maps archive items with synthesized weekLabel and dateRange", () => {
-    const result = mapDashboardData({
-      review: makeReview(),
-      archive: makeArchive(),
-      weeklyReport: makeWeeklyReport(),
-      now: new Date("2026-04-17T10:00:00.000Z"),
-    });
-    expect(result.archive).toHaveLength(2);
-    expect(result.archive[0]?.weekLabel).toMatch(/^Week \d+$/);
-    expect(result.archive[0]?.dateRange).toMatch(
-      /^[A-Z][a-z]{2} \d+\u2013(?:[A-Z][a-z]{2} )?\d+, \d{4}$/,
-    );
-  });
-
   it("flags isCurrentUser when currentUserId matches a lead row", () => {
     const result = mapDashboardData({
       review: makeReview(),
-      archive: makeArchive(),
       weeklyReport: makeWeeklyReport(),
       now: new Date("2026-04-17T10:00:00.000Z"),
       currentUserId: LEAD_A,
