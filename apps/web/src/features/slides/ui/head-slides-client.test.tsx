@@ -1,22 +1,20 @@
-/**
- * @vitest-environment jsdom
- *
- * viewer-report-surface-parity (review P3): HeadSlidesClient's `enableActivity`
- * gate is the load-bearing reason a viewer deck never fires `activity.live` (a
- * head-only / FORBIDDEN-for-viewer procedure). The viewer shell test only
- * asserts the prop pass-through; this suite exercises the gating logic itself:
- *   - the `activity.live` query is created with `enabled: false`, so the
- *     forbidden query never fires for a viewer;
- *   - with no published lead sections, a viewer deck stays empty — the
- *     activity fallback is skipped even when activity rows are available.
- * The default (head) path is also pinned so the gate did not change it.
- */
+/** @vitest-environment jsdom */
 
 import "@testing-library/jest-dom/vitest";
 
 import { useQuery } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+interface ActivityQueryResult {
+  readonly data:
+    | { readonly rows: readonly { readonly id: string }[] }
+    | undefined;
+  readonly isLoading: boolean;
+  readonly isError: boolean;
+}
+
+const mockActivityQuery = vi.hoisted(() => vi.fn<() => ActivityQueryResult>());
 
 vi.mock("./report-slides", () => ({
   ReportSlides: ({ slides }: { slides: unknown[] }) => (
@@ -85,13 +83,7 @@ vi.mock("@tanstack/react-query", () => ({
         isError: false,
       };
     }
-    // activity.live — return rows regardless; the component must ignore them
-    // when enableActivity is false.
-    return {
-      data: { rows: ACTIVITY_ROWS },
-      isLoading: false,
-      isError: false,
-    };
+    return mockActivityQuery();
   }),
 }));
 
@@ -108,8 +100,17 @@ function activityQueryCall() {
     ) as { enabled?: boolean } | undefined;
 }
 
+beforeEach(() => {
+  mockActivityQuery.mockReturnValue({
+    data: { rows: ACTIVITY_ROWS },
+    isLoading: false,
+    isError: false,
+  });
+});
+
 afterEach(() => {
   vi.mocked(useQuery).mockClear();
+  mockActivityQuery.mockClear();
 });
 
 describe("HeadSlidesClient — enableActivity gating", () => {
@@ -136,6 +137,63 @@ describe("HeadSlidesClient — enableActivity gating", () => {
       "data-slide-count",
       String(ACTIVITY_ROWS.length),
     );
+  });
+});
+
+describe("HeadSlidesClient — activity fallback states", () => {
+  it("renders populated report slides while activity is loading", () => {
+    mockActivityQuery.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+    });
+
+    render(<HeadSlidesClient reportId="report-a" />);
+
+    expect(screen.getByText(/Report A slide/)).toBeInTheDocument();
+    expect(screen.queryByTestId("slide-skeleton")).not.toBeInTheDocument();
+    expect(screen.queryByText("Slides could not load")).not.toBeInTheDocument();
+  });
+
+  it("renders populated report slides when activity fails", () => {
+    mockActivityQuery.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    });
+
+    render(<HeadSlidesClient reportId="report-a" />);
+
+    expect(screen.getByText(/Report A slide/)).toBeInTheDocument();
+    expect(screen.queryByTestId("slide-skeleton")).not.toBeInTheDocument();
+    expect(screen.queryByText("Slides could not load")).not.toBeInTheDocument();
+  });
+
+  it("shows the skeleton for an empty report while activity is loading", () => {
+    mockActivityQuery.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+    });
+
+    render(<HeadSlidesClient />);
+
+    expect(screen.getByTestId("slide-skeleton")).toBeInTheDocument();
+    expect(screen.queryByTestId("report-slides")).not.toBeInTheDocument();
+  });
+
+  it("shows the error state for an empty report when activity fails", () => {
+    mockActivityQuery.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    });
+
+    render(<HeadSlidesClient />);
+
+    expect(screen.getByText("Slides could not load")).toBeInTheDocument();
+    expect(screen.queryByTestId("slide-skeleton")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("report-slides")).not.toBeInTheDocument();
   });
 });
 
