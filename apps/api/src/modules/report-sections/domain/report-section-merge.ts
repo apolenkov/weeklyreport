@@ -3,7 +3,10 @@ import {
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
   type SubmitSectionPayload,
+  type TrafficLightStatus,
 } from "@customreport/shared";
+
+import { aggregateTrafficLight } from "./traffic-light-aggregation";
 
 /**
  * The draft/submit write-path merge: folds a save/submit payload onto the
@@ -11,8 +14,6 @@ import {
  * aggregation, lead-owned decisions, and the activity-status slice.
  */
 
-/** Worst-case severity rank for the per-project traffic-light aggregation (any red stage wins). */
-const TRAFFIC_LIGHT_RED_SEVERITY = 3;
 export function mergeSection(
   section: ReportSectionReadModel,
   input: DraftSavePayload | SubmitSectionPayload,
@@ -30,29 +31,6 @@ export function mergeSection(
     ]),
   );
 
-  const aggregateTrafficLight = (
-    ownedStages: NonNullable<
-      ReportSectionReadModel["projects"][number]["ownedStages"]
-    >,
-  ) => {
-    // eslint-disable-next-line no-restricted-syntax -- Loop-carried severity preserves the first red-stage short-circuit; a reduce would keep scanning after the terminal state.
-    let severity = 0;
-    for (const stage of ownedStages) {
-      if (stage.status === "red") {
-        severity = TRAFFIC_LIGHT_RED_SEVERITY;
-        break;
-      }
-      if (stage.status === "yellow") severity = Math.max(severity, 2);
-      if (stage.status === "green") severity = Math.max(severity, 1);
-    }
-    return severity === TRAFFIC_LIGHT_RED_SEVERITY
-      ? "red"
-      : severity === 2
-        ? "yellow"
-        : severity === 1
-          ? "green"
-          : null;
-  };
   const leadOwnedDecisions = input.decisions.map((decision) => ({
     ...decision,
     // The lead form owner input is read-only and represents the section owner.
@@ -84,8 +62,16 @@ export function mergeSection(
         }),
       }))
       .map((project) => {
+        const ownedStageStatuses = project.ownedStages.map(
+          (stage): TrafficLightStatus | null =>
+            stage.status === "red" ||
+            stage.status === "yellow" ||
+            stage.status === "green"
+              ? stage.status
+              : null,
+        );
         const trafficLight =
-          aggregateTrafficLight(project.ownedStages) ??
+          aggregateTrafficLight(ownedStageStatuses) ??
           input.projectStatuses.find(
             (status) => status.projectId === project.projectId,
           )?.status ??

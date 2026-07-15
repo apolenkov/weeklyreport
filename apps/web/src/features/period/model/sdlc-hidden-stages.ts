@@ -1,5 +1,3 @@
-"use client";
-
 import type { StageAssignment, StageStatus } from "../../report-sections";
 import {
   canonicalStageName,

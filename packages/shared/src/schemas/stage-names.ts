@@ -47,3 +47,30 @@ export function normalizeStageName(stageName: string): string {
 export function stageNamesMatch(a: string, b: string): boolean {
   return normalizeStageName(a) === normalizeStageName(b);
 }
+
+const STAGE_NAME_SEPARATOR = /[,;]+/;
+
+// Whether a risk applies to a stage: prefers the structured stage-id list
+// (empty means "covers everything"), falling back to the legacy CSV
+// stageName field (absent/blank/"—" also means "covers everything") when
+// stageIds itself is absent.
+export function riskCoversStage(
+  risk: { stageName?: string | null; stageIds?: readonly string[] },
+  stageName: string,
+): boolean {
+  if (risk.stageIds !== undefined) {
+    return (
+      risk.stageIds.length === 0 ||
+      risk.stageIds.some((id) => stageNamesMatch(id, stageName))
+    );
+  }
+
+  const legacyStageNames = risk.stageName?.trim();
+  if (!legacyStageNames || legacyStageNames === "—") return true;
+
+  return legacyStageNames
+    .split(STAGE_NAME_SEPARATOR)
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0)
+    .some((name) => stageNamesMatch(name, stageName));
+}
