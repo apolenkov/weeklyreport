@@ -1,4 +1,4 @@
-import type { MockProduct } from "../../../shared/lib/admin-mock-data";
+import type { MockProduct } from "./admin-types";
 
 export interface ProductFormData {
   name: string;

@@ -1,4 +1,4 @@
-import type { MockGroup } from "../../../shared/lib/admin-mock-data";
+import type { MockGroup } from "./admin-types";
 
 export interface GroupFormData {
   name: string;

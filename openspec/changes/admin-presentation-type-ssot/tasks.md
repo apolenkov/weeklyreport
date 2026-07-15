@@ -1,21 +1,21 @@
 ## 1. Repoint the three admin model files at `admin-types.ts`
 
-- [ ] 1.1 `apps/web/src/features/admin/model/group-form.ts`: change the
+- [x] 1.1 `apps/web/src/features/admin/model/group-form.ts`: change the
       `MockGroup` import from `../../../shared/lib/admin-mock-data` to
       `./admin-types`
-- [ ] 1.2 `apps/web/src/features/admin/model/product-form.ts`: change the
+- [x] 1.2 `apps/web/src/features/admin/model/product-form.ts`: change the
       `MockProduct` import from `../../../shared/lib/admin-mock-data` to
       `./admin-types`
-- [ ] 1.3 `apps/web/src/features/admin/model/user-form.ts`: change the
+- [x] 1.3 `apps/web/src/features/admin/model/user-form.ts`: change the
       `MockGroup, MockUser` import from `../../../shared/lib/admin-mock-data`
       to `./admin-types`
-- [ ] 1.4 Re-grep `apps/web/src/features/admin` for any other
+- [x] 1.4 Re-grep `apps/web/src/features/admin` for any other
       `admin-mock-data` import of `MockUser`/`MockGroup`/`MockProduct` this
       proposal's file list missed; repoint any found
 
 ## 2. Spec delta
 
-- [ ] 2.1 `web-model-type-boundary`: MODIFY the "Presentation modules type
+- [x] 2.1 `web-model-type-boundary`: MODIFY the "Presentation modules type
       against the real model, not a mock/legacy module" requirement, adding
       a scenario covering the admin group/product/user-form case
       specifically
