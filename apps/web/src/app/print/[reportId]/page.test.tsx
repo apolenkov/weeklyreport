@@ -16,7 +16,8 @@
  * involves keyboard, dialog, or focus behavior.
  */
 
-import { render } from "@testing-library/react";
+import { useQuery } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 /* ---- Module mocks (must be hoisted above imports) ---- */
@@ -27,12 +28,21 @@ vi.mock("@tanstack/react-query", async () => {
   );
   return {
     ...actual,
-    useQuery: vi.fn(() => ({
-      data: { status: "open" },
-      isLoading: false,
-      isError: false,
-      error: null,
-    })),
+    useQuery: vi.fn((options: { queryKey?: unknown[] }) =>
+      options.queryKey?.[1] === "report-b"
+        ? {
+            data: undefined,
+            isLoading: true,
+            isError: false,
+            error: null,
+          }
+        : {
+            data: { status: "open" },
+            isLoading: false,
+            isError: false,
+            error: null,
+          },
+    ),
   };
 });
 
@@ -43,7 +53,11 @@ vi.mock("sonner", () => ({
 vi.mock("../../../lib/trpc-context", () => ({
   useTRPC: () => ({
     weeklyReport: {
-      get: { queryOptions: () => ({ queryKey: ["weeklyReport.get"] }) },
+      get: {
+        queryOptions: ({ reportId }: { reportId: string }) => ({
+          queryKey: ["weeklyReport.get", reportId],
+        }),
+      },
     },
   }),
 }));
@@ -139,5 +153,22 @@ describe("PrintReportTemplate — <style dangerouslySetInnerHTML> static CSS saf
                   }
                 "
     `);
+  });
+});
+
+describe("PrintReportTemplate report-key transitions", () => {
+  it("replaces report A output with the pending shell for report B", async () => {
+    const rendered = renderPage("report-a");
+    expect(screen.getByText(/W1, Jun 1 – Jun 7/)).toBeInTheDocument();
+
+    rendered.rerender(<PrintReportTemplate reportId="report-b" />);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/W1, Jun 1 – Jun 7/)).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("Loading report report-b …")).toBeInTheDocument();
+    expect(vi.mocked(useQuery).mock.lastCall?.[0]).toMatchObject({
+      queryKey: ["weeklyReport.get", "report-b"],
+    });
   });
 });

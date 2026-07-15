@@ -1,7 +1,7 @@
 import { TRPCClientError } from "@trpc/client";
 import { describe, expect, it } from "vitest";
 
-import { shouldRetryQuery } from "./query-client";
+import { makeQueryClient, shouldRetryQuery } from "./query-client";
 
 function makeTRPCError(
   message: string,
@@ -52,5 +52,13 @@ describe("shouldRetryQuery", () => {
 
     expect(shouldRetryQuery(0, error)).toBe(true);
     expect(shouldRetryQuery(3, error)).toBe(false);
+  });
+});
+
+describe("makeQueryClient", () => {
+  it("does not retain data from a previous query key by default", () => {
+    const client = makeQueryClient();
+
+    expect(client.getDefaultOptions().queries?.placeholderData).toBeUndefined();
   });
 });
