@@ -954,7 +954,6 @@ export default defineConfig([
       // possible but would not improve the file (per code-style: keep the larger
       // unit and say why).
       "apps/api/src/modules/report-sections/infrastructure/lead-form.prisma-repository.ts", // one DI provider for one LeadFormRepository interface; domain separation already lives at the service layer above it
-      "apps/web/src/features/slides/model/section-slide-utils.ts", // core mapper buildSectionSlideModel (247 lines) + its private helpers are inseparable; extracting all else still leaves ~335 lines
     ],
     rules: { "max-lines": "off" },
   },
@@ -1007,7 +1006,6 @@ export default defineConfig([
       "apps/web/src/features/review/ui/risks-section.tsx", // 3 dialog states across handlers + JSX; prior split broke behavior
       "apps/web/src/features/report-sections/ui/stage-chip.tsx", // interactive chip; dropdown/status/clear/popover entangled via hooks
       "apps/web/src/shared/ui/navigation/nav-bar.tsx", // role-based link filtering + session/hydration across layout slots
-      "apps/web/src/features/slides/model/section-slide-utils.ts", // 4 domain transforms; branch count inherent to the data they model
       "apps/web/src/features/report-sections/ui/product-accordion.tsx", // 6 status-aware sections; uniform accordion pattern
     ],
     rules: { complexity: "off" },
@@ -1023,7 +1021,6 @@ export default defineConfig([
       "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // see cyclomatic block
       "apps/web/src/features/review/ui/risks-section.tsx", // see cyclomatic block
       "apps/web/src/features/report-sections/ui/stage-chip.tsx", // see cyclomatic block
-      "apps/web/src/features/slides/model/section-slide-utils.ts", // see cyclomatic block
       "apps/web/src/features/report-sections/ui/product-accordion.tsx", // see cyclomatic block
       "apps/web/uat-suite/inventory.mjs", // classify() must stay inline (runs inside page.evaluate) + multi-phase report IIFE
     ],

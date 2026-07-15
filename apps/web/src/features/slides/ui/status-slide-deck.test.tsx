@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { buildSectionSlideModel } from "../model/section-slide-utils";
+import { buildSectionSlideModel } from "../model/section-slide-model";
 import { StatusSlideDeck } from "./status-slide-deck";
 
 type Item = ReportSectionReadModel["items"][number];

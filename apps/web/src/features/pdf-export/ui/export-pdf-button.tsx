@@ -1,6 +1,6 @@
 "use client";
 
-import { MS_PER_SECOND } from "@customreport/shared";
+import { MS_PER_SECOND, type PeriodStatus } from "@customreport/shared";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -14,7 +14,7 @@ type DeliveryMode = "tab" | "fallback";
 
 interface ExportPdfButtonProps {
   readonly reportId: string;
-  readonly periodStatus: "open" | "published" | "reopened";
+  readonly periodStatus: PeriodStatus;
 }
 
 /**

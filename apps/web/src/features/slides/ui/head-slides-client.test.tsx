@@ -34,10 +34,16 @@ vi.mock("../../../lib/use-query-error-handler", () => ({
 
 // One activity row maps to one slide; identity sort keeps the count stable so
 // the assertion is on enableActivity gating, not the slide-building internals.
-vi.mock("../model/section-slide-utils", () => ({
+vi.mock("../model/activity-slide-model", () => ({
   buildActivitySlideModel: (row: unknown) => row,
+}));
+vi.mock("../model/product-scoped-slides", () => ({
   buildProductScopedSlides: (sections: unknown[]) => sections,
+}));
+vi.mock("../model/section-slide-model", () => ({
   buildSectionSlideModel: (section: unknown) => section,
+}));
+vi.mock("../model/section-slide-pagination", () => ({
   paginateSectionSlides: (model: unknown) => [model],
   sortSlidesForReview: (slides: unknown[]) => slides,
 }));

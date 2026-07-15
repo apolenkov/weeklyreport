@@ -2,7 +2,7 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { buildSectionSlideModel } from "../model/section-slide-utils";
+import { buildSectionSlideModel } from "../model/section-slide-model";
 import { HeadSlideCarousel } from "./head-slide-carousel";
 
 const makeSection = (

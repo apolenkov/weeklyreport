@@ -1,4 +1,7 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type {
+  PeriodStatus,
+  ReportSectionReadModel,
+} from "@customreport/shared";
 import Link from "next/link";
 
 import type { ReviewMode, SubmissionFilter } from "../../review";
@@ -16,16 +19,12 @@ import {
   ReportOverviewBand,
   ReviewModeVerdictSurface,
 } from "./weekly-report-page-content";
-import type {
-  AccordionModel,
-  LivePeriodStatus,
-  ReviewModel,
-} from "./weekly-report-page-helpers";
+import type { AccordionModel, ReviewModel } from "./weekly-report-page-helpers";
 import { isSubmittedSection } from "./weekly-report-page-helpers";
 
 export interface ReportContentProps {
   readonly hasAnyContent: boolean;
-  readonly periodStatus: LivePeriodStatus;
+  readonly periodStatus: PeriodStatus;
   readonly periodLabel: string;
   readonly scope: "product" | "lead";
   /**
