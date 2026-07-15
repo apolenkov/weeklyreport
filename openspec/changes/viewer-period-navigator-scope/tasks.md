@@ -1,25 +1,25 @@
 ## 1. `PeriodNavigator`: accept an explicit current-period id
 
-- [ ] 1.1 `apps/web/src/features/period/ui/period-navigator.tsx`: add
+- [x] 1.1 `apps/web/src/features/period/ui/period-navigator.tsx`: add
       `currentPeriodId?: string` to `PeriodNavigatorProps`, documented as
       taking precedence over the `pathname` regex when supplied
-- [ ] 1.2 Update the `currentIndex` memo to resolve `pathReportId ??
+- [x] 1.2 Update the `currentIndex` memo to resolve `pathReportId ??
 currentPeriodId ?? null` (prop wins when both would apply; explicit
       wins over inference) before falling back to index `0`
-- [ ] 1.3 `apps/web/src/features/period/ui/period-navigator.test.tsx`: add a
+- [x] 1.3 `apps/web/src/features/period/ui/period-navigator.test.tsx`: add a
       case with a pathname that does not match the regex (e.g.
       `/reports/2026-W16`) and `currentPeriodId="2026-W16"`, asserting the
       trigger label, listbox highlight, and Prev/Next targets resolve to
       `2026-W16`, not index `0`
-- [ ] 1.4 Add a case where `currentPeriodId` is supplied alongside a
+- [x] 1.4 Add a case where `currentPeriodId` is supplied alongside a
       matching pathname, asserting no regression (both agree, index
       resolves the same)
 
 ## 2. Wire the viewer route
 
-- [ ] 2.1 `apps/web/src/features/viewer/ui/viewer-report-shell.tsx`: pass
+- [x] 2.1 `apps/web/src/features/viewer/ui/viewer-report-shell.tsx`: pass
       `currentPeriodId={reportId}` to `<PeriodNavigator>`
-- [ ] 2.2 `apps/web/src/features/viewer/ui/viewer-report-shell.test.tsx`:
+- [x] 2.2 `apps/web/src/features/viewer/ui/viewer-report-shell.test.tsx`:
       add/extend a case with a `periods` list containing an older
       non-newest entry as the addressed `reportId`, asserting the rendered
       navigator reflects that period (not the newest)

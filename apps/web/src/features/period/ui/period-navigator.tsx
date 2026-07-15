@@ -20,6 +20,11 @@ const PERIOD_SELECT_WIDTH_CH = 24;
 interface PeriodNavigatorProps {
   readonly periods: ReportPeriod[];
   /**
+   * Addressed period id. When supplied, this takes precedence over the
+   * pathname regex used to infer the current period.
+   */
+  readonly currentPeriodId?: string;
+  /**
    * Optional URL builder for navigation. When provided, replaces the default
    * lead-specific `/lead/report/<periodId>` path construction so the navigator
    * can be reused by other roles via a custom addressed-path scheme.
@@ -79,6 +84,7 @@ export const PERIOD_NAV_ARROW_BUTTON_CLASS =
 
 export function PeriodNavigator({
   periods,
+  currentPeriodId,
   urlBuilder,
   showLeadSubmissionMarkers = false,
   leadSubmittedAt = null,
@@ -91,23 +97,20 @@ export function PeriodNavigator({
   // reference (see usePeriodListboxNav).
   const instanceId = useId();
 
-  // The dropdown reflects the path-segment reportId when the page is
-  // rendered under `/lead/report/[reportId]`. This navigator is also
-  // rendered on `/head/report/[reportId]` (via HeadReportShell with a
-  // urlBuilder), so the regex must match the head base too — otherwise
-  // currentIndex defaults to 0 and the trigger shows the latest published
-  // period instead of the addressed week.
+  // Preserve path-based inference for lead and head callers that do not pass
+  // the addressed period id explicitly.
   const pathReportId = useMemo(() => {
-    if (!pathname) return null;
+    if (currentPeriodId !== undefined || !pathname) return null;
     const match = /^\/(?:lead|head)\/report\/([^/]+)$/.exec(pathname);
     return match ? match[1] : null;
-  }, [pathname]);
+  }, [currentPeriodId, pathname]);
 
   const currentIndex = useMemo(() => {
-    if (!pathReportId) return 0; // default to first (current) period
-    const idx = periods.findIndex((p) => p.id === pathReportId);
-    return idx !== -1 ? idx : 0;
-  }, [pathReportId, periods]);
+    const resolvedPeriodId = currentPeriodId ?? pathReportId;
+    if (!resolvedPeriodId) return 0; // default to first (current) period
+    const index = periods.findIndex((period) => period.id === resolvedPeriodId);
+    return index !== -1 ? index : 0;
+  }, [currentPeriodId, pathReportId, periods]);
 
   const selectedPeriod = periods.at(currentIndex);
   const hasPrev = currentIndex < periods.length - 1;

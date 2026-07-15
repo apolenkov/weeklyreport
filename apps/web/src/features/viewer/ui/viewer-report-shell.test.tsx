@@ -140,6 +140,7 @@ import { ViewerReportShell } from "./viewer-report-shell";
 const REPORT_ID = "test-report-001";
 
 afterEach(() => {
+  mockPathname.mockReturnValue("/reports/test-report-001");
   mockSearchParams.mockReturnValue(new URLSearchParams());
   mockReplace.mockReset();
   vi.mocked(useQuery).mockClear();
@@ -234,6 +235,58 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     expect(slidesHref).not.toContain("recovery=");
     // a legitimate param is still threaded through
     expect(slidesHref).toContain("scope=lead");
+  });
+
+  it("selects the addressed older period instead of the newest history entry", () => {
+    const addressedReportId = "2026-W16";
+    mockPathname.mockReturnValue(`/reports/${addressedReportId}`);
+    vi.mocked(useQuery)
+      .mockImplementationOnce(
+        () =>
+          ({
+            data: {
+              entries: [
+                {
+                  reportId: "2026-W17",
+                  periodStart: "2026-04-21T00:00:00.000Z",
+                  periodEnd: "2026-04-27T00:00:00.000Z",
+                  archived: false,
+                },
+                {
+                  reportId: addressedReportId,
+                  periodStart: "2026-04-14T00:00:00.000Z",
+                  periodEnd: "2026-04-20T00:00:00.000Z",
+                  archived: false,
+                },
+              ],
+            },
+            isLoading: false,
+            isError: false,
+          }) as unknown as ReturnType<typeof useQuery>,
+      )
+      .mockImplementationOnce(
+        () =>
+          ({
+            data: {
+              status: "active",
+              reportId: addressedReportId,
+              periodStart: "2026-04-14T00:00:00.000Z",
+              periodEnd: "2026-04-20T00:00:00.000Z",
+              periodStatus: "published",
+            },
+            isLoading: false,
+            isError: false,
+            error: null,
+          }) as unknown as ReturnType<typeof useQuery>,
+      );
+
+    render(<ViewerReportShell reportId={addressedReportId} mode="form" />);
+
+    const periodTrigger = screen.getByRole("combobox", {
+      name: "Select reporting period",
+    });
+    expect(periodTrigger).toHaveTextContent("Apr 14–20, 2026");
+    expect(periodTrigger).not.toHaveTextContent("Apr 21–27, 2026");
   });
 
   it("slides mode renders the deck with activity disabled (head-only procedure)", () => {

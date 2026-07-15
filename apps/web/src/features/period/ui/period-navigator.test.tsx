@@ -283,6 +283,48 @@ describe("PeriodNavigator (lead)", () => {
     expect(getTrigger()).toHaveTextContent("Apr 7–13, 2026");
   });
 
+  it("uses currentPeriodId on a viewer pathname for selection and adjacent navigation", () => {
+    mockPathname = "/reports/2026-W16";
+    render(
+      <PeriodNavigator
+        periods={PERIODS}
+        currentPeriodId="2026-W16"
+        urlBuilder={(periodId) => `/reports/${periodId}`}
+      />,
+    );
+
+    const trigger = getTrigger();
+    expect(trigger).toHaveTextContent("Apr 14–20, 2026");
+    expect(trigger).not.toHaveTextContent("Apr 21–27, 2026 (Current)");
+
+    fireEvent.click(trigger);
+    const addressedOption = screen.getByRole("option", {
+      name: /Apr 14–20, 2026/,
+    });
+    const newestOption = screen.getByRole("option", {
+      name: /Apr 21–27, 2026 \(Current\)/,
+    });
+    expect(addressedOption).toHaveAttribute("aria-selected", "true");
+    expect(newestOption).toHaveAttribute("aria-selected", "false");
+
+    fireEvent.click(screen.getByRole("button", { name: "Previous period" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next period" }));
+    expect(push).toHaveBeenNthCalledWith(1, "/reports/2026-W15");
+    expect(push).toHaveBeenNthCalledWith(2, "/reports/2026-W17");
+  });
+
+  it("resolves the same period when currentPeriodId agrees with the pathname", () => {
+    mockPathname = "/lead/report/2026-W16";
+    render(<PeriodNavigator periods={PERIODS} currentPeriodId="2026-W16" />);
+
+    expect(getTrigger()).toHaveTextContent("Apr 14–20, 2026");
+    expect(getTrigger()).not.toHaveTextContent("Apr 21–27, 2026 (Current)");
+    fireEvent.click(getTrigger());
+    expect(
+      screen.getByRole("option", { name: /Apr 14–20, 2026/ }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
   it("ignores a stale ?period= query (retired) and defaults to the current period", () => {
     mockPathname = "/lead/report";
     mockSearchParams = new URLSearchParams("period=2026-W15");
