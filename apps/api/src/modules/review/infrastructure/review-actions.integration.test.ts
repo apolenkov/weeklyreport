@@ -13,6 +13,7 @@ import { CarryOverPrismaRepository } from "../../carry-over/carry-over.prisma-re
 import { CarryOverService } from "../../carry-over/carry-over.service.js";
 import { applyRevokeTransition } from "../../report-sections/application/revoke-transition.js";
 import { ReportSectionsPrismaRepository } from "../../report-sections/infrastructure/report-sections.prisma-repository.js";
+import { ReviewNotFoundError } from "../application/review.service.js";
 import { ReviewActionsService } from "../application/review-actions.service";
 import { ReviewActionsPrismaRepository } from "./review-actions.prisma-repository";
 
@@ -119,6 +120,63 @@ describe("review-actions (integration)", () => {
       await sectionsRepo.saveSection({ ...model, items: [] }, model.version);
 
       expect(await commentsForSection()).toHaveLength(0);
+    });
+
+    it("preserves or rejects a comment racing the same record's save", async () => {
+      const item = await seedItem();
+      const model = expectDefined(
+        await sectionsRepo.getSectionById(testData.section.id),
+      );
+
+      const [saveResult, commentResult] = await Promise.allSettled([
+        sectionsRepo.saveSection(model, model.version),
+        repo.insertComment(
+          testData.head.id,
+          { itemId: item.id },
+          "racing comment",
+        ),
+      ]);
+
+      expect(saveResult.status).toBe("fulfilled");
+      if (commentResult.status === "rejected") {
+        expect(commentResult.reason as unknown).toBeInstanceOf(
+          ReviewNotFoundError,
+        );
+        return;
+      }
+
+      const recreated = expectDefined(
+        await prisma.item.findUnique({
+          where: {
+            reportSectionId_stableId: {
+              reportSectionId: testData.section.id,
+              stableId: STABLE_A,
+            },
+          },
+        }),
+      );
+      const comments = await commentsForSection();
+      expect(comments).toHaveLength(1);
+      expect(expectDefined(comments[0])).toMatchObject({
+        itemId: recreated.id,
+        text: "racing comment",
+      });
+    });
+
+    it("returns ReviewNotFoundError for a PK deleted by a completed save", async () => {
+      const item = await seedItem();
+      const model = expectDefined(
+        await sectionsRepo.getSectionById(testData.section.id),
+      );
+      await sectionsRepo.saveSection({ ...model, items: [] }, model.version);
+
+      await expect(
+        repo.insertComment(
+          testData.head.id,
+          { itemId: item.id },
+          "stale comment",
+        ),
+      ).rejects.toBeInstanceOf(ReviewNotFoundError);
     });
   });
 
