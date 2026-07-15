@@ -106,7 +106,7 @@ export function useCursorPagination<
   );
   const queryOptions = {
     ...built,
-    enabled: options.enabled,
+    enabled: options.enabled ?? built.enabled,
   } as UseInfiniteQueryOptions<
     CursorPage<TItem>,
     unknown,

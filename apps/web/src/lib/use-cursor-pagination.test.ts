@@ -169,4 +169,49 @@ describe("useCursorPagination", () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(queryFn).not.toHaveBeenCalled();
   });
+
+  it("preserves a factory-set enabled=false when enabled is omitted", async () => {
+    const { Wrapper } = makeWrapper();
+    // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock implements the async queryFn contract (no awaitable work in the stub)
+    const queryFn = vi.fn(async () => ({ items: [], nextCursor: null }));
+    const factory = (input: { cursor?: string; limit?: number }) => ({
+      queryKey: ["archive", "list", { limit: input.limit }] as const,
+      initialPageParam: undefined as string | undefined,
+      queryFn,
+      getNextPageParam: () => undefined,
+      enabled: false,
+    });
+
+    renderHook(() => useCursorPagination(factory, { limit: 5 }), {
+      wrapper: Wrapper,
+    });
+
+    // Wait a microtask + a couple rAFs to be sure no fetch happens.
+    await new Promise((r) => setTimeout(r, 20));
+    expect(queryFn).not.toHaveBeenCalled();
+  });
+
+  it("lets an explicit enabled=true override factory-set enabled=false", async () => {
+    const { Wrapper } = makeWrapper();
+    // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock implements the async queryFn contract (no awaitable work in the stub)
+    const queryFn = vi.fn(async () => ({
+      items: ["loaded"],
+      nextCursor: null,
+    }));
+    const factory = (input: { cursor?: string; limit?: number }) => ({
+      queryKey: ["archive", "list", { limit: input.limit }] as const,
+      initialPageParam: undefined as string | undefined,
+      queryFn,
+      getNextPageParam: () => undefined,
+      enabled: false,
+    });
+
+    const { result } = renderHook(
+      () => useCursorPagination(factory, { limit: 5 }, { enabled: true }),
+      { wrapper: Wrapper },
+    );
+
+    await waitFor(() => expect(result.current.items).toEqual(["loaded"]));
+    expect(queryFn).toHaveBeenCalledTimes(1);
+  });
 });
