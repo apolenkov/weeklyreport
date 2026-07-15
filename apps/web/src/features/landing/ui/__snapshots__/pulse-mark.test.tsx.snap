@@ -13,14 +13,10 @@ exports[`PulseMark > component render tree matches snapshot 1`] = `
     WEEKLY
   </span>
   <span
-    class="pulse-line"
+    aria-hidden="true"
+    class="pulse-strong"
   >
-    <span
-      aria-hidden="true"
-      class="pulse-strong"
-    >
-      REPORT
-    </span>
+    REPORT
   </span>
 </div>
 `;

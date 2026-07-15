@@ -64,8 +64,8 @@ interface RiskEditDialogProps {
  * when closed and mounts the inner content otherwise. Mount = fresh useState
  * from props; close = unmount. No useEffect reset is needed — the remount is the
  * structural reset, and the parent's openSeq dialogKey forces a fresh mount on
- * every open. This makes the invariant (stagesForProduct never read in any deps
- * array) structural.
+ * every open. That gives stagesForProduct a fresh useState snapshot on each
+ * mount, so its value at open time matters rather than reactive re-reads.
  */
 export function RiskEditDialog(props: RiskEditDialogProps) {
   if (!props.open) return null;

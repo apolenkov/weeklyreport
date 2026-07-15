@@ -225,7 +225,7 @@ export const draftSaveSchema = z.object({
   // Optimistic-concurrency expected version: the row revision the client
   // loaded. The repository compare-and-sets on it and 409s a stale write.
   version: z.number().int().min(1),
-  status: reportSectionStatusSchema.default("draft"),
+  status: z.literal("draft").default("draft"),
   projectStatuses: z
     .array(projectStatusInputSchema)
     .max(MAX_RECORDS_PER_SECTION_SAVE),

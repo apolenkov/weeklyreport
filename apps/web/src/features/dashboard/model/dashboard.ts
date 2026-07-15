@@ -1,7 +1,6 @@
 /**
- * Composes `review.dashboard` + `archive.list` + `weeklyReport.get` into the
- * KPI / leads / blocked-at-risk / archive / pending-leads shape that
- * `DashboardPage` expects.
+ * Composes `review.dashboard` + `weeklyReport.get` into the KPI / leads /
+ * blocked-at-risk / pending-leads shape that `DashboardPage` expects.
  *
  * - `review.dashboard` returns `SubmissionDashboardRow[]` only — it does NOT
  *   carry submission counts, deadlines, escalations, or completion percentages.
@@ -11,26 +10,16 @@
  *   reporting deadline has already passed.
  * - `lastWeekSubmitted` / `lastWeekTotal` have no equivalent in any v5.0 read
  *   model, so they default to 0/0 (the KPI card just renders "0/0").
- * - `archive.list` returns `ArchiveReportSummary[]` (via `PaginatedResult`).
- *   The summary carries no week label, submission count, product count, risk
- *   count, or decision count. Synthesize weekLabel / dateRange from
- *   `periodStart`/`periodEnd`; default the rest to 0/empty.
  * - The `PendingLead` type in mock-data is just `string[]` (lead names) — we
  *   produce that directly.
  */
 
 import type {
-  ArchiveReportSummary,
   DbRole,
-  PaginatedResult,
   SubmissionDashboardRow,
   WeeklyReportReadModel,
 } from "@customreport/shared";
 
-import {
-  formatPeriodRangeWithYear,
-  formatWeekLabel,
-} from "../../../lib/format-date";
 import type { LeadStatus } from "../../report-sections";
 import { escalationToBlockedItem } from "./dashboard-escalations";
 import { buildKpiData, formatRelativeDeadline } from "./dashboard-kpi";
@@ -92,44 +81,10 @@ export interface BlockedAtRiskItem {
   description: string;
 }
 
-export interface ArchiveReport {
-  id: string;
-  weekLabel: string;
-  dateRange: string;
-  submissionLabel: string;
-  productCount: number;
-  riskCount: number;
-  decisionCount: number;
-}
-
-/**
- * Map a single ArchiveReportSummary to the presentation-layer ArchiveReport
- * shape. Exported so the cursor-paginated archive list can map page items
- * incrementally without re-running the full dashboard composer.
- */
-export function mapArchiveSummary(
-  summary: ArchiveReportSummary,
-): ArchiveReport {
-  return {
-    id: summary.reportId,
-    weekLabel: formatWeekLabel(summary.periodStart),
-    dateRange: formatPeriodRangeWithYear(
-      summary.periodStart,
-      summary.periodEnd,
-    ),
-    // Submission counts aren't on ArchiveReportSummary at v5.0.
-    submissionLabel: "",
-    productCount: 0,
-    riskCount: 0,
-    decisionCount: 0,
-  };
-}
-
 // ---- Composer ----
 
 export interface MapDashboardArgs {
   review: SubmissionDashboardRow[];
-  archive: PaginatedResult<ArchiveReportSummary>;
   weeklyReport: WeeklyReportReadModel;
   /** Override `now` for deterministic deadline tests. */
   now?: Date;
@@ -141,13 +96,12 @@ export interface MappedDashboard {
   kpi: KpiData;
   leads: LeadInfo[];
   blockedAtRisk: BlockedAtRiskItem[];
-  archive: ArchiveReport[];
   pendingLeads: string[];
 }
 
 export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
   const now = args.now ?? new Date();
-  const { review, archive, weeklyReport, currentUserId } = args;
+  const { review, weeklyReport, currentUserId } = args;
 
   // -------- Leads --------
   const leads = buildLeadInfos(review, weeklyReport, currentUserId);
@@ -179,14 +133,10 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
     .map((e, idx) => escalationToBlockedItem(e, idx))
     .filter((item): item is BlockedAtRiskItem => item !== null);
 
-  // -------- Archive --------
-  const archiveItems = archive.items.map<ArchiveReport>(mapArchiveSummary);
-
   return {
     kpi,
     leads,
     blockedAtRisk,
-    archive: archiveItems,
     pendingLeads,
   };
 }

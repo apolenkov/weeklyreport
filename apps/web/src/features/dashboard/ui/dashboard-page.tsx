@@ -239,7 +239,6 @@ export function DashboardPage() {
 
   const dashboard = mapDashboardData({
     review: reviewQ.data,
-    archive: { items: [], nextCursor: null },
     weeklyReport: weeklyQ.data,
   });
   const { kpi, leads, blockedAtRisk, pendingLeads } = dashboard;

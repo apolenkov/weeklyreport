@@ -214,6 +214,14 @@ describe("draftSaveSchema", () => {
       expect(result.data.status).toBe("draft");
     }
   });
+
+  it("rejects submitted status on a draft save", () => {
+    const result = draftSaveSchema.safeParse({
+      ...validDraft(),
+      status: "submitted",
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

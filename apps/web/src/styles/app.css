@@ -199,8 +199,9 @@ body:has([role="dialog"]) [data-testid="dev-role-switcher-trigger"] {
    the bottom of the viewport). Nav bar height ≈ 64px; 4.5rem ≈ 72px gives a
    small gap. box.y must be < 200px. The selector is intentionally
    doubled to outrank the panel's own single-class rule by specificity, so no
-   forced override is needed. */
-.styles-module__toolbar___wNsdK.styles-module__toolbar___wNsdK {
+   forced override is needed. Agentation authors this stable attribute on the
+   toolbar container. */
+[data-agentation-toolbar][data-agentation-toolbar] {
   top: 4.5rem;
   bottom: auto;
 }

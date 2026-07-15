@@ -99,7 +99,6 @@ vi.mock("../model/dashboard", () => ({
     },
     leads: [],
     blockedAtRisk: [],
-    archive: [],
     pendingLeads: [],
   }),
 }));
