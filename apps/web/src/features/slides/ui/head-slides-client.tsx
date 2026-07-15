@@ -27,11 +27,8 @@ interface HeadSlidesClientProps {
    */
   readonly scope?: "lead" | "product";
   /**
-   * viewer-report-surface-parity: the empty-report fallback pulls live activity
-   * (`activity.live`), which is a head-only procedure — a viewer would get
-   * FORBIDDEN. The viewer shell passes `false` to skip that query and its
-   * fallback entirely; a viewer deck is built from the published sections only.
-   * Defaults to `true` so the head surface is unchanged.
+   * The empty-report fallback uses a head-only procedure. The viewer shell
+   * passes `false` so its deck depends only on published sections.
    */
   readonly enableActivity?: boolean;
 }
@@ -51,6 +48,11 @@ export function HeadSlidesClient({
     ...trpc.activity.live.queryOptions(),
     enabled: enableActivity,
   });
+  const needsActivityFallback =
+    enableActivity &&
+    weeklyQ.data !== undefined &&
+    weeklyQ.data.status !== "no-period" &&
+    weeklyQ.data.leadSections.length === 0;
 
   useQueryErrorHandler(weeklyQ, {
     event: "headSlides.weeklyReport.load_failed",
@@ -71,11 +73,11 @@ export function HeadSlidesClient({
         base.flatMap((model) => paginateSectionSlides(model)),
       );
     }
-    if (!enableActivity) return [];
+    if (!needsActivityFallback) return [];
     return sortSlidesForReview(
       (activityQ.data?.rows ?? []).map((row) => buildActivitySlideModel(row)),
     );
-  }, [weeklyQ.data, activityQ.data, scope, enableActivity]);
+  }, [weeklyQ.data, activityQ.data, scope, needsActivityFallback]);
 
   useEffect(() => {
     // Two-sided clamp — see lead-slides-client: a negative index from an
@@ -84,11 +86,9 @@ export function HeadSlidesClient({
     setSelectedIndex(0);
   }, [selectedIndex, slides.length]);
 
-  if (weeklyQ.isLoading || (enableActivity && activityQ.isLoading)) {
-    return <SlideSkeleton />;
-  }
+  if (weeklyQ.isLoading) return <SlideSkeleton />;
 
-  if (weeklyQ.isError || (enableActivity && activityQ.isError)) {
+  if (weeklyQ.isError) {
     return (
       <SlideEmptyState
         title="Slides could not load"
@@ -102,6 +102,17 @@ export function HeadSlidesClient({
       <SlideEmptyState
         title="No active deck"
         message="There is no open or reopened report period to assemble into slides."
+      />
+    );
+  }
+
+  if (needsActivityFallback && activityQ.isLoading) return <SlideSkeleton />;
+
+  if (needsActivityFallback && activityQ.isError) {
+    return (
+      <SlideEmptyState
+        title="Slides could not load"
+        message="Refresh the page after the weekly report is available."
       />
     );
   }
