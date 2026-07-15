@@ -226,6 +226,10 @@ describe("ReportsPage history archive toggle", () => {
     const search = screen.getByLabelText("Search Reports");
     expect(search).toHaveAttribute("data-scope", "published");
     expect(search).toHaveAttribute("placeholder", "Search published reports…");
+    expect(
+      screen.queryByRole("button", { name: /draft/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/include drafts/i)).not.toBeInTheDocument();
   });
 
   it("defaults head History to NO archive even when the URL is ?tab=published", () => {

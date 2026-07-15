@@ -22,6 +22,10 @@ import {
   WeeklyReportSkeleton,
 } from "../../report-sections";
 import { HeadSlidesClient, SlideSkeleton } from "../../slides";
+import {
+  deriveViewerAuthority,
+  ViewerAuthorityLabel,
+} from "./viewer-authority-label";
 
 // Module-scope so the reference is stable across renders — a fresh literal would
 // churn the hook's `buildQuery` memoization. The viewer strips the one-shot
@@ -35,28 +39,9 @@ interface ViewerReportShellProps {
 }
 
 /**
- * viewer-report-surface-parity (task 5) + viewer-live-status: read-only analogue
- * of `HeadReportShell`. It composes the same `ReportToolbar` primitives —
- * `PeriodNavigator`, `ArchiveToggle`, `ScopeToggle`, `ViewModeToggle`,
- * `ExportPdfButton` — with URL-backed scope (`?scope=lead`) and view-mode
- * (`?mode=slides`), so the viewer gets the same present/slides surface the head
- * has. It OMITS every mutation: there is no `HeadPublishLockAction` and
- * `WeeklyReportPage` already gates Publish/Reopen/Move-to-archive on
- * `canMutatePeriod` (head/admin only), so a viewer never sees them.
- *
- * viewer-live-status (task 5.1): the Back-to-Archive affordance is removed
- * (History lives in the nav, no durable spec governs it); the `Agent-review`
- * coming-soon control is KEPT (the `deferred-feature-pattern` contract mandates
- * exactly one on every report-reading surface, viewer included).
- *
- * viewer-live-status (task 4.3): the read gate is published-or-current and
- * fail-closed, so an `open → published` race yields a `NOT_FOUND` the query
- * client never retries. When that happens AND we arrived from the Status entry
- * (`?source=status&recovery=0`), recover ONCE by redirecting to
- * `/reports/latest?recovery=1`, which re-resolves to the published snapshot. A
- * `NOT_FOUND` carrying `recovery=1`, or any without `source=status` (History /
- * a directly-typed id), shows the terminal notice without redirecting (loop
- * guard).
+ * Read-only analogue of `HeadReportShell`, with the same navigation and view
+ * controls but no lifecycle mutation. A Status-entry race recovers once through
+ * `/reports/latest`; direct and History failures remain terminal.
  */
 export function ViewerReportShell({
   reportId,
@@ -67,14 +52,8 @@ export function ViewerReportShell({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // viewer-live-status (task 4.3): `source`/`recovery` are one-shot markers the
-  // `/reports/latest` redirect places on the FIRST report URL. `stripParams`
-  // deletes them on every in-shell navigation (period navigator, scope / archive
-  // / view-mode toggles) — otherwise a History selection or a toggle would
-  // inherit `source=status`, and a later NOT_FOUND would be misread as a Status
-  // navigation and bounce the viewer back to the Status target. They live exactly
-  // on the entry redirect, read directly from `searchParams` for the recovery
-  // check below.
+  // Status recovery markers belong only to the entry URL. Strip them from every
+  // in-shell navigation so a later failure cannot be mistaken for that race.
   const { buildQuery, includeArchive, setIncludeArchive, scope, setScope } =
     useReportShellUrlState({ stripParams: VIEWER_STRIP_PARAMS });
 
@@ -83,14 +62,8 @@ export function ViewerReportShell({
   );
   const displayedQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
 
-  // viewer-live-status (task 4.3): one-shot race recovery. A published-or-current
-  // gate rejection (the open→published flip) surfaces here as an invalid-link
-  // NOT_FOUND. Recover ONCE when we arrived from the Status entry and have not
-  // yet retried (`source=status`, `recovery` defaulting to 0). The flag set to
-  // `1` on the re-resolution bars a redirect loop; a direct/History NOT_FOUND
-  // (no `source=status`) falls through to the terminal notice unchanged. The
-  // redirect lives in ONE place (here) — `WeeklyReportPage`'s own fetch shares
-  // this query key, so React Query dedupes it; intercepting once is enough.
+  // The page fetch shares this query key, so handling the fail-closed
+  // open-to-published race here is sufficient and avoids duplicate recovery.
   const source = searchParams.get("source");
   const alreadyRetried = searchParams.get("recovery") === "1";
   const isInvalidLink =
@@ -179,9 +152,7 @@ export function ViewerReportShell({
     </>
   );
 
-  // viewer-live-status (task 4.3): while the one-shot recovery redirect is in
-  // flight, short-circuit to a resolving state so the terminal "Report not
-  // found" notice from `WeeklyReportPage` never flashes before the navigation.
+  // Do not flash the terminal notice while the one-shot redirect is in flight.
   if (shouldRecover) {
     return (
       <p
@@ -194,6 +165,13 @@ export function ViewerReportShell({
   }
 
   const displayed = displayedQ.data;
+  const authority =
+    displayed && displayed.status !== "no-period"
+      ? deriveViewerAuthority(displayed.periodStatus)
+      : undefined;
+  const headerContextLabel = authority ? (
+    <ViewerAuthorityLabel authority={authority} />
+  ) : undefined;
   const exportPdf =
     displayed && displayed.status !== "no-period" ? (
       <ExportPdfButton
@@ -207,9 +185,12 @@ export function ViewerReportShell({
       {mode === "slides" ? (
         <>
           <header className="flex flex-wrap items-center justify-between gap-4">
-            <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
-              Status Report
-            </h1>
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
+              <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
+                Status Report
+              </h1>
+              {headerContextLabel}
+            </div>
             {exportPdf}
           </header>
           <ReportToolbar contextControls={contextControls} />
@@ -230,6 +211,7 @@ export function ViewerReportShell({
               scope={reportScope}
               documentActionsLeading={exportPdf}
               contextControls={contextControls}
+              headerContextLabel={headerContextLabel}
             />
           </Suspense>
         </div>
