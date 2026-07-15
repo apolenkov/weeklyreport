@@ -44,6 +44,7 @@ import express, { type RequestHandler } from "express";
 import helmet from "helmet";
 import { ClsMiddleware } from "nestjs-cls";
 import { AppModule } from "./app.module";
+import { AdminBullmqJobsQueue } from "./infrastructure/bullmq/admin-jobs-queue.adapter.js";
 import { mountBullBoard } from "./infrastructure/bullmq/bull-board.module";
 import { QueueRegistry } from "./infrastructure/bullmq/queue-registry.js";
 import { validateEnv } from "./infrastructure/config/env.schema";
@@ -59,43 +60,43 @@ import { APP_LOGGER, createAuditLogger } from "./lib/audit-logger";
 import type { AppLogger } from "./lib/logger";
 import { createAppLogger } from "./lib/logger";
 import { NestAppLoggerAdapter } from "./lib/nest-app-logger.adapter";
-import { ActivityService } from "./modules/activity/activity.service";
-import { ActionLogService } from "./modules/admin/action-log.service";
-import { AdminService } from "./modules/admin/admin.service";
-import { JobsService } from "./modules/admin/jobs.service";
-import { SessionRevocationService } from "./modules/admin/session-revocation.service";
-import { AnalyticsService } from "./modules/analytics/analytics.service";
-import { ArchiveService } from "./modules/archive/archive.service";
-import { createAuthController } from "./modules/auth/auth.controller";
-import { mountAuthRoutes } from "./modules/auth/auth.routes";
-import type { ProvisionLeadWorkspace } from "./modules/auth/user-session";
+import { ActivityService } from "./modules/activity/index.js";
+import { ActionLogService } from "./modules/admin/index.js";
+import { AdminService } from "./modules/admin/index.js";
+import { JobsService } from "./modules/admin/index.js";
+import { SessionRevocationService } from "./modules/admin/index.js";
+import { AnalyticsService } from "./modules/analytics/index.js";
+import { ArchiveService } from "./modules/archive/index.js";
+import { createAuthController } from "./modules/auth/index.js";
+import { mountAuthRoutes } from "./modules/auth/index.js";
+import type { ProvisionLeadWorkspace } from "./modules/auth/index.js";
 import {
   createSamlStrategy,
   createSamlStrategyOptions,
-} from "./modules/auth/saml.strategy";
+} from "./modules/auth/index.js";
 import {
   buildAutoCarryOverDeps,
   carryOverIntoOpenedPeriod,
-} from "./modules/carry-over/auto-carry-over";
-import { CarryOverPrismaRepository } from "./modules/carry-over/carry-over.prisma-repository";
-import { CarryOverService } from "./modules/carry-over/carry-over.service";
-import { OrganizationService } from "./modules/organization/organization.service";
-import { createPdfDownloadHandler } from "./modules/pdf-export/pdf-export.download-handler";
-import { PdfExportService } from "./modules/pdf-export/pdf-export.service";
-import { ensureCurrentPeriod } from "./modules/period/application/period-factory";
-import { PeriodService } from "./modules/period/application/period.service";
-import { ProjectActivityService } from "./modules/project-activity/project-activity.service";
-import { PublicationService } from "./modules/publication/application/publication.service";
-import { PolicyApplicatorService } from "./modules/reminders/policy-applicator.service";
-import { RemindersService } from "./modules/reminders/reminders.service";
-import { ensureLeadSection } from "./modules/report-sections/application/ensure-lead-section";
-import { LeadFormService } from "./modules/report-sections/application/lead-form.service";
-import { ReportSectionsService } from "./modules/report-sections/application/report-sections.service";
-import { ReviewActionsService } from "./modules/review/application/review-actions.service";
-import { ReviewService } from "./modules/review/application/review.service";
-import { SearchService } from "./modules/search/search.service";
-import { TelemetryService } from "./modules/telemetry/telemetry.service";
-import { WeeklyReportService } from "./modules/weekly-report/weekly-report.service";
+} from "./modules/carry-over/index.js";
+import { CarryOverPrismaRepository } from "./modules/carry-over/index.js";
+import { CarryOverService } from "./modules/carry-over/index.js";
+import { OrganizationService } from "./modules/organization/index.js";
+import { createPdfDownloadHandler } from "./modules/pdf-export/index.js";
+import { PdfExportService } from "./modules/pdf-export/index.js";
+import { ensureCurrentPeriod } from "./modules/period/index.js";
+import { PeriodService } from "./modules/period/index.js";
+import { ProjectActivityService } from "./modules/project-activity/index.js";
+import { PublicationService } from "./modules/publication/index.js";
+import { PolicyApplicatorService } from "./modules/reminders/index.js";
+import { RemindersService } from "./modules/reminders/index.js";
+import { ensureLeadSection } from "./modules/report-sections/index.js";
+import { LeadFormService } from "./modules/report-sections/index.js";
+import { ReportSectionsService } from "./modules/report-sections/index.js";
+import { ReviewActionsService } from "./modules/review/index.js";
+import { ReviewService } from "./modules/review/index.js";
+import { SearchService } from "./modules/search/index.js";
+import { TelemetryService } from "./modules/telemetry/index.js";
+import { WeeklyReportService } from "./modules/weekly-report/index.js";
 
 const UUID_SEGMENT_RE =
   /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
@@ -349,15 +350,19 @@ async function bootstrap() {
   // admin DLQ admin tab (`/admin?tab=jobs`). Stays out of the NestJS DI graph
   // for the same reason emailReminderQueue does — see the @nestjs/bullmq DI
   // bug note in bullmq.module.ts.
-  const jobsService = new JobsService(emailReminderQueue, logger, {
-    reminderExecutionExists: async (executionId) => {
-      const execution = await prismaService.reminderExecution.findUnique({
-        where: { id: executionId },
-        select: { id: true },
-      });
-      return execution !== null;
+  const jobsService = new JobsService(
+    new AdminBullmqJobsQueue(emailReminderQueue),
+    logger,
+    {
+      reminderExecutionExists: async (executionId) => {
+        const execution = await prismaService.reminderExecution.findUnique({
+          where: { id: executionId },
+          select: { id: true },
+        });
+        return execution !== null;
+      },
     },
-  });
+  );
 
   // Auto carry-over closure shared by the tRPC createPeriodManual seam and the
   // login provisioning seam below. Best effort by construction —

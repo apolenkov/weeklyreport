@@ -9,6 +9,7 @@ import {
   customreportPeriodStateTransitionsTotal,
   customreportReportsSubmittedTotal,
 } from "../../../infrastructure/metrics/metrics.registry.js";
+import { PublicationPrometheusTelemetry } from "../infrastructure/publication-prometheus-telemetry.adapter.js";
 import {
   type AutoPublishResult,
   PublicationAccessError,
@@ -510,7 +511,12 @@ describe("PublicationService", () => {
     // for both the manual and auto paths. Both paths use `state='published'`
     // so the funnel rolls up cleanly.
     it("publishReport increments product KPI counters once on success", async () => {
-      const service = new PublicationService(createRepository(assembledReport));
+      const service = new PublicationService(
+        createRepository(assembledReport),
+        undefined,
+        undefined,
+        new PublicationPrometheusTelemetry(),
+      );
       const submittedBefore = await getCounterValue(
         customreportReportsSubmittedTotal,
         { state: "published" },
@@ -549,7 +555,12 @@ describe("PublicationService", () => {
           };
         },
       };
-      const service = new PublicationService(repository);
+      const service = new PublicationService(
+        repository,
+        undefined,
+        undefined,
+        new PublicationPrometheusTelemetry(),
+      );
       const before = await getCounterValue(
         customreportPeriodStateTransitionsTotal,
         { from: "reopened", to: "published" },
@@ -670,7 +681,12 @@ describe("PublicationService", () => {
     });
 
     it("publishAuto increments product KPI counters once on success", async () => {
-      const service = new PublicationService(createRepository(assembledReport));
+      const service = new PublicationService(
+        createRepository(assembledReport),
+        undefined,
+        undefined,
+        new PublicationPrometheusTelemetry(),
+      );
       const submittedBefore = await getCounterValue(
         customreportReportsSubmittedTotal,
         { state: "published" },

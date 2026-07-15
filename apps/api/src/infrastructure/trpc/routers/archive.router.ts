@@ -1,8 +1,8 @@
 import { paginationInputSchema } from "@customreport/shared";
 import { z } from "zod";
 
-import type { AdminService } from "../../../modules/admin/admin.service.js";
-import type { ArchiveService } from "../../../modules/archive/archive.service.js";
+import type { AdminService } from "../../../modules/admin/index.js";
+import type { ArchiveService } from "../../../modules/archive/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import { anyRoleProcedure, headProcedure, router } from "../trpc.middleware.js";
 

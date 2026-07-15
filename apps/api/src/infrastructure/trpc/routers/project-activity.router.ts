@@ -5,7 +5,7 @@ import {
   projectActivityUpdateSchema,
 } from "@customreport/shared";
 
-import type { ProjectActivityService } from "../../../modules/project-activity/project-activity.service.js";
+import type { ProjectActivityService } from "../../../modules/project-activity/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import { adminProcedure, router } from "../trpc.middleware.js";
 

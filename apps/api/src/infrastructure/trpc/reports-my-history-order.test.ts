@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
-import { ReportSectionDomainError } from "../../modules/report-sections/application/report-sections.service.js";
+import { ReportSectionDomainError } from "../../modules/report-sections/index.js";
 import { createAppRouter } from "./trpc.router.js";
 
 /**

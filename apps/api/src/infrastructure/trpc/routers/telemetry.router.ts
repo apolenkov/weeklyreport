@@ -1,4 +1,4 @@
-import type { TelemetryService } from "../../../modules/telemetry/telemetry.service.js";
+import type { TelemetryService } from "../../../modules/telemetry/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import { leadershipProcedure, router } from "../trpc.middleware.js";
 

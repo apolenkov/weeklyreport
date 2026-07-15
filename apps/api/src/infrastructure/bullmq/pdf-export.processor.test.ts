@@ -48,7 +48,7 @@ vi.mock("bullmq", () => ({
 }));
 
 // Mock the service (and its transitive @customreport/shared dependency)
-vi.mock("../../modules/pdf-export/pdf-export.service.js", () => ({
+vi.mock("../../modules/pdf-export/index.js", () => ({
   PdfExportService: class {
     markExportCompleted = vi.fn();
     markExportFailed = vi.fn();

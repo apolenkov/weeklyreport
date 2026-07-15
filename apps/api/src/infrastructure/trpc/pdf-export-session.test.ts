@@ -2,7 +2,7 @@ import type { INestApplication } from "@nestjs/common";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../lib/logger";
-import { SessionRevocationService } from "../../modules/admin/session-revocation.service";
+import { SessionRevocationService } from "../../modules/admin/index.js";
 import { PrismaService } from "../prisma/prisma.service";
 import { buildPdfExportSession, createContextFactory } from "./trpc.context";
 

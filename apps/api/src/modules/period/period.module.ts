@@ -21,10 +21,15 @@ import {
   type PeriodRepository,
   PeriodService,
 } from "./application/period.service.js";
+import {
+  PERIOD_TELEMETRY,
+  type PeriodTelemetry,
+} from "./application/period-telemetry.port.js";
 import { AutoArchiverScheduler } from "./infrastructure/auto-archiver.scheduler.js";
 import { AutoPublisherScheduler } from "./infrastructure/auto-publisher.scheduler.js";
 import { PeriodPrismaRepository } from "./infrastructure/period.prisma-repository.js";
 import { PeriodCreatorScheduler } from "./infrastructure/period-creator.scheduler.js";
+import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-telemetry.adapter.js";
 
 /**
  * Three scheduler classes (`PeriodCreatorScheduler`,
@@ -51,12 +56,15 @@ import { PeriodCreatorScheduler } from "./infrastructure/period-creator.schedule
   ],
   providers: [
     { provide: PERIOD_REPOSITORY, useClass: PeriodPrismaRepository },
+    PeriodPrometheusTelemetry,
+    { provide: PERIOD_TELEMETRY, useExisting: PeriodPrometheusTelemetry },
     {
       provide: PeriodService,
       useFactory: (
         repo: PeriodRepository,
         cache: AnalyticsCache,
         admin: AdminService,
+        telemetry: PeriodTelemetry,
       ) =>
         new PeriodService(
           repo,
@@ -73,8 +81,15 @@ import { PeriodCreatorScheduler } from "./infrastructure/period-creator.schedule
           },
           // The AI ingestion module was removed; PeriodService's ingestion
           // hook falls back to its no-op default until the AI rebuild.
+          undefined,
+          telemetry,
         ),
-      inject: [PERIOD_REPOSITORY, AnalyticsCache, AdminService],
+      inject: [
+        PERIOD_REPOSITORY,
+        AnalyticsCache,
+        AdminService,
+        PERIOD_TELEMETRY,
+      ],
     },
     // PolicyApplicatorService provided directly (depends only on PrismaService,
     // no circular dep). Injected into the scheduler so that auto-created periods

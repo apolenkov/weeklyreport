@@ -23,7 +23,7 @@ vi.mock("bullmq", () => ({
 }));
 
 // Mock services (and their transitive @customreport/shared dependency)
-vi.mock("../../modules/reminders/reminders.service.js", () => ({
+vi.mock("../../modules/reminders/index.js", () => ({
   RemindersService: class {
     markReminderSent = vi.fn();
   },
@@ -32,7 +32,7 @@ vi.mock("../../modules/reminders/reminders.service.js", () => ({
 // AdminService is an optional constructor dependency of
 // EmailReminderProcessor. Mocking the module keeps the test isolated from
 // Prisma + Nest DI.
-vi.mock("../../modules/admin/admin.service.js", () => ({
+vi.mock("../../modules/admin/index.js", () => ({
   AdminService: class {
     getSettings = vi.fn();
   },

@@ -13,7 +13,6 @@ import type {
   CrossAuthorSectionRow,
   LeadFormRepository,
 } from "../application/lead-form.service";
-import { queryPublishedLineage } from "../application/published-lineage";
 import {
   ReportSectionDomainError,
   SectionVersionConflictError,
@@ -26,6 +25,7 @@ import {
   reopenBlockedMessage,
   ReopenRequestError,
 } from "../domain/lead-form-shared";
+import { queryPublishedLineage } from "./published-lineage.query.js";
 import { reportSectionFullInclude } from "./report-sections.include";
 import { mapPrismaToReportSection } from "./report-sections.mappers";
 

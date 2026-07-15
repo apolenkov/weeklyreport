@@ -24,6 +24,7 @@ import {
   PdfExportService,
   verifyPdfExportToken,
 } from "./pdf-export.service";
+import { PdfExportInfrastructureTelemetry } from "./pdf-export-telemetry.adapter.js";
 
 const reportId = "22222222-2222-4222-8222-222222222222";
 const requesterSession: UserSession = {
@@ -204,7 +205,7 @@ describe("PdfExportService", () => {
   });
 
   it("rejects an out-of-scope report before enqueue", async () => {
-    const queue = { add: vi.fn() };
+    const queue = { enqueue: vi.fn() };
     const service = new PdfExportService(
       createRepository(publishedReport, undefined, false),
       undefined,
@@ -214,15 +215,18 @@ describe("PdfExportService", () => {
     await expect(
       service.requestPdfExport(reportId, requesterSession),
     ).rejects.toThrow("PDF export is not available for this caller.");
-    expect(queue.add).not.toHaveBeenCalled();
+    expect(queue.enqueue).not.toHaveBeenCalled();
   });
 
   it("does not increment requests_total when enqueue fails", async () => {
-    const queue = { add: vi.fn().mockRejectedValue(new Error("Redis down")) };
+    const queue = {
+      enqueue: vi.fn().mockRejectedValue(new Error("Redis down")),
+    };
     const service = new PdfExportService(
       createRepository(publishedReport),
       undefined,
       queue,
+      new PdfExportInfrastructureTelemetry(undefined),
     );
     const before = await getCounterValue(customreportPdfExportRequestsTotal, {
       role: "head",
@@ -248,7 +252,12 @@ describe("PdfExportService", () => {
   // confirm the optional `requestedByRole` is threaded through and the
   // omission path defaults to 'system' (worker / cron callers).
   it("bumps customreport_pdf_export_requests_total{role} per call", async () => {
-    const service = new PdfExportService(createRepository(publishedReport));
+    const service = new PdfExportService(
+      createRepository(publishedReport),
+      undefined,
+      undefined,
+      new PdfExportInfrastructureTelemetry(undefined),
+    );
     const beforeHead = await getCounterValue(
       customreportPdfExportRequestsTotal,
       {
@@ -379,15 +388,15 @@ describe("PDF export JWT signing", () => {
 
   it("requestPdfExport enqueues a JWT-shaped authToken bound to the reportId", async () => {
     interface EnqueuedJob {
-      name: string;
-      data: { reportId: string; jobId: string; authToken: string };
+      reportId: string;
+      jobId: string;
+      authToken: string;
     }
     const enqueued: EnqueuedJob[] = [];
     const fakeQueue = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async queue.add contract (no awaitable work in this stub)
-      add: async (name: string, data: EnqueuedJob["data"]) => {
-        enqueued.push({ name, data });
-        return { id: "fake" };
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async enqueue port (no awaitable work in this stub)
+      enqueue: async (data: EnqueuedJob) => {
+        enqueued.push(data);
       },
     };
 
@@ -399,12 +408,11 @@ describe("PDF export JWT signing", () => {
     await service.requestPdfExport(reportId, requesterSession);
 
     expect(enqueued).toHaveLength(1);
-    expect(expectDefined(enqueued[0]).name).toBe("generate");
-    expect(expectDefined(enqueued[0]).data.reportId).toBe(reportId);
-    expect(expectDefined(enqueued[0]).data.authToken).toMatch(/^eyJ/);
+    expect(expectDefined(enqueued[0]).reportId).toBe(reportId);
+    expect(expectDefined(enqueued[0]).authToken).toMatch(/^eyJ/);
 
     const decoded = jwt.verify(
-      expectDefined(enqueued[0]).data.authToken,
+      expectDefined(enqueued[0]).authToken,
       PDF_SECRET,
     ) as {
       reportId: string;
@@ -414,15 +422,15 @@ describe("PDF export JWT signing", () => {
 
   it("requestPdfExport allows pre-signed authToken pass-through (does not re-sign)", async () => {
     interface EnqueuedJob {
-      name: string;
-      data: { reportId: string; jobId: string; authToken: string };
+      reportId: string;
+      jobId: string;
+      authToken: string;
     }
     const enqueued: EnqueuedJob[] = [];
     const fakeQueue = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async queue.add contract (no awaitable work in this stub)
-      add: async (name: string, data: EnqueuedJob["data"]) => {
-        enqueued.push({ name, data });
-        return { id: "fake" };
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async enqueue port (no awaitable work in this stub)
+      enqueue: async (data: EnqueuedJob) => {
+        enqueued.push(data);
       },
     };
 
@@ -436,7 +444,7 @@ describe("PDF export JWT signing", () => {
     );
     await service.requestPdfExport(reportId, requesterSession, presigned);
 
-    expect(expectDefined(enqueued[0]).data.authToken).toBe(presigned);
+    expect(expectDefined(enqueued[0]).authToken).toBe(presigned);
   });
 });
 

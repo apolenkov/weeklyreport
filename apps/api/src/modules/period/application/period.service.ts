@@ -6,9 +6,9 @@ import {
 } from "@customreport/shared";
 
 import {
-  customreportPeriodStateTransitionsTotal,
-  customreportReportsSubmittedTotal,
-} from "../../../infrastructure/metrics/metrics.registry.js";
+  NOOP_PERIOD_TELEMETRY,
+  type PeriodTelemetry,
+} from "./period-telemetry.port.js";
 
 export class PeriodAccessError extends Error {
   constructor(message: string) {
@@ -149,6 +149,7 @@ export class PeriodService {
      */
     private readonly ingestionHook: IngestionPublishHook = () =>
       Promise.resolve(undefined),
+    private readonly telemetry: PeriodTelemetry = NOOP_PERIOD_TELEMETRY,
   ) {}
 
   async publishPeriod(
@@ -222,11 +223,8 @@ export class PeriodService {
     reportId: string,
     priorStatus: PeriodStatus,
   ): Promise<void> {
-    customreportReportsSubmittedTotal.inc({ state: "published" });
-    customreportPeriodStateTransitionsTotal.inc({
-      from: priorStatus,
-      to: "published",
-    });
+    this.telemetry.recordPublishedReport();
+    this.telemetry.recordPeriodPublished(priorStatus);
 
     await this.invalidateAnalyticsCache();
 

@@ -168,15 +168,15 @@ describe("cookie seam — service against real Prisma repo", () => {
     });
 
     interface EnqueuedJob {
-      name: string;
-      data: { reportId: string; jobId: string; authToken: string };
+      reportId: string;
+      jobId: string;
+      authToken: string;
     }
     const enqueued: EnqueuedJob[] = [];
     const fakeQueue = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async BullMQ Queue.add contract (no awaitable work in the stub)
-      add: async (name: string, data: EnqueuedJob["data"]) => {
-        enqueued.push({ name, data });
-        return { id: "fake" };
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async enqueue port (no awaitable work in the stub)
+      enqueue: async (data: EnqueuedJob) => {
+        enqueued.push(data);
       },
     } as never;
 
@@ -193,11 +193,11 @@ describe("cookie seam — service against real Prisma repo", () => {
     await service.requestPdfExport(testData.report.id, session);
 
     expect(enqueued).toHaveLength(1);
-    expect(expectDefined(enqueued[0]).data.reportId).toBe(testData.report.id);
-    expect(expectDefined(enqueued[0]).data.authToken).toMatch(/^eyJ/);
+    expect(expectDefined(enqueued[0]).reportId).toBe(testData.report.id);
+    expect(expectDefined(enqueued[0]).authToken).toMatch(/^eyJ/);
 
     const decoded = jwt.verify(
-      expectDefined(enqueued[0]).data.authToken,
+      expectDefined(enqueued[0]).authToken,
       "integration-test-secret-32-chars-or-more",
     ) as { reportId: string; requestedBy?: string };
     expect(decoded.reportId).toBe(testData.report.id);
@@ -243,12 +243,12 @@ describe("cookie seam — service against real Prisma repo", () => {
       activeReportSectionId: null,
       reportingGroupId: otherGroup.id,
     };
-    const queue = { add: vi.fn() };
+    const queue = { enqueue: vi.fn() };
     const service = new PdfExportService(repo, undefined, queue);
 
     await expect(
       service.requestPdfExport(testData.report.id, session),
     ).rejects.toThrow("PDF export is not available for this caller.");
-    expect(queue.add).not.toHaveBeenCalled();
+    expect(queue.enqueue).not.toHaveBeenCalled();
   });
 });

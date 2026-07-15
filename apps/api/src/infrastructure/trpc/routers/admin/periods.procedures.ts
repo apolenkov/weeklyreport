@@ -6,7 +6,7 @@ import {
 } from "@customreport/shared";
 import { z } from "zod";
 
-import type { AdminService } from "../../../../modules/admin/admin.service.js";
+import type { AdminService } from "../../../../modules/admin/index.js";
 import { mapDomainError } from "../../trpc.error-mapper.js";
 import { adminProcedure, headProcedure } from "../../trpc.middleware.js";
 

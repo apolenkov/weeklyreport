@@ -1,5 +1,8 @@
-/**
- * reminders facade barrel — public surface for siblings (Zone 3). Export-only,
- * zero side effects. admin and period's DI wiring pull the policy applicator.
- */
 export { PolicyApplicatorService } from "./policy-applicator.service.js";
+export { RemindersModule } from "./reminders.module.js";
+export { RemindersPrismaRepository } from "./reminders.prisma-repository.js";
+export {
+  ReminderDomainError,
+  ReminderScopeError,
+  RemindersService,
+} from "./reminders.service.js";

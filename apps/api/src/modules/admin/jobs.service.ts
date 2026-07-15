@@ -1,6 +1,5 @@
-import type { Queue } from "bullmq";
-
 import { type AppLogger, createNullLogger } from "../../lib/logger";
+import type { AdminJobsQueue } from "./admin-jobs.port.js";
 
 const DEFAULT_FAILED_JOBS_LIMIT = 50;
 const MAX_FAILED_JOBS_LIMIT = 200;
@@ -51,7 +50,7 @@ interface JobsServiceOptions {
 }
 
 /**
- * 35-06: when the BullMQ Queue handle is absent (e.g. unit-test wiring with
+ * When the queue port is absent (e.g. unit-test wiring with
  * `createAppRouter({})`), the service still needs to be callable. Caller
  * surfaces an empty list / no-op retry so the tRPC procedure never throws
  * for missing infra.
@@ -60,7 +59,7 @@ export class JobsService {
   private readonly logger: AppLogger;
 
   constructor(
-    private readonly emailReminderQueue: Queue | undefined,
+    private readonly emailReminderQueue: AdminJobsQueue | undefined,
     logger?: AppLogger,
     private readonly options: JobsServiceOptions = {},
   ) {
@@ -88,16 +87,11 @@ export class JobsService {
     const jobs: FailedJob[] = rawJobs.map((job) => ({
       id: job.id ?? "",
       name: job.name,
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- BullMQ Job field is an external-lib boundary value
       failedReason: job.failedReason ?? "",
-      stacktrace: Array.isArray(job.stacktrace) ? [...job.stacktrace] : [],
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- BullMQ Job field is an external-lib boundary value
+      stacktrace: job.stacktrace ? [...job.stacktrace] : [],
       attemptsMade: job.attemptsMade ?? 0,
       timestamp: job.timestamp,
-      // Defensive copy — BullMQ Job#data is mutable and can carry non-trivial
-      // payloads. We keep it `unknown` at the boundary; the Zod schema on the
-      // tRPC side validates the shape callers care about.
-      data: job.data as unknown,
+      data: job.data,
     }));
 
     // If the slice came back full, advance the cursor; otherwise the failed

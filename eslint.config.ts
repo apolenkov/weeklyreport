@@ -119,6 +119,18 @@ const apiCrossModuleZones = apiModules.map((moduleName) => ({
   message: `api module boundary: '${moduleName}' may reach a sibling module only through its index.ts facade barrel, never an internal path (restructure-directory-architecture).`,
 }));
 
+const apiInfrastructureModuleZones = [
+  "apps/api/src/infrastructure",
+  "apps/api/src/main.ts",
+  "apps/api/src/app.module.ts",
+].map((target) => ({
+  target,
+  from: apiModulesDir,
+  except: apiModules.map((moduleName) => `${moduleName}/index.ts`),
+  message:
+    "api infrastructure and bootstrap files must consume module contracts through the owning index.ts public API",
+}));
+
 // One zone per web slice: files under features/S may import from features/ only
 // within their own slice or through a sibling's index.ts barrel. ALL populated
 // slices are enforced (boundaries flip #33); any slice-to-slice coupling not
@@ -658,6 +670,20 @@ export default defineConfig([
     plugins: { "import-x": importX },
     rules: {
       "import-x/no-restricted-paths": ["error", { zones: apiCrossModuleZones }],
+    },
+  },
+  {
+    files: [
+      "apps/api/src/infrastructure/**/*.ts",
+      "apps/api/src/main.ts",
+      "apps/api/src/app.module.ts",
+    ],
+    plugins: { "import-x": importX },
+    rules: {
+      "import-x/no-restricted-paths": [
+        "error",
+        { zones: apiInfrastructureModuleZones },
+      ],
     },
   },
   // Zone 5 — web cross-slice ban. Each extracted web slice appends its own zone

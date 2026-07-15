@@ -1,6 +1,6 @@
-import type { Queue } from "bullmq";
 import { describe, expect, it, vi } from "vitest";
 
+import type { AdminJobsQueue } from "./admin-jobs.port.js";
 import { JobsService } from "./jobs.service";
 
 interface FakeJob {
@@ -11,8 +11,8 @@ interface FakeJob {
   attemptsMade?: number;
   timestamp: number;
   data: unknown;
-  retry: ReturnType<typeof vi.fn>;
-  remove: ReturnType<typeof vi.fn>;
+  retry: ReturnType<typeof vi.fn<() => Promise<void>>>;
+  remove: ReturnType<typeof vi.fn<() => Promise<void>>>;
 }
 
 function makeJob(overrides: Partial<FakeJob> & { id: string }): FakeJob {
@@ -23,8 +23,8 @@ function makeJob(overrides: Partial<FakeJob> & { id: string }): FakeJob {
     attemptsMade: 3,
     timestamp: 1_700_000_000_000,
     data: { recipient: "lead@example.com" },
-    retry: vi.fn().mockResolvedValue(undefined),
-    remove: vi.fn().mockResolvedValue(undefined),
+    retry: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    remove: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -44,11 +44,11 @@ function makeQueue(opts: {
       if (opts.getJob) return opts.getJob(id);
       return opts.failed.find((j) => j.id === id);
     }),
-  } as unknown as Queue;
+  } satisfies AdminJobsQueue;
   return queue;
 }
 
-describe("JobsService — 35-06 BullMQ DLQ admin surface", () => {
+describe("JobsService — DLQ admin surface", () => {
   it("listFailed: returns mapped failed jobs with default page size", async () => {
     const failed = Array.from({ length: 3 }, (_, i) =>
       makeJob({ id: `job-${i}`, attemptsMade: i + 1 }),
@@ -80,7 +80,6 @@ describe("JobsService — 35-06 BullMQ DLQ admin surface", () => {
     const service = new JobsService(queue);
 
     await service.listFailed({ queue: "email-reminder", cursor: 0, limit: 50 });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(queue.getFailed).toHaveBeenCalledWith(0, 49);
 
     await service.listFailed({
@@ -88,7 +87,6 @@ describe("JobsService — 35-06 BullMQ DLQ admin surface", () => {
       cursor: 50,
       limit: 50,
     });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(queue.getFailed).toHaveBeenLastCalledWith(50, 99);
   });
 

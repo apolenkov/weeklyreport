@@ -6,6 +6,7 @@ import {
   metricsRegistry,
 } from "../../../infrastructure/metrics/metrics.registry.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
+import { ReportSectionsPrometheusTelemetry } from "../infrastructure/report-sections-prometheus-telemetry.adapter.js";
 import {
   computeReopenEligibility,
   LeadFormAccessError,
@@ -345,7 +346,10 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
         .fn()
         .mockResolvedValue({ coOwnsShared: true, rows: [contentRow] }),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(
+      repo,
+      new ReportSectionsPrometheusTelemetry(),
+    );
     const before = await readResultCount("denied");
 
     const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
@@ -366,7 +370,10 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
         .fn()
         .mockResolvedValue({ coOwnsShared: false, rows: [] }),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(
+      repo,
+      new ReportSectionsPrometheusTelemetry(),
+    );
     const before = await readResultCount("denied");
 
     const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
@@ -384,7 +391,10 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
         .fn()
         .mockResolvedValue({ coOwnsShared: true, rows: [] }),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(
+      repo,
+      new ReportSectionsPrometheusTelemetry(),
+    );
     const before = await readResultCount("empty");
 
     const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
@@ -402,7 +412,10 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
         .fn()
         .mockResolvedValue({ coOwnsShared: true, rows: [contentRow] }),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(
+      repo,
+      new ReportSectionsPrometheusTelemetry(),
+    );
     const before = await readResultCount("allowed");
 
     const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
@@ -1561,7 +1574,10 @@ describe("LeadFormService — requestReopen", () => {
     const repo = createMockRepository({
       getSectionReopenContext: vi.fn().mockResolvedValue(reopenContext()),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(
+      repo,
+      new ReportSectionsPrometheusTelemetry(),
+    );
 
     const before = await getCounterValue(customreportReopenRequestsTotal, {
       state: "requested",

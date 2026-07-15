@@ -7,13 +7,13 @@ import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
-import { queryPublishedLineage } from "../application/published-lineage";
 import {
   ReportSectionDomainError,
   type ReportSectionsRepository,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
 import type { MyHistorySectionRow } from "../domain/my-history.js";
+import { queryPublishedLineage } from "./published-lineage.query.js";
 import { reportSectionFullInclude } from "./report-sections.include";
 import { mapPrismaToReportSection } from "./report-sections.mappers";
 import { queryMyHistoryRows } from "./report-sections.my-history-query.js";

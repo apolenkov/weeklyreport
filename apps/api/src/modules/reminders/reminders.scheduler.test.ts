@@ -118,16 +118,21 @@ function createServiceRepo(): RemindersRepository {
 
 describe("RemindersScheduler — deadline reminder dispatch", () => {
   let queueAdds: { name: string; data: Record<string, unknown> }[];
-  let fakeQueue: { add: ReturnType<typeof vi.fn> };
+  let fakeQueue: { enqueue: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     queueAdds = [];
     fakeQueue = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async queue.add (no awaitable work in the stub)
-      add: vi.fn(async (name: string, data: Record<string, unknown>) => {
-        queueAdds.push({ name, data });
-        return { id: "fake" };
-      }),
+      enqueue: vi.fn(
+        (
+          _executionId: string,
+          data: Record<string, unknown>,
+          context: Record<string, unknown>,
+        ) => {
+          queueAdds.push({ name: "send", data: { ...data, ...context } });
+          return Promise.resolve();
+        },
+      ),
     };
   });
 
@@ -400,16 +405,21 @@ describe("RemindersScheduler — escalation dispatch", () => {
   }
 
   let queueAdds: { name: string; data: Record<string, unknown> }[];
-  let fakeQueue: { add: ReturnType<typeof vi.fn> };
+  let fakeQueue: { enqueue: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     queueAdds = [];
     fakeQueue = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async queue.add (no awaitable work in the stub)
-      add: vi.fn(async (name: string, data: Record<string, unknown>) => {
-        queueAdds.push({ name, data });
-        return { id: "fake" };
-      }),
+      enqueue: vi.fn(
+        (
+          _executionId: string,
+          data: Record<string, unknown>,
+          context: Record<string, unknown>,
+        ) => {
+          queueAdds.push({ name: "send", data: { ...data, ...context } });
+          return Promise.resolve();
+        },
+      ),
     };
   });
 
@@ -577,16 +587,21 @@ describe("RemindersScheduler — escalation dispatch", () => {
 
 describe("RemindersScheduler — opt-out", () => {
   let queueAdds: { name: string; data: Record<string, unknown> }[];
-  let fakeQueue: { add: ReturnType<typeof vi.fn> };
+  let fakeQueue: { enqueue: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     queueAdds = [];
     fakeQueue = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async queue.add (no awaitable work in the stub)
-      add: vi.fn(async (name: string, data: Record<string, unknown>) => {
-        queueAdds.push({ name, data });
-        return { id: "fake" };
-      }),
+      enqueue: vi.fn(
+        (
+          _executionId: string,
+          data: Record<string, unknown>,
+          context: Record<string, unknown>,
+        ) => {
+          queueAdds.push({ name: "send", data: { ...data, ...context } });
+          return Promise.resolve();
+        },
+      ),
     };
   });
 

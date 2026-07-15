@@ -1,10 +1,6 @@
 import type { ReportSectionReadModel, Role } from "@customreport/shared";
 
 import {
-  customreportCrossAuthorContentReadsTotal,
-  customreportReopenRequestsTotal,
-} from "../../../infrastructure/metrics/metrics.registry.js";
-import {
   assertHeadTargetInGroup,
   filterSectionToSharedProducts,
   readSectionForByPeriod,
@@ -22,6 +18,10 @@ import {
   ReopenRequestError,
 } from "../domain/lead-form-shared";
 import { ReportSectionDomainError } from "./report-sections.service.js";
+import {
+  NOOP_REPORT_SECTIONS_TELEMETRY,
+  type ReportSectionsTelemetry,
+} from "./report-sections-telemetry.port.js";
 
 // Re-export the error classes and shared types from their original module
 // path so every existing importer (`./lead-form.service`) resolves unchanged.
@@ -50,7 +50,10 @@ export const LEAD_FORM_REPOSITORY = Symbol("LeadFormRepository");
  * (defer-versions-coming-soon); TODO(versions-v2) marks the re-entry points.
  */
 export class LeadFormService {
-  constructor(private readonly repository: LeadFormRepository) {}
+  constructor(
+    private readonly repository: LeadFormRepository,
+    private readonly telemetry: ReportSectionsTelemetry = NOOP_REPORT_SECTIONS_TELEMETRY,
+  ) {}
 
   /**
    * Revoke a lead's submission (head-only). The injected
@@ -205,7 +208,7 @@ export class LeadFormService {
     // Product telemetry. `state='requested'` is the funnel's entry — paired
     // with `approved` / `rejected` from the admin mutation it gives leadership
     // the full demand-vs-policy picture.
-    customreportReopenRequestsTotal.inc({ state: "requested" });
+    this.telemetry.recordReopenRequest("requested");
     return { success: true };
   }
 
@@ -344,7 +347,7 @@ export class LeadFormService {
       userId,
     );
     if (!ownSection) {
-      customreportCrossAuthorContentReadsTotal.inc({ result: "denied" });
+      this.telemetry.recordCrossAuthorRead("denied");
       return [];
     }
 
@@ -355,13 +358,11 @@ export class LeadFormService {
       userId,
     );
     if (!coOwnsShared) {
-      customreportCrossAuthorContentReadsTotal.inc({ result: "denied" });
+      this.telemetry.recordCrossAuthorRead("denied");
       return [];
     }
 
-    customreportCrossAuthorContentReadsTotal.inc({
-      result: rows.length > 0 ? "allowed" : "empty",
-    });
+    this.telemetry.recordCrossAuthorRead(rows.length > 0 ? "allowed" : "empty");
     return rows;
   }
 

@@ -4,8 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
-import { AdminPrismaRepository } from "../../modules/admin/admin.prisma-repository.js";
-import { AdminService } from "../../modules/admin/admin.service.js";
+import type { AdminTelemetry } from "../../modules/admin/index.js";
+import { AdminPrismaRepository } from "../../modules/admin/index.js";
+import { AdminService } from "../../modules/admin/index.js";
 import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
 import { createAppRouter } from "./trpc.router.js";
 
@@ -25,6 +26,11 @@ const GROUP_ID = "99999999-9999-4999-8999-999999999999";
 const REQUEST_ID = "11111111-1111-4111-8111-111111111111";
 const SECTION_ID = "22222222-2222-4222-8222-222222222222";
 const USER_ID = "33333333-3333-4333-8333-333333333333";
+const prometheusTelemetry: AdminTelemetry = {
+  recordReopenRequestDecision: (decision) => {
+    customreportReopenRequestsTotal.inc({ state: decision });
+  },
+};
 
 function makeSession(role: Role) {
   return {
@@ -86,6 +92,8 @@ function buildCaller(
   // router touching `deps.prisma` directly.
   const adminService = new AdminService(
     new AdminPrismaRepository(prisma as never),
+    undefined,
+    prometheusTelemetry,
   );
   const deps = {
     prisma,

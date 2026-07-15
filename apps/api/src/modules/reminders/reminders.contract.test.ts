@@ -82,7 +82,7 @@ function createRepository(...rules: AdminReminderRule[]): RemindersRepository {
 }
 
 function createMockQueue() {
-  return { add: vi.fn() };
+  return { enqueue: vi.fn() };
 }
 
 // ---------------------------------------------------------------------------
@@ -186,19 +186,15 @@ describe("RemindersService — contract tests", () => {
         recipientEmail,
       );
 
-      expect(mockQueue.add).toHaveBeenCalledTimes(1);
-      expect(mockQueue.add).toHaveBeenCalledWith(
-        "send",
+      expect(mockQueue.enqueue).toHaveBeenCalledTimes(1);
+      expect(mockQueue.enqueue).toHaveBeenCalledWith(
+        execution.id,
         {
           executionId: execution.id,
           recipientEmail,
           reportPeriod: REPORT_PERIOD_LABEL,
         },
-        {
-          attempts: 3,
-          backoff: { type: "exponential", delay: 5000 },
-          jobId: execution.id,
-        },
+        {},
       );
     });
 

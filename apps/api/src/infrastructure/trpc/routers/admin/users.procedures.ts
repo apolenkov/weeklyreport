@@ -1,8 +1,8 @@
 import { adminUserSchema } from "@customreport/shared";
 import { z } from "zod";
 
-import type { AdminService } from "../../../../modules/admin/admin.service.js";
-import type { SessionRevocationService } from "../../../../modules/admin/session-revocation.service.js";
+import type { AdminService } from "../../../../modules/admin/index.js";
+import type { SessionRevocationService } from "../../../../modules/admin/index.js";
 import { mapDomainError } from "../../trpc.error-mapper.js";
 import { adminProcedure } from "../../trpc.middleware.js";
 

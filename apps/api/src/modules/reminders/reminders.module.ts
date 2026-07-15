@@ -8,10 +8,18 @@ import { ConfigModule } from "../../infrastructure/config/config.module.js";
 import { APP_LOGGER } from "../../lib/audit-logger.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { OrganizationModule } from "../organization/index.js";
+import {
+  REMINDERS_ENQUEUER,
+  REMINDERS_TELEMETRY,
+  type RemindersEnqueuer,
+  type RemindersTelemetry,
+} from "./reminders.ports.js";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository";
 import { RemindersScheduler } from "./reminders.scheduler";
 import { RemindersService } from "./reminders.service";
+import { RemindersBullmqEnqueuer } from "./reminders-bullmq-enqueuer.adapter.js";
 import { RemindersReaperScheduler } from "./reminders-reaper.scheduler";
+import { RemindersInfrastructureTelemetry } from "./reminders-telemetry.adapter.js";
 
 @Module({
   // `OrganizationModule` exposes `OrganizationService` so the scheduler can
@@ -20,18 +28,29 @@ import { RemindersReaperScheduler } from "./reminders-reaper.scheduler";
   providers: [
     RemindersPrismaRepository,
     {
+      provide: REMINDERS_ENQUEUER,
+      useFactory: (queue: Queue) => new RemindersBullmqEnqueuer(queue),
+      inject: [getQueueToken("email-reminder")],
+    },
+    {
+      provide: REMINDERS_TELEMETRY,
+      useFactory: (cls: ClsService) =>
+        new RemindersInfrastructureTelemetry(cls),
+      inject: [ClsService],
+    },
+    {
       provide: RemindersService,
       useFactory: (
         repo: RemindersPrismaRepository,
         logger: AppLogger,
-        queue: Queue,
-        cls: ClsService,
-      ) => new RemindersService(repo, logger, queue, cls),
+        queue: RemindersEnqueuer,
+        telemetry: RemindersTelemetry,
+      ) => new RemindersService(repo, logger, queue, telemetry),
       inject: [
         RemindersPrismaRepository,
         APP_LOGGER,
-        getQueueToken("email-reminder"),
-        ClsService,
+        REMINDERS_ENQUEUER,
+        REMINDERS_TELEMETRY,
       ],
     },
     // Hourly @Cron deadline reminder dispatcher.

@@ -5,17 +5,15 @@ import {
   type UserSession,
 } from "@customreport/shared";
 import jwt from "jsonwebtoken";
-import type { ClsService } from "nestjs-cls";
 
-import type { JobEnqueuer } from "../../infrastructure/bullmq/job-enqueuer.js";
-import {
-  captureJobTraceContext,
-  resolveCorrelationId,
-} from "../../infrastructure/bullmq/worker-observability.js";
-import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import { requireEnv } from "../../lib/env.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
 import { resolveSessionCookieName } from "../../lib/session-cookie.js";
+import {
+  NOOP_PDF_EXPORT_TELEMETRY,
+  type PdfExportEnqueuer,
+  type PdfExportTelemetry,
+} from "./pdf-export.ports.js";
 
 export class PdfExportDomainError extends Error {
   constructor(message: string) {
@@ -119,13 +117,13 @@ export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
 
 export class PdfExportService {
   private readonly logger: AppLogger;
-  private readonly pdfQueue: JobEnqueuer | null;
+  private readonly pdfQueue: PdfExportEnqueuer | null;
 
   constructor(
     private readonly repository: PdfExportRepository,
     logger?: AppLogger,
-    pdfQueue?: JobEnqueuer,
-    private readonly cls?: ClsService,
+    pdfQueue?: PdfExportEnqueuer,
+    private readonly telemetry: PdfExportTelemetry = NOOP_PDF_EXPORT_TELEMETRY,
   ) {
     this.logger = logger ?? createNullLogger();
     this.pdfQueue = pdfQueue ?? null;
@@ -204,18 +202,9 @@ export class PdfExportService {
       // a queue (and thus without a real worker) don't require the secret.
       const cookieToken =
         authToken ?? this.signPdfExportToken(reportId, session.userId);
-      await this.pdfQueue.add(
-        "generate",
-        {
-          reportId,
-          jobId: job.jobId,
-          authToken: cookieToken,
-          ...captureJobTraceContext(resolveCorrelationId(this.cls)),
-        },
-        {
-          attempts: 3,
-          backoff: { type: "exponential", delay: 5000 },
-        },
+      await this.pdfQueue.enqueue(
+        { reportId, jobId: job.jobId, authToken: cookieToken },
+        this.telemetry.captureJobContext(),
       );
       this.logger.info("enqueued pdf-export job", {
         jobId: job.jobId,
@@ -223,9 +212,7 @@ export class PdfExportService {
       });
     }
 
-    customreportPdfExportRequestsTotal.inc({
-      role: requestedByRole ?? "system",
-    });
+    this.telemetry.recordRequest(requestedByRole ?? "system");
 
     return job;
   }

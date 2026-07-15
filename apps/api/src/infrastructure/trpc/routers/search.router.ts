@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server";
 import {
   SearchAuthorizationError,
   type SearchService,
-} from "../../../modules/search/search.service.js";
+} from "../../../modules/search/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import { protectedProcedure, router } from "../trpc.middleware.js";
 

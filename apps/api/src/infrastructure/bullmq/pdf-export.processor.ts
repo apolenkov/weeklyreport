@@ -10,7 +10,7 @@ import { chromium, type Page } from "playwright";
 
 import { requireEnv } from "../../lib/env.js";
 import type { AppLogger } from "../../lib/logger.js";
-import { PdfExportService } from "../../modules/pdf-export/pdf-export.service";
+import { PdfExportService } from "../../modules/pdf-export/index.js";
 import type { EnvConfig } from "../config/env.schema";
 import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
 import {

@@ -5,10 +5,10 @@ import type { CreateExpressContextOptions } from "@trpc/server/adapters/express"
 import { type AuditLogger, createAuditLogger } from "../../lib/audit-logger.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { resolveSessionCookieName } from "../../lib/session-cookie.js";
-import { SessionRevocationService } from "../../modules/admin/session-revocation.service.js";
-import { createAuthController } from "../../modules/auth/auth.controller.js";
-import { isUserAccessBarred } from "../../modules/auth/session-deactivation.js";
-import { verifyPdfExportToken } from "../../modules/pdf-export/pdf-export.service.js";
+import { SessionRevocationService } from "../../modules/admin/index.js";
+import { createAuthController } from "../../modules/auth/index.js";
+import { isUserAccessBarred } from "../../modules/auth/index.js";
+import { verifyPdfExportToken } from "../../modules/pdf-export/index.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { hydrateSession } from "./trpc.session-hydration.js";
 

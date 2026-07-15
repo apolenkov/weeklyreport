@@ -2,8 +2,8 @@ import { paginationInputSchema } from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import type { RemindersService } from "../../../modules/reminders/reminders.service.js";
-import type { WeeklyReportService } from "../../../modules/weekly-report/weekly-report.service.js";
+import type { RemindersService } from "../../../modules/reminders/index.js";
+import type { WeeklyReportService } from "../../../modules/weekly-report/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import { headProcedure, router } from "../trpc.middleware.js";
 

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../../lib/audit-logger.js";
 import { createNullLogger } from "../../../lib/logger.js";
-import type { RemindersService } from "../../../modules/reminders/reminders.service.js";
+import type { RemindersService } from "../../../modules/reminders/index.js";
 import { createRemindersRouter } from "./reminders.router.js";
 
 const CURRENT_REPORT_ID = "10000000-0000-4000-8000-000000000001";

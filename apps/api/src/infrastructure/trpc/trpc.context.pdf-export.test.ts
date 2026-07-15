@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../lib/logger";
-import { SessionRevocationService } from "../../modules/admin/session-revocation.service";
+import { SessionRevocationService } from "../../modules/admin/index.js";
 import { PrismaService } from "../prisma/prisma.service";
 import { createContextFactory } from "./trpc.context";
 

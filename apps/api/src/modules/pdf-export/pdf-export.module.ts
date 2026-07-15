@@ -7,26 +7,45 @@ import { BullMQModule } from "../../infrastructure/bullmq/bullmq.module";
 import { ConfigModule } from "../../infrastructure/config/config.module.js";
 import { APP_LOGGER } from "../../lib/audit-logger.js";
 import type { AppLogger } from "../../lib/logger.js";
+import {
+  PDF_EXPORT_ENQUEUER,
+  PDF_EXPORT_TELEMETRY,
+  type PdfExportEnqueuer,
+  type PdfExportTelemetry,
+} from "./pdf-export.ports.js";
 import { PdfExportPrismaRepository } from "./pdf-export.prisma-repository";
 import { PdfExportService } from "./pdf-export.service";
+import { PdfExportBullmqEnqueuer } from "./pdf-export-bullmq-enqueuer.adapter.js";
+import { PdfExportInfrastructureTelemetry } from "./pdf-export-telemetry.adapter.js";
 
 @Module({
   imports: [BullMQModule, ConfigModule],
   providers: [
     PdfExportPrismaRepository,
     {
+      provide: PDF_EXPORT_ENQUEUER,
+      useFactory: (queue: Queue) => new PdfExportBullmqEnqueuer(queue),
+      inject: [getQueueToken("pdf-export")],
+    },
+    {
+      provide: PDF_EXPORT_TELEMETRY,
+      useFactory: (cls: ClsService) =>
+        new PdfExportInfrastructureTelemetry(cls),
+      inject: [ClsService],
+    },
+    {
       provide: PdfExportService,
       useFactory: (
         repo: PdfExportPrismaRepository,
         logger: AppLogger,
-        queue: Queue,
-        cls: ClsService,
-      ) => new PdfExportService(repo, logger, queue, cls),
+        queue: PdfExportEnqueuer,
+        telemetry: PdfExportTelemetry,
+      ) => new PdfExportService(repo, logger, queue, telemetry),
       inject: [
         PdfExportPrismaRepository,
         APP_LOGGER,
-        getQueueToken("pdf-export"),
-        ClsService,
+        PDF_EXPORT_ENQUEUER,
+        PDF_EXPORT_TELEMETRY,
       ],
     },
   ],

@@ -4,8 +4,8 @@ import {
   submitSectionSchema,
 } from "@customreport/shared";
 
-import type { ReportSectionsService } from "../../../modules/report-sections/application/report-sections.service.js";
-import type { WeeklyReportService } from "../../../modules/weekly-report/weekly-report.service.js";
+import type { ReportSectionsService } from "../../../modules/report-sections/index.js";
+import type { WeeklyReportService } from "../../../modules/weekly-report/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import {
   anyRoleProcedure,

@@ -2,7 +2,7 @@ import type { UserSession } from "@customreport/shared";
 import jwt from "jsonwebtoken";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createAuthController } from "../../modules/auth/auth.controller";
+import { createAuthController } from "../../modules/auth/index.js";
 import { PrismaService } from "../prisma/prisma.service";
 import { resolveHumanSession } from "./trpc.context";
 

@@ -4,9 +4,9 @@ import { type Job, type WorkerOptions } from "bullmq";
 import type { ClsService } from "nestjs-cls";
 
 import type { AppLogger } from "../../lib/logger.js";
-import { AdminService } from "../../modules/admin/admin.service";
-import { renderEmail } from "../../modules/email/render-template";
-import { RemindersService } from "../../modules/reminders/reminders.service";
+import { AdminService } from "../../modules/admin/index.js";
+import { renderEmail } from "../../modules/email/index.js";
+import { RemindersService } from "../../modules/reminders/index.js";
 import type { EnvConfig } from "../config/env.schema";
 import type { EmailPort } from "../email/email.service";
 import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
