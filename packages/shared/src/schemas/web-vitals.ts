@@ -10,15 +10,19 @@ import { z } from "zod";
  *
  * The endpoint is public and unauthenticated, so this is the single trust
  * boundary: an invalid body must be rejected before any metric write. `value`
- * is a non-negative finite number — `z.number().nonnegative()` rejects NaN,
- * ±Infinity (Zod v4), and negatives, which every web-vitals metric excludes by
- * definition (timings and the CLS score are never < 0). A negative value would
- * otherwise corrupt the histogram's `_sum`/quantile aggregates. `id` must be
+ * is a bounded, non-negative finite number. The shared, generous ceiling keeps
+ * one adversarial or buggy sample from corrupting the Prometheus histogram's
+ * `_sum` and derived averages; quantile buckets are unaffected. A single bound
+ * covers every metric without imposing brittle per-metric limits. `id` must be
  * non-empty.
  */
+
+/** Five minutes in milliseconds, far above any realistic supported metric. */
+export const MAX_WEB_VITAL_VALUE = 300_000;
+
 export const webVitalBeaconSchema = z.object({
   name: z.enum(["LCP", "CLS", "FCP", "INP", "TTFB"]),
-  value: z.number().nonnegative(),
+  value: z.number().nonnegative().max(MAX_WEB_VITAL_VALUE),
   id: z.string().min(1),
   navigationType: z.string().optional(),
 });
