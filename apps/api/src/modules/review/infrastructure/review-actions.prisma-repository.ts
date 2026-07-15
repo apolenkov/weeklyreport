@@ -13,6 +13,7 @@ import type {
   ReviewActionsRepository,
   VerdictContext,
 } from "../application/review-actions.service.js";
+import { insertCoordinatedComment } from "./review-actions.comment-write.js";
 
 // review-acknowledgement: the group that owns a record is its section author's
 // reporting group (the same relation path `groupScopeFilter(_, 'reportSection')`
@@ -113,29 +114,7 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
     anchor: RecordAnchor,
     text: string,
   ): Promise<RecordCommentView> {
-    const created = await this.prisma.recordComment.create({
-      data: {
-        reviewerId,
-        text,
-        itemId: anchor.itemId ?? null,
-        riskId: anchor.riskId ?? null,
-        decisionId: anchor.decisionId ?? null,
-      },
-      select: {
-        id: true,
-        reviewerId: true,
-        text: true,
-        createdAt: true,
-        reviewer: { select: { name: true } },
-      },
-    });
-    return {
-      id: created.id,
-      reviewerId: created.reviewerId,
-      reviewerName: created.reviewer.name,
-      text: created.text,
-      createdAt: created.createdAt,
-    };
+    return insertCoordinatedComment(this.prisma, reviewerId, anchor, text);
   }
 
   async getCommentContext(
