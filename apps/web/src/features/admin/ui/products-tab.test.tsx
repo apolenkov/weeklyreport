@@ -60,6 +60,7 @@ vi.mock("../../../shared/ui/confirm-delete-dialog", () => ({
 
 const LEAD_ID = "u-lead-1";
 const PRODUCT_ID = "p-product-1";
+const SECOND_PRODUCT_ID = "p-product-2";
 
 const mockLead: MockUser = {
   id: LEAD_ID,
@@ -81,6 +82,12 @@ const mockProduct: MockProduct = {
   leadOwnerId: LEAD_ID,
   stages: [],
   status: "active",
+};
+
+const secondProduct: MockProduct = {
+  ...mockProduct,
+  id: SECOND_PRODUCT_ID,
+  name: "Second Product",
 };
 
 // ----- tRPC test double ----------------------------------------------
@@ -127,6 +134,93 @@ function renderTab(opts?: {
 }
 
 // ----- tests ---------------------------------------------------------
+
+describe("ProductsTab — deep-link panel state", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("auto-expands the deep-linked product on initial load", () => {
+    renderTab({ productFilter: PRODUCT_ID });
+
+    expect(
+      screen.getByRole("button", {
+        name: `Collapse stage assignments for ${mockProduct.name}`,
+      }),
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getByTestId("stage-assignment-editor-stub"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps a manually collapsed deep-linked product closed after a refetch", async () => {
+    const user = userEvent.setup();
+    const products = [mockProduct];
+    const { rerender } = renderTab({ products, productFilter: PRODUCT_ID });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: `Collapse stage assignments for ${mockProduct.name}`,
+      }),
+    );
+
+    rerender(
+      <ProductsTab
+        products={products.map((product) => ({ ...product }))}
+        users={[mockLead]}
+        productFilter={PRODUCT_ID}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: `Expand stage assignments for ${mockProduct.name}`,
+      }),
+    ).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.queryByTestId("stage-assignment-editor-stub"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("auto-expands and guards a genuinely new deep-link target", async () => {
+    const user = userEvent.setup();
+    const products = [mockProduct, secondProduct];
+    const { rerender } = renderTab({ products, productFilter: PRODUCT_ID });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: `Collapse stage assignments for ${mockProduct.name}`,
+      }),
+    );
+    rerender(
+      <ProductsTab
+        products={products}
+        users={[mockLead]}
+        productFilter={SECOND_PRODUCT_ID}
+      />,
+    );
+
+    const secondProductToggle = screen.getByRole("button", {
+      name: `Collapse stage assignments for ${secondProduct.name}`,
+    });
+    expect(secondProductToggle).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(secondProductToggle);
+    rerender(
+      <ProductsTab
+        products={products.map((product) => ({ ...product }))}
+        users={[mockLead]}
+        productFilter={SECOND_PRODUCT_ID}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: `Expand stage assignments for ${secondProduct.name}`,
+      }),
+    ).toHaveAttribute("aria-expanded", "false");
+  });
+});
 
 describe("ProductsTab — Add/Edit dialog a11y (VA-0a high unit-rtl)", () => {
   beforeEach(() => {

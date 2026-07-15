@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../../lib/cache-keys";
@@ -22,6 +22,7 @@ import {
 import { ProductEditDialog } from "./product-edit-dialog";
 import { ProductsTable } from "./products-table";
 import { TabHeader, TabSearch } from "./tab-header";
+import { useProductDeepLinkExpand } from "./use-product-deep-link-expand";
 
 interface ProductsTabProps {
   readonly products: MockProduct[];
@@ -38,6 +39,11 @@ export function ProductsTab({
   const qc = useQueryClient();
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { markUserToggle } = useProductDeepLinkExpand({
+    productFilter,
+    products,
+    setExpandedId,
+  });
   const [showDialog, setShowDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<MockProduct | null>(
     null,
@@ -48,13 +54,6 @@ export function ProductsTab({
   );
   // local name filter (distinct from the global SearchInput deep-link)
   const [localSearch, setLocalSearch] = useState("");
-
-  useEffect(() => {
-    if (!productFilter) return;
-    if (products.some((product) => product.id === productFilter)) {
-      setExpandedId(productFilter);
-    }
-  }, [productFilter, products]);
 
   // exclude deactivated users from picker; existing assignments to
   // deactivated leads remain visible via getUserById (full users list).
@@ -239,9 +238,10 @@ export function ProductsTab({
           stageCountByProject={stageCountByProject}
           leads={leads}
           expandedId={expandedId}
-          onToggleExpand={(id) =>
-            setExpandedId((current) => (current === id ? null : id))
-          }
+          onToggleExpand={(id) => {
+            markUserToggle(id);
+            setExpandedId((current) => (current === id ? null : id));
+          }}
           onEdit={openEdit}
           onArchive={setPendingArchive}
           onRestore={handleRestore}
