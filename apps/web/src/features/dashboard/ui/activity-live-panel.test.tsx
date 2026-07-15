@@ -1,23 +1,5 @@
 /**
  * @vitest-environment jsdom
- *
- * VA-0a / VA-0b regression tests for activity-live-panel.tsx.
- *
- * Catalog: openspec/changes/verify-a11y-recommended-flip/design.md
- * Section: apps/web/src/features/dashboard/ui/activity-live-panel.tsx
- *
- * In-scope rows:
- *   unit-rtl/high  — draft-status div: no aria-label
- *   unit-rtl/high  — draft-status div: title="Lead is still working, report not submitted"
- *   unit-rtl/high  — empty-status div: title="${leadName} has no report content yet"
- *   unit-rtl/high  — empty-status div: no aria-label
- *   snapshot/medium — draft branch cursor-default (class check, not full snapshot)
- *   snapshot/medium — empty branch emptyClassName (class check, not full snapshot)
- *
- * NOTE: snapshot rows are implemented as explicit class assertions rather than
- * toMatchSnapshot() — full DOM snapshots are brittle here (Tailwind class soup,
- * CSS-var strings); the class checks test the identical regression target more
- * durably. Deviation noted in the change catalog notes.
  */
 import "@testing-library/jest-dom/vitest";
 
@@ -55,6 +37,7 @@ import { ActivityLivePanel } from "./activity-live-panel";
 const BASE_REPORT_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const DRAFT_LEAD_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const EMPTY_LEAD_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const SUBMITTED_LEAD_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 
 /** Minimum valid ActivityLiveRow fixture. */
 function makeRow(
@@ -93,7 +76,7 @@ function renderWithData(data: ActivityLiveResponse) {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("ActivityLivePanel — draft-status div (hasContent && isDraft)", () => {
+describe("ActivityLivePanel — content-bearing rows", () => {
   const draftData: ActivityLiveResponse = {
     reportId: BASE_REPORT_ID,
     periodStart: new Date("2025-06-02"),
@@ -108,29 +91,58 @@ describe("ActivityLivePanel — draft-status div (hasContent && isDraft)", () =>
       }),
     ],
   };
+  const submittedData: ActivityLiveResponse = {
+    reportId: BASE_REPORT_ID,
+    periodStart: new Date("2025-06-02"),
+    periodEnd: new Date("2025-06-08"),
+    periodStatus: "open",
+    rows: [
+      makeRow({
+        leadId: SUBMITTED_LEAD_ID,
+        leadName: "Carol White",
+        status: "submitted",
+        riskCount: 1,
+      }),
+    ],
+  };
 
-  it("draft-status div has no aria-label attribute", () => {
+  it("links a draft row to the exact focused report with an accessible name", () => {
     renderWithData(draftData);
-    const draftDiv = screen.getByTitle(
-      "Lead is still working, report not submitted",
+    const accessibleName = "Open Alice Smith report section";
+    const draftLink = screen.getByRole("link", {
+      name: accessibleName,
+    });
+
+    expect(draftLink).toHaveAttribute(
+      "href",
+      `/head/report/${BASE_REPORT_ID}?authorId=${DRAFT_LEAD_ID}`,
     );
-    expect(draftDiv).not.toHaveAttribute("aria-label");
+    expect(draftLink).toHaveAccessibleName(accessibleName);
+    expect(draftLink).toHaveAttribute(
+      "title",
+      "Open Alice Smith report section",
+    );
+    expect(draftLink.className).toContain("cursor-pointer");
+    expect(draftLink.className).toContain("hover:bg-[var(--color-success)]");
+    expect(draftLink.className).toContain("focus-visible:ring-2");
+    expect(screen.getByText("Draft")).toBeVisible();
   });
 
-  it("draft-status div renders with the correct title attribute", () => {
-    renderWithData(draftData);
-    expect(
-      screen.getByTitle("Lead is still working, report not submitted"),
-    ).toBeInTheDocument();
-  });
+  it("keeps a submitted row linked with keyboard-focus affordances", () => {
+    renderWithData(submittedData);
+    const submittedLink = screen.getByRole("link", {
+      name: "Open Carol White report section",
+    });
 
-  it("draft-status branch uses cursor-default (not cursor-pointer)", () => {
-    renderWithData(draftData);
-    const draftDiv = screen.getByTitle(
-      "Lead is still working, report not submitted",
+    expect(submittedLink).toHaveAttribute(
+      "href",
+      `/head/report/${BASE_REPORT_ID}?authorId=${SUBMITTED_LEAD_ID}`,
     );
-    expect(draftDiv.className).toContain("cursor-default");
-    expect(draftDiv.className).not.toContain("cursor-pointer");
+    expect(submittedLink.className).toContain("focus-visible:outline-none");
+    expect(submittedLink.className).toContain("focus-visible:ring-2");
+    expect(submittedLink.className).toContain("focus-visible:ring-offset-2");
+    submittedLink.focus();
+    expect(submittedLink).toHaveFocus();
   });
 });
 
@@ -153,21 +165,17 @@ describe("ActivityLivePanel — empty-status div (no content)", () => {
     ],
   };
 
-  it("empty-status div title contains the lead name", () => {
+  it("keeps a row with zero content inert", () => {
     renderWithData(emptyData);
     const emptyDiv = screen.getByTitle("Bob Jones has no report content yet");
+
     expect(emptyDiv).toBeInTheDocument();
-  });
-
-  it("empty-status div has no aria-label attribute", () => {
-    renderWithData(emptyData);
-    const emptyDiv = screen.getByTitle("Bob Jones has no report content yet");
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
     expect(emptyDiv).not.toHaveAttribute("aria-label");
-  });
-
-  it("empty-status branch applies cursor-default and opacity-65 classes", () => {
-    renderWithData(emptyData);
-    const emptyDiv = screen.getByTitle("Bob Jones has no report content yet");
+    expect(emptyDiv).toHaveTextContent(
+      "0 items · 0 risks · 0 decisions · 0 priorities",
+    );
+    expect(screen.getByText("No content")).toBeVisible();
     expect(emptyDiv.className).toContain("cursor-default");
     expect(emptyDiv.className).toContain("opacity-65");
     expect(emptyDiv.className).not.toContain("cursor-pointer");
