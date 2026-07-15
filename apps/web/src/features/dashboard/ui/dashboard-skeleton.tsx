@@ -8,6 +8,12 @@ const LEAD_TABLE_COL_ROLE_WIDTH = 80;
 const LEAD_TABLE_COL_STATUS_WIDTH = 80;
 const LEAD_TABLE_COL_PROGRESS_WIDTH = 80;
 const LEAD_TABLE_COL_ACTION_WIDTH = 100;
+// Literal classes keep these closed-set widths visible to Tailwind's static scanner.
+const LEAD_TABLE_COLUMN_WIDTH_CLASSES: Record<number, string> = {
+  80: "w-[80px]",
+  100: "w-[100px]",
+  120: "w-[120px]",
+};
 const LEAD_TABLE_COLUMN_WIDTHS = [
   LEAD_TABLE_COL_LEAD_WIDTH,
   LEAD_TABLE_COL_ROLE_WIDTH,
@@ -84,10 +90,13 @@ export function DashboardSkeleton() {
           <div className="w-full">
             {/* thead placeholder */}
             <div className="flex gap-4 border-b border-[var(--color-border)] px-5 py-3">
-              {LEAD_TABLE_COLUMN_WIDTHS.map((w, i) => (
-                // eslint-disable-next-line react/no-array-index-key -- static column-width array, order never changes
-                <Skeleton key={i} className={`h-3 w-[${w}px]`} />
-              ))}
+              {LEAD_TABLE_COLUMN_WIDTHS.map((w, i) => {
+                const cls = `h-3 ${LEAD_TABLE_COLUMN_WIDTH_CLASSES[w]}`;
+                return (
+                  // eslint-disable-next-line react/no-array-index-key -- static column-width array, order never changes
+                  <Skeleton key={i} className={cls} />
+                );
+              })}
             </div>
             {/* tbody rows */}
             {leadTableBodyRowIndexes.map((i) => (

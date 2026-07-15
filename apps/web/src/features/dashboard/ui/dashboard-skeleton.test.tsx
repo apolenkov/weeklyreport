@@ -5,10 +5,18 @@
  * DashboardSkeleton full render (snapshot/medium).
  */
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { DashboardSkeleton } from "./dashboard-skeleton";
+
+const dashboardSkeletonSource = readFileSync(
+  resolve(__dirname, "dashboard-skeleton.tsx"),
+  "utf8",
+);
 
 describe("DashboardSkeleton", () => {
   it("renders 5 thead placeholder skeletons with the correct arbitrary-width classes", () => {
@@ -27,6 +35,11 @@ describe("DashboardSkeleton", () => {
       return match ? match[1] : null;
     });
     expect(widths).toEqual(["120px", "80px", "80px", "80px", "100px"]);
+
+    expect(dashboardSkeletonSource).toContain('80: "w-[80px]"');
+    expect(dashboardSkeletonSource).toContain('100: "w-[100px]"');
+    expect(dashboardSkeletonSource).toContain('120: "w-[120px]"');
+    expect(dashboardSkeletonSource).not.toContain("w-[${");
   });
 
   it("matches thead placeholder skeleton snapshot", () => {
