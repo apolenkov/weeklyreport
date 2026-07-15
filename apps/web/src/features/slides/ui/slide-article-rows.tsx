@@ -195,7 +195,9 @@ function ItemRow({
     onRowActivate?.(editableRef);
   };
   const handleKeyDown = (event: KeyboardEvent<HTMLSpanElement>) => {
-    if (event.key !== "Enter") return;
+    // Space's default on a non-native button element is page scroll, so the
+    // guard runs for both activation keys per the role="button" contract.
+    if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
     activate();
   };

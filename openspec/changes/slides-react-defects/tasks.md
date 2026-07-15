@@ -1,26 +1,26 @@
 ## 1. Fix duplicate carousel keys
 
-- [ ] 1.1 `apps/web/src/features/slides/ui/head-slide-carousel.tsx`: change
+- [x] 1.1 `apps/web/src/features/slides/ui/head-slide-carousel.tsx`: change
       the button `key` from `item.id` to
       `` `${item.id}:${item.pageIndex ?? 0}` ``
-- [ ] 1.2 `apps/web/src/features/slides/ui/head-slide-carousel.test.tsx`
+- [x] 1.2 `apps/web/src/features/slides/ui/head-slide-carousel.test.tsx`
       (new file): render the carousel with two `SectionSlideModel` entries
       sharing one `id` but different `pageIndex`, assert two cards render
       and no duplicate-key warning is logged
 
 ## 2. Persist fullscreen across slide navigation
 
-- [ ] 2.1 `apps/web/src/features/slides/ui/status-slide-deck.tsx`: move the
+- [x] 2.1 `apps/web/src/features/slides/ui/status-slide-deck.tsx`: move the
       `useFullscreen(frameRef, frameRef)` call and its `frameRef` from
       `HeadSlideFrame` up to `StatusSlideDeck`'s render body (the outer
       `<section>` is not remounted on `selectedIndex` change)
-- [ ] 2.2 Turn `HeadSlideFrame` into a presentational component receiving
+- [x] 2.2 Turn `HeadSlideFrame` into a presentational component receiving
       `frameRef`, `isFullscreen`, and `onToggle` as props instead of calling
       `useFullscreen` itself
-- [ ] 2.3 Confirm the outer `<section>`'s `handleKeyDown` (Arrow
+- [x] 2.3 Confirm the outer `<section>`'s `handleKeyDown` (Arrow
       navigation) still updates `selectedIndex` without touching the
       hoisted `frameRef`/fullscreen state
-- [ ] 2.4 `apps/web/src/features/slides/ui/status-slide-deck.test.tsx`: add
+- [x] 2.4 `apps/web/src/features/slides/ui/status-slide-deck.test.tsx`: add
       a case that enters fullscreen (invoke `onToggle`/the overlay control),
       then fires an ArrowRight keydown on the deck root, and asserts
       `DeckFullscreenOverlay`'s `isFullscreen` prop / rendered state is
@@ -28,22 +28,22 @@
 
 ## 3. Space-key activation on slide rows
 
-- [ ] 3.1 `apps/web/src/features/slides/ui/slide-article-rows.tsx`:
+- [x] 3.1 `apps/web/src/features/slides/ui/slide-article-rows.tsx`:
       `handleKeyDown` activates on both `"Enter"` and `" "`, calling
       `event.preventDefault()` for either
-- [ ] 3.2 `apps/web/src/features/slides/ui/slide-article-rows.test.tsx`: add
+- [x] 3.2 `apps/web/src/features/slides/ui/slide-article-rows.test.tsx`: add
       a case firing a Space keydown on an activatable row and asserting
       `onRowActivate` fires, mirroring the existing Enter case
 
 ## 4. Spec delta
 
-- [ ] 4.1 `head-slide-density`: MODIFY "The head deck navigates via a top
+- [x] 4.1 `head-slide-density`: MODIFY "The head deck navigates via a top
       carousel" to require collision-free carousel keys across paginated
       pages of one section
-- [ ] 4.2 `head-slide-density`: MODIFY "The active head slide keeps a
+- [x] 4.2 `head-slide-density`: MODIFY "The active head slide keeps a
       visible fullscreen exit path" to require fullscreen state to persist
       across arrow-key/carousel slide navigation
-- [ ] 4.3 `slide-inline-record-editing`: MODIFY "Double-click opens the
+- [x] 4.3 `slide-inline-record-editing`: MODIFY "Double-click opens the
       record editor on own slide rows" to add Space as an equivalent
       keyboard activation path alongside Enter
 

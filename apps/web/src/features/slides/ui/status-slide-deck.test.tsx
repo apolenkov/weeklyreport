@@ -1,6 +1,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { useState } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildSectionSlideModel } from "../model/section-slide-utils";
 import { StatusSlideDeck } from "./status-slide-deck";
@@ -328,5 +329,66 @@ describe("StatusSlideDeck — by-product grid article", () => {
     ).not.toBeInTheDocument();
     fireEvent.doubleClick(screen.getByText("own item"));
     expect(onRowActivate).not.toHaveBeenCalled();
+  });
+
+  describe("fullscreen persists across slide navigation", () => {
+    function setFullscreenElement(el: Element | null) {
+      Object.defineProperty(document, "fullscreenElement", {
+        configurable: true,
+        value: el,
+      });
+    }
+
+    afterEach(() => {
+      setFullscreenElement(null);
+    });
+
+    it("keeps the fullscreen overlay active after an ArrowRight slide change", () => {
+      const slideA = buildSectionSlideModel(makeSection({ items: [item()] }));
+      const slideB = buildSectionSlideModel(
+        makeSection({ reportSectionId: "sec-2", authorName: "Петров М.К." }),
+      );
+
+      // A controlled wrapper: `StatusSlideDeck` is fully controlled by
+      // `selectedIndex`, so the arrow-key navigation only actually changes
+      // slides — and can only actually remount the article/frame — if
+      // `onSelect` feeds back into the prop, as it does in the real app.
+      function ControlledDeck() {
+        const [selectedIndex, setSelectedIndex] = useState(0);
+        return (
+          <StatusSlideDeck
+            slides={[slideA, slideB]}
+            selectedIndex={selectedIndex}
+            onSelect={setSelectedIndex}
+            mode="head"
+          />
+        );
+      }
+
+      render(<ControlledDeck />);
+
+      // Enter fullscreen the same way the deck-level `useFullscreen` owner
+      // observes it: via the native `fullscreenchange` event, not the toggle
+      // (jsdom does not implement `Element.requestFullscreen`).
+      const deck = screen.getByTestId("head-slides-deck");
+      const frame = deck.querySelector('[tabindex="-1"]');
+      expect(frame).not.toBeNull();
+      act(() => {
+        setFullscreenElement(frame);
+        document.dispatchEvent(new Event("fullscreenchange"));
+      });
+      expect(
+        screen.getByRole("button", { name: "Exit fullscreen" }),
+      ).toBeInTheDocument();
+
+      fireEvent.keyDown(deck, { key: "ArrowRight" });
+
+      // If the fullscreened wrapper had been remounted by the navigation, the
+      // real Fullscreen API — and this overlay, which self-gates on
+      // `isFullscreen` — would drop out. It must still be present.
+      expect(
+        screen.getByRole("button", { name: "Exit fullscreen" }),
+      ).toBeInTheDocument();
+    });
   });
 });
