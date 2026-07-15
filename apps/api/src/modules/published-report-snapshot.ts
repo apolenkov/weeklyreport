@@ -13,7 +13,16 @@ import { mapPrismaToReportSection } from "./report-sections/infrastructure/repor
 import { deriveEffectiveProductStatus } from "./report-sections/infrastructure/report-sections.status-derivation";
 
 export const reportFullIncludeForSnapshot = {
-  sections: { include: reportSectionFullInclude },
+  sections: {
+    include: reportSectionFullInclude,
+    // Postgres's default collation orders author names ascending here, but it
+    // only approximates the live preview's Node/ICU localeCompare(..., "ru")
+    // order. Exact parity is not guaranteed; this accepted residual gap keeps
+    // the durable snapshot's ordering in one query-level location.
+    // The id tiebreak keeps the order stable across reads when two authors
+    // share a display name.
+    orderBy: [{ author: { name: "asc" } }, { id: "asc" }],
+  },
   publishedBy: true,
 } as const satisfies Prisma.ReportInclude;
 
