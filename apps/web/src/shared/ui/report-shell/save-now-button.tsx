@@ -66,6 +66,15 @@ export function SaveNowButton({ autosave }: SaveNowButtonProps) {
         setShowSaved(false);
         revertTimerRef.current = null;
       }, SAVED_REVERT_MS);
+    } else if (state !== "saved") {
+      // Leave the post-success flash as soon as autosave is no longer "saved"
+      // (new edit → pending, or a failed save → error) — do not wait out the
+      // revert timer, which would otherwise leave a stale green check.
+      setShowSaved(false);
+      if (revertTimerRef.current !== null) {
+        clearTimeout(revertTimerRef.current);
+        revertTimerRef.current = null;
+      }
     }
   }, [state, isInFlight]);
 

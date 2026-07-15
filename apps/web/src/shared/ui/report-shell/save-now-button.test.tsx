@@ -131,6 +131,79 @@ describe("SaveNowButton", () => {
     expect(screen.getByTestId("save-now-disc")).toBeDefined();
   });
 
+  it("clears the saved indicator synchronously when state leaves saved before the revert timer", () => {
+    const { rerender } = render(
+      <SaveNowButton
+        autosave={makeSnapshot({ state: "pending", dirty: true })}
+      />,
+    );
+
+    rerender(
+      <SaveNowButton
+        autosave={makeSnapshot({
+          state: "saved",
+          dirty: false,
+          isInFlight: false,
+        })}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /draft saved/i })).toBeDefined();
+    expect(screen.getByTestId("save-now-check")).toBeDefined();
+
+    // New edit before 1500ms — must clear without advancing fake timers.
+    rerender(
+      <SaveNowButton
+        autosave={makeSnapshot({
+          state: "pending",
+          dirty: true,
+          isInFlight: false,
+        })}
+      />,
+    );
+
+    expect(screen.queryByTestId("save-now-check")).toBeNull();
+    expect(
+      (screen.getByRole("button") as HTMLButtonElement).getAttribute(
+        "aria-label",
+      ),
+    ).toBe("Save draft now");
+  });
+
+  it("clears the saved indicator synchronously on error before the revert timer", () => {
+    const { rerender } = render(
+      <SaveNowButton
+        autosave={makeSnapshot({ state: "pending", dirty: true })}
+      />,
+    );
+
+    rerender(
+      <SaveNowButton
+        autosave={makeSnapshot({
+          state: "saved",
+          dirty: false,
+          isInFlight: false,
+        })}
+      />,
+    );
+
+    expect(screen.getByTestId("save-now-check")).toBeDefined();
+
+    // Failed save before 1500ms — must clear without advancing fake timers.
+    rerender(
+      <SaveNowButton
+        autosave={makeSnapshot({
+          state: "error",
+          dirty: true,
+          isInFlight: false,
+        })}
+      />,
+    );
+
+    expect(screen.queryByTestId("save-now-check")).toBeNull();
+    expect(screen.getByTestId("save-now-alert")).toBeDefined();
+  });
+
   it("calls forceSave when clicked in pending state", async () => {
     const forceSave = vi.fn().mockResolvedValue(undefined);
     render(

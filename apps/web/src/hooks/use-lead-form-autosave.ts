@@ -249,6 +249,12 @@ export function useLeadFormAutosave(
   // Debounced save trigger.
   useEffect(() => {
     if (!enabled || !dirty || !reportSectionId) {
+      // A pending announcement whose edit is no longer dirty is stale — the
+      // first render races the baseline-priming effect (dirty is computed at
+      // render time from a ref the priming effect has not yet stamped), and a
+      // user can also undo back to the saved content. Saving/saved/error
+      // states are owned by the mutation callbacks and stay untouched.
+      setState((current) => (current === "pending" ? "idle" : current));
       return;
     }
 
