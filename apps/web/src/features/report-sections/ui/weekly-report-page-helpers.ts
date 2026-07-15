@@ -6,7 +6,6 @@ import type {
 
 import { getClientErrorDetails } from "../../../lib/client-error-reporting";
 import { isAdmin, isHeadLike, isLead } from "../../../lib/role-predicates";
-import type { ProductReport } from "../../../shared/lib/dashboard-mock-data";
 import type { SectionReviewRow } from "../../review";
 import { toSectionReviewRows } from "../../review";
 import { reportHasContent } from "../model/report-content";
@@ -14,6 +13,7 @@ import {
   mapWeeklyReport,
   mapWeeklyReportLeadGroups,
 } from "../model/weekly-report";
+import type { WeeklyProductReport } from "../model/weekly-report-types";
 import type { AccordionReviewContext } from "./product-accordion";
 
 export interface TerminalNotice {
@@ -126,11 +126,11 @@ export function buildReviewModel(
 export interface LeadGroup {
   id: string;
   name: string;
-  products: ProductReport[];
+  products: WeeklyProductReport[];
 }
 
 export interface AccordionModel {
-  readonly products: ProductReport[];
+  readonly products: WeeklyProductReport[];
   readonly leadGroups: LeadGroup[];
   /** Any section (submitted OR draft) carries content — the "truly empty period" gate. */
   readonly hasAnyContent: boolean;
@@ -211,7 +211,7 @@ export function buildAccordionModel(params: {
   readonly reportData: WeeklyReportReadModel;
   readonly scope: "product" | "lead";
   readonly submittedOnly: boolean;
-  readonly fullProducts: ProductReport[];
+  readonly fullProducts: WeeklyProductReport[];
   readonly fullLeadGroups: LeadGroup[];
 }): AccordionModel {
   const { reportData, scope, submittedOnly, fullProducts, fullLeadGroups } =
@@ -240,9 +240,7 @@ export function buildAccordionModel(params: {
   const products =
     mapWeeklyReport(submittedData).products.filter(reportHasContent);
   const leadGroups =
-    scope === "lead"
-      ? (mapWeeklyReportLeadGroups(submittedData) as LeadGroup[])
-      : [];
+    scope === "lead" ? mapWeeklyReportLeadGroups(submittedData) : [];
   // A draft section counts toward "N in draft" when it carries product
   // content OR activity content (mirroring hasAnyContent's product-OR-activity
   // fold above) — an activity-only draft section must not be invisible to the

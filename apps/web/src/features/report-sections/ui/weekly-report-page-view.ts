@@ -2,10 +2,6 @@ import type { WeeklyReportReadModel } from "@customreport/shared";
 
 import { joinPeriodLabel } from "../../../lib/format-date";
 import { isHeadLike, isLead } from "../../../lib/role-predicates";
-import type {
-  PortfolioProduct,
-  ProductReport,
-} from "../../../shared/lib/dashboard-mock-data";
 import { reportHasContent } from "../model/report-content";
 import type { ReportPeriod } from "../model/types";
 import {
@@ -14,6 +10,7 @@ import {
   mapWeeklyReportLeadGroups,
   mapWeeklyReportLeadOverview,
 } from "../model/weekly-report";
+import type { WeeklyPortfolioProduct } from "../model/weekly-report-types";
 import {
   type AccordionModel,
   buildAccordionModel,
@@ -37,7 +34,7 @@ export interface WeeklyReportPageView {
   readonly submitted: number;
   readonly total: number;
   readonly pendingCount: number;
-  readonly portfolio: PortfolioProduct[];
+  readonly portfolio: WeeklyPortfolioProduct[];
   readonly leadOverviewRows: LeadOverviewRow[];
   readonly reviewModel: ReviewModel;
   readonly accordion: AccordionModel;
@@ -85,17 +82,14 @@ export function buildWeeklyReportPageView(
   // pendingCount mirrors mock semantics: total - submitted, clamped >= 0.
   const pendingCount = Math.max(0, total - submitted);
 
-  // The mapper produces structurally compatible shapes; cast to the existing
-  // mock-data presentation types so children keep their imports unchanged.
-  const portfolio: PortfolioProduct[] = view.portfolio;
-  const products: ProductReport[] = view.products;
+  const { portfolio, products } = view;
   // Head split-view "by lead" grouping (report-card-clarity): slice each product
   // to the lead's OWN contribution — mapWeeklyReportLeadGroups builds per-lead
   // cards from each single section, drops empty leads, and is computed only in
   // "lead" scope (the default product path stays cheap).
   const rawLeadGroups =
     scope === "lead" ? mapWeeklyReportLeadGroups(reportData) : [];
-  const fullLeadGroups = rawLeadGroups as LeadGroup[];
+  const fullLeadGroups: LeadGroup[] = rawLeadGroups;
   // report-overview-scope-parity: per-lead overview rows derived from the SAME
   // FULL groups (truth) — the overview band always shows every section, even
   // while the §7 filter narrows the accordion body below.
@@ -125,7 +119,7 @@ export function buildWeeklyReportPageView(
   const focusedProductId = focusedAuthorId
     ? products.find(
         (report) =>
-          report.authorIds?.includes(focusedAuthorId) &&
+          report.authorIds.includes(focusedAuthorId) &&
           reportHasContent(report),
       )?.id
     : undefined;

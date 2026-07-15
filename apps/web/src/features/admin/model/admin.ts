@@ -1,11 +1,10 @@
 /**
- * Translates `admin.snapshot` + `admin.getSettings` to the mock-shaped types
- * the existing admin tab components expect.
+ * Translates `admin.snapshot` + `admin.getSettings` to the presentation types
+ * consumed by the admin tabs.
  *
  * Used by the Users, Products, Periods, Reminders, and Settings tabs. The
- * mapper is intentionally self-contained and re-declares the presentation
- * types so downstream consumers do not couple to a particular UI module
- * (`apps/web/src/shared/lib/admin-mock-data.ts`).
+ * mapper is intentionally self-contained so downstream consumers depend on
+ * the feature model rather than a particular UI module.
  *
  * The presentation types live in `admin-types.ts` and the form-state→API
  * helpers in `admin-form-inputs.ts`; this module keeps the snapshot/settings

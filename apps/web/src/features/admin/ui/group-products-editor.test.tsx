@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { MockProduct } from "../../../shared/lib/admin-mock-data";
+import type { MockProduct } from "../model/admin-types";
 
 // Mock @tanstack/react-query — two useQuery calls (attached-products list
 // and the batched ownership lookup, routed by queryKey), the useMutation

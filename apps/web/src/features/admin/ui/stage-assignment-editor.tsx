@@ -6,7 +6,7 @@ import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
-import type { MockUser, StageName } from "../../../shared/lib/admin-mock-data";
+import type { MockUser, StageName } from "../model/admin-types";
 
 const STAGE_COLORS: Record<StageName, string> = {
   Planning: "var(--color-starbucks-green)",

@@ -9,13 +9,13 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 
 import { mapWeeklyReport } from "../../../features/report-sections/model/weekly-report";
+import type {
+  WeeklyPortfolioProduct,
+  WeeklyProductReport,
+} from "../../../features/report-sections/model/weekly-report-types";
 import { formatClientErrorMessage } from "../../../lib/client-error-reporting";
 import { formatDateTime, joinPeriodLabel } from "../../../lib/format-date";
 import { useTRPC } from "../../../lib/trpc-context";
-import type {
-  PortfolioProduct,
-  ProductReport,
-} from "../../../shared/lib/dashboard-mock-data";
 
 /**
  * Print/PDF template — client component. Renders an A4-optimized weekly
@@ -92,7 +92,7 @@ function workflowBadge(status: string): string {
 
 /* ---- Portfolio Overview Table ---- */
 
-function PortfolioTable({ products }: { products: PortfolioProduct[] }) {
+function PortfolioTable({ products }: { products: WeeklyPortfolioProduct[] }) {
   return (
     <table
       style={{
@@ -184,7 +184,7 @@ function PortfolioTable({ products }: { products: PortfolioProduct[] }) {
 
 /* ---- Lead Section (flat, no accordion) ---- */
 
-function LeadSection({ report }: { report: ProductReport }) {
+function LeadSection({ report }: { report: WeeklyProductReport }) {
   return (
     <section
       style={{
@@ -542,8 +542,7 @@ export function PrintReportTemplate({ reportId }: Props) {
   }
 
   const view = mapWeeklyReport(weeklyQ.data);
-  const portfolio: PortfolioProduct[] = view.portfolio;
-  const products: ProductReport[] = view.products;
+  const { portfolio, products } = view;
   const submitted = view.submissionCount;
   const total = view.totalLeads;
   // Counts derived from re-sliced products.

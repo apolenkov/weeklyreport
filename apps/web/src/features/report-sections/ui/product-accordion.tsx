@@ -5,16 +5,16 @@ import { type ReactNode, useEffect, useState } from "react";
 
 import { pluralize } from "../../../lib/pluralize";
 import { sortByPriorityRank } from "../../../lib/priority-sort";
-import type {
-  ProductReport,
-  ReportDecision,
-  ReportItem,
-  ReportRisk,
-} from "../../../shared/lib/dashboard-mock-data";
 import { RotatingChevron } from "../../../shared/ui/report-shell/rotating-chevron";
 import type { RecordCommentAnchor } from "../../review";
 import { RecordComments } from "../../review";
 import { reportHasContent } from "../model/report-content";
+import type {
+  WeeklyProductReport,
+  WeeklyReportDecision,
+  WeeklyReportItem,
+  WeeklyReportRisk,
+} from "../model/weekly-report-types";
 
 /**
  * review-acknowledgement: the in-app reviewer context threaded from the page.
@@ -31,7 +31,7 @@ export interface AccordionReviewContext {
 const SCROLL_INTO_VIEW_DELAY_MS = 80;
 
 interface ProductAccordionProps {
-  readonly report: ProductReport;
+  readonly report: WeeklyProductReport;
   readonly defaultOpen?: boolean;
   readonly highlighted?: boolean;
   readonly scrollIntoViewOnHighlight?: boolean;
@@ -232,7 +232,11 @@ function Gutter({
   );
 }
 
-function StatusBadge({ status }: { readonly status: ReportItem["status"] }) {
+function StatusBadge({
+  status,
+}: {
+  readonly status: WeeklyReportItem["status"];
+}) {
   const cfg = STATUS_BADGE[status];
   return (
     <span className="flex justify-end pt-px">
@@ -246,7 +250,7 @@ function StatusBadge({ status }: { readonly status: ReportItem["status"] }) {
   );
 }
 
-function ItemRow({ item }: { readonly item: ReportItem }) {
+function ItemRow({ item }: { readonly item: WeeklyReportItem }) {
   return (
     <div className={ROW_GRID} data-accordion-row="item">
       <span className="flex min-h-[18px] justify-center pt-px">
@@ -255,7 +259,7 @@ function ItemRow({ item }: { readonly item: ReportItem }) {
         ) : null}
       </span>
       <Rail tone={itemRailTone(item.status)} />
-      <Gutter stage={item.stage ?? ""} owner={item.owner ?? ""} />
+      <Gutter stage={item.stage} owner={item.owner} />
       <span className="pt-px text-[14.5px] leading-normal text-[var(--color-foreground)]">
         {item.text}
       </span>
@@ -264,17 +268,17 @@ function ItemRow({ item }: { readonly item: ReportItem }) {
   );
 }
 
-function RiskRow({ risk }: { readonly risk: ReportRisk }) {
+function RiskRow({ risk }: { readonly risk: WeeklyReportRisk }) {
   const tone =
     risk.severity === "blocked" ? CSS.destructive : CSS.statusAtRiskBorder;
   return (
     <div className={ROW_GRID} data-accordion-row="risk">
       <span className="min-h-[18px]" aria-hidden="true" />
       <Rail tone={tone} />
-      <Gutter stage={risk.stage ?? ""} owner={risk.owner ?? ""} />
+      <Gutter stage={risk.stage} owner={risk.owner} />
       <span className="pt-px">
         <div className="text-[14.5px] leading-snug text-[var(--color-foreground)]">
-          {risk.problem ?? risk.text}
+          {risk.problem}
         </div>
         {risk.impact || risk.mitigation ? (
           <div className="mt-1.5 grid grid-cols-[84px_minmax(0,1fr)] items-baseline gap-x-2.5 gap-y-1">
@@ -348,12 +352,16 @@ function EscalationRow({
   );
 }
 
-function DecisionRow({ decision }: { readonly decision: ReportDecision }) {
+function DecisionRow({
+  decision,
+}: {
+  readonly decision: WeeklyReportDecision;
+}) {
   return (
     <div className={ROW_GRID} data-accordion-row="decision">
       <span className="min-h-[18px]" aria-hidden="true" />
       <Rail tone="var(--color-decisions-accent)" />
-      <Gutter stage="Decision" owner={decision.owner ?? ""} />
+      <Gutter stage="Decision" owner={decision.owner} />
       <span className="pt-px text-[14.5px] leading-normal text-[var(--color-foreground)]">
         {decision.text}
       </span>
@@ -419,11 +427,13 @@ export function ProductAccordion({
   const renderedTexts = new Set([
     ...report.currentWeek.map((item) => item.text),
     ...report.nextWeek.map((item) => item.text),
-    ...report.risks.map((risk) => risk.problem ?? risk.text),
+    ...report.risks.map((risk) => risk.problem),
   ]);
+  const attention = report.needsAttention;
   const showNeedsAttention =
-    Boolean(report.needsAttention) &&
-    !renderedTexts.has(report.needsAttention ?? "");
+    typeof attention === "string" &&
+    attention.length > 0 &&
+    !renderedTexts.has(attention);
 
   useEffect(() => {
     if (highlighted && hasContent) setExpanded(true);

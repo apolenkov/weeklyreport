@@ -9,13 +9,13 @@ import {
 } from "@customreport/ui/components/ui/tabs";
 import { ComingSoonTooltip } from "@customreport/ui/components/ui/tooltip";
 
-import type { MockSettings } from "../../../shared/lib/admin-mock-data";
 import {
   IdentitySubTab,
   IntegrationsSubTab,
   NotificationsSubTab,
 } from "../../organization";
 import { PeriodsSubTab } from "../../period";
+import type { MockSettings } from "../model/admin-types";
 import { RemindersSubTab } from "./settings-reminders-sub-tab";
 import { TabHeader } from "./tab-header";
 

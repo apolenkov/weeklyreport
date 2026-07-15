@@ -33,7 +33,7 @@ vi.mock("sonner", () => ({
   },
 }));
 
-import type { MockSettings } from "../../../shared/lib/admin-mock-data";
+import type { MockSettings } from "../model/admin-types";
 import { SettingsTab } from "./settings-tab";
 
 // Telegram integration status shape returned by

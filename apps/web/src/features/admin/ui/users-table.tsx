@@ -3,7 +3,7 @@
 import type { DbRole } from "@customreport/shared";
 import { ROLE_LABEL, shortName } from "@customreport/shared";
 
-import type { MockUser } from "../../../shared/lib/admin-mock-data";
+import type { MockUser } from "../model/admin-types";
 
 interface UsersTableProps {
   readonly users: readonly MockUser[];

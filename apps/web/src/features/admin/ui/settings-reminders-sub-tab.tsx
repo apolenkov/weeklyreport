@@ -1,11 +1,11 @@
 "use client";
 
-import type { MockSettings } from "../../../shared/lib/admin-mock-data";
 import {
   CheckIcon,
   useUpdateSettingsMut,
 } from "../../../shared/ui/settings-tab-shared";
 import { useServerSeededDraft } from "../../../shared/ui/use-server-seeded-draft";
+import type { MockSettings } from "../model/admin-types";
 import { TIMEZONE_OPTIONS } from "../model/timezone-options";
 
 export function RemindersSubTab({

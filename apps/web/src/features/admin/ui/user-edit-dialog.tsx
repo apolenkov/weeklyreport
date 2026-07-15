@@ -4,7 +4,7 @@ import type { DbRole } from "@customreport/shared";
 import { useRef } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
-import type { MockGroup, MockUser } from "../../../shared/lib/admin-mock-data";
+import type { MockGroup, MockUser } from "../model/admin-types";
 import type { UserFormData } from "../model/user-form";
 
 interface UserEditDialogProps {
