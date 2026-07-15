@@ -35,7 +35,7 @@ export function HeadSlideCarousel({
         const selected = index === selectedIndex;
         return (
           <button
-            key={item.id}
+            key={`${item.id}:${item.pageIndex ?? 0}`}
             type="button"
             onClick={() => onSelect(index)}
             aria-current={selected ? "true" : undefined}

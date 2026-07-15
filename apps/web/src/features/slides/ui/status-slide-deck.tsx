@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, type RefObject, useRef } from "react";
 
 import { useFullscreen } from "../../../hooks/use-fullscreen";
 import type { SectionSlideModel } from "../model/section-slide-utils";
@@ -28,22 +28,35 @@ function selectedSlide(
 }
 
 /** The head deck owns its fullscreen affordance (the lead deck's lives in
- * LeadSlidesClient); the frame also provides the horizontal scroll floor for
- * the article's min canvas width. */
-function HeadSlideFrame({ slide }: { readonly slide: SectionSlideModel }) {
-  const frameRef = useRef<HTMLDivElement>(null);
-  const fullscreen = useFullscreen(frameRef, frameRef);
+ * LeadSlidesClient). `frameRef`/`isFullscreen`/`onToggle` are hoisted to
+ * `StatusSlideDeck`'s persistent root and passed in as props: this wrapper
+ * itself is never keyed by slide, so the actual fullscreened DOM node
+ * survives arrow-key navigation (only the inner `SlideArticle` remounts per
+ * slide) — a browser force-exits fullscreen the instant the requested
+ * element itself is unmounted. The frame also provides the horizontal
+ * scroll floor for the article's min canvas width. */
+function HeadSlideFrame({
+  slide,
+  frameRef,
+  isFullscreen,
+  onToggle,
+}: {
+  readonly slide: SectionSlideModel;
+  readonly frameRef: RefObject<HTMLDivElement | null>;
+  readonly isFullscreen: boolean;
+  readonly onToggle: () => void;
+}) {
   return (
     <div
       ref={frameRef}
       tabIndex={-1}
       className="relative overflow-auto bg-[var(--color-background)]"
     >
-      <DeckFullscreenOverlay
-        isFullscreen={fullscreen.isFullscreen}
-        onToggle={fullscreen.toggle}
+      <DeckFullscreenOverlay isFullscreen={isFullscreen} onToggle={onToggle} />
+      <SlideArticle
+        key={`${slide.id}:${String(slide.pageIndex ?? 0)}`}
+        slide={slide}
       />
-      <SlideArticle slide={slide} />
     </div>
   );
 }
@@ -62,6 +75,12 @@ export function StatusSlideDeck({
   const canGoNext = selectedIndex < slides.length - 1;
   const isLead = mode === "lead";
   const showLeadControls = isLead && slides.length > 1;
+  // Hoisted to the persistent root (never remounted by `selectedIndex`
+  // changes) so arrow-key/carousel navigation cannot tear down the actual
+  // fullscreened element. Disabled on the lead branch, which owns its own
+  // fullscreen instance in `LeadSlidesClient` (single-listener invariant).
+  const frameRef = useRef<HTMLDivElement>(null);
+  const fullscreen = useFullscreen(frameRef, frameRef, !isLead);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "ArrowRight") {
@@ -154,8 +173,10 @@ export function StatusSlideDeck({
               </div>
             ) : (
               <HeadSlideFrame
-                key={`${slide.id}:${String(slide.pageIndex ?? 0)}`}
                 slide={slide}
+                frameRef={frameRef}
+                isFullscreen={fullscreen.isFullscreen}
+                onToggle={fullscreen.toggle}
               />
             )}
           </div>

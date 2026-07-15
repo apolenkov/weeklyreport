@@ -75,6 +75,34 @@ describe("SlideCell row hover", () => {
     });
   });
 
+  it("activates editable rows on Space and prevents the default page scroll", () => {
+    const onRowActivate = vi.fn();
+    const editableRow: GridRow = {
+      ...ROW,
+      editableRef: { kind: "item", stableId: "item-stable-1" },
+    };
+    render(
+      <SdlcTooltipProvider>
+        <SlideCell
+          rows={[editableRow]}
+          authorsById={authorsById}
+          showStages={false}
+          label="Current work"
+          onRowActivate={onRowActivate}
+        />
+      </SdlcTooltipProvider>,
+    );
+    const button = screen.getByRole("button", { name: /edit paused/i });
+    const event = fireEvent.keyDown(button, { key: " " });
+    expect(onRowActivate).toHaveBeenCalledWith({
+      kind: "item",
+      stableId: "item-stable-1",
+    });
+    // fireEvent.keyDown returns false when the dispatched event's default was
+    // prevented — Space's native default (page scroll) must be suppressed.
+    expect(event).toBe(false);
+  });
+
   it("keeps rows inert when the activation handler or editable ref is absent", () => {
     const onRowActivate = vi.fn();
     const editableRow: GridRow = {
