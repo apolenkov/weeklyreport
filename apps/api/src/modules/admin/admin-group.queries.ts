@@ -117,7 +117,12 @@ async function upsertStageAssignmentRow(
       include: STAGE_ASSIGNMENT_RELATIONS,
     });
   } catch (error) {
-    if (!isUniqueViolation(error, { columns: ["stageId", "projectId"] })) {
+    if (
+      !isUniqueViolation(error, {
+        index: "StageAssignment_stageId_projectId_key",
+        columns: ["stageId", "projectId"],
+      })
+    ) {
       throw error;
     }
     return prisma.stageAssignment.update({

@@ -40,6 +40,15 @@ describe("isUniqueViolation", () => {
     expect(isUniqueViolation(error, { index: OPEN_BOUNDARY_INDEX })).toBe(true);
   });
 
+  it("matches a scoped index in the plain Prisma message form", () => {
+    const error = {
+      code: PRISMA_UNIQUE_CONSTRAINT_ERROR_CODE,
+      message: `Unique constraint failed on "${OPEN_BOUNDARY_INDEX}"`,
+    };
+
+    expect(isUniqueViolation(error, { index: OPEN_BOUNDARY_INDEX })).toBe(true);
+  });
+
   it("matches a scoped composite column set present in the identity", () => {
     const error = pgAdapterP2002(
       "duplicate key value violates unique constraint on (periodStart, periodEnd)",
@@ -71,6 +80,18 @@ describe("isUniqueViolation", () => {
     expect(isUniqueViolation(error, { index: OPEN_BOUNDARY_INDEX })).toBe(
       false,
     );
+  });
+
+  it("rejects index and column substrings inside unrelated identifiers", () => {
+    const error = pgAdapterP2002(
+      `duplicate key value violates unique constraint "Archived_${OPEN_BOUNDARY_INDEX}_backup"`,
+      "Unique constraint failed on dedupeKeyBackup",
+    );
+
+    expect(isUniqueViolation(error, { index: OPEN_BOUNDARY_INDEX })).toBe(
+      false,
+    );
+    expect(isUniqueViolation(error, { columns: ["dedupeKey"] })).toBe(false);
   });
 
   it("returns true for any P2002 when unscoped", () => {

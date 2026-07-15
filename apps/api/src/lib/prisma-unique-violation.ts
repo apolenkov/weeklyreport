@@ -22,9 +22,9 @@ export const PRISMA_UNIQUE_CONSTRAINT_ERROR_CODE = "P2002";
  * (no scope) accepts any P2002.
  */
 export interface UniqueViolationScope {
-  /** Constraint / index name substring, e.g. `Report_one_open_per_boundary`. */
+  /** Exact constraint / index name, e.g. `Report_one_open_per_boundary`. */
   readonly index?: string;
-  /** Column-name substrings, ALL of which must appear (a composite index). */
+  /** Exact column names, ALL of which must appear (a composite index). */
   readonly columns?: readonly string[];
 }
 
@@ -35,6 +35,18 @@ function safeJson(value: unknown): string {
   } catch {
     return "";
   }
+}
+
+/** Escapes a literal identifier before embedding it in a RegExp source. */
+function escapeRegex(identifier: string): string {
+  return identifier.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+}
+
+/** Matches an identifier only when adjacent characters are non-identifiers. */
+function containsIdentityToken(identity: string, identifier: string): boolean {
+  const escapedIdentifier = escapeRegex(identifier);
+  const pattern = `(?:^|[^A-Za-z0-9_])${escapedIdentifier}(?![A-Za-z0-9_])`;
+  return new RegExp(pattern).test(identity);
 }
 
 /**
@@ -62,11 +74,11 @@ export function isUniqueViolation(
   }`;
 
   const indexMatch =
-    scope.index !== undefined && identity.includes(scope.index);
+    scope.index !== undefined && containsIdentityToken(identity, scope.index);
   const columnsMatch =
     scope.columns !== undefined &&
     scope.columns.length > 0 &&
-    scope.columns.every((column) => identity.includes(column));
+    scope.columns.every((column) => containsIdentityToken(identity, column));
 
   return indexMatch || columnsMatch;
 }
