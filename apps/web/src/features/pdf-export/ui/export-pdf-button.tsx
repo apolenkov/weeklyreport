@@ -10,6 +10,8 @@ import { ToolbarIconButton } from "../../../shared/ui/report-shell/toolbar-icon-
 
 const STATUS_POLL_INTERVAL_MS = 2 * MS_PER_SECOND;
 
+type DeliveryMode = "tab" | "fallback";
+
 interface ExportPdfButtonProps {
   readonly reportId: string;
   readonly periodStatus: "open" | "published" | "reopened";
@@ -21,9 +23,9 @@ interface ExportPdfButtonProps {
  * Wires the leadership-scoped (head/admin/viewer; lead FORBIDDEN)
  * `pdfExport.request` mutation to start a BullMQ job, then
  * polls `pdfExport.status` every 2 seconds until the worker reports
- * `completed` or `failed`. On completion, opens the relative same-origin
- * `/pdfs/{jobId}.pdf` artefact in a new tab; the ambient session cookie rides
- * the GET so the API's authenticated download handler can authorize it.
+ * `completed` or `failed`. Opens a blank tab synchronously on click so the
+ * later navigation is not treated as an unsolicited popup; if open is blocked,
+ * renders a download link once the artifact URL is known.
  *
  * The button is disabled only for never-published open periods. Reopened
  * periods are still backed by a published report row and can be exported.
@@ -34,9 +36,15 @@ export function ExportPdfButton({
 }: ExportPdfButtonProps) {
   const trpc = useTRPC();
   const [jobId, setJobId] = useState<string | null>(null);
-  // One-shot guard: download fires exactly once per completed jobId regardless
+  // Held so the fallback link stays visible after jobId is cleared.
+  const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
+  // One-shot guard: delivery fires exactly once per completed jobId regardless
   // of how many times tanstack-query re-runs the effect.
   const lastDownloadedJobIdRef = useRef<string | null>(null);
+  // Set synchronously in the click handler so the poll effect can navigate the
+  // same tab (or switch to fallback) without racing React state commits.
+  const openedTabRef = useRef<Window | null>(null);
+  const deliveryModeRef = useRef<DeliveryMode | null>(null);
 
   const requestMut = useMutation(
     trpc.pdfExport.request.mutationOptions({
@@ -44,6 +52,8 @@ export function ExportPdfButton({
         setJobId(job.jobId);
       },
       onError: (err: unknown) => {
+        closeHeldTab(openedTabRef);
+        deliveryModeRef.current = null;
         toast.error(
           err instanceof Error ? err.message : "Failed to start PDF export",
         );
@@ -65,24 +75,41 @@ export function ExportPdfButton({
   );
 
   useEffect(() => {
+    if (jobId === null) return;
+
+    if (statusQ.isError) {
+      closeHeldTab(openedTabRef);
+      deliveryModeRef.current = null;
+      toast.error("PDF export status check failed. Please try again.");
+      setJobId(null);
+      return;
+    }
+
     const data = statusQ.data;
-    if (!data || jobId === null) return;
+    if (!data) return;
 
     if (data.status === "completed" && data.artifactUrl) {
-      if (lastDownloadedJobIdRef.current !== data.jobId) {
-        lastDownloadedJobIdRef.current = data.jobId;
-        window.open(data.artifactUrl, "_blank");
-        toast.success("PDF ready");
-        setJobId(null);
-      }
+      if (lastDownloadedJobIdRef.current === data.jobId) return;
+      lastDownloadedJobIdRef.current = data.jobId;
+      deliverArtifact(
+        data.artifactUrl,
+        deliveryModeRef,
+        openedTabRef,
+        setFallbackUrl,
+      );
+      deliveryModeRef.current = null;
+      openedTabRef.current = null;
+      setJobId(null);
       return;
     }
 
     if (data.status === "failed") {
+      closeHeldTab(openedTabRef);
+      deliveryModeRef.current = null;
       toast.error("PDF export failed. Please try again.");
       setJobId(null);
     }
-  }, [statusQ.data, jobId]);
+  }, [statusQ.data, statusQ.isError, jobId]);
 
   const isExportable =
     periodStatus === "published" || periodStatus === "reopened";
@@ -92,6 +119,16 @@ export function ExportPdfButton({
 
   function handleExport() {
     if (disabled) return;
+    setFallbackUrl(null);
+    // Must open before any await so the browser still treats this as a user gesture.
+    const tab = window.open("", "_blank");
+    if (tab === null) {
+      deliveryModeRef.current = "fallback";
+      openedTabRef.current = null;
+    } else {
+      deliveryModeRef.current = "tab";
+      openedTabRef.current = tab;
+    }
     requestMut.mutate({ reportId });
   }
 
@@ -122,8 +159,43 @@ export function ExportPdfButton({
           Publish the report first to export PDF.
         </span>
       ) : null}
+      {fallbackUrl !== null ? (
+        <a href={fallbackUrl} download>
+          Download PDF
+        </a>
+      ) : null}
     </>
   );
+}
+
+function closeHeldTab(ref: { current: Window | null }): void {
+  const tab = ref.current;
+  if (tab !== null && !tab.closed) {
+    tab.close();
+  }
+  ref.current = null;
+}
+
+/**
+ * Hands the artifact to the user via the held tab or a fallback URL state.
+ * Success toast fires only when one of those paths actually runs.
+ */
+function deliverArtifact(
+  artifactUrl: string,
+  deliveryModeRef: { current: DeliveryMode | null },
+  openedTabRef: { current: Window | null },
+  setFallbackUrl: (url: string) => void,
+): void {
+  const mode = deliveryModeRef.current;
+  if (mode === "tab" && openedTabRef.current !== null) {
+    openedTabRef.current.location.href = artifactUrl;
+    toast.success("PDF ready");
+    return;
+  }
+  if (mode === "fallback") {
+    setFallbackUrl(artifactUrl);
+    toast.success("PDF ready");
+  }
 }
 
 // ---------------------------------------------------------------------------
