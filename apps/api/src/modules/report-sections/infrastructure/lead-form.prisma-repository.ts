@@ -3,7 +3,7 @@ import type {
   ReportSectionReadModel,
   TrafficLightStatus,
 } from "@customreport/shared";
-import { shortNameFromName } from "@customreport/shared";
+import { shortNameFromName, stageNamesMatch } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
@@ -28,16 +28,6 @@ import {
 } from "../domain/lead-form-shared";
 import { reportSectionFullInclude } from "./report-sections.include";
 import { mapPrismaToReportSection } from "./report-sections.mappers";
-
-/**
- * Mirrors `normalizeStageName` in apps/web/src/lib/mappers/lead-form.ts — the
- * "Development" ↔ "Dev" alias collapses to one canonical pipeline slot. Inlined
- * here because lib/mappers must not be imported across the api/web boundary.
- */
-function normalizeStageName(stageName: string): string {
-  const lower = stageName.toLowerCase();
-  return lower === "development" ? "dev" : lower;
-}
 
 /** API traffic-light enum; null = no data / untouched stage. */
 type StageTrafficStatus = TrafficLightStatus | null;
@@ -855,7 +845,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     }[],
     persisted: StageTrafficStatus,
   ): StageTrafficStatus {
-    const norm = normalizeStageName(stageName);
     const covering = risks.filter(
       (r) =>
         r.projectId === projectId &&
@@ -864,7 +853,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         // dialog default). Without this, a co-lead's covers-all blocked risk
         // would colour no foreign stage and product health would read green.
         (r.stageNames.length === 0 ||
-          r.stageNames.some((n) => normalizeStageName(n) === norm)),
+          r.stageNames.some((name) => stageNamesMatch(name, stageName))),
     );
     if (covering.some((r) => r.severity === "blocked")) return "red";
     if (covering.length > 0) return "yellow";

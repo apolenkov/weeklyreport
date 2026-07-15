@@ -410,6 +410,41 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
     expect(products[0]?.worstStatus).toBe("yellow");
   });
 
+  it("floors Development red for a published snapshot risk named Dev", () => {
+    const products = buildPortfolioProductsFromSnapshotSections([
+      makeSection({
+        projects: [
+          {
+            projectId: OWNED_PRODUCT,
+            projectName: "CRM Portal",
+            trafficLight: "green",
+            ownedStages: [
+              {
+                stageId: OWNED_STAGE_ID,
+                stageName: OWNED_STAGE_NAME,
+                sortOrder: 0,
+                status: null,
+              },
+            ],
+          },
+        ],
+        risks: [
+          {
+            id: "9ee5f506-1728-493a-8e34-5f60718293a4",
+            projectId: OWNED_PRODUCT,
+            risk: "Legacy release blocker",
+            impact: "High",
+            mitigation: "Fix before release",
+            severity: "blocked",
+            stageIds: ["Dev"],
+          },
+        ],
+      }),
+    ]);
+
+    expect(products[0]?.worstStatus).toBe("red");
+  });
+
   it("1.4 keeps red when a stage is already red and the own risk is milder", () => {
     const products = buildPortfolioProductsFromSnapshotSections([
       makeSection({

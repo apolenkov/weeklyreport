@@ -1,17 +1,11 @@
-"use client";
-
 import { STAGE } from "@customreport/shared";
+export { riskCoversStage } from "@customreport/shared";
 
 const STAGE_SPLIT_RE = /[,;]+/;
 
-/** UI chip label → DB canonical stage name. "Dev" is the chip; "Development" is stored in stageIds. */
-const STAGE_ALIAS: Record<string, string> = {
-  dev: STAGE.DEVELOPMENT,
-};
-
 /** Normalize a stage name to its canonical DB form (resolves UI chip aliases). */
 export function canonicalStageName(name: string): string {
-  return STAGE_ALIAS[name.toLowerCase()] ?? name;
+  return name.toLowerCase() === "dev" ? STAGE.DEVELOPMENT : name;
 }
 
 /**
@@ -85,27 +79,4 @@ export function stageNameMatches(
   const target = canonicalStageName(stage);
   const tags = splitStageNames(stageName).map(canonicalStageName);
   return tags.length === 0 || tags.includes(target);
-}
-
-/**
- * Returns true when a risk (or decision/item) covers the given stage name.
- *
- * Prefers `stageIds` (new format) over the deprecated `stageName` CSV field.
- * This is the canonical matcher — always use it instead of raw stageNameMatches
- * when the object may carry stageIds.
- *
- * stageIds = []  → risk applies to all assigned stages → always true
- * stageIds = ["Testing"]  → only true for "Testing"
- * stageIds = undefined  → fall back to stageName CSV (legacy)
- */
-export function riskCoversStage(
-  risk: { stageName?: string | null; stageIds?: readonly string[] },
-  stageName: string,
-): boolean {
-  if (risk.stageIds !== undefined) {
-    if (risk.stageIds.length === 0) return true;
-    const canonical = canonicalStageName(stageName);
-    return risk.stageIds.some((id) => canonicalStageName(id) === canonical);
-  }
-  return stageNameMatches(risk.stageName, stageName);
 }
