@@ -967,4 +967,28 @@ describe("useLeadFormAutosave", () => {
     // hook must NOT also fire its generic autosave-failed toast.
     expect(toast.error).not.toHaveBeenCalled();
   });
+
+  it("renders idle and clean when initialSavedKey already matches the first payload key", () => {
+    const { wrapper } = buildHarness();
+    const payload = makePayload("already-saved");
+    const initialSavedKey = stableStringify(payload);
+
+    const { result } = renderHook(
+      () =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload,
+          enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
+          debounceMs: 3000,
+          initialSavedKey,
+        }),
+      { wrapper },
+    );
+
+    // Primed clean from the first render — no edit, so never pending.
+    expect(result.current.dirty).toBe(false);
+    expect(result.current.state).toBe("idle");
+  });
 });
