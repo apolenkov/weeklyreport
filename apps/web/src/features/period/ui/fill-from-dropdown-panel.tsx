@@ -25,6 +25,12 @@ interface FillFromDropdownPanelProps {
   readonly panelRef: RefObject<HTMLDivElement | null>;
   readonly pastPeriods: readonly ReportPeriod[];
   readonly filteredPeriods: readonly ReportPeriod[];
+  /**
+   * The real previous period's id (the one the main split-button fills),
+   * independent of search filtering — badges/highlights key off this
+   * identity, never off filtered-array position.
+   */
+  readonly previousPeriodId: string | undefined;
   readonly search: string;
   readonly onSearchChange: (value: string) => void;
   readonly onSelect: (period: ReportPeriod) => void;
@@ -41,6 +47,7 @@ export function FillFromDropdownPanel({
   panelRef,
   pastPeriods,
   filteredPeriods,
+  previousPeriodId,
   search,
   onSearchChange,
   onSelect,
@@ -74,13 +81,13 @@ export function FillFromDropdownPanel({
             No reports match your search.
           </p>
         ) : null}
-        {filteredPeriods.map((p, idx) => (
+        {filteredPeriods.map((p) => (
           <button
             key={p.id}
             type="button"
             className={[
               "flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors",
-              idx === 0
+              p.id === previousPeriodId
                 ? "border border-[var(--color-starbucks-accent)] bg-[var(--color-success)] hover:brightness-95"
                 : "border border-transparent bg-[var(--color-background)] hover:bg-[var(--color-surface-hover)]",
             ].join(" ")}
@@ -98,7 +105,7 @@ export function FillFromDropdownPanel({
                     Archived
                   </span>
                 )}
-                {idx === 0 && (
+                {p.id === previousPeriodId && (
                   <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2 py-0.5 text-[9px] font-semibold text-white">
                     Previous
                   </span>

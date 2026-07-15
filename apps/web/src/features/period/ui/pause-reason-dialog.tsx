@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { useDialogFocus } from "../../../lib/use-dialog-focus";
+
 interface PauseReasonDialogProps {
   readonly open: boolean;
   /** Single-line preview of the item being paused. */
@@ -15,9 +17,10 @@ interface PauseReasonDialogProps {
 
 /**
  * require-paused-item-reason: the reason prompt shown when a lead pauses an
- * item from its card. A pause is never silent — the reason is required, so the
- * confirm button stays disabled until the field is non-empty. Mirrors
- * `ConfirmDeleteDialog`'s modal/focus/escape shape; portaled to body to escape
+ * item from its card. A pause is never silent — the reason is required, so
+ * the confirm button stays disabled until the field is non-empty. Wires the
+ * shared `useDialogFocus` primitive for Escape-to-close, Tab-trap, and
+ * focus-restore, matching `ConfirmDeleteDialog`; portaled to body to escape
  * any `overflow:hidden` ancestor.
  */
 export function PauseReasonDialog({
@@ -28,28 +31,19 @@ export function PauseReasonDialog({
   onCancel,
 }: PauseReasonDialogProps) {
   const [reason, setReason] = useState(initialReason);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const surfaceRef = useRef<HTMLDivElement>(null);
+
+  // Escape-to-close, Tab-trap, and focus-restore-to-trigger all come from the
+  // shared primitive; the textarea is the surface's first focusable element,
+  // so the primitive's initial-focus fallback autofocuses it for free.
+  useDialogFocus({ open, onClose: onCancel, containerRef: surfaceRef });
 
   // Reset the field each time the dialog opens so a prior draft never leaks
   // into the next pause.
   useEffect(() => {
     if (!open) return;
     setReason(initialReason);
-    const id = requestAnimationFrame(() => textareaRef.current?.focus());
-    return () => cancelAnimationFrame(id);
   }, [open, initialReason]);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onCancel();
-      }
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [open, onCancel]);
 
   if (!open || typeof document === "undefined") return null;
 
@@ -63,6 +57,7 @@ export function PauseReasonDialog({
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop-close propagation for inside clicks; no keyboard equivalent needed */}
       <div
+        ref={surfaceRef}
         className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
@@ -91,7 +86,6 @@ export function PauseReasonDialog({
         </label>
         <textarea
           id="pause-reason-input"
-          ref={textareaRef}
           className="w-full resize-y rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
           style={{ minHeight: "64px" }}
           value={reason}
