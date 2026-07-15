@@ -21,6 +21,7 @@ import type {
   SlideTrafficStatus,
 } from "../model/slide-grid-model";
 import { SlideCell, type SlideRowActivateHandler } from "./slide-article-rows";
+import { SLIDE_PRODUCT_STATUS_PRESENTATION } from "./slide-product-status";
 
 /** The one shared 4-column template — identical in the header row and every
  * subsection so columns align vertically across the whole slide. Current/Next
@@ -76,12 +77,6 @@ export function SlideColumnHeaderRow() {
   );
 }
 
-const STATUS_STRIPE: Record<TrafficLightStatus, string> = {
-  green: "border-l-4 border-l-[var(--color-chip-on-track-border)]",
-  yellow: "border-l-4 border-l-[var(--color-status-dot-at-risk)]",
-  red: "border-l-4 border-l-[var(--color-destructive)]",
-};
-
 /** Traffic light → canonical status for the dot map lookup (D6). */
 function trafficDotStatus(status: TrafficLightStatus): CanonicalStatus {
   if (status === "red") return "blocked";
@@ -100,6 +95,25 @@ function StatusDot({ status }: { readonly status: SlideTrafficStatus }) {
       />
       <span className="sr-only">{statusLabel(canonical, "screen")}</span>
     </>
+  );
+}
+
+function ProductStatusMark({
+  status,
+}: {
+  readonly status: TrafficLightStatus;
+}) {
+  const presentation = SLIDE_PRODUCT_STATUS_PRESENTATION[status];
+  const Icon = presentation.Icon;
+  return (
+    <span
+      role="img"
+      aria-label={presentation.label}
+      className="inline-flex h-4 w-4 shrink-0 items-center justify-center"
+    >
+      <Icon aria-hidden="true" className="h-3.5 w-3.5" />
+      <span className="sr-only">{presentation.label}</span>
+    </span>
   );
 }
 
@@ -181,16 +195,22 @@ export function SlideProductCard({
       </div>
     );
   }
-  const stripe = card.status == null ? "" : STATUS_STRIPE[card.status];
+  const stripe =
+    card.status == null
+      ? ""
+      : SLIDE_PRODUCT_STATUS_PRESENTATION[card.status].stripeClassName;
   return (
     <section
       data-testid="slide-product-card"
       aria-label={card.name}
       className={`space-y-2.5 rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] px-4 py-3 ${stripe}`}
     >
-      <h3 className="flex items-center gap-2 text-[15px] font-semibold text-[var(--color-foreground)]">
-        <StatusDot status={card.status} />
-        <span className="truncate" title={card.name}>
+      <h3 className="flex min-w-0 items-center gap-2 text-[15px] font-semibold text-[var(--color-foreground)]">
+        {card.status == null ? null : (
+          <ProductStatusMark status={card.status} />
+        )}
+        {card.status == null ? null : " "}
+        <span className="min-w-0 break-words" title={card.name}>
           {card.name}
         </span>
       </h3>
