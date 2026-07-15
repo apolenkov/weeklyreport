@@ -87,6 +87,7 @@ export async function ensureLeadSection(
     | "projectStatus"
     | "projectActivityLead"
     | "activityStatus"
+    | "$transaction"
   >,
   reportId: string,
   userId: string,
@@ -98,13 +99,15 @@ export async function ensureLeadSection(
   if (existing) return { sectionId: existing.id };
 
   try {
-    const section = await prisma.reportSection.create({
-      data: { reportId, authorId: userId },
-      select: { id: true },
+    return await prisma.$transaction(async (tx) => {
+      const section = await tx.reportSection.create({
+        data: { reportId, authorId: userId },
+        select: { id: true },
+      });
+      await seedProjectStatuses(tx, section.id, userId);
+      await seedActivityStatuses(tx, section.id, userId);
+      return { sectionId: section.id };
     });
-    await seedProjectStatuses(prisma, section.id, userId);
-    await seedActivityStatuses(prisma, section.id, userId);
-    return { sectionId: section.id };
   } catch (error) {
     if (!isSectionUniqueViolation(error)) throw error;
     const won = await prisma.reportSection.findUnique({

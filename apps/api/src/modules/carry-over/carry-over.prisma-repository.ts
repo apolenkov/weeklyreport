@@ -308,7 +308,7 @@ async function createNewExecution(
         sourceDecisionId: r.sourceDecisionId,
         targetItemId: r.targetItemId,
         targetDecisionId: r.targetDecisionId,
-        recordType: r.sourceItemId ? "item" : "decision",
+        recordType: r.targetItemId ? "item" : "decision",
       })),
     });
   }

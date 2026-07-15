@@ -8,8 +8,8 @@ const SCROLL_FADE_THRESHOLD_PX = 4;
 
 /**
  * Whether a scroll container has more content below the fold — drives a
- * bottom fade-out affordance. Re-checks on scroll and on resize, and tolerates
- * SSR / jsdom where `ResizeObserver` is absent.
+ * bottom fade-out affordance. Re-checks on scroll, resize, and child-content
+ * mutations, and tolerates SSR / jsdom where either observer is absent.
  */
 export function useScrollFade(ref: RefObject<HTMLElement | null>): boolean {
   const [canScrollDown, setCanScrollDown] = useState(false);
@@ -27,9 +27,15 @@ export function useScrollFade(ref: RefObject<HTMLElement | null>): boolean {
     const ro =
       typeof ResizeObserver !== "undefined" ? new ResizeObserver(check) : null;
     ro?.observe(el);
+    const mo =
+      typeof MutationObserver !== "undefined"
+        ? new MutationObserver(check)
+        : null;
+    mo?.observe(el, { childList: true, subtree: true });
     return () => {
       el.removeEventListener("scroll", check);
       ro?.disconnect();
+      mo?.disconnect();
     };
   }, [ref]);
   return canScrollDown;

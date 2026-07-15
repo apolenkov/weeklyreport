@@ -145,6 +145,90 @@ describe("CarryOverPrismaRepository (integration)", () => {
     expect(expectDefined(targetItems[0]).text).toBe("Carry this over");
   });
 
+  it("persists an item recordType when sourceItemId is null", async () => {
+    const targetReport = await prisma.report.create({
+      data: {
+        id: TEST_IDS.targetReport,
+        periodStart: new Date("2026-04-14"),
+        periodEnd: new Date("2026-04-20"),
+        deadline: new Date("2026-04-18"),
+        status: "draft",
+      },
+    });
+    const targetSection = await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.lead.id,
+        status: "draft",
+      },
+    });
+    const dedupeKey = `${testData.report.id}:${targetReport.id}`;
+    const execution = {
+      id: TEST_IDS.carryExec,
+      sourceReportId: testData.report.id,
+      targetReportId: targetReport.id,
+      dedupeKey,
+      status: "completed" as const,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      carriedItemCount: 1,
+      carriedDecisionCount: 0,
+    };
+    const records = [
+      {
+        id: TEST_IDS.carryRecord,
+        sourceReportId: testData.report.id,
+        targetReportId: targetReport.id,
+        sourceItemId: null,
+        targetItemId: TEST_IDS.carryTargetItem,
+        sourceDecisionId: null,
+        targetDecisionId: null,
+        status: "completed" as const,
+        carriedAt: new Date(),
+      },
+    ];
+    const targetSectionReadModel = {
+      reportSectionId: targetSection.id,
+      reportId: targetReport.id,
+      authorId: testData.lead.id,
+      authorName: "Test Lead 1",
+      version: 1,
+      status: "draft" as const,
+      submittedAt: null,
+      projects: [],
+      items: [
+        {
+          id: TEST_IDS.carryTargetItem,
+          projectId: testData.project.id,
+          type: "current" as const,
+          text: "Item with no source id",
+          tag: "feature",
+          workflowStatus: "in_progress" as const,
+          carriedOver: true,
+        },
+      ],
+      risks: [],
+      decisions: [],
+      priorities: [],
+      activities: [],
+    };
+
+    await repo.saveCarryOver(execution, records, [targetSectionReadModel]);
+
+    await expect(
+      prisma.carryOverRecord.findUnique({
+        where: { id: TEST_IDS.carryRecord },
+        select: { recordType: true },
+      }),
+    ).resolves.toEqual({ recordType: "item" });
+    await expect(
+      repo.findExecutionByDedupeKey(dedupeKey),
+    ).resolves.toMatchObject({
+      carriedItemCount: 1,
+      carriedDecisionCount: 0,
+    });
+  });
+
   // introduce-durable-record-identity (task 5.2): saveCarryOver must persist the
   // source record's stableId onto the clone so a carried позиция shares one
   // lineage key with its origin, while the clone still gets its own PK id.

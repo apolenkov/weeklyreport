@@ -6,11 +6,16 @@ vi.mock("../../../lib/server/api-url", () => ({
 
 import { POST } from "./route";
 
-function makeRequest(headers: Record<string, string>): Request {
+const CLIENT_LOGS_MAX_BODY_BYTES = 128 * 1024;
+
+function makeRequest(
+  headers: Record<string, string>,
+  body = JSON.stringify({ entries: [] }),
+): Request {
   return new Request("http://web.test/api/client-logs", {
     method: "POST",
     headers,
-    body: JSON.stringify({ entries: [] }),
+    body,
   });
 }
 
@@ -56,5 +61,36 @@ describe("client-logs proxy route", () => {
       RequestInit,
     ];
     expect(new Headers(init.headers).get("x-forwarded-for")).toBeNull();
+  });
+
+  it("rejects an oversized body without forwarding it to the API", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await POST(
+      makeRequest(
+        { "content-type": "application/json" },
+        "x".repeat(CLIENT_LOGS_MAX_BODY_BYTES + 1),
+      ) as never,
+    );
+
+    expect(res.status).toBe(413);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an oversized Content-Length before reading the body", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const req = makeRequest({
+      "content-type": "application/json",
+      "content-length": String(CLIENT_LOGS_MAX_BODY_BYTES + 1),
+    });
+    const textSpy = vi.spyOn(req, "text");
+
+    const res = await POST(req as never);
+
+    expect(res.status).toBe(413);
+    expect(textSpy).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

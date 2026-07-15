@@ -21,8 +21,8 @@ export interface AdminOpsDeps {
    * BullMQ DLQ admin surface — `admin.jobs.listFailed` /
    * `admin.jobs.retryFailed`. Optional so test fixtures and the role-coverage
    * harness can build the router with `{}` deps; in that mode the service
-   * is constructed locally from an undefined Queue and every call returns
-   * an empty/no-op result.
+   * is constructed locally from an undefined Queue, `listFailed` returns an
+   * empty result, and `retryFailed` fails loud.
    */
   jobsService?: JobsService;
   /**
@@ -49,18 +49,33 @@ function requireActionLogService(deps: AdminOpsDeps): ActionLogService {
   return deps.actionLogService;
 }
 
+function requireEmailReminderQueue(deps: AdminOpsDeps): Queue {
+  if (!deps.emailReminderQueue) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Email reminder queue is not configured.",
+    });
+  }
+  return deps.emailReminderQueue;
+}
+
+function requireJobsService(deps: AdminOpsDeps): JobsService {
+  if (!deps.jobsService) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Jobs service is not configured.",
+    });
+  }
+  return deps.jobsService;
+}
+
 export function createAdminOpsProcedures(deps: AdminOpsDeps) {
   return {
     // BullMQ DLQ count — failed-jobs set of the
     // email-reminder queue. adminProcedure (admin/head only).
-    // Returns { count: 0 } when the Queue handle is absent (e.g. unit test
-    // wiring) so the procedure is always callable.
     dlqCount: adminProcedure.query(async () => {
       try {
-        if (!deps.emailReminderQueue) {
-          return { count: 0 };
-        }
-        const count = await deps.emailReminderQueue.getFailedCount();
+        const count = await requireEmailReminderQueue(deps).getFailedCount();
         return { count };
       } catch (error) {
         throw mapDomainError(error);
@@ -122,11 +137,7 @@ export function createAdminOpsProcedures(deps: AdminOpsDeps) {
         )
         .mutation(async ({ input }) => {
           try {
-            const service = deps.jobsService;
-            if (!service) {
-              return { retried: false, jobId: input.jobId };
-            }
-            return await service.retryFailed(input);
+            return await requireJobsService(deps).retryFailed(input);
           } catch (error) {
             throw mapDomainError(error);
           }

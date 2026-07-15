@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
+import { ReportSectionDomainError } from "../../modules/report-sections/application/report-sections.service.js";
 import { createAppRouter } from "./trpc.router.js";
 
 /**
@@ -46,5 +47,22 @@ describe("reports.myHistory — router delegation", () => {
     expect(myHistory).toHaveBeenCalledWith(
       "44444444-4444-4444-8444-444444444444",
     );
+  });
+
+  it("maps a report-section domain error to its typed tRPC code", async () => {
+    const myHistory = vi.fn(() =>
+      Promise.reject(
+        new ReportSectionDomainError(
+          "SECTION_ALREADY_SUBMITTED",
+          "History is unavailable.",
+        ),
+      ),
+    );
+    const caller = buildLeadCaller(myHistory);
+
+    await expect(caller.reports.myHistory()).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "History is unavailable.",
+    });
   });
 });

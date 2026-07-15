@@ -2,12 +2,33 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { requireApiUrl } from "../../../lib/server/api-url";
 
+// Matches the API's express.json limit; the byte form also protects this hop.
+// eslint-disable-next-line @typescript-eslint/no-magic-numbers -- protocol limit expressed in kibibytes
+const CLIENT_LOGS_MAX_BODY_BYTES = 128 * 1024;
+
+function declaredBodyIsOversized(req: NextRequest): boolean {
+  const contentLength = req.headers.get("content-length");
+  if (contentLength === null) return false;
+  const parsedLength = Number(contentLength);
+  return (
+    Number.isFinite(parsedLength) && parsedLength > CLIENT_LOGS_MAX_BODY_BYTES
+  );
+}
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   // Outside the try: a missing API URL is a deployment misconfiguration and
   // must fail loud, not be swallowed into the fire-and-forget 204.
   const apiUrl = requireApiUrl();
   try {
+    if (declaredBodyIsOversized(req)) {
+      return new NextResponse(null, { status: 413 });
+    }
     const body = await req.text();
+    if (
+      new TextEncoder().encode(body).byteLength > CLIENT_LOGS_MAX_BODY_BYTES
+    ) {
+      return new NextResponse(null, { status: 413 });
+    }
     // Pass the edge proxy's client-IP chain through to the API: its
     // per-IP client-logs limiter (trust proxy: 1) keys on X-Forwarded-For,
     // and without this hop-through every browser lands in one shared bucket
