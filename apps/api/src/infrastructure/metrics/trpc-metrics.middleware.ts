@@ -1,3 +1,4 @@
+import { trace } from "@opentelemetry/api";
 import type { TRPCError } from "@trpc/server";
 
 import {
@@ -53,15 +54,24 @@ export async function trpcMetricsMiddleware<R extends TrpcMiddlewareResult>(
   const labels = { procedure: path, type };
   const endTimer = trpcRequestDurationSeconds.startTimer(labels);
 
-  try {
-    const result = await next();
-    const status = result.ok ? "success" : "error";
-    endTimer({ ...labels, status });
-    trpcRequestTotal.inc({ ...labels, status });
-    return result;
-  } catch (error) {
-    endTimer({ ...labels, status: "error" });
-    trpcRequestTotal.inc({ ...labels, status: "error" });
-    throw error;
-  }
+  return trace
+    .getTracer("customreport-api")
+    .startActiveSpan(path, async (span) => {
+      span.setAttribute("type", type);
+      try {
+        const result = await next();
+        const status = result.ok ? "success" : "error";
+        span.setAttribute("status", status);
+        endTimer({ ...labels, status });
+        trpcRequestTotal.inc({ ...labels, status });
+        span.end();
+        return result;
+      } catch (error) {
+        span.setAttribute("status", "error");
+        endTimer({ ...labels, status: "error" });
+        trpcRequestTotal.inc({ ...labels, status: "error" });
+        span.end();
+        throw error;
+      }
+    });
 }

@@ -58,6 +58,10 @@ async function gaugeValue(gauge: {
 }
 
 describe("TelemetryGauges", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("on-time ratio gauge updates from the port at scrape time", async () => {
     const gauges = new TelemetryGauges(buildPort({ onTimeRatio: 0.85 }));
     gauges.onModuleInit();
@@ -77,16 +81,26 @@ describe("TelemetryGauges", () => {
     gauges.onModuleDestroy();
   });
 
-  it("on-time ratio gauge stays unset when the port returns null (no eligible data)", async () => {
-    // Pre-set a sentinel so we can prove the collect callback did NOT
-    // overwrite it when the port returns null. Real production would
-    // surface NaN to Prom; the dashboard renders that as "no data".
-    customreportReportsOnTimeRatio.set(0.42);
-    const gauges = new TelemetryGauges(buildPort({ onTimeRatio: null }));
+  it("clears the prior on-time ratio when a later scrape has no data", async () => {
+    const onTimeRatioLastNPeriods = vi
+      .fn()
+      .mockResolvedValueOnce(0.42)
+      .mockResolvedValueOnce(null);
+    const port: TelemetryGaugesPort = {
+      onTimeRatioLastNPeriods,
+      activeLeadsLastPublishedPeriod: vi.fn().mockResolvedValue(0),
+    };
+    const set = vi.spyOn(customreportReportsOnTimeRatio, "set");
+    const gauges = new TelemetryGauges(port);
     gauges.onModuleInit();
 
-    // eslint-disable-next-line sonarjs/no-floating-point-equality -- asserts the pre-set sentinel (0.42) is preserved when the port returns null; exact equality is intended
+    // eslint-disable-next-line sonarjs/no-floating-point-equality -- asserts the port value passes through unchanged before the no-data transition
     expect(await gaugeValue(customreportReportsOnTimeRatio)).toBe(0.42);
+    expect(Number.isNaN(await gaugeValue(customreportReportsOnTimeRatio))).toBe(
+      true,
+    );
+    expect(set).toHaveBeenNthCalledWith(1, 0.42);
+    expect(set).toHaveBeenNthCalledWith(2, Number.NaN);
 
     gauges.onModuleDestroy();
   });

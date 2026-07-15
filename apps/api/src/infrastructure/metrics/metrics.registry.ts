@@ -7,16 +7,9 @@ import {
 } from "prom-client";
 
 /**
- * Shared prom-client registry + counter singletons.
- *
- * Every counter referenced by deploy/grafana/customreport-dashboard.json
- * lives here so there's a single import point and a single registration
- * (prom-client throws on double-register otherwise).
- *
- * collectDefaultMetrics() lights up the Node.js standard panel — heap, CPU,
- * GC, event-loop lag.
+ * Shared registration point for application and Node.js process metrics.
+ * prom-client rejects duplicate names, so every singleton lives here.
  */
-
 export const metricsRegistry = new Registry();
 
 collectDefaultMetrics({ register: metricsRegistry });
@@ -30,10 +23,8 @@ export const httpRequestDurationSeconds = new Histogram({
 });
 
 /**
- * Every BullMQ job that exhausts its retry budget and lands in the
- * failed-set increments this counter. Read in Grafana via `rate(...)` for
- * a per-second growth signal; an alertmanager rule on top of the absolute
- * value vs DLQ_ALERT_THRESHOLD provides the page.
+ * Counts terminal BullMQ failures for rate-based alerting; absolute queue
+ * state is tracked separately because events can be missed across restarts.
  */
 export const dlqFailedTotal = new Counter({
   name: "cr_dlq_failed_total",
@@ -43,10 +34,30 @@ export const dlqFailedTotal = new Counter({
 });
 
 /**
- * Current Redis `used_memory` (bytes), refreshed each DLQ-monitor poll from
- * `INFO memory`. Graphed against the configured `REDIS_MAXMEMORY_BYTES` cap so
- * the slow unbounded-growth failure mode is visible before the container's
- * memory limit OOM-kills redis-server; the monitor also warns past 80% of cap.
+ * Current BullMQ job depth by queue and state, refreshed from Redis on every
+ * DLQ-monitor poll so stuck waiting, active, and delayed jobs remain visible.
+ */
+export const queueDepth = new Gauge({
+  name: "cr_queue_depth",
+  help: "Current BullMQ job count by queue and state",
+  labelNames: ["queue", "state"] as const,
+  registers: [metricsRegistry],
+});
+
+/**
+ * Authoritative absolute failed-job count read from each BullMQ queue. Unlike
+ * the event-driven counter, this gauge remains accurate across monitor restarts.
+ */
+export const dlqFailedCurrent = new Gauge({
+  name: "cr_dlq_failed_current",
+  help: "Current authoritative BullMQ failed-job count",
+  labelNames: ["queue"] as const,
+  registers: [metricsRegistry],
+});
+
+/**
+ * Tracks Redis memory against its configured cap so sustained growth is
+ * visible before Redis or the container reaches its memory limit.
  */
 export const redisMemoryUsedBytes = new Gauge({
   name: "cr_redis_memory_used_bytes",
@@ -55,9 +66,8 @@ export const redisMemoryUsedBytes = new Gauge({
 });
 
 /**
- * Every rate-limit response increments this counter,
- * tagged by bucket (auth | trpc). Lets ops see a brute-force attempt as
- * a spike before the rate-limit log line scrolls off.
+ * Splits rate-limit responses by ingress bucket so sustained abuse remains
+ * visible after individual warning logs expire.
  */
 export const rateLimitHitsTotal = new Counter({
   name: "cr_rate_limit_hits_total",
@@ -67,9 +77,8 @@ export const rateLimitHitsTotal = new Counter({
 });
 
 /**
- * Every login outcome (saml-callback success/fail, dev-login
- * success). Lets the dashboard distinguish "login attempt rate dropped"
- * (real outage) from "login attempt rate spiked" (brute-force).
+ * Separates authentication traffic by method and outcome so outages and
+ * abusive spikes have distinct signals.
  */
 export const loginAttemptsTotal = new Counter({
   name: "cr_login_attempts_total",
@@ -79,15 +88,8 @@ export const loginAttemptsTotal = new Counter({
 });
 
 /**
- * Per-procedure tRPC latency histogram. Labels:
- * - `procedure` — tRPC `path` (e.g. `admin.snapshot`, `weeklyReport.get`)
- * - `type` — `query` | `mutation` | `subscription`
- * - `status` — `success` | `error`
- *
- * Drives the trpc-latency Grafana dashboard (p50/p95/p99 by procedure +
- * top-10 slow + error rate). Bucket boundaries are skewed toward the
- * sub-50ms range because the cached read paths land there; we still
- * cover up to 10s for the slow PDF + Prisma cold-start outliers.
+ * Per-procedure latency by path, type, and outcome. Buckets retain detail for
+ * cached reads while covering slow PDF and Prisma cold-start outliers.
  */
 export const trpcRequestDurationSeconds = new Histogram({
   name: "trpc_request_duration_seconds",
@@ -98,11 +100,8 @@ export const trpcRequestDurationSeconds = new Histogram({
 });
 
 /**
- * Companion counter to the histogram. Used for the
- * dashboard's request-volume panel and the error-rate stat
- * (`status="error"` over `status=*`). Histogram `_count` could carry
- * the same signal, but a dedicated counter is cheaper to query and the
- * standard Grafana-recipe expression assumes a separate `_total`.
+ * Companion request-volume counter keeps error-rate queries cheaper than
+ * aggregating histogram counts.
  */
 export const trpcRequestTotal = new Counter({
   name: "trpc_request_total",
@@ -111,26 +110,12 @@ export const trpcRequestTotal = new Counter({
   registers: [metricsRegistry],
 });
 
-// ============================================================
-// Product / business-KPI telemetry.
-//
-// Distinct from the engineering telemetry above (which measures
-// latency / errors / DLQ / login). The metrics below answer
-// leadership-readable questions: how many reports landed on time,
-// which roles miss deadlines, how many reopens we churn through,
-// who actually opens PDFs.
-//
-// Prefix `customreport_*`, even though the existing counters use
-// `cr_*`. The mismatch is a deferred consolidation — renaming
-// existing counters would re-baseline production SLOs, which is out
-// of scope here.
-// ============================================================
+// Product metrics retain the `customreport_*` prefix to avoid re-baselining
+// existing dashboards and SLO time series.
 
 /**
- * Every Report transition into the `published` state increments
- * this counter (whether driven by an explicit `publishReport` action or
- * the auto-publisher cron). Labelled by `state` so future expansion
- * (e.g. `state='archived'`) does not require a new counter.
+ * Counts report transitions by destination state across manual and automatic
+ * publication paths.
  */
 export const customreportReportsSubmittedTotal = new Counter({
   name: "customreport_reports_submitted_total",
@@ -140,11 +125,8 @@ export const customreportReportsSubmittedTotal = new Counter({
 });
 
 /**
- * Every ReportSection submission. `late` is the on-time flag
- * stamped at submit time by ReportSectionsService (`now > deadline`).
- * The two-label cardinality (late=true|false) keeps the series count
- * bounded; aggregating with `sum by (late)` answers the «how often do
- * we miss the deadline» question.
+ * Counts section submissions by the bounded on-time flag stamped at submit
+ * time, allowing deadline performance to be aggregated without author labels.
  */
 export const customreportSectionsSubmittedTotal = new Counter({
   name: "customreport_sections_submitted_total",
@@ -154,12 +136,8 @@ export const customreportSectionsSubmittedTotal = new Counter({
 });
 
 /**
- * Signed-seconds histogram of (deadline − submittedAt). Negative
- * buckets surface how far in advance leads typically submit;
- * positive buckets surface how late they are when they slip.
- *
- * Bucket choice is calibrated for a weekly cadence with an 18:00
- * deadline: -1d / -12h / -1h / 0 / +1h / +4h / +12h / +1d / +3d.
+ * Signed deadline distance distinguishes early from late submissions; buckets
+ * cover the useful range for a weekly reporting cadence.
  */
 export const customreportSectionSubmissionLatencySeconds = new Histogram({
   name: "customreport_section_submission_latency_seconds",
@@ -169,10 +147,8 @@ export const customreportSectionSubmissionLatencySeconds = new Histogram({
 });
 
 /**
- * Rolling on-time ratio (last 4 published periods, per
- * ReportSection because that is what the head dashboard's «late» badge
- * reflects). Set by a `collect` async callback in TelemetryGauges so
- * the value refreshes lazily at Prometheus scrape time — no scheduler.
+ * Rolling section ratio over four published periods, refreshed lazily by the
+ * TelemetryGauges scrape callback.
  */
 export const customreportReportsOnTimeRatio = new Gauge({
   name: "customreport_reports_on_time_ratio",
@@ -181,10 +157,8 @@ export const customreportReportsOnTimeRatio = new Gauge({
 });
 
 /**
- * Distinct lead authors who submitted in the most recently
- * published period. Engagement signal; pairs with reports_submitted_total
- * to distinguish «volume up because more leads» from «volume up because
- * the same leads filed twice».
+ * Distinct recent lead authors separates broader engagement from repeated
+ * submissions by the same people.
  */
 export const customreportActiveLeadsTotal = new Gauge({
   name: "customreport_active_leads_total",
@@ -193,11 +167,8 @@ export const customreportActiveLeadsTotal = new Gauge({
 });
 
 /**
- * Reopen-request funnel. `state ∈ {requested, approved, rejected}`.
- * `requested` fires from LeadFormService.requestReopen; `approved` and
- * `rejected` fire from the admin.respondReopenRequest mutation. The
- * three-state funnel exposes both demand (requested rate) and the
- * head's policy stance (approve/reject ratio).
+ * Three-state reopen funnel exposes both request demand and approval policy
+ * without user-level cardinality.
  */
 export const customreportReopenRequestsTotal = new Counter({
   name: "customreport_reopen_requests_total",
@@ -218,10 +189,8 @@ export const customreportPdfExportRequestsTotal = new Counter({
 });
 
 /**
- * Period state-machine transitions (`from` → `to`). Covers
- * `open → published` (manual + auto), and any future archival
- * transitions plumbed in. Lets ops distinguish a stuck pipeline
- * («no published transitions in 7d») from a slow one.
+ * Period transitions distinguish a stopped publication pipeline from one that
+ * is merely progressing slowly.
  */
 export const customreportPeriodStateTransitionsTotal = new Counter({
   name: "customreport_period_state_transitions_total",
@@ -231,16 +200,8 @@ export const customreportPeriodStateTransitionsTotal = new Counter({
 });
 
 /**
- * scope-lead-report-to-own-contribution — every full-content
- * cross-author read on the lead form ("Everyone" visibility lens).
- * `result ∈ {allowed, denied, empty}` audits the authorization boundary:
- * a denied read returns an empty payload, so without this label a denial
- * is indistinguishable from a legitimately empty result. `denied` =
- * caller lacks report access OR co-owns no shared product; `empty` =
- * caller co-owns a shared product but the co-owner authored no records;
- * `allowed` = foreign records were returned. The payload stays empty in
- * both `denied` and `empty` cases (no leak); only this signal distinguishes
- * them.
+ * Audits cross-author lead-form reads. The result label distinguishes denied
+ * access from an authorized empty response without exposing payload content.
  */
 export const customreportCrossAuthorContentReadsTotal = new Counter({
   name: "customreport_cross_author_content_reads_total",
@@ -249,15 +210,11 @@ export const customreportCrossAuthorContentReadsTotal = new Counter({
   registers: [metricsRegistry],
 });
 
-// ============================================================
-// Telegram — day-1 metrics.
-// Declared here even while MockTelegramAdapter is the only path.
-// ============================================================
+// Telegram delivery and binding lifecycle metrics.
 
 /**
- * Every outbound Telegram message attempt. `status` is `ok` |
- * `error`. Lets ops chart message delivery rate and detect silent
- * failures before users notice missed notifications.
+ * Tracks Telegram delivery outcomes so silent failures are visible before
+ * users report missed notifications.
  */
 export const telegramMessageSentTotal = new Counter({
   name: "customreport_telegram_message_sent_total",
@@ -267,10 +224,7 @@ export const telegramMessageSentTotal = new Counter({
 });
 
 /**
- * User ↔ bot binding lifecycle events. `event` is
- * `created` | `deleted` | `reactivated`. Lets ops see how many
- * users have active Telegram bindings and whether the /start flow
- * is being used.
+ * Tracks binding creation, deletion, and reactivation without user labels.
  */
 export const telegramBindingTotal = new Counter({
   name: "customreport_telegram_binding_total",

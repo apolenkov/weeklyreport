@@ -4,11 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EnvConfig } from "../config/env.schema";
 import {
+  dlqFailedCurrent,
   dlqFailedTotal,
+  queueDepth,
   redisMemoryUsedBytes,
 } from "../metrics/metrics.registry.js";
 import { DLQMonitorService } from "./dlq-monitor.service.js";
-import type { QueueRegistry } from "./queue-registry.js";
+import {
+  QUEUE_NAMES,
+  type QueueName,
+  type QueueRegistry,
+} from "./queue-registry.js";
 
 // The service touches the registry/env only in onModuleInit (not exercised by
 // these Redis-free seam tests); minimal stubs satisfy the constructor.
@@ -80,6 +86,64 @@ describe("DLQMonitorService.recordTerminalFailure", () => {
     await seam().recordTerminalFailure("pdf-export", queue, "job-2", "retry");
 
     expect(inc).not.toHaveBeenCalled();
+  });
+});
+
+interface PollSeam {
+  pollQueueMetrics(threshold: number): Promise<void>;
+}
+
+function pollSeam(registry: QueueRegistry): PollSeam {
+  return new DLQMonitorService(registry, STUB_ENV) as unknown as PollSeam;
+}
+
+describe("DLQMonitorService.pollQueueMetrics", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("publishes queue depths and authoritative failed counts in one cycle", async () => {
+    const queues = Object.fromEntries(
+      QUEUE_NAMES.map((name, index) => [
+        name,
+        {
+          getJobCounts: vi.fn().mockResolvedValue({
+            waiting: index + 1,
+            active: index + 2,
+            delayed: index + 3,
+          }),
+          getFailedCount: vi.fn().mockResolvedValue(index + 4),
+        },
+      ]),
+    ) as unknown as Record<
+      QueueName,
+      Pick<Queue, "getFailedCount" | "getJobCounts">
+    >;
+    const registry = {
+      get: vi.fn((name: QueueName) => queues[name]),
+    } as unknown as QueueRegistry;
+    const depthSet = vi.spyOn(queueDepth, "set");
+    const failedSet = vi.spyOn(dlqFailedCurrent, "set");
+
+    await pollSeam(registry).pollQueueMetrics(10);
+
+    expect(depthSet).toHaveBeenCalledTimes(QUEUE_NAMES.length * 3);
+    expect(failedSet).toHaveBeenCalledTimes(QUEUE_NAMES.length);
+    QUEUE_NAMES.forEach((name, index) => {
+      expect(depthSet).toHaveBeenCalledWith(
+        { queue: name, state: "waiting" },
+        index + 1,
+      );
+      expect(depthSet).toHaveBeenCalledWith(
+        { queue: name, state: "active" },
+        index + 2,
+      );
+      expect(depthSet).toHaveBeenCalledWith(
+        { queue: name, state: "delayed" },
+        index + 3,
+      );
+      expect(failedSet).toHaveBeenCalledWith({ queue: name }, index + 4);
+    });
   });
 });
 
