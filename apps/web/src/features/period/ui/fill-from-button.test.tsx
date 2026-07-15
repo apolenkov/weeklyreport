@@ -340,3 +340,147 @@ describe("FillFromButton — icon triggers keep the fill flow (head-toolbar-pari
     expect(onFillFrom).toHaveBeenCalledWith("sec-W16");
   });
 });
+
+describe("FillFromButton — 'Previous' badge keyed by identity, not filtered index (period-dialogs-polish)", () => {
+  const week16: ReportPeriod = {
+    id: "2026-W16",
+    sourceSectionId: "sec-W16",
+    weekLabel: "Week 16",
+    dateRange: "Apr 14–20, 2026",
+    isCurrent: false,
+    isSubmitted: true,
+  };
+  const week15: ReportPeriod = {
+    id: "2026-W15",
+    sourceSectionId: "sec-W15",
+    weekLabel: "Week 15",
+    dateRange: "Apr 7–13, 2026",
+    isCurrent: false,
+    isSubmitted: true,
+  };
+
+  function openDropdown() {
+    fireEvent.click(
+      screen.getByRole("button", { name: "Choose past report to fill from" }),
+    );
+  }
+
+  it("badges the real previous period (Week 16) when unfiltered", () => {
+    render(<FillFromButton periods={[week16, week15]} />);
+    openDropdown();
+
+    const badge = screen.getByText("Previous");
+    expect(badge.closest("div")).toContainElement(screen.getByText(/Week 16/));
+  });
+
+  it("does not mislabel Week 15 as Previous when a search excludes Week 16", () => {
+    render(<FillFromButton periods={[week16, week15]} />);
+    openDropdown();
+
+    fireEvent.change(screen.getByPlaceholderText("Search reports…"), {
+      target: { value: "Week 15" },
+    });
+
+    // The true previous period (Week 16) is filtered out entirely, so no
+    // period in the remaining list — including filtered-index-0 Week 15 —
+    // may carry the "Previous" badge.
+    expect(screen.getByText(/Week 15/)).toBeInTheDocument();
+    expect(screen.queryByText("Previous")).not.toBeInTheDocument();
+  });
+
+  it("keeps badging Week 16 as Previous while a search still matches it", () => {
+    render(<FillFromButton periods={[week16, week15]} />);
+    openDropdown();
+
+    // A query matching both rows must not disturb which row is badged.
+    fireEvent.change(screen.getByPlaceholderText("Search reports…"), {
+      target: { value: "Week 1" },
+    });
+
+    expect(screen.getByText(/Week 15/)).toBeInTheDocument();
+    const badge = screen.getByText("Previous");
+    expect(badge.closest("div")).toContainElement(screen.getByText(/Week 16/));
+  });
+});
+
+describe("FillFromButton — dropdown search resets on every close path (period-dialogs-polish)", () => {
+  const week16: ReportPeriod = {
+    id: "2026-W16",
+    sourceSectionId: "sec-W16",
+    weekLabel: "Week 16",
+    dateRange: "Apr 14–20, 2026",
+    isCurrent: false,
+    isSubmitted: true,
+  };
+  const week15: ReportPeriod = {
+    id: "2026-W15",
+    sourceSectionId: "sec-W15",
+    weekLabel: "Week 15",
+    dateRange: "Apr 7–13, 2026",
+    isCurrent: false,
+    isSubmitted: true,
+  };
+
+  function openDropdown() {
+    fireEvent.click(
+      screen.getByRole("button", { name: "Choose past report to fill from" }),
+    );
+  }
+
+  function reopenAndReadSearch() {
+    openDropdown();
+    return screen.getByPlaceholderText<HTMLInputElement>("Search reports…")
+      .value;
+  }
+
+  it("clears the search on Escape", () => {
+    render(<FillFromButton periods={[week16, week15]} />);
+    openDropdown();
+    fireEvent.change(screen.getByPlaceholderText("Search reports…"), {
+      target: { value: "Week 15" },
+    });
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(reopenAndReadSearch()).toBe("");
+  });
+
+  it("clears the search on period selection", () => {
+    render(<FillFromButton periods={[week16, week15]} />);
+    openDropdown();
+    fireEvent.change(screen.getByPlaceholderText("Search reports…"), {
+      target: { value: "Week 15" },
+    });
+
+    fireEvent.click(screen.getByText(/Week 15/));
+
+    expect(reopenAndReadSearch()).toBe("");
+  });
+
+  it("clears the search on an outside click", () => {
+    render(<FillFromButton periods={[week16, week15]} />);
+    openDropdown();
+    fireEvent.change(screen.getByPlaceholderText("Search reports…"), {
+      target: { value: "Week 15" },
+    });
+
+    fireEvent.mouseDown(document.body);
+
+    expect(reopenAndReadSearch()).toBe("");
+  });
+
+  it("clears the search when the trigger toggles the dropdown closed", () => {
+    render(<FillFromButton periods={[week16, week15]} />);
+    const trigger = screen.getByRole("button", {
+      name: "Choose past report to fill from",
+    });
+    fireEvent.click(trigger);
+    fireEvent.change(screen.getByPlaceholderText("Search reports…"), {
+      target: { value: "Week 15" },
+    });
+
+    fireEvent.click(trigger);
+
+    expect(reopenAndReadSearch()).toBe("");
+  });
+});

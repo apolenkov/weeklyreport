@@ -89,18 +89,34 @@ export function FillFromButton({
       p.dateRange.toLowerCase().includes(search.toLowerCase()),
   );
 
+  // Every close path clears the leftover search query too, so reopening the
+  // dropdown always starts unfiltered rather than pre-filtered by whatever
+  // was typed last session.
+  function closeDropdown() {
+    setShowDropdown(false);
+    setSearch("");
+  }
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       const target = e.target as Node;
       const wrapContains = wrapRef.current?.contains(target);
       const panelContains = dropdownPanelRef.current?.contains(target);
       if (!wrapContains && !panelContains) {
-        setShowDropdown(false);
+        closeDropdown();
       }
     }
     if (showDropdown)
       document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showDropdown]);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") closeDropdown();
+    }
+    if (showDropdown) document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [showDropdown]);
 
   // Position the dropdown via portal to escape the toolbar's overflow clip.
@@ -131,7 +147,7 @@ export function FillFromButton({
 
   function handleFillFromPeriod(period: ReportPeriod) {
     setSelectedPeriod(period);
-    setShowDropdown(false);
+    closeDropdown();
     setShowConfirm(true);
   }
 
@@ -173,7 +189,9 @@ export function FillFromButton({
             type="button"
             aria-label="Choose past report to fill from"
             title={lockedReason ?? "Choose past report to fill from"}
-            onClick={() => setShowDropdown(!showDropdown)}
+            onClick={() =>
+              showDropdown ? closeDropdown() : setShowDropdown(true)
+            }
             disabled={disabled || locked}
             className={SPLIT_BUTTON_CHEVRON_CLASS}
           >
@@ -191,6 +209,7 @@ export function FillFromButton({
         panelRef={dropdownPanelRef}
         pastPeriods={pastPeriods}
         filteredPeriods={filteredPeriods}
+        previousPeriodId={previousPeriod?.id}
         search={search}
         onSearchChange={setSearch}
         onSelect={handleFillFromPeriod}
