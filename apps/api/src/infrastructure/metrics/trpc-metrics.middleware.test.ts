@@ -1,5 +1,7 @@
+import type { Span, Tracer } from "@opentelemetry/api";
+import { trace } from "@opentelemetry/api";
 import { TRPCError } from "@trpc/server";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   metricsRegistry,
@@ -7,6 +9,24 @@ import {
   trpcRequestTotal,
 } from "./metrics.registry.js";
 import { trpcMetricsMiddleware } from "./trpc-metrics.middleware.js";
+
+function installSpanSpy(): {
+  span: Pick<Span, "end" | "setAttribute">;
+  startActiveSpan: ReturnType<typeof vi.fn>;
+} {
+  const span = {
+    setAttribute: vi.fn().mockReturnThis(),
+    end: vi.fn(),
+  };
+  const startActiveSpan = vi.fn(
+    (_name: string, callback: (activeSpan: Span) => unknown) =>
+      callback(span as unknown as Span),
+  );
+  vi.spyOn(trace, "getTracer").mockReturnValue({
+    startActiveSpan,
+  } as unknown as Tracer);
+  return { span, startActiveSpan };
+}
 
 /**
  * Verifies the tRPC Prometheus middleware emits the right labels and
@@ -18,6 +38,10 @@ describe("trpcMetricsMiddleware", () => {
     // counter assertions don't bleed across test cases. Mirrors the pattern
     // used by metrics.registry.test.ts.
     metricsRegistry.resetMetrics();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   async function invoke(
@@ -40,6 +64,7 @@ describe("trpcMetricsMiddleware", () => {
   }
 
   it("records a success label set for a passing query", async () => {
+    const { span, startActiveSpan } = installSpanSpy();
     await invoke("admin.snapshot", "query", { ok: true, data: { rows: 0 } });
     await invoke("admin.snapshot", "query", { ok: true, data: { rows: 0 } });
 
@@ -53,9 +78,15 @@ describe("trpcMetricsMiddleware", () => {
     expect(text).toContain(
       'trpc_request_duration_seconds_count{procedure="admin.snapshot",type="query",status="success"} 2',
     );
+    expect(startActiveSpan).toHaveBeenCalledTimes(2);
+    expect(startActiveSpan.mock.calls[0]?.[0]).toBe("admin.snapshot");
+    expect(span.setAttribute).toHaveBeenCalledWith("type", "query");
+    expect(span.setAttribute).toHaveBeenCalledWith("status", "success");
+    expect(span.end).toHaveBeenCalledTimes(2);
   });
 
   it("records an error label when the inner middleware returns ok=false", async () => {
+    const { span, startActiveSpan } = installSpanSpy();
     await invoke("admin.snapshot", "mutation", {
       ok: false,
       error: new TRPCError({ code: "FORBIDDEN", message: "denied" }),
@@ -68,6 +99,13 @@ describe("trpcMetricsMiddleware", () => {
     expect(text).toContain(
       'trpc_request_duration_seconds_count{procedure="admin.snapshot",type="mutation",status="error"} 1',
     );
+    expect(startActiveSpan).toHaveBeenCalledExactlyOnceWith(
+      "admin.snapshot",
+      expect.any(Function),
+    );
+    expect(span.setAttribute).toHaveBeenCalledWith("type", "mutation");
+    expect(span.setAttribute).toHaveBeenCalledWith("status", "error");
+    expect(span.end).toHaveBeenCalledOnce();
   });
 
   it("records an error label and rethrows when inner next() throws", async () => {

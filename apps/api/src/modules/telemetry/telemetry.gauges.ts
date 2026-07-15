@@ -27,7 +27,7 @@ export interface TelemetryGaugesPort {
    * (`late=false`) across the last `n` published periods. Returns `null`
    * when there is no eligible data (no published periods or no submitted
    * sections) — caller decides how to surface the missing value to
-   * Prometheus (Gauge stays unset, scrape emits NaN).
+   * Prometheus (the gauge reports NaN).
    */
   onTimeRatioLastNPeriods(n: number): Promise<number | null>;
   /**
@@ -117,12 +117,13 @@ export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
         const value = await this.repo.onTimeRatioLastNPeriods(
           ON_TIME_RATIO_WINDOW_PERIODS,
         );
-        if (value !== null) {
-          customreportReportsOnTimeRatio.set(value);
+        if (value === null) {
+          // Overwrite the last good sample so a has-data-to-no-data transition
+          // cannot leave a stale ratio visible in subsequent scrapes.
+          customreportReportsOnTimeRatio.set(Number.NaN);
+          return;
         }
-        // If null → leave gauge unset; prom-client emits the last-set
-        // value or NaN, which the dashboard panel renders as "no data"
-        // rather than a misleading 0.
+        customreportReportsOnTimeRatio.set(value);
       } catch (error) {
         this.logger.error(
           "customreportReportsOnTimeRatio collect failed",

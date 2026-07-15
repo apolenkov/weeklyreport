@@ -10,6 +10,8 @@ import { observable } from "@trpc/server/observable";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import superjson from "superjson";
 
+import { fetchWithTraceparent } from "./trace-context";
+
 // ---------------------------------------------------------------------------
 // 401 interceptor — redirect logic
 // ---------------------------------------------------------------------------
@@ -111,8 +113,7 @@ export function makeTRPCClient() {
       httpBatchLink({
         transformer: superjson,
         url: "/trpc",
-        fetch: (url, options) =>
-          fetch(url, { ...options, credentials: "include" }),
+        fetch: fetchWithTraceparent,
       }),
     ],
   });

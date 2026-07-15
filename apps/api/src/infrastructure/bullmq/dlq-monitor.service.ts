@@ -4,7 +4,9 @@ import { type Queue, QueueEvents } from "bullmq";
 
 import type { EnvConfig } from "../config/env.schema";
 import {
+  dlqFailedCurrent,
   dlqFailedTotal,
+  queueDepth,
   redisMemoryUsedBytes,
 } from "../metrics/metrics.registry.js";
 import { getBullMQOptions } from "./bullmq-options";
@@ -89,7 +91,7 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     // positive int (env.schema `z.coerce.number()`), so no parse/guard here.
     const threshold = this.env.DLQ_ALERT_THRESHOLD ?? DEFAULT_THRESHOLD;
     this.pollTimer = setInterval(() => {
-      void this.checkThresholds(threshold);
+      void this.pollQueueMetrics(threshold);
       void this.checkRedisMemory();
     }, POLL_INTERVAL_MS);
     // Don't keep the event loop alive on shutdown.
@@ -141,10 +143,19 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /** Publish queue depths and authoritative failed counts for one poll cycle. */
+  private async pollQueueMetrics(threshold: number): Promise<void> {
+    await Promise.all([
+      this.checkThresholds(threshold),
+      this.checkQueueDepths(),
+    ]);
+  }
+
   private async checkThresholds(threshold: number): Promise<void> {
     for (const name of QUEUE_NAMES) {
       try {
         const count = await this.registry.get(name).getFailedCount();
+        dlqFailedCurrent.set({ queue: name }, count);
         if (count > threshold) {
           this.logger.error(
             `[dlq-alert] queue=${name} failedCount=${count} threshold=${threshold} — investigate via /admin/queues`,
@@ -156,6 +167,24 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
         );
       }
     }
+  }
+
+  /** Publish waiting, active, and delayed depths for every registered queue. */
+  private async checkQueueDepths(): Promise<void> {
+    await Promise.all(
+      QUEUE_NAMES.map(async (name) => {
+        try {
+          const counts = await this.registry.get(name).getJobCounts();
+          queueDepth.set({ queue: name, state: "waiting" }, counts.waiting);
+          queueDepth.set({ queue: name, state: "active" }, counts.active);
+          queueDepth.set({ queue: name, state: "delayed" }, counts.delayed);
+        } catch (error) {
+          this.logger.warn(
+            `[queue-depth] poll failed for ${name}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      }),
+    );
   }
 
   /**
