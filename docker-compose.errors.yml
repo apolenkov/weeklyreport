@@ -11,7 +11,7 @@
 
 services:
   bugsink:
-    image: bugsink/bugsink:latest
+    image: bugsink/bugsink:latest@sha256:bc3a491edb7d94d42ae49be14f586a4b7eefa929389272c37f9bec112f232e78
     ports:
       - "${BUGSINK_PORT:-8000}:8000"
     volumes:

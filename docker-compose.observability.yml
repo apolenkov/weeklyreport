@@ -6,10 +6,10 @@
 # Not part of the prod-default compose — the org typically has a managed stack already.
 #
 # Usage:
-#   docker compose -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.observability.yml up -d
+#   pnpm observability:up   # dev layering incl. docker-compose.observability.dev.yml (last)
 #   docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d
 #
-# Grafana login: admin / admin  →  http://localhost:3003
+# Grafana login: admin / the configured GRAFANA_ADMIN_PASSWORD  →  http://localhost:3003
 
 services:
   # Composing this overlay is what turns api tracing ON: it supplies the
@@ -19,12 +19,12 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-lgtm:4318
 
   otel-lgtm:
-    image: grafana/otel-lgtm:latest
+    image: grafana/otel-lgtm:latest@sha256:6e14b923e0130b8b294ca5bcc7c94d54e899d150817e6c3ed82d9b665afe5499
     ports:
-      - "${GRAFANA_PORT:-3003}:3000"
-      - "4317:4317"
-      - "4318:4318"
-      - "9090:9090"
+      - "127.0.0.1:${GRAFANA_PORT:-3003}:3000"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:9090:9090"
     volumes:
       - lgtmdata:/data
       - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -38,7 +38,7 @@ services:
     environment:
       GF_PATHS_PROVISIONING: /etc/grafana/provisioning
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set}
       GF_USERS_ALLOW_SIGN_UP: "false"
     depends_on:
       - postgres-exporter
@@ -46,16 +46,17 @@ services:
     restart: unless-stopped
 
   postgres-exporter:
-    image: prometheuscommunity/postgres-exporter:v0.15.0
+    image: prometheuscommunity/postgres-exporter:v0.15.0@sha256:386b12d19eab2a37d7cd8ca8b4c7491cc7a830d9581f49af6c98a393da9605e6
     environment:
-      DATA_SOURCE_NAME: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport_dev?sslmode=disable
+      # Dev supplies POSTGRES_DB via docker-compose.dev.yml; prod must export it.
+      DATA_SOURCE_NAME: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
 
   redis-exporter:
-    image: oliver006/redis_exporter:v1.62.0
+    image: oliver006/redis_exporter:v1.62.0@sha256:c5a968ba5f30bab5e12181cceb89c4ed37cb4fe4d85490b5b66c7cfe4750b5e8
     environment:
       REDIS_ADDR: redis://redis:6379
     depends_on:

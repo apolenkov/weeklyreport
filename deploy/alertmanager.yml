@@ -10,7 +10,7 @@ route:
 receivers:
   - name: webhook-stub
     webhook_configs:
-      # Stub: POST to the API's /api/alerts endpoint (to be implemented when alerting is activated).
+      # The /api/alerts endpoint does not exist yet; alerting must not be activated until it does.
       # Replace with Slack/PagerDuty/email config for production use.
-      - url: "http://api:3002/api/alerts"
+      - url: "http://api:3001/api/alerts"
         send_resolved: true

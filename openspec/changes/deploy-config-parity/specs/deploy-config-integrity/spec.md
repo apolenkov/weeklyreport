@@ -40,7 +40,7 @@ default when the variable is absent.
 
 ### Requirement: Non-prod container images MUST be pinned to an immutable digest
 
-Every image reference in `docker-compose.yml`, `docker-compose.errors.yml`, and `docker-compose.observability.yml` that currently resolves to a mutable tag MUST be pinned to a `@sha256:...` digest.
+Every image reference in `docker-compose.yml`, `docker-compose.errors.yml`, and `docker-compose.observability.yml` that currently resolves to a mutable tag MUST be pinned to a `@sha256:...` digest — except the dev-only `postgres:15-alpine` and `redis:7-alpine` base services, which the proposal's Non-goals leave tag-pinned (their prod counterparts in `docker-compose.prod.yml` are already digest-pinned).
 This applies to any `:latest` or bare version tag without a digest, matching
 the pinning discipline `docker-compose.prod.yml` already applies to
 `postgres`, `pgbouncer`, `redis`, and `caddy`.

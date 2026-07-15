@@ -63,7 +63,7 @@
 		# Lock down where browsers may load resources from (relax if /reports
 		# embeds external imagery — currently same-origin only).
 		# TODO: flip Report-Only -> enforcing after in-browser CSP validation across all role surfaces
-		Content-Security-Policy-Report-Only "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self'"
+		Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'"
 		-Server
 	}
 
