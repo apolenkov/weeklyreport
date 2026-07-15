@@ -4,10 +4,7 @@ import { MAX_PRODUCTS_PER_LEAD } from "@customreport/shared";
 import { useRef } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
-import type {
-  MockProduct,
-  MockUser,
-} from "../../../shared/lib/admin-mock-data";
+import type { MockProduct, MockUser } from "../model/admin-types";
 import type { ProductFormData } from "../model/product-form";
 
 interface ProductEditDialogProps {

@@ -454,7 +454,7 @@ async function main() {
   });
 
   // ----- Active report (Week 16) sections -----
-  // Section status plan (matches MOCK_KPI: submitted: 4, total: 6, pendingCount: 2):
+  // Section status plan: submitted: 4, total: 6, pendingCount: 2.
   //   Василий И. -> submitted (Apr 14 10:00)
   //   Maria K.    -> submitted (Apr 14 14:00)
   //   Igor V.     -> submitted (Apr 15 09:30)

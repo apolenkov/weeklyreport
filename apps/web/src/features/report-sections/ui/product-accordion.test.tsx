@@ -18,16 +18,19 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type {
-  ProductReport,
-  ReportDecision,
-  ReportItem,
-  ReportRisk,
-} from "../../../shared/lib/dashboard-mock-data";
+  WeeklyProductReport,
+  WeeklyReportDecision,
+  WeeklyReportItem,
+  WeeklyReportRisk,
+} from "../model/weekly-report-types";
 import { ProductAccordion } from "./product-accordion";
 
-function makeReport(overrides?: Partial<ProductReport>): ProductReport {
+function makeReport(
+  overrides?: Partial<WeeklyProductReport>,
+): WeeklyProductReport {
   return {
     id: "p1",
+    authorIds: ["author-1"],
     initials: "PA",
     name: "Product Alpha",
     status: "on-track",
@@ -42,7 +45,9 @@ function makeReport(overrides?: Partial<ProductReport>): ProductReport {
   };
 }
 
-function makeItem(overrides: Partial<ReportItem> & { id: string }): ReportItem {
+function makeItem(
+  overrides: Partial<WeeklyReportItem> & { id: string },
+): WeeklyReportItem {
   return {
     stageLead: "Dev · AL",
     stage: "Development",
@@ -53,7 +58,9 @@ function makeItem(overrides: Partial<ReportItem> & { id: string }): ReportItem {
   };
 }
 
-function makeRisk(overrides: Partial<ReportRisk> & { id: string }): ReportRisk {
+function makeRisk(
+  overrides: Partial<WeeklyReportRisk> & { id: string },
+): WeeklyReportRisk {
   return {
     badge: "Product Alpha · Development",
     stage: "Development",
@@ -68,8 +75,8 @@ function makeRisk(overrides: Partial<ReportRisk> & { id: string }): ReportRisk {
 }
 
 function makeDecision(
-  overrides: Partial<ReportDecision> & { id: string },
-): ReportDecision {
+  overrides: Partial<WeeklyReportDecision> & { id: string },
+): WeeklyReportDecision {
   return {
     badge: "Product Alpha",
     owner: "AL",

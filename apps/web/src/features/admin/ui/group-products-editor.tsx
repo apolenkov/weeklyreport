@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
-import type { MockProduct } from "../../../shared/lib/admin-mock-data";
+import type { MockProduct } from "../model/admin-types";
 
 /**
  * «Products attached» section inside the Groups tab edit dialog.

@@ -6,14 +6,10 @@ import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
-import type {
-  MockGroup,
-  MockProduct,
-  MockUser,
-} from "../../../shared/lib/admin-mock-data";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import { PlusIcon } from "../../../shared/ui/icons";
 import { toReportingGroupInput } from "../model/admin";
+import type { MockGroup, MockProduct, MockUser } from "../model/admin-types";
 import {
   EMPTY_GROUP_FORM,
   formFromGroup,

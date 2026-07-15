@@ -1,6 +1,6 @@
 "use client";
 
-import type { MockGroup, MockUser } from "../../../shared/lib/admin-mock-data";
+import type { MockGroup, MockUser } from "../model/admin-types";
 
 interface GroupsTableProps {
   readonly groups: readonly MockGroup[];

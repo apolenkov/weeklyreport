@@ -1,9 +1,7 @@
 /**
- * Presentation types for the admin tabs. These are intentionally
- * self-contained re-declarations so downstream consumers do not couple to a
- * particular UI module (`apps/web/src/shared/lib/admin-mock-data.ts`). The
- * mapper logic that produces them lives in `admin.ts`; the form-state→API
- * helpers live in `admin-form-inputs.ts`.
+ * Canonical presentation types for the admin tabs. The mapper logic that
+ * produces them lives in `admin.ts`; the form-state-to-API helpers live in
+ * `admin-form-inputs.ts`.
  */
 
 import type {

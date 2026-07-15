@@ -8,11 +8,13 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { PortfolioProduct } from "../../../shared/lib/dashboard-mock-data";
 import type { LeadOverviewRow } from "../model/weekly-report";
+import type { WeeklyPortfolioProduct } from "../model/weekly-report-types";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
 
-function makeProduct(overrides?: Partial<PortfolioProduct>): PortfolioProduct {
+function makeProduct(
+  overrides?: Partial<WeeklyPortfolioProduct>,
+): WeeklyPortfolioProduct {
   return {
     id: "p1",
     initials: "PA",

@@ -2,7 +2,7 @@
 
 import type { Dispatch, SetStateAction } from "react";
 
-import type { MockSettings } from "../../../shared/lib/admin-mock-data";
+import type { MockSettings } from "../../admin";
 
 /**
  * Period base fields for the Settings → Periods sub-tab. The owning

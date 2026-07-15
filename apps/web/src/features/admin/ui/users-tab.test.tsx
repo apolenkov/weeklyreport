@@ -26,8 +26,8 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../lib/trpc-context";
-import type { MockGroup, MockUser } from "../../../shared/lib/admin-mock-data";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
+import type { MockGroup, MockUser } from "../model/admin-types";
 import { UsersTab } from "./users-tab";
 
 // Silence toast calls — the mutations resolve async; these tests don't wait

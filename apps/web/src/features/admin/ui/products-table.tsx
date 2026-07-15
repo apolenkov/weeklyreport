@@ -1,9 +1,6 @@
 "use client";
 
-import type {
-  MockProduct,
-  MockUser,
-} from "../../../shared/lib/admin-mock-data";
+import type { MockProduct, MockUser } from "../model/admin-types";
 import { ProductGroupChips } from "./product-group-chips";
 import { StageAssignmentEditor } from "./stage-assignment-editor";
 

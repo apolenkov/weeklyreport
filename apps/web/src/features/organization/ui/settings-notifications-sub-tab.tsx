@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import type { MockSettings } from "../../../shared/lib/admin-mock-data";
 import {
   CheckIcon,
   useUpdateSettingsMut,
 } from "../../../shared/ui/settings-tab-shared";
+import type { MockSettings } from "../../admin";
 
 export function NotificationsSubTab({
   serverSettings,

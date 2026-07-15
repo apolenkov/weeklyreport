@@ -910,9 +910,7 @@ export default defineConfig([
   // unit and say why"). These are the documented end-state exempts, NOT TODO.
   {
     files: [
-      "apps/web/src/shared/lib/dashboard-mock-data.ts", // fixture data, no logic
       "apps/web/src/features/report-sections/model/mock-data.ts", // fixture data, no logic
-      "apps/web/src/shared/lib/admin-mock-data.ts", // fixture data, no logic
       "packages/ui/src/components/ui/sidebar.tsx", // shadcn/ui generated primitive bundle
       "prisma/wipe-manual-uat.ts", // one-off operational script (cf. seeds, ignored)
       "packages/shared/src/schemas/report.schema.ts", // dense Zod schema catalogue, no logic
@@ -962,9 +960,7 @@ export default defineConfig([
   // strings) — same footing as the test carve-out above.
   {
     files: [
-      "apps/web/src/shared/lib/dashboard-mock-data.ts",
       "apps/web/src/features/report-sections/model/mock-data.ts",
-      "apps/web/src/shared/lib/admin-mock-data.ts",
       "packages/ui/src/components/ui/sidebar.tsx",
       "prisma/wipe-manual-uat.ts",
       "apps/web/uat-suite/**",

@@ -3,11 +3,7 @@
 import { useRef } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
-import type {
-  MockGroup,
-  MockProduct,
-  MockUser,
-} from "../../../shared/lib/admin-mock-data";
+import type { MockGroup, MockProduct, MockUser } from "../model/admin-types";
 import type { GroupFormData } from "../model/group-form";
 import { GroupProductsEditor } from "./group-products-editor";
 

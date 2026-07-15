@@ -1,14 +1,14 @@
 "use client";
 
-import type { PortfolioProduct } from "../../../shared/lib/dashboard-mock-data";
 import type { LeadOverviewRow } from "../model/weekly-report";
+import type { WeeklyPortfolioProduct } from "../model/weekly-report-types";
 
 // report-overview-scope-parity: the overview band follows the report's active
 // scope. In `product` scope it summarizes products (unchanged); in `lead` scope
 // it summarizes leads — one card per lead with content, click jumps to that
 // lead's section. The grouping unit always matches the report body's unit.
 type PortfolioOverviewTableProps =
-  | { readonly scope?: "product"; readonly products: PortfolioProduct[] }
+  | { readonly scope?: "product"; readonly products: WeeklyPortfolioProduct[] }
   | { readonly scope: "lead"; readonly leads: readonly LeadOverviewRow[] };
 
 const CSS_PRIMARY = "var(--color-primary)";
@@ -134,7 +134,7 @@ function LeadOverviewCard({ lead }: { readonly lead: LeadOverviewRow }) {
 function ProductOverviewCard({
   product,
 }: {
-  readonly product: PortfolioProduct;
+  readonly product: WeeklyPortfolioProduct;
 }) {
   const isEmpty =
     product.currentWeekCount === 0 &&

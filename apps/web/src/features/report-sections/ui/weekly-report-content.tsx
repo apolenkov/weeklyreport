@@ -1,7 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import Link from "next/link";
 
-import type { PortfolioProduct } from "../../../shared/lib/dashboard-mock-data";
 import type { ReviewMode, SubmissionFilter } from "../../review";
 import {
   DraftHiddenSignal,
@@ -9,6 +8,7 @@ import {
   SubmissionFilterToggle,
 } from "../../review";
 import type { LeadOverviewRow } from "../model/weekly-report";
+import type { WeeklyPortfolioProduct } from "../model/weekly-report-types";
 import { ActivityStatusStrip } from "./activity-status-strip";
 import {
   AcknowledgeSurface,
@@ -34,7 +34,7 @@ export interface ReportContentProps {
    * status/note is unreviewed content and must not leak to head/viewer.
    */
   readonly activitySections: readonly ReportSectionReadModel[];
-  readonly portfolio: PortfolioProduct[];
+  readonly portfolio: WeeklyPortfolioProduct[];
   readonly leadOverviewRows: LeadOverviewRow[];
   readonly reviewModel: ReviewModel;
   readonly reportId: string;

@@ -1,11 +1,11 @@
-import type {
-  PortfolioProduct,
-  ProductReport,
-} from "../../../shared/lib/dashboard-mock-data";
 import { ExportPdfButton, PdfExportComingSoonControl } from "../../pdf-export";
 import type { ReviewMode } from "../../review";
 import { ReviewAcknowledgeBar, ReviewVerdictBand } from "../../review";
 import type { LeadOverviewRow } from "../model/weekly-report";
+import type {
+  WeeklyPortfolioProduct,
+  WeeklyProductReport,
+} from "../model/weekly-report-types";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
 import { ProductAccordion } from "./product-accordion";
 import type { LeadGroup, ReviewModel } from "./weekly-report-page-helpers";
@@ -48,13 +48,13 @@ export function ReportAccordionBody({
   review,
 }: {
   readonly scope: "product" | "lead";
-  readonly products: ProductReport[];
+  readonly products: WeeklyProductReport[];
   readonly leadGroups: LeadGroup[];
   readonly focusedProductId: string | undefined;
   readonly scrollTargetProductId: string | undefined;
   readonly review: ReviewModel["context"];
 }) {
-  const renderAccordion = (report: ProductReport) => (
+  const renderAccordion = (report: WeeklyProductReport) => (
     <ProductAccordion
       key={report.id}
       report={report}
@@ -104,7 +104,7 @@ export function ReportOverviewBand({
   leadOverviewRows,
 }: {
   readonly scope: "product" | "lead";
-  readonly portfolio: PortfolioProduct[];
+  readonly portfolio: WeeklyPortfolioProduct[];
   readonly leadOverviewRows: LeadOverviewRow[];
 }) {
   if (scope === "lead") {
