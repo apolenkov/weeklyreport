@@ -103,7 +103,7 @@ function writeRedisCommand(command: string, ...args: string[]): Buffer {
   );
 }
 
-async function flushRedisDb(): Promise<
+export async function flushRedisDb(): Promise<
   { flushed: true } | { flushed: false; reason: string }
 > {
   if (process.env.MANUAL_UAT_WIPE_FLUSH_REDIS === "false") {
@@ -118,7 +118,10 @@ async function flushRedisDb(): Promise<
 
   return new Promise((resolve) => {
     const socket = net.createConnection({ host, port });
+    let settled = false;
     const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
       socket.destroy();
       resolve({ flushed: false, reason: "timeout" });
     }, 5000);
@@ -129,7 +132,8 @@ async function flushRedisDb(): Promise<
     });
     socket.on("data", (chunk) => {
       response += chunk.toString("utf8");
-      if (!response.includes("\r\n")) return;
+      if (!response.includes("\r\n") || settled) return;
+      settled = true;
       clearTimeout(timer);
       socket.end();
       if (response.startsWith("+OK")) {
@@ -139,11 +143,16 @@ async function flushRedisDb(): Promise<
       }
     });
     socket.once("error", (error) => {
+      if (settled) return;
+      settled = true;
       clearTimeout(timer);
       resolve({ flushed: false, reason: error.message });
     });
     socket.once("close", () => {
       clearTimeout(timer);
+      if (settled) return;
+      settled = true;
+      resolve({ flushed: false, reason: "closed-before-reply" });
     });
   });
 }
@@ -669,12 +678,14 @@ async function main() {
   );
 }
 
-void main()
-  .catch((error: unknown) => {
-    console.error("[wipe-manual-uat] Failed:", error);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-    await pool.end();
-  });
+if (typeof require !== "undefined" && require.main === module) {
+  void main()
+    .catch((error: unknown) => {
+      console.error("[wipe-manual-uat] Failed:", error);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+      await pool.end();
+    });
+}
