@@ -7,7 +7,7 @@ import {
   statusDotClassName,
   statusLabel,
 } from "../../../lib/status-presentation";
-import type { SlideActivityPill } from "../model/section-slide-utils";
+import type { SlideActivityPill } from "../model/section-slide-contracts";
 
 type PillStatus = TrafficLightStatus | "empty";
 

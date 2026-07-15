@@ -1,3 +1,5 @@
+import type { PeriodStatus } from "@customreport/shared";
+
 import { ExportPdfButton, PdfExportComingSoonControl } from "../../pdf-export";
 import type { ReviewMode } from "../../review";
 import { ReviewAcknowledgeBar, ReviewVerdictBand } from "../../review";
@@ -128,7 +130,7 @@ export function ToolbarExportControl({
   canExportPdf: boolean;
   showComingSoon: boolean;
   reportId: string;
-  periodStatus: "open" | "published" | "reopened";
+  periodStatus: PeriodStatus;
 }) {
   if (canExportPdf) {
     return <ExportPdfButton reportId={reportId} periodStatus={periodStatus} />;

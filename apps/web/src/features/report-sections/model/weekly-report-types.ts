@@ -122,7 +122,7 @@ export interface WeeklyReportPeriod {
    * Period lifecycle state mirrored from the API. Used by the head's
    * Publish & Lock / Reopen toggle to decide which action to render.
    */
-  periodStatus: "open" | "published" | "reopened";
+  periodStatus: WeeklyReportReadModel["periodStatus"];
   weekLabel: string;
   dateRange: string;
   isCurrent: boolean;

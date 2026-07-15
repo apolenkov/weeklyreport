@@ -35,7 +35,7 @@ vi.mock("../model/lead-slides-deck-model", () => ({
   buildLeadDeckModel: (section: unknown) => section,
 }));
 
-vi.mock("../model/section-slide-utils", () => ({
+vi.mock("../model/section-slide-pagination", () => ({
   paginateSectionSlides: (model: unknown) => [model],
 }));
 

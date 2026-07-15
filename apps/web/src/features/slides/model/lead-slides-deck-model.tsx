@@ -1,13 +1,13 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
 import type { CrossAuthorContentRow } from "../../report-sections";
+import type { SectionSlideModel } from "./section-slide-contracts";
 import {
   applyForeignProductHealth,
-  buildSectionSlideModel,
   crossAuthorContentToSlideForeign,
   mergeForeignSlideContent,
-  type SectionSlideModel,
-} from "./section-slide-utils";
+} from "./section-slide-foreign";
+import { buildSectionSlideModel } from "./section-slide-model";
 
 /**
  * Assemble the lead deck's slide model: own records, then the risk-derived

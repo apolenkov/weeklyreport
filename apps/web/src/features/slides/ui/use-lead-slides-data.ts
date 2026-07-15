@@ -15,10 +15,8 @@ import {
   resolveLeadSlideReportId,
 } from "../model/lead-slide-periods";
 import { buildLeadDeckModel } from "../model/lead-slides-deck-model";
-import {
-  paginateSectionSlides,
-  type SectionSlideModel,
-} from "../model/section-slide-utils";
+import { type SectionSlideModel } from "../model/section-slide-contracts";
+import { paginateSectionSlides } from "../model/section-slide-pagination";
 
 export type LeadSlideFormData = NonNullable<ReturnType<typeof mapLeadFormData>>;
 

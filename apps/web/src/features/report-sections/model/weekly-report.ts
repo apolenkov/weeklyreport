@@ -24,9 +24,7 @@ import type { WeeklyReportReadModel } from "@customreport/shared";
 import { statusLabel } from "../../../lib/status-presentation";
 import { reportHasContent } from "./report-content";
 import {
-  buildProductToAuthorMap,
   buildProjectNameMap,
-  findNeedsAttention,
   formatWeekRange,
   groupDecisionsByProject,
   groupItemsByProject,
@@ -37,10 +35,14 @@ import {
   statusLabelFor,
   trafficToProductStatus,
 } from "./weekly-report-groupers";
+import {
+  buildWeeklyReportProjectionContext,
+  type ProjectedWeeklyProduct,
+  projectWeeklyProduct,
+} from "./weekly-report-projection";
 import type {
   LeadOverviewRow,
   MapWeeklyReportResult,
-  WeeklyPortfolioProduct,
   WeeklyProductReport,
   WeeklyProductStatus,
   WeeklyReportPeriod,
@@ -49,82 +51,10 @@ import type {
 export { formatWeekRange } from "./weekly-report-groupers";
 export type * from "./weekly-report-types";
 
-/**
- * Compose `weeklyReport.get` into the page's portfolio + per-product slices.
- */
-export function mapWeeklyReport(
+function buildWeeklyReportPeriod(
   api: WeeklyReportReadModel,
-): MapWeeklyReportResult {
-  const projectNames = buildProjectNameMap(
-    api.leadSections,
-    api.portfolioOverview,
-  );
-  const itemsByProject = groupItemsByProject(api.leadSections);
-  const risksByProject = groupRisksByProject(api.leadSections, projectNames);
-  const decisionsByProject = groupDecisionsByProject(
-    api.leadSections,
-    projectNames,
-  );
-  const prioritiesByProject = groupPrioritiesByProject(api.leadSections);
-  const authorsByProject = buildProductToAuthorMap(api.leadSections);
-
-  // Portfolio rows + per-product reports — driven by api.portfolioOverview
-  // (already aggregated server-side).
-  const portfolio: WeeklyPortfolioProduct[] = [];
-  const products: WeeklyProductReport[] = [];
-
-  for (const overview of api.portfolioOverview) {
-    const status = trafficToProductStatus(overview.worstStatus);
-    const items = itemsByProject.get(overview.productId) ?? {
-      current: [],
-      next: [],
-    };
-    const risks = risksByProject.get(overview.productId) ?? [];
-    const decisions = decisionsByProject.get(overview.productId) ?? [];
-    const priorities = prioritiesByProject.get(overview.productId) ?? [];
-    const leadsLabel =
-      overview.leadNames.length > 0
-        ? overview.leadNames.join(" · ")
-        : "unassigned";
-    const initials = initialsFromName(overview.productName);
-
-    portfolio.push({
-      id: overview.productId,
-      initials,
-      name: overview.productName,
-      status,
-      statusLabel: statusLabelFor(status, overview.leadNames),
-      leads: leadsLabel,
-      currentWeekCount: items.current.length,
-      nextWeekCount: items.next.length,
-      riskCount: risks.length,
-    });
-
-    const attention = findNeedsAttention(api, overview.productName);
-
-    products.push({
-      id: overview.productId,
-      authorIds: authorsByProject.get(overview.productId) ?? [],
-      initials,
-      name: overview.productName,
-      status,
-      statusLabel: statusLabel(status, "print"),
-      leads: leadsLabel,
-      ...(attention.needsAttention !== undefined
-        ? { needsAttention: attention.needsAttention }
-        : {}),
-      ...(attention.needsAttentionSeverity !== undefined
-        ? { needsAttentionSeverity: attention.needsAttentionSeverity }
-        : {}),
-      currentWeek: items.current,
-      nextWeek: items.next,
-      risks,
-      decisions,
-      priorities,
-    });
-  }
-
-  const period: WeeklyReportPeriod = {
+): WeeklyReportPeriod {
+  return {
     id: api.reportId,
     reportId: api.reportId,
     periodStatus: api.periodStatus,
@@ -132,16 +62,33 @@ export function mapWeeklyReport(
     dateRange: formatWeekRange(api.periodStart, api.periodEnd),
     isCurrent: api.periodStatus !== "published",
   };
+}
 
+function assembleWeeklyReport(
+  api: WeeklyReportReadModel,
+  period: WeeklyReportPeriod,
+  projections: readonly ProjectedWeeklyProduct[],
+): MapWeeklyReportResult {
   return {
     period,
-    portfolio,
-    products,
+    portfolio: projections.map(({ portfolio }) => portfolio),
+    products: projections.map(({ product }) => product),
     submissionLabel: `${api.submissionCount}/${api.totalLeads} submitted`,
     periodStatus: api.periodStatus,
     submissionCount: api.submissionCount,
     totalLeads: api.totalLeads,
   };
+}
+
+/** Compose `weeklyReport.get` into the page's portfolio + per-product slices. */
+export function mapWeeklyReport(
+  api: WeeklyReportReadModel,
+): MapWeeklyReportResult {
+  const context = buildWeeklyReportProjectionContext(api);
+  const projections = api.portfolioOverview.map((overview) =>
+    projectWeeklyProduct(overview, context),
+  );
+  return assembleWeeklyReport(api, buildWeeklyReportPeriod(api), projections);
 }
 
 /**

@@ -1,5 +1,6 @@
 "use client";
 
+import type { PeriodStatus } from "@customreport/shared";
 import { useRef, useState } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
@@ -13,7 +14,7 @@ interface PublishLockButtonProps {
    * `reopened`, the button shows "Publish & Lock"; when `published`, it shows
    * "Reopen Period".
    */
-  readonly periodStatus: "open" | "published" | "reopened";
+  readonly periodStatus: PeriodStatus;
   /** Invoked after the user confirms the publish dialog. */
   readonly onPublish: () => void;
   /** Invoked after the user confirms the reopen dialog. Reopen is destructive

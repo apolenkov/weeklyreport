@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import type { SectionSlideModel } from "../model/section-slide-utils";
+import type { SectionSlideModel } from "../model/section-slide-contracts";
 import type { SlideRowActivateHandler } from "./slide-article-rows";
 import { StatusSlideDeck } from "./status-slide-deck";
 

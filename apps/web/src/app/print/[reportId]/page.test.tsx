@@ -28,21 +28,31 @@ vi.mock("@tanstack/react-query", async () => {
   );
   return {
     ...actual,
-    useQuery: vi.fn((options: { queryKey?: unknown[] }) =>
-      options.queryKey?.[1] === "report-b"
-        ? {
-            data: undefined,
-            isLoading: true,
-            isError: false,
-            error: null,
-          }
-        : {
-            data: { status: "open" },
-            isLoading: false,
-            isError: false,
-            error: null,
-          },
-    ),
+    useQuery: vi.fn((options: { queryKey?: unknown[] }) => {
+      const reportId = options.queryKey?.[1];
+      if (reportId === "report-b") {
+        return {
+          data: undefined,
+          isLoading: true,
+          isError: false,
+          error: null,
+        };
+      }
+      if (reportId === "report-error") {
+        return {
+          data: undefined,
+          isLoading: false,
+          isError: true,
+          error: new Error("network unavailable"),
+        };
+      }
+      return {
+        data: { status: "open" },
+        isLoading: false,
+        isError: false,
+        error: null,
+      };
+    }),
   };
 });
 
@@ -64,10 +74,46 @@ vi.mock("../../../lib/trpc-context", () => ({
 
 vi.mock("../../../features/report-sections/model/weekly-report", () => ({
   mapWeeklyReport: () => ({
-    portfolio: [],
-    products: [],
-    submissionCount: 0,
-    totalLeads: 0,
+    portfolio: [
+      {
+        id: "product-1",
+        initials: "CO",
+        name: "Core",
+        status: "at-risk",
+        statusLabel: "At Risk · Alex Lead",
+        leads: "Alex Lead",
+        currentWeekCount: 1,
+        nextWeekCount: 1,
+        riskCount: 1,
+      },
+    ],
+    products: [
+      {
+        id: "product-1",
+        authorIds: ["author-1"],
+        initials: "CO",
+        name: "Core",
+        status: "at-risk",
+        statusLabel: "At Risk",
+        leads: "Alex Lead",
+        currentWeek: [
+          {
+            id: "item-1",
+            stageLead: "Build · AL",
+            stage: "Build",
+            owner: "AL",
+            text: "Ship release",
+            status: "in-progress",
+          },
+        ],
+        nextWeek: [],
+        risks: [],
+        decisions: [{ id: "decision-1", badge: "Core", text: "Approve" }],
+        priorities: [],
+      },
+    ],
+    submissionCount: 1,
+    totalLeads: 2,
     period: {
       id: "p1",
       reportId: "r1",
@@ -170,5 +216,44 @@ describe("PrintReportTemplate report-key transitions", () => {
     expect(vi.mocked(useQuery).mock.lastCall?.[0]).toMatchObject({
       queryKey: ["weeklyReport.get", "report-b"],
     });
+  });
+});
+
+describe("PrintReportTemplate render outcomes", () => {
+  it("renders the loading marker without ready content", () => {
+    const { container } = renderPage("report-b");
+
+    expect(
+      container.querySelector('[data-print-state="loading"]'),
+    ).not.toBeNull();
+    expect(container.querySelector('[data-print-state="ready"]')).toBeNull();
+  });
+
+  it("renders the terminal error marker", () => {
+    const { container } = renderPage("report-error");
+
+    expect(
+      container.querySelector('[data-print-state="error"]'),
+    ).not.toBeNull();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Report could not be rendered",
+    );
+  });
+
+  it("renders ready summary, portfolio, and product records", () => {
+    const { container } = renderPage("report-ready");
+
+    expect(
+      container.querySelector('[data-print-state="ready"]'),
+    ).not.toBeNull();
+    expect(screen.getByText("Executive Summary")).toBeInTheDocument();
+    expect(screen.getByText("Portfolio Overview")).toBeInTheDocument();
+    expect(screen.getByText("Product Reports")).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "Core" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Core" })).toBeInTheDocument();
+    expect(screen.getByText("Ship release")).toBeInTheDocument();
+    expect(container.querySelector("header")).toHaveTextContent(
+      "1/2 leads submitted",
+    );
   });
 });

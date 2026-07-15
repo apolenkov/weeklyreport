@@ -1,4 +1,4 @@
-import type { WeeklyReportReadModel } from "@customreport/shared";
+import type { PeriodStatus, WeeklyReportReadModel } from "@customreport/shared";
 
 import { joinPeriodLabel } from "../../../lib/format-date";
 import { isHeadLike, isLead } from "../../../lib/role-predicates";
@@ -28,7 +28,7 @@ export interface WeeklyReportPageView {
   readonly showLeadExportComingSoon: boolean;
   readonly periodId: string;
   readonly reportId: string;
-  readonly periodStatus: "open" | "published" | "reopened";
+  readonly periodStatus: PeriodStatus;
   readonly periodLabel: string;
   readonly periods: ReportPeriod[];
   readonly submitted: number;

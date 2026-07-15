@@ -2,18 +2,21 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import type { CrossAuthorContentRow } from "../../report-sections";
+import { buildActivitySlideModel } from "./activity-slide-model";
+import { buildProductScopedSlides } from "./product-scoped-slides";
+import type { SlideProduct } from "./section-slide-contracts";
 import {
   applyForeignProductHealth,
-  buildActivitySlideModel,
-  buildProductScopedSlides,
-  buildSectionSlideModel,
   crossAuthorContentToSlideForeign,
   EMPTY_SLIDE_FOREIGN_CONTENT,
   mergeForeignSlideContent,
   type SlideForeignContent,
-  type SlideProduct,
+} from "./section-slide-foreign";
+import { buildSectionSlideModel } from "./section-slide-model";
+import {
+  paginateSectionSlides,
   sortSlidesForReview,
-} from "./section-slide-utils";
+} from "./section-slide-pagination";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const SECTION_ID = "22222222-2222-4222-8222-222222222222";
@@ -571,6 +574,44 @@ describe("section slide utilities", () => {
     expect(slide.productSlides.map((product) => product.name)).toEqual([
       "Core Product",
       "Data Portal",
+    ]);
+  });
+
+  it("preserves product and grid identity across pagination", () => {
+    const model = buildSectionSlideModel(
+      makeSection({
+        projects: [
+          ...makeSection().projects,
+          {
+            projectId: PRODUCT_TWO_ID,
+            projectName: "Second Product",
+            trafficLight: "yellow",
+            ownedStages: [],
+          },
+        ],
+      }),
+    );
+
+    expect(
+      paginateSectionSlides(model, 1).map((page) => ({
+        pageIndex: page.pageIndex,
+        pageTotal: page.pageTotal,
+        productIds: page.productSlides.map((product) => product.id),
+        gridProductIds: page.grid?.products.map((product) => product.id),
+      })),
+    ).toEqual([
+      {
+        pageIndex: 0,
+        pageTotal: 2,
+        productIds: [PRODUCT_ID],
+        gridProductIds: [PRODUCT_ID],
+      },
+      {
+        pageIndex: 1,
+        pageTotal: 2,
+        productIds: [PRODUCT_TWO_ID],
+        gridProductIds: [PRODUCT_TWO_ID],
+      },
     ]);
   });
 

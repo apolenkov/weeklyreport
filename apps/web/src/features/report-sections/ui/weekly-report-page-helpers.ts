@@ -1,4 +1,5 @@
 import type {
+  PeriodStatus,
   ReportSectionReadModel,
   Role,
   WeeklyReportReadModel,
@@ -49,7 +50,6 @@ export function resolveTerminalNotice(query: {
 }
 
 export type CurrentRole = Role | null;
-export type LivePeriodStatus = "open" | "published" | "reopened";
 
 export interface ReviewModel {
   readonly context: AccordionReviewContext | undefined;
@@ -72,7 +72,7 @@ export const EMPTY_REVIEW_MODEL: ReviewModel = {
  */
 export function isReviewEnabled(
   role: CurrentRole,
-  periodStatus: LivePeriodStatus,
+  periodStatus: PeriodStatus,
 ): boolean {
   if (role === null || isLead(role)) return false;
   return periodStatus !== "published";
@@ -99,7 +99,7 @@ export function buildReviewModel(
   reportData: WeeklyReportReadModel,
   params: {
     readonly currentRole: CurrentRole;
-    readonly periodStatus: "open" | "published" | "reopened";
+    readonly periodStatus: PeriodStatus;
     readonly currentUserId: string | null;
     readonly onMutated: () => void;
   },

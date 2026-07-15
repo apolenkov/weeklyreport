@@ -6,6 +6,7 @@
 
 import type {
   DbRole,
+  PeriodStatus,
   ReminderAudience,
   ReminderPolicyKind,
 } from "@customreport/shared";
@@ -53,7 +54,7 @@ export interface MockProduct {
   status: "active" | "archived";
 }
 
-export type PeriodStatus = "open" | "published" | "reopened";
+export type { PeriodStatus } from "@customreport/shared";
 
 export interface MockPeriod {
   id: string;

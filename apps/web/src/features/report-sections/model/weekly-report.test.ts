@@ -90,10 +90,203 @@ describe("statusLabelFor", () => {
 describe("mapWeeklyReport", () => {
   it("returns empty portfolio and products for an empty report", () => {
     const result = mapWeeklyReport(baseReport());
-    expect(result.portfolio).toEqual([]);
-    expect(result.products).toEqual([]);
-    expect(result.period.weekLabel).toBe("Week 16");
-    expect(result.submissionLabel).toBe("0/0 submitted");
+    expect(result).toEqual({
+      period: {
+        id: REPORT_ID,
+        reportId: REPORT_ID,
+        periodStatus: "open",
+        weekLabel: "Week 16",
+        dateRange: "Apr 14–20, 2026",
+        isCurrent: true,
+      },
+      portfolio: [],
+      products: [],
+      submissionLabel: "0/0 submitted",
+      periodStatus: "open",
+      submissionCount: 0,
+      totalLeads: 0,
+    });
+  });
+
+  it("maps a complete report through one stable output contract", () => {
+    const report = baseReport({
+      periodStatus: "reopened",
+      weekLabel: null,
+      submissionCount: 1,
+      totalLeads: 2,
+      portfolioOverview: [
+        {
+          productId: PROJECT_A,
+          productName: "Core",
+          worstStatus: null,
+          stageCount: 1,
+          leadNames: ["Alex Lead"],
+        },
+      ],
+      leadSections: [
+        {
+          activities: [],
+          reportSectionId: SECTION_A,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_A,
+          authorName: "Alex Lead",
+          version: 1,
+          status: "submitted",
+          submittedAt: new Date("2026-04-19T18:00:00Z"),
+          projects: [
+            {
+              projectId: PROJECT_A,
+              projectName: "Core",
+              trafficLight: null,
+            },
+          ],
+          items: [
+            {
+              id: "current-1",
+              projectId: PROJECT_A,
+              type: "current",
+              text: "Ship release",
+              tag: "delivery",
+              workflowStatus: "in_progress",
+              carriedOver: false,
+              priorityRank: 2,
+              stageIds: ["Build"],
+            },
+            {
+              id: "next-1",
+              projectId: PROJECT_A,
+              type: "next",
+              text: "Plan follow-up",
+              tag: "planning",
+              workflowStatus: "planned",
+              carriedOver: false,
+            },
+          ],
+          risks: [
+            {
+              id: "risk-1",
+              projectId: PROJECT_A,
+              risk: "Vendor delay",
+              impact: "Release slips",
+              mitigation: "Escalate",
+              severity: "blocked",
+              stageIds: ["Build"],
+            },
+          ],
+          decisions: [
+            {
+              id: "decision-1",
+              productId: PROJECT_A,
+              text: "Approve launch",
+              owner: "Head",
+              impact: "Release",
+            },
+          ],
+        },
+      ],
+      escalations: [
+        {
+          type: "blocked",
+          productName: "Core",
+          stageName: "Build",
+          leadName: "Alex Lead",
+          description: "Launch needs approval.",
+        },
+      ],
+    });
+
+    expect(mapWeeklyReport(report)).toEqual({
+      period: {
+        id: REPORT_ID,
+        reportId: REPORT_ID,
+        periodStatus: "reopened",
+        weekLabel: "Week 16",
+        dateRange: "Apr 14–20, 2026",
+        isCurrent: true,
+      },
+      portfolio: [
+        {
+          id: PROJECT_A,
+          initials: "CO",
+          name: "Core",
+          status: "on-track",
+          statusLabel: "On Track · Alex Lead",
+          leads: "Alex Lead",
+          currentWeekCount: 1,
+          nextWeekCount: 1,
+          riskCount: 1,
+        },
+      ],
+      products: [
+        {
+          id: PROJECT_A,
+          authorIds: [AUTHOR_A],
+          initials: "CO",
+          name: "Core",
+          status: "on-track",
+          statusLabel: "On Track",
+          leads: "Alex Lead",
+          needsAttention: "Launch needs approval.",
+          needsAttentionSeverity: "blocked",
+          currentWeek: [
+            {
+              id: "current-1",
+              stageLead: "Build · AL",
+              stage: "Build",
+              owner: "AL",
+              text: "Ship release",
+              status: "blocked",
+              priorityRank: 2,
+              comments: [],
+              canReview: false,
+            },
+          ],
+          nextWeek: [
+            {
+              id: "next-1",
+              stageLead: "Planned",
+              stage: "",
+              owner: "AL",
+              text: "Plan follow-up",
+              status: "planned",
+              priorityRank: null,
+              comments: [],
+              canReview: false,
+            },
+          ],
+          risks: [
+            {
+              id: "risk-1",
+              badge: "Core · Build",
+              stage: "Build",
+              owner: "AL",
+              severity: "blocked",
+              text: "Vendor delay — Impact: Release slips — Mitigation: Escalate",
+              problem: "Vendor delay",
+              impact: "Release slips",
+              mitigation: "Escalate",
+              comments: [],
+              canReview: false,
+            },
+          ],
+          decisions: [
+            {
+              id: "decision-1",
+              badge: "Core",
+              owner: "AL",
+              text: "Approve launch",
+              comments: [],
+              canReview: false,
+            },
+          ],
+          priorities: [{ rank: 2, text: "Ship release" }],
+        },
+      ],
+      submissionLabel: "1/2 submitted",
+      periodStatus: "reopened",
+      submissionCount: 1,
+      totalLeads: 2,
+    });
   });
 
   it("surfaces reportId and periodStatus on the period object", () => {
