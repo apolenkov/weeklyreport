@@ -1,6 +1,6 @@
 import type { DbRole } from "@customreport/shared";
 
-import type { MockGroup, MockUser } from "../../../shared/lib/admin-mock-data";
+import type { MockGroup, MockUser } from "./admin-types";
 
 export interface UserFormData {
   lastName: string;
