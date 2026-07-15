@@ -8,7 +8,6 @@ export { ItemCardActions, PublishedRecordMarker } from "./ui/item-card-actions";
 export { PeriodNavigator } from "./ui/period-navigator";
 export { PeriodsTab } from "./ui/periods-tab";
 export { PublishLockButton } from "./ui/publish-lock-button";
-export { RecordStageStep } from "./ui/record-stage-step";
 export { RequestReopenDialog } from "./ui/request-reopen-dialog";
 export type { CrossAuthorEntry } from "./ui/sdlc-pipeline";
 export { SdlcPipeline } from "./ui/sdlc-pipeline";

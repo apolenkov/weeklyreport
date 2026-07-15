@@ -8,8 +8,7 @@ import type {
   Product,
   RecordParent,
 } from "../../report-sections";
-import { ParentPicker } from "../../report-sections";
-import { RecordStageStep } from "./record-stage-step";
+import { ParentPicker, StageStep } from "../../report-sections";
 
 interface DecisionEditDialogFieldsProps {
   readonly text: string;
@@ -138,13 +137,13 @@ export function DecisionEditDialogFields({
 
         {/* activity-first-class: the stage step is product-only. */}
         {!isActivityParent && (
-          <RecordStageStep
+          <StageStep
             id="dec-stage"
             stageIds={stageIds}
             availableStages={availableStages}
             isDeadEnd={isDeadEnd}
             error={stageError}
-            parentName={headerProductName}
+            deadEndNotice={`No stages assigned on ${headerProductName} — contact admin.`}
             onChange={onStageChange}
           />
         )}

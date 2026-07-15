@@ -2,7 +2,6 @@
 
 import type { ChipChoice } from "../../../shared/ui/choice-chip-row";
 import { RecordTextareaField } from "../../../shared/ui/record-textarea-field";
-import { RecordStageStep } from "../../period";
 import type { ItemStatus, Product } from "../model/types";
 import type { StatusSlot } from "./item-edit-dialog-helpers";
 import { PausedReasonField } from "./item-paused-reason-field";
@@ -12,6 +11,7 @@ import {
   ParentPicker,
   type RecordParent,
 } from "./product-picker";
+import { StageStep } from "./stage-step";
 
 interface ItemEditDialogFieldsProps {
   readonly text: string;
@@ -150,13 +150,13 @@ export function ItemEditDialogFields({
         {/* activity-first-class: the stage step is product-only. An activity
             owns no SDLC stage, so it is omitted for an activity parent. */}
         {!isActivityParent && (
-          <RecordStageStep
+          <StageStep
             id="item-stage"
             stageIds={stageIds}
             availableStages={availableStages}
             isDeadEnd={isDeadEnd}
             error={stageError}
-            parentName={parentName}
+            deadEndNotice={`No stages assigned on ${parentName} — contact admin.`}
             onChange={onStageChange}
           />
         )}

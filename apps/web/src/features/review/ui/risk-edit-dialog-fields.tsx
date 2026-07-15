@@ -9,10 +9,9 @@ import type {
   Product,
   RecordParent,
 } from "../../report-sections";
-import { ParentPicker } from "../../report-sections";
+import { ParentPicker, StageStep } from "../../report-sections";
 import type { RiskSeverity } from "./risk-edit-dialog-helpers";
 import { SEVERITY_CHOICES } from "./risk-severity-choices";
-import { RiskStageStep } from "./risk-stage-step";
 
 interface RiskEditDialogFieldsProps {
   readonly text: string;
@@ -139,12 +138,14 @@ export function RiskEditDialogFields({
 
         {/* activity-first-class: the stage step is product-only. */}
         {!isActivityParent && (
-          <RiskStageStep
+          <StageStep
+            id="risk-stage"
             stageIds={stageIds}
             availableStages={availableStages}
-            severity={severity}
+            previewSeverity={severity}
             isDeadEnd={isZeroOwnedStageDeadEnd}
             error={stageError}
+            deadEndNotice="No stages assigned — contact admin."
             onChange={onStageChange}
           />
         )}
