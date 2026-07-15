@@ -411,9 +411,8 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
     const addCalls: unknown[] = [];
     const queue = {
       // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      add: async (...args: unknown[]) => {
+      enqueue: async (...args: unknown[]) => {
         addCalls.push(args);
-        return { id: "job" };
       },
     };
     const service = new RemindersService(repository, undefined, queue);
@@ -428,9 +427,8 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
     const addCalls: unknown[] = [];
     const queue = {
       // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      add: async (...args: unknown[]) => {
+      enqueue: async (...args: unknown[]) => {
         addCalls.push(args);
-        return { id: "job" };
       },
     };
     const service = new RemindersService(repository, undefined, queue);
@@ -488,7 +486,7 @@ describe("requestReminderExecution — enqueue failure is recorded, not swallowe
     const repository = buildRepoCapturingFailures(failures);
     const queue = {
       // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      add: async () => {
+      enqueue: async () => {
         throw new Error("Redis unavailable");
       },
     };

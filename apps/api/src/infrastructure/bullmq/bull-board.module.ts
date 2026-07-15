@@ -12,9 +12,9 @@ import type {
 } from "express";
 
 import { resolveSessionCookieName } from "../../lib/session-cookie";
-import { SessionRevocationService } from "../../modules/admin/session-revocation.service";
-import { createAuthController } from "../../modules/auth/auth.controller";
-import { isUserAccessBarred } from "../../modules/auth/session-deactivation";
+import { SessionRevocationService } from "../../modules/admin/index.js";
+import { createAuthController } from "../../modules/auth/index.js";
+import { isUserAccessBarred } from "../../modules/auth/index.js";
 import { PrismaService } from "../prisma/prisma.service";
 import { QueueRegistry } from "./queue-registry.js";
 

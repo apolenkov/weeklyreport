@@ -6,11 +6,14 @@ import {
   type PaginatedResult,
   type PaginationInput,
 } from "@customreport/shared";
-import type { ClsService } from "nestjs-cls";
 
-import type { JobEnqueuer } from "../../infrastructure/bullmq/job-enqueuer.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
 import { ReminderDomainError, ReminderScopeError } from "./reminders.errors.js";
+import {
+  NOOP_REMINDERS_TELEMETRY,
+  type RemindersEnqueuer,
+  type RemindersTelemetry,
+} from "./reminders.ports.js";
 import {
   type EnqueueContext,
   enqueueOrMarkFailed,
@@ -168,7 +171,7 @@ export type ReminderExecutionPayload =
 
 export class RemindersService {
   private readonly logger: AppLogger;
-  private readonly emailQueue: JobEnqueuer | null;
+  private readonly emailQueue: RemindersEnqueuer | null;
   /**
    * Scope-authorization + dispatch surface for the reminders.* procedures
    * (see `RemindersScopeService`). Composed, not inherited, so the router
@@ -179,8 +182,8 @@ export class RemindersService {
   constructor(
     private readonly repository: RemindersRepository,
     logger?: AppLogger,
-    emailQueue?: JobEnqueuer,
-    private readonly cls?: ClsService,
+    emailQueue?: RemindersEnqueuer,
+    private readonly telemetry: RemindersTelemetry = NOOP_REMINDERS_TELEMETRY,
   ) {
     this.logger = logger ?? createNullLogger();
     this.emailQueue = emailQueue ?? null;
@@ -260,10 +263,10 @@ export class RemindersService {
     );
   }
 
-  private enqueueContext(queue: JobEnqueuer): EnqueueContext {
+  private enqueueContext(queue: RemindersEnqueuer): EnqueueContext {
     return {
       queue,
-      cls: this.cls,
+      telemetry: this.telemetry,
       logger: this.logger,
       markExecutionFailed: this.repository.markExecutionFailed?.bind(
         this.repository,

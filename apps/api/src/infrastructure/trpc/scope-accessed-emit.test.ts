@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
-import type { WeeklyReportServiceResult } from "../../modules/weekly-report/weekly-report.service.js";
+import type { WeeklyReportServiceResult } from "../../modules/weekly-report/index.js";
 import { createAppRouter } from "./trpc.router.js";
 
 /**

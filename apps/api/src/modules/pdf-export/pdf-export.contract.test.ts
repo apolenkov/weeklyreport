@@ -111,7 +111,7 @@ function createRepository(
 }
 
 function createMockQueue() {
-  return { add: vi.fn() };
+  return { enqueue: vi.fn() };
 }
 
 // ---------------------------------------------------------------------------
@@ -182,15 +182,14 @@ describe("PdfExportService — contract tests", () => {
 
         const job = await service.requestPdfExport(reportId, requesterSession);
 
-        expect(mockQueue.add).toHaveBeenCalledTimes(1);
-        expect(mockQueue.add).toHaveBeenCalledWith(
-          "generate",
+        expect(mockQueue.enqueue).toHaveBeenCalledTimes(1);
+        expect(mockQueue.enqueue).toHaveBeenCalledWith(
           expect.objectContaining({
             reportId,
             jobId: job.jobId,
             authToken: expect.stringMatching(/^eyJ/) as unknown,
           }),
-          { attempts: 3, backoff: { type: "exponential", delay: 5000 } },
+          {},
         );
       } finally {
         if (originalSecret === undefined) {
@@ -229,7 +228,7 @@ describe("PdfExportService — contract tests", () => {
       await expect(
         service.requestPdfExport(reportId, requesterSession),
       ).rejects.toThrow("PDF export is not available for this caller.");
-      expect(queue.add).not.toHaveBeenCalled();
+      expect(queue.enqueue).not.toHaveBeenCalled();
     });
   });
 

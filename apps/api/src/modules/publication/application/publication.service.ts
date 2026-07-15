@@ -6,11 +6,11 @@ import {
   type UserSession,
 } from "@customreport/shared";
 
-import {
-  customreportPeriodStateTransitionsTotal,
-  customreportReportsSubmittedTotal,
-} from "../../../infrastructure/metrics/metrics.registry.js";
 import { type AppLogger, createNullLogger } from "../../../lib/logger";
+import {
+  NOOP_PUBLICATION_TELEMETRY,
+  type PublicationTelemetry,
+} from "./publication-telemetry.port.js";
 
 /**
  * Post-publish ingestion seam. The enqueue is awaited and any error it throws
@@ -175,6 +175,7 @@ export class PublicationService {
      */
     private readonly ingestionHook: IngestionPublishHook = () =>
       Promise.resolve(undefined),
+    private readonly telemetry: PublicationTelemetry = NOOP_PUBLICATION_TELEMETRY,
   ) {
     this.logger = logger ?? createNullLogger();
   }
@@ -258,11 +259,8 @@ export class PublicationService {
     // failed write would otherwise inflate the counter and corrupt the on-time
     // ratio numerator at the next gauge scrape. The `from` label carries the
     // actual prior state (`open` or `reopened`), never a hardcoded value.
-    customreportReportsSubmittedTotal.inc({ state: "published" });
-    customreportPeriodStateTransitionsTotal.inc({
-      from: outcome.priorPeriodStatus,
-      to: "published",
-    });
+    this.telemetry.recordPublishedReport();
+    this.telemetry.recordPeriodPublished(outcome.priorPeriodStatus);
     // Enqueue ingestion AFTER metrics are emitted. The enqueue is awaited and
     // its errors are swallowed, so an ingestion failure never blocks telemetry
     // or the response — the publish still returns even when the hook is degraded.
@@ -324,11 +322,8 @@ export class PublicationService {
     // without `or` predicates — the manual-vs-auto split is recovered from the
     // period_state_transitions panel paired with publishedById nullness. Emit
     // only after the write succeeds so a failed save never inflates the counter.
-    customreportReportsSubmittedTotal.inc({ state: "published" });
-    customreportPeriodStateTransitionsTotal.inc({
-      from: "open",
-      to: "published",
-    });
+    this.telemetry.recordPublishedReport();
+    this.telemetry.recordPeriodPublished("open");
     // Ingestion enqueue AFTER metrics — auto-publishes feed the same queue as
     // manual publishes. The enqueue is awaited and its errors are swallowed, so
     // a degraded hook never blocks telemetry or the response.

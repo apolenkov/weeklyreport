@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { PeriodService } from "../../../modules/period/application/period.service.js";
+import type { PeriodService } from "../../../modules/period/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import { headProcedure, router } from "../trpc.middleware.js";
 

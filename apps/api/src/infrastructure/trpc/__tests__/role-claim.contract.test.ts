@@ -2,11 +2,11 @@ import type { Role } from "@customreport/shared";
 import type { UserSession } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { createAuthController } from "../../../modules/auth/auth.controller.js";
+import { createAuthController } from "../../../modules/auth/index.js";
 import {
   type SamlStrategyOptions,
   verifySamlProfile,
-} from "../../../modules/auth/saml.strategy.js";
+} from "../../../modules/auth/index.js";
 
 // ---------------------------------------------------------------------------
 // Contract test (structured-user-name): the SAML assertion no longer

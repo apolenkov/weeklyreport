@@ -27,6 +27,10 @@ import type {
   StageAssignmentCountRow,
   StageRow,
 } from "./admin-shared";
+import {
+  type AdminTelemetry,
+  NOOP_ADMIN_TELEMETRY,
+} from "./admin-telemetry.port.js";
 import type { ReopenRequestListItem } from "./period-admin.envelope";
 import { PeriodAdminService } from "./period-admin.service";
 import { ProjectAdminService } from "./project-admin.service";
@@ -86,7 +90,11 @@ export class AdminService {
   private readonly periodAdmin: PeriodAdminService;
   private readonly reopenRequestAdmin: ReopenRequestAdminService;
 
-  constructor(repository: AdminRepository, logger?: AppLogger) {
+  constructor(
+    repository: AdminRepository,
+    logger?: AppLogger,
+    telemetry: AdminTelemetry = NOOP_ADMIN_TELEMETRY,
+  ) {
     this.logger = logger ?? createNullLogger();
     this.snapshotAdmin = new SnapshotAdminService(repository, this.logger);
     this.projectAdmin = new ProjectAdminService(repository, this.logger);
@@ -95,6 +103,7 @@ export class AdminService {
     this.reopenRequestAdmin = new ReopenRequestAdminService(
       repository,
       this.logger,
+      telemetry,
     );
   }
 

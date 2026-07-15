@@ -2,6 +2,7 @@ import type { UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import { AdminPrometheusTelemetry } from "./admin-prometheus-telemetry.adapter.js";
 import {
   AdminReopenRequestAlreadyProcessedError,
   type AdminRepository,
@@ -64,6 +65,8 @@ describe("ReopenRequestAdminService.respondReopenRequest", () => {
     const before = await counterValue("approved");
     const service = new ReopenRequestAdminService(
       createRepository({ kind: "decided", decision: "approved" }),
+      undefined,
+      new AdminPrometheusTelemetry(),
     );
 
     const result = await service.respondReopenRequest({

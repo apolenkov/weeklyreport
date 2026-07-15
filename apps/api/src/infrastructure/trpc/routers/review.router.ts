@@ -7,10 +7,10 @@ import {
 } from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
 
-import type { PublicationService } from "../../../modules/publication/application/publication.service.js";
-import type { ReviewService } from "../../../modules/review/application/review.service.js";
-import type { ReviewActionsService } from "../../../modules/review/application/review-actions.service.js";
-import type { WeeklyReportService } from "../../../modules/weekly-report/weekly-report.service.js";
+import type { PublicationService } from "../../../modules/publication/index.js";
+import type { ReviewService } from "../../../modules/review/index.js";
+import type { ReviewActionsService } from "../../../modules/review/index.js";
+import type { WeeklyReportService } from "../../../modules/weekly-report/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import {
   headProcedure,

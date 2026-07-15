@@ -3,8 +3,8 @@ import { TRPCError } from "@trpc/server";
 import type { Queue } from "bullmq";
 import { z } from "zod";
 
-import type { ActionLogService } from "../../../../modules/admin/action-log.service.js";
-import type { JobsService } from "../../../../modules/admin/jobs.service.js";
+import type { ActionLogService } from "../../../../modules/admin/index.js";
+import type { JobsService } from "../../../../modules/admin/index.js";
 import { mapDomainError } from "../../trpc.error-mapper.js";
 import { adminProcedure, router } from "../../trpc.middleware.js";
 

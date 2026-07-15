@@ -9,6 +9,7 @@ import {
   customreportPeriodStateTransitionsTotal,
   customreportReportsSubmittedTotal,
 } from "../../../infrastructure/metrics/metrics.registry.js";
+import { PeriodPrometheusTelemetry } from "../infrastructure/period-prometheus-telemetry.adapter.js";
 import {
   type AnalyticsCacheInvalidator,
   PeriodAccessError,
@@ -611,6 +612,8 @@ describe("PeriodService — manual-publish telemetry", () => {
       createSpyRepository(reports),
       noopInvalidate,
       noGatingReopenPolicy,
+      undefined,
+      new PeriodPrometheusTelemetry(),
     );
     const before = await getCounterValue(customreportReportsSubmittedTotal, {
       state: "published",
@@ -641,6 +644,8 @@ describe("PeriodService — manual-publish telemetry", () => {
       createSpyRepository(reports),
       noopInvalidate,
       noGatingReopenPolicy,
+      undefined,
+      new PeriodPrometheusTelemetry(),
     );
     const before = await getCounterValue(
       customreportPeriodStateTransitionsTotal,
@@ -673,6 +678,8 @@ describe("PeriodService — manual-publish telemetry", () => {
       createSpyRepository(reports),
       noopInvalidate,
       noGatingReopenPolicy,
+      undefined,
+      new PeriodPrometheusTelemetry(),
     );
     const before = await getCounterValue(
       customreportPeriodStateTransitionsTotal,

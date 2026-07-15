@@ -19,10 +19,6 @@ import {
   validateSubmitInput,
 } from "@customreport/shared";
 
-import {
-  customreportSectionsSubmittedTotal,
-  customreportSectionSubmissionLatencySeconds,
-} from "../../../infrastructure/metrics/metrics.registry.js";
 import { createServiceLogger } from "../../../lib/logger-service.js";
 import {
   buildMyHistoryEntries,
@@ -30,6 +26,10 @@ import {
 } from "../domain/my-history.js";
 import { findPublishedRecordViolation } from "../domain/published-record-guard.js";
 import { mergeSection } from "../domain/report-section-merge.js";
+import {
+  NOOP_REPORT_SECTIONS_TELEMETRY,
+  type ReportSectionsTelemetry,
+} from "./report-sections-telemetry.port.js";
 
 export class ReportSectionDomainError extends Error {
   constructor(
@@ -139,6 +139,7 @@ export class ReportSectionsService {
     // When undefined (test seam / legacy fixtures), the gate is skipped
     // and late stays false — preserves pre-50-B behaviour.
     private readonly getGraceSettings?: GetGraceSettings,
+    private readonly telemetry: ReportSectionsTelemetry = NOOP_REPORT_SECTIONS_TELEMETRY,
   ) {}
 
   private assertCanEditSection(
@@ -358,14 +359,14 @@ export class ReportSectionsService {
     // back-compat repos predate `getReportMeta`). Wrapped in a defensive
     // try/catch because telemetry MUST NOT break the write path.
     try {
-      customreportSectionsSubmittedTotal.inc({ late: String(late) });
+      this.telemetry.recordSectionSubmitted(late);
       if (this.repository.getReportMeta) {
         const meta = await this.repository.getReportMeta(section.reportId);
         if (meta) {
           // Signed seconds: positive = late, negative = submitted early.
           const deltaSeconds =
             (Date.now() - meta.deadline.getTime()) / MS_PER_SECOND;
-          customreportSectionSubmissionLatencySeconds.observe(deltaSeconds);
+          this.telemetry.observeSubmissionLatency(deltaSeconds);
         }
       }
     } catch {

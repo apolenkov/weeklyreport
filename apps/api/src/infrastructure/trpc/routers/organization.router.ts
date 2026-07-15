@@ -1,6 +1,6 @@
 import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
 
-import type { OrganizationService } from "../../../modules/organization/organization.service.js";
+import type { OrganizationService } from "../../../modules/organization/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import { publicProcedure, router } from "../trpc.middleware.js";
 

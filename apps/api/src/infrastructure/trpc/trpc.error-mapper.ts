@@ -9,48 +9,48 @@ import {
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,
   AdminUserConflictError,
-} from "../../modules/admin/admin.service.js";
-import { ArchiveDomainError } from "../../modules/archive/archive.service.js";
+} from "../../modules/admin/index.js";
+import { ArchiveDomainError } from "../../modules/archive/index.js";
 import {
   CarryOverConflictError,
   CarryOverDomainError,
-} from "../../modules/carry-over/carry-over.service.js";
-import { PdfExportDomainError } from "../../modules/pdf-export/pdf-export.service.js";
+} from "../../modules/carry-over/index.js";
+import { PdfExportDomainError } from "../../modules/pdf-export/index.js";
 import {
   PeriodNotFoundError,
   PeriodScopeError,
-} from "../../modules/period/application/period.service.js";
+} from "../../modules/period/index.js";
 import {
   ProjectActivityDomainError,
   ProjectActivityNotFoundError,
-} from "../../modules/project-activity/project-activity.service.js";
+} from "../../modules/project-activity/index.js";
 import {
   PublicationAccessError,
   PublicationArchivedError,
   PublicationNotFoundError,
-} from "../../modules/publication/application/publication.service.js";
+} from "../../modules/publication/index.js";
 import {
   ReminderDomainError,
   ReminderScopeError,
-} from "../../modules/reminders/reminders.service.js";
+} from "../../modules/reminders/index.js";
 import {
   LeadFormAccessError,
   LeadFormConstraintError,
   LeadFormDomainError,
   ReopenRequestError,
-} from "../../modules/report-sections/application/lead-form.service.js";
+} from "../../modules/report-sections/index.js";
 import {
   ReportSectionAccessError,
   ReportSectionDomainError,
   SectionVersionConflictError,
-} from "../../modules/report-sections/application/report-sections.service.js";
+} from "../../modules/report-sections/index.js";
 import {
   ReviewAccessError,
   ReviewConstraintError,
   ReviewNotFoundError,
   ReviewVersionConflictError,
-} from "../../modules/review/application/review.service.js";
-import { WeeklyReportDomainError } from "../../modules/weekly-report/weekly-report.service.js";
+} from "../../modules/review/index.js";
+import { WeeklyReportDomainError } from "../../modules/weekly-report/index.js";
 
 /** A domain error class, matched against the thrown error via `instanceof`. */
 type DomainErrorCtor = abstract new (...args: never[]) => Error;

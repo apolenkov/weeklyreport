@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { PdfExportService } from "../../../modules/pdf-export/pdf-export.service.js";
+import type { PdfExportService } from "../../../modules/pdf-export/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import { leadershipProcedure, router } from "../trpc.middleware.js";
 

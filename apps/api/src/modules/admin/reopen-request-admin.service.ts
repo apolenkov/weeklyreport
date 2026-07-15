@@ -1,12 +1,15 @@
 import type { UserSession } from "@customreport/shared";
 
-import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
 import {
   AdminReopenRequestAlreadyProcessedError,
   type AdminRepository,
   type ReopenRequestStatusFilter,
 } from "./admin-shared";
+import {
+  type AdminTelemetry,
+  NOOP_ADMIN_TELEMETRY,
+} from "./admin-telemetry.port.js";
 import {
   type ReopenRequestListItem,
   toReopenRequestListItem,
@@ -44,6 +47,7 @@ export class ReopenRequestAdminService {
   constructor(
     private readonly repository: AdminRepository,
     logger?: AppLogger,
+    private readonly telemetry: AdminTelemetry = NOOP_ADMIN_TELEMETRY,
   ) {
     this.logger = logger ?? createNullLogger();
   }
@@ -103,7 +107,7 @@ export class ReopenRequestAdminService {
     if (outcome.kind === "stale") {
       return { success: true, decision: "rejected", staleAutoClosed: true };
     }
-    customreportReopenRequestsTotal.inc({ state: outcome.decision });
+    this.telemetry.recordReopenRequestDecision(outcome.decision);
     return {
       success: true,
       decision: outcome.decision,

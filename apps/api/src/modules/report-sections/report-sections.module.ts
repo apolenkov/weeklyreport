@@ -11,8 +11,13 @@ import {
   type ReportSectionsRepository,
   ReportSectionsService,
 } from "./application/report-sections.service";
+import {
+  REPORT_SECTIONS_TELEMETRY,
+  type ReportSectionsTelemetry,
+} from "./application/report-sections-telemetry.port.js";
 import { LeadFormPrismaRepository } from "./infrastructure/lead-form.prisma-repository";
 import { ReportSectionsPrismaRepository } from "./infrastructure/report-sections.prisma-repository";
+import { ReportSectionsPrometheusTelemetry } from "./infrastructure/report-sections-prometheus-telemetry.adapter.js";
 
 @Module({
   // AdminModule is imported so ReportSectionsService can read
@@ -21,6 +26,11 @@ import { ReportSectionsPrismaRepository } from "./infrastructure/report-sections
   // injection) keeps the service test seam narrow — tests pass a tiny stub.
   imports: [AdminModule],
   providers: [
+    ReportSectionsPrometheusTelemetry,
+    {
+      provide: REPORT_SECTIONS_TELEMETRY,
+      useExisting: ReportSectionsPrometheusTelemetry,
+    },
     {
       provide: REPORT_SECTIONS_REPOSITORY,
       useClass: ReportSectionsPrismaRepository,
@@ -28,20 +38,35 @@ import { ReportSectionsPrismaRepository } from "./infrastructure/report-sections
     { provide: LEAD_FORM_REPOSITORY, useClass: LeadFormPrismaRepository },
     {
       provide: ReportSectionsService,
-      useFactory: (repo: ReportSectionsRepository, admin: AdminService) =>
-        new ReportSectionsService(repo, async () => {
-          const s = await admin.getSettings();
-          return {
-            gracePeriodHours: s.gracePeriodHours,
-            allowLateSubmissions: s.allowLateSubmissions,
-          };
-        }),
-      inject: [REPORT_SECTIONS_REPOSITORY, AdminService],
+      useFactory: (
+        repo: ReportSectionsRepository,
+        admin: AdminService,
+        telemetry: ReportSectionsTelemetry,
+      ) =>
+        new ReportSectionsService(
+          repo,
+          async () => {
+            const s = await admin.getSettings();
+            return {
+              gracePeriodHours: s.gracePeriodHours,
+              allowLateSubmissions: s.allowLateSubmissions,
+            };
+          },
+          telemetry,
+        ),
+      inject: [
+        REPORT_SECTIONS_REPOSITORY,
+        AdminService,
+        REPORT_SECTIONS_TELEMETRY,
+      ],
     },
     {
       provide: LeadFormService,
-      useFactory: (repo: LeadFormRepository) => new LeadFormService(repo),
-      inject: [LEAD_FORM_REPOSITORY],
+      useFactory: (
+        repo: LeadFormRepository,
+        telemetry: ReportSectionsTelemetry,
+      ) => new LeadFormService(repo, telemetry),
+      inject: [LEAD_FORM_REPOSITORY, REPORT_SECTIONS_TELEMETRY],
     },
   ],
   exports: [ReportSectionsService, LeadFormService],

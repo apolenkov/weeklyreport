@@ -6,6 +6,7 @@ import {
   customreportSectionSubmissionLatencySeconds,
 } from "../../../infrastructure/metrics/metrics.registry.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
+import { ReportSectionsPrometheusTelemetry } from "../infrastructure/report-sections-prometheus-telemetry.adapter.js";
 import {
   ReportSectionAccessError,
   type ReportSectionsRepository,
@@ -1014,6 +1015,7 @@ describe("ReportSectionsService — product telemetry", () => {
       buildRepo(new Date(Date.now() + 6 * ONE_HOUR)),
       // eslint-disable-next-line @typescript-eslint/require-await -- implements GetGraceSettings contract ((): Promise<...>); no awaitable work in stub
       async () => ({ gracePeriodHours: 24, allowLateSubmissions: false }),
+      new ReportSectionsPrometheusTelemetry(),
     );
     await service.submitSection({
       reportSectionId: "11111111-1111-4111-8111-111111111111",
@@ -1062,6 +1064,7 @@ describe("ReportSectionsService — product telemetry", () => {
       buildRepo(new Date(Date.now() - 2 * ONE_HOUR)),
       // eslint-disable-next-line @typescript-eslint/require-await -- implements GetGraceSettings contract ((): Promise<...>); no awaitable work in stub
       async () => ({ gracePeriodHours: 24, allowLateSubmissions: true }),
+      new ReportSectionsPrometheusTelemetry(),
     );
     await service.submitSection({
       reportSectionId: "11111111-1111-4111-8111-111111111111",

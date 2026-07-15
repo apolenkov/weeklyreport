@@ -2,36 +2,21 @@ import {
   type AdminReminderExecution,
   adminReminderExecutionSchema,
 } from "@customreport/shared";
-import type { ClsService } from "nestjs-cls";
 
-import type {
-  JobEnqueueOptions,
-  JobEnqueuer,
-} from "../../infrastructure/bullmq/job-enqueuer.js";
-import {
-  captureJobTraceContext,
-  resolveCorrelationId,
-} from "../../infrastructure/bullmq/worker-observability.js";
 import type { AppLogger } from "../../lib/logger";
+import type {
+  RemindersEnqueuer,
+  RemindersTelemetry,
+} from "./reminders.ports.js";
 import {
   buildQueuePayload,
   type ReminderQueuePayload,
 } from "./reminders-queue-payload.js";
 
-/**
- * Retry/backoff shared by every email-reminder enqueue — the scheduler's
- * initial `add` and the reaper's re-enqueue — so both paths land jobs with
- * identical durability. Centralized rather than copy-pasted per call site.
- */
-export const EMAIL_REMINDER_JOB_OPTIONS = {
-  attempts: 3,
-  backoff: { type: "exponential", delay: 5000 },
-} as const satisfies JobEnqueueOptions;
-
 /** Collaborators the enqueue helpers need from the owning service. */
 export interface EnqueueContext {
-  queue: JobEnqueuer;
-  cls: ClsService | undefined;
+  queue: RemindersEnqueuer;
+  telemetry: RemindersTelemetry;
   logger: AppLogger;
   markExecutionFailed?: (id: string, message: string) => Promise<void>;
 }
@@ -41,10 +26,10 @@ async function addJob(
   execution: AdminReminderExecution,
   data: Record<string, unknown>,
 ): Promise<void> {
-  await ctx.queue.add(
-    "send",
-    { ...data, ...captureJobTraceContext(resolveCorrelationId(ctx.cls)) },
-    { ...EMAIL_REMINDER_JOB_OPTIONS, jobId: execution.id },
+  await ctx.queue.enqueue(
+    execution.id,
+    data,
+    ctx.telemetry.captureJobContext(),
   );
 }
 

@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 import { groupScopeFilter } from "../../../lib/group-scope.js";
-import type { AdminService } from "../../../modules/admin/admin.service.js";
-import type { LeadFormService } from "../../../modules/report-sections/application/lead-form.service.js";
+import type { AdminService } from "../../../modules/admin/index.js";
+import type { LeadFormService } from "../../../modules/report-sections/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import {
   headProcedure,

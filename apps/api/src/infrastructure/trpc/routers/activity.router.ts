@@ -1,4 +1,4 @@
-import type { ActivityService } from "../../../modules/activity/activity.service.js";
+import type { ActivityService } from "../../../modules/activity/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import { headProcedure, router } from "../trpc.middleware.js";
 

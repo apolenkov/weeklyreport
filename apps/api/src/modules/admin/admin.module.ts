@@ -12,6 +12,11 @@ import { ActionLogPrismaRepository } from "./action-log.prisma-repository";
 import { ActionLogService } from "./action-log.service";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
 import { AdminService } from "./admin.service";
+import { AdminPrometheusTelemetry } from "./admin-prometheus-telemetry.adapter.js";
+import {
+  ADMIN_TELEMETRY,
+  type AdminTelemetry,
+} from "./admin-telemetry.port.js";
 import { SessionRevocationService } from "./session-revocation.service";
 
 @Module({
@@ -23,12 +28,17 @@ import { SessionRevocationService } from "./session-revocation.service";
     // re-imported from RemindersModule) to keep the cycle tight: admin
     // owns Period.create, so admin owns the post-create hook wiring.
     PolicyApplicatorService,
+    AdminPrometheusTelemetry,
+    { provide: ADMIN_TELEMETRY, useExisting: AdminPrometheusTelemetry },
     AdminPrismaRepository,
     {
       provide: AdminService,
-      useFactory: (repo: AdminPrismaRepository, logger: AppLogger) =>
-        new AdminService(repo, logger),
-      inject: [AdminPrismaRepository, APP_LOGGER],
+      useFactory: (
+        repo: AdminPrismaRepository,
+        logger: AppLogger,
+        telemetry: AdminTelemetry,
+      ) => new AdminService(repo, logger, telemetry),
+      inject: [AdminPrismaRepository, APP_LOGGER, ADMIN_TELEMETRY],
     },
     // The service builds its own ioredis client from the validated env when
     // no test client is injected; the factory passes only env so the redis

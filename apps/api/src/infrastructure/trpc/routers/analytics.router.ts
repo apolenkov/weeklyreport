@@ -4,7 +4,7 @@ import {
   trafficLightHistoryInputSchema,
 } from "@customreport/shared";
 
-import type { AnalyticsService } from "../../../modules/analytics/analytics.service.js";
+import type { AnalyticsService } from "../../../modules/analytics/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import { anyRoleProcedure, router } from "../trpc.middleware.js";
 

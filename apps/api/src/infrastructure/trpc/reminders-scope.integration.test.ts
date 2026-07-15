@@ -3,10 +3,10 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
-import { RemindersPrismaRepository } from "../../modules/reminders/reminders.prisma-repository.js";
-import { RemindersService } from "../../modules/reminders/reminders.service.js";
-import { WeeklyReportPrismaRepository } from "../../modules/weekly-report/weekly-report.prisma-repository.js";
-import { WeeklyReportService } from "../../modules/weekly-report/weekly-report.service.js";
+import { RemindersPrismaRepository } from "../../modules/reminders/index.js";
+import { RemindersService } from "../../modules/reminders/index.js";
+import { WeeklyReportPrismaRepository } from "../../modules/weekly-report/index.js";
+import { WeeklyReportService } from "../../modules/weekly-report/index.js";
 import {
   cleanDatabase,
   createTestPrisma,

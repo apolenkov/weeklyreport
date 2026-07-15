@@ -7,9 +7,9 @@ import { TRPCError } from "@trpc/server";
 import type { Queue } from "bullmq";
 
 import { isTelegramConfigured } from "../../../../lib/env.js";
-import type { AdminService } from "../../../../modules/admin/admin.service.js";
-import type { OrganizationService } from "../../../../modules/organization/organization.service.js";
-import { TELEGRAM_OUTBOUND_JOB_OPTS } from "../../../../modules/telegram/telegram.queue.js";
+import type { AdminService } from "../../../../modules/admin/index.js";
+import type { OrganizationService } from "../../../../modules/organization/index.js";
+import { TELEGRAM_OUTBOUND_JOB_OPTS } from "../../../../modules/telegram/index.js";
 import { captureJobTraceContext } from "../../../bullmq/worker-observability.js";
 import type { EnvConfig } from "../../../config/env.schema";
 import { clearOrgCache } from "../../trpc.context.js";

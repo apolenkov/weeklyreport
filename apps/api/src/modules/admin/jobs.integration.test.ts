@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { Queue, QueueEvents, Worker } from "bullmq";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { AdminBullmqJobsQueue } from "../../infrastructure/bullmq/admin-jobs-queue.adapter.js";
 import { getBullMQOptions } from "../../infrastructure/bullmq/bullmq-options";
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import { requireEnv } from "../../lib/env";
@@ -85,15 +86,19 @@ describe("JobsService — integration (BullMQ failed jobs)", () => {
       }),
     ).resolves.toBeNull();
 
-    const service = new JobsService(queue, undefined, {
-      reminderExecutionExists: async (executionId) => {
-        const execution = await prisma.reminderExecution.findUnique({
-          where: { id: executionId },
-          select: { id: true },
-        });
-        return execution !== null;
+    const service = new JobsService(
+      new AdminBullmqJobsQueue(queue),
+      undefined,
+      {
+        reminderExecutionExists: async (executionId) => {
+          const execution = await prisma.reminderExecution.findUnique({
+            where: { id: executionId },
+            select: { id: true },
+          });
+          return execution !== null;
+        },
       },
-    });
+    );
 
     const result = await service.retryFailed({
       queue: "email-reminder",
