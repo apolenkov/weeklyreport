@@ -10,6 +10,8 @@ import type { EnvConfig } from "../config/env.schema";
 const DEV_JSON_TRANSPORT_FROM = "noreply@example.com";
 // nodemailer's conventional submission port when SMTP_PORT is left unset.
 const DEFAULT_SMTP_PORT = 587;
+// SMTP port reserved for connections that establish TLS immediately.
+const IMPLICIT_TLS_SMTP_PORT = 465;
 
 /**
  * The email-sending seam its consumers (the email-reminder worker) depend on.
@@ -56,13 +58,15 @@ export class EmailService implements EmailPort {
 
     if (host) {
       this.isDev = false;
+      const auth = env.SMTP_USER
+        ? { user: env.SMTP_USER, pass: env.SMTP_PASS }
+        : undefined;
       this.transporter = nodemailer.createTransport({
         host,
         port: env.SMTP_PORT ?? DEFAULT_SMTP_PORT,
-        secure: false,
-        auth: env.SMTP_USER
-          ? { user: env.SMTP_USER, pass: env.SMTP_PASS }
-          : undefined,
+        secure: (env.SMTP_PORT ?? DEFAULT_SMTP_PORT) === IMPLICIT_TLS_SMTP_PORT,
+        auth,
+        ...(auth ? { requireTLS: true } : {}),
       });
     } else {
       this.isDev = true;
