@@ -5,6 +5,8 @@ import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
 import { RemindersPrismaRepository } from "../../modules/reminders/reminders.prisma-repository.js";
 import { RemindersService } from "../../modules/reminders/reminders.service.js";
+import { WeeklyReportPrismaRepository } from "../../modules/weekly-report/weekly-report.prisma-repository.js";
+import { WeeklyReportService } from "../../modules/weekly-report/weekly-report.service.js";
 import {
   cleanDatabase,
   createTestPrisma,
@@ -56,9 +58,14 @@ const prisma = createTestPrisma();
 function buildCaller(role: Role, activeReportId: string | null) {
   const repo = new RemindersPrismaRepository(prisma as never);
   const remindersService = new RemindersService(repo);
-  const deps = { prisma, remindersService } as unknown as Parameters<
-    typeof createAppRouter
-  >[0];
+  const weeklyReportService = new WeeklyReportService(
+    new WeeklyReportPrismaRepository(prisma as never),
+  );
+  const deps = {
+    prisma,
+    remindersService,
+    weeklyReportService,
+  } as unknown as Parameters<typeof createAppRouter>[0];
   return createAppRouter(deps).createCaller({
     session: makeSession(role, activeReportId),
     logger: createNullLogger(),
@@ -121,9 +128,13 @@ describe("reminders namespace — per-group scope (integration)", () => {
     await prisma.report.create({
       data: {
         id: REPORT_B,
-        periodStart: new Date("2026-04-14"),
-        periodEnd: new Date("2026-04-20"),
-        deadline: new Date("2026-04-18"),
+        // Deliberately BEFORE the shared report A's period (2026-04-07) so
+        // report A stays the DB-resolved current editable period across this
+        // suite — dispatchPending's gate now compares against that resolved
+        // value, not the caller-supplied `activeReportId` fixture argument.
+        periodStart: new Date("2026-03-24"),
+        periodEnd: new Date("2026-03-30"),
+        deadline: new Date("2026-03-28"),
         status: "draft",
       },
     });
@@ -314,7 +325,17 @@ describe("reminders namespace — per-group scope (integration)", () => {
     it("dispatches for a lead in a group it does not belong to", async () => {
       // The head path throws FORBIDDEN (`lead-out-of-scope`) for LEAD_B; admin
       // god-mode authorizes the out-of-group lead and the procedure resolves to
-      // its dispatch summary instead of a scope rejection.
+      // its dispatch summary instead of a scope rejection. dispatchPending's
+      // gate now compares against the DB-resolved current editable report, so
+      // this test makes REPORT_B that report (report A stays current for
+      // every other test in this suite).
+      await prisma.report.update({
+        where: { id: REPORT_B },
+        data: {
+          periodStart: new Date("2026-05-05"),
+          periodEnd: new Date("2026-05-11"),
+        },
+      });
       const caller = buildCaller("admin", REPORT_B);
       const result = await caller.reminders.dispatchPending({
         reportId: REPORT_B,

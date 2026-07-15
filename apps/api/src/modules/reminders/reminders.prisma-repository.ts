@@ -15,13 +15,17 @@ import {
   queryDueDeadlineRules,
   queryDueEscalationRules,
 } from "./reminders-due-rules.prisma-query.js";
+import type { ExecutionPageRequest } from "./reminders-execution-pagination.js";
 import {
   isDedupeKeyConflict,
   toExecutionCreateData,
   toExecutionDomain,
   toExecutionUpdateData,
-  toRuleDomain,
 } from "./reminders-row-mappers.js";
+import {
+  queryReminderRule,
+  queryRulePeriodLabel,
+} from "./reminders-rule.prisma-query.js";
 import {
   queryActiveRuleForDispatch,
   queryDraftSectionsForDispatch,
@@ -112,16 +116,12 @@ export class RemindersPrismaRepository implements RemindersRepository {
     return queryExecutionCreatedAt(this.prisma, dedupeKey);
   }
 
-  async getRule(ruleId: string): Promise<AdminReminderRule | null> {
-    const rule = await this.prisma.reminderRule.findUnique({
-      where: { id: ruleId },
-    });
+  getRule(ruleId: string): Promise<AdminReminderRule | null> {
+    return queryReminderRule(this.prisma, ruleId);
+  }
 
-    if (!rule) {
-      return null;
-    }
-
-    return toRuleDomain(rule);
+  getRulePeriodLabel(ruleId: string): Promise<string | null> {
+    return queryRulePeriodLabel(this.prisma, ruleId);
   }
 
   async findExecutionByDedupeKey(
@@ -242,19 +242,19 @@ export class RemindersPrismaRepository implements RemindersRepository {
     return toExecutionDomain(execution);
   }
 
-  async listExecutions(ruleId: string): Promise<AdminReminderExecution[]> {
-    // Explicit LIMIT 100 on the admin "executions" listing. Without it Prisma
-    // issues `... ORDER BY createdAt DESC OFFSET $1`
-    // with no upper bound, which a) trips the slow-query log on growing
-    // tables and b) loads more rows into memory than the UI ever paginates
-    // through (admin reminder page caps at 20 per page; 100 covers ~5 pages
-    // of cursor-based scroll). The router still applies cursor pagination
-    // on top of this slice via RemindersService.listExecutions.
+  async listExecutions(
+    ruleId: string,
+    page: ExecutionPageRequest,
+  ): Promise<AdminReminderExecution[]> {
+    // Keyset page at the database level: recipient scoping happens in the
+    // service (recipientEmail is derived from dedupeKey, not a column), so the
+    // service walks these pages instead of loading the whole history.
     const executions = await this.prisma.reminderExecution.findMany({
       where: { ruleId },
       include: { rule: true },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      take: 100,
+      take: page.take,
+      ...(page.cursor ? { cursor: { id: page.cursor }, skip: 1 } : {}),
     });
 
     return executions.map(toExecutionDomain);

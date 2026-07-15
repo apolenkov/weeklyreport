@@ -52,8 +52,17 @@ const A3 = execution("000a3", IN_SCOPE);
 function buildService(
   rows: readonly AdminReminderExecution[],
 ): RemindersService {
+  // Emulates the port's keyset contract: the page starts strictly after
+  // `cursor` and carries at most `take` rows.
   const repository = {
-    listExecutions: vi.fn().mockResolvedValue([...rows]),
+    listExecutions: vi.fn(
+      (_ruleId: string, page: { cursor: string | null; take: number }) => {
+        const start = page.cursor
+          ? rows.findIndex((row) => row.id === page.cursor) + 1
+          : 0;
+        return Promise.resolve(rows.slice(start, start + page.take));
+      },
+    ),
   } as unknown as RemindersRepository;
   return new RemindersService(repository);
 }

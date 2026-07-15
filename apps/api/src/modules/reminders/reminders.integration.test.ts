@@ -99,7 +99,10 @@ describe("RemindersPrismaRepository (integration)", () => {
       },
     });
 
-    const executions = await repo.listExecutions(TEST_IDS.reminderRule);
+    const executions = await repo.listExecutions(TEST_IDS.reminderRule, {
+      cursor: null,
+      take: 10,
+    });
 
     expect(executions).toHaveLength(2);
     // Most recent first (ordered by createdAt desc)
