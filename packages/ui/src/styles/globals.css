@@ -10,8 +10,11 @@
 
 @theme {
   /* ---- Typography ---- */
-  --font-sans: "Lexend", "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Source Sans 3", "Lexend", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), "Times New Roman", serif;
+  --font-sans: var(--font-lexend), var(--font-source-sans-3), ui-sans-serif,
+    system-ui, sans-serif;
+  --font-body: var(--font-source-sans-3), var(--font-lexend), ui-sans-serif,
+    system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
 
   /* ---- Canvas & surfaces ---- */

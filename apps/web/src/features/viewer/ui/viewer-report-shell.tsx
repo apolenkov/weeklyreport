@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 import { getClientErrorDetails } from "../../../lib/client-error-reporting";
 import { useTRPC } from "../../../lib/trpc-context";
@@ -19,9 +19,8 @@ import {
   formatDateRange,
   isoWeekNumber,
   WeeklyReportPage,
-  WeeklyReportSkeleton,
 } from "../../report-sections";
-import { HeadSlidesClient, SlideSkeleton } from "../../slides";
+import { HeadSlidesClient } from "../../slides";
 import {
   deriveViewerAuthority,
   ViewerAuthorityLabel,
@@ -194,26 +193,22 @@ export function ViewerReportShell({
             {exportPdf}
           </header>
           <ReportToolbar contextControls={contextControls} />
-          <Suspense fallback={<SlideSkeleton />}>
-            <HeadSlidesClient
-              reportId={reportId}
-              scope={reportScope}
-              enableActivity={false}
-            />
-          </Suspense>
+          <HeadSlidesClient
+            reportId={reportId}
+            scope={reportScope}
+            enableActivity={false}
+          />
         </>
       ) : (
         <div className="min-w-0">
-          <Suspense fallback={<WeeklyReportSkeleton />}>
-            <WeeklyReportPage
-              reportId={reportId}
-              authorId={authorId}
-              scope={reportScope}
-              documentActionsLeading={exportPdf}
-              contextControls={contextControls}
-              headerContextLabel={headerContextLabel}
-            />
-          </Suspense>
+          <WeeklyReportPage
+            reportId={reportId}
+            authorId={authorId}
+            scope={reportScope}
+            documentActionsLeading={exportPdf}
+            contextControls={contextControls}
+            headerContextLabel={headerContextLabel}
+          />
         </div>
       )}
     </div>

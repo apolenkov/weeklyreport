@@ -1,146 +1,108 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import "@testing-library/jest-dom/vitest";
 
 import { useQuery } from "@tanstack/react-query";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { logClientError } from "../../../lib/client-error-reporting";
-import { DASHBOARD_LOAD_STALL_MS, DashboardPage } from "./dashboard-page";
+import { DashboardPage } from "./dashboard-page";
+import { DASHBOARD_LOAD_STALL_MS } from "./use-dashboard-query-recovery";
 
 vi.mock("@tanstack/react-query", () => ({
   useQuery: vi.fn(),
   useMutation: vi.fn(() => ({ isPending: false, mutate: vi.fn() })),
   useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() })),
 }));
-
-vi.mock("sonner", () => ({
-  toast: {
-    error: vi.fn(),
-  },
-}));
-
+vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("../../../lib/client-error-reporting", () => ({
   formatClientErrorMessage: vi.fn((prefix: string, error: unknown) =>
     error instanceof Error ? `${prefix}: ${error.message}` : prefix,
   ),
   logClientError: vi.fn(),
 }));
-
 vi.mock("../../../lib/trpc-context", () => ({
   useTRPC: () => ({
     review: {
-      dashboard: {
-        queryOptions: () => ({ queryKey: ["review.dashboard"] }),
-      },
-      verdict: {
-        mutationOptions: () => ({}),
-      },
+      dashboard: { queryOptions: () => ({ queryKey: ["review.dashboard"] }) },
     },
     weeklyReport: {
-      get: {
-        queryOptions: () => ({ queryKey: ["weeklyReport.get"] }),
-      },
+      get: { queryOptions: () => ({ queryKey: ["weeklyReport.get"] }) },
     },
-    leadForm: {
-      revokeAllSubmitted: {
-        mutationOptions: () => ({}),
-      },
-    },
+    leadForm: { revokeAllSubmitted: { mutationOptions: () => ({}) } },
   }),
 }));
-
-vi.mock("./dashboard-skeleton", () => ({
-  DashboardSkeleton: () => <div>Dashboard skeleton</div>,
+vi.mock("../../review", () => ({
+  SectionReviewStrip: () => <div>Review context</div>,
+  toSectionReviewRows: () => [],
 }));
-
+vi.mock("../model/dashboard", () => ({
+  mapWeeklyDashboardData: () => ({
+    kpi: {},
+    blockedAtRisk: [],
+  }),
+  mapReviewDashboardData: () => ({
+    leads: [],
+    pendingLeads: [],
+  }),
+}));
 vi.mock("./activity-live-panel", () => ({
   ActivityLivePanel: () => <div>Activity</div>,
 }));
-
-vi.mock("./kpi-cards", () => ({
-  KpiCards: () => <div>KPI</div>,
-}));
-
-vi.mock("./alert-bar", () => ({
-  AlertBar: () => <div>Alerts</div>,
-}));
-
-vi.mock("./reopen-requests-card", () => ({
-  ReopenRequestsCard: () => <div>Reopen requests</div>,
-}));
-
-vi.mock("./blocked-at-risk-table", () => ({
-  BlockedAtRiskTable: () => <div>Blocked</div>,
-}));
-
+vi.mock("./kpi-cards", () => ({ KpiCards: () => <div>KPI</div> }));
 vi.mock("./lead-summary-table", () => ({
   LeadSummaryTable: () => <div>Lead summary</div>,
 }));
-
+vi.mock("./alert-bar", () => ({ AlertBar: () => <div>Alerts</div> }));
+vi.mock("./reopen-requests-card", () => ({
+  ReopenRequestsCard: () => <div>Reopen requests</div>,
+}));
+vi.mock("./blocked-at-risk-table", () => ({
+  BlockedAtRiskTable: () => <div>Blocked</div>,
+}));
 vi.mock("../../../shared/ui/confirmation-dialog", () => ({
   ConfirmationDialog: () => null,
 }));
 
-// Mapper is unit-tested separately; stub it so the success-path render does not
-// need a full WeeklyReportReadModel fixture (head-dashboard-declutter test 5.1).
-vi.mock("../model/dashboard", () => ({
-  mapDashboardData: () => ({
-    kpi: {
-      submitted: 0,
-      total: 0,
-      lastWeekSubmitted: 0,
-      lastWeekTotal: 0,
-      pendingCount: 0,
-      deadlineLabel: "2d 0h",
-      deadlineTime: "2026-05-15",
-      blockedCount: 0,
-      atRiskCount: 0,
-      decisionCount: 0,
-    },
-    leads: [],
-    blockedAtRisk: [],
-    pendingLeads: [],
-  }),
-}));
-
 interface QueryState {
-  data?: unknown;
-  error?: Error | null;
-  isError?: boolean;
-  isLoading?: boolean;
-  status?: "pending" | "error" | "success";
-  fetchStatus?: "fetching" | "paused" | "idle";
-  refetch?: ReturnType<typeof vi.fn>;
+  readonly data?: unknown;
+  readonly error?: Error | null;
+  readonly isError?: boolean;
+  readonly status?: "pending" | "error" | "success";
+  readonly fetchStatus?: "fetching" | "paused" | "idle";
+  readonly refetch?: ReturnType<typeof vi.fn>;
 }
 
+const ACTIVE_WEEKLY = {
+  status: "active",
+  reportId: "report-1",
+  weekLabel: "Week 20",
+  periodStatus: "open",
+  submissionCount: 2,
+  hasActiveReminderRule: true,
+  leadSections: [],
+};
 const queryStates = new Map<string, Required<QueryState>>();
 
-function makeQueryState(overrides: QueryState = {}): Required<QueryState> {
-  return {
+function setQueryState(key: string, overrides: QueryState) {
+  queryStates.set(key, {
     data: undefined,
     error: null,
     isError: false,
-    isLoading: false,
     status: "success",
     fetchStatus: "idle",
     refetch: vi.fn().mockResolvedValue({ data: overrides.data }),
     ...overrides,
-  };
+  });
 }
 
-function setQueryState(key: string, state: QueryState) {
-  queryStates.set(key, makeQueryState(state));
-}
-
-describe("DashboardPage loading guard", () => {
+describe("DashboardPage progressive readiness", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     queryStates.clear();
-    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
-      cb(0);
-      return 0;
-    });
-
     vi.mocked(useQuery).mockImplementation((options: unknown) => {
       const key = (options as { queryKey: [string] }).queryKey[0];
       const state = queryStates.get(key);
@@ -151,175 +113,138 @@ describe("DashboardPage loading guard", () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.unstubAllGlobals();
   });
 
-  it("renders the live activity feed exactly once and no removed 24h card (head-dashboard-declutter)", () => {
+  it("renders all panels when both root queries are ready", () => {
     setQueryState("review.dashboard", { data: [] });
-    setQueryState("weeklyReport.get", {
-      data: {
-        status: "ok",
-        reportId: "report-1",
-        weekLabel: "Week 20",
-        periodStatus: "open",
-        hasActiveReminderRule: true,
-        leadSections: [],
-      },
-    });
-
+    setQueryState("weeklyReport.get", { data: ACTIVE_WEEKLY });
     render(<DashboardPage />);
-
-    // ActivityLivePanel owns the activity.live feed; it must render exactly once
-    // (the duplicate Activity24hCard was removed).
-    expect(screen.getAllByText("Activity")).toHaveLength(1);
-    expect(screen.queryByTestId("activity-24h-card")).not.toBeInTheDocument();
+    expect(screen.getByText("Week 20 · CustomReport")).toBeInTheDocument();
+    expect(screen.getByText("Activity")).toBeInTheDocument();
+    expect(screen.getByText("KPI")).toBeInTheDocument();
     expect(screen.getByText("Lead summary")).toBeInTheDocument();
-  });
-
-  it("renders the alert bar and the Reopen Requests card as independent surfaces (lead-report-surface-polish HF6: single reopen surface)", () => {
-    setQueryState("review.dashboard", { data: [] });
-    setQueryState("weeklyReport.get", {
-      data: {
-        status: "ok",
-        reportId: "report-1",
-        weekLabel: "Week 20",
-        periodStatus: "open",
-        hasActiveReminderRule: true,
-        leadSections: [],
-      },
-    });
-
-    render(<DashboardPage />);
-
-    // The alert bar covers lead-submission signals only; the Reopen
-    // Requests card is the sole surface for pending reopen requests. Each
-    // self-suppresses independently — this asserts the page still composes
-    // both as siblings, with neither standing in for the other.
-    expect(screen.getByText("Alerts")).toBeInTheDocument();
+    expect(screen.getByText("Review context")).toBeInTheDocument();
     expect(screen.getByText("Reopen requests")).toBeInTheDocument();
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
   });
 
-  it("mounts the section-reviews roll-up strip in the dashboard review area (report-review-mode HF3)", () => {
+  it("keeps weekly-backed panels visible while review remains pending", () => {
+    setQueryState("review.dashboard", {
+      status: "pending",
+      fetchStatus: "fetching",
+    });
+    setQueryState("weeklyReport.get", { data: ACTIVE_WEEKLY });
+    render(<DashboardPage />);
+    expect(screen.getByText("KPI")).toBeInTheDocument();
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
+    expect(screen.getByText("Review context")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Revoke All (2)" }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-leads-loading")).toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-alert-loading")).toBeInTheDocument();
+  });
+
+  it("keeps self-contained panels visible while weekly context is pending", () => {
     setQueryState("review.dashboard", { data: [] });
     setQueryState("weeklyReport.get", {
-      data: {
-        status: "ok",
-        reportId: "report-1",
-        weekLabel: "Week 20",
-        periodStatus: "open",
-        hasActiveReminderRule: true,
-        leadSections: [
-          {
-            reportSectionId: "sec-1",
-            version: 1,
-            authorName: "Alice",
-            status: "submitted",
-            reviews: [],
-            canReview: true,
-            groupId: "group-1",
-          },
-        ],
-      },
+      status: "pending",
+      fetchStatus: "fetching",
     });
-
     render(<DashboardPage />);
-
-    // This strip lives on the dashboard, not the report body; it exposes the
-    // per-section verdict control for the head's at-a-glance roll-up.
-    expect(
-      screen.getByRole("region", { name: "Section reviews" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
+    expect(screen.getByText("Activity")).toBeInTheDocument();
+    expect(screen.getByText("Reopen requests")).toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-kpi-loading")).toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-leads-loading")).toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-blocked-loading")).toBeInTheDocument();
   });
 
-  it("does not keep the dashboard on the skeleton after a query error", () => {
+  it("scopes a review failure and retry to review-backed panels", () => {
+    const reviewRefetch = vi.fn().mockResolvedValue({});
+    const weeklyRefetch = vi.fn().mockResolvedValue({});
     setQueryState("review.dashboard", {
       error: new Error("review failed"),
       isError: true,
       status: "error",
+      refetch: reviewRefetch,
     });
     setQueryState("weeklyReport.get", {
-      data: { reportId: "report-1" },
+      data: ACTIVE_WEEKLY,
+      refetch: weeklyRefetch,
     });
-
     render(<DashboardPage />);
-
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Could not load dashboard",
-    );
-    expect(screen.queryByText("Dashboard skeleton")).not.toBeInTheDocument();
+    expect(screen.getByText("KPI")).toBeInTheDocument();
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
+    const issue = screen.getByTestId("dashboard-leads-error");
+    expect(issue).toHaveTextContent("review failed");
+    fireEvent.click(within(issue).getByRole("button", { name: "Retry" }));
+    expect(reviewRefetch).toHaveBeenCalledTimes(1);
+    expect(weeklyRefetch).not.toHaveBeenCalled();
   });
 
-  it("logs, retries, and leaves the skeleton when dashboard queries stall", () => {
+  it("shows no-period as a terminal state without waiting for review", () => {
+    setQueryState("review.dashboard", {
+      status: "pending",
+      fetchStatus: "fetching",
+    });
+    setQueryState("weeklyReport.get", {
+      data: { status: "no-period", report: null },
+    });
+    render(<DashboardPage />);
+    expect(screen.getByText("No active reporting period")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("dashboard-leads-loading"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("marks and refetches only the query that stalls", async () => {
     vi.useFakeTimers();
+    const reviewRefetch = vi.fn().mockResolvedValue({});
+    const weeklyRefetch = vi.fn().mockResolvedValue({});
     setQueryState("review.dashboard", {
       status: "pending",
       fetchStatus: "fetching",
-      refetch: vi.fn().mockResolvedValue({}),
+      refetch: reviewRefetch,
     });
     setQueryState("weeklyReport.get", {
-      status: "pending",
-      fetchStatus: "fetching",
-      refetch: vi.fn().mockResolvedValue({}),
+      data: ACTIVE_WEEKLY,
+      refetch: weeklyRefetch,
     });
-
     render(<DashboardPage />);
-    expect(screen.getByText("Dashboard skeleton")).toBeInTheDocument();
-
-    act(() => {
-      vi.advanceTimersByTime(DASHBOARD_LOAD_STALL_MS);
-    });
-
+    await act(() => vi.advanceTimersByTime(DASHBOARD_LOAD_STALL_MS));
     expect(logClientError).toHaveBeenCalledWith(
-      "dashboard.load_stalled",
+      "dashboard.query_stalled",
       expect.any(Error),
-      expect.objectContaining({
-        component: "DashboardPage",
-        reviewStatus: "pending",
-        reviewFetchStatus: "fetching",
-      }),
+      expect.objectContaining({ query: "review" }),
     );
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Dashboard is still loading",
-    );
-    expect(screen.queryByText("Dashboard skeleton")).not.toBeInTheDocument();
-    expect(queryStates.get("review.dashboard")?.refetch).toHaveBeenCalled();
-    expect(queryStates.get("weeklyReport.get")?.refetch).toHaveBeenCalled();
+    expect(reviewRefetch).toHaveBeenCalledTimes(1);
+    expect(weeklyRefetch).not.toHaveBeenCalled();
+    expect(screen.getByTestId("dashboard-leads-error")).toBeInTheDocument();
+    expect(screen.getByText("KPI")).toBeInTheDocument();
   });
 
-  it("recovers when the browser restores a pending dashboard from history", () => {
+  it("refetches only unsettled data after a history restore", async () => {
+    const reviewRefetch = vi.fn().mockResolvedValue({});
+    const weeklyRefetch = vi.fn().mockResolvedValue({});
     setQueryState("review.dashboard", {
       status: "pending",
       fetchStatus: "fetching",
-      refetch: vi.fn().mockResolvedValue({}),
+      refetch: reviewRefetch,
     });
     setQueryState("weeklyReport.get", {
-      status: "pending",
-      fetchStatus: "fetching",
-      refetch: vi.fn().mockResolvedValue({}),
+      data: ACTIVE_WEEKLY,
+      refetch: weeklyRefetch,
     });
-
     render(<DashboardPage />);
     const event = new Event("pageshow") as PageTransitionEvent;
     Object.defineProperty(event, "persisted", { value: true });
-
-    act(() => {
-      window.dispatchEvent(event);
-    });
-
+    await act(() => window.dispatchEvent(event));
     expect(logClientError).toHaveBeenCalledWith(
-      "dashboard.pageshow_missing_data",
+      "dashboard.pageshow_unsettled_query",
       expect.any(Error),
-      expect.objectContaining({
-        component: "DashboardPage",
-        reviewStatus: "pending",
-        reviewFetchStatus: "fetching",
-      }),
+      expect.objectContaining({ query: "review" }),
     );
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Dashboard is still loading",
-    );
-    expect(queryStates.get("review.dashboard")?.refetch).toHaveBeenCalled();
-    expect(queryStates.get("weeklyReport.get")?.refetch).toHaveBeenCalled();
+    expect(reviewRefetch).toHaveBeenCalledTimes(1);
+    expect(weeklyRefetch).not.toHaveBeenCalled();
   });
 });

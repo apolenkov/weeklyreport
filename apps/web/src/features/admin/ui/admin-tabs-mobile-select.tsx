@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 
+import type { AdminTab } from "../model/admin-tab-dependencies";
+
 /**
  * Native <select> for admin-tab navigation at narrow
  * widths. The desktop anchor-tab list (apps/web/src/app/(app)/admin/page.tsx)
@@ -12,17 +14,6 @@ import { useRouter } from "next/navigation";
  * (iOS wheel, Android bottom sheet), which is far more accessible than a
  * 5-button row at 375px.
  */
-
-type AdminTab =
-  | "users"
-  | "groups"
-  | "products"
-  | "periods"
-  | "reminders"
-  | "reopen"
-  | "jobs"
-  | "actions"
-  | "settings";
 
 const TABS: readonly { value: AdminTab; label: string }[] = [
   { value: "users", label: "Users" },

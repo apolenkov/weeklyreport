@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Suspense, useCallback, useContext, useMemo } from "react";
+import { useCallback, useContext, useMemo } from "react";
 
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
@@ -17,11 +17,10 @@ import { useReportShellUrlState } from "../../../shared/ui/report-shell/use-repo
 import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
 import { ExportPdfButton } from "../../pdf-export";
 import { HeadPublishLockAction, PeriodNavigator } from "../../period";
-import { HeadSlidesClient, SlideSkeleton } from "../../slides";
+import { HeadSlidesClient } from "../../slides";
 import { formatDateRange, isoWeekNumber } from "../model/lead-history";
 import type { ReportPeriod } from "../model/types";
 import { WeeklyReportPage } from "./weekly-report-page";
-import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 
 // Module-scope so the reference is stable across renders — a fresh literal would
 // churn the hook's `buildQuery` memoization. The head strips no one-shot markers.
@@ -237,22 +236,18 @@ export function HeadReportShell({
             </DocumentActionGroup>
           </header>
           {slidesToolbar}
-          <Suspense fallback={<SlideSkeleton />}>
-            <HeadSlidesClient reportId={reportId} scope={reportScope} />
-          </Suspense>
+          <HeadSlidesClient reportId={reportId} scope={reportScope} />
         </>
       ) : (
         <div className="min-w-0">
-          <Suspense fallback={<WeeklyReportSkeleton />}>
-            <WeeklyReportPage
-              reportId={reportId}
-              authorId={authorId}
-              scope={reportScope}
-              documentActionsLeading={exportPdf}
-              contextControls={contextControls}
-              headerContextLabel={headerContextLabel}
-            />
-          </Suspense>
+          <WeeklyReportPage
+            reportId={reportId}
+            authorId={authorId}
+            scope={reportScope}
+            documentActionsLeading={exportPdf}
+            contextControls={contextControls}
+            headerContextLabel={headerContextLabel}
+          />
         </div>
       )}
     </div>

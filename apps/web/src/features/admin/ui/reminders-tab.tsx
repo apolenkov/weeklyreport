@@ -45,12 +45,8 @@ interface RemindersTabProps {
   readonly derivedRulesByPolicyId: Readonly<
     Record<string, readonly MockReminder[]>
   >;
-  /**
-   * Organisation-wide timezone default for a new reminder. Optional —
-   * callers that omit it fall back to the Europe/Moscow default. The
-   * audience default does not feed the pairing.
-   */
-  readonly defaultTimezone?: string;
+  /** Organisation-wide timezone required to seed a new reminder. */
+  readonly defaultTimezone: string;
 }
 
 export function RemindersTab({
@@ -65,7 +61,7 @@ export function RemindersTab({
     policies.length === 0 ? { mode: "add" } : { mode: "closed" },
   );
   const [form, setForm] = useState<PolicyFormState>(() =>
-    emptyPolicyForm({ timezone: defaultTimezone }),
+    emptyPolicyForm(defaultTimezone),
   );
   const [pendingDelete, setPendingDelete] = useState<MockReminderPolicy | null>(
     null,
@@ -78,7 +74,7 @@ export function RemindersTab({
   const now = useMemo(() => new Date(), []);
 
   function resetForm() {
-    setForm(emptyPolicyForm({ timezone: defaultTimezone }));
+    setForm(emptyPolicyForm(defaultTimezone));
   }
 
   const validityValid = useMemo(() => {

@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { Suspense } from "react";
 
 import { LeadSectionPreviewAuth } from "../../../../../../features/report-sections/ui/lead-section-preview-auth";
-import { WeeklyReportSkeleton } from "../../../../../../features/report-sections/ui/weekly-report-skeleton";
 import { AgentReviewComingSoon } from "../../../../../../shared/ui/report-shell/agent-review-coming-soon";
 import { RoleGate } from "../../../../../../shared/ui/role-gate";
 
@@ -56,9 +54,7 @@ export default async function LeadReportPreviewPage({ params }: Props) {
             </div>
           </header>
 
-          <Suspense fallback={<WeeklyReportSkeleton />}>
-            <LeadSectionPreviewAuth reportId={reportId} />
-          </Suspense>
+          <LeadSectionPreviewAuth reportId={reportId} />
         </div>
       </main>
     </RoleGate>

@@ -1,6 +1,7 @@
 import "../styles/app.css";
 
 import type { Metadata } from "next";
+import { Fraunces, Lexend, Source_Sans_3 } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { WebVitalsReporter } from "../features/telemetry/ui/web-vitals-reporter";
@@ -12,6 +13,23 @@ import { QueryErrorBoundary } from "../shared/ui/error-boundary";
 type RootLayoutProps = Readonly<{
   children: ReactNode;
 }>;
+
+const fraunces = Fraunces({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+});
+const lexend = Lexend({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-lexend",
+});
+const sourceSans = Source_Sans_3({
+  display: "swap",
+  style: ["normal", "italic"],
+  subsets: ["cyrillic", "latin"],
+  variable: "--font-source-sans-3",
+});
 
 // Vercel audit 2026-05-22: titles were blank on SSR (set later by a client
 // effect). Set them server-side via the Metadata API so the document title is
@@ -28,25 +46,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* TODO(VERCEL-FONT): migrate the three Google families to
-            next/font/google for self-hosting (drops the render-blocking
-            external stylesheet + adds size-adjust fallback metrics for lower
-            CLS). Deferred: touches the --font-* CSS token system and needs a
-            visual sign-off pass, so it is held behind the theme/visual gate.
-            Current preconnect + display=swap is an acceptable interim. */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${fraunces.variable} ${lexend.variable} ${sourceSans.variable}`}
+    >
       <body className="min-h-svh bg-background font-sans antialiased tracking-[-0.01em]">
         <a
           href="#main-content"

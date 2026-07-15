@@ -7,7 +7,12 @@ import {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { formatRelativeDeadline, mapDashboardData } from "./dashboard";
+import {
+  formatRelativeDeadline,
+  mapDashboardData,
+  mapReviewDashboardData,
+  mapWeeklyDashboardData,
+} from "./dashboard";
 
 // v4-shape UUIDs (4 in position 13, 8/9/a/b in position 17).
 const REPORT_ID = "11111111-1111-4111-8111-aaaaaaaaaaaa";
@@ -191,6 +196,25 @@ describe("formatRelativeDeadline", () => {
 });
 
 describe("mapDashboardData", () => {
+  it("maps weekly-backed KPI and escalation panels without review data", () => {
+    const result = mapWeeklyDashboardData({
+      weeklyReport: makeWeeklyReport(),
+      now: new Date("2026-04-17T10:00:00.000Z"),
+    });
+    expect(result.kpi.total).toBe(6);
+    expect(result.kpi.pendingCount).toBe(4);
+    expect(result.blockedAtRisk.length).toBeGreaterThan(0);
+  });
+
+  it("maps review-backed lead and pending panels from the scoped review rows", () => {
+    const result = mapReviewDashboardData({
+      review: makeReview(),
+      weeklyReport: makeWeeklyReport(),
+    });
+    expect(result.leads).toHaveLength(3);
+    expect(result.pendingLeads).toEqual(["Cara L."]);
+  });
+
   it("produces kpi.submitted/total from weeklyReport counts (4/6 case)", () => {
     const result = mapDashboardData({
       review: makeReview(),
