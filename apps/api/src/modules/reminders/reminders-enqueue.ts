@@ -1,7 +1,6 @@
 import {
   type AdminReminderExecution,
   adminReminderExecutionSchema,
-  type AdminReminderRule,
 } from "@customreport/shared";
 import type { ClsService } from "nestjs-cls";
 
@@ -14,8 +13,10 @@ import {
   resolveCorrelationId,
 } from "../../infrastructure/bullmq/worker-observability.js";
 import type { AppLogger } from "../../lib/logger";
-import type { ReminderExecutionPayload } from "./reminders.service.js";
-import { buildQueuePayload } from "./reminders-queue-payload.js";
+import {
+  buildQueuePayload,
+  type ReminderQueuePayload,
+} from "./reminders-queue-payload.js";
 
 /**
  * Retry/backoff shared by every email-reminder enqueue — the scheduler's
@@ -58,14 +59,13 @@ export async function enqueueOrMarkFailed(
   ctx: EnqueueContext,
   execution: AdminReminderExecution,
   recipientEmail: string,
-  rule: AdminReminderRule,
-  payload?: ReminderExecutionPayload,
+  payload: ReminderQueuePayload,
 ): Promise<AdminReminderExecution> {
   try {
     await addJob(
       ctx,
       execution,
-      buildQueuePayload(execution, recipientEmail, rule, payload),
+      buildQueuePayload(execution, recipientEmail, payload),
     );
     ctx.logger.info("enqueued email reminder job", {
       executionId: execution.id,
@@ -96,12 +96,12 @@ export async function enqueueOrMarkFailed(
 export async function reEnqueueStuck(
   ctx: EnqueueContext,
   execution: AdminReminderExecution,
-  rule: AdminReminderRule,
+  reportPeriod: string,
 ): Promise<void> {
   await addJob(
     ctx,
     execution,
-    buildQueuePayload(execution, execution.recipientEmail, rule),
+    buildQueuePayload(execution, execution.recipientEmail, { reportPeriod }),
   );
   ctx.logger.info("reaper re-enqueued stuck execution", {
     executionId: execution.id,

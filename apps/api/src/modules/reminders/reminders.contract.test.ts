@@ -36,6 +36,7 @@ const pausedRule: AdminReminderRule = {
 
 const recipientEmail = "lead1@customreport.local";
 const recipientEmail2 = "lead2@customreport.local";
+const REPORT_PERIOD_LABEL = "2026-04-07 → 2026-04-13";
 
 // ---------------------------------------------------------------------------
 // In-memory repository
@@ -51,6 +52,7 @@ function createRepository(...rules: AdminReminderRule[]): RemindersRepository {
       const found = rules.find((r) => r.id === ruleId);
       return found ? structuredClone(found) : null;
     },
+    getRulePeriodLabel: () => Promise.resolve(REPORT_PERIOD_LABEL),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async findExecutionByDedupeKey(dedupeKey: string) {
       for (const execution of executions.values()) {
@@ -190,7 +192,7 @@ describe("RemindersService — contract tests", () => {
         {
           executionId: execution.id,
           recipientEmail,
-          reportPeriod: activeRule.reportId,
+          reportPeriod: REPORT_PERIOD_LABEL,
         },
         {
           attempts: 3,

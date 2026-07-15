@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import type { RemindersService } from "../../../modules/reminders/reminders.service.js";
+import type { WeeklyReportService } from "../../../modules/weekly-report/weekly-report.service.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import { headProcedure, router } from "../trpc.middleware.js";
 
@@ -10,6 +11,7 @@ const DEFAULT_EXECUTION_LIST_LIMIT = 20;
 
 export interface RemindersRouterDeps {
   remindersService: RemindersService;
+  weeklyReportService: Pick<WeeklyReportService, "getCurrentEditableId">;
 }
 
 export function createRemindersRouter(deps: RemindersRouterDeps) {
@@ -97,8 +99,9 @@ export function createRemindersRouter(deps: RemindersRouterDeps) {
       )
       .mutation(async ({ input, ctx }) => {
         try {
-          const activeReportId = ctx.session.activeReportId;
-          if (!activeReportId || activeReportId !== input.reportId) {
+          const currentEditableReportId =
+            await deps.weeklyReportService.getCurrentEditableId();
+          if (currentEditableReportId !== input.reportId) {
             throw new TRPCError({
               code: "FORBIDDEN",
               message: "report-not-active",

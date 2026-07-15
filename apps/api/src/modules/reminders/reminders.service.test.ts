@@ -378,6 +378,7 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
       async getRule(ruleId: string) {
         return ruleId === activeRule.id ? structuredClone(activeRule) : null;
       },
+      getRulePeriodLabel: () => Promise.resolve("2026-04-07 → 2026-04-13"),
       // eslint-disable-next-line @typescript-eslint/require-await -- stub
       async findExecutionByDedupeKey() {
         return null;
@@ -454,6 +455,7 @@ describe("requestReminderExecution — enqueue failure is recorded, not swallowe
       async getRule(ruleId: string) {
         return ruleId === activeRule.id ? structuredClone(activeRule) : null;
       },
+      getRulePeriodLabel: () => Promise.resolve("2026-04-07 → 2026-04-13"),
       // eslint-disable-next-line @typescript-eslint/require-await -- stub
       async findExecutionByDedupeKey() {
         return null;

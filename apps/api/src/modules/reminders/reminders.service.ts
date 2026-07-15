@@ -18,6 +18,11 @@ import {
 } from "./reminders-enqueue.js";
 import type { EscalationGroupDigest } from "./reminders-escalation-grouping.js";
 import {
+  type ExecutionPageRequest,
+  paginateReminderExecutions,
+} from "./reminders-execution-pagination.js";
+import { requireRulePeriodLabel } from "./reminders-queue-payload.js";
+import {
   type RemindersScopeRepository,
   RemindersScopeService,
 } from "./reminders-scope.service.js";
@@ -66,6 +71,7 @@ export interface RemindersRepository extends RemindersScopeRepository {
     executionId: string,
     errorMessage: string,
   ): Promise<void>;
+  getRulePeriodLabel?(ruleId: string): Promise<string | null>;
   /**
    * Reverses the `queued → sending` claim so a retryable send failure can be
    * re-claimed by the next BullMQ attempt instead of being stranded. Guarded
@@ -77,7 +83,11 @@ export interface RemindersRepository extends RemindersScopeRepository {
    */
   releaseExecutionClaim?(executionId: string): Promise<void>;
   getExecution(executionId: string): Promise<AdminReminderExecution | null>;
-  listExecutions(ruleId: string): Promise<AdminReminderExecution[]>;
+  /** One DB-level keyset page (newest first) starting strictly after `cursor`. */
+  listExecutions(
+    ruleId: string,
+    page: ExecutionPageRequest,
+  ): Promise<AdminReminderExecution[]>;
 }
 
 /**
@@ -239,12 +249,14 @@ export class RemindersService {
     // Enqueue only after the insert has committed AND only for the caller that
     // inserted the row, so a redundant concurrent tick enqueues nothing.
     if (!this.emailQueue) return execution;
+    const queuePayload = payload ?? {
+      reportPeriod: await requireRulePeriodLabel(this.repository, rule.id),
+    };
     return enqueueOrMarkFailed(
       this.enqueueContext(this.emailQueue),
       execution,
       recipientEmail,
-      rule,
-      payload,
+      queuePayload,
     );
   }
 
@@ -307,7 +319,12 @@ export class RemindersService {
       });
       return;
     }
-    await reEnqueueStuck(this.enqueueContext(this.emailQueue), execution, rule);
+    const reportPeriod = await requireRulePeriodLabel(this.repository, rule.id);
+    await reEnqueueStuck(
+      this.enqueueContext(this.emailQueue),
+      execution,
+      reportPeriod,
+    );
   }
 
   /**
@@ -351,41 +368,15 @@ export class RemindersService {
     );
   }
 
-  async listExecutions(
+  listExecutions(
     ruleId: string,
     pagination?: PaginationInput,
     recipientAllowlist?: ReadonlySet<string> | null,
   ): Promise<PaginatedResult<AdminReminderExecution>> {
-    const fetched = adminReminderExecutionSchema
-      .array()
-      .parse(await this.repository.listExecutions(ruleId));
-
-    // Recipient-level scope: a shared report's rule can carry executions for
-    // several groups' draft authors. Drop out-of-scope recipients here, over
-    // the full slice, so pagination below runs on the already-scoped set and
-    // out-of-scope rows can neither consume page size nor surface as
-    // nextCursor. A null/undefined allowlist (admin) keeps every row.
-    const all = recipientAllowlist
-      ? fetched.filter((execution) =>
-          recipientAllowlist.has(execution.recipientEmail),
-        )
-      : fetched;
-
-    if (!pagination) {
-      return { items: all, nextCursor: null };
-    }
-
-    const limit = pagination.limit;
-    const startIndex = pagination.cursor
-      ? all.findIndex((e) => e.id === pagination.cursor) + 1
-      : 0;
-    const page = all.slice(startIndex, startIndex + limit);
-    // The if-condition guarantees `all[startIndex + limit - 1]` exists, but
-    // TS only sees `T | undefined` after subscript access — narrow explicitly.
-    const lastInPage = all.at(startIndex + limit - 1);
-    const nextCursor =
-      startIndex + limit < all.length && lastInPage ? lastInPage.id : null;
-
-    return { items: page, nextCursor };
+    return paginateReminderExecutions(
+      (page) => this.repository.listExecutions(ruleId, page),
+      pagination,
+      recipientAllowlist,
+    );
   }
 }
