@@ -80,7 +80,7 @@ function writeRedisCommand(command: string, ...args: string[]): Buffer {
   );
 }
 
-async function flushRedis(): Promise<void> {
+export async function flushRedis(): Promise<void> {
   const { host, port, source } = getRedisEndpoint();
   console.log(`[reset-hard] Redis target: ${host}:${port} (${source})`);
 
@@ -93,9 +93,11 @@ async function flushRedis(): Promise<void> {
       reject(new Error(`Redis FLUSHALL timed out at ${host}:${port}`));
     }, 5000);
     let buf = "";
+    let receivedOk = false;
     sock.on("data", (chunk) => {
       buf += chunk.toString("utf8");
       if (buf.startsWith("+OK")) {
+        receivedOk = true;
         clearTimeout(timer);
         sock.end();
         resolve();
@@ -111,7 +113,15 @@ async function flushRedis(): Promise<void> {
     });
     sock.on("end", () => {
       clearTimeout(timer);
-      resolve();
+      if (receivedOk) {
+        resolve();
+      } else {
+        reject(
+          new Error(
+            "Redis FLUSHALL: connection closed before +OK was received",
+          ),
+        );
+      }
     });
   });
 
@@ -199,12 +209,14 @@ async function main(): Promise<void> {
   );
 }
 
-main()
-  .catch((error: unknown) => {
-    console.error("[reset-hard] FAILED:", error);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-    await pool.end();
-  });
+if (typeof require !== "undefined" && require.main === module) {
+  void main()
+    .catch((error: unknown) => {
+      console.error("[reset-hard] FAILED:", error);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+      await pool.end();
+    });
+}
