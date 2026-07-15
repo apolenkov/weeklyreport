@@ -1,7 +1,11 @@
 ---
-# Phase 68: Custom Prometheus config for grafana/otel-lgtm.
+# Custom Prometheus config for grafana/otel-lgtm (prod-true targets).
 # Mounted to /otel-lgtm/prometheus.yaml inside the container.
 # Extends the otel-lgtm defaults with scrape configs for our exporters.
+# Dev overrides this mount with prometheus-otel-lgtm.dev.yml
+# (docker-compose.dev.yml), whose api target is the dev host port — a static
+# file cannot switch targets per environment, and a permanently-down target
+# would keep the ApiDown alert firing.
 
 global:
   scrape_interval: 15s
@@ -32,14 +36,8 @@ scrape_configs:
     metrics_path: /metrics
     scrape_interval: 15s
     static_configs:
-      # host.docker.internal: api is in customreport_default network,
-      # otel-lgtm is in customreport-obs_default (different compose projects), so
-      # it scrapes via the Docker host, not the service DNS. This targets the DEV
-      # host port (docker-compose.yml publishes 3002). Prod closes the API host
-      # port (docker-compose.prod.yml is expose-only), so a prod-layered
-      # observability run must use a managed scrape or attach otel-lgtm to the api
-      # network and target api:3001.
-      - targets: [host.docker.internal:3002]
+      # Prod scrapes compose-network service DNS on the api's internal port.
+      - targets: ["api:3001"]
         labels:
           service: api
 
@@ -47,7 +45,7 @@ scrape_configs:
     metrics_path: /metrics
     scrape_interval: 30s
     static_configs:
-      - targets: [postgres-exporter:9187]
+      - targets: ["postgres-exporter:9187"]
         labels:
           service: postgres
 
@@ -55,7 +53,7 @@ scrape_configs:
     metrics_path: /metrics
     scrape_interval: 30s
     static_configs:
-      - targets: [redis-exporter:9121]
+      - targets: ["redis-exporter:9121"]
         labels:
           service: redis
 
