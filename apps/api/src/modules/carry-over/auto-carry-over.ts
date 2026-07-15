@@ -82,6 +82,7 @@ export async function carryOverIntoOpenedPeriod(
 
 type AutoCarryOverPrisma = Pick<
   PrismaClient,
+  | "$transaction"
   | "reportSection"
   | "project"
   | "projectStatus"

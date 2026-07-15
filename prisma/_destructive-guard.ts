@@ -45,10 +45,6 @@ export function assertNonProdDestructive(scriptName: string): void {
     );
   }
 
-  const lastSegment = (url.split("?")[0]?.split("/").pop() ?? "").toLowerCase();
-  // eslint-disable-next-line sonarjs/super-linear-regex -- DATABASE_URL host extraction; greedy `.*` to last `@` is linear, standard URL parsing
-  const host = url.replace(/.*@/, "").split(/[:/]/)[0]?.toLowerCase() ?? "";
-
   const refuse = (reason: string): never => {
     const masked = url.replace(/:[^:@]*@/, ":***@");
     throw new Error(
@@ -56,6 +52,17 @@ export function assertNonProdDestructive(scriptName: string): void {
         `${reason} Set ALLOW_PROD_DESTRUCTIVE=yes to override.`,
     );
   };
+
+  const lastSegment = (url.split("?")[0]?.split("/").pop() ?? "").toLowerCase();
+  const host = (() => {
+    try {
+      return new URL(url).hostname.toLowerCase();
+    } catch {
+      // A malformed URL must still surface the masked, actionable refusal,
+      // not a raw TypeError leaking the unmasked connection string.
+      return refuse("DATABASE_URL is not a parseable URL.");
+    }
+  })();
 
   // Hard refusal on prod-smelling DB name regardless of host
   // (catches tunneled / SSH-forwarded prod connections).

@@ -35,7 +35,11 @@ export function createReportsRouter(deps: ReportsRouterDeps) {
     }),
 
     myHistory: protectedProcedure.query(async ({ ctx }) => {
-      return deps.reportSectionsService.myHistory(ctx.session.userId);
+      try {
+        return await deps.reportSectionsService.myHistory(ctx.session.userId);
+      } catch (error) {
+        throw mapDomainError(error);
+      }
     }),
 
     compiledHistory: anyRoleProcedure

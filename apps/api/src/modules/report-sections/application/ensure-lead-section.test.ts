@@ -31,16 +31,23 @@ function makePrisma(opts: {
     .mockResolvedValue(opts.activityAttachments ?? []);
   const activityStatusCreateMany = vi.fn().mockResolvedValue({ count: 0 });
 
+  const transaction = vi.fn();
   const client = {
     reportSection: { findUnique: sectionFindUnique, create: sectionCreate },
     project: { findMany: projectFindMany },
     projectStatus: { createMany: projectStatusCreateMany },
     projectActivityLead: { findMany: activityLeadFindMany },
     activityStatus: { createMany: activityStatusCreateMany },
+    $transaction: transaction,
   } as unknown as LeadSectionPrisma;
+  transaction.mockImplementation(
+    (callback: (tx: LeadSectionPrisma) => Promise<unknown>) => callback(client),
+  );
 
   return {
     client,
+    transaction,
+    sectionFindUnique,
     sectionCreate,
     projectStatusCreateMany,
     activityLeadFindMany,
@@ -137,16 +144,36 @@ describe("ensureLeadSection", () => {
   });
 
   it("concurrent same-lead login: create P2002 resolves to the winner's section, no throw", async () => {
-    const { client, projectStatusCreateMany } = makePrisma({
-      createThrows: P2002_SECTION,
-      raced: { id: "sec-winner" },
-    });
+    const { client, transaction, sectionFindUnique, projectStatusCreateMany } =
+      makePrisma({
+        createThrows: P2002_SECTION,
+        raced: { id: "sec-winner" },
+      });
 
     const result = await ensureLeadSection(client, REPORT_ID, USER_ID);
 
     expect(result).toEqual({ sectionId: "sec-winner" });
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(sectionFindUnique).toHaveBeenCalledTimes(2);
     // The loser must not seed statuses — the winner already did.
     expect(projectStatusCreateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects the whole transaction when activity-status seeding fails", async () => {
+    const seedError = new Error("activity status seed failed");
+    const { client, transaction, sectionCreate, activityStatusCreateMany } =
+      makePrisma({
+        createdId: "sec-new",
+        activityAttachments: [{ activityId: "act-1" }],
+      });
+    activityStatusCreateMany.mockRejectedValueOnce(seedError);
+
+    await expect(ensureLeadSection(client, REPORT_ID, USER_ID)).rejects.toBe(
+      seedError,
+    );
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(sectionCreate).toHaveBeenCalledTimes(1);
   });
 
   it("re-throws a non-unique-violation error from create", async () => {
