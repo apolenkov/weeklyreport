@@ -10,7 +10,7 @@ import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
  * login.
  *
  * Concurrency: two concurrent first-logins of the SAME lead could both miss the
- * fast-path find and both create, hitting the `ReportSection_reportId_authorId`
+ * fast-path find and both create, hitting the `ReportSection_reportId_authorId_key`
  * unique index. The fast path stays a cheap `findUnique`; the create is guarded
  * by a catch-on-unique-violation + re-read so the loser resolves to the winner's
  * section instead of throwing. `ProjectStatus` rows are seeded only on a fresh
@@ -18,7 +18,7 @@ import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
  */
 
 const DEFAULT_PROJECT_STATUS = "green" as const;
-const SECTION_UNIQUE_INDEX = "ReportSection_reportId_authorId";
+const SECTION_UNIQUE_INDEX = "ReportSection_reportId_authorId_key";
 
 function isSectionUniqueViolation(error: unknown): boolean {
   return isUniqueViolation(error, {

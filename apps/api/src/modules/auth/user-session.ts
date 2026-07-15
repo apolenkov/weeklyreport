@@ -32,8 +32,8 @@ const SAML_STUB_FIRST_NAME_PLACEHOLDER = " ";
 // shape, where the old meta.target-only check was blind.
 function isUserUniqueViolation(error: unknown): boolean {
   return (
-    isUniqueViolation(error, { columns: ["email"] }) ||
-    isUniqueViolation(error, { columns: ["samlId"] })
+    isUniqueViolation(error, { index: "User_email_key", columns: ["email"] }) ||
+    isUniqueViolation(error, { index: "User_samlId_key", columns: ["samlId"] })
   );
 }
 

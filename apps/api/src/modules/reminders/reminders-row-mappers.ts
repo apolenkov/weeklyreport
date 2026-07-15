@@ -79,7 +79,10 @@ export function formatPeriodLabel(start: Date, end: Date): string {
  * `meta.target` alone).
  */
 export function isDedupeKeyConflict(error: unknown): boolean {
-  return isUniqueViolation(error, { columns: ["dedupeKey"] });
+  return isUniqueViolation(error, {
+    index: "ReminderExecution_dedupeKey_key",
+    columns: ["dedupeKey"],
+  });
 }
 
 export function toRuleDomain(rule: {

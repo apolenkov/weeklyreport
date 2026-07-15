@@ -62,7 +62,14 @@ export async function attachProductToGroup(
     });
     return groupProductSchema.parse(row);
   } catch (error) {
-    if (!isUniqueViolation(error, { columns: ["productId"] })) throw error;
+    if (
+      !isUniqueViolation(error, {
+        index: "GroupProduct_productId_key",
+        columns: ["productId"],
+      })
+    ) {
+      throw error;
+    }
 
     const winner = await prisma.groupProduct.findUnique({
       where: { productId: input.productId },
