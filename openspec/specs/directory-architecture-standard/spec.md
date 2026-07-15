@@ -520,7 +520,7 @@ barrel. The relocation MUST be behavior-neutral.
 
 The legacy `apps/web/src/components/lead/` tree MUST NOT survive as a single
 `features/lead` slice. Its files MUST relocate to the canonical domain slice each
-belongs to, per `docs/architecture/mapping/web-comp-lead-2026-07-02.md`: the
+belongs to, per the 2026-07-02 relocation mapping (archived out of the repo): the
 report-section rendering core (`lead-form`, `item-card*`, `item-edit-dialog`,
 `next-week-section`, the item-board kit `board-column-header`/`board-empty-state`/
 `activity-lanes-block`, `stage-chip`, and the kernel model files `mock-data`,
@@ -614,7 +614,7 @@ behavior-neutral.
 
 The legacy `apps/web/src/components/weekly-report/` tree MUST NOT survive as a
 `features/weekly-report` slice. Its files MUST relocate to the canonical domain
-each belongs to, per `docs/architecture/mapping/web-comp-weekly-report-2026-07-02.md`:
+each belongs to, per the 2026-07-02 relocation mapping (archived out of the repo):
 the assembled-report rendering core (`activity-status-strip`, `portfolio-overview-table`,
 `product-accordion`, `weekly-report-page`, `weekly-report-skeleton`) under
 `features/report-sections/ui`; `export-pdf-button` under `features/pdf-export/ui`;
@@ -683,7 +683,7 @@ survive. The relocation MUST be behavior-neutral.
 
 The legacy `apps/web/src/lib/mappers/` tree MUST NOT survive as a shared mapper
 barrel. Each mapper file MUST relocate to the `model/` dir of the domain that owns
-it, per `docs/architecture/mapping/web-lib-2026-07-02.md`: the admin mappers
+it, per the 2026-07-02 relocation mapping (archived out of the repo): the admin mappers
 (`admin`, `admin-form-inputs`, `admin-types`) under `features/admin/model`; the
 dashboard mappers (`dashboard`, `dashboard-counts`, `dashboard-escalations`,
 `dashboard-kpi`, `dashboard-leads`) under `features/dashboard/model`; and the

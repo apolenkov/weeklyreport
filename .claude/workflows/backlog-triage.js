@@ -11,8 +11,9 @@ export const meta = {
   ],
 };
 
-// Embedded work-list (args do not thread via scriptPath here). Wave from
-// docs/IMPLEMENTATION-ROADMAP.md (A=P0 blockers → D=P2/P3 hygiene; ratchet last).
+// Embedded work-list (args do not thread via scriptPath here). Wave from the
+// June implementation roadmap, now archived in ~/work/customreport-archive/
+// (A=P0 blockers → D=P2/P3 hygiene; ratchet last).
 const CHANGES = [
   { name: "set-express-trust-proxy", wave: "A" },
   { name: "route-pdfs-and-authz", wave: "A" },

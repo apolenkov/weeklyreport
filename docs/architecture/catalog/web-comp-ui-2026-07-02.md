@@ -1,8 +1,0 @@
-# Catalog — web-comp-ui (2026-07-02)
-
-2 files. Purpose/layer/domain per file, for the architecture-grouping analysis.
-
-| File                                               | Layer     | Domain    | Purpose                                                                                                                                                                                                                      | Key exports                         | Deps                                  |
-| -------------------------------------------------- | --------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------- |
-| apps/web/src/components/ui/confirmation-dialog.tsx | component | shared-ui | Generic reusable modal confirmation dialog (focus-trapped, Escape/backdrop close) plus a preset-config factory for the app's standard confirm actions (submit, publish, reopen, revoke, fill-from, version-restore, delete). | ConfirmationDialog, getDialogPreset | lib/use-dialog-focus (useDialogFocus) |
-| apps/web/src/components/ui/sdlc-tooltip.tsx        | component | shared-ui | Singleton document-body-portal tooltip for SDLC stage chips, escaping overflow:hidden clipping in collapsed accordions; provides a context hook for show/hide.                                                               | useSdlcTooltip, SdlcTooltipProvider | react-dom (createPortal)              |
