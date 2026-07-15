@@ -89,6 +89,10 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
         sections: {
           ...(sectionScope ? { where: sectionScope } : {}),
           include: reportSectionFullInclude,
+          // Same deterministic order as the frozen-snapshot include: the
+          // live/draft render branch (and a published row whose snapshot is
+          // absent) must not serve raw heap order.
+          orderBy: [{ author: { name: "asc" } }, { id: "asc" }],
         },
       },
     });

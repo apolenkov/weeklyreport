@@ -66,6 +66,70 @@ describe("PublicationPrismaRepository (integration)", () => {
     ).toHaveLength(1);
   });
 
+  it("orders sections by author name and keeps the order stable across reads", async () => {
+    const additionalLeads = [
+      {
+        id: "a0000000-0000-4000-a000-000000000011",
+        email: "zeta-lead@test.local",
+        name: "Zeta Lead",
+        lastName: "Lead",
+        firstName: "Zeta",
+        role: "lead" as const,
+        samlId: "zeta-lead-test",
+        reportingGroupId: testData.lead.reportingGroupId,
+      },
+      {
+        id: "a0000000-0000-4000-a000-000000000012",
+        email: "alpha-lead@test.local",
+        name: "Alpha Lead",
+        lastName: "Lead",
+        firstName: "Alpha",
+        role: "lead" as const,
+        samlId: "alpha-lead-test",
+        reportingGroupId: testData.lead.reportingGroupId,
+      },
+      {
+        id: "a0000000-0000-4000-a000-000000000013",
+        email: "mike-lead@test.local",
+        name: "Mike Lead",
+        lastName: "Lead",
+        firstName: "Mike",
+        role: "lead" as const,
+        samlId: "mike-lead-test",
+        reportingGroupId: testData.lead.reportingGroupId,
+      },
+    ];
+    await prisma.user.createMany({ data: additionalLeads });
+    await Promise.all(
+      additionalLeads.map((lead) =>
+        prisma.reportSection.create({
+          data: { reportId: testData.report.id, authorId: lead.id },
+        }),
+      ),
+    );
+
+    const firstRead = expectDefined(
+      await repo.getAssembledReport(testData.report.id),
+    );
+    const secondRead = expectDefined(
+      await repo.getAssembledReport(testData.report.id),
+    );
+    const firstAuthorNames = firstRead.sections.map(
+      (section) => section.authorName,
+    );
+    const secondAuthorNames = secondRead.sections.map(
+      (section) => section.authorName,
+    );
+
+    expect(firstAuthorNames).toEqual([
+      "Alpha Lead",
+      "Mike Lead",
+      "Test Lead 1",
+      "Zeta Lead",
+    ]);
+    expect(secondAuthorNames).toEqual(firstAuthorNames);
+  });
+
   /** Build the publish payload from the seeded draft report. */
   async function publishPayload(publishedById: string | null) {
     const assembled = await repo.getAssembledReport(testData.report.id);
