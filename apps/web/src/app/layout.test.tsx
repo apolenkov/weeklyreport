@@ -12,6 +12,11 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("../lib/server/get-org-public", () => ({
   getOrgPublic: vi.fn(),
 }));
+vi.mock("next/font/google", () => ({
+  Fraunces: () => ({ variable: "font-fraunces" }),
+  Lexend: () => ({ variable: "font-lexend" }),
+  Source_Sans_3: () => ({ variable: "font-source-sans" }),
+}));
 
 // Stub client-only components that would fail in a jsdom render of the
 // full RSC tree (they are not under test here).
@@ -66,5 +71,16 @@ describe("RootLayout — inline org-data XSS sink removed", () => {
     for (const script of doc.querySelectorAll("script")) {
       expect(script.textContent).not.toContain("onerror");
     }
+  });
+
+  it("applies self-hosted font variables without Google stylesheet links", () => {
+    const doc = renderLayout(STUB_ORG);
+    expect(doc.documentElement.className.split(" ")).toEqual([
+      "font-fraunces",
+      "font-lexend",
+      "font-source-sans",
+    ]);
+    expect(doc.querySelector('link[href*="fonts.googleapis.com"]')).toBeNull();
+    expect(doc.querySelector('link[href*="fonts.gstatic.com"]')).toBeNull();
   });
 });

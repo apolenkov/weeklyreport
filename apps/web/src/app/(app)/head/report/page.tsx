@@ -1,7 +1,4 @@
-import { Suspense } from "react";
-
 import { WeeklyReportPage } from "../../../../features/report-sections/ui/weekly-report-page";
-import { WeeklyReportSkeleton } from "../../../../features/report-sections/ui/weekly-report-skeleton";
 
 interface Props {
   searchParams: Promise<{ authorId?: string }>;
@@ -25,9 +22,7 @@ export default async function HeadReportPage({ searchParams }: Props) {
       className="min-h-screen bg-[var(--color-background)]"
     >
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-        <Suspense fallback={<WeeklyReportSkeleton />}>
-          <WeeklyReportPage authorId={authorId} redirectToCanonical />
-        </Suspense>
+        <WeeklyReportPage authorId={authorId} redirectToCanonical />
       </div>
     </main>
   );

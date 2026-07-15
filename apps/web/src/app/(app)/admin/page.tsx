@@ -1,8 +1,10 @@
 import Link from "next/link";
 
 import {
+  ADMIN_TABS,
   AdminPanel,
   AdminTabsMobileSelect,
+  isAdminTab,
   JobsTabLabel,
 } from "../../../features/admin";
 // ReopenTabLabel lives in the review slice; the route composes it directly
@@ -21,24 +23,9 @@ interface Props {
 // Position: between 'products' and 'reminders' — products → periods →
 // reminders mirrors the actual data-flow ordering (a period scoped to
 // products, with reminders fired against it).
-const tabs = [
-  "users",
-  "groups",
-  "products",
-  "periods",
-  "reminders",
-  "reopen",
-  "jobs",
-  "actions",
-  "settings",
-] as const;
-type TabId = (typeof tabs)[number];
-
 export default async function AdminPage({ searchParams }: Props) {
   const { tab = "users", filter = null } = await searchParams;
-  const activeTab: TabId = tabs.includes(tab as TabId)
-    ? (tab as TabId)
-    : "users";
+  const activeTab = isAdminTab(tab) ? tab : "users";
 
   return (
     <main id="main-content" className="operational-paper-shell min-h-screen">
@@ -58,7 +45,7 @@ export default async function AdminPage({ searchParams }: Props) {
               container uses bg-white + shadow per mockup spec. */}
           <nav aria-label="Admin tabs" className="hidden sm:block">
             <div className="flex gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] p-1 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-              {tabs.map((t) => (
+              {ADMIN_TABS.map((t) => (
                 <Link
                   key={t}
                   href={`/admin?tab=${t}`}

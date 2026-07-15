@@ -92,6 +92,20 @@ export interface MapDashboardArgs {
   currentUserId?: string;
 }
 
+export interface MapWeeklyDashboardArgs {
+  weeklyReport: WeeklyReportReadModel;
+  /** Override `now` for deterministic deadline tests. */
+  now?: Date;
+  /** Review-backed pending count when available; weekly totals seed partial UI. */
+  pendingCount?: number;
+}
+
+export interface MapReviewDashboardArgs {
+  review: SubmissionDashboardRow[];
+  weeklyReport: WeeklyReportReadModel;
+  currentUserId?: string;
+}
+
 export interface MappedDashboard {
   kpi: KpiData;
   leads: LeadInfo[];
@@ -99,45 +113,71 @@ export interface MappedDashboard {
   pendingLeads: string[];
 }
 
-export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
-  const now = args.now ?? new Date();
-  const { review, weeklyReport, currentUserId } = args;
+export type MappedWeeklyDashboard = Pick<
+  MappedDashboard,
+  "kpi" | "blockedAtRisk"
+>;
 
-  // -------- Leads --------
-  const leads = buildLeadInfos(review, weeklyReport, currentUserId);
+export type MappedReviewDashboard = Pick<
+  MappedDashboard,
+  "leads" | "pendingLeads"
+>;
 
-  // -------- Pending leads (alert bar) --------
-  const pendingLeads = leads
-    .filter((l) => l.status === "pending")
-    .map((l) => l.name);
-
-  // -------- KPI --------
-  const kpi = buildKpiData(weeklyReport, pendingLeads.length, now);
-
-  // -------- Blocked & At-Risk --------
-  // Concrete blockers/risks are keyed by stage+product (`blocked` /
-  // `unresolved_risk` carry a stageName). The product-level "flagged red"
-  // escalation (the only `at_risk` source) is a stage-less roll-up the
-  // ProductCard header already shows, so drop it when the product has a concrete
-  // row; keep it only as the sole signal for a red product with nothing
-  // concrete to point at.
+function mapBlockedAtRisk(
+  weeklyReport: WeeklyReportReadModel,
+): BlockedAtRiskItem[] {
   const stageKeyedProducts = new Set(
     weeklyReport.escalations
       .filter((e) => e.type === "blocked" || e.type === "unresolved_risk")
       .map((e) => e.productName),
   );
-  const blockedAtRisk: BlockedAtRiskItem[] = weeklyReport.escalations
+  return weeklyReport.escalations
     .filter(
       (e) => e.type !== "at_risk" || !stageKeyedProducts.has(e.productName),
     )
     .map((e, idx) => escalationToBlockedItem(e, idx))
     .filter((item): item is BlockedAtRiskItem => item !== null);
+}
+
+export function mapWeeklyDashboardData({
+  weeklyReport,
+  now = new Date(),
+  pendingCount: reviewPendingCount,
+}: MapWeeklyDashboardArgs): MappedWeeklyDashboard {
+  const pendingCount =
+    reviewPendingCount ??
+    Math.max(0, weeklyReport.totalLeads - weeklyReport.leadSections.length);
+  return {
+    kpi: buildKpiData(weeklyReport, pendingCount, now),
+    blockedAtRisk: mapBlockedAtRisk(weeklyReport),
+  };
+}
+
+export function mapReviewDashboardData({
+  review,
+  weeklyReport,
+  currentUserId,
+}: MapReviewDashboardArgs): MappedReviewDashboard {
+  const leads = buildLeadInfos(review, weeklyReport, currentUserId);
+  return {
+    leads,
+    pendingLeads: leads
+      .filter((lead) => lead.status === "pending")
+      .map((lead) => lead.name),
+  };
+}
+
+export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
+  const review = mapReviewDashboardData(args);
+  const weekly = mapWeeklyDashboardData({
+    weeklyReport: args.weeklyReport,
+    pendingCount: review.pendingLeads.length,
+    ...(args.now ? { now: args.now } : {}),
+  });
 
   return {
-    kpi,
-    leads,
-    blockedAtRisk,
-    pendingLeads,
+    ...weekly,
+    ...review,
   };
 }
 

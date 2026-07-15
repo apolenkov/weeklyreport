@@ -132,7 +132,7 @@ function renderTab(args?: {
     <RemindersTab
       policies={policies}
       derivedRulesByPolicyId={derivedRulesByPolicyId}
-      defaultTimezone={args?.defaultTimezone}
+      defaultTimezone={args?.defaultTimezone ?? "Europe/Moscow"}
     />,
     { wrapper: Wrapper },
   );

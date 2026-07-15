@@ -5,53 +5,58 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
-import { PeriodsTab } from "../../period";
-import { ReopenTab } from "../../review";
 import { mapAdminSettings, mapAdminSnapshot } from "../model/admin";
-import { ActionLogTab } from "./action-log-tab";
-import { AdminTabSkeleton } from "./admin-skeleton";
-import { GroupsTab } from "./groups-tab";
-import { JobsTab } from "./jobs-tab";
-import { ProductsTab } from "./products-tab";
-import { RemindersTab } from "./reminders-tab";
-import { SettingsTab } from "./settings-tab";
-import { UsersTab } from "./users-tab";
+import {
+  ADMIN_TAB_QUERY_DEPENDENCIES,
+  type AdminTab,
+} from "../model/admin-tab-dependencies";
+import { AdminPanelContent } from "./admin-panel-content";
 
 interface AdminPanelProps {
-  readonly activeTab: string;
+  readonly activeTab: AdminTab;
   readonly productFilter?: string | null;
 }
 
-/**
- * Admin Panel container. Lifts the snapshot + settings queries into the parent
- * so the child tabs can stay focused on form/table behavior while mutations
- * invalidate the shared admin snapshot.
- */
+interface QueryErrorState {
+  readonly enabled: boolean;
+  readonly error: unknown;
+  readonly isError: boolean;
+  readonly label: string;
+}
+
+function useAdminQueryErrorToast(state: QueryErrorState): void {
+  useEffect(() => {
+    if (!state.enabled || !state.isError) return;
+    const detail =
+      state.error instanceof Error ? `: ${state.error.message}` : "";
+    toast.error(`Failed to load ${state.label}${detail}`);
+  }, [state.enabled, state.error, state.isError, state.label]);
+}
+
 export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
   const trpc = useTRPC();
+  const dependencies = ADMIN_TAB_QUERY_DEPENDENCIES[activeTab];
+  const snapshotQuery = useQuery({
+    ...trpc.admin.snapshot.queryOptions(),
+    enabled: dependencies.snapshot,
+  });
+  const settingsQuery = useQuery({
+    ...trpc.admin.getSettings.queryOptions(),
+    enabled: dependencies.settings,
+  });
 
-  const snapshotQuery = useQuery(trpc.admin.snapshot.queryOptions());
-  const settingsQuery = useQuery(trpc.admin.getSettings.queryOptions());
-
-  useEffect(() => {
-    if (snapshotQuery.isError) {
-      toast.error(
-        snapshotQuery.error instanceof Error
-          ? `Failed to load admin data: ${snapshotQuery.error.message}`
-          : "Failed to load admin data",
-      );
-    }
-  }, [snapshotQuery.isError, snapshotQuery.error]);
-
-  useEffect(() => {
-    if (settingsQuery.isError) {
-      toast.error(
-        settingsQuery.error instanceof Error
-          ? `Failed to load settings: ${settingsQuery.error.message}`
-          : "Failed to load settings",
-      );
-    }
-  }, [settingsQuery.isError, settingsQuery.error]);
+  useAdminQueryErrorToast({
+    enabled: dependencies.snapshot,
+    error: snapshotQuery.error,
+    isError: snapshotQuery.isError,
+    label: "admin data",
+  });
+  useAdminQueryErrorToast({
+    enabled: dependencies.settings,
+    error: settingsQuery.error,
+    isError: settingsQuery.isError,
+    label: "settings",
+  });
 
   const data = snapshotQuery.data
     ? mapAdminSnapshot(snapshotQuery.data)
@@ -62,89 +67,16 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
 
   return (
     <div data-testid="admin-panel">
-      {activeTab === "settings" &&
-        (!settings ? (
-          <AdminTabSkeleton variant="form" />
-        ) : (
-          <SettingsTab settings={settings} />
-        ))}
-
-      {/* Reopen tab is self-contained — it owns its own queries, doesn't need
-          the snapshot/settings context that the other tabs share. */}
-      {activeTab === "reopen" && <ReopenTab />}
-
-      {/* Jobs tab is also self-contained — it consumes the BullMQ-backed
-          `admin.jobs.listFailed` query directly and doesn't need the admin
-          snapshot. */}
-      {activeTab === "jobs" && <JobsTab />}
-
-      {activeTab === "actions" && <ActionLogTab />}
-
-      {!data &&
-        activeTab !== "settings" &&
-        activeTab !== "reopen" &&
-        activeTab !== "jobs" &&
-        activeTab !== "actions" && <AdminTabSkeleton variant="table" />}
-
-      {data &&
-        activeTab !== "settings" &&
-        activeTab !== "reopen" &&
-        activeTab !== "jobs" &&
-        activeTab !== "actions" && (
-          <>
-            {activeTab === "users" && (
-              <UsersTab users={data.users} groups={data.groups} />
-            )}
-            {activeTab === "groups" && (
-              <GroupsTab
-                groups={data.groups}
-                users={data.users}
-                products={data.products}
-              />
-            )}
-            {activeTab === "products" && (
-              <ProductsTab
-                products={data.products}
-                users={data.users}
-                productFilter={productFilter}
-              />
-            )}
-            {/* PeriodsTab owns its own queries (admin.listPeriodsByState) so
-                it pulls richer rows than the shared admin snapshot can
-                carry — no props needed. */}
-            {activeTab === "periods" && <PeriodsTab />}
-            {activeTab === "reminders" &&
-              (() => {
-                // Group rules by their owning policy for the read-only
-                // expander on each policy row. Rules whose `policyId` is
-                // `null` (legacy) are skipped — the policy editor has no row
-                // to attach them to.
-                const derivedRulesByPolicyId: Record<
-                  string,
-                  typeof data.reminders
-                > = {};
-                for (const rule of data.reminders) {
-                  if (rule.policyId === null) continue;
-                  const bucket = derivedRulesByPolicyId[rule.policyId] ?? [];
-                  bucket.push(rule);
-                  derivedRulesByPolicyId[rule.policyId] = bucket;
-                }
-                return (
-                  <RemindersTab
-                    policies={data.policies}
-                    derivedRulesByPolicyId={derivedRulesByPolicyId}
-                    // Seed the new-reminder form's timezone from AppSettings.
-                    // Falls back to Europe/Moscow when settings haven't loaded
-                    // yet (handled inside emptyPolicyForm).
-                    defaultTimezone={settings?.defaultTimezone}
-                  />
-                );
-              })()}
-            {!["users", "groups", "products", "periods", "reminders"].includes(
-              activeTab,
-            ) && <UsersTab users={data.users} groups={data.groups} />}
-          </>
-        )}
+      <AdminPanelContent
+        activeTab={activeTab}
+        productFilter={productFilter}
+        data={data}
+        settings={settings}
+        snapshotError={dependencies.snapshot && snapshotQuery.isError}
+        settingsError={dependencies.settings && settingsQuery.isError}
+        retrySnapshot={() => void snapshotQuery.refetch()}
+        retrySettings={() => void settingsQuery.refetch()}
+      />
     </div>
   );
 }

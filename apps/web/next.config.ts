@@ -17,6 +17,9 @@ const nextConfig: NextConfig = {
   output: "standalone",
   reactCompiler: true,
   transpilePackages: ["@customreport/ui"],
+  experimental: {
+    optimizePackageImports: ["lucide-react", "recharts"],
+  },
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   // Allow E2E to spawn a parallel dev server alongside the user's
   // running dev process. Next.js 16 has a sibling-process guard that

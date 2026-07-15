@@ -946,7 +946,6 @@ export default defineConfig([
       "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // tRPC instance + all procedure builders share the private `t` binding
       "apps/web/src/features/report-sections/ui/lead-form-sync-bridge.tsx", // one context bridge wiring sync to two consumers
       "apps/web/src/shared/ui/navigation/nav-bar.tsx", // one role-aware nav widget; MobileNav/coming-soon have no external consumers
-      "apps/web/src/features/dashboard/ui/dashboard-page.tsx", // one head-dashboard page; private load-issue helper only
       "apps/web/src/features/report-sections/ui/product-accordion.tsx", // one accordion for one ProductReport
       "apps/web/src/features/period/ui/current-week-section.tsx", // 255 lines: FSD relocation forced two model imports to multi-line (longer paths), tipping it 5 over; content unchanged from its <=250 pre-move form. Candidate for a small extraction.
       "apps/web/src/features/report-sections/model/lead-form.ts", // one LeadForm mapping pipeline; types-out alone stays >300, further split fragments it
@@ -1000,7 +999,6 @@ export default defineConfig([
   {
     files: [
       "apps/web/src/app/(app)/reports/page.tsx", // role-aware history renderer; 5 roles × distinct query/filter/label paths
-      "apps/web/src/features/admin/ui/admin-panel.tsx", // 9-tab dispatch + skeleton/loaded gating; only ~3 pts extractable
       "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // status-card multi-branch messaging (streak/viewer/draft/risk)
       "apps/web/src/features/report-sections/ui/next-week-section.tsx", // kanban CRUD + discriminated-union dialog state + grouped columns
       "apps/web/src/features/review/ui/risks-section.tsx", // 3 dialog states across handlers + JSX; prior split broke behavior

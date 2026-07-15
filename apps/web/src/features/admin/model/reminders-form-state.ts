@@ -46,7 +46,7 @@ function todayIsoString(): string {
  * footgun (`deadline → head-of-late`) this change removes. Only the timezone
  * default is sourced from AppSettings.
  */
-export function emptyPolicyForm(opts?: { timezone?: string }): PolicyFormState {
+export function emptyPolicyForm(timezone: string): PolicyFormState {
   const today = todayIsoString();
   const { kind, audience } = presetPairing(DEFAULT_PRESET);
   return {
@@ -54,7 +54,7 @@ export function emptyPolicyForm(opts?: { timezone?: string }): PolicyFormState {
     kind,
     audience,
     offsetMinutes: DEFAULT_OFFSET_MINUTES, // T-24h
-    timezone: opts?.timezone ?? "Europe/Moscow",
+    timezone,
     active: true,
     validFromIso: today,
     validUntilIso: null,

@@ -27,7 +27,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 0.05em;
-  font-family: "Fraunces", "Times New Roman", serif;
+  font-family: var(--font-display);
   font-feature-settings:
     "ss01" on,
     "liga" on;
@@ -72,7 +72,7 @@
 /* ───── Tagline under PulseMark (cycling with fade) ───── */
 
 .pulse-tagline {
-  font-family: "Lexend", "Source Sans 3", system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: clamp(0.9rem, 0.6vw + 0.7rem, 1.05rem);
   letter-spacing: 0.01em;
   color: rgba(255, 255, 255, 0.78);

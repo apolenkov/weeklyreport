@@ -26,19 +26,21 @@ import { useTRPC } from "../../../../lib/trpc-context";
 
 const TrafficLightHistoryChart = dynamic(
   () =>
-    import("../../../../features/analytics").then(
-      (m) => m.TrafficLightHistoryChart,
-    ),
+    import(
+      "../../../../features/analytics/ui/traffic-light-history.chart"
+    ).then((m) => m.TrafficLightHistoryChart),
   { ssr: false, loading: () => <ChartSkeleton /> },
 );
 const LeadVelocityChart = dynamic(
   () =>
-    import("../../../../features/analytics").then((m) => m.LeadVelocityChart),
+    import("../../../../features/analytics/ui/lead-velocity.chart").then(
+      (m) => m.LeadVelocityChart,
+    ),
   { ssr: false, loading: () => <ChartSkeleton /> },
 );
 const PeriodComparisonChart = dynamic(
   () =>
-    import("../../../../features/analytics").then(
+    import("../../../../features/analytics/ui/period-comparison.chart").then(
       (m) => m.PeriodComparisonChart,
     ),
   { ssr: false, loading: () => <ChartSkeleton /> },

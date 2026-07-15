@@ -1,3 +1,8 @@
+export {
+  ADMIN_TABS,
+  type AdminTab,
+  isAdminTab,
+} from "./model/admin-tab-dependencies";
 export type { MockSettings } from "./model/admin-types";
 export { AdminPanel } from "./ui/admin-panel";
 export { AdminTabsMobileSelect } from "./ui/admin-tabs-mobile-select";
