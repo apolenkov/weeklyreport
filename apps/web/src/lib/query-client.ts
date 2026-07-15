@@ -1,7 +1,6 @@
 import { MS_PER_SECOND } from "@customreport/shared";
 import {
   defaultShouldDehydrateQuery,
-  keepPreviousData,
   QueryClient,
 } from "@tanstack/react-query";
 import superjson from "superjson";
@@ -41,9 +40,6 @@ export function makeQueryClient(): QueryClient {
       queries: {
         staleTime: STALE_TIME_MS,
         refetchOnWindowFocus: true,
-        // A20: prevent blank flash during refetch (autosave → invalidate cycle).
-        // Shows previous data while new data loads instead of unmounting UI.
-        placeholderData: keepPreviousData,
         // Driver finding 1: skip retrying deterministic 4xx (a malformed
         // reportId fails once, not 1 + 3 retries). See shouldRetryQuery.
         retry: shouldRetryQuery,

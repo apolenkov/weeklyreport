@@ -15,12 +15,14 @@
 import "@testing-library/jest-dom/vitest";
 
 import { useQuery } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./report-slides", () => ({
   ReportSlides: ({ slides }: { slides: unknown[] }) => (
-    <div data-testid="report-slides" data-slide-count={String(slides.length)} />
+    <div data-testid="report-slides" data-slide-count={String(slides.length)}>
+      {slides.map((slide) => JSON.stringify(slide)).join(" ")}
+    </div>
   ),
 }));
 
@@ -68,8 +70,17 @@ vi.mock("@tanstack/react-query", () => ({
   useQuery: vi.fn((opts: { queryKey?: unknown[]; enabled?: boolean }) => {
     const key = opts.queryKey?.[0];
     if (key === "weeklyReport.get") {
+      if (opts.queryKey?.[1] === "report-b") {
+        return { data: undefined, isLoading: true, isError: false };
+      }
       return {
-        data: { status: "active", leadSections: [] },
+        data: {
+          status: "active",
+          leadSections:
+            opts.queryKey?.[1] === "report-a"
+              ? [{ id: "report-a-slide", label: "Report A slide" }]
+              : [],
+        },
         isLoading: false,
         isError: false,
       };
@@ -125,5 +136,24 @@ describe("HeadSlidesClient — enableActivity gating", () => {
       "data-slide-count",
       String(ACTIVITY_ROWS.length),
     );
+  });
+});
+
+describe("HeadSlidesClient report-key transitions", () => {
+  it("replaces report A slides with the pending skeleton for report B", async () => {
+    const rendered = render(
+      <HeadSlidesClient reportId="report-a" enableActivity={false} />,
+    );
+    expect(screen.getByText(/Report A slide/)).toBeInTheDocument();
+
+    rendered.rerender(
+      <HeadSlidesClient reportId="report-b" enableActivity={false} />,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Report A slide/)).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId("slide-skeleton")).toBeInTheDocument();
+    expect(screen.queryByTestId("report-slides")).toBeNull();
   });
 });
