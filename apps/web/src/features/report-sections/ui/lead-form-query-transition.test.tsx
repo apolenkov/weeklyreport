@@ -40,40 +40,62 @@ vi.mock("./use-lead-form-redirects", () => ({
   useLeadFormRedirects: () => undefined,
 }));
 
-vi.mock("./use-lead-form-draft-orchestration", () => ({
-  useLeadFormDraftOrchestration: ({
-    serverSection,
-  }: {
-    serverSection?: unknown;
-  }) => ({
-    autosave: {},
+const READINESS = {
+  unsetStatuses: [],
+  willAutoPromote: [],
+  blockingIssues: [],
+  autosaveState: "idle",
+  submitPending: false,
+  canOpenConfirmation: true,
+};
+
+vi.mock("./lead-form-draft-seam", () => ({
+  useLeadFormDraftSeam: () => ({
+    submitSection: vi.fn(),
+    submitPending: false,
+    onSubmitSuccess: vi.fn(),
+  }),
+}));
+
+vi.mock("./use-lead-form-add-signals", () => ({
+  useLeadFormAddSignals: () => ({
+    currentWeekAddSignal: 0,
+    nextWeekAddSignal: 0,
+    risksAddSignal: 0,
+    decisionsAddSignal: 0,
+    addCurrentWeekItem: vi.fn(),
+    addNextWeekItem: vi.fn(),
+    addRisk: vi.fn(),
+    addDecision: vi.fn(),
+  }),
+}));
+
+vi.mock("./use-lead-form-draft", () => ({
+  useLeadFormDraft: ({ serverSection }: { serverSection?: unknown }) => ({
+    draft: serverSection ?? null,
     draftPayload: null,
-    draftSection: serverSection ?? null,
-    handleConflict: vi.fn(),
+    dirty: false,
+    autosave: {},
+    version: 1,
     isSubmitted: false,
-    setDraftSection: vi.fn(),
     setIsSubmitted: vi.fn(),
-    setVersionSafe: vi.fn(),
-    versionRef: { current: 1 },
+    save: vi.fn(),
+    submit: vi.fn(),
+    submitReadiness: READINESS,
+    apply: vi.fn(),
+    quickAdd: vi.fn(),
+    pendingQuickAdd: null,
+    quickAddSave: vi.fn(),
+    clearQuickAdd: vi.fn(),
+    routeToBlocker: vi.fn(),
+    pendingRiskPrefill: null,
+    clearRiskPrefill: vi.fn(),
+    handleConflict: vi.fn(),
   }),
 }));
 
 vi.mock("./use-lead-form-write-actions", () => ({
-  useLeadFormWriteActions: () => ({
-    getSubmitReadiness: () => ({
-      unsetStatuses: [],
-      willAutoPromote: [],
-      blockingIssues: [],
-      autosaveState: "idle",
-      submitPending: false,
-      canOpenConfirmation: true,
-    }),
-    handleSubmit: vi.fn(),
-  }),
-}));
-
-vi.mock("./use-lead-form-draft-merges", () => ({
-  useLeadFormDraftMerges: () => ({}),
+  useLeadFormWriteActions: () => ({ handleSubmit: vi.fn() }),
 }));
 
 vi.mock("./use-lead-form-chrome", () => ({

@@ -1,16 +1,34 @@
 "use client";
 
+import type {
+  ReportSectionReadModel,
+  TrafficLightStatus,
+} from "@customreport/shared";
 import { useRef, useState } from "react";
 
 import { useFullscreen } from "../../../hooks/use-fullscreen";
-import type { KanbanItem, Product, RiskEntry } from "../model/types";
+import {
+  markCompletePatch,
+  moveToCurrentWeekPatch,
+  moveToNextWeekPatch,
+  pauseItemPatch,
+} from "../../../lib/lead-item-actions";
+import type {
+  DecisionEntry,
+  KanbanItem,
+  Product,
+  RiskEntry,
+} from "../model/types";
+import { useLeadFormDraftSeam } from "./lead-form-draft-seam";
 import { LeadFormLoaded } from "./lead-form-loaded";
 import { buildLeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
+import type { LeadFormLoadedContext } from "./lead-form-submit-context";
+import type { QuickAddKind } from "./quick-add-button";
+import { useLeadFormAddSignals } from "./use-lead-form-add-signals";
 import { useLeadFormChrome } from "./use-lead-form-chrome";
 import { useLeadFormData } from "./use-lead-form-data";
-import { useLeadFormDraftMerges } from "./use-lead-form-draft-merges";
-import { useLeadFormDraftOrchestration } from "./use-lead-form-draft-orchestration";
+import { useLeadFormDraft } from "./use-lead-form-draft";
 import { useLeadFormWriteActions } from "./use-lead-form-write-actions";
 
 interface LeadFormProps {
@@ -26,6 +44,12 @@ interface LeadFormProps {
 
 export { sectionToDraftPayload } from "../model/lead-section-draft-payload";
 
+const EMPTY_LOADED_CONTEXT: LeadFormLoadedContext = {
+  products: [],
+  currentWeekItems: [],
+  nextWeekItems: [],
+};
+
 export function LeadForm({
   reportId: pinnedReportId,
   redirectToCanonical,
@@ -39,87 +63,59 @@ export function LeadForm({
     redirectToCanonical,
     isSlidesMode,
   });
-  // W9.A: ref shared between lead-form header (SlideFullscreenButton) and LeadSlidesClient (deck root div)
+  // ref shared between lead-form header (SlideFullscreenButton) and
+  // LeadSlidesClient (deck root div).
   const deckRef = useRef<HTMLDivElement>(null);
   const fullscreenToggleRef = useRef<HTMLButtonElement>(null);
-  // add-slide-fullscreen-exit-affordance: lead-form is the SINGLE fullscreen
-  // owner on the hosted path. It threads isFullscreen + toggle into BOTH its
-  // toolbar toggle AND LeadSlidesClient (whose local hook is disabled), so
-  // exactly one `f`/fullscreenchange listener exists. Focus returns to the
-  // toolbar toggle on exit. Gated on slides mode so the edit form adds no `f`.
+  // lead-form is the SINGLE fullscreen owner on the hosted path: it threads
+  // isFullscreen + toggle into BOTH its toolbar toggle AND LeadSlidesClient
+  // (whose local hook is disabled), so exactly one `f`/fullscreenchange
+  // listener exists. Focus returns to the toolbar toggle on exit. Gated on
+  // slides mode so the edit form adds no `f` listener.
   const slidesFullscreen = useFullscreen(
     deckRef,
     fullscreenToggleRef,
     isSlidesMode,
   );
 
-  // ---- Local UI + draft state ----
-  const {
-    autosave,
-    draftPayload,
-    draftSection,
-    handleConflict,
-    isSubmitted,
-    setDraftSection,
-    setIsSubmitted,
-    setVersionSafe,
-    versionRef,
-  } = useLeadFormDraftOrchestration({
+  // Draft module: editable section, autosave, version, readiness, submit, and
+  // every merge behind one handle. Its live view-model inputs enter as the
+  // `loaded` render arg, carried across renders by this component's local ref
+  // (the value is one render behind — benign for the modal quick-add
+  // callbacks — and no ref object crosses into the module).
+  const loadedContextRef = useRef<LeadFormLoadedContext>(EMPTY_LOADED_CONTEXT);
+  const seam = useLeadFormDraftSeam();
+  const draft = useLeadFormDraft({
     serverSection: data.byPeriodData?.section,
     sectionIdForActions: data.sectionIdForActions,
     serverReadOnly: data.byPeriodData ? data.byPeriodData.readOnly : true,
     refetchSection: data.refetchSection,
+    crossAuthors: data.crossAuthors,
+    isEveryone: data.isEveryone,
+    loaded: loadedContextRef.current,
+    seam,
   });
+  const addSignals = useLeadFormAddSignals();
 
-  const writeActionSubmitContextRef = useRef<{
-    draftPayload: typeof draftPayload;
-    products: readonly Product[];
-    activities: readonly { id: string; name: string }[];
-    stages: readonly {
-      projectId: string;
-      stageId: string;
-      name: string;
-    }[];
-    ownRisks: readonly RiskEntry[];
-  }>({
-    draftPayload: null,
-    products: [],
-    activities: [],
-    stages: [],
-    ownRisks: [],
-  });
-
-  // One object — the header/dialog components consume it wholesale.
+  // Draft dialog lifecycle: submit-confirm, revoke, reopen, fill-from. Calls
+  // the draft module's submit and reads its readiness.
   const writeActions = useLeadFormWriteActions({
     sectionIdForActions: data.sectionIdForActions,
-    autosaveDirty: autosave.dirty,
-    autosaveState: autosave.state,
-    getSubmitContext: () => writeActionSubmitContextRef.current,
-    versionRef,
-    setVersionSafe,
-    setIsSubmitted,
-    handleConflict,
+    autosaveDirty: draft.autosave.dirty,
+    submitReadiness: draft.submitReadiness,
+    submit: draft.submit,
+    version: draft.version,
+    setIsSubmitted: draft.setIsSubmitted,
+    handleConflict: draft.handleConflict,
   });
 
-  const draftMergeContextRef = useRef<{
-    products: readonly Product[];
-    currentWeekItems: readonly KanbanItem[];
-    nextWeekItems: readonly KanbanItem[];
-  }>({ products: [], currentWeekItems: [], nextWeekItems: [] });
-
-  // One object — the section/header/dialog components consume it wholesale.
-  const merges = useLeadFormDraftMerges({
-    setDraftSection,
-    getLoadedContext: () => draftMergeContextRef.current,
-  });
-
-  // simplify-stage-status-interaction (D4): stages the lead left unset (null
+  // simplify-stage-status-interaction: stages the lead left unset (null
   // traffic) auto-promote to On Track at submit, warned first. stageStatuses
   // only carries the lead's OWN stages, so a null entry is a genuinely unset
-  // own stage. Both the confirm-dialog warning and the coercion below read this
-  // one count, so they can never disagree.
-  const unsetOwnStageCount = (draftPayload?.stageStatuses ?? []).filter(
-    (s) => s.status == null,
+  // own stage. Both the confirm-dialog warning and the coercion read this one
+  // count, so they can never disagree.
+  const unsetOwnStageCount = (draft.draftPayload?.stageStatuses ?? []).filter(
+    (status) => status.status == null,
   ).length;
 
   // Toggle All state — must live above the early return below, otherwise the
@@ -145,16 +141,16 @@ export function LeadForm({
     data.activeData === undefined ||
     !data.byPeriodData ||
     !data.historyData ||
-    !draftSection
+    !draft.draft
   ) {
     return <LeadFormSkeleton />;
   }
 
   // Loaded display derivations (lead-form-loaded-view-model) — one object,
-  // consumed wholesale by the section/header/toolbar/dialog components.
+  // consumed by the section/header/toolbar/dialog components.
   const viewModel = buildLeadFormLoadedViewModel({
-    active: data.activeData ?? draftSection,
-    draftSection,
+    active: data.activeData ?? draft.draft,
+    draftSection: draft.draft,
     serverReadOnly: data.byPeriodData.readOnly,
     canRequestReopen: data.byPeriodData.canRequestReopen,
     publishedLineage: data.byPeriodData.publishedLineage,
@@ -164,48 +160,86 @@ export function LeadForm({
     isEveryone: data.isEveryone,
     visibilityHydrated: data.visibilityHydrated,
     isForeignSlidesDeck: data.isForeignSlidesDeck,
-    isSubmitted,
+    isSubmitted: draft.isSubmitted,
     selectedPeriodId,
     showArchivePeriods,
   });
-  writeActionSubmitContextRef.current = {
-    draftPayload,
-    products: viewModel.products,
-    activities: viewModel.activityOptions,
-    stages: (draftPayload?.stageStatuses ?? []).map(
-      (status, index, statuses) => {
-        const product = viewModel.products.find(
-          (candidate) => candidate.id === status.projectId,
-        );
-        const stageIndex = statuses
-          .slice(0, index)
-          .filter(
-            (candidate) => candidate.projectId === status.projectId,
-          ).length;
-        return {
-          projectId: status.projectId,
-          stageId: status.stageId,
-          name: product?.stages[stageIndex]?.stageName ?? status.stageId,
-        };
-      },
-    ),
-    ownRisks: viewModel.ownRisks,
-  };
-  draftMergeContextRef.current = {
+  // Refresh the loaded context the module's quick-add callbacks read next
+  // render. Only VALUES flow into the module — no ref protocol crosses the
+  // file boundary, so the module owns its own refresh ordering.
+  loadedContextRef.current = {
     products: viewModel.products,
     currentWeekItems: viewModel.currentWeekItems,
     nextWeekItems: viewModel.nextWeekItems,
   };
+
+  const quickAddByKind: Record<QuickAddKind, () => void> = {
+    "current-item": () => draft.quickAdd("current"),
+    "next-item": () => draft.quickAdd("next"),
+    blocker: () =>
+      draft.routeToBlocker({
+        productId: viewModel.products[0]?.id ?? "",
+        stageIds: [],
+        severity: "blocked",
+      }),
+    risk: addSignals.addRisk,
+    decision: addSignals.addDecision,
+  };
+  const onQuickAdd = (kind: QuickAddKind) => quickAddByKind[kind]();
+
+  const patchItem = (
+    itemId: string,
+    patch: Partial<ReportSectionReadModel["items"][number]>,
+  ) => draft.apply({ kind: "item-patch", itemId, patch });
+  const draftActions = {
+    onProductsChange: (next: Product[]) =>
+      draft.apply({ kind: "products", products: next }),
+    onRisksChange: (next: RiskEntry[]) =>
+      draft.apply({ kind: "risks", risks: next }),
+    onDecisionsChange: (next: DecisionEntry[]) =>
+      draft.apply({ kind: "decisions", decisions: next }),
+    onCurrentWeekItemsChange: (items: KanbanItem[]) =>
+      draft.apply({ kind: "week-items", week: "current", items }),
+    onNextWeekItemsChange: (items: KanbanItem[]) =>
+      draft.apply({ kind: "week-items", week: "next", items }),
+    onMarkComplete: (itemId: string) => patchItem(itemId, markCompletePatch()),
+    onMoveToNextWeek: (itemId: string) =>
+      patchItem(itemId, moveToNextWeekPatch()),
+    onMoveToCurrentWeek: (itemId: string) =>
+      patchItem(itemId, moveToCurrentWeekPatch()),
+    onPauseItem: (itemId: string, reason: string) =>
+      patchItem(itemId, pauseItemPatch(reason)),
+    onActivityStatusChange: (activityId: string, status: TrafficLightStatus) =>
+      draft.apply({ kind: "activity-status", activityId, status }),
+    onActivityRaiseRequiresRisk: (
+      activityId: string,
+      severity: "at-risk" | "blocked",
+    ) =>
+      draft.routeToBlocker({
+        productId: "",
+        stageIds: [],
+        severity,
+        activityId,
+      }),
+    onQuickAdd,
+    quickAddItem: draft.pendingQuickAdd,
+    onQuickAddSave: draft.quickAddSave,
+    onQuickAddCancel: draft.clearQuickAdd,
+    riskPrefill: draft.pendingRiskPrefill,
+    ...addSignals,
+  };
+
   return (
     <LeadFormLoaded
       data={data}
       viewModel={viewModel}
-      draftSection={draftSection}
-      autosave={autosave}
-      merges={merges}
+      draftSection={draft.draft}
+      autosave={draft.autosave}
+      submitReadiness={draft.submitReadiness}
+      draftActions={draftActions}
       writeActions={writeActions}
       isSlidesMode={isSlidesMode}
-      isSubmitted={isSubmitted}
+      isSubmitted={draft.isSubmitted}
       pinnedReportId={pinnedReportId}
       showArchivePeriods={showArchivePeriods}
       setShowArchivePeriods={setShowArchivePeriods}

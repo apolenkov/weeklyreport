@@ -215,84 +215,87 @@ afterEach(() => {
 });
 
 describe("LeadForm mutation wiring", () => {
-  it("submit success: invalidates caches, fires toast.success, locks form", async () => {
+  it("submit success: invalidates caches, fires toast.success", async () => {
     const { Wrapper, captured, queryClient } = buildHarness();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    captured["reports.submit"].mutationFn.mockResolvedValue({
+      ...makeSection({ status: "submitted" }),
+      version: 2,
+    });
 
     render(
       <Wrapper>
         <LeadForm />
       </Wrapper>,
     );
+    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
-    // Wait for the component to mount its mutation hook — the factory records
-    // the caller-passed options (onSuccess/onError) in lastOptions.
-    await waitFor(() =>
-      expect(
-        Object.keys(captured["reports.submit"].lastOptions).length,
-      ).toBeGreaterThan(0),
-    );
-
-    // Retrieve the onSuccess/onError callbacks captured when the component
-    // mounted its mutation hook.
-    const submitOpts = captured["reports.submit"]
-      .lastOptions as MutationCallbacks;
-
-    // onSuccess from the submit mutation fires invalidations + toast.
-    // Trigger onSuccess deterministically — the mutation wiring is the unit
-    // under test (the orchestration of invalidation + toast + lock).
-    act(() => {
-      // submit returns the persisted read model (carries the bumped version).
-      submitOpts.onSuccess?.(makeSection());
+    // The submit flow now lives in the draft module: toolbar Submit → confirm
+    // dialog → confirm drives the mutation via mutateAsync; on success the
+    // dialog module fires the toast and the seam invalidates the lead caches.
+    act(() => screen.getByRole("button", { name: "Submit" }).click());
+    const dialog = await screen.findByRole("dialog", {
+      name: "Confirm submission",
     });
-    expect(toast.success).toHaveBeenCalledWith("Report submitted");
-    // invalidateLeadForm + invalidateLeadHistory each call invalidateQueries.
+    act(() => within(dialog).getByRole("button", { name: "Submit" }).click());
+
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Report submitted"),
+    );
+    // invalidateLeadForm + invalidateDashboard + invalidateLeadHistory.
     expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
 
   it("submit error: fires toast.error with the error message", async () => {
     const { Wrapper, captured } = buildHarness();
+    captured["reports.submit"].mutationFn.mockRejectedValue(
+      new Error("Submit blew up"),
+    );
     render(
       <Wrapper>
         <LeadForm />
       </Wrapper>,
     );
-    await waitFor(() =>
-      expect(captured["reports.submit"].lastOptions).toBeDefined(),
-    );
+    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
-    const submitOpts = captured["reports.submit"]
-      .lastOptions as MutationCallbacks;
-    // Simulate error path.
-    submitOpts.onError?.(new Error("Submit blew up"));
-    expect(toast.error).toHaveBeenCalledWith("Submit blew up");
+    act(() => screen.getByRole("button", { name: "Submit" }).click());
+    const dialog = await screen.findByRole("dialog", {
+      name: "Confirm submission",
+    });
+    act(() => within(dialog).getByRole("button", { name: "Submit" }).click());
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Submit blew up"),
+    );
   });
 
   it("submit CONFLICT (stale version): surfaces the reload prompt, not the generic error", async () => {
     const { Wrapper, captured } = buildHarness();
-    render(
-      <Wrapper>
-        <LeadForm />
-      </Wrapper>,
-    );
-    await waitFor(() =>
-      expect(captured["reports.submit"].lastOptions).toBeDefined(),
-    );
-
     const conflict = new TRPCClientError("stale");
     Object.defineProperty(conflict, "data", {
       value: { httpStatus: 409, code: "CONFLICT" },
       configurable: true,
     });
+    captured["reports.submit"].mutationFn.mockRejectedValue(conflict);
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
-    const submitOpts = captured["reports.submit"]
-      .lastOptions as MutationCallbacks;
-    submitOpts.onError?.(conflict);
+    act(() => screen.getByRole("button", { name: "Submit" }).click());
+    const dialog = await screen.findByRole("dialog", {
+      name: "Confirm submission",
+    });
+    act(() => within(dialog).getByRole("button", { name: "Submit" }).click());
 
     // Guardrail 5: a cross-writer conflict refetches + surfaces a distinct
     // reload prompt rather than echoing the raw error message.
-    expect(toast.error).toHaveBeenCalledWith(
-      expect.stringContaining("changed elsewhere"),
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringContaining("changed elsewhere"),
+      ),
     );
     expect(toast.error).not.toHaveBeenCalledWith("stale");
   });

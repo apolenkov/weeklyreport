@@ -4,23 +4,36 @@ import type { ComponentProps } from "react";
 
 import { AccordionSection } from "../../../shared/ui/report-shell/accordion-section";
 import { CurrentWeekSection } from "../../period";
+import type { KanbanItem } from "../model/types";
 import { CalendarIcon, NextWeekIcon } from "./lead-form-icons";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { NextWeekSection } from "./next-week-section";
 import { UnifiedActivitySection } from "./unified-activity-section";
-import type { useLeadFormDraftMerges } from "./use-lead-form-draft-merges";
 
 export const NO_PRODUCTS_ASSIGNED_MESSAGE =
   "No products assigned — contact admin";
 
-type LeadFormDraftMerges = ReturnType<typeof useLeadFormDraftMerges>;
+/** The draft actions and add-signals the item sections drive. */
+export interface LeadFormItemSectionsActions {
+  readonly onCurrentWeekItemsChange: (items: KanbanItem[]) => void;
+  readonly onNextWeekItemsChange: (items: KanbanItem[]) => void;
+  readonly onMarkComplete: (itemId: string) => void;
+  readonly onMoveToNextWeek: (itemId: string) => void;
+  readonly onMoveToCurrentWeek: (itemId: string) => void;
+  readonly onPauseItem: (itemId: string, reason: string) => void;
+  readonly addCurrentWeekItem: () => void;
+  readonly addNextWeekItem: () => void;
+  readonly currentWeekAddSignal: number;
+  readonly nextWeekAddSignal: number;
+}
+
 type StagesForProduct = ComponentProps<
   typeof CurrentWeekSection
 >["stagesForProduct"];
 
 interface LeadFormItemSectionsProps {
   readonly viewModel: LeadFormLoadedViewModel;
-  readonly merges: LeadFormDraftMerges;
+  readonly actions: LeadFormItemSectionsActions;
   readonly groupExpanded: boolean;
   readonly unifiedView: boolean;
   readonly stagesForProduct: StagesForProduct;
@@ -34,7 +47,7 @@ interface LeadFormItemSectionsProps {
  */
 export function LeadFormItemSections({
   viewModel,
-  merges,
+  actions,
   groupExpanded,
   unifiedView,
   stagesForProduct,
@@ -66,16 +79,16 @@ export function LeadFormItemSections({
         readOnly={isReadOnly}
         onWeekItemsChange={(week, items) =>
           week === "current"
-            ? merges.handleCurrentWeekItemsChange(items)
-            : merges.handleNextWeekItemsChange(items)
+            ? actions.onCurrentWeekItemsChange(items)
+            : actions.onNextWeekItemsChange(items)
         }
         currentUserName={currentUser.name}
         products={products}
         stagesForProduct={stagesForProduct}
         ownPeriodRanks={ownPeriodRanks}
         publishedLockedIds={publishedLockedItemIds}
-        onMarkComplete={merges.handleMarkComplete}
-        onMoveToNextWeek={merges.handleMoveToNextWeek}
+        onMarkComplete={actions.onMarkComplete}
+        onMoveToNextWeek={actions.onMoveToNextWeek}
       />
     </AccordionSection>
   ) : (
@@ -93,7 +106,7 @@ export function LeadFormItemSections({
             <button
               type="button"
               className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={merges.handleAddCurrentWeekItem}
+              onClick={actions.addCurrentWeekItem}
               disabled={products.length === 0}
               title={
                 products.length > 0
@@ -110,17 +123,17 @@ export function LeadFormItemSections({
           items={currentWeekItems}
           risks={risks}
           readOnly={isReadOnly}
-          onItemsChange={merges.handleCurrentWeekItemsChange}
+          onItemsChange={actions.onCurrentWeekItemsChange}
           currentUserName={currentUser.name}
           products={products}
           activities={activityOptions}
           stagesForProduct={stagesForProduct}
           ownPeriodRanks={ownPeriodRanks}
-          addSignal={merges.currentWeekAddSignal}
+          addSignal={actions.currentWeekAddSignal}
           publishedLockedIds={publishedLockedItemIds}
-          onMarkComplete={merges.handleMarkComplete}
-          onMoveToNextWeek={merges.handleMoveToNextWeek}
-          onPauseItem={merges.handlePauseItem}
+          onMarkComplete={actions.onMarkComplete}
+          onMoveToNextWeek={actions.onMoveToNextWeek}
+          onPauseItem={actions.onPauseItem}
         />
       </AccordionSection>
 
@@ -137,7 +150,7 @@ export function LeadFormItemSections({
             <button
               type="button"
               className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={merges.handleAddNextWeekItem}
+              onClick={actions.addNextWeekItem}
               disabled={products.length === 0}
               title={
                 products.length > 0
@@ -154,15 +167,15 @@ export function LeadFormItemSections({
           items={nextWeekItems}
           risks={risks}
           readOnly={isReadOnly}
-          onItemsChange={merges.handleNextWeekItemsChange}
+          onItemsChange={actions.onNextWeekItemsChange}
           currentUserName={currentUser.name}
           products={products}
           activities={activityOptions}
           stagesForProduct={stagesForProduct}
           ownPeriodRanks={ownPeriodRanks}
-          addSignal={merges.nextWeekAddSignal}
+          addSignal={actions.nextWeekAddSignal}
           publishedLockedIds={publishedLockedItemIds}
-          onMoveToCurrentWeek={merges.handleMoveToCurrentWeek}
+          onMoveToCurrentWeek={actions.onMoveToCurrentWeek}
         />
       </AccordionSection>
     </>

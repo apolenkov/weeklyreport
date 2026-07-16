@@ -4,7 +4,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import type { AutosaveState } from "../../../hooks/use-lead-form-autosave";
 import {
   invalidateDashboard,
   invalidateLeadForm,
@@ -12,43 +11,36 @@ import {
 } from "../../../lib/cache-keys";
 import { isConflictError } from "../../../lib/trpc";
 import { useTRPC } from "../../../lib/trpc-context";
-import type { sectionToDraftPayload } from "../model/lead-section-draft-payload";
-import {
-  buildLeadSubmitPayload,
-  deriveLeadSubmitReadiness,
-} from "../model/lead-submit-readiness";
-import type { Product, RiskEntry } from "../model/types";
-
-type DraftPayload = ReturnType<typeof sectionToDraftPayload>;
+import type { LeadSubmitReadiness } from "../model/lead-submit-readiness";
+import type { SubmitOutcome } from "./lead-form-submit-context";
 
 interface UseLeadFormWriteActionsArgs {
   readonly sectionIdForActions: string;
   readonly autosaveDirty: boolean;
-  readonly autosaveState: AutosaveState;
-  readonly getSubmitContext: () => {
-    readonly draftPayload: DraftPayload | null;
-    readonly products: readonly Product[];
-    readonly activities: readonly { id: string; name: string }[];
-    readonly stages: readonly {
-      projectId: string;
-      stageId: string;
-      name: string;
-    }[];
-    readonly ownRisks: readonly RiskEntry[];
-  };
-  readonly versionRef: { readonly current: number };
-  readonly setVersionSafe: (next: number) => void;
+  /** Draft-owned readiness, derived from the live draft by the draft module. */
+  readonly submitReadiness: LeadSubmitReadiness;
+  /** Draft-owned submit: builds the payload, advances version, locks the form. */
+  readonly submit: () => Promise<SubmitOutcome>;
+  /** Draft-owned optimistic-lock version, carried into fill-from as an argument. */
+  readonly version: number;
+  /** Draft-owned submitted flag; revoke returns the section to draft. */
   readonly setIsSubmitted: (next: boolean) => void;
+  /** Draft-owned conflict recovery (refetch + reload prompt). */
   readonly handleConflict: () => void;
 }
 
+/**
+ * The lead form's dialog-lifecycle module: submit confirmation, revoke, reopen,
+ * and fill-from dialogs and their mutations. Draft state lives in the draft
+ * module — this calls its `submit` and reads its `submitReadiness`; the submit
+ * mutation and readiness projection no longer live here.
+ */
 export function useLeadFormWriteActions({
   sectionIdForActions,
   autosaveDirty,
-  autosaveState,
-  getSubmitContext,
-  versionRef,
-  setVersionSafe,
+  submitReadiness,
+  submit,
+  version,
   setIsSubmitted,
   handleConflict,
 }: UseLeadFormWriteActionsArgs) {
@@ -58,30 +50,6 @@ export function useLeadFormWriteActions({
   const [showReopenDialog, setShowReopenDialog] = useState(false);
   const [reopenError, setReopenError] = useState<string | null>(null);
   const [showRevokeDialog, setShowRevokeDialog] = useState(false);
-
-  const submitMut = useMutation(
-    trpc.reports.submit.mutationOptions({
-      onSuccess: (saved) => {
-        setVersionSafe(saved.version);
-        invalidateLeadForm(qc, trpc);
-        invalidateLeadHistory(qc, trpc);
-        setIsSubmitted(true);
-        setShowSubmitConfirm(false);
-        toast.success("Report submitted");
-      },
-      onError: (err: unknown) => {
-        if (isConflictError(err)) {
-          handleConflict();
-          return;
-        }
-        if (err instanceof Error) {
-          toast.error(err.message);
-        } else {
-          toast.error("Submit failed");
-        }
-      },
-    }),
-  );
 
   const revokeMut = useMutation(
     trpc.leadForm.revoke.mutationOptions({
@@ -132,15 +100,8 @@ export function useLeadFormWriteActions({
     }),
   );
 
-  const getSubmitReadiness = () =>
-    deriveLeadSubmitReadiness({
-      ...getSubmitContext(),
-      autosaveState,
-      submitPending: submitMut.isPending,
-    });
-
   const surfaceReadinessBlocker = () => {
-    const issue = getSubmitReadiness().blockingIssues.at(0);
+    const issue = submitReadiness.blockingIssues.at(0);
     if (!issue) return;
     const message = issue.id.startsWith("risk-stage:")
       ? "Specify stages for at-risk/blocked products in Risks & Blockers."
@@ -149,8 +110,7 @@ export function useLeadFormWriteActions({
   };
 
   const handleSubmit = () => {
-    const readiness = getSubmitReadiness();
-    if (!readiness.canOpenConfirmation) {
+    if (!submitReadiness.canOpenConfirmation) {
       surfaceReadinessBlocker();
       return;
     }
@@ -158,15 +118,17 @@ export function useLeadFormWriteActions({
   };
 
   const handleConfirmSubmit = () => {
-    const readiness = getSubmitReadiness();
-    if (!readiness.canOpenConfirmation) {
+    if (!submitReadiness.canOpenConfirmation) {
       setShowSubmitConfirm(false);
       surfaceReadinessBlocker();
       return;
     }
-    const { draftPayload } = getSubmitContext();
-    if (!draftPayload) return;
-    submitMut.mutate(buildLeadSubmitPayload(draftPayload, versionRef.current));
+    void submit().then((outcome) => {
+      if (outcome === "submitted") {
+        setShowSubmitConfirm(false);
+        toast.success("Report submitted");
+      }
+    });
   };
 
   const handleRevoke = () => {
@@ -208,14 +170,13 @@ export function useLeadFormWriteActions({
     fillFromMut.mutate({
       targetSectionId: sectionIdForActions,
       sourceSectionId,
-      version: versionRef.current,
+      version,
     });
   };
 
   return {
     confirmRevoke,
     fillFromMut,
-    getSubmitReadiness,
     handleConfirmSubmit,
     handleFillFrom,
     handleRequestReopen,
@@ -231,6 +192,6 @@ export function useLeadFormWriteActions({
     showReopenDialog,
     showRevokeDialog,
     showSubmitConfirm,
-    submitMut,
+    submitPending: submitReadiness.submitPending,
   };
 }

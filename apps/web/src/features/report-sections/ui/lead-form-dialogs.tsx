@@ -6,21 +6,42 @@ import type { ComponentProps } from "react";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import { RequestReopenDialog } from "../../period";
 import { ownedStagesForProject } from "../model/lead-form";
+import type { KanbanItem } from "../model/types";
 import { ItemEditDialog } from "./item-edit-dialog";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
-import type { useLeadFormDraftMerges } from "./use-lead-form-draft-merges";
-import type { useLeadFormWriteActions } from "./use-lead-form-write-actions";
+import type { QuickAddItem } from "./use-lead-form-draft";
 
-type LeadFormDraftMerges = ReturnType<typeof useLeadFormDraftMerges>;
-type LeadFormWriteActions = ReturnType<typeof useLeadFormWriteActions>;
+/** The quick-add dialog slice the dialogs host renders from. */
+export interface LeadFormDialogsQuickAdd {
+  readonly quickAddItem: QuickAddItem | null;
+  readonly onQuickAddSave: (item: KanbanItem) => void;
+  readonly onQuickAddCancel: () => void;
+}
+
+/** The dialog-lifecycle slice the dialogs host drives. */
+export interface LeadFormDialogsWriteActions {
+  readonly showSubmitConfirm: boolean;
+  readonly setShowSubmitConfirm: (open: boolean) => void;
+  readonly handleConfirmSubmit: () => void;
+  readonly submitPending: boolean;
+  readonly showReopenDialog: boolean;
+  readonly requestReopenMut: { readonly isPending: boolean };
+  readonly reopenError: string | null;
+  readonly handleRequestReopen: (reason: string | undefined) => void;
+  readonly closeReopenDialog: () => void;
+  readonly showRevokeDialog: boolean;
+  readonly confirmRevoke: () => void;
+  readonly setShowRevokeDialog: (open: boolean) => void;
+}
+
 type StagesForProduct = ComponentProps<
   typeof ItemEditDialog
 >["stagesForProduct"];
 
 interface LeadFormDialogsProps {
   readonly viewModel: LeadFormLoadedViewModel;
-  readonly merges: LeadFormDraftMerges;
-  readonly writeActions: LeadFormWriteActions;
+  readonly quickAdd: LeadFormDialogsQuickAdd;
+  readonly writeActions: LeadFormDialogsWriteActions;
   /**
    * simplify-stage-status-interaction (D4): count of the lead's own unset
    * stages. Derived in `LeadForm` from `draftPayload.stageStatuses` — the
@@ -39,7 +60,7 @@ interface LeadFormDialogsProps {
  */
 export function LeadFormDialogs({
   viewModel,
-  merges,
+  quickAdd,
   writeActions,
   unsetOwnStageCount,
   draftSection,
@@ -130,7 +151,7 @@ export function LeadFormDialogs({
                 type="button"
                 className="btn-press inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={writeActions.handleConfirmSubmit}
-                disabled={writeActions.submitMut.isPending}
+                disabled={writeActions.submitPending}
               >
                 Submit
               </button>
@@ -144,19 +165,19 @@ export function LeadFormDialogs({
           quick-adds open the dialogs the sections already host (a blocker rides
           the severity-blocked risk prefill). */}
       <ItemEditDialog
-        key={`quick-add-${merges.quickAddItem?.seq ?? 0}`}
-        open={merges.quickAddItem !== null}
+        key={`quick-add-${quickAdd.quickAddItem?.seq ?? 0}`}
+        open={quickAdd.quickAddItem !== null}
         item={null}
         products={products}
         activities={activityOptions}
-        week={merges.quickAddItem?.week ?? "current"}
+        week={quickAdd.quickAddItem?.week ?? "current"}
         currentUserName={currentUser.name}
         defaultProductId={products[0]?.id}
         stagesForProduct={stagesForProduct}
         ownPeriodRanks={ownPeriodRanks}
         risks={risks}
-        onSave={merges.handleQuickAddSave}
-        onCancel={merges.handleQuickAddCancel}
+        onSave={quickAdd.onQuickAddSave}
+        onCancel={quickAdd.onQuickAddCancel}
       />
 
       <RequestReopenDialog
