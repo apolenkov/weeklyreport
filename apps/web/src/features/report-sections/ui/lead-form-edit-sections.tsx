@@ -1,6 +1,9 @@
 "use client";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type {
+  ReportSectionReadModel,
+  TrafficLightStatus,
+} from "@customreport/shared";
 import type { ComponentProps } from "react";
 
 import type { RecordVisibility } from "../../../hooks/use-record-visibility";
@@ -12,23 +15,47 @@ import {
   mapLeadReviewFeedback,
   ownedStagesForProject,
 } from "../model/lead-form";
+import type { DecisionEntry } from "../model/types";
 import { AlertIcon, ChatIcon, GridIcon } from "./lead-form-icons";
 import {
   LeadFormItemSections,
+  type LeadFormItemSectionsActions,
   NO_PRODUCTS_ASSIGNED_MESSAGE,
 } from "./lead-form-item-sections";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
-import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
-import type { useLeadFormDraftMerges } from "./use-lead-form-draft-merges";
+import {
+  LeadFormSyncBridge,
+  type RiskPrefillRequest,
+} from "./lead-form-sync-bridge";
 
-type LeadFormDraftMerges = ReturnType<typeof useLeadFormDraftMerges>;
 type SyncBridgeProviderProps = ComponentProps<
   typeof LeadFormSyncBridge.Provider
 >;
 
+/** The draft actions the edit stack drives, plus the item-section slice it forwards. */
+export interface LeadFormEditSectionsActions
+  extends LeadFormItemSectionsActions {
+  readonly onProductsChange: SyncBridgeProviderProps["onProductsChange"];
+  readonly onRisksChange: SyncBridgeProviderProps["onRisksChange"];
+  readonly onDecisionsChange: (next: DecisionEntry[]) => void;
+  readonly onActivityStatusChange: (
+    activityId: string,
+    status: TrafficLightStatus,
+  ) => void;
+  readonly onActivityRaiseRequiresRisk: (
+    activityId: string,
+    severity: "at-risk" | "blocked",
+  ) => void;
+  readonly addRisk: () => void;
+  readonly addDecision: () => void;
+  readonly risksAddSignal: number;
+  readonly decisionsAddSignal: number;
+  readonly riskPrefill: RiskPrefillRequest | null;
+}
+
 interface LeadFormEditSectionsProps {
   readonly viewModel: LeadFormLoadedViewModel;
-  readonly merges: LeadFormDraftMerges;
+  readonly actions: LeadFormEditSectionsActions;
   readonly draftSection: ReportSectionReadModel;
   /** The authoritative SERVER section — reviewer feedback derives from it. */
   readonly serverSection: ReportSectionReadModel;
@@ -48,7 +75,7 @@ interface LeadFormEditSectionsProps {
  */
 export function LeadFormEditSections({
   viewModel,
-  merges,
+  actions,
   draftSection,
   serverSection,
   groupExpanded,
@@ -92,14 +119,14 @@ export function LeadFormEditSections({
         products={products}
         activities={activityOptions}
         risks={ownRisks}
-        onProductsChange={merges.handleProductsChange}
-        onRisksChange={merges.handleRisksChange}
+        onProductsChange={actions.onProductsChange}
+        onRisksChange={actions.onRisksChange}
         readOnly={isReadOnly}
         stagesForProduct={stagesForProduct}
         {...(draftSection.authorName
           ? { sectionAuthorName: draftSection.authorName }
           : {})}
-        risksAddSignal={merges.risksAddSignal}
+        risksAddSignal={actions.risksAddSignal}
         crossAuthors={crossAuthorEntries}
         // lead-mine-hide-unowned-stages: until the persisted visibility is
         // hydrated, render the full grid ("everyone") to avoid a flash that
@@ -107,7 +134,7 @@ export function LeadFormEditSections({
         // "everyone" (the gated content fetch is likewise hydration-guarded).
         visibilityMode={visibilityHydrated ? recordVisibility : "everyone"}
         displayRisks={risks}
-        externalRiskPrefill={merges.riskPrefill}
+        externalRiskPrefill={actions.riskPrefill}
       >
         <AccordionSection
           groupExpanded={groupExpanded}
@@ -135,8 +162,8 @@ export function LeadFormEditSections({
             <ActivityStatusSection
               activities={activityCards}
               readOnly={isReadOnly}
-              onStatusChange={merges.handleActivityStatusChange}
-              onRaiseRequiresRisk={merges.handleActivityRaiseRequiresRisk}
+              onStatusChange={actions.onActivityStatusChange}
+              onRaiseRequiresRisk={actions.onActivityRaiseRequiresRisk}
             />
           </AccordionSection>
         )}
@@ -146,7 +173,7 @@ export function LeadFormEditSections({
             (a pure projection — physical Item.type is untouched). */}
         <LeadFormItemSections
           viewModel={viewModel}
-          merges={merges}
+          actions={actions}
           groupExpanded={groupExpanded}
           unifiedView={unifiedView}
           stagesForProduct={stagesForProduct}
@@ -170,7 +197,7 @@ export function LeadFormEditSections({
               <button
                 type="button"
                 className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={merges.handleAddRisk}
+                onClick={actions.addRisk}
                 disabled={products.length === 0}
                 title={
                   products.length > 0 ? undefined : NO_PRODUCTS_ASSIGNED_MESSAGE
@@ -203,7 +230,7 @@ export function LeadFormEditSections({
             <button
               type="button"
               className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={merges.handleAddDecision}
+              onClick={actions.addDecision}
             >
               + Add Decision
             </button>
@@ -213,13 +240,13 @@ export function LeadFormEditSections({
         <DecisionsSection
           decisions={decisions}
           readOnly={isReadOnly}
-          onChange={merges.handleDecisionsChange}
+          onChange={actions.onDecisionsChange}
           currentUserName={currentUser.name}
           stagesForProduct={stagesForProduct}
           products={products}
           activities={activityOptions}
           defaultProductId={products[0]?.id}
-          addSignal={merges.decisionsAddSignal}
+          addSignal={actions.decisionsAddSignal}
           publishedLockedIds={publishedLockedDecisionIds}
         />
       </AccordionSection>

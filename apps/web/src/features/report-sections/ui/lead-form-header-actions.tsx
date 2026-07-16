@@ -12,13 +12,20 @@ import {
   LeadCompletionActions,
 } from "./lead-completion-actions";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
-import type { useLeadFormWriteActions } from "./use-lead-form-write-actions";
 
-type LeadFormWriteActions = ReturnType<typeof useLeadFormWriteActions>;
+/** The dialog-lifecycle slice the page header drives. */
+export interface LeadFormHeaderWriteActions {
+  readonly fillFromMut: { readonly isPending: boolean };
+  readonly handleFillFrom: (sourceSectionId: string) => void;
+  readonly requestReopenMut: { readonly isPending: boolean };
+  readonly openReopenDialog: () => void;
+  readonly revokeMut: { readonly isPending: boolean };
+  readonly handleRevoke: () => void;
+}
 
 interface LeadFormHeaderActionsProps {
   readonly viewModel: LeadFormLoadedViewModel;
-  readonly writeActions: LeadFormWriteActions;
+  readonly writeActions: LeadFormHeaderWriteActions;
   readonly completionActions: LeadCompletionActionContract;
   readonly completionSentinelRef: Ref<HTMLDivElement>;
   readonly showCompletionActions: boolean;

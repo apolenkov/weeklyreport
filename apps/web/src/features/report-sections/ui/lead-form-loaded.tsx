@@ -7,26 +7,44 @@ import type { useFullscreen } from "../../../hooks/use-fullscreen";
 import type { AutosaveSnapshot } from "../../../hooks/use-lead-form-autosave";
 import { SdlcTooltipProvider } from "../../../shared/ui/sdlc-tooltip";
 import { LeadSlidesClient } from "../../slides";
-import { LeadFormDialogs } from "./lead-form-dialogs";
-import { LeadFormEditSections } from "./lead-form-edit-sections";
-import { LeadFormHeaderActions } from "./lead-form-header-actions";
+import type { LeadSubmitReadiness } from "../model/lead-submit-readiness";
+import {
+  LeadFormDialogs,
+  type LeadFormDialogsQuickAdd,
+  type LeadFormDialogsWriteActions,
+} from "./lead-form-dialogs";
+import {
+  LeadFormEditSections,
+  type LeadFormEditSectionsActions,
+} from "./lead-form-edit-sections";
+import {
+  LeadFormHeaderActions,
+  type LeadFormHeaderWriteActions,
+} from "./lead-form-header-actions";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { LeadFormPastPeriodBanner } from "./lead-form-past-period-banner";
 import { LeadFormToolbarControls } from "./lead-form-toolbar-controls";
 import { LeadStickyCompletionActions } from "./lead-sticky-completion-actions";
 import { LeadSubmitReadinessSummary } from "./lead-submit-readiness-summary";
+import type { QuickAddKind } from "./quick-add-button";
 import { useHeaderActionsVisibility } from "./use-header-actions-visibility";
 import type { useLeadFormData } from "./use-lead-form-data";
-import type { useLeadFormDraftMerges } from "./use-lead-form-draft-merges";
-import type { useLeadFormWriteActions } from "./use-lead-form-write-actions";
+
+type LeadFormLoadedActions = LeadFormEditSectionsActions &
+  LeadFormDialogsQuickAdd & {
+    readonly onQuickAdd: (kind: QuickAddKind) => void;
+  };
+type LeadFormLoadedWriteActions = LeadFormHeaderWriteActions &
+  LeadFormDialogsWriteActions & { readonly handleSubmit: () => void };
 
 interface LeadFormLoadedProps {
   readonly data: ReturnType<typeof useLeadFormData>;
   readonly viewModel: LeadFormLoadedViewModel;
   readonly draftSection: ReportSectionReadModel;
   readonly autosave: AutosaveSnapshot;
-  readonly merges: ReturnType<typeof useLeadFormDraftMerges>;
-  readonly writeActions: ReturnType<typeof useLeadFormWriteActions>;
+  readonly submitReadiness: LeadSubmitReadiness;
+  readonly draftActions: LeadFormLoadedActions;
+  readonly writeActions: LeadFormLoadedWriteActions;
   readonly isSlidesMode: boolean;
   readonly isSubmitted: boolean;
   readonly pinnedReportId?: string;
@@ -42,10 +60,10 @@ interface LeadFormLoadedProps {
 
 function useCompletionPresentation(props: LeadFormLoadedProps) {
   const { headerActionsVisible, sentinelRef } = useHeaderActionsVisibility();
-  const readiness = props.writeActions.getSubmitReadiness();
+  const readiness = props.submitReadiness;
   const completionActions = {
     autosave: props.autosave,
-    onAdd: props.merges.handleQuickAdd,
+    onAdd: props.draftActions.onQuickAdd,
     addDisabled: props.viewModel.products.length === 0,
     onSubmit: props.writeActions.handleSubmit,
     submitDisabled: !readiness.canOpenConfirmation,
@@ -122,7 +140,7 @@ function LoadedReportContent({
   readonly completion: CompletionPresentation;
   readonly serverSection: ReportSectionReadModel;
 }) {
-  const { data, viewModel, merges } = props;
+  const { data, viewModel, draftActions } = props;
   if (props.isSlidesMode) {
     return (
       <LeadSlidesClient
@@ -140,7 +158,7 @@ function LoadedReportContent({
     <>
       <LeadFormEditSections
         viewModel={viewModel}
-        merges={merges}
+        actions={draftActions}
         draftSection={props.draftSection}
         serverSection={serverSection}
         groupExpanded={props.groupExpanded}
@@ -186,7 +204,7 @@ export function LeadFormLoaded(props: LeadFormLoadedProps) {
       </form>
       <LeadFormDialogs
         viewModel={props.viewModel}
-        merges={props.merges}
+        quickAdd={props.draftActions}
         writeActions={props.writeActions}
         unsetOwnStageCount={props.unsetOwnStageCount}
         draftSection={props.draftSection}
