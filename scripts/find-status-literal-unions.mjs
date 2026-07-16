@@ -46,7 +46,7 @@ const ALLOWLIST = [
   "prisma/seed-constants.ts",
   // The canonical presentation vocabulary's single declaration
   // (status-presentation-model spec).
-  "apps/web/src/lib/status-presentation.ts",
+  "packages/shared/src/schemas/canonical-status.ts",
   // The role vocabulary's single declaration, both axes (role-type spec).
   "packages/shared/src/schemas/auth.ts",
   // e2e's isolated tsconfig cannot resolve @customreport/shared (no `paths`
@@ -113,7 +113,7 @@ const violation = (literals) => {
     return "re-declares the ReportStatus union — import it from @customreport/shared (report-primitives.schema.ts)";
   }
   if (CANONICAL.every((status) => set.has(status))) {
-    return "re-declares the CanonicalStatus union — import it from lib/status-presentation (or the StageStatus alias)";
+    return "re-declares the CanonicalStatus union — import it from @customreport/shared (canonical-status.ts, or the StageStatus alias)";
   }
   if (ROLE.every((role) => set.has(role))) {
     return "re-declares the Role/DbRole union — import it from @customreport/shared (schemas/auth.ts)";

@@ -6,6 +6,7 @@ export * from "./constants";
 export * from "./name/user-name";
 export * from "./schemas/analytics";
 export * from "./schemas/auth";
+export * from "./schemas/canonical-status";
 export * from "./schemas/integrations";
 export * from "./schemas/organization";
 export * from "./schemas/project-activity.schema";

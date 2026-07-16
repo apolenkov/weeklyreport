@@ -1,12 +1,11 @@
 "use client";
 
-import type { TrafficLightStatus } from "@customreport/shared";
 import type {
+  CanonicalStatus,
   ReportSectionReadModel,
   SectionActivity,
+  TrafficLightStatus,
 } from "@customreport/shared";
-
-import type { CanonicalStatus } from "../../../lib/status-presentation";
 
 // `linkedProducts` carries a schema default, but legacy fixtures and frozen
 // pre-activity snapshots may omit it, so tolerate its absence at the type level.

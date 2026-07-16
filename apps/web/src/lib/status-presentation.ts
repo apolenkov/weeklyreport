@@ -1,13 +1,13 @@
-import type { TrafficLightStatus } from "@customreport/shared";
+import type { CanonicalStatus, TrafficLightStatus } from "@customreport/shared";
 import { AlertTriangle, type LucideIcon } from "lucide-react";
 
 /**
  * Single source for a workflow status's icon, dot, tone chip, and labels, so
  * slide/dashboard/print surfaces derive them here instead of each holding its
  * own `Record<status, …>`. Color VALUES stay owned by status-color-semantics /
- * the status tokens — this map only keys onto those tokens.
+ * the status tokens — this map only keys onto those tokens. The status
+ * vocabulary itself (`CanonicalStatus`) lives in `@customreport/shared`.
  */
-export type CanonicalStatus = "blocked" | "at-risk" | "on-track" | "empty";
 
 /**
  * Label vocabularies the surfaces render today, reproduced (not unified) so

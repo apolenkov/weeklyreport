@@ -1,4 +1,4 @@
-import type { TrafficLightStatus } from "@customreport/shared";
+import type { CanonicalStatus, TrafficLightStatus } from "@customreport/shared";
 import {
   AlertTriangle,
   ArrowRight,
@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 
 import {
-  type CanonicalStatus,
   statusDotClassName,
   statusLabel,
 } from "../../../lib/status-presentation";

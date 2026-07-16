@@ -1,4 +1,9 @@
-import { riskCoversStage, type TrafficLightStatus } from "@customreport/shared";
+import {
+  canonicalToTrafficLight,
+  riskCoversStage,
+  riskSeverityToCanonicalFloor,
+  type TrafficLightStatus,
+} from "@customreport/shared";
 
 import { aggregateTrafficLight } from "../domain/traffic-light-aggregation";
 
@@ -8,12 +13,6 @@ export function aggregateStageTraffic(
   stages: readonly { status?: string | null }[],
 ): TrafficLight | null {
   return aggregateTrafficLight(stages.map((stage) => asTraffic(stage.status)));
-}
-
-function severityToTraffic(severity: string | undefined): TrafficLight | null {
-  if (severity === "blocked") return "red";
-  if (severity === "at-risk") return "yellow";
-  return null;
 }
 
 export function asTraffic(
@@ -68,7 +67,14 @@ export function deriveEffectiveProductStatus(project: {
     const coveringSeverity = aggregateTrafficLight(
       scopedRisks
         .filter((risk) => riskCoversStage(risk, stage.stageName))
-        .map((risk) => severityToTraffic(risk.severity)),
+        // Only a risk with an explicit severity floors the stage — an
+        // unset severity on an otherwise-covering risk contributes nothing.
+        .filter(
+          (risk) => risk.severity === "blocked" || risk.severity === "at-risk",
+        )
+        .map((risk) =>
+          canonicalToTrafficLight(riskSeverityToCanonicalFloor(risk.severity)),
+        ),
     );
     return aggregateTrafficLight([asTraffic(stage.status), coveringSeverity]);
   });
@@ -93,7 +99,7 @@ export function deriveActivityStatus(
 ): { derivedStatus: TrafficLight | null; alarmFloor: TrafficLight | null } {
   const alarmFloor = aggregateTrafficLight(
     ownRisks.map((risk) =>
-      severityToTraffic(risk.severity === "blocked" ? "blocked" : "at-risk"),
+      canonicalToTrafficLight(riskSeverityToCanonicalFloor(risk.severity)),
     ),
   );
   return {

@@ -1,5 +1,6 @@
+import type { CanonicalStatus } from "@customreport/shared";
+
 import {
-  type CanonicalStatus,
   statusIcon,
   statusLabel,
   type StatusLabelVariant,
