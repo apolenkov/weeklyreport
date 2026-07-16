@@ -24,7 +24,7 @@
 
 - [x] 4.1 Run focused queue model/row/action tests covering each state and mutation transition.
 - [x] 4.2 Update dashboard catalog scenarios for queue collapsed/expanded, content-bearing draft Open, Remind, Review, Request Changes, Revoke, published read-only, and secondary Revoke All.
-- [ ] 4.3 Drive the head dashboard from source and confirm each lead appears once, actions match state, and no unique activity/review signal was lost.
+- [x] 4.3 Drive the head dashboard from source and confirm each lead appears once, actions match state, and no unique activity/review signal was lost.
 - [x] 4.4 Check changed `.tsx` files with `grep -nE '[а-яА-Я]' <file>` and confirm every hit is permitted data/comment/test content.
 
 ## 5. Repository gates

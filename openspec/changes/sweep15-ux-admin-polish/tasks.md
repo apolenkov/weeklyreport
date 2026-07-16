@@ -11,13 +11,13 @@
 - [x] 2.3 Implement pure product-first pagination with a named per-view record cap and labeled continuation pages.
 - [x] 2.4 Add flattening invariants proving every source record appears exactly once in order with stable author/status/Mine-Everyone semantics.
 - [x] 2.5 Add an explicit Document/Presentation density control to lead, head, and viewer deck shells with visible state, keyboard access, and reversible switching without refetch.
-- [ ] 2.6 Preserve Document as the auto-height all-content mode and verify Presentation in fullscreen/projection at dense fixture sizes.
+- [x] 2.6 Preserve Document as the auto-height all-content mode and verify Presentation in fullscreen/projection at dense fixture sizes.
 
 ## 3. Verification and catalog
 
 - [x] 3.1 Run focused Users table/dialog/menu, pagination, deck-control, and accessibility tests.
 - [x] 3.2 Update admin and slide catalog scenarios for overflow Delete, 40px targets, density switching, and multi-page product continuation.
-- [ ] 3.3 Drive admin Users and dense lead/head/viewer slides from source; verify no destructive misclick affordance, clipped action, or lost/duplicate record.
+- [x] 3.3 Drive admin Users and dense lead/head/viewer slides from source; verify no destructive misclick affordance, clipped action, or lost/duplicate record.
 - [x] 3.4 Check changed `.tsx` files with `grep -nE '[а-яА-Я]' <file>` and confirm every hit is permitted data/comment/test content.
 
 ## 4. Repository gates
