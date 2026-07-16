@@ -24,11 +24,17 @@ import {
  *   `enabled=false` to avoid a second listener). State is driven from the
  *   native event, never a local guess.
  */
+/** The fullscreen handle consumers receive: current state + one toggle. */
+export interface FullscreenHandle {
+  readonly isFullscreen: boolean;
+  readonly toggle: () => void;
+}
+
 export function useFullscreen(
   targetRef: RefObject<HTMLElement | null>,
   focusOnExitRef?: RefObject<HTMLElement | null>,
   enabled = true,
-) {
+): FullscreenHandle {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const wasFullscreenRef = useRef(false);
 
