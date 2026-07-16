@@ -26,15 +26,30 @@ export function DashboardRevokeAllControl({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        disabled={pending}
-        data-testid="revoke-all-button"
-        className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center rounded-[var(--radius-pill)] border border-red-300 px-4 text-sm font-semibold text-red-600 disabled:opacity-60"
+      <section
+        aria-label="Bulk actions"
+        className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3"
       >
-        Revoke All ({submittedCount})
-      </button>
+        <details>
+          <summary className="cursor-pointer text-xs font-semibold text-[var(--color-muted-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]">
+            Bulk actions
+          </summary>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-[var(--color-muted-foreground)]">
+              Destructive actions affect every submitted lead.
+            </p>
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              disabled={pending}
+              data-testid="revoke-all-button"
+              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-red-300 px-4 text-sm font-semibold text-red-600 disabled:opacity-60"
+            >
+              Revoke All ({submittedCount})
+            </button>
+          </div>
+        </details>
+      </section>
       <ConfirmationDialog
         open={open}
         onClose={() => setOpen(false)}

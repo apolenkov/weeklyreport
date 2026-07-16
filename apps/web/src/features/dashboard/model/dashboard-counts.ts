@@ -8,7 +8,18 @@
  * "has the lead started" signal stays TOTAL so an activity-only lead reads as
  * started.
  */
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type {
+  ActivityLiveRow,
+  ReportSectionReadModel,
+} from "@customreport/shared";
+
+export function countActivityLiveContent(
+  row: ActivityLiveRow | undefined,
+): number {
+  return row
+    ? row.itemCount + row.riskCount + row.decisionCount + row.priorityCount
+    : 0;
+}
 
 /**
  * Total content across product AND activity records. Drives deriveLeadStatus

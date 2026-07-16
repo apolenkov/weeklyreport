@@ -5,7 +5,6 @@ const PANEL_HEIGHT_CLASS = {
   kpi: "h-24",
   leads: "h-56",
   alert: "h-12",
-  review: "h-20",
   blocked: "h-40",
 } as const;
 

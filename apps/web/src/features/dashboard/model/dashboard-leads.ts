@@ -1,11 +1,15 @@
 import type {
+  ActivityLiveResponse,
+  ActivityLiveRow,
   PortfolioProductOverview,
   ReportSectionReadModel,
+  SectionReviewView,
   SubmissionDashboardRow,
   WeeklyReportReadModel,
 } from "@customreport/shared";
 import {
   initialsFromName as sharedInitialsFromName,
+  MS_PER_DAY,
   shortNameFromName,
 } from "@customreport/shared";
 
@@ -13,108 +17,225 @@ import type { LeadStatus } from "../../report-sections";
 import { deriveLeadStatus, trafficToStageStatus } from "../../report-sections";
 import type { LeadInfo, ProductStatus, TrafficLight } from "./dashboard";
 import {
+  countActivityLiveContent,
   countActivityRecords,
   countProductContent,
   countSectionContent,
   productColumnCounts,
 } from "./dashboard-counts";
+import {
+  attentionLabel,
+  reviewPresentation,
+} from "./dashboard-lead-presentation";
+import { compareLeadPriority, queuePriority } from "./dashboard-lead-priority";
 
 const TRAFFIC_ICON: Record<ProductStatus, string> = {
-  "on-track": "✓", // ✓
-  blocked: "✕", // ✕
+  "on-track": "✓",
+  blocked: "✕",
   "at-risk": "!",
 };
 
-// Avatar initials via the canonical shared helper (surname-first ФИО), with
-// this surface's "??" placeholder for an empty name. The token logic lives once
-// in @customreport/shared so hand-cloned copies can't diverge and drift apart.
+const ISO_DATE_LENGTH = 10;
+
+interface BuildLeadInfosArgs {
+  readonly review: readonly SubmissionDashboardRow[];
+  readonly weeklyReport: WeeklyReportReadModel;
+  readonly activity?: ActivityLiveResponse;
+  readonly now: Date;
+  readonly currentUserId?: string;
+}
+
+interface LeadBuildContext {
+  readonly weeklyReport: WeeklyReportReadModel;
+  readonly sectionByAuthor: ReadonlyMap<string, ReportSectionReadModel>;
+  readonly activityByLead: ReadonlyMap<string, ActivityLiveRow>;
+  readonly now: Date;
+  readonly currentUserId?: string;
+}
+
+interface LeadQueueState {
+  readonly section: ReportSectionReadModel | undefined;
+  readonly activity: ActivityLiveRow | undefined;
+  readonly contentCount: number;
+  readonly status: LeadStatus;
+  readonly reviews: readonly SectionReviewView[];
+  readonly review: Pick<LeadInfo, "reviewState" | "reviewLabel">;
+  readonly editable: boolean;
+  readonly remindersEnabled: boolean;
+  readonly lastEditAt: Date | null;
+  readonly isStale: boolean;
+  readonly reviewer: boolean;
+  readonly canReview: boolean;
+  readonly trafficLights: readonly TrafficLight[];
+}
+
 export function initialsFromName(name: string): string {
   return sharedInitialsFromName(name) || "??";
 }
 
-// "YYYY-MM-DD" — length of an ISO date-only prefix.
-const ISO_DATE_LENGTH = 10;
-
-function isoSubmittedLabel(date: Date | null): string | null {
-  return date ? date.toISOString().slice(0, ISO_DATE_LENGTH) : null;
-}
-
-function trafficLightsForLeadByName(
+function trafficLightsForLead(
   leadName: string,
-  portfolio: PortfolioProductOverview[],
+  portfolio: readonly PortfolioProductOverview[],
 ): TrafficLight[] {
   return portfolio
-    .filter((p) => p.leadNames.includes(leadName))
-    .map((p) => p.worstStatus)
+    .filter((product) => product.leadNames.includes(leadName))
+    .map((product) => product.worstStatus)
     .filter((status): status is NonNullable<typeof status> => status !== null)
     .map((status) => {
       const presentation = trafficToStageStatus(status);
-      const productStatus: ProductStatus =
-        presentation === "on-track" ||
-        presentation === "at-risk" ||
-        presentation === "blocked"
+      const normalized: ProductStatus =
+        presentation === "blocked" || presentation === "at-risk"
           ? presentation
           : "on-track";
-      return { status: productStatus, icon: TRAFFIC_ICON[productStatus] };
+      return { status: normalized, icon: TRAFFIC_ICON[normalized] };
     });
 }
 
-/**
- * Build the per-lead rows for the dashboard leads table, folding in section
- * content counts, derived status, traffic lights, and submission metadata.
- */
-export function buildLeadInfos(
-  review: SubmissionDashboardRow[],
-  weeklyReport: WeeklyReportReadModel,
-  currentUserId: string | undefined,
-): LeadInfo[] {
-  const sectionByAuthor = new Map<string, ReportSectionReadModel>();
-  for (const section of weeklyReport.leadSections) {
-    sectionByAuthor.set(section.authorId, section);
-  }
-
-  return review.map((row) => {
-    const section = sectionByAuthor.get(row.leadId);
-    // "Has the lead started" reads TOTAL content (product + activity); the
-    // displayed product column reads only product-parented rows.
-    const totalContentCount = section ? countSectionContent(section) : 0;
-    const reportContentCount = section ? countProductContent(section) : 0;
-    const status: LeadStatus = section
-      ? deriveLeadStatus({
-          sectionStatus: section.status,
-          contentCount: totalContentCount,
-        })
-      : "pending";
-
-    // The portfolio overview only carries lead NAMES, so we name-match either way.
-    const trafficLights = trafficLightsForLeadByName(
-      row.leadName,
-      weeklyReport.portfolioOverview,
-    );
-
-    const lastActivity = section?.submittedAt
-      ? section.submittedAt.toISOString().slice(0, ISO_DATE_LENGTH)
-      : status === "pending"
-        ? "Not started"
-        : "In progress";
-
-    return {
-      id: row.leadId,
-      initials: initialsFromName(row.leadName),
-      // ADR 0006: the leads table shows the short form; the avatar stays 2-letter.
-      name: shortNameFromName(row.leadName),
-      role: row.role,
-      status,
-      trafficLights,
-      lastActivity,
-      isCurrentUser:
-        currentUserId !== undefined && row.leadId === currentUserId,
-      productCount: row.projectNames.length,
-      reportContentCount,
-      ...productColumnCounts(section),
-      activityCount: section ? countActivityRecords(section) : 0,
-      submittedAtLabel: isoSubmittedLabel(section?.submittedAt ?? null),
-      reportSectionId: section?.reportSectionId,
-    };
+function deriveLeadQueueState(
+  row: SubmissionDashboardRow,
+  context: LeadBuildContext,
+): LeadQueueState {
+  const section = context.sectionByAuthor.get(row.leadId);
+  const activity = context.activityByLead.get(row.leadId);
+  const contentCount = Math.max(
+    section ? countSectionContent(section) : 0,
+    countActivityLiveContent(activity),
+  );
+  const status = deriveLeadStatus({
+    sectionStatus: section?.status ?? activity?.status ?? row.status,
+    contentCount,
   });
+  const reviews = section?.reviews ?? [];
+  const review = reviewPresentation(reviews);
+  const editable =
+    context.weeklyReport.periodStatus === "open" ||
+    context.weeklyReport.periodStatus === "reopened";
+  const lastEditAt = activity?.lastEditAt ?? null;
+  const isStale =
+    editable &&
+    status !== "submitted" &&
+    (lastEditAt === null ||
+      context.now.getTime() - lastEditAt.getTime() > MS_PER_DAY);
+  const reviewer = Boolean(section?.canReview);
+  const canReview =
+    editable &&
+    status === "submitted" &&
+    reviewer &&
+    review.reviewState !== "approved";
+
+  return {
+    section,
+    activity,
+    contentCount,
+    status,
+    reviews,
+    review,
+    editable,
+    remindersEnabled: context.weeklyReport.hasActiveReminderRule,
+    lastEditAt,
+    isStale,
+    reviewer,
+    canReview,
+    trafficLights: trafficLightsForLead(
+      row.leadName,
+      context.weeklyReport.portfolioOverview,
+    ),
+  };
+}
+
+function sectionIdentity(
+  section: ReportSectionReadModel | undefined,
+  activity: ActivityLiveRow | undefined,
+): Partial<Pick<LeadInfo, "reportSectionId" | "version">> {
+  const reportSectionId = section?.reportSectionId ?? activity?.reportSectionId;
+  return {
+    ...(reportSectionId ? { reportSectionId } : {}),
+    ...(section ? { version: section.version } : {}),
+  };
+}
+
+function leadActions(state: LeadQueueState): LeadInfo["actions"] {
+  return {
+    canOpen: state.contentCount > 0,
+    canRemind:
+      state.editable && state.status !== "submitted" && state.remindersEnabled,
+    canReview: state.canReview,
+    canRequestChanges:
+      state.editable && state.status === "submitted" && state.reviewer,
+    canRevoke:
+      state.editable &&
+      state.status === "submitted" &&
+      state.section !== undefined,
+  };
+}
+
+function buildLeadInfo(
+  row: SubmissionDashboardRow,
+  context: LeadBuildContext,
+): LeadInfo {
+  const state = deriveLeadQueueState(row, context);
+
+  return {
+    id: row.leadId,
+    initials: initialsFromName(row.leadName),
+    name: shortNameFromName(row.leadName),
+    role: row.role,
+    status: state.status,
+    trafficLights: [...state.trafficLights],
+    lastEditAt: state.lastEditAt,
+    submittedAt:
+      state.activity?.submittedAt ??
+      state.section?.submittedAt ??
+      row.submittedAt,
+    isStale: state.isStale,
+    isCurrentUser: context.currentUserId === row.leadId,
+    productCount: row.projectNames.length,
+    reportContentCount: state.section ? countProductContent(state.section) : 0,
+    ...productColumnCounts(state.section),
+    activityCount: state.section ? countActivityRecords(state.section) : 0,
+    submittedAtLabel:
+      state.section?.submittedAt?.toISOString().slice(0, ISO_DATE_LENGTH) ??
+      null,
+    ...sectionIdentity(state.section, state.activity),
+    reviews: state.reviews,
+    ...state.review,
+    attentionLabel: attentionLabel(state.trafficLights),
+    actions: leadActions(state),
+    priority: queuePriority(
+      state.review.reviewState,
+      state.canReview,
+      state.isStale,
+      state.status,
+    ),
+  };
+}
+
+export function buildLeadInfos({
+  review,
+  weeklyReport,
+  activity,
+  now,
+  currentUserId,
+}: BuildLeadInfosArgs): LeadInfo[] {
+  const context: LeadBuildContext = {
+    weeklyReport,
+    sectionByAuthor: new Map(
+      weeklyReport.leadSections.map((section) => [section.authorId, section]),
+    ),
+    activityByLead: new Map(
+      (activity?.rows ?? []).map((row) => [row.leadId, row]),
+    ),
+    now,
+    ...(currentUserId ? { currentUserId } : {}),
+  };
+  return review
+    .map((row) => buildLeadInfo(row, context))
+    .reduce<LeadInfo[]>((sorted, lead) => {
+      const insertAt = sorted.findIndex(
+        (current) => compareLeadPriority(lead, current) < 0,
+      );
+      return insertAt === -1
+        ? [...sorted, lead]
+        : [...sorted.slice(0, insertAt), lead, ...sorted.slice(insertAt)];
+    }, []);
 }

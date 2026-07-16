@@ -10,7 +10,7 @@ interface DashboardQueryRecoveryInput {
   readonly fetchStatus: string;
   readonly hasData: boolean;
   readonly isError: boolean;
-  readonly name: "review" | "weeklyReport";
+  readonly name: "activity" | "review" | "weeklyReport";
   readonly refetch: () => Promise<unknown>;
   readonly status: string;
 }

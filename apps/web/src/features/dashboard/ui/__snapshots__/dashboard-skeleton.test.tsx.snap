@@ -1,173 +1,9 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`DashboardSkeleton > matches full DashboardSkeleton render snapshot 1`] = `
+exports[`DashboardSkeleton > matches the dashboard loading geometry 1`] = `
 <div
   class="space-y-6"
 >
-  <div
-    class="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
-  >
-    <div
-      class="mb-4 flex flex-wrap items-baseline justify-between gap-2"
-    >
-      <div
-        class="skeleton rounded-md h-6 w-44"
-        data-slot="skeleton"
-      />
-      <div
-        class="skeleton rounded-md h-4 w-36"
-        data-slot="skeleton"
-      />
-    </div>
-    <ul
-      class="space-y-1"
-    >
-      <li
-        class="flex items-center gap-3 py-1"
-      >
-        <div
-          class="skeleton h-9 w-9 shrink-0 rounded-full"
-          data-slot="skeleton"
-        />
-        <div
-          class="min-w-0 flex-1 space-y-1.5"
-        >
-          <div
-            class="skeleton rounded-md h-4 w-36"
-            data-slot="skeleton"
-          />
-          <div
-            class="skeleton rounded-md h-3 w-24"
-            data-slot="skeleton"
-          />
-        </div>
-        <div
-          class="skeleton h-5 w-20 rounded-[var(--radius-pill)]"
-          data-slot="skeleton"
-        />
-      </li>
-      <li
-        class="flex items-center gap-3 py-1"
-      >
-        <div
-          class="skeleton h-9 w-9 shrink-0 rounded-full"
-          data-slot="skeleton"
-        />
-        <div
-          class="min-w-0 flex-1 space-y-1.5"
-        >
-          <div
-            class="skeleton rounded-md h-4 w-36"
-            data-slot="skeleton"
-          />
-          <div
-            class="skeleton rounded-md h-3 w-24"
-            data-slot="skeleton"
-          />
-        </div>
-        <div
-          class="skeleton h-5 w-20 rounded-[var(--radius-pill)]"
-          data-slot="skeleton"
-        />
-      </li>
-      <li
-        class="flex items-center gap-3 py-1"
-      >
-        <div
-          class="skeleton h-9 w-9 shrink-0 rounded-full"
-          data-slot="skeleton"
-        />
-        <div
-          class="min-w-0 flex-1 space-y-1.5"
-        >
-          <div
-            class="skeleton rounded-md h-4 w-36"
-            data-slot="skeleton"
-          />
-          <div
-            class="skeleton rounded-md h-3 w-24"
-            data-slot="skeleton"
-          />
-        </div>
-        <div
-          class="skeleton h-5 w-20 rounded-[var(--radius-pill)]"
-          data-slot="skeleton"
-        />
-      </li>
-      <li
-        class="flex items-center gap-3 py-1"
-      >
-        <div
-          class="skeleton h-9 w-9 shrink-0 rounded-full"
-          data-slot="skeleton"
-        />
-        <div
-          class="min-w-0 flex-1 space-y-1.5"
-        >
-          <div
-            class="skeleton rounded-md h-4 w-36"
-            data-slot="skeleton"
-          />
-          <div
-            class="skeleton rounded-md h-3 w-24"
-            data-slot="skeleton"
-          />
-        </div>
-        <div
-          class="skeleton h-5 w-20 rounded-[var(--radius-pill)]"
-          data-slot="skeleton"
-        />
-      </li>
-      <li
-        class="flex items-center gap-3 py-1"
-      >
-        <div
-          class="skeleton h-9 w-9 shrink-0 rounded-full"
-          data-slot="skeleton"
-        />
-        <div
-          class="min-w-0 flex-1 space-y-1.5"
-        >
-          <div
-            class="skeleton rounded-md h-4 w-36"
-            data-slot="skeleton"
-          />
-          <div
-            class="skeleton rounded-md h-3 w-24"
-            data-slot="skeleton"
-          />
-        </div>
-        <div
-          class="skeleton h-5 w-20 rounded-[var(--radius-pill)]"
-          data-slot="skeleton"
-        />
-      </li>
-      <li
-        class="flex items-center gap-3 py-1"
-      >
-        <div
-          class="skeleton h-9 w-9 shrink-0 rounded-full"
-          data-slot="skeleton"
-        />
-        <div
-          class="min-w-0 flex-1 space-y-1.5"
-        >
-          <div
-            class="skeleton rounded-md h-4 w-36"
-            data-slot="skeleton"
-          />
-          <div
-            class="skeleton rounded-md h-3 w-24"
-            data-slot="skeleton"
-          />
-        </div>
-        <div
-          class="skeleton h-5 w-20 rounded-[var(--radius-pill)]"
-          data-slot="skeleton"
-        />
-      </li>
-    </ul>
-  </div>
   <div
     class="grid gap-4 sm:grid-cols-3"
   >
@@ -221,130 +57,207 @@ exports[`DashboardSkeleton > matches full DashboardSkeleton render snapshot 1`] 
     </div>
   </div>
   <div
-    class="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm"
+    class="min-w-0 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm"
   >
     <div
-      class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-4"
+      class="border-b border-[var(--color-border)] px-4 py-3"
     >
       <div
         class="skeleton rounded-md h-5 w-48"
         data-slot="skeleton"
       />
       <div
-        class="skeleton h-5 w-24 rounded-[var(--radius-pill)]"
+        class="skeleton rounded-md mt-2 h-3 w-72 max-w-full"
         data-slot="skeleton"
       />
     </div>
     <div
-      class="overflow-x-auto"
+      class="grid min-w-0 gap-2 p-3 sm:p-4"
     >
       <div
-        class="w-full"
+        class="grid min-w-0 gap-3 rounded-[var(--radius)] border border-[var(--color-border)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(11rem,1.3fr)_minmax(9rem,0.8fr)_minmax(10rem,1fr)_minmax(9rem,0.8fr)_auto_auto]"
+        data-testid="dashboard-queue-skeleton-row"
       >
-        <div
-          class="flex gap-4 border-b border-[var(--color-border)] px-5 py-3"
+        <span
+          class="flex min-w-0 items-center gap-3"
         >
           <div
-            class="skeleton rounded-md h-3 w-[120px]"
+            class="skeleton h-9 w-9 shrink-0 rounded-full"
             data-slot="skeleton"
           />
           <div
-            class="skeleton rounded-md h-3 w-[80px]"
+            class="skeleton rounded-md h-4 w-32 max-w-full"
             data-slot="skeleton"
           />
-          <div
-            class="skeleton rounded-md h-3 w-[80px]"
-            data-slot="skeleton"
-          />
-          <div
-            class="skeleton rounded-md h-3 w-[80px]"
-            data-slot="skeleton"
-          />
-          <div
-            class="skeleton rounded-md h-3 w-[100px]"
-            data-slot="skeleton"
-          />
-        </div>
+        </span>
         <div
-          class="flex items-center gap-4 border-b border-[var(--color-border)] px-5 py-3 last:border-0"
+          class="skeleton h-6 w-24 rounded-[var(--radius-pill)]"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton rounded-md h-4 w-32 max-w-full"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton rounded-md h-4 w-28 max-w-full"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton h-9 w-20 rounded-[var(--radius-pill)]"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton h-9 w-20 rounded-[var(--radius-pill)]"
+          data-slot="skeleton"
+        />
+      </div>
+      <div
+        class="grid min-w-0 gap-3 rounded-[var(--radius)] border border-[var(--color-border)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(11rem,1.3fr)_minmax(9rem,0.8fr)_minmax(10rem,1fr)_minmax(9rem,0.8fr)_auto_auto]"
+        data-testid="dashboard-queue-skeleton-row"
+      >
+        <span
+          class="flex min-w-0 items-center gap-3"
         >
           <div
-            class="skeleton h-8 w-8 shrink-0 rounded-full"
+            class="skeleton h-9 w-9 shrink-0 rounded-full"
             data-slot="skeleton"
           />
           <div
-            class="skeleton rounded-md h-4 w-32"
+            class="skeleton rounded-md h-4 w-32 max-w-full"
             data-slot="skeleton"
           />
-          <div
-            class="skeleton ml-auto h-5 w-20 rounded-[var(--radius-pill)]"
-            data-slot="skeleton"
-          />
-        </div>
+        </span>
         <div
-          class="flex items-center gap-4 border-b border-[var(--color-border)] px-5 py-3 last:border-0"
+          class="skeleton h-6 w-24 rounded-[var(--radius-pill)]"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton rounded-md h-4 w-32 max-w-full"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton rounded-md h-4 w-28 max-w-full"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton h-9 w-20 rounded-[var(--radius-pill)]"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton h-9 w-20 rounded-[var(--radius-pill)]"
+          data-slot="skeleton"
+        />
+      </div>
+      <div
+        class="grid min-w-0 gap-3 rounded-[var(--radius)] border border-[var(--color-border)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(11rem,1.3fr)_minmax(9rem,0.8fr)_minmax(10rem,1fr)_minmax(9rem,0.8fr)_auto_auto]"
+        data-testid="dashboard-queue-skeleton-row"
+      >
+        <span
+          class="flex min-w-0 items-center gap-3"
         >
           <div
-            class="skeleton h-8 w-8 shrink-0 rounded-full"
+            class="skeleton h-9 w-9 shrink-0 rounded-full"
             data-slot="skeleton"
           />
           <div
-            class="skeleton rounded-md h-4 w-32"
+            class="skeleton rounded-md h-4 w-32 max-w-full"
             data-slot="skeleton"
           />
-          <div
-            class="skeleton ml-auto h-5 w-20 rounded-[var(--radius-pill)]"
-            data-slot="skeleton"
-          />
-        </div>
+        </span>
         <div
-          class="flex items-center gap-4 border-b border-[var(--color-border)] px-5 py-3 last:border-0"
+          class="skeleton h-6 w-24 rounded-[var(--radius-pill)]"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton rounded-md h-4 w-32 max-w-full"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton rounded-md h-4 w-28 max-w-full"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton h-9 w-20 rounded-[var(--radius-pill)]"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton h-9 w-20 rounded-[var(--radius-pill)]"
+          data-slot="skeleton"
+        />
+      </div>
+      <div
+        class="grid min-w-0 gap-3 rounded-[var(--radius)] border border-[var(--color-border)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(11rem,1.3fr)_minmax(9rem,0.8fr)_minmax(10rem,1fr)_minmax(9rem,0.8fr)_auto_auto]"
+        data-testid="dashboard-queue-skeleton-row"
+      >
+        <span
+          class="flex min-w-0 items-center gap-3"
         >
           <div
-            class="skeleton h-8 w-8 shrink-0 rounded-full"
+            class="skeleton h-9 w-9 shrink-0 rounded-full"
             data-slot="skeleton"
           />
           <div
-            class="skeleton rounded-md h-4 w-32"
+            class="skeleton rounded-md h-4 w-32 max-w-full"
             data-slot="skeleton"
           />
-          <div
-            class="skeleton ml-auto h-5 w-20 rounded-[var(--radius-pill)]"
-            data-slot="skeleton"
-          />
-        </div>
+        </span>
         <div
-          class="flex items-center gap-4 border-b border-[var(--color-border)] px-5 py-3 last:border-0"
+          class="skeleton h-6 w-24 rounded-[var(--radius-pill)]"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton rounded-md h-4 w-32 max-w-full"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton rounded-md h-4 w-28 max-w-full"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton h-9 w-20 rounded-[var(--radius-pill)]"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton h-9 w-20 rounded-[var(--radius-pill)]"
+          data-slot="skeleton"
+        />
+      </div>
+      <div
+        class="grid min-w-0 gap-3 rounded-[var(--radius)] border border-[var(--color-border)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(11rem,1.3fr)_minmax(9rem,0.8fr)_minmax(10rem,1fr)_minmax(9rem,0.8fr)_auto_auto]"
+        data-testid="dashboard-queue-skeleton-row"
+      >
+        <span
+          class="flex min-w-0 items-center gap-3"
         >
           <div
-            class="skeleton h-8 w-8 shrink-0 rounded-full"
+            class="skeleton h-9 w-9 shrink-0 rounded-full"
             data-slot="skeleton"
           />
           <div
-            class="skeleton rounded-md h-4 w-32"
+            class="skeleton rounded-md h-4 w-32 max-w-full"
             data-slot="skeleton"
           />
-          <div
-            class="skeleton ml-auto h-5 w-20 rounded-[var(--radius-pill)]"
-            data-slot="skeleton"
-          />
-        </div>
+        </span>
         <div
-          class="flex items-center gap-4 border-b border-[var(--color-border)] px-5 py-3 last:border-0"
-        >
-          <div
-            class="skeleton h-8 w-8 shrink-0 rounded-full"
-            data-slot="skeleton"
-          />
-          <div
-            class="skeleton rounded-md h-4 w-32"
-            data-slot="skeleton"
-          />
-          <div
-            class="skeleton ml-auto h-5 w-20 rounded-[var(--radius-pill)]"
-            data-slot="skeleton"
-          />
-        </div>
+          class="skeleton h-6 w-24 rounded-[var(--radius-pill)]"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton rounded-md h-4 w-32 max-w-full"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton rounded-md h-4 w-28 max-w-full"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton h-9 w-20 rounded-[var(--radius-pill)]"
+          data-slot="skeleton"
+        />
+        <div
+          class="skeleton h-9 w-20 rounded-[var(--radius-pill)]"
+          data-slot="skeleton"
+        />
       </div>
     </div>
   </div>
@@ -392,32 +305,5 @@ exports[`DashboardSkeleton > matches full DashboardSkeleton render snapshot 1`] 
       />
     </div>
   </div>
-</div>
-`;
-
-exports[`DashboardSkeleton > matches thead placeholder skeleton snapshot 1`] = `
-<div
-  class="flex gap-4 border-b border-[var(--color-border)] px-5 py-3"
->
-  <div
-    class="skeleton rounded-md h-3 w-[120px]"
-    data-slot="skeleton"
-  />
-  <div
-    class="skeleton rounded-md h-3 w-[80px]"
-    data-slot="skeleton"
-  />
-  <div
-    class="skeleton rounded-md h-3 w-[80px]"
-    data-slot="skeleton"
-  />
-  <div
-    class="skeleton rounded-md h-3 w-[80px]"
-    data-slot="skeleton"
-  />
-  <div
-    class="skeleton rounded-md h-3 w-[100px]"
-    data-slot="skeleton"
-  />
 </div>
 `;
