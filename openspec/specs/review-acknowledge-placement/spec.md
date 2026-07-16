@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by syncing change lead-report-surface-polish. Update Purpose after archive.
+Place review acknowledgement inside the head's publish-and-lock flow as supporting context rather than a separate gate.
 
 ## Requirements
 

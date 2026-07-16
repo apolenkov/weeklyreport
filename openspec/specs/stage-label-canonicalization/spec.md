@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change stage-label-canonicalization. Update Purpose after archive.
+Keep stored stage identifiers and user-visible record stage labels aligned to the canonical stage vocabulary.
 
 ## Requirements
 

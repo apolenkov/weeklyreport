@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change record-status-derived-from-risk. Update Purpose after archive.
+Derive item alarm state from covering risks while keeping progress status, blocker creation, pause reasons, and escalation counts coherent across edit surfaces.
 
 ## Requirements
 

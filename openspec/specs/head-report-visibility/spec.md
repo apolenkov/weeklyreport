@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change demo-feedback-polish. Update Purpose after archive.
+Let heads see live draft content before submission while retaining submission as the gate for publish and rollback actions rather than visibility.
 
 ## Requirements
 

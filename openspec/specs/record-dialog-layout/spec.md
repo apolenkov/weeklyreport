@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change unify-record-dialogs. Update Purpose after archive.
+Give item, risk, and decision editors one consistent two-column record-dialog layout.
 
 ## Requirements
 

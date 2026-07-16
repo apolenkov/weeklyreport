@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change lead-history-and-submit-label. Update Purpose after archive.
+Present lead report history in period order with completed-period-only aggregates, matching denominators, and direct history navigation.
 
 ## Requirements
 

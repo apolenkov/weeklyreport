@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change toolbar-polish. Update Purpose after archive.
+Keep lead and head toolbar controls consistent, evenly spaced, mode-safe, and behaviorally stable around PDF export and header toggles.
 
 ## Requirements
 

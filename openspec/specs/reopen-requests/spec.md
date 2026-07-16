@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change reopen-request-lifecycle. Update Purpose after archive.
+Define the scoped, race-safe request and decision lifecycle that lets a lead ask a head or admin to reopen a submitted section.
 
 ## Requirements
 

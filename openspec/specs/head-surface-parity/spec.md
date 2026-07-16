@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change head-surface-parity-declutter. Update Purpose after archive.
+Align head slides, dashboard, and report toolbar chrome with the shared lead/report vocabulary while removing redundant non-signal controls.
 
 ## Requirements
 

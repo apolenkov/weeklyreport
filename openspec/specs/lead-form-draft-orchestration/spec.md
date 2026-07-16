@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change refactor-lead-form-draft-orchestration. Update Purpose after archive.
+Coordinate lead draft state and optimistic-lock versions through one tested hook that refetches and reports stale-version conflicts.
 
 ## Requirements
 

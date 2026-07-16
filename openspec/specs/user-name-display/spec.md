@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change user-name-display-policy. Update Purpose after archive.
+Apply one canonical user-name display form per surface, including short cross-author stage-owner labels.
 
 ## Requirements
 

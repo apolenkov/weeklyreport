@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change refactor-lead-form-write-actions. Update Purpose after archive.
+Route lead-form writes through one tested action boundary while preserving optimistic locking, conflict handling, and user-visible side effects.
 
 ## Requirements
 

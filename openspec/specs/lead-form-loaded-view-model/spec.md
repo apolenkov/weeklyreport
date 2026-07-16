@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change refactor-lead-form-loaded-view-model. Update Purpose after archive.
+Derive the loaded lead-form view, cross-author visibility, activity alarms, and available affordances through one behavior-compatible view model.
 
 ## Requirements
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change toolbar-two-row-document-vs-context. Update Purpose after archive.
+Organize report header actions and context controls into stable, accessible groups that remain reachable across roles, view modes, period states, and narrow widths.
 
 ## Requirements
 
