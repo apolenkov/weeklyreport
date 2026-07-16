@@ -20,7 +20,7 @@ import type {
   RiskEntry,
 } from "../model/types";
 import { useLeadFormDraftSeam } from "./lead-form-draft-seam";
-import { LeadFormLoaded } from "./lead-form-loaded";
+import { LeadFormLoaded, type LeadFormLoadedData } from "./lead-form-loaded";
 import { buildLeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
 import type { LeadFormLoadedContext } from "./lead-form-submit-context";
@@ -187,6 +187,21 @@ export function LeadForm({
   };
   const onQuickAdd = (kind: QuickAddKind) => quickAddByKind[kind]();
 
+  // The declared slice `LeadFormLoaded` and its children read — narrower than
+  // `data`, which also carries this component's own draft/chrome inputs.
+  const loadedData: LeadFormLoadedData = {
+    byPeriodData: data.byPeriodData,
+    toolbarVisibility: data.toolbarVisibility,
+    setRecordVisibility: data.setRecordVisibility,
+    isForeignSlidesDeck: data.isForeignSlidesDeck,
+    targetReportId: data.targetReportId,
+    activeReportId: data.activeReportId,
+    visibilityHydrated: data.visibilityHydrated,
+    unifiedView: data.unifiedView,
+    recordVisibility: data.recordVisibility,
+    crossAuthors: data.crossAuthors,
+  };
+
   const patchItem = (
     itemId: string,
     patch: Partial<ReportSectionReadModel["items"][number]>,
@@ -231,7 +246,7 @@ export function LeadForm({
 
   return (
     <LeadFormLoaded
-      data={data}
+      data={loadedData}
       viewModel={viewModel}
       draftSection={draft.draft}
       autosave={draft.autosave}

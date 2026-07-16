@@ -3,9 +3,11 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 
-import type { useFullscreen } from "../../../hooks/use-fullscreen";
+import type { FullscreenHandle } from "../../../hooks/use-fullscreen";
 import type { AutosaveSnapshot } from "../../../hooks/use-lead-form-autosave";
+import type { RecordVisibility } from "../../../hooks/use-record-visibility";
 import { SdlcTooltipProvider } from "../../../shared/ui/sdlc-tooltip";
+import type { CrossAuthorEntry } from "../../period";
 import { LeadSlidesClient } from "../../slides";
 import type { LeadSubmitReadiness } from "../model/lead-submit-readiness";
 import {
@@ -28,7 +30,6 @@ import { LeadStickyCompletionActions } from "./lead-sticky-completion-actions";
 import { LeadSubmitReadinessSummary } from "./lead-submit-readiness-summary";
 import type { QuickAddKind } from "./quick-add-button";
 import { useHeaderActionsVisibility } from "./use-header-actions-visibility";
-import type { useLeadFormData } from "./use-lead-form-data";
 
 type LeadFormLoadedActions = LeadFormEditSectionsActions &
   LeadFormDialogsQuickAdd & {
@@ -37,8 +38,29 @@ type LeadFormLoadedActions = LeadFormEditSectionsActions &
 type LeadFormLoadedWriteActions = LeadFormHeaderWriteActions &
   LeadFormDialogsWriteActions & { readonly handleSubmit: () => void };
 
+/**
+ * Exactly the fields `LeadFormLoaded` and its children read from the
+ * lead-form data-loading hook — a declared seam instead of the hook's own
+ * return type, so a consumer never has to chase the hook to know what it may
+ * read.
+ */
+export interface LeadFormLoadedData {
+  readonly byPeriodData:
+    | { readonly section: ReportSectionReadModel }
+    | undefined;
+  readonly toolbarVisibility: RecordVisibility;
+  readonly setRecordVisibility: (next: RecordVisibility) => void;
+  readonly isForeignSlidesDeck: boolean;
+  readonly targetReportId: string;
+  readonly activeReportId: string;
+  readonly visibilityHydrated: boolean;
+  readonly unifiedView: boolean;
+  readonly recordVisibility: RecordVisibility;
+  readonly crossAuthors: CrossAuthorEntry[];
+}
+
 interface LeadFormLoadedProps {
-  readonly data: ReturnType<typeof useLeadFormData>;
+  readonly data: LeadFormLoadedData;
   readonly viewModel: LeadFormLoadedViewModel;
   readonly draftSection: ReportSectionReadModel;
   readonly autosave: AutosaveSnapshot;
@@ -54,11 +76,30 @@ interface LeadFormLoadedProps {
   readonly setGroupExpanded: Dispatch<SetStateAction<boolean>>;
   readonly deckRef: RefObject<HTMLDivElement | null>;
   readonly fullscreenToggleRef: RefObject<HTMLButtonElement | null>;
-  readonly slidesFullscreen: ReturnType<typeof useFullscreen>;
+  readonly slidesFullscreen: FullscreenHandle;
   readonly unsetOwnStageCount: number;
 }
 
-function useCompletionPresentation(props: LeadFormLoadedProps) {
+/** Everything the completion surfaces render: actions + visibility switches. */
+interface CompletionPresentation {
+  readonly completionActions: {
+    readonly autosave: AutosaveSnapshot;
+    readonly onAdd: (kind: QuickAddKind) => void;
+    readonly addDisabled: boolean;
+    readonly onSubmit: () => void;
+    readonly submitDisabled: boolean;
+    readonly submitDisabledReason: string | undefined;
+  };
+  readonly headerActionsVisible: boolean;
+  readonly readiness: LeadSubmitReadiness;
+  readonly sentinelRef: (node: HTMLDivElement | null) => void;
+  readonly showCompletionSurface: boolean;
+  readonly showStickyCompletion: boolean;
+}
+
+function useCompletionPresentation(
+  props: LeadFormLoadedProps,
+): CompletionPresentation {
   const { headerActionsVisible, sentinelRef } = useHeaderActionsVisibility();
   const readiness = props.submitReadiness;
   const completionActions = {
@@ -81,8 +122,6 @@ function useCompletionPresentation(props: LeadFormLoadedProps) {
     showStickyCompletion,
   };
 }
-
-type CompletionPresentation = ReturnType<typeof useCompletionPresentation>;
 
 function LoadedChrome({
   props,
