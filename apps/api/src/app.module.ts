@@ -29,7 +29,7 @@ import { ObservabilityModule } from "./modules/observability/index.js";
 import { OrganizationModule } from "./modules/organization/index.js";
 import { PdfExportModule } from "./modules/pdf-export/index.js";
 import { PdfExportService } from "./modules/pdf-export/index.js";
-import { PeriodModule } from "./modules/period/index.js";
+import { PeriodModule } from "./modules/period/module.js";
 import { ProjectActivityModule } from "./modules/project-activity/index.js";
 import { PublicationModule } from "./modules/publication/index.js";
 import { RemindersModule } from "./modules/reminders/index.js";

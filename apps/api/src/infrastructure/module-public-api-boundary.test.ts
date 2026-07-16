@@ -62,7 +62,9 @@ describe("API module public boundary", () => {
     expect(messages).toEqual([
       expect.objectContaining({
         ruleId: "import-x/no-restricted-paths",
-        message: expect.stringContaining("index.ts public API") as unknown,
+        message: expect.stringContaining(
+          "through an owning public entrypoint",
+        ) as unknown,
       }),
     ]);
   }, 20_000);
