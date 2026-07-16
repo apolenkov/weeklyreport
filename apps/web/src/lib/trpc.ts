@@ -3,6 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import {
   createTRPCClient as createTRPCClientCore,
   httpBatchLink,
+  splitLink,
   TRPCClientError,
   type TRPCLink,
 } from "@trpc/client";
@@ -25,6 +26,17 @@ const AUTH_REDIRECT_EXEMPT = /^\/(?:$|auth(?:\/|$))/;
 
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_CONFLICT = 409;
+
+const PROGRESSIVE_DASHBOARD_PROCEDURES = [
+  "admin.listReopenRequests",
+  "activity.live",
+  "review.dashboard",
+  "weeklyReport.get",
+] as const;
+
+export function isProgressiveDashboardProcedure(path: string): boolean {
+  return (PROGRESSIVE_DASHBOARD_PROCEDURES as readonly string[]).includes(path);
+}
 
 /**
  * Pure function exported for unit testing. Given an unknown error captured
@@ -105,15 +117,24 @@ export function isConflictError(err: unknown): boolean {
 // ---------------------------------------------------------------------------
 
 export function makeTRPCClient() {
+  const transportOptions = {
+    transformer: superjson,
+    url: "/trpc",
+    fetch: fetchWithTraceparent,
+  } as const;
+
   return createTRPCClientCore<AppRouter>({
     links: [
-      // Auth redirect MUST come before httpBatchLink so it can observe the
+      // Auth redirect MUST come before the transport so it can observe the
       // network error stream and short-circuit before the caller sees it.
       createAuthRedirectLink(),
-      httpBatchLink({
-        transformer: superjson,
-        url: "/trpc",
-        fetch: fetchWithTraceparent,
+      splitLink({
+        condition: ({ path }) => isProgressiveDashboardProcedure(path),
+        // A slow dashboard source must not hold ready sibling panels inside
+        // one batch response. Keep the batch wire format, but isolate each
+        // independently rendered root query at the transport boundary.
+        true: httpBatchLink({ ...transportOptions, maxItems: 1 }),
+        false: httpBatchLink(transportOptions),
       }),
     ],
   });

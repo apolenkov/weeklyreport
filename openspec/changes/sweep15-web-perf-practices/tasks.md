@@ -17,7 +17,7 @@
 - [x] 3.1 Add `experimental.optimizePackageImports` for `lucide-react` and `recharts` in `apps/web/next.config.ts` and verify the production build accepts the option.
 - [x] 3.2 Point all Trends `dynamic()` loaders at the concrete chart files while preserving `ssr: false`, named exports, and `ChartSkeleton` fallbacks.
 - [x] 3.3 Configure Fraunces, Lexend, and Source Sans 3 with `next/font/google`, apply CSS variables compatible with existing font tokens, and remove Google stylesheet/preconnect tags and `TODO(VERCEL-FONT)`.
-- [ ] 3.4 Run visual comparisons for representative lead, head dashboard, admin, viewer, and print typography/layout states.
+- [x] 3.4 Run visual comparisons for representative lead, head dashboard, admin, viewer, and print typography/layout states.
 
 ## 4. Truthful Suspense boundaries
 
@@ -29,7 +29,7 @@
 
 - [x] 5.1 Run focused AdminPanel tab-query and dashboard partial-readiness/error/retry tests.
 - [x] 5.2 Run focused Trends and route-loading tests, then `pnpm build` and inspect that direct chart chunks and self-hosted font assets are emitted.
-- [ ] 5.3 Verify in a source-run browser that inactive admin tabs issue no parent requests and one slow dashboard query does not block ready panels.
+- [x] 5.3 Verify in a source-run browser that inactive admin tabs issue no parent requests and one slow dashboard query does not block ready panels.
 
 ## 6. Repository gates
 
