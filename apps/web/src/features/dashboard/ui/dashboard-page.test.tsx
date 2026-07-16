@@ -10,6 +10,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { logClientError } from "../../../lib/client-error-reporting";
 import { DashboardPage } from "./dashboard-page";
+import {
+  ACTIVE_ACTIVITY,
+  ACTIVE_WEEKLY,
+  queryStates,
+  setQueryState,
+} from "./dashboard-page.fixtures";
 import { DASHBOARD_LOAD_STALL_MS } from "./use-dashboard-query-recovery";
 
 vi.mock("@tanstack/react-query", () => ({
@@ -26,6 +32,9 @@ vi.mock("../../../lib/client-error-reporting", () => ({
 }));
 vi.mock("../../../lib/trpc-context", () => ({
   useTRPC: () => ({
+    activity: {
+      live: { queryOptions: () => ({ queryKey: ["activity.live"] }) },
+    },
     review: {
       dashboard: { queryOptions: () => ({ queryKey: ["review.dashboard"] }) },
     },
@@ -34,10 +43,6 @@ vi.mock("../../../lib/trpc-context", () => ({
     },
     leadForm: { revokeAllSubmitted: { mutationOptions: () => ({}) } },
   }),
-}));
-vi.mock("../../review", () => ({
-  SectionReviewStrip: () => <div>Review context</div>,
-  toSectionReviewRows: () => [],
 }));
 vi.mock("../model/dashboard", () => ({
   mapWeeklyDashboardData: () => ({
@@ -48,9 +53,6 @@ vi.mock("../model/dashboard", () => ({
     leads: [],
     pendingLeads: [],
   }),
-}));
-vi.mock("./activity-live-panel", () => ({
-  ActivityLivePanel: () => <div>Activity</div>,
 }));
 vi.mock("./kpi-cards", () => ({ KpiCards: () => <div>KPI</div> }));
 vi.mock("./lead-summary-table", () => ({
@@ -67,42 +69,11 @@ vi.mock("../../../shared/ui/confirmation-dialog", () => ({
   ConfirmationDialog: () => null,
 }));
 
-interface QueryState {
-  readonly data?: unknown;
-  readonly error?: Error | null;
-  readonly isError?: boolean;
-  readonly status?: "pending" | "error" | "success";
-  readonly fetchStatus?: "fetching" | "paused" | "idle";
-  readonly refetch?: ReturnType<typeof vi.fn>;
-}
-
-const ACTIVE_WEEKLY = {
-  status: "active",
-  reportId: "report-1",
-  weekLabel: "Week 20",
-  periodStatus: "open",
-  submissionCount: 2,
-  hasActiveReminderRule: true,
-  leadSections: [],
-};
-const queryStates = new Map<string, Required<QueryState>>();
-
-function setQueryState(key: string, overrides: QueryState) {
-  queryStates.set(key, {
-    data: undefined,
-    error: null,
-    isError: false,
-    status: "success",
-    fetchStatus: "idle",
-    refetch: vi.fn().mockResolvedValue({ data: overrides.data }),
-    ...overrides,
-  });
-}
-
 describe("DashboardPage progressive readiness", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     queryStates.clear();
+    setQueryState("activity.live", { data: ACTIVE_ACTIVITY });
     vi.mocked(useQuery).mockImplementation((options: unknown) => {
       const key = (options as { queryKey: [string] }).queryKey[0];
       const state = queryStates.get(key);
@@ -115,15 +86,15 @@ describe("DashboardPage progressive readiness", () => {
     vi.useRealTimers();
   });
 
-  it("renders all panels when both root queries are ready", () => {
+  it("renders the canonical queue without the duplicate activity and review rosters", () => {
     setQueryState("review.dashboard", { data: [] });
     setQueryState("weeklyReport.get", { data: ACTIVE_WEEKLY });
     render(<DashboardPage />);
     expect(screen.getByText("Week 20 · CustomReport")).toBeInTheDocument();
-    expect(screen.getByText("Activity")).toBeInTheDocument();
     expect(screen.getByText("KPI")).toBeInTheDocument();
     expect(screen.getByText("Lead summary")).toBeInTheDocument();
-    expect(screen.getByText("Review context")).toBeInTheDocument();
+    expect(screen.queryByText("Activity")).not.toBeInTheDocument();
+    expect(screen.queryByText("Review context")).not.toBeInTheDocument();
     expect(screen.getByText("Reopen requests")).toBeInTheDocument();
     expect(screen.getByText("Blocked")).toBeInTheDocument();
   });
@@ -137,10 +108,12 @@ describe("DashboardPage progressive readiness", () => {
     render(<DashboardPage />);
     expect(screen.getByText("KPI")).toBeInTheDocument();
     expect(screen.getByText("Blocked")).toBeInTheDocument();
-    expect(screen.getByText("Review context")).toBeInTheDocument();
+    const bulkActions = screen.getByText("Bulk actions");
+    expect(bulkActions).toBeInTheDocument();
+    fireEvent.click(bulkActions);
     expect(
       screen.getByRole("button", { name: "Revoke All (2)" }),
-    ).toBeInTheDocument();
+    ).toBeVisible();
     expect(screen.getByTestId("dashboard-leads-loading")).toBeInTheDocument();
     expect(screen.getByTestId("dashboard-alert-loading")).toBeInTheDocument();
   });
@@ -152,11 +125,27 @@ describe("DashboardPage progressive readiness", () => {
       fetchStatus: "fetching",
     });
     render(<DashboardPage />);
-    expect(screen.getByText("Activity")).toBeInTheDocument();
     expect(screen.getByText("Reopen requests")).toBeInTheDocument();
     expect(screen.getByTestId("dashboard-kpi-loading")).toBeInTheDocument();
     expect(screen.getByTestId("dashboard-leads-loading")).toBeInTheDocument();
     expect(screen.getByTestId("dashboard-blocked-loading")).toBeInTheDocument();
+  });
+
+  it("limits activity freshness loading to the canonical queue", () => {
+    setQueryState("activity.live", {
+      status: "pending",
+      fetchStatus: "fetching",
+    });
+    setQueryState("review.dashboard", { data: [] });
+    setQueryState("weeklyReport.get", { data: ACTIVE_WEEKLY });
+
+    render(<DashboardPage />);
+
+    expect(screen.getByText("KPI")).toBeInTheDocument();
+    expect(screen.getByText("Alerts")).toBeInTheDocument();
+    expect(screen.getByText("Reopen requests")).toBeInTheDocument();
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-leads-loading")).toBeInTheDocument();
   });
 
   it("scopes a review failure and retry to review-backed panels", () => {

@@ -20,9 +20,9 @@ routes:
       - id: head-dashboard-revoke-all-submissions
         intent: "Revoke all lead submissions at once to return all forms to Draft status"
         given: "The current period is not yet published and there is at least one submitted lead form"
-        when: "the head clicks the Revoke All button and confirms the dialog"
-        then: "The submission state is reverted to Draft for all listed leads, a success toast appears showing the count of revoked submissions, and the Period Summary table updates to reflect Draft status"
-        note: "Calls leadForm.revokeAllSubmitted; available only when period is open/reopened and submittedCount > 0. Count shown on button label."
+        when: "the head expands the secondary Bulk actions area, clicks Revoke All, and confirms the dialog"
+        then: "The submission state is reverted to Draft for all listed leads, a success toast appears showing the count of revoked submissions, and the Period Summary queue updates to reflect Draft status"
+        note: "Calls leadForm.revokeAllSubmitted; available only when period is open/reopened and submittedCount > 0. The destructive action is collapsed below normal queue actions."
       - id: head-dashboard-view-status-report
         intent: "Navigate to the active period's unified status report for review and publication"
         given: "An active reporting period exists with a reportId"
@@ -36,23 +36,47 @@ routes:
         then: "A success toast shows how many reminders were dispatched (and how many were already sent or skipped in the current cycle); if no rule is configured, a toast directs the head to Admin → Reminders"
         note: "Calls reminders.dispatchPending without leadId filter; applies to all pending leads. Disabled when canSendReminder=false (no active rule)."
       - id: head-dashboard-send-reminder-single-lead
-        intent: "Send a reminder email to a single lead who is still in Draft status"
-        given: "A lead has status Draft (form started but not submitted) and the period is open"
-        when: "the head clicks Remind next to that lead in the Period Summary table"
+        intent: "Send a reminder email to one lead with open work"
+        given: "A lead is Not started or In progress, the period is editable, and an active reminder rule exists"
+        when: "the head clicks the contextual Remind action in that lead's Period Summary queue row"
         then: "A success toast shows 'Sent' (or 'Already sent' if this cycle already reminded the lead); the button label changes and becomes disabled briefly, then resets"
-        note: "Calls reminders.dispatchPending with leadId filter. Appears only for Draft-status rows in the Period Summary table."
+        note: "Calls reminders.dispatchPending with leadId filter and refreshes review, weekly, and activity queue sources after success."
       - id: head-dashboard-revoke-single-submission
         intent: "Revoke a single lead's submitted form to return it to Draft status"
         given: "A lead has Submitted status and the period is not published"
-        when: "the head clicks Revoke next to that lead in the Period Summary table and confirms the dialog"
-        then: "The lead's status changes to Draft, a success toast appears confirming revocation, and the Period Summary table updates to show Draft status for that row"
-        note: "Calls leadForm.revoke; appears only for Submitted-status rows in the Period Summary table."
+        when: "the head expands that lead's Period Summary queue row, clicks Revoke, and confirms the dialog"
+        then: "The lead's status changes to Draft, a success toast appears confirming revocation, and the same queue row updates to show In progress"
+        note: "Calls leadForm.revoke; appears only for Submitted rows in an editable period and remains distinct from Request Changes."
       - id: head-dashboard-view-lead-detailed-report
-        intent: "Navigate to a specific lead's completed report section for review"
-        given: "A lead has submitted their form or has draft content (itemCount + riskCount + decisionCount + priorityCount > 0)"
-        when: "the head clicks a submitted lead row in the Submission Activity panel"
+        intent: "Open a specific lead's content-bearing draft or submission"
+        given: "A lead has report content, whether In progress or Submitted"
+        when: "the head clicks Open in that lead's Period Summary queue row"
         then: "The page navigates to /head/report/{reportId}?authorId={leadId} and displays that lead's report section in focused view"
-        note: "Only clickable for submitted sections with content; draft rows and empty rows are not clickable."
+        note: "The canonical queue preserves the content-bearing draft drilldown; empty rows do not offer Open."
+      - id: head-dashboard-expand-lead-queue-row
+        intent: "Inspect one lead's detailed content, freshness, review, and action context without leaving the dashboard"
+        given: "The lead appears once as a collapsed Period Summary queue row"
+        when: "the head activates Details"
+        then: "aria-expanded becomes true and the controlled detail reveals product/activity counts, last edit and submission freshness, review history summary, attention state, and valid secondary actions"
+        note: "The vertical queue is ordered by action need and remains stacked without horizontal scroll at desktop, tablet, and phone widths."
+      - id: head-dashboard-review-submission
+        intent: "Open a reviewable submitted section on the existing report review surface"
+        given: "A submitted lead section has canReview and no current approval"
+        when: "the head clicks the row's primary Review action"
+        then: "The page navigates to /head/report/{reportId}?authorId={leadId}, where the existing Read/Review surface can judge that focused section"
+        note: "Review reuses the addressed head report; no new workflow state or route is introduced."
+      - id: head-dashboard-request-changes
+        intent: "Return a submitted section to its lead with a changes-requested verdict"
+        given: "A submitted lead section has canReview in an editable period"
+        when: "the head expands the queue row and clicks Request Changes"
+        then: "review.verdict records changes_requested at the displayed section version, the section returns to Draft when applicable, and all queue sources refresh"
+        note: "The action uses the existing optimistic-concurrency review mutation and remains distinct from explicit Revoke."
+      - id: head-dashboard-published-queue-read-only
+        intent: "Inspect a published period without exposing live mutations"
+        given: "The Period Summary queue displays a published period"
+        when: "the head scans or expands any lead row"
+        then: "Content-bearing rows retain Open, while Remind, Review, Request Changes, Revoke, and Revoke All are absent"
+        note: "Published-period action gates are derived from the same server-backed weekly and review models."
   - route: /head/history
     access: [head]
     intents:

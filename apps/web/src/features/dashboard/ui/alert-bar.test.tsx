@@ -1,9 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * Regression coverage for the dashboard alert-bar. The "Configure
- * reminders" link is admin-only; head/lead/viewer
- * sessions should never see it even when canSendReminder=false.
+ * Regression coverage for the dashboard alert-bar. The "Configure reminders"
+ * link is admin-only; non-admin sessions never see it when reminders are off.
  */
 import "@testing-library/jest-dom/vitest";
 
@@ -82,7 +81,7 @@ const baseProps = {
  *   Row 1 (unit-rtl/high): AlertIcon svg has aria-hidden="true"
  *   Row 2 (snapshot/high): svg with aria-hidden="true" present in rendered DOM
  *   Row 3 (snapshot/high): alert bar semantic structure — decorative SVG hidden,
- *     button type="button", pending-names spans all rendered
+ *     button type="button", aggregate pending count rendered
  */
 describe("VA-0a: AlertIcon SVG aria-hidden", () => {
   it("AlertIcon svg has aria-hidden='true'", () => {
@@ -106,7 +105,7 @@ describe("VA-0b: AlertBar snapshots", () => {
     expect(svgEl).toMatchSnapshot();
   });
 
-  it("alert bar semantic structure — decorative SVG hidden, button type='button', pending spans rendered (snapshot)", () => {
+  it("alert bar semantic structure — decorative SVG hidden, button type='button', aggregate count rendered (snapshot)", () => {
     mockRole("head");
     const { container } = render(
       <AlertBar
@@ -209,15 +208,15 @@ describe("AlertBar — role gating", () => {
 });
 
 describe("AlertBar — pending label accuracy", () => {
-  it("labels every pending lead 'Not started' and never 'Draft'", () => {
+  it("renders an aggregate count without creating a second lead roster", () => {
     mockRole(null);
 
     render(<AlertBar {...baseProps} pendingLeads={["Alice", "Bob"]} />);
 
-    expect(screen.getByText("Alice")).toBeInTheDocument();
-    expect(screen.getByText("Bob")).toBeInTheDocument();
-    expect(screen.getAllByText(/Not started/)).toHaveLength(2);
-    expect(screen.queryByText(/Draft/)).not.toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText(/leads haven't started/i)).toBeInTheDocument();
+    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+    expect(screen.queryByText("Bob")).not.toBeInTheDocument();
   });
 });
 
@@ -244,7 +243,7 @@ describe("AlertBar — no reopen surface", () => {
       <AlertBar {...baseProps} pendingLeads={["Alice"]} canSendReminder />,
     );
 
-    expect(screen.getByText(/haven't submitted/i)).toBeInTheDocument();
+    expect(screen.getByText(/haven't started/i)).toBeInTheDocument();
     expect(screen.queryByText(/reopen request/i)).not.toBeInTheDocument();
   });
 });

@@ -76,16 +76,6 @@ export function AlertBar({
 
   if (pendingLeads.length === 0) return null;
 
-  const pendingNames = pendingLeads.map((name, i) => {
-    const isLast = i === pendingLeads.length - 1;
-    return (
-      <span key={name}>
-        <strong>{name}</strong> (Not started)
-        {!isLast && " and "}
-      </span>
-    );
-  });
-
   return (
     <div
       className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[#fffbeb] p-3 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
@@ -93,7 +83,10 @@ export function AlertBar({
     >
       <AlertIcon />
       <div className="flex flex-1 flex-col gap-1 text-sm">
-        <span>{pendingNames} haven&apos;t submitted</span>
+        <span>
+          <strong>{pendingLeads.length}</strong> lead
+          {pendingLeads.length === 1 ? "" : "s"} haven&apos;t started
+        </span>
       </div>
       <button
         type="button"

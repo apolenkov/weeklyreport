@@ -1,18 +1,17 @@
 "use client";
 
 import type {
+  ActivityLiveResponse,
   SubmissionDashboardRow,
   WeeklyReportReadModel,
 } from "@customreport/shared";
 import type { ReactElement } from "react";
 
 import { formatClientErrorMessage } from "../../../lib/client-error-reporting";
-import { SectionReviewStrip, toSectionReviewRows } from "../../review";
 import {
   mapReviewDashboardData,
   mapWeeklyDashboardData,
 } from "../model/dashboard";
-import { ActivityLivePanel } from "./activity-live-panel";
 import { AlertBar } from "./alert-bar";
 import { BlockedAtRiskTable } from "./blocked-at-risk-table";
 import {
@@ -34,6 +33,8 @@ export interface DashboardSourceState {
 
 interface DashboardContentProps {
   readonly organizationName: string;
+  readonly activity?: ActivityLiveResponse;
+  readonly activityState: DashboardSourceState;
   readonly review?: SubmissionDashboardRow[];
   readonly reviewState: DashboardSourceState;
   readonly weeklyReport?: WeeklyReportReadModel;
@@ -97,15 +98,18 @@ function DashboardHeader({
   );
 }
 
-function resolveReviewSource(
-  review: DashboardSourceState,
-  weekly: DashboardSourceState,
+function resolveDependentSource(
+  sources: readonly [DashboardSourceState, ...DashboardSourceState[]],
 ): DashboardSourceState {
-  return weekly.isError || weekly.stalled ? weekly : review;
+  return (
+    sources.find((source) => source.isError || source.stalled) ?? sources[0]
+  );
 }
 
 interface DashboardPanelsProps {
-  readonly review?: ReturnType<typeof mapReviewDashboardData>;
+  readonly queue?: ReturnType<typeof mapReviewDashboardData>;
+  readonly pending?: ReturnType<typeof mapReviewDashboardData>;
+  readonly queueSource: DashboardSourceState;
   readonly reviewSource: DashboardSourceState;
   readonly weekly?: ReturnType<typeof mapWeeklyDashboardData>;
   readonly weeklyReport?: WeeklyReportReadModel;
@@ -128,42 +132,29 @@ function DashboardPanels(props: DashboardPanelsProps) {
       </DashboardSourceSlot>
       <DashboardSourceSlot
         kind="leads"
-        ready={props.review !== undefined}
-        source={props.reviewSource}
+        ready={props.queue !== undefined}
+        source={props.queueSource}
         title="Period summary"
       >
-        {props.review && reportId ? (
+        {props.queue && reportId ? (
           <LeadSummaryTable
-            leads={props.review.leads}
+            leads={props.queue.leads}
             reportId={reportId}
-            canSendReminder={props.canSendReminder}
+            onMutated={props.onRefreshDashboard}
           />
         ) : null}
       </DashboardSourceSlot>
       <DashboardSourceSlot
         kind="alert"
-        ready={props.review !== undefined}
+        ready={props.pending !== undefined}
         source={props.reviewSource}
         title="Pending leads"
       >
-        {props.review && reportId ? (
+        {props.pending && reportId ? (
           <AlertBar
-            pendingLeads={props.review.pendingLeads}
+            pendingLeads={props.pending.pendingLeads}
             reportId={reportId}
             canSendReminder={props.canSendReminder}
-          />
-        ) : null}
-      </DashboardSourceSlot>
-      <DashboardSourceSlot
-        kind="review"
-        ready={props.weeklyReport !== undefined}
-        source={props.weeklyState}
-        title="Review context"
-      >
-        {props.weeklyReport ? (
-          <SectionReviewStrip
-            sections={toSectionReviewRows(props.weeklyReport.leadSections)}
-            onMutated={props.onRefreshDashboard}
           />
         ) : null}
       </DashboardSourceSlot>
@@ -184,6 +175,8 @@ function DashboardPanels(props: DashboardPanelsProps) {
 
 export function DashboardContent({
   organizationName,
+  activity,
+  activityState,
   review,
   reviewState,
   weeklyReport,
@@ -192,17 +185,28 @@ export function DashboardContent({
   onRevokeAll,
   onRefreshDashboard,
 }: DashboardContentProps) {
-  const reviewData =
+  const pendingData =
     review && weeklyReport
       ? mapReviewDashboardData({ review, weeklyReport })
+      : undefined;
+  const queueData =
+    review && weeklyReport && activity
+      ? mapReviewDashboardData({ review, weeklyReport, activity })
       : undefined;
   const weekly = weeklyReport
     ? mapWeeklyDashboardData({
         weeklyReport,
-        ...(reviewData ? { pendingCount: reviewData.pendingLeads.length } : {}),
+        ...(pendingData
+          ? { pendingCount: pendingData.pendingLeads.length }
+          : {}),
       })
     : undefined;
-  const reviewSource = resolveReviewSource(reviewState, weeklyState);
+  const reviewSource = resolveDependentSource([weeklyState, reviewState]);
+  const queueSource = resolveDependentSource([
+    weeklyState,
+    reviewState,
+    activityState,
+  ]);
   const canSendReminder = Boolean(
     weeklyReport &&
       weeklyReport.periodStatus !== "published" &&
@@ -216,21 +220,22 @@ export function DashboardContent({
         weekLabel={weeklyReport?.weekLabel}
         organizationName={organizationName}
       />
-      <DashboardRevokeAllControl
-        pending={revokeAllPending}
-        report={weeklyReport}
-        submittedCount={submittedCount}
-        onRevokeAll={onRevokeAll}
-      />
-      <ActivityLivePanel />
       <DashboardPanels
-        review={reviewData}
+        queue={queueData}
+        pending={pendingData}
+        queueSource={queueSource}
         reviewSource={reviewSource}
         weekly={weekly}
         weeklyReport={weeklyReport}
         weeklyState={weeklyState}
         canSendReminder={canSendReminder}
         onRefreshDashboard={onRefreshDashboard}
+      />
+      <DashboardRevokeAllControl
+        pending={revokeAllPending}
+        report={weeklyReport}
+        submittedCount={submittedCount}
+        onRevokeAll={onRevokeAll}
       />
     </div>
   );

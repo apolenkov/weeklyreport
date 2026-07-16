@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`VA-0b: AlertBar snapshots > alert bar semantic structure — decorative SVG hidden, button type='button', pending spans rendered (snapshot) 1`] = `
+exports[`VA-0b: AlertBar snapshots > alert bar semantic structure — decorative SVG hidden, button type='button', aggregate count rendered (snapshot) 1`] = `
 <div
   class="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[#fffbeb] p-3 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
   style="border-left: 3px solid var(--color-warning);"
@@ -36,20 +36,12 @@ exports[`VA-0b: AlertBar snapshots > alert bar semantic structure — decorative
     class="flex flex-1 flex-col gap-1 text-sm"
   >
     <span>
-      <span>
-        <strong>
-          Alice
-        </strong>
-         (Not started)
-         and 
-      </span>
-      <span>
-        <strong>
-          Bob
-        </strong>
-         (Not started)
-      </span>
-       haven't submitted
+      <strong>
+        2
+      </strong>
+       lead
+      s
+       haven't started
     </span>
   </div>
   <button

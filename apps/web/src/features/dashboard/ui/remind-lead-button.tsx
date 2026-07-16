@@ -10,6 +10,7 @@ interface RemindLeadButtonProps {
   readonly reportId: string;
   readonly leadId: string;
   readonly leadName: string;
+  readonly onMutated: () => void;
 }
 
 const NO_SECTION_CONFIRM_STATE = "no-section";
@@ -35,6 +36,7 @@ export function RemindLeadButton({
   reportId,
   leadId,
   leadName,
+  onMutated,
 }: RemindLeadButtonProps): React.JSX.Element {
   const trpc = useTRPC();
   const [confirm, setConfirm] = useState<ConfirmState>("idle");
@@ -72,6 +74,7 @@ export function RemindLeadButton({
         } else {
           setConfirm("error");
         }
+        onMutated();
         scheduleReset();
       },
       onError: () => {

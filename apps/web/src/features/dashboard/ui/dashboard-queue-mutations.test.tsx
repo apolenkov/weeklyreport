@@ -1,0 +1,151 @@
+/** @vitest-environment jsdom */
+import "@testing-library/jest-dom/vitest";
+
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { useMutationMock, invalidateQueries, invalidateReview, mutate } =
+  vi.hoisted(() => ({
+    useMutationMock: vi.fn(),
+    invalidateQueries: vi.fn(),
+    invalidateReview: vi.fn(),
+    mutate: vi.fn(),
+  }));
+
+vi.mock("@tanstack/react-query", () => ({
+  useMutation: (options: unknown) => useMutationMock(options) as unknown,
+  useQueryClient: () => ({ invalidateQueries }),
+}));
+vi.mock("sonner", () => ({
+  toast: { error: vi.fn(), success: vi.fn() },
+}));
+vi.mock("../../../lib/cache-keys", () => ({ invalidateReview }));
+vi.mock("../../../lib/trpc-context", () => ({
+  useTRPC: () => ({
+    activity: {
+      live: { queryOptions: () => ({ queryKey: ["activity.live"] }) },
+    },
+    leadForm: {
+      revoke: {
+        mutationOptions: (options: unknown) => ({ kind: "revoke", options }),
+      },
+    },
+    reminders: {
+      dispatchPending: {
+        mutationOptions: (options: unknown) => ({ kind: "remind", options }),
+      },
+    },
+    review: {
+      dashboard: { queryOptions: () => ({ queryKey: ["review.dashboard"] }) },
+      verdict: {
+        mutationOptions: (options: unknown) => ({ kind: "review", options }),
+      },
+    },
+    weeklyReport: {
+      get: { queryOptions: () => ({ queryKey: ["weeklyReport.get"] }) },
+    },
+  }),
+}));
+vi.mock("../../../shared/ui/confirmation-dialog", () => ({
+  ConfirmationDialog: ({
+    open,
+    onConfirm,
+  }: {
+    readonly open: boolean;
+    readonly onConfirm: () => void;
+  }) =>
+    open ? (
+      <button type="button" onClick={onConfirm}>
+        Confirm revoke
+      </button>
+    ) : null,
+}));
+
+import { RemindLeadButton } from "./remind-lead-button";
+import { RequestChangesButton } from "./request-changes-button";
+import { RevokeSectionButton } from "./revoke-lead-button";
+
+interface MockMutationOptions {
+  readonly kind: "remind" | "review" | "revoke";
+  readonly options: {
+    readonly onSuccess: (result: unknown) => void;
+  };
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  useMutationMock.mockImplementation((configuration: MockMutationOptions) => ({
+    isPending: false,
+    mutate: (input: unknown) => {
+      mutate(input);
+      const result =
+        configuration.kind === "remind"
+          ? { reason: null, dispatched: 1, alreadySent: 0, skipped: 0 }
+          : configuration.kind === "review"
+            ? { verdict: "changes_requested", unsubmitted: true }
+            : undefined;
+      configuration.options.onSuccess(result);
+    },
+  }));
+});
+
+describe("dashboard queue mutation transitions", () => {
+  it("refreshes all queue sources after a per-lead reminder", () => {
+    const onMutated = vi.fn();
+    render(
+      <RemindLeadButton
+        reportId="10000000-0000-4000-8000-000000000001"
+        leadId="20000000-0000-4000-8000-000000000001"
+        leadName="Alice Lead"
+        onMutated={onMutated}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /send reminder/i }));
+    expect(mutate).toHaveBeenCalledWith({
+      reportId: "10000000-0000-4000-8000-000000000001",
+      leadId: "20000000-0000-4000-8000-000000000001",
+    });
+    expect(onMutated).toHaveBeenCalledTimes(1);
+  });
+
+  it("posts the existing changes-requested verdict and refreshes the queue", () => {
+    const onMutated = vi.fn();
+    render(
+      <RequestChangesButton
+        reportSectionId="30000000-0000-4000-8000-000000000001"
+        version={4}
+        leadName="Alice Lead"
+        onMutated={onMutated}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Request Changes" }));
+    expect(mutate).toHaveBeenCalledWith({
+      reportSectionId: "30000000-0000-4000-8000-000000000001",
+      verdict: "changes_requested",
+      version: 4,
+    });
+    expect(invalidateReview).toHaveBeenCalledTimes(1);
+    expect(onMutated).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps per-lead revoke confirmed and refreshes the queue on success", () => {
+    const onMutated = vi.fn();
+    render(
+      <RevokeSectionButton
+        reportSectionId="30000000-0000-4000-8000-000000000001"
+        leadName="Alice Lead"
+        onMutated={onMutated}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /revoke alice/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm revoke" }));
+    expect(mutate).toHaveBeenCalledWith({
+      reportSectionId: "30000000-0000-4000-8000-000000000001",
+    });
+    expect(invalidateQueries).toHaveBeenCalledTimes(1);
+    expect(onMutated).toHaveBeenCalledTimes(1);
+  });
+});

@@ -15,7 +15,9 @@
  */
 
 import type {
+  ActivityLiveResponse,
   DbRole,
+  SectionReviewView,
   SubmissionDashboardRow,
   WeeklyReportReadModel,
 } from "@customreport/shared";
@@ -43,7 +45,9 @@ export interface LeadInfo {
   role: DbRole;
   status: LeadStatus;
   trafficLights: TrafficLight[];
-  lastActivity: string;
+  lastEditAt: Date | null;
+  submittedAt: Date | null;
+  isStale: boolean;
   isCurrentUser: boolean;
   productCount?: number;
   reportContentCount?: number;
@@ -57,6 +61,19 @@ export interface LeadInfo {
   submittedAtLabel?: string | null;
   /** The section UUID needed for the per-lead Revoke button. */
   reportSectionId?: string;
+  version?: number;
+  reviews: readonly SectionReviewView[];
+  reviewState: "changes-requested" | "approved" | "awaiting" | "none";
+  reviewLabel: string;
+  attentionLabel: "Blocked" | "At risk" | "On track" | "No signal";
+  actions: {
+    readonly canOpen: boolean;
+    readonly canRemind: boolean;
+    readonly canReview: boolean;
+    readonly canRequestChanges: boolean;
+    readonly canRevoke: boolean;
+  };
+  priority: "action-needed" | "stale" | "active" | "complete";
 }
 
 export interface KpiData {
@@ -84,8 +101,9 @@ export interface BlockedAtRiskItem {
 // ---- Composer ----
 
 export interface MapDashboardArgs {
-  review: SubmissionDashboardRow[];
+  review: readonly SubmissionDashboardRow[];
   weeklyReport: WeeklyReportReadModel;
+  activity?: ActivityLiveResponse;
   /** Override `now` for deterministic deadline tests. */
   now?: Date;
   /** Optional: identifier of the currently authenticated lead, used to flag isCurrentUser. */
@@ -101,8 +119,11 @@ export interface MapWeeklyDashboardArgs {
 }
 
 export interface MapReviewDashboardArgs {
-  review: SubmissionDashboardRow[];
+  review: readonly SubmissionDashboardRow[];
   weeklyReport: WeeklyReportReadModel;
+  activity?: ActivityLiveResponse;
+  /** Override `now` for deterministic queue freshness and ordering tests. */
+  now?: Date;
   currentUserId?: string;
 }
 
@@ -156,9 +177,17 @@ export function mapWeeklyDashboardData({
 export function mapReviewDashboardData({
   review,
   weeklyReport,
+  activity,
+  now = new Date(),
   currentUserId,
 }: MapReviewDashboardArgs): MappedReviewDashboard {
-  const leads = buildLeadInfos(review, weeklyReport, currentUserId);
+  const leads = buildLeadInfos({
+    review,
+    weeklyReport,
+    now,
+    ...(activity ? { activity } : {}),
+    ...(currentUserId ? { currentUserId } : {}),
+  });
   return {
     leads,
     pendingLeads: leads

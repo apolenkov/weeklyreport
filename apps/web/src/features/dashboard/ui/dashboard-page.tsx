@@ -44,6 +44,12 @@ export function DashboardPage() {
         isError: data.reviewQ.isError,
         ...data.reviewRecovery,
       }}
+      activity={data.activityQ.data}
+      activityState={{
+        error: data.activityQ.error,
+        isError: data.activityQ.isError,
+        ...data.activityRecovery,
+      }}
       weeklyReport={data.weeklyQ.data}
       weeklyState={{
         error: data.weeklyQ.error,

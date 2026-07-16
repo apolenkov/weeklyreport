@@ -11,6 +11,7 @@ import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
 interface RevokeSectionButtonProps {
   readonly reportSectionId: string;
   readonly leadName: string;
+  readonly onMutated: () => void;
 }
 
 /**
@@ -24,6 +25,7 @@ interface RevokeSectionButtonProps {
 export function RevokeSectionButton({
   reportSectionId,
   leadName,
+  onMutated,
 }: RevokeSectionButtonProps): React.JSX.Element {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -36,6 +38,7 @@ export function RevokeSectionButton({
         void queryClient.invalidateQueries(
           trpc.weeklyReport.get.queryOptions({}),
         );
+        onMutated();
       },
       onError: (err) => {
         toast.error(
