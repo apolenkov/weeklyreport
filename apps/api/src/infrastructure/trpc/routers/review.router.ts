@@ -94,26 +94,6 @@ export function createReviewRouter(deps: ReviewRouterDeps) {
       }
     }),
 
-    publish: headProcedure.mutation(async ({ ctx }) => {
-      try {
-        const reportId = await deps.weeklyReportService.getCurrentEditableId();
-
-        if (!reportId) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "No active period to publish.",
-          });
-        }
-
-        return await deps.publicationService.publishReport(
-          reportId,
-          ctx.session,
-        );
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    }),
-
     // review-acknowledgement: all on `leadershipProcedure` (head + admin +
     // viewer; lead excluded) so `role-coverage-gate` stays green; the
     // per-group scope + reviewer designation are enforced in the service.

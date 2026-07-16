@@ -5,12 +5,15 @@ import { createNullLogger } from "../../lib/logger.js";
 import { createAppRouter } from "./trpc.router.js";
 
 /**
- * `review.publish`, `review.assembledReport`, and `review.dashboard` must
- * resolve their target period from the DB via
- * `weeklyReportService.getCurrentEditableId()`, never from
- * `ctx.session.activeReportId` (baked into the JWT at login, so it can be
- * stale). These guard that resolution: routing any of the three at the stale
+ * `review.assembledReport` and `review.dashboard` must resolve their target
+ * period from the DB via `weeklyReportService.getCurrentEditableId()`, never
+ * from `ctx.session.activeReportId` (baked into the JWT at login, so it can
+ * be stale). These guard that resolution: routing either at the stale
  * `activeReportId` would fail here.
+ *
+ * `review.publish` used to be pinned here too; it was deleted in favor of
+ * `period.publish` (consolidate-publish-side-effects) — see
+ * `routers/period.router.test.ts` for that mutation's router-wiring pin.
  */
 
 const STALE_ACTIVE_REPORT_ID = "11111111-1111-4111-8111-111111111111";
@@ -21,13 +24,12 @@ function buildHeadCaller() {
   const getCurrentEditableId = vi.fn(() =>
     Promise.resolve(DB_RESOLVED_REPORT_ID),
   );
-  const publishReport = vi.fn(() => Promise.resolve({ published: true }));
   const getAssembledReport = vi.fn(() => Promise.resolve({ assembled: true }));
   const getSubmissionDashboard = vi.fn(() => Promise.resolve([]));
 
   const deps = {
     weeklyReportService: { getCurrentEditableId },
-    publicationService: { publishReport, getAssembledReport },
+    publicationService: { getAssembledReport },
     reviewService: { getSubmissionDashboard },
   } as unknown as Parameters<typeof createAppRouter>[0];
 
@@ -53,7 +55,6 @@ function buildHeadCaller() {
   return {
     caller,
     getCurrentEditableId,
-    publishReport,
     getAssembledReport,
     getSubmissionDashboard,
     session,
@@ -61,18 +62,6 @@ function buildHeadCaller() {
 }
 
 describe("review.* resolve the publish target from the DB, not the stale JWT", () => {
-  it("review.publish acts on the DB-resolved period, not session.activeReportId", async () => {
-    const { caller, publishReport, session } = buildHeadCaller();
-
-    await caller.review.publish();
-
-    expect(publishReport).toHaveBeenCalledWith(DB_RESOLVED_REPORT_ID, session);
-    expect(publishReport).not.toHaveBeenCalledWith(
-      STALE_ACTIVE_REPORT_ID,
-      expect.anything(),
-    );
-  });
-
   it("review.assembledReport reads the DB-resolved period, not session.activeReportId", async () => {
     const { caller, getAssembledReport } = buildHeadCaller();
 

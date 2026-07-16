@@ -9,6 +9,10 @@ import {
   NOOP_PERIOD_TELEMETRY,
   type PeriodTelemetry,
 } from "./period-telemetry.port.js";
+import {
+  emitPublishSideEffects,
+  type IngestionPublishHook,
+} from "./publish-side-effects.js";
 
 export class PeriodAccessError extends Error {
   constructor(message: string) {
@@ -120,21 +124,6 @@ export type ReopenPolicyReader = () => Promise<{
   reopenWindowHours: number;
 }>;
 
-/**
- * Fire-and-forget post-publish ingestion seam, called after a
- * successful `publishPeriod` with the just-published section ids.
- * Defaults to a no-op so existing tests (88+) that don't care about
- * ingestion stay green. Errors are swallowed by the caller so a
- * downstream consumer blip cannot fail a real-user publish action.
- *
- * The original AI/RAG consumer was removed; the seam is kept so a rebuilt
- * pipeline — or any other async consumer — can re-wire without
- * touching the publish path.
- */
-export type IngestionPublishHook = (
-  sectionIds: readonly string[],
-) => Promise<void>;
-
 export class PeriodService {
   constructor(
     private readonly repository: PeriodRepository,
@@ -206,34 +195,21 @@ export class PeriodService {
       return { success: true, reportId };
     }
 
-    await this.emitPublishSideEffects(reportId, priorStatus);
+    await emitPublishSideEffects(
+      {
+        telemetry: this.telemetry,
+        ingestionHook: this.ingestionHook,
+        invalidateAnalyticsCache: this.invalidateAnalyticsCache,
+      },
+      {
+        priorStatus,
+        // Read AFTER the publish transaction so sections that raced into the
+        // period before commit are still picked up.
+        getSectionIds: () => this.repository.listSectionIds(reportId),
+      },
+    );
 
     return { success: true, reportId };
-  }
-
-  /**
-   * Post-transition side-effects, emitted only after a real transition so a
-   * redundant or failed write never inflates the counters (mirrors the
-   * discipline in publication.service.ts). The ingestion enqueue reads the
-   * section ids AFTER the publish transaction so sections that raced into the
-   * period before commit are still picked up; its errors never bubble — a
-   * downstream consumer blip must not turn a successful publish into a 5xx.
-   */
-  private async emitPublishSideEffects(
-    reportId: string,
-    priorStatus: PeriodStatus,
-  ): Promise<void> {
-    this.telemetry.recordPublishedReport();
-    this.telemetry.recordPeriodPublished(priorStatus);
-
-    await this.invalidateAnalyticsCache();
-
-    try {
-      const sectionIds = await this.repository.listSectionIds(reportId);
-      await this.ingestionHook(sectionIds);
-    } catch {
-      // intentionally swallowed
-    }
   }
 
   /**

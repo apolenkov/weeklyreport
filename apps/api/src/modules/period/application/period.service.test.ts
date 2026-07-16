@@ -811,6 +811,95 @@ describe("PeriodService — manual-publish telemetry", () => {
       }),
     ).toBe(transitionsBefore);
   });
+
+  // Characterization pin: the
+  // ingestion hook receives the section ids read AFTER the publish
+  // transaction (not read before it), so sections that raced in before
+  // commit are still picked up.
+  it("enqueues ingestion with the section ids read after the publish transaction", async () => {
+    const ingestion = vi.fn(() => Promise.resolve());
+    const reports = new Map<string, SpyReport>([
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+        },
+      ],
+    ]);
+    const repo = createSpyRepository(reports);
+    const service = new PeriodService(
+      { ...repo, listSectionIds: () => Promise.resolve(["s1", "s2"]) },
+      noopInvalidate,
+      noGatingReopenPolicy,
+      ingestion,
+    );
+
+    await service.publishPeriod(reportId, headSession);
+
+    expect(ingestion).toHaveBeenCalledExactlyOnceWith(["s1", "s2"]);
+  });
+
+  // Characterization pin: an ingestion-hook failure is swallowed — the
+  // publish still resolves successfully (mirrors the discipline the
+  // publication module logs a warning for instead of throwing away silently).
+  it("swallows an ingestion hook failure without rejecting the publish", async () => {
+    const reports = new Map<string, SpyReport>([
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+        },
+      ],
+    ]);
+    const service = new PeriodService(
+      createSpyRepository(reports),
+      noopInvalidate,
+      noGatingReopenPolicy,
+      () => Promise.reject(new Error("queue down")),
+    );
+
+    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
+      { success: true, reportId },
+    );
+  });
+
+  // The post-commit section-id read shares the ingestion swallow: a transient
+  // read failure degrades ingestion, never the already-committed publish.
+  it("swallows a section-id read failure without rejecting the publish", async () => {
+    const reports = new Map<string, SpyReport>([
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+        },
+      ],
+    ]);
+    const repo = createSpyRepository(reports);
+    const ingestion = vi.fn(() => Promise.resolve());
+    const service = new PeriodService(
+      {
+        ...repo,
+        listSectionIds: () => Promise.reject(new Error("read blip")),
+      },
+      noopInvalidate,
+      noGatingReopenPolicy,
+      ingestion,
+    );
+
+    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
+      { success: true, reportId },
+    );
+    expect(ingestion).not.toHaveBeenCalled();
+  });
 });
 
 /* ------------------------------------------------------------------ */
