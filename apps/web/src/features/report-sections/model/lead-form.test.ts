@@ -915,6 +915,7 @@ describe("report-wide name resolution (referencedProjects)", () => {
           risk: "Cross-stage risk",
           impact: "Impact",
           mitigation: "Mitigation",
+          severity: "at-risk",
         },
       ],
     });
@@ -973,6 +974,7 @@ describe("report-wide name resolution (referencedProjects)", () => {
           risk: "Foreign risk",
           impact: "Impact",
           mitigation: "Mitigation",
+          severity: "at-risk",
         },
       ],
       decisions: [
@@ -1000,6 +1002,7 @@ describe("report-wide name resolution (referencedProjects)", () => {
           risk: "Owned-project risk",
           impact: "Impact",
           mitigation: "Mitigation",
+          severity: "at-risk",
         },
       ],
     });

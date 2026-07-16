@@ -16,7 +16,11 @@
  *     name. Drives the `mapForeign*` content mappers below.
  */
 
-import type { DbRole, TrafficLightStatus } from "@customreport/shared";
+import type {
+  DbRole,
+  RiskSeverity,
+  TrafficLightStatus,
+} from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 
 import {
@@ -77,7 +81,7 @@ export interface CrossAuthorContentRow {
     risk: string;
     impact: string;
     mitigation: string;
-    severity: string;
+    severity: RiskSeverity;
     stageNames: string[];
   }[];
   decisions: {
@@ -236,8 +240,7 @@ export function mapForeignItems(
     const alarmRisks = ca.risks.map((r) => ({
       productId: r.projectId,
       stageIds: r.stageNames,
-      severity:
-        r.severity === "blocked" ? ("blocked" as const) : ("at-risk" as const),
+      severity: r.severity,
       text: r.risk,
     }));
     return ca.items
@@ -281,7 +284,7 @@ export function mapForeignRisks(
         productId: r.projectId,
         productName: productNameById.get(r.projectId) ?? r.projectId,
         stageIds: r.stageNames,
-        severity: r.severity === "blocked" ? "blocked" : "at-risk",
+        severity: r.severity,
         text: r.risk,
         impact: r.impact,
         mitigation: r.mitigation,

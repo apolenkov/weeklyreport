@@ -36,6 +36,7 @@ const risk = (over: Partial<Risk> = {}): Risk => ({
   risk: "own risk",
   impact: "",
   mitigation: "",
+  severity: "at-risk",
   projectId: "p1",
   stageIds: [],
   ...over,

@@ -120,6 +120,7 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
         risk: `${Q} schedule risk`,
         impact: "high",
         mitigation: "mitigate",
+        severity: "at-risk",
       },
     });
   }

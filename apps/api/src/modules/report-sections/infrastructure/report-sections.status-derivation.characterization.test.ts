@@ -1,4 +1,4 @@
-import type { TrafficLightStatus } from "@customreport/shared";
+import type { RiskSeverity, TrafficLightStatus } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -7,7 +7,7 @@ import {
 } from "./report-sections.status-derivation";
 
 /**
- * dedupe-severity-floor-ranking: pins `deriveEffectiveProductStatus` and
+ * Pins `deriveEffectiveProductStatus` and
  * `deriveActivityStatus`'s current output over the severity × items ×
  * explicit-status permutation grid (traffic vocabulary, incl. `null`
  * handling) BEFORE the ranking core moves to the shared package. Frozen — do
@@ -32,7 +32,7 @@ describe("deriveEffectiveProductStatus — characterization grid", () => {
   const riskSets: {
     readonly label: string;
     readonly risks: readonly {
-      severity?: string;
+      severity: RiskSeverity;
       stageIds?: readonly string[];
     }[];
   }[] = [
@@ -44,10 +44,6 @@ describe("deriveEffectiveProductStatus — characterization grid", () => {
     {
       label: "covering blocked",
       risks: [{ severity: "blocked", stageIds: ["Development"] }],
-    },
-    {
-      label: "covering risk with undefined severity",
-      risks: [{ severity: undefined, stageIds: ["Development"] }],
     },
     {
       label: "non-covering risk",
@@ -117,7 +113,7 @@ describe("deriveActivityStatus — characterization grid", () => {
   ];
   const riskSets: {
     readonly label: string;
-    readonly risks: readonly { severity: string }[];
+    readonly risks: readonly { severity: RiskSeverity }[];
   }[] = [
     { label: "no risks", risks: [] },
     { label: "one at-risk", risks: [{ severity: "at-risk" }] },

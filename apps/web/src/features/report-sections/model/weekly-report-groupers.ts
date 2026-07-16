@@ -90,7 +90,7 @@ export function groupItemsByProject(
     const alarmRisks = section.risks.map((risk) => ({
       productId: risk.projectId ?? "",
       stageIds: risk.stageIds ?? undefined,
-      severity: risk.severity ?? ("at-risk" as const),
+      severity: risk.severity,
       text: risk.risk,
     }));
     for (const item of section.items) {
@@ -138,9 +138,7 @@ export function groupItemsByProject(
 }
 
 /**
- * Group risks across all sections by `projectId`. A risk missing an explicit
- * severity defaults to `'at-risk'` (there is no stored blocked item status to
- * infer from — rework-item-status-model).
+ * Group risks across all sections by `projectId`.
  *
  * `projectNames` is the REPORT-WIDE id→name map (fix-product-name-resolution):
  * resolving only against the owning section's projects rendered "Unknown" for
@@ -157,7 +155,6 @@ export function groupRisksByProject(
       // under their activity, not a product column — skip them here.
       if (risk.projectId == null) continue;
       const productName = projectNames.get(risk.projectId) ?? "Unknown";
-      const severity: "blocked" | "at-risk" = risk.severity ?? "at-risk";
       const text = `${risk.risk} — Impact: ${risk.impact} — Mitigation: ${risk.mitigation}`;
       // Same hardcoded-"Dev" fix as items: show the risk's real stage tags.
       const riskStages = (risk.stageIds ?? []).join("+");
@@ -168,7 +165,7 @@ export function groupRisksByProject(
         // Gutter fields for the redesigned risk row; `badge`/`text` stay for print.
         stage: riskStages,
         owner: initialsFromName(section.authorName),
-        severity,
+        severity: risk.severity,
         text,
         problem: risk.risk,
         impact: risk.impact,

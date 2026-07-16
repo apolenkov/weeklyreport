@@ -90,6 +90,11 @@ export function addItemTypeStatusIssue(
   }
 }
 export const riskSeveritySchema = z.enum(["at-risk", "blocked"]);
+/**
+ * The single source of truth for the risk severity value: every risk is
+ * explicitly `at-risk` or `blocked` — there is no third state and no default.
+ */
+export type RiskSeverity = z.infer<typeof riskSeveritySchema>;
 export const reportSectionStatusSchema = z.enum(["draft", "submitted"]);
 /**
  * The single source of truth for the report-section status value. The two

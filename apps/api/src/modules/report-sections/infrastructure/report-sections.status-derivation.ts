@@ -1,6 +1,7 @@
 import {
   canonicalToTrafficLight,
   riskCoversStage,
+  type RiskSeverity,
   riskSeverityToCanonicalFloor,
   type TrafficLightStatus,
 } from "@customreport/shared";
@@ -54,9 +55,9 @@ export function deriveEffectiveProductStatus(project: {
   risks?: readonly {
     // Nullable/optional: an activity-parented risk carries no product FK — it
     // never matches a product's projectId below, so it cannot floor product
-    // health. `undefined` tolerated for read-model risks (optional field).
+    // health.
     projectId?: string | null;
-    severity?: string;
+    severity: RiskSeverity;
     stageIds?: readonly string[];
   }[];
 }): TrafficLight | null {
@@ -67,11 +68,6 @@ export function deriveEffectiveProductStatus(project: {
     const coveringSeverity = aggregateTrafficLight(
       scopedRisks
         .filter((risk) => riskCoversStage(risk, stage.stageName))
-        // Only a risk with an explicit severity floors the stage — an
-        // unset severity on an otherwise-covering risk contributes nothing.
-        .filter(
-          (risk) => risk.severity === "blocked" || risk.severity === "at-risk",
-        )
         .map((risk) =>
           canonicalToTrafficLight(riskSeverityToCanonicalFloor(risk.severity)),
         ),
@@ -95,7 +91,7 @@ export function deriveEffectiveProductStatus(project: {
  */
 export function deriveActivityStatus(
   stored: TrafficLight | null,
-  ownRisks: readonly { severity: string }[],
+  ownRisks: readonly { severity: RiskSeverity }[],
 ): { derivedStatus: TrafficLight | null; alarmFloor: TrafficLight | null } {
   const alarmFloor = aggregateTrafficLight(
     ownRisks.map((risk) =>

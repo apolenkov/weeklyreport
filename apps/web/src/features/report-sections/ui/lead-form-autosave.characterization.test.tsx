@@ -1,6 +1,6 @@
 /**
  * Characterization pins for the lead-form AUTOSAVE CADENCE (task 1.1) — frozen
- * safety net for the `deepen-lead-form-draft-module` refactor. Kept in a
+ * safety net for the draft-module refactor. Kept in a
  * separate file from the dialog/gating pins because it drives fake timers for
  * the whole suite; mixing fake timers with RTL's `waitFor` in one file
  * deadlocks. Every assertion targets the public `<LeadForm>` surface (rendered

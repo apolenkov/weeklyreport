@@ -1,4 +1,7 @@
-import type { TrafficLightStatus } from "./report-primitives.schema";
+import type {
+  RiskSeverity,
+  TrafficLightStatus,
+} from "./report-primitives.schema";
 
 /**
  * The single severity vocabulary every surface's status ladder is an adapter
@@ -36,14 +39,14 @@ export function worstCanonicalStatus(
 
 /**
  * Floors a covering risk's severity to the status it forces on the
- * stage/product/activity it covers: an explicit `"blocked"` floors to
- * blocked, everything else — including an unset severity on a risk that is
- * already known to cover — floors to at-risk.
- * @param severity the risk's raw stored severity
+ * stage/product/activity it covers: `"blocked"` floors to blocked,
+ * `"at-risk"` floors to at-risk. Severity is mandatory — there is no third
+ * state to default.
+ * @param severity the risk's stored severity
  * @returns the status floor this risk forces
  */
 export function riskSeverityToCanonicalFloor(
-  severity: string | undefined,
+  severity: RiskSeverity,
 ): CanonicalStatus {
   return severity === "blocked" ? "blocked" : "at-risk";
 }

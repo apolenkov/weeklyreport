@@ -223,6 +223,7 @@ describe("ReportSectionsService — saveDraft happy path", () => {
             risk: "Deadline risk",
             impact: "Revenue",
             mitigation: "Hire contractor",
+            severity: "at-risk",
             // require-risk-stage: stageIds is required (min 1) on writes.
             stageIds: ["Development"],
           },
@@ -458,6 +459,7 @@ describe("ReportSectionsService — submitSection happy path", () => {
             risk: "Risk",
             impact: "Impact",
             mitigation: "Mitigation",
+            severity: "at-risk",
             // require-risk-stage: stageIds is required (min 1) on writes.
             stageIds: ["Development"],
           },
@@ -917,6 +919,7 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
               risk: "",
               impact: "Some impact",
               mitigation: "Some mitigation",
+              severity: "at-risk",
               // require-risk-stage: keep stageIds valid so the rejection
               // stays attributable to the empty text under test.
               stageIds: ["Development"],
@@ -939,6 +942,7 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
               risk: "A valid risk",
               impact: "",
               mitigation: "Some mitigation",
+              severity: "at-risk",
               // require-risk-stage: keep stageIds valid so the rejection
               // stays attributable to the empty impact under test.
               stageIds: ["Development"],
@@ -961,6 +965,7 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
               risk: "A valid risk",
               impact: "Some impact",
               mitigation: "Some mitigation",
+              severity: "at-risk",
             },
           ],
         }),

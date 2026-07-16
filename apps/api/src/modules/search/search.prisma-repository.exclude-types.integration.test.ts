@@ -84,6 +84,7 @@ describe("SearchPrismaRepository excludeTypes (integration)", () => {
         risk: `${QUERY} risk`,
         impact: "high",
         mitigation: "mitigate",
+        severity: "at-risk",
       },
     });
     await prisma.decision.create({

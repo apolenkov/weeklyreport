@@ -12,7 +12,7 @@ import { createAppRouter } from "./trpc.router.js";
  * `activeReportId` would fail here.
  *
  * `review.publish` used to be pinned here too; it was deleted in favor of
- * `period.publish` (consolidate-publish-side-effects) — see
+ * `period.publish` — see
  * `routers/period.router.test.ts` for that mutation's router-wiring pin.
  */
 

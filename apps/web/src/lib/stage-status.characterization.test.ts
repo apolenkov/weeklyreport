@@ -1,4 +1,4 @@
-import type { CanonicalStatus } from "@customreport/shared";
+import type { CanonicalStatus, RiskSeverity } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { deriveEffectiveStageStatus } from "./stage-status";
@@ -14,16 +14,16 @@ const PRECEDENCE: Record<Grid, number> = {
 
 /**
  * Independent restatement of the documented rule (NOT a call into the code
- * under test): severity is the worst of covering risks (undefined severity
- * floors to at-risk) and any blocked item; an orphaned manual at-risk/blocked
- * with no backing severity collapses to on-track, empty stays empty.
- * dedupe-severity-floor-ranking: pins this behavior BEFORE the ranking core
+ * under test): severity is the worst of covering risks and any blocked item;
+ * an orphaned manual at-risk/blocked with no backing severity collapses to
+ * on-track, empty stays empty.
+ * Pins this behavior BEFORE the ranking core
  * moves to the shared package. Frozen — do not edit assertions after the
  * move lands; a diff here means a behavior change.
  */
 function expectedStatus(
   explicit: Grid,
-  risks: readonly { severity?: string }[],
+  risks: readonly { severity: RiskSeverity }[],
   items: readonly { workflowStatus: string }[],
 ): Grid {
   const candidates: Grid[] = [
@@ -52,7 +52,7 @@ describe("deriveEffectiveStageStatus — characterization grid", () => {
   ];
   const riskSets: {
     readonly label: string;
-    readonly risks: readonly { severity?: string }[];
+    readonly risks: readonly { severity: RiskSeverity }[];
   }[] = [
     { label: "no risks", risks: [] },
     { label: "one at-risk", risks: [{ severity: "at-risk" }] },
@@ -61,7 +61,6 @@ describe("deriveEffectiveStageStatus — characterization grid", () => {
       label: "at-risk + blocked",
       risks: [{ severity: "at-risk" }, { severity: "blocked" }],
     },
-    { label: "risk with undefined severity", risks: [{ severity: undefined }] },
   ];
   const itemSets: {
     readonly label: string;

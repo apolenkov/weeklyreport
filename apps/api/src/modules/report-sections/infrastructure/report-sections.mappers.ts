@@ -1,6 +1,7 @@
 import {
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
+  type RiskSeverity,
 } from "@customreport/shared";
 
 import type {
@@ -175,9 +176,11 @@ export function mapPrismaToReportSection(
             projectId: project.id,
             trafficLight: asTraffic(rawTrafficLight),
             ownedStages,
+            // The DB column is a plain String (Risk_severity_check CHECK backs
+            // the two-value vocabulary); narrow the Prisma-typed string here.
             risks: row.risks.map((r) => ({
               projectId: r.projectId,
-              severity: r.severity === "blocked" ? "blocked" : "at-risk",
+              severity: r.severity as RiskSeverity,
               stageIds: r.stageNames.length > 0 ? r.stageNames : undefined,
             })),
           }),
@@ -218,7 +221,9 @@ export function mapPrismaToReportSection(
       risk: r.risk,
       impact: r.impact,
       mitigation: r.mitigation,
-      severity: r.severity === "blocked" ? "blocked" : "at-risk",
+      // Validated by reportSectionReadModelSchema.parse below (Zod enforces the
+      // two-value vocabulary at runtime; the DB CHECK is the write-side backstop).
+      severity: r.severity,
       stageIds: r.stageNames.length > 0 ? r.stageNames : undefined,
       comments: toCommentViews(r.recordComments),
     })),
@@ -255,7 +260,9 @@ export function mapPrismaToReportSection(
           .sort((a, b) => a.productName.localeCompare(b.productName, "ru")),
         ...deriveActivityStatus(
           asTraffic(status.status),
-          row.risks.filter((r) => r.activityId === status.activityId),
+          row.risks
+            .filter((r) => r.activityId === status.activityId)
+            .map((r) => ({ severity: r.severity as RiskSeverity })),
         ),
       }))
       .sort((a, b) => a.activityName.localeCompare(b.activityName, "ru")),

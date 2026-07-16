@@ -1,6 +1,6 @@
 /**
  * Characterization pins for the lead-form draft flow — frozen safety net for
- * the `deepen-lead-form-draft-module` refactor. Every assertion drives the
+ * the draft-module refactor. Every assertion drives the
  * PUBLIC `<LeadForm>` surface (rendered DOM + the mocked tRPC mutation seam +
  * cache-key invalidation spies), never the module internals, so the file stays
  * byte-identical while the draft hooks are restructured underneath it.

@@ -260,7 +260,7 @@ export class ReportSectionsPrismaRepository
                 risk: r.risk,
                 impact: r.impact,
                 mitigation: r.mitigation,
-                severity: r.severity ?? "at-risk",
+                severity: r.severity,
                 stageNames: r.stageIds ?? [],
               })),
             });

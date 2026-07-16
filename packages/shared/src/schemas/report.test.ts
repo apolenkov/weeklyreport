@@ -72,7 +72,9 @@ const validRisk = () => ({
   risk: "Deadline may slip",
   impact: "Revenue loss",
   mitigation: "Hire contractor",
-  // require-risk-stage: stageIds is required (min 1) on the write contract.
+  // severity is required (no default) on the write contract.
+  severity: "at-risk" as const,
+  // stageIds is required (min 1) on the write contract.
   stageIds: ["Development"],
 });
 
@@ -392,6 +394,12 @@ describe("riskInputSchema — safeText", () => {
 
   it("rejects unknown severity", () => {
     const result = riskSeveritySchema.safeParse("critical");
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a risk payload without severity", () => {
+    const { severity: _severity, ...withoutSeverity } = validRisk();
+    const result = riskInputSchema.safeParse(withoutSeverity);
     expect(result.success).toBe(false);
   });
 
@@ -1160,6 +1168,7 @@ describe("record write schema — XOR parent + conditional stage", () => {
       risk: "On-call fatigue",
       impact: "Slower response",
       mitigation: "Rotate weekly",
+      severity: "at-risk" as const,
       stageIds: [] as string[],
     };
     expect(riskWriteSchema.safeParse(activityRisk).success).toBe(true);

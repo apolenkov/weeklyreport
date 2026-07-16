@@ -111,6 +111,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
         risk: "Target stale risk",
         impact: "Old",
         mitigation: "Old",
+        severity: "at-risk",
       },
     });
     await prisma.decision.create({

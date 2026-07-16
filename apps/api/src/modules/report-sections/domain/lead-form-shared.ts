@@ -1,6 +1,7 @@
 import type {
   DbRole,
   ReportSectionReadModel,
+  RiskSeverity,
   TrafficLightStatus,
 } from "@customreport/shared";
 
@@ -244,7 +245,7 @@ export interface CrossAuthorSectionRow {
     risk: string;
     impact: string;
     mitigation: string;
-    severity: string;
+    severity: RiskSeverity;
     stageNames: string[];
   }[];
   decisions: {
