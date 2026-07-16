@@ -1,6 +1,4 @@
 export {
-  PublicationAccessError,
-  PublicationArchivedError,
   PublicationNotFoundError,
   PublicationService,
 } from "./application/publication.service.js";

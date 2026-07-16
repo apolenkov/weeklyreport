@@ -6,7 +6,7 @@ Deleting the dead `review.publish` → `publishReport` path (`consolidate-publis
 
 - Delete `PublicationPrismaRepository.publishAssembledReport`, `PublishReportOutcome`, and their tests; `saveAutoPublishedReport` (scheduler path) stays.
 - Delete `PublicationAccessError` and `PublicationArchivedError` (no remaining thrower) and their error-mapper rows/tests; `PublicationNotFoundError` stays (thrown by `getAssembledReport`).
-- Update the `publish-compare-and-set` spec: the shared CAS helper's mandatory-caller list shrinks to the two live write paths (`PeriodPrismaRepository.publishPeriod`, `PublicationPrismaRepository.saveAutoPublishedReport`).
+- Update the `publish-compare-and-set` spec: the shared CAS helper's mandatory-caller list shrinks to the one surviving manual write path (`PeriodPrismaRepository.publishPeriod`); `saveAutoPublishedReport` keeps its deliberately different draft-keyed predicate and stays off the helper.
 - Verify by repo-wide grep that nothing else references the deleted symbols before removal.
 
 ## Capabilities

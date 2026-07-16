@@ -18,11 +18,7 @@ import {
   PeriodNotFoundError,
   PeriodScopeError,
 } from "../../modules/period/index.js";
-import {
-  PublicationAccessError,
-  PublicationArchivedError,
-  PublicationNotFoundError,
-} from "../../modules/publication/index.js";
+import { PublicationNotFoundError } from "../../modules/publication/index.js";
 import { ReminderDomainError } from "../../modules/reminders/index.js";
 import {
   LeadFormAccessError,
@@ -156,46 +152,6 @@ describe("mapDomainError", () => {
 
     expect(mapped.code).toBe("FORBIDDEN");
     expect(mapped.message).toContain("head users");
-  });
-
-  // -----------------------------------------------------------------------
-  // PublicationAccessError -> CONFLICT
-  // -----------------------------------------------------------------------
-
-  describe("PublicationAccessError -> CONFLICT", () => {
-    it('maps "already published" to CONFLICT', () => {
-      const error = new PublicationAccessError(
-        "Report has already been published.",
-      );
-      const mapped = mapDomainError(error);
-
-      expect(mapped.code).toBe("CONFLICT");
-      expect(mapped.message).toContain("already been published");
-    });
-
-    it('maps "immutable" to CONFLICT', () => {
-      const error = new PublicationAccessError(
-        "Published reports are immutable.",
-      );
-      const mapped = mapDomainError(error);
-
-      expect(mapped.code).toBe("CONFLICT");
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // PublicationArchivedError -> FORBIDDEN (distinct from the CONFLICT above)
-  // -----------------------------------------------------------------------
-
-  it("maps PublicationArchivedError to FORBIDDEN, not CONFLICT", () => {
-    const error = new PublicationArchivedError(
-      "Cannot publish an archived report.",
-    );
-    const mapped = mapDomainError(error);
-
-    expect(mapped.code).toBe("FORBIDDEN");
-    expect(mapped.code).not.toBe("CONFLICT");
-    expect(mapped.message).toBe("Cannot publish an archived report.");
   });
 
   // -----------------------------------------------------------------------
@@ -429,16 +385,6 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       code: "FORBIDDEN",
     },
     {
-      name: "PublicationAccessError",
-      make: () => new PublicationAccessError("m"),
-      code: "CONFLICT",
-    },
-    {
-      name: "PublicationArchivedError",
-      make: () => new PublicationArchivedError("m"),
-      code: "FORBIDDEN",
-    },
-    {
       name: "PdfExportDomainError",
       make: () => new PdfExportDomainError("m"),
       code: "NOT_FOUND",
@@ -527,7 +473,7 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
 
   it("covers every domain error class the mapper imports", () => {
     // Guards against a class being added to the mapper without a row here.
-    expect(cases).toHaveLength(24);
+    expect(cases).toHaveLength(22);
   });
 });
 

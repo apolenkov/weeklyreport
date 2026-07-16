@@ -74,11 +74,6 @@ function createRepository(
   report: AssembledReport | null,
 ): PublicationRepository {
   let currentReport = report ? structuredClone(report) : null;
-  // The assembled read model exposes only legacy `status`; the publish guard
-  // keys on `periodStatus`, so the fake tracks it separately (a reopened
-  // period carries legacy status="published" with periodStatus="reopened").
-  let currentPeriodStatus: "open" | "published" | "reopened" =
-    report?.status === "published" ? "published" : "open";
 
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
@@ -88,23 +83,6 @@ function createRepository(
       }
 
       return structuredClone(currentReport);
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
-    async publishAssembledReport(nextReport: AssembledReport) {
-      if (currentPeriodStatus === "published") {
-        return {
-          status: "already-published" as const,
-          report: structuredClone(currentReport ?? nextReport),
-        };
-      }
-      const priorPeriodStatus = currentPeriodStatus;
-      currentReport = structuredClone(nextReport);
-      currentPeriodStatus = "published";
-      return {
-        status: "transitioned" as const,
-        priorPeriodStatus,
-        report: structuredClone(currentReport),
-      };
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
     async saveAutoPublishedReport(nextReport: AssembledReport) {
