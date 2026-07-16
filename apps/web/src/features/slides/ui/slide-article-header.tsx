@@ -1,6 +1,6 @@
+import type { CanonicalStatus } from "@customreport/shared";
 import type { ReactNode } from "react";
 
-import { type CanonicalStatus } from "../../../lib/status-presentation";
 import type {
   GridAuthor,
   SlideGridModel,

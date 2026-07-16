@@ -1,8 +1,8 @@
+import type { CanonicalStatus } from "@customreport/shared";
 import { AlertTriangle } from "lucide-react";
 import { describe, expect, it } from "vitest";
 
 import {
-  type CanonicalStatus,
   statusDotClassName,
   statusIcon,
   statusLabel,

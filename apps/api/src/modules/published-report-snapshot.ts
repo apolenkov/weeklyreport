@@ -8,6 +8,7 @@ import {
 } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
+import { aggregateTrafficLight } from "./report-sections/domain/traffic-light-aggregation";
 import { reportSectionFullInclude } from "./report-sections/infrastructure/report-sections.include";
 import { mapPrismaToReportSection } from "./report-sections/infrastructure/report-sections.mappers";
 import { deriveEffectiveProductStatus } from "./report-sections/infrastructure/report-sections.status-derivation";
@@ -186,20 +187,8 @@ export function buildPortfolioProductsFromSnapshotSections(
     .sort((a, b) => a.productName.localeCompare(b.productName, "ru"));
 }
 
-const statusSeverity: Record<TrafficLightStatus, number> = {
-  green: 0,
-  yellow: 1,
-  red: 2,
-};
-
 export function computeWorstStatus(
   statuses: readonly TrafficLightStatus[],
 ): TrafficLightStatus | null {
-  if (statuses.length === 0) return null;
-
-  return statuses.reduce<TrafficLightStatus>(
-    (worst, status) =>
-      statusSeverity[status] > statusSeverity[worst] ? status : worst,
-    "green",
-  );
+  return aggregateTrafficLight(statuses);
 }

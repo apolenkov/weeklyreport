@@ -139,7 +139,7 @@ test("the allowlist passes at its repo-rooted paths only", () => {
   const result = scan({
     "prisma/seed-constants.ts": `type S = { status: "draft" | "published" };`,
     "packages/shared/src/schemas/report-primitives.schema.ts": `const s = z.enum(["green", "yellow", "red"]);`,
-    "apps/web/src/lib/status-presentation.ts": `type C = "blocked" | "at-risk" | "on-track" | "empty";`,
+    "packages/shared/src/schemas/canonical-status.ts": `type C = "blocked" | "at-risk" | "on-track" | "empty";`,
     "packages/shared/src/schemas/auth.ts": `const s = z.enum(["lead", "head", "admin", "viewer"]);`,
   });
   assert.equal(result.status, 0, result.stdout);

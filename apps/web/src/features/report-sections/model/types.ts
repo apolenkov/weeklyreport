@@ -3,7 +3,7 @@
  * Real data will come from tRPC endpoints in a later phase.
  */
 
-// The vocabulary is declared once (`CanonicalStatus` in lib/status-presentation);
+// The vocabulary is declared once (`CanonicalStatus` in @customreport/shared);
 // this re-export keeps the historical import path for stage-grid consumers.
 import type { StageStatus } from "./traffic-light";
 

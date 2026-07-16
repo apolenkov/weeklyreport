@@ -1,60 +1,41 @@
 /**
- * Traffic-light mapper: bridges API enum (green/yellow/red, optionally null)
- * with the UI presentation enum (on-track/at-risk/blocked/empty).
+ * Traffic-light mapper: bridges the API enum (green/yellow/red, optionally
+ * null) with the UI presentation enum (on-track/at-risk/blocked/empty).
  *
- * The mapper is intentionally self-contained and does NOT import from
- * mock-data.ts or any UI module; the color side comes from the shared
- * traffic-light SSOT and the presentation vocabulary from its single
- * declaration (`CanonicalStatus` in lib/status-presentation), so downstream
- * consumers can depend on the mapper layer without coupling to a particular
- * UI module. `StageStatus` is the feature-domain alias of that vocabulary.
+ * Both directions delegate to the shared canonical-status adapters — the
+ * single home of the vocabulary mapping — so this layer only contributes the
+ * feature-domain names. `StageStatus` is the feature-domain alias of the
+ * canonical vocabulary.
  */
 
-import type { TrafficLightStatus } from "@customreport/shared";
-
-import type { CanonicalStatus } from "../../../lib/status-presentation";
+import type { CanonicalStatus, TrafficLightStatus } from "@customreport/shared";
+import {
+  canonicalToTrafficLight,
+  trafficLightToCanonical,
+} from "@customreport/shared";
 
 export type StageStatus = CanonicalStatus;
 
 /**
  * Converts an API TrafficLightStatus (or null for "no data") into the
  * StageStatus enum used by lead/dashboard presentation components.
- *
- * - green  -> on-track
- * - yellow -> at-risk
- * - red    -> blocked
- * - null   -> empty (no API equivalent; computed presentation-only state)
+ * @param trafficLight the API traffic light, or null when the API has no data
+ * @returns the presentation status (`null` maps to `"empty"`)
  */
 export function trafficToStageStatus(
   trafficLight: TrafficLightStatus | null,
 ): StageStatus {
-  switch (trafficLight) {
-    case "green":
-      return "on-track";
-    case "yellow":
-      return "at-risk";
-    case "red":
-      return "blocked";
-    case null:
-      return "empty";
-  }
+  return trafficLightToCanonical(trafficLight);
 }
 
 /**
  * Inverse mapping: presentation StageStatus back to API TrafficLightStatus.
- * Returns null for the computed 'empty' state, since it has no DB enum value.
+ * @param status the presentation status
+ * @returns the equivalent traffic light, or `null` for the computed
+ * `"empty"` state, which has no DB enum value
  */
 export function stageStatusToTraffic(
   status: StageStatus,
 ): TrafficLightStatus | null {
-  switch (status) {
-    case "on-track":
-      return "green";
-    case "at-risk":
-      return "yellow";
-    case "blocked":
-      return "red";
-    case "empty":
-      return null;
-  }
+  return canonicalToTrafficLight(status);
 }

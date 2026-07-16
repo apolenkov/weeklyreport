@@ -1,18 +1,8 @@
-import type { CanonicalStatus } from "./status-presentation";
-
-const PRECEDENCE: Record<CanonicalStatus, number> = {
-  blocked: 3,
-  "at-risk": 2,
-  "on-track": 1,
-  empty: 0,
-};
-
-function moreSevere(
-  current: CanonicalStatus,
-  candidate: CanonicalStatus,
-): CanonicalStatus {
-  return PRECEDENCE[candidate] > PRECEDENCE[current] ? candidate : current;
-}
+import {
+  type CanonicalStatus,
+  riskSeverityToCanonicalFloor,
+  worstCanonicalStatus,
+} from "@customreport/shared";
 
 /**
  * Derives effective StageStatus from the risks/items that back the stage —
@@ -52,13 +42,11 @@ export function deriveEffectiveStageStatus(
   risks: readonly { severity?: string }[],
   items: readonly { workflowStatus: string }[],
 ): CanonicalStatus {
-  const riskBest = risks.reduce<CanonicalStatus>(
-    (best, r) =>
-      moreSevere(best, r.severity === "blocked" ? "blocked" : "at-risk"),
-    "empty",
+  const riskBest = worstCanonicalStatus(
+    risks.map((r) => riskSeverityToCanonicalFloor(r.severity)),
   );
   const best = items.some((i) => i.workflowStatus === "blocked")
-    ? moreSevere(riskBest, "blocked")
+    ? worstCanonicalStatus([riskBest, "blocked"])
     : riskBest;
   if (best !== "empty") return best;
   // No backing risk/item: a manual at-risk/blocked has nothing to back it, so
