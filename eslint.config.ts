@@ -126,9 +126,14 @@ const apiInfrastructureModuleZones = [
 ].map((target) => ({
   target,
   from: apiModulesDir,
-  except: apiModules.map((moduleName) => `${moduleName}/index.ts`),
+  // Bootstrap may import the ordinary contract facade or the module-only
+  // entrypoint that avoids eagerly evaluating a facade's pure exports.
+  except: apiModules.flatMap((moduleName) => [
+    `${moduleName}/index.ts`,
+    `${moduleName}/module.ts`,
+  ]),
   message:
-    "api infrastructure and bootstrap files must consume module contracts through the owning index.ts public API",
+    "api infrastructure and bootstrap files must consume module contracts through an owning public entrypoint",
 }));
 
 // One zone per web slice: files under features/S may import from features/ only
