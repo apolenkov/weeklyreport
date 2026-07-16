@@ -59,7 +59,17 @@ vi.mock("./use-lead-form-draft-orchestration", () => ({
 }));
 
 vi.mock("./use-lead-form-write-actions", () => ({
-  useLeadFormWriteActions: () => ({}),
+  useLeadFormWriteActions: () => ({
+    getSubmitReadiness: () => ({
+      unsetStatuses: [],
+      willAutoPromote: [],
+      blockingIssues: [],
+      autosaveState: "idle",
+      submitPending: false,
+      canOpenConfirmation: true,
+    }),
+    handleSubmit: vi.fn(),
+  }),
 }));
 
 vi.mock("./use-lead-form-draft-merges", () => ({
