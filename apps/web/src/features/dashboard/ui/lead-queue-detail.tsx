@@ -19,6 +19,52 @@ function relativeTime(value: Date | null, emptyLabel: string): string {
   return value ? formatRelativePast(value, new Date(), "activity") : emptyLabel;
 }
 
+function LeadCountGrid({ lead }: { readonly lead: LeadInfo }) {
+  return (
+    <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+      {COUNT_FIELDS.map((field) => (
+        <div
+          key={field.label}
+          className="rounded-[var(--radius-sm)] bg-[var(--color-surface-muted)] p-2"
+        >
+          <dt className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+            {field.label}
+          </dt>
+          <dd className="mt-1 text-sm font-semibold tabular-nums text-[var(--color-foreground)]">
+            {field.get(lead)}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function LeadQueueFacts({ lead }: { readonly lead: LeadInfo }) {
+  const facts = [
+    ["Last edit", relativeTime(lead.lastEditAt, "No edits yet")],
+    ["Submitted", relativeTime(lead.submittedAt, "Not submitted")],
+    [
+      "Review",
+      `${lead.reviewLabel} · ${String(lead.reviews.length)} verdict${lead.reviews.length === 1 ? "" : "s"}`,
+    ],
+    ["Attention", lead.attentionLabel],
+  ] as const;
+  return (
+    <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+      {facts.map(([label, value]) => (
+        <div key={label}>
+          <dt className="text-xs text-[var(--color-muted-foreground)]">
+            {label}
+          </dt>
+          <dd className="font-medium text-[var(--color-foreground)]">
+            {value}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 export function LeadQueueDetail({
   lead,
   reportId,
@@ -35,57 +81,8 @@ export function LeadQueueDetail({
       id={detailId}
       className="border-t border-[var(--color-border)] px-3 py-4 sm:px-4"
     >
-      <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-        {COUNT_FIELDS.map((field) => (
-          <div
-            key={field.label}
-            className="rounded-[var(--radius-sm)] bg-[var(--color-surface-muted)] p-2"
-          >
-            <dt className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-              {field.label}
-            </dt>
-            <dd className="mt-1 text-sm font-semibold tabular-nums text-[var(--color-foreground)]">
-              {field.get(lead)}
-            </dd>
-          </div>
-        ))}
-      </dl>
-
-      <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <dt className="text-xs text-[var(--color-muted-foreground)]">
-            Last edit
-          </dt>
-          <dd className="font-medium text-[var(--color-foreground)]">
-            {relativeTime(lead.lastEditAt, "No edits yet")}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-[var(--color-muted-foreground)]">
-            Submitted
-          </dt>
-          <dd className="font-medium text-[var(--color-foreground)]">
-            {relativeTime(lead.submittedAt, "Not submitted")}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-[var(--color-muted-foreground)]">
-            Review
-          </dt>
-          <dd className="font-medium text-[var(--color-foreground)]">
-            {lead.reviewLabel} · {lead.reviews.length} verdict
-            {lead.reviews.length === 1 ? "" : "s"}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-[var(--color-muted-foreground)]">
-            Attention
-          </dt>
-          <dd className="font-medium text-[var(--color-foreground)]">
-            {lead.attentionLabel}
-          </dd>
-        </div>
-      </dl>
+      <LeadCountGrid lead={lead} />
+      <LeadQueueFacts lead={lead} />
 
       <div className="mt-4">
         <LeadSecondaryActions

@@ -10,6 +10,7 @@ const REPORT_ID = "10000000-0000-4000-8000-000000000001";
 const GROUP_ID = "10000000-0000-4000-8000-000000000002";
 const REVIEWER_ID = "10000000-0000-4000-8000-000000000003";
 const UUID_SUFFIX_LENGTH = 12;
+const DEFAULT_TOTAL_LEADS = 5;
 
 export const QUEUE_NOW = new Date("2026-07-16T12:00:00.000Z");
 
@@ -107,6 +108,7 @@ export function queueActivityRow(
 export function queueReport(
   leadSections: readonly ReportSectionReadModel[],
   periodStatus: WeeklyReportReadModel["periodStatus"] = "open",
+  totalLeads = DEFAULT_TOTAL_LEADS,
 ): WeeklyReportReadModel {
   return {
     reportId: REPORT_ID,
@@ -117,7 +119,7 @@ export function queueReport(
     weekLabel: "Week 29",
     submissionCount: leadSections.filter((row) => row.status === "submitted")
       .length,
-    totalLeads: 5,
+    totalLeads,
     hasActiveReminderRule: true,
     portfolioOverview: [],
     leadSections: [...leadSections],

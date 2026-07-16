@@ -30,3 +30,7 @@
 - [x] 5.2 `pnpm typecheck`
 - [x] 5.3 `pnpm lint`
 - [x] 5.4 `pnpm test`
+
+## 6. Adversarial review closure
+
+- [x] 6.1 Split the submit-readiness summary into focused groups while preserving readiness, auto-promotion, and blocking copy.

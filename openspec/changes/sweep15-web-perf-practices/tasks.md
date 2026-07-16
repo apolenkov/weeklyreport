@@ -37,3 +37,9 @@
 - [x] 6.2 `pnpm typecheck`
 - [x] 6.3 `pnpm lint`
 - [x] 6.4 `pnpm test`
+
+## 7. Adversarial review closure
+
+- [x] 7.1 Keep the weekly-backed Period Summary and alerts available while review or activity enrichment remains pending.
+- [x] 7.2 Keep KPI and escalation panels review-backed, and surface activity failure or stall as a local retry without hiding weekly queue rows.
+- [x] 7.3 Split dashboard content and query-recovery helpers so every touched production file and function satisfies the repository size limits.

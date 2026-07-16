@@ -33,3 +33,10 @@
 - [x] 5.2 `pnpm typecheck`
 - [x] 5.3 `pnpm lint`
 - [x] 5.4 `pnpm test`
+
+## 6. Adversarial review closure
+
+- [x] 6.1 Build the canonical roster from the union of weekly sections, review rows, and activity rows with one row per lead and source precedence preserved.
+- [x] 6.2 Resolve activity through the shared leadership report target so a published fallback still enumerates scoped leads without sections.
+- [x] 6.3 Prove the published queue contains both section-backed and no-section leads and keeps every unavailable action read-only.
+- [x] 6.4 Split queue row, detail, action, and summary components so every touched production function remains at or below 50 lines.

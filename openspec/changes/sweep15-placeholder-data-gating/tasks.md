@@ -13,10 +13,10 @@
 
 ## 3. Repo gates
 
-- [ ] 3.1 `pnpm --filter @customreport/api db:generate`
-- [ ] 3.2 `pnpm typecheck`
-- [ ] 3.3 `pnpm lint`
-- [ ] 3.4 `pnpm test`
+- [x] 3.1 `pnpm --filter @customreport/api db:generate`
+- [x] 3.2 `pnpm typecheck`
+- [x] 3.3 `pnpm lint`
+- [x] 3.4 `pnpm test`
 
 Scoped web verification used for this frontend-only change:
 

@@ -27,6 +27,7 @@ export function DashboardPanelLoading({
 
 interface DashboardPanelIssueProps {
   readonly kind: DashboardPanelKind;
+  readonly testId?: string;
   readonly title: string;
   readonly description: string;
   readonly onRetry: () => void;
@@ -34,13 +35,14 @@ interface DashboardPanelIssueProps {
 
 export function DashboardPanelIssue({
   kind,
+  testId,
   title,
   description,
   onRetry,
 }: DashboardPanelIssueProps) {
   return (
     <section
-      data-testid={`dashboard-${kind}-error`}
+      data-testid={testId ?? `dashboard-${kind}-error`}
       className="flex min-h-24 flex-col gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4"
       role="alert"
     >

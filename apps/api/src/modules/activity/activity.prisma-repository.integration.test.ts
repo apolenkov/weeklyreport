@@ -106,7 +106,7 @@ describe("ActivityPrismaRepository (integration)", () => {
       reportingGroupId: groupA,
     };
 
-    const result = await repo.getLiveActivity(session);
+    const result = await repo.getLiveActivity(reportId, session);
 
     expect(result.reportId).toBe(reportId);
     expect(result.periodStatus).toBe("reopened");
@@ -114,11 +114,7 @@ describe("ActivityPrismaRepository (integration)", () => {
     expect(result.rows[0]?.leadId).toBe(leadA);
   });
 
-  it("ignores a scheduled-future open period and resolves the current one", async () => {
-    // A scheduled-future period carries periodStatus="open" (the enum has no
-    // "scheduled" value). Without the periodStart <= now guard it would win the
-    // periodStart-desc ordering and surface its empty section list, making every
-    // lead read "not started". The current period must win instead.
+  it("keeps the lifecycle-resolved report when a scheduled future period exists", async () => {
     const futureReportId = "a0000000-0000-4000-a000-000000000407";
     const futureStart = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await prisma.report.create({
@@ -141,16 +137,14 @@ describe("ActivityPrismaRepository (integration)", () => {
       reportingGroupId: groupA,
     };
 
-    const result = await repo.getLiveActivity(session);
+    const result = await repo.getLiveActivity(reportId, session);
 
     expect(result.reportId).toBe(reportId);
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0]?.leadId).toBe(leadA);
   });
 
-  it("reads a lead with no section as draft with zero activity and null lastEditAt", async () => {
-    // A lead in the caller's group who has not started a section for the
-    // current report — the no-section branch that maps to a synthetic draft row.
+  it("keeps a no-section lead in the published-report roster", async () => {
     const leadNoSection = "a0000000-0000-4000-a000-000000000410";
     await prisma.user.create({
       data: {
@@ -164,9 +158,18 @@ describe("ActivityPrismaRepository (integration)", () => {
         reportingGroupId: groupA,
       },
     });
+    await prisma.report.update({
+      where: { id: reportId },
+      data: {
+        status: "published",
+        periodStatus: "published",
+        periodState: "published",
+      },
+    });
 
-    const result = await repo.getLiveActivity(headSession);
+    const result = await repo.getLiveActivity(reportId, headSession);
 
+    expect(result.periodStatus).toBe("published");
     const row = result.rows.find((r) => r.leadId === leadNoSection);
     expect(row).toBeDefined();
     expect(row?.reportSectionId).toBeNull();
@@ -218,7 +221,7 @@ describe("ActivityPrismaRepository (integration)", () => {
       },
     });
 
-    const result = await repo.getLiveActivity(headSession);
+    const result = await repo.getLiveActivity(reportId, headSession);
 
     const draftIndex = result.rows.findIndex((r) => r.leadId === leadA);
     const submittedIndex = result.rows.findIndex(
@@ -309,7 +312,7 @@ describe("ActivityPrismaRepository (integration)", () => {
       },
     });
 
-    const result = await repo.getLiveActivity(headSession);
+    const result = await repo.getLiveActivity(reportId, headSession);
 
     const row = result.rows.find((r) => r.leadId === leadMulti);
     expect(row).toBeDefined();

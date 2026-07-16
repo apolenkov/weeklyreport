@@ -145,6 +145,17 @@ export class WeeklyReportService {
   }
 
   /**
+   * Resolve the report shown on leadership dashboard surfaces. The current
+   * editable period wins; otherwise the newest usable published period does.
+   */
+  async getCurrentLeadershipReportId(): Promise<string | null> {
+    return (
+      (await this.repository.getCurrentEditableId()) ??
+      (await this.repository.getLatestPublishedNonArchivedId())
+    );
+  }
+
+  /**
    * Resolve the default report when the caller passes no `reportId`. Leadership
    * readers use the current editable period, else the newest non-archived
    * published period, so their default cannot land on an archived report.
@@ -157,17 +168,8 @@ export class WeeklyReportService {
    * so there is no divergence to close.
    */
   private async resolveDefaultReportId(role?: Role): Promise<string | null> {
-    if (role === "viewer") {
-      return (
-        (await this.repository.getCurrentEditableId()) ??
-        (await this.repository.getLatestPublishedNonArchivedId())
-      );
-    }
-    if (role === "head") {
-      return (
-        (await this.repository.getCurrentEditableId()) ??
-        (await this.repository.getLatestPublishedNonArchivedId())
-      );
+    if (role === "viewer" || role === "head") {
+      return this.getCurrentLeadershipReportId();
     }
     return this.repository.getActiveReportId();
   }
