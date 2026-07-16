@@ -1,7 +1,6 @@
 import type {
   AssembledReport,
   ReportSectionReadModel,
-  UserSession,
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
@@ -12,8 +11,6 @@ import {
 import { PublicationPrometheusTelemetry } from "../infrastructure/publication-prometheus-telemetry.adapter.js";
 import {
   type AutoPublishResult,
-  PublicationAccessError,
-  PublicationArchivedError,
   type PublicationRepository,
   PublicationService,
 } from "./publication.service";
@@ -23,15 +20,6 @@ import {
 /* ------------------------------------------------------------------ */
 
 const reportId = "22222222-2222-4222-8222-222222222222";
-
-const headSession: UserSession = {
-  userId: "00000000-0000-4000-8000-000000000001",
-  email: "head@customreport.local",
-  name: "Department Head",
-  role: "head",
-  activeReportId: reportId,
-  activeReportSectionId: null,
-};
 
 /* ------------------------------------------------------------------ */
 /*  Section / report factories                                         */
@@ -444,214 +432,6 @@ describe("PublicationService", () => {
     });
   });
 
-  describe("publishReport", () => {
-    it("sets status to published, publishedAt, publishedById, publishedByName", async () => {
-      const report = makeReport({ sections: [sectionAlpha] });
-
-      const service = new PublicationService(createRepository(report));
-      const published = await service.publishReport(reportId, headSession);
-
-      expect(published.status).toBe("published");
-      expect(published.publishedAt).toBeInstanceOf(Date);
-      expect(published.publishedById).toBe(headSession.userId);
-      expect(published.publishedByName).toBe(headSession.name);
-    });
-
-    it("throws PublicationAccessError when report already published", async () => {
-      const report = makeReport({
-        status: "published",
-        publishedAt: new Date("2026-04-10T16:00:00.000Z"),
-        publishedById: headSession.userId,
-        publishedByName: headSession.name,
-        sections: [sectionAlpha],
-      });
-
-      const service = new PublicationService(createRepository(report));
-
-      await expect(
-        service.publishReport(reportId, headSession),
-      ).rejects.toBeInstanceOf(PublicationAccessError);
-
-      await expect(
-        service.publishReport(reportId, headSession),
-      ).rejects.toThrow("Report has already been published.");
-    });
-
-    it("preserves all sections and portfolio overview", async () => {
-      const report = makeReport({
-        sections: [sectionAlpha, sectionBravo, sectionCharlie],
-      });
-
-      const service = new PublicationService(createRepository(report));
-      const published = await service.publishReport(reportId, headSession);
-
-      expect(published.sections).toHaveLength(3);
-      expect(published.portfolioOverview).toEqual({
-        status: "red",
-        totals: { green: 1, yellow: 1, red: 1 },
-      });
-      expect(published.sections.map((s) => s.authorName)).toEqual([
-        "Alpha Lead",
-        "Bravo Lead",
-        "Charlie Lead",
-      ]);
-    });
-
-    it("publishes and stamps head attribution", async () => {
-      const service = new PublicationService(createRepository(assembledReport));
-
-      const published = await service.publishReport(reportId, headSession);
-
-      expect(published.status).toBe("published");
-      expect(published.publishedById).toBe(headSession.userId);
-      expect(published.publishedAt).toBeInstanceOf(Date);
-    });
-
-    // Product-telemetry counters bump exactly once per successful publish,
-    // for both the manual and auto paths. Both paths use `state='published'`
-    // so the funnel rolls up cleanly.
-    it("publishReport increments product KPI counters once on success", async () => {
-      const service = new PublicationService(
-        createRepository(assembledReport),
-        undefined,
-        undefined,
-        new PublicationPrometheusTelemetry(),
-      );
-      const submittedBefore = await getCounterValue(
-        customreportReportsSubmittedTotal,
-        { state: "published" },
-      );
-      const transitionsBefore = await getCounterValue(
-        customreportPeriodStateTransitionsTotal,
-        { from: "open", to: "published" },
-      );
-
-      await service.publishReport(reportId, headSession);
-
-      expect(
-        await getCounterValue(customreportReportsSubmittedTotal, {
-          state: "published",
-        }),
-      ).toBe(submittedBefore + 1);
-      expect(
-        await getCounterValue(customreportPeriodStateTransitionsTotal, {
-          from: "open",
-          to: "published",
-        }),
-      ).toBe(transitionsBefore + 1);
-    });
-
-    it("publishReport labels the transition counter with the prior status (reopened, not a hardcoded open)", async () => {
-      // A reopened period carries legacy status="published" with
-      // periodStatus="reopened"; the from label must reflect that, never "open".
-      const repository: PublicationRepository = {
-        ...createRepository(assembledReport),
-        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
-        async publishAssembledReport(nextReport: AssembledReport) {
-          return {
-            status: "transitioned" as const,
-            priorPeriodStatus: "reopened" as const,
-            report: structuredClone(nextReport),
-          };
-        },
-      };
-      const service = new PublicationService(
-        repository,
-        undefined,
-        undefined,
-        new PublicationPrometheusTelemetry(),
-      );
-      const before = await getCounterValue(
-        customreportPeriodStateTransitionsTotal,
-        { from: "reopened", to: "published" },
-      );
-
-      await service.publishReport(reportId, headSession);
-
-      expect(
-        await getCounterValue(customreportPeriodStateTransitionsTotal, {
-          from: "reopened",
-          to: "published",
-        }),
-      ).toBe(before + 1);
-    });
-
-    it("publishReport raced (zero-transition): returns the published report, no counters, no ingestion", async () => {
-      // A concurrent publish won the compare-and-set. Idempotent success: the
-      // report comes back published, but this call emits no counters and enqueues
-      // no ingestion, so a redundant publish never inflates the ratio.
-      const ingestion = vi.fn(() => Promise.resolve());
-      const repository: PublicationRepository = {
-        ...createRepository(assembledReport),
-        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
-        async publishAssembledReport(nextReport: AssembledReport) {
-          return {
-            status: "raced" as const,
-            report: { ...structuredClone(nextReport), status: "published" },
-          };
-        },
-      };
-      const service = new PublicationService(repository, undefined, ingestion);
-      const submittedBefore = await getCounterValue(
-        customreportReportsSubmittedTotal,
-        { state: "published" },
-      );
-      const transitionsBefore = await getCounterValue(
-        customreportPeriodStateTransitionsTotal,
-        { from: "open", to: "published" },
-      );
-
-      const published = await service.publishReport(reportId, headSession);
-
-      expect(published.status).toBe("published");
-      expect(ingestion).not.toHaveBeenCalled();
-      expect(
-        await getCounterValue(customreportReportsSubmittedTotal, {
-          state: "published",
-        }),
-      ).toBe(submittedBefore);
-      expect(
-        await getCounterValue(customreportPeriodStateTransitionsTotal, {
-          from: "open",
-          to: "published",
-        }),
-      ).toBe(transitionsBefore);
-    });
-
-    it("publishReport archived-in-window: throws PublicationArchivedError, no counters, no ingestion", async () => {
-      // The period was archived inside the read→write window: the guarded
-      // compare-and-set matched zero rows and the re-read showed the row archived.
-      // Fail closed (FORBIDDEN), never a silent idempotent success.
-      const ingestion = vi.fn(() => Promise.resolve());
-      const repository: PublicationRepository = {
-        ...createRepository(assembledReport),
-        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
-        async publishAssembledReport(nextReport: AssembledReport) {
-          return {
-            status: "archived" as const,
-            report: structuredClone(nextReport),
-          };
-        },
-      };
-      const service = new PublicationService(repository, undefined, ingestion);
-      const submittedBefore = await getCounterValue(
-        customreportReportsSubmittedTotal,
-        { state: "published" },
-      );
-
-      await expect(
-        service.publishReport(reportId, headSession),
-      ).rejects.toBeInstanceOf(PublicationArchivedError);
-
-      expect(ingestion).not.toHaveBeenCalled();
-      expect(
-        await getCounterValue(customreportReportsSubmittedTotal, {
-          state: "published",
-        }),
-      ).toBe(submittedBefore);
-    });
-  });
-
   describe("publishAuto", () => {
     // Scheduler-driven auto-publish bypasses session attribution.
     // publishedById stays null and publishedByName='system' so the head
@@ -749,6 +529,67 @@ describe("PublicationService", () => {
           to: "published",
         }),
       ).toBe(transitionsBefore);
+    });
+
+    // Characterization pin: the shared side-effects module must call the
+    // ingestion enqueue with the just-published report's ids.
+    it("publishAuto enqueues ingestion with the published report's section ids", async () => {
+      const ingestion = vi.fn(() => Promise.resolve());
+      const service = new PublicationService(
+        createRepository(assembledReport),
+        undefined,
+        ingestion,
+      );
+
+      const published = expectPublished(await service.publishAuto(reportId));
+
+      expect(ingestion).toHaveBeenCalledTimes(1);
+      expect(ingestion).toHaveBeenCalledWith(
+        published.sections.map((s) => s.reportSectionId),
+      );
+    });
+
+    // Characterization pin: publishAuto has never enqueued ingestion for a
+    // report with zero sections (the old inline enqueueIngestion guard).
+    it("publishAuto skips the ingestion hook when the published report has no sections", async () => {
+      const report = makeReport({ sections: [] });
+      const ingestion = vi.fn(() => Promise.resolve());
+      const service = new PublicationService(
+        createRepository(report),
+        undefined,
+        ingestion,
+      );
+
+      await service.publishAuto(reportId);
+
+      expect(ingestion).not.toHaveBeenCalled();
+    });
+
+    // Characterization pin: an ingestion-hook failure is logged, never
+    // rejected — the auto-publish still reports a published outcome.
+    it("publishAuto logs (and swallows) an ingestion hook failure", async () => {
+      const warn = vi.fn();
+      const logger = {
+        debug: () => undefined,
+        info: () => undefined,
+        warn,
+        error: () => undefined,
+        child: () => logger,
+      };
+      const ingestion = vi.fn(() => Promise.reject(new Error("queue down")));
+      const service = new PublicationService(
+        createRepository(assembledReport),
+        logger,
+        ingestion,
+      );
+
+      const result = await service.publishAuto(reportId);
+
+      expect(result.published).toBe(true);
+      expect(warn).toHaveBeenCalledWith(
+        "ingestion hook failed",
+        expect.objectContaining({ error: "queue down" }),
+      );
     });
   });
 });

@@ -170,8 +170,9 @@ export class PublicationPrismaRepository implements PublicationRepository {
    * manual path) the publisher id from the assembled report so the builder is
    * the only writer of those fields. A published report must carry a
    * `publishedAt`, and a manual publish must carry a `publishedById`; these are
-   * guaranteed by `PublicationService.publishReport` / `publishAuto`, asserted
-   * here so a malformed caller fails loudly instead of writing a torn row.
+   * guaranteed by the publishing service callers (`publishAuto` today),
+   * asserted here so a malformed caller fails loudly instead of writing a
+   * torn row.
    */
   private publishLifecycle(report: AssembledReport, auto: boolean) {
     if (!report.publishedAt) {

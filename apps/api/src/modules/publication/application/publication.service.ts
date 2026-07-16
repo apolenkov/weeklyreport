@@ -3,29 +3,17 @@ import {
   assembledReportSchema,
   type PortfolioOverview,
   type ReportSectionReadModel,
-  type UserSession,
 } from "@customreport/shared";
 
 import { type AppLogger, createNullLogger } from "../../../lib/logger";
 import {
+  emitPublishSideEffects,
+  type IngestionPublishHook,
+} from "../../period/index.js";
+import {
   NOOP_PUBLICATION_TELEMETRY,
   type PublicationTelemetry,
 } from "./publication-telemetry.port.js";
-
-/**
- * Post-publish ingestion seam. The enqueue is awaited and any error it throws
- * is swallowed by the publish path — the publish must succeed even when a
- * downstream consumer is degraded, but it is NOT detached (awaiting keeps the
- * rejection handled and test timing deterministic). Unit tests default to a
- * no-op so the 200+ existing tests stay green.
- *
- * The original AI/RAG consumer was removed; the seam is kept so a rebuilt
- * pipeline — or any other async consumer — can re-wire without touching
- * the publish path.
- */
-export type IngestionPublishHook = (
-  sectionIds: readonly string[],
-) => Promise<void>;
 
 export class PublicationAccessError extends Error {
   constructor(message: string) {
@@ -53,9 +41,9 @@ export class PublicationArchivedError extends Error {
 /**
  * Thrown by `getAssembledReport` when the requested report row is absent. A
  * missing resource, so the tRPC error-mapper renders it NOT_FOUND (distinct
- * from `PublicationAccessError` → CONFLICT). Its in-service callers
- * (`publishReport`, `publishAuto`) propagate it, so a missing report surfaces
- * as NOT_FOUND instead of a false 500.
+ * from `PublicationAccessError` → CONFLICT). Its in-service caller
+ * (`publishAuto`) propagates it, so a missing report surfaces as NOT_FOUND
+ * instead of a false 500.
  */
 export class PublicationNotFoundError extends Error {
   constructor(message: string) {
@@ -180,23 +168,6 @@ export class PublicationService {
     this.logger = logger ?? createNullLogger();
   }
 
-  /**
-   * Private helper — invokes the post-publish ingestion hook with every
-   * section id in the assembled report and swallows any error so the
-   * calling publish path always returns the report.
-   */
-  private async enqueueIngestion(report: AssembledReport): Promise<void> {
-    const ids = report.sections.map((s) => s.reportSectionId);
-    if (ids.length === 0) return;
-    try {
-      await this.ingestionHook(ids);
-    } catch (error) {
-      this.logger.warn("ingestion hook failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
   async getAssembledReport(activeReportId: string): Promise<AssembledReport> {
     const report = await this.repository.getAssembledReport(activeReportId);
 
@@ -215,62 +186,9 @@ export class PublicationService {
     });
   }
 
-  async publishReport(
-    activeReportId: string,
-    session: UserSession,
-  ): Promise<AssembledReport> {
-    const report = await this.getAssembledReport(activeReportId);
-
-    this.logger.info("publishing report", {
-      activeReportId,
-      userId: session.userId,
-    });
-    const outcome = await this.repository.publishAssembledReport(
-      assembledReportSchema.parse({
-        ...report,
-        status: "published",
-        publishedAt: new Date(),
-        publishedById: session.userId,
-        publishedByName: session.name,
-      }),
-    );
-
-    // The fast-path rejection keys on `periodStatus`, not legacy `status`, so a
-    // reopened period (legacy `status="published"`) stays publishable while a
-    // truly-published one is rejected.
-    if (outcome.status === "already-published") {
-      throw new PublicationAccessError("Report has already been published.");
-    }
-    if (outcome.status === "archived") {
-      // The period was archived inside the read→write window — the guarded
-      // compare-and-set excludes archived rows, so the write matched none and
-      // the re-read showed the row archived. Fail closed (FORBIDDEN); never a
-      // silent idempotent success that would hide the contradiction.
-      throw new PublicationArchivedError("Cannot publish an archived report.");
-    }
-    if (outcome.status === "raced") {
-      // A concurrent publish won the compare-and-set: the period is published.
-      // Idempotent success — return it without re-emitting counters or
-      // re-enqueuing ingestion so a redundant publish never inflates the ratio.
-      return outcome.report;
-    }
-
-    // Product telemetry. Emit only after a real transition — a redundant or
-    // failed write would otherwise inflate the counter and corrupt the on-time
-    // ratio numerator at the next gauge scrape. The `from` label carries the
-    // actual prior state (`open` or `reopened`), never a hardcoded value.
-    this.telemetry.recordPublishedReport();
-    this.telemetry.recordPeriodPublished(outcome.priorPeriodStatus);
-    // Enqueue ingestion AFTER metrics are emitted. The enqueue is awaited and
-    // its errors are swallowed, so an ingestion failure never blocks telemetry
-    // or the response — the publish still returns even when the hook is degraded.
-    await this.enqueueIngestion(outcome.report);
-    return outcome.report;
-  }
-
   /**
-   * Scheduler-driven auto-publish. Same effect as {@link publishReport} but no
-   * human actor — `publishedById=null` and `publishedByName='system'`.
+   * Scheduler-driven auto-publish. No human actor — `publishedById=null` and
+   * `publishedByName='system'`.
    *
    * Returns a discriminated outcome, not the bare report: the underlying write
    * is a compare-and-set guarded on the row still being `status="draft"` and
@@ -318,16 +236,32 @@ export class PublicationService {
       return { published: false };
     }
 
-    // Same telemetry as publishReport, same `state` label so ops aggregate
-    // without `or` predicates — the manual-vs-auto split is recovered from the
-    // period_state_transitions panel paired with publishedById nullness. Emit
-    // only after the write succeeds so a failed save never inflates the counter.
-    this.telemetry.recordPublishedReport();
-    this.telemetry.recordPeriodPublished("open");
-    // Ingestion enqueue AFTER metrics — auto-publishes feed the same queue as
-    // manual publishes. The enqueue is awaited and its errors are swallowed, so
-    // a degraded hook never blocks telemetry or the response.
-    await this.enqueueIngestion(result.report);
+    // `state='published'`, same `from='open'` label auto-publish has always
+    // used — a scheduler candidate is always `status='draft'` with
+    // `periodStatus='open'`, never a reopened period. Emit only after the
+    // write succeeds so a failed save never inflates the counter.
+    await emitPublishSideEffects(
+      {
+        telemetry: this.telemetry,
+        ingestionHook: this.ingestionHook,
+        // publishAuto has never invalidated the analytics cache (no
+        // `invalidateAnalyticsCache` collaborator is wired here) — that stays
+        // as-is; only `period.publish` does.
+        onIngestionError: (error) => {
+          this.logger.warn("ingestion hook failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        },
+        // A report with zero sections was never enqueued — preserved from
+        // the pre-consolidation enqueueIngestion guard.
+        skipIngestionWhenEmpty: true,
+      },
+      {
+        priorStatus: "open",
+        getSectionIds: () =>
+          result.report.sections.map((s) => s.reportSectionId),
+      },
+    );
     return { published: true, report: result.report };
   }
 }
