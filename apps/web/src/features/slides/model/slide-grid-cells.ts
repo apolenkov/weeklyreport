@@ -132,6 +132,7 @@ export function columnsRowCount(columns: GridColumns): number {
 
 export interface GridPriorityCard {
   readonly id: string;
+  readonly productId: string;
   readonly rank: number;
   readonly text: string;
   readonly productName: string;
@@ -158,6 +159,7 @@ export function buildPriorityStrip(input: {
     return [
       {
         id: item.id ?? item.stableId ?? `priority-${String(index)}`,
+        productId: homeProductId,
         rank,
         text: item.text.trim(),
         productName: productNameById.get(homeProductId) ?? input.sharedCardName,

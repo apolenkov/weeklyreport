@@ -50,9 +50,10 @@ export function HeadSlideCarousel({
               {item.ownerName}
             </span>
             <span className="truncate text-xs text-[var(--color-muted-foreground)]">
-              {item.products.length > 0
-                ? item.products.join(" / ")
-                : "No product scope"}
+              {item.pageLabel ??
+                (item.products.length > 0
+                  ? item.products.join(" / ")
+                  : "No product scope")}
             </span>
             <span className="flex items-center gap-1.5 text-xs text-[var(--color-muted-foreground)]">
               <Gauge className="h-3.5 w-3.5" aria-hidden="true" />

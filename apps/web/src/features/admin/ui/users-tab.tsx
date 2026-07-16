@@ -1,8 +1,7 @@
 "use client";
 
-import { ROLE_LABEL, sessionRoleSchema } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../../lib/cache-keys";
@@ -12,26 +11,16 @@ import { PlusIcon } from "../../../shared/ui/icons";
 import { toAdminUserInput } from "../model/admin";
 import type { MockGroup, MockUser } from "../model/admin-types";
 import { emptyForm, formFromUser, type UserFormData } from "../model/user-form";
+import {
+  filterAdminUsers,
+  USER_ROLE_FILTER_OPTIONS,
+  USER_STATUS_FILTER_OPTIONS,
+  userGroupFilterOptions,
+  type UserStatusFilter,
+} from "../model/user-table-filters";
 import { TabFilter, TabHeader, TabSearch } from "./tab-header";
 import { UserEditDialog } from "./user-edit-dialog";
 import { UsersTable } from "./users-table";
-
-// role quick-filter options — declared module-level so no per-render alloc
-const ROLE_OPTIONS = [
-  { value: "", label: "All roles" },
-  ...sessionRoleSchema.options.map((role) => ({
-    value: role,
-    label: ROLE_LABEL[role],
-  })),
-];
-
-// status quick-filter — default "active" hides deactivated users on load
-const STATUS_OPTIONS = [
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "all", label: "All" },
-] as const;
-type StatusFilterValue = (typeof STATUS_OPTIONS)[number]["value"];
 
 interface UsersTabProps {
   readonly users: MockUser[];
@@ -45,13 +34,12 @@ export function UsersTab({ users, groups }: UsersTabProps) {
   const [editingUser, setEditingUser] = useState<MockUser | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MockUser | null>(null);
+  const deleteTriggerRef = useRef<HTMLElement | null>(null);
   const [form, setForm] = useState<UserFormData>(() => emptyForm(groups));
   const [search, setSearch] = useState("");
-  // role quick-filter ("" = all roles)
   const [roleFilter, setRoleFilter] = useState("");
   const [groupFilter, setGroupFilter] = useState("");
-  // status quick-filter (default "active" — hides deactivated on load)
-  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("active");
+  const [statusFilter, setStatusFilter] = useState<UserStatusFilter>("active");
 
   const activeGroups = useMemo(
     () => groups.filter((group) => !group.archived),
@@ -71,16 +59,8 @@ export function UsersTab({ users, groups }: UsersTabProps) {
       ? [...activeGroups, assignedArchivedGroup]
       : activeGroups;
   }, [activeGroups, form.groupId, groups]);
-  const groupFilterOptions = useMemo(
-    () => [
-      { value: "", label: "All groups" },
-      ...groups.map((group) => ({ value: group.id, label: group.name })),
-    ],
-    [groups],
-  );
+  const groupFilterOptions = userGroupFilterOptions(groups);
 
-  // Shared toast+refetch success and error handlers — every admin mutation
-  // invalidates the admin cache and surfaces the error message identically.
   const onError = (err: { message: string }) => toast.error(err.message);
   const onSuccess = (message: string, after?: () => void) => () => {
     invalidateAdmin(qc, trpc);
@@ -102,8 +82,6 @@ export function UsersTab({ users, groups }: UsersTabProps) {
     }),
   );
 
-  // deactivate/activate mutations with immediate Redis session revocation
-  // on the backend.
   const deactivateUserMut = useMutation(
     trpc.admin.deactivateUser.mutationOptions({
       onSuccess: onSuccess("User deactivated"),
@@ -149,32 +127,27 @@ export function UsersTab({ users, groups }: UsersTabProps) {
     setDeleteTarget(null);
   }
 
+  function openDelete(user: MockUser, trigger: HTMLButtonElement) {
+    deleteTriggerRef.current = trigger;
+    setDeleteTarget(user);
+  }
+
   const isSaving = saveUserMut.isPending;
   const canSave =
     form.lastName.trim().length > 0 &&
     form.firstName.trim().length > 0 &&
     (form.role === "viewer" || form.groupId.length > 0) &&
     !isSaving;
-  const filteredUsers = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    return users.filter((user) => {
-      if (roleFilter && user.role !== roleFilter) return false;
-      if (groupFilter && user.groupId !== groupFilter) return false;
-      if (statusFilter === "active" && !user.isActive) return false;
-      if (statusFilter === "inactive" && user.isActive) return false;
-      if (!needle) return true;
-      return [
-        user.name,
-        user.email,
-        user.role,
-        user.department,
-        user.position ?? "",
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(needle);
-    });
-  }, [search, roleFilter, groupFilter, statusFilter, users]);
+  const filteredUsers = useMemo(
+    () =>
+      filterAdminUsers(users, {
+        search,
+        role: roleFilter,
+        groupId: groupFilter,
+        status: statusFilter,
+      }),
+    [search, roleFilter, groupFilter, statusFilter, users],
+  );
 
   return (
     <>
@@ -187,15 +160,15 @@ export function UsersTab({ users, groups }: UsersTabProps) {
             <>
               <TabFilter
                 value={statusFilter}
-                onChange={(v) => setStatusFilter(v as StatusFilterValue)}
-                options={STATUS_OPTIONS}
+                onChange={(v) => setStatusFilter(v as UserStatusFilter)}
+                options={USER_STATUS_FILTER_OPTIONS}
                 testId="users-status-filter"
                 ariaLabel="Filter by status"
               />
               <TabFilter
                 value={roleFilter}
                 onChange={setRoleFilter}
-                options={ROLE_OPTIONS}
+                options={USER_ROLE_FILTER_OPTIONS}
                 testId="users-role-filter"
                 ariaLabel="Filter by role"
               />
@@ -235,7 +208,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
           onEdit={openEdit}
           onDeactivate={(user) => deactivateUserMut.mutate({ userId: user.id })}
           onActivate={(user) => activateUserMut.mutate({ userId: user.id })}
-          onDelete={setDeleteTarget}
+          onDelete={openDelete}
         />
         {filteredUsers.length === 0 && (
           <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
@@ -267,6 +240,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
         confirmLabel="Delete"
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
+        triggerRef={deleteTriggerRef}
       />
     </>
   );

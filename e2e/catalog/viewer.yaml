@@ -50,6 +50,12 @@ routes:
         when: "The page loads with a reportId URL param"
         then: "The portfolio overview table and per-product accordions are displayed; the page title shows the week number and date range"
         note: "viewer-live-status: the primary read-only intent. The read gate is published-or-current, so the current open/reopened period shows live content INCLUDING unsubmitted drafts (same as the head sees). The viewer can expand/collapse product accordions and scroll. No mutations occur."
+      - id: viewer-toggle-slide-density
+        intent: "Read a published slide deck in document or presentation density"
+        given: "The viewer has opened an allowed report in slides mode"
+        when: "the viewer switches between Document and Presentation"
+        then: "Document shows all content; Presentation shows product-first pages with a 12-record cap and labeled continuations, preserving every visible record exactly once without fetching head-only activity data"
+        note: "The same accessible density control is shared with the head deck; viewer report authority and read-only scope remain unchanged."
       - id: viewer-export-report-pdf
         intent: "Export the published report as a downloadable PDF"
         given: "The viewer is viewing a published or reopened report"

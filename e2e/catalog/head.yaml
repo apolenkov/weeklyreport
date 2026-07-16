@@ -107,6 +107,12 @@ routes:
         when: "the head clicks the Slides or Edit toggle button"
         then: "the view mode switches (form ↔ slides), the URL updates (?mode=slides or removes the param), the same report data is re-rendered in the new layout"
         note: "Navigation action using Link with ?mode=slides query param. The current scope and authorId query params are preserved. Form is the default."
+      - id: head-addressed-report-toggle-slide-density
+        intent: "Review a dense head deck as a document or bounded presentation pages"
+        given: "the addressed report is in slides mode with lead- or product-grouped content"
+        when: "the head switches between Document and Presentation density"
+        then: "Document retains the complete auto-height report; Presentation pages each product deterministically, labels continuations, and preserves every record, author, status, and selected scope exactly once"
+        note: "Density is local reversible view state and does not refetch weekly-report data."
       - id: head-addressed-report-toggle-scope
         intent: "Switch between product and lead grouping in the addressed report view"
         given: "a report in form or slides mode"

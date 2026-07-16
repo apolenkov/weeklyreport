@@ -8,11 +8,13 @@ import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
 import { buildActivitySlideModel } from "../model/activity-slide-model";
 import { buildProductScopedSlides } from "../model/product-scoped-slides";
 import { buildSectionSlideModel } from "../model/section-slide-model";
+import { sortSlidesForReview } from "../model/section-slide-pagination";
 import {
-  paginateSectionSlides,
-  sortSlidesForReview,
-} from "../model/section-slide-pagination";
+  type SlideDensity,
+  slidesForDensity,
+} from "../model/slide-density-pagination";
 import { ReportSlides } from "./report-slides";
+import { SlideDensityControl } from "./slide-density-control";
 import { SlideEmptyState } from "./slide-empty-state";
 import { SlideSkeleton } from "./slide-skeleton";
 
@@ -40,6 +42,7 @@ export function HeadSlidesClient({
 }: HeadSlidesClientProps = {}) {
   const trpc = useTRPC();
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [density, setDensity] = useState<SlideDensity>("document");
 
   const weeklyQ = useQuery(
     trpc.weeklyReport.get.queryOptions(reportId ? { reportId } : {}),
@@ -60,7 +63,7 @@ export function HeadSlidesClient({
     procedure: "weeklyReport.get",
   });
 
-  const slides = useMemo(() => {
+  const documentSlides = useMemo(() => {
     if (!weeklyQ.data || weeklyQ.data.status === "no-period") return [];
     if (weeklyQ.data.leadSections.length > 0) {
       const base =
@@ -69,15 +72,17 @@ export function HeadSlidesClient({
           : weeklyQ.data.leadSections.map((section) =>
               buildSectionSlideModel(section),
             );
-      return sortSlidesForReview(
-        base.flatMap((model) => paginateSectionSlides(model)),
-      );
+      return sortSlidesForReview(base);
     }
     if (!needsActivityFallback) return [];
     return sortSlidesForReview(
       (activityQ.data?.rows ?? []).map((row) => buildActivitySlideModel(row)),
     );
   }, [weeklyQ.data, activityQ.data, scope, needsActivityFallback]);
+  const slides = useMemo(
+    () => slidesForDensity(documentSlides, density),
+    [documentSlides, density],
+  );
 
   useEffect(() => {
     // Two-sided clamp — see lead-slides-client: a negative index from an
@@ -123,6 +128,7 @@ export function HeadSlidesClient({
       selectedIndex={selectedIndex}
       onSelect={setSelectedIndex}
       variant="head"
+      toolbar={<SlideDensityControl value={density} onChange={setDensity} />}
     />
   );
 }

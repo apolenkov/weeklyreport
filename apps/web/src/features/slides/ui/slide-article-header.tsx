@@ -37,11 +37,13 @@ export function SlideGridHeader({
   ownerName,
   grid,
   heroControls,
+  pageLabel,
 }: {
   readonly ownerName: string;
   readonly grid: SlideGridModel;
   /** Deck-owned controls (fullscreen, period picker) rendered at the end. */
   readonly heroControls?: ReactNode;
+  readonly pageLabel?: string;
 }) {
   const short = grid.onTrack.on < grid.onTrack.total;
   return (
@@ -53,6 +55,11 @@ export function SlideGridHeader({
       <h2 className="min-w-0 truncate text-xl font-semibold text-[var(--color-foreground)]">
         {ownerName}
       </h2>
+      {pageLabel ? (
+        <span className="text-sm font-semibold text-[var(--color-muted-foreground)]">
+          {pageLabel}
+        </span>
+      ) : null}
       <span className="ml-auto flex items-center gap-2">
         {metric(grid.counters.current, "current")}
         <span aria-hidden="true">·</span>

@@ -4,6 +4,7 @@ import type { DbRole } from "@customreport/shared";
 import { ROLE_LABEL, shortName } from "@customreport/shared";
 
 import type { MockUser } from "../model/admin-types";
+import { UserRowActions } from "./user-row-actions";
 
 interface UsersTableProps {
   readonly users: readonly MockUser[];
@@ -12,7 +13,7 @@ interface UsersTableProps {
   readonly onEdit: (user: MockUser) => void;
   readonly onDeactivate: (user: MockUser) => void;
   readonly onActivate: (user: MockUser) => void;
-  readonly onDelete: (user: MockUser) => void;
+  readonly onDelete: (user: MockUser, trigger: HTMLButtonElement) => void;
 }
 
 export function UsersTable({
@@ -78,45 +79,15 @@ export function UsersTable({
                 {user.position ?? "—"}
               </td>
               <td className="px-4 py-3 text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onEdit(user)}
-                    className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)]"
-                    aria-label={`Edit ${user.name}`}
-                  >
-                    Edit
-                  </button>
-                  {user.isActive ? (
-                    <button
-                      type="button"
-                      onClick={() => onDeactivate(user)}
-                      disabled={deactivatePending}
-                      className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-amber-600 transition-colors hover:border-[rgba(180,100,0,0.3)] hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      aria-label={`Deactivate ${user.name}`}
-                    >
-                      Deactivate
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => onActivate(user)}
-                      disabled={activatePending}
-                      className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
-                      aria-label={`Activate ${user.name}`}
-                    >
-                      Activate
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => onDelete(user)}
-                    className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[rgba(200,32,20,0.3)] hover:bg-red-50"
-                    aria-label={`Delete ${user.name}`}
-                  >
-                    Delete
-                  </button>
-                </div>
+                <UserRowActions
+                  user={user}
+                  deactivatePending={deactivatePending}
+                  activatePending={activatePending}
+                  onEdit={onEdit}
+                  onDeactivate={onDeactivate}
+                  onActivate={onActivate}
+                  onDelete={onDelete}
+                />
               </td>
             </tr>
           ))}

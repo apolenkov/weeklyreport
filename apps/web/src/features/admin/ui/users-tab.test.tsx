@@ -258,18 +258,23 @@ describe("UsersTab — delete modal focus management (dialog-listbox-a11y)", () 
     vi.clearAllMocks();
   });
 
-  function openDeleteModal() {
+  async function openDeleteModal() {
+    const user = userEvent.setup();
     const trigger = screen.getByRole("button", {
-      name: /delete ivanova alice/i,
+      name: /more actions for ivanova alice/i,
     });
     trigger.focus();
-    fireEvent.click(trigger);
+    await user.click(trigger);
+    await user.click(screen.getByRole("menuitem", { name: /delete user/i }));
     return trigger;
   }
 
-  it("closes on Escape and restores focus to the row's delete trigger", () => {
+  it("discovers Delete through overflow and restores focus after Escape", async () => {
     renderTab();
-    const trigger = openDeleteModal();
+    expect(
+      screen.queryByRole("button", { name: /delete ivanova alice/i }),
+    ).not.toBeInTheDocument();
+    const trigger = await openDeleteModal();
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
 
     fireEvent.keyDown(document, { key: "Escape" });
@@ -278,9 +283,9 @@ describe("UsersTab — delete modal focus management (dialog-listbox-a11y)", () 
     expect(document.activeElement).toBe(trigger);
   });
 
-  it("closes on backdrop click and restores focus to the delete trigger", () => {
+  it("closes on backdrop click and restores focus to the overflow trigger", async () => {
     renderTab();
-    const trigger = openDeleteModal();
+    const trigger = await openDeleteModal();
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
 
     const backdrop = document.querySelector('[role="presentation"]');
@@ -292,13 +297,50 @@ describe("UsersTab — delete modal focus management (dialog-listbox-a11y)", () 
     expect(document.activeElement).toBe(trigger);
   });
 
-  it("does NOT close when clicking inside the modal (stopPropagation)", () => {
+  it("does NOT close when clicking inside the modal (stopPropagation)", async () => {
     renderTab();
-    openDeleteModal();
+    await openDeleteModal();
 
     fireEvent.click(screen.getByRole("alertdialog"));
 
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+  });
+
+  it("keeps routine actions inline and gives every row action a 40px target", () => {
+    renderTab();
+    const row = screen.getByText(USER.email).closest("tr");
+    expect(row).not.toBeNull();
+    const actions = [
+      within(row as HTMLElement).getByRole("button", {
+        name: /edit ivanova alice/i,
+      }),
+      within(row as HTMLElement).getByRole("button", {
+        name: /deactivate ivanova alice/i,
+      }),
+      within(row as HTMLElement).getByRole("button", {
+        name: /more actions for ivanova alice/i,
+      }),
+    ];
+
+    actions.forEach((action) => {
+      expect(action).toHaveClass("h-10", "min-w-10");
+    });
+    expect(actions[0]?.parentElement).toHaveClass("flex-wrap");
+  });
+
+  it("uses the existing delete mutation after confirmation", async () => {
+    const { captured } = renderTab();
+    captured["admin.deleteUser"].mutationFn.mockResolvedValue(undefined);
+    await openDeleteModal();
+
+    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+
+    await waitFor(() => {
+      expect(captured["admin.deleteUser"].mutationFn).toHaveBeenCalledWith(
+        { userId: USER.id },
+        expect.anything(),
+      );
+    });
   });
 });
 

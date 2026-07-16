@@ -16,7 +16,6 @@ import {
 } from "../model/lead-slide-periods";
 import { buildLeadDeckModel } from "../model/lead-slides-deck-model";
 import { type SectionSlideModel } from "../model/section-slide-contracts";
-import { paginateSectionSlides } from "../model/section-slide-pagination";
 
 export type LeadSlideFormData = NonNullable<ReturnType<typeof mapLeadFormData>>;
 
@@ -162,7 +161,7 @@ export function useLeadSlidesData({
     );
   }, [byPeriodQ.data, crossAuthorsQ.data, foreignContentRows, isOwnDeck]);
   const slides = useMemo(
-    () => (sectionModel ? paginateSectionSlides(sectionModel) : []),
+    () => (sectionModel ? [sectionModel] : []),
     [sectionModel],
   );
   const section = byPeriodQ.data?.section ?? null;

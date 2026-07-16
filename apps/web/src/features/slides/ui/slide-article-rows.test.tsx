@@ -146,6 +146,7 @@ describe("SlidePriorityStrip rank badge", () => {
     priorityStrip: [
       {
         id: "prio-1",
+        productId: "product-1",
         rank: 2,
         text: "Ship the export",
         productName: "Portal",

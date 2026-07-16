@@ -3,7 +3,8 @@
 import "@testing-library/jest-dom/vitest";
 
 import { useQuery } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 interface ActivityQueryResult {
@@ -17,8 +18,15 @@ interface ActivityQueryResult {
 const mockActivityQuery = vi.hoisted(() => vi.fn<() => ActivityQueryResult>());
 
 vi.mock("./report-slides", () => ({
-  ReportSlides: ({ slides }: { slides: unknown[] }) => (
+  ReportSlides: ({
+    slides,
+    toolbar,
+  }: {
+    slides: unknown[];
+    toolbar?: ReactNode;
+  }) => (
     <div data-testid="report-slides" data-slide-count={String(slides.length)}>
+      {toolbar}
       {slides.map((slide) => JSON.stringify(slide)).join(" ")}
     </div>
   ),
@@ -44,7 +52,6 @@ vi.mock("../model/section-slide-model", () => ({
   buildSectionSlideModel: (section: unknown) => section,
 }));
 vi.mock("../model/section-slide-pagination", () => ({
-  paginateSectionSlides: (model: unknown) => [model],
   sortSlidesForReview: (slides: unknown[]) => slides,
 }));
 
@@ -143,6 +150,24 @@ describe("HeadSlidesClient — enableActivity gating", () => {
       "data-slide-count",
       String(ACTIVITY_ROWS.length),
     );
+  });
+});
+
+describe("HeadSlidesClient — density control", () => {
+  it("exposes a reversible Document/Presentation state on viewer and head decks", () => {
+    render(<HeadSlidesClient reportId="report-a" enableActivity={false} />);
+    const document = screen.getByRole("button", { name: "Document" });
+    const presentation = screen.getByRole("button", {
+      name: "Presentation",
+    });
+
+    expect(document).toHaveAttribute("aria-pressed", "true");
+    expect(presentation).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(presentation);
+    expect(document).toHaveAttribute("aria-pressed", "false");
+    expect(presentation).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(document);
+    expect(document).toHaveAttribute("aria-pressed", "true");
   });
 });
 

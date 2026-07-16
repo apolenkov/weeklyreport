@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../lib/use-dialog-focus";
@@ -43,6 +43,7 @@ interface ConfirmDeleteDialogProps {
   readonly reversible?: boolean;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
+  readonly triggerRef?: RefObject<HTMLElement | null>;
 }
 
 /**
@@ -71,6 +72,7 @@ export function ConfirmDeleteDialog({
   reversible = false,
   onConfirm,
   onCancel,
+  triggerRef,
 }: ConfirmDeleteDialogProps) {
   const confirmRef = useRef<HTMLButtonElement | null>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
@@ -78,7 +80,12 @@ export function ConfirmDeleteDialog({
   // Escape-to-close, Tab-trap, and focus-restore-to-trigger all come from the
   // shared primitive; backdrop click and the Cancel button share the same
   // `onCancel` close path.
-  useDialogFocus({ open, onClose: onCancel, containerRef: surfaceRef });
+  useDialogFocus({
+    open,
+    onClose: onCancel,
+    containerRef: surfaceRef,
+    triggerRef,
+  });
 
   useEffect(() => {
     if (!open) return;

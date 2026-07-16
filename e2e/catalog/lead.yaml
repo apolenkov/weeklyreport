@@ -104,6 +104,12 @@ routes:
         when: "the lead clicks the view-mode toggle button to switch from edit to slides (or vice versa)"
         then: "the page navigates to the same report with the query parameter ?mode=slides (or without it for edit mode); the form displays the content in presentation slides format instead of the editable form"
         note: "The URL changes to reflect the mode; slides mode is read-only but the lead can still navigate between periods"
+      - id: lead-report-toggle-slide-density
+        intent: "Switch the slide deck between all-content reading and projection density"
+        given: "The lead is viewing the report in slides mode"
+        when: "the lead switches from Document to Presentation density and back"
+        then: "Document shows the auto-height article with every product record; Presentation creates product-first pages capped at 12 records with labeled continuation pages, and switching back restores Document without refetching report data"
+        note: "The two 40px controls expose their active state with aria-pressed and remain available in hosted and standalone lead decks."
       - id: lead-report-toggle-archive-periods
         intent: "Show or hide archived (old) reporting periods"
         given: "The lead is on the report form"

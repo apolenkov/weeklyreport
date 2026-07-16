@@ -13,10 +13,12 @@ import {
   type SlideForeignContent,
 } from "./section-slide-foreign";
 import { buildSectionSlideModel } from "./section-slide-model";
+import { sortSlidesForReview } from "./section-slide-pagination";
 import {
   paginateSectionSlides,
-  sortSlidesForReview,
-} from "./section-slide-pagination";
+  slidesForDensity,
+} from "./slide-density-pagination";
+import { slideRecordIdentities } from "./slide-record-identities";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const SECTION_ID = "22222222-2222-4222-8222-222222222222";
@@ -577,7 +579,7 @@ describe("section slide utilities", () => {
     ]);
   });
 
-  it("preserves product and grid identity across pagination", () => {
+  it("paginates product-first and preserves every stable record identity", () => {
     const model = buildSectionSlideModel(
       makeSection({
         projects: [
@@ -592,27 +594,87 @@ describe("section slide utilities", () => {
       }),
     );
 
-    expect(
-      paginateSectionSlides(model, 1).map((page) => ({
-        pageIndex: page.pageIndex,
-        pageTotal: page.pageTotal,
-        productIds: page.productSlides.map((product) => product.id),
-        gridProductIds: page.grid?.products.map((product) => product.id),
-      })),
-    ).toEqual([
-      {
-        pageIndex: 0,
-        pageTotal: 2,
-        productIds: [PRODUCT_ID],
-        gridProductIds: [PRODUCT_ID],
-      },
-      {
-        pageIndex: 1,
-        pageTotal: 2,
-        productIds: [PRODUCT_TWO_ID],
-        gridProductIds: [PRODUCT_TWO_ID],
-      },
+    const pages = paginateSectionSlides(model, 2);
+    const sourceIdentities = slideRecordIdentities(model);
+    const pageIdentities = pages.flatMap(slideRecordIdentities);
+
+    expect(pages.map((page) => page.pageLabel)).toEqual([
+      "Core Product — 1 of 2",
+      "Core Product — continuation 2 of 2",
+      "Second Product",
     ]);
+    expect(pageIdentities).toEqual(sourceIdentities);
+    expect(new Set(pageIdentities).size).toBe(pageIdentities.length);
+    expect(pages.every((page) => slideRecordIdentities(page).length <= 2)).toBe(
+      true,
+    );
+    expect(pages.every((page) => page.grid?.products.length === 1)).toBe(true);
+    expect(
+      pages.every((page) => page.grid?.authors === model.grid?.authors),
+    ).toBe(true);
+  });
+
+  it("keeps document density as the unchanged all-content model", () => {
+    const model = buildSectionSlideModel(makeSection());
+    const [document] = slidesForDensity([model], "document");
+
+    expect(document).toBe(model);
+    expect(document.grid?.products).toHaveLength(1);
+    expect(slideRecordIdentities(document)).toEqual(
+      slideRecordIdentities(model),
+    );
+  });
+
+  it("preserves Everyone-scoped author, status, and row objects while paging", () => {
+    const mine = buildSectionSlideModel(makeSection());
+    const everyone = buildSectionSlideModel(makeSection(), {
+      foreign: [
+        makeForeignRow({
+          items: [
+            {
+              id: "foreign-current",
+              projectId: PRODUCT_ID,
+              type: "current",
+              text: "Foreign current",
+              workflowStatus: "in_progress",
+              stageNames: ["Build"],
+            },
+          ],
+        }),
+      ],
+    });
+    const sourceRows = everyone.grid?.products.flatMap((product) =>
+      product.subsections.flatMap((subsection) => [
+        ...subsection.columns.current,
+        ...subsection.columns.next,
+        ...subsection.columns.risks,
+        ...subsection.columns.decisions,
+      ]),
+    );
+    const pages = paginateSectionSlides(everyone, 2);
+    const pageRows = pages.flatMap(
+      (page) =>
+        page.grid?.products.flatMap((product) =>
+          product.subsections.flatMap((subsection) => [
+            ...subsection.columns.current,
+            ...subsection.columns.next,
+            ...subsection.columns.risks,
+            ...subsection.columns.decisions,
+          ]),
+        ) ?? [],
+    );
+    const foreignRow = sourceRows?.find(
+      (row) => row.authorId === FOREIGN_AUTHOR_ID,
+    );
+
+    expect(slideRecordIdentities(everyone)).toHaveLength(
+      slideRecordIdentities(mine).length + 1,
+    );
+    expect(pageRows).toEqual(sourceRows);
+    expect(pageRows.find((row) => row.id === foreignRow?.id)).toBe(foreignRow);
+    expect(
+      pages.every((page) => page.grid?.authors === everyone.grid?.authors),
+    ).toBe(true);
   });
 
   it("requires a risk story when section signals red or yellow", () => {

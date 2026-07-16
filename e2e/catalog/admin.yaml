@@ -40,7 +40,13 @@ routes:
         given: "The admin is on the Users tab."
         when: "the admin adds a new user, edits an existing user's name/email/role/group assignment, deactivates or activates a user, or deletes a user"
         then: "A toast appears with 'User saved', 'User deleted', 'User deactivated', or 'User activated'; the user list table updates to reflect the change."
-        note: "The tab displays all users with role/group/status filters and search. Includes deactivate/activate as distinct from delete (A2: immediate session revocation on backend)."
+        note: "The tab displays all users with role/group/status filters and search. Edit and Activate/Deactivate remain inline with 40px targets; Delete is available only from the labeled row overflow menu and opens the existing confirmation dialog. Cancel restores focus to the overflow trigger."
+      - id: admin-users-delete-overflow
+        intent: "Delete a user without presenting destruction as a routine row action."
+        given: "The admin is on the Users tab at desktop or narrow width."
+        when: "the admin opens a user's labeled More actions menu and chooses Delete user"
+        then: "The destructive confirmation opens; cancel returns focus to More actions, while confirm calls the existing authorized delete mutation. Edit and Activate/Deactivate remain visible inline."
+        note: "Every row action and the destructive menu item has at least a 40px interactive target and a visible keyboard focus state."
       - id: admin-groups-manage
         intent: "Manage reporting groups: create, edit, archive, and unarchive groups; assign head users and group products."
         given: "The admin is on the Groups tab."
