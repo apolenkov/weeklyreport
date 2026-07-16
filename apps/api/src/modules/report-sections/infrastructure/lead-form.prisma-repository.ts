@@ -1,6 +1,7 @@
 import type {
   DbRole,
   ReportSectionReadModel,
+  RiskSeverity,
   TrafficLightStatus,
 } from "@customreport/shared";
 import { shortNameFromName, stageNamesMatch } from "@customreport/shared";
@@ -808,10 +809,14 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           (i): i is typeof i & { projectId: string } =>
             i.projectId != null && sharedIds.has(i.projectId),
         ),
-        risks: section.risks.filter(
-          (r): r is typeof r & { projectId: string } =>
-            r.projectId != null && sharedIds.has(r.projectId),
-        ),
+        risks: section.risks
+          .filter(
+            (r): r is typeof r & { projectId: string } =>
+              r.projectId != null && sharedIds.has(r.projectId),
+          )
+          // The DB column is a plain String (Risk_severity_check CHECK backs
+          // the two-value vocabulary); narrow the Prisma-typed string here.
+          .map((r) => ({ ...r, severity: r.severity as RiskSeverity })),
         decisions: section.decisions.filter(
           (d): d is typeof d & { productId: string } =>
             d.productId != null && sharedIds.has(d.productId),

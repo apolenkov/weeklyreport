@@ -60,13 +60,8 @@ describe("riskSeverityToCanonicalFloor", () => {
     expect(riskSeverityToCanonicalFloor("blocked")).toBe("blocked");
   });
 
-  it.each([
-    { severity: "at-risk" },
-    { severity: undefined },
-    { severity: "" },
-    { severity: "some-other-value" },
-  ])("floors severity=$severity to at-risk", ({ severity }) => {
-    expect(riskSeverityToCanonicalFloor(severity)).toBe("at-risk");
+  it('floors "at-risk" to at-risk', () => {
+    expect(riskSeverityToCanonicalFloor("at-risk")).toBe("at-risk");
   });
 });
 

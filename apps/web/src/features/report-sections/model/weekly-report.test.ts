@@ -372,6 +372,7 @@ describe("mapWeeklyReport", () => {
               risk: "OAuth slow",
               impact: "SSO slips",
               mitigation: "Vendor escalation",
+              severity: "at-risk",
             },
           ],
           decisions: [],
@@ -435,60 +436,6 @@ describe("mapWeeklyReport", () => {
     );
     expect(expectDefined(crmReport?.nextWeek[0]).stageLead).toBe("Planned");
     expect(crmReport?.risks).toHaveLength(1);
-    expect(expectDefined(crmReport?.risks[0]).severity).toBe("at-risk");
-  });
-
-  it("defaults a risk with no explicit severity to at-risk, regardless of item status (rework-item-status-model: no stored blocked item to infer from)", () => {
-    const report = baseReport({
-      portfolioOverview: [
-        {
-          productId: PROJECT_A,
-          productName: "CRM",
-          worstStatus: "red",
-          stageCount: 7,
-          leadNames: ["Тимлид 1"],
-        },
-      ],
-      leadSections: [
-        {
-          activities: [],
-          reportSectionId: SECTION_A,
-          reportId: REPORT_ID,
-          authorId: AUTHOR_A,
-          authorName: "Тимлид 1",
-          version: 1,
-          status: "draft",
-          submittedAt: null,
-          projects: [
-            { projectId: PROJECT_A, projectName: "CRM", trafficLight: "red" },
-          ],
-          items: [
-            {
-              id: "i1",
-              projectId: PROJECT_A,
-              type: "current",
-              text: "ETL fix",
-              tag: "etl",
-              workflowStatus: "in_progress",
-              carriedOver: false,
-            },
-          ],
-          risks: [
-            {
-              id: "r1",
-              projectId: PROJECT_A,
-              risk: "OOM in ETL",
-              impact: "Blocks release",
-              mitigation: "Vendor patch",
-            },
-          ],
-          decisions: [],
-        },
-      ],
-    });
-
-    const result = mapWeeklyReport(report);
-    const crmReport = result.products.find((p) => p.id === PROJECT_A);
     expect(expectDefined(crmReport?.risks[0]).severity).toBe("at-risk");
   });
 
@@ -863,6 +810,7 @@ describe("product name resolution (fix-product-name-resolution)", () => {
               risk: "Cross-project risk",
               impact: "Impact",
               mitigation: "Mitigation",
+              severity: "at-risk",
               stageIds: ["Analysis"],
             },
           ],

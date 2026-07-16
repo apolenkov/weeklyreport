@@ -1,5 +1,6 @@
 import {
   type CanonicalStatus,
+  type RiskSeverity,
   riskSeverityToCanonicalFloor,
   worstCanonicalStatus,
 } from "@customreport/shared";
@@ -39,7 +40,7 @@ import {
  */
 export function deriveEffectiveStageStatus(
   explicit: CanonicalStatus,
-  risks: readonly { severity?: string }[],
+  risks: readonly { severity: RiskSeverity }[],
   items: readonly { workflowStatus: string }[],
 ): CanonicalStatus {
   const riskBest = worstCanonicalStatus(

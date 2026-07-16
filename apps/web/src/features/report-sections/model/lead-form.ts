@@ -16,7 +16,11 @@ import type {
   RecordCommentView,
   ReportSectionReadModel,
 } from "@customreport/shared";
-import type { DbRole, TrafficLightStatus } from "@customreport/shared";
+import type {
+  DbRole,
+  RiskSeverity,
+  TrafficLightStatus,
+} from "@customreport/shared";
 import {
   initialsFromName as sharedInitialsFromName,
   normalizeStageName,
@@ -223,7 +227,10 @@ function buildStageGrid(
     status?: TrafficLightStatus | null;
   }[],
   stageSet: readonly { stageName: string }[] = [],
-  risks: readonly { stageIds?: readonly string[]; severity?: string }[] = [],
+  risks: readonly {
+    stageIds?: readonly string[];
+    severity: RiskSeverity;
+  }[] = [],
 ): LeadStageAssignment[] {
   // unassigned-stage-reporting-exclusion: membership is assignment-driven —
   // a stage renders only if it is in the product's `stageSet` (assigned to some
@@ -425,7 +432,7 @@ export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
           : {}),
         // Stage array from DB; legacy rows fall back to undefined.
         stageIds: r.stageIds,
-        severity: r.severity ?? "at-risk",
+        severity: r.severity,
         text: r.risk,
         impact: r.impact,
         mitigation: r.mitigation,

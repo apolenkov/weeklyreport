@@ -229,7 +229,7 @@ CREATE TABLE "Risk" (
     "risk" TEXT NOT NULL,
     "impact" TEXT NOT NULL,
     "mitigation" TEXT NOT NULL,
-    "severity" TEXT NOT NULL DEFAULT 'at-risk',
+    "severity" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "searchTsv" tsvector GENERATED ALWAYS AS (to_tsvector('russian'::regconfig, ((((COALESCE(risk, ''::text) || ' '::text) || COALESCE(impact, ''::text)) || ' '::text) || COALESCE(mitigation, ''::text)))) STORED,

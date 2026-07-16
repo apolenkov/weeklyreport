@@ -859,6 +859,7 @@ async function main() {
       mitigation:
         "Эскалирована заявка на расширение квоты, параллельно готовим batch-fallback",
       stageNames: ["Development"],
+      severity: "at-risk",
     },
     {
       id: riskId(2),
@@ -869,6 +870,7 @@ async function main() {
       mitigation:
         "Патч ETA 8 мая, временно перешли на chunked extraction по 500K",
       stageNames: ["Testing"],
+      severity: "at-risk",
     },
     {
       id: riskId(3),
@@ -880,6 +882,7 @@ async function main() {
       mitigation:
         "Окно запланировано в субботу 02:00 МСК, rollback-план провалидирован",
       stageNames: ["DevOps"],
+      severity: "at-risk",
     },
     {
       id: riskId(4),
@@ -889,6 +892,7 @@ async function main() {
       impact: "Часть клиентских запросов может блокироваться без причины",
       mitigation: "Раскатка через shadow-mode + кнопка мгновенного rollback",
       stageNames: ["Support"],
+      severity: "at-risk",
     },
     // Olga's section — risk on Testing stage (no explicit stageStatus), so
     // deriveEffectiveStageStatus shows the Testing chip at-risk (#fef3c7).
@@ -900,6 +904,7 @@ async function main() {
       impact: "Задержка валидации релиза",
       mitigation: "Изолированный стенд для нагрузки запланирован на следующий спринт",
       stageNames: ["Testing"],
+      severity: "at-risk",
     },
     // record-status-derived-from-risk: the covering blocker for Olga's DevOps
     // item (5156). The item itself is stored `in_progress` now — its blocked
@@ -926,9 +931,7 @@ async function main() {
         impact: r.impact,
         mitigation: r.mitigation,
         stageNames: r.stageNames,
-        // record-status-derived-from-risk: carry the explicit severity so a
-        // re-seed keeps the blocked severity (others fall to the column default).
-        ...("severity" in r ? { severity: r.severity } : {}),
+        severity: r.severity,
       },
       create: r,
     });

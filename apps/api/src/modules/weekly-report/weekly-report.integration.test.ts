@@ -270,6 +270,7 @@ describe("WeeklyReportService — integration (data shape)", () => {
               risk: "Deadline slip",
               impact: "Revenue",
               mitigation: "Hire contractor",
+              severity: "at-risk",
             },
           ],
           decisions: [

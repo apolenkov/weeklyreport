@@ -120,7 +120,7 @@ export const riskInputSchema = z.object({
   risk: safeText({ max: 500 }),
   impact: safeText({ max: 500 }),
   mitigation: safeText({ max: 500 }),
-  severity: riskSeveritySchema.optional(),
+  severity: riskSeveritySchema,
   // Length-tolerant; the riskWriteSchema superRefine enforces the conditional
   // stage rule (≥1 for a product parent, none for an activity parent).
   stageIds: writeStageIdsField,

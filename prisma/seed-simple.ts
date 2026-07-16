@@ -1015,7 +1015,7 @@ async function main() {
       risk: string;
       impact: string;
       mitigation: string;
-      severity?: "at-risk" | "blocked";
+      severity: "at-risk" | "blocked";
     };
     decisions: {
       text: string;
@@ -1119,6 +1119,7 @@ async function main() {
         risk: "Риск: провайдер платежей выкатывает breaking changes без анонса",
         impact: "Влияние: возможные простои чекаута на 1-2 часа",
         mitigation: "Митигация: контракт-тесты в CI + фича-флаг для отката",
+        severity: "at-risk",
       },
       decisions: [
         {
@@ -1256,6 +1257,7 @@ async function main() {
         impact: "Влияние: сдвиг релиза мобильного приложения на одну неделю",
         mitigation:
           "Митигация: ежедневный sync с менеджером партнёра, готов фолбэк-флоу",
+        severity: "at-risk",
       },
       decisions: [
         {
@@ -1556,7 +1558,7 @@ async function main() {
           risk: content.risk.risk,
           impact: content.risk.impact,
           mitigation: content.risk.mitigation,
-          severity: content.risk.severity ?? "at-risk",
+          severity: content.risk.severity,
           stageNames: [stageFor(0)],
         },
       });

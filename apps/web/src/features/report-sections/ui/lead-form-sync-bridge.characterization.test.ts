@@ -4,7 +4,7 @@ import type { Product, RiskEntry } from "../model/types";
 import { applyRiskSeverityFloor } from "./lead-form-sync-bridge";
 
 /**
- * dedupe-severity-floor-ranking: pins `applyRiskSeverityFloor`'s current
+ * Pins `applyRiskSeverityFloor`'s current
  * output over the severity × explicit-status permutation grid BEFORE the
  * ranking core moves to the shared package. Frozen — do not edit assertions
  * after the move lands; a diff here means a behavior change.

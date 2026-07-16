@@ -56,6 +56,7 @@ const sectionLead1: ReportSectionReadModel = {
       risk: "Vendor delay risk",
       impact: "May delay launch by 1 week",
       mitigation: "Prepare fallback vendor",
+      severity: "at-risk",
     },
   ],
   decisions: [

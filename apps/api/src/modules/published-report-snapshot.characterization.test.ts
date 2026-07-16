@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { computeWorstStatus } from "./published-report-snapshot";
 
 /**
- * dedupe-severity-floor-ranking: pins `computeWorstStatus`'s current output
+ * Pins `computeWorstStatus`'s current output
  * (the snapshot module's own worst-of fold, historically backed by a local
  * `statusSeverity` rank table) over the traffic-light permutation grid
  * BEFORE it is re-expressed over the shared domain fold. Frozen — do not

@@ -101,6 +101,7 @@ describe("Analytics day-range matching (integration)", () => {
             risk: `risk ${String(i)}`,
             impact: "impact",
             mitigation: "mitigation",
+            severity: "at-risk",
             stageNames: [],
           },
         }),
@@ -362,6 +363,7 @@ describe("Analytics group scoping (integration)", () => {
         risk: "Group B risk",
         impact: "B impact",
         mitigation: "B mitigation",
+        severity: "at-risk",
       },
     });
   });
