@@ -1,0 +1,99 @@
+"use client";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@customreport/ui/components/ui/dropdown-menu";
+import { MoreHorizontal, Trash2 } from "lucide-react";
+import { useRef } from "react";
+
+import type { MockUser } from "../model/admin-types";
+
+interface UserRowActionsProps {
+  readonly user: MockUser;
+  readonly deactivatePending: boolean;
+  readonly activatePending: boolean;
+  readonly onEdit: (user: MockUser) => void;
+  readonly onDeactivate: (user: MockUser) => void;
+  readonly onActivate: (user: MockUser) => void;
+  readonly onDelete: (user: MockUser, trigger: HTMLButtonElement) => void;
+}
+
+const ROUTINE_ACTION_CLASS =
+  "btn-press inline-flex h-10 min-w-10 items-center justify-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+
+export function UserRowActions({
+  user,
+  deactivatePending,
+  activatePending,
+  onEdit,
+  onDeactivate,
+  onActivate,
+  onDelete,
+}: UserRowActionsProps) {
+  const overflowTriggerRef = useRef<HTMLButtonElement>(null);
+  const activation = user.isActive
+    ? {
+        label: "Deactivate",
+        pending: deactivatePending,
+        action: onDeactivate,
+        className:
+          "text-amber-600 hover:border-[rgba(180,100,0,0.3)] hover:bg-amber-50",
+      }
+    : {
+        label: "Activate",
+        pending: activatePending,
+        action: onActivate,
+        className:
+          "text-[var(--color-starbucks-accent)] hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)]",
+      };
+
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <button
+        type="button"
+        onClick={() => onEdit(user)}
+        className={`${ROUTINE_ACTION_CLASS} text-[var(--color-starbucks-accent)] hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)]`}
+        aria-label={`Edit ${user.name}`}
+      >
+        Edit
+      </button>
+      <button
+        type="button"
+        onClick={() => activation.action(user)}
+        disabled={activation.pending}
+        className={`${ROUTINE_ACTION_CLASS} ${activation.className}`}
+        aria-label={`${activation.label} ${user.name}`}
+      >
+        {activation.label}
+      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            ref={overflowTriggerRef}
+            type="button"
+            className={`${ROUTINE_ACTION_CLASS} px-0 text-[var(--color-muted-foreground)] hover:border-[rgba(0,117,74,0.3)] hover:text-[var(--color-foreground)]`}
+            aria-label={`More actions for ${user.name}`}
+          >
+            <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-44">
+          <DropdownMenuItem
+            variant="destructive"
+            className="min-h-10 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+            onSelect={() => {
+              const trigger = overflowTriggerRef.current;
+              if (trigger) onDelete(user, trigger);
+            }}
+          >
+            <Trash2 aria-hidden="true" />
+            Delete user
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}

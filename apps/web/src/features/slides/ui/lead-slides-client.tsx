@@ -1,14 +1,19 @@
 "use client";
 
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
 
 import { useFullscreen } from "../../../hooks/use-fullscreen";
 import { useSlideInlineEditor } from "../../report-sections";
+import {
+  type SlideDensity,
+  slidesForDensity,
+} from "../model/slide-density-pagination";
 import {
   DeckFullscreenOverlay,
   DeckToolbarControls,
 } from "./deck-fullscreen-overlay";
 import { ReportSlides } from "./report-slides";
+import { SlideDensityControl } from "./slide-density-control";
 import { SlideEmptyState } from "./slide-empty-state";
 import { SlideSkeleton } from "./slide-skeleton";
 import { useLeadSlidesData } from "./use-lead-slides-data";
@@ -46,6 +51,7 @@ export function LeadSlidesClient({
   visibilityHydrated = false,
 }: LeadSlidesClientProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [density, setDensity] = useState<SlideDensity>("document");
   const internalDeckRef = useRef<HTMLDivElement>(null);
   const deckRef = externalDeckRef ?? internalDeckRef;
   // add-slide-fullscreen-exit-affordance: the lead-form-hosted path passes
@@ -68,14 +74,18 @@ export function LeadSlidesClient({
     canInlineEdit: leadSlides.canInlineEdit,
     refetchSection: leadSlides.refetchSection,
   });
+  const slides = useMemo(
+    () => slidesForDensity(leadSlides.slides, density),
+    [leadSlides.slides, density],
+  );
 
   useEffect(() => {
     // Two-sided clamp: a shrink strands the index past the end, and an
     // ArrowRight on an EMPTY deck stores -1 (Math.min(length-1, ...)), which a
     // one-sided upper-bound check would accept forever once slides arrive.
-    if (selectedIndex >= 0 && selectedIndex < leadSlides.slides.length) return;
+    if (selectedIndex >= 0 && selectedIndex < slides.length) return;
     setSelectedIndex(0);
-  }, [selectedIndex, leadSlides.slides.length]);
+  }, [selectedIndex, slides.length]);
 
   if (leadSlides.isLoading) {
     return <SlideSkeleton />;
@@ -109,21 +119,22 @@ export function LeadSlidesClient({
       }
     >
       <ReportSlides
-        slides={leadSlides.slides}
+        slides={slides}
         selectedIndex={selectedIndex}
         onSelect={setSelectedIndex}
         variant="lead"
         onRowActivate={inlineEditor.onRowActivate}
         toolbar={
-          !leadSlides.inReportMode ? (
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <SlideDensityControl value={density} onChange={setDensity} />
+            {!leadSlides.inReportMode ? (
               <DeckToolbarControls
                 isFullscreen={isFullscreen}
                 onToggle={onToggle}
                 toggleRef={toggleButtonRef}
               />
-            </div>
-          ) : undefined
+            ) : null}
+          </div>
         }
       />
       <DeckFullscreenOverlay isFullscreen={isFullscreen} onToggle={onToggle} />

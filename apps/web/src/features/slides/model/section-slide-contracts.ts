@@ -70,6 +70,7 @@ export interface SectionSlideModel {
   readonly priorities: string[];
   readonly pageIndex?: number;
   readonly pageTotal?: number;
+  readonly pageLabel?: string;
   readonly activities?: readonly SlideActivityPill[];
   readonly grid?: SlideGridModel;
 }

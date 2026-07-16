@@ -60,6 +60,7 @@ export function SlideArticle({
         ownerName={slide.ownerName}
         grid={grid}
         heroControls={heroControls}
+        pageLabel={slide.pageLabel}
       />
       <SlidePriorityStrip grid={grid} authorsById={authorsById} />
       <SlideColumnHeaderRow />

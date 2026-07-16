@@ -54,13 +54,16 @@ vi.mock("../../../lib/use-query-error-handler", () => ({
 vi.mock("./report-slides", () => ({
   ReportSlides: ({
     onRowActivate,
+    toolbar,
   }: {
     onRowActivate?: (ref: { kind: "item"; stableId: string }) => void;
+    toolbar?: ReactNode;
   }) => (
     <div
       data-testid="report-slides"
       data-editable={String(onRowActivate !== undefined)}
     >
+      {toolbar}
       <button
         type="button"
         data-testid="activate-row"
@@ -270,6 +273,21 @@ afterEach(() => {
 });
 
 describe("LeadSlidesClient inline slide editing", () => {
+  it("exposes a reversible density control in the hosted report deck", async () => {
+    renderHarness();
+    await screen.findByTestId("report-slides");
+    const document = screen.getByRole("button", { name: "Document" });
+    const presentation = screen.getByRole("button", {
+      name: "Presentation",
+    });
+
+    expect(document).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(presentation);
+    expect(presentation).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(document);
+    expect(document).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("opens an own item row and saves through reports.saveDraft", async () => {
     const { captured } = renderHarness();
     await screen.findByTestId("report-slides");
