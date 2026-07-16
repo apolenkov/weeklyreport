@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change unify-status-presentation. Update Purpose after archive.
+Provide one presentation model for canonical status vocabulary, tones, icons, dots, badges, and empty states across user-facing surfaces.
 
 ## Requirements
 

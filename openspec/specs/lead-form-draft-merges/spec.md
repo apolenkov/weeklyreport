@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change refactor-lead-form-draft-merges. Update Purpose after archive.
+Preserve lead draft merge, record identity, quick-add, and blocker-routing behavior behind one tested merge boundary.
 
 ## Requirements
 

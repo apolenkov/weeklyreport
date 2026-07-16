@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change rethink-pipeline-state-vs-completeness. Update Purpose after archive.
+Present each lead product pipeline with risk-derived health separated from the lead's own stage-input completeness and Mine-scope ownership.
 
 ## Requirements
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change fix-ui-role-access-inconsistencies. Update Purpose after archive.
+Render role-based route denials through one environment-agnostic in-page wall that returns each visitor to their own home without redundant nested gates.
 
 ## Requirements
 

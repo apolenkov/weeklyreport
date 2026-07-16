@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change head-dashboard-declutter. Update Purpose after archive.
+Keep the head dashboard focused on triage and action through one live activity feed, compact period summaries, actionable reminder states, and deduplicated product-grouped risks.
 
 ## Requirements
 

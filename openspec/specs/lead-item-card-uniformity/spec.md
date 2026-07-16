@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by syncing change lead-report-surface-polish. Update Purpose after archive.
+Keep lead section item cards at a uniform height while exposing truncated text through an accessible full-text tooltip.
 
 ## Requirements
 

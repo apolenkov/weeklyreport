@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change report-card-clarity. Update Purpose after archive.
+Make product report cards scannable and scope-correct through aligned rows, explicit ownership, structured risks, stage-scoped add actions, and non-duplicated attention signals.
 
 ## Requirements
 

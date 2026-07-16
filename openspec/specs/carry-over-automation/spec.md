@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by syncing change lead-report-surface-polish. Update Purpose after archive.
+Carry unfinished work into a new reporting period automatically through one race-safe write, without a manual carry-over banner.
 
 ## Requirements
 

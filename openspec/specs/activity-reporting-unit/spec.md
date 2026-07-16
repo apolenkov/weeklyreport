@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change activity-first-class-reporting-unit. Update Purpose after archive.
+Define activity-parented report records, links, and derived status across the lead form, slide deck, head report, and admin activity configuration without changing linked-product health.
 
 ## Requirements
 

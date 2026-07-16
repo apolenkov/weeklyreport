@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change fix-admin-holidays-nested-button. Update Purpose after archive.
+Define the Admin Settings sub-tab navigation, live policy fields, deferred integration affordances, and form-state/error behavior.
 
 ## Requirements
 
