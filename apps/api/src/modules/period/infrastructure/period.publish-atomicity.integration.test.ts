@@ -76,6 +76,25 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
     expect(reloaded?.publishedSnapshot).not.toBeNull();
   });
 
+  it("transitions a reopened period back to published", async () => {
+    // A reopened period keeps the legacy tuple (status="published") but flips
+    // periodStatus to "reopened". The shared guard keys on periodStatus (not
+    // legacy status), so it must still transition here — the open-period test
+    // above cannot catch a regression to legacy-status keying, since an open
+    // period is unpublished under both predicates.
+    await prisma.report.update({
+      where: { id: REPORT },
+      data: { status: "published", periodStatus: "reopened" },
+    });
+
+    const result = await repository.publishPeriod(REPORT, USER);
+
+    expect(result).toEqual({ transitioned: true });
+    const reloaded = await prisma.report.findUnique({ where: { id: REPORT } });
+    expect(reloaded?.periodStatus).toBe("published");
+    expect(reloaded?.periodState).toBe("published");
+  });
+
   it("reports no transition (raced) for an already-published period", async () => {
     await repository.publishPeriod(REPORT, USER);
 

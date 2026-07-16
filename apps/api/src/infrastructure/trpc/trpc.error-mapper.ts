@@ -24,11 +24,7 @@ import {
   ProjectActivityDomainError,
   ProjectActivityNotFoundError,
 } from "../../modules/project-activity/index.js";
-import {
-  PublicationAccessError,
-  PublicationArchivedError,
-  PublicationNotFoundError,
-} from "../../modules/publication/index.js";
+import { PublicationNotFoundError } from "../../modules/publication/index.js";
 import {
   ReminderDomainError,
   ReminderScopeError,
@@ -84,13 +80,6 @@ const DOMAIN_ERROR_CODES: readonly (readonly [
   [AdminAccessError, "FORBIDDEN"],
   [ReportSectionAccessError, "FORBIDDEN"],
   [LeadFormAccessError, "FORBIDDEN"],
-  // An "already published / immutable" write is a state conflict, not a missing
-  // resource — CONFLICT.
-  [PublicationAccessError, "CONFLICT"],
-  // Publishing a report archived inside the read→write window is an
-  // authorization denial on the target, not a state conflict — FORBIDDEN,
-  // mirroring PeriodScopeError on the period publish path.
-  [PublicationArchivedError, "FORBIDDEN"],
   [PdfExportDomainError, "NOT_FOUND"],
   [ArchiveDomainError, "NOT_FOUND"],
   [WeeklyReportDomainError, "NOT_FOUND"],

@@ -1,14 +1,16 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 
 /**
- * Shared publish compare-and-set, homed here because both publish writers
- * (`PeriodPrismaRepository.publishPeriod` and
- * `PublicationPrismaRepository.publishAssembledReport`) carried the identical
- * guarded predicate and the identical zero-row disambiguation, drifting
- * independently. This owns ONLY the canonical predicate and the `count === 0`
- * classification; the client (transaction or base) and the caller's full `data`
- * field set are injected, so each caller keeps its own transaction context and
- * its own snapshot-write strategy — a behavior-preserving dedup.
+ * Shared publish compare-and-set for the manual-publish write path
+ * (`PeriodPrismaRepository.publishPeriod`), homed here so the guarded
+ * predicate and the zero-row disambiguation exist in exactly one place. This
+ * owns ONLY the canonical predicate and the `count === 0` classification; the
+ * client (transaction or base) and the caller's full `data` field set are
+ * injected, so the caller keeps its own transaction context and its own
+ * snapshot-write strategy. The scheduler auto-publish path
+ * (`PublicationPrismaRepository.saveAutoPublishedReport`) has a different
+ * predicate (`status: "draft"`, not periodStatus-keyed) and does not call this
+ * helper.
  */
 
 /**

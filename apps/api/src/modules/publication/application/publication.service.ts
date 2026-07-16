@@ -15,35 +15,10 @@ import {
   type PublicationTelemetry,
 } from "./publication-telemetry.port.js";
 
-export class PublicationAccessError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "PublicationAccessError";
-  }
-}
-
 /**
- * Thrown when a manual publish targets a report archived inside its read→write
- * window: the guarded compare-and-set matched zero rows and the re-read showed
- * the row archived (not concurrently published). A separate class from
- * `PublicationAccessError` so it maps to FORBIDDEN (an archived target is an
- * authorization denial), mirroring `PeriodScopeError` on the period path, and
- * NOT to the CONFLICT that `PublicationAccessError` ("already published") uses.
- * Extends `Error` directly so the error-mapper table matches it on its own row.
- */
-export class PublicationArchivedError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "PublicationArchivedError";
-  }
-}
-
-/**
- * Thrown by `getAssembledReport` when the requested report row is absent. A
- * missing resource, so the tRPC error-mapper renders it NOT_FOUND (distinct
- * from `PublicationAccessError` → CONFLICT). Its in-service caller
- * (`publishAuto`) propagates it, so a missing report surfaces as NOT_FOUND
- * instead of a false 500.
+ * Thrown by `getAssembledReport` when the requested report row is absent. Its
+ * in-service caller (`publishAuto`) propagates it, so a missing report
+ * surfaces as NOT_FOUND instead of a false 500.
  */
 export class PublicationNotFoundError extends Error {
   constructor(message: string) {
@@ -63,38 +38,8 @@ export type AutoPublishResult =
   | { readonly published: true; readonly report: AssembledReport }
   | { readonly published: false };
 
-/**
- * Outcome of a manual publish compare-and-set. `transitioned` carries the row's
- * prior `periodStatus` so the caller labels the transition counter with the
- * actual source state (`open` vs `reopened`). `already-published` is a truly
- * published period (rejected); `raced` is a period a concurrent publish
- * transitioned out from under this call (idempotent success); `archived` is a
- * period archived inside the read→write window (rejected, fail closed). All
- * carry the current assembled report.
- */
-export type PublishReportOutcome =
-  | {
-      readonly status: "transitioned";
-      readonly priorPeriodStatus: "open" | "reopened";
-      readonly report: AssembledReport;
-    }
-  | { readonly status: "already-published"; readonly report: AssembledReport }
-  | { readonly status: "archived"; readonly report: AssembledReport }
-  | { readonly status: "raced"; readonly report: AssembledReport };
-
 export interface PublicationRepository {
   getAssembledReport(activeReportId: string): Promise<AssembledReport | null>;
-  /**
-   * Publish the assembled report through a guarded `periodStatus != "published"`
-   * compare-and-set. Keys on `periodStatus` (NOT legacy `status`), so a reopened
-   * period (legacy `status="published"`, `periodStatus="reopened"`) stays
-   * publishable. Returns whether it transitioned, the row's prior
-   * `periodStatus`, and the current assembled report — see {@link
-   * PublishReportOutcome}.
-   */
-  publishAssembledReport(
-    report: AssembledReport,
-  ): Promise<PublishReportOutcome>;
   /**
    * Persist a scheduler-driven auto-publish via the `autoPublish` transition,
    * guarded by a compare-and-set that only writes when the target row is still
