@@ -4,10 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import {
-  computeCoupling,
-  validateCoupling,
-} from "../../../hooks/use-status-risk";
+import type { AutosaveState } from "../../../hooks/use-lead-form-autosave";
 import {
   invalidateDashboard,
   invalidateLeadForm,
@@ -16,6 +13,10 @@ import {
 import { isConflictError } from "../../../lib/trpc";
 import { useTRPC } from "../../../lib/trpc-context";
 import type { sectionToDraftPayload } from "../model/lead-section-draft-payload";
+import {
+  buildLeadSubmitPayload,
+  deriveLeadSubmitReadiness,
+} from "../model/lead-submit-readiness";
 import type { Product, RiskEntry } from "../model/types";
 
 type DraftPayload = ReturnType<typeof sectionToDraftPayload>;
@@ -23,9 +24,16 @@ type DraftPayload = ReturnType<typeof sectionToDraftPayload>;
 interface UseLeadFormWriteActionsArgs {
   readonly sectionIdForActions: string;
   readonly autosaveDirty: boolean;
+  readonly autosaveState: AutosaveState;
   readonly getSubmitContext: () => {
     readonly draftPayload: DraftPayload | null;
     readonly products: readonly Product[];
+    readonly activities: readonly { id: string; name: string }[];
+    readonly stages: readonly {
+      projectId: string;
+      stageId: string;
+      name: string;
+    }[];
     readonly ownRisks: readonly RiskEntry[];
   };
   readonly versionRef: { readonly current: number };
@@ -34,53 +42,10 @@ interface UseLeadFormWriteActionsArgs {
   readonly handleConflict: () => void;
 }
 
-function hasMissingRiskStageCoupling(
-  products: readonly Product[],
-  ownRisks: readonly RiskEntry[],
-): boolean {
-  const committedRisks = ownRisks.filter(
-    (risk) => risk.text.trim().length > 0 && risk.mitigation.trim().length > 0,
-  );
-  const coupling = computeCoupling(products, committedRisks);
-  const { missing } = validateCoupling(coupling);
-  return missing.length > 0;
-}
-
-function buildSubmitPayload(draftPayload: DraftPayload, version: number) {
-  const projectStatuses = draftPayload.projectStatuses.map((project) => ({
-    projectId: project.projectId,
-    status: project.status ?? ("green" as const),
-  }));
-  const activityStatuses = (draftPayload.activityStatuses ?? []).map(
-    (activity) => ({
-      activityId: activity.activityId,
-      status: activity.status ?? ("green" as const),
-      note: activity.note ?? null,
-    }),
-  );
-  const stageStatuses = (draftPayload.stageStatuses ?? []).map((stage) => ({
-    ...stage,
-    status:
-      stage.status == null ||
-      stage.status === "red" ||
-      stage.status === "yellow"
-        ? ("green" as const)
-        : stage.status,
-  }));
-
-  return {
-    ...draftPayload,
-    version,
-    projectStatuses,
-    activityStatuses,
-    stageStatuses,
-    confirmed: true as const,
-  };
-}
-
 export function useLeadFormWriteActions({
   sectionIdForActions,
   autosaveDirty,
+  autosaveState,
   getSubmitContext,
   versionRef,
   setVersionSafe,
@@ -167,21 +132,41 @@ export function useLeadFormWriteActions({
     }),
   );
 
+  const getSubmitReadiness = () =>
+    deriveLeadSubmitReadiness({
+      ...getSubmitContext(),
+      autosaveState,
+      submitPending: submitMut.isPending,
+    });
+
+  const surfaceReadinessBlocker = () => {
+    const issue = getSubmitReadiness().blockingIssues.at(0);
+    if (!issue) return;
+    const message = issue.id.startsWith("risk-stage:")
+      ? "Specify stages for at-risk/blocked products in Risks & Blockers."
+      : issue.label;
+    toast.error(message);
+  };
+
   const handleSubmit = () => {
-    const { products, ownRisks } = getSubmitContext();
-    if (hasMissingRiskStageCoupling(products, ownRisks)) {
-      toast.error(
-        "Specify stages for at-risk/blocked products in Risks & Blockers.",
-      );
+    const readiness = getSubmitReadiness();
+    if (!readiness.canOpenConfirmation) {
+      surfaceReadinessBlocker();
       return;
     }
     setShowSubmitConfirm(true);
   };
 
   const handleConfirmSubmit = () => {
+    const readiness = getSubmitReadiness();
+    if (!readiness.canOpenConfirmation) {
+      setShowSubmitConfirm(false);
+      surfaceReadinessBlocker();
+      return;
+    }
     const { draftPayload } = getSubmitContext();
     if (!draftPayload) return;
-    submitMut.mutate(buildSubmitPayload(draftPayload, versionRef.current));
+    submitMut.mutate(buildLeadSubmitPayload(draftPayload, versionRef.current));
   };
 
   const handleRevoke = () => {
@@ -230,6 +215,7 @@ export function useLeadFormWriteActions({
   return {
     confirmRevoke,
     fillFromMut,
+    getSubmitReadiness,
     handleConfirmSubmit,
     handleFillFrom,
     handleRequestReopen,

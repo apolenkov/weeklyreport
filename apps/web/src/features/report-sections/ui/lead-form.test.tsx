@@ -209,6 +209,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   vi.clearAllMocks();
   mockPathname = "/lead/report";
 });
@@ -487,6 +488,55 @@ describe("LeadForm mutation wiring", () => {
     };
     expect(sent.stageStatuses?.length).toBeGreaterThan(0);
     expect(sent.stageStatuses?.every((s) => s.status === "green")).toBe(true);
+  });
+
+  it("uses the shared readiness projection to block risk-stage coupling", async () => {
+    const seeded = makeSection();
+    const blocked = {
+      ...seeded,
+      projects: seeded.projects.map((project) => ({
+        ...project,
+        trafficLight: "red" as const,
+      })),
+      risks: [
+        {
+          id: "99999999-9999-4999-8999-999999999999",
+          stableId: "9a9a9a9a-9a9a-4a9a-8a9a-9a9a9a9a9a9a",
+          projectId: PROJECT_ID,
+          risk: "Release is blocked",
+          impact: "The date will slip",
+          mitigation: "Reduce scope",
+          severity: "blocked" as const,
+          stageIds: [],
+        },
+      ],
+    };
+    const { Wrapper } = buildHarness({
+      byPeriodQueryFn: () =>
+        Promise.resolve({
+          section: blocked,
+          readOnly: false,
+          canRequestReopen: false,
+          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
+        }),
+    });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByText("Blocks submission")).toBeInTheDocument();
+    expect(
+      screen.getByText("Test Product: specify stages for committed risks."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Submit report" }),
+    ).toBeDisabled();
+    expect(
+      screen.queryByRole("dialog", { name: "Confirm submission" }),
+    ).toBeNull();
   });
 
   it("a refetch updates the held version without dirtying the form, and the new version reaches the next write (guardrail 4)", async () => {
@@ -1044,6 +1094,56 @@ describe("LeadForm mutation wiring", () => {
     );
   });
 
+  it("hands completion actions to the sticky bar with no duplicate active set", async () => {
+    let notify: IntersectionObserverCallback = (_entries, _observer) =>
+      undefined;
+    class Observer {
+      constructor(callback: IntersectionObserverCallback) {
+        notify = callback;
+      }
+      observe = vi.fn();
+      disconnect = vi.fn();
+      unobserve = vi.fn();
+      takeRecords = () => [];
+      root = null;
+      rootMargin = "0px";
+      thresholds = [0];
+    }
+    vi.stubGlobal("IntersectionObserver", Observer);
+    const { Wrapper } = buildHarness();
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await screen.findByText("Autosaved");
+
+    expect(
+      screen.getByRole("group", { name: "Header completion actions" }),
+    ).toBeInTheDocument();
+    act(() =>
+      notify(
+        [{ isIntersecting: false } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      ),
+    );
+    expect(
+      screen.queryByRole("group", { name: "Header completion actions" }),
+    ).toBeNull();
+    const sticky = screen.getByRole("group", {
+      name: "Sticky completion actions",
+    });
+    expect(sticky).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Submit" })).toHaveLength(1);
+
+    act(() => {
+      within(sticky).getByRole("button", { name: "Submit" }).click();
+    });
+    expect(
+      await screen.findByRole("dialog", { name: "Confirm submission" }),
+    ).toBeInTheDocument();
+  });
+
   it("read-only past period: hides Save/Submit/Fill-From/+ Add but keeps the inert Coming-soon stubs", async () => {
     // report-toolbar-layout: a read-only past period hides the real mutating
     // document actions, while the deferred-feature inert stubs stay visible
@@ -1085,6 +1185,8 @@ describe("LeadForm mutation wiring", () => {
     expect(
       screen.getByRole("group", { name: "Context controls" }),
     ).toBeInTheDocument();
+    expect(screen.queryByTestId("lead-sticky-completion-actions")).toBeNull();
+    expect(screen.queryByTestId("lead-submit-readiness")).toBeNull();
   });
 });
 

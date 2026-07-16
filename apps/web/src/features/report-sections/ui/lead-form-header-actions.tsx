@@ -1,41 +1,42 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import type { Ref } from "react";
 
 import { isLead } from "../../../lib/role-predicates";
 import { DocumentActionGroup } from "../../../shared/ui/report-shell/report-toolbar";
-import { SaveNowButton } from "../../../shared/ui/report-shell/save-now-button";
 import { VersionComingSoonControl } from "../../admin";
 import { PdfExportComingSoonControl } from "../../pdf-export";
 import { FillFromButton } from "../../period";
+import {
+  type LeadCompletionActionContract,
+  LeadCompletionActions,
+} from "./lead-completion-actions";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
-import { QuickAddButton } from "./quick-add-button";
-import type { useLeadFormDraftMerges } from "./use-lead-form-draft-merges";
 import type { useLeadFormWriteActions } from "./use-lead-form-write-actions";
 
-type LeadFormDraftMerges = ReturnType<typeof useLeadFormDraftMerges>;
 type LeadFormWriteActions = ReturnType<typeof useLeadFormWriteActions>;
-type Autosave = ComponentProps<typeof SaveNowButton>["autosave"];
 
 interface LeadFormHeaderActionsProps {
   readonly viewModel: LeadFormLoadedViewModel;
-  readonly merges: LeadFormDraftMerges;
   readonly writeActions: LeadFormWriteActions;
-  readonly autosave: Autosave;
+  readonly completionActions: LeadCompletionActionContract;
+  readonly completionSentinelRef: Ref<HTMLDivElement>;
+  readonly showCompletionActions: boolean;
   readonly isSlidesMode: boolean;
   readonly isSubmitted: boolean;
 }
 
 /**
  * The lead form's page header: title, submitted/autosave badge, and the
- * document-action group. Pure relocation from `LeadForm` — markup and handler
- * wiring unchanged.
+ * contextual document actions. Save/Add/Submit use the shared completion
+ * presentation so the observed sticky handoff cannot fork action state.
  */
 export function LeadFormHeaderActions({
   viewModel,
-  merges,
   writeActions,
-  autosave,
+  completionActions,
+  completionSentinelRef,
+  showCompletionActions,
   isSlidesMode,
   isSubmitted,
 }: LeadFormHeaderActionsProps) {
@@ -44,9 +45,9 @@ export function LeadFormHeaderActions({
     currentUser,
     fillFromLocked,
     isReadOnly,
-    products,
     visiblePeriods,
   } = viewModel;
+  const { autosave } = completionActions;
 
   // Autosave indicator label — 4-state badge.
   const autosaveLabel =
@@ -123,7 +124,6 @@ export function LeadFormHeaderActions({
             onFillFrom={writeActions.handleFillFrom}
           />
         )}
-        {!isReadOnly && <SaveNowButton autosave={autosave} />}
         {/* reopen-request-lifecycle (D4): the control is driven by the
             server-computed `canRequestReopen` flag — hidden when the period
             is published/archived or a request is already pending. The client
@@ -150,27 +150,14 @@ export function LeadFormHeaderActions({
             Revoke
           </button>
         )}
-        {/* Quick-add: one picker button routing to the existing per-type
-            dialogs (current-item / next-item / decision / risk /
-            blocker). report-toolbar-layout: sits immediately before the
-            Submit commit — after Save and Fill-From — and stays visible
-            in both edit and slides mode so it never disappears. */}
-        {!isReadOnly && (
-          <QuickAddButton
-            onPick={merges.handleQuickAdd}
-            disabled={products.length === 0}
-          />
-        )}
-        {!isSubmitted && !isReadOnly && (
-          <button
-            type="button"
-            className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={writeActions.handleSubmit}
-            disabled={writeActions.submitMut.isPending}
-          >
-            Submit
-          </button>
-        )}
+        <div ref={completionSentinelRef} className="min-h-px min-w-px">
+          {!isReadOnly && showCompletionActions && (
+            <LeadCompletionActions
+              {...completionActions}
+              label="Header completion actions"
+            />
+          )}
+        </div>
       </DocumentActionGroup>
     </header>
   );

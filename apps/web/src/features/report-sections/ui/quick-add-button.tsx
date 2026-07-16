@@ -26,6 +26,7 @@ interface QuickAddButtonProps {
   /** Fired with the picked type; the lead form routes to the right dialog. */
   readonly onPick: (kind: QuickAddKind) => void;
   readonly disabled?: boolean;
+  readonly placement?: "above" | "below";
 }
 
 /**
@@ -38,6 +39,7 @@ interface QuickAddButtonProps {
 export function QuickAddButton({
   onPick,
   disabled = false,
+  placement = "below",
 }: QuickAddButtonProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -87,7 +89,9 @@ export function QuickAddButton({
         <div
           role="group"
           aria-label="Quick-add record type"
-          className="absolute right-0 top-full z-50 mt-1 w-48 rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-1 shadow-lg"
+          className={`absolute right-0 z-50 w-48 rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-1 shadow-lg ${
+            placement === "above" ? "bottom-full mb-1" : "top-full mt-1"
+          }`}
         >
           {QUICK_ADD_OPTIONS.map((option) => (
             <button

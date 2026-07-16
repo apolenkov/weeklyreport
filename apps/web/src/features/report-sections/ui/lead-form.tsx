@@ -3,16 +3,10 @@
 import { useRef, useState } from "react";
 
 import { useFullscreen } from "../../../hooks/use-fullscreen";
-import { SdlcTooltipProvider } from "../../../shared/ui/sdlc-tooltip";
-import { LeadSlidesClient } from "../../slides";
 import type { KanbanItem, Product, RiskEntry } from "../model/types";
-import { LeadFormDialogs } from "./lead-form-dialogs";
-import { LeadFormEditSections } from "./lead-form-edit-sections";
-import { LeadFormHeaderActions } from "./lead-form-header-actions";
+import { LeadFormLoaded } from "./lead-form-loaded";
 import { buildLeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
-import { LeadFormPastPeriodBanner } from "./lead-form-past-period-banner";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
-import { LeadFormToolbarControls } from "./lead-form-toolbar-controls";
 import { useLeadFormChrome } from "./use-lead-form-chrome";
 import { useLeadFormData } from "./use-lead-form-data";
 import { useLeadFormDraftMerges } from "./use-lead-form-draft-merges";
@@ -80,13 +74,26 @@ export function LeadForm({
   const writeActionSubmitContextRef = useRef<{
     draftPayload: typeof draftPayload;
     products: readonly Product[];
+    activities: readonly { id: string; name: string }[];
+    stages: readonly {
+      projectId: string;
+      stageId: string;
+      name: string;
+    }[];
     ownRisks: readonly RiskEntry[];
-  }>({ draftPayload: null, products: [], ownRisks: [] });
+  }>({
+    draftPayload: null,
+    products: [],
+    activities: [],
+    stages: [],
+    ownRisks: [],
+  });
 
   // One object — the header/dialog components consume it wholesale.
   const writeActions = useLeadFormWriteActions({
     sectionIdForActions: data.sectionIdForActions,
     autosaveDirty: autosave.dirty,
+    autosaveState: autosave.state,
     getSubmitContext: () => writeActionSubmitContextRef.current,
     versionRef,
     setVersionSafe,
@@ -164,6 +171,24 @@ export function LeadForm({
   writeActionSubmitContextRef.current = {
     draftPayload,
     products: viewModel.products,
+    activities: viewModel.activityOptions,
+    stages: (draftPayload?.stageStatuses ?? []).map(
+      (status, index, statuses) => {
+        const product = viewModel.products.find(
+          (candidate) => candidate.id === status.projectId,
+        );
+        const stageIndex = statuses
+          .slice(0, index)
+          .filter(
+            (candidate) => candidate.projectId === status.projectId,
+          ).length;
+        return {
+          projectId: status.projectId,
+          stageId: status.stageId,
+          name: product?.stages[stageIndex]?.stageName ?? status.stageId,
+        };
+      },
+    ),
     ownRisks: viewModel.ownRisks,
   };
   draftMergeContextRef.current = {
@@ -171,80 +196,25 @@ export function LeadForm({
     currentWeekItems: viewModel.currentWeekItems,
     nextWeekItems: viewModel.nextWeekItems,
   };
-
   return (
-    <SdlcTooltipProvider>
-      <form className="space-y-6" data-testid="lead-report-form">
-        <LeadFormHeaderActions
-          viewModel={viewModel}
-          merges={merges}
-          writeActions={writeActions}
-          autosave={autosave}
-          isSlidesMode={isSlidesMode}
-          isSubmitted={isSubmitted}
-        />
-
-        <LeadFormToolbarControls
-          viewModel={viewModel}
-          leadSubmittedAt={data.byPeriodData.section.submittedAt ?? null}
-          showArchivePeriods={showArchivePeriods}
-          onShowArchivePeriodsChange={setShowArchivePeriods}
-          toolbarVisibility={data.toolbarVisibility}
-          onVisibilityChange={data.setRecordVisibility}
-          isForeignSlidesDeck={data.isForeignSlidesDeck}
-          isSlidesMode={isSlidesMode}
-          targetReportId={data.targetReportId}
-          slidesFullscreen={slidesFullscreen}
-          fullscreenToggleRef={fullscreenToggleRef}
-          groupExpanded={groupExpanded}
-          setGroupExpanded={setGroupExpanded}
-        />
-
-        <LeadFormPastPeriodBanner
-          pinnedReportId={pinnedReportId}
-          activeReportId={data.activeReportId}
-          isSubmitted={isSubmitted}
-        />
-
-        {isSlidesMode ? (
-          <LeadSlidesClient
-            initialReportId={data.targetReportId || pinnedReportId || null}
-            chrome="content"
-            deckRef={deckRef}
-            // add-slide-fullscreen-exit-affordance: lead-form owns the single
-            // fullscreen hook; the deck's local hook is disabled and it renders
-            // the floating pill + Esc hint presentationally from these props.
-            isFullscreen={slidesFullscreen.isFullscreen}
-            onToggle={slidesFullscreen.toggle}
-            // slides-record-visibility: thread the toolbar's visibility state so
-            // the deck shows Mine vs Everyone. LeadSlidesClient owns the own-deck
-            // gate + the gated cross-author fetch/merge; lead-form just supplies
-            // the (hydrated) toggle value, forced to Mine on a foreign deck.
-            visibilityMode={data.toolbarVisibility}
-            visibilityHydrated={data.visibilityHydrated}
-          />
-        ) : (
-          <LeadFormEditSections
-            viewModel={viewModel}
-            merges={merges}
-            draftSection={draftSection}
-            serverSection={data.byPeriodData.section}
-            groupExpanded={groupExpanded}
-            unifiedView={data.unifiedView}
-            recordVisibility={data.recordVisibility}
-            visibilityHydrated={data.visibilityHydrated}
-            crossAuthorEntries={data.crossAuthors}
-          />
-        )}
-      </form>
-
-      <LeadFormDialogs
-        viewModel={viewModel}
-        merges={merges}
-        writeActions={writeActions}
-        unsetOwnStageCount={unsetOwnStageCount}
-        draftSection={draftSection}
-      />
-    </SdlcTooltipProvider>
+    <LeadFormLoaded
+      data={data}
+      viewModel={viewModel}
+      draftSection={draftSection}
+      autosave={autosave}
+      merges={merges}
+      writeActions={writeActions}
+      isSlidesMode={isSlidesMode}
+      isSubmitted={isSubmitted}
+      pinnedReportId={pinnedReportId}
+      showArchivePeriods={showArchivePeriods}
+      setShowArchivePeriods={setShowArchivePeriods}
+      groupExpanded={groupExpanded}
+      setGroupExpanded={setGroupExpanded}
+      deckRef={deckRef}
+      fullscreenToggleRef={fullscreenToggleRef}
+      slidesFullscreen={slidesFullscreen}
+      unsetOwnStageCount={unsetOwnStageCount}
+    />
   );
 }
