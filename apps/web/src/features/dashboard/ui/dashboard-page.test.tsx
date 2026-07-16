@@ -106,16 +106,16 @@ describe("DashboardPage progressive readiness", () => {
     });
     setQueryState("weeklyReport.get", { data: ACTIVE_WEEKLY });
     render(<DashboardPage />);
-    expect(screen.getByText("KPI")).toBeInTheDocument();
-    expect(screen.getByText("Blocked")).toBeInTheDocument();
+    expect(screen.getByText("Lead summary")).toBeInTheDocument();
+    expect(screen.getByText("Alerts")).toBeInTheDocument();
     const bulkActions = screen.getByText("Bulk actions");
     expect(bulkActions).toBeInTheDocument();
     fireEvent.click(bulkActions);
     expect(
       screen.getByRole("button", { name: "Revoke All (2)" }),
     ).toBeVisible();
-    expect(screen.getByTestId("dashboard-leads-loading")).toBeInTheDocument();
-    expect(screen.getByTestId("dashboard-alert-loading")).toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-kpi-loading")).toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-blocked-loading")).toBeInTheDocument();
   });
 
   it("keeps self-contained panels visible while weekly context is pending", () => {
@@ -131,7 +131,7 @@ describe("DashboardPage progressive readiness", () => {
     expect(screen.getByTestId("dashboard-blocked-loading")).toBeInTheDocument();
   });
 
-  it("limits activity freshness loading to the canonical queue", () => {
+  it("renders the weekly queue while optional activity freshness is pending", () => {
     setQueryState("activity.live", {
       status: "pending",
       fetchStatus: "fetching",
@@ -142,10 +142,40 @@ describe("DashboardPage progressive readiness", () => {
     render(<DashboardPage />);
 
     expect(screen.getByText("KPI")).toBeInTheDocument();
+    expect(screen.getByText("Lead summary")).toBeInTheDocument();
     expect(screen.getByText("Alerts")).toBeInTheDocument();
     expect(screen.getByText("Reopen requests")).toBeInTheDocument();
     expect(screen.getByText("Blocked")).toBeInTheDocument();
-    expect(screen.getByTestId("dashboard-leads-loading")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("dashboard-leads-loading"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the weekly queue visible and retries only failed activity freshness", () => {
+    const activityRefetch = vi.fn().mockResolvedValue({});
+    const reviewRefetch = vi.fn().mockResolvedValue({});
+    const weeklyRefetch = vi.fn().mockResolvedValue({});
+    setQueryState("activity.live", {
+      error: new Error("activity failed"),
+      isError: true,
+      status: "error",
+      refetch: activityRefetch,
+    });
+    setQueryState("review.dashboard", { data: [], refetch: reviewRefetch });
+    setQueryState("weeklyReport.get", {
+      data: ACTIVE_WEEKLY,
+      refetch: weeklyRefetch,
+    });
+
+    render(<DashboardPage />);
+
+    expect(screen.getByText("Lead summary")).toBeInTheDocument();
+    const issue = screen.getByTestId("dashboard-activity-error");
+    expect(issue).toHaveTextContent("activity failed");
+    fireEvent.click(within(issue).getByRole("button", { name: "Retry" }));
+    expect(activityRefetch).toHaveBeenCalledOnce();
+    expect(reviewRefetch).not.toHaveBeenCalled();
+    expect(weeklyRefetch).not.toHaveBeenCalled();
   });
 
   it("scopes a review failure and retry to review-backed panels", () => {
@@ -162,9 +192,8 @@ describe("DashboardPage progressive readiness", () => {
       refetch: weeklyRefetch,
     });
     render(<DashboardPage />);
-    expect(screen.getByText("KPI")).toBeInTheDocument();
-    expect(screen.getByText("Blocked")).toBeInTheDocument();
-    const issue = screen.getByTestId("dashboard-leads-error");
+    expect(screen.getByText("Lead summary")).toBeInTheDocument();
+    const issue = screen.getByTestId("dashboard-kpi-error");
     expect(issue).toHaveTextContent("review failed");
     fireEvent.click(within(issue).getByRole("button", { name: "Retry" }));
     expect(reviewRefetch).toHaveBeenCalledTimes(1);
@@ -208,8 +237,8 @@ describe("DashboardPage progressive readiness", () => {
     );
     expect(reviewRefetch).toHaveBeenCalledTimes(1);
     expect(weeklyRefetch).not.toHaveBeenCalled();
-    expect(screen.getByTestId("dashboard-leads-error")).toBeInTheDocument();
-    expect(screen.getByText("KPI")).toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-kpi-error")).toBeInTheDocument();
+    expect(screen.getByText("Lead summary")).toBeInTheDocument();
   });
 
   it("refetches only unsettled data after a history restore", async () => {

@@ -12,6 +12,36 @@ const PUBLISHED_REPORT_FILTER = {
   OR: [{ periodStatus: "published" as const }, { archived: true }],
 };
 
+function queryPublishedItems(
+  prisma: PrismaService,
+  candidates: LineageCandidates,
+) {
+  if (candidates.itemStableIds.length === 0) return Promise.resolve([]);
+  return prisma.item.findMany({
+    where: {
+      stableId: { in: [...candidates.itemStableIds] },
+      reportSectionId: { not: candidates.reportSectionId },
+      reportSection: { report: PUBLISHED_REPORT_FILTER },
+    },
+    select: { stableId: true },
+  });
+}
+
+function queryPublishedDecisions(
+  prisma: PrismaService,
+  candidates: LineageCandidates,
+) {
+  if (candidates.decisionStableIds.length === 0) return Promise.resolve([]);
+  return prisma.decision.findMany({
+    where: {
+      stableId: { in: [...candidates.decisionStableIds] },
+      reportSectionId: { not: candidates.reportSectionId },
+      reportSection: { report: PUBLISHED_REPORT_FILTER },
+    },
+    select: { stableId: true },
+  });
+}
+
 export async function queryPublishedLineage(
   prisma: PrismaService,
   candidates: LineageCandidates,
@@ -29,26 +59,8 @@ export async function queryPublishedLineage(
         where: { id: candidates.reportId },
         select: { publishedSnapshot: true },
       }),
-      candidates.itemStableIds.length > 0
-        ? prisma.item.findMany({
-            where: {
-              stableId: { in: [...candidates.itemStableIds] },
-              reportSectionId: { not: candidates.reportSectionId },
-              reportSection: { report: PUBLISHED_REPORT_FILTER },
-            },
-            select: { stableId: true },
-          })
-        : Promise.resolve([]),
-      candidates.decisionStableIds.length > 0
-        ? prisma.decision.findMany({
-            where: {
-              stableId: { in: [...candidates.decisionStableIds] },
-              reportSectionId: { not: candidates.reportSectionId },
-              reportSection: { report: PUBLISHED_REPORT_FILTER },
-            },
-            select: { stableId: true },
-          })
-        : Promise.resolve([]),
+      queryPublishedItems(prisma, candidates),
+      queryPublishedDecisions(prisma, candidates),
       prisma.report.findMany({
         where: {
           id: { not: candidates.reportId },

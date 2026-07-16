@@ -5,31 +5,22 @@ import type {
   SubmissionDashboardRow,
   WeeklyReportReadModel,
 } from "@customreport/shared";
-import type { ReactElement } from "react";
 
-import { formatClientErrorMessage } from "../../../lib/client-error-reporting";
 import {
   mapReviewDashboardData,
   mapWeeklyDashboardData,
 } from "../model/dashboard";
 import { AlertBar } from "./alert-bar";
 import { BlockedAtRiskTable } from "./blocked-at-risk-table";
-import {
-  DashboardPanelIssue,
-  type DashboardPanelKind,
-  DashboardPanelLoading,
-} from "./dashboard-panel-state";
 import { DashboardRevokeAllControl } from "./dashboard-revoke-all-control";
+import {
+  DashboardActivityIssue,
+  DashboardSourceSlot,
+  type DashboardSourceState,
+} from "./dashboard-source-slot";
 import { KpiCards } from "./kpi-cards";
 import { LeadSummaryTable } from "./lead-summary-table";
 import { ReopenRequestsCard } from "./reopen-requests-card";
-
-export interface DashboardSourceState {
-  readonly error: unknown;
-  readonly isError: boolean;
-  readonly retry: () => void;
-  readonly stalled: boolean;
-}
 
 interface DashboardContentProps {
   readonly organizationName: string;
@@ -42,37 +33,6 @@ interface DashboardContentProps {
   readonly revokeAllPending: boolean;
   readonly onRevokeAll: (reportId: string) => void;
   readonly onRefreshDashboard: () => void;
-}
-
-interface SourceSlotProps {
-  readonly children: ReactElement | null;
-  readonly kind: DashboardPanelKind;
-  readonly ready: boolean;
-  readonly source: DashboardSourceState;
-  readonly title: string;
-}
-
-function DashboardSourceSlot({
-  children,
-  kind,
-  ready,
-  source,
-  title,
-}: SourceSlotProps) {
-  if (source.isError || source.stalled) {
-    const description = source.isError
-      ? formatClientErrorMessage(`${title} request failed`, source.error)
-      : `${title} is taking longer than expected.`;
-    return (
-      <DashboardPanelIssue
-        kind={kind}
-        title={`${title} unavailable`}
-        description={description}
-        onRetry={source.retry}
-      />
-    );
-  }
-  return ready ? children : <DashboardPanelLoading kind={kind} />;
 }
 
 function DashboardHeader({
@@ -107,135 +67,149 @@ function resolveDependentSource(
 }
 
 interface DashboardPanelsProps {
+  readonly activitySource: DashboardSourceState;
   readonly queue?: ReturnType<typeof mapReviewDashboardData>;
-  readonly pending?: ReturnType<typeof mapReviewDashboardData>;
   readonly queueSource: DashboardSourceState;
   readonly reviewSource: DashboardSourceState;
   readonly weekly?: ReturnType<typeof mapWeeklyDashboardData>;
   readonly weeklyReport?: WeeklyReportReadModel;
-  readonly weeklyState: DashboardSourceState;
   readonly canSendReminder: boolean;
   readonly onRefreshDashboard: () => void;
 }
 
-function DashboardPanels(props: DashboardPanelsProps) {
+function DashboardKpiPanel(props: DashboardPanelsProps) {
+  return (
+    <DashboardSourceSlot
+      kind="kpi"
+      ready={props.weekly !== undefined}
+      source={props.reviewSource}
+      title="KPI data"
+    >
+      {props.weekly ? <KpiCards data={props.weekly.kpi} /> : null}
+    </DashboardSourceSlot>
+  );
+}
+
+function DashboardQueuePanel(props: DashboardPanelsProps) {
   const reportId = props.weeklyReport?.reportId;
   return (
-    <>
-      <DashboardSourceSlot
-        kind="kpi"
-        ready={props.weekly !== undefined}
-        source={props.weeklyState}
-        title="KPI data"
-      >
-        {props.weekly ? <KpiCards data={props.weekly.kpi} /> : null}
-      </DashboardSourceSlot>
-      <DashboardSourceSlot
-        kind="leads"
-        ready={props.queue !== undefined}
-        source={props.queueSource}
-        title="Period summary"
-      >
-        {props.queue && reportId ? (
+    <DashboardSourceSlot
+      kind="leads"
+      ready={props.queue !== undefined}
+      source={props.queueSource}
+      title="Period summary"
+    >
+      {props.queue && reportId ? (
+        <div className="space-y-3">
           <LeadSummaryTable
             leads={props.queue.leads}
             reportId={reportId}
             onMutated={props.onRefreshDashboard}
           />
-        ) : null}
-      </DashboardSourceSlot>
-      <DashboardSourceSlot
-        kind="alert"
-        ready={props.pending !== undefined}
-        source={props.reviewSource}
-        title="Pending leads"
-      >
-        {props.pending && reportId ? (
-          <AlertBar
-            pendingLeads={props.pending.pendingLeads}
-            reportId={reportId}
-            canSendReminder={props.canSendReminder}
-          />
-        ) : null}
-      </DashboardSourceSlot>
+          <DashboardActivityIssue source={props.activitySource} />
+        </div>
+      ) : null}
+    </DashboardSourceSlot>
+  );
+}
+
+function DashboardAlertPanel(props: DashboardPanelsProps) {
+  const reportId = props.weeklyReport?.reportId;
+  return (
+    <DashboardSourceSlot
+      kind="alert"
+      ready={props.queue !== undefined}
+      source={props.queueSource}
+      title="Pending leads"
+    >
+      {props.queue && reportId ? (
+        <AlertBar
+          pendingLeads={props.queue.pendingLeads}
+          reportId={reportId}
+          canSendReminder={props.canSendReminder}
+        />
+      ) : null}
+    </DashboardSourceSlot>
+  );
+}
+
+function DashboardEscalationPanel(props: DashboardPanelsProps) {
+  return (
+    <DashboardSourceSlot
+      kind="blocked"
+      ready={props.weekly !== undefined}
+      source={props.reviewSource}
+      title="Escalations"
+    >
+      {props.weekly ? (
+        <BlockedAtRiskTable items={props.weekly.blockedAtRisk} />
+      ) : null}
+    </DashboardSourceSlot>
+  );
+}
+
+function DashboardPanels(props: DashboardPanelsProps) {
+  return (
+    <>
+      <DashboardKpiPanel {...props} />
+      <DashboardQueuePanel {...props} />
+      <DashboardAlertPanel {...props} />
       <ReopenRequestsCard />
-      <DashboardSourceSlot
-        kind="blocked"
-        ready={props.weekly !== undefined}
-        source={props.weeklyState}
-        title="Escalations"
-      >
-        {props.weekly ? (
-          <BlockedAtRiskTable items={props.weekly.blockedAtRisk} />
-        ) : null}
-      </DashboardSourceSlot>
+      <DashboardEscalationPanel {...props} />
     </>
   );
 }
 
-export function DashboardContent({
-  organizationName,
-  activity,
-  activityState,
-  review,
-  reviewState,
-  weeklyReport,
-  weeklyState,
-  revokeAllPending,
-  onRevokeAll,
-  onRefreshDashboard,
-}: DashboardContentProps) {
-  const pendingData =
-    review && weeklyReport
-      ? mapReviewDashboardData({ review, weeklyReport })
-      : undefined;
-  const queueData =
-    review && weeklyReport && activity
-      ? mapReviewDashboardData({ review, weeklyReport, activity })
-      : undefined;
-  const weekly = weeklyReport
-    ? mapWeeklyDashboardData({
+function dashboardPanelModel(
+  props: DashboardContentProps,
+): DashboardPanelsProps {
+  const { activity, review, weeklyReport, weeklyState, reviewState } = props;
+  const queue = weeklyReport
+    ? mapReviewDashboardData({
         weeklyReport,
-        ...(pendingData
-          ? { pendingCount: pendingData.pendingLeads.length }
-          : {}),
+        ...(review ? { review } : {}),
+        ...(activity ? { activity } : {}),
       })
     : undefined;
-  const reviewSource = resolveDependentSource([weeklyState, reviewState]);
-  const queueSource = resolveDependentSource([
-    weeklyState,
-    reviewState,
-    activityState,
-  ]);
-  const canSendReminder = Boolean(
-    weeklyReport &&
-      weeklyReport.periodStatus !== "published" &&
-      weeklyReport.hasActiveReminderRule,
-  );
-  const submittedCount = weeklyReport?.submissionCount ?? 0;
+  const weekly =
+    weeklyReport && review
+      ? mapWeeklyDashboardData({
+          weeklyReport,
+          pendingCount: queue?.pendingLeads.length ?? 0,
+        })
+      : undefined;
+  return {
+    queue,
+    activitySource: props.activityState,
+    queueSource: weeklyState,
+    reviewSource: resolveDependentSource([weeklyState, reviewState]),
+    weekly,
+    weeklyReport,
+    canSendReminder: Boolean(
+      weeklyReport &&
+        weeklyReport.periodStatus !== "published" &&
+        weeklyReport.hasActiveReminderRule,
+    ),
+    onRefreshDashboard: props.onRefreshDashboard,
+  };
+}
+
+export function DashboardContent(props: DashboardContentProps) {
+  const panelModel = dashboardPanelModel(props);
+  const submittedCount = props.weeklyReport?.submissionCount ?? 0;
 
   return (
     <div className="space-y-6">
       <DashboardHeader
-        weekLabel={weeklyReport?.weekLabel}
-        organizationName={organizationName}
+        weekLabel={props.weeklyReport?.weekLabel}
+        organizationName={props.organizationName}
       />
-      <DashboardPanels
-        queue={queueData}
-        pending={pendingData}
-        queueSource={queueSource}
-        reviewSource={reviewSource}
-        weekly={weekly}
-        weeklyReport={weeklyReport}
-        weeklyState={weeklyState}
-        canSendReminder={canSendReminder}
-        onRefreshDashboard={onRefreshDashboard}
-      />
+      <DashboardPanels {...panelModel} />
       <DashboardRevokeAllControl
-        pending={revokeAllPending}
-        report={weeklyReport}
+        pending={props.revokeAllPending}
+        report={props.weeklyReport}
         submittedCount={submittedCount}
-        onRevokeAll={onRevokeAll}
+        onRevokeAll={props.onRevokeAll}
       />
     </div>
   );

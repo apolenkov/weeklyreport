@@ -74,29 +74,79 @@ export function LeadPrimaryAction({
   );
 }
 
-export function LeadSecondaryActions({
-  lead,
-  reportId,
-  onMutated,
-}: LeadQueueActionsProps) {
+function secondaryActionState(lead: LeadInfo) {
   const primary = primaryAction(lead);
-  const showOpen = lead.actions.canOpen && primary !== "open";
-  const showRemind = lead.actions.canRemind && primary !== "remind";
   const requestChanges =
     lead.actions.canRequestChanges &&
     lead.reportSectionId !== undefined &&
     lead.version !== undefined
       ? { reportSectionId: lead.reportSectionId, version: lead.version }
       : null;
-  const revokeSectionId =
-    lead.actions.canRevoke && lead.reportSectionId !== undefined
-      ? lead.reportSectionId
-      : null;
-  const hasAction =
-    showOpen ||
-    showRemind ||
-    requestChanges !== null ||
-    revokeSectionId !== null;
+  return {
+    showOpen: lead.actions.canOpen && primary !== "open",
+    showRemind: lead.actions.canRemind && primary !== "remind",
+    requestChanges,
+    revokeSectionId:
+      lead.actions.canRevoke && lead.reportSectionId !== undefined
+        ? lead.reportSectionId
+        : null,
+  };
+}
+
+function SecondaryActionSet({
+  lead,
+  reportId,
+  onMutated,
+}: LeadQueueActionsProps) {
+  const actions = secondaryActionState(lead);
+  return (
+    <div
+      className="flex flex-wrap items-center gap-2"
+      aria-label="Lead actions"
+    >
+      {actions.showOpen ? (
+        <QueueLink
+          href={reportHref(reportId, lead.id)}
+          label="Open"
+          leadName={lead.name}
+        />
+      ) : null}
+      {actions.showRemind ? (
+        <RemindLeadButton
+          reportId={reportId}
+          leadId={lead.id}
+          leadName={lead.name}
+          onMutated={onMutated}
+        />
+      ) : null}
+      {actions.requestChanges ? (
+        <RequestChangesButton
+          reportSectionId={actions.requestChanges.reportSectionId}
+          version={actions.requestChanges.version}
+          leadName={lead.name}
+          onMutated={onMutated}
+        />
+      ) : null}
+      {actions.revokeSectionId ? (
+        <RevokeSectionButton
+          reportSectionId={actions.revokeSectionId}
+          leadName={lead.name}
+          onMutated={onMutated}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+export function LeadSecondaryActions({
+  lead,
+  reportId,
+  onMutated,
+}: LeadQueueActionsProps) {
+  const actions = secondaryActionState(lead);
+  const hasAction = Object.values(actions).some(
+    (value) => value !== false && value !== null,
+  );
 
   if (!hasAction) {
     return (
@@ -107,40 +157,6 @@ export function LeadSecondaryActions({
   }
 
   return (
-    <div
-      className="flex flex-wrap items-center gap-2"
-      aria-label="Lead actions"
-    >
-      {showOpen ? (
-        <QueueLink
-          href={reportHref(reportId, lead.id)}
-          label="Open"
-          leadName={lead.name}
-        />
-      ) : null}
-      {showRemind ? (
-        <RemindLeadButton
-          reportId={reportId}
-          leadId={lead.id}
-          leadName={lead.name}
-          onMutated={onMutated}
-        />
-      ) : null}
-      {requestChanges ? (
-        <RequestChangesButton
-          reportSectionId={requestChanges.reportSectionId}
-          version={requestChanges.version}
-          leadName={lead.name}
-          onMutated={onMutated}
-        />
-      ) : null}
-      {revokeSectionId ? (
-        <RevokeSectionButton
-          reportSectionId={revokeSectionId}
-          leadName={lead.name}
-          onMutated={onMutated}
-        />
-      ) : null}
-    </div>
+    <SecondaryActionSet lead={lead} reportId={reportId} onMutated={onMutated} />
   );
 }

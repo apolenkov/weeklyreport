@@ -24,6 +24,69 @@ interface UserRowActionsProps {
 const ROUTINE_ACTION_CLASS =
   "btn-press inline-flex h-10 min-w-10 items-center justify-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
+function UserActivationButton(props: UserRowActionsProps) {
+  const activation = props.user.isActive
+    ? {
+        label: "Deactivate",
+        pending: props.deactivatePending,
+        action: props.onDeactivate,
+        className:
+          "text-amber-600 hover:border-[rgba(180,100,0,0.3)] hover:bg-amber-50",
+      }
+    : {
+        label: "Activate",
+        pending: props.activatePending,
+        action: props.onActivate,
+        className:
+          "text-[var(--color-starbucks-accent)] hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)]",
+      };
+  return (
+    <button
+      type="button"
+      onClick={() => activation.action(props.user)}
+      disabled={activation.pending}
+      className={`${ROUTINE_ACTION_CLASS} ${activation.className}`}
+      aria-label={`${activation.label} ${props.user.name}`}
+    >
+      {activation.label}
+    </button>
+  );
+}
+
+function UserOverflowMenu({
+  user,
+  onDelete,
+}: Pick<UserRowActionsProps, "user" | "onDelete">) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          ref={triggerRef}
+          type="button"
+          className={`${ROUTINE_ACTION_CLASS} px-0 text-[var(--color-muted-foreground)] hover:border-[rgba(0,117,74,0.3)] hover:text-[var(--color-foreground)]`}
+          aria-label={`More actions for ${user.name}`}
+        >
+          <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-44">
+        <DropdownMenuItem
+          variant="destructive"
+          className="min-h-10 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+          onSelect={() => {
+            const trigger = triggerRef.current;
+            if (trigger) onDelete(user, trigger);
+          }}
+        >
+          <Trash2 aria-hidden="true" />
+          Delete user
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function UserRowActions({
   user,
   deactivatePending,
@@ -33,23 +96,6 @@ export function UserRowActions({
   onActivate,
   onDelete,
 }: UserRowActionsProps) {
-  const overflowTriggerRef = useRef<HTMLButtonElement>(null);
-  const activation = user.isActive
-    ? {
-        label: "Deactivate",
-        pending: deactivatePending,
-        action: onDeactivate,
-        className:
-          "text-amber-600 hover:border-[rgba(180,100,0,0.3)] hover:bg-amber-50",
-      }
-    : {
-        label: "Activate",
-        pending: activatePending,
-        action: onActivate,
-        className:
-          "text-[var(--color-starbucks-accent)] hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)]",
-      };
-
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
       <button
@@ -60,40 +106,16 @@ export function UserRowActions({
       >
         Edit
       </button>
-      <button
-        type="button"
-        onClick={() => activation.action(user)}
-        disabled={activation.pending}
-        className={`${ROUTINE_ACTION_CLASS} ${activation.className}`}
-        aria-label={`${activation.label} ${user.name}`}
-      >
-        {activation.label}
-      </button>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            ref={overflowTriggerRef}
-            type="button"
-            className={`${ROUTINE_ACTION_CLASS} px-0 text-[var(--color-muted-foreground)] hover:border-[rgba(0,117,74,0.3)] hover:text-[var(--color-foreground)]`}
-            aria-label={`More actions for ${user.name}`}
-          >
-            <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-44">
-          <DropdownMenuItem
-            variant="destructive"
-            className="min-h-10 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
-            onSelect={() => {
-              const trigger = overflowTriggerRef.current;
-              if (trigger) onDelete(user, trigger);
-            }}
-          >
-            <Trash2 aria-hidden="true" />
-            Delete user
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <UserActivationButton
+        user={user}
+        deactivatePending={deactivatePending}
+        activatePending={activatePending}
+        onEdit={onEdit}
+        onDeactivate={onDeactivate}
+        onActivate={onActivate}
+        onDelete={onDelete}
+      />
+      <UserOverflowMenu user={user} onDelete={onDelete} />
     </div>
   );
 }

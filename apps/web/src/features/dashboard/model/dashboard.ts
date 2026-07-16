@@ -119,7 +119,7 @@ export interface MapWeeklyDashboardArgs {
 }
 
 export interface MapReviewDashboardArgs {
-  review: readonly SubmissionDashboardRow[];
+  review?: readonly SubmissionDashboardRow[];
   weeklyReport: WeeklyReportReadModel;
   activity?: ActivityLiveResponse;
   /** Override `now` for deterministic queue freshness and ordering tests. */

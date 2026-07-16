@@ -124,12 +124,12 @@ function buildProductSlide(
   };
 }
 
-function buildCrossProductSlide(
+type ProductPredicate = (productId: string | null | undefined) => boolean;
+
+function crossProductSlices(
   section: ReportSectionReadModel,
-  projectIds: ReadonlySet<string>,
-): SlideProduct | null {
-  const isCrossProduct = (productId: string | null | undefined) =>
-    !productId || !projectIds.has(productId);
+  isCrossProduct: ProductPredicate,
+) {
   const itemTexts = (type: "current" | "next") =>
     section.items
       .filter(
@@ -140,11 +140,7 @@ function buildCrossProductSlide(
           nonEmpty(item.text),
       )
       .map((item) => item.text.trim());
-  const slide: SlideProduct = {
-    id: CROSS_PRODUCT_ID,
-    name: "Cross-product",
-    status: null,
-    stages: [],
+  return {
     currentItems: itemTexts("current"),
     nextItems: itemTexts("next"),
     risks: section.risks
@@ -172,6 +168,22 @@ function buildCrossProductSlide(
           nonEmpty(item.text),
       )
       .map((item) => item.text.trim()),
+  };
+}
+
+function buildCrossProductSlide(
+  section: ReportSectionReadModel,
+  projectIds: ReadonlySet<string>,
+): SlideProduct | null {
+  const isCrossProduct = (productId: string | null | undefined) =>
+    !productId || !projectIds.has(productId);
+  const slices = crossProductSlices(section, isCrossProduct);
+  const slide: SlideProduct = {
+    id: CROSS_PRODUCT_ID,
+    name: "Cross-product",
+    status: null,
+    stages: [],
+    ...slices,
   };
   const recordCount =
     slide.currentItems.length +

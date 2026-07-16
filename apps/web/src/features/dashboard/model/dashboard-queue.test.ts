@@ -14,11 +14,11 @@ import {
 
 describe("dashboard lead queue", () => {
   it("joins scoped identity, weekly review state, and activity freshness once", () => {
-    const missing = queueReviewRow(queueLeadId(1), "Nora No Section");
+    const missingId = queueLeadId(1);
     const draft = queueReviewRow(queueLeadId(2), "Dana Draft");
     const submitted = queueReviewRow(queueLeadId(3), "Riley Review");
     const mapped = mapReviewDashboardData({
-      review: [missing, draft, submitted],
+      review: [draft, submitted],
       weeklyReport: queueReport([
         queueSection(draft.leadId, draft.leadName, "draft"),
         queueSection(submitted.leadId, submitted.leadName, "submitted", {
@@ -27,6 +27,10 @@ describe("dashboard lead queue", () => {
         }),
       ]),
       activity: queueActivity([
+        {
+          ...queueActivityRow(missingId, "Nora No Section"),
+          reportSectionId: null,
+        },
         queueActivityRow(draft.leadId, draft.leadName, {
           content: 2,
           lastEditAt: new Date("2026-07-16T11:30:00.000Z"),
@@ -109,34 +113,83 @@ describe("dashboard lead queue", () => {
 
   it("keeps published rows read-only while preserving content navigation", () => {
     const row = queueReviewRow(queueLeadId(1), "Parker Published");
+    const noSection = queueReviewRow(queueLeadId(2), "Nora NoSection");
     const mapped = mapReviewDashboardData({
-      review: [row],
+      review: [],
       weeklyReport: queueReport(
         [
-          queueSection(row.leadId, row.leadName, "submitted", {
-            canReview: true,
-          }),
+          {
+            ...queueSection(row.leadId, row.leadName, "submitted", {
+              canReview: true,
+            }),
+            items: [
+              {
+                type: "current",
+                text: "Published item",
+                tag: "",
+                workflowStatus: "done",
+                carriedOver: false,
+                projectId: null,
+                stageIds: [],
+              },
+            ],
+          },
         ],
         "published",
+        2,
       ),
       activity: queueActivity(
         [
-          queueActivityRow(row.leadId, row.leadName, {
-            content: 1,
-            status: "submitted",
-          }),
+          queueActivityRow(row.leadId, row.leadName, { status: "submitted" }),
+          {
+            ...queueActivityRow(noSection.leadId, noSection.leadName),
+            reportSectionId: null,
+          },
         ],
         "published",
       ),
       now: QUEUE_NOW,
     });
 
-    expect(mapped.leads[0]?.actions).toEqual({
+    const publishedRow = mapped.leads.find((lead) => lead.id === row.leadId);
+    const noSectionRow = mapped.leads.find(
+      (lead) => lead.id === noSection.leadId,
+    );
+    expect(publishedRow?.actions).toEqual({
       canOpen: true,
       canRemind: false,
       canReview: false,
       canRequestChanges: false,
       canRevoke: false,
+    });
+    expect(mapped.leads).toHaveLength(2);
+    expect(noSectionRow).toMatchObject({
+      id: noSection.leadId,
+      name: "Nora N.",
+    });
+    expect(noSectionRow?.actions).toEqual({
+      canOpen: false,
+      canRemind: false,
+      canReview: false,
+      canRequestChanges: false,
+      canRevoke: false,
+    });
+  });
+
+  it("renders weekly section rows before review and activity resolve", () => {
+    const row = queueReviewRow(queueLeadId(1), "Wendy Weekly");
+    const mapped = mapReviewDashboardData({
+      weeklyReport: queueReport([
+        queueSection(row.leadId, row.leadName, "submitted"),
+      ]),
+      now: QUEUE_NOW,
+    });
+
+    expect(mapped.leads).toHaveLength(1);
+    expect(mapped.leads[0]).toMatchObject({
+      id: row.leadId,
+      name: "Wendy W.",
+      status: "submitted",
     });
   });
 });

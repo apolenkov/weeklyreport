@@ -35,3 +35,7 @@
 - [x] 5.2 `pnpm typecheck`
 - [x] 5.3 `pnpm lint`
 - [x] 5.4 `pnpm test`
+
+## 6. Adversarial review closure
+
+- [x] 6.1 Split the extracted print portfolio table and slide product projection helpers so every touched production function remains at or below 50 lines.

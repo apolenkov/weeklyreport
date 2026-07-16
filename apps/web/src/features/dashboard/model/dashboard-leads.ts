@@ -28,6 +28,7 @@ import {
   reviewPresentation,
 } from "./dashboard-lead-presentation";
 import { compareLeadPriority, queuePriority } from "./dashboard-lead-priority";
+import { buildDashboardLeadRows } from "./dashboard-lead-rows";
 
 const TRAFFIC_ICON: Record<ProductStatus, string> = {
   "on-track": "✓",
@@ -38,7 +39,7 @@ const TRAFFIC_ICON: Record<ProductStatus, string> = {
 const ISO_DATE_LENGTH = 10;
 
 interface BuildLeadInfosArgs {
-  readonly review: readonly SubmissionDashboardRow[];
+  readonly review?: readonly SubmissionDashboardRow[];
   readonly weeklyReport: WeeklyReportReadModel;
   readonly activity?: ActivityLiveResponse;
   readonly now: Date;
@@ -228,7 +229,11 @@ export function buildLeadInfos({
     now,
     ...(currentUserId ? { currentUserId } : {}),
   };
-  return review
+  return buildDashboardLeadRows({
+    review,
+    weeklyReport,
+    activity,
+  })
     .map((row) => buildLeadInfo(row, context))
     .reduce<LeadInfo[]>((sorted, lead) => {
       const insertAt = sorted.findIndex(

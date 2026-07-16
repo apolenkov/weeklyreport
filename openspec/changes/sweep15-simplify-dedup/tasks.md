@@ -39,3 +39,7 @@
 - [x] 6.2 `pnpm typecheck`
 - [x] 6.3 `pnpm lint`
 - [x] 6.4 `pnpm test`
+
+## 7. Adversarial review closure
+
+- [x] 7.1 Split the published-lineage query assembly into functions at or below 50 lines without changing the batched query shape or lineage semantics.

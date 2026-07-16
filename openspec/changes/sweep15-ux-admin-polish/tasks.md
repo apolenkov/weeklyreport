@@ -26,3 +26,7 @@
 - [x] 4.2 `pnpm typecheck`
 - [x] 4.3 `pnpm lint`
 - [x] 4.4 `pnpm test`
+
+## 5. Adversarial review closure
+
+- [x] 5.1 Split Users row activation and overflow actions into focused components while preserving the menu, confirmation, and mutation behavior.
