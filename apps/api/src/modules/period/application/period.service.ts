@@ -110,7 +110,7 @@ export type AnalyticsCacheInvalidator = () => Promise<void>;
 
 /**
  * A lazy reader for the two reopen-policy knobs in `AppSettings`.
- * PeriodService stays decoupled from AdminService by reading them through
+ * PeriodService stays decoupled from the settings service by reading them through
  * this lambda; the production wiring resolves to `appSettings.get`. The
  * return is non-null: a reopen-policy gate is always wired, so no code path
  * can construct the service without one.

@@ -1,13 +1,13 @@
 import { adminUserSchema } from "@customreport/shared";
 import { z } from "zod";
 
-import type { AdminService } from "../../../../modules/admin/index.js";
+import type { SnapshotAdminService } from "../../../../modules/admin/index.js";
 import type { SessionRevocationService } from "../../../../modules/admin/index.js";
 import { mapDomainError } from "../../trpc.error-mapper.js";
 import { adminProcedure } from "../../trpc.middleware.js";
 
 export interface AdminUsersDeps {
-  adminService: AdminService;
+  snapshotAdminService: SnapshotAdminService;
   /**
    * Redis-backed session revocation for
    * deactivate/activate user. Optional so existing role-coverage test
@@ -24,7 +24,7 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
       .input(adminUserSchema)
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.upsertUser(input);
+          return await deps.snapshotAdminService.upsertUser(input);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -34,7 +34,7 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
       .input(z.object({ userId: z.uuid() }))
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.removeUser(input.userId);
+          return await deps.snapshotAdminService.removeUser(input.userId);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -49,7 +49,9 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
       .input(z.object({ userId: z.uuid() }))
       .mutation(async ({ input }) => {
         try {
-          const result = await deps.adminService.deactivateUser(input.userId);
+          const result = await deps.snapshotAdminService.deactivateUser(
+            input.userId,
+          );
           await deps.sessionRevocationService?.revokeSession(input.userId);
           return result;
         } catch (error) {
@@ -66,7 +68,9 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
       .input(z.object({ userId: z.uuid() }))
       .mutation(async ({ input }) => {
         try {
-          const result = await deps.adminService.activateUser(input.userId);
+          const result = await deps.snapshotAdminService.activateUser(
+            input.userId,
+          );
           await deps.sessionRevocationService?.restoreSession(input.userId);
           return result;
         } catch (error) {

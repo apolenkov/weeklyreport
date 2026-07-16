@@ -4,15 +4,24 @@
  * include timeZone: 'UTC' to prevent off-by-one day shifts in UTC+N timezones.
  */
 
-import { DAYS_PER_WEEK, MS_PER_WEEK } from "@customreport/shared";
+import {
+  DAYS_PER_WEEK,
+  HOURS_PER_DAY,
+  MINUTES_PER_HOUR,
+  MS_PER_SECOND,
+  MS_PER_WEEK,
+  SECONDS_PER_MINUTE,
+} from "@customreport/shared";
 
 type DateInput = Date | string | null | undefined;
+export type RelativePastVariant = "compact" | "long" | "activity";
 
 // ISO-8601 week numbering: week 1 is the week containing the year's first
 // Thursday (equivalently, the week containing Jan 4). Shifting a date to the
 // Thursday of its week makes the year-boundary weeks resolve correctly.
 const ISO_PIVOT_WEEKDAY_OFFSET = 3;
 const ISO_PIVOT_JANUARY_DAY = 4;
+const ACTIVITY_JUST_NOW_THRESHOLD_SECONDS = 30;
 
 /** Format a date for display (ru-RU locale, medium style). */
 export function formatDate(date: DateInput): string {
@@ -73,6 +82,44 @@ export const MONTHS_SHORT = [
  */
 export function formatTimestampShort(date: Date): string {
   return `${MONTHS_SHORT[date.getUTCMonth()]} ${date.getUTCDate()}`;
+}
+
+function formatRelativeHours(
+  hours: number,
+  variant: RelativePastVariant,
+): string {
+  if (variant === "long") {
+    return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+  }
+  return hours === 1 ? "1h ago" : `${hours}h ago`;
+}
+
+export function formatRelativePast(
+  date: Date,
+  now: Date,
+  variant: RelativePastVariant = "compact",
+): string {
+  const diffSeconds = Math.max(
+    0,
+    Math.floor((now.getTime() - date.getTime()) / MS_PER_SECOND),
+  );
+  if (
+    variant === "activity" &&
+    diffSeconds >= ACTIVITY_JUST_NOW_THRESHOLD_SECONDS &&
+    diffSeconds < SECONDS_PER_MINUTE
+  ) {
+    return `${diffSeconds}s ago`;
+  }
+  if (diffSeconds < SECONDS_PER_MINUTE) return "just now";
+  const minutes = Math.floor(diffSeconds / SECONDS_PER_MINUTE);
+  if (minutes < MINUTES_PER_HOUR) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / MINUTES_PER_HOUR);
+  if (hours < HOURS_PER_DAY) return formatRelativeHours(hours, variant);
+  if (variant !== "activity") return formatTimestampShort(date);
+  const days = Math.floor(hours / HOURS_PER_DAY);
+  return days < DAYS_PER_WEEK
+    ? `${days}d ago`
+    : date.toLocaleDateString("en-US", { timeZone: "UTC" });
 }
 
 function toDate(date: Date | string): Date {

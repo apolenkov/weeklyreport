@@ -601,8 +601,7 @@ describe("PeriodsTab — a11y dialog behavioral regressions (VA-0a)", () => {
     await user.click(await screen.findByTestId(`action-delete-${openRow.id}`));
     expect(screen.getByTestId("periods-delete-dialog")).toBeInTheDocument();
 
-    // Fire Escape on the document — the useEffect keydown handler should
-    // call setDeleteConfirm(null), unmounting the dialog.
+    // Fire Escape on the document — the shared focus hook closes the dialog.
     fireEvent.keyDown(document, { key: "Escape" });
 
     await waitFor(() => {
@@ -658,10 +657,25 @@ describe("PeriodsTab — a11y dialog behavioral regressions (VA-0a)", () => {
 
     // The inner div has role="dialog" and an onClick that calls
     // e.stopPropagation(), so the backdrop's onClick is NOT triggered.
-    await user.click(screen.getByRole("dialog"));
+    await user.click(screen.getByRole("alertdialog"));
 
     // The dialog must STILL be in the DOM.
     expect(screen.getByTestId("periods-delete-dialog")).toBeInTheDocument();
+  });
+
+  it("keeps the delete dialog open and disables its actions while pending", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+    captured["admin.deleteReport"].mutationFn.mockReturnValueOnce(
+      new Promise(() => undefined),
+    );
+
+    await user.click(await screen.findByTestId(`action-delete-${openRow.id}`));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(screen.getByTestId("periods-delete-dialog")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Deleting…" })).toBeDisabled();
   });
 
   it("Escape closes the create/edit dialog", async () => {

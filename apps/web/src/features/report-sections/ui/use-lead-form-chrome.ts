@@ -3,7 +3,10 @@
 import type { MyHistoryEntry } from "@customreport/shared";
 import { useEffect, useMemo, useState } from "react";
 
-import { formatDateRange, isoWeekNumber } from "../model/lead-history";
+import {
+  formatPeriodRangeWithYear,
+  isoWeekNumber,
+} from "../../../lib/format-date";
 
 interface UseLeadFormChromeInput {
   readonly pinnedReportId: string | undefined;
@@ -44,7 +47,7 @@ export function useLeadFormChrome({
     if (!titleHistoryEntry) return;
     const start = titleHistoryEntry.periodStart;
     const week = isoWeekNumber(start);
-    const range = formatDateRange(start, titleHistoryEntry.periodEnd);
+    const range = formatPeriodRangeWithYear(start, titleHistoryEntry.periodEnd);
     const previous = document.title;
     document.title = `Week ${week}, ${range} - CustomReport`;
     return () => {

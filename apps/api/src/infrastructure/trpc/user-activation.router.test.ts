@@ -31,7 +31,7 @@ function makeSession(role: Role) {
 }
 
 function buildCaller(role: Role) {
-  const adminService = {
+  const snapshotAdminService = {
     deactivateUser: vi.fn().mockResolvedValue({ success: true }),
     activateUser: vi.fn().mockResolvedValue({ success: true }),
   };
@@ -40,7 +40,7 @@ function buildCaller(role: Role) {
     restoreSession: vi.fn().mockResolvedValue(undefined),
   };
   const deps = {
-    adminService,
+    snapshotAdminService,
     sessionRevocationService,
   } as unknown as Parameters<typeof createAppRouter>[0];
   const caller = createAppRouter(deps).createCaller({
@@ -51,24 +51,25 @@ function buildCaller(role: Role) {
     isPdfExport: false,
     pdfReportId: null,
   });
-  return { caller, adminService, sessionRevocationService };
+  return { caller, snapshotAdminService, sessionRevocationService };
 }
 
 describe("admin.deactivateUser — session revocation wiring", () => {
   it("revokes the session after the DB write, for the same user", async () => {
-    const { caller, adminService, sessionRevocationService } =
+    const { caller, snapshotAdminService, sessionRevocationService } =
       buildCaller("admin");
 
     await expect(
       caller.admin.deactivateUser({ userId: TARGET_ID }),
     ).resolves.toEqual({ success: true });
 
-    expect(adminService.deactivateUser).toHaveBeenCalledWith(TARGET_ID);
+    expect(snapshotAdminService.deactivateUser).toHaveBeenCalledWith(TARGET_ID);
     expect(sessionRevocationService.revokeSession).toHaveBeenCalledWith(
       TARGET_ID,
     );
     const dbOrder =
-      adminService.deactivateUser.mock.invocationCallOrder[0] ?? Infinity;
+      snapshotAdminService.deactivateUser.mock.invocationCallOrder[0] ??
+      Infinity;
     const revokeOrder =
       sessionRevocationService.revokeSession.mock.invocationCallOrder[0] ?? 0;
     expect(dbOrder).toBeLessThan(revokeOrder);
@@ -77,19 +78,19 @@ describe("admin.deactivateUser — session revocation wiring", () => {
 
 describe("admin.activateUser — session restoration wiring", () => {
   it("restores the session after the DB write, for the same user", async () => {
-    const { caller, adminService, sessionRevocationService } =
+    const { caller, snapshotAdminService, sessionRevocationService } =
       buildCaller("admin");
 
     await expect(
       caller.admin.activateUser({ userId: TARGET_ID }),
     ).resolves.toEqual({ success: true });
 
-    expect(adminService.activateUser).toHaveBeenCalledWith(TARGET_ID);
+    expect(snapshotAdminService.activateUser).toHaveBeenCalledWith(TARGET_ID);
     expect(sessionRevocationService.restoreSession).toHaveBeenCalledWith(
       TARGET_ID,
     );
     const dbOrder =
-      adminService.activateUser.mock.invocationCallOrder[0] ?? Infinity;
+      snapshotAdminService.activateUser.mock.invocationCallOrder[0] ?? Infinity;
     const restoreOrder =
       sessionRevocationService.restoreSession.mock.invocationCallOrder[0] ?? 0;
     expect(dbOrder).toBeLessThan(restoreOrder);

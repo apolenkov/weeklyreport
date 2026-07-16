@@ -1,14 +1,14 @@
 import { paginationInputSchema } from "@customreport/shared";
 import { z } from "zod";
 
-import type { AdminService } from "../../../modules/admin/index.js";
+import type { PeriodAdminService } from "../../../modules/admin/index.js";
 import type { ArchiveService } from "../../../modules/archive/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import { anyRoleProcedure, headProcedure, router } from "../trpc.middleware.js";
 
 export interface ArchiveRouterDeps {
   archiveService: ArchiveService;
-  adminService: AdminService;
+  periodAdminService: PeriodAdminService;
 }
 
 // archive.list / archive.detail use anyRoleProcedure
@@ -66,7 +66,7 @@ export function createArchiveRouter(deps: ArchiveRouterDeps) {
 
     /**
      * Head-only mutation to move a published report into the archive.
-     * Sets `archived=true` on the Report row via adminService.archivePeriod
+     * Sets `archived=true` on the Report row via periodAdminService.archivePeriod
      * (which uses Report.id — "period" and "report" are the same table).
      * After this call the report appears in archive.list and is no longer
      * shown in the "recently published" surface.
@@ -75,7 +75,7 @@ export function createArchiveRouter(deps: ArchiveRouterDeps) {
       .input(z.object({ reportId: z.uuid() }))
       .mutation(async ({ input }) => {
         try {
-          await deps.adminService.archivePeriod(input.reportId);
+          await deps.periodAdminService.archivePeriod(input.reportId);
           return { success: true as const };
         } catch (error) {
           throw mapDomainError(error);
@@ -85,13 +85,13 @@ export function createArchiveRouter(deps: ArchiveRouterDeps) {
     /**
      * Head-only mutation to un-archive a report (move back to
      * "published but not archived"). Sets `archived=false` via
-     * adminService.unarchivePeriod and removes it from archive.list.
+     * periodAdminService.unarchivePeriod and removes it from archive.list.
      */
     unarchiveReport: headProcedure
       .input(z.object({ reportId: z.uuid() }))
       .mutation(async ({ input }) => {
         try {
-          await deps.adminService.unarchivePeriod(input.reportId);
+          await deps.periodAdminService.unarchivePeriod(input.reportId);
           return { success: true as const };
         } catch (error) {
           throw mapDomainError(error);

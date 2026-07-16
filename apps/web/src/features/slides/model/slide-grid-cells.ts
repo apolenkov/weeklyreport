@@ -1,7 +1,4 @@
-import type {
-  ReportSectionReadModel,
-  TrafficLightStatus,
-} from "@customreport/shared";
+import type { ReportSectionReadModel } from "@customreport/shared";
 
 import type { ForeignGridRow } from "./slide-grid-foreign";
 import {
@@ -12,7 +9,6 @@ import {
   type GridAuthor,
   type GridColumns,
   type GridRow,
-  type SlideTrafficStatus,
   sortCellRows,
 } from "./slide-grid-rows";
 
@@ -32,22 +28,6 @@ export const emptyBuckets = (): CellBuckets => ({
 
 export function hasText(text: string | null | undefined): text is string {
   return typeof text === "string" && text.trim().length > 0;
-}
-
-const TRAFFIC_RANK: Record<TrafficLightStatus, number> = {
-  green: 0,
-  yellow: 1,
-  red: 2,
-};
-
-export function worstOf(
-  statuses: readonly SlideTrafficStatus[],
-): SlideTrafficStatus {
-  return statuses.reduce<SlideTrafficStatus>((worst, status) => {
-    if (status == null) return worst;
-    if (worst == null) return status;
-    return TRAFFIC_RANK[status] >= TRAFFIC_RANK[worst] ? status : worst;
-  }, null);
 }
 
 /** An activity subsection lives under its single linked product; zero or

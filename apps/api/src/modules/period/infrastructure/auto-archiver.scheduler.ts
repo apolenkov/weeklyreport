@@ -4,7 +4,7 @@ import { Cron } from "@nestjs/schedule";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { AuditLogger } from "../../../lib/audit-logger.js";
-import { AdminService } from "../../admin/index.js";
+import { SnapshotAdminService } from "../../admin/index.js";
 import { buildTransition } from "../domain/period-transition.js";
 
 /**
@@ -29,7 +29,7 @@ export class AutoArchiverScheduler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly adminService: AdminService,
+    private readonly snapshotAdminService: SnapshotAdminService,
     private readonly auditLogger: AuditLogger,
   ) {}
 
@@ -50,7 +50,7 @@ export class AutoArchiverScheduler {
     | { archived: false; reason: "disabled" }
     | { archived: true; periodIds: readonly string[] }
   > {
-    const settings = await this.adminService.getSettings();
+    const settings = await this.snapshotAdminService.getSettings();
     if (settings.autoArchiveWeeksAfterPublish <= 0) {
       return { archived: false, reason: "disabled" };
     }

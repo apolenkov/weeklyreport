@@ -6,10 +6,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { formatPeriodLabel, formatPeriodRange } from "../../../lib/format-date";
 import { useTRPC } from "../../../lib/trpc-context";
+import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
 import { TabHeader, TabSearch } from "../../admin";
 import { usePeriodMutations } from "../model/use-period-mutations";
 import { PeriodsArchiveSection } from "./periods-archive-section";
-import { PeriodsDeleteConfirmDialog } from "./periods-delete-confirm-dialog";
 import { CreatePeriodDialog } from "./periods-tab-dialog";
 import { PlusIcon } from "./periods-tab-icons";
 import { PeriodTable } from "./periods-tab-table";
@@ -82,20 +82,6 @@ export function PeriodsTab() {
     }
   }, [editingRow]);
 
-  // Esc-to-close for the delete confirmation dialog (matches the
-  // create/edit dialog pattern below). Backdrop click and Cancel also close.
-  useEffect(() => {
-    if (!deleteConfirm) return;
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setDeleteConfirm(null);
-      }
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [deleteConfirm]);
-
   // text search over active periods (weekLabel + date range)
   const [search, setSearch] = useState("");
 
@@ -118,6 +104,7 @@ export function PeriodsTab() {
   } = usePeriodMutations({
     onCreateSuccess: () => setShowCreate(false),
     onEditSuccess: () => setEditingRow(null),
+    onDeleteSuccess: () => setDeleteConfirm(null),
   });
 
   const allActiveRows = useMemo(
@@ -277,13 +264,16 @@ export function PeriodsTab() {
 
       {/* Delete confirmation dialog */}
       {deleteConfirm && (
-        <PeriodsDeleteConfirmDialog
+        <ConfirmationDialog
+          open={true}
+          title="Delete period?"
+          description="This will permanently delete the period and all draft sections. This action cannot be undone."
+          confirmLabel={deleteMut.isPending ? "Deleting…" : "Delete"}
+          variant="delete"
+          testId="periods-delete-dialog"
           isPending={deleteMut.isPending}
-          onCancel={() => setDeleteConfirm(null)}
-          onConfirm={() => {
-            deleteMut.mutate({ reportId: deleteConfirm.id });
-            setDeleteConfirm(null);
-          }}
+          onClose={() => setDeleteConfirm(null)}
+          onConfirm={() => deleteMut.mutate({ reportId: deleteConfirm.id })}
         />
       )}
     </div>

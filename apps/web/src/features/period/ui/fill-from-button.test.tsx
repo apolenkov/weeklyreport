@@ -315,7 +315,7 @@ describe("FillFromButton — locked on a reopened period", () => {
     );
 
     expect(
-      screen.queryByRole("dialog", { name: "Confirm fill from previous" }),
+      screen.queryByRole("alertdialog", { name: "Fill from Week 16?" }),
     ).not.toBeInTheDocument();
     expect(onFillFrom).not.toHaveBeenCalled();
   });
@@ -333,10 +333,15 @@ describe("FillFromButton — icon triggers keep the fill flow (head-toolbar-pari
     );
 
     expect(
-      screen.getByRole("dialog", { name: "Confirm fill from previous" }),
+      screen.getByRole("alertdialog", { name: "Fill from Week 16?" }),
     ).toBeInTheDocument();
 
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      "This will overwrite your current draft with data from Week 16 (Apr 14–20, 2026). Current Week items, Risks, and Decisions will be replaced. Priorities will NOT be filled.",
+    );
+
     fireEvent.click(screen.getByRole("button", { name: /Replace & Fill/ }));
+    expect(onFillFrom).toHaveBeenCalledOnce();
     expect(onFillFrom).toHaveBeenCalledWith("sec-W16");
   });
 });

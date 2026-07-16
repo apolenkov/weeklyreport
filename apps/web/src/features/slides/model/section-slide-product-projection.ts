@@ -1,6 +1,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
 import { deriveEffectiveStageStatus } from "../../../lib/stage-status";
+import { worstTrafficStatus } from "../../../lib/status-presentation";
 import {
   riskCoversStage,
   stageStatusToTraffic,
@@ -15,7 +16,6 @@ import {
   CROSS_PRODUCT_ID,
   nonEmpty,
   unique,
-  worstTraffic,
 } from "./section-slide-model-helpers";
 
 type SectionProject = ReportSectionReadModel["projects"][number];
@@ -118,10 +118,7 @@ function buildProductSlide(
   return {
     id: project.projectId,
     name: project.projectName,
-    status: stages.reduce<SlideStageStatus>(
-      (worst, stage) => worstTraffic(worst, stage.status),
-      null,
-    ),
+    status: worstTrafficStatus(stages.map((stage) => stage.status)),
     stages,
     ...recordSlices(section, project.projectId),
   };

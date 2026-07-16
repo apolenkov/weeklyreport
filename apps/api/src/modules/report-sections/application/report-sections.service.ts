@@ -118,7 +118,7 @@ export const REPORT_SECTIONS_REPOSITORY = Symbol("ReportSectionsRepository");
 /**
  * Minimal AppSettings shape the service needs to enforce grace + late
  * submission rules. Modeled as a callback rather
- * than a direct AdminService dependency so unit tests can pass a tiny
+ * than a direct settings-service dependency so unit tests can pass a tiny
  * stub without standing up the admin module.
  */
 export type GetGraceSettings = () => Promise<{

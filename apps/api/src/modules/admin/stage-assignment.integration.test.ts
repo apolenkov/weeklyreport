@@ -5,8 +5,9 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { type AdminRepository, AdminService } from "./admin.service";
 import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
+import type { AdminRepository } from "./admin-shared.js";
+import { ProjectAdminService } from "./project-admin.service.js";
 
 /* ------------------------------------------------------------------ */
 /*  Constants & defaults                                               */
@@ -178,9 +179,9 @@ function createRepository(
 /*  Stage assignment integration tests                                 */
 /* ------------------------------------------------------------------ */
 
-describe("AdminService — stage assignments (integration)", () => {
+describe("ProjectAdminService — stage assignments (integration)", () => {
   it("creates a valid assignment and returns it", async () => {
-    const service = new AdminService(createRepository());
+    const service = new ProjectAdminService(createRepository());
 
     const created = await service.saveStageAssignment({
       userId: USER_ID,
@@ -196,7 +197,7 @@ describe("AdminService — stage assignments (integration)", () => {
   });
 
   it("updates the assignee for the same project stage", async () => {
-    const service = new AdminService(createRepository());
+    const service = new ProjectAdminService(createRepository());
 
     const first = await service.saveStageAssignment({
       userId: USER_ID,
@@ -220,7 +221,7 @@ describe("AdminService — stage assignments (integration)", () => {
   });
 
   it("deletes an assignment successfully", async () => {
-    const service = new AdminService(createRepository());
+    const service = new ProjectAdminService(createRepository());
 
     const created = await service.saveStageAssignment({
       userId: USER_ID,
@@ -236,7 +237,7 @@ describe("AdminService — stage assignments (integration)", () => {
   });
 
   it("lists assignments filtered by project", async () => {
-    const service = new AdminService(createRepository());
+    const service = new ProjectAdminService(createRepository());
 
     // Create assignments in two projects
     await service.saveStageAssignment({

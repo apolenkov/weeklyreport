@@ -5,6 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo } from "react";
 
 import { getClientErrorDetails } from "../../../lib/client-error-reporting";
+import {
+  formatPeriodRangeWithYear,
+  isoWeekNumber,
+} from "../../../lib/format-date";
 import { useTRPC } from "../../../lib/trpc-context";
 import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../../../shared/ui/report-shell/archive-toggle";
@@ -15,11 +19,7 @@ import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle
 import { ExportPdfButton } from "../../pdf-export";
 import { PeriodNavigator } from "../../period";
 import type { ReportPeriod } from "../../report-sections";
-import {
-  formatDateRange,
-  isoWeekNumber,
-  WeeklyReportPage,
-} from "../../report-sections";
+import { WeeklyReportPage } from "../../report-sections";
 import { HeadSlidesClient } from "../../slides";
 import {
   deriveViewerAuthority,
@@ -80,7 +80,7 @@ export function ViewerReportShell({
     const historyPeriods: ReportPeriod[] = entries.map((entry) => ({
       id: entry.reportId,
       weekLabel: `Week ${isoWeekNumber(new Date(entry.periodStart))}`,
-      dateRange: formatDateRange(
+      dateRange: formatPeriodRangeWithYear(
         new Date(entry.periodStart),
         new Date(entry.periodEnd),
       ),
@@ -99,7 +99,7 @@ export function ViewerReportShell({
         {
           id: reportId,
           weekLabel: `Week ${isoWeekNumber(new Date(displayed.periodStart))}`,
-          dateRange: formatDateRange(
+          dateRange: formatPeriodRangeWithYear(
             new Date(displayed.periodStart),
             new Date(displayed.periodEnd),
           ),

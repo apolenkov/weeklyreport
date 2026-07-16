@@ -9,10 +9,6 @@ import type {
 } from "@customreport/shared";
 import { initialsFromName as sharedInitialsFromName } from "@customreport/shared";
 
-import {
-  formatPeriodRangeWithYear,
-  formatWeekLabel,
-} from "../../../lib/format-date";
 import { statusLabel } from "../../../lib/status-presentation";
 import { deriveHeadItemStatus } from "./item-status";
 import { trafficToStageStatus } from "./traffic-light";
@@ -29,15 +25,6 @@ import type {
 // in @customreport/shared so cloned copies can't diverge.
 export function initialsFromName(name: string): string {
   return sharedInitialsFromName(name) || "??";
-}
-
-export function isoWeekLabel(date: Date): string {
-  return formatWeekLabel(date);
-}
-
-/** Format an inclusive period range as `Apr 14–20, 2026`. */
-export function formatWeekRange(start: Date, end: Date): string {
-  return formatPeriodRangeWithYear(start, end);
 }
 
 export function trafficToProductStatus(

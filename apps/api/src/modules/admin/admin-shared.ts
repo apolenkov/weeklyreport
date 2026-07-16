@@ -152,32 +152,23 @@ export interface AdminRepository {
   }): Promise<StageAssignment>;
   deleteStageAssignment(id: string): Promise<void>;
   listStageAssignments(projectId: string): Promise<StageAssignment[]>;
-  // ReminderPolicy CRUD. Optional so existing
-  // in-memory test repositories that predate the policies surface keep
-  // compiling — service callers fall back to an empty list when the
-  // repo doesn't implement them.
-  listReminderPolicies?(): Promise<ReminderPolicy[]>;
-  saveReminderPolicy?(policy: ReminderPolicy): Promise<ReminderPolicy>;
-  deleteReminderPolicy?(policyId: string): Promise<void>;
-  // rich period rows for the redesigned Admin
-  // Periods tab. Optional so existing in-memory test repositories
-  // (e.g. admin.service.test.ts) keep compiling — service callers fall
-  // back to an empty list when the repo doesn't implement it.
-  listPeriodsByState?(filter: {
+  listReminderPolicies(): Promise<ReminderPolicy[]>;
+  saveReminderPolicy(policy: ReminderPolicy): Promise<ReminderPolicy>;
+  deleteReminderPolicy(policyId: string): Promise<void>;
+  listPeriodsByState(filter: {
     states: readonly PeriodState[];
     /** Cap is enforced server-side; defaults to 50 when caller omits. */
     limit: number;
   }): Promise<PeriodRowFromRepo[]>;
-  archivePeriod?(periodId: string): Promise<void>;
-  unarchivePeriod?(
+  archivePeriod(periodId: string): Promise<void>;
+  unarchivePeriod(
     periodId: string,
   ): Promise<{ nextPeriodState: PeriodState; nextPeriodStatus: PeriodStatus }>;
-  // A27: delete a Report (period) and cascade-delete all child rows.
-  // Optional so in-memory test repos can opt out.
-  deleteReport?(reportId: string): Promise<void>;
-  // A27: read a Report for delete-guard checks (status, periodStatus to block published).
+  // Delete a Report (period) and cascade-delete all child rows.
+  deleteReport(reportId: string): Promise<void>;
+  // Read a Report for delete-guard checks (status, periodStatus to block published).
   // Returns null if not found so the service can throw AdminAccessError.
-  readReportForDelete?(reportId: string): Promise<{
+  readReportForDelete(reportId: string): Promise<{
     status: ReportStatus;
     periodStatus: PeriodStatus;
   } | null>;
@@ -185,13 +176,13 @@ export interface AdminRepository {
   // overlaps the supplied half-open range. The service uses this BEFORE
   // calling createPeriodManual to surface a friendly error pointing at
   // the blocking row. Returns the first overlap (newest-first); null when
-  // free. Optional so in-memory test repos can opt out.
+  // free.
   //
   // `excludeId` lets the update path rerun the overlap gate while
   // excluding the row being edited (otherwise a no-op rewrite of the
   // same envelope would self-conflict). Callers that omit the field get
   // unchanged behavior.
-  findOverlappingPeriod?(input: {
+  findOverlappingPeriod(input: {
     periodStart: Date;
     periodEnd: Date;
     excludeId?: string;
@@ -200,9 +191,8 @@ export interface AdminRepository {
   // materialise its reminder rules via the PolicyApplicator (parity with
   // saveSnapshot and period-factory). `now` is forwarded to the applicator so
   // a backfilled (past-dated) period does not arm already-elapsed reminders as
-  // `active` — they would fire stale on the next scheduler tick. Optional so
-  // in-memory test repos can opt out (they skip reminder materialisation).
-  createPeriodManual?(
+  // `active` — they would fire stale on the next scheduler tick.
+  createPeriodManual(
     input: {
       periodStart: Date;
       periodEnd: Date;
@@ -222,7 +212,7 @@ export interface AdminRepository {
   // Returns null when the id does not resolve so the service can throw
   // `AdminPeriodNotFoundError` (maps to NOT_FOUND). The current envelope
   // is also used for the audit `from`-snapshot of changed fields.
-  readPeriodById?(periodId: string): Promise<{
+  readPeriodById(periodId: string): Promise<{
     id: string;
     periodStart: Date;
     periodEnd: Date;
@@ -233,7 +223,7 @@ export interface AdminRepository {
   // patch the date envelope + weekLabel of an existing Report.
   // Repository writes only the keys present in `data` (partial PATCH);
   // returns the updated row in the same projection used by `readPeriodById`.
-  updatePeriodManual?(input: {
+  updatePeriodManual(input: {
     reportId: string;
     data: {
       periodStart?: Date;
@@ -249,20 +239,15 @@ export interface AdminRepository {
     weekLabel: string | null;
     periodState: PeriodState;
   }>;
-  // explicit Group ↔ Product M:M edge mutations and
-  // read paths. Optional so existing in-memory test repositories that
-  // predate this surface keep compiling — service callers throw when the
-  // repo doesn't implement them. Matches the listReminderPolicies?(...)
-  // pattern above.
-  attachProductToGroup?(input: GroupProductEdgeInput): Promise<GroupProduct>;
-  detachProductFromGroup?(input: GroupProductEdgeInput): Promise<void>;
-  listGroupProducts?(groupId: string): Promise<AdminProject[]>;
-  listProductGroups?(productId: string): Promise<ReportingGroup[]>;
+  // Explicit Group ↔ Product M:M edge mutations and read paths.
+  attachProductToGroup(input: GroupProductEdgeInput): Promise<GroupProduct>;
+  detachProductFromGroup(input: GroupProductEdgeInput): Promise<void>;
+  listGroupProducts(groupId: string): Promise<AdminProject[]>;
+  listProductGroups(productId: string): Promise<ReportingGroup[]>;
   // batched owning-group lookup for the "products attached" editor.
   // One query resolves the single owning group for every requested product,
-  // replacing the per-product listProductGroups fan-out. Optional to match
-  // the other group-product entries so in-memory test repos keep compiling.
-  listProductGroupOwnership?(
+  // replacing the per-product listProductGroups fan-out.
+  listProductGroupOwnership(
     productIds: readonly string[],
   ): Promise<ProductGroupOwnership[]>;
   // -----------------------------------------------------------------

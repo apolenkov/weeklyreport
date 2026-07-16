@@ -1,6 +1,9 @@
 import type { MyHistoryEntry } from "@customreport/shared";
 
-import { formatDateRange, isoWeekNumber } from "../../report-sections";
+import {
+  formatPeriodRangeWithYear,
+  isoWeekNumber,
+} from "../../../lib/format-date";
 
 export interface LeadSlidePeriodOption {
   readonly reportId: string;
@@ -22,7 +25,10 @@ export function buildLeadSlidePeriodOptions(
     .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime())
     .map((entry) => {
       const periodLabel = `Period ${isoWeekNumber(entry.periodStart)}`;
-      const dateRange = formatDateRange(entry.periodStart, entry.periodEnd);
+      const dateRange = formatPeriodRangeWithYear(
+        entry.periodStart,
+        entry.periodEnd,
+      );
       const current =
         activeReportId !== null && entry.reportId === activeReportId;
       const archived = entry.archived ?? false;

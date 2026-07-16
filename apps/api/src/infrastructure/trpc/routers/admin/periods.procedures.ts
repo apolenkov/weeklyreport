@@ -6,7 +6,10 @@ import {
 } from "@customreport/shared";
 import { z } from "zod";
 
-import type { AdminService } from "../../../../modules/admin/index.js";
+import type {
+  PeriodAdminService,
+  ReopenRequestAdminService,
+} from "../../../../modules/admin/index.js";
 import { mapDomainError } from "../../trpc.error-mapper.js";
 import { adminProcedure, headProcedure } from "../../trpc.middleware.js";
 
@@ -14,7 +17,8 @@ const MAX_PERIOD_LIST_LIMIT = 200;
 const MAX_REOPEN_NOTE_LENGTH = 500;
 
 export interface AdminPeriodsDeps {
-  adminService: AdminService;
+  periodAdminService: PeriodAdminService;
+  reopenRequestAdminService: ReopenRequestAdminService;
   /**
    * Best-effort auto carry-over when a manually created period is minted open
    * (scheduled-born ones carry later at scheduled→open flip). Never rejects.
@@ -30,7 +34,7 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
       .input(reportPeriodSchema)
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.upsertPeriod(input);
+          return await deps.periodAdminService.upsertPeriod(input);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -50,7 +54,7 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
       )
       .query(async ({ input }) => {
         try {
-          return await deps.adminService.listPeriodsByState(input);
+          return await deps.periodAdminService.listPeriodsByState(input);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -68,7 +72,8 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
       .input(adminCreatePeriodManualSchema)
       .mutation(async ({ ctx, input }) => {
         try {
-          const result = await deps.adminService.createPeriodManual(input);
+          const result =
+            await deps.periodAdminService.createPeriodManual(input);
           ctx.auditLogger.periodManualCreate({
             userId: ctx.session.userId,
             role: ctx.session.role,
@@ -103,7 +108,7 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
       .mutation(async ({ ctx, input }) => {
         try {
           const { result, diff } =
-            await deps.adminService.updatePeriodManual(input);
+            await deps.periodAdminService.updatePeriodManual(input);
           if (Object.keys(diff).length > 0) {
             // Date → ISO for audit payload (aggregators serialize to JSON).
             const changes: {
@@ -154,7 +159,7 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
       .input(z.object({ periodId: z.uuid() }))
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.archivePeriod(input.periodId);
+          return await deps.periodAdminService.archivePeriod(input.periodId);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -169,7 +174,7 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
       .input(z.object({ periodId: z.uuid() }))
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.unarchivePeriod(input.periodId);
+          return await deps.periodAdminService.unarchivePeriod(input.periodId);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -182,7 +187,7 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
       .input(z.object({ reportId: z.uuid() }))
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.deleteReport(input.reportId);
+          return await deps.periodAdminService.deleteReport(input.reportId);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -204,7 +209,7 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
       )
       .query(async ({ input, ctx }) => {
         try {
-          return await deps.adminService.listReopenRequests({
+          return await deps.reopenRequestAdminService.listReopenRequests({
             status: input?.status,
             session: ctx.session,
           });
@@ -222,7 +227,7 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
       )
       .mutation(async ({ input, ctx }) => {
         try {
-          return await deps.adminService.respondReopenRequest({
+          return await deps.reopenRequestAdminService.respondReopenRequest({
             id: input.id,
             decision: input.decision,
             note: input.note,
@@ -235,7 +240,9 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
       }),
     pendingReopenCount: headProcedure.query(async ({ ctx }) => {
       try {
-        return await deps.adminService.pendingReopenCount(ctx.session);
+        return await deps.reopenRequestAdminService.pendingReopenCount(
+          ctx.session,
+        );
       } catch (error) {
         throw mapDomainError(error);
       }

@@ -1,17 +1,6 @@
-import type { TrafficLightStatus } from "@customreport/shared";
-
-import type {
-  SlideReadinessItem,
-  SlideStageStatus,
-  SlideTone,
-} from "./section-slide-contracts";
+import type { SlideReadinessItem, SlideTone } from "./section-slide-contracts";
 
 const PERCENT_MAX = 100;
-const TRAFFIC_RANK: Record<TrafficLightStatus, number> = {
-  green: 0,
-  yellow: 1,
-  red: 2,
-};
 
 export const NEEDS_WORK_STATUS = "needs-work";
 export const CROSS_PRODUCT_ID = "cross-product";
@@ -57,13 +46,4 @@ export function statusTone(model: {
     return "warning";
   }
   return "ready";
-}
-
-export function worstTraffic(
-  left: SlideStageStatus,
-  right: SlideStageStatus,
-): SlideStageStatus {
-  if (left == null) return right;
-  if (right == null) return left;
-  return TRAFFIC_RANK[left] >= TRAFFIC_RANK[right] ? left : right;
 }

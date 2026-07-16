@@ -19,6 +19,14 @@ import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PolicyApplicatorService } from "../reminders/index.js";
+import * as entityWriteQueries from "./admin-entity-write.queries";
+import * as groupQueries from "./admin-group.queries";
+import * as groupProductQueries from "./admin-group-product.queries";
+import * as periodQueries from "./admin-period.queries";
+import * as periodLifecycle from "./admin-period-lifecycle";
+import * as policyQueries from "./admin-reminder-policy.queries";
+import * as reopenQueries from "./admin-reopen-request-lifecycle.js";
+import * as settingsQueries from "./admin-settings.queries";
 import type {
   AdminRepository,
   DecideReopenRequestInput,
@@ -29,15 +37,7 @@ import type {
   ReopenRequestRow,
   StageAssignmentCountRow,
   StageRow,
-} from "./admin.service";
-import * as entityWriteQueries from "./admin-entity-write.queries";
-import * as groupQueries from "./admin-group.queries";
-import * as groupProductQueries from "./admin-group-product.queries";
-import * as periodQueries from "./admin-period.queries";
-import * as periodLifecycle from "./admin-period-lifecycle";
-import * as policyQueries from "./admin-reminder-policy.queries";
-import * as reopenQueries from "./admin-reopen-request-lifecycle.js";
-import * as settingsQueries from "./admin-settings.queries";
+} from "./admin-shared";
 import * as snapshotQueries from "./admin-snapshot.queries";
 import * as snapshotWriteQueries from "./admin-snapshot-write.queries";
 

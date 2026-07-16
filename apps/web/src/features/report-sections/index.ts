@@ -10,7 +10,6 @@ export type {
 } from "./model/lead-form";
 export { mapLeadFormData, mapLeadReviewFeedback } from "./model/lead-form";
 export type { HistoryEntry } from "./model/lead-history";
-export { formatDateRange, isoWeekNumber } from "./model/lead-history";
 export type { LeadStatus } from "./model/lead-status";
 export { deriveLeadStatus } from "./model/lead-status";
 export { MOCK_PRODUCTS } from "./model/mock-data";

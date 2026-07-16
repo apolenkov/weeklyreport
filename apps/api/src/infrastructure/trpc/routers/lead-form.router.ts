@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { groupScopeFilter } from "../../../lib/group-scope.js";
-import type { AdminService } from "../../../modules/admin/index.js";
+import type { SnapshotAdminService } from "../../../modules/admin/index.js";
 import type { LeadFormService } from "../../../modules/report-sections/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import {
@@ -13,7 +13,7 @@ import {
 const MAX_REOPEN_REASON_LENGTH = 500;
 
 export interface LeadFormRouterDeps {
-  adminService: AdminService;
+  snapshotAdminService: SnapshotAdminService;
   leadFormService: LeadFormService;
 }
 
@@ -25,7 +25,7 @@ export function createLeadFormRouter(deps: LeadFormRouterDeps) {
     // vs unified view.
     viewSettings: protectedProcedure.query(async () => {
       try {
-        const settings = await deps.adminService.getSettings();
+        const settings = await deps.snapshotAdminService.getSettings();
         return { unifiedActivityView: settings.unifiedActivityView };
       } catch (error) {
         throw mapDomainError(error);

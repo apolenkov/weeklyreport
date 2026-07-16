@@ -15,9 +15,11 @@ import { useTRPC } from "../../../lib/trpc-context";
 export function usePeriodMutations({
   onCreateSuccess,
   onEditSuccess,
+  onDeleteSuccess,
 }: {
   readonly onCreateSuccess: () => void;
   readonly onEditSuccess: () => void;
+  readonly onDeleteSuccess: () => void;
 }) {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -118,6 +120,7 @@ export function usePeriodMutations({
       onSuccess: () => {
         invalidatePeriodLists();
         toast.success("Period deleted");
+        onDeleteSuccess();
       },
       onError: (err) => {
         toast.error(err.message);

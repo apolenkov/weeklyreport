@@ -1,3 +1,4 @@
+import type { TrafficLightStatus } from "@customreport/shared";
 import { AlertTriangle, type LucideIcon } from "lucide-react";
 
 /**
@@ -58,6 +59,24 @@ const STATUS_PRESENTATION: Record<CanonicalStatus, StatusPresentation> = {
     labels: { screen: "No status", print: "No status", worstPill: "No status" },
   },
 };
+
+const TRAFFIC_STATUS_RANK: Record<TrafficLightStatus, number> = {
+  green: 0,
+  yellow: 1,
+  red: 2,
+};
+
+export function worstTrafficStatus(
+  statuses: readonly (TrafficLightStatus | null | undefined)[],
+): TrafficLightStatus | null {
+  return statuses.reduce<TrafficLightStatus | null>((worst, status) => {
+    if (status == null) return worst;
+    if (worst == null) return status;
+    return TRAFFIC_STATUS_RANK[status] > TRAFFIC_STATUS_RANK[worst]
+      ? status
+      : worst;
+  }, null);
+}
 
 export function statusLabel(
   status: CanonicalStatus,

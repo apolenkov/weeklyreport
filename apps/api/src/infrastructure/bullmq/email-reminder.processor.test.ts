@@ -29,11 +29,11 @@ vi.mock("../../modules/reminders/index.js", () => ({
   },
 }));
 
-// AdminService is an optional constructor dependency of
+// SnapshotAdminService is an optional constructor dependency of
 // EmailReminderProcessor. Mocking the module keeps the test isolated from
 // Prisma + Nest DI.
 vi.mock("../../modules/admin/index.js", () => ({
-  AdminService: class {
+  SnapshotAdminService: class {
     getSettings = vi.fn();
   },
 }));
@@ -66,10 +66,12 @@ function createMockEmailService() {
 }
 
 /**
- * AdminService stub for from-address injection.
+ * Settings-service stub for from-address injection.
  * Pass `notificationFromEmail` to control what the processor pulls in.
  */
-function createMockAdminService(notificationFromEmail: string | null = null) {
+function createMockSnapshotAdminService(
+  notificationFromEmail: string | null = null,
+) {
   return {
     getSettings: vi.fn().mockResolvedValue({
       notificationFromEmail,
@@ -123,13 +125,13 @@ describe("EmailReminderProcessor.processJob", () => {
       mockReminders as never,
       mockEmail,
       STUB_ENV,
+      createMockSnapshotAdminService() as never,
     );
     const job = createMockJob(defaultJobData);
 
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
-    // The processor forwards an optional 4th arg `from` (null when
-    // AdminService is not wired into the constructor).
+    // A null setting delegates the final From-address choice to EmailService.
     expect(mockEmail.sendMail).toHaveBeenCalledWith(
       "lead@test.com",
       "Reminder: Weekly Status Report Due",
@@ -138,13 +140,13 @@ describe("EmailReminderProcessor.processJob", () => {
     );
   });
 
-  // When AdminService is wired and exposes a non-null notificationFromEmail,
+  // When the settings service exposes a non-null notificationFromEmail,
   // the processor must forward that value to EmailService verbatim so
   // corporate SMTP relays see the configured From header.
   it("forwards AppSettings.notificationFromEmail as the From override", async () => {
     const mockReminders = createMockRemindersService();
     const mockEmail = createMockEmailService();
-    const mockAdmin = createMockAdminService("alerts@corp.example.com");
+    const mockAdmin = createMockSnapshotAdminService("alerts@corp.example.com");
     const processor = new EmailReminderProcessor(
       mockReminders as never,
       mockEmail,
@@ -170,7 +172,7 @@ describe("EmailReminderProcessor.processJob", () => {
   it("passes through null notificationFromEmail unchanged (env fallback at EmailService boundary)", async () => {
     const mockReminders = createMockRemindersService();
     const mockEmail = createMockEmailService();
-    const mockAdmin = createMockAdminService(null);
+    const mockAdmin = createMockSnapshotAdminService(null);
     const processor = new EmailReminderProcessor(
       mockReminders as never,
       mockEmail,
@@ -196,6 +198,7 @@ describe("EmailReminderProcessor.processJob", () => {
       mockReminders as never,
       mockEmail,
       STUB_ENV,
+      createMockSnapshotAdminService() as never,
     );
     const job = createMockJob(defaultJobData);
 
@@ -213,6 +216,7 @@ describe("EmailReminderProcessor.processJob", () => {
       mockReminders as never,
       mockEmail,
       STUB_ENV,
+      createMockSnapshotAdminService() as never,
     );
     // attemptsMade=2 with attempts=3 is the final (3rd) attempt.
     const job = createMockJob(defaultJobData, 2, 3);
@@ -240,6 +244,7 @@ describe("EmailReminderProcessor.processJob", () => {
       mockReminders as never,
       mockEmail,
       STUB_ENV,
+      createMockSnapshotAdminService() as never,
     );
     // attemptsMade=0 with attempts=3 is the first of three attempts.
     const job = createMockJob(defaultJobData, 0, 3);
@@ -266,6 +271,7 @@ describe("EmailReminderProcessor.processJob", () => {
       mockReminders as never,
       mockEmail,
       STUB_ENV,
+      createMockSnapshotAdminService() as never,
     );
     const job = createMockJob(defaultJobData);
 
@@ -288,6 +294,7 @@ describe("EmailReminderProcessor.processJob", () => {
       mockReminders as never,
       mockEmail,
       STUB_ENV,
+      createMockSnapshotAdminService() as never,
     );
     const job = createMockJob(defaultJobData);
 
@@ -305,6 +312,7 @@ describe("EmailReminderProcessor.processJob", () => {
       mockReminders as never,
       mockEmail,
       STUB_ENV,
+      createMockSnapshotAdminService() as never,
     );
     const job = createMockJob(defaultJobData);
 

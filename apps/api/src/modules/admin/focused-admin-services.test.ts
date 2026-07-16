@@ -10,13 +10,17 @@ import { createAppRouter } from "../../infrastructure/trpc/trpc.router.js";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
 import {
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
   type AdminRepository,
-  AdminService,
-} from "./admin.service";
-import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
+  type PeriodRowFromRepo,
+} from "./admin-shared.js";
+import { PeriodAdminService } from "./period-admin.service.js";
+import { ProjectAdminService } from "./project-admin.service.js";
+import { ReminderAdminService } from "./reminder-admin.service.js";
+import { SnapshotAdminService } from "./snapshot-admin.service.js";
 
 const adminSession: UserSession = {
   userId: "00000000-0000-4000-8000-0000000000ad",
@@ -32,8 +36,8 @@ const adminSession: UserSession = {
  * gate is asserted against the wired path, not a parallel router copy. Heads get
  * FORBIDDEN here — the admin panel is admin-only.
  */
-function buildAdminCaller(service: AdminService, session: UserSession) {
-  const deps = { adminService: service } as unknown as Parameters<
+function buildAdminCaller(service: SnapshotAdminService, session: UserSession) {
+  const deps = { snapshotAdminService: service } as unknown as Parameters<
     typeof createAppRouter
   >[0];
 
@@ -275,9 +279,9 @@ function createRepository(
   };
 }
 
-describe("AdminService", () => {
+describe("focused admin services", () => {
   it("adds and removes users", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
 
     const withLead = await service.upsertUser({
       email: leadSession.email,
@@ -300,7 +304,7 @@ describe("AdminService", () => {
   });
 
   it("creates and archives reporting groups", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new ProjectAdminService(createRepository(initialSnapshot));
     const groupId = "99999999-9999-4999-8999-999999999992";
 
     const created = await service.upsertReportingGroup({
@@ -321,7 +325,7 @@ describe("AdminService", () => {
   });
 
   it("persists headUserId round-trip on upsertReportingGroup", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new ProjectAdminService(createRepository(initialSnapshot));
     const groupId = "99999999-9999-4999-8999-000000042000";
     const leaderId = "00000000-0000-4000-8000-000000000099";
 
@@ -347,24 +351,27 @@ describe("AdminService", () => {
     expect(restored.headUserId).toBe(leaderId);
   });
 
-  it("creates projects, periods, and reminder rules", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+  it("routes project, period, and reminder writes to their owning services", async () => {
+    const repository = createRepository(initialSnapshot);
+    const projectService = new ProjectAdminService(repository);
+    const periodService = new PeriodAdminService(repository);
+    const reminderService = new ReminderAdminService(repository);
 
-    const withProject = await service.upsertProject({
+    const withProject = await projectService.upsertProject({
       archived: false,
       id: "44444444-4444-4444-8444-444444444444",
       leadId: leadSession.userId,
       leadName: leadSession.name,
       name: "Project 1",
     });
-    const withPeriod = await service.upsertPeriod({
+    const withPeriod = await periodService.upsertPeriod({
       deadline: new Date("2026-04-17T15:00:00.000Z"),
       id: "55555555-5555-4555-8555-555555555555",
       periodEnd: new Date("2026-04-19T23:59:59.000Z"),
       periodStart: new Date("2026-04-13T00:00:00.000Z"),
       status: "draft",
     });
-    const withRule = await service.upsertReminderRule({
+    const withRule = await reminderService.upsertReminderRule({
       fireAt: new Date("2026-04-17T09:00:00.000Z"),
       id: "66666666-6666-4666-8666-666666666666",
       kind: "deadline",
@@ -381,7 +388,7 @@ describe("AdminService", () => {
   });
 
   it("rejects non-admin access at the live procedure gate", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
 
     // Both lead and head are non-admin: the panel is admin-only.
     await expect(
@@ -391,10 +398,6 @@ describe("AdminService", () => {
       buildAdminCaller(service, headSession).admin.snapshot(),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
-
-  // -----------------------------------------------------------------------
-  // P0/P1 Regression — ADM scenarios
-  // -----------------------------------------------------------------------
 
   describe("getSnapshot — regression", () => {
     it("returns snapshot with all entity types", async () => {
@@ -449,7 +452,7 @@ describe("AdminService", () => {
         policies: [],
       };
 
-      const service = new AdminService(createRepository(fullSnapshot));
+      const service = new SnapshotAdminService(createRepository(fullSnapshot));
       const result = await service.getSnapshot();
 
       expect(result.users).toHaveLength(1);
@@ -470,7 +473,7 @@ describe("AdminService", () => {
         policies: [],
       };
 
-      const service = new AdminService(createRepository(emptySnapshot));
+      const service = new SnapshotAdminService(createRepository(emptySnapshot));
       const result = await service.getSnapshot();
 
       expect(result.users).toEqual([]);
@@ -482,7 +485,9 @@ describe("AdminService", () => {
 
   describe("upsertUser — regression", () => {
     it("creates a new user", async () => {
-      const service = new AdminService(createRepository(initialSnapshot));
+      const service = new SnapshotAdminService(
+        createRepository(initialSnapshot),
+      );
 
       const result = await service.upsertUser({
         id: "77777777-7777-4777-8777-777777777777",
@@ -504,7 +509,9 @@ describe("AdminService", () => {
     });
 
     it("updates existing user by ID", async () => {
-      const service = new AdminService(createRepository(initialSnapshot));
+      const service = new SnapshotAdminService(
+        createRepository(initialSnapshot),
+      );
 
       // First add the user
       await service.upsertUser({
@@ -541,7 +548,9 @@ describe("AdminService", () => {
     });
 
     it("sorts users by name after upsert", async () => {
-      const service = new AdminService(createRepository(initialSnapshot));
+      const service = new SnapshotAdminService(
+        createRepository(initialSnapshot),
+      );
 
       await service.upsertUser({
         id: "77777777-7777-4777-8777-777777777777",
@@ -577,7 +586,9 @@ describe("AdminService", () => {
 
   describe("upsertProject — regression", () => {
     it("creates a new project", async () => {
-      const service = new AdminService(createRepository(initialSnapshot));
+      const service = new ProjectAdminService(
+        createRepository(initialSnapshot),
+      );
 
       const result = await service.upsertProject({
         id: "44444444-4444-4444-8444-444444444444",
@@ -592,7 +603,9 @@ describe("AdminService", () => {
     });
 
     it("updates existing project by ID", async () => {
-      const service = new AdminService(createRepository(initialSnapshot));
+      const service = new ProjectAdminService(
+        createRepository(initialSnapshot),
+      );
 
       await service.upsertProject({
         id: "44444444-4444-4444-8444-444444444444",
@@ -617,7 +630,9 @@ describe("AdminService", () => {
 
   describe("upsertReminderRule — regression", () => {
     it("creates a new reminder rule with kind/fireAt/status fields", async () => {
-      const service = new AdminService(createRepository(initialSnapshot));
+      const service = new ReminderAdminService(
+        createRepository(initialSnapshot),
+      );
 
       const result = await service.upsertReminderRule({
         id: "66666666-6666-4666-8666-666666666666",
@@ -640,7 +655,9 @@ describe("AdminService", () => {
     });
 
     it("updates existing reminder rule by ID", async () => {
-      const service = new AdminService(createRepository(initialSnapshot));
+      const service = new ReminderAdminService(
+        createRepository(initialSnapshot),
+      );
 
       await service.upsertReminderRule({
         id: "66666666-6666-4666-8666-666666666666",
@@ -672,7 +689,7 @@ describe("AdminService", () => {
 
   describe("upsertPeriod — regression", () => {
     it("creates a new period", async () => {
-      const service = new AdminService(createRepository(initialSnapshot));
+      const service = new PeriodAdminService(createRepository(initialSnapshot));
 
       const result = await service.upsertPeriod({
         id: "55555555-5555-4555-8555-555555555555",
@@ -687,7 +704,7 @@ describe("AdminService", () => {
     });
 
     it("updates existing period by ID", async () => {
-      const service = new AdminService(createRepository(initialSnapshot));
+      const service = new PeriodAdminService(createRepository(initialSnapshot));
 
       await service.upsertPeriod({
         id: "55555555-5555-4555-8555-555555555555",
@@ -731,7 +748,9 @@ describe("removeUser — DB deletion via repository", () => {
         },
       ],
     };
-    const service = new AdminService(createRepository(snapshotWithLead));
+    const service = new SnapshotAdminService(
+      createRepository(snapshotWithLead),
+    );
     const result = await service.removeUser(leadSession.userId);
 
     // Verify the user was removed from the snapshot
@@ -774,7 +793,7 @@ describe("removeUser — DB deletion via repository", () => {
         },
       ],
     };
-    const service = new AdminService(
+    const service = new SnapshotAdminService(
       createRepository(snapshotWithMultipleUsers),
     );
     const result = await service.removeUser(leadSession.userId);
@@ -789,7 +808,7 @@ describe("removeUser — DB deletion via repository", () => {
   });
 
   it("handles removal of non-existent user gracefully (no-op)", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
     const result = await service.removeUser(
       "99999999-9999-4999-8999-999999999999",
     );
@@ -813,7 +832,9 @@ describe("removeProject — archive behavior", () => {
         },
       ],
     };
-    const service = new AdminService(createRepository(snapshotWithProject));
+    const service = new ProjectAdminService(
+      createRepository(snapshotWithProject),
+    );
     const result = await service.removeProject(
       "44444444-4444-4444-8444-444444444444",
     );
@@ -840,7 +861,9 @@ describe("removeReminderRule — deletion", () => {
         },
       ],
     };
-    const service = new AdminService(createRepository(snapshotWithRule));
+    const service = new ReminderAdminService(
+      createRepository(snapshotWithRule),
+    );
     const result = await service.removeReminderRule(
       "66666666-6666-4666-8666-666666666666",
     );
@@ -851,7 +874,7 @@ describe("removeReminderRule — deletion", () => {
 
 describe("admin.snapshot (live adminProcedure)", () => {
   it("returns the admin snapshot for admin users", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
 
     await expect(
       buildAdminCaller(service, adminSession).admin.snapshot(),
@@ -863,9 +886,9 @@ describe("admin.snapshot (live adminProcedure)", () => {
 // getSettings / updateSettings
 // ---------------------------------------------------------------------------
 
-describe("AdminService — settings", () => {
+describe("SnapshotAdminService — settings", () => {
   it("returns default settings", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
     const result = await service.getSettings();
 
     expect(result).toEqual(defaultSettings);
@@ -873,7 +896,7 @@ describe("AdminService — settings", () => {
 
   // the 9 new fields round-trip through partial update.
   it("round-trips the 9 new AppSettings fields", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
 
     const result = await service.updateSettings({
       periodLengthDays: 14,
@@ -899,7 +922,7 @@ describe("AdminService — settings", () => {
   });
 
   it("updates settings fully", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
     const result = await service.updateSettings({
       autoCreatePeriods: true,
       defaultDeadlineDays: 7,
@@ -910,7 +933,7 @@ describe("AdminService — settings", () => {
   });
 
   it("applies partial update preserving other fields", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
 
     // First do a full update
     await service.updateSettings({
@@ -932,13 +955,13 @@ describe("AdminService — settings", () => {
 // saveStageAssignment / deleteStageAssignment / listStageAssignments
 // ---------------------------------------------------------------------------
 
-describe("AdminService — stage assignments", () => {
+describe("ProjectAdminService — stage assignments", () => {
   const USER_ID = "11111111-1111-4111-8111-111111111111";
   const STAGE_ID = "22222222-2222-4222-8222-222222222222";
   const PROJECT_ID = "33333333-3333-4333-8333-333333333333";
 
   it("creates a stage assignment and lists it", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new ProjectAdminService(createRepository(initialSnapshot));
 
     const created = await service.saveStageAssignment({
       userId: USER_ID,
@@ -957,7 +980,7 @@ describe("AdminService — stage assignments", () => {
   });
 
   it("deletes a stage assignment", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new ProjectAdminService(createRepository(initialSnapshot));
 
     const created = await service.saveStageAssignment({
       userId: USER_ID,
@@ -973,7 +996,7 @@ describe("AdminService — stage assignments", () => {
   });
 
   it("updates the assignee for the same project stage", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new ProjectAdminService(createRepository(initialSnapshot));
 
     const first = await service.saveStageAssignment({
       userId: USER_ID,
@@ -999,8 +1022,6 @@ describe("AdminService — stage assignments", () => {
 // ---------------------------------------------------------------------------
 // listPeriodsByState + archivePeriod + unarchivePeriod
 // ---------------------------------------------------------------------------
-
-import type { PeriodRowFromRepo } from "./admin.service";
 
 const PERIOD_ID_OPEN = "11111111-1111-4111-8111-111111111101";
 const PERIOD_ID_PUBLISHED_FRESH = "11111111-1111-4111-8111-111111111102";
@@ -1071,9 +1092,9 @@ function makePeriodAwareRepository(
   };
 }
 
-describe("AdminService — listPeriodsByState", () => {
-  it("returns empty when repository does not implement the method", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+describe("PeriodAdminService — listPeriodsByState", () => {
+  it("returns empty when the repository has no matching rows", async () => {
+    const service = new PeriodAdminService(createRepository(initialSnapshot));
     const result = await service.listPeriodsByState({ bucket: "active" });
     expect(result).toEqual([]);
   });
@@ -1087,7 +1108,7 @@ describe("AdminService — listPeriodsByState", () => {
       periodStart: new Date("2026-05-11T00:00:00Z"),
     });
     const archived = periodFixture(PERIOD_ID_ARCHIVED, "archived");
-    const service = new AdminService(
+    const service = new PeriodAdminService(
       makePeriodAwareRepository([fresh, open, archived]),
     );
 
@@ -1101,7 +1122,7 @@ describe("AdminService — listPeriodsByState", () => {
   it("archive bucket only contains archived rows", async () => {
     const fresh = periodFixture(PERIOD_ID_PUBLISHED_FRESH, "published");
     const archived = periodFixture(PERIOD_ID_ARCHIVED, "archived");
-    const service = new AdminService(
+    const service = new PeriodAdminService(
       makePeriodAwareRepository([fresh, archived]),
     );
 
@@ -1113,7 +1134,7 @@ describe("AdminService — listPeriodsByState", () => {
     const fresh = periodFixture(PERIOD_ID_PUBLISHED_FRESH, "published", {
       publishedAt: new Date(Date.now() - 2 * 3_600_000), // 2h ago
     });
-    const service = new AdminService(
+    const service = new PeriodAdminService(
       makePeriodAwareRepository([fresh], {
         ...defaultSettings,
         allowReopenAfterPublish: true,
@@ -1130,7 +1151,7 @@ describe("AdminService — listPeriodsByState", () => {
     const stale = periodFixture(PERIOD_ID_PUBLISHED_STALE, "published", {
       publishedAt: new Date(Date.now() - 100 * 3_600_000), // 100h ago
     });
-    const service = new AdminService(
+    const service = new PeriodAdminService(
       makePeriodAwareRepository([stale], {
         ...defaultSettings,
         allowReopenAfterPublish: true,
@@ -1146,7 +1167,7 @@ describe("AdminService — listPeriodsByState", () => {
     const fresh = periodFixture(PERIOD_ID_PUBLISHED_FRESH, "published", {
       publishedAt: new Date(Date.now() - 2 * 3_600_000),
     });
-    const service = new AdminService(
+    const service = new PeriodAdminService(
       makePeriodAwareRepository([fresh], {
         ...defaultSettings,
         allowReopenAfterPublish: false,
@@ -1161,7 +1182,7 @@ describe("AdminService — listPeriodsByState", () => {
   it("canArchive is true for published not-yet-archived rows", async () => {
     const fresh = periodFixture(PERIOD_ID_PUBLISHED_FRESH, "published");
     const archived = periodFixture(PERIOD_ID_ARCHIVED, "archived");
-    const service = new AdminService(
+    const service = new PeriodAdminService(
       makePeriodAwareRepository([fresh, archived]),
     );
     const active = await service.listPeriodsByState({ bucket: "active" });
@@ -1172,7 +1193,7 @@ describe("AdminService — listPeriodsByState", () => {
 
   it("limit is clamped between 1 and 200", async () => {
     const fresh = periodFixture(PERIOD_ID_PUBLISHED_FRESH, "published");
-    const service = new AdminService(makePeriodAwareRepository([fresh]));
+    const service = new PeriodAdminService(makePeriodAwareRepository([fresh]));
     // Negative gets clamped to 1, then filtered (and the one row matches).
     const a = await service.listPeriodsByState({ bucket: "active", limit: 0 });
     expect(a.length).toBeGreaterThan(0);
@@ -1185,11 +1206,11 @@ describe("AdminService — listPeriodsByState", () => {
   });
 });
 
-describe("AdminService — archivePeriod / unarchivePeriod", () => {
+describe("PeriodAdminService — archivePeriod / unarchivePeriod", () => {
   it("archivePeriod flips state + archived on the in-memory row", async () => {
     const open = periodFixture(PERIOD_ID_OPEN, "open");
     const repo = makePeriodAwareRepository([open]);
-    const service = new AdminService(repo);
+    const service = new PeriodAdminService(repo);
 
     const result = await service.archivePeriod(PERIOD_ID_OPEN);
     expect(result).toEqual({ success: true });
@@ -1202,18 +1223,13 @@ describe("AdminService — archivePeriod / unarchivePeriod", () => {
     const archived = periodFixture(PERIOD_ID_ARCHIVED, "archived", {
       periodStatus: "published",
     });
-    const service = new AdminService(makePeriodAwareRepository([archived]));
+    const service = new PeriodAdminService(
+      makePeriodAwareRepository([archived]),
+    );
 
     const result = await service.unarchivePeriod(PERIOD_ID_ARCHIVED);
     expect(result.success).toBe(true);
     expect(result.periodState).toBe("published");
-  });
-
-  it("archivePeriod throws when repository does not implement the method", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
-    await expect(service.archivePeriod(PERIOD_ID_OPEN)).rejects.toThrow(
-      /not implemented/,
-    );
   });
 });
 
@@ -1221,7 +1237,7 @@ describe("AdminService — archivePeriod / unarchivePeriod", () => {
 // Group <-> Product M:M surface
 // ---------------------------------------------------------------------------
 
-describe("AdminService — Group <-> Product M:M", () => {
+describe("ProjectAdminService — Group <-> Product M:M", () => {
   const GROUP_A = "11111111-1111-4111-8111-111111111aaa";
   const GROUP_B = "11111111-1111-4111-8111-111111111bbb";
   const PRODUCT_X = "22222222-2222-4222-8222-2222222222a1";
@@ -1319,7 +1335,9 @@ describe("AdminService — Group <-> Product M:M", () => {
   };
 
   it("attachProductToGroup returns a parsed GroupProduct row", async () => {
-    const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
+    const service = new ProjectAdminService(
+      makeRepoWithGroupProductSurface(snapshot),
+    );
     const row = await service.attachProductToGroup({
       groupId: GROUP_A,
       productId: PRODUCT_X,
@@ -1330,7 +1348,9 @@ describe("AdminService — Group <-> Product M:M", () => {
   });
 
   it("attachProductToGroup is idempotent when same group is re-attached (B1)", async () => {
-    const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
+    const service = new ProjectAdminService(
+      makeRepoWithGroupProductSurface(snapshot),
+    );
     const first = await service.attachProductToGroup({
       groupId: GROUP_A,
       productId: PRODUCT_X,
@@ -1343,7 +1363,9 @@ describe("AdminService — Group <-> Product M:M", () => {
   });
 
   it("attachProductToGroup rejects attaching a product owned by another group (B1 invariant)", async () => {
-    const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
+    const service = new ProjectAdminService(
+      makeRepoWithGroupProductSurface(snapshot),
+    );
     await service.attachProductToGroup({
       groupId: GROUP_A,
       productId: PRODUCT_X,
@@ -1364,7 +1386,9 @@ describe("AdminService — Group <-> Product M:M", () => {
   });
 
   it("detachProductFromGroup returns {success: true} and removes the edge", async () => {
-    const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
+    const service = new ProjectAdminService(
+      makeRepoWithGroupProductSurface(snapshot),
+    );
     await service.attachProductToGroup({
       groupId: GROUP_A,
       productId: PRODUCT_X,
@@ -1379,7 +1403,9 @@ describe("AdminService — Group <-> Product M:M", () => {
   });
 
   it("detachProductFromGroup is idempotent (no-op when edge already absent)", async () => {
-    const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
+    const service = new ProjectAdminService(
+      makeRepoWithGroupProductSurface(snapshot),
+    );
     await expect(
       service.detachProductFromGroup({
         groupId: GROUP_A,
@@ -1389,7 +1415,9 @@ describe("AdminService — Group <-> Product M:M", () => {
   });
 
   it("listGroupProducts and listProductGroups reflect attached edge (B1: one group per product)", async () => {
-    const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
+    const service = new ProjectAdminService(
+      makeRepoWithGroupProductSurface(snapshot),
+    );
     await service.attachProductToGroup({
       groupId: GROUP_A,
       productId: PRODUCT_X,
@@ -1402,26 +1430,10 @@ describe("AdminService — Group <-> Product M:M", () => {
     expect(productsForGroupA.map((p) => p.id)).toContain(PRODUCT_X);
   });
 
-  it("returns empty arrays when repository does not implement the surface", async () => {
-    const service = new AdminService(createRepository(snapshot));
+  it("returns the neutral unused-stub collections", async () => {
+    const service = new ProjectAdminService(createRepository(snapshot));
     expect(await service.listGroupProducts(GROUP_A)).toEqual([]);
     expect(await service.listProductGroups(PRODUCT_X)).toEqual([]);
-  });
-
-  it("attach/detach throw when repository does not implement the method", async () => {
-    const service = new AdminService(createRepository(snapshot));
-    await expect(
-      service.attachProductToGroup({
-        groupId: GROUP_A,
-        productId: PRODUCT_X,
-      }),
-    ).rejects.toThrow(/not implemented/);
-    await expect(
-      service.detachProductFromGroup({
-        groupId: GROUP_A,
-        productId: PRODUCT_X,
-      }),
-    ).rejects.toThrow(/not implemented/);
   });
 });
 
@@ -1507,10 +1519,10 @@ function makeCreatePeriodRepository(opts: {
   };
 }
 
-describe("AdminService — createPeriodManual", () => {
+describe("PeriodAdminService — createPeriodManual", () => {
   it("happy path: mints a period with the supplied non-Monday periodStart", async () => {
     const repo = makeCreatePeriodRepository({});
-    const service = new AdminService(repo);
+    const service = new PeriodAdminService(repo);
 
     const result = await service.createPeriodManual(
       {
@@ -1533,7 +1545,7 @@ describe("AdminService — createPeriodManual", () => {
 
   it("derives 'open' when periodStart is at or before now", async () => {
     const repo = makeCreatePeriodRepository({});
-    const service = new AdminService(repo);
+    const service = new PeriodAdminService(repo);
 
     const result = await service.createPeriodManual(
       {
@@ -1546,7 +1558,7 @@ describe("AdminService — createPeriodManual", () => {
 
   it("D-8: accepts a custom period that starts on a non-Monday", async () => {
     const repo = makeCreatePeriodRepository({});
-    const service = new AdminService(repo);
+    const service = new PeriodAdminService(repo);
 
     const result = await service.createPeriodManual(
       {
@@ -1564,7 +1576,7 @@ describe("AdminService — createPeriodManual", () => {
 
   it("computes default deadline from AppSettings (defaultDeadlineDays + workingDays + deadlineTime)", async () => {
     const repo = makeCreatePeriodRepository({});
-    const service = new AdminService(repo);
+    const service = new PeriodAdminService(repo);
 
     // defaultSettings: defaultDeadlineDays=5, workingDays='mon-fri',
     // defaultTimezone='Europe/Moscow', deadlineTime='18:00'. periodStart
@@ -1583,7 +1595,7 @@ describe("AdminService — createPeriodManual", () => {
 
   it("respects explicit periodEnd / deadline / weekLabel overrides", async () => {
     const repo = makeCreatePeriodRepository({});
-    const service = new AdminService(repo);
+    const service = new PeriodAdminService(repo);
 
     const explicitEnd = new Date("2026-05-31T23:59:59.999Z");
     const explicitDeadline = new Date("2026-05-29T15:00:00.000Z");
@@ -1610,7 +1622,7 @@ describe("AdminService — createPeriodManual", () => {
         },
       ],
     });
-    const service = new AdminService(repo);
+    const service = new PeriodAdminService(repo);
 
     await expect(
       service.createPeriodManual({
@@ -1622,7 +1634,7 @@ describe("AdminService — createPeriodManual", () => {
 
   it("rejects when periodEnd < periodStart", async () => {
     const repo = makeCreatePeriodRepository({});
-    const service = new AdminService(repo);
+    const service = new PeriodAdminService(repo);
 
     await expect(
       service.createPeriodManual({
@@ -1630,15 +1642,6 @@ describe("AdminService — createPeriodManual", () => {
         periodEnd: new Date("2026-05-10T00:00:00.000Z"),
       }),
     ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
-  });
-
-  it("throws when repository does not implement createPeriodManual", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
-    await expect(
-      service.createPeriodManual({
-        periodStart: new Date("2026-05-18T00:00:00.000Z"),
-      }),
-    ).rejects.toThrow(/not implemented/);
   });
 });
 
@@ -1754,10 +1757,10 @@ function defaultEditSeed(): EditableRow[] {
   ];
 }
 
-describe("AdminService — updatePeriodManual", () => {
+describe("PeriodAdminService — updatePeriodManual", () => {
   it("happy path: applies the diff and returns the updated row", async () => {
     const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
-    const service = new AdminService(repo);
+    const service = new PeriodAdminService(repo);
 
     const { result, diff } = await service.updatePeriodManual({
       reportId: SEED_ROW_ID,
@@ -1783,7 +1786,7 @@ describe("AdminService — updatePeriodManual", () => {
 
   it("allows clearing weekLabel via explicit null", async () => {
     const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
-    const service = new AdminService(repo);
+    const service = new PeriodAdminService(repo);
 
     const { result, diff } = await service.updatePeriodManual({
       reportId: SEED_ROW_ID,
@@ -1796,7 +1799,7 @@ describe("AdminService — updatePeriodManual", () => {
 
   it("rejects when reportId does not resolve", async () => {
     const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
-    const service = new AdminService(repo);
+    const service = new PeriodAdminService(repo);
 
     await expect(
       service.updatePeriodManual({
@@ -1820,7 +1823,7 @@ describe("AdminService — updatePeriodManual", () => {
         },
       ],
     });
-    const service = new AdminService(repo);
+    const service = new PeriodAdminService(repo);
 
     // Try to push SEED_ROW_ID's end into the SEED_OTHER_ID window.
     await expect(
@@ -1833,7 +1836,7 @@ describe("AdminService — updatePeriodManual", () => {
 
   it("self-edit on the same envelope does NOT trigger overlap (excludeId works)", async () => {
     const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
-    const service = new AdminService(repo);
+    const service = new PeriodAdminService(repo);
 
     // Shifting deadline only — envelope keys unchanged — should not even
     // touch the overlap gate. Then shift periodEnd to the same value
@@ -1848,7 +1851,7 @@ describe("AdminService — updatePeriodManual", () => {
 
   it("no-op (zero changed fields) short-circuits without audit / write", async () => {
     const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
-    const service = new AdminService(repo);
+    const service = new PeriodAdminService(repo);
 
     const { result, diff } = await service.updatePeriodManual({
       reportId: SEED_ROW_ID,
@@ -1867,7 +1870,7 @@ describe("AdminService — updatePeriodManual", () => {
 
   it("rejects when supplied periodEnd < periodStart", async () => {
     const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
-    const service = new AdminService(repo);
+    const service = new PeriodAdminService(repo);
 
     await expect(
       service.updatePeriodManual({
@@ -1877,30 +1880,14 @@ describe("AdminService — updatePeriodManual", () => {
       }),
     ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
   });
-
-  it("throws when repository does not implement updatePeriodManual", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
-    await expect(
-      service.updatePeriodManual({
-        reportId: SEED_ROW_ID,
-        deadline: new Date("2026-05-10T15:00:00.000Z"),
-      }),
-    ).rejects.toThrow(/not implemented/);
-  });
 });
 
-// ---------------------------------------------------------------------------
-// drain-admin-router: deactivate/activate, integrations status, stage
-// catalogue, reopen-request lifecycle — thin AdminService delegation to the
-// repository's new required methods.
-// ---------------------------------------------------------------------------
-
-describe("AdminService — deactivate/activate, integrations, stages", () => {
+describe("focused services — users, integrations, and stages", () => {
   it("deactivateUser delegates to the repository and reports success", async () => {
     const repo = createRepository(initialSnapshot) as AdminRepository & {
       deactivateUser: ReturnType<typeof vi.fn>;
     };
-    const service = new AdminService(repo);
+    const service = new SnapshotAdminService(repo);
 
     await expect(service.deactivateUser("user-1")).resolves.toEqual({
       success: true,
@@ -1912,7 +1899,7 @@ describe("AdminService — deactivate/activate, integrations, stages", () => {
     const repo = createRepository(initialSnapshot) as AdminRepository & {
       activateUser: ReturnType<typeof vi.fn>;
     };
-    const service = new AdminService(repo);
+    const service = new SnapshotAdminService(repo);
 
     await expect(service.activateUser("user-1")).resolves.toEqual({
       success: true,
@@ -1921,7 +1908,7 @@ describe("AdminService — deactivate/activate, integrations, stages", () => {
   });
 
   it("integrationsStatus combines the caller-resolved `configured` flag with the repository binding count", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
 
     await expect(service.integrationsStatus(true)).resolves.toEqual({
       telegram: { configured: true, bindings: 0 },
@@ -1929,7 +1916,7 @@ describe("AdminService — deactivate/activate, integrations, stages", () => {
   });
 
   it("listStages and listStageAssignmentCounts delegate to the repository", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new ProjectAdminService(createRepository(initialSnapshot));
 
     await expect(service.listStages()).resolves.toEqual([]);
     await expect(service.listStageAssignmentCounts()).resolves.toEqual([]);

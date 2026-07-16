@@ -5,7 +5,7 @@ import type { PrismaClient } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { AuditLogger } from "../../../lib/audit-logger.js";
-import { AdminService } from "../../admin/index.js";
+import { SnapshotAdminService } from "../../admin/index.js";
 import { PolicyApplicatorService } from "../../reminders/index.js";
 import {
   ensureCurrentPeriod,
@@ -100,7 +100,7 @@ export class PeriodCreatorScheduler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly adminService: AdminService,
+    private readonly snapshotAdminService: SnapshotAdminService,
     private readonly auditLogger: AuditLogger,
     // Wire PolicyApplicator so auto-created periods materialise reminder rules
     // just like admin-panel-created ones.
@@ -154,7 +154,7 @@ export class PeriodCreatorScheduler {
         periodState: "scheduled" | "open";
       }
   > {
-    const settings = await this.adminService.getSettings();
+    const settings = await this.snapshotAdminService.getSettings();
     if (!settings.autoCreatePeriods) {
       return { created: false, reason: "disabled" };
     }

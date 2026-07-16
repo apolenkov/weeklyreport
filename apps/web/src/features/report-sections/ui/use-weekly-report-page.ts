@@ -3,11 +3,14 @@ import { useRouter } from "next/navigation";
 import { useContext, useEffect, useMemo, useState } from "react";
 
 import { invalidateReview } from "../../../lib/cache-keys";
+import {
+  formatPeriodRangeWithYear,
+  isoWeekNumber,
+} from "../../../lib/format-date";
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
 import type { ReviewMode, SubmissionFilter } from "../../review";
-import { formatDateRange, isoWeekNumber } from "../model/lead-history";
 import { useWeeklyReportMutations } from "./use-weekly-report-mutations";
 import {
   resolveTerminalNotice,
@@ -129,7 +132,10 @@ export function useWeeklyReportPage(
     const start = weeklyQ.data.periodStart;
     const end = weeklyQ.data.periodEnd;
     if (!(start instanceof Date) || !(end instanceof Date)) return null;
-    return { week: isoWeekNumber(start), range: formatDateRange(start, end) };
+    return {
+      week: isoWeekNumber(start),
+      range: formatPeriodRangeWithYear(start, end),
+    };
   }, [weeklyQ.data]);
   useEffect(() => {
     if (typeof document === "undefined") return;

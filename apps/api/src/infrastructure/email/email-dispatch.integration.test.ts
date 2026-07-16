@@ -100,7 +100,7 @@ const remindersStub = {
   markReminderSent: vi.fn().mockResolvedValue(undefined),
 };
 
-// AdminService stub — null from-override; EmailService falls back to SMTP_FROM.
+// Settings-service stub — null from-override; EmailService uses SMTP_FROM.
 const adminStub = {
   getSettings: vi.fn().mockResolvedValue({ notificationFromEmail: null }),
 };

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import { AdminPrometheusTelemetry } from "./admin-prometheus-telemetry.adapter.js";
+import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
 import {
   AdminReopenRequestAlreadyProcessedError,
   type AdminRepository,
@@ -27,6 +28,7 @@ function createRepository(
     throw new Error("not exercised by reopen-request-admin tests");
   };
   return {
+    ...unusedAdminRepositoryStubs(),
     getSnapshot: unused,
     saveSnapshot: unused,
     upsertUser: unused,
@@ -43,11 +45,6 @@ function createRepository(
     saveStageAssignment: unused,
     deleteStageAssignment: unused,
     listStageAssignments: unused,
-    deactivateUser: unused,
-    activateUser: unused,
-    countActiveTelegramBindings: unused,
-    listStages: unused,
-    listStageAssignmentCounts: unused,
     listReopenRequests: () => Promise.resolve([]),
     countPendingReopenRequests: () => Promise.resolve(0),
     decideReopenRequest: vi.fn().mockResolvedValue(decideResult),

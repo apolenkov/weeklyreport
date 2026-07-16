@@ -4,7 +4,7 @@ import { ConfigModule } from "../../infrastructure/config/config.module.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { AuditLogger } from "../../lib/audit-logger.js";
 import { AUDIT_LOGGER } from "../../lib/audit-logger.js";
-import { AdminModule, AdminService } from "../admin/index.js";
+import { AdminModule, SnapshotAdminService } from "../admin/index.js";
 import { AnalyticsCache, AnalyticsModule } from "../analytics/index.js";
 import {
   buildAutoCarryOverDeps,
@@ -34,7 +34,7 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
 /**
  * Three scheduler classes (`PeriodCreatorScheduler`,
  * `AutoPublisherScheduler`, `AutoArchiverScheduler`) are wired here. They
- * consume `AdminService` (settings), `PrismaService` (DB), and — for the
+ * consume `SnapshotAdminService` (settings), `PrismaService` (DB), and — for the
  * auto-publisher — `PublicationService` (publishAuto). NestSchedule's
  * `@Cron` decorators in those classes only fire when `ScheduleModule.forRoot()`
  * is present in the root `AppModule` — already wired there for the
@@ -63,7 +63,7 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
       useFactory: (
         repo: PeriodRepository,
         cache: AnalyticsCache,
-        admin: AdminService,
+        admin: SnapshotAdminService,
         telemetry: PeriodTelemetry,
       ) =>
         new PeriodService(
@@ -87,7 +87,7 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
       inject: [
         PERIOD_REPOSITORY,
         AnalyticsCache,
-        AdminService,
+        SnapshotAdminService,
         PERIOD_TELEMETRY,
       ],
     },
@@ -99,7 +99,7 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
       provide: PeriodCreatorScheduler,
       useFactory: (
         prisma: PrismaService,
-        admin: AdminService,
+        admin: SnapshotAdminService,
         auditLogger: AuditLogger,
         policyApplicator: PolicyApplicatorService,
         carryOverService: CarryOverService,
@@ -129,7 +129,7 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
       },
       inject: [
         PrismaService,
-        AdminService,
+        SnapshotAdminService,
         AUDIT_LOGGER,
         PolicyApplicatorService,
         CarryOverService,
@@ -140,20 +140,25 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
       provide: AutoPublisherScheduler,
       useFactory: (
         prisma: PrismaService,
-        admin: AdminService,
+        admin: SnapshotAdminService,
         publication: PublicationService,
         auditLogger: AuditLogger,
       ) => new AutoPublisherScheduler(prisma, admin, publication, auditLogger),
-      inject: [PrismaService, AdminService, PublicationService, AUDIT_LOGGER],
+      inject: [
+        PrismaService,
+        SnapshotAdminService,
+        PublicationService,
+        AUDIT_LOGGER,
+      ],
     },
     {
       provide: AutoArchiverScheduler,
       useFactory: (
         prisma: PrismaService,
-        admin: AdminService,
+        admin: SnapshotAdminService,
         auditLogger: AuditLogger,
       ) => new AutoArchiverScheduler(prisma, admin, auditLogger),
-      inject: [PrismaService, AdminService, AUDIT_LOGGER],
+      inject: [PrismaService, SnapshotAdminService, AUDIT_LOGGER],
     },
   ],
   // PolicyApplicatorService is exported so the composition root (`main.ts`) can

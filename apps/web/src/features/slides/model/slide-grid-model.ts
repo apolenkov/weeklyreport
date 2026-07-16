@@ -1,5 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
+import { worstTrafficStatus } from "../../../lib/status-presentation";
 import type { CrossAuthorContentRow } from "../../report-sections";
 import {
   activityHomeProduct,
@@ -10,7 +11,6 @@ import {
   finalizeColumns,
   type GridPriorityCard,
   hasText,
-  worstOf,
 } from "./slide-grid-cells";
 import { buildForeignRows } from "./slide-grid-foreign";
 import {
@@ -227,7 +227,7 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
   });
   return {
     authors: roster.authors,
-    worstStatus: worstOf(realCards.map((card) => card.status)),
+    worstStatus: worstTrafficStatus(realCards.map((card) => card.status)),
     counters: {
       current: allColumns.reduce((sum, c) => sum + c.current.length, 0),
       risks: allColumns.reduce((sum, c) => sum + c.risks.length, 0),

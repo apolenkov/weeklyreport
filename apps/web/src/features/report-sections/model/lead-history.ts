@@ -10,17 +10,11 @@ import type {
   CompiledHistoryEntry,
   MyHistoryEntry,
 } from "@customreport/shared";
-import {
-  HOURS_PER_DAY,
-  MINUTES_PER_HOUR,
-  MS_PER_SECOND,
-  SECONDS_PER_MINUTE,
-} from "@customreport/shared";
 
 import {
   formatPeriodRangeWithYear,
-  formatTimestampShort,
-  isoWeekNumber as sharedIsoWeekNumber,
+  formatRelativePast,
+  isoWeekNumber,
 } from "../../../lib/format-date";
 
 // ---------------------------------------------------------------------------
@@ -55,53 +49,11 @@ export interface HistoryEntry {
 // Helpers (pure, fully unit-testable -- no I/O, no React)
 // ---------------------------------------------------------------------------
 
-export function formatDateRange(start: Date, end: Date): string {
-  return formatPeriodRangeWithYear(start, end);
-}
-
-/**
- * Format a submission timestamp into a relative or short-form string:
- *  - null               -> null (passthrough; component renders "no submitted line")
- *  - <60s               -> 'just now'
- *  - <60min             -> 'N min ago'
- *  - <24h               -> 'N hour ago' / 'N hours ago'
- *  - older              -> 'Apr 18' (UTC components)
- */
-export function formatSubmittedAt(
-  submittedAt: Date | null,
-  now: Date = new Date(),
-): string | null {
-  if (submittedAt === null) return null;
-
-  const diffMs = now.getTime() - submittedAt.getTime();
-  const diffSec = Math.floor(diffMs / MS_PER_SECOND);
-
-  if (diffSec < SECONDS_PER_MINUTE) return "just now";
-
-  const diffMin = Math.floor(diffSec / SECONDS_PER_MINUTE);
-  if (diffMin < MINUTES_PER_HOUR) return `${diffMin} min ago`;
-
-  const diffHour = Math.floor(diffMin / MINUTES_PER_HOUR);
-  if (diffHour < HOURS_PER_DAY)
-    return diffHour === 1 ? "1 hour ago" : `${diffHour} hours ago`;
-
-  // Older than a day: short month/day in UTC.
-  return formatTimestampShort(submittedAt);
-}
-
 function formatHistoryTimestamp(
   value: Date | null | undefined,
   now: Date,
 ): string | null {
-  return formatSubmittedAt(value ?? null, now);
-}
-
-/**
- * Standard ISO 8601 week number (Mon-anchored), computed against UTC components
- * so the result is timezone-stable.
- */
-export function isoWeekNumber(d: Date): number {
-  return sharedIsoWeekNumber(d);
+  return value == null ? null : formatRelativePast(value, now, "long");
 }
 
 // ---------------------------------------------------------------------------
@@ -121,10 +73,10 @@ export function mapHistoryEntries(
     // for routing purposes. This is acceptable for the read-only history page.
     periodId: e.reportId,
     weekLabel: `Week ${isoWeekNumber(e.periodStart)}`,
-    dateRange: formatDateRange(e.periodStart, e.periodEnd),
+    dateRange: formatPeriodRangeWithYear(e.periodStart, e.periodEnd),
     status: e.sectionStatus,
     archived: e.archived ?? false,
-    submittedAt: formatSubmittedAt(e.submittedAt, now),
+    submittedAt: formatHistoryTimestamp(e.submittedAt, now),
     createdAt: formatHistoryTimestamp(e.createdAt, now),
     lastEditAt: formatHistoryTimestamp(e.lastEditAt ?? e.updatedAt, now),
     trafficLights: e.trafficLights ?? { green: 0, yellow: 0, red: 0 },
@@ -145,7 +97,7 @@ export function mapCompiledHistoryEntries(
     periodId: e.reportId,
     href: `/reports/${encodeURIComponent(e.reportId)}`,
     weekLabel: `Week ${isoWeekNumber(e.periodStart)}`,
-    dateRange: formatDateRange(e.periodStart, e.periodEnd),
+    dateRange: formatPeriodRangeWithYear(e.periodStart, e.periodEnd),
     status: e.archived ? "archived" : "published",
     archived: e.archived,
     submittedAt: null,

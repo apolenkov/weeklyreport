@@ -1,3 +1,3 @@
-import type { AdminService } from "../modules/admin/index.js";
+import type { SnapshotAdminService } from "../modules/admin/index.js";
 
-export type PublicBoundaryFixture = AdminService;
+export type PublicBoundaryFixture = SnapshotAdminService;

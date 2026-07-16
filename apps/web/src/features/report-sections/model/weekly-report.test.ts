@@ -1,10 +1,10 @@
 import type { WeeklyReportReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { formatPeriodRangeWithYear } from "../../../lib/format-date";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   __testing,
-  formatWeekRange,
   mapWeeklyReport,
   mapWeeklyReportLeadGroups,
   mapWeeklyReportLeadOverview,
@@ -42,10 +42,10 @@ function baseReport(
   };
 }
 
-describe("formatWeekRange", () => {
+describe("formatPeriodRangeWithYear", () => {
   it("formats a same-month range with en-dash", () => {
     expect(
-      formatWeekRange(
+      formatPeriodRangeWithYear(
         new Date("2026-04-14T00:00:00Z"),
         new Date("2026-04-20T00:00:00Z"),
       ),
@@ -54,7 +54,7 @@ describe("formatWeekRange", () => {
 
   it("formats a cross-month range with en-dash and second month name", () => {
     expect(
-      formatWeekRange(
+      formatPeriodRangeWithYear(
         new Date("2026-04-28T00:00:00Z"),
         new Date("2026-05-04T00:00:00Z"),
       ),

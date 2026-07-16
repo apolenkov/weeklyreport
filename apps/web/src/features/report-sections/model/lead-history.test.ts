@@ -5,12 +5,11 @@ import type {
 import { describe, expect, it } from "vitest";
 
 import {
-  formatDateRange,
-  formatSubmittedAt,
+  formatPeriodRangeWithYear,
+  formatRelativePast,
   isoWeekNumber,
-  mapCompiledHistoryEntries,
-  mapHistoryEntries,
-} from "./lead-history";
+} from "../../../lib/format-date";
+import { mapCompiledHistoryEntries, mapHistoryEntries } from "./lead-history";
 
 const baseEntry = (
   overrides: Partial<MyHistoryEntry> = {},
@@ -26,10 +25,10 @@ const baseEntry = (
   ...overrides,
 });
 
-describe("formatDateRange", () => {
+describe("formatPeriodRangeWithYear", () => {
   it("formats a same-month range as 'Apr 14–20, 2026'", () => {
     expect(
-      formatDateRange(
+      formatPeriodRangeWithYear(
         new Date("2026-04-14T00:00:00.000Z"),
         new Date("2026-04-20T00:00:00.000Z"),
       ),
@@ -38,7 +37,7 @@ describe("formatDateRange", () => {
 
   it("formats a cross-month range as 'Apr 28–May 4, 2026'", () => {
     expect(
-      formatDateRange(
+      formatPeriodRangeWithYear(
         new Date("2026-04-28T00:00:00.000Z"),
         new Date("2026-05-04T00:00:00.000Z"),
       ),
@@ -46,36 +45,32 @@ describe("formatDateRange", () => {
   });
 });
 
-describe("formatSubmittedAt", () => {
+describe("formatRelativePast long variant", () => {
   const now = new Date("2026-04-20T12:00:00.000Z");
-
-  it("returns null for a null input (passthrough)", () => {
-    expect(formatSubmittedAt(null, now)).toBeNull();
-  });
 
   it("returns 'just now' for a submission less than a minute old", () => {
     const submitted = new Date(now.getTime() - 30 * 1000);
-    expect(formatSubmittedAt(submitted, now)).toBe("just now");
+    expect(formatRelativePast(submitted, now, "long")).toBe("just now");
   });
 
   it("returns 'N min ago' for a submission 2 minutes old", () => {
     const submitted = new Date(now.getTime() - 2 * 60 * 1000);
-    expect(formatSubmittedAt(submitted, now)).toBe("2 min ago");
+    expect(formatRelativePast(submitted, now, "long")).toBe("2 min ago");
   });
 
   it("returns '1 hour ago' for a submission exactly 1 hour old (singular)", () => {
     const submitted = new Date(now.getTime() - 60 * 60 * 1000);
-    expect(formatSubmittedAt(submitted, now)).toBe("1 hour ago");
+    expect(formatRelativePast(submitted, now, "long")).toBe("1 hour ago");
   });
 
   it("returns 'N hours ago' for a submission 5 hours old (plural)", () => {
     const submitted = new Date(now.getTime() - 5 * 60 * 60 * 1000);
-    expect(formatSubmittedAt(submitted, now)).toBe("5 hours ago");
+    expect(formatRelativePast(submitted, now, "long")).toBe("5 hours ago");
   });
 
   it("formats a multi-day-old submission as a short 'Apr 18' style", () => {
     const submitted = new Date("2026-04-18T15:30:00.000Z");
-    expect(formatSubmittedAt(submitted, now)).toBe("Apr 18");
+    expect(formatRelativePast(submitted, now, "long")).toBe("Apr 18");
   });
 });
 

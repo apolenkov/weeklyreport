@@ -11,7 +11,7 @@ const FIXTURE_PATH = resolve(
   "apps/api/src/infrastructure/module-public-api-boundary.fixture.ts",
 );
 const PUBLIC_IMPORT =
-  'import type { AdminService } from "../modules/admin/index.js";\n\nexport type PublicBoundaryFixture = AdminService;\n';
+  'import type { SnapshotAdminService } from "../modules/admin/index.js";\n\nexport type PublicBoundaryFixture = SnapshotAdminService;\n';
 
 function runEslint(): Promise<string> {
   return new Promise((resolveOutput, reject) => {
@@ -56,7 +56,7 @@ describe("API module public boundary", () => {
 
   it("rejects infrastructure imports of module internals", async () => {
     const messages = await lintInfrastructureImport(
-      'import type { AdminService } from "../modules/admin/admin.service.js";\n\nexport type PublicBoundaryFixture = AdminService;\n',
+      'import type { SnapshotAdminService } from "../modules/admin/snapshot-admin.service.js";\n\nexport type PublicBoundaryFixture = SnapshotAdminService;\n',
     );
 
     expect(messages).toEqual([

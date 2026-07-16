@@ -5,7 +5,7 @@ import type {
 } from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import type { PeriodRowFromRepo } from "./admin.service";
+import type { PeriodRowFromRepo } from "./admin-shared";
 
 /**
  * Period (Report) read queries for the Admin Periods tab: list/overlap/read/

@@ -7,7 +7,7 @@ import { TRPCError } from "@trpc/server";
 import type { Queue } from "bullmq";
 
 import { isTelegramConfigured } from "../../../../lib/env.js";
-import type { AdminService } from "../../../../modules/admin/index.js";
+import type { SnapshotAdminService } from "../../../../modules/admin/index.js";
 import type { OrganizationService } from "../../../../modules/organization/index.js";
 import { TELEGRAM_OUTBOUND_JOB_OPTS } from "../../../../modules/telegram/index.js";
 import { captureJobTraceContext } from "../../../bullmq/worker-observability.js";
@@ -17,7 +17,7 @@ import { mapDomainError } from "../../trpc.error-mapper.js";
 import { adminProcedure } from "../../trpc.middleware.js";
 
 export interface AdminSettingsDeps {
-  adminService: AdminService;
+  snapshotAdminService: SnapshotAdminService;
   /**
    * Validated env from main.ts — Telegram configured-check
    * (`integrationsStatus`) and reseed repo-root override (`dev.wipeAndReseed`);
@@ -43,14 +43,14 @@ export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
   return {
     snapshot: adminProcedure.query(async () => {
       try {
-        return await deps.adminService.getSnapshot();
+        return await deps.snapshotAdminService.getSnapshot();
       } catch (error) {
         throw mapDomainError(error);
       }
     }),
     getSettings: adminProcedure.query(async () => {
       try {
-        return await deps.adminService.getSettings();
+        return await deps.snapshotAdminService.getSettings();
       } catch (error) {
         throw mapDomainError(error);
       }
@@ -59,7 +59,7 @@ export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
       .input(appSettingsUpdateSchema)
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.updateSettings(input);
+          return await deps.snapshotAdminService.updateSettings(input);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -73,7 +73,7 @@ export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
     integrationsStatus: adminProcedure.query(async () => {
       try {
         const configured = isTelegramConfigured(deps.env);
-        return await deps.adminService.integrationsStatus(configured);
+        return await deps.snapshotAdminService.integrationsStatus(configured);
       } catch (error) {
         throw mapDomainError(error);
       }
