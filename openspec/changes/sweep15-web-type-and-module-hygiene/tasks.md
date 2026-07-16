@@ -12,7 +12,7 @@
 - [x] 2.3 Extract the portfolio table into `print-portfolio-table.tsx` with typed, fetch-free props.
 - [x] 2.4 Extract lead/product content into `print-lead-section.tsx` with stable DOM order and record rendering.
 - [x] 2.5 Extract the executive summary into `print-executive-summary.tsx` and print declarations into `print-report-styles.tsx` or a scoped stylesheet.
-- [ ] 2.6 Remove the inline `max-lines` disable and run focused print/PDF readiness tests plus a visual print comparison.
+- [x] 2.6 Remove the inline `max-lines` disable and run focused print/PDF readiness tests plus a visual print comparison.
 
 ## 3. Slide model decomposition
 

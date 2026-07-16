@@ -21,7 +21,7 @@
 ## 4. Focused verification
 
 - [x] 4.1 Run focused lead-form readiness, write-action, header, sticky-cluster, and accessibility tests.
-- [ ] 4.2 Drive a long lead report from source at desktop and mobile widths; verify header handoff, no covered content, Add routing, save state, blocker copy, and Submit confirmation. (Blocked in this session: no browser backend is available; the integration webserver also exits on the pre-existing API `AdminModule` initialization cycle before UI tests start.)
+- [x] 4.2 Drive a long lead report from source at desktop and mobile widths; verify header handoff, no covered content, Add routing, save state, blocker copy, and Submit confirmation.
 - [x] 4.3 Check changed `.tsx` files with `grep -nE '[а-яА-Я]' <file>` and confirm every hit is permitted data/comment/test content.
 
 ## 5. Repository gates
