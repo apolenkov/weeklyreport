@@ -37,8 +37,8 @@ export interface RespondReopenRequestResult {
 /**
  * Reopen-request lifecycle surface (reopen-request-lifecycle, ADR 0008) —
  * reopen requests are period lifecycle, so this is a sibling of
- * `PeriodAdminService` in the `AdminService` facade's sub-service set
- * (kept in its own file/class rather than inlined into
+ * `PeriodAdminService` as a focused lifecycle service
+ * (kept in its own file rather than inlined into
  * `PeriodAdminService` to keep that file under the line budget).
  */
 export class ReopenRequestAdminService {

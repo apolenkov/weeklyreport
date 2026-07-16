@@ -3,8 +3,14 @@ import type { Queue } from "bullmq";
 
 import type { ActivityService } from "../../modules/activity/index.js";
 import type { ActionLogService } from "../../modules/admin/index.js";
-import type { AdminService } from "../../modules/admin/index.js";
 import type { JobsService } from "../../modules/admin/index.js";
+import type {
+  PeriodAdminService,
+  ProjectAdminService,
+  ReminderAdminService,
+  ReopenRequestAdminService,
+  SnapshotAdminService,
+} from "../../modules/admin/index.js";
 import type { SessionRevocationService } from "../../modules/admin/index.js";
 import type { AnalyticsService } from "../../modules/analytics/index.js";
 import type { ArchiveService } from "../../modules/archive/index.js";
@@ -62,7 +68,11 @@ interface RouterDeps {
   reviewActionsService?: ReviewActionsService;
   publicationService: PublicationService;
   pdfExportService: PdfExportService;
-  adminService: AdminService;
+  snapshotAdminService: SnapshotAdminService;
+  projectAdminService: ProjectAdminService;
+  reminderAdminService: ReminderAdminService;
+  periodAdminService: PeriodAdminService;
+  reopenRequestAdminService: ReopenRequestAdminService;
   /**
    * Organization identity surface.
    *  - `org.getPublic` (publicProcedure) reads shortName/fullName for the

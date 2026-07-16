@@ -3,6 +3,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useContext, useMemo } from "react";
 
+import {
+  formatPeriodRangeWithYear,
+  isoWeekNumber,
+} from "../../../lib/format-date";
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
 import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
@@ -18,7 +22,6 @@ import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle
 import { ExportPdfButton } from "../../pdf-export";
 import { HeadPublishLockAction, PeriodNavigator } from "../../period";
 import { HeadSlidesClient } from "../../slides";
-import { formatDateRange, isoWeekNumber } from "../model/lead-history";
 import type { ReportPeriod } from "../model/types";
 import { WeeklyReportPage } from "./weekly-report-page";
 
@@ -83,7 +86,7 @@ export function HeadReportShell({
     const historyPeriods: ReportPeriod[] = entries.map((entry) => ({
       id: entry.reportId,
       weekLabel: `Week ${isoWeekNumber(new Date(entry.periodStart))}`,
-      dateRange: formatDateRange(
+      dateRange: formatPeriodRangeWithYear(
         new Date(entry.periodStart),
         new Date(entry.periodEnd),
       ),
@@ -105,7 +108,7 @@ export function HeadReportShell({
     ): ReportPeriod => ({
       id,
       weekLabel: `Week ${isoWeekNumber(new Date(data.periodStart))}`,
-      dateRange: formatDateRange(
+      dateRange: formatPeriodRangeWithYear(
         new Date(data.periodStart),
         new Date(data.periodEnd),
       ),

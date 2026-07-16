@@ -50,9 +50,6 @@ export class ReminderAdminService {
    * path stays silent.
    */
   async listPolicies(): Promise<ReminderPolicy[]> {
-    if (!this.repository.listReminderPolicies) {
-      return [];
-    }
     const rows = await this.repository.listReminderPolicies();
     return rows.map((row) => reminderPolicySchema.parse(row));
   }
@@ -62,12 +59,8 @@ export class ReminderAdminService {
    * decide whether the upcoming `savePolicy` call is a create or an
    * update — feeds the `admin.policy.save` audit event so SIEM rules
    * and dashboards can split the two cases without diffing payloads.
-   * Returns `false` (not an exception) when the policy surface is not
-   * implemented on the repository, so router-level audit emission stays
-   * resilient against in-memory test repos.
    */
   async policyExists(policyId: string): Promise<boolean> {
-    if (!this.repository.listReminderPolicies) return false;
     const rows = await this.repository.listReminderPolicies();
     return rows.some((row) => row.id === policyId);
   }
@@ -80,11 +73,6 @@ export class ReminderAdminService {
    */
   async savePolicy(policy: ReminderPolicy): Promise<ReminderPolicy> {
     const parsed = reminderPolicySchema.parse(policy);
-    if (!this.repository.saveReminderPolicy) {
-      throw new Error(
-        "AdminRepository.saveReminderPolicy is not implemented for this repository.",
-      );
-    }
     this.logger.info("upserted reminder policy", { policyId: parsed.id });
     return reminderPolicySchema.parse(
       await this.repository.saveReminderPolicy(parsed),
@@ -97,11 +85,6 @@ export class ReminderAdminService {
    * there is no soft-delete fallback (D9).
    */
   async removePolicy(policyId: string): Promise<{ success: true }> {
-    if (!this.repository.deleteReminderPolicy) {
-      throw new Error(
-        "AdminRepository.deleteReminderPolicy is not implemented for this repository.",
-      );
-    }
     this.logger.info("deleted reminder policy", { policyId });
     await this.repository.deleteReminderPolicy(policyId);
     return { success: true };

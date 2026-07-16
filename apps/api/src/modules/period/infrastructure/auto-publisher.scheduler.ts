@@ -4,7 +4,7 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { AuditLogger } from "../../../lib/audit-logger.js";
-import { AdminService } from "../../admin/index.js";
+import { SnapshotAdminService } from "../../admin/index.js";
 import { PublicationService } from "../../publication/index.js";
 
 /**
@@ -31,7 +31,7 @@ export class AutoPublisherScheduler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly adminService: AdminService,
+    private readonly snapshotAdminService: SnapshotAdminService,
     private readonly publicationService: PublicationService,
     private readonly auditLogger: AuditLogger,
   ) {}
@@ -52,7 +52,7 @@ export class AutoPublisherScheduler {
     | { published: false; reason: "disabled" }
     | { published: true; periodIds: readonly string[] }
   > {
-    const settings = await this.adminService.getSettings();
+    const settings = await this.snapshotAdminService.getSettings();
     if (!settings.autoPublishAfterDeadline) {
       return { published: false, reason: "disabled" };
     }

@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 
-import { AdminModule, AdminService } from "../admin/index.js";
+import { AdminModule, SnapshotAdminService } from "../admin/index.js";
 import {
   LEAD_FORM_REPOSITORY,
   type LeadFormRepository,
@@ -40,7 +40,7 @@ import { ReportSectionsPrometheusTelemetry } from "./infrastructure/report-secti
       provide: ReportSectionsService,
       useFactory: (
         repo: ReportSectionsRepository,
-        admin: AdminService,
+        admin: SnapshotAdminService,
         telemetry: ReportSectionsTelemetry,
       ) =>
         new ReportSectionsService(
@@ -56,7 +56,7 @@ import { ReportSectionsPrometheusTelemetry } from "./infrastructure/report-secti
         ),
       inject: [
         REPORT_SECTIONS_REPOSITORY,
-        AdminService,
+        SnapshotAdminService,
         REPORT_SECTIONS_TELEMETRY,
       ],
     },

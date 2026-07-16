@@ -774,8 +774,8 @@ describe("LeadForm mutation wiring", () => {
         })
         .click();
     });
-    const dialog = await screen.findByRole("dialog", {
-      name: "Confirm fill from previous",
+    const dialog = await screen.findByRole("alertdialog", {
+      name: /^Fill from Week \d+\?$/,
     });
     act(() => {
       within(dialog).getByRole("button", { name: "Replace & Fill" }).click();

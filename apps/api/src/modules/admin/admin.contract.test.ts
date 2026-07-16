@@ -4,7 +4,7 @@ import { adminProcedure } from "../../infrastructure/trpc/trpc.middleware.js";
 import { createAppRouter } from "../../infrastructure/trpc/trpc.router.js";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
-import type { AdminService } from "./admin.service.js";
+import type { ReminderAdminService } from "./reminder-admin.service.js";
 
 /**
  * Contract guarantees for the ReminderPolicy tRPC surface —
@@ -87,14 +87,14 @@ describe("admin reminder-policy contract", () => {
   });
 
   it("admin.saveReminderRule write path throws METHOD_NOT_SUPPORTED", async () => {
-    // Build a real router with an `adminService` whose `upsertReminderRule`
+    // Build a real router with a reminder service whose `upsertReminderRule`
     // is spied so we can assert the deprecated handler never reaches it.
     const upsertSpy = vi.fn();
-    const stubAdminService = {
+    const reminderAdminService = {
       upsertReminderRule: upsertSpy,
-    } as unknown as AdminService;
+    } as unknown as ReminderAdminService;
     const realDeps = {
-      adminService: stubAdminService,
+      reminderAdminService,
     } as unknown as Parameters<typeof createAppRouter>[0];
     const realRouter = createAppRouter(realDeps);
 

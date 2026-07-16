@@ -4,7 +4,7 @@ import { type Job, type WorkerOptions } from "bullmq";
 import type { ClsService } from "nestjs-cls";
 
 import type { AppLogger } from "../../lib/logger.js";
-import { AdminService } from "../../modules/admin/index.js";
+import { SnapshotAdminService } from "../../modules/admin/index.js";
 import { renderEmail } from "../../modules/email/index.js";
 import { RemindersService } from "../../modules/reminders/index.js";
 import type { EnvConfig } from "../config/env.schema";
@@ -61,9 +61,9 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     private readonly remindersService: RemindersService,
     private readonly emailService: EmailPort,
     env: EnvConfig,
-    // Optional: surfaces the AppSettings From-address override. Missing at
-    // test time (DI fallback); null means "use the SMTP_FROM env default".
-    private readonly adminService?: AdminService,
+    // Surfaces the AppSettings From-address override. A null setting means
+    // "use the SMTP_FROM env default".
+    private readonly snapshotAdminService: SnapshotAdminService,
     logger?: AppLogger,
     cls?: ClsService,
   ) {
@@ -138,11 +138,8 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
   }
 
   private async dispatchEmail(data: EmailReminderJobData): Promise<void> {
-    // null is a valid value ("use env default"); a missing adminService
-    // (test-time DI fallback) skips the lookup entirely.
-    const fromOverride = this.adminService
-      ? (await this.adminService.getSettings()).notificationFromEmail
-      : null;
+    const fromOverride = (await this.snapshotAdminService.getSettings())
+      .notificationFromEmail;
 
     if ("kind" in data && data.kind === "deadline") {
       const rendered = await renderEmail({

@@ -21,7 +21,7 @@ import { PrismaModule } from "./infrastructure/prisma/prisma.module";
 import { assertNoDevAuthInProduction } from "./lib/dev-auth-fence";
 import { ActivityModule } from "./modules/activity/index.js";
 import { AdminModule } from "./modules/admin/index.js";
-import { AdminService } from "./modules/admin/index.js";
+import { SnapshotAdminService } from "./modules/admin/index.js";
 import { AnalyticsModule } from "./modules/analytics/index.js";
 import { ArchiveModule } from "./modules/archive/index.js";
 import { CarryOverModule } from "./modules/carry-over/index.js";
@@ -106,14 +106,14 @@ import { WeeklyReportModule } from "./modules/weekly-report/index.js";
         remindersService: RemindersService,
         emailService: EmailPort,
         env: EnvConfig,
-        adminService: AdminService,
+        snapshotAdminService: SnapshotAdminService,
         cls: ClsService,
       ) =>
         new EmailReminderProcessor(
           remindersService,
           emailService,
           env,
-          adminService,
+          snapshotAdminService,
           createWorkerLogger("email-reminder-worker", cls),
           cls,
         ),
@@ -121,7 +121,7 @@ import { WeeklyReportModule } from "./modules/weekly-report/index.js";
         RemindersService,
         EMAIL_PORT,
         ENV_CONFIG,
-        AdminService,
+        SnapshotAdminService,
         ClsService,
       ],
     },

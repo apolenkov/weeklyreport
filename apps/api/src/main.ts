@@ -62,9 +62,13 @@ import { createAppLogger } from "./lib/logger";
 import { NestAppLoggerAdapter } from "./lib/nest-app-logger.adapter";
 import { ActivityService } from "./modules/activity/index.js";
 import { ActionLogService } from "./modules/admin/index.js";
-import { AdminService } from "./modules/admin/index.js";
 import { JobsService } from "./modules/admin/index.js";
+import { PeriodAdminService } from "./modules/admin/index.js";
+import { ProjectAdminService } from "./modules/admin/index.js";
+import { ReminderAdminService } from "./modules/admin/index.js";
+import { ReopenRequestAdminService } from "./modules/admin/index.js";
 import { SessionRevocationService } from "./modules/admin/index.js";
+import { SnapshotAdminService } from "./modules/admin/index.js";
 import { AnalyticsService } from "./modules/analytics/index.js";
 import { ArchiveService } from "./modules/archive/index.js";
 import { createAuthController } from "./modules/auth/index.js";
@@ -386,7 +390,11 @@ async function bootstrap() {
     reviewActionsService: app.get(ReviewActionsService),
     publicationService: app.get(PublicationService),
     pdfExportService: app.get(PdfExportService),
-    adminService: app.get(AdminService),
+    snapshotAdminService: app.get(SnapshotAdminService),
+    projectAdminService: app.get(ProjectAdminService),
+    reminderAdminService: app.get(ReminderAdminService),
+    periodAdminService: app.get(PeriodAdminService),
+    reopenRequestAdminService: app.get(ReopenRequestAdminService),
     actionLogService: app.get(ActionLogService),
     // Without this the deactivate/activate revoked-set fast path is dead code:
     // the procedures call `deps.sessionRevocationService?.` and silently no-op.
@@ -492,9 +500,9 @@ async function bootstrap() {
   // settings are read PER CALL so admin changes propagate to newly-created
   // periods.
   const policyApplicator = app.get(PolicyApplicatorService);
-  const adminService = app.get(AdminService);
+  const snapshotAdminService = app.get(SnapshotAdminService);
   const provisionLeadWorkspace: ProvisionLeadWorkspace = async (userId) => {
-    const settings = await adminService.getSettings();
+    const settings = await snapshotAdminService.getSettings();
     const now = new Date();
     const { reportId } = await ensureCurrentPeriod(
       prismaService,

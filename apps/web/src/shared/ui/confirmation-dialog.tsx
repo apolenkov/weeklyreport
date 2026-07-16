@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../lib/use-dialog-focus";
 
@@ -24,13 +25,17 @@ interface ConfirmationDialogProps {
   /** Dialog title */
   readonly title: string;
   /** Dialog description / body text */
-  readonly description: string;
+  readonly description: React.ReactNode;
   /** Label for the confirm button (defaults to "Confirm") */
   readonly confirmLabel?: string;
   /** Label for the cancel button (defaults to "Cancel") */
   readonly cancelLabel?: string;
   /** Visual variant — destructive shows red confirm button */
   readonly variant?: ConfirmationDialogVariant;
+  /** Disable both actions while the confirm operation is pending. */
+  readonly isPending?: boolean;
+  /** Optional stable selector for an integration flow's backdrop. */
+  readonly testId?: string;
   /** Optional extra content between description and buttons */
   readonly children?: React.ReactNode;
 }
@@ -59,6 +64,8 @@ export function ConfirmationDialog({
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   variant = "default",
+  isPending = false,
+  testId,
   children,
 }: ConfirmationDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -67,15 +74,16 @@ export function ConfirmationDialog({
 
   useDialogFocus({ open, onClose, containerRef: dialogRef });
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
       role="presentation"
+      data-testid={testId}
     >
       <div
         ref={dialogRef}
@@ -97,14 +105,16 @@ export function ConfirmationDialog({
           <button
             type="button"
             onClick={onClose}
-            className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+            disabled={isPending}
+            className="btn-press inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {cancelLabel}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className={`btn-press rounded-[var(--radius-pill)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors ${
+            disabled={isPending}
+            className={`btn-press inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
               isDestructive
                 ? "bg-[var(--color-destructive)] hover:bg-red-700"
                 : "bg-[var(--color-starbucks-accent)] hover:bg-[var(--color-primary)]"
@@ -114,7 +124,8 @@ export function ConfirmationDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

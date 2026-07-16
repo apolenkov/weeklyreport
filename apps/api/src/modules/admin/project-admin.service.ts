@@ -102,11 +102,6 @@ export class ProjectAdminService {
   async attachProductToGroup(
     input: GroupProductEdgeInput,
   ): Promise<GroupProduct> {
-    if (!this.repository.attachProductToGroup) {
-      throw new Error(
-        "AdminRepository.attachProductToGroup is not implemented for this repository.",
-      );
-    }
     this.logger.info("attached product to group", input);
     return groupProductSchema.parse(
       await this.repository.attachProductToGroup(input),
@@ -122,11 +117,6 @@ export class ProjectAdminService {
   async detachProductFromGroup(
     input: GroupProductEdgeInput,
   ): Promise<{ success: true }> {
-    if (!this.repository.detachProductFromGroup) {
-      throw new Error(
-        "AdminRepository.detachProductFromGroup is not implemented for this repository.",
-      );
-    }
     this.logger.info("detached product from group", input);
     await this.repository.detachProductFromGroup(input);
     return { success: true };
@@ -140,7 +130,6 @@ export class ProjectAdminService {
    * without a second snapshot call.
    */
   async listGroupProducts(groupId: string): Promise<AdminProject[]> {
-    if (!this.repository.listGroupProducts) return [];
     const rows = await this.repository.listGroupProducts(groupId);
     return rows.map((row) => adminProjectSchema.parse(row));
   }
@@ -152,7 +141,6 @@ export class ProjectAdminService {
    * show the group name without a join.
    */
   async listProductGroups(productId: string): Promise<ReportingGroup[]> {
-    if (!this.repository.listProductGroups) return [];
     const rows = await this.repository.listProductGroups(productId);
     return rows.map((row) => reportingGroupSchema.parse(row));
   }
@@ -161,13 +149,11 @@ export class ProjectAdminService {
    * Batched owning-group lookup for the admin Groups tab's «Products
    * attached» editor. One repository query resolves the single owning group
    * for every requested product, replacing the per-product
-   * `listProductGroups` fan-out. Falls back to an empty list when the repo
-   * predates the batched read, mirroring `listProductGroups`.
+   * `listProductGroups` fan-out.
    */
   async listProductGroupOwnership(
     productIds: readonly string[],
   ): Promise<ProductGroupOwnership[]> {
-    if (!this.repository.listProductGroupOwnership) return [];
     return this.repository.listProductGroupOwnership(productIds);
   }
 

@@ -18,13 +18,9 @@ import type {
 } from "@customreport/shared";
 import type { DbRole, TrafficLightStatus } from "@customreport/shared";
 import {
-  HOURS_PER_DAY,
   initialsFromName as sharedInitialsFromName,
-  MINUTES_PER_HOUR,
-  MS_PER_SECOND,
   normalizeStageName,
   ROLE_LABEL,
-  SECONDS_PER_MINUTE,
   shortNameFromName,
   STAGE_NAMES,
   stageNamesMatch,
@@ -32,8 +28,7 @@ import {
 
 import {
   formatPeriodRangeWithYear,
-  formatTimestampShort,
-  isoWeekNumber as sharedIsoWeekNumber,
+  isoWeekNumber,
 } from "../../../lib/format-date";
 import { deriveEffectiveStageStatus } from "../../../lib/stage-status";
 import { deriveItemStatus } from "./item-status";
@@ -92,31 +87,11 @@ export interface LeadCurrentUser {
 // stage options from it, so a record stores the full "Development"; the pipeline
 // chip renders a display-only short label (`stageShortLabel`), never stored.
 
-function isoWeekNumber(d: Date): number {
-  return sharedIsoWeekNumber(d);
-}
-
 // Truncation length for a fallback id's embedded text fragment.
 const ID_TEXT_FRAGMENT_LENGTH = 8;
 
 // "YYYY-MM-DD" — length of an ISO date-only prefix.
 const ISO_DATE_LENGTH = 10;
-
-function formatDateRange(start: Date, end: Date): string {
-  return formatPeriodRangeWithYear(start, end);
-}
-
-function formatRelativeTimestamp(at: Date, now: Date): string {
-  const diffMs = now.getTime() - at.getTime();
-  const diffSec = Math.max(0, Math.floor(diffMs / MS_PER_SECOND));
-  if (diffSec < SECONDS_PER_MINUTE) return "just now";
-  const diffMin = Math.floor(diffSec / SECONDS_PER_MINUTE);
-  if (diffMin < MINUTES_PER_HOUR) return `${diffMin} min ago`;
-  const diffHour = Math.floor(diffMin / MINUTES_PER_HOUR);
-  if (diffHour < HOURS_PER_DAY)
-    return diffHour === 1 ? "1h ago" : `${diffHour}h ago`;
-  return formatTimestampShort(at);
-}
 
 function clampRank(rank: number): number {
   // Keep ranks ≥ 1 (schema requires positive int) but no upper clamp — the
@@ -576,7 +551,7 @@ export function mapLeadPeriods(
       id: e.reportId,
       sourceSectionId: e.sectionId,
       weekLabel: `Week ${isoWeekNumber(e.periodStart)}`,
-      dateRange: formatDateRange(e.periodStart, e.periodEnd),
+      dateRange: formatPeriodRangeWithYear(e.periodStart, e.periodEnd),
       isCurrent: activeReportId !== null && e.reportId === activeReportId,
       isSubmitted: e.sectionStatus === "submitted",
       archived: e.archived ?? false,
@@ -752,8 +727,5 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
 export const __testing = {
   buildStageGrid,
   initialsFromName,
-  formatRelativeTimestamp,
-  formatDateRange,
-  isoWeekNumber,
   clampRank,
 };

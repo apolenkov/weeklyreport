@@ -1,12 +1,12 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 
+import { worstTrafficStatus } from "../../../lib/status-presentation";
 import type {
   SectionSlideModel,
   SlideStageStatus,
 } from "./section-slide-contracts";
 import { buildSectionSlideModel } from "./section-slide-model";
-import { worstTraffic } from "./section-slide-model-helpers";
 
 type SectionItem = ReportSectionReadModel["items"][number];
 type SectionRisk = ReportSectionReadModel["risks"][number];
@@ -106,7 +106,7 @@ function mergeOwnedStages(
     const value = previous
       ? {
           ...previous,
-          status: worstTraffic(previous.status ?? null, stage.status ?? null),
+          status: worstTrafficStatus([previous.status, stage.status]),
         }
       : stage;
     return new Map([...merged, [stage.stageId, value]]);
@@ -126,10 +126,10 @@ function addProject(
       registerContribution(
         {
           ...accumulator,
-          trafficLight: worstTraffic(
+          trafficLight: worstTrafficStatus([
             accumulator.trafficLight,
             project.trafficLight,
-          ),
+          ]),
           ownedStages: mergeOwnedStages(
             accumulator.ownedStages,
             project.ownedStages ?? [],

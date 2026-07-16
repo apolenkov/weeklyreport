@@ -42,7 +42,7 @@ describe("ConfirmationDialog", () => {
   it("clicking the backdrop (target===currentTarget) fires onClose", () => {
     const onClose = vi.fn();
     const onConfirm = vi.fn();
-    const { container } = render(
+    render(
       <ConfirmationDialog
         open={true}
         onClose={onClose}
@@ -53,7 +53,7 @@ describe("ConfirmationDialog", () => {
     );
 
     // The backdrop is the outermost element with role="presentation".
-    const backdrop = container.querySelector('[role="presentation"]');
+    const backdrop = document.querySelector('[role="presentation"]');
     if (!backdrop) throw new Error("backdrop [role=presentation] not found");
     // Directly clicking the backdrop element fires target===currentTarget path.
     fireEvent.click(backdrop);
@@ -210,5 +210,28 @@ describe("ConfirmationDialog", () => {
 
     rerender(<Harness open={false} />);
     expect(trigger).toHaveFocus();
+  });
+
+  it("renders rich context and disables both actions while pending", () => {
+    render(
+      <ConfirmationDialog
+        open={true}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        title="Delete period?"
+        description={
+          <>
+            Delete <strong>Week 16</strong> permanently.
+          </>
+        }
+        confirmLabel="Deleting…"
+        variant="delete"
+        isPending={true}
+      />,
+    );
+
+    expect(screen.getByText("Week 16").tagName).toBe("STRONG");
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Deleting…" })).toBeDisabled();
   });
 });

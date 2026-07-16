@@ -89,9 +89,6 @@ export class PeriodAdminService {
     bucket: PeriodListBucket;
     limit?: number;
   }): Promise<PeriodListItem[]> {
-    if (!this.repository.listPeriodsByState) {
-      return [];
-    }
     const limit = Math.min(
       Math.max(input.limit ?? DEFAULT_PERIOD_LIST_LIMIT, 1),
       MAX_PERIOD_LIST_LIMIT,
@@ -115,11 +112,6 @@ export class PeriodAdminService {
    * success, so a reopen racing the archive is mutually exclusive from this side.
    */
   async archivePeriod(periodId: string): Promise<{ success: true }> {
-    if (!this.repository.archivePeriod) {
-      throw new Error(
-        "AdminRepository.archivePeriod is not implemented for this repository.",
-      );
-    }
     this.logger.info("archived period", { periodId });
     await this.repository.archivePeriod(periodId);
     return { success: true };
@@ -157,11 +149,6 @@ export class PeriodAdminService {
     rawInput: AdminCreatePeriodManualInput,
     options: { now?: Date } = {},
   ): Promise<AdminCreatePeriodManualResult> {
-    if (!this.repository.createPeriodManual) {
-      throw new Error(
-        "AdminRepository.createPeriodManual is not implemented for this repository.",
-      );
-    }
     const input = adminCreatePeriodManualSchema.parse(rawInput);
     const settings = await this.getSettings();
     const now = options.now ?? new Date();
@@ -190,14 +177,12 @@ export class PeriodAdminService {
       );
 
     // -- Overlap gate ---------------------------------------------------
-    if (this.repository.findOverlappingPeriod) {
-      const conflict = await this.repository.findOverlappingPeriod({
-        periodStart: input.periodStart,
-        periodEnd,
-      });
-      if (conflict) {
-        throw new AdminPeriodOverlapError(overlapMessage(conflict));
-      }
+    const conflict = await this.repository.findOverlappingPeriod({
+      periodStart: input.periodStart,
+      periodEnd,
+    });
+    if (conflict) {
+      throw new AdminPeriodOverlapError(overlapMessage(conflict));
     }
 
     // -- Mint -----------------------------------------------------------
@@ -271,14 +256,6 @@ export class PeriodAdminService {
      */
     diff: PeriodPatchDiff;
   }> {
-    if (
-      !this.repository.updatePeriodManual ||
-      !this.repository.readPeriodById
-    ) {
-      throw new Error(
-        "AdminRepository.updatePeriodManual / readPeriodById is not implemented for this repository.",
-      );
-    }
     const input = adminUpdatePeriodManualSchema.parse(rawInput);
 
     // -- Read existing -------------------------------------------------
@@ -306,7 +283,7 @@ export class PeriodAdminService {
     // -- Overlap gate (only when an envelope key changed) --------------
     const envelopeChanged =
       data.periodStart !== undefined || data.periodEnd !== undefined;
-    if (envelopeChanged && this.repository.findOverlappingPeriod) {
+    if (envelopeChanged) {
       // Use the new effective envelope (incoming where provided, existing
       // otherwise) so the overlap check matches what will be written.
       const effectiveStart = data.periodStart ?? existing.periodStart;
@@ -350,11 +327,6 @@ export class PeriodAdminService {
   async unarchivePeriod(
     periodId: string,
   ): Promise<{ success: true; periodState: PeriodState }> {
-    if (!this.repository.unarchivePeriod) {
-      throw new Error(
-        "AdminRepository.unarchivePeriod is not implemented for this repository.",
-      );
-    }
     this.logger.info("unarchived period", { periodId });
     const result = await this.repository.unarchivePeriod(periodId);
     return { success: true, periodState: result.nextPeriodState };
@@ -366,12 +338,7 @@ export class PeriodAdminService {
    * period is published; maps to FORBIDDEN via trpc.error-mapper.
    */
   async deleteReport(reportId: string): Promise<{ success: true }> {
-    if (!this.repository.deleteReport) {
-      throw new Error(
-        "AdminRepository.deleteReport is not implemented for this repository.",
-      );
-    }
-    const report = await this.repository.readReportForDelete?.(reportId);
+    const report = await this.repository.readReportForDelete(reportId);
     if (!report) {
       throw new AdminAccessError(`Report ${reportId} not found.`);
     }

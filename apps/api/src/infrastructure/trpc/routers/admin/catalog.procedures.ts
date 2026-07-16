@@ -5,12 +5,12 @@ import {
 } from "@customreport/shared";
 import { z } from "zod";
 
-import type { AdminService } from "../../../../modules/admin/index.js";
+import type { ProjectAdminService } from "../../../../modules/admin/index.js";
 import { mapDomainError } from "../../trpc.error-mapper.js";
 import { adminProcedure } from "../../trpc.middleware.js";
 
 export interface AdminCatalogDeps {
-  adminService: AdminService;
+  projectAdminService: ProjectAdminService;
 }
 
 export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
@@ -19,7 +19,7 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
       .input(reportingGroupSchema)
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.upsertReportingGroup(input);
+          return await deps.projectAdminService.upsertReportingGroup(input);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -29,7 +29,9 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
       .input(z.object({ groupId: z.uuid() }))
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.archiveReportingGroup(input.groupId);
+          return await deps.projectAdminService.archiveReportingGroup(
+            input.groupId,
+          );
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -39,7 +41,7 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
       .input(adminProjectSchema)
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.upsertProject(input);
+          return await deps.projectAdminService.upsertProject(input);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -49,7 +51,7 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
       .input(z.object({ projectId: z.uuid() }))
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.removeProject(input.projectId);
+          return await deps.projectAdminService.removeProject(input.projectId);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -65,7 +67,7 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
       )
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.saveStageAssignment(input);
+          return await deps.projectAdminService.saveStageAssignment(input);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -75,7 +77,7 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
       .input(z.object({ id: z.uuid() }))
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.deleteStageAssignment(input.id);
+          return await deps.projectAdminService.deleteStageAssignment(input.id);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -85,7 +87,9 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
       .input(z.object({ projectId: z.uuid() }))
       .query(async ({ input }) => {
         try {
-          return await deps.adminService.listStageAssignments(input.projectId);
+          return await deps.projectAdminService.listStageAssignments(
+            input.projectId,
+          );
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -96,7 +100,7 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
     // stages that already have an assignment row for the project.
     listStages: adminProcedure.query(async () => {
       try {
-        return await deps.adminService.listStages();
+        return await deps.projectAdminService.listStages();
       } catch (error) {
         throw mapDomainError(error);
       }
@@ -107,7 +111,7 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
     // without loading every assignment row.
     listStageAssignmentCounts: adminProcedure.query(async () => {
       try {
-        return await deps.adminService.listStageAssignmentCounts();
+        return await deps.projectAdminService.listStageAssignmentCounts();
       } catch (error) {
         throw mapDomainError(error);
       }
@@ -130,7 +134,7 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
       .input(groupProductEdgeInputSchema)
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.attachProductToGroup(input);
+          return await deps.projectAdminService.attachProductToGroup(input);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -140,7 +144,7 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
       .input(groupProductEdgeInputSchema)
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.detachProductFromGroup(input);
+          return await deps.projectAdminService.detachProductFromGroup(input);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -150,7 +154,9 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
       .input(z.object({ groupId: z.uuid() }))
       .query(async ({ input }) => {
         try {
-          return await deps.adminService.listGroupProducts(input.groupId);
+          return await deps.projectAdminService.listGroupProducts(
+            input.groupId,
+          );
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -160,7 +166,9 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
       .input(z.object({ productId: z.uuid() }))
       .query(async ({ input }) => {
         try {
-          return await deps.adminService.listProductGroups(input.productId);
+          return await deps.projectAdminService.listProductGroups(
+            input.productId,
+          );
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -173,7 +181,7 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
       .input(z.object({ productId: z.array(z.uuid()) }))
       .query(async ({ input }) => {
         try {
-          return await deps.adminService.listProductGroupOwnership(
+          return await deps.projectAdminService.listProductGroupOwnership(
             input.productId,
           );
         } catch (error) {

@@ -19,19 +19,27 @@
  *   + `leadNames`; we use it directly. Counts are derived from the re-sliced
  *   items.
  */
-import type { WeeklyReportReadModel } from "@customreport/shared";
+import type {
+  TrafficLightStatus,
+  WeeklyReportReadModel,
+} from "@customreport/shared";
 
-import { statusLabel } from "../../../lib/status-presentation";
+import {
+  formatPeriodRangeWithYear,
+  formatWeekLabel,
+} from "../../../lib/format-date";
+import {
+  statusLabel,
+  worstTrafficStatus,
+} from "../../../lib/status-presentation";
 import { reportHasContent } from "./report-content";
 import {
   buildProjectNameMap,
-  formatWeekRange,
   groupDecisionsByProject,
   groupItemsByProject,
   groupPrioritiesByProject,
   groupRisksByProject,
   initialsFromName,
-  isoWeekLabel,
   statusLabelFor,
   trafficToProductStatus,
 } from "./weekly-report-groupers";
@@ -48,7 +56,6 @@ import type {
   WeeklyReportPeriod,
 } from "./weekly-report-types";
 
-export { formatWeekRange } from "./weekly-report-groupers";
 export type * from "./weekly-report-types";
 
 function buildWeeklyReportPeriod(
@@ -58,8 +65,8 @@ function buildWeeklyReportPeriod(
     id: api.reportId,
     reportId: api.reportId,
     periodStatus: api.periodStatus,
-    weekLabel: api.weekLabel ?? isoWeekLabel(api.periodStart),
-    dateRange: formatWeekRange(api.periodStart, api.periodEnd),
+    weekLabel: api.weekLabel ?? formatWeekLabel(api.periodStart),
+    dateRange: formatPeriodRangeWithYear(api.periodStart, api.periodEnd),
     isCurrent: api.periodStatus !== "published",
   };
 }
@@ -165,14 +172,25 @@ export function mapWeeklyReportLeadGroups(
     .filter((group) => group.products.length > 0);
 }
 
-// report-overview-scope-parity: status precedence for the per-lead overview —
-// blocked (worst) < at-risk < on-track. Lower rank = worse, so the overview
-// sorts ascending (worst first) and the worst-of fold keeps the lowest rank.
-const LEAD_STATUS_RANK: Record<WeeklyProductStatus, number> = {
-  blocked: 0,
-  "at-risk": 1,
-  "on-track": 2,
-};
+function productStatusToTraffic(
+  status: WeeklyProductStatus,
+): TrafficLightStatus {
+  if (status === "blocked") return "red";
+  if (status === "at-risk") return "yellow";
+  return "green";
+}
+
+function compareProductStatus(
+  left: WeeklyProductStatus,
+  right: WeeklyProductStatus,
+): number {
+  if (left === right) return 0;
+  const leftTraffic = productStatusToTraffic(left);
+  return worstTrafficStatus([leftTraffic, productStatusToTraffic(right)]) ===
+    leftTraffic
+    ? -1
+    : 1;
+}
 
 /**
  * report-overview-scope-parity: derive the `by lead` Report overview rows from
@@ -202,12 +220,12 @@ export function mapWeeklyReportLeadOverview(
     .map((group) => ({
       id: group.id,
       name: group.name,
-      worstStatus: group.products.reduce<WeeklyProductStatus>(
-        (worst, p) =>
-          LEAD_STATUS_RANK[p.status] < LEAD_STATUS_RANK[worst]
-            ? p.status
-            : worst,
-        "on-track",
+      worstStatus: trafficToProductStatus(
+        worstTrafficStatus(
+          group.products.map((product) =>
+            productStatusToTraffic(product.status),
+          ),
+        ),
       ),
       currentCount: sumOver(group.products, (p) => p.currentWeek.length),
       nextCount: sumOver(group.products, (p) => p.nextWeek.length),
@@ -215,7 +233,7 @@ export function mapWeeklyReportLeadOverview(
     }))
     .sort(
       (a, b) =>
-        LEAD_STATUS_RANK[a.worstStatus] - LEAD_STATUS_RANK[b.worstStatus] ||
+        compareProductStatus(a.worstStatus, b.worstStatus) ||
         a.name.localeCompare(b.name),
     );
 }
@@ -223,8 +241,6 @@ export function mapWeeklyReportLeadOverview(
 // Internal exports for tests.
 export const __testing = {
   initialsFromName,
-  isoWeekLabel,
   trafficToProductStatus,
   statusLabelFor,
-  formatWeekRange,
 };

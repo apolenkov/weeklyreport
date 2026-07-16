@@ -5,12 +5,12 @@ import {
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import type { AdminService } from "../../../../modules/admin/index.js";
+import type { ReminderAdminService } from "../../../../modules/admin/index.js";
 import { mapDomainError } from "../../trpc.error-mapper.js";
 import { adminProcedure } from "../../trpc.middleware.js";
 
 export interface AdminReminderPoliciesDeps {
-  adminService: AdminService;
+  reminderAdminService: ReminderAdminService;
 }
 
 export function createAdminReminderPoliciesProcedures(
@@ -34,7 +34,7 @@ export function createAdminReminderPoliciesProcedures(
     /** List reminder policies (active + archived) for the policy editor grid. */
     listPolicies: adminProcedure.query(async () => {
       try {
-        return await deps.adminService.listPolicies();
+        return await deps.reminderAdminService.listPolicies();
       } catch (error) {
         throw mapDomainError(error);
       }
@@ -49,8 +49,10 @@ export function createAdminReminderPoliciesProcedures(
       .input(reminderPolicySchema)
       .mutation(async ({ ctx, input }) => {
         try {
-          const existed = await deps.adminService.policyExists(input.id);
-          const saved = await deps.adminService.savePolicy(input);
+          const existed = await deps.reminderAdminService.policyExists(
+            input.id,
+          );
+          const saved = await deps.reminderAdminService.savePolicy(input);
           ctx.auditLogger.policySave({
             userId: ctx.session.userId,
             role: ctx.session.role,
@@ -73,7 +75,7 @@ export function createAdminReminderPoliciesProcedures(
       .input(z.object({ id: z.uuid() }))
       .mutation(async ({ ctx, input }) => {
         try {
-          const result = await deps.adminService.removePolicy(input.id);
+          const result = await deps.reminderAdminService.removePolicy(input.id);
           ctx.auditLogger.policyRemove({
             userId: ctx.session.userId,
             role: ctx.session.role,
@@ -89,7 +91,9 @@ export function createAdminReminderPoliciesProcedures(
       .input(z.object({ ruleId: z.uuid() }))
       .mutation(async ({ input }) => {
         try {
-          return await deps.adminService.removeReminderRule(input.ruleId);
+          return await deps.reminderAdminService.removeReminderRule(
+            input.ruleId,
+          );
         } catch (error) {
           throw mapDomainError(error);
         }

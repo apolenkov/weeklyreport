@@ -1,14 +1,11 @@
+import { worstTrafficStatus } from "../../../lib/status-presentation";
 import type { CrossAuthorContentRow } from "../../report-sections";
 import type {
   SectionSlideModel,
   SlideProduct,
   SlideStageStatus,
 } from "./section-slide-contracts";
-import {
-  nonEmpty,
-  statusTone,
-  worstTraffic,
-} from "./section-slide-model-helpers";
+import { nonEmpty, statusTone } from "./section-slide-model-helpers";
 
 interface ForeignTextRow {
   readonly projectId: string;
@@ -42,14 +39,16 @@ export function applyForeignProductHealth(
 ): SlideProduct[] {
   if (crossAuthors.length === 0) return [...productSlides];
   return productSlides.map((product) => {
-    const foreignWorst = crossAuthors
-      .filter((crossAuthor) => crossAuthor.projectId === product.id)
-      .flatMap((crossAuthor) => crossAuthor.stages)
-      .reduce<SlideStageStatus>(
-        (worst, stage) => worstTraffic(worst, stage.status),
-        null,
-      );
-    return { ...product, status: worstTraffic(product.status, foreignWorst) };
+    const foreignWorst = worstTrafficStatus(
+      crossAuthors
+        .filter((crossAuthor) => crossAuthor.projectId === product.id)
+        .flatMap((crossAuthor) => crossAuthor.stages)
+        .map((stage) => stage.status),
+    );
+    return {
+      ...product,
+      status: worstTrafficStatus([product.status, foreignWorst]),
+    };
   });
 }
 

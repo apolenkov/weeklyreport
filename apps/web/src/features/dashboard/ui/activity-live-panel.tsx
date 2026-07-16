@@ -4,16 +4,10 @@ import type {
   ActivityLiveResponse,
   ActivityLiveRow,
 } from "@customreport/shared";
-import {
-  DAYS_PER_WEEK,
-  HOURS_PER_DAY,
-  initialsFromName as sharedInitialsFromName,
-  MINUTES_PER_HOUR,
-  MS_PER_SECOND,
-  SECONDS_PER_MINUTE,
-} from "@customreport/shared";
+import { initialsFromName as sharedInitialsFromName } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 
+import { formatRelativePast } from "../../../lib/format-date";
 import { useTRPC } from "../../../lib/trpc-context";
 
 /**
@@ -133,7 +127,7 @@ function ActivityRow({
     row.itemCount + row.riskCount + row.decisionCount + row.priorityCount;
   const hasContent = contentCount > 0;
   const lastEdit = row.lastEditAt
-    ? formatRelative(new Date(row.lastEditAt))
+    ? formatRelativePast(new Date(row.lastEditAt), new Date(), "activity")
     : "not started";
   const rowClassName =
     "flex flex-wrap items-center gap-3 rounded-[var(--radius)] border px-2 py-3 transition-[background-color,border-color,box-shadow]";
@@ -226,21 +220,4 @@ function StatusPill({
 // in @customreport/shared.
 function initials(name: string): string {
   return sharedInitialsFromName(name) || "??";
-}
-
-const JUST_NOW_THRESHOLD_SECONDS = 30;
-
-// Lightweight relative-time formatter; no extra dependency needed.
-function formatRelative(date: Date): string {
-  const diffMs = Date.now() - date.getTime();
-  const diffSec = Math.floor(diffMs / MS_PER_SECOND);
-  if (diffSec < JUST_NOW_THRESHOLD_SECONDS) return "just now";
-  if (diffSec < SECONDS_PER_MINUTE) return `${diffSec}s ago`;
-  const diffMin = Math.floor(diffSec / SECONDS_PER_MINUTE);
-  if (diffMin < MINUTES_PER_HOUR) return `${diffMin} min ago`;
-  const diffHr = Math.floor(diffMin / MINUTES_PER_HOUR);
-  if (diffHr < HOURS_PER_DAY) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / HOURS_PER_DAY);
-  if (diffDay < DAYS_PER_WEEK) return `${diffDay}d ago`;
-  return date.toLocaleDateString("en-US");
 }

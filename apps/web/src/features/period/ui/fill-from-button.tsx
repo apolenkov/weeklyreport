@@ -3,8 +3,8 @@
 import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
 import type { ReportPeriod } from "../../report-sections";
-import { FillFromConfirmDialog } from "./fill-from-confirm-dialog";
 import { FillFromDropdownPanel } from "./fill-from-dropdown-panel";
 
 // polish-lead-toolbar-and-risk-dialog 1.3: the fill-from control is a single
@@ -215,14 +215,26 @@ export function FillFromButton({
         onSelect={handleFillFromPeriod}
       />
 
-      {/* Confirmation dialog — portal to document.body so ancestor
-          transform/filter does not break position:fixed containment */}
-      <FillFromConfirmDialog
-        open={showConfirm}
-        selectedPeriod={selectedPeriod}
-        onConfirm={handleConfirm}
-        onCancel={handleCancel}
-      />
+      {selectedPeriod && (
+        <ConfirmationDialog
+          open={showConfirm}
+          title={`Fill from ${selectedPeriod.weekLabel}?`}
+          description={
+            <>
+              This will overwrite your current draft with data from{" "}
+              <strong>
+                {selectedPeriod.weekLabel} ({selectedPeriod.dateRange})
+              </strong>
+              . Current Week items, Risks, and Decisions will be replaced.
+              Priorities will NOT be filled.
+            </>
+          }
+          confirmLabel="Replace & Fill"
+          variant="fill-from"
+          onConfirm={handleConfirm}
+          onClose={handleCancel}
+        />
+      )}
     </>
   );
 }

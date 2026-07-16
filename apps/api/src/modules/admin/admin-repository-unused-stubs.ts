@@ -1,46 +1,88 @@
 import { vi } from "vitest";
 
-import type {
-  DecideReopenRequestInput,
-  ListReopenRequestsInput,
-  ReopenDecisionOutcome,
-  ReopenRequestRow,
-  StageAssignmentCountRow,
-  StageRow,
-} from "./admin-shared.js";
+import type { AdminRepository } from "./admin-shared.js";
+
+type StubbedMethod =
+  | "activateUser"
+  | "archivePeriod"
+  | "attachProductToGroup"
+  | "countActiveTelegramBindings"
+  | "countPendingReopenRequests"
+  | "createPeriodManual"
+  | "deactivateUser"
+  | "decideReopenRequest"
+  | "deleteReminderPolicy"
+  | "deleteReport"
+  | "detachProductFromGroup"
+  | "findOverlappingPeriod"
+  | "listGroupProducts"
+  | "listPeriodsByState"
+  | "listProductGroupOwnership"
+  | "listProductGroups"
+  | "listReminderPolicies"
+  | "listReopenRequests"
+  | "listStageAssignmentCounts"
+  | "listStages"
+  | "readPeriodById"
+  | "readReportForDelete"
+  | "saveReminderPolicy"
+  | "unarchivePeriod"
+  | "updatePeriodManual";
+
+export type AdminRepositoryUnusedStubs = Pick<AdminRepository, StubbedMethod>;
+
+const STUB_ID = "00000000-0000-4000-8000-000000000000";
+const STUB_DATE = new Date(0);
 
 /**
- * The 8 methods added to `AdminRepository` by drain-admin-router
- * (deactivate/activate user, integrations status, stage catalogue,
- * reopen-request lifecycle), stubbed to a "no data / not exercised" result.
- * None of the pre-existing admin unit-test fakes exercise these paths; spread
- * this into a fake's object literal so it satisfies the (now required)
- * `AdminRepository` port without every call site hand-rolling all 8.
+ * Neutral implementations for required repository methods a test does not
+ * exercise. Test doubles spread these stubs and override the owned behavior.
  */
-export function unusedAdminRepositoryStubs(): {
-  deactivateUser: () => Promise<void>;
-  activateUser: () => Promise<void>;
-  countActiveTelegramBindings: () => Promise<number>;
-  listStages: () => Promise<StageRow[]>;
-  listStageAssignmentCounts: () => Promise<StageAssignmentCountRow[]>;
-  listReopenRequests: (
-    input: ListReopenRequestsInput,
-  ) => Promise<ReopenRequestRow[]>;
-  countPendingReopenRequests: () => Promise<number>;
-  decideReopenRequest: (
-    input: DecideReopenRequestInput,
-  ) => Promise<ReopenDecisionOutcome>;
-} {
+export function unusedAdminRepositoryStubs(): AdminRepositoryUnusedStubs {
   return {
-    deactivateUser: vi.fn().mockResolvedValue(undefined),
     activateUser: vi.fn().mockResolvedValue(undefined),
+    archivePeriod: vi.fn().mockResolvedValue(undefined),
+    attachProductToGroup: vi.fn((input) =>
+      Promise.resolve({ id: STUB_ID, ...input, createdAt: STUB_DATE }),
+    ),
     countActiveTelegramBindings: vi.fn().mockResolvedValue(0),
-    listStages: vi.fn().mockResolvedValue([]),
-    listStageAssignmentCounts: vi.fn().mockResolvedValue([]),
-    listReopenRequests: vi.fn().mockResolvedValue([]),
     countPendingReopenRequests: vi.fn().mockResolvedValue(0),
+    createPeriodManual: vi.fn((input) =>
+      Promise.resolve({ id: STUB_ID, ...input }),
+    ),
+    deactivateUser: vi.fn().mockResolvedValue(undefined),
     decideReopenRequest: vi
       .fn()
       .mockResolvedValue({ kind: "already-processed" }),
+    deleteReminderPolicy: vi.fn().mockResolvedValue(undefined),
+    deleteReport: vi.fn().mockResolvedValue(undefined),
+    detachProductFromGroup: vi.fn().mockResolvedValue(undefined),
+    findOverlappingPeriod: vi.fn().mockResolvedValue(null),
+    listGroupProducts: vi.fn().mockResolvedValue([]),
+    listPeriodsByState: vi.fn().mockResolvedValue([]),
+    listProductGroupOwnership: vi.fn((productIds: readonly string[]) =>
+      Promise.resolve(
+        productIds.map((productId) => ({ productId, group: null })),
+      ),
+    ),
+    listProductGroups: vi.fn().mockResolvedValue([]),
+    listReminderPolicies: vi.fn().mockResolvedValue([]),
+    listReopenRequests: vi.fn().mockResolvedValue([]),
+    listStageAssignmentCounts: vi.fn().mockResolvedValue([]),
+    listStages: vi.fn().mockResolvedValue([]),
+    readPeriodById: vi.fn().mockResolvedValue(null),
+    readReportForDelete: vi.fn().mockResolvedValue(null),
+    saveReminderPolicy: vi.fn((policy) => Promise.resolve(policy)),
+    unarchivePeriod: vi
+      .fn()
+      .mockResolvedValue({ nextPeriodState: "open", nextPeriodStatus: "open" }),
+    updatePeriodManual: vi.fn().mockResolvedValue({
+      id: STUB_ID,
+      periodStart: STUB_DATE,
+      periodEnd: STUB_DATE,
+      deadline: STUB_DATE,
+      weekLabel: null,
+      periodState: "open",
+    }),
   };
 }

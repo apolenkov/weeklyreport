@@ -9,8 +9,9 @@ import { describe, expect, it } from "vitest";
 import { createAppRouter } from "../../infrastructure/trpc/trpc.router.js";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
-import { type AdminRepository, AdminService } from "./admin.service";
 import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
+import type { AdminRepository } from "./admin-shared.js";
+import { SnapshotAdminService } from "./snapshot-admin.service.js";
 
 /* ------------------------------------------------------------------ */
 /*  Sessions & defaults                                                */
@@ -192,9 +193,9 @@ function createRepository(
 /*  Settings integration tests                                         */
 /* ------------------------------------------------------------------ */
 
-describe("AdminService — settings (integration)", () => {
+describe("SnapshotAdminService — settings (integration)", () => {
   it("returns default settings when nothing has been configured", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
     const result = await service.getSettings();
 
     expect(result).toEqual(defaultSettings);
@@ -202,7 +203,7 @@ describe("AdminService — settings (integration)", () => {
 
   // round-trip the new fields through updateSettings.
   it("round-trips the 9 new AppSettings fields", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
 
     const result = await service.updateSettings({
       periodLengthDays: 14,
@@ -230,7 +231,7 @@ describe("AdminService — settings (integration)", () => {
   });
 
   it("toggles autoCreatePeriods", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
 
     const result = await service.updateSettings({
       autoCreatePeriods: true,
@@ -240,7 +241,7 @@ describe("AdminService — settings (integration)", () => {
   });
 
   it("changes defaultDeadlineDays", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
 
     const result = await service.updateSettings({
       defaultDeadlineDays: 10,
@@ -252,7 +253,7 @@ describe("AdminService — settings (integration)", () => {
   // round-trip the retained period-cycle knobs (a settings surface cleanup
   // removed the four consumer-less ones).
   it("round-trips the period-cycle AppSettings fields", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
 
     const result = await service.updateSettings({
       deadlineTime: "09:30",
@@ -270,7 +271,7 @@ describe("AdminService — settings (integration)", () => {
   });
 
   it("returns defaults for the period-cycle fields when nothing has been configured", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
     const result = await service.getSettings();
 
     expect(result.deadlineTime).toBe("18:00");
@@ -279,8 +280,8 @@ describe("AdminService — settings (integration)", () => {
   });
 
   it("admin.snapshot rejects non-admin access at the live procedure gate", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
-    const deps = { adminService: service } as unknown as Parameters<
+    const service = new SnapshotAdminService(createRepository(initialSnapshot));
+    const deps = { snapshotAdminService: service } as unknown as Parameters<
       typeof createAppRouter
     >[0];
     const caller = createAppRouter(deps).createCaller({
