@@ -71,7 +71,7 @@ export function applyRiskSeverityFloor(
 }
 
 /**
- * W11 (fix-report-surface-integrity): render-time twin of the mapper's
+ * Render-time twin of the mapper's
  * `coveredByOwnRisk` annotation. `ctx.products` is stable across an in-session
  * risk add (no refetch), so the mapper-baked flag goes stale the moment the lead
  * stages a risk; re-deriving it here from the live `risks` lets the completeness
