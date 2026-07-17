@@ -36,11 +36,12 @@ function computeBannerText(
   required: boolean,
 ): string {
   const severityLabel = previewSeverity === "blocked" ? "Blocked" : "At Risk";
-  if (selected.length === 0) {
+  const [onlySelected] = selected;
+  if (onlySelected === undefined) {
     return required ? "" : `All assigned stages will show as ${severityLabel}.`;
   }
   if (selected.length === 1) {
-    return `Stage ${selected[0]} will show as ${severityLabel}.`;
+    return `Stage ${onlySelected} will show as ${severityLabel}.`;
   }
   return `Selected stages will show as ${severityLabel}.`;
 }

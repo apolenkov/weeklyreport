@@ -100,7 +100,7 @@ describe("ExportPdfButton", () => {
     vi.stubGlobal("open", openMock);
 
     const { captured } = renderButton({ statusQuery: COMPLETED_STATUS });
-    const mutationFn = captured["pdfExport.request"].mutationFn;
+    const mutationFn = expectDefined(captured["pdfExport.request"]).mutationFn;
     mutationFn.mockResolvedValue({ jobId: JOB_ID });
 
     await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
@@ -127,7 +127,7 @@ describe("ExportPdfButton", () => {
     );
 
     const { captured } = renderButton({ statusQuery: COMPLETED_STATUS });
-    captured["pdfExport.request"].mutationFn.mockResolvedValue({
+    expectDefined(captured["pdfExport.request"]).mutationFn.mockResolvedValue({
       jobId: JOB_ID,
     });
 
@@ -147,7 +147,7 @@ describe("ExportPdfButton", () => {
     );
 
     const { captured } = renderButton({ statusQuery: COMPLETED_STATUS });
-    captured["pdfExport.request"].mutationFn.mockResolvedValue({
+    expectDefined(captured["pdfExport.request"]).mutationFn.mockResolvedValue({
       jobId: JOB_ID,
     });
 
@@ -175,7 +175,7 @@ describe("ExportPdfButton", () => {
         throw new Error("poll failed");
       },
     });
-    captured["pdfExport.request"].mutationFn.mockResolvedValue({
+    expectDefined(captured["pdfExport.request"]).mutationFn.mockResolvedValue({
       jobId: JOB_ID,
     });
 

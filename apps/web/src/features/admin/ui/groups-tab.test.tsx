@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type { MockGroup, MockUser } from "../model/admin-types";
 import { GroupsTab } from "./groups-tab";
@@ -63,10 +64,14 @@ function renderTab(opts?: { groups?: MockGroup[]; users?: MockUser[] }) {
     { path: ["admin", "archiveReportingGroup"], mutation: true },
   ]);
 
-  captured["admin.saveReportingGroup"].mutationFn.mockResolvedValue({
+  expectDefined(
+    captured["admin.saveReportingGroup"],
+  ).mutationFn.mockResolvedValue({
     id: "g-new",
   });
-  captured["admin.archiveReportingGroup"].mutationFn.mockResolvedValue({
+  expectDefined(
+    captured["admin.archiveReportingGroup"],
+  ).mutationFn.mockResolvedValue({
     id: "g-1",
   });
 

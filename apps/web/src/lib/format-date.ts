@@ -77,11 +77,24 @@ export const MONTHS_SHORT = [
 ];
 
 /**
+ * Total tuple lookup: `getUTCMonth()` is always 0–11, so the throw can only
+ * fire on a broken Date — it satisfies noUncheckedIndexedAccess without a
+ * silent "" fallback that would render a blank month label.
+ * @param date the date whose UTC month to label
+ * @returns the short month label, e.g. "Apr"
+ */
+export function monthShortLabel(date: Date): string {
+  const label = MONTHS_SHORT[date.getUTCMonth()];
+  if (label === undefined) throw new Error("month index out of range");
+  return label;
+}
+
+/**
  * Short "Mon D" timestamp in UTC (e.g. "Apr 18"). UTC accessors keep the label
  * timezone-stable, matching the period-range formatters above.
  */
 export function formatTimestampShort(date: Date): string {
-  return `${MONTHS_SHORT[date.getUTCMonth()]} ${date.getUTCDate()}`;
+  return `${monthShortLabel(date)} ${date.getUTCDate()}`;
 }
 
 function formatRelativeHours(
@@ -158,9 +171,9 @@ export function formatPeriodRange(start: DateInput, end: DateInput): string {
   if (!start || !end) return "\u2014";
   const s = toDate(start);
   const e = toDate(end);
-  const sMonth = MONTHS_SHORT[s.getUTCMonth()];
+  const sMonth = monthShortLabel(s);
   const sDay = s.getUTCDate();
-  const eMonth = MONTHS_SHORT[e.getUTCMonth()];
+  const eMonth = monthShortLabel(e);
   const eDay = e.getUTCDate();
   if (s.getUTCMonth() === e.getUTCMonth()) {
     return `${sMonth} ${sDay}\u2013${eDay}`;
@@ -175,8 +188,8 @@ export function formatPeriodRangeWithYear(
   if (!start || !end) return "\u2014";
   const s = toDate(start);
   const e = toDate(end);
-  const sMonth = MONTHS_SHORT[s.getUTCMonth()];
-  const eMonth = MONTHS_SHORT[e.getUTCMonth()];
+  const sMonth = monthShortLabel(s);
+  const eMonth = monthShortLabel(e);
   const sDay = s.getUTCDate();
   const eDay = e.getUTCDate();
   const eYear = e.getUTCFullYear();

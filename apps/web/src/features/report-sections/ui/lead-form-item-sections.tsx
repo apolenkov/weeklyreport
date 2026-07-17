@@ -64,6 +64,7 @@ export function LeadFormItemSections({
     risks,
     unifiedEntries,
   } = viewModel;
+  const firstProduct = products[0];
   return unifiedView ? (
     <AccordionSection
       groupExpanded={groupExpanded}
@@ -109,8 +110,8 @@ export function LeadFormItemSections({
               onClick={actions.addCurrentWeekItem}
               disabled={products.length === 0}
               title={
-                products.length > 0
-                  ? `Add item to ${products[0]?.name}`
+                firstProduct !== undefined
+                  ? `Add item to ${firstProduct.name}`
                   : NO_PRODUCTS_ASSIGNED_MESSAGE
               }
             >
@@ -153,8 +154,8 @@ export function LeadFormItemSections({
               onClick={actions.addNextWeekItem}
               disabled={products.length === 0}
               title={
-                products.length > 0
-                  ? `Add item to ${products[0]?.name}`
+                firstProduct !== undefined
+                  ? `Add item to ${firstProduct.name}`
                   : NO_PRODUCTS_ASSIGNED_MESSAGE
               }
             >

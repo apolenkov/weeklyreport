@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { workflowToItemStatus } from "./item-status";
 import {
   applyCrossAuthorStageOverrides,
@@ -133,7 +134,9 @@ describe("applyCrossAuthorStageOverrides", () => {
   ]);
 
   it("fills foreign-owned (locked) stages from cross-author data, leaving mine and unmatched locked untouched", () => {
-    const [result] = applyCrossAuthorStageOverrides([product], overrides);
+    const result = expectDefined(
+      applyCrossAuthorStageOverrides([product], overrides)[0],
+    );
     expect(result.stages).toEqual([
       // 'mine' untouched even though an override exists for "dev".
       product.stages[0],
@@ -216,7 +219,9 @@ describe("mapForeignItems", () => {
       ],
     });
 
-    const [mapped] = mapForeignItems([row], new Map(), "current");
+    const mapped = expectDefined(
+      mapForeignItems([row], new Map(), "current")[0],
+    );
 
     expect(mapped.productName).toBe(PROJECT_ID);
   });
@@ -235,10 +240,12 @@ describe("mapForeignItems", () => {
       ],
     });
 
-    const [mapped] = mapForeignItems(
-      [row],
-      new Map([[PROJECT_ID, "Alpha Product"]]),
-      "current",
+    const mapped = expectDefined(
+      mapForeignItems(
+        [row],
+        new Map([[PROJECT_ID, "Alpha Product"]]),
+        "current",
+      )[0],
     );
 
     expect(mapped.productName).toBe("Alpha Product");
@@ -269,7 +276,9 @@ describe("mapForeignItems", () => {
       ],
     });
 
-    const [mapped] = mapForeignItems([row], new Map(), "current");
+    const mapped = expectDefined(
+      mapForeignItems([row], new Map(), "current")[0],
+    );
 
     expect(mapped.status).toBe("blocked");
   });
@@ -288,7 +297,9 @@ describe("mapForeignItems", () => {
       ],
     });
 
-    const [mapped] = mapForeignItems([row], new Map(), "current");
+    const mapped = expectDefined(
+      mapForeignItems([row], new Map(), "current")[0],
+    );
 
     expect(mapped.status).toBe("in-progress");
   });
@@ -344,7 +355,7 @@ describe("mapForeignDecisions", () => {
       ],
     });
 
-    const [mapped] = mapForeignDecisions([row], new Map());
+    const mapped = expectDefined(mapForeignDecisions([row], new Map())[0]);
 
     expect(mapped.id).toBe(`foreign:${AUTHOR_ID}:decision-1`);
     expect(mapped.deadline).toBe("2026-08-01");
@@ -365,7 +376,7 @@ describe("mapForeignDecisions", () => {
       ],
     });
 
-    const [mapped] = mapForeignDecisions([row], new Map());
+    const mapped = expectDefined(mapForeignDecisions([row], new Map())[0]);
 
     expect(mapped.deadline).toBeNull();
   });

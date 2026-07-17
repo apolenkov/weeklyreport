@@ -218,7 +218,7 @@ describe("LeadForm mutation wiring", () => {
   it("submit success: invalidates caches, fires toast.success", async () => {
     const { Wrapper, captured, queryClient } = buildHarness();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-    captured["reports.submit"].mutationFn.mockResolvedValue({
+    expectDefined(captured["reports.submit"]).mutationFn.mockResolvedValue({
       ...makeSection({ status: "submitted" }),
       version: 2,
     });
@@ -248,7 +248,7 @@ describe("LeadForm mutation wiring", () => {
 
   it("submit error: fires toast.error with the error message", async () => {
     const { Wrapper, captured } = buildHarness();
-    captured["reports.submit"].mutationFn.mockRejectedValue(
+    expectDefined(captured["reports.submit"]).mutationFn.mockRejectedValue(
       new Error("Submit blew up"),
     );
     render(
@@ -276,7 +276,9 @@ describe("LeadForm mutation wiring", () => {
       value: { httpStatus: 409, code: "CONFLICT" },
       configurable: true,
     });
-    captured["reports.submit"].mutationFn.mockRejectedValue(conflict);
+    expectDefined(captured["reports.submit"]).mutationFn.mockRejectedValue(
+      conflict,
+    );
     render(
       <Wrapper>
         <LeadForm />
@@ -304,7 +306,8 @@ describe("LeadForm mutation wiring", () => {
     const { Wrapper, captured } = buildHarness();
     // The success path reads `.version`; resolve a versioned read model so it
     // does not throw. The assertion targets the submit INPUT, not this value.
-    captured["reports.submit"].mutationFn.mockResolvedValue({
+    const submitEntry = expectDefined(captured["reports.submit"]);
+    submitEntry.mutationFn.mockResolvedValue({
       ...makeSection(),
       version: 6,
     });
@@ -314,14 +317,13 @@ describe("LeadForm mutation wiring", () => {
       </Wrapper>,
     );
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
-    await waitFor(() =>
-      expect(captured["reports.saveDraft"].lastOptions).toBeDefined(),
-    );
+    const saveDraftEntry = expectDefined(captured["reports.saveDraft"]);
+    await waitFor(() => expect(saveDraftEntry.lastOptions).toBeDefined());
 
     // An autosave succeeds and the server bumps the row to version 5. This
     // drives the component's version forward through the hook's onVersionChange
     // exactly as a live save would.
-    const saveDraftOpts = captured["reports.saveDraft"].lastOptions as {
+    const saveDraftOpts = saveDraftEntry.lastOptions as {
       onSuccess?: (saved: unknown) => void;
     };
     act(() => {
@@ -342,13 +344,9 @@ describe("LeadForm mutation wiring", () => {
     // Guardrail 3: submit reads the CURRENT version (5) synchronously, not the
     // initially-loaded 1 captured in a stale closure.
     await waitFor(() =>
-      expect(
-        captured["reports.submit"].mutationFn.mock.calls.length,
-      ).toBeGreaterThan(0),
+      expect(submitEntry.mutationFn.mock.calls.length).toBeGreaterThan(0),
     );
-    const sent = captured["reports.submit"].mutationFn.mock.calls.at(
-      -1,
-    )?.[0] as {
+    const sent = submitEntry.mutationFn.mock.calls.at(-1)?.[0] as {
       version?: number;
     };
     expect(sent.version).toBe(5);
@@ -379,14 +377,11 @@ describe("LeadForm mutation wiring", () => {
     act(() => {
       within(dialog).getByRole("button", { name: "Submit" }).click();
     });
+    const submitEntry = expectDefined(captured["reports.submit"]);
     await waitFor(() =>
-      expect(
-        captured["reports.submit"].mutationFn.mock.calls.length,
-      ).toBeGreaterThan(0),
+      expect(submitEntry.mutationFn.mock.calls.length).toBeGreaterThan(0),
     );
-    const sent = captured["reports.submit"].mutationFn.mock.calls.at(
-      -1,
-    )?.[0] as {
+    const sent = submitEntry.mutationFn.mock.calls.at(-1)?.[0] as {
       stageStatuses?: { status: string | null }[];
     };
     expect(sent.stageStatuses?.length).toBeGreaterThan(0);
@@ -479,14 +474,11 @@ describe("LeadForm mutation wiring", () => {
     act(() => {
       within(dialog).getByRole("button", { name: "Submit" }).click();
     });
+    const submitEntry = expectDefined(captured["reports.submit"]);
     await waitFor(() =>
-      expect(
-        captured["reports.submit"].mutationFn.mock.calls.length,
-      ).toBeGreaterThan(0),
+      expect(submitEntry.mutationFn.mock.calls.length).toBeGreaterThan(0),
     );
-    const sent = captured["reports.submit"].mutationFn.mock.calls.at(
-      -1,
-    )?.[0] as {
+    const sent = submitEntry.mutationFn.mock.calls.at(-1)?.[0] as {
       stageStatuses?: { status: string | null }[];
     };
     expect(sent.stageStatuses?.length).toBeGreaterThan(0);
@@ -553,7 +545,8 @@ describe("LeadForm mutation wiring", () => {
           publishedLineage: { itemStableIds: [], decisionStableIds: [] },
         }),
     });
-    captured["reports.submit"].mutationFn.mockResolvedValue({
+    const submitEntry = expectDefined(captured["reports.submit"]);
+    submitEntry.mutationFn.mockResolvedValue({
       ...makeSection(),
       version: 6,
     });
@@ -589,13 +582,9 @@ describe("LeadForm mutation wiring", () => {
       within(dialog).getByRole("button", { name: "Submit" }).click();
     });
     await waitFor(() =>
-      expect(
-        captured["reports.submit"].mutationFn.mock.calls.length,
-      ).toBeGreaterThan(0),
+      expect(submitEntry.mutationFn.mock.calls.length).toBeGreaterThan(0),
     );
-    const sent = captured["reports.submit"].mutationFn.mock.calls.at(
-      -1,
-    )?.[0] as {
+    const sent = submitEntry.mutationFn.mock.calls.at(-1)?.[0] as {
       version?: number;
     };
     expect(sent.version).toBe(5);
@@ -729,12 +718,10 @@ describe("LeadForm mutation wiring", () => {
         <LeadForm />
       </Wrapper>,
     );
-    await waitFor(() =>
-      expect(captured["leadForm.fillFrom"].lastOptions).toBeDefined(),
-    );
+    const fillFromEntry = expectDefined(captured["leadForm.fillFrom"]);
+    await waitFor(() => expect(fillFromEntry.lastOptions).toBeDefined());
 
-    const fillFromOpts = captured["leadForm.fillFrom"]
-      .lastOptions as MutationCallbacks;
+    const fillFromOpts = fillFromEntry.lastOptions as MutationCallbacks;
     act(() => {
       fillFromOpts.onSuccess?.();
     });
@@ -752,9 +739,8 @@ describe("LeadForm mutation wiring", () => {
         <LeadForm />
       </Wrapper>,
     );
-    await waitFor(() =>
-      expect(captured["leadForm.fillFrom"].lastOptions).toBeDefined(),
-    );
+    const fillFromEntry = expectDefined(captured["leadForm.fillFrom"]);
+    await waitFor(() => expect(fillFromEntry.lastOptions).toBeDefined());
 
     const conflict = new TRPCClientError("stale");
     Object.defineProperty(conflict, "data", {
@@ -762,8 +748,7 @@ describe("LeadForm mutation wiring", () => {
       configurable: true,
     });
 
-    const fillFromOpts = captured["leadForm.fillFrom"]
-      .lastOptions as MutationCallbacks;
+    const fillFromOpts = fillFromEntry.lastOptions as MutationCallbacks;
     act(() => {
       fillFromOpts.onError?.(conflict);
     });
@@ -799,7 +784,8 @@ describe("LeadForm mutation wiring", () => {
         },
       ],
     });
-    captured["leadForm.fillFrom"].mutationFn.mockResolvedValue({
+    const fillFromEntry = expectDefined(captured["leadForm.fillFrom"]);
+    fillFromEntry.mutationFn.mockResolvedValue({
       success: true,
       copiedItems: 1,
     });
@@ -810,7 +796,8 @@ describe("LeadForm mutation wiring", () => {
     );
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
-    const saveDraftOpts = captured["reports.saveDraft"].lastOptions as {
+    const saveDraftOpts = expectDefined(captured["reports.saveDraft"])
+      .lastOptions as {
       onSuccess?: (saved: unknown) => void;
     };
     act(() => {
@@ -834,12 +821,8 @@ describe("LeadForm mutation wiring", () => {
       within(dialog).getByRole("button", { name: "Replace & Fill" }).click();
     });
 
-    await waitFor(() =>
-      expect(captured["leadForm.fillFrom"].mutationFn).toHaveBeenCalled(),
-    );
-    expect(
-      captured["leadForm.fillFrom"].mutationFn.mock.calls.at(0)?.[0],
-    ).toEqual({
+    await waitFor(() => expect(fillFromEntry.mutationFn).toHaveBeenCalled());
+    expect(fillFromEntry.mutationFn.mock.calls.at(0)?.[0]).toEqual({
       targetSectionId: SECTION_ID,
       sourceSectionId,
       version: 5,
@@ -935,9 +918,10 @@ describe("LeadForm mutation wiring", () => {
     });
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     const pendingReopen = new Promise<never>(() => undefined);
-    captured["leadForm.requestReopen"].mutationFn.mockReturnValue(
-      pendingReopen,
+    const requestReopenEntry = expectDefined(
+      captured["leadForm.requestReopen"],
     );
+    requestReopenEntry.mutationFn.mockReturnValue(pendingReopen);
     render(
       <Wrapper>
         <LeadForm />
@@ -961,17 +945,14 @@ describe("LeadForm mutation wiring", () => {
     });
 
     await waitFor(() =>
-      expect(captured["leadForm.requestReopen"].mutationFn).toHaveBeenCalled(),
+      expect(requestReopenEntry.mutationFn).toHaveBeenCalled(),
     );
-    expect(
-      captured["leadForm.requestReopen"].mutationFn.mock.calls.at(0)?.[0],
-    ).toEqual({
+    expect(requestReopenEntry.mutationFn.mock.calls.at(0)?.[0]).toEqual({
       reportSectionId: SECTION_ID,
       reason: "Need to add a carry-over",
     });
 
-    const reopenOpts = captured["leadForm.requestReopen"]
-      .lastOptions as MutationCallbacks;
+    const reopenOpts = requestReopenEntry.lastOptions as MutationCallbacks;
     act(() => {
       reopenOpts.onError?.(new Error("Request already pending"));
     });
@@ -1000,12 +981,10 @@ describe("LeadForm mutation wiring", () => {
         <LeadForm />
       </Wrapper>,
     );
-    await waitFor(() =>
-      expect(captured["leadForm.revoke"].lastOptions).toBeDefined(),
-    );
+    const revokeEntry = expectDefined(captured["leadForm.revoke"]);
+    await waitFor(() => expect(revokeEntry.lastOptions).toBeDefined());
 
-    const revokeOpts = captured["leadForm.revoke"]
-      .lastOptions as MutationCallbacks;
+    const revokeOpts = revokeEntry.lastOptions as MutationCallbacks;
     act(() => {
       revokeOpts.onSuccess?.();
     });

@@ -15,10 +15,9 @@ function focusableWithin(container: HTMLElement): HTMLElement[] {
 
 function trapTab(event: KeyboardEvent, container: HTMLElement): void {
   const focusable = focusableWithin(container);
-  if (focusable.length === 0) return;
-
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
+  const first = focusable.at(0);
+  const last = focusable.at(-1);
+  if (first === undefined || last === undefined) return;
   const active = document.activeElement;
 
   if (event.shiftKey && active === first) {

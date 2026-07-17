@@ -650,6 +650,9 @@ export default defineConfig([
     rules: {
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs["core-web-vitals"].rules,
+      // Pages-Router-only rule; this app is App Router and the rule errors
+      // ("Pages directory cannot be found") when eslint runs from the repo root.
+      "@next/next/no-html-link-for-pages": "off",
     },
   },
   // import boundary — apps/web must not import apps/api at RUNTIME. The tRPC

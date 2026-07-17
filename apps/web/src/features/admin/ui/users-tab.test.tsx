@@ -26,6 +26,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type { MockGroup, MockUser } from "../model/admin-types";
 import { UsersTab } from "./users-tab";
@@ -185,7 +186,9 @@ describe("UsersTab — invalidation contract (D4)", () => {
 
   it("Save user invalidates admin.getOrganization by its specific queryKey", async () => {
     const { qc, captured } = renderTab([], [GROUP]);
-    captured["admin.saveUser"].mutationFn.mockResolvedValue(undefined);
+    expectDefined(captured["admin.saveUser"]).mutationFn.mockResolvedValue(
+      undefined,
+    );
     const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
 
     openDialog();
@@ -330,13 +333,14 @@ describe("UsersTab — delete modal focus management (dialog-listbox-a11y)", () 
 
   it("uses the existing delete mutation after confirmation", async () => {
     const { captured } = renderTab();
-    captured["admin.deleteUser"].mutationFn.mockResolvedValue(undefined);
+    const deleteUser = expectDefined(captured["admin.deleteUser"]);
+    deleteUser.mutationFn.mockResolvedValue(undefined);
     await openDeleteModal();
 
     fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
 
     await waitFor(() => {
-      expect(captured["admin.deleteUser"].mutationFn).toHaveBeenCalledWith(
+      expect(deleteUser.mutationFn).toHaveBeenCalledWith(
         { userId: USER.id },
         expect.anything(),
       );

@@ -271,7 +271,9 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
 
   it("clicking Publish & Lock fires period.publish with reportId from view.period", async () => {
     const { captured } = renderPage(makeWeeklyReportData("open"));
-    captured["period.publish"].mutationFn.mockResolvedValue(undefined);
+    expectDefined(captured["period.publish"]).mutationFn.mockResolvedValue(
+      undefined,
+    );
 
     // Wait for query to resolve and page to render.
     await screen.findByRole("button", { name: /publish & lock/i });
@@ -288,11 +290,12 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     const buttons = dialog.querySelectorAll("button");
     await userEvent.click(expectDefined(buttons[buttons.length - 1]));
 
+    const publishMutation = expectDefined(captured["period.publish"]);
     await waitFor(() => {
-      expect(captured["period.publish"].mutationFn).toHaveBeenCalledTimes(1);
+      expect(publishMutation.mutationFn).toHaveBeenCalledTimes(1);
     });
     // TanStack Query invokes mutationFn(variables, context); assert the first arg only.
-    expect(captured["period.publish"].mutationFn.mock.calls[0]?.[0]).toEqual({
+    expect(publishMutation.mutationFn.mock.calls[0]?.[0]).toEqual({
       reportId: REPORT_ID,
     });
   });
@@ -345,7 +348,9 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     expect(
       screen.queryByRole("dialog", { name: /confirm publish/i }),
     ).not.toBeInTheDocument();
-    expect(captured["period.publish"].mutationFn).not.toHaveBeenCalled();
+    expect(
+      expectDefined(captured["period.publish"]).mutationFn,
+    ).not.toHaveBeenCalled();
   });
 
   it("A32: shows empty-state with archive link when the report has no content and the period is open", async () => {
@@ -499,7 +504,8 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
 
     // Trigger the onSuccess hook directly via the captured options. This decouples
     // the test from internal react-query timing while still exercising the user code.
-    const publishOpts = captured["period.publish"].lastOptions as MutationOpts;
+    const publishOpts = expectDefined(captured["period.publish"])
+      .lastOptions as MutationOpts;
     expect(publishOpts.onSuccess).toBeTypeOf("function");
     act(() => {
       expectDefined(publishOpts.onSuccess)();
@@ -515,7 +521,8 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
 
     await screen.findByRole("button", { name: /publish & lock/i });
 
-    const publishOpts = captured["period.publish"].lastOptions as MutationOpts;
+    const publishOpts = expectDefined(captured["period.publish"])
+      .lastOptions as MutationOpts;
     expect(publishOpts.onError).toBeTypeOf("function");
     act(() => {
       expectDefined(publishOpts.onError)(new Error("Forbidden"));
@@ -526,7 +533,9 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
 
   it("clicking Reopen Period (via confirm dialog) fires period.reopen with reportId when periodStatus is published", async () => {
     const { captured } = renderPage(makeWeeklyReportData("published"));
-    captured["period.reopen"].mutationFn.mockResolvedValue(undefined);
+    expectDefined(captured["period.reopen"]).mutationFn.mockResolvedValue(
+      undefined,
+    );
 
     // Reopen is now destructive → goes through ConfirmDeleteDialog.
     const reopenBtn = await screen.findByRole("button", {
@@ -538,10 +547,11 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     const confirmBtn = await screen.findByRole("button", { name: /^reopen$/i });
     await userEvent.click(confirmBtn);
 
+    const reopenMutation = expectDefined(captured["period.reopen"]);
     await waitFor(() => {
-      expect(captured["period.reopen"].mutationFn).toHaveBeenCalledTimes(1);
+      expect(reopenMutation.mutationFn).toHaveBeenCalledTimes(1);
     });
-    expect(captured["period.reopen"].mutationFn.mock.calls[0]?.[0]).toEqual({
+    expect(reopenMutation.mutationFn.mock.calls[0]?.[0]).toEqual({
       reportId: REPORT_ID,
     });
   });
@@ -551,7 +561,8 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
 
     await screen.findByRole("button", { name: /reopen period/i });
 
-    const reopenOpts = captured["period.reopen"].lastOptions as MutationOpts;
+    const reopenOpts = expectDefined(captured["period.reopen"])
+      .lastOptions as MutationOpts;
     expect(reopenOpts.onSuccess).toBeTypeOf("function");
     act(() => {
       expectDefined(reopenOpts.onSuccess)();
@@ -1076,7 +1087,7 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
   it("all-draft live period shows the 'N in draft — Show all' signal, not the empty-state", async () => {
     renderPage({
       ...makeWeeklyReportData("open", {
-        portfolioOverview: [TWO_PRODUCT_OVERVIEW[1]],
+        portfolioOverview: [expectDefined(TWO_PRODUCT_OVERVIEW[1])],
         leadSections: [draftSection()],
       }),
       submissionCount: 0,

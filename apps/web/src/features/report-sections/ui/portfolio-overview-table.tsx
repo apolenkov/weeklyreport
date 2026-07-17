@@ -1,7 +1,10 @@
 "use client";
 
 import type { LeadOverviewRow } from "../model/weekly-report";
-import type { WeeklyPortfolioProduct } from "../model/weekly-report-types";
+import type {
+  WeeklyPortfolioProduct,
+  WeeklyProductStatus,
+} from "../model/weekly-report-types";
 
 // report-overview-scope-parity: the overview band follows the report's active
 // scope. In `product` scope it summarizes products (unchanged); in `lead` scope
@@ -13,37 +16,37 @@ type PortfolioOverviewTableProps =
 
 const CSS_PRIMARY = "var(--color-primary)";
 
-const STATUS_BG: Record<string, string> = {
+const STATUS_BG: Record<WeeklyProductStatus, string> = {
   "on-track": "var(--color-success)",
   "at-risk": "var(--color-status-at-risk-bg)",
   blocked: "var(--color-status-blocked-bg)",
 };
 
-const STATUS_TEXT: Record<string, string> = {
+const STATUS_TEXT: Record<WeeklyProductStatus, string> = {
   "on-track": CSS_PRIMARY,
   "at-risk": "var(--color-status-at-risk-fg)",
   blocked: "var(--color-destructive)",
 };
 
-const STATUS_ICON: Record<string, string> = {
+const STATUS_ICON: Record<WeeklyProductStatus, string> = {
   "on-track": "✓",
   "at-risk": "!",
   blocked: "✕",
 };
 
-const STATUS_ICON_TEXT: Record<string, string> = {
+const STATUS_ICON_TEXT: Record<WeeklyProductStatus, string> = {
   "on-track": CSS_PRIMARY,
   "at-risk": "var(--color-status-at-risk-fg)",
   blocked: "var(--color-destructive)",
 };
 
-const STATUS_LABEL: Record<string, string> = {
+const STATUS_LABEL: Record<WeeklyProductStatus, string> = {
   "on-track": "On Track",
   "at-risk": "At Risk",
   blocked: "Blocked",
 };
 
-const STATUS_SORT: Record<string, number> = {
+const STATUS_SORT: Record<WeeklyProductStatus, number> = {
   blocked: 0,
   "at-risk": 1,
   "on-track": 2,
@@ -213,7 +216,7 @@ export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
   const sortedProducts = isLead
     ? []
     : [...props.products].sort(
-        (a, b) => (STATUS_SORT[a.status] ?? 2) - (STATUS_SORT[b.status] ?? 2),
+        (a, b) => STATUS_SORT[a.status] - STATUS_SORT[b.status],
       );
   const leads = isLead ? props.leads : [];
 

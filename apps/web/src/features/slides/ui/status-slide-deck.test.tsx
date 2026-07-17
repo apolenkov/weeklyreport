@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { buildSectionSlideModel } from "../model/section-slide-model";
 import { StatusSlideDeck } from "./status-slide-deck";
 
@@ -116,7 +117,7 @@ describe("StatusSlideDeck — by-product grid article", () => {
 
   it("keeps DOM order Current → Next → Risks → Decisions and dashes empty cells", () => {
     renderDeck(makeSection({ items: [item()] }));
-    const card = screen.getAllByTestId("slide-product-card")[0];
+    const card = expectDefined(screen.getAllByTestId("slide-product-card")[0]);
     const cells = within(card).getAllByLabelText(
       /^(No )?(Current work|Next focus|Risks|Decisions)$/,
     );
@@ -142,7 +143,7 @@ describe("StatusSlideDeck — by-product grid article", () => {
         items: [item({ text: "first" }), item({ text: "second" })],
       }),
     );
-    const card = screen.getAllByTestId("slide-product-card")[0];
+    const card = expectDefined(screen.getAllByTestId("slide-product-card")[0]);
     expect(within(card).getAllByTestId("slide-author-badge")).toHaveLength(1);
   });
 

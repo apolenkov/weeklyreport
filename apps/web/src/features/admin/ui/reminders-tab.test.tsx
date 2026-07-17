@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type {
   MockPeriod,
@@ -103,8 +104,10 @@ function renderTab(args?: {
     { path: ["weeklyReport", "get"] },
   ]);
 
-  captured["admin.savePolicy"].mutationFn.mockResolvedValue(undefined);
-  captured["admin.removePolicy"].mutationFn.mockResolvedValue({
+  expectDefined(captured["admin.savePolicy"]).mutationFn.mockResolvedValue(
+    undefined,
+  );
+  expectDefined(captured["admin.removePolicy"]).mutationFn.mockResolvedValue({
     success: true,
   });
 
@@ -207,10 +210,11 @@ describe("RemindersTab — plain-language cards", () => {
 
     await user.click(screen.getByTestId(`toggle-${policyDeadline.id}`));
 
+    const savePolicyEntry = expectDefined(captured["admin.savePolicy"]);
     await waitFor(() => {
-      expect(captured["admin.savePolicy"].mutationFn).toHaveBeenCalledTimes(1);
+      expect(savePolicyEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
-    const arg = captured["admin.savePolicy"].mutationFn.mock.calls[0]?.[0] as
+    const arg = savePolicyEntry.mutationFn.mock.calls[0]?.[0] as
       | Record<string, unknown>
       | undefined;
     expect(arg?.id).toBe(policyDeadline.id);
@@ -230,10 +234,11 @@ describe("RemindersTab — plain-language cards", () => {
     // policyEscalation is active:false → toggling must write active=true.
     await user.click(screen.getByTestId(`toggle-${policyEscalation.id}`));
 
+    const savePolicyEntry = expectDefined(captured["admin.savePolicy"]);
     await waitFor(() => {
-      expect(captured["admin.savePolicy"].mutationFn).toHaveBeenCalledTimes(1);
+      expect(savePolicyEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
-    const arg = captured["admin.savePolicy"].mutationFn.mock.calls[0]?.[0] as
+    const arg = savePolicyEntry.mutationFn.mock.calls[0]?.[0] as
       | Record<string, unknown>
       | undefined;
     expect(arg?.id).toBe(policyEscalation.id);
@@ -306,11 +311,14 @@ describe("RemindersTab — add / edit form", () => {
 
     await user.click(screen.getByTestId("policy-save-button"));
 
+    const savePolicyEntry = expectDefined(captured["admin.savePolicy"]);
     await waitFor(() => {
-      expect(captured["admin.savePolicy"].mutationFn).toHaveBeenCalledTimes(1);
+      expect(savePolicyEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
-    const arg = captured["admin.savePolicy"].mutationFn.mock
-      .calls[0]?.[0] as Record<string, unknown>;
+    const arg = savePolicyEntry.mutationFn.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
     expect(arg.kind).toBe("deadline");
     expect(arg.audience).toBe("lead-with-draft");
     expect(arg.offsetMinutes).toBe(-1440);
@@ -355,11 +363,14 @@ describe("RemindersTab — add / edit form", () => {
 
     await user.click(screen.getByTestId("policy-save-button"));
 
+    const savePolicyEntry = expectDefined(captured["admin.savePolicy"]);
     await waitFor(() => {
-      expect(captured["admin.savePolicy"].mutationFn).toHaveBeenCalledTimes(1);
+      expect(savePolicyEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
-    const arg = captured["admin.savePolicy"].mutationFn.mock
-      .calls[0]?.[0] as Record<string, unknown>;
+    const arg = savePolicyEntry.mutationFn.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
     // Stored kind/audience are written back unchanged (never coerced).
     expect(arg.kind).toBe("follow_up");
     expect(arg.audience).toBe("lead-with-draft");
@@ -377,11 +388,14 @@ describe("RemindersTab — add / edit form", () => {
 
     await user.click(screen.getByTestId("policy-save-button"));
 
+    const savePolicyEntry = expectDefined(captured["admin.savePolicy"]);
     await waitFor(() => {
-      expect(captured["admin.savePolicy"].mutationFn).toHaveBeenCalledTimes(1);
+      expect(savePolicyEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
-    const arg = captured["admin.savePolicy"].mutationFn.mock
-      .calls[0]?.[0] as Record<string, unknown>;
+    const arg = savePolicyEntry.mutationFn.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
     expect(arg.kind).toBe("deadline");
     expect(arg.audience).toBe("lead-with-draft");
     expect(`${arg.kind as string}→${arg.audience as string}`).not.toBe(
@@ -457,14 +471,13 @@ describe("RemindersTab — permanent delete", () => {
     ).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("button", { name: /^delete$/i }));
+    const removePolicyEntry = expectDefined(captured["admin.removePolicy"]);
     await waitFor(() => {
-      expect(captured["admin.removePolicy"].mutationFn).toHaveBeenCalledTimes(
-        1,
-      );
+      expect(removePolicyEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
-    expect(
-      captured["admin.removePolicy"].mutationFn.mock.calls[0]?.[0],
-    ).toEqual({ id: policyDeadline.id });
+    expect(removePolicyEntry.mutationFn.mock.calls[0]?.[0]).toEqual({
+      id: policyDeadline.id,
+    });
     expect(toastSuccess).toHaveBeenCalledWith("Reminder removed");
   });
 });

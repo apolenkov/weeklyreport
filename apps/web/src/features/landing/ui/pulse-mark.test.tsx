@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { PulseMark } from "./pulse-mark";
 
 afterEach(() => {
@@ -53,7 +54,7 @@ describe("PulseMark", () => {
     // accessible name computation — the name must not contain raw
     // "WEEKLY REPORT" concatenated from children (it is driven by
     // aria-label instead).
-    const img = imgs[0];
+    const img = expectDefined(imgs[0]);
     expect(img.getAttribute("aria-label")).toBe("Weekly Report");
     // Confirm the text children carry aria-hidden so AT ignores them.
     const wordSpan = img.querySelector(".pulse-word");

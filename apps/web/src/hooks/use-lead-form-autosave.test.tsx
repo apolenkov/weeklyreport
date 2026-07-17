@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../lib/trpc-context";
+import { expectDefined } from "../test-utils/expect-defined.js";
 import { createMockTRPC } from "../test-utils/mock-trpc";
 import { stableStringify, useLeadFormAutosave } from "./use-lead-form-autosave";
 
@@ -86,7 +87,7 @@ function buildHarness(
 
   // Wire the captured saveDraft mutationFn to delegate to the harness's
   // own calls array and user-supplied mutationFn — same contract as before.
-  captured["reports.saveDraft"].mutationFn.mockImplementation(
+  expectDefined(captured["reports.saveDraft"]).mutationFn.mockImplementation(
     // eslint-disable-next-line @typescript-eslint/no-misused-promises -- async mock implementation; Promise is consumed by React Query, not discarded
     async (vars: unknown) => {
       calls.push(vars);

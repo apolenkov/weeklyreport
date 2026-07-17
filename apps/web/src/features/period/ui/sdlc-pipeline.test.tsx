@@ -592,7 +592,7 @@ describe("SdlcPipeline — align-pipeline-arrows structural contract", () => {
     const cells = Array.from(row.children) as HTMLElement[];
     // Cell at index 1 (second stage) has the arrow as its first child.
     // Arrow wrapper: direct child that is NOT the StageChip root (min-w-[90px]).
-    const secondCell = cells[1] as HTMLElement | undefined;
+    const secondCell = cells[1];
     expect(secondCell).toBeDefined();
     if (!secondCell) return;
     const arrowEl = Array.from(secondCell.children).find(

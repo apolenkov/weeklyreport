@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 
 const toastSuccess = vi.fn<(...args: unknown[]) => void>();
@@ -281,7 +282,9 @@ describe("JobsTab — BullMQ DLQ admin UI", () => {
       makeJob("job-2", { name: "send-escalation-email", attemptsMade: 5 }),
     ];
     const { captured } = renderTab(jobs);
-    const retryMutationFn = captured["admin.jobs.retryFailed"].mutationFn;
+    const retryMutationFn = expectDefined(
+      captured["admin.jobs.retryFailed"],
+    ).mutationFn;
     retryMutationFn.mockResolvedValue({ retried: true, jobId: "job-1" });
 
     // Wait for both rows to render.
@@ -305,7 +308,9 @@ describe("JobsTab — BullMQ DLQ admin UI", () => {
 
   it("on retry success: success toast fires when retried=true", async () => {
     const { captured } = renderTab([makeJob("job-1")]);
-    captured["admin.jobs.retryFailed"].mutationFn.mockResolvedValue({
+    expectDefined(
+      captured["admin.jobs.retryFailed"],
+    ).mutationFn.mockResolvedValue({
       retried: true,
       jobId: "job-1",
     });
@@ -324,7 +329,9 @@ describe("JobsTab — BullMQ DLQ admin UI", () => {
 
   it("on retry result {retried: false}: info toast (job no longer exists)", async () => {
     const { captured } = renderTab([makeJob("job-9")]);
-    captured["admin.jobs.retryFailed"].mutationFn.mockResolvedValue({
+    expectDefined(
+      captured["admin.jobs.retryFailed"],
+    ).mutationFn.mockResolvedValue({
       retried: false,
       jobId: "job-9",
     });
@@ -341,7 +348,9 @@ describe("JobsTab — BullMQ DLQ admin UI", () => {
 
   it("on retry result {removed: true}: info toast explains stale job cleanup", async () => {
     const { captured } = renderTab([makeJob("job-stale")]);
-    captured["admin.jobs.retryFailed"].mutationFn.mockResolvedValue({
+    expectDefined(
+      captured["admin.jobs.retryFailed"],
+    ).mutationFn.mockResolvedValue({
       retried: false,
       removed: true,
       reason: "Reminder execution missing.",

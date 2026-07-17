@@ -175,9 +175,7 @@ describe("createMockTRPC — mutation capture", () => {
 
     await opts.mutationFn({ shortName: "ACME" });
 
-    const entry = captured["admin.updateOrganization"] as
-      | (typeof captured)[string]
-      | undefined;
+    const entry = captured["admin.updateOrganization"];
     expect(entry).toBeDefined();
     expect(entry?.calls).toHaveLength(1);
     expect(entry?.calls[0]).toEqual({ shortName: "ACME" });
@@ -193,9 +191,7 @@ describe("createMockTRPC — mutation capture", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- proxy access for test
     (proxy as any).reports.saveDraft.mutationOptions({ onSuccess, onError });
 
-    const entry = captured["reports.saveDraft"] as
-      | (typeof captured)[string]
-      | undefined;
+    const entry = captured["reports.saveDraft"];
     expect(entry).toBeDefined();
     expect(entry?.lastOptions.onSuccess).toBe(onSuccess);
     expect(entry?.lastOptions.onError).toBe(onError);

@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import type { LeadActivityCard } from "../../report-sections";
 import { ActivityStatusSection } from "./activity-status-section";
 
@@ -91,7 +92,7 @@ describe("ActivityStatusSection", () => {
     const [onTrack, atRisk] = pillsOf("Jira triage duty");
     expect(onTrack).toHaveAttribute("aria-pressed", "true");
 
-    await user.click(atRisk);
+    await user.click(expectDefined(atRisk));
     expect(onStatusChange).not.toHaveBeenCalled();
     expect(onRaiseRequiresRisk).toHaveBeenCalledWith(ACTIVITY_A, "at-risk");
   });
@@ -102,7 +103,7 @@ describe("ActivityStatusSection", () => {
     renderSection([makeCard({})], { onRaiseRequiresRisk });
 
     const [, , blocked] = pillsOf("Jira triage duty");
-    await user.click(blocked);
+    await user.click(expectDefined(blocked));
     expect(onRaiseRequiresRisk).toHaveBeenCalledWith(ACTIVITY_A, "blocked");
   });
 
@@ -117,7 +118,7 @@ describe("ActivityStatusSection", () => {
     );
 
     const [, , blocked] = pillsOf("Jira triage duty");
-    await user.click(blocked);
+    await user.click(expectDefined(blocked));
     expect(onStatusChange).not.toHaveBeenCalled();
     expect(onRaiseRequiresRisk).toHaveBeenCalledWith(ACTIVITY_A, "blocked");
   });
@@ -135,7 +136,7 @@ describe("ActivityStatusSection", () => {
     );
 
     const [, atRisk] = pillsOf("Jira triage duty");
-    await user.click(atRisk);
+    await user.click(expectDefined(atRisk));
     expect(onStatusChange).not.toHaveBeenCalled();
     expect(onRaiseRequiresRisk).not.toHaveBeenCalled();
   });
@@ -160,7 +161,7 @@ describe("ActivityStatusSection", () => {
     expect(blocked).toHaveAttribute("aria-pressed", "true");
     expect(onTrack).toHaveAttribute("aria-pressed", "false");
 
-    await user.click(onTrack);
+    await user.click(expectDefined(onTrack));
     expect(onStatusChange).not.toHaveBeenCalled();
     expect(
       screen.getByText(/resolve the covering risk\/blocker first/i),
@@ -185,7 +186,7 @@ describe("ActivityStatusSection", () => {
     );
 
     const [onTrack] = pillsOf("Jira triage duty");
-    await user.click(onTrack);
+    await user.click(expectDefined(onTrack));
     expect(onStatusChange).toHaveBeenCalledWith(ACTIVITY_A, "green");
     expect(onRaiseRequiresRisk).not.toHaveBeenCalled();
     expect(
@@ -207,7 +208,7 @@ describe("ActivityStatusSection", () => {
     expect(buttons.every((button) => button.hasAttribute("disabled"))).toBe(
       true,
     );
-    await user.click(buttons[0]);
+    await user.click(expectDefined(buttons[0]));
     expect(onStatusChange).not.toHaveBeenCalled();
     expect(onRaiseRequiresRisk).not.toHaveBeenCalled();
   });

@@ -58,7 +58,9 @@ export function ScopeToggle({
     const delta = isNext ? 1 : -1;
     const nextIndex =
       (index + delta + allowedScopes.length) % allowedScopes.length;
-    onChange(allowedScopes[nextIndex]);
+    const nextScope = allowedScopes[nextIndex];
+    if (nextScope === undefined) return;
+    onChange(nextScope);
     buttonRefs.current[nextIndex]?.focus();
   }
 
