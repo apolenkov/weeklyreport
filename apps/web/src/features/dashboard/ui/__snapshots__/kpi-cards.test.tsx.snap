@@ -38,12 +38,15 @@ exports[`KpiCards — a11y regression (verify-a11y-recommended-flip) > Snapshots
         class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5"
       >
         <span
-          class="text-[13px] tabular-nums text-[var(--color-muted-foreground)]"
+          class="text-[13px] text-[var(--color-muted-foreground)]"
         >
-          Last week 
-          4
-          /
-          8
+          Last week
+        </span>
+        <span
+          class="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700"
+          data-state="coming-soon"
+        >
+          Coming Soon
         </span>
         <span
           class="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-status-at-risk-fg)]"

@@ -8,8 +8,9 @@
  * - `weeklyReport.deadline` is the only source for the dashboard deadline.
  *   Never infer it from `periodEnd`: a period can stay open/reopened while the
  *   reporting deadline has already passed.
- * - `lastWeekSubmitted` / `lastWeekTotal` have no equivalent in any v5.0 read
- *   model, so they default to 0/0 (the KPI card just renders "0/0").
+ * - No v5.0 read model carries a prior-period submission count, so `KpiData`
+ *   omits a "last week" field entirely rather than fabricate one; `KpiCards`
+ *   renders that comparison as explicitly unavailable.
  * - The `PendingLead` type in mock-data is just `string[]` (lead names) — we
  *   produce that directly.
  */
@@ -79,8 +80,6 @@ export interface LeadInfo {
 export interface KpiData {
   submitted: number;
   total: number;
-  lastWeekSubmitted: number;
-  lastWeekTotal: number;
   pendingCount: number;
   deadlineLabel: string;
   deadlineTime: string;

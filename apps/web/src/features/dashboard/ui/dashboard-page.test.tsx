@@ -97,6 +97,9 @@ describe("DashboardPage progressive readiness", () => {
     expect(screen.queryByText("Review context")).not.toBeInTheDocument();
     expect(screen.getByText("Reopen requests")).toBeInTheDocument();
     expect(screen.getByText("Blocked")).toBeInTheDocument();
+    expect(
+      document.querySelector("[data-dashboard-loading='true']"),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps weekly-backed panels visible while review remains pending", () => {
@@ -116,6 +119,12 @@ describe("DashboardPage progressive readiness", () => {
     ).toBeVisible();
     expect(screen.getByTestId("dashboard-kpi-loading")).toBeInTheDocument();
     expect(screen.getByTestId("dashboard-blocked-loading")).toBeInTheDocument();
+    // Literal copy of the selector the bfcache-recovery script in
+    // app/(app)/head/dashboard/page.tsx queries — keep them in sync by hand
+    // if that script ever changes.
+    expect(
+      document.querySelector("[data-dashboard-loading='true']"),
+    ).toBeInTheDocument();
   });
 
   it("keeps self-contained panels visible while weekly context is pending", () => {
@@ -129,6 +138,9 @@ describe("DashboardPage progressive readiness", () => {
     expect(screen.getByTestId("dashboard-kpi-loading")).toBeInTheDocument();
     expect(screen.getByTestId("dashboard-leads-loading")).toBeInTheDocument();
     expect(screen.getByTestId("dashboard-blocked-loading")).toBeInTheDocument();
+    expect(
+      document.querySelector("[data-dashboard-loading='true']"),
+    ).toBeInTheDocument();
   });
 
   it("renders the weekly queue while optional activity freshness is pending", () => {
