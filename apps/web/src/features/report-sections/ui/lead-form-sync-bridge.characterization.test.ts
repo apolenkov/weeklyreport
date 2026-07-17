@@ -57,7 +57,7 @@ describe("applyRiskSeverityFloor — characterization grid", () => {
     (status) => {
       const result = applyRiskSeverityFloor([makeProduct(status)], []);
       const expected = status === "empty" ? "empty" : "on-track";
-      expect(result[0].stages[0].status).toBe(expected);
+      expect(result[0]?.stages[0]?.status).toBe(expected);
     },
   );
 
@@ -68,7 +68,7 @@ describe("applyRiskSeverityFloor — characterization grid", () => {
         [makeProduct(status)],
         [makeRisk({ severity: "at-risk" })],
       );
-      expect(result[0].stages[0].status).toBe("at-risk");
+      expect(result[0]?.stages[0]?.status).toBe("at-risk");
     },
   );
 
@@ -79,7 +79,7 @@ describe("applyRiskSeverityFloor — characterization grid", () => {
         [makeProduct(status)],
         [makeRisk({ severity: "blocked" })],
       );
-      expect(result[0].stages[0].status).toBe("blocked");
+      expect(result[0]?.stages[0]?.status).toBe("blocked");
     },
   );
 
@@ -88,7 +88,7 @@ describe("applyRiskSeverityFloor — characterization grid", () => {
       [makeProduct("on-track")],
       [makeRisk({ severity: "blocked", stageIds: ["Testing"] })],
     );
-    expect(result[0].stages[0].status).toBe("on-track");
+    expect(result[0]?.stages[0]?.status).toBe("on-track");
   });
 
   it("a foreign risk (different productId) does not floor the chip", () => {
@@ -96,7 +96,7 @@ describe("applyRiskSeverityFloor — characterization grid", () => {
       [makeProduct("on-track")],
       [makeRisk({ severity: "blocked", productId: "other" })],
     );
-    expect(result[0].stages[0].status).toBe("on-track");
+    expect(result[0]?.stages[0]?.status).toBe("on-track");
   });
 
   it("a locked (foreign-owned) stage is never floored", () => {
@@ -104,7 +104,7 @@ describe("applyRiskSeverityFloor — characterization grid", () => {
       [makeProduct("empty", "locked")],
       [makeRisk({ severity: "blocked" })],
     );
-    expect(result[0].stages[0].status).toBe("empty");
+    expect(result[0]?.stages[0]?.status).toBe("empty");
   });
 
   it("an empty-text risk does not count as covering", () => {
@@ -112,6 +112,6 @@ describe("applyRiskSeverityFloor — characterization grid", () => {
       [makeProduct("on-track")],
       [makeRisk({ severity: "blocked", text: "" })],
     );
-    expect(result[0].stages[0].status).toBe("on-track");
+    expect(result[0]?.stages[0]?.status).toBe("on-track");
   });
 });

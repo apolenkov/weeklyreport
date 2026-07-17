@@ -1,6 +1,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined";
 import type { CrossAuthorContentRow } from "../../report-sections";
 import { buildActivitySlideModel } from "./activity-slide-model";
 import { buildProductScopedSlides } from "./product-scoped-slides";
@@ -616,7 +617,7 @@ describe("section slide utilities", () => {
 
   it("keeps document density as the unchanged all-content model", () => {
     const model = buildSectionSlideModel(makeSection());
-    const [document] = slidesForDensity([model], "document");
+    const document = expectDefined(slidesForDensity([model], "document")[0]);
 
     expect(document).toBe(model);
     expect(document.grid?.products).toHaveLength(1);
@@ -846,7 +847,7 @@ describe("section slide utilities", () => {
 
     // Shared product aggregates both leads' items; worst traffic (green+red)
     // drives the blocked tone; contributing leads replace the product subtitle.
-    const core = byName["Core Product"];
+    const core = expectDefined(byName["Core Product"]);
     expect(core.ownerRole).toBe("product");
     expect(core.products).toEqual(["Alice", "Bob"]);
     expect([...core.currentItems].sort()).toEqual([
@@ -856,12 +857,12 @@ describe("section slide utilities", () => {
     expect(core.tone).toBe("blocked");
 
     // Single-owner product carries only that lead's content.
-    const portal = byName["Data Portal"];
+    const portal = expectDefined(byName["Data Portal"]);
     expect(portal.products).toEqual(["Alice"]);
     expect(portal.nextItems).toEqual(["Alice portal next"]);
 
     // Cross-product decisions land in a synthetic Shared context slide.
-    const shared = byName["Shared context"];
+    const shared = expectDefined(byName["Shared context"]);
     expect(shared.decisions).toEqual(["Shared roadmap call"]);
     expect(shared.products).toEqual(["Bob"]);
   });

@@ -1,10 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    // TODO(noUncheckedIndexedAccess-web): temporary opt-out from the base
-    // flag — 231 pre-existing index-access sites need guards; burn down in a
-    // dedicated wave, then delete this override.
-    "noUncheckedIndexedAccess": false,
     "experimentalDecorators": true,
     "jsx": "preserve",
     "incremental": true,

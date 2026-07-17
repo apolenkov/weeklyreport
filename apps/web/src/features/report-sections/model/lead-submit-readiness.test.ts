@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import type { DraftSaveContent } from "./lead-section-draft-payload";
 import {
   buildLeadSubmitPayload,
@@ -82,7 +83,7 @@ describe("deriveLeadSubmitReadiness", () => {
     };
     const readiness = deriveLeadSubmitReadiness({
       ...baseInput,
-      products: [{ ...products[0], overallStatus: "blocked" }],
+      products: [{ ...expectDefined(products[0]), overallStatus: "blocked" }],
       ownRisks: [risk],
       autosaveState: "error",
     });

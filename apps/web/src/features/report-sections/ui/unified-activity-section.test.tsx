@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import type { KanbanItem } from "../model/types";
 import {
   type UnifiedActivityEntry,
@@ -132,9 +133,13 @@ describe("UnifiedActivitySection", () => {
     );
     // Two open current-week entries (in-progress renders before paused per bucket order).
     expect(screen.getAllByLabelText("Mark complete")).toHaveLength(2);
-    fireEvent.click(screen.getAllByLabelText("Mark complete")[1]);
+    fireEvent.click(
+      expectDefined(screen.getAllByLabelText("Mark complete")[1]),
+    );
     expect(onMarkComplete).toHaveBeenCalledWith("i-paused");
-    fireEvent.click(screen.getAllByLabelText("Move to next week")[1]);
+    fireEvent.click(
+      expectDefined(screen.getAllByLabelText("Move to next week")[1]),
+    );
     expect(onMoveToNextWeek).toHaveBeenCalledWith("i-paused");
   });
 });

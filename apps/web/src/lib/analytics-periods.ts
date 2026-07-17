@@ -10,9 +10,9 @@
 export function latestPeriodPair(
   periods: readonly string[],
 ): { periodA: string; periodB: string } | null {
-  if (periods.length < 2) return null;
-  return {
-    periodA: periods[periods.length - 2],
-    periodB: periods[periods.length - 1],
-  };
+  const SECOND_LATEST = -2;
+  const periodA = periods.at(SECOND_LATEST);
+  const periodB = periods.at(-1);
+  if (periodA === undefined || periodB === undefined) return null;
+  return { periodA, periodB };
 }

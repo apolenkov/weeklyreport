@@ -21,6 +21,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { expectDefined } from "../../../test-utils/expect-defined";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 
 const toastSuccess = vi.fn();
@@ -206,7 +207,9 @@ describe("SettingsTab — Identity sub-tab", () => {
       screen.getByRole("button", { name: /save organization identity/i }),
     );
 
-    const updateOrgFn = captured["admin.updateOrganization"].mutationFn;
+    const updateOrgFn = expectDefined(
+      captured["admin.updateOrganization"],
+    ).mutationFn;
     await waitFor(() => {
       expect(updateOrgFn).toHaveBeenCalled();
     });
@@ -256,9 +259,9 @@ describe("SettingsTab — Identity sub-tab", () => {
   it("Save success invalidates admin.getOrganization by its specific queryKey", async () => {
     const { proxy, captured } = buildProxy();
     // Resolve the mutation so onSuccess fires.
-    captured["admin.updateOrganization"].mutationFn.mockResolvedValue(
-      undefined,
-    );
+    expectDefined(
+      captured["admin.updateOrganization"],
+    ).mutationFn.mockResolvedValue(undefined);
     // Stub fetch so the /api/revalidate-org call in onSuccess does not hang.
     const origFetch = globalThis.fetch;
     globalThis.fetch = vi
@@ -328,7 +331,9 @@ describe("SettingsTab — Periods sub-tab (new fields)", () => {
       screen.getByRole("button", { name: /save period policy/i }),
     );
 
-    const updateSettingsFn = captured["admin.updateSettings"].mutationFn;
+    const updateSettingsFn = expectDefined(
+      captured["admin.updateSettings"],
+    ).mutationFn;
     await waitFor(() => {
       expect(updateSettingsFn).toHaveBeenCalled();
     });
@@ -431,7 +436,9 @@ describe("SettingsTab — Periods sub-tab (period-cycle inputs)", () => {
       screen.getByRole("button", { name: /save period policy/i }),
     );
 
-    const updateSettingsFn = captured["admin.updateSettings"].mutationFn;
+    const updateSettingsFn = expectDefined(
+      captured["admin.updateSettings"],
+    ).mutationFn;
     await waitFor(() => {
       expect(updateSettingsFn).toHaveBeenCalled();
     });
@@ -486,7 +493,9 @@ describe("SettingsTab — Reminders sub-tab", () => {
       screen.getByRole("button", { name: /save reminder defaults/i }),
     );
 
-    const updateSettingsFn = captured["admin.updateSettings"].mutationFn;
+    const updateSettingsFn = expectDefined(
+      captured["admin.updateSettings"],
+    ).mutationFn;
     await waitFor(() => {
       expect(updateSettingsFn).toHaveBeenCalled();
     });
@@ -518,7 +527,9 @@ describe("SettingsTab — Notifications sub-tab", () => {
       screen.getByRole("button", { name: /save notification settings/i }),
     );
 
-    const updateSettingsFn = captured["admin.updateSettings"].mutationFn;
+    const updateSettingsFn = expectDefined(
+      captured["admin.updateSettings"],
+    ).mutationFn;
     await waitFor(() => {
       expect(updateSettingsFn).toHaveBeenCalled();
     });
@@ -702,9 +713,9 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
   // Row 402: CheckIcon SVG — aria-hidden="true" static attribute
   it("CheckIcon SVG has aria-hidden=true in Identity success message", async () => {
     const { proxy, captured } = buildProxy();
-    captured["admin.updateOrganization"].mutationFn.mockResolvedValue(
-      undefined,
-    );
+    expectDefined(
+      captured["admin.updateOrganization"],
+    ).mutationFn.mockResolvedValue(undefined);
     renderSettings(proxy);
 
     // Wait for the org query to populate the form, then save.
@@ -730,9 +741,9 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
   // Row 403: CheckIcon SVG aria-hidden in Identity success message (interaction)
   it("CheckIcon SVG aria-hidden=true persists in Identity saved message", async () => {
     const { proxy, captured } = buildProxy();
-    captured["admin.updateOrganization"].mutationFn.mockResolvedValue(
-      undefined,
-    );
+    expectDefined(
+      captured["admin.updateOrganization"],
+    ).mutationFn.mockResolvedValue(undefined);
     renderSettings(proxy);
 
     const shortNameInput = (await screen.findByLabelText(
@@ -761,7 +772,9 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
   // Row 404: CheckIcon SVG aria-hidden in Periods success message
   it("CheckIcon SVG aria-hidden=true in Period policy saved message", async () => {
     const { proxy, captured } = buildProxy();
-    captured["admin.updateSettings"].mutationFn.mockResolvedValue(undefined);
+    expectDefined(
+      captured["admin.updateSettings"],
+    ).mutationFn.mockResolvedValue(undefined);
     renderSettings(proxy);
 
     const user = userEvent.setup();
@@ -785,7 +798,9 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
   // Row 405: CheckIcon SVG aria-hidden in Reminders success message
   it("CheckIcon SVG aria-hidden=true in Reminder defaults saved message", async () => {
     const { proxy, captured } = buildProxy();
-    captured["admin.updateSettings"].mutationFn.mockResolvedValue(undefined);
+    expectDefined(
+      captured["admin.updateSettings"],
+    ).mutationFn.mockResolvedValue(undefined);
     renderSettings(proxy);
 
     const user = userEvent.setup();
@@ -810,7 +825,9 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
   // Row 406: CheckIcon SVG aria-hidden in Notifications success message
   it("CheckIcon SVG aria-hidden=true in Notification settings saved message", async () => {
     const { proxy, captured } = buildProxy();
-    captured["admin.updateSettings"].mutationFn.mockResolvedValue(undefined);
+    expectDefined(
+      captured["admin.updateSettings"],
+    ).mutationFn.mockResolvedValue(undefined);
     renderSettings(proxy);
 
     const user = userEvent.setup();
@@ -835,9 +852,9 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
   // Row 407: CheckIcon SVG attributes snapshot
   it("CheckIcon SVG attributes snapshot — viewBox, stroke, fill, strokeWidth, strokeLinecap, strokeLinejoin", async () => {
     const { proxy, captured } = buildProxy();
-    captured["admin.updateOrganization"].mutationFn.mockResolvedValue(
-      undefined,
-    );
+    expectDefined(
+      captured["admin.updateOrganization"],
+    ).mutationFn.mockResolvedValue(undefined);
     renderSettings(proxy);
 
     const shortNameInput = (await screen.findByLabelText(
@@ -863,9 +880,9 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
   // Row 409: Success message DOM structure snapshot (CheckIcon SVG + text coexist)
   it("success message DOM structure snapshot — CheckIcon SVG and text node coexist in span", async () => {
     const { proxy, captured } = buildProxy();
-    captured["admin.updateOrganization"].mutationFn.mockResolvedValue(
-      undefined,
-    );
+    expectDefined(
+      captured["admin.updateOrganization"],
+    ).mutationFn.mockResolvedValue(undefined);
     renderSettings(proxy);
 
     const shortNameInput = (await screen.findByLabelText(

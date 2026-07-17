@@ -4,6 +4,7 @@ import type {
   Product,
   RiskEntry,
 } from "../features/report-sections/model/types";
+import { expectDefined } from "../test-utils/expect-defined";
 import { computeCoupling, validateCoupling } from "./use-status-risk";
 
 function makeProduct(
@@ -47,28 +48,28 @@ describe("computeCoupling", () => {
     const risks = [makeRisk("r1", "p1", [])];
     const result = computeCoupling(products, risks);
     expect(result).toHaveLength(1);
-    expect(result[0].riskRowsWithoutStages).toEqual(["r1"]);
+    expect(expectDefined(result[0]).riskRowsWithoutStages).toEqual(["r1"]);
   });
 
   it("includes blocked product with undefined stageIds", () => {
     const products = [makeProduct("p1", "blocked")];
     const risks = [makeRisk("r1", "p1")]; // no stageIds
     const result = computeCoupling(products, risks);
-    expect(result[0].riskRowsWithoutStages).toEqual(["r1"]);
+    expect(expectDefined(result[0]).riskRowsWithoutStages).toEqual(["r1"]);
   });
 
   it("does not flag risk row that has stageIds", () => {
     const products = [makeProduct("p1", "at-risk")];
     const risks = [makeRisk("r1", "p1", ["planning"])];
     const result = computeCoupling(products, risks);
-    expect(result[0].riskRowsWithoutStages).toEqual([]);
+    expect(expectDefined(result[0]).riskRowsWithoutStages).toEqual([]);
   });
 
   it("handles multi-stage risk row correctly", () => {
     const products = [makeProduct("p1", "blocked")];
     const risks = [makeRisk("r1", "p1", ["planning", "discovery"])];
     const result = computeCoupling(products, risks);
-    expect(result[0].riskRowsWithoutStages).toEqual([]);
+    expect(expectDefined(result[0]).riskRowsWithoutStages).toEqual([]);
   });
 
   it("ignores risk rows for green products", () => {
@@ -82,8 +83,9 @@ describe("computeCoupling", () => {
     ];
     const result = computeCoupling(products, risks);
     expect(result).toHaveLength(1);
-    expect(result[0].productId).toBe("p2");
-    expect(result[0].riskRowsWithoutStages).toEqual(["r2"]);
+    const row = expectDefined(result[0]);
+    expect(row.productId).toBe("p2");
+    expect(row.riskRowsWithoutStages).toEqual(["r2"]);
   });
 
   it("does not falsely reject when staged risk exists alongside an empty row", () => {
@@ -101,7 +103,7 @@ describe("computeCoupling", () => {
     );
     const result = computeCoupling(products, committedRisks);
     // Only r1 remains after filter; r1 has stageIds → no coupling violation
-    expect(result[0].riskRowsWithoutStages).toEqual([]);
+    expect(expectDefined(result[0]).riskRowsWithoutStages).toEqual([]);
     expect(validateCoupling(result).missing).toEqual([]);
   });
 });
@@ -117,7 +119,7 @@ describe("computeCoupling — stagesWithoutRiskCoverage (F10)", () => {
       },
     ]);
     const result = computeCoupling([product], []);
-    expect(result[0].stagesWithoutRiskCoverage).toEqual([
+    expect(expectDefined(result[0]).stagesWithoutRiskCoverage).toEqual([
       { stageName: "dev", severity: "blocked" },
     ]);
   });
@@ -133,7 +135,7 @@ describe("computeCoupling — stagesWithoutRiskCoverage (F10)", () => {
     ]);
     const risk = makeRisk("r1", "p1", ["planning"]);
     const result = computeCoupling([product], [risk]);
-    expect(result[0].stagesWithoutRiskCoverage).toEqual([]);
+    expect(expectDefined(result[0]).stagesWithoutRiskCoverage).toEqual([]);
   });
 
   it("clears flag when risk row has empty stageIds (covers all stages)", () => {
@@ -147,7 +149,7 @@ describe("computeCoupling — stagesWithoutRiskCoverage (F10)", () => {
     ]);
     const risk = makeRisk("r1", "p1", []);
     const result = computeCoupling([product], [risk]);
-    expect(result[0].stagesWithoutRiskCoverage).toEqual([]);
+    expect(expectDefined(result[0]).stagesWithoutRiskCoverage).toEqual([]);
   });
 
   it("ignores on-track stages", () => {
@@ -160,7 +162,7 @@ describe("computeCoupling — stagesWithoutRiskCoverage (F10)", () => {
       },
     ]);
     const result = computeCoupling([product], []);
-    expect(result[0].stagesWithoutRiskCoverage).toEqual([]);
+    expect(expectDefined(result[0]).stagesWithoutRiskCoverage).toEqual([]);
   });
 });
 

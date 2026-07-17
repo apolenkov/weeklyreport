@@ -18,6 +18,7 @@ import {
   type SessionState,
 } from "../../../lib/session-provider";
 import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type { KanbanItem } from "../../report-sections";
 import { LeadSlidesClient } from "./lead-slides-client";
@@ -303,10 +304,9 @@ describe("LeadSlidesClient inline slide editing", () => {
 
     fireEvent.click(screen.getByTestId("save-item"));
 
-    await waitFor(() =>
-      expect(captured["reports.saveDraft"].calls).toHaveLength(1),
-    );
-    expect(captured["reports.saveDraft"].calls[0]).toEqual(
+    const saveDraft = expectDefined(captured["reports.saveDraft"]);
+    await waitFor(() => expect(saveDraft.calls).toHaveLength(1));
+    expect(saveDraft.calls[0]).toEqual(
       expect.objectContaining({
         reportSectionId: SECTION_ID,
         version: 1,
@@ -335,10 +335,9 @@ describe("LeadSlidesClient inline slide editing", () => {
 
     fireEvent.click(screen.getByTestId("confirm-delete"));
 
-    await waitFor(() =>
-      expect(captured["reports.saveDraft"].calls).toHaveLength(1),
-    );
-    expect(captured["reports.saveDraft"].calls[0]).toEqual(
+    const saveDraft = expectDefined(captured["reports.saveDraft"]);
+    await waitFor(() => expect(saveDraft.calls).toHaveLength(1));
+    expect(saveDraft.calls[0]).toEqual(
       expect.objectContaining({
         reportSectionId: SECTION_ID,
         version: 1,

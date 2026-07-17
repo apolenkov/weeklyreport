@@ -16,6 +16,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
 
 describe("LeadFormSkeleton — a11y regression (VA-0a)", () => {
@@ -63,7 +64,7 @@ describe("LeadFormSkeleton — snapshot (VA-0b)", () => {
     expect(spaceContainers).toHaveLength(6);
 
     // Snapshot the first block's row count and slot values for stability
-    const firstBlock = spaceContainers[0];
+    const firstBlock = expectDefined(spaceContainers[0]);
     const firstSnapshot = Array.from(firstBlock.children).map(
       (el) => (el as HTMLElement).dataset.slot,
     );
@@ -71,7 +72,7 @@ describe("LeadFormSkeleton — snapshot (VA-0b)", () => {
     // Re-render should produce the same structure (index-keyed rows are stable)
     rerender(<LeadFormSkeleton />);
     const spaceContainersAfter = container.querySelectorAll(".space-y-2");
-    const firstBlockAfter = spaceContainersAfter[0];
+    const firstBlockAfter = expectDefined(spaceContainersAfter[0]);
     const afterSnapshot = Array.from(firstBlockAfter.children).map(
       (el) => (el as HTMLElement).dataset.slot,
     );

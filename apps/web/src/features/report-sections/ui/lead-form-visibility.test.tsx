@@ -33,6 +33,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SessionContext } from "../../../lib/session-provider";
 import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { LeadForm } from "./lead-form";
 
@@ -445,9 +446,10 @@ describe("LeadForm — Record visibility: view-only submit (7d.5 / 7d.8)", () =>
   // submit payload. Foreign records must never reach the payload.
   async function captureSubmitPayload(seedEveryone: boolean): Promise<unknown> {
     const { Wrapper, captured } = buildHarness({ seedEveryone });
+    const submit = expectDefined(captured["reports.submit"]);
     // submit resolves the persisted read model; the onSuccess handler reads its
     // `.version`, so give it one (the test asserts on the INPUT payload).
-    captured["reports.submit"].mutationFn.mockResolvedValue({ version: 2 });
+    submit.mutationFn.mockResolvedValue({ version: 2 });
     render(
       <Wrapper>
         <LeadForm />
@@ -477,10 +479,8 @@ describe("LeadForm — Record visibility: view-only submit (7d.5 / 7d.8)", () =>
     act(() => {
       confirmBtn.click();
     });
-    await waitFor(() =>
-      expect(captured["reports.submit"].calls.length).toBeGreaterThan(0),
-    );
-    return captured["reports.submit"].calls[0];
+    await waitFor(() => expect(submit.calls.length).toBeGreaterThan(0));
+    return submit.calls[0];
   }
 
   it("Everyone: submitted payload carries own records only (no foreign rows)", async () => {

@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   buildLeadVelocityChartData,
   LeadVelocityChart,
@@ -78,7 +79,7 @@ describe("buildLeadVelocityChartData", () => {
     ]);
 
     expect(data).toHaveLength(1);
-    const point = data[0];
+    const point = expectDefined(data[0]);
     expect(point.period).toBe("2026-04-21");
     // Keyed by UUID, the colliding name does not overwrite the first value.
     expect(point[idA]).toBe(3);
@@ -104,7 +105,7 @@ describe("buildTrafficLightHistoryChartData", () => {
     );
 
     expect(data).toHaveLength(1);
-    const point = data[0];
+    const point = expectDefined(data[0]);
     expect(point.period).toBe("2026-04-21");
     // Keyed by UUID, the colliding name keeps each project's status distinct.
     expect(point[idA]).toBe(3);

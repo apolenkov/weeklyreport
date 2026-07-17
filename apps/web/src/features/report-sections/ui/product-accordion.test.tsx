@@ -17,6 +17,7 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import type {
   WeeklyProductReport,
   WeeklyReportDecision,
@@ -290,7 +291,7 @@ describe("ProductAccordion — item status badge", () => {
         })}
       />,
     );
-    const row = itemRows(container)[0];
+    const row = expectDefined(itemRows(container)[0]);
     // the gutter (3rd cell) names the stage + owner, never the status word
     const gutter = row.children[2] as HTMLElement | undefined;
     expect(gutter?.textContent).toContain("Development");

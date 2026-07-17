@@ -40,9 +40,7 @@ function useHistoryRecovery(input: RecoveryEffectInput) {
   const { fetchStatus, name, refetch, setStalled, settled, status } = input;
   useEffect(() => {
     function handlePageShow(event: PageTransitionEvent) {
-      const navigation = performance.getEntriesByType("navigation")[0] as
-        | PerformanceNavigationTiming
-        | undefined;
+      const navigation = performance.getEntriesByType("navigation")[0];
       if (!event.persisted && navigation?.type !== "back_forward") return;
       if (settled) return;
       logRecovery(

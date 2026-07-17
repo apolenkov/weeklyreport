@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined";
 import { buildItemColumns, splitItemBoard } from "./next-week-columns";
 import type { KanbanItem, Product } from "./types";
 
@@ -35,18 +36,20 @@ describe("buildItemColumns — activity lanes", () => {
 
     const columns = buildItemColumns(PRODUCTS, rows);
     expect(columns.map((c) => c.key)).toEqual(["Portal", "activity:act-a"]);
-    const lane = columns[1];
+    const lane = expectDefined(columns[1]);
     expect(lane.activityId).toBe("act-a");
     expect(lane.productName).toBe("Jira triage duty");
     expect(lane.items.map((i) => i.id)).toEqual(["act-1"]);
     // The activity row never leaks into a product column.
-    expect(columns[0].items.map((i) => i.id)).toEqual(["prod-1"]);
+    expect(expectDefined(columns[0]).items.map((i) => i.id)).toEqual([
+      "prod-1",
+    ]);
   });
 
   it("emits no activity lane when no activity owns rows", () => {
     const columns = buildItemColumns(PRODUCTS, [item({ id: "prod-only" })]);
     expect(columns).toHaveLength(1);
-    expect(columns[0].activityId).toBeUndefined();
+    expect(expectDefined(columns[0]).activityId).toBeUndefined();
   });
 
   it("keeps activity rows in lanes on the fallback (no products) path", () => {
@@ -61,8 +64,9 @@ describe("buildItemColumns — activity lanes", () => {
     ];
     const columns = buildItemColumns(undefined, rows);
     expect(columns).toHaveLength(1);
-    expect(columns[0].activityId).toBe("act-a");
-    expect(columns[0].items.map((i) => i.id)).toEqual(["act-2"]);
+    const column = expectDefined(columns[0]);
+    expect(column.activityId).toBe("act-a");
+    expect(column.items.map((i) => i.id)).toEqual(["act-2"]);
   });
 });
 
@@ -81,9 +85,13 @@ describe("splitItemBoard — two-level split", () => {
 
     const board = splitItemBoard(PRODUCTS, rows);
     expect(board.productColumns.map((c) => c.key)).toEqual(["Portal"]);
-    expect(board.productColumns[0].items.map((i) => i.id)).toEqual(["prod-1"]);
+    expect(
+      expectDefined(board.productColumns[0]).items.map((i) => i.id),
+    ).toEqual(["prod-1"]);
     expect(board.activityLanes.map((c) => c.key)).toEqual(["activity:act-a"]);
-    expect(board.activityLanes[0].items.map((i) => i.id)).toEqual(["act-1"]);
+    expect(
+      expectDefined(board.activityLanes[0]).items.map((i) => i.id),
+    ).toEqual(["act-1"]);
   });
 
   it("returns empty activityLanes when no activity owns rows AND none attached", () => {

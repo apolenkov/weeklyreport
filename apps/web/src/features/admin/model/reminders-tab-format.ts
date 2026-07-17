@@ -10,7 +10,7 @@ import {
   MINUTES_PER_HOUR,
 } from "@customreport/shared";
 
-import { MONTHS_SHORT } from "../../../lib/format-date";
+import { monthShortLabel } from "../../../lib/format-date";
 import { pluralize } from "../../../lib/pluralize";
 import type { MockReminder, MockReminderPolicy } from "./admin-types";
 
@@ -166,5 +166,5 @@ export function nextSendDate(
   const next = upcoming.at(0);
   if (!next) return null;
   const fireAt = next.fireAt;
-  return `${MONTHS_SHORT[fireAt.getUTCMonth()]} ${fireAt.getUTCDate()}, ${fireAt.getUTCFullYear()}`;
+  return `${monthShortLabel(fireAt)} ${fireAt.getUTCDate()}, ${fireAt.getUTCFullYear()}`;
 }

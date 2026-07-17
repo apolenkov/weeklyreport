@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { LeadForm } from "./lead-form";
 
@@ -116,7 +117,7 @@ function buildHarness() {
     { path: ["admin", "snapshot"] },
     { path: ["admin", "getSettings"] },
   ]);
-  captured["reports.saveDraft"].mutationFn.mockResolvedValue({
+  expectDefined(captured["reports.saveDraft"]).mutationFn.mockResolvedValue({
     ...makeSection(),
     version: 2,
   });
@@ -183,7 +184,9 @@ describe("lead-form draft: autosave cadence (1.1)", () => {
   it("issues no save while the freshly loaded draft is clean", async () => {
     const { captured } = await renderLoaded();
     await act(() => vi.advanceTimersByTimeAsync(10_000));
-    expect(captured["reports.saveDraft"].mutationFn).not.toHaveBeenCalled();
+    expect(
+      expectDefined(captured["reports.saveDraft"]).mutationFn,
+    ).not.toHaveBeenCalled();
   });
 
   it("debounces a dirty edit, then fires exactly one save after the window", async () => {
@@ -192,10 +195,14 @@ describe("lead-form draft: autosave cadence (1.1)", () => {
     clickEditableStageChip();
     // Before the 5s debounce elapses no save is issued.
     await act(() => vi.advanceTimersByTimeAsync(4000));
-    expect(captured["reports.saveDraft"].mutationFn).not.toHaveBeenCalled();
+    expect(
+      expectDefined(captured["reports.saveDraft"]).mutationFn,
+    ).not.toHaveBeenCalled();
     // After the full window exactly one save fires.
     await act(() => vi.advanceTimersByTimeAsync(1500));
-    expect(captured["reports.saveDraft"].mutationFn).toHaveBeenCalledTimes(1);
+    expect(
+      expectDefined(captured["reports.saveDraft"]).mutationFn,
+    ).toHaveBeenCalledTimes(1);
   });
 
   it("Save now flushes immediately, before the debounce elapses", async () => {
@@ -209,6 +216,8 @@ describe("lead-form draft: autosave cadence (1.1)", () => {
     if (!saveButton) throw new Error("no Save-now button rendered");
     act(() => saveButton.click());
     await flush();
-    expect(captured["reports.saveDraft"].mutationFn).toHaveBeenCalledTimes(1);
+    expect(
+      expectDefined(captured["reports.saveDraft"]).mutationFn,
+    ).toHaveBeenCalledTimes(1);
   });
 });

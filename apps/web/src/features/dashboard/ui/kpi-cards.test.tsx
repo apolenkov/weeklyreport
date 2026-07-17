@@ -13,6 +13,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import type { KpiData } from "../model/dashboard";
 import { KpiCards } from "./kpi-cards";
 
@@ -34,7 +35,7 @@ describe("KpiCards — a11y regression (verify-a11y-recommended-flip)", () => {
       // section elements with aria-label are exposed as 'region' landmarks
       const regions = screen.getAllByRole("region");
       // first region is the Submissions card
-      expect(regions[0].tagName.toLowerCase()).toBe("section");
+      expect(expectDefined(regions[0]).tagName.toLowerCase()).toBe("section");
     });
   });
 
@@ -65,7 +66,7 @@ describe("KpiCards — a11y regression (verify-a11y-recommended-flip)", () => {
     it("renders as a <section> element (not a <div>)", () => {
       render(<KpiCards data={baseData} />);
       const regions = screen.getAllByRole("region");
-      expect(regions[1].tagName.toLowerCase()).toBe("section");
+      expect(expectDefined(regions[1]).tagName.toLowerCase()).toBe("section");
     });
   });
 
@@ -83,7 +84,7 @@ describe("KpiCards — a11y regression (verify-a11y-recommended-flip)", () => {
     it("renders as a <section> element (not a <div>)", () => {
       render(<KpiCards data={baseData} />);
       const regions = screen.getAllByRole("region");
-      expect(regions[2].tagName.toLowerCase()).toBe("section");
+      expect(expectDefined(regions[2]).tagName.toLowerCase()).toBe("section");
     });
   });
 
@@ -183,7 +184,7 @@ describe("KpiCards — a11y regression (verify-a11y-recommended-flip)", () => {
     it("CSS classes on Submissions card are untouched (rounded, border, bg, p, shadow)", () => {
       render(<KpiCards data={baseData} />);
       const regions = screen.getAllByRole("region");
-      const submissionsCard = regions[0];
+      const submissionsCard = expectDefined(regions[0]);
       expect(submissionsCard.className).toContain("rounded-");
       expect(submissionsCard.className).toContain("border");
       expect(submissionsCard.className).toContain("p-3");
@@ -192,7 +193,7 @@ describe("KpiCards — a11y regression (verify-a11y-recommended-flip)", () => {
     it("CSS classes on Deadline card are untouched", () => {
       render(<KpiCards data={baseData} />);
       const regions = screen.getAllByRole("region");
-      const deadlineCard = regions[1];
+      const deadlineCard = expectDefined(regions[1]);
       expect(deadlineCard.className).toContain("rounded-");
       expect(deadlineCard.className).toContain("border");
       expect(deadlineCard.className).toContain("p-3");
@@ -201,7 +202,7 @@ describe("KpiCards — a11y regression (verify-a11y-recommended-flip)", () => {
     it("CSS classes on Risks & Blockers card are untouched", () => {
       render(<KpiCards data={baseData} />);
       const regions = screen.getAllByRole("region");
-      const risksCard = regions[2];
+      const risksCard = expectDefined(regions[2]);
       expect(risksCard.className).toContain("rounded-");
       expect(risksCard.className).toContain("border");
       expect(risksCard.className).toContain("p-3");
@@ -210,7 +211,7 @@ describe("KpiCards — a11y regression (verify-a11y-recommended-flip)", () => {
     it("Submissions card has borderLeft inline style", () => {
       render(<KpiCards data={baseData} />);
       const regions = screen.getAllByRole("region");
-      const submissionsCard = regions[0];
+      const submissionsCard = expectDefined(regions[0]);
       expect(submissionsCard.style.borderLeft).toContain(
         "var(--color-starbucks-accent)",
       );
@@ -219,14 +220,14 @@ describe("KpiCards — a11y regression (verify-a11y-recommended-flip)", () => {
     it("Deadline card has borderLeft inline style", () => {
       render(<KpiCards data={baseData} />);
       const regions = screen.getAllByRole("region");
-      const deadlineCard = regions[1];
+      const deadlineCard = expectDefined(regions[1]);
       expect(deadlineCard.style.borderLeft).toContain("var(--color-warning)");
     });
 
     it("Risks & Blockers card has borderLeft inline style", () => {
       render(<KpiCards data={baseData} />);
       const regions = screen.getAllByRole("region");
-      const risksCard = regions[2];
+      const risksCard = expectDefined(regions[2]);
       expect(risksCard.style.borderLeft).toContain("var(--color-destructive)");
     });
   });

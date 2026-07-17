@@ -15,6 +15,7 @@ import {
 } from "vitest";
 
 import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { PeriodsTab } from "./periods-tab";
 
@@ -124,17 +125,21 @@ function renderTab(args?: {
   ]);
 
   // Seed default mock resolved values for mutation fns.
-  captured["admin.archivePeriod"].mutationFn.mockResolvedValue({
+  expectDefined(captured["admin.archivePeriod"]).mutationFn.mockResolvedValue({
     success: true,
   });
-  captured["admin.unarchivePeriod"].mutationFn.mockResolvedValue({
-    success: true,
-  });
-  captured["admin.deleteReport"].mutationFn.mockResolvedValue({
+  expectDefined(captured["admin.unarchivePeriod"]).mutationFn.mockResolvedValue(
+    {
+      success: true,
+    },
+  );
+  expectDefined(captured["admin.deleteReport"]).mutationFn.mockResolvedValue({
     success: true,
   });
   // createPeriodManual server returns the new row's shape.
-  captured["admin.createPeriodManual"].mutationFn.mockResolvedValue({
+  expectDefined(
+    captured["admin.createPeriodManual"],
+  ).mutationFn.mockResolvedValue({
     periodId: "11111111-1111-4111-8111-111111111199",
     periodStart: new Date("2026-05-18T00:00:00Z"),
     periodEnd: new Date("2026-05-24T23:59:59Z"),
@@ -142,7 +147,9 @@ function renderTab(args?: {
     periodState: "scheduled",
   });
   // updatePeriodManual server returns the updated row.
-  captured["admin.updatePeriodManual"].mutationFn.mockResolvedValue({
+  expectDefined(
+    captured["admin.updatePeriodManual"],
+  ).mutationFn.mockResolvedValue({
     periodId: "11111111-1111-4111-8111-111111111102",
     periodStart: new Date("2026-05-04T00:00:00Z"),
     periodEnd: new Date("2026-05-10T23:59:59Z"),
@@ -150,8 +157,12 @@ function renderTab(args?: {
     periodState: "published",
     weekLabel: null,
   });
-  captured["period.publish"].mutationFn.mockResolvedValue({ success: true });
-  captured["period.reopen"].mutationFn.mockResolvedValue({ success: true });
+  expectDefined(captured["period.publish"]).mutationFn.mockResolvedValue({
+    success: true,
+  });
+  expectDefined(captured["period.reopen"]).mutationFn.mockResolvedValue({
+    success: true,
+  });
 
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -321,14 +332,11 @@ describe("PeriodsTab", () => {
 
     await user.click(screen.getByTestId(`action-archive-${publishedFresh.id}`));
 
+    const archivePeriodEntry = expectDefined(captured["admin.archivePeriod"]);
     await waitFor(() => {
-      expect(captured["admin.archivePeriod"].mutationFn).toHaveBeenCalledTimes(
-        1,
-      );
+      expect(archivePeriodEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
-    expect(
-      captured["admin.archivePeriod"].mutationFn.mock.calls[0]?.[0],
-    ).toEqual({
+    expect(archivePeriodEntry.mutationFn.mock.calls[0]?.[0]).toEqual({
       periodId: publishedFresh.id,
     });
   });
@@ -345,10 +353,11 @@ describe("PeriodsTab", () => {
 
     await user.click(screen.getByTestId(`action-reopen-${publishedFresh.id}`));
 
+    const reopenEntry = expectDefined(captured["period.reopen"]);
     await waitFor(() => {
-      expect(captured["period.reopen"].mutationFn).toHaveBeenCalledTimes(1);
+      expect(reopenEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
-    expect(captured["period.reopen"].mutationFn.mock.calls[0]?.[0]).toEqual({
+    expect(reopenEntry.mutationFn.mock.calls[0]?.[0]).toEqual({
       reportId: publishedFresh.id,
     });
   });
@@ -454,14 +463,14 @@ describe("PeriodsTab — «New period» dialog", () => {
 
     await user.click(screen.getByTestId("periods-create-submit"));
 
+    const createPeriodManualEntry = expectDefined(
+      captured["admin.createPeriodManual"],
+    );
     await waitFor(() => {
-      expect(
-        captured["admin.createPeriodManual"].mutationFn,
-      ).toHaveBeenCalledTimes(1);
+      expect(createPeriodManualEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
 
-    const payload = captured["admin.createPeriodManual"].mutationFn.mock
-      .calls[0]?.[0] as {
+    const payload = createPeriodManualEntry.mutationFn.mock.calls[0]?.[0] as {
       periodStart: Date;
       weekLabel?: string;
     };
@@ -543,13 +552,13 @@ describe("PeriodsTab — «Edit period» dialog", () => {
 
     await user.click(screen.getByTestId("periods-create-submit"));
 
+    const updatePeriodManualEntry = expectDefined(
+      captured["admin.updatePeriodManual"],
+    );
     await waitFor(() => {
-      expect(
-        captured["admin.updatePeriodManual"].mutationFn,
-      ).toHaveBeenCalledTimes(1);
+      expect(updatePeriodManualEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
-    const payload = captured["admin.updatePeriodManual"].mutationFn.mock
-      .calls[0]?.[0] as {
+    const payload = updatePeriodManualEntry.mutationFn.mock.calls[0]?.[0] as {
       reportId: string;
       weekLabel?: string | null;
     };
@@ -666,9 +675,9 @@ describe("PeriodsTab — a11y dialog behavioral regressions (VA-0a)", () => {
   it("keeps the delete dialog open and disables its actions while pending", async () => {
     const user = userEvent.setup();
     const { captured } = renderTab();
-    captured["admin.deleteReport"].mutationFn.mockReturnValueOnce(
-      new Promise(() => undefined),
-    );
+    expectDefined(
+      captured["admin.deleteReport"],
+    ).mutationFn.mockReturnValueOnce(new Promise(() => undefined));
 
     await user.click(await screen.findByTestId(`action-delete-${openRow.id}`));
     await user.click(screen.getByRole("button", { name: "Delete" }));
@@ -840,13 +849,15 @@ describe("PeriodsTab — deadline UTC round-trip under a non-UTC timezone", () =
 
     await user.click(screen.getByTestId("periods-create-submit"));
 
+    const updatePeriodManualEntry = expectDefined(
+      captured["admin.updatePeriodManual"],
+    );
     await waitFor(() => {
-      expect(
-        captured["admin.updatePeriodManual"].mutationFn,
-      ).toHaveBeenCalledTimes(1);
+      expect(updatePeriodManualEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
-    const payload = captured["admin.updatePeriodManual"].mutationFn.mock
-      .calls[0]?.[0] as { deadline?: Date };
+    const payload = updatePeriodManualEntry.mutationFn.mock.calls[0]?.[0] as {
+      deadline?: Date;
+    };
     expect(payload.deadline?.toISOString()).toBe("2026-05-09T18:00:00.000Z");
   });
 
@@ -874,13 +885,15 @@ describe("PeriodsTab — deadline UTC round-trip under a non-UTC timezone", () =
 
     await user.click(screen.getByTestId("periods-create-submit"));
 
+    const updatePeriodManualEntry = expectDefined(
+      captured["admin.updatePeriodManual"],
+    );
     await waitFor(() => {
-      expect(
-        captured["admin.updatePeriodManual"].mutationFn,
-      ).toHaveBeenCalledTimes(1);
+      expect(updatePeriodManualEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
-    const payload = captured["admin.updatePeriodManual"].mutationFn.mock
-      .calls[0]?.[0] as { deadline?: Date };
+    const payload = updatePeriodManualEntry.mutationFn.mock.calls[0]?.[0] as {
+      deadline?: Date;
+    };
     expect(payload.deadline?.toISOString()).toBe("2026-05-04T01:00:00.000Z");
   });
 });

@@ -24,6 +24,7 @@ import {
   invalidateLeadHistory,
 } from "../../../lib/cache-keys";
 import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { expectDefined } from "../../../test-utils/expect-defined";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { LeadForm } from "./lead-form";
 
@@ -182,7 +183,7 @@ afterEach(() => {
 describe("lead-form draft: save-echo + optimistic lock (1.2)", () => {
   it("Save now flushes immediately, before the debounce elapses", async () => {
     const { Wrapper, captured } = buildHarness();
-    captured["reports.saveDraft"].mutationFn.mockResolvedValue({
+    expectDefined(captured["reports.saveDraft"]).mutationFn.mockResolvedValue({
       ...makeSection(),
       version: 2,
     });
@@ -199,7 +200,9 @@ describe("lead-form draft: save-echo + optimistic lock (1.2)", () => {
     });
     act(() => saveButtons[0]?.click());
     await waitFor(() =>
-      expect(captured["reports.saveDraft"].mutationFn).toHaveBeenCalledTimes(1),
+      expect(
+        expectDefined(captured["reports.saveDraft"]).mutationFn,
+      ).toHaveBeenCalledTimes(1),
     );
   });
 
@@ -210,7 +213,9 @@ describe("lead-form draft: save-echo + optimistic lock (1.2)", () => {
       value: { httpStatus: 409, code: "CONFLICT" },
       configurable: true,
     });
-    captured["reports.submit"].mutationFn.mockRejectedValue(conflict);
+    expectDefined(captured["reports.submit"]).mutationFn.mockRejectedValue(
+      conflict,
+    );
     render(
       <Wrapper>
         <LeadForm />
@@ -266,7 +271,7 @@ describe("lead-form draft: save-echo + optimistic lock (1.2)", () => {
           byPeriodPayload({ ...makeSection(), version: serverVersion }),
         ),
     });
-    captured["reports.submit"].mutationFn.mockResolvedValue({
+    expectDefined(captured["reports.submit"]).mutationFn.mockResolvedValue({
       ...makeSection(),
       version: 6,
     });
@@ -290,12 +295,12 @@ describe("lead-form draft: save-echo + optimistic lock (1.2)", () => {
     act(() => within(dialog).getByRole("button", { name: "Submit" }).click());
     await waitFor(() =>
       expect(
-        captured["reports.submit"].mutationFn.mock.calls.length,
+        expectDefined(captured["reports.submit"]).mutationFn.mock.calls.length,
       ).toBeGreaterThan(0),
     );
-    const sent = captured["reports.submit"].mutationFn.mock.calls.at(
-      -1,
-    )?.[0] as { version?: number } | undefined;
+    const sent = expectDefined(
+      captured["reports.submit"],
+    ).mutationFn.mock.calls.at(-1)?.[0] as { version?: number } | undefined;
     expect(sent?.version).toBe(5);
   });
 });
@@ -383,7 +388,7 @@ describe("lead-form draft: submit gating + dialogs (1.4)", () => {
 
   it("submit-confirm warns about unset own stages and coerces them to On Track", async () => {
     const { Wrapper, captured } = buildHarness();
-    captured["reports.submit"].mutationFn.mockResolvedValue({
+    expectDefined(captured["reports.submit"]).mutationFn.mockResolvedValue({
       ...makeSection(),
       version: 2,
     });
@@ -405,12 +410,12 @@ describe("lead-form draft: submit gating + dialogs (1.4)", () => {
     act(() => within(dialog).getByRole("button", { name: "Submit" }).click());
     await waitFor(() =>
       expect(
-        captured["reports.submit"].mutationFn.mock.calls.length,
+        expectDefined(captured["reports.submit"]).mutationFn.mock.calls.length,
       ).toBeGreaterThan(0),
     );
-    const sent = captured["reports.submit"].mutationFn.mock.calls.at(
-      -1,
-    )?.[0] as {
+    const sent = expectDefined(
+      captured["reports.submit"],
+    ).mutationFn.mock.calls.at(-1)?.[0] as {
       stageStatuses?: { status: string | null }[];
     };
     expect(sent.stageStatuses?.length).toBeGreaterThan(0);
@@ -436,12 +441,14 @@ describe("lead-form draft: submit gating + dialogs (1.4)", () => {
         screen.queryByRole("dialog", { name: "Confirm submission" }),
       ).toBeNull(),
     );
-    expect(captured["reports.submit"].mutationFn).not.toHaveBeenCalled();
+    expect(
+      expectDefined(captured["reports.submit"]).mutationFn,
+    ).not.toHaveBeenCalled();
   });
 
   it("submit success invalidates the lead caches and locks the form", async () => {
     const { Wrapper, captured } = buildHarness();
-    captured["reports.submit"].mutationFn.mockResolvedValue({
+    expectDefined(captured["reports.submit"]).mutationFn.mockResolvedValue({
       ...makeSection({ status: "submitted" }),
       version: 2,
     });
@@ -536,6 +543,8 @@ describe("lead-form draft: submit gating + dialogs (1.4)", () => {
       within(dialog).getByRole("button", { name: "Replace & Fill" }).click(),
     );
     expect(confirmSpy).toHaveBeenCalled();
-    expect(captured["leadForm.fillFrom"].mutationFn).not.toHaveBeenCalled();
+    expect(
+      expectDefined(captured["leadForm.fillFrom"]).mutationFn,
+    ).not.toHaveBeenCalled();
   });
 });

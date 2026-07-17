@@ -37,8 +37,8 @@ export function activityHomeProduct(
   knownProductIds: ReadonlySet<string>,
   sharedCardId: string,
 ): string {
-  if (linkedProducts.length !== 1) return sharedCardId;
-  const [only] = linkedProducts;
+  const [only, ...rest] = linkedProducts;
+  if (only === undefined || rest.length > 0) return sharedCardId;
   return knownProductIds.has(only.productId) ? only.productId : sharedCardId;
 }
 

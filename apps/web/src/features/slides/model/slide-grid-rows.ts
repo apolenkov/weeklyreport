@@ -96,15 +96,16 @@ export function buildAuthorRoster(
   const foreignAuthors = [...foreignById.entries()].sort(([, a], [, b]) =>
     a.name.localeCompare(b.name),
   );
+  const owner = {
+    id: section.authorId,
+    name: section.authorName,
+    ...(section.authorRole === undefined ? {} : { role: section.authorRole }),
+    initials: initialsOf(section.authorName),
+    colorIndex: 0,
+    isOwner: true,
+  };
   const authors = [
-    {
-      id: section.authorId,
-      name: section.authorName,
-      ...(section.authorRole === undefined ? {} : { role: section.authorRole }),
-      initials: initialsOf(section.authorName),
-      colorIndex: 0,
-      isOwner: true,
-    },
+    owner,
     ...foreignAuthors.map(([id, { name, role }], index) => ({
       id,
       name,
@@ -114,7 +115,6 @@ export function buildAuthorRoster(
       isOwner: false,
     })),
   ];
-  const owner = authors[0];
   return { owner, authors };
 }
 
@@ -230,9 +230,10 @@ export function buildOwnDecisionRow(
 const FIRST_STAGE_FALLBACK_RANK = UNKNOWN_STAGE_RANK + 1;
 
 function firstStageRank(row: GridRow): number {
-  return row.stageNames.length === 0
+  const [firstStage] = row.stageNames;
+  return firstStage === undefined
     ? FIRST_STAGE_FALLBACK_RANK
-    : stageRank(row.stageNames[0]);
+    : stageRank(firstStage);
 }
 
 /** Stage order first (stage-less rows last), then author (owner first, legend
