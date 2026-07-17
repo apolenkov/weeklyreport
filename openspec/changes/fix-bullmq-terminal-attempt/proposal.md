@@ -22,11 +22,16 @@ Two confirmed code-review findings on the BullMQ `failed` event handlers:
   comment history is why this bug shipped — it asserts the premature-mark
   behavior as correct instead of catching it.
 
-`EmailReminderProcessor` (`email-reminder.processor.ts`) has the identical
-`attemptsUsed = job.attemptsMade + 1` computation and the identical test
-shape (`email-reminder.processor.test.ts`, `attemptsMade=2`/`attempts=3`
-asserted as the final attempt), so it carries the same off-by-one and the
-same wrong-contract test. Its `EmailReminderJobData` union also has three
+`EmailReminderProcessor` (`email-reminder.processor.ts`) has the same
+`attemptsUsed = job.attemptsMade + 1` computation, but its check sits INSIDE
+`processJob`'s own catch — which runs BEFORE BullMQ's `moveToFailed`
+increments `attemptsMade` (the increment lands only after the processor
+throws). At that observation point the counter excludes the failing attempt,
+so the `+1` is CORRECT there and must stay; dropping it would make the
+terminal branch unreachable and a permanently-failing reminder would cycle
+release→reaper-re-enqueue forever. Only the observation-point rationale and
+the test's mislabeled fixtures need correcting. Its `EmailReminderJobData`
+union also has three
 payload shapes (legacy, `kind: "deadline"`, `kind: "escalation"`) but the
 test's `createMockJob` helper only ever constructs the legacy shape — the
 `dispatchEmail` branches for `deadline` and `escalation` have no test
@@ -37,8 +42,11 @@ coverage at all.
 - Fix the terminal-attempt check in `pdf-export.processor.ts`'s `onJobFailed`
   from `job.attemptsMade + 1 >= maxAttempts` to `job.attemptsMade >=
 maxAttempts`, matching `dlq-monitor.service.ts`.
-- Apply the same fix to `email-reminder.processor.ts`'s `processJob` catch
-  block.
+- Keep the `+1` in `email-reminder.processor.ts`'s `processJob` catch block
+  (pre-increment observation point) and document WHY the two processors
+  legitimately differ; fix its tests' attempt-count fixtures to the
+  pre-increment scale (terminal = `attemptsMade=2` of `attempts=3` inside
+  the catch).
 - Rewrite the `pdf-export.processor.test.ts` terminal-attempt test to use the
   real post-increment sequence: `attemptsMade=2` of `attempts=3` as the
   genuine non-terminal (penultimate, retry still pending) case, and

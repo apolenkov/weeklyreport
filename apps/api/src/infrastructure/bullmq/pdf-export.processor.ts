@@ -73,9 +73,8 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
     };
 
     if (job?.data.jobId) {
-      const attemptsUsed = job.attemptsMade + 1;
       const maxAttempts = job.opts.attempts ?? 1;
-      if (attemptsUsed >= maxAttempts) {
+      if (job.attemptsMade >= maxAttempts) {
         void this.pdfExportService
           .markExportFailed(job.data.jobId, error.message)
           .catch((markError: unknown) => {

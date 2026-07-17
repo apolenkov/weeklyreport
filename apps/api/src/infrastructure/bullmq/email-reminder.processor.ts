@@ -119,9 +119,13 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
       // marking it `failed` here would defeat the retry (the CAS only
       // matches the pre-claim status).
       const message = error instanceof Error ? error.message : String(error);
-      const attemptsUsed = job.attemptsMade + 1;
       const maxAttempts = job.opts.attempts ?? 1;
-      if (attemptsUsed >= maxAttempts) {
+      // This catch runs INSIDE the processor, before BullMQ's moveToFailed
+      // increments attemptsMade — so the counter still excludes the attempt
+      // that just failed and needs the +1. The pdf-export processor checks in
+      // a worker 'failed' event handler instead, which fires AFTER the
+      // increment and must compare without it.
+      if (job.attemptsMade + 1 >= maxAttempts) {
         await this.remindersService.markReminderFailed(executionId, message);
       } else {
         await this.remindersService.releaseExecutionClaim(executionId);

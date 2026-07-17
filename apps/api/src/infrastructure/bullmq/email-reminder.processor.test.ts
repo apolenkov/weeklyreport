@@ -38,6 +38,16 @@ vi.mock("../../modules/admin/index.js", () => ({
   },
 }));
 
+// The deadline/escalation dispatch branches call renderEmail (react-email
+// rendering); mocking it keeps these tests focused on the processor's
+// dispatch wiring rather than template output.
+vi.mock("../../modules/email/index.js", () => ({
+  renderEmail: vi.fn(),
+}));
+
+import type { OrganizationBrand } from "@customreport/shared";
+
+import { renderEmail } from "../../modules/email/index.js";
 import type { EnvConfig } from "../config/env.schema";
 import { EmailReminderProcessor } from "./email-reminder.processor.js";
 
@@ -79,11 +89,38 @@ function createMockSnapshotAdminService(
   };
 }
 
-interface EmailReminderJobData {
-  executionId: string;
-  recipientEmail: string;
-  reportPeriod: string;
-}
+// Mirrors the processor's own EmailReminderJobData union so the mock job
+// factory can construct all three payload shapes it dispatches on.
+type EmailReminderJobData =
+  | {
+      executionId: string;
+      recipientEmail: string;
+      reportPeriod: string;
+    }
+  | {
+      executionId: string;
+      recipientEmail: string;
+      kind: "deadline";
+      leadName: string;
+      reportPeriod: string;
+      deadlineIso: string;
+      sectionUrl: string;
+      organization: OrganizationBrand;
+    }
+  | {
+      executionId: string;
+      recipientEmail: string;
+      kind: "escalation";
+      headName: string;
+      cycleDate: string;
+      reportPeriod: string;
+      lateLeads: readonly {
+        leadName: string;
+        sectionTitle: string;
+        deadlineIso: string;
+      }[];
+      organization: OrganizationBrand;
+    };
 
 function createMockJob(
   data: EmailReminderJobData,
@@ -107,6 +144,45 @@ const defaultJobData: EmailReminderJobData = {
   executionId: "exec-1",
   recipientEmail: "lead@test.com",
   reportPeriod: "2026-04-07 – 2026-04-13",
+};
+
+const organizationBrand: OrganizationBrand = {
+  shortName: "Acme",
+  fullName: "Acme Corp",
+};
+
+const deadlineJobData = {
+  executionId: "exec-2",
+  recipientEmail: "lead@test.com",
+  kind: "deadline" as const,
+  leadName: "Jane Lead",
+  reportPeriod: "2026-04-07 – 2026-04-13",
+  deadlineIso: "2026-04-14T18:00:00.000Z",
+  sectionUrl: "https://app.example.com/reports/123",
+  organization: organizationBrand,
+};
+
+const escalationJobData = {
+  executionId: "exec-3",
+  recipientEmail: "head@test.com",
+  kind: "escalation" as const,
+  headName: "Head Person",
+  cycleDate: "2026-04-14",
+  reportPeriod: "2026-04-07 – 2026-04-13",
+  lateLeads: [
+    {
+      leadName: "Jane Lead",
+      sectionTitle: "Team Alpha",
+      deadlineIso: "2026-04-14T18:00:00.000Z",
+    },
+  ],
+  organization: organizationBrand,
+};
+
+const renderedEmailFixture = {
+  subject: "rendered subject",
+  html: "<p>rendered html</p>",
+  text: "rendered text",
 };
 
 // ---------------------------------------------------------------------------
@@ -218,7 +294,9 @@ describe("EmailReminderProcessor.processJob", () => {
       STUB_ENV,
       createMockSnapshotAdminService() as never,
     );
-    // attemptsMade=2 with attempts=3 is the final (3rd) attempt.
+    // processJob's catch runs before BullMQ's moveToFailed increments
+    // attemptsMade, so on the true final (3rd of 3) attempt the counter
+    // still reads 2 — the +1 in the processor makes that terminal.
     const job = createMockJob(defaultJobData, 2, 3);
 
     await expect(
@@ -235,27 +313,38 @@ describe("EmailReminderProcessor.processJob", () => {
 
   // Transient dispatch failure with retries remaining must release the claim
   // (not mark failed) so the next BullMQ attempt can re-claim and resend.
-  it("releases the claim (not markReminderFailed) when a non-final attempt's dispatch fails", async () => {
-    const mockReminders = createMockRemindersService();
-    const mockEmail = createMockEmailService();
-    mockEmail.sendMail.mockRejectedValue(new Error("SMTP connection refused"));
+  // Inside processJob's catch the counter is pre-increment: 0 = first
+  // attempt failing, 1 = second (penultimate) of 3 — neither is terminal.
+  it.each([
+    { attemptsMade: 0, label: "first attempt" },
+    { attemptsMade: 1, label: "penultimate attempt, retry still pending" },
+  ])(
+    "releases the claim (not markReminderFailed) when a non-final attempt's dispatch fails ($label)",
+    async ({ attemptsMade }) => {
+      const mockReminders = createMockRemindersService();
+      const mockEmail = createMockEmailService();
+      mockEmail.sendMail.mockRejectedValue(
+        new Error("SMTP connection refused"),
+      );
 
-    const processor = new EmailReminderProcessor(
-      mockReminders as never,
-      mockEmail,
-      STUB_ENV,
-      createMockSnapshotAdminService() as never,
-    );
-    // attemptsMade=0 with attempts=3 is the first of three attempts.
-    const job = createMockJob(defaultJobData, 0, 3);
+      const processor = new EmailReminderProcessor(
+        mockReminders as never,
+        mockEmail,
+        STUB_ENV,
+        createMockSnapshotAdminService() as never,
+      );
+      const job = createMockJob(defaultJobData, attemptsMade, 3);
 
-    await expect(
-      (processor as unknown as ProcessorTestSeam).processJob(job),
-    ).rejects.toThrow("SMTP connection refused");
+      await expect(
+        (processor as unknown as ProcessorTestSeam).processJob(job),
+      ).rejects.toThrow("SMTP connection refused");
 
-    expect(mockReminders.releaseExecutionClaim).toHaveBeenCalledWith("exec-1");
-    expect(mockReminders.markReminderFailed).not.toHaveBeenCalled();
-  });
+      expect(mockReminders.releaseExecutionClaim).toHaveBeenCalledWith(
+        "exec-1",
+      );
+      expect(mockReminders.markReminderFailed).not.toHaveBeenCalled();
+    },
+  );
 
   // If dispatch succeeds but the follow-up markReminderSent write throws
   // (e.g. a transient DB error), the email was already delivered: the row
@@ -320,6 +409,72 @@ describe("EmailReminderProcessor.processJob", () => {
 
     expect(mockReminders.claimExecutionForSending).toHaveBeenCalledWith(
       "exec-1",
+    );
+  });
+
+  it('renders and sends the deadline template for kind: "deadline" jobs', async () => {
+    vi.mocked(renderEmail).mockResolvedValue(renderedEmailFixture);
+    const mockReminders = createMockRemindersService();
+    const mockEmail = createMockEmailService();
+    const processor = new EmailReminderProcessor(
+      mockReminders as never,
+      mockEmail,
+      STUB_ENV,
+      createMockSnapshotAdminService() as never,
+    );
+    const job = createMockJob(deadlineJobData);
+
+    await (processor as unknown as ProcessorTestSeam).processJob(job);
+
+    expect(renderEmail).toHaveBeenCalledWith({
+      kind: "deadline",
+      props: {
+        leadName: deadlineJobData.leadName,
+        reportPeriod: deadlineJobData.reportPeriod,
+        deadlineIso: deadlineJobData.deadlineIso,
+        sectionUrl: deadlineJobData.sectionUrl,
+        organization: deadlineJobData.organization,
+      },
+    });
+    expect(mockEmail.sendMailMultipart).toHaveBeenCalledWith(
+      deadlineJobData.recipientEmail,
+      renderedEmailFixture.subject,
+      renderedEmailFixture.html,
+      renderedEmailFixture.text,
+      null,
+    );
+  });
+
+  it('renders and sends the escalation template for kind: "escalation" jobs', async () => {
+    vi.mocked(renderEmail).mockResolvedValue(renderedEmailFixture);
+    const mockReminders = createMockRemindersService();
+    const mockEmail = createMockEmailService();
+    const processor = new EmailReminderProcessor(
+      mockReminders as never,
+      mockEmail,
+      STUB_ENV,
+      createMockSnapshotAdminService() as never,
+    );
+    const job = createMockJob(escalationJobData);
+
+    await (processor as unknown as ProcessorTestSeam).processJob(job);
+
+    expect(renderEmail).toHaveBeenCalledWith({
+      kind: "escalation",
+      props: {
+        headName: escalationJobData.headName,
+        cycleDate: escalationJobData.cycleDate,
+        reportPeriod: escalationJobData.reportPeriod,
+        lateLeads: escalationJobData.lateLeads,
+        organization: escalationJobData.organization,
+      },
+    });
+    expect(mockEmail.sendMailMultipart).toHaveBeenCalledWith(
+      escalationJobData.recipientEmail,
+      renderedEmailFixture.subject,
+      renderedEmailFixture.html,
+      renderedEmailFixture.text,
+      null,
     );
   });
 });

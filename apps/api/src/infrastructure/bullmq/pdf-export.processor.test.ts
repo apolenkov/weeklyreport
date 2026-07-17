@@ -394,23 +394,19 @@ describe("PdfExportProcessor.onModuleInit", () => {
       authToken: "fake-jwt",
     };
 
+    // BullMQ increments attemptsMade before emitting `failed`, so for
+    // attempts=3 the penultimate failure reports attemptsMade=2 — a third
+    // attempt is still queued.
     failedHandler?.(
-      createMockJob(jobData, 0, 3) as never,
+      createMockJob(jobData, 2, 3) as never,
       new Error("browser missing") as never,
     );
 
     expect(mockService.markExportFailed).not.toHaveBeenCalled();
 
+    // The true terminal failure reports attemptsMade=3 (== attempts).
     failedHandler?.(
-      createMockJob(
-        {
-          reportId: "report-1",
-          jobId: "job-1",
-          authToken: "fake-jwt",
-        },
-        2,
-        3,
-      ) as never,
+      createMockJob(jobData, 3, 3) as never,
       new Error("browser missing") as never,
     );
 
