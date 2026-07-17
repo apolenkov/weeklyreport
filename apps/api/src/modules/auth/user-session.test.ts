@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildUserSession,
   type ProvisionLeadWorkspace,
+  SamlIdentityMismatchError,
   type SamlProfile,
 } from "./user-session";
 
@@ -184,8 +185,12 @@ describe("buildUserSession — admin SAML login", () => {
         samlId: "old-saml-id",
       },
     });
+    // samlId matches the stored row: this test is about the create-only
+    // invariant, not identity matching (that has its own describe block
+    // below) — a mismatched samlId here would now be a refusal, not a
+    // silent accept, per decide-saml-identity-and-session-pick.
     const profile: SamlProfile = {
-      samlId: "saml-admin-rotated",
+      samlId: "old-saml-id",
       email: "admin@customreport.local",
       displayName: "Administrator",
       role: "admin",
@@ -322,6 +327,23 @@ describe("buildUserSession — first-login create race (P2002 reread)", () => {
     expect(findFirst).toHaveBeenCalledTimes(3);
   });
 
+  it("loser is REFUSED when the race winner's row carries a different samlId", async () => {
+    const { prisma } = racingPrisma();
+    // Same email as the winner, different IdP identity: the catch-branch
+    // re-read must apply the same mismatch guard as the fast path — binding
+    // the loser to the winner's role/group would be an identity takeover.
+    const profile: SamlProfile = {
+      samlId: "saml-INTRUDER",
+      email: "racer@customreport.local",
+      displayName: "Racer",
+      role: "viewer",
+    };
+
+    await expect(
+      buildUserSession(prisma, profile, failIfProvisioned),
+    ).rejects.toThrow(SamlIdentityMismatchError);
+  });
+
   it("re-throws when create fails for a non-unique reason", async () => {
     const { prisma } = racingPrisma();
     // Override create to throw a non-P2002 error: it must propagate untouched.
@@ -338,5 +360,113 @@ describe("buildUserSession — first-login create race (P2002 reread)", () => {
     await expect(
       buildUserSession(prisma, profile, failIfProvisioned),
     ).rejects.toThrow("connection reset");
+  });
+});
+
+// decide-saml-identity-and-session-pick (ratified 2026-07-17): a reused email
+// pointing at a different IdP identity must not silently inherit the old
+// account's role/group. Pre-fix, the email-first lookup accepted ANY email
+// match regardless of samlId — that acceptance is the exact behavior this
+// change closes; the "reused email" case below pins the new, ratified
+// refusal in its place.
+describe("buildUserSession — samlId identity cross-check", () => {
+  const EXISTING_USER = {
+    id: "existing-user-id",
+    email: "reused@customreport.local",
+    name: "Original Owner",
+    lastName: "Owner",
+    firstName: "Original",
+    middleName: null,
+    // head, not lead: the lead lazy-provision path is a separate concern
+    // (see failIfProvisioned) and would otherwise fire on the accepted-match
+    // scenarios below (no reportSection.findFirst hit in this fake).
+    role: "head" as Role,
+    reportingGroupId: "a0000000-0000-4000-8000-000000000301",
+  };
+
+  function fakePrisma(existingSamlId: string) {
+    const findFirst = vi.fn(
+      ({ where }: { where: { email?: string; samlId?: string } }) => {
+        if (where.email === EXISTING_USER.email) {
+          return Promise.resolve({ ...EXISTING_USER, samlId: existingSamlId });
+        }
+        return Promise.resolve(null);
+      },
+    );
+    const fake = {
+      user: { findFirst, create: vi.fn(), update: vi.fn() },
+      reportSection: {
+        findFirst: vi.fn(() => Promise.resolve(null)),
+        findUnique: vi.fn(() => Promise.resolve(null)),
+        create: vi.fn(),
+      },
+      report: {
+        findFirst: vi.fn(() => Promise.resolve(null)),
+        create: vi.fn(),
+      },
+      project: { findMany: vi.fn(() => Promise.resolve([])) },
+      projectStatus: { createMany: vi.fn() },
+      reportingGroup: {
+        findFirst: vi.fn(() => Promise.resolve(null)),
+        findUnique: vi.fn(() =>
+          Promise.resolve({ name: "Software Development" }),
+        ),
+        upsert: vi.fn(() => Promise.resolve(null)),
+      },
+    };
+    return { prisma: fake as unknown as PrismaClient, findFirst };
+  }
+
+  it("a reused email with a DIFFERENT stored samlId is refused, not re-linked or auto-created", async () => {
+    const { prisma } = fakePrisma("saml-original-owner");
+    const profile: SamlProfile = {
+      samlId: "saml-new-idp-identity",
+      email: EXISTING_USER.email,
+      displayName: "New Identity",
+      role: "lead",
+    };
+
+    await expect(
+      buildUserSession(prisma, profile, failIfProvisioned),
+    ).rejects.toThrow(SamlIdentityMismatchError);
+
+    // Refusal, not reconciliation: neither the re-link (update) nor the
+    // auto-create (writeProvisionedUser's create path) may run.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(prisma.user.update).not.toHaveBeenCalled();
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+
+  it("a reused email with the SAME stored samlId is accepted as the same identity", async () => {
+    const { prisma } = fakePrisma("saml-shared");
+    const profile: SamlProfile = {
+      samlId: "saml-shared",
+      email: EXISTING_USER.email,
+      displayName: "Original Owner",
+      role: "lead",
+    };
+
+    const session = await buildUserSession(prisma, profile, failIfProvisioned);
+
+    expect(session.userId).toBe(EXISTING_USER.id);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it("a stored user with no samlId on record still resolves by email, unchanged", async () => {
+    // Empty samlId models the seed/dev-login carve-out: the ratified rule
+    // only compares samlId when BOTH sides carry one.
+    const { prisma } = fakePrisma("");
+    const profile: SamlProfile = {
+      samlId: "saml-any-idp-value",
+      email: EXISTING_USER.email,
+      displayName: "Whoever",
+      role: "lead",
+    };
+
+    const session = await buildUserSession(prisma, profile, failIfProvisioned);
+
+    expect(session.userId).toBe(EXISTING_USER.id);
   });
 });

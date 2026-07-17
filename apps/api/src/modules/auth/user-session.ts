@@ -27,6 +27,57 @@ const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
 // the name helpers treat as absent (canSave trims it, so it never re-saves).
 const SAML_STUB_FIRST_NAME_PLACEHOLDER = " ";
 
+/**
+ * Thrown by `buildUserSession` when an email match's stored `samlId` and the
+ * incoming profile's `samlId` are both present and differ — a reused email
+ * now points at a different IdP identity. The caller's existing catch-all
+ * (auth.routes.ts / dev-login.routes.ts) already turns any thrown error into
+ * a failed login, so no separate wiring is needed for the refusal.
+ */
+export class SamlIdentityMismatchError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SamlIdentityMismatchError";
+  }
+}
+
+// True only when BOTH sides carry a samlId and they differ. Either side
+// missing one (seed/dev-login users) is not a mismatch — the email-only path
+// stays unchanged for them.
+function isSamlIdentityMismatch(
+  existingByEmail: { samlId: string } | null,
+  profile: SamlProfile,
+): boolean {
+  return Boolean(
+    existingByEmail?.samlId &&
+      profile.samlId &&
+      existingByEmail.samlId !== profile.samlId,
+  );
+}
+
+type ExistingUser = Awaited<ReturnType<PrismaClient["user"]["findFirst"]>>;
+
+// Prefer email match (seed users may not have samlId), fall back to samlId. A
+// samlId collision on the email hit is refused outright (not re-linked, not
+// auto-created) rather than silently inheriting the old account's role/group.
+async function resolveExistingUser(
+  prisma: PrismaClient,
+  profile: SamlProfile,
+): Promise<ExistingUser> {
+  const existingByEmail = await prisma.user.findFirst({
+    where: { email: profile.email },
+  });
+  if (isSamlIdentityMismatch(existingByEmail, profile)) {
+    throw new SamlIdentityMismatchError(
+      `SAML profile samlId does not match the samlId on record for email ${profile.email}`,
+    );
+  }
+  return (
+    existingByEmail ??
+    (await prisma.user.findFirst({ where: { samlId: profile.samlId } }))
+  );
+}
+
 // `User.email` and `User.samlId` are each `@unique`; either colliding means a
 // concurrent first-login raced us. The shared guard also reads the pg-adapter
 // shape, where the old meta.target-only check was blind.
@@ -100,12 +151,11 @@ async function writeProvisionedUser(
     });
   } catch (error) {
     if (!isUserUniqueViolation(error)) throw error;
-    // A concurrent first-login for the same identity won the create race.
-    // Re-read by the same keys the fast path uses (email first, then samlId)
-    // and return that full row; the loser session is identical to the winner's.
-    const won =
-      (await prisma.user.findFirst({ where: { email: profile.email } })) ??
-      (await prisma.user.findFirst({ where: { samlId: profile.samlId } }));
+    // A concurrent first-login won the create race. Re-resolve through the
+    // SAME guarded lookup the fast path uses: if the winner's row carries a
+    // different samlId for this email, the loser must be refused — not
+    // silently bound to the winner's identity/role/group.
+    const won = await resolveExistingUser(prisma, profile);
     if (!won) throw error;
     return won;
   }
@@ -117,10 +167,7 @@ export async function buildUserSession(
   provisionLeadWorkspace: ProvisionLeadWorkspace,
   options: { resyncExisting?: boolean } = {},
 ): Promise<UserSession> {
-  // Prefer email match (seed users may not have samlId), fall back to samlId
-  const existing =
-    (await prisma.user.findFirst({ where: { email: profile.email } })) ??
-    (await prisma.user.findFirst({ where: { samlId: profile.samlId } }));
+  const existing = await resolveExistingUser(prisma, profile);
 
   // SAML is create-only: an existing record is the source of truth and is
   // NEVER re-synced from the IdP. dev-login passes { resyncExisting: true } so
@@ -137,10 +184,14 @@ export async function buildUserSession(
       })
     : null;
 
-  // Lead users: find or auto-create their section in the active (draft) report.
+  // Lead users: find or auto-create their section in the active (draft)
+  // report. Ordered the same way the report-only fallback below already is:
+  // nothing at the DB layer guarantees only one report is ever `draft`, so
+  // without this the pick would follow insertion order, not report recency.
   const existingSection = await prisma.reportSection.findFirst({
     where: { authorId: user.id, report: { status: "draft" } },
     select: { id: true, reportId: true },
+    orderBy: { report: { createdAt: "desc" } },
   });
 
   // A lead with no active section gets their workspace provisioned (period +
