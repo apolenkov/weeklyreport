@@ -178,10 +178,3 @@ export function startOtel(
 
   return decision;
 }
-
-export function shutdownOtel(): Promise<void> {
-  return Promise.all([
-    sdk?.shutdown() ?? Promise.resolve(),
-    loggerProvider?.shutdown() ?? Promise.resolve(),
-  ]).then(() => undefined);
-}

@@ -28,7 +28,6 @@ import {
 import {
   queryActiveReportId,
   queryCurrentEditableId,
-  queryLatestPublishedId,
   queryLatestPublishedNonArchivedId,
 } from "./report-lifecycle-ids.prisma-query.js";
 import type {
@@ -51,10 +50,6 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
 
   getCurrentEditableId(): Promise<string | null> {
     return queryCurrentEditableId(this.prisma);
-  }
-
-  getLatestPublishedId(): Promise<string | null> {
-    return queryLatestPublishedId(this.prisma);
   }
 
   getLatestPublishedNonArchivedId(): Promise<string | null> {

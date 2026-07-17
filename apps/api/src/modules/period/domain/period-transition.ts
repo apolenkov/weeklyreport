@@ -32,9 +32,10 @@ import type { PeriodState, ReportStatus } from "@customreport/shared";
 /**
  * The bare-scalar lifecycle subset every transition produces. Every value is a
  * plain scalar (never a Prisma `{ set }` update wrapper), so the object is
- * assignable to both `Prisma.ReportUpdateInput` (existing-row transitions via
- * `applyTransition`) and `Prisma.ReportCreateInput` (the `create` path, which
- * spreads it alongside the identity envelope).
+ * assignable to both `Prisma.ReportUpdateInput` (existing-row transitions,
+ * spread directly into each writer's own `tx.report.update`) and
+ * `Prisma.ReportCreateInput` (the `create` path, which spreads it alongside
+ * the identity envelope).
  */
 export interface LifecycleWrite {
   periodState?: PeriodState;

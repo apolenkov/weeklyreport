@@ -68,7 +68,7 @@ path must respect them and link the relevant `openspec/specs/` spec.
 
 - **Period dual-state.** A Report carries both the new period state and the legacy
   period tuple; concurrent leads must write both atomically.
-- **Role-coverage gate.** tRPC procedures must use one of the 9 canonical
+- **Role-coverage gate.** tRPC procedures must use one of the 8 canonical
   middleware-chain builders (matched by reference identity). Don't hand-roll a chain.
 
 ## Conventions

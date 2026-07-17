@@ -503,15 +503,6 @@ const leadershipRoleMiddleware = buildRoleMiddleware([
   "admin",
   "viewer",
 ]);
-// fix-report-surface-integrity: ORPHANED — no procedure uses this gate.
-// Retained only so role-coverage's ALLOWED_CHAINS keeps a chain to match. The
-// live pdfExport policy is `leadershipProcedure` (head + admin + viewer); lead
-// is FORBIDDEN (data subject, ComingSoon UI). Do not re-wire without a change.
-const leadHeadAdminRoleMiddleware = buildRoleMiddleware([
-  "lead",
-  "head",
-  "admin",
-]);
 
 export const headProcedure = buildProtectedProcedure(headRoleMiddleware);
 export const leadProcedure = buildProtectedProcedure(leadRoleMiddleware);
@@ -525,11 +516,6 @@ export const adminProcedure = buildProtectedProcedure(adminRoleMiddleware);
 // Lead is excluded by design (lead is the data subject of product KPIs).
 export const leadershipProcedure = buildProtectedProcedure(
   leadershipRoleMiddleware,
-);
-// fix-report-surface-integrity: orphaned (see leadHeadAdminRoleMiddleware).
-// Exported only so role-coverage can register its chain in ALLOWED_CHAINS.
-export const leadHeadAdminProcedure = buildProtectedProcedure(
-  leadHeadAdminRoleMiddleware,
 );
 
 export const router = t.router;

@@ -76,10 +76,6 @@ function createRepository(
       return structuredClone(section);
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- repository-contract stub; no awaitable work
-    async getReportStatus() {
-      return "draft";
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- repository-contract stub; no awaitable work
     async getReportPeriodStatusForSection() {
       return "open";
     },

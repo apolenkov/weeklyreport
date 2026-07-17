@@ -1,15 +1,15 @@
 ## Purpose
 
-Every tRPC procedure in CustomReport MUST be constructed through one of 9 canonical
+Every tRPC procedure in CustomReport MUST be constructed through one of 8 canonical
 middleware-chain builders that live in `apps/api/src/infrastructure/trpc/`. The CI
 role-coverage gate verifies this by reference identity — not structural equality —
 so that copying a builder's body into a local helper still counts as a violation.
 A PR that adds a non-compliant procedure MUST fail CI before the branch can be merged.
 
-The 9 canonical builders are: `publicProcedure`, `protectedProcedure`,
+The 8 canonical builders are: `publicProcedure`, `protectedProcedure`,
 `headProcedure`, `leadProcedure`, `viewerProcedure`, `anyRoleProcedure`,
-`adminProcedure`, `leadershipProcedure`, and `leadHeadAdminProcedure`. All
-are exported from `apps/api/src/infrastructure/trpc/trpc.middleware.ts`.
+`adminProcedure`, and `leadershipProcedure`. All are exported from
+`apps/api/src/infrastructure/trpc/trpc.middleware.ts`.
 
 Consumer surfaces: `apps/api/src/infrastructure/trpc/` (canonical builders),
 all `*.router.ts` files under `apps/api/src/` (targets), and the CI workflow
@@ -20,7 +20,7 @@ file under `.github/workflows/` (enforcement point).
 ### Requirement: Procedures Must Use Canonical Builders
 
 Every tRPC procedure defined in `apps/api/src/**/*.router.ts` MUST be constructed
-using one of the 9 canonical middleware-chain builders exported from
+using one of the 8 canonical middleware-chain builders exported from
 `apps/api/src/infrastructure/trpc/`. Procedures that do not reference a canonical
 builder MUST be rejected by the CI gate.
 
@@ -37,7 +37,7 @@ builder MUST be rejected by the CI gate.
 ### Requirement: Gate Compares Builders by Reference Identity
 
 The CI gate MUST verify that a procedure's builder is the same object reference
-as one of the 9 canonical builders. A developer who copies a canonical builder's
+as one of the 8 canonical builders. A developer who copies a canonical builder's
 middleware chain into a new local helper and uses that helper MUST still fail the
 gate.
 
@@ -51,16 +51,15 @@ gate.
 - **WHEN** a module re-exports a canonical builder under an alias (`export { leadProcedure as authedProcedure }`) and a router imports that alias
 - **THEN** the gate resolves the alias to the original canonical reference, confirms identity, and CI passes
 
-### Requirement: Gate Allow-List Enumerates All Nine Canonical Builders
+### Requirement: Gate Allow-List Enumerates All Eight Canonical Builders
 
-The gate allow-list MUST enumerate exactly the 9 canonical builders named in
+The gate allow-list MUST enumerate exactly the 8 canonical builders named in
 this spec's Purpose: `publicProcedure`, `protectedProcedure`, `headProcedure`,
-`leadProcedure`, `viewerProcedure`, `anyRoleProcedure`, `adminProcedure`,
-`leadershipProcedure`, and `leadHeadAdminProcedure`. The allow-list lives in
-`ALLOWED_CHAINS` in
+`leadProcedure`, `viewerProcedure`, `anyRoleProcedure`, `adminProcedure`, and
+`leadershipProcedure`. The allow-list lives in `ALLOWED_CHAINS` in
 `apps/api/src/infrastructure/trpc/__tests__/role-coverage.test.ts`.
 Documentation that states the builder count (e.g. `openspec/config.yaml`
-conventions) MUST say 9, not 8.
+conventions) MUST say 8.
 
 fix-report-surface-integrity (2026-06-16) moved the `pdfExport.request` /
 `pdfExport.status` procedures to `leadershipProcedure`
@@ -68,23 +67,16 @@ fix-report-surface-integrity (2026-06-16) moved the `pdfExport.request` /
 lead is EXCLUDED (FORBIDDEN) — the lead surface shows an inert ComingSoon control
 instead of an active Export button. This superseded the earlier
 driver-findings-2026-06-13 decision that briefly routed pdfExport through
-`leadHeadAdminProcedure` (`["lead","head","admin"]`). `leadHeadAdminProcedure` is
-now orphaned (no production caller) but is RETAINED in `ALLOWED_CHAINS` and pinned
-by the chain-composition test, so the builder count stays 9 and the
-reference-identity gate keeps passing.
+`leadHeadAdminProcedure` (`["lead","head","admin"]`). `leadHeadAdminProcedure`
+was later removed entirely (remove-dead-surface-api) once no production caller
+remained, dropping the canonical builder count from 9 to 8.
 
 #### Scenario: A router uses leadershipProcedure
 
 - **WHEN** a `*.router.ts` file defines a procedure with `leadershipProcedure`
 - **THEN** the role-coverage gate reports the procedure as compliant and CI passes
 
-#### Scenario: A router uses leadHeadAdminProcedure
-
-- **WHEN** a `*.router.ts` file defines a procedure with `leadHeadAdminProcedure`
-  (currently orphaned — no production caller; retained as a recognized builder)
-- **THEN** the role-coverage gate reports the procedure as compliant and CI passes
-
-#### Scenario: A tenth builder is exported
+#### Scenario: A ninth builder is exported
 
 - **WHEN** `trpc.middleware.ts` exports a new procedure builder
 - **THEN** the same change MUST add its chain to `ALLOWED_CHAINS` and update
@@ -100,7 +92,7 @@ The shared middleware chain MUST have exactly one definition site:
 the chain (metrics → logging → auth/role → pdf-export guard → mutation audit)
 lives in a local `buildProtectedProcedure(authMiddleware)` factory inside
 `apps/api/src/infrastructure/trpc/trpc.middleware.ts`, and the protected
-canonical builders MUST be created through it. The 9 exported builder
+canonical builders MUST be created through it. The 8 exported builder
 references MUST remain identity-stable across this consolidation so the
 reference-identity gate keeps passing.
 

@@ -16,7 +16,6 @@ import {
 
 import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
-import { pdfExportRouter } from "./pdf-export.router";
 import {
   PdfExportDomainError,
   type PdfExportJobRecord,
@@ -621,14 +620,10 @@ describe("buildAuthCookies", () => {
   });
 });
 
-describe("pdfExportRouter", () => {
+describe("requestPdfExport + getPdfExportStatus round trip", () => {
   it("returns the latest async export status for an existing job", async () => {
     const service = new PdfExportService(createRepository(publishedReport));
-    const queued = await pdfExportRouter.requestPdfExport({
-      pdfExportService: service,
-      reportId,
-      session: requesterSession,
-    });
+    const queued = await service.requestPdfExport(reportId, requesterSession);
     const completed = await service.markExportCompleted(
       queued.jobId,
       "/exports/report.pdf",
@@ -636,28 +631,7 @@ describe("pdfExportRouter", () => {
     );
 
     await expect(
-      pdfExportRouter.getPdfExportStatus({
-        jobId: queued.jobId,
-        pdfExportService: service,
-        requestedBy: requesterSession.userId,
-      }),
+      service.getPdfExportStatus(queued.jobId, requesterSession.userId),
     ).resolves.toMatchObject(completed);
-  });
-
-  // Ensure router fixture forwards session userId to service
-  it("threads requestedBy from the router context into the service call", async () => {
-    const capture: { lastRequestedBy?: string } = {};
-    const service = new PdfExportService(
-      createRepository(publishedReport, capture),
-    );
-    const sessionUserId = "00000000-0000-4000-8000-00000000beef";
-
-    await pdfExportRouter.requestPdfExport({
-      pdfExportService: service,
-      reportId,
-      session: sessionFor(sessionUserId),
-    });
-
-    expect(capture.lastRequestedBy).toBe(sessionUserId);
   });
 });
