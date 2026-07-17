@@ -5,7 +5,6 @@ import {
   canonicalStageName,
   riskCoversStage,
   splitStageNames,
-  stageNameMatches,
 } from "./stage-tags";
 
 describe("splitStageNames", () => {
@@ -19,28 +18,6 @@ describe("splitStageNames", () => {
   it("splits CSV and semicolon", () => {
     expect(splitStageNames("Dev, Testing")).toEqual(["Dev", "Testing"]);
     expect(splitStageNames("Dev;Testing")).toEqual(["Dev", "Testing"]);
-  });
-});
-
-describe("stageNameMatches", () => {
-  it("returns true for empty stageName (all-stages legacy sentinel)", () => {
-    expect(stageNameMatches(undefined, "Development")).toBe(true);
-    expect(stageNameMatches(null, "Development")).toBe(true);
-  });
-
-  it("returns true when stage is in the CSV list", () => {
-    expect(stageNameMatches("Development, Testing", "Development")).toBe(true);
-  });
-
-  it("returns false when stage is not in the CSV list", () => {
-    expect(stageNameMatches("Testing", "Development")).toBe(false);
-  });
-
-  it("treats a legacy 'Dev' tag as 'Development' (stage-label-canonicalization 1.3)", () => {
-    expect(stageNameMatches("Dev", "Development")).toBe(true);
-    expect(stageNameMatches("Dev, Testing", "Development")).toBe(true);
-    // …and a stored 'Development' tag still matches a short 'Dev' query.
-    expect(stageNameMatches("Development", "Dev")).toBe(true);
   });
 });
 

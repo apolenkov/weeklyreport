@@ -298,7 +298,7 @@ function Provider({
         toast.info(COVERED_STAGE_HINT_MESSAGE);
         return;
       }
-      sync.handleStageStatusChange(productId, stageName, newStatus, "user");
+      sync.handleStageStatusChange(productId, stageName, newStatus);
     },
     [readOnly, sync, risks],
   );
