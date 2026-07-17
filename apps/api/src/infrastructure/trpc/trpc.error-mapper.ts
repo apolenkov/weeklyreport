@@ -60,7 +60,7 @@ type DomainErrorCtor = abstract new (...args: never[]) => Error;
  * error can match two rows. The non-obvious codes — those that aren't the
  * "default" for their error shape — carry an inline WHY.
  */
-const DOMAIN_ERROR_CODES: readonly (readonly [
+export const DOMAIN_ERROR_CODES: readonly (readonly [
   DomainErrorCtor,
   TRPCError["code"],
 ])[] = [

@@ -36,6 +36,7 @@ interface RepoOverrides {
   anchorGroup?: string | null;
   verdictContext?: VerdictContext;
   canReview?: boolean;
+  commentContext?: { reviewerId: string; groupId: string | null } | null;
 }
 
 function buildRepo(overrides: RepoOverrides = {}) {
@@ -64,6 +65,7 @@ function buildRepo(overrides: RepoOverrides = {}) {
       seenAt: new Date("2026-06-01T00:00:00.000Z"),
     }),
   );
+  const deleteComment = vi.fn((_commentId: string) => Promise.resolve());
   const repo: ReviewActionsRepository = {
     acknowledge,
     listAcknowledgements: vi.fn(() => Promise.resolve([])),
@@ -79,9 +81,13 @@ function buildRepo(overrides: RepoOverrides = {}) {
     ),
     insertComment,
     getCommentContext: vi.fn(() =>
-      Promise.resolve({ reviewerId: "x", groupId: GROUP_A }),
+      Promise.resolve(
+        overrides.commentContext === undefined
+          ? { reviewerId: "x", groupId: GROUP_A }
+          : overrides.commentContext,
+      ),
     ),
-    deleteComment: vi.fn(() => Promise.resolve()),
+    deleteComment,
     getVerdictContext: vi.fn(() =>
       Promise.resolve<VerdictContext>(
         overrides.verdictContext ?? {
@@ -95,7 +101,7 @@ function buildRepo(overrides: RepoOverrides = {}) {
     ),
     postVerdict,
   };
-  return { repo, insertComment, postVerdict, acknowledge };
+  return { repo, insertComment, postVerdict, acknowledge, deleteComment };
 }
 
 const commentInput = { itemId: ITEM, text: "please fix" };
@@ -236,5 +242,46 @@ describe("ReviewActionsService — verdict", () => {
       }),
     ).rejects.toMatchObject({ name: "ReviewAccessError" });
     expect(postVerdict).not.toHaveBeenCalled();
+  });
+});
+
+describe("ReviewActionsService — deleteComment", () => {
+  const COMMENT_ID = "bb000000-0000-4000-8000-0000000000bb";
+
+  it("rejects when the comment does not exist", async () => {
+    const { repo, deleteComment } = buildRepo({ commentContext: null });
+    const service = new ReviewActionsService(repo);
+
+    await expect(
+      service.deleteComment(headA, { commentId: COMMENT_ID }),
+    ).rejects.toMatchObject({ name: "ReviewNotFoundError" });
+    expect(deleteComment).not.toHaveBeenCalled();
+  });
+
+  it("a designated reviewer on the comment's own group deletes it", async () => {
+    const { repo, deleteComment } = buildRepo({
+      commentContext: { reviewerId: "x", groupId: GROUP_A },
+    });
+    const service = new ReviewActionsService(repo);
+
+    const result = await service.deleteComment(headA, {
+      commentId: COMMENT_ID,
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(deleteComment).toHaveBeenCalledWith(COMMENT_ID);
+  });
+
+  it("rejects a group-A reviewer deleting a group-B comment (no cross-group)", async () => {
+    const { repo, deleteComment } = buildRepo({
+      commentContext: { reviewerId: "x", groupId: GROUP_B },
+      canReview: false,
+    });
+    const service = new ReviewActionsService(repo);
+
+    await expect(
+      service.deleteComment(reviewerA, { commentId: COMMENT_ID }),
+    ).rejects.toMatchObject({ name: "ReviewAccessError" });
+    expect(deleteComment).not.toHaveBeenCalled();
   });
 });

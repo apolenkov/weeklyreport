@@ -123,12 +123,14 @@ export async function readSectionForByPeriod(
  * array — whose entries carry the per-stage statuses, traffic light, owned
  * stages, and stage set, so dropping an unshared entry removes its whole card
  * and stage grid. `referencedProjects` is recomputed from the surviving rows so
- * a dropped unshared product can never re-leak its name. A decision may carry a
- * null/undefined `productId` — a cross-cutting, non-product-scoped decision; it
- * is NOT a record on an unshared product, so the scoping has no reason to hide
- * it and it is kept. An activity-parented item/risk/decision carries a null
- * product FK and IS dropped here (this lens is product-scoped). Section-identity
- * fields (status, version, author, submittedAt) are preserved unchanged.
+ * a dropped unshared product can never re-leak its name. A decision with a
+ * null/undefined `productId` IS dropped by this filter too, mirroring
+ * `getCrossAuthorContent`: the shared-product scope has no product to check it
+ * against, so it is treated as not-on-a-shared-product rather than let through.
+ * An activity-parented item/risk/decision carries a null product FK and IS
+ * dropped here for the same reason (this lens is product-scoped).
+ * Section-identity fields (status, version, author, submittedAt) are preserved
+ * unchanged.
  *
  * Ceiling: this shared-product lens never exposes a field the curated Everyone
  * lens (`CrossAuthorSectionRow`) omits. `activities` (per-activity status +
