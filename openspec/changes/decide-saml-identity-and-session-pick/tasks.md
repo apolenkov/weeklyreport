@@ -13,31 +13,37 @@
 
 ## 2. Characterization pins (write before any behavior change)
 
-- [ ] 2.1 Add a unit test pinning current `buildUserSession` behavior: an
+- [x] 2.1 Add a unit test pinning current `buildUserSession` behavior: an
       email match with a mismatched `samlId` is accepted today (the exact
       case this change intends to close) — pin it as-is first, so the diff
-      that changes it is visible.
-- [ ] 2.2 Add a unit test pinning current `existingSection` behavior: with
+      that changes it is visible. (Superseded in place by 3.2 — see below.)
+- [x] 2.2 Add a unit test pinning current `existingSection` behavior: with
       more than one `draft`-status report existing, document which section
       `findFirst` returns today (insertion order), to prove whether the bug
-      is real before touching ordering.
+      is real before touching ordering. Confirmed real: with insertion order
+      matching createdAt order (older report's section written first), the
+      un-ordered `findFirst` returns the OLDER report's section — see
+      `user-session.existing-section-order.integration.test.ts`.
 
 ## 3. Identity cross-check (only after 1.1 is ratified)
 
-- [ ] 3.1 Implement the ratified samlId cross-check in `buildUserSession`
+- [x] 3.1 Implement the ratified samlId cross-check in `buildUserSession`
       (`apps/api/src/modules/auth/user-session.ts`), keeping the email-only
       path for either side missing a `samlId`.
-- [ ] 3.2 Update or replace the pin from 2.1 to assert the new, ratified
+- [x] 3.2 Update or replace the pin from 2.1 to assert the new, ratified
       behavior; keep the old-behavior case as a comment/reference only if the
-      ratified decision says the mismatch case must now diverge.
+      ratified decision says the mismatch case must now diverge. Done: the
+      mismatch case now throws `SamlIdentityMismatchError` (login refusal);
+      see `describe("buildUserSession — samlId identity cross-check", ...)`
+      in `user-session.test.ts`.
 
 ## 4. Active-report/section ordering fix (independent of 1.1; may ship first)
 
-- [ ] 4.1 If 2.2 shows the current row order is not guaranteed to be the
+- [x] 4.1 If 2.2 shows the current row order is not guaranteed to be the
       current-period draft, add `orderBy: { report: { createdAt: "desc" } }`
       to the `existingSection` query so it agrees with the report-only
-      fallback's ordering.
-- [ ] 4.2 Update the test from 2.2 to assert the now-deterministic pick.
+      fallback's ordering. Done — 2.2 confirmed the bug is real.
+- [x] 4.2 Update the test from 2.2 to assert the now-deterministic pick.
 
 ## Gates
 
