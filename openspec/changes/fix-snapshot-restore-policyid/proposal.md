@@ -65,3 +65,13 @@ write path throws away.
 - Not adding a delete/detach path for rules whose policy no longer exists in
   the snapshot — `saveSnapshot` remains additive-only per its existing
   contract.
+
+## Follow-ups (out of scope, pre-existing)
+
+- Restore-time `applyToPeriod(newPeriod)` omits `now`, so restoring an old
+  snapshot can materialize already-elapsed derived rules as `active` (stale
+  dispatch on the next tick). Identical behavior existed before this change.
+- The applicator's upsert re-derives fireAt/kind/timezone/status for rules
+  of active policies on newly-created periods. This is its designed
+  idempotent materialization (policy is the source of truth for derived
+  rules), not a restore defect.
