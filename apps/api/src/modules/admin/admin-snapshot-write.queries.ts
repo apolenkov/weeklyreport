@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { PolicyApplicatorService } from "../reminders/index.js";
 import { writePeriodRow } from "./admin-entity-write.queries";
+import { audienceToPrisma } from "./admin-enum-mappers";
 import { ensureFallbackReportingGroup } from "./admin-group.queries";
 import { getSnapshot } from "./admin-snapshot.queries";
 
@@ -154,6 +155,32 @@ async function upsertPeriods(
   return { newlyCreatedPeriods };
 }
 
+async function upsertReminderPolicies(
+  tx: Prisma.TransactionClient,
+  policies: AdminSnapshot["policies"],
+): Promise<void> {
+  // Restored BEFORE the rules so a rule's non-null policyId FK resolves on a
+  // fresh database. Unlike the live admin edit path (saveReminderPolicy),
+  // this does NOT cascade `active` onto derived rule statuses — the snapshot
+  // carries each rule row's own status and writes it explicitly below.
+  for (const policy of policies) {
+    const data = {
+      kind: policy.kind,
+      offsetMinutes: policy.offsetMinutes,
+      timezone: policy.timezone,
+      audience: audienceToPrisma[policy.audience],
+      active: policy.active,
+      validFrom: policy.validFrom,
+      validUntil: policy.validUntil,
+    };
+    await tx.reminderPolicy.upsert({
+      where: { id: policy.id },
+      create: { id: policy.id, ...data },
+      update: data,
+    });
+  }
+}
+
 async function upsertReminderRules(
   tx: Prisma.TransactionClient,
   reminderRules: AdminSnapshot["reminderRules"],
@@ -163,6 +190,7 @@ async function upsertReminderRules(
 
   for (const rule of reminderRules) {
     const ruleData = {
+      policyId: rule.policyId,
       kind: rule.kind,
       fireAt: rule.fireAt,
       timezone: rule.timezone,
@@ -217,6 +245,7 @@ export async function saveSnapshot(
     await applyGroupHeads(tx, snapshot.groups);
     await upsertProjects(tx, snapshot.projects);
     const periods = await upsertPeriods(tx, snapshot.periods);
+    await upsertReminderPolicies(tx, snapshot.policies);
     await upsertReminderRules(tx, snapshot.reminderRules, currentRules);
 
     return periods;

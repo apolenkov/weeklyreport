@@ -470,6 +470,68 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(group.headUserId).toBe(testData.lead.id);
   });
 
+  // fix-snapshot-restore-policyid: getSnapshot reads a reminder rule's
+  // policyId FK, but the restore path built `ruleData` without it, so a
+  // policy-derived rule detached from its policy on every restore.
+  it("preserves a reminder rule's policyId through a getSnapshot -> saveSnapshot restore (fix-snapshot-restore-policyid)", async () => {
+    const policyId = "d1111111-1111-4111-8111-111111111111";
+    const ruleId = "d2222222-2222-4222-8222-222222222222";
+
+    await prisma.reminderPolicy.create({
+      data: {
+        id: policyId,
+        kind: "deadline",
+        offsetMinutes: -1440,
+        timezone: "Europe/Moscow",
+        audience: "LEAD_WITH_DRAFT",
+        active: true,
+        validFrom: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    });
+    await prisma.reminderRule.create({
+      data: {
+        id: ruleId,
+        policyId,
+        kind: "deadline",
+        fireAt: new Date("2026-04-11T09:00:00.000Z"),
+        timezone: "Europe/Moscow",
+        status: "active",
+        version: 1,
+        reportId: testData.report.id,
+      },
+    });
+
+    const snapshot = await repo.getSnapshot();
+    // Drop BOTH the rule and its policy: a fresh-database restore must
+    // re-create the policy first or the rule's policyId FK cannot resolve
+    // (the original fix without policy restore crashed here with P2003).
+    await prisma.reminderRule.delete({ where: { id: ruleId } });
+    await prisma.reminderPolicy.delete({ where: { id: policyId } });
+
+    await repo.saveSnapshot(snapshot);
+
+    const restored = expectDefined(
+      await prisma.reminderRule.findUnique({ where: { id: ruleId } }),
+    );
+    expect(restored.policyId).toBe(policyId);
+    const restoredPolicy = expectDefined(
+      await prisma.reminderPolicy.findUnique({ where: { id: policyId } }),
+    );
+    expect(restoredPolicy.audience).toBe("LEAD_WITH_DRAFT");
+
+    // UPDATE branch: strip the FK on the live row, restore again over the
+    // existing rule id, and confirm the update re-attaches the policy.
+    await prisma.reminderRule.update({
+      where: { id: ruleId },
+      data: { policyId: null },
+    });
+    await repo.saveSnapshot(snapshot);
+    const reRestored = expectDefined(
+      await prisma.reminderRule.findUnique({ where: { id: ruleId } }),
+    );
+    expect(reRestored.policyId).toBe(policyId);
+  });
+
   it("attachProductToGroup rejects moving a product from another group (UAT v7)", async () => {
     await prisma.groupProduct.deleteMany({});
     const leadGroupId = expectDefined(testData.lead.reportingGroupId);
