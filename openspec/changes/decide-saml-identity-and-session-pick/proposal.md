@@ -81,3 +81,16 @@ can be called correct, and a fix if the assumption doesn't hold.
   product-owner ratification of the identity-matching rule; only the
   active-report ordering fix (once verified as a real bug) may ship without
   further sign-off, since it does not change identity semantics.
+
+## Rollout caveat (recorded 2026-07-17)
+
+`User.samlId` is REQUIRED and unique in the schema, so no stored user
+actually "lacks" a samlId — seed/snapshot rows carry placeholders
+("head-1", or the email). The email-only branch of the guard therefore
+covers only an empty/absent samlId on the PROFILE side. dev-login is
+unaffected: it builds its profile from the DB row's own samlId, so
+equality always holds. When a real IdP integration lands, stored
+placeholder samlIds will NOT match IdP identifiers and those logins will
+be refused — deliberately fail-closed. The SSO rollout must align stored
+samlIds (admin sync or migration) as part of the integration, not weaken
+the guard.
