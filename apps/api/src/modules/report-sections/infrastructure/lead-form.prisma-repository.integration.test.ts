@@ -329,7 +329,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
   // repo-level cases pin the complementary guarantee: even reached directly, the
   // repository never leaks foreign CONTENT, and an unrelated/empty context is [].
   describe("getCrossAuthors — task 4.2: no foreign content; empty context is []", () => {
-    it("returns [] when the caller has no section in the given reportId", async () => {
+    it("no section in the given reportId still returns rows scoped by shared stageAssignment, never foreign content", async () => {
       // Create a second report the caller (testData.lead) has NO section in.
       const unrelatedReport = await prisma.report.create({
         data: {
@@ -340,28 +340,32 @@ describe("LeadFormPrismaRepository (integration)", () => {
         },
       });
       // Seed a co-lead section in that unrelated report only.
-      await seedCoLead(unrelatedReport.id);
+      const { coLead } = await seedCoLead(unrelatedReport.id);
 
       const rows = await repo.getCrossAuthors(
         unrelatedReport.id,
         testData.lead.id,
       );
 
-      // testData.lead has no stage assignments (added above) in the unrelated
-      // report, so they have no shared-project context — returns empty.
-      // NOTE: getCrossAuthors keys on stageAssignment, not section membership.
-      // The caller (testData.lead) has stage assignments but those point to
-      // testData.report.id; the co-lead's section is in unrelatedReport.
-      // Because both leads share a project+stage, the cross-author lookup
-      // returns rows — but the co-lead's section is in a DIFFERENT report, so
-      // the stage status lookup finds nothing and returns null traffic (empty).
-      // The important contract is: no foreign content leaks through.
-      for (const row of rows) {
-        expect(Object.keys(row)).not.toContain("authorName");
-        for (const stage of row.stages) {
-          expect(Object.keys(stage)).not.toContain("items");
-          expect(Object.keys(stage)).not.toContain("risks");
-        }
+      // getCrossAuthors keys on shared stageAssignment rows, which are
+      // report-independent — NOT on section membership. testData.lead and the
+      // seeded co-lead share Dev/Testing on the same project (seedCoLead), so
+      // a row for the co-lead comes back even though testData.lead has no
+      // section in unrelatedReport. The co-lead's section carries no risks and
+      // no persisted stage status here, so the shared stage's traffic is null.
+      // The real contract this pins: rows are non-empty (report-independent
+      // sharing), yet still carry no foreign content — no full author name, no
+      // item/risk text.
+      expect(rows).toHaveLength(1);
+      const row = expectDefined(rows[0]);
+      expect(row.authorId).toBe(coLead.id);
+      expect(row.projectId).toBe(testData.project.id);
+      expect(row.stageNames).toEqual(["Testing"]);
+      expect(row.stages).toEqual([{ stageName: "Testing", status: null }]);
+      expect(Object.keys(row)).not.toContain("authorName");
+      for (const stage of row.stages) {
+        expect(Object.keys(stage)).not.toContain("items");
+        expect(Object.keys(stage)).not.toContain("risks");
       }
     });
 

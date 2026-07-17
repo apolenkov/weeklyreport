@@ -374,7 +374,7 @@ describe("ArchiveService — contract tests", () => {
       expect(() => archiveReportDetailSchema.parse(result)).not.toThrow();
     });
 
-    it("returns report with sections sorted by authorName", async () => {
+    it("returns report with sections sorted by authorName ascending", async () => {
       const reportId = "22222222-2222-4222-8222-222222222222";
       const sectionZ: ReportSectionReadModel = {
         ...sectionLead1,
@@ -382,6 +382,7 @@ describe("ArchiveService — contract tests", () => {
         authorId: "33333333-3333-4333-8333-333333333334",
         authorName: "Zulu Lead",
       };
+      // Fed in non-alphabetical input order to verify the service sorts.
       const detail = makeDetail({ sections: [sectionZ, sectionLead1] });
       const details = new Map<string, ArchiveReportDetail>([
         [reportId, detail],
@@ -391,10 +392,8 @@ describe("ArchiveService — contract tests", () => {
 
       const result = await service.getArchiveReport(reportId);
       expect(result.report.sections).toHaveLength(2);
-      // Verify the report returns both sections
       const names = result.report.sections.map((s) => s.authorName);
-      expect(names).toContain("Lead Alpha");
-      expect(names).toContain("Zulu Lead");
+      expect(names).toEqual(["Lead Alpha", "Zulu Lead"]);
     });
 
     it("unpublished reports are not in archive", async () => {

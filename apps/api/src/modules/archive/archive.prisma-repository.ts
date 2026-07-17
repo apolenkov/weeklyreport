@@ -197,8 +197,9 @@ export class ArchivePrismaRepository implements ArchiveRepository {
 /**
  * Narrow the archive `where` to rows strictly after the cursor coordinate,
  * matching the `publishedAt desc, id desc` order exactly so pagination neither
- * skips nor duplicates a row across the tie. A malformed cursor decodes to null
- * and the unnarrowed `where` is returned (first-page read), never a throw.
+ * skips nor duplicates a row across the tie. A cursor that fails to decode
+ * throws `BadRequestException` (400) — it never falls back to an unnarrowed,
+ * first-page `where`.
  */
 function withArchiveKeyset(
   where: Prisma.ReportWhereInput,

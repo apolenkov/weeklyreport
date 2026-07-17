@@ -4,8 +4,12 @@ import { describe, expect, it } from "vitest";
 import {
   AdminAccessError,
   AdminGroupProductConflictError,
+  AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
+  AdminReopenRequestAlreadyProcessedError,
+  AdminReopenRequestNotFoundError,
+  AdminUserConflictError,
 } from "../../modules/admin/index.js";
 import { ArchiveDomainError } from "../../modules/archive/index.js";
 import {
@@ -18,8 +22,15 @@ import {
   PeriodNotFoundError,
   PeriodScopeError,
 } from "../../modules/period/index.js";
+import {
+  ProjectActivityDomainError,
+  ProjectActivityNotFoundError,
+} from "../../modules/project-activity/index.js";
 import { PublicationNotFoundError } from "../../modules/publication/index.js";
-import { ReminderDomainError } from "../../modules/reminders/index.js";
+import {
+  ReminderDomainError,
+  ReminderScopeError,
+} from "../../modules/reminders/index.js";
 import {
   LeadFormAccessError,
   LeadFormConstraintError,
@@ -33,10 +44,12 @@ import {
 } from "../../modules/report-sections/index.js";
 import {
   ReviewAccessError,
+  ReviewConstraintError,
+  ReviewNotFoundError,
   ReviewVersionConflictError,
 } from "../../modules/review/index.js";
 import { WeeklyReportDomainError } from "../../modules/weekly-report/index.js";
-import { mapDomainError } from "./trpc.error-mapper.js";
+import { DOMAIN_ERROR_CODES, mapDomainError } from "./trpc.error-mapper.js";
 
 describe("mapDomainError", () => {
   // -----------------------------------------------------------------------
@@ -336,15 +349,14 @@ describe("mapDomainError", () => {
 // ---------------------------------------------------------------------------
 // Exhaustive domain-error → tRPC-code coverage.
 //
-// map-domain-errors refactored mapDomainError from a per-class if-chain to a
-// declarative table (the complexity ceiling forbids 20 instanceof branches).
-// The table can silently mis-code ANY class, so every domain error is asserted
-// here. These [class, code] pairs are hand-written INDEPENDENTLY of the
-// production DOMAIN_ERROR_CODES table — importing and iterating it would assert
-// the table against itself. This block also satisfies the spec's per-class
-// coverage requirement for the classes this change added or newly routes
-// (LeadFormConstraintError, AdminGroupProductConflictError,
-// PublicationNotFoundError, LeadFormAccessError, AdminPeriodNotFoundError).
+// mapDomainError maps via a declarative table (the complexity ceiling forbids
+// one instanceof branch per class), which can silently mis-code ANY class, so
+// every domain error is asserted here. The [class, code] pairs below are
+// hand-typed INDEPENDENTLY of the production DOMAIN_ERROR_CODES table's codes
+// — asserting a code against itself would prove nothing. The coverage check
+// at the bottom of this block DOES import DOMAIN_ERROR_CODES, but only to
+// compare class membership (not codes) against this list, so a class added to
+// or dropped from the production table without a matching row here fails.
 // ---------------------------------------------------------------------------
 
 describe("mapDomainError — exhaustive domain-error → code coverage", () => {
@@ -459,6 +471,51 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       make: () => new PeriodNotFoundError("m"),
       code: "NOT_FOUND",
     },
+    {
+      name: "ReviewNotFoundError",
+      make: () => new ReviewNotFoundError("m"),
+      code: "NOT_FOUND",
+    },
+    {
+      name: "ReviewConstraintError",
+      make: () => new ReviewConstraintError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "ReminderScopeError",
+      make: () => new ReminderScopeError("m"),
+      code: "FORBIDDEN",
+    },
+    {
+      name: "AdminPeriodAlreadyArchivedError",
+      make: () => new AdminPeriodAlreadyArchivedError("m"),
+      code: "CONFLICT",
+    },
+    {
+      name: "AdminReopenRequestNotFoundError",
+      make: () => new AdminReopenRequestNotFoundError("m"),
+      code: "NOT_FOUND",
+    },
+    {
+      name: "AdminReopenRequestAlreadyProcessedError",
+      make: () => new AdminReopenRequestAlreadyProcessedError("m"),
+      code: "CONFLICT",
+    },
+    {
+      name: "AdminUserConflictError",
+      make: () => new AdminUserConflictError("m"),
+      code: "CONFLICT",
+    },
+    {
+      name: "ProjectActivityNotFoundError",
+      make: () => new ProjectActivityNotFoundError("m"),
+      code: "NOT_FOUND",
+    },
+    {
+      name: "ProjectActivityDomainError",
+      make: () => new ProjectActivityDomainError("m"),
+      code: "BAD_REQUEST",
+    },
   ] as const;
 
   it.each(cases)("maps $name → $code", ({ make, code }) => {
@@ -472,8 +529,21 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
   });
 
   it("covers every domain error class the mapper imports", () => {
-    // Guards against a class being added to the mapper without a row here.
-    expect(cases).toHaveLength(22);
+    // Derived from the production table (imported, not iterated for its
+    // codes — the codes above stay hand-typed independently so this block
+    // doesn't just assert the table against itself): every DomainErrorCtor
+    // DOMAIN_ERROR_CODES maps must have exactly one row above, and every row
+    // above must construct a class the table actually maps — so a class
+    // added to (or dropped from) the production table without a matching row
+    // change here fails this test.
+    const mappedCtors = DOMAIN_ERROR_CODES.map(([Ctor]) => Ctor);
+    const testedCtors = cases.map((c) => c.make().constructor);
+
+    expect(new Set(testedCtors).size).toBe(testedCtors.length);
+    expect(testedCtors).toHaveLength(mappedCtors.length);
+    for (const Ctor of mappedCtors) {
+      expect(testedCtors).toContain(Ctor);
+    }
   });
 });
 

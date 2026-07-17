@@ -1,14 +1,19 @@
 /**
- * VA-0a / VA-0b regression tests for escalation.template.tsx.
+ * Regression tests for escalation.template.tsx.
  *
- * Coverage targets (verify-a11y-recommended-flip catalog):
+ * Coverage targets:
  *  - unit-rtl high: module exports EscalationEmail as React.ReactElement
  *  - snapshot high:  li render loop — composite key (leadName+sectionTitle)
- *  - unit-rtl high: li keys are stable when lateLeads is reordered
+ *  - unit-rtl high: static render output follows lateLeads array order
  *  - snapshot med:  same lateLeads renders to identical HTML twice
  *
  * No jsdom / RTL — the api package runs in Node; html is obtained via
- * react-email's render, already a production dependency.
+ * react-email's render, already a production dependency. `render()` is a
+ * single, non-reconciling static render (no React commit/diff step), so a
+ * key-identity claim (composite keys vs. index keys distinguishing on
+ * reorder) cannot be tested from here — that needs a client-render harness
+ * this package doesn't have. See the reorder test below for what a static
+ * render CAN prove.
  */
 import * as React from "react";
 import { render } from "react-email";
@@ -78,18 +83,16 @@ describe("EscalationEmail — li composite key snapshot", () => {
 });
 
 // ---------------------------------------------------------------------------
-// unit-rtl / high: stable composite keys — reorder does NOT silently collapse
+// unit-rtl / high: static render output follows input array order
 // ---------------------------------------------------------------------------
 
-describe("EscalationEmail — stable composite keys under reorder", () => {
-  it("reordering lateLeads changes rendered order (keys follow identity, not position)", async () => {
-    // Catalog row: "li elements maintain identity when lateLeads array is
-    // reordered (same leadName+sectionTitle pair = same DOM node)"
-    //
-    // With index keys: swapping A↔B would still render HTML in [A,B] order
-    // because React reconciles by position. With composite keys React tracks
-    // by identity, so the rendered HTML reflects the actual array order.
-    // Test: render [A,B] vs [B,A] → the HTML content order should differ.
+describe("EscalationEmail — render order follows input order", () => {
+  it("reordering lateLeads changes the rendered HTML order to match", async () => {
+    // This is a single, non-reconciling static render (react-email's
+    // render()) — there is no commit/diff step where a `key` prop strategy
+    // (composite vs. index) could matter. `map()` always emits its output in
+    // array order regardless of `key`, so this only pins that claim: render
+    // [A,B] vs [B,A] and the HTML content order follows the input order.
     const htmlAB = await render(
       React.createElement(EscalationEmail, {
         ...baseProps,
@@ -109,7 +112,7 @@ describe("EscalationEmail — stable composite keys under reorder", () => {
     expect(htmlBA).toContain("Alice");
     expect(htmlBA).toContain("Bob");
 
-    // Order must reflect the actual array order (composite key tracks identity).
+    // Order must reflect the actual input array order.
     const alicePosAB = htmlAB.indexOf("Alice");
     const bobPosAB = htmlAB.indexOf("Bob");
     const alicePosBA = htmlBA.indexOf("Alice");

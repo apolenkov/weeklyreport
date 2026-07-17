@@ -75,6 +75,26 @@ export function buildArchiveReadFilter(
   return {};
 }
 
+/**
+ * Order an archive detail's sections by author name ascending. Pure — never
+ * mutates the input array — so a viewer scanning the archived report finds
+ * authors alphabetically rather than in whatever order the assembled report
+ * happened to produce them.
+ */
+function sortSectionsByAuthorName(
+  detail: ArchiveReportDetail,
+): ArchiveReportDetail {
+  return {
+    ...detail,
+    report: {
+      ...detail.report,
+      sections: [...detail.report.sections].sort((a, b) =>
+        a.authorName.localeCompare(b.authorName),
+      ),
+    },
+  };
+}
+
 export class ArchiveService {
   constructor(private readonly repository: ArchiveRepository) {}
 
@@ -114,6 +134,6 @@ export class ArchiveService {
       throw new ArchiveDomainError(`Archive report ${reportId} was not found.`);
     }
 
-    return archiveReportDetailSchema.parse(detail);
+    return archiveReportDetailSchema.parse(sortSectionsByAuthorName(detail));
   }
 }
