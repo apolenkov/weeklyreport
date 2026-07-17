@@ -14,6 +14,7 @@ import {
   type RemindersEnqueuer,
   type RemindersTelemetry,
 } from "./reminders.ports.js";
+import { resolveReminderDedupeKey } from "./reminders-dedupe-key.js";
 import {
   type EnqueueContext,
   enqueueOrMarkFailed,
@@ -129,12 +130,10 @@ export interface DueEscalationRule {
 /**
  * The richer payload threaded by the scheduler through
  * `requestReminderExecution`. The dedupeKey uses
- * `${rule.id}:${kind}:${cycleDate}:${recipientEmail}` so two scheduler ticks
- * within one UTC day collapse to a single execution for both kinds.
- *
- * The legacy dedupe key shape
- * (`${rule.id}:${fireAt.toISOString()}:${recipientEmail}`) is preserved for
- * callers that omit `payload`.
+ * `${rule.id}:${kind}:${cycleDate}:${recipientEmail}` (see
+ * `resolveReminderDedupeKey`) so two scheduler ticks within one UTC day
+ * collapse to a single execution for both kinds — a caller that omits
+ * `payload` gets the same shape, defaulted to `kind: "deadline"`.
  *
  * Every payload carries `organization` —
  * `{shortName, fullName}` snapshotted at enqueue time from the
@@ -193,12 +192,12 @@ export class RemindersService {
   }
 
   /**
-   * Record (idempotently) and enqueue one reminder execution. With a `payload`
-   * the dedupe key is `${rule.id}:${kind}:${cycleDate}:${recipientEmail}`, so
-   * hourly ticks within one UTC cycle collapse to a single execution; without
-   * one it keeps the legacy ISO-suffixed shape. The email job is enqueued only
-   * when this call actually inserted the row, so a concurrent duplicate tick
-   * enqueues nothing.
+   * Record (idempotently) and enqueue one reminder execution. The dedupe key
+   * (`resolveReminderDedupeKey`) is shared with every other caller so a
+   * manual dispatch collides with an already-sent automated reminder for the
+   * same rule/recipient/cycle. The email job is enqueued only when this call
+   * actually inserted the row, so a concurrent duplicate tick enqueues
+   * nothing.
    */
   async requestReminderExecution(
     ruleId: string,
@@ -217,12 +216,7 @@ export class RemindersService {
       );
     }
 
-    // Both kinds share the dedupeKey shape so two scheduler ticks within one
-    // UTC day collapse to a single execution; the legacy (no-payload) caller
-    // keeps its own ISO-suffixed shape.
-    const dedupeKey = payload
-      ? `${rule.id}:${payload.kind}:${payload.cycleDate}:${recipientEmail}`
-      : `${rule.id}:${rule.fireAt.toISOString()}:${recipientEmail}`;
+    const dedupeKey = resolveReminderDedupeKey(rule, recipientEmail, payload);
 
     const candidate = adminReminderExecutionSchema.parse({
       id: crypto.randomUUID(),

@@ -32,7 +32,7 @@ function execution(
     id: `a0000000-0000-4000-a000-0000000${idTail}`,
     ruleId: RULE_ID,
     reportId: REPORT_ID,
-    dedupeKey: `${RULE_ID}:2026-04-11T09:00:00.000Z:${recipientEmail}`,
+    dedupeKey: `${RULE_ID}:deadline:2026-04-11:${recipientEmail}`,
     status: "queued",
     scheduledFor: new Date("2026-04-11T09:00:00.000Z"),
     sentAt: null,

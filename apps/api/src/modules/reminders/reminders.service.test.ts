@@ -272,20 +272,50 @@ describe("deadline payload — extended dedupe-key shape", () => {
     expect(cycleNplus1.dedupeKey).not.toBe(cycleN.dedupeKey);
   });
 
-  it("legacy (no payload) and deadline (with payload) are independent dedupe namespaces", async () => {
+  it("no-payload dispatch defaults to kind:'deadline' with cycleDate from the rule's own fireAt", async () => {
     const service = new RemindersService(createRepository(activeRule));
-    const legacy = await service.requestReminderExecution(
+    const manual = await service.requestReminderExecution(
       activeRule.id,
       "lead@test.local",
     );
-    const deadline = await service.requestReminderExecution(
+
+    // activeRule.fireAt is 2026-04-10T09:00:00.000Z — UTC-truncated to
+    // 2026-04-10, the same shape a payload-bearing scheduler tick builds.
+    expect(manual.dedupeKey).toBe(
+      `${activeRule.id}:deadline:2026-04-10:lead@test.local`,
+    );
+  });
+
+  it("a no-payload manual dispatch collides with an automated payload for the same cycle — no second execution (regression)", async () => {
+    const service = new RemindersService(createRepository(activeRule));
+    const automated = await service.requestReminderExecution(
+      activeRule.id,
+      "lead@test.local",
+      { ...deadlinePayload, cycleDate: "2026-04-10" },
+    );
+    const manual = await service.requestReminderExecution(
+      activeRule.id,
+      "lead@test.local",
+    );
+
+    expect(manual.id).toBe(automated.id);
+    expect(manual.dedupeKey).toBe(automated.dedupeKey);
+  });
+
+  it("no-payload and payload dispatches for a DIFFERENT cycle stay independent", async () => {
+    const service = new RemindersService(createRepository(activeRule));
+    const manual = await service.requestReminderExecution(
+      activeRule.id,
+      "lead@test.local",
+    );
+    const automated = await service.requestReminderExecution(
       activeRule.id,
       "lead@test.local",
       deadlinePayload,
     );
 
-    expect(deadline.id).not.toBe(legacy.id);
-    expect(deadline.dedupeKey).not.toBe(legacy.dedupeKey);
+    expect(automated.id).not.toBe(manual.id);
+    expect(automated.dedupeKey).not.toBe(manual.dedupeKey);
   });
 });
 

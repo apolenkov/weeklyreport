@@ -1,6 +1,7 @@
 import type { AdminReminderExecution, UserSession } from "@customreport/shared";
 
 import { ReminderScopeError } from "./reminders.errors.js";
+import { resolveReminderDedupeKey } from "./reminders-dedupe-key.js";
 
 const REMINDER_RULE_OUT_OF_SCOPE_MESSAGE = "reminder-rule-out-of-scope";
 
@@ -244,7 +245,6 @@ export class RemindersScopeService {
     rule: { id: string; fireAt: Date },
     draftSections: { email: string; notificationOptOut: boolean }[],
   ): Promise<DispatchPendingResult> {
-    const fireAtIso = rule.fireAt.toISOString();
     // eslint-disable-next-line no-restricted-syntax -- Race-safe dispatch accounting must stay beside the async dedupe call; a reducer would hide the TOCTOU boundary.
     let dispatched = 0;
     // eslint-disable-next-line no-restricted-syntax -- Race-safe dispatch accounting must stay beside the async dedupe call; a reducer would hide the TOCTOU boundary.
@@ -256,7 +256,10 @@ export class RemindersScopeService {
         skipped++;
         continue;
       }
-      const dedupeKey = `${rule.id}:${fireAtIso}:${section.email}`;
+      // Mirrors the no-payload key `requestReminderExecution` builds for this
+      // same rule/recipient below, so the read-back always finds the row
+      // this call (or a colliding earlier manual/automated one) produced.
+      const dedupeKey = resolveReminderDedupeKey(rule, section.email);
       const beforeMs = Date.now();
       await this.requestReminderExecution(rule.id, section.email);
       const createdAt = await this.repository.findExecutionCreatedAt(dedupeKey);
