@@ -151,7 +151,7 @@ Steps:
 4. Flags (verify against code, not just the spec):
    - touchesSchema: edits prisma/schema.prisma or a migration?
    - touchesSharedGodFiles: edits apps/api/src/infrastructure/trpc/trpc.router.ts or trpc.middleware.ts?
-   - touchesAuthMiddleware: adds/changes a tRPC procedure's middleware chain (the 9 canonical chain builders)?
+   - touchesAuthMiddleware: adds/changes a tRPC procedure's middleware chain (the 8 canonical chain builders)?
    - highStakes: auth / schema / concurrency / migration / money.
 5. sizeTasks = number of checkbox items in tasks.md. sizeEstimate small/medium/large.
 6. dependsOn = other change names that must land before this (shared file, or builds on their fix). [] if none.

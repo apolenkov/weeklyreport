@@ -21,7 +21,7 @@ const STANDARDS = [
   "UI strings in apps/web/**/*.tsx stay English (JSX/toast/aria/placeholder). Russian only in DB/seed data, comments, test fixtures.",
   "Comment hygiene: NO ticket/phase/change-slug prefixes (no `UFB-052`, `Phase X`, change names) in comments. Explain the WHY of current code only; never narrate what the code already says.",
   "Strict lint rules are ERRORS and bite mid-edit: require-await, no-unnecessary-condition, prefer-string-raw, jsdoc-on-private-helper, x-powered-by. Changed paths MUST pass `eslint --max-warnings 0`.",
-  "Reuse canonical helpers (e.g. groupScopeFilter from apps/api/src/lib/group-scope.ts). tRPC procedures MUST use one of the 9 canonical middleware-chain builders (matched by reference identity) — never hand-roll a chain.",
+  "Reuse canonical helpers (e.g. groupScopeFilter from apps/api/src/lib/group-scope.ts). tRPC procedures MUST use one of the 8 canonical middleware-chain builders (matched by reference identity) — never hand-roll a chain.",
   "Period dual-state invariant: a Report write updates BOTH the new period state AND the legacy period tuple, atomically.",
 ];
 
