@@ -36,6 +36,10 @@ if (!process.env.E2E_DATABASE_URL) {
 
 export default defineConfig({
   testDir: path.join(__dirname, "integration"),
+  // *.test.ts files in this dir are vitest pins (run via vitest.prisma.config.ts),
+  // not Playwright specs — Playwright's default pattern would otherwise collect
+  // them and crash on the vitest import.
+  testIgnore: "**/*.test.ts",
   outputDir: path.join(__dirname, "integration/.results"),
   globalSetup: path.join(__dirname, "integration/global-setup.ts"),
   globalTeardown: path.join(__dirname, "integration/global-teardown.ts"),
