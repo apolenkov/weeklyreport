@@ -1,4 +1,5 @@
 import eslintComments from "@eslint-community/eslint-plugin-eslint-comments";
+import nextPlugin from "@next/eslint-plugin-next";
 import type { ESLint, Linter } from "eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 import { createTypeScriptImportResolver } from "eslint-import-resolver-typescript";
@@ -637,6 +638,18 @@ export default defineConfig([
       // (require-param/returns, check-tag-names, …) where blocks exist, not
       // their presence. Flip to error with content in a dedicated docs pass.
       "jsdoc/require-jsdoc": "off",
+    },
+  },
+  // Next-specific correctness rules (Next 16 removed `next lint`, so the
+  // plugin must be wired manually or these rules simply never run). The
+  // core-web-vitals preset layers the CWV-relevant promotions on top of
+  // recommended; preset severities kept as shipped.
+  {
+    files: ["apps/web/**/*.{ts,tsx}"],
+    plugins: { "@next/next": nextPlugin },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs["core-web-vitals"].rules,
     },
   },
   // import boundary — apps/web must not import apps/api at RUNTIME. The tRPC
