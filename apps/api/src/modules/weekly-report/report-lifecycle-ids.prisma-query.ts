@@ -75,26 +75,7 @@ export async function queryCurrentEditableId(
 }
 
 /**
- * viewer-live-status: the newest `published` report id. Used as the viewer's
- * default-report fallback when no current editable period exists, so the
- * resolved default is a period the published-or-current gate accepts. The
- * `id desc` tiebreak keeps the pick deterministic on a shared `periodStart`.
- */
-export async function queryLatestPublishedId(
-  prisma: PrismaService,
-): Promise<string | null> {
-  const publishedReport = await prisma.report.findFirst({
-    where: { periodStatus: "published" },
-    orderBy: [{ periodStart: "desc" }, { id: "desc" }],
-    select: { id: true },
-  });
-
-  return publishedReport?.id ?? null;
-}
-
-/**
- * The newest non-archived `published` report id. Mirrors
- * `queryLatestPublishedId` but adds `archived: false`, so it is the head's
+ * The newest non-archived `published` report id — the head's
  * `period.reopen` authz target and published-fallback default: a head can
  * reopen the newest non-archived published period even when a newer published
  * row has since been archived (the archived-rejection guard would otherwise

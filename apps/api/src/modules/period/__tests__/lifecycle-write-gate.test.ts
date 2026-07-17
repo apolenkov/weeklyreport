@@ -51,7 +51,6 @@ const WRITE_METHODS = new Set([
 // transition module itself (it IS the single writer). Stored as path suffixes.
 const EXEMPT_SUFFIXES = [
   join("modules", "period", "domain", "period-transition.ts"),
-  join("modules", "period", "application", "period-transition.apply.ts"),
 ];
 
 // A call-site opt-out. Reserved for writes that genuinely are NOT lifecycle

@@ -101,13 +101,11 @@ function createSpyRepository(
   reports: Map<string, WeeklyReportReadModel>,
   activeId: string | null = null,
   currentEditableId: string | null = null,
-  latestPublishedId: string | null = null,
   latestPublishedNonArchivedId: string | null = null,
 ): WeeklyReportRepository & {
   getWeeklyReport: ReturnType<typeof vi.fn>;
   getActiveReportId: ReturnType<typeof vi.fn>;
   getCurrentEditableId: ReturnType<typeof vi.fn>;
-  getLatestPublishedId: ReturnType<typeof vi.fn>;
   getLatestPublishedNonArchivedId: ReturnType<typeof vi.fn>;
 } {
   return {
@@ -120,8 +118,6 @@ function createSpyRepository(
     getActiveReportId: vi.fn(async () => activeId),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract (no awaitable work in the stub)
     getCurrentEditableId: vi.fn(async () => currentEditableId),
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract (no awaitable work in the stub)
-    getLatestPublishedId: vi.fn(async () => latestPublishedId),
     getLatestPublishedNonArchivedId: vi.fn(() =>
       Promise.resolve(latestPublishedNonArchivedId),
     ),
@@ -405,13 +401,7 @@ describe("WeeklyReportService — viewer-live-status published-or-current gate (
   it("viewer no-reportId falls back to the latest non-archived published report", async () => {
     const published = makeWeeklyReport({ periodStatus: "published" });
     const reports = new Map([[reportId, published]]);
-    const repo = createSpyRepository(
-      reports,
-      activeReportId,
-      null,
-      activeReportId,
-      reportId,
-    );
+    const repo = createSpyRepository(reports, activeReportId, null, reportId);
     const service = new WeeklyReportService(repo);
 
     const result = await service.getWeeklyReport(undefined, "viewer");
@@ -422,7 +412,6 @@ describe("WeeklyReportService — viewer-live-status published-or-current gate (
     expect(result.reportId).toBe(reportId);
     expect(repo.getCurrentEditableId).toHaveBeenCalledOnce();
     expect(repo.getLatestPublishedNonArchivedId).toHaveBeenCalledOnce();
-    expect(repo.getLatestPublishedId).not.toHaveBeenCalled();
     expect(repo.getActiveReportId).not.toHaveBeenCalled();
   });
 
@@ -503,10 +492,6 @@ function createCrossGroupRepository(
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
     async getCurrentEditableId() {
-      return null;
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
-    async getLatestPublishedId() {
       return null;
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
@@ -638,13 +623,7 @@ describe("WeeklyReportService — head default resolution", () => {
     const reports = new Map([[reportId, report]]);
     // getActiveReportId points elsewhere; the head default MUST track the
     // lifecycle resolver so its reportId equals the publish authz target.
-    const repo = createSpyRepository(
-      reports,
-      activeReportId,
-      reportId,
-      null,
-      null,
-    );
+    const repo = createSpyRepository(reports, activeReportId, reportId, null);
     const service = new WeeklyReportService(repo);
 
     await service.getWeeklyReport(undefined, "head");
@@ -659,12 +638,10 @@ describe("WeeklyReportService — head default resolution", () => {
     const reports = new Map([[olderPublishedId, report]]);
     // No current editable; the newest published is archived, so the head
     // default lands on the older NON-archived published id — the same target
-    // period.reopen authz resolves. The archived-inclusive getLatestPublishedId
-    // (viewer fallback) must NOT be used for a head.
+    // period.reopen authz resolves.
     const repo = createSpyRepository(
       reports,
       activeReportId,
-      null,
       null,
       olderPublishedId,
     );
@@ -674,7 +651,6 @@ describe("WeeklyReportService — head default resolution", () => {
 
     expect(repo.getCurrentEditableId).toHaveBeenCalledOnce();
     expect(repo.getLatestPublishedNonArchivedId).toHaveBeenCalledOnce();
-    expect(repo.getLatestPublishedId).not.toHaveBeenCalled();
     expect(repo.getActiveReportId).not.toHaveBeenCalled();
     expect(repo.getWeeklyReport).toHaveBeenCalledWith(
       olderPublishedId,
@@ -685,7 +661,7 @@ describe("WeeklyReportService — head default resolution", () => {
   it("keeps the lead default on getActiveReportId (unchanged)", async () => {
     const report = makeWeeklyReport({ reportId: activeReportId });
     const reports = new Map([[activeReportId, report]]);
-    const repo = createSpyRepository(reports, activeReportId, null, null, null);
+    const repo = createSpyRepository(reports, activeReportId, null, null);
     const service = new WeeklyReportService(repo);
 
     await service.getWeeklyReport(undefined, "lead");

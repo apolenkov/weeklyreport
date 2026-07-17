@@ -28,15 +28,6 @@ export class ReportSectionsPrismaRepository
 {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getReportStatus(reportId: string): Promise<ReportStatus | null> {
-    const report = await this.prisma.report.findUnique({
-      where: { id: reportId },
-      select: { status: true },
-    });
-
-    return report?.status ?? null;
-  }
-
   /**
    * Canonical period status of the section's report, keyed on the section id —
    * the single lookup both write-path gates read. Selects `report.periodStatus`

@@ -119,10 +119,6 @@ function createRepository(
       return currentEditableId;
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
-    async getLatestPublishedId() {
-      return null;
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
     async getLatestPublishedNonArchivedId() {
       return null;
     },

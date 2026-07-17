@@ -85,10 +85,6 @@ function createRepository(
       return structuredClone(currentSection);
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReportSectionsRepository contract (no awaitable work in the stub)
-    async getReportStatus() {
-      return "draft";
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReportSectionsRepository contract (no awaitable work in the stub)
     async getReportPeriodStatusForSection() {
       return periodStatus;
     },

@@ -131,37 +131,6 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId", () => {
   });
 });
 
-// viewer-live-status: the newest-published resolver used as the viewer's
-// default-report fallback. Pins periodStatus=published + the deterministic
-// periodStart/id ordering.
-describe("WeeklyReportPrismaRepository.getLatestPublishedId", () => {
-  it("queries the newest published report with a deterministic id tiebreak", async () => {
-    const findFirst = vi.fn().mockResolvedValue({ id: "published-id" });
-    const repository = createRepository(findFirst);
-
-    await expect(repository.getLatestPublishedId()).resolves.toBe(
-      "published-id",
-    );
-
-    expect(findFirst).toHaveBeenCalledOnce();
-    const callArgs = findFirst.mock.calls[0]?.[0] as {
-      where: { periodStatus: string };
-      orderBy: { periodStart?: string; id?: string }[];
-      select: { id: boolean };
-    };
-    expect(callArgs.where.periodStatus).toBe("published");
-    expect(callArgs.orderBy).toEqual([{ periodStart: "desc" }, { id: "desc" }]);
-    expect(callArgs.select).toEqual({ id: true });
-  });
-
-  it("returns null when no published report exists", async () => {
-    const findFirst = vi.fn().mockResolvedValue(null);
-    const repository = createRepository(findFirst);
-
-    await expect(repository.getLatestPublishedId()).resolves.toBeNull();
-  });
-});
-
 // Live-path parity: the live escalations are built by mapping the Prisma row
 // via mapPrismaToReportSection and then running the SAME shared builder the
 // published-snapshot path uses. This test drives that exact pipeline so a

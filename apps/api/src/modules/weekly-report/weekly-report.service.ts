@@ -84,14 +84,8 @@ export interface WeeklyReportRepository {
    */
   getCurrentEditableId(): Promise<string | null>;
   /**
-   * The newest `published` report id, including archived reports
-   * (deterministic `periodStart desc`, then `id desc`), or null.
-   */
-  getLatestPublishedId(): Promise<string | null>;
-  /**
    * The newest non-archived `published` report id (deterministic `periodStart
-   * desc, id desc`), or null. Mirrors `getLatestPublishedId` but adds the
-   * `archived: false` filter, so it is the head's reopen authz target and
+   * desc, id desc`), or null. It is the head's reopen authz target and
    * published-fallback default for leadership readers — the default remains
    * usable even when a newer published row has been archived.
    */

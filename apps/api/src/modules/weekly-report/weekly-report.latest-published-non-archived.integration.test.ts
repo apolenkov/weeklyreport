@@ -15,8 +15,7 @@ import { WeeklyReportService } from "./weekly-report.service";
  * where-shape lives in the unit tests; this one runs the filter against
  * Postgres and proves the behaviour:
  *   - the newest non-archived `published` period wins;
- *   - an archived `published` row is EXCLUDED even when it is the newest — the
- *     divergence from `getLatestPublishedId`, which DOES return it;
+ *   - an archived `published` row is EXCLUDED even when it is the newest;
  *   - a same-`periodStart` tie breaks deterministically by `id desc`;
  *   - no non-archived published period returns null.
  */
@@ -79,9 +78,8 @@ describe("WeeklyReportPrismaRepository.getLatestPublishedNonArchivedId (integrat
   });
 
   it("EXCLUDES an archived newest published row and returns the older non-archived one", async () => {
-    // The archived period is NEWER; getLatestPublishedId would return it, but
-    // the archived:false filter must skip it so a head can reopen the older
-    // non-archived published period.
+    // The archived period is NEWER; the archived:false filter must skip it so
+    // a head can reopen the older non-archived published period.
     await createReport(OLD_PUBLISHED, "published", "2026-05-04T00:00:00.000Z");
     await createReport(
       ARCHIVED_PUBLISHED,
@@ -92,11 +90,6 @@ describe("WeeklyReportPrismaRepository.getLatestPublishedNonArchivedId (integrat
 
     await expect(repository.getLatestPublishedNonArchivedId()).resolves.toBe(
       OLD_PUBLISHED,
-    );
-    // Teeth: the archived-inclusive resolver DOES return the archived newest,
-    // proving the two resolvers diverge exactly on the archived row.
-    await expect(repository.getLatestPublishedId()).resolves.toBe(
-      ARCHIVED_PUBLISHED,
     );
   });
 

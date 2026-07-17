@@ -79,10 +79,6 @@ function createRepository(
       return structuredClone(currentSection);
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<string | null>); no awaitable work in stub
-    async getReportStatus() {
-      return "draft";
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<string | null>); no awaitable work in stub
     async getReportPeriodStatusForSection() {
       return "open";
     },
@@ -295,9 +291,7 @@ describe("ReportSectionsService", () => {
       const repo = createRepository(baseSection);
       // The reopen transition leaves the legacy Report.status at 'published'
       // while flipping the canonical periodStatus to 'reopened'. The gate must
-      // follow periodStatus, so the divergent legacy value must not block.
-      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository.getReportStatus contract (Promise<string | null>); no awaitable work in stub
-      repo.getReportStatus = async () => "published";
+      // follow periodStatus regardless of the divergent legacy value.
       // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository.getReportPeriodStatusForSection contract (Promise<string | null>); no awaitable work in stub
       repo.getReportPeriodStatusForSection = async () => "reopened";
 
@@ -794,10 +788,6 @@ describe("ReportSectionsService — deadline gate", () => {
         return structuredClone(currentSection);
       },
       // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<string | null>); no awaitable work in stub
-      async getReportStatus() {
-        return "draft";
-      },
-      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<string | null>); no awaitable work in stub
       async getReportPeriodStatusForSection() {
         return "open";
       },
@@ -978,10 +968,6 @@ describe("ReportSectionsService — product telemetry", () => {
       async getSectionById(id) {
         if (id !== current.reportSectionId) return null;
         return structuredClone(current);
-      },
-      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<string | null>); no awaitable work in stub
-      async getReportStatus() {
-        return "draft";
       },
       // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<string | null>); no awaitable work in stub
       async getReportPeriodStatusForSection() {

@@ -65,7 +65,6 @@ export interface ReportSectionsRepository {
   getSectionById(
     reportSectionId: string,
   ): Promise<ReportSectionReadModel | null>;
-  getReportStatus(reportId: string): Promise<ReportStatus | null>;
   /**
    * Canonical period status of the section's report, keyed on the section id.
    * Both write paths decide editability from this — never the legacy
@@ -80,9 +79,9 @@ export interface ReportSectionsRepository {
    * Deadline-aware variant. Returns `null` when the
    * report does not exist (caller treats that as "no gate to enforce").
    * Kept optional so legacy in-memory test repositories that predate the
-   * 50-B grace-period gate keep compiling — the service falls back to
-   * `getReportStatus` and skips the late-flag computation when this is
-   * not implemented.
+   * 50-B grace-period gate keep compiling — when unimplemented,
+   * `evaluateDeadlineGate` returns `false` directly and no late flag is
+   * computed.
    */
   getReportMeta?(
     reportId: string,

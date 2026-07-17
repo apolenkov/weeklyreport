@@ -1189,8 +1189,8 @@ describe("PeriodService — reopen target scope", () => {
     // The newest published row (reportId) is archived; an older published row
     // (otherReportId) is non-archived. The reopen resolver must skip the
     // archived newest and return the older non-archived id, and a head reopening
-    // THAT id succeeds — proving the resolver diverges from getLatestPublishedId
-    // and the archived guard does not block the older non-archived period.
+    // THAT id succeeds — the archived guard does not block the older
+    // non-archived period.
     const repo = createSpyRepository(
       new Map<string, SpyReport>([
         [reportId, publishedReport(reportId, true)],
