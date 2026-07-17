@@ -1,5 +1,4 @@
 import {
-  shortNameFromName,
   type SubmissionDashboardRow,
   submissionDashboardRowSchema,
   type WeeklyReportReadModel,
@@ -297,30 +296,41 @@ describe("mapDashboardData", () => {
     expect(result.pendingLeads).toEqual(["Cara L."]);
   });
 
-  // Regression for the alert-bar pendingLeads leak.
-  // The mapper's pendingLeads MUST be a strict subset of the upstream
-  // `review` rows (which are pre-filtered server-side via
-  // groupScopeFilter(session, 'reportSection')). If the mapper ever
-  // synthesised leads from a different source — e.g. weeklyReport.leadSections
-  // alone, which is also scoped but only contains leads who already created
-  // a section — that would mask scope leaks at the API boundary. This test
-  // pins the contract: a lead can only land in pendingLeads if their leadId
-  // appears in `review`.
-  it("pendingLeads is a strict subset of the scoped review input", () => {
-    const result = mapDashboardData({
-      review: makeReview(),
-      weeklyReport: makeWeeklyReport(),
-      now: new Date("2026-04-17T10:00:00.000Z"),
+  // The mapper's real contract (confirmed via dashboard-leads.ts /
+  // dashboard-lead-rows.ts and pinned independently by dashboard-queue.test.ts's
+  // "Nora No Section" fixture): pendingLeads draws from leads ∪ leadSections ∪
+  // activity ∪ review, NOT review alone — a lead who has started (or not
+  // started) a section, or shown activity, still surfaces here even when the
+  // scoped `review` rows omit them. No caller of mapDashboardData /
+  // mapReviewDashboardData (dashboard-content.tsx reads only
+  // `pendingLeads.length`) assumes a review-only surface, so this is the
+  // intended contract, not a scope leak — this test documents and pins it.
+  it("pendingLeads includes a lead present via weeklyReport.leadSections but absent from the scoped review rows", () => {
+    const LEAD_D = "11111111-1111-4111-8111-cc0000000004";
+    const SECTION_D = "11111111-1111-4111-8111-bbbbbbbbbbb3";
+    const weeklyReport = makeWeeklyReport({
+      leadSections: [
+        {
+          reportSectionId: SECTION_D,
+          reportId: REPORT_ID,
+          authorId: LEAD_D,
+          authorName: "Denise Draft",
+          version: 1,
+          status: "draft",
+          submittedAt: null,
+          projects: [],
+          items: [],
+          risks: [],
+          decisions: [],
+          activities: [],
+        },
+      ],
     });
-    // pendingLeads carries the short display form (ADR 0006); the subset
-    // invariant still holds — every pending lead must come from a `review` row,
-    // compared on that same short form.
-    const reviewNames = new Set(
-      makeReview().map((r) => shortNameFromName(r.leadName)),
-    );
-    for (const name of result.pendingLeads) {
-      expect(reviewNames.has(name)).toBe(true);
-    }
+    const result = mapReviewDashboardData({
+      review: makeReview(), // scoped review rows do NOT include Denise
+      weeklyReport,
+    });
+    expect(result.pendingLeads).toContain("Denise D.");
   });
 
   it("empty review (scoped-out caller) yields empty pendingLeads", () => {

@@ -24,30 +24,6 @@ vi.mock("../../../lib/session-provider", () => ({
   useSession: () => useSessionMock() as SessionState,
 }));
 
-// NavBar reads the active period via tRPC for the right-rail badge. Tests
-// don't exercise that surface — stub the proxy to a minimal object that
-// satisfies `trpc.weeklyReport.get.queryOptions(...)` calls.
-vi.mock("../../../lib/trpc-context", () => ({
-  useTRPC: () => ({
-    weeklyReport: {
-      get: {
-        queryOptions: () => ({
-          queryKey: ["weeklyReport", "get"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async queryFn contract expected by react-query (no awaitable work in the stub)
-          queryFn: async () => null,
-          enabled: false,
-        }),
-      },
-    },
-  }),
-}));
-
-// useQuery without a real QueryClientProvider would crash; stub it for these
-// role-visibility tests since we don't care about the period badge here.
-vi.mock("@tanstack/react-query", () => ({
-  useQuery: () => ({ data: undefined, isLoading: false }),
-}));
-
 import { NavBar } from "./nav-bar";
 
 function setRole(role: Role | null): void {

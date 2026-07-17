@@ -1,20 +1,24 @@
 /**
- * Characterization tests for the extracted cross-author mappers
- * (refactor-lead-mappers slice). Fixtures pin today's behavior byte for
- * byte, they are NOT idealized expectations.
- *
- * crossAuthorSections-based tests (mapForeignItems / mapForeignRisks /
- * mapForeignDecisions / coerceWorkflowToItemStatus) have been removed:
- * those mappers no longer exist — foreign-content reads were deleted as
- * part of the scope-lead-report-to-own-contribution change.
+ * Characterization + unit tests for the extracted cross-author mappers
+ * (refactor-lead-mappers slice). The stage-map fixtures pin today's behavior
+ * byte for byte, they are NOT idealized expectations. The foreign-content
+ * mappers below (`mapForeignItems` / `mapForeignRisks` / `mapForeignDecisions`
+ * / `coerceWorkflowToItemStatus`) are live — called from
+ * `lead-form-loaded-view-model-helpers.ts` — and are asserted directly here.
  */
 
 import { describe, expect, it } from "vitest";
 
+import { workflowToItemStatus } from "./item-status";
 import {
   applyCrossAuthorStageOverrides,
   buildCrossAuthorStageMap,
+  coerceWorkflowToItemStatus,
+  type CrossAuthorContentRow,
   type CrossAuthorRow,
+  mapForeignDecisions,
+  mapForeignItems,
+  mapForeignRisks,
 } from "./lead-cross-author";
 import type { LeadProduct } from "./lead-form";
 
@@ -147,5 +151,241 @@ describe("applyCrossAuthorStageOverrides", () => {
   it("returns products untouched when no override entry matches", () => {
     const [result] = applyCrossAuthorStageOverrides([product], new Map());
     expect(result).toBe(product);
+  });
+});
+
+const AUTHOR_ID = "author-9";
+const PROJECT_ID = "proj-x";
+
+function makeContentRow(
+  overrides: Partial<CrossAuthorContentRow> = {},
+): CrossAuthorContentRow {
+  return {
+    authorId: AUTHOR_ID,
+    authorName: "Baker Lee",
+    items: [],
+    risks: [],
+    decisions: [],
+    ...overrides,
+  };
+}
+
+describe("mapForeignItems", () => {
+  it("scopes ids as foreign:<authorId>:<itemId> and filters by item type", () => {
+    const row = makeContentRow({
+      items: [
+        {
+          id: "item-current",
+          projectId: PROJECT_ID,
+          type: "current",
+          text: "Current work",
+          workflowStatus: "planned",
+          stageNames: [],
+        },
+        {
+          id: "item-next",
+          projectId: PROJECT_ID,
+          type: "next",
+          text: "Next work",
+          workflowStatus: "planned",
+          stageNames: [],
+        },
+      ],
+    });
+
+    const current = mapForeignItems([row], new Map(), "current");
+    const next = mapForeignItems([row], new Map(), "next");
+
+    expect(current).toHaveLength(1);
+    expect(current[0]?.id).toBe(`foreign:${AUTHOR_ID}:item-current`);
+    expect(next).toHaveLength(1);
+    expect(next[0]?.id).toBe(`foreign:${AUTHOR_ID}:item-next`);
+  });
+
+  it("falls back to the raw projectId as productName on a lookup miss", () => {
+    const row = makeContentRow({
+      items: [
+        {
+          id: "item-1",
+          projectId: PROJECT_ID,
+          type: "current",
+          text: "Work",
+          workflowStatus: "planned",
+          stageNames: [],
+        },
+      ],
+    });
+
+    const [mapped] = mapForeignItems([row], new Map(), "current");
+
+    expect(mapped.productName).toBe(PROJECT_ID);
+  });
+
+  it("uses the productNameById lookup when it hits", () => {
+    const row = makeContentRow({
+      items: [
+        {
+          id: "item-1",
+          projectId: PROJECT_ID,
+          type: "current",
+          text: "Work",
+          workflowStatus: "planned",
+          stageNames: [],
+        },
+      ],
+    });
+
+    const [mapped] = mapForeignItems(
+      [row],
+      new Map([[PROJECT_ID, "Alpha Product"]]),
+      "current",
+    );
+
+    expect(mapped.productName).toBe("Alpha Product");
+  });
+
+  it("applies the author's own covering blocked risk as the blocked overlay", () => {
+    const row = makeContentRow({
+      items: [
+        {
+          id: "item-1",
+          projectId: PROJECT_ID,
+          type: "current",
+          text: "In-flight work",
+          workflowStatus: "in_progress",
+          stageNames: [],
+        },
+      ],
+      risks: [
+        {
+          id: "risk-1",
+          projectId: PROJECT_ID,
+          risk: "Vendor outage",
+          impact: "Delivery slips",
+          mitigation: "Failover plan",
+          severity: "blocked",
+          stageNames: [],
+        },
+      ],
+    });
+
+    const [mapped] = mapForeignItems([row], new Map(), "current");
+
+    expect(mapped.status).toBe("blocked");
+  });
+
+  it("does not apply the overlay when no covering risk exists", () => {
+    const row = makeContentRow({
+      items: [
+        {
+          id: "item-1",
+          projectId: PROJECT_ID,
+          type: "current",
+          text: "In-flight work",
+          workflowStatus: "in_progress",
+          stageNames: [],
+        },
+      ],
+    });
+
+    const [mapped] = mapForeignItems([row], new Map(), "current");
+
+    expect(mapped.status).toBe("in-progress");
+  });
+});
+
+describe("mapForeignRisks", () => {
+  it("scopes ids as foreign:<authorId>:<riskId> and passes severity through unchanged", () => {
+    const row = makeContentRow({
+      risks: [
+        {
+          id: "risk-1",
+          projectId: PROJECT_ID,
+          risk: "Vendor outage",
+          impact: "Delivery slips",
+          mitigation: "Failover plan",
+          severity: "at-risk",
+          stageNames: [],
+        },
+        {
+          id: "risk-2",
+          projectId: PROJECT_ID,
+          risk: "Data loss",
+          impact: "Compliance",
+          mitigation: "Backups",
+          severity: "blocked",
+          stageNames: [],
+        },
+      ],
+    });
+
+    const mapped = mapForeignRisks([row], new Map());
+
+    expect(mapped[0]?.id).toBe(`foreign:${AUTHOR_ID}:risk-1`);
+    expect(mapped[0]?.severity).toBe("at-risk");
+    expect(mapped[1]?.id).toBe(`foreign:${AUTHOR_ID}:risk-2`);
+    expect(mapped[1]?.severity).toBe("blocked");
+  });
+});
+
+describe("mapForeignDecisions", () => {
+  it("scopes ids as foreign:<authorId>:<decisionId> and formats a present deadline to its ISO date prefix", () => {
+    const row = makeContentRow({
+      decisions: [
+        {
+          id: "decision-1",
+          productId: PROJECT_ID,
+          text: "Choose vendor",
+          owner: "Baker Lee",
+          impact: "Cost",
+          deadline: new Date("2026-08-01T15:30:00.000Z"),
+          stageNames: [],
+        },
+      ],
+    });
+
+    const [mapped] = mapForeignDecisions([row], new Map());
+
+    expect(mapped.id).toBe(`foreign:${AUTHOR_ID}:decision-1`);
+    expect(mapped.deadline).toBe("2026-08-01");
+  });
+
+  it("passes a null deadline through as null", () => {
+    const row = makeContentRow({
+      decisions: [
+        {
+          id: "decision-1",
+          productId: PROJECT_ID,
+          text: "Choose vendor",
+          owner: "Baker Lee",
+          impact: "Cost",
+          deadline: null,
+          stageNames: [],
+        },
+      ],
+    });
+
+    const [mapped] = mapForeignDecisions([row], new Map());
+
+    expect(mapped.deadline).toBeNull();
+  });
+});
+
+describe("coerceWorkflowToItemStatus", () => {
+  it.each([
+    ["done", workflowToItemStatus("done")],
+    ["in_progress", workflowToItemStatus("in_progress")],
+    ["paused", workflowToItemStatus("paused")],
+    ["postponed", workflowToItemStatus("postponed")],
+    ["planned", workflowToItemStatus("planned")],
+  ] as const)(
+    "delegates known workflow value %s to workflowToItemStatus",
+    (ws, expected) => {
+      expect(coerceWorkflowToItemStatus(ws)).toBe(expected);
+    },
+  );
+
+  it("falls back to 'planned' for an unknown workflow string", () => {
+    expect(coerceWorkflowToItemStatus("some-legacy-value")).toBe("planned");
   });
 });

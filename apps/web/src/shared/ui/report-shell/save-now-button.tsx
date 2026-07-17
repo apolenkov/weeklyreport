@@ -35,20 +35,21 @@ function deriveSaveView(
 }
 
 /**
- * Icon-only "Save now" button. Circle 32×32 to match the pill-shaped
- * sibling controls in the toolbar (period nav arrows, version nav arrows,
- * Fill caret); the SVG glyph itself is 14×14, centred. Anchored to the
- * toolbar's far-right slot. Renders a floppy-disc icon by default; swaps
- * to a spinner while a save is in flight; flashes a check on success;
- * shows an alert triangle on error.
+ * "Save now" labeled pill button — sized like the other labeled toolbar
+ * actions (`min-w-[6.5rem]`, `px-4`), NOT icon-only: it renders an icon plus
+ * a visible `<span>{label}</span>` beside it. Anchored to the toolbar's
+ * far-right slot. Renders a floppy-disc + "Save" by default; swaps to a
+ * spinner + "Saving" while a save is in flight; flashes a check + "Saved" on
+ * success; shows an alert triangle + "Retry" on error.
  *
- * State → icon mapping:
- *   idle / pending          → disc        (enabled only in `pending`)
- *   saving (isInFlight)     → spinner    (disabled, accent green fill,
- *                                         white icon, aria-busy="true",
- *                                         full opacity overrides washout)
- *   saved (post-success)    → check      (disabled, reverts after 1500ms)
- *   error                   → alert      (enabled — click retries)
+ * State → icon + label mapping:
+ *   idle / pending          → disc + "Save"      (enabled only in `pending`)
+ *   saving (isInFlight)     → spinner + "Saving" (disabled, accent green
+ *                                                  fill, white text/icon,
+ *                                                  aria-busy="true")
+ *   saved (post-success)    → check + "Saved"    (disabled, reverts after
+ *                                                  1500ms)
+ *   error                   → alert + "Retry"    (enabled — click retries)
  */
 export function SaveNowButton({ autosave }: SaveNowButtonProps) {
   const { state, isInFlight, forceSave } = autosave;

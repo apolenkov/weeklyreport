@@ -48,12 +48,14 @@ describe("TaglineCycler", () => {
 
   it("cycles to a different phrase after the visible+fade interval", () => {
     render(<TaglineCycler />);
+    const first = screen.getByRole("paragraph").textContent;
     // Advance past visible period + fade-out + swap
     act(() => {
       vi.advanceTimersByTime(3000 + 250 + 1);
     });
     const second = screen.getByRole("paragraph").textContent;
     expect(LANDING_TAGLINES).toContain(second);
+    expect(second).not.toBe(first);
   });
 
   it("opacity is 1 initially and 0 during fade-out", () => {

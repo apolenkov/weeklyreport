@@ -27,9 +27,15 @@ function makeSection(
   } as ReportSectionReadModel;
 }
 
+// Distinct per fixture so a mapper that swaps risk/decision stableIds (not
+// just drops them) also fails the round-trip assertions below.
+const RISK_STABLE_ID = "77777777-7777-4777-8777-777777777777";
+const DECISION_STABLE_ID = "88888888-8888-4888-8888-888888888888";
+
 function makeRisk(impact: string) {
   return {
     id: "55555555-5555-4555-8555-555555555555",
+    stableId: RISK_STABLE_ID,
     projectId: PROJECT_ID,
     activityId: null,
     risk: "Delivery risk",
@@ -43,6 +49,7 @@ function makeRisk(impact: string) {
 function makeDecision(overrides: Record<string, string>) {
   return {
     id: "66666666-6666-4666-8666-666666666666",
+    stableId: DECISION_STABLE_ID,
     productId: PROJECT_ID,
     activityId: null,
     text: "Choose a path",
@@ -69,6 +76,20 @@ describe("sectionToDraftPayload", () => {
     const payload = sectionToDraftPayload(makeSection({ risks: [risk] }));
 
     expect(payload.risks).toEqual([risk]);
+    // Durable stableId round-trip is load-bearing (see the module doc
+    // comment): a mapper that drops or regenerates it must fail here even
+    // if a future refactor loosens the toEqual comparison above.
+    expect(payload.risks[0]?.stableId).toBe(RISK_STABLE_ID);
+  });
+
+  it("includes a decision with all three required text fields, preserving stableId", () => {
+    const decision = makeDecision({});
+    const payload = sectionToDraftPayload(
+      makeSection({ decisions: [decision] }),
+    );
+
+    expect(payload.decisions).toEqual([decision]);
+    expect(payload.decisions[0]?.stableId).toBe(DECISION_STABLE_ID);
   });
 
   it.each([

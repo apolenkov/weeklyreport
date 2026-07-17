@@ -83,3 +83,87 @@ describe("RecordComments — compact touch floor (responsive-compact-layout)", (
     );
   });
 });
+
+describe("RecordComments — authorization branches", () => {
+  it("hides the composer for a non-UUID (synthetic) anchor id", () => {
+    renderWithClient(
+      <RecordComments
+        anchor={{ itemId: "client-temp-id" }}
+        comments={[OWN_COMMENT]}
+        canReview
+        currentUserId={REVIEWER_ID}
+        isAdmin={false}
+        onMutated={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  it("hides the composer when canReview is false, even for a valid UUID anchor", () => {
+    renderWithClient(
+      <RecordComments
+        anchor={{ itemId: "11111111-1111-4111-8111-111111111111" }}
+        comments={[OWN_COMMENT]}
+        canReview={false}
+        currentUserId={REVIEWER_ID}
+        isAdmin={false}
+        onMutated={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  it("hides the Delete control for a comment authored by someone else (non-admin)", () => {
+    const otherAuthorComment: RecordCommentView = {
+      ...OWN_COMMENT,
+      id: "44444444-4444-4444-8444-444444444444",
+      reviewerId: "55555555-5555-4555-8555-555555555555",
+    };
+    renderWithClient(
+      <RecordComments
+        anchor={{ itemId: "11111111-1111-4111-8111-111111111111" }}
+        comments={[otherAuthorComment]}
+        canReview
+        currentUserId={REVIEWER_ID}
+        isAdmin={false}
+        onMutated={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Delete comment" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the Delete control for every comment when isAdmin, regardless of author", () => {
+    const otherAuthorComment: RecordCommentView = {
+      ...OWN_COMMENT,
+      id: "44444444-4444-4444-8444-444444444444",
+      reviewerId: "55555555-5555-4555-8555-555555555555",
+    };
+    renderWithClient(
+      <RecordComments
+        anchor={{ itemId: "11111111-1111-4111-8111-111111111111" }}
+        comments={[otherAuthorComment]}
+        canReview
+        currentUserId={REVIEWER_ID}
+        isAdmin
+        onMutated={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Delete comment" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the Delete control for the caller's own comment when canReview (baseline)", () => {
+    renderComments();
+
+    expect(
+      screen.getByRole("button", { name: "Delete comment" }),
+    ).toBeInTheDocument();
+  });
+});

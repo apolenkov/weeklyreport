@@ -161,4 +161,38 @@ describe("ConfirmDeleteDialog — a11y regression (VA-0a)", () => {
 
     expect(trigger).toHaveFocus();
   });
+
+  it("does NOT call onConfirm when Enter is pressed while focus is elsewhere (reflexive-Enter guard)", async () => {
+    const onConfirm = vi.fn();
+    renderDialog({ onConfirm });
+
+    // Focus lands on Cancel by default (least-destructive-first); Enter here
+    // must not confirm the delete.
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /cancel/i })).toHaveFocus();
+    });
+
+    fireEvent.keyDown(document, { key: "Enter" });
+
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it("calls onConfirm exactly once when Enter is pressed while the Confirm button holds focus", async () => {
+    const onConfirm = vi.fn();
+    renderDialog({ onConfirm, confirmLabel: "Delete" });
+
+    const confirm = screen.getByRole("button", { name: /delete/i });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /cancel/i })).toHaveFocus();
+    });
+    // Mirrors the tab-trap test above: Shift+Tab from Cancel wraps to Confirm.
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    await waitFor(() => {
+      expect(confirm).toHaveFocus();
+    });
+
+    fireEvent.keyDown(document, { key: "Enter" });
+
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
 });
