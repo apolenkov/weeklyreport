@@ -75,7 +75,11 @@ describe("AutoPublisherScheduler", () => {
       getSettings: vi.fn().mockResolvedValue(makeSettings()),
     };
     const publication = {
-      publishAuto: vi.fn().mockResolvedValue({ published: true, report: {} }),
+      publishAuto: vi.fn().mockResolvedValue({
+        published: true,
+        wasAlreadyPublished: false,
+        report: {},
+      }),
     };
     const audit = {
       ...createNullAuditLogger(),
@@ -158,7 +162,11 @@ describe("AutoPublisherScheduler", () => {
           throw new Error("db transient");
         })
         // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async publishAuto contract (no awaitable work in the stub)
-        .mockImplementationOnce(async () => ({ published: true, report: {} })),
+        .mockImplementationOnce(async () => ({
+          published: true,
+          wasAlreadyPublished: false,
+          report: {},
+        })),
     };
     const audit = {
       ...createNullAuditLogger(),
@@ -275,7 +283,11 @@ describe("AutoPublisherScheduler", () => {
       publishAuto: vi
         .fn()
         .mockResolvedValueOnce({ published: false })
-        .mockResolvedValueOnce({ published: true, report: {} }),
+        .mockResolvedValueOnce({
+          published: true,
+          wasAlreadyPublished: false,
+          report: {},
+        }),
     };
     const audit = {
       ...createNullAuditLogger(),
@@ -296,6 +308,99 @@ describe("AutoPublisherScheduler", () => {
     expect(audit.periodAutoPublish).toHaveBeenCalledWith({
       periodId: "rep-ok",
       missingSectionsCount: 1,
+      from: "open",
+      to: "published",
+    });
+    expect(prisma.reportSection.count).toHaveBeenCalledTimes(1);
+  });
+
+  // A head manually publishing a candidate between selection and the
+  // scheduler's publishAuto call must not be recorded as an auto-publish:
+  // publishAuto's idempotent short-circuit reports wasAlreadyPublished=true,
+  // and the scheduler must suppress the same side-effects it suppresses for
+  // the archived-after-selection skip.
+  it("raced outcome: wasAlreadyPublished=true emits no audit, no log, no count, excluded from periodIds", async () => {
+    const prisma = {
+      report: { findMany: vi.fn().mockResolvedValue([{ id: "rep-race" }]) },
+      reportSection: { count: vi.fn() },
+    };
+    const admin = {
+      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+    };
+    const publication = {
+      publishAuto: vi.fn().mockResolvedValue({
+        published: true,
+        wasAlreadyPublished: true,
+        report: {},
+      }),
+    };
+    const audit = {
+      ...createNullAuditLogger(),
+      periodAutoPublish: vi.fn(),
+    };
+
+    const scheduler = new AutoPublisherScheduler(
+      asAny(prisma),
+      asAny(admin),
+      asAny(publication),
+      asAny(audit),
+    );
+
+    const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
+
+    expect(publication.publishAuto).toHaveBeenCalledWith("rep-race");
+    expect(result).toEqual({ published: true, periodIds: [] });
+    expect(audit.periodAutoPublish).not.toHaveBeenCalled();
+    expect(prisma.reportSection.count).not.toHaveBeenCalled();
+  });
+
+  // Mixed tick: a raced candidate must not suppress side-effects for a
+  // genuine auto-publish elsewhere in the same batch.
+  it("mixed tick: raced id excluded from periodIds, genuinely auto-published id still audited", async () => {
+    const prisma = {
+      report: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([{ id: "rep-race" }, { id: "rep-ok" }]),
+      },
+      reportSection: { count: vi.fn().mockResolvedValue(3) },
+    };
+    const admin = {
+      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+    };
+    const publication = {
+      publishAuto: vi
+        .fn()
+        .mockResolvedValueOnce({
+          published: true,
+          wasAlreadyPublished: true,
+          report: {},
+        })
+        .mockResolvedValueOnce({
+          published: true,
+          wasAlreadyPublished: false,
+          report: {},
+        }),
+    };
+    const audit = {
+      ...createNullAuditLogger(),
+      periodAutoPublish: vi.fn(),
+    };
+
+    const scheduler = new AutoPublisherScheduler(
+      asAny(prisma),
+      asAny(admin),
+      asAny(publication),
+      asAny(audit),
+    );
+
+    const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
+
+    expect(result).toEqual({ published: true, periodIds: ["rep-ok"] });
+    expect(audit.periodAutoPublish).toHaveBeenCalledTimes(1);
+    expect(audit.periodAutoPublish).toHaveBeenCalledWith({
+      periodId: "rep-ok",
+      missingSectionsCount: 3,
       from: "open",
       to: "published",
     });

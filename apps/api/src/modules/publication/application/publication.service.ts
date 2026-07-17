@@ -33,9 +33,22 @@ export class PublicationNotFoundError extends Error {
  * nor `periodState` — so a period archived between candidate selection and the
  * guarded write must be signalled explicitly as `{ published: false }` rather
  * than derived from the report's shape.
+ *
+ * Within `published: true`, `wasAlreadyPublished` distinguishes the two ways
+ * a call can land there: `true` means the report was already `status=
+ * "published"` when read and no write happened (e.g. a head manually
+ * published it between candidate selection and this call); `false` means
+ * this call performed the compare-and-set write itself. Neither can be told
+ * apart from the returned `report` alone, which is why the flag exists — a
+ * caller like the scheduler's audit trail must not treat a race as if it had
+ * auto-published.
  */
 export type AutoPublishResult =
-  | { readonly published: true; readonly report: AssembledReport }
+  | {
+      readonly published: true;
+      readonly report: AssembledReport;
+      readonly wasAlreadyPublished: boolean;
+    }
   | { readonly published: false };
 
 export interface PublicationRepository {
@@ -146,9 +159,13 @@ export class PublicationService {
    * side-effects (audit, missing-section count, periodIds) on the same signal.
    *
    * Idempotent: an already-published report short-circuits to a published
-   * outcome without a second write or a duplicate metric bump (defense-in-depth
-   * against two ticks racing; the scheduler's candidate query is `status='draft'`
-   * so this is rarely reached).
+   * outcome (`wasAlreadyPublished: true`) without a second write or a
+   * duplicate metric bump. This is not only two-ticks-racing defense-in-depth
+   * (the scheduler's candidate query is `status='draft'`, so that alone is
+   * rare) — a head manually publishing the same report between the
+   * scheduler's candidate selection and this call also lands here, so
+   * callers that audit auto-publishes must branch on `wasAlreadyPublished`
+   * to avoid recording a manual publish as one.
    *
    * Missing sections are NOT auto-stubbed in the DB — they render as "Не сдал"
    * at read time from the head dashboard, keeping the write path narrow.
@@ -157,7 +174,7 @@ export class PublicationService {
     const report = await this.getAssembledReport(activeReportId);
 
     if (report.status === "published") {
-      return { published: true, report };
+      return { published: true, report, wasAlreadyPublished: true };
     }
 
     this.logger.info("auto-publishing report", { activeReportId });
@@ -207,6 +224,10 @@ export class PublicationService {
           result.report.sections.map((s) => s.reportSectionId),
       },
     );
-    return { published: true, report: result.report };
+    return {
+      published: true,
+      report: result.report,
+      wasAlreadyPublished: result.wasAlreadyPublished,
+    };
   }
 }

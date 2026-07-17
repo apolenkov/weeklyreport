@@ -100,6 +100,16 @@ export class AutoPublisherScheduler {
           continue;
         }
 
+        if (outcome.wasAlreadyPublished) {
+          // Raced with a manual publish: a head published this same report
+          // between candidate selection and this call, so `publishAuto`'s
+          // idempotent short-circuit returned the current row without
+          // writing. Auditing this as an auto-publish would misattribute a
+          // human action to the scheduler — same treatment as the archived
+          // skip above: no audit, no count, keep it out of `periodIds`.
+          continue;
+        }
+
         // Count sections that never reached `submitted` status; these
         // render as «Не сдал» placeholders downstream. Counted post-
         // publish so the audit number matches what the head dashboard
