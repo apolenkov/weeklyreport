@@ -13,17 +13,17 @@ longer, differently-role-gated chain to be classified as allowed.
 
 - WHEN a procedure is built as
   `t.procedure.use(metricsMiddleware).use(loggingMiddleware).use(<a role
-middleware not equal by reference to any of the 9 canonical role
+middleware not equal by reference to any of the 8 canonical role
 middlewares>)`
 - THEN `findUncoveredProcedures` includes that procedure's path in the
   offending list
 
 #### Scenario: A procedure built on a canonical base still passes
 
-- WHEN a procedure's middleware chain equals one of the 9 canonical chains
+- WHEN a procedure's middleware chain equals one of the 8 canonical chains
   (`publicProcedure`, `protectedProcedure`, `headProcedure`,
   `adminProcedure`, `leadProcedure`, `viewerProcedure`, `anyRoleProcedure`,
-  `leadershipProcedure`, `leadHeadAdminProcedure`) at exact length with every
+  `leadershipProcedure`) at exact length with every
   middleware equal by reference
 - THEN `findUncoveredProcedures` does not include that procedure's path in
   the offending list
