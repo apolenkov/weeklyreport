@@ -54,6 +54,20 @@ confirmed = [
 
 DATA = json.dumps({"files": files}, ensure_ascii=False).replace("</", "<\\/")
 
+# Incomplete coverage must be loud, never implied-complete: any missed batch
+# and any still-unverified major get a warning banner at the top of the page.
+missed = data.get("missedBatches") or []
+unverified_n = sum(1 for f in files for x in f["findings"] if x["status"] == "unverified")
+warn_bits = []
+if missed:
+    warn_bits.append(f"НЕ покрыто ревью: {len(missed)} пачек ({html.escape(', '.join(missed[:8]))}{'…' if len(missed) > 8 else ''})")
+if unverified_n:
+    warn_bits.append(f"неверифицированных major-находок: {unverified_n} — вердикты по ним предварительные")
+warning_html = (
+    f'<section style="border-color:var(--crit)"><h2 style="color:var(--crit)">Ревью НЕПОЛНОЕ</h2><p>{" · ".join(warn_bits)}</p></section>'
+    if warn_bits else ""
+)
+
 def chip(v, n=None):
     label = {"exemplary": "exemplary", "good": "good", "needs-attention": "needs attention", "defect": "defect"}[v]
     return f'<span class="chip chip-{v}">{label}{"" if n is None else f" · {n}"}</span>'
@@ -144,6 +158,7 @@ details .body ul {{ margin:.5rem 0 0; padding-left:1.2rem; }}
   <h1>CustomReport — массовое ревью кода</h1>
   <p class="sub">{len(files)} файлов · Opus-ревью каждого файла · адверсарная верификация major-находок (Opus + Codex) · 2026-07-17 · main@c9bb1edc</p>
 </header>
+{warning_html}
 <div class="stats">{stat_row}</div>
 <section><h2>Подтверждённые находки ({len(confirmed)})</h2><ul class="confirmed">{conf_rows}</ul></section>
 {council_html}
