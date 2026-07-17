@@ -8,55 +8,121 @@ Keep the head dashboard focused on triage and action through one live activity f
 
 ### Requirement: The live activity feed renders exactly once on the dashboard
 
-The head dashboard (`/head/dashboard`, `DashboardPage`) MUST render the
-`activity.live` feed exactly once, via `ActivityLivePanel`. A second card that
-re-renders the same `activity.live` feed (the removed `Activity24hCard`) MUST
-NOT appear on the dashboard.
+The head dashboard (`/head/dashboard`, `DashboardPage`) MUST represent lead
+submission/edit freshness exactly once in the canonical Period Summary queue. A
+standalone `ActivityLivePanel` per-lead roster or any second card that
+re-renders the same lead activity feed MUST NOT appear. Non-lead operational
+events MAY remain in a collapsed event feed only when they are not another lead
+roster.
 
 #### Scenario: the head opens the dashboard
 
 - **WHEN** the head opens `/head/dashboard` with an active period
-- **THEN** the live activity feed renders once via `ActivityLivePanel`
-- **AND** no second card re-renders the same `activity.live` feed
+- **THEN** each lead's latest submission/edit freshness appears in that lead's Period Summary queue row/detail
+- **AND** no separate Submission Activity lead roster appears
 
 ### Requirement: The Period Summary table fits its container without horizontal scroll
 
-The `LeadSummaryTable` ("Period Summary") on the head dashboard MUST render as a
-vertical list of per-lead cards (rounded `rounded-lg` cards on a soft surface,
-separated by gaps rather than ruled table borders) — NOT as a multi-column ruled
-`<table>` — and MUST fit within its card container at standard dashboard width so
-no horizontal-scroll affordance appears. Each lead card MUST carry the lead
-identity (avatar, name, role) and
-submission status on its lead line, the per-section counts (products, current,
-next, risks, decisions, priorities) as compact labeled values, and the per-lead
-action (Remind or Revoke) gated exactly as before. The per-lead counts MUST sit
-on shared column rails (a CSS subgrid track template owned by the list) so the
-same count aligns vertically across every lead row regardless of value width;
-the status, submitted-date, and action columns MUST size to their content so
-their controls are never clipped.
+The `LeadSummaryTable` surface labeled "Period Summary" MUST become a vertical
+expandable per-lead action queue, not a ruled multi-column table, and MUST fit
+its card container without horizontal scrolling. Each collapsed row MUST carry
+identity, role, submission/review state, freshness, compact content/attention
+summary, and the currently primary contextual action. Expanding a row MUST
+reveal product/activity content counts, recent edit/submission detail, review
+state, and all currently valid secondary actions without rendering the full
+report body. Rows MUST order by action need, with a stable name tie-break, and
+controls MUST never be clipped.
 
-#### Scenario: the per-lead counts align on shared column rails
+#### Scenario: the queue prioritizes work needing action
 
-- **WHEN** the head views the Period Summary with several leads of differing
-  counts
-- **THEN** each count column (products, current, next, risks, decisions,
-  priorities) lines up vertically across all lead rows
-- **AND** the Remind / Revoke action renders fully without being clipped at the
-  card edge
+- **WHEN** the period contains a requested-changes row, a reviewable submission, a stale draft, an active draft, and an approved/completed row
+- **THEN** the action-needed rows sort ahead of active and completed rows according to the documented queue priority
+- **AND** equal-priority rows remain name-stable
 
-#### Scenario: the head views the Period Summary at standard width
+#### Scenario: a lead row expands
 
-- **WHEN** the head opens `/head/dashboard` at a standard desktop width
-- **THEN** the Period Summary fits inside its card with no horizontal scrollbar
-- **AND** its rows read as rounded cards in the idiom of the surrounding
-  dashboard cards, not a square-ruled table
+- **WHEN** the head activates a row's expansion control
+- **THEN** the control exposes accurate `aria-expanded` and `aria-controls`
+- **AND** freshness, content detail, review state, and valid secondary actions become reachable without navigating away
 
-#### Scenario: per-lead action gating is preserved
+#### Scenario: the queue fits standard and narrow widths
 
-- **WHEN** a lead card renders for a draft lead with `canSendReminder` true
-- **THEN** the card offers the Remind action
-- **AND** a submitted lead card offers Revoke, and a row with neither shows a
-  neutral placeholder — the same gating the prior table applied
+- **WHEN** the Period Summary renders at standard desktop, tablet, or phone width
+- **THEN** it uses stacked/compact responsive rows with no horizontal scrollbar
+- **AND** action controls remain fully visible and keyboard reachable
+
+### Requirement: Every content-bearing live activity row drills into the focused report
+
+The head dashboard `ActivityLivePanel` MUST render every row with report content
+as a link to that lead's focused live report, whether the section is draft or
+submitted, and MUST keep only zero-content rows inert.
+
+#### Scenario: Draft content opens the focused live report
+
+- **WHEN** a draft activity row has at least one item, risk, decision, or priority
+- **THEN** the row links to `/head/report/[reportId]?authorId=[leadId]`
+- **AND** its draft status remains visibly labeled
+
+#### Scenario: Submitted content remains linked
+
+- **WHEN** a submitted activity row has report content
+- **THEN** the row links to the same focused live-report target
+- **AND** it exposes the standard keyboard focus and link affordances
+
+#### Scenario: Truly empty row is inert
+
+- **WHEN** an activity row has zero items, risks, decisions, and priorities
+- **THEN** the row renders no report link
+- **AND** it communicates that the lead has no report content yet
+
+### Requirement: Period Summary is the single canonical per-lead action queue
+
+The head dashboard MUST render each period lead exactly once in Period Summary
+and MUST NOT render a separate Section Review roster or another submission roster
+after their unique signals and actions are represented in the queue.
+
+#### Scenario: Review and activity data exist for one lead
+
+- **WHEN** a lead has content freshness, a submitted section, and a review verdict/action
+- **THEN** one Period Summary row combines those signals
+- **AND** the lead's name is not repeated in standalone Submission Activity or Review rosters
+
+### Requirement: Queue actions are contextual and reuse existing gates
+
+Each Period Summary row MUST offer only actions valid for its current state and
+server-provided capabilities: Open for content-bearing drafts/submissions, Remind
+only when an active reminder rule permits it, Review and Request Changes only
+when review capability permits, and Revoke only for a submitted section in a
+non-published period.
+
+#### Scenario: A draft lead has content
+
+- **WHEN** a draft row has content and reminders are enabled
+- **THEN** Open and Remind are available
+- **AND** Review, Request Changes, and Revoke are not presented as valid actions
+
+#### Scenario: A submitted section is reviewable
+
+- **WHEN** a submitted row has `canReview` in a non-published period
+- **THEN** Review and Request Changes are available through the existing review flow
+- **AND** Revoke remains a distinct explicit rollback action
+
+#### Scenario: A period is published
+
+- **WHEN** the queue displays a published period
+- **THEN** mutation actions that require an editable period are absent or disabled according to existing server capability fields
+
+### Requirement: Revoke All is secondary to per-lead queue actions
+
+The dashboard MUST place Revoke All in a secondary bulk/destructive action area
+rather than the primary page-header action slot, while preserving its
+confirmation, count, authorization, and mutation behavior.
+
+#### Scenario: Submitted leads exist
+
+- **WHEN** Revoke All is available
+- **THEN** normal per-lead queue actions remain visually primary
+- **AND** invoking the secondary bulk action still requires the existing destructive confirmation
 
 ### Requirement: A submitted lead row is never marked 24h-inactive
 

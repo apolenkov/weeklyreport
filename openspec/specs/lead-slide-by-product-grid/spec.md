@@ -100,24 +100,32 @@ without truncation, the product name, and the author's initials badge.
 - **WHEN** a slide has risks and zero ranked items
 - **THEN** the priority strip renders nothing
 
-### Requirement: Product cards carry status by color only
+### Requirement: Product cards expose status without relying on color
 
-Each product card MUST show its status as a left stripe and a status dot beside
-the product name, using existing status tokens; textual status chips MUST NOT
-appear on the card. A product with no data for the period MUST render as a
-collapsed dashed-border row reading "no status for this period". Products with
-no status MUST render without a status stripe.
+Each product card MUST show a shape-distinct compact status icon with accessible
+English status text beside the product name, and MUST retain the existing
+status-colored left stripe as reinforcement. On Track, At Risk, and Blocked MUST
+have distinguishable icon shapes and accessible labels. A product with no data
+for the period MUST render as a collapsed dashed-border row reading "no status
+for this period" and MUST render without a status stripe or status icon.
 
-#### Scenario: blocked product card
+#### Scenario: Blocked product has redundant status channels
 
 - **WHEN** a product's derived status is blocked
-- **THEN** its card shows the blocked-token stripe and dot
-- **AND** no textual status chip appears on the card
+- **THEN** its card shows the blocked stripe and the distinct blocked icon beside the product name
+- **AND** assistive technology announces `Blocked` without relying on color
 
-#### Scenario: product without data collapses
+#### Scenario: Statuses remain distinguishable without color
+
+- **WHEN** on-track, at-risk, and blocked product cards are viewed without color information
+- **THEN** their compact icons remain shape-distinct
+- **AND** each icon exposes its corresponding `On Track`, `At Risk`, or `Blocked` accessible text
+
+#### Scenario: Product without data collapses
 
 - **WHEN** a product assigned to the owner has no records this period
 - **THEN** it renders as a collapsed dashed row with the no-status copy
+- **AND** it renders no status stripe or status icon
 
 ### Requirement: Subsections share one four-column grid
 
@@ -217,3 +225,28 @@ separate Product-mode card grid.
 - **WHEN** the head or viewer surface is in Leads scope
 - **THEN** each active slide renders through the same article layout, with no
   separate lead-specific article
+
+### Requirement: Presentation density paginates every product record
+
+The slide deck MUST offer an explicit Presentation density that pages by
+product and caps records per view with deterministic continuation pages, while
+the existing Document density keeps the auto-height all-content article.
+Presentation density MUST preserve every record exactly once, product/record
+order, author attribution, status, and Mine/Everyone scoping.
+
+#### Scenario: One product exceeds the presentation cap
+
+- **WHEN** a product contains more records than one presentation view allows
+- **THEN** the model creates labeled continuation pages for that product
+- **AND** flattening the pages yields every source record identity exactly once in source order
+
+#### Scenario: The user switches density
+
+- **WHEN** the viewer switches between Document and Presentation
+- **THEN** the control exposes the active mode and is reversible
+- **AND** no report data is re-fetched or discarded solely because density changed
+
+#### Scenario: Document density remains available
+
+- **WHEN** a slide is used for document reading or print-oriented review
+- **THEN** the auto-height article continues to render all products and records without count-based truncation
