@@ -90,6 +90,7 @@ function createRepository(
 
       return {
         published: true as const,
+        wasAlreadyPublished: false,
         report: structuredClone(currentReport),
       };
     },
@@ -436,6 +437,54 @@ describe("PublicationService", () => {
       // publishedAt should be the same instant — the second call must not
       // re-stamp a new Date(); idempotent means "no write".
       expect(second.publishedAt).toEqual(first.publishedAt);
+    });
+
+    // The idempotent short-circuit must be distinguishable from a real write
+    // so a caller (the scheduler) can tell "raced with a manual publish"
+    // apart from "auto-published just now".
+    it("publishAuto idempotent short-circuit reports wasAlreadyPublished=true and performs no write", async () => {
+      const alreadyPublished = makeReport({
+        status: "published",
+        publishedAt: new Date("2026-04-10T18:00:00.000Z"),
+        publishedById: "55555555-5555-4555-8555-555555555555",
+        publishedByName: "Head",
+        sections: [sectionAlpha],
+      });
+      const saveAutoPublishedReport = vi.fn();
+      const repository: PublicationRepository = {
+        ...createRepository(alreadyPublished),
+        saveAutoPublishedReport,
+      };
+      const service = new PublicationService(repository);
+
+      const result = await service.publishAuto(reportId);
+
+      expect(result).toEqual({
+        published: true,
+        wasAlreadyPublished: true,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.objectContaining() returns any; vitest asymmetric matcher has no precise type
+        report: expect.objectContaining({ status: "published" }),
+      });
+      expect(saveAutoPublishedReport).not.toHaveBeenCalled();
+    });
+
+    // Regression: the real write branch (report was draft, compare-and-set
+    // succeeds) must still report wasAlreadyPublished=false, distinguishing
+    // it from the idempotent short-circuit above.
+    it("publishAuto real write reports wasAlreadyPublished=false and writes exactly once", async () => {
+      const repository = createRepository(assembledReport);
+      const saveSpy = vi.spyOn(repository, "saveAutoPublishedReport");
+      const service = new PublicationService(repository);
+
+      const result = await service.publishAuto(reportId);
+
+      expect(result).toEqual({
+        published: true,
+        wasAlreadyPublished: false,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.objectContaining() returns any; vitest asymmetric matcher has no precise type
+        report: expect.objectContaining({ status: "published" }),
+      });
+      expect(saveSpy).toHaveBeenCalledTimes(1);
     });
 
     it("publishAuto increments product KPI counters once on success", async () => {

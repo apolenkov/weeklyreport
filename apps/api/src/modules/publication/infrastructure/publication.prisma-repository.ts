@@ -82,6 +82,9 @@ export class PublicationPrismaRepository implements PublicationRepository {
 
       return {
         published: true,
+        // This layer only ever performs the write — the idempotent
+        // no-write short-circuit lives in `publishAuto`, above it.
+        wasAlreadyPublished: false,
         report: await freezeSnapshotInTx(tx, report.reportId),
       };
     });

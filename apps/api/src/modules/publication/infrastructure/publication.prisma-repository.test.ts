@@ -88,6 +88,7 @@ describe("PublicationPrismaRepository.saveAutoPublishedReport", () => {
 
     expect(result).toEqual({
       published: true,
+      wasAlreadyPublished: false,
       report: { reportId: "rep-1", status: "published" },
     });
     expect(findUniqueOrThrow).toHaveBeenCalledOnce();
