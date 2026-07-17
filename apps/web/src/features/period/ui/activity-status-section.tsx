@@ -1,6 +1,10 @@
 "use client";
 
 import type { TrafficLightStatus } from "@customreport/shared";
+import {
+  CANONICAL_STATUS_PRECEDENCE,
+  trafficLightToCanonical,
+} from "@customreport/shared";
 import { useState } from "react";
 
 import type { LeadActivityCard } from "../../report-sections";
@@ -19,12 +23,12 @@ const STATUS_OPTIONS: readonly {
   { value: "red", label: "Blocked", dotClass: "bg-[var(--color-destructive)]" },
 ];
 
-// green < yellow < red — the risk/blocker floor forbids a manual lower below it.
-const SEVERITY_RANK: Record<TrafficLightStatus, number> = {
-  green: 0,
-  yellow: 1,
-  red: 2,
-};
+// green < yellow < red — the risk/blocker floor forbids a manual lower below
+// it. The ordering comes from the shared canonical ladder; this is a lookup,
+// not a private precedence table.
+function trafficRank(status: TrafficLightStatus): number {
+  return CANONICAL_STATUS_PRECEDENCE[trafficLightToCanonical(status)];
+}
 
 interface ActivityStatusSectionProps {
   /** The author's attached activities as full record cards. */
@@ -79,12 +83,10 @@ function ActivityStatusPills({
   // Display the lead's current pick floored by the alarm, computed client-side so
   // the active pill tracks a local pick immediately (no save+refetch needed).
   const displayStatus: TrafficLightStatus =
-    floor != null && SEVERITY_RANK[floor] > SEVERITY_RANK[stored]
-      ? floor
-      : stored;
+    floor != null && trafficRank(floor) > trafficRank(stored) ? floor : stored;
 
   function pick(next: TrafficLightStatus) {
-    if (floor != null && SEVERITY_RANK[next] < SEVERITY_RANK[floor]) {
+    if (floor != null && trafficRank(next) < trafficRank(floor)) {
       setRefused(true);
       return;
     }
@@ -94,10 +96,7 @@ function ActivityStatusPills({
     // unbacked raise routes through risk creation instead of persisting — the
     // status lands via the render-time floor once the risk is saved; cancel
     // changes nothing.
-    if (
-      next !== "green" &&
-      SEVERITY_RANK[next] > SEVERITY_RANK[floor ?? "green"]
-    ) {
+    if (next !== "green" && trafficRank(next) > trafficRank(floor ?? "green")) {
       onRaiseRequiresRisk(
         card.activityId,
         next === "red" ? "blocked" : "at-risk",
@@ -110,8 +109,8 @@ function ActivityStatusPills({
     // is at/above the floor, a pick is a genuine change and writes through.
     if (
       floor != null &&
-      SEVERITY_RANK[floor] > SEVERITY_RANK[stored] &&
-      SEVERITY_RANK[next] === SEVERITY_RANK[floor]
+      trafficRank(floor) > trafficRank(stored) &&
+      trafficRank(next) === trafficRank(floor)
     ) {
       return;
     }

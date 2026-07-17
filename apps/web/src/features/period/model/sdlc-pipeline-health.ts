@@ -1,3 +1,4 @@
+import { worstCanonicalStatus } from "@customreport/shared";
 import type { CSSProperties } from "react";
 
 import type {
@@ -22,21 +23,9 @@ const STRIPE_BY_STATUS: Record<StageStatus, string> = {
   empty: "var(--color-border)",
 };
 
-// Health severity order: blocked > at-risk > on-track > empty
-// (empty = nothing set yet).
-const SEVERITY_RANK: Record<StageStatus, number> = {
-  blocked: 3,
-  "at-risk": 2,
-  "on-track": 1,
-  empty: 0,
-};
-
-export function worstStatusOf(values: readonly StageStatus[]): StageStatus {
-  return values.reduce<StageStatus>(
-    (worst, s) => (SEVERITY_RANK[s] > SEVERITY_RANK[worst] ? s : worst),
-    "empty",
-  );
-}
+// Health severity order comes from the shared canonical ladder
+// (blocked > at-risk > on-track > empty; empty = nothing set yet).
+export const worstStatusOf = worstCanonicalStatus;
 
 // pipeline-tooltip-and-indicator (reverses #90): the collapsed `+N more`
 // indicator colours by the FULL status scale of the hidden stages, by

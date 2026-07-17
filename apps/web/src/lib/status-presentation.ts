@@ -1,4 +1,9 @@
 import type { CanonicalStatus, TrafficLightStatus } from "@customreport/shared";
+import {
+  canonicalToTrafficLight,
+  trafficLightToCanonical,
+  worstCanonicalStatus,
+} from "@customreport/shared";
 import { AlertTriangle, type LucideIcon } from "lucide-react";
 
 /**
@@ -60,22 +65,17 @@ const STATUS_PRESENTATION: Record<CanonicalStatus, StatusPresentation> = {
   },
 };
 
-const TRAFFIC_STATUS_RANK: Record<TrafficLightStatus, number> = {
-  green: 0,
-  yellow: 1,
-  red: 2,
-};
-
+/**
+ * Worst traffic light across a set of values — a thin adapter over the shared
+ * canonical fold, so this module keeps no private precedence table. An
+ * all-null (or empty) input folds to `"empty"` and adapts back to `null`.
+ */
 export function worstTrafficStatus(
   statuses: readonly (TrafficLightStatus | null | undefined)[],
 ): TrafficLightStatus | null {
-  return statuses.reduce<TrafficLightStatus | null>((worst, status) => {
-    if (status == null) return worst;
-    if (worst == null) return status;
-    return TRAFFIC_STATUS_RANK[status] > TRAFFIC_STATUS_RANK[worst]
-      ? status
-      : worst;
-  }, null);
+  return canonicalToTrafficLight(
+    worstCanonicalStatus(statuses.map(trafficLightToCanonical)),
+  );
 }
 
 export function statusLabel(
