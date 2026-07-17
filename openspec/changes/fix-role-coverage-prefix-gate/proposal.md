@@ -46,12 +46,17 @@ archaeology that CLAUDE.md's comment-hygiene rule says to remove.
 
 ## What Changes
 
-- Rewrite `isProcedureChainAllowed` to require an EXACT-length,
-  full-reference-identity match against each canonical chain in
-  `ALLOWED_CHAINS` (`middlewares.length === chain.length &&` every slot
-  matches by reference), instead of a length-inequality-tolerant prefix
-  match. A procedure's own chain (pre-resolver) must equal one recognised
-  base's chain exactly, not merely start with a shorter one.
+- Rewrite `isProcedureChainAllowed` to require a full-reference-identity
+  match of one canonical chain from `ALLOWED_CHAINS`, with everything after
+  that base restricted to tRPC's own per-procedure plumbing middlewares
+  (`inputValidatorMiddleware` / `outputValidatorMiddleware` /
+  `resolveMiddleware`, recognised by name — they are fresh closures per
+  procedure and cannot be reference-compared). A literal exact-length
+  match (the first drafted approach) is impossible: every finalized leaf
+  procedure carries those trailing plumbing entries, so it would flag all
+  92 legitimate procedures. Known residual: a middleware wilfully NAMED
+  like a plumbing function still passes the tail check — out of scope,
+  the gate targets accidental hand-rolls, not deliberate evasion.
 - Add a regression/characterization test: a synthetic procedure built as
   `t.procedure.use(metricsMiddleware).use(loggingMiddleware).use(<fake role
 middleware>)` (reusing the real shared prefix, differing only past slot 2)
@@ -68,8 +73,8 @@ middleware>)` (reusing the real shared prefix, differing only past slot 2)
 
 ### Modified Capabilities
 
-- `role-coverage-gate` — the gate now requires exact-length,
-  full-reference-identity middleware-chain matches instead of a
+- `role-coverage-gate` — the gate now requires a full-reference-identity
+  canonical-base match with a plumbing-only tail instead of a
   length-tolerant prefix match, closing the gap where a hand-rolled chain
   reusing the shared metrics+logging prefix passed undetected.
 
