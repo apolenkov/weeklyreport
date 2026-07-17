@@ -10,6 +10,8 @@ import {
   leadershipProcedure,
   leadHeadAdminProcedure,
   leadProcedure,
+  loggingMiddleware,
+  metricsMiddleware,
   protectedProcedure,
   publicProcedure,
   viewerProcedure,
@@ -100,26 +102,47 @@ const ALLOWED_CHAINS: readonly { name: string; chain: readonly unknown[] }[] = [
   { name: "leadHeadAdminProcedure", chain: LEAD_HEAD_ADMIN_CHAIN },
 ];
 
+// A finalized leaf procedure (`.query()`/`.mutation()`/`.subscription()`)
+// always carries a trailing `resolveMiddleware` closure over its own
+// resolver, and — when built with `.input()` / `.output()` — a preceding
+// `inputValidatorMiddleware` / `outputValidatorMiddleware` closure over its
+// own schema. All are created fresh per procedure, so they can never be
+// compared by reference against the canonical chains (which are captured
+// from a throwaway `.query(() => undefined)` with no input/output schema).
+// They are recognised by name instead: this is tRPC's own naming for them,
+// so it fails loud (the tail stops reading as "all plumbing" and the
+// coverage test goes red) rather than silently passing a hand-rolled chain
+// if it ever changes.
+const TRPC_PLUMBING_MIDDLEWARE_NAMES = new Set([
+  "inputValidatorMiddleware",
+  "outputValidatorMiddleware",
+  "resolveMiddleware",
+]);
+
+function isPlumbingMiddleware(middleware: unknown): boolean {
+  return TRPC_PLUMBING_MIDDLEWARE_NAMES.has(
+    (middleware as { name?: string } | undefined)?.name ?? "",
+  );
+}
+
 /**
  * Assert that a procedure's `_def.middlewares` chain begins with one of the
- * allowed base-procedure middleware-prefix identities. The procedure's own
- * resolver is appended after the chain, so we compare prefix-only.
+ * allowed base-procedure middleware identities by exact reference, and that
+ * everything after that base is tRPC's own per-procedure plumbing — never a
+ * hand-rolled middleware masquerading past a shorter canonical chain (e.g.
+ * `PUBLIC_CHAIN` being a prefix of every protected chain).
  */
 function isProcedureChainAllowed(middlewares: readonly unknown[]): boolean {
-  return ALLOWED_CHAINS.some(({ chain }) => {
-    if (middlewares.length < chain.length) return false;
-    return chain.every((mw, i) => middlewares[i] === mw);
-  });
+  return ALLOWED_CHAINS.some(
+    ({ chain }) =>
+      middlewares.length >= chain.length &&
+      chain.every((mw, i) => middlewares[i] === mw) &&
+      middlewares.slice(chain.length).every(isPlumbingMiddleware),
+  );
 }
 
 interface LeafProcedure {
   _def: { middlewares: readonly unknown[] };
-}
-
-type RouterRecord = Record<string, LeafProcedure | RouterShape>;
-
-interface RouterShape {
-  _def: { procedures: RouterRecord; record?: RouterRecord };
 }
 
 function isLeafProcedure(node: unknown): node is LeafProcedure {
@@ -196,7 +219,7 @@ describe("default-deny coverage gate", () => {
     if (offending.length > 0) {
       // Diagnostic surface for CI failures; the assertion below fails the test.
       console.error(
-        `[AUTH-03] Procedures lacking recognised role declaration:\n${offending
+        `Procedures lacking recognised role declaration:\n${offending
           .map((p) => `  - ${p}`)
           .join(
             "\n",
@@ -241,6 +264,33 @@ describe("default-deny coverage gate", () => {
     const offending = findUncoveredProcedures(altRouter);
 
     expect(offending).toContain("lookalike");
+  });
+
+  it("mutation test: a chain reusing the real metrics+logging prefix with a fake role middleware also triggers the gate", async () => {
+    // This is the case an inequality-tolerant prefix match misses: the chain
+    // starts with the REAL shared metricsMiddleware + loggingMiddleware pair
+    // (same references PUBLIC_CHAIN is built from), so a `.some()` prefix
+    // check matches PUBLIC_CHAIN without ever looking at slot 2 — the
+    // hand-rolled role middleware never gets inspected.
+    const { initTRPC } = await import("@trpc/server");
+    // Context must match TrpcContext — the real metricsMiddleware /
+    // loggingMiddleware are typed against it and won't attach to a bare
+    // `initTRPC.create()` procedure.
+    const t = initTRPC.context<TrpcContext>().create();
+
+    const fakeRoleMiddleware = t.middleware(({ next }) => next());
+    const handRolled = t.procedure
+      .use(metricsMiddleware)
+      .use(loggingMiddleware)
+      .use(fakeRoleMiddleware);
+
+    const handRolledRouter = t.router({
+      impersonator: handRolled.query(() => "reuses the real shared prefix"),
+    });
+
+    const offending = findUncoveredProcedures(handRolledRouter);
+
+    expect(offending).toContain("impersonator");
   });
 });
 
