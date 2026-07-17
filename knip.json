@@ -1,0 +1,47 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignore": [
+    ".claude/**",
+    ".agents/**",
+    "openspec/**",
+    "apps/web/uat-suite/**"
+  ],
+  "ignoreBinaries": ["tail", "rg", "playwright"],
+  "workspaces": {
+    ".": {
+      "entry": [
+        "prisma/*.ts",
+        "scripts/*.mjs",
+        "e2e/playwright.integration.config.ts",
+        "e2e/sweep/playwright.config.ts",
+        "e2e/sweep/render-checklist.mjs",
+        "e2e/**/*.spec.ts",
+        "e2e/integration/global-teardown.ts"
+      ],
+      "project": ["prisma/**/*.ts", "scripts/**/*.mjs", "e2e/**/*.{ts,mjs}"]
+    },
+    "apps/api": {
+      "entry": ["src/main.ts", "src/**/*.test.ts", "src/**/*.fixture.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "apps/web": {
+      "entry": [
+        "src/app/**/{page,layout,template,error,loading,not-found,route}.tsx",
+        "src/app/**/{page,layout,template,error,loading,not-found,route}.ts",
+        "src/middleware.ts",
+        "src/instrumentation.ts",
+        "src/**/*.test.{ts,tsx}",
+        "src/test-utils/**"
+      ],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "packages/shared": {
+      "entry": ["src/index.ts", "src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/ui": {
+      "entry": ["src/index.ts", "src/**/*.test.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx}"]
+    }
+  }
+}
