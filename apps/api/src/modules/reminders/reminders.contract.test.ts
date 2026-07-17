@@ -134,8 +134,8 @@ describe("RemindersService — contract tests", () => {
       ).rejects.toThrow("Reminder execution requires an active rule.");
     });
 
-    // 4. deduplicates by ruleId:fireAt:email key
-    it("deduplicates by ruleId:fireAt:email composite key", async () => {
+    // 4. deduplicates by ruleId:kind:cycleDate:email key
+    it("deduplicates by ruleId:kind:cycleDate:email composite key", async () => {
       const service = new RemindersService(createRepository(activeRule));
 
       const first = await service.requestReminderExecution(
@@ -150,7 +150,12 @@ describe("RemindersService — contract tests", () => {
       expect(first.id).toBe(second.id);
       expect(first.dedupeKey).toBe(second.dedupeKey);
       expect(first.dedupeKey).toContain(activeRule.id);
-      expect(first.dedupeKey).toContain(activeRule.fireAt.toISOString());
+      // No-payload dispatch defaults to kind: 'deadline' with cycleDate
+      // truncated from the rule's own fireAt (see resolveReminderDedupeKey).
+      expect(first.dedupeKey).toContain("deadline");
+      expect(first.dedupeKey).toContain(
+        activeRule.fireAt.toISOString().slice(0, 10),
+      );
       expect(first.dedupeKey).toContain(recipientEmail);
     });
 
