@@ -107,23 +107,6 @@ describe("useStatusRiskSync", () => {
     expect(dev?.status).toBe<StageStatus>("on-track");
   });
 
-  it("Test 3: applyStatusSuggestion applies the status through the auto-sync source", () => {
-    const product = buildProduct();
-    const { state, hookResult } = setup([product]);
-
-    act(() => {
-      hookResult.result.current.applyStatusSuggestion("crm", "Dev", "at-risk");
-    });
-
-    expect(state.productsCalls).toHaveLength(1);
-    const dev = expectDefined(
-      expectDefined(state.productsCalls[0])[0],
-    ).stages.find((s) => s.stageName === "Dev");
-    expect(dev?.status).toBe<StageStatus>("at-risk");
-    // The source ref returns to "user" after the synchronous frame.
-    expect(hookResult.result.current.syncSource()).toBe("user");
-  });
-
   it("Test 4: revert to on-track applies at hook level (interception is the bridge's job)", () => {
     const product = buildProduct({
       stages: [
@@ -142,7 +125,6 @@ describe("useStatusRiskSync", () => {
         "crm",
         "Dev",
         "on-track",
-        "user",
       );
     });
 

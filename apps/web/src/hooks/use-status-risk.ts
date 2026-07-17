@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 
 import { riskCoversStage } from "../features/report-sections/model/stage-tags";
 import type {
@@ -119,14 +119,6 @@ export function validateCoupling(coupling: CouplingState): {
 // Stage status apply hook
 // ---------------------------------------------------------------------------
 
-/**
- * SyncSource discriminates between user-driven changes and auto-sync changes
- * applied by the bridge after a risk-routed flow (unify-risk-stage-status
- * D2/D3). Auto-applies go through `applyStatusSuggestion`, which bypasses
- * the bridge-level interception by construction, so no loop can form.
- */
-export type SyncSource = "user" | "auto-sync";
-
 type ProductsUpdater = Product[] | ((prev: Product[]) => Product[]);
 
 export interface UseStatusRiskSyncArgs {
@@ -138,43 +130,25 @@ export interface UseStatusRiskSyncResult {
     productId: string,
     stageName: string,
     newStatus: StageStatus,
-    source?: SyncSource,
   ) => void;
-  applyStatusSuggestion: (
-    productId: string,
-    stageName: string,
-    status: StageStatus,
-  ) => void;
-  syncSource: () => SyncSource;
 }
 
 /**
- * Stage status applier with a SyncSource ref to discriminate user clicks
- * from bridge auto-applies.
+ * Stage status applier.
  *
  * The hook only applies stage status changes; the bridge
  * (`lead-form-sync-bridge`) owns interception of conflicting transitions
  * (raise without a risk, lower with covering risks). A saved risk forces its
  * covered chips to at least its severity (automatic severity floor), so there
  * is no opt-in "bump the chip?" suggestion to make.
- *
- * The syncSourceRef toggles to 'auto-sync' across the synchronous frame
- * of an auto-applied mutation.
  */
 export function useStatusRiskSync(
   args: UseStatusRiskSyncArgs,
 ): UseStatusRiskSyncResult {
   const { onProductsChange } = args;
 
-  const syncSourceRef = useRef<SyncSource>("user");
-
   const handleStageStatusChange = useCallback(
-    (
-      productId: string,
-      stageName: string,
-      newStatus: StageStatus,
-      _source: SyncSource = "user",
-    ) => {
+    (productId: string, stageName: string, newStatus: StageStatus) => {
       // Update the stage status. No automatic side-effects on Risks —
       // risk creation/removal is routed explicitly by the bridge.
       onProductsChange((prev) =>
@@ -192,18 +166,7 @@ export function useStatusRiskSync(
     [onProductsChange],
   );
 
-  const applyStatusSuggestion = useCallback(
-    (productId: string, stageName: string, status: StageStatus) => {
-      syncSourceRef.current = "auto-sync";
-      handleStageStatusChange(productId, stageName, status, "auto-sync");
-      syncSourceRef.current = "user";
-    },
-    [handleStageStatusChange],
-  );
-
   return {
     handleStageStatusChange,
-    applyStatusSuggestion,
-    syncSource: () => syncSourceRef.current,
   };
 }

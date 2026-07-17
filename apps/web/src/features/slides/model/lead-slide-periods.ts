@@ -77,29 +77,3 @@ export function resolveLeadSlideReportId({
     ""
   );
 }
-
-export function visibleLeadSlidePeriodOptions({
-  options,
-  includeArchive,
-  selectedReportId,
-}: {
-  readonly options: readonly LeadSlidePeriodOption[];
-  readonly includeArchive: boolean;
-  readonly selectedReportId: string;
-}): LeadSlidePeriodOption[] {
-  if (includeArchive) return [...options];
-
-  const visible = options.filter((option) => !option.archived);
-  const selected = options.find(
-    (option) => option.reportId === selectedReportId,
-  );
-
-  if (!selected?.archived) return visible;
-  if (visible.some((option) => option.reportId === selected.reportId)) {
-    return visible;
-  }
-
-  return [...visible, selected].sort(
-    (a, b) => b.periodStart.getTime() - a.periodStart.getTime(),
-  );
-}

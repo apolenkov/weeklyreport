@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildLeadSlidePeriodOptions,
   resolveLeadSlideReportId,
-  visibleLeadSlidePeriodOptions,
 } from "./lead-slide-periods";
 
 const CURRENT_REPORT_ID = "11111111-1111-4111-8111-111111111111";
@@ -79,30 +78,5 @@ describe("lead slide periods", () => {
         activeReportId: null,
       }),
     ).toBe(PUBLISHED_REPORT_ID);
-  });
-
-  it("hides archived options until archive mode is enabled", () => {
-    const options = buildLeadSlidePeriodOptions(
-      [
-        historyEntry(CURRENT_REPORT_ID, "2026-05-11T00:00:00.000Z"),
-        historyEntry(ARCHIVED_REPORT_ID, "2026-04-27T00:00:00.000Z", true),
-      ],
-      CURRENT_REPORT_ID,
-    );
-
-    expect(
-      visibleLeadSlidePeriodOptions({
-        options,
-        includeArchive: false,
-        selectedReportId: CURRENT_REPORT_ID,
-      }).map((option) => option.reportId),
-    ).toEqual([CURRENT_REPORT_ID]);
-    expect(
-      visibleLeadSlidePeriodOptions({
-        options,
-        includeArchive: true,
-        selectedReportId: CURRENT_REPORT_ID,
-      }).map((option) => option.reportId),
-    ).toEqual([CURRENT_REPORT_ID, ARCHIVED_REPORT_ID]);
   });
 });
