@@ -216,7 +216,7 @@ describe("SettingsTab — Identity sub-tab", () => {
     });
   });
 
-  it("disables Save when shortName exceeds 16 chars", async () => {
+  it("disables Save when shortName exceeds 16 chars, and re-enables at <=16", async () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
 
@@ -225,9 +225,26 @@ describe("SettingsTab — Identity sub-tab", () => {
     )) as HTMLInputElement;
     await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
 
-    // The input itself caps at 16 via maxLength, so we read the counter to
-    // assert the bound is communicated to the admin.
-    expect(screen.getByText(/3\/16/)).toBeTruthy();
+    const saveButton = screen.getByRole("button", {
+      name: /save organization identity/i,
+    }) as HTMLButtonElement;
+
+    // fireEvent.change bypasses the input's maxLength DOM attribute (which
+    // only clamps real typed/pasted input), so this is the only way to
+    // actually exercise the over-limit disable branch.
+    fireEvent.change(shortNameInput, {
+      target: { value: "ABCDEFGHIJKLMNOPQ" },
+    });
+
+    expect(screen.getByText(/17\/16/)).toBeTruthy();
+    await waitFor(() => expect(saveButton.disabled).toBe(true));
+
+    fireEvent.change(shortNameInput, {
+      target: { value: "ABCDEFGHIJKLMNOP" },
+    });
+
+    expect(screen.getByText(/16\/16/)).toBeTruthy();
+    await waitFor(() => expect(saveButton.disabled).toBe(false));
   });
 
   // D4 (design): pin the non-vacuous invalidation fix — after Save success

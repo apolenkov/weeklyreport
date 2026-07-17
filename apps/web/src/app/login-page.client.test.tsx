@@ -98,18 +98,23 @@ describe("VA-0a: Primary CTA SVG aria-hidden (login-page.client)", () => {
     expect(svgEl).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("SVG does not contribute to the accessible name of the primary CTA link", async () => {
+  it("the explicit aria-label wins over the link's own visible text in the accessible name", async () => {
     const LoginPageClient = await loadLoginPageClient();
     render(<LoginPageClient initialOrg={STUB_ORG} />);
 
-    // In production (AUTH_STUB=false) the aria-label is "Sign in with corporate SSO".
-    // If the SVG were NOT aria-hidden, ATF would pick up its inner text/paths
-    // and the label would differ. With aria-hidden the resolved accessible name
-    // comes solely from the explicit aria-label on the <a> element.
+    // An explicit aria-label on the <a> always wins over descendant content
+    // in accessible-name computation, independent of whether the SVG carries
+    // aria-hidden — so the resolved name is "Sign in with corporate SSO" (the
+    // aria-label) even though the link's own visible text reads "Sign in with
+    // SSO". Assert both halves: the label wins, AND it differs from the
+    // visible text — a regression that dropped the aria-label (falling back
+    // to visible-text naming) fails this for the right reason.
     const cta = screen.getByRole("link", {
       name: "Sign in with corporate SSO",
     });
-    expect(cta).toBeInTheDocument();
+    expect(cta).toHaveAccessibleName("Sign in with corporate SSO");
+    expect(cta.textContent.trim()).toBe("Sign in with SSO");
+    expect(cta.textContent.trim()).not.toBe("Sign in with corporate SSO");
   });
 });
 

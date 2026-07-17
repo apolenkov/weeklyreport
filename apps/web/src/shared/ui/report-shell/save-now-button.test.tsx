@@ -45,16 +45,38 @@ describe("SaveNowButton", () => {
     ).toBeDefined();
   });
 
-  it("renders no visible label text — icon-only button", () => {
-    render(
+  it("renders the visible label text matching the current state — not icon-only", () => {
+    const { rerender } = render(
       <SaveNowButton
         autosave={makeSnapshot({ state: "pending", dirty: true })}
       />,
     );
-    // The textual labels from the old pill ("Save now" / "Saving…" / "Saved" /
-    // "Retry save") must not appear in the rendered DOM. The aria-label/title
-    // attribute carries the accessible name instead.
-    expect(screen.queryByText(/save now|saving|saved|retry save/i)).toBeNull();
+    expect(screen.getByText("Save")).toBeDefined();
+
+    rerender(
+      <SaveNowButton
+        autosave={makeSnapshot({ state: "saving", isInFlight: true })}
+      />,
+    );
+    expect(screen.getByText("Saving")).toBeDefined();
+
+    rerender(
+      <SaveNowButton
+        autosave={makeSnapshot({
+          state: "saved",
+          dirty: false,
+          isInFlight: false,
+        })}
+      />,
+    );
+    expect(screen.getByText("Saved")).toBeDefined();
+
+    rerender(
+      <SaveNowButton
+        autosave={makeSnapshot({ state: "error", dirty: true })}
+      />,
+    );
+    expect(screen.getByText("Retry")).toBeDefined();
   });
 
   it("is enabled only when state is pending or error", () => {
