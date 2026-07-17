@@ -1,0 +1,198 @@
+export const meta = {
+  name: "mass-file-review",
+  description:
+    "Per-file Opus review of every source file (batches of ~6) -> adversarial verify of major+ findings -> aggregated per-file verdict dataset",
+  phases: [
+    {
+      title: "Review",
+      detail: "one Opus agent per ~6-file batch, verdict per file",
+    },
+    {
+      title: "Verify",
+      detail: "adversarial refutation of every major/blocker finding",
+    },
+  ],
+};
+
+const REPO = "/home/user/work/customreport";
+
+// __BATCHES__ is replaced at launch time with the generated batch list.
+const BATCHES = __BATCHES__;
+
+const REVIEW_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["results"],
+  properties: {
+    results: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["file", "verdict", "summary", "findings"],
+        properties: {
+          file: { type: "string" },
+          verdict: {
+            type: "string",
+            enum: ["exemplary", "good", "needs-attention", "defect"],
+          },
+          summary: { type: "string" },
+          findings: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["severity", "line", "issue"],
+              properties: {
+                severity: {
+                  type: "string",
+                  enum: ["blocker", "major", "minor"],
+                },
+                line: { type: "integer" },
+                issue: { type: "string" },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+const VERDICT_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["refuted", "reason"],
+  properties: {
+    refuted: { type: "boolean" },
+    reason: { type: "string" },
+  },
+};
+
+function reviewPrompt(batch) {
+  return [
+    `You are a strict per-file code reviewer for the repo at ${REPO} (read-only; do NOT edit anything).`,
+    `Review EACH of these files and give EVERY file its own verdict:`,
+    ...batch.files.map((f) => `  - ${f}`),
+    ``,
+    `Read each file IN FULL. For test files, also skim the source file under test if needed to judge assertion strength.`,
+    ``,
+    `Verdict scale (apply honestly, do not grade-inflate):`,
+    `- "exemplary": reference-quality; nothing you would change.`,
+    `- "good": solid; only nitpicks not worth a task.`,
+    `- "needs-attention": real but non-urgent improvements (shallow module, duplicated logic, weak tests, comment noise, dead exports).`,
+    `- "defect": a concrete bug, correctness risk, misleading contract/type lie, or a test that cannot fail.`,
+    ``,
+    `Judge what LINTERS CANNOT see (lint/typecheck are already enforced and green — do NOT report line counts, complexity numbers, or formatting):`,
+    `1. Correctness: real bugs, race conditions, wrong edge-case handling, contract/type lies (e.g. optional in Zod but NOT NULL in DB).`,
+    `2. Depth: pass-through wrappers failing the deletion test; interfaces as wide as their implementation; ref/callback smuggling.`,
+    `3. Duplication: reimplementations of canonical helpers (shared schemas, lib/ helpers, severity ladder, stage matching).`,
+    `4. Dead surface: exports/branches with no reachable production caller.`,
+    `5. Tests: assertions that cannot fail, pins that miss side effects, mocks that drift from real contracts, weakened thresholds.`,
+    `6. Comment hygiene: change-log/ticket archaeology, narration of the obvious (repo bans these).`,
+    ``,
+    `Findings need file-local line numbers and ONE-sentence issues. No praise prose, no approval boilerplate. If a file is genuinely fine, verdict "good" (or "exemplary") with zero findings is the correct answer — do not invent findings to look thorough.`,
+    `Known context: this is an MVP; ComingSoon-gated features are deliberate, not dead code. OpenSpec specs in openspec/specs/ are the source of truth for intended behavior.`,
+    `Return ONLY the structured result.`,
+  ].join("\n");
+}
+
+phase("Review");
+log(
+  `Reviewing ${BATCHES.reduce((n, b) => n + b.files.length, 0)} files in ${BATCHES.length} batches`,
+);
+
+const reviewed = await parallel(
+  BATCHES.map(
+    (batch) => () =>
+      agent(reviewPrompt(batch), {
+        label: `review:${batch.label}`,
+        phase: "Review",
+        model: "opus",
+        schema: REVIEW_SCHEMA,
+      }).then((r) => (r ? r.results : null)),
+  ),
+);
+
+const allResults = reviewed.filter(Boolean).flat();
+const missedBatches = BATCHES.filter((_, i) => !reviewed[i]);
+if (missedBatches.length > 0) {
+  log(
+    `WARNING: ${missedBatches.length} batches returned null and are NOT covered: ${missedBatches.map((b) => b.label).join(", ")}`,
+  );
+}
+
+phase("Verify");
+const majorFindings = allResults.flatMap((r) =>
+  r.findings
+    .filter((f) => f.severity === "blocker" || f.severity === "major")
+    .map((f) => ({ file: r.file, ...f })),
+);
+log(`${majorFindings.length} major/blocker findings to adversarially verify`);
+
+const verified = await parallel(
+  majorFindings.map(
+    (f) => () =>
+      agent(
+        [
+          `Adversarially VERIFY a code-review finding in ${REPO} (read-only).`,
+          `File: ${f.file}, line ~${f.line}.`,
+          `Claim: ${f.issue}`,
+          `Read the file and its callers/tests as needed. Try hard to REFUTE the claim: is the scenario actually reachable, is the behavior actually wrong, is it maybe deliberate and documented (spec/ADR/comment), is it already gated elsewhere?`,
+          `Default to refuted=true if the claim is speculative, unreachable, or restates a deliberate decision. refuted=false ONLY if you can articulate the concrete failure or defect yourself.`,
+        ].join("\n"),
+        {
+          label: `verify:${f.file.split("/").pop()}:${f.line}`,
+          phase: "Verify",
+          model: "opus",
+          schema: VERDICT_SCHEMA,
+        },
+      ).then((v) => ({ ...f, verdict: v })),
+  ),
+);
+
+const confirmed = verified
+  .filter(Boolean)
+  .filter((v) => v.verdict && !v.verdict.refuted);
+const refuted = verified
+  .filter(Boolean)
+  .filter((v) => v.verdict && v.verdict.refuted);
+
+// Downgrade files whose ONLY major findings were refuted.
+const confirmedByFile = new Map();
+for (const c of confirmed) {
+  const list = confirmedByFile.get(c.file) || [];
+  list.push(c);
+  confirmedByFile.set(c.file, list);
+}
+const finalResults = allResults.map((r) => {
+  const hadMajor = r.findings.some((f) => f.severity !== "minor");
+  const keptMajor = (confirmedByFile.get(r.file) || []).length > 0;
+  const verdict =
+    r.verdict === "defect" && hadMajor && !keptMajor
+      ? "needs-attention"
+      : r.verdict;
+  return { ...r, verdict, confirmedMajors: confirmedByFile.get(r.file) || [] };
+});
+
+const counts = finalResults.reduce((acc, r) => {
+  acc[r.verdict] = (acc[r.verdict] || 0) + 1;
+  return acc;
+}, {});
+log(
+  `Done. Verdicts: ${JSON.stringify(counts)}; confirmed majors: ${confirmed.length}, refuted: ${refuted.length}`,
+);
+
+return {
+  counts,
+  totalFiles: allResults.length,
+  missedBatches: missedBatches.map((b) => b.label),
+  confirmedMajors: confirmed,
+  refutedMajors: refuted.map((r) => ({
+    file: r.file,
+    line: r.line,
+    issue: r.issue,
+    reason: r.verdict.reason,
+  })),
+  files: finalResults,
+};
