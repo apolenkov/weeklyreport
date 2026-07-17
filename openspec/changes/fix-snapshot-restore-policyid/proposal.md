@@ -1,0 +1,57 @@
+# Fix Snapshot Restore Policy ID
+
+## Why
+
+`getSnapshot` reads each reminder rule's `policyId` (`admin-snapshot.queries.ts:113`)
+and the shared `AdminSnapshot` schema carries it
+(`packages/shared/src/schemas/report.schema.ts:184`), so the field is part of
+the exported snapshot contract.
+
+`upsertReminderRules` in `admin-snapshot-write.queries.ts` builds `ruleData`
+without `policyId` (lines 165–172) and uses that same object on both the
+`update` and `create` branches (lines 175–182). On a `getSnapshot` →
+`saveSnapshot` restore into a fresh database, every reminder rule that was
+derived from a `ReminderPolicy` is recreated with `policyId` left at its
+column default (`null`), silently detaching the rule from its owning policy.
+The FK and its index exist in the schema (`prisma/schema.prisma:546-561`)
+specifically to preserve this linkage, so the read path exports data the
+write path throws away.
+
+## What Changes
+
+- Add `policyId: rule.policyId` to the `ruleData` object in
+  `upsertReminderRules` so both the create and update branches persist the
+  policy linkage from the snapshot.
+- Add a restore-roundtrip regression test: seed a reminder rule with a
+  non-null `policyId`, run it through `getSnapshot` then `saveSnapshot` into
+  an empty database, and assert the restored row's `policyId` matches.
+
+## Capabilities
+
+### Modified Capabilities
+
+- `admin-snapshot-restore` — restoring a snapshot now preserves each reminder
+  rule's `policyId` on both the create and update branch instead of dropping
+  it to `null`.
+
+## Impact
+
+- Package: `@customreport/api`
+- File: `apps/api/src/modules/admin/admin-snapshot-write.queries.ts`
+  (`upsertReminderRules`)
+- Tests: new/updated case in the api's admin snapshot integration test
+  covering the restore roundtrip
+- No schema change — `ReminderRule.policyId` already exists and is already
+  read by `getSnapshot`
+
+## Non-goals
+
+- Not touching `upsertProjects`, `upsertPeriods`, or any other
+  `upsert*` function in this file — no other field was found missing from
+  its `ruleData`/equivalent object.
+- Not changing the `PolicyApplicatorService` derivation logic that creates
+  rules from policies on new periods — this change only affects the
+  snapshot restore path, not first-time policy application.
+- Not adding a delete/detach path for rules whose policy no longer exists in
+  the snapshot — `saveSnapshot` remains additive-only per its existing
+  contract.
