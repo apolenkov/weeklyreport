@@ -22,9 +22,19 @@ write path throws away.
 - Add `policyId: rule.policyId` to the `ruleData` object in
   `upsertReminderRules` so both the create and update branches persist the
   policy linkage from the snapshot.
-- Add a restore-roundtrip regression test: seed a reminder rule with a
-  non-null `policyId`, run it through `getSnapshot` then `saveSnapshot` into
-  an empty database, and assert the restored row's `policyId` matches.
+- Restore `ReminderPolicy` rows (`upsertReminderPolicies`, from
+  `snapshot.policies`) inside the same transaction BEFORE the rules —
+  without this the persisted FK cannot resolve on a fresh database and the
+  whole restore rolls back with P2003. (ADDED during implementation:
+  adversarial verify reproduced the FK crash; persisting the FK alone is
+  not a complete fix.) Unlike the live `saveReminderPolicy` path, the
+  restore does not cascade `active` onto rule statuses — the snapshot
+  writes each rule's own status explicitly.
+- Add a restore-roundtrip regression test: seed a policy + a reminder rule
+  with a non-null `policyId`, run getSnapshot, delete BOTH rows (fresh-DB
+  path), saveSnapshot, and assert the rule's `policyId` and the policy row
+  itself are restored; then null the live rule's FK and restore again to
+  cover the update branch.
 
 ## Capabilities
 
