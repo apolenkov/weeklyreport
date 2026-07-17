@@ -992,3 +992,31 @@ describe("useLeadFormAutosave", () => {
     expect(result.current.state).toBe("idle");
   });
 });
+
+describe("stableStringify", () => {
+  it("produces different keys for payloads that differ only by a Date-typed field", () => {
+    const decision = {
+      text: "Ship v2",
+      owner: "Alice",
+      impact: "impact",
+      deadline: new Date("2026-01-01T00:00:00.000Z"),
+      stageIds: ["Development"],
+    };
+    const early = { ...makePayload(), decisions: [decision] };
+    const late = {
+      ...makePayload(),
+      decisions: [
+        { ...decision, deadline: new Date("2026-02-01T00:00:00.000Z") },
+      ],
+    };
+
+    expect(stableStringify(early)).not.toBe(stableStringify(late));
+  });
+
+  it("serializes a Date as its ISO string rather than collapsing it to {}", () => {
+    const deadline = new Date("2026-01-01T00:00:00.000Z");
+    expect(stableStringify({ deadline })).toBe(
+      `{"deadline":${JSON.stringify(deadline.toISOString())}}`,
+    );
+  });
+});
