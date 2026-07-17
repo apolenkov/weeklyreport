@@ -2,12 +2,14 @@
 
 ## 1. Product decision (BLOCKING)
 
-- [ ] 1.1 Confirm the identity-matching decision with the product owner: when
+- [x] 1.1 Confirm the identity-matching decision with the product owner: when
       both the profile and the stored user carry a `samlId`, require strict
       `samlId` equality before accepting an email match as the same identity;
       when either side lacks a `samlId` (seed/dev-login users), keep the
-      current email-only path. Mark this change as **blocked** until ratified
-      — no implementation task below may start first.
+      current email-only path. **RATIFIED 2026-07-17 (product owner): strict
+      `samlId` equality when both sides carry one; a mismatch is a login
+      refusal, not a re-link. Email-only path stays for users without a
+      stored `samlId`.** Change is unblocked; implementation may proceed.
 
 ## 2. Characterization pins (write before any behavior change)
 
