@@ -36,7 +36,7 @@ const DEV_SESSION: UserSession = {
  * (`isPdfExport` + `pdfReportId`) and are enforced by `pdfExportGuardMiddleware`
  * in trpc.middleware, NOT by mutating the role.
  */
-const PDF_EXPORT_SYNTHETIC_USER_ID = "a0000000-0000-4000-8000-0000000pdfwk";
+const PDF_EXPORT_SYNTHETIC_USER_ID = "a0000000-0000-4000-8000-00000000fdb0";
 const PDF_EXPORT_SYNTHETIC_EMAIL = "pdf-worker@internal.customreport.local";
 
 /**

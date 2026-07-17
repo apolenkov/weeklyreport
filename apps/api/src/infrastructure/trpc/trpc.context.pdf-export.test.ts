@@ -412,6 +412,27 @@ describe("createContextFactory — PDF JWT be-the-requester scope (empty-PDF fix
 });
 
 // ---------------------------------------------------------------------------
+// Legacy (no-requestedBy) session vs. userSessionSchema
+// ---------------------------------------------------------------------------
+
+import { userSessionSchema } from "@customreport/shared";
+
+import { buildPdfExportSession } from "./trpc.context";
+
+describe("buildPdfExportSession — legacy fallback satisfies userSessionSchema", () => {
+  it("the no-requestedBy legacy session parses as a valid UserSession", async () => {
+    const session = await buildPdfExportSession(
+      "11111111-2222-4333-8444-555555555555",
+      undefined,
+      {} as unknown as PrismaService,
+      { isRevoked: () => Promise.resolve(false) },
+    );
+
+    expect(userSessionSchema.safeParse(session).success).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Middleware-level allowlist guard (pdfExportGuard)
 // ---------------------------------------------------------------------------
 
@@ -453,7 +474,7 @@ describe("pdfExportGuard — PDF synthetic session restrictions", () => {
   function makePdfCtx(reportId: string): TrpcContext {
     return {
       session: {
-        userId: "a0000000-0000-4000-8000-0000000pdfwk",
+        userId: "a0000000-0000-4000-8000-00000000fdb0",
         email: "pdf-worker@internal.customreport.local",
         name: "PDF Worker",
         role: "viewer",
