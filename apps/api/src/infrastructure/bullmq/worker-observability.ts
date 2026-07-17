@@ -102,7 +102,7 @@ export function extractTraceId(ctx: JobTraceContext): string | undefined {
   const segments = ctx.traceparent?.split("-");
   if (segments?.length !== TRACEPARENT_SEGMENT_COUNT) return undefined;
   const traceId = segments[1];
-  return traceId.length > 0 ? traceId : undefined;
+  return traceId !== undefined && traceId.length > 0 ? traceId : undefined;
 }
 
 /**

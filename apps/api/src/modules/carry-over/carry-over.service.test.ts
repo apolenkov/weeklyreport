@@ -5,6 +5,7 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   CarryOverDomainError,
   type CarryOverRepository,
@@ -128,7 +129,7 @@ function createRepository(
     ) {
       executions.set(execution.id, structuredClone(execution));
       records = structuredClone(nextRecords);
-      targetSection = structuredClone(nextSections[0]);
+      targetSection = structuredClone(expectDefined(nextSections[0]));
       return {
         execution: structuredClone(execution),
         records: structuredClone(records),
@@ -230,7 +231,11 @@ describe("CarryOverService", () => {
       getTargetReportState: () =>
         Promise.resolve({ periodStatus: "open" as const, archived: false }),
       saveCarryOver: (execution, records, sections) =>
-        Promise.resolve({ execution, records, targetSection: sections[0] }),
+        Promise.resolve({
+          execution,
+          records,
+          targetSection: expectDefined(sections[0]),
+        }),
     };
     const service = new CarryOverService(repo);
     const result = await service.executeCarryOver(
@@ -338,7 +343,7 @@ describe("CarryOverService", () => {
           return {
             execution: structuredClone(execution),
             records: structuredClone(savedRecords),
-            targetSection: structuredClone(nextSections[0]),
+            targetSection: structuredClone(expectDefined(nextSections[0])),
           };
         },
       };
@@ -422,7 +427,11 @@ describe("CarryOverService", () => {
         },
         // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
         async saveCarryOver(execution, records, sections) {
-          return { execution, records, targetSection: sections[0] };
+          return {
+            execution,
+            records,
+            targetSection: expectDefined(sections[0]),
+          };
         },
       };
 
@@ -457,7 +466,11 @@ describe("CarryOverService", () => {
         },
         // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
         async saveCarryOver(execution, records, sections) {
-          return { execution, records, targetSection: sections[0] };
+          return {
+            execution,
+            records,
+            targetSection: expectDefined(sections[0]),
+          };
         },
       };
 

@@ -233,7 +233,7 @@ function createInMemoryRepository(opts: {
       return {
         execution: structuredClone(execution),
         records: structuredClone(records),
-        targetSection: structuredClone(targetSections[0]),
+        targetSection: structuredClone(expectDefined(targetSections[0])),
       };
     },
   };

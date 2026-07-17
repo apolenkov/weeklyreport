@@ -164,10 +164,10 @@ export class ProjectActivityService {
         this.repository.productExists(productId),
       ),
     );
-    const missingIndex = existence.findIndex((exists) => !exists);
-    if (missingIndex !== -1) {
+    const missingId = linkedProductIds.find((_, index) => !existence[index]);
+    if (missingId !== undefined) {
       throw new ProjectActivityNotFoundError(
-        `Product ${linkedProductIds[missingIndex]} was not found.`,
+        `Product ${missingId} was not found.`,
       );
     }
   }

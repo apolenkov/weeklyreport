@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createNullAuditLogger } from "../../../lib/audit-logger.js";
 import { createNullLogger } from "../../../lib/logger.js";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import type { TrpcContext } from "../trpc.context.js";
 import {
   adminProcedure,
@@ -344,13 +345,15 @@ describe("W2 pdfExport authz: leadership chain, lead excluded", () => {
   }
 
   it("pdfExport.request uses the leadership chain (head+admin+viewer), not anyRole", () => {
-    const chain = procedures["pdfExport.request"]._def.middlewares;
+    const chain = expectDefined(procedures["pdfExport.request"])._def
+      .middlewares;
     expect(startsWithChain(chain, LEADERSHIP_CHAIN)).toBe(true);
     expect(startsWithChain(chain, ANY_ROLE_CHAIN)).toBe(false);
   });
 
   it("pdfExport.status uses the leadership chain (head+admin+viewer), not anyRole", () => {
-    const chain = procedures["pdfExport.status"]._def.middlewares;
+    const chain = expectDefined(procedures["pdfExport.status"])._def
+      .middlewares;
     expect(startsWithChain(chain, LEADERSHIP_CHAIN)).toBe(true);
     expect(startsWithChain(chain, ANY_ROLE_CHAIN)).toBe(false);
   });

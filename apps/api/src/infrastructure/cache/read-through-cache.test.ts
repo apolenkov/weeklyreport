@@ -55,7 +55,9 @@ const CONNECTION: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT"> = {
 };
 
 function storeOf(): Map<string, string> {
-  return instances[0].store;
+  const [instance] = instances;
+  if (!instance) throw new Error("FakeRedis was never instantiated");
+  return instance.store;
 }
 
 describe("createRedisReadThroughCache", () => {

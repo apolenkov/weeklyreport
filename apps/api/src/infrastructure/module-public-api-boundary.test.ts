@@ -41,6 +41,7 @@ async function lintInfrastructureImport(source: string) {
     const [result] = JSON.parse(await runEslint()) as {
       readonly messages: readonly { readonly message: string }[];
     }[];
+    if (!result) throw new Error("ESLint returned no file results");
     return result.messages;
   } finally {
     await writeFile(FIXTURE_PATH, PUBLIC_IMPORT, "utf8");

@@ -519,8 +519,21 @@ export default defineConfig([
         },
       ],
 
-      "react-hooks/rules-of-hooks": "error",
+      // Full v7 recommended preset: the classic two rules plus the
+      // React-Compiler-powered diagnostics (purity, set-state-in-effect,
+      // immutability, refs, …) that pair with react-compiler/react-compiler.
+      ...reactHooks.configs.recommended.rules,
       "react-hooks/exhaustive-deps": "warn",
+      // refs: the compiler taints the WHOLE return object of a custom hook
+      // that bundles refs with data/handlers, so every `d.field` read in the
+      // consuming component fires (104 hits, 90 in the three edit dialogs).
+      // Off until hook returns separate refs from data; the classic misuse
+      // (reading .current in render) is still caught by react-compiler.
+      "react-hooks/refs": "off",
+      // set-state-in-effect: real signal, but each firing is a state-derivation
+      // redesign (24 files × 1). Warn during the burn-down, like
+      // exhaustive-deps; ratchet to error when the count reaches zero.
+      "react-hooks/set-state-in-effect": "warn",
 
       // React Compiler (React 19)
       "react-compiler/react-compiler": "error",

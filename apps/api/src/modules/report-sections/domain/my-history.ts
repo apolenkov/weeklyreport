@@ -89,7 +89,7 @@ export function buildMyHistoryEntries(
       ];
       const lastEditAt = editDates.reduce(
         (latest, date) => (date > latest ? date : latest),
-        editDates[0],
+        s.updatedAt,
       );
 
       return {

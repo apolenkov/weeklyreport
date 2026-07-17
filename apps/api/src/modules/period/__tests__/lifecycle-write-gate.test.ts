@@ -145,7 +145,6 @@ export function findLifecycleViolationsInSource(
         receiver.name.text === "report";
       if (isReportDelegate && WRITE_METHODS.has(method) && !isExempt(node)) {
         const arg = node.arguments[0];
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- call argument may be undefined in the AST shape being traversed
         if (arg && ts.isObjectLiteralExpression(arg)) {
           for (const prop of arg.properties) {
             if (

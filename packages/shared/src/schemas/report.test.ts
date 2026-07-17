@@ -1029,7 +1029,7 @@ describe("validateSubmitInput", () => {
     const input = validSubmit();
     const errors = validateSubmitInput(section, input);
     expect(errors).toHaveLength(1);
-    expect(errors[0].code).toBe("SECTION_ALREADY_SUBMITTED");
+    expect(errors[0]?.code).toBe("SECTION_ALREADY_SUBMITTED");
   });
 
   it("returns MISSING_TRAFFIC_LIGHT when project has no status", () => {
