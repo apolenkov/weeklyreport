@@ -174,10 +174,18 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     await Promise.all(
       QUEUE_NAMES.map(async (name) => {
         try {
+          // getJobCounts is typed as an open Record<string, number>; a state
+          // BullMQ did not report means zero jobs in it, not a missing metric.
           const counts = await this.registry.get(name).getJobCounts();
-          queueDepth.set({ queue: name, state: "waiting" }, counts.waiting);
-          queueDepth.set({ queue: name, state: "active" }, counts.active);
-          queueDepth.set({ queue: name, state: "delayed" }, counts.delayed);
+          queueDepth.set(
+            { queue: name, state: "waiting" },
+            counts.waiting ?? 0,
+          );
+          queueDepth.set({ queue: name, state: "active" }, counts.active ?? 0);
+          queueDepth.set(
+            { queue: name, state: "delayed" },
+            counts.delayed ?? 0,
+          );
         } catch (error) {
           this.logger.warn(
             `[queue-depth] poll failed for ${name}: ${error instanceof Error ? error.message : String(error)}`,

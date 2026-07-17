@@ -2,6 +2,25 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
 /**
+ * The result's `targetSection` is the first target section; the service
+ * guarantees a non-empty list before any write, so an empty one here is a
+ * broken caller invariant — fail loud instead of typing the field optional.
+ * @param targetSections the target report's sections, service-validated non-empty
+ * @returns the first target section
+ */
+export function requirePrimaryTargetSection(
+  targetSections: ReportSectionReadModel[],
+): ReportSectionReadModel {
+  const [primary] = targetSections;
+  if (primary === undefined) {
+    throw new Error(
+      "Carry-over requires at least one target section — the service validates this before writing.",
+    );
+  }
+  return primary;
+}
+
+/**
  * Persists one target section's carried rows inside the caller's transaction.
  * Both inserts
  * ride `skipDuplicates`: a carried lineage the target section already holds

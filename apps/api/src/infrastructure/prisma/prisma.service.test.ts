@@ -51,6 +51,7 @@ describe("PrismaService pool error listener", () => {
 
     expect(errorSpy).toHaveBeenCalledTimes(1);
     const call = errorSpy.mock.calls[0];
+    if (!call) throw new Error("logger.error was not called");
     // Exactly one argument: a second arg would be swallowed as the Nest log
     // context and the payload would render as "[object Object]".
     expect(call).toHaveLength(1);

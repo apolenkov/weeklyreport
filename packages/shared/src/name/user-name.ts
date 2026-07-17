@@ -20,7 +20,7 @@ export interface UserNameParts {
  */
 function firstLetter(part?: string | null): string {
   const trimmed = (part ?? "").trim();
-  return trimmed ? trimmed[0] : "";
+  return trimmed[0] ?? "";
 }
 
 /**
@@ -61,10 +61,10 @@ export function shortName(parts: UserNameParts): string {
  * @returns up to two uppercase initials
  */
 export function initialsFromName(name: string): string {
-  const tokens = name.trim().split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) return "";
-  if (tokens.length === 1) return tokens[0].slice(0, 2).toUpperCase();
-  return `${firstLetter(tokens[0])}${firstLetter(tokens[1])}`.toUpperCase();
+  const [first, second] = name.trim().split(/\s+/).filter(Boolean);
+  if (first === undefined) return "";
+  if (second === undefined) return first.slice(0, 2).toUpperCase();
+  return `${firstLetter(first)}${firstLetter(second)}`.toUpperCase();
 }
 
 /**
@@ -79,9 +79,8 @@ export function initialsFromName(name: string): string {
  * @returns the short "Surname I.O." form
  */
 export function shortNameFromName(name: string): string {
-  const tokens = name.trim().split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) return "";
-  const [surname, ...rest] = tokens;
+  const [surname, ...rest] = name.trim().split(/\s+/).filter(Boolean);
+  if (surname === undefined) return "";
   if (rest.length === 0) return surname;
   const initials = rest
     .map((token) => `${firstLetter(token).toUpperCase()}.`)

@@ -123,8 +123,10 @@ describe("public ingress limits — /api/client-logs flood", () => {
         61,
       );
       expect(responses.slice(0, 60).every((r) => r.status === 204)).toBe(true);
-      expect(responses[60].status).toBe(429);
-      const rejected = JSON.parse(responses[60].body) as { error: string };
+      const limited = responses.at(60);
+      if (!limited) throw new Error("61st response missing");
+      expect(limited.status).toBe(429);
+      const rejected = JSON.parse(limited.body) as { error: string };
       expect(rejected.error).toBe("rate_limit_exceeded");
     } finally {
       await close(server);

@@ -279,7 +279,7 @@ describe("reminders namespace — per-group scope (integration)", () => {
 
       expect(result.items).toHaveLength(1);
       const [row] = result.items;
-      expect(row.recipientEmail).toBe(LEAD_A_EMAIL);
+      expect(row?.recipientEmail).toBe(LEAD_A_EMAIL);
       // No group-B recipientEmail / dedupeKey leaks through.
       expect(
         result.items.some(
