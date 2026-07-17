@@ -1,5 +1,7 @@
 "use client";
 
+import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
+
 import type { KpiData } from "../model/dashboard";
 
 interface KpiCardsProps {
@@ -46,9 +48,10 @@ export function KpiCards({ data }: KpiCardsProps) {
             Submissions
           </p>
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <span className="text-[13px] tabular-nums text-[var(--color-muted-foreground)]">
-              Last week {data.lastWeekSubmitted}/{data.lastWeekTotal}
+            <span className="text-[13px] text-[var(--color-muted-foreground)]">
+              Last week
             </span>
+            <ComingSoonBadge />
             {data.pendingCount > 0 && (
               <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-status-at-risk-fg)]">
                 {data.pendingCount} pending

@@ -160,6 +160,25 @@ function DashboardPanels(props: DashboardPanelsProps) {
   );
 }
 
+function isPanelLoading(ready: boolean, source: DashboardSourceState): boolean {
+  return !ready && !source.isError && !source.stalled;
+}
+
+// kpi and blocked panels share the same (weekly, reviewSource) readiness
+// inputs — see DashboardKpiPanel / DashboardEscalationPanel above — so one
+// check covers both; leads has its own (queue, queueSource) pair.
+function dashboardIsLoading(panelModel: DashboardPanelsProps): boolean {
+  const kpiOrBlockedLoading = isPanelLoading(
+    panelModel.weekly !== undefined,
+    panelModel.reviewSource,
+  );
+  const leadsLoading = isPanelLoading(
+    panelModel.queue !== undefined,
+    panelModel.queueSource,
+  );
+  return kpiOrBlockedLoading || leadsLoading;
+}
+
 function dashboardPanelModel(
   props: DashboardContentProps,
 ): DashboardPanelsProps {
@@ -197,9 +216,10 @@ function dashboardPanelModel(
 export function DashboardContent(props: DashboardContentProps) {
   const panelModel = dashboardPanelModel(props);
   const submittedCount = props.weeklyReport?.submissionCount ?? 0;
+  const isLoading = dashboardIsLoading(panelModel);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-dashboard-loading={isLoading}>
       <DashboardHeader
         weekLabel={props.weeklyReport?.weekLabel}
         organizationName={props.organizationName}

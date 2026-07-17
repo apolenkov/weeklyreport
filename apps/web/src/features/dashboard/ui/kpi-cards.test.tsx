@@ -19,8 +19,6 @@ import { KpiCards } from "./kpi-cards";
 const baseData: KpiData = {
   submitted: 5,
   total: 8,
-  lastWeekSubmitted: 4,
-  lastWeekTotal: 8,
   pendingCount: 3,
   deadlineLabel: "Thu",
   deadlineTime: "5:00 PM",
@@ -115,6 +113,19 @@ describe("KpiCards — a11y regression (verify-a11y-recommended-flip)", () => {
       // all unique
       const unique = new Set(names);
       expect(unique.size).toBe(3);
+    });
+  });
+
+  describe("last-week comparison — not available yet", () => {
+    it("renders a Coming Soon badge instead of a fabricated 0/0 comparison", () => {
+      render(<KpiCards data={baseData} />);
+      expect(screen.getByText("Last week")).toBeInTheDocument();
+      expect(screen.getByText("Coming Soon")).toBeInTheDocument();
+    });
+
+    it("never renders a literal last-week numeric comparison", () => {
+      const { container } = render(<KpiCards data={baseData} />);
+      expect(container.textContent).not.toMatch(/Last week \d+\/\d+/);
     });
   });
 

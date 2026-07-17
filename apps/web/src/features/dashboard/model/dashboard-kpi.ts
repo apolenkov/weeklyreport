@@ -61,9 +61,6 @@ export function buildKpiData(
   return {
     submitted,
     total,
-    // No "last week" comparison endpoint exists in v5.0 read models.
-    lastWeekSubmitted: 0,
-    lastWeekTotal: 0,
     pendingCount,
     deadlineLabel,
     deadlineTime,
