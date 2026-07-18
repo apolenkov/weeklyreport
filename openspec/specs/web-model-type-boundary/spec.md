@@ -8,15 +8,7 @@ Keep web presentation modules typed against their real domain model instead of m
 
 ### Requirement: Presentation modules type against the real model, not a mock/legacy module
 
-A web presentation module MUST import its display-data type from the real
-domain model that produces the data it renders, or from the consuming
-feature's own documented self-contained presentation type, and MUST NOT
-import a structurally-similar type from a mock or legacy data module (for
-example `shared/lib/dashboard-mock-data.ts`, `shared/lib/admin-mock-data.ts`)
-when a real-model or self-contained type already exists for the same shape.
-When a mapper's output type omits a field the mapper actually assigns, the
-field MUST be added to the mapper's declared return type instead of being
-recovered downstream with an `as` type assertion.
+A web presentation module MUST import its display-data type from the real domain model that produces the data it renders, or from the consuming feature's own documented self-contained presentation type, and MUST NOT import a structurally-similar type from a mock or legacy data module (for example `shared/lib/dashboard-mock-data.ts`, `shared/lib/admin-mock-data.ts`) when a real-model or self-contained type already exists for the same shape. When a mapper's output type omits a field the mapper actually assigns, the field MUST be added to the mapper's declared return type instead of being recovered downstream with an `as` type assertion.
 
 #### Scenario: a component imports its data type from the real model
 
@@ -43,3 +35,12 @@ recovered downstream with an `as` type assertion.
   the documented module
 - **AND** they do not import the structurally similar type from the
   mock/legacy module the self-contained type was created to decouple from
+
+#### Scenario: admin form models import from `admin-types.ts`, not `admin-mock-data.ts`
+
+- **WHEN** an admin model file needs `MockGroup`, `MockProduct`, or
+  `MockUser` (for example `group-form.ts`, `product-form.ts`,
+  `user-form.ts`)
+- **THEN** the type is imported from `features/admin/model/admin-types.ts`,
+  which already declares a self-contained version of each
+- **AND** it is not imported from `shared/lib/admin-mock-data.ts`
