@@ -7,6 +7,7 @@
     "apps/web/uat-suite/**"
   ],
   "ignoreBinaries": ["tail", "rg", "playwright"],
+  "ignoreDependencies": ["@playwright/test", "@axe-core/playwright"],
   "workspaces": {
     ".": {
       "entry": [
@@ -22,7 +23,8 @@
     },
     "apps/api": {
       "entry": ["src/main.ts", "src/**/*.test.ts", "src/**/*.fixture.ts"],
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["tsx"]
     },
     "apps/web": {
       "entry": [
@@ -33,7 +35,8 @@
         "src/**/*.test.{ts,tsx}",
         "src/test-utils/**"
       ],
-      "project": ["src/**/*.{ts,tsx}"]
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["@axe-core/playwright", "tailwindcss"]
     },
     "packages/shared": {
       "entry": ["src/index.ts", "src/**/*.test.ts"],

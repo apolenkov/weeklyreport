@@ -10,7 +10,6 @@ onlyBuiltDependencies:
   - playwright
   - esbuild
   - msgpackr-extract
-  - msw
   - sharp
 
 overrides:
