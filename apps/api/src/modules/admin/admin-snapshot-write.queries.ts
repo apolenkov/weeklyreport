@@ -253,10 +253,28 @@ export async function saveSnapshot(
 
   // Materialize one ReminderRule per active policy on each newly-created
   // Period. Run AFTER the transaction commits so a failure in the applicator
-  // (e.g. an unreachable Prisma engine) cannot roll back the periods.
+  // (e.g. an unreachable Prisma engine) cannot roll back the periods. Two
+  // restore-specific guards: pairs the snapshot itself just wrote are
+  // excluded (re-materializing would clobber the restored status/fireAt —
+  // e.g. force a deliberately paused rule back to active), and `now` is
+  // passed so an old snapshot's already-elapsed instants are skipped instead
+  // of dispatching stale reminders on the next tick.
   if (policyApplicator) {
+    const restoredPolicyIdsByReport = new Map<string, Set<string>>();
+    for (const rule of snapshot.reminderRules) {
+      if (!rule.reportId || !rule.policyId) continue;
+      const forReport =
+        restoredPolicyIdsByReport.get(rule.reportId) ?? new Set<string>();
+      forReport.add(rule.policyId);
+      restoredPolicyIdsByReport.set(rule.reportId, forReport);
+    }
+    const now = new Date();
     for (const newPeriod of newlyCreatedPeriods) {
-      await policyApplicator.applyToPeriod(newPeriod);
+      await policyApplicator.applyToPeriod(
+        newPeriod,
+        now,
+        restoredPolicyIdsByReport.get(newPeriod.id),
+      );
     }
   }
 

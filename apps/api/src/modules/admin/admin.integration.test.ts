@@ -19,6 +19,7 @@ import {
   seedTestData,
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
+import { PolicyApplicatorService } from "../reminders/index.js";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
 import { AdminUserConflictError } from "./admin-shared";
 
@@ -530,6 +531,76 @@ describe("AdminPrismaRepository (integration)", () => {
       await prisma.reminderRule.findUnique({ where: { id: ruleId } }),
     );
     expect(reRestored.policyId).toBe(policyId);
+  });
+
+  // Council finding (Fable + Codex, independently): the post-commit
+  // applicator's (reportId, policyId) upsert used to clobber restored rows —
+  // forcing a deliberately paused rule back to `active` with a recomputed
+  // fireAt on every fresh-DB restore. The restore now excludes the pairs its
+  // own transaction wrote.
+  it("fresh-DB restore keeps a snapshot rule paused instead of re-materializing it active", async () => {
+    const policyId = "d3333333-3333-4333-8333-333333333333";
+    const ruleId = "d4444444-4444-4444-8444-444444444444";
+    const periodId = "d5555555-5555-4555-8555-555555555555";
+
+    await prisma.report.create({
+      data: {
+        id: periodId,
+        periodStart: new Date("2026-03-02"),
+        periodEnd: new Date("2026-03-08"),
+        // Deadline already past: without the restore-time `now` guard the
+        // applicator would also arm elapsed instants as active.
+        deadline: new Date("2026-03-06T15:00:00.000Z"),
+        status: "draft",
+      },
+    });
+    await prisma.reminderPolicy.create({
+      data: {
+        id: policyId,
+        kind: "deadline",
+        offsetMinutes: -1440,
+        timezone: "Europe/Moscow",
+        audience: "LEAD_WITH_DRAFT",
+        active: true,
+        validFrom: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    });
+    await prisma.reminderRule.create({
+      data: {
+        id: ruleId,
+        policyId,
+        kind: "deadline",
+        fireAt: new Date("2026-03-05T15:00:00.000Z"),
+        timezone: "Europe/Moscow",
+        status: "paused",
+        version: 1,
+        reportId: periodId,
+      },
+    });
+
+    const applicatorRepo = new AdminPrismaRepository(
+      prisma as never,
+      new PolicyApplicatorService(prisma as never),
+    );
+    const snapshot = await applicatorRepo.getSnapshot();
+    // Fresh-DB path: everything the snapshot carries is absent pre-restore,
+    // so the period counts as newly created and the applicator runs.
+    await prisma.reminderRule.delete({ where: { id: ruleId } });
+    await prisma.reminderPolicy.delete({ where: { id: policyId } });
+    await prisma.report.delete({ where: { id: periodId } });
+
+    await applicatorRepo.saveSnapshot(snapshot);
+
+    const restored = expectDefined(
+      await prisma.reminderRule.findUnique({ where: { id: ruleId } }),
+    );
+    expect(restored.status).toBe("paused");
+    expect(restored.fireAt).toEqual(new Date("2026-03-05T15:00:00.000Z"));
+    // And no duplicate derived rule was materialized for the same pair.
+    const pairRules = await prisma.reminderRule.findMany({
+      where: { reportId: periodId, policyId },
+    });
+    expect(pairRules).toHaveLength(1);
   });
 
   it("attachProductToGroup rejects moving a product from another group (UAT v7)", async () => {

@@ -98,6 +98,7 @@ export class PolicyApplicatorService {
       deadline: Date;
     },
     now?: Date,
+    excludePolicyIds?: ReadonlySet<string>,
   ): Promise<{ created: number; updated: number; skipped: number }> {
     const policies = await this.prisma.reminderPolicy.findMany({
       where: { active: true },
@@ -111,6 +112,13 @@ export class PolicyApplicatorService {
     let skipped = 0;
 
     for (const policy of policies) {
+      // Snapshot restore passes the pairs its own transaction just wrote:
+      // re-materializing those would clobber the restored rows' status and
+      // fireAt (e.g. force a deliberately paused rule back to active).
+      if (excludePolicyIds?.has(policy.id)) {
+        skipped += 1;
+        continue;
+      }
       const fireAt = this.computeFireAt(
         period.deadline,
         policy.offsetMinutes,

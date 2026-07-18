@@ -470,6 +470,137 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
 });
 
 // -----------------------------------------------------------------------
+// A terminally failed cycle must stay manually retriable: with the unified
+// dedupe key, the failed row IS the manual re-dispatch's dedupe hit, so the
+// service revives it (atomic failed→queued) and enqueues a fresh job. A row
+// in any other state, or a lost revival CAS, keeps the plain dedup return.
+// -----------------------------------------------------------------------
+
+describe("requestReminderExecution — failed execution revival", () => {
+  function buildFailedRepo(opts: {
+    status: AdminReminderExecution["status"];
+    requeueWins?: boolean;
+    requeueCalls?: string[];
+  }): RemindersRepository {
+    const existing: AdminReminderExecution = {
+      id: "99999999-9999-4999-8999-999999999998",
+      ruleId: activeRule.id,
+      reportId: activeRule.reportId,
+      dedupeKey: `${activeRule.id}:deadline:2026-04-10:lead@test.local`,
+      status: opts.status,
+      scheduledFor: activeRule.fireAt,
+      sentAt: null,
+      recipientEmail: "lead@test.local",
+      errorMessage: opts.status === "failed" ? "SMTP down" : null,
+    };
+    return {
+      ...unusedRemindersScopeStubs(),
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async getRule(ruleId: string) {
+        return ruleId === activeRule.id ? structuredClone(activeRule) : null;
+      },
+      getRulePeriodLabel: () => Promise.resolve("2026-04-07 → 2026-04-13"),
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async findExecutionByDedupeKey() {
+        return structuredClone(existing);
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async insertExecutionOnConflict() {
+        return { execution: structuredClone(existing), inserted: false };
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async requeueFailedExecution(executionId: string) {
+        opts.requeueCalls?.push(executionId);
+        return opts.requeueWins ?? true;
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async saveExecution(execution: AdminReminderExecution) {
+        return structuredClone(execution);
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async getExecution() {
+        return null;
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async listExecutions() {
+        return [];
+      },
+    } satisfies RemindersRepository;
+  }
+
+  function buildQueue(addCalls: unknown[]) {
+    return {
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      enqueue: async (...args: unknown[]) => {
+        addCalls.push(args);
+      },
+    };
+  }
+
+  it("revives a failed row (failed→queued) and enqueues a fresh job", async () => {
+    const requeueCalls: string[] = [];
+    const addCalls: unknown[] = [];
+    const service = new RemindersService(
+      buildFailedRepo({ status: "failed", requeueCalls }),
+      undefined,
+      buildQueue(addCalls),
+    );
+
+    const result = await service.requestReminderExecution(
+      activeRule.id,
+      "lead@test.local",
+    );
+
+    expect(requeueCalls).toHaveLength(1);
+    expect(addCalls).toHaveLength(1);
+    expect(result.status).toBe("queued");
+    expect(result.errorMessage).toBeNull();
+    // The revival must NOT reuse the row id as the queue jobId: the original
+    // failed job is retained (removeOnFail count) and the backend silently
+    // dedups an add against any still-existing jobId.
+    const [jobId] = addCalls[0] as [string, ...unknown[]];
+    expect(jobId).not.toBe("99999999-9999-4999-8999-999999999998");
+    expect(jobId).toContain("99999999-9999-4999-8999-999999999998");
+  });
+
+  it("does not enqueue when the revival CAS is lost to a concurrent caller", async () => {
+    const addCalls: unknown[] = [];
+    const service = new RemindersService(
+      buildFailedRepo({ status: "failed", requeueWins: false }),
+      undefined,
+      buildQueue(addCalls),
+    );
+
+    const result = await service.requestReminderExecution(
+      activeRule.id,
+      "lead@test.local",
+    );
+
+    expect(addCalls).toHaveLength(0);
+    expect(result.status).toBe("failed");
+  });
+
+  it("never attempts revival for a row that is not failed", async () => {
+    const requeueCalls: string[] = [];
+    const addCalls: unknown[] = [];
+    const service = new RemindersService(
+      buildFailedRepo({ status: "sent", requeueCalls }),
+      undefined,
+      buildQueue(addCalls),
+    );
+
+    const result = await service.requestReminderExecution(
+      activeRule.id,
+      "lead@test.local",
+    );
+
+    expect(requeueCalls).toHaveLength(0);
+    expect(addCalls).toHaveLength(0);
+    expect(result.status).toBe("sent");
+  });
+});
+
+// -----------------------------------------------------------------------
 // A synchronous enqueue throw (Redis down) must NOT leave a committed `queued`
 // row with no job: the execution is marked `failed`, and the throw does not
 // propagate past the recipient boundary so the scheduler tick continues.

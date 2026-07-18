@@ -5,7 +5,7 @@ import type { Role } from "@customreport/shared";
  * out "is this role X?" (client-role-predicates spec).
  *
  * UX-affordance layer ONLY, not a security boundary: enforcement lives in
- * the API's role-coverage gate (the 9 canonical middleware chains) and the
+ * the API's role-coverage gate (the 8 canonical middleware chains) and the
  * server-side route gates. Do not add `can*` enforcement helpers here, do
  * not absorb server-computed capability flags, and keep these pure — no
  * React, no session access; callers pass their own role operand and keep
