@@ -39,7 +39,7 @@ describe("App Router loading ownership", () => {
       source("src/shared/ui/report-shell/use-report-shell-url-state.ts"),
     ).toContain("useSearchParams");
     expect(
-      source("src/features/report-sections/ui/use-lead-form-data.ts"),
+      source("src/features/report-pages/ui/use-lead-form-data.ts"),
     ).toContain("useSearchParams");
     expect(source("src/features/viewer/ui/viewer-report-shell.tsx")).toContain(
       "useSearchParams",
@@ -48,7 +48,7 @@ describe("App Router loading ownership", () => {
 
   it("removes nested data-only Suspense from report shells", () => {
     expect(
-      source("src/features/report-sections/ui/head-report-shell.tsx"),
+      source("src/features/report-pages/ui/head-report-shell.tsx"),
     ).not.toContain("<Suspense");
     expect(
       source("src/features/viewer/ui/viewer-report-shell.tsx"),

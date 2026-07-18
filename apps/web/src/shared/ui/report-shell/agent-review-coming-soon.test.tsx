@@ -47,16 +47,13 @@ vi.mock("../../../lib/server/get-print-route-context", () => ({
   getPrintRouteContext: () => getPrintRouteContext(),
 }));
 
-vi.mock(
-  "../../../features/report-sections/ui/lead-section-preview-auth",
-  () => ({
-    LeadSectionPreviewAuth: () => (
-      <div data-testid="lead-section-preview-auth-stub" />
-    ),
-  }),
-);
+vi.mock("../../../features/report-pages/ui/lead-section-preview-auth", () => ({
+  LeadSectionPreviewAuth: () => (
+    <div data-testid="lead-section-preview-auth-stub" />
+  ),
+}));
 
-vi.mock("../../../features/report-sections/ui/weekly-report-page", () => ({
+vi.mock("../../../features/report-pages/ui/weekly-report-page", () => ({
   // viewer-report-surface-parity: the viewer now wraps WeeklyReportPage in
   // ViewerReportShell, which routes the full bottom-row controls (agent-review
   // placeholder + Back-to-Archive + scope/view-mode toggles) through the
@@ -70,7 +67,7 @@ vi.mock("../../../features/report-sections/ui/weekly-report-page", () => ({
   ),
 }));
 
-vi.mock("../../../features/report-sections/ui/weekly-report-skeleton", () => ({
+vi.mock("../../../features/report-pages/ui/weekly-report-skeleton", () => ({
   WeeklyReportSkeleton: () => <div data-testid="weekly-report-skeleton-stub" />,
 }));
 

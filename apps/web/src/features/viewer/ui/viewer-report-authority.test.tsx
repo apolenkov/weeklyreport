@@ -110,10 +110,7 @@ vi.mock("../../slides", () => ({
   SlideSkeleton: () => <div>Loading slides</div>,
 }));
 
-vi.mock("../../report-sections", () => ({
-  formatDateRange: () => "Jun 8–14, 2026",
-  isoWeekNumber: () => 24,
-  WeeklyReportSkeleton: () => <div>Loading report</div>,
+vi.mock("../../report-pages", () => ({
   WeeklyReportPage: ({
     documentActionsLeading,
     contextControls,
