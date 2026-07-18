@@ -10,12 +10,14 @@
 
 ## 2. Waves 2–6 — remaining S-slices
 
-- [ ] 2.1 web-shared
-- [ ] 2.2 web-lib
-- [ ] 2.3 api-lib
-- [ ] 2.4 api-auth-admin (load-bearing: auth; cross-vendor review)
-- [ ] 2.5 api-report-pub-search
-- [ ] 2.6 api-analytics-activity-obs
+- [x] 2.1 web-shared
+- [x] 2.2 web-lib
+- [x] 2.3 api-lib
+- [x] 2.4 api-auth-admin (load-bearing: auth; cross-vendor review — Codex pass)
+- [ ] 2.5 api-report-pub-search — lane died at StructuredOutput (no tree
+      changes left behind); re-run as a single-lane wave
+- [x] 2.6 api-analytics-activity-obs (Grok lane; import-sort fixup by
+      orchestrator — add eslint check to grok lane spec)
 
 ## 3. Waves 7–14 — M-slices
 
