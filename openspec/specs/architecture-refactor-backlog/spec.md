@@ -296,3 +296,56 @@ belongs to a dropped, unrevived feature area.
   `@customreport/shared`, `COLORS`/`ChartSeries`/`ChartData` from
   `chart-palette.ts`, or the exported discriminators from
   `slide-inline-editor-dialogs.tsx`) instead of re-declaring it
+
+### Requirement: Dead API surface identified by code review MUST be deleted, not documented as intentional
+
+The backlog MUST record that a code-review sweep found nine dead-surface findings in `apps/api` — `shutdownOtel` (`otel.bootstrap.ts`), the `pdfExportRouter` module (`modules/pdf-export/pdf-export.router.ts`, superseded by `infrastructure/trpc/routers/pdf-export.router.ts`), `applyTransition`/`runTransition` (`period-transition.apply.ts`), `getReportStatus` on `ReportSectionsRepository` plus the doc comment on `report-sections.service.ts` that falsely claimed a `getReportStatus` fallback exists, `getLatestPublishedId` on `WeeklyReportRepository` (repo, service, and Prisma query), and the `leadHeadAdminProcedure` canonical builder in `trpc.middleware.ts` — each reachable only from its own unit test, never from production code. Every one of these is deleted by `remove-dead-surface-api`, and the `role-coverage-gate` spec's canonical-builder count is corrected from 9 to 8 in the same change.
+
+#### Scenario: Every deleted symbol is confirmed caller-free before removal
+
+- **WHEN** each symbol named above is grepped repo-wide prior to deletion
+- **THEN** the only hits are its own declaration and its own test file (or, for `pdfExportRouter`, the one stale test importing it)
+- **AND** no production module imports or calls it
+
+#### Scenario: The report-sections doc comment matches real control flow
+
+- **WHEN** `evaluateDeadlineGate` is inspected after this change
+- **THEN** it returns `false` directly when `getReportMeta` is not implemented, with no call to a `getReportStatus`-shaped fallback
+- **AND** the `getReportMeta` doc comment states that plain fact instead of describing a fallback that never runs
+
+#### Scenario: The role-coverage gate's builder count stays accurate
+
+- **WHEN** `openspec/specs/role-coverage-gate/spec.md` and its allow-list test are inspected after this change
+- **THEN** both enumerate exactly 8 canonical builders
+- **AND** neither references `leadHeadAdminProcedure`
+
+### Requirement: Dead web-frontend surface found by code review MUST be deleted, not just tolerated
+
+The backlog SHALL record that code review confirmed six pieces of
+`apps/web` surface with no production caller, each carrying its own test
+suite that gives false coverage confidence, and that these were deleted
+rather than kept: `stageNameMatches`
+(`features/report-sections/model/stage-tags.ts`),
+`visibleLeadSlidePeriodOptions`
+(`features/slides/model/lead-slide-periods.ts`), the
+`applyStatusSuggestion`/`syncSource()` half of `useStatusRiskSync`
+(`hooks/use-status-risk.ts`), the ignored `source?: SyncSource` parameter
+contract on `handleStageStatusChange`, and `getDialogPreset`
+(`shared/ui/confirmation-dialog.tsx`).
+
+#### Scenario: Reviewer re-encounters one of the removed symbols
+
+- WHEN a future review or grep turns up `stageNameMatches`,
+  `visibleLeadSlidePeriodOptions`, `applyStatusSuggestion`, `syncSource`, or
+  `getDialogPreset` reintroduced in `apps/web`
+- THEN treat it as new dead surface requiring the same justification (a real
+  production caller) before it is allowed to stay, not as a restoration of
+  prior-approved code
+
+#### Scenario: A hook parameter is added to a public interface
+
+- WHEN a function's exported interface declares an optional parameter (e.g.
+  `source?: SyncSource`)
+- THEN the implementation MUST branch on that parameter's value, or the
+  parameter MUST be removed — an interface may not advertise behavior the
+  implementation does not provide
