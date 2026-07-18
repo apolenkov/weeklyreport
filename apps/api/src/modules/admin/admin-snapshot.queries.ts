@@ -11,20 +11,13 @@ import {
 } from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { extractRecipientEmail } from "../reminders/index.js";
 import { audienceFromPrisma } from "./admin-enum-mappers";
 
 /**
  * AdminSnapshot read path. The write path lives in
  * `admin-snapshot-write.queries.ts`.
  */
-
-/**
- * Extracts recipientEmail from dedupeKey format: "ruleId:isoDate:email".
- */
-function extractRecipientEmail(dedupeKey: string): string {
-  const emailMatch = /Z:(.+)$/.exec(dedupeKey);
-  return emailMatch?.[1] ?? "";
-}
 
 export async function getSnapshot(
   prisma: PrismaService,

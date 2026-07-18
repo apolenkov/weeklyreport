@@ -25,12 +25,9 @@ async function addJob(
   ctx: EnqueueContext,
   execution: AdminReminderExecution,
   data: Record<string, unknown>,
+  jobId: string = execution.id,
 ): Promise<void> {
-  await ctx.queue.enqueue(
-    execution.id,
-    data,
-    ctx.telemetry.captureJobContext(),
-  );
+  await ctx.queue.enqueue(jobId, data, ctx.telemetry.captureJobContext());
 }
 
 /**
@@ -45,12 +42,14 @@ export async function enqueueOrMarkFailed(
   execution: AdminReminderExecution,
   recipientEmail: string,
   payload: ReminderQueuePayload,
+  jobId?: string,
 ): Promise<AdminReminderExecution> {
   try {
     await addJob(
       ctx,
       execution,
       buildQueuePayload(execution, recipientEmail, payload),
+      jobId,
     );
     ctx.logger.info("enqueued email reminder job", {
       executionId: execution.id,
@@ -69,6 +68,79 @@ export async function enqueueOrMarkFailed(
       errorMessage: message,
     });
   }
+}
+
+/** The persistence slice `recordExecutionOnConflict` needs. */
+interface ExecutionRecorder {
+  insertExecutionOnConflict?(
+    execution: AdminReminderExecution,
+  ): Promise<{ execution: AdminReminderExecution; inserted: boolean }>;
+  findExecutionByDedupeKey(
+    dedupeKey: string,
+  ): Promise<AdminReminderExecution | null>;
+  saveExecution(
+    execution: AdminReminderExecution,
+  ): Promise<AdminReminderExecution>;
+}
+
+/**
+ * Record the execution row, preferring the repository's atomic
+ * insert-on-conflict. Repositories without it (in-memory test doubles) fall
+ * back to check-then-insert — safe there because nothing races them;
+ * production takes the atomic path.
+ */
+export async function recordExecutionOnConflict(
+  repository: ExecutionRecorder,
+  candidate: AdminReminderExecution,
+): Promise<{ execution: AdminReminderExecution; inserted: boolean }> {
+  if (repository.insertExecutionOnConflict) {
+    return repository.insertExecutionOnConflict(candidate);
+  }
+  const existing = await repository.findExecutionByDedupeKey(
+    candidate.dedupeKey,
+  );
+  if (existing) {
+    return { execution: existing, inserted: false };
+  }
+  const saved = await repository.saveExecution(candidate);
+  return { execution: saved, inserted: true };
+}
+
+/**
+ * Manual-retry path: atomically revive a terminally `failed` execution
+ * (failed → queued via the repository CAS; exactly one concurrent caller
+ * wins) and re-enqueue its email. Returns null when the row was not revived
+ * — not `failed`, or a concurrent revival won — so the caller falls back to
+ * the plain deduplicated return. Without this, the unified dedupe key makes
+ * a cycle whose send exhausted its SMTP attempts permanently report
+ * "already sent" to a manual re-dispatch.
+ */
+export async function reviveFailedExecution(
+  ctx: EnqueueContext | null,
+  requeue: ((executionId: string) => Promise<boolean>) | undefined,
+  execution: AdminReminderExecution,
+  recipientEmail: string,
+  payload: () => Promise<ReminderQueuePayload>,
+): Promise<AdminReminderExecution | null> {
+  if (execution.status !== "failed") return null;
+  if (!requeue || !(await requeue(execution.id))) return null;
+  const requeued = adminReminderExecutionSchema.parse({
+    ...execution,
+    status: "queued",
+    errorMessage: null,
+  });
+  if (!ctx) return requeued;
+  // Fresh jobId: the original failed job is retained by removeOnFail, and the
+  // queue backend silently dedups an add against ANY still-existing jobId —
+  // reusing execution.id would make the revival a no-op. At-most-once send is
+  // still guaranteed by the revival CAS plus the worker's own send claim.
+  return enqueueOrMarkFailed(
+    ctx,
+    requeued,
+    recipientEmail,
+    await payload(),
+    `${execution.id}:revive:${crypto.randomUUID()}`,
+  );
 }
 
 /**

@@ -46,8 +46,8 @@ export const prisma = new PrismaClient({ adapter });
  */
 export async function resetMutations(): Promise<void> {
   const { execSync } = await import("node:child_process");
-  const path = await import("node:path");
-  const repoRoot = path.resolve(__dirname, "../../../../..");
+  const { findRepoRoot } = await import("../global-setup");
+  const repoRoot = findRepoRoot(__dirname);
   execSync("pnpm exec prisma db seed", {
     cwd: repoRoot,
     env: { ...process.env, DATABASE_URL: process.env.E2E_DATABASE_URL! },

@@ -210,6 +210,19 @@ export class RemindersPrismaRepository implements RemindersRepository {
   }
 
   /**
+   * Atomic `failed → queued` revival for a manual re-dispatch. Guarded to
+   * `failed` in the write itself, so exactly one of two concurrent revivals
+   * wins and only the winner enqueues a fresh email job.
+   */
+  async requeueFailedExecution(executionId: string): Promise<boolean> {
+    const result = await this.prisma.reminderExecution.updateMany({
+      where: { id: executionId, status: "failed" },
+      data: { status: "pending", error: null },
+    });
+    return result.count > 0;
+  }
+
+  /**
    * Executions still `queued` (Prisma `pending`) whose row is older than
    * `olderThan` — the pod-died-before-enqueue case that leaves no job and no
    * `failed` marker. `sending` rows are intentionally excluded: re-enqueuing an

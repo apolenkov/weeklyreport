@@ -18,7 +18,9 @@ import { resolveReminderDedupeKey } from "./reminders-dedupe-key.js";
 import {
   type EnqueueContext,
   enqueueOrMarkFailed,
+  recordExecutionOnConflict,
   reEnqueueStuck,
+  reviveFailedExecution,
 } from "./reminders-enqueue.js";
 import type { EscalationGroupDigest } from "./reminders-escalation-grouping.js";
 import {
@@ -86,6 +88,12 @@ export interface RemindersRepository extends RemindersScopeRepository {
    * production `RemindersPrismaRepository` always provides it.
    */
   releaseExecutionClaim?(executionId: string): Promise<void>;
+  /**
+   * Atomic `failed → queued` revival; true only when THIS call won the
+   * transition (see `reviveFailedExecution` for why it exists). Optional on
+   * the port like its sibling CAS methods; production always provides it.
+   */
+  requeueFailedExecution?(executionId: string): Promise<boolean>;
   getExecution(executionId: string): Promise<AdminReminderExecution | null>;
   /** One DB-level keyset page (newest first) starting strictly after `cursor`. */
   listExecutions(
@@ -230,14 +238,28 @@ export class RemindersService {
       errorMessage: null,
     });
 
-    const { execution, inserted } = await this.recordExecution(candidate);
+    const { execution, inserted } = await recordExecutionOnConflict(
+      this.repository,
+      candidate,
+    );
+
+    const queuePayload = async () =>
+      payload ?? {
+        reportPeriod: await requireRulePeriodLabel(this.repository, rule.id),
+      };
 
     if (!inserted) {
-      // dedupeKey embeds recipientEmail for uniqueness; logging it would leak
-      // that address, so ruleId is the identifier we surface here.
-      this.logger.debug("deduplicated reminder execution", {
-        ruleId,
-      });
+      const revived = await reviveFailedExecution(
+        this.emailQueue ? this.enqueueContext(this.emailQueue) : null,
+        this.repository.requeueFailedExecution?.bind(this.repository),
+        execution,
+        recipientEmail,
+        queuePayload,
+      );
+      if (revived) return revived;
+      // dedupeKey embeds recipientEmail for uniqueness; logging it would
+      // leak that address, so ruleId is the identifier we surface here.
+      this.logger.debug("deduplicated reminder execution", { ruleId });
       return adminReminderExecutionSchema.parse(execution);
     }
 
@@ -246,14 +268,11 @@ export class RemindersService {
     // Enqueue only after the insert has committed AND only for the caller that
     // inserted the row, so a redundant concurrent tick enqueues nothing.
     if (!this.emailQueue) return execution;
-    const queuePayload = payload ?? {
-      reportPeriod: await requireRulePeriodLabel(this.repository, rule.id),
-    };
     return enqueueOrMarkFailed(
       this.enqueueContext(this.emailQueue),
       execution,
       recipientEmail,
-      queuePayload,
+      await queuePayload(),
     );
   }
 
@@ -322,28 +341,6 @@ export class RemindersService {
       execution,
       reportPeriod,
     );
-  }
-
-  /**
-   * Record the execution row, preferring the repository's atomic
-   * insert-on-conflict. Repositories without it (in-memory test doubles) fall
-   * back to check-then-insert — safe there because nothing races them;
-   * production takes the atomic path.
-   */
-  private async recordExecution(
-    candidate: AdminReminderExecution,
-  ): Promise<{ execution: AdminReminderExecution; inserted: boolean }> {
-    if (this.repository.insertExecutionOnConflict) {
-      return this.repository.insertExecutionOnConflict(candidate);
-    }
-    const existing = await this.repository.findExecutionByDedupeKey(
-      candidate.dedupeKey,
-    );
-    if (existing) {
-      return { execution: existing, inserted: false };
-    }
-    const saved = await this.repository.saveExecution(candidate);
-    return { execution: saved, inserted: true };
   }
 
   async markReminderSent(executionId: string): Promise<AdminReminderExecution> {
