@@ -89,6 +89,7 @@ export function useEditableListDialog<TEntity extends { id: string }>({
   // from a stale non-zero addSignal counter (D1 fix). Copied verbatim from
   // the donor sections — do NOT "improve" the ref-write into an effect-sync.
   const readOnlyRef = useRef(readOnly);
+  // eslint-disable-next-line react-hooks/refs -- deliberate render-time ref stamp (see comment above): an effect-sync would re-open the dialog from a stale addSignal
   readOnlyRef.current = readOnly;
 
   // D4: close the stale-signal-vs-seed-change residual channel. The seed id

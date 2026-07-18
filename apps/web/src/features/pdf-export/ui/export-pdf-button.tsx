@@ -47,6 +47,7 @@ export function ExportPdfButton({
   const deliveryModeRef = useRef<DeliveryMode | null>(null);
 
   const requestMut = useMutation(
+    // eslint-disable-next-line react-hooks/refs -- refs are touched inside mutation callbacks (event time); the options factory just runs during render
     trpc.pdfExport.request.mutationOptions({
       onSuccess: (job) => {
         setJobId(job.jobId);

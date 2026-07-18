@@ -92,6 +92,7 @@ export function LeadForm({
     refetchSection: data.refetchSection,
     crossAuthors: data.crossAuthors,
     isEveryone: data.isEveryone,
+    // eslint-disable-next-line react-hooks/refs -- passes the sanctioned render->callback bridge ref value; consumed only inside post-commit callbacks
     loaded: loadedContextRef.current,
     seam,
   });
@@ -167,6 +168,7 @@ export function LeadForm({
   // Refresh the loaded context the module's quick-add callbacks read next
   // render. Only VALUES flow into the module — no ref protocol crosses the
   // file boundary, so the module owns its own refresh ordering.
+  // eslint-disable-next-line react-hooks/refs -- the one sanctioned render->callback bridge: stamps the loaded context the module's quick-add callbacks read after commit
   loadedContextRef.current = {
     products: viewModel.products,
     currentWeekItems: viewModel.currentWeekItems,

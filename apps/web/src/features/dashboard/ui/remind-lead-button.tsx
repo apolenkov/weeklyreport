@@ -63,6 +63,7 @@ export function RemindLeadButton({
   );
 
   const mutation = useMutation(
+    // eslint-disable-next-line react-hooks/refs -- refs are touched inside mutation callbacks (event time); the options factory just runs during render
     trpc.reminders.dispatchPending.mutationOptions({
       onSuccess: (result) => {
         if (result.reason === "no-matching-section") {

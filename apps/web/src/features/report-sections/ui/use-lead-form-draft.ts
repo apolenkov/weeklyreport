@@ -79,6 +79,7 @@ export function useLeadFormDraft({
   // The one sanctioned render->callback bridge: the live loaded context a
   // quick-add merge callback reads after commit.
   const loadedRef = useRef(loaded);
+  // eslint-disable-next-line react-hooks/refs -- the one sanctioned render->callback bridge (see comment above)
   loadedRef.current = loaded;
 
   const [version, setVersion] = useState(1);
