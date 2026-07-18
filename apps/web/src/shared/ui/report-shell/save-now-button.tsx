@@ -59,6 +59,7 @@ export function SaveNowButton({ autosave }: SaveNowButtonProps) {
 
   useEffect(() => {
     if (state === "saved" && !isInFlight) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- saved-then-revert timer choreography driven by the autosave state; the timeout owns the transitions
       setShowSaved(true);
       if (revertTimerRef.current !== null) {
         clearTimeout(revertTimerRef.current);

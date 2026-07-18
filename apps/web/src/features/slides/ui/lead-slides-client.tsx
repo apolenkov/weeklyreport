@@ -1,6 +1,6 @@
 "use client";
 
-import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { type RefObject, useMemo, useRef, useState } from "react";
 
 import { useFullscreen } from "../../../hooks/use-fullscreen";
 import { useSlideInlineEditor } from "../../report-sections";
@@ -50,7 +50,7 @@ export function LeadSlidesClient({
   visibilityMode = "mine",
   visibilityHydrated = false,
 }: LeadSlidesClientProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [rawSelectedIndex, setSelectedIndex] = useState(0);
   const [density, setDensity] = useState<SlideDensity>("document");
   const internalDeckRef = useRef<HTMLDivElement>(null);
   const deckRef = externalDeckRef ?? internalDeckRef;
@@ -79,13 +79,15 @@ export function LeadSlidesClient({
     [leadSlides.slides, density],
   );
 
-  useEffect(() => {
-    // Two-sided clamp: a shrink strands the index past the end, and an
-    // ArrowRight on an EMPTY deck stores -1 (Math.min(length-1, ...)), which a
-    // one-sided upper-bound check would accept forever once slides arrive.
-    if (selectedIndex >= 0 && selectedIndex < slides.length) return;
-    setSelectedIndex(0);
-  }, [selectedIndex, slides.length]);
+  // Two-sided clamp derived at render (no reset effect): a shrink strands the
+  // stored index past the end, and an ArrowRight on an EMPTY deck stores -1
+  // (Math.min(length-1, ...)), which a one-sided upper-bound check would
+  // accept forever once slides arrive. The child always navigates from this
+  // clamped value, so the stale raw value is never observed.
+  const selectedIndex =
+    rawSelectedIndex >= 0 && rawSelectedIndex < slides.length
+      ? rawSelectedIndex
+      : 0;
 
   if (leadSlides.isLoading) {
     return <SlideSkeleton />;

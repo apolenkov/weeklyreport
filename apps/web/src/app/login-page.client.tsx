@@ -124,6 +124,7 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
   const [lastRoleLoaded, setLastRoleLoaded] = useState(!AUTH_STUB);
   useEffect(() => {
     if (!AUTH_STUB) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate post-hydration localStorage read: SSR/client first paint must match, then the hint pops in (external store, one-shot)
     setLastRole(readLastRole());
     setLastRoleLoaded(true);
   }, []);

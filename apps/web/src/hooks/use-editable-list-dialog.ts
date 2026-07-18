@@ -148,6 +148,7 @@ export function useEditableListDialog<TEntity extends { id: string }>({
     if (readOnlyRef.current) return;
     if (requireSeed && !seedProductId) return;
     lastHandledSignal.current = addSignal;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- consumes the addSignal SIGNAL prop (an event delivered via props) with ref-based once-guards; state updates are the event's handler
     setOpenSeq((n) => n + 1);
     setDialogState({ open: true, mode: "create", seedProductId });
   }, [addSignal, seedProductId, requireSeed]);

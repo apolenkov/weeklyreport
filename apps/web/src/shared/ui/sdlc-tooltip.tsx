@@ -21,11 +21,24 @@ import {
   type ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
+
+// Hydration gate without effect-driven state: the store never changes, so the
+// hook returns the server snapshot (false) during SSR/hydration and the client
+// snapshot (true) afterwards — exactly the old `mounted` flag, minus a render.
+const emptySubscribe = () => () => {
+  /* nothing to unsubscribe — the hydration "store" never changes */
+};
+const useIsHydrated = () =>
+  useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
 
 interface TooltipState {
   content: string;
@@ -65,11 +78,7 @@ export function SdlcTooltipProvider({
   readonly children: ReactNode;
 }) {
   const [state, setState] = useState<TooltipState | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useIsHydrated();
 
   const show = useCallback((rect: DOMRect, content: string) => {
     if (!content) return;

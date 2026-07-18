@@ -166,7 +166,7 @@ export function PeriodNavigator({
     listboxId,
     optionIdPrefix,
     open,
-    setOpen,
+    toggleOpen,
     activeIdx,
     setActiveIdx,
     triggerRef,
@@ -226,7 +226,7 @@ export function PeriodNavigator({
             open ? `${optionIdPrefix}${activeIdx}` : undefined
           }
           className="flex h-[var(--toolbar-control-h)] w-full cursor-pointer items-center gap-1.5 truncate rounded-[var(--radius)] border border-[var(--color-border)] bg-white px-2 pr-7 text-left text-[13px] font-semibold text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,117,74,0.16)]"
-          onClick={() => setOpen((o) => !o)}
+          onClick={toggleOpen}
           onKeyDown={handleTriggerKeyDown}
         >
           <span className="truncate">

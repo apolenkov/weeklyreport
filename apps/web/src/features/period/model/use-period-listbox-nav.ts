@@ -111,10 +111,20 @@ export function usePeriodListboxNav({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
-  // When opening, anchor the highlight on the currently selected option.
-  useEffect(() => {
-    if (open) setActiveIdx(currentIndex);
-  }, [open, currentIndex]);
+  // Opening anchors the highlight on the currently selected option — done in
+  // the open EVENT (openListbox/toggleOpen own every open transition), not in
+  // a state-sync effect.
+  const openListbox = useCallback(() => {
+    setActiveIdx(currentIndex);
+    setOpen(true);
+  }, [currentIndex]);
+  const toggleOpen = useCallback(() => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    openListbox();
+  }, [open, openListbox]);
 
   // Keep the active option visible: scroll it into view whenever the highlight
   // moves (Arrow/Home/End), so keyboard navigation never runs off the panel's
@@ -156,7 +166,7 @@ export function usePeriodListboxNav({
     }
     if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter") {
       e.preventDefault();
-      setOpen(true);
+      openListbox();
     }
   }
 
@@ -183,6 +193,7 @@ export function usePeriodListboxNav({
     optionIdPrefix,
     open,
     setOpen,
+    toggleOpen,
     activeIdx,
     setActiveIdx,
     triggerRef,

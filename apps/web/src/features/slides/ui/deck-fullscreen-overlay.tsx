@@ -19,6 +19,7 @@ function SlideEscHint({ isFullscreen }: { readonly isFullscreen: boolean }) {
 
   useEffect(() => {
     if (!isFullscreen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- show-then-auto-hide timer choreography on entering fullscreen; the timeout owns the state transitions
       setShow(false);
       return;
     }

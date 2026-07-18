@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 
 import { RotatingChevron } from "./rotating-chevron";
 
@@ -38,16 +38,25 @@ export function AccordionSection({
   actions,
   children,
 }: AccordionSectionProps) {
-  const [expanded, setExpanded] = useState(defaultOpen);
+  // A local toggle is stored PAIRED with the groupExpanded value it was made
+  // under: the expand-all/collapse-all toolbar only ever arrives as a value
+  // CHANGE, which makes the stored override stale, so the group command wins —
+  // the old mirror-into-local effect, without the effect. With no group prop
+  // the override always matches (undefined) and defaultOpen seeds the state.
+  const [override, setOverride] = useState<{
+    readonly group: boolean | undefined;
+    readonly value: boolean;
+  } | null>(null);
+  const expanded =
+    override !== null && override.group === groupExpanded
+      ? override.value
+      : (groupExpanded ?? defaultOpen);
+  const setExpanded = (value: boolean) =>
+    setOverride({ group: groupExpanded, value });
   // Stable id on the collapsible panel so both toggles can point their
   // aria-controls at it; derived from testId when present, else a unique id.
   const generatedId = useId();
   const panelId = testId ? `${testId}-panel` : generatedId;
-
-  useEffect(() => {
-    if (groupExpanded === undefined) return;
-    setExpanded(groupExpanded);
-  }, [groupExpanded]);
 
   return (
     <div

@@ -141,6 +141,7 @@ export function RisksSection({
   // create mode seeded with the clicked product (one open source).
   useEffect(() => {
     if (!addPrefill || addPrefill.signal === 0) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- consumes the addPrefill SIGNAL prop (an event delivered via props); state updates are the event's handler
     setCreatePrefill({
       stageIds: addPrefill.stageIds,
       severity: addPrefill.severity,

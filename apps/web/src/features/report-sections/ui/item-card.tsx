@@ -159,35 +159,8 @@ export function ItemCard({
   const showEditor = isEditing && !locked;
   const stageTagsState = deriveItemCardStageTags(item);
 
-  // Local draft for the inline textarea. Reset every time edit mode opens so
-  // the field tracks the latest committed text.
-  const [draft, setDraft] = useState(item.text);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  useEffect(() => {
-    if (isEditing) {
-      setDraft(item.text);
-      // Defer focus so the textarea exists in the DOM.
-      requestAnimationFrame(() => {
-        textareaRef.current?.focus();
-        textareaRef.current?.select();
-      });
-    }
-  }, [isEditing, item.text]);
-
   function commit(next: string) {
     onTextSave?.(item.id, next);
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      commit(draft);
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      // Cancel: re-emit original text, parent clears edit mode.
-      commit(item.text);
-    }
   }
 
   return (
@@ -231,15 +204,10 @@ export function ItemCard({
           textarea always shows the full, untruncated `item.text` (seeded
           into `draft`); only the static render below clamps. */}
       {showEditor ? (
-        <textarea
-          ref={textareaRef}
-          className="w-full resize-y rounded-md border border-[var(--color-starbucks-accent)] bg-white px-2 py-1.5 text-sm text-[var(--color-foreground)] focus:outline-none focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
-          style={{ minHeight: "52px" }}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => commit(draft)}
-          onKeyDown={handleKeyDown}
-          aria-label="Edit item text"
+        <ItemInlineTextEditor
+          key={item.text}
+          initialText={item.text}
+          onCommit={commit}
         />
       ) : (
         // flex-1 min-h-0 lets this region absorb whatever space is left
@@ -281,5 +249,55 @@ export function ItemCard({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Inline text editor mounted only while edit mode is on: `draft` initializes
+ * from the committed text on mount, and the caller keys this component by
+ * `item.text`, so an external text change remounts it — replacing the old
+ * reset-in-effect. The textarea always shows the full, untruncated text.
+ */
+function ItemInlineTextEditor({
+  initialText,
+  onCommit,
+}: {
+  readonly initialText: string;
+  readonly onCommit: (next: string) => void;
+}) {
+  const [draft, setDraft] = useState(initialText);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    // Defer focus so the textarea exists in the DOM.
+    const id = requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.select();
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      onCommit(draft);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      // Cancel: re-emit original text, parent clears edit mode.
+      onCommit(initialText);
+    }
+  }
+
+  return (
+    <textarea
+      ref={textareaRef}
+      className="w-full resize-y rounded-md border border-[var(--color-starbucks-accent)] bg-white px-2 py-1.5 text-sm text-[var(--color-foreground)] focus:outline-none focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
+      style={{ minHeight: "52px" }}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => onCommit(draft)}
+      onKeyDown={handleKeyDown}
+      aria-label="Edit item text"
+    />
   );
 }

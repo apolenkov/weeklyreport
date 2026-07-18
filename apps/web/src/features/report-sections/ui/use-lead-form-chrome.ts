@@ -55,17 +55,24 @@ export function useLeadFormChrome({
     };
   }, [titleHistoryEntry]);
 
-  const [showArchivePeriods, setShowArchivePeriods] = useState(false);
+  // The archived-section visibility auto-expands while an archived period is
+  // selected. A manual toggle is stored PAIRED with the period it was made
+  // on, so it wins only for that period; switching periods falls back to the
+  // auto rule — replacing the old sync effect.
+  const [archiveToggle, setArchiveToggle] = useState<{
+    readonly periodId: string;
+    readonly value: boolean;
+  } | null>(null);
   const selectedPeriodId = pinnedReportId || activeReportId || "";
   const selectedHistoryPeriod = history?.find(
     (entry) => entry.reportId === selectedPeriodId && entry.reportId !== "",
   );
-
-  useEffect(() => {
-    if (selectedHistoryPeriod?.archived) {
-      setShowArchivePeriods(true);
-    }
-  }, [selectedHistoryPeriod?.reportId, selectedHistoryPeriod?.archived]);
+  const showArchivePeriods =
+    archiveToggle !== null && archiveToggle.periodId === selectedPeriodId
+      ? archiveToggle.value
+      : selectedHistoryPeriod?.archived === true;
+  const setShowArchivePeriods = (next: boolean) =>
+    setArchiveToggle({ periodId: selectedPeriodId, value: next });
 
   return { selectedPeriodId, showArchivePeriods, setShowArchivePeriods };
 }
