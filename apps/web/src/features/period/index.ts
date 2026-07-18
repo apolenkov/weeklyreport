@@ -4,7 +4,6 @@ export { DecisionEditDialog } from "./ui/decision-edit-dialog";
 export { DecisionsSection } from "./ui/decisions-section";
 export { FillFromButton } from "./ui/fill-from-button";
 export { HeadPublishLockAction } from "./ui/head-publish-lock-action";
-export { ItemCardActions, PublishedRecordMarker } from "./ui/item-card-actions";
 export { PeriodNavigator } from "./ui/period-navigator";
 export { PeriodsTab } from "./ui/periods-tab";
 export { PublishLockButton } from "./ui/publish-lock-button";

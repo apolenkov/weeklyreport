@@ -6,13 +6,13 @@ import {
   coveringRisksForItem,
   highestAlarmSeverity,
 } from "../../../lib/item-alarm";
-import { ItemCardActions } from "../../period";
 import {
   cardContainerStyle,
   STATUS_BADGE,
   type StatusBadge,
 } from "../model/item-card-style";
 import type { ItemStatus, KanbanItem, RiskEntry } from "../model/types";
+import { ItemCardActions } from "./item-card-actions";
 import { ItemCardBadges } from "./item-card-badges";
 import {
   deriveItemCardStageTags,

@@ -4,9 +4,9 @@ import type { DecisionEntry } from "../../report-sections";
 import {
   canonicalStageName,
   FOREIGN_ENTRY_OPACITY,
+  PublishedRecordMarker,
   splitStageNames,
 } from "../../report-sections";
-import { PublishedRecordMarker } from "./item-card-actions";
 
 function EditIcon() {
   return (

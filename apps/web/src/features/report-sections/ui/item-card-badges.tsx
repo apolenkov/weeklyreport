@@ -1,5 +1,5 @@
-import { PublishedRecordMarker } from "../../period";
 import type { StatusBadge } from "../model/item-card-style";
+import { PublishedRecordMarker } from "./item-card-actions";
 
 interface ItemCardBadgesProps {
   readonly badge: StatusBadge;

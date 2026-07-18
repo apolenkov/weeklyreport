@@ -49,6 +49,7 @@ export { ActivityLanesBlock } from "./ui/activity-lanes-block";
 export { BoardColumnHeader } from "./ui/board-column-header";
 export { BoardEmptyState } from "./ui/board-empty-state";
 export { ItemCard } from "./ui/item-card";
+export { PublishedRecordMarker } from "./ui/item-card-actions";
 export { ItemEditDialog } from "./ui/item-edit-dialog";
 export type { ParentActivityOption, RecordParent } from "./ui/product-picker";
 export { ParentPicker } from "./ui/product-picker";
