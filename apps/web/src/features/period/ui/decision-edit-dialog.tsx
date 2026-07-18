@@ -68,7 +68,31 @@ function DecisionEditDialogContent({
   onCancel,
   onDelete,
 }: DecisionEditDialogProps) {
-  const d = useDecisionEditDialog({
+  const {
+    availableStages,
+    deadline,
+    dialogSurfaceRef,
+    handleKeyDown,
+    handleSave,
+    headerProductName,
+    headerVerb,
+    impact,
+    impactError,
+    impactRef,
+    isActivityParent,
+    isDeadEnd,
+    onDeadlineChange,
+    onImpactChange,
+    onParentChange,
+    onStageChange,
+    onTextChange,
+    parent,
+    stageError,
+    stageIds,
+    text,
+    textError,
+    textRef,
+  } = useDecisionEditDialog({
     decision,
     defaultOwner,
     stagesForProduct,
@@ -83,55 +107,55 @@ function DecisionEditDialogContent({
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       onClick={onCancel}
-      onKeyDown={d.handleKeyDown}
+      onKeyDown={handleKeyDown}
       role="presentation"
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops propagation to the backdrop; Escape is handled by the backdrop's onKeyDown which bubbles up */}
       <div
-        ref={d.dialogSurfaceRef}
+        ref={dialogSurfaceRef}
         className="w-full max-w-3xl rounded-[var(--radius)] bg-white p-4 md:p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={`${d.headerVerb} dialog`}
+        aria-label={`${headerVerb} dialog`}
       >
         <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {d.headerVerb}
+          {headerVerb}
         </h2>
 
         {/* unify-record-dialogs: two-column layout mirroring the risk dialog —
             prose on the left, a CLASSIFICATION panel (Product + Stages) on the
             right. A decision carries no status/severity, so the panel is leaner. */}
         <DecisionEditDialogFields
-          text={d.text}
-          onTextChange={d.onTextChange}
-          textError={d.textError}
-          textRef={d.textRef}
-          deadline={d.deadline}
-          onDeadlineChange={d.onDeadlineChange}
-          impact={d.impact}
-          onImpactChange={d.onImpactChange}
-          impactError={d.impactError}
-          impactRef={d.impactRef}
-          parent={d.parent}
+          text={text}
+          onTextChange={onTextChange}
+          textError={textError}
+          textRef={textRef}
+          deadline={deadline}
+          onDeadlineChange={onDeadlineChange}
+          impact={impact}
+          onImpactChange={onImpactChange}
+          impactError={impactError}
+          impactRef={impactRef}
+          parent={parent}
           products={products ?? []}
           activities={activities}
-          onParentChange={d.onParentChange}
-          isActivityParent={d.isActivityParent}
-          stageIds={d.stageIds}
-          availableStages={d.availableStages}
-          isDeadEnd={d.isDeadEnd}
-          stageError={d.stageError}
-          headerProductName={d.headerProductName}
-          onStageChange={d.onStageChange}
+          onParentChange={onParentChange}
+          isActivityParent={isActivityParent}
+          stageIds={stageIds}
+          availableStages={availableStages}
+          isDeadEnd={isDeadEnd}
+          stageError={stageError}
+          headerProductName={headerProductName}
+          onStageChange={onStageChange}
         />
 
         <RecordDialogFooter
           saveLabel="Save Decision"
           onCancel={onCancel}
-          onSave={d.handleSave}
+          onSave={handleSave}
           onDelete={onDelete}
-          saveDisabled={d.isDeadEnd}
+          saveDisabled={isDeadEnd}
         />
       </div>
     </div>,

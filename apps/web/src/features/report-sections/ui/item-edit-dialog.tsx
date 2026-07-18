@@ -101,7 +101,34 @@ function ItemEditDialogContent({
   onCancel,
   onDelete,
 }: ItemEditDialogProps) {
-  const d = useItemEditDialog({
+  const {
+    availableStages,
+    dialogSurfaceRef,
+    handleKeyDown,
+    handleSave,
+    headerVerb,
+    isActivityParent,
+    isDeadEnd,
+    onParentChange,
+    onPausedReasonChange,
+    onPriorityRankChange,
+    onStageChange,
+    onStatusSelect,
+    onTextChange,
+    parent,
+    parentName,
+    pausedReason,
+    pausedReasonError,
+    priorityRank,
+    rankOptions,
+    stageError,
+    stageIds,
+    status,
+    statusSlot,
+    takenRanks,
+    text,
+    textError,
+  } = useItemEditDialog({
     item,
     products,
     activities,
@@ -122,23 +149,23 @@ function ItemEditDialogContent({
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       onClick={onCancel}
-      onKeyDown={d.handleKeyDown}
+      onKeyDown={handleKeyDown}
       role="presentation"
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops propagation to keep clicks inside the dialog from closing it; there is no keyboard action to mirror */}
       <div
-        ref={d.dialogSurfaceRef}
+        ref={dialogSurfaceRef}
         className="w-full max-w-3xl rounded-[var(--radius)] bg-white p-4 md:p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={`${d.headerVerb} dialog`}
+        aria-label={`${headerVerb} dialog`}
       >
         <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {d.headerVerb}{" "}
-          {d.parentName ? (
+          {headerVerb}{" "}
+          {parentName ? (
             <span className="text-[var(--color-muted-foreground)]">
-              — {d.parentName}
+              — {parentName}
             </span>
           ) : null}
         </h2>
@@ -147,40 +174,40 @@ function ItemEditDialogContent({
             prose on the left, a CLASSIFICATION panel (Product + Stages + Status)
             on the right. */}
         <ItemEditDialogFields
-          text={d.text}
-          onTextChange={d.onTextChange}
-          textError={d.textError}
-          priorityRank={d.priorityRank}
-          onPriorityRankChange={d.onPriorityRankChange}
-          rankOptions={d.rankOptions}
-          takenRanks={d.takenRanks}
+          text={text}
+          onTextChange={onTextChange}
+          textError={textError}
+          priorityRank={priorityRank}
+          onPriorityRankChange={onPriorityRankChange}
+          rankOptions={rankOptions}
+          takenRanks={takenRanks}
           week={week}
-          parent={d.parent}
+          parent={parent}
           products={products}
           activities={activities}
-          onParentChange={d.onParentChange}
-          isActivityParent={d.isActivityParent}
-          stageIds={d.stageIds}
-          availableStages={d.availableStages}
-          isDeadEnd={d.isDeadEnd}
-          stageError={d.stageError}
-          parentName={d.parentName}
-          onStageChange={d.onStageChange}
-          statusSlot={d.statusSlot}
+          onParentChange={onParentChange}
+          isActivityParent={isActivityParent}
+          stageIds={stageIds}
+          availableStages={availableStages}
+          isDeadEnd={isDeadEnd}
+          stageError={stageError}
+          parentName={parentName}
+          onStageChange={onStageChange}
+          statusSlot={statusSlot}
           choices={choices}
-          status={d.status}
-          onStatusSelect={d.onStatusSelect}
-          pausedReason={d.pausedReason}
-          pausedReasonError={d.pausedReasonError}
-          onPausedReasonChange={d.onPausedReasonChange}
+          status={status}
+          onStatusSelect={onStatusSelect}
+          pausedReason={pausedReason}
+          pausedReasonError={pausedReasonError}
+          onPausedReasonChange={onPausedReasonChange}
         />
 
         <RecordDialogFooter
           saveLabel="Save Item"
           onCancel={onCancel}
-          onSave={d.handleSave}
+          onSave={handleSave}
           onDelete={onDelete}
-          saveDisabled={d.isDeadEnd}
+          saveDisabled={isDeadEnd}
         />
       </div>
     </div>,

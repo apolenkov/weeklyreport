@@ -156,6 +156,7 @@ export function useLeadFormAutosave(
   }, [initialSavedKey]);
 
   const saveDraftMut = useMutation(
+    // eslint-disable-next-line react-hooks/refs -- refs are touched inside mutation callbacks (event time); the options factory just runs during render
     trpc.reports.saveDraft.mutationOptions({
       onSuccess: (saved) => {
         // Advance the live version from the server-confirmed value FIRST, so the
@@ -222,6 +223,7 @@ export function useLeadFormAutosave(
     enabled &&
     payload !== null &&
     payloadKey !== "" &&
+    // eslint-disable-next-line react-hooks/refs -- dirty is deliberately computed from the last-saved ref at render (see comment below); making it state would re-arm the debounce on every save
     payloadKey !== lastSavedRef.current;
 
   // Stash the latest payload + mutate fn in refs so the debounce effect can
@@ -313,6 +315,7 @@ export function useLeadFormAutosave(
    * fired automatically on success.
    */
   const forceSave = useRef<() => Promise<void>>(() => Promise.resolve());
+  // eslint-disable-next-line react-hooks/refs -- latest-ref stable-callback pattern: render stamps the newest closure; consumers call it at event time
   forceSave.current = async () => {
     const current = payloadRef.current;
     const currentKey = current === null ? "" : stableStringify(current);
@@ -357,6 +360,7 @@ export function useLeadFormAutosave(
     lastSavedAt,
     dirty,
     isInFlight,
+    // eslint-disable-next-line react-hooks/refs -- returns the latest-ref stable callback; the ref is only INVOKED from event handlers
     forceSave: forceSave.current,
   };
 }

@@ -46,6 +46,7 @@ export function useQueryErrorHandler(
   opts: UseQueryErrorHandlerOpts,
 ): void {
   const optsRef = useRef(opts);
+  // eslint-disable-next-line react-hooks/refs -- latest-ref bridge: render stamps the newest opts; read only inside the error effect
   optsRef.current = opts;
 
   useEffect(() => {

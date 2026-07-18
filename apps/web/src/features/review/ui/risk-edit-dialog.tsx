@@ -87,7 +87,36 @@ function RiskEditDialogContent({
   activities = [],
   onDelete,
 }: RiskEditDialogProps) {
-  const d = useRiskEditDialog({
+  const {
+    availableStages,
+    dialogSurfaceRef,
+    handleKeyDown,
+    handleSave,
+    headerVerb,
+    impact,
+    impactError,
+    impactRef,
+    isActivityParent,
+    isDeadEnd,
+    mitigation,
+    mitigationError,
+    mitigationRef,
+    onImpactChange,
+    onMitigationChange,
+    onParentChange,
+    onSeveritySelect,
+    onStageChange,
+    onTextChange,
+    parent,
+    parentName,
+    preCheckedStages,
+    severity,
+    stageError,
+    stageIds,
+    text,
+    textError,
+    textRef,
+  } = useRiskEditDialog({
     risk,
     products,
     activities,
@@ -106,23 +135,23 @@ function RiskEditDialogContent({
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       onClick={onCancel}
-      onKeyDown={d.handleKeyDown}
+      onKeyDown={handleKeyDown}
       role="presentation"
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop click-through; not an interactive action, so no keyboard equivalent applies */}
       <div
-        ref={d.dialogSurfaceRef}
+        ref={dialogSurfaceRef}
         className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[var(--radius)] bg-white p-4 md:p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={`${d.headerVerb} dialog`}
+        aria-label={`${headerVerb} dialog`}
       >
         <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {d.headerVerb}{" "}
-          {d.parentName ? (
+          {headerVerb}{" "}
+          {parentName ? (
             <span className="text-[var(--color-muted-foreground)]">
-              — {d.parentName}
+              — {parentName}
             </span>
           ) : null}
         </h2>
@@ -130,11 +159,11 @@ function RiskEditDialogContent({
         {/* Context strip: flagged owned SDLC stages — product parents only. An
             activity owns no stage, so suppress it there (preCheckedStages derives
             from the mount-time seed product and does not clear on a parent switch). */}
-        {!d.isActivityParent && d.preCheckedStages.length > 0 && (
+        {!isActivityParent && preCheckedStages.length > 0 && (
           <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs">
             <div className="font-medium text-amber-900">
-              {d.parentName} →{" "}
-              {d.preCheckedStages
+              {parentName} →{" "}
+              {preCheckedStages
                 .map(
                   (s) =>
                     `${s.name} (${s.severity === "blocked" ? "Blocked" : "At Risk"})`,
@@ -148,39 +177,39 @@ function RiskEditDialogContent({
         )}
 
         <RiskEditDialogFields
-          text={d.text}
-          onTextChange={d.onTextChange}
-          textError={d.textError}
-          textRef={d.textRef}
-          impact={d.impact}
-          onImpactChange={d.onImpactChange}
-          impactError={d.impactError}
-          impactRef={d.impactRef}
-          mitigation={d.mitigation}
-          onMitigationChange={d.onMitigationChange}
-          mitigationError={d.mitigationError}
-          mitigationRef={d.mitigationRef}
-          parent={d.parent}
+          text={text}
+          onTextChange={onTextChange}
+          textError={textError}
+          textRef={textRef}
+          impact={impact}
+          onImpactChange={onImpactChange}
+          impactError={impactError}
+          impactRef={impactRef}
+          mitigation={mitigation}
+          onMitigationChange={onMitigationChange}
+          mitigationError={mitigationError}
+          mitigationRef={mitigationRef}
+          parent={parent}
           products={products}
           activities={activities}
-          onParentChange={d.onParentChange}
-          isActivityParent={d.isActivityParent}
-          stageIds={d.stageIds}
-          availableStages={d.availableStages}
-          severity={d.severity}
-          isZeroOwnedStageDeadEnd={d.isDeadEnd}
-          stageError={d.stageError}
-          onStageChange={d.onStageChange}
-          onSeveritySelect={d.onSeveritySelect}
+          onParentChange={onParentChange}
+          isActivityParent={isActivityParent}
+          stageIds={stageIds}
+          availableStages={availableStages}
+          severity={severity}
+          isZeroOwnedStageDeadEnd={isDeadEnd}
+          stageError={stageError}
+          onStageChange={onStageChange}
+          onSeveritySelect={onSeveritySelect}
         />
 
         <RecordDialogFooter
           sticky
           saveLabel="Save Risk"
           onCancel={onCancel}
-          onSave={d.handleSave}
+          onSave={handleSave}
           onDelete={onDelete}
-          saveDisabled={d.isDeadEnd}
+          saveDisabled={isDeadEnd}
         />
       </div>
     </div>,

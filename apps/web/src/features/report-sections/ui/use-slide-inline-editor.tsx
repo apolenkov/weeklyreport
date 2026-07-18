@@ -62,6 +62,7 @@ export function useSlideInlineEditor({
   const saveOperationRef = useRef<"saved" | "deleted">("saved");
 
   const saveDraftMut = useMutation(
+    // eslint-disable-next-line react-hooks/refs -- refs are touched inside mutation callbacks (event time); the options factory just runs during render
     trpc.reports.saveDraft.mutationOptions({
       onSuccess: () => {
         invalidateLeadForm(qc, trpc);

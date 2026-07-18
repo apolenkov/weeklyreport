@@ -525,12 +525,12 @@ export default defineConfig([
       // immutability, refs, …) that pair with react-compiler/react-compiler.
       ...reactHooks.configs.recommended.rules,
       "react-hooks/exhaustive-deps": "warn",
-      // refs: the compiler taints the WHOLE return object of a custom hook
-      // that bundles refs with data/handlers, so every `d.field` read in the
-      // consuming component fires (104 hits, 90 in the three edit dialogs).
-      // Off until hook returns separate refs from data; the classic misuse
-      // (reading .current in render) is still caught by react-compiler.
-      "react-hooks/refs": "off",
+      // refs: error since the burn-down. The compiler taints a WHOLE hook
+      // return object that bundles refs with data, so dialog components
+      // DESTRUCTURE the hook result instead of holding the bag; the surviving
+      // deliberate render-time ref patterns (latest-ref bridges, mutation
+      // callbacks) carry per-site disables with reasons.
+      "react-hooks/refs": "error",
       // set-state-in-effect: error since the 24-site burn-down (derive/paired
       // state/mount-fresh redesigns; the surviving effect-owned sites —
       // external-system syncs, signal props, timer choreography — carry
