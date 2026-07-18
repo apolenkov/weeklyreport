@@ -81,6 +81,7 @@ export function ExportPdfButton({
       closeHeldTab(openedTabRef);
       deliveryModeRef.current = null;
       toast.error("PDF export status check failed. Please try again.");
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- polling pipeline reacting to the export job's server status — external-system sync owns this state
       setJobId(null);
       return;
     }

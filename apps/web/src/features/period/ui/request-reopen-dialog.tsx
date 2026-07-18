@@ -40,25 +40,33 @@ interface RequestReopenDialogProps {
  */
 export function RequestReopenDialog({
   open,
+  ...contentProps
+}: RequestReopenDialogProps) {
+  // The form mounts fresh on every open, so `reason` starts empty on mount —
+  // no reset effect.
+  if (!open || typeof document === "undefined") return null;
+  return <RequestReopenDialogContent {...contentProps} />;
+}
+
+function RequestReopenDialogContent({
   pending = false,
   error,
   onConfirm,
   onCancel,
-}: RequestReopenDialogProps) {
+}: Omit<RequestReopenDialogProps, "open">) {
   const [reason, setReason] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const dialogSurfaceRef = useRef<HTMLDivElement>(null);
 
-  // Escape + focus trap + restore-to-trigger via the shared primitive.
+  // Escape + focus trap + restore-to-trigger via the shared primitive. The
+  // content component exists only while open.
   useDialogFocus({
-    open,
+    open: true,
     onClose: onCancel,
     containerRef: dialogSurfaceRef,
   });
 
   useEffect(() => {
-    if (!open) return;
-    setReason("");
     // Defer focus to the textarea so the portal mounts first (the shared
     // primitive's generic focus-in lands on the first focusable; this pins it
     // to the note field, matching the reopen dialog's intent).
@@ -66,7 +74,7 @@ export function RequestReopenDialog({
       textareaRef.current?.focus();
     });
     return () => cancelAnimationFrame(id);
-  }, [open]);
+  }, []);
 
   function handleConfirm() {
     const trimmed = reason.trim();
@@ -79,8 +87,6 @@ export function RequestReopenDialog({
       handleConfirm();
     }
   }
-
-  if (!open || typeof document === "undefined") return null;
 
   return createPortal(
     <div

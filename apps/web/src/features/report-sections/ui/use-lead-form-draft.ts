@@ -141,6 +141,7 @@ export function useLeadFormDraft({
 
   useEffect(() => {
     if (!serverSection) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- server-section arrival re-bases the local draft engine (version/submitted/baseline) — external-data sync
     setVersionSafe(serverSection.version);
     setIsSubmitted(serverSection.status === "submitted");
 

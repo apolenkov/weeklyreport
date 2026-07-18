@@ -132,7 +132,12 @@ export function SearchInput({
 
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
+  // Selection is stored PAIRED with the hit list it was made in; a new result
+  // set naturally resets it to 0 without a reset effect.
+  const [active, setActive] = useState<{
+    readonly hits: readonly SearchHit[];
+    readonly index: number;
+  } | null>(null);
   const debouncedQ = useDebouncedValue(q.trim(), DEBOUNCE_MS);
 
   const enabled = debouncedQ.length >= MIN_LEN && debouncedQ.length <= MAX_LEN;
@@ -150,10 +155,17 @@ export function SearchInput({
     return isViewer ? all.filter((hit) => hit.type !== "project") : all;
   }, [data, isViewer]);
 
-  // Reset selection when results change.
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [hits]);
+  const activeIndex = active?.hits === hits ? active.index : 0;
+  const moveActive = (delta: number) => {
+    setActive((prev) => {
+      const current = prev?.hits === hits ? prev.index : 0;
+      const upper = Math.max(hits.length - 1, 0);
+      return {
+        hits,
+        index: Math.min(Math.max(current + delta, 0), upper),
+      };
+    });
+  };
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -178,10 +190,10 @@ export function SearchInput({
     if (!open || hits.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIndex((idx) => Math.min(idx + 1, hits.length - 1));
+      moveActive(1);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActiveIndex((idx) => Math.max(idx - 1, 0));
+      moveActive(-1);
     } else if (e.key === "Enter") {
       const hit = hits.at(activeIndex);
       if (hit) {
@@ -273,7 +285,7 @@ export function SearchInput({
                 type="button"
                 role="option"
                 aria-selected={isActive}
-                onMouseEnter={() => setActiveIndex(idx)}
+                onMouseEnter={() => setActive({ hits, index: idx })}
                 onClick={() => {
                   setOpen(false);
                   router.push(url);

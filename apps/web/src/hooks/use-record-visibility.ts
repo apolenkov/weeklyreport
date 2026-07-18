@@ -89,6 +89,7 @@ export function useRecordVisibility(
   useEffect(() => {
     if (!currentKey) {
       // Context not resolvable yet — stay on the default, unhydrated.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- re-scopes the persisted visibility from localStorage when user/report context changes — external store sync
       setVisibilityState("mine");
       setHydratedKey(null);
       return;

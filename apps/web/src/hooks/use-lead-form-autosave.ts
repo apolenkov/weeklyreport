@@ -255,6 +255,7 @@ export function useLeadFormAutosave(
       // render time from a ref the priming effect has not yet stamped), and a
       // user can also undo back to the saved content. Saving/saved/error
       // states are owned by the mutation callbacks and stay untouched.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced autosave state machine: pending/idle transitions are owned by the debounce timer effect
       setState((current) => (current === "pending" ? "idle" : current));
       return;
     }

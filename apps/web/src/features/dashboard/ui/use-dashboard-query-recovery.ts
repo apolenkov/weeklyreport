@@ -91,6 +91,7 @@ export function useDashboardQueryRecovery({
   }, [refetch]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- stall flag is cleared when the QUERY settles — sync with an external async system, not derivable without re-arming bugs
     if (settled) setStalled(false);
   }, [settled]);
   const recovery = {

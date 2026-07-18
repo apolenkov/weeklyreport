@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
@@ -25,27 +25,29 @@ interface PauseReasonDialogProps {
  */
 export function PauseReasonDialog({
   open,
+  ...contentProps
+}: PauseReasonDialogProps) {
+  // The form mounts fresh on every open, so `reason` initializes from
+  // `initialReason` on mount — a prior draft never leaks into the next pause
+  // and no reset effect is needed.
+  if (!open || typeof document === "undefined") return null;
+  return <PauseReasonDialogContent {...contentProps} />;
+}
+
+function PauseReasonDialogContent({
   preview,
   initialReason = "",
   onConfirm,
   onCancel,
-}: PauseReasonDialogProps) {
+}: Omit<PauseReasonDialogProps, "open">) {
   const [reason, setReason] = useState(initialReason);
   const surfaceRef = useRef<HTMLDivElement>(null);
 
   // Escape-to-close, Tab-trap, and focus-restore-to-trigger all come from the
   // shared primitive; the textarea is the surface's first focusable element,
-  // so the primitive's initial-focus fallback autofocuses it for free.
-  useDialogFocus({ open, onClose: onCancel, containerRef: surfaceRef });
-
-  // Reset the field each time the dialog opens so a prior draft never leaks
-  // into the next pause.
-  useEffect(() => {
-    if (!open) return;
-    setReason(initialReason);
-  }, [open, initialReason]);
-
-  if (!open || typeof document === "undefined") return null;
+  // so the primitive's initial-focus fallback autofocuses it for free. The
+  // content component exists only while open.
+  useDialogFocus({ open: true, onClose: onCancel, containerRef: surfaceRef });
 
   const trimmed = reason.trim();
 

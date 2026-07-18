@@ -531,10 +531,11 @@ export default defineConfig([
       // Off until hook returns separate refs from data; the classic misuse
       // (reading .current in render) is still caught by react-compiler.
       "react-hooks/refs": "off",
-      // set-state-in-effect: real signal, but each firing is a state-derivation
-      // redesign (24 files × 1). Warn during the burn-down, like
-      // exhaustive-deps; ratchet to error when the count reaches zero.
-      "react-hooks/set-state-in-effect": "warn",
+      // set-state-in-effect: error since the 24-site burn-down (derive/paired
+      // state/mount-fresh redesigns; the surviving effect-owned sites —
+      // external-system syncs, signal props, timer choreography — carry
+      // per-site disables with reasons).
+      "react-hooks/set-state-in-effect": "error",
 
       // React Compiler (React 19)
       "react-compiler/react-compiler": "error",

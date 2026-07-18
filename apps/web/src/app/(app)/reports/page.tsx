@@ -187,11 +187,10 @@ function HistoryPanel({
   readonly summaryTitle: string;
   readonly isLead: boolean;
 }) {
-  const [showAll, setShowAll] = useState(false);
-
-  useEffect(() => {
-    setShowAll(false);
-  }, [includeArchive]);
+  // "Show all" is stored PAIRED with the archive scope it was pressed in, so
+  // flipping the scope naturally collapses the list again — no reset effect.
+  const [showAllScope, setShowAllScope] = useState<boolean | null>(null);
+  const showAll = showAllScope === includeArchive;
 
   const visibleEntries = showAll
     ? entries
@@ -221,7 +220,7 @@ function HistoryPanel({
             <button
               type="button"
               className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
-              onClick={() => setShowAll(true)}
+              onClick={() => setShowAllScope(includeArchive)}
               aria-label={`Show all ${entries.length} reports`}
             >
               Show all ({entries.length})

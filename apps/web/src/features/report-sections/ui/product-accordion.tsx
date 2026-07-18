@@ -399,8 +399,20 @@ export function ProductAccordion({
   scrollIntoViewOnHighlight = false,
   review,
 }: ProductAccordionProps) {
-  const [expanded, setExpanded] = useState(defaultOpen);
+  // A manual toggle is stored PAIRED with the highlight state it was made
+  // under: a fresh highlight (search jump) invalidates the stored value, so
+  // the card force-opens; a collapse made WHILE highlighted sticks until the
+  // highlight changes — the old force-open effect's semantics, derived.
+  const [toggle, setToggle] = useState<{
+    readonly highlighted: boolean;
+    readonly value: boolean;
+  } | null>(null);
   const hasContent = reportHasContent(report);
+  const expanded =
+    toggle !== null && toggle.highlighted === highlighted
+      ? toggle.value
+      : (highlighted && hasContent) || defaultOpen;
+  const setExpanded = (value: boolean) => setToggle({ highlighted, value });
   const isEmpty = !hasContent;
   const config = isEmpty
     ? {
@@ -434,10 +446,6 @@ export function ProductAccordion({
     typeof attention === "string" &&
     attention.length > 0 &&
     !renderedTexts.has(attention);
-
-  useEffect(() => {
-    if (highlighted && hasContent) setExpanded(true);
-  }, [highlighted, hasContent]);
 
   useEffect(() => {
     if (!highlighted || !scrollIntoViewOnHighlight) return;

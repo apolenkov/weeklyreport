@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { useTRPC } from "../../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
@@ -41,7 +41,7 @@ export function HeadSlidesClient({
   enableActivity = true,
 }: HeadSlidesClientProps = {}) {
   const trpc = useTRPC();
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [rawSelectedIndex, setSelectedIndex] = useState(0);
   const [density, setDensity] = useState<SlideDensity>("document");
 
   const weeklyQ = useQuery(
@@ -84,12 +84,13 @@ export function HeadSlidesClient({
     [documentSlides, density],
   );
 
-  useEffect(() => {
-    // Two-sided clamp — see lead-slides-client: a negative index from an
-    // empty-deck arrow press must reset too, not just an out-of-range one.
-    if (selectedIndex >= 0 && selectedIndex < slides.length) return;
-    setSelectedIndex(0);
-  }, [selectedIndex, slides.length]);
+  // Two-sided clamp derived at render — see lead-slides-client: a negative
+  // index from an empty-deck arrow press must clamp too, not just an
+  // out-of-range one.
+  const selectedIndex =
+    rawSelectedIndex >= 0 && rawSelectedIndex < slides.length
+      ? rawSelectedIndex
+      : 0;
 
   if (weeklyQ.isLoading) return <SlideSkeleton />;
 
