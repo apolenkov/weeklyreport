@@ -33,7 +33,7 @@ interface ProductAccumulator {
   readonly latestSubmittedAt: Date | null;
 }
 
-export const CROSS_PRODUCT_LABEL = "Shared context";
+const CROSS_PRODUCT_LABEL = "Shared context";
 const SHARED_PRODUCT_ID = "shared-context";
 
 function createAccumulator(

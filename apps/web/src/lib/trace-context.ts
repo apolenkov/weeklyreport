@@ -8,7 +8,7 @@ function randomUuidHex(): string {
 }
 
 /** Format pre-generated trace and parent IDs as W3C trace context. */
-export function formatTraceparent(traceId: string, parentId: string): string {
+function formatTraceparent(traceId: string, parentId: string): string {
   return `${TRACEPARENT_VERSION}-${traceId}-${parentId}-${SAMPLED_TRACE_FLAGS}`;
 }
 

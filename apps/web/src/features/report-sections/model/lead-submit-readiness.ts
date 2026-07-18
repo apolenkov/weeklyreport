@@ -6,13 +6,13 @@ import {
 import type { DraftSaveContent } from "./lead-section-draft-payload";
 import type { Product, RiskEntry } from "./types";
 
-export interface LeadSubmitStatusIdentity {
+interface LeadSubmitStatusIdentity {
   readonly id: string;
   readonly kind: "product" | "activity" | "stage";
   readonly label: string;
 }
 
-export interface LeadSubmitBlockingIssue {
+interface LeadSubmitBlockingIssue {
   readonly id: string;
   readonly label: string;
 }

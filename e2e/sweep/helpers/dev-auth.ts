@@ -1,6 +1,3 @@
-import { spawnSync } from "node:child_process";
-import * as path from "node:path";
-
 import type { Page } from "@playwright/test";
 
 type Role = "lead" | "head" | "admin" | "viewer";
@@ -183,82 +180,5 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
       await page.goto("/", { waitUntil: "domcontentloaded" }).catch(() => null);
     }
     return;
-  }
-}
-
-/**
- * Out-of-band advanced seed for the LSC suite. The API-mediated
- * dev.wipeAndReseed procedure caps its child process at 120 s, but the
- * advanced seed runs ~2 m 48 s and gets SIGKILL'd mid-seed, leaving the DB
- * dropped and every subsequent request (including dev-login) returning 500.
- * Running the seed directly via the Prisma CLI with a 300 s timeout sidesteps
- * the procedural cap.
- *
- * TODO(E2E-RESEED-01): the suite-wide in-test reseed via API under
- * fullyParallel is inherently race-prone — this is the LSC-only escape hatch.
- */
-export function seedAdvancedViaCli(): void {
-  // e2e/regression/helpers → 3 levels up to repo root
-  const repoRoot = path.resolve(__dirname, "..", "..", "..");
-  const env = {
-    ...process.env,
-    PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
-  };
-  const opts = { cwd: repoRoot, encoding: "utf8" as const, timeout: 300_000, env };
-
-  const reset = spawnSync("pnpm", ["exec", "prisma", "migrate", "reset", "--force"], opts);
-  if (reset.status !== 0) {
-    throw new Error(`prisma migrate reset failed (status=${reset.status}):\n${reset.stderr}`);
-  }
-
-  const seed = spawnSync("pnpm", ["exec", "prisma", "db", "seed"], opts);
-  if (seed.status !== 0) {
-    throw new Error(`prisma db seed failed (status=${seed.status}):\n${seed.stderr}`);
-  }
-}
-
-export async function wipeAndReseed(
-  page: Page,
-  variant: "small" | "middle" | "huge" | "manual-uat" = "middle",
-) {
-  const body = JSON.stringify({ "0": { json: { variant } } });
-  for (let attempt = 1; attempt <= 4; attempt++) {
-    const response = await page.request.post(
-      "/trpc/dev.wipeAndReseed?batch=1",
-      {
-        data: body,
-        headers: { "content-type": "application/json" },
-      },
-    );
-
-    const responseBody = await response.text();
-    if (response.ok()) {
-      return;
-    }
-
-    if (
-      response.status() === 429 &&
-      responseBody.includes("rate_limit_exceeded") &&
-      attempt === 1
-    ) {
-      const retryAfterHeader = response.headers()["retry-after"];
-      const retryAfterPayload = Number(
-        /"retryAfter":(\d+)/.exec(responseBody)?.[1] ?? NaN,
-      );
-      const retryAfter = Number.isFinite(retryAfterPayload)
-        ? retryAfterPayload
-        : Number(retryAfterHeader ?? NaN);
-      const resolvedWaitMs = Math.min(
-        Number.isFinite(retryAfter) ? retryAfter * 1000 : 2000,
-        5000,
-      );
-      const jitter = 250 * attempt + Math.floor(Math.random() * 250);
-      await page.waitForTimeout(resolvedWaitMs + jitter);
-      continue;
-    }
-
-    throw new Error(
-      `dev.wipeAndReseed failed: ${response.status()} ${responseBody}`,
-    );
   }
 }

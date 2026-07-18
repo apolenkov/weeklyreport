@@ -1,14 +1,14 @@
 import type { EnvConfig } from "../config/env.schema";
 import { buildRedisConnectionOptions } from "../config/redis-connection";
 
-export function getBullMQConnectionOptions(env: EnvConfig) {
+function getBullMQConnectionOptions(env: EnvConfig) {
   return {
     ...buildRedisConnectionOptions(env),
     maxRetriesPerRequest: null,
   };
 }
 
-export function getBullMQPrefix(env: EnvConfig): string | undefined {
+function getBullMQPrefix(env: EnvConfig): string | undefined {
   const prefix = env.BULLMQ_PREFIX?.trim();
   return prefix ? prefix : undefined;
 }

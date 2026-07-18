@@ -14,9 +14,6 @@ export {
 } from "./application/report-sections.service.js";
 export { applyRevokeTransition } from "./application/revoke-transition.js";
 export { LeadFormPrismaRepository } from "./infrastructure/lead-form.prisma-repository.js";
-export {
-  type PrismaReportSectionWithRelations,
-  reportSectionFullInclude,
-} from "./infrastructure/report-sections.include.js";
+export { reportSectionFullInclude } from "./infrastructure/report-sections.include.js";
 export { mapPrismaToReportSection } from "./infrastructure/report-sections.mappers.js";
 export { ReportSectionsModule } from "./report-sections.module.js";

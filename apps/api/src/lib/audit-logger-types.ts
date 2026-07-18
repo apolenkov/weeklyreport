@@ -41,7 +41,7 @@ export type AuditEvent =
   | "period.manual-edit"
   | "scope-accessed";
 
-export interface AuditEnvelope {
+interface AuditEnvelope {
   readonly event: AuditEvent;
   readonly userId: string;
   readonly role: Role | null;
@@ -210,10 +210,7 @@ type PeriodManualCreateInput = Omit<
  * at `warn`). Per-request dedupe: one event per read regardless of how
  * many cross-group products surface.
  */
-export type ScopeAccessedInput = Omit<
-  AuditEnvelope,
-  "event" | "attemptedRole"
-> & {
+type ScopeAccessedInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
   readonly accessedScope: string;
   readonly productIds: readonly string[];
   readonly groupIds: readonly string[];

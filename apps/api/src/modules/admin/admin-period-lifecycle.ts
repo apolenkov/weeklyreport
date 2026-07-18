@@ -23,9 +23,7 @@ import {
  * edit onto a contested boundary, or an unarchive into one all land here. Any
  * other error (including an unrelated unique violation) re-throws unchanged.
  */
-export async function openBoundaryGuarded<T>(
-  write: () => Promise<T>,
-): Promise<T> {
+async function openBoundaryGuarded<T>(write: () => Promise<T>): Promise<T> {
   try {
     return await write();
   } catch (error) {

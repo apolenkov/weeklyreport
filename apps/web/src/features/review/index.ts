@@ -11,7 +11,6 @@ export { ReviewModeToggle } from "./ui/review-mode-toggle";
 export { ReviewVerdictBand } from "./ui/review-verdict-band";
 export { RiskEditDialog } from "./ui/risk-edit-dialog";
 export { RisksSection } from "./ui/risks-section";
-export { SectionReviewStrip } from "./ui/section-review-strip";
 export type { SubmissionFilter } from "./ui/submission-filter";
 export {
   DraftHiddenSignal,

@@ -47,7 +47,7 @@ export interface SessionUser {
  * nav-bar consumes `organization.shortName` for the brand string; anonymous
  * pages (landing) use `org.getPublic` instead.
  */
-export interface SessionOrganization {
+interface SessionOrganization {
   shortName: string;
   fullName: string;
 }

@@ -11,7 +11,7 @@ import {
 import { useTRPC } from "../../../lib/trpc-context";
 import type { buildLeadSubmitPayload } from "../model/lead-submit-readiness";
 
-export type LeadSubmitInput = ReturnType<typeof buildLeadSubmitPayload>;
+type LeadSubmitInput = ReturnType<typeof buildLeadSubmitPayload>;
 
 /**
  * The draft module's write dependency: the submit mutation plus the cache

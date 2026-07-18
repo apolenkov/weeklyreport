@@ -30,7 +30,7 @@ function assertValidRole(role, context) {
 }
 
 // Inverse of the generator's `yamlStr` (always double-quoted, \\ and \" escaped).
-export function unquote(raw) {
+function unquote(raw) {
   const trimmed = raw.trim();
   if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
     return trimmed

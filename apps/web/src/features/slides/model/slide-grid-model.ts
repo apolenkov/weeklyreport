@@ -10,7 +10,6 @@ import {
   emptyBuckets,
   finalizeColumns,
   type GridPriorityCard,
-  hasText,
 } from "./slide-grid-cells";
 import { buildForeignRows } from "./slide-grid-foreign";
 import {
@@ -25,10 +24,8 @@ export type { GridPriorityCard } from "./slide-grid-cells";
 export type {
   GridAuthor,
   GridColumnKey,
-  GridColumns,
   GridRow,
   GridRowEditableRef,
-  GridRowKind,
   GridTone,
   SlideTrafficStatus,
 } from "./slide-grid-rows";
@@ -256,6 +253,3 @@ export function collectStageNames(model: SlideGridModel): readonly string[] {
     .flatMap((row) => row.stageNames);
   return sortStageNames([...new Set(names)]);
 }
-
-/** Guard used by tests and the article: `hasText` re-export for fixtures. */
-export { hasText };

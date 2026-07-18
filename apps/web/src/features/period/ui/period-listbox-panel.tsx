@@ -6,9 +6,9 @@ import { createPortal } from "react-dom";
 // Custom listbox geometry (D3): the panel portals to document.body so the
 // toolbar's overflow clip cannot truncate it. Mirrors the FillFromButton
 // portal — position:fixed from the trigger rect, scroll/resize tracked.
-export const PERIOD_PANEL_MAX_HEIGHT_PX = 280;
+const PERIOD_PANEL_MAX_HEIGHT_PX = 280;
 
-export interface PeriodOption {
+interface PeriodOption {
   id: string;
   dateRange: string;
   isCurrent: boolean;

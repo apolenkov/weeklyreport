@@ -17,7 +17,7 @@ import {
  * the env accepts can never drift.
  */
 export const logLevelSchema = z.enum(["debug", "info", "warn", "error"]);
-export type LogLevel = z.infer<typeof logLevelSchema>;
+type LogLevel = z.infer<typeof logLevelSchema>;
 
 export interface AppLogger {
   debug(message: string, context?: Record<string, unknown>): void;

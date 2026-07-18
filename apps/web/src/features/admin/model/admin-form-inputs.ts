@@ -5,7 +5,6 @@
  * contract drift (e.g. schema field renames) collects in one place.
  */
 
-import type { ReportStatus } from "@customreport/shared";
 import type { DbRole } from "@customreport/shared";
 import {
   composeName,
@@ -134,74 +133,6 @@ export function toAdminProjectInput(
     archived: form.archived ?? false,
     leadId: form.leadOwnerId,
     leadName: (form.leadName ?? "").trim() || "Unknown Lead",
-  };
-}
-
-export interface ReportPeriodFormInput {
-  startDate: string; // YYYY-MM-DD
-  endDate: string;
-  deadline: string;
-  status?: ReportStatus;
-}
-
-/**
- * Maps the Periods tab form state to the `reportPeriodSchema` payload.
- * Date strings are coerced via `new Date(...)`; the schema then re-validates
- * them with `reportDate()` (year >= 2000).
- */
-export function toReportPeriodInput(
-  form: ReportPeriodFormInput,
-  existingId?: string,
-): {
-  id: string;
-  periodStart: Date;
-  periodEnd: Date;
-  deadline: Date;
-  status: ReportStatus;
-} {
-  return {
-    id: existingId ?? newId(),
-    periodStart: new Date(form.startDate),
-    periodEnd: new Date(form.endDate),
-    deadline: new Date(form.deadline),
-    status: form.status ?? "draft",
-  };
-}
-
-export interface AdminReminderRuleFormInput {
-  kind: "deadline" | "follow_up" | "escalation";
-  fireAt: Date | string;
-  timezone?: string;
-  status?: "active" | "paused";
-  reportId?: string | null;
-  version?: number;
-}
-
-/**
- * Maps the Reminders tab form state to the `adminReminderRuleSchema` payload.
- */
-export function toAdminReminderRuleInput(
-  form: AdminReminderRuleFormInput,
-  existingId?: string,
-): {
-  id: string;
-  reportId: string | null;
-  kind: "deadline" | "follow_up" | "escalation";
-  fireAt: Date;
-  timezone: string;
-  status: "active" | "paused";
-  version: number;
-} {
-  const fireAt =
-    form.fireAt instanceof Date ? form.fireAt : new Date(form.fireAt);
-  return {
-    id: existingId ?? newId(),
-    reportId: form.reportId ?? null,
-    kind: form.kind,
-    fireAt,
-    timezone: form.timezone ?? "UTC",
-    status: form.status ?? "active",
-    version: form.version ?? 1,
   };
 }
 

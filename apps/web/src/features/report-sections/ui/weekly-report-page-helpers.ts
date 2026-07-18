@@ -58,7 +58,7 @@ export interface ReviewModel {
   readonly isHeadOrAdmin: boolean;
 }
 
-export const EMPTY_REVIEW_MODEL: ReviewModel = {
+const EMPTY_REVIEW_MODEL: ReviewModel = {
   context: undefined,
   groups: [],
   sections: [],
@@ -79,7 +79,7 @@ export function isReviewEnabled(
 }
 
 /** Distinct non-null author groups in the report (the Acknowledge group set). */
-export function distinctReviewGroups(
+function distinctReviewGroups(
   sections: WeeklyReportReadModel["leadSections"],
 ): { groupId: string }[] {
   const ids = sections
@@ -149,7 +149,7 @@ export interface AccordionModel {
  * empty-state. Without the fold an all-activity period (real activity content,
  * zero product content) would read "No submissions yet" and could not publish.
  */
-export function sectionHasActivityContent(
+function sectionHasActivityContent(
   // `activities` is optional here (unlike the strict read model) so a legacy /
   // pre-activity fixture section that omits it is treated as no-activity, not a
   // crash — the same tolerance ActivityStatusStrip applies.

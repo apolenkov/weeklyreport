@@ -79,7 +79,7 @@ function ChevronRight() {
   );
 }
 
-export const PERIOD_NAV_ARROW_BUTTON_CLASS =
+const PERIOD_NAV_ARROW_BUTTON_CLASS =
   "inline-flex h-[var(--toolbar-control-h)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35";
 
 export function PeriodNavigator({

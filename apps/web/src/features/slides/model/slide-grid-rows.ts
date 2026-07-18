@@ -21,7 +21,7 @@ export type GridTone =
   | "paused"
   | "postponed";
 
-export type GridRowKind = "item" | "risk" | "decision";
+type GridRowKind = "item" | "risk" | "decision";
 
 export interface GridRowEditableRef {
   readonly kind: GridRowKind;
@@ -62,7 +62,7 @@ export interface GridColumns {
 export type GridColumnKey = keyof GridColumns;
 
 /** Distinct author color tokens before the cycle repeats. */
-export const AUTHOR_COLOR_COUNT = 6;
+const AUTHOR_COLOR_COUNT = 6;
 
 const INITIALS_TOKENS = 2;
 

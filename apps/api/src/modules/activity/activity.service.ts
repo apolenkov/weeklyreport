@@ -1,7 +1,6 @@
 import {
   type ActivityLiveResponse,
   activityLiveResponseSchema,
-  type ActivityLiveRow,
   type UserSession,
 } from "@customreport/shared";
 
@@ -36,5 +35,3 @@ export class ActivityService {
     return activityLiveResponseSchema.parse(raw);
   }
 }
-
-export type { ActivityLiveRow };

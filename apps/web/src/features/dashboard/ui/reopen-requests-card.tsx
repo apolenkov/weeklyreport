@@ -22,7 +22,7 @@ import { useTRPC } from "../../../lib/trpc-context";
  *
  * Anchored by `id` so the AlertBar reopen indicator can scroll to it.
  */
-export const REOPEN_REQUESTS_CARD_ID = "reopen-requests-card";
+const REOPEN_REQUESTS_CARD_ID = "reopen-requests-card";
 
 function formatTimestamp(iso: string): string {
   return new Date(iso).toLocaleString("ru-RU", {

@@ -25,7 +25,7 @@ import type { Product, RiskEntry, StageStatus } from "../model/types";
  * (unify-risk-stage-status: coverage uses the canonical `riskCoversStage`
  * predicate — same as `computeUnbackedStages`). Exported for unit testing.
  */
-export function coveringRisksForStage(
+function coveringRisksForStage(
   risks: readonly RiskEntry[],
   productId: string,
   stageName: string,
@@ -80,7 +80,7 @@ export function applyRiskSeverityFloor(
  * covers-all (`[]`) or legacy stage-less risk does not, so it never inflates the
  * counter. Foreign risks (other productId) never set it. Exported for testing.
  */
-export function annotateOwnRiskCoverage(
+function annotateOwnRiskCoverage(
   products: readonly Product[],
   risks: readonly RiskEntry[],
 ): Product[] {
@@ -199,7 +199,7 @@ function useBridgeContext(componentName: string): BridgeContextValue {
   return ctx;
 }
 
-export interface LeadFormSyncBridgeProviderProps {
+interface LeadFormSyncBridgeProviderProps {
   readonly products: Product[];
   readonly risks: RiskEntry[];
   readonly onProductsChange: (next: Product[]) => void;
@@ -422,5 +422,3 @@ export const LeadFormSyncBridge = {
   Pipeline,
   Risks,
 };
-
-export type LeadFormSyncBridgeContextValue = BridgeContextValue;

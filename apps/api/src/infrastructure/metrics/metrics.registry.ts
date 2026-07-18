@@ -222,13 +222,3 @@ export const telegramMessageSentTotal = new Counter({
   labelNames: ["status"] as const,
   registers: [metricsRegistry],
 });
-
-/**
- * Tracks binding creation, deletion, and reactivation without user labels.
- */
-export const telegramBindingTotal = new Counter({
-  name: "customreport_telegram_binding_total",
-  help: "Telegram user binding lifecycle events",
-  labelNames: ["event"] as const,
-  registers: [metricsRegistry],
-});

@@ -25,7 +25,7 @@ const STRIPE_BY_STATUS: Record<StageStatus, string> = {
 
 // Health severity order comes from the shared canonical ladder
 // (blocked > at-risk > on-track > empty; empty = nothing set yet).
-export const worstStatusOf = worstCanonicalStatus;
+const worstStatusOf = worstCanonicalStatus;
 
 // pipeline-tooltip-and-indicator (reverses #90): the collapsed `+N more`
 // indicator colours by the FULL status scale of the hidden stages, by

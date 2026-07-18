@@ -20,7 +20,7 @@ export async function isMailpitUp(): Promise<boolean> {
   }
 }
 
-export interface MailpitAddress {
+interface MailpitAddress {
   Name: string;
   Address: string;
 }
@@ -36,13 +36,13 @@ export interface MailpitMessage {
   Created: string;
 }
 
-export interface MailpitMessagesResponse {
+interface MailpitMessagesResponse {
   total: number;
   messages: MailpitMessage[];
 }
 
 /** Lists all messages currently stored in Mailpit. */
-export async function listMessages(): Promise<MailpitMessage[]> {
+async function listMessages(): Promise<MailpitMessage[]> {
   const res = await fetch(`${MAILPIT_BASE}/api/v1/messages`);
   if (!res.ok) throw new Error(`Mailpit GET failed: ${res.status}`);
   const body = (await res.json()) as MailpitMessagesResponse;

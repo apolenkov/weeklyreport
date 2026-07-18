@@ -62,7 +62,7 @@ export const STATUS_BADGE = {
  * text stays available via the `title` hover tooltip). The chrome rows keep
  * their natural size (`shrink-0`); the body is the only flexible slot.
  */
-export const ITEM_CARD_REFERENCE_HEIGHT = 150;
+const ITEM_CARD_REFERENCE_HEIGHT = 150;
 
 /** Faded opacity applied to a card/row owned by another lead ("foreign"). */
 export const FOREIGN_ENTRY_OPACITY = 0.7;

@@ -295,7 +295,7 @@ function extractAuditTarget(raw: unknown): string | undefined {
   return targetKey ? (record[targetKey] as string) : undefined;
 }
 
-export const mutationAuditMiddleware = t.middleware(
+const mutationAuditMiddleware = t.middleware(
   async ({ ctx, next, path, type, getRawInput }) => {
     if (type !== "mutation") return next();
     if (path.startsWith("auth.")) return next();
@@ -519,4 +519,3 @@ export const leadershipProcedure = buildProtectedProcedure(
 );
 
 export const router = t.router;
-export const mergeRouters = t.mergeRouters;

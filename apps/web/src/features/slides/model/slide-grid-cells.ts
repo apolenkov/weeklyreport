@@ -26,7 +26,7 @@ export const emptyBuckets = (): CellBuckets => ({
   decisions: [],
 });
 
-export function hasText(text: string | null | undefined): text is string {
+function hasText(text: string | null | undefined): text is string {
   return typeof text === "string" && text.trim().length > 0;
 }
 
