@@ -5,11 +5,11 @@ import type { UserSession } from "@customreport/shared";
 import type { Request, RequestHandler, Response } from "express";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { groupScopeFilter } from "../../lib/group-scope.js";
 import {
   type HumanSessionDeps,
   resolveHumanSession,
-} from "../../infrastructure/trpc/trpc.context.js";
-import { groupScopeFilter } from "../../lib/group-scope.js";
+} from "../../lib/human-session.js";
 import { resolveSessionCookieName } from "../../lib/session-cookie.js";
 
 const JOB_ID_RE =
