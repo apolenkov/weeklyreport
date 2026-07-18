@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
-import { TabHeader, TabSearch } from "../../admin";
+import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
 import { ReopenRequestCard } from "./reopen-request-card";
 
 type FilterStatus = "pending" | "approved" | "rejected" | "all";

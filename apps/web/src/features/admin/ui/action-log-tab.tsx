@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { useTRPC } from "../../../lib/trpc-context";
 import { useCursorPagination } from "../../../lib/use-cursor-pagination";
+import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
 import {
   copyToClipboard,
   formatTimestamp,
@@ -11,7 +12,6 @@ import {
   statusLabel,
   truncate,
 } from "../model/action-log-format";
-import { TabHeader, TabSearch } from "./tab-header";
 
 interface ActionLogRow {
   id: string;

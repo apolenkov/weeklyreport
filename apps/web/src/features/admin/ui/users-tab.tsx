@@ -8,6 +8,7 @@ import { invalidateAdmin } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import { PlusIcon } from "../../../shared/ui/icons";
+import { TabFilter, TabHeader, TabSearch } from "../../../shared/ui/tab-header";
 import { toAdminUserInput } from "../model/admin";
 import type { MockGroup, MockUser } from "../model/admin-types";
 import { emptyForm, formFromUser, type UserFormData } from "../model/user-form";
@@ -18,7 +19,6 @@ import {
   userGroupFilterOptions,
   type UserStatusFilter,
 } from "../model/user-table-filters";
-import { TabFilter, TabHeader, TabSearch } from "./tab-header";
 import { UserEditDialog } from "./user-edit-dialog";
 import { UsersTable } from "./users-table";
 

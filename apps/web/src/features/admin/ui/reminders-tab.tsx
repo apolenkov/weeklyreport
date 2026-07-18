@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { pluralize } from "../../../lib/pluralize";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import { PlusIcon } from "../../../shared/ui/icons";
+import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
 import { toReminderPolicyInput } from "../model/admin";
 import type { MockReminder, MockReminderPolicy } from "../model/admin-types";
 import {
@@ -25,7 +26,6 @@ import {
 import { PolicyForm } from "./policy-form";
 import { PolicyRow } from "./policy-row";
 import { RemindersEmptyState } from "./reminders-empty-state";
-import { TabHeader, TabSearch } from "./tab-header";
 
 /**
  * The inline editor is mutually exclusive: a new reminder renders at the top
