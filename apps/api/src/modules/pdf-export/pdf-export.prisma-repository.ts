@@ -20,7 +20,10 @@ import type {
   PdfExportRepository,
 } from "./pdf-export.service.js";
 
-const pdfStatusToDb: Record<string, string> = {
+const pdfStatusToDb: Record<
+  PdfExportJob["status"],
+  "pending" | "completed" | "failed"
+> = {
   queued: "pending",
   completed: "completed",
   failed: "failed",
@@ -84,7 +87,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
       data: {
         id: job.jobId,
         reportId: job.reportId,
-        status: (pdfStatusToDb[job.status] ?? "pending") as "pending",
+        status: pdfStatusToDb[job.status],
         // Thread session userId for audit; fall back to 'system' for non-tRPC
         // callers (workers, scripts) so the column stays NOT NULL.
         requestedBy: requestedBy ?? "system",
@@ -113,7 +116,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
     const updated = await this.prisma.pdfExportJob.update({
       where: { id: job.jobId },
       data: {
-        status: (pdfStatusToDb[job.status] ?? "pending") as "pending",
+        status: pdfStatusToDb[job.status],
         filePath: job.artifactUrl,
         checksum: job.checksum,
         error: null,
@@ -164,11 +167,11 @@ export function toAssembledReport(
   const sections = report.sections.map((section) =>
     mapPrismaToReportSection(section),
   );
-  // fix-published-empty-stage-risk-floor: compute the PDF top-line totals from
-  // the floored `trafficLight` of the mapped sections, NOT
-  // from raw `projectStatuses`, so the per-product cards and the top-line totals
-  // agree inside the same PDF. `computePortfolioOverviewFromReadSections` re-
-  // applies the same own-risk floor the mapper baked into each card.
+  // Compute the PDF top-line totals from the floored `trafficLight` of the
+  // mapped sections, NOT from raw `projectStatuses`, so the per-product cards
+  // and the top-line totals agree inside the same PDF.
+  // `computePortfolioOverviewFromReadSections` re-applies the same own-risk
+  // floor the mapper baked into each card.
   const portfolio = computePortfolioOverviewFromReadSections(sections);
 
   return assembledReportSchema.parse({

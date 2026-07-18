@@ -87,9 +87,19 @@ describe("organizationUpdateSchema", () => {
 describe("organizationPublicSchema", () => {
   it("strips timestamps and id from the public projection", () => {
     const pub = organizationPublicSchema.parse({
+      id: "singleton",
+      shortName: "Demo",
+      fullName: "Example Software Department",
+      createdAt: new Date("2026-05-10T00:00:00Z"),
+      updatedAt: new Date("2026-05-10T00:00:00Z"),
+    });
+    expect(Object.keys(pub).sort()).toEqual(["fullName", "shortName"]);
+    expect(pub).toEqual({
       shortName: "Demo",
       fullName: "Example Software Department",
     });
-    expect(Object.keys(pub).sort()).toEqual(["fullName", "shortName"]);
+    expect((pub as { id?: unknown }).id).toBeUndefined();
+    expect((pub as { createdAt?: unknown }).createdAt).toBeUndefined();
+    expect((pub as { updatedAt?: unknown }).updatedAt).toBeUndefined();
   });
 });

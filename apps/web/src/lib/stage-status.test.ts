@@ -47,10 +47,10 @@ describe("deriveEffectiveStageStatus", () => {
     ).toBe("blocked");
   });
 
-  it("section isolation: risks for another stage do not bleed into this chip", () => {
-    // Regression for #10: risks filtered to stageIds:["Testing"] must not
-    // affect the Development chip. The caller (mapLeadProducts) does the
-    // filtering; we verify that an empty risks/items array leaves the chip alone.
+  it("empty risk and item arrays leave the manual status unchanged", () => {
+    // Cross-stage filtering (e.g. stageIds:["Testing"] not bleeding into the
+    // Development chip) is the caller's job (mapLeadProducts); this only pins
+    // that an empty risks/items array is a no-op on the manual status.
     expect(deriveEffectiveStageStatus("empty", [], [])).toBe("empty");
     expect(deriveEffectiveStageStatus("on-track", [], [])).toBe("on-track");
   });

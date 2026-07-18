@@ -21,6 +21,7 @@ import {
   invalidateDashboard,
   invalidateLeadForm,
   invalidateLeadHistory,
+  invalidateReview,
 } from "./cache-keys";
 import type { TRPCProxy } from "./trpc";
 
@@ -124,7 +125,28 @@ describe("cache-keys helpers", () => {
         "admin.getOrganization",
         "org.getPublic",
         "auth.me",
+        "weeklyReport.get",
       ]),
     );
+  });
+
+  it("invalidateReview covers weeklyReport.get + leadForm.byPeriod + reports.getActive", () => {
+    const qc = new QueryClient();
+    const spy = vi
+      .spyOn(qc, "invalidateQueries")
+      .mockReturnValue(Promise.resolve());
+    invalidateReview(qc, makeStubTrpc());
+
+    const tags = spy.mock.calls.map(
+      (c) => (c.at(0) as { tag?: string } | undefined)?.tag,
+    );
+    expect(tags).toEqual(
+      expect.arrayContaining([
+        "weeklyReport.get",
+        "leadForm.byPeriod",
+        "reports.getActive",
+      ]),
+    );
+    expect(spy).toHaveBeenCalledTimes(3);
   });
 });

@@ -4,7 +4,7 @@
 // promise rejections, batches them, and POSTs to /api/client-logs so all
 // debug data lives in apps/api/.logs/app.log alongside server entries.
 //
-// Dev-only by default — installCLientLogger() is a no-op when
+// Dev-only by default — installClientLogger() is a no-op when
 // NEXT_PUBLIC_CLIENT_LOG_FORWARDING is not 'true'. Enable via
 // .env.development by default; opt-in in prod.
 
@@ -70,18 +70,8 @@ async function flush() {
   }
 }
 
-export function installClientLogger(): void {
-  const loggerConsole = console as Console & {
-    [INSTALLED_MARK]?: true;
-  };
-  if (loggerConsole[INSTALLED_MARK]) return;
-  if (typeof window === "undefined") return;
-  if (!webEnv.clientLogForwarding()) return;
-  Object.defineProperty(loggerConsole, INSTALLED_MARK, {
-    configurable: true,
-    value: true,
-  });
-
+/** Wrap console.error/warn so both entries are queued for forwarding and still print. */
+function patchConsole(): void {
   const origError = console.error.bind(console);
   const origWarn = console.warn.bind(console);
 
@@ -107,7 +97,10 @@ export function installClientLogger(): void {
     });
     origWarn(...args);
   };
+}
 
+/** Wire window error/rejection capture and the tab-hide flush trigger. */
+function registerWindowListeners(): void {
   window.addEventListener("error", (event) => {
     enqueue({
       level: "error",
@@ -135,4 +128,20 @@ export function installClientLogger(): void {
   window.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") void flush();
   });
+}
+
+export function installClientLogger(): void {
+  const loggerConsole = console as Console & {
+    [INSTALLED_MARK]?: true;
+  };
+  if (loggerConsole[INSTALLED_MARK]) return;
+  if (typeof window === "undefined") return;
+  if (!webEnv.clientLogForwarding()) return;
+  Object.defineProperty(loggerConsole, INSTALLED_MARK, {
+    configurable: true,
+    value: true,
+  });
+
+  patchConsole();
+  registerWindowListeners();
 }

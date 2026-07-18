@@ -97,11 +97,11 @@ export async function listPeriodsByState(
 
 /**
  * Find the most recent Report whose [periodStart, periodEnd]
- * range overlaps the supplied half-open range. Used by the service's
+ * range overlaps the supplied closed (inclusive) range. Used by the service's
  * pre-create overlap gate to surface the blocking row's date span.
  * Returns null when the range is free.
  *
- * Half-open intersect: a.start <= b.end AND a.end >= b.start.
+ * Closed (inclusive) intersect: a.start <= b.end AND a.end >= b.start.
  */
 export async function findOverlappingPeriod(
   prisma: PrismaService,

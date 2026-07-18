@@ -48,3 +48,40 @@ describe("OrganizationPrismaRepository.getOrganization", () => {
     );
   });
 });
+
+describe("OrganizationPrismaRepository.updateOrganization", () => {
+  it("upserts the singleton with the input shortName and fullName", async () => {
+    const input = {
+      shortName: "NEW",
+      fullName: "New Organization Name",
+    };
+    const updatedRow = {
+      ...existingRow,
+      shortName: input.shortName,
+      fullName: input.fullName,
+    };
+    const upsert = vi.fn().mockResolvedValue(updatedRow);
+    const prisma = {
+      organization: { upsert },
+    } as unknown as PrismaService;
+
+    const repo = new OrganizationPrismaRepository(prisma);
+    const org = await repo.updateOrganization(input);
+
+    expect(org.shortName).toBe(input.shortName);
+    expect(org.fullName).toBe(input.fullName);
+    expect(upsert).toHaveBeenCalledOnce();
+    expect(upsert).toHaveBeenCalledWith({
+      where: { id: "singleton" },
+      create: {
+        id: "singleton",
+        shortName: input.shortName,
+        fullName: input.fullName,
+      },
+      update: {
+        shortName: input.shortName,
+        fullName: input.fullName,
+      },
+    });
+  });
+});

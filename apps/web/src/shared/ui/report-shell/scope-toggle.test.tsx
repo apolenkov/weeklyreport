@@ -167,10 +167,10 @@ describe("ScopeToggle", () => {
     expect(container).toMatchSnapshot();
   });
 
-  // toolbar-polish part 4: selecting a header toggle must change only the
-  // grouping (onChange), never open an item/risk/decision dialog. The reported
-  // "toggle opens a dialog" bug was NOT reproducible (the head report wires no
-  // such dialog into the toggle); this is the standing guard.
+  // Selecting a header toggle must change only the grouping (onChange), never
+  // open an item/risk/decision dialog. The reported "toggle opens a dialog"
+  // bug was NOT reproducible (the head report wires no such dialog into the
+  // toggle); this is the standing guard.
   it("selecting a scope opens no item/risk/decision dialog", () => {
     const onChange = vi.fn();
     const { baseElement } = render(

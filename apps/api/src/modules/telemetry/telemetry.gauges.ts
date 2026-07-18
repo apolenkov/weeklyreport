@@ -56,14 +56,17 @@ export class TelemetryGaugesPrismaRepository implements TelemetryGaugesPort {
     if (reports.length === 0) return null;
 
     const reportIds = reports.map((r) => r.id);
+    const baseWhere = {
+      reportId: { in: reportIds },
+      status: "submitted" as const,
+    };
     const [total, onTime] = await Promise.all([
       this.prisma.reportSection.count({
-        where: { reportId: { in: reportIds }, status: "submitted" },
+        where: { ...baseWhere },
       }),
       this.prisma.reportSection.count({
         where: {
-          reportId: { in: reportIds },
-          status: "submitted",
+          ...baseWhere,
           late: false,
         },
       }),

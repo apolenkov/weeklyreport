@@ -44,6 +44,6 @@ import { TelemetryService } from "./telemetry.service.js";
       inject: [TelemetryPrismaRepository, TelemetryCache],
     },
   ],
-  exports: [TelemetryGauges, TelemetryGaugesPrismaRepository, TelemetryService],
+  exports: [TelemetryGauges, TelemetryService],
 })
 export class TelemetryModule {}

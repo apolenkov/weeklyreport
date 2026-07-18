@@ -1,5 +1,5 @@
 /**
- * refactor-auth-exemplary-layering: the single source of truth for the session
+ * The single source of truth for the session
  * cookie name. The set path (`auth.controller.createSessionCookie`), the clear
  * path (logout), the request-auth read (`trpc.context`), and the PDF worker's
  * session injection all resolve the name through here instead of repeating the

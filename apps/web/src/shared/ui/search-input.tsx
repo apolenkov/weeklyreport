@@ -1,13 +1,10 @@
 "use client";
 
-import type { SearchHit } from "@customreport/shared";
-import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useId } from "react";
 
-import { isViewer as isViewerRole } from "../../lib/role-predicates";
-import { useSession } from "../../lib/session-provider";
-import { useTRPC } from "../../lib/trpc-context";
+import { useSearchController } from "./search-input-controller";
+import type { SearchScope } from "./search-input-utils";
+import { SearchResultsDropdown } from "./search-results-dropdown";
 
 /**
  * Full-text search input.
@@ -33,88 +30,10 @@ import { useTRPC } from "../../lib/trpc-context";
  * <mark> element. We split on the literal markers (not regex) because the
  * markers are server-controlled and can't be confused with user text.
  */
-type Scope = "mine" | "all" | "published";
-
 interface SearchInputProps {
-  readonly scope: Scope;
+  readonly scope: SearchScope;
   readonly placeholder?: string;
   readonly className?: string;
-}
-
-const DEBOUNCE_MS = 300;
-const MIN_LEN = 2;
-const MAX_LEN = 200;
-
-function useDebouncedValue<T>(value: T, delayMs: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delayMs);
-    return () => clearTimeout(timer);
-  }, [value, delayMs]);
-  return debounced;
-}
-
-/**
- * Resolve the click-through URL for a search hit.
- *
- * Items/risks/decisions deep-link into the addressed lead form
- * `/lead/report/<reportId>`. Project hits deep-link to /admin?tab=products
- * with a filter query param.
- *
- * No `#section-<id>` fragment is emitted: `/lead/report/[reportId]` is a
- * type-organized form with no `id="section-<reportSectionId>"` target, so
- * the anchor never resolved and only produced a dead scroll. Strip it
- * rather than render a per-section-UUID target the form is not shaped for.
- */
-function targetUrlFor(hit: SearchHit, isViewer: boolean): string {
-  if (hit.type === "project") {
-    // A viewer has no product surface (Decision 3); project hits are excluded
-    // server-side and filtered client-side, so this is a defensive dead-end.
-    return isViewer ? "#" : `/admin?tab=products&filter=${hit.id}`;
-  }
-  if (hit.reportId) {
-    // viewer-report-surface-parity (Decision 4): a viewer's item/risk/decision
-    // hits route to the read-only published report, never the lead form.
-    return isViewer
-      ? `/reports/${hit.reportId}`
-      : `/lead/report/${hit.reportId}`;
-  }
-  return "#";
-}
-
-const TYPE_BADGE: Record<SearchHit["type"], { label: string; aria: string }> = {
-  item: { label: "Task", aria: "Task match" },
-  risk: { label: "Risk", aria: "Risk match" },
-  decision: { label: "Decision", aria: "Decision match" },
-  project: { label: "Product", aria: "Product match" },
-};
-
-/**
- * Render a snippet with `<<` / `>>` markers as <mark> elements. The
- * function returns a stable key for each chunk so React can reconcile
- * highlights across re-renders.
- */
-/** Length of the `<<` / `>>` snippet markers, stripped when unwrapping a match. */
-const SNIPPET_MARKER_LENGTH = 2;
-
-function renderSnippet(snippet: string): React.ReactNode {
-  if (!snippet) return null;
-  // eslint-disable-next-line sonarjs/super-linear-regex -- server-generated literal markers, negated class + lazy quantifier, bounded input
-  const parts = snippet.split(/(<<[^>]*?>>)/g);
-  return parts.map((part, idx) => {
-    if (part.startsWith("<<") && part.endsWith(">>")) {
-      const inner = part.slice(SNIPPET_MARKER_LENGTH, -SNIPPET_MARKER_LENGTH);
-      return (
-        <mark
-          key={`m-${idx.toString()}`}
-          className="rounded-[2px] bg-[var(--color-success)] px-[2px] text-[var(--color-foreground)]"
-        >
-          {inner}
-        </mark>
-      );
-    }
-    return <span key={`t-${idx.toString()}`}>{part}</span>;
-  });
 }
 
 export function SearchInput({
@@ -122,91 +41,28 @@ export function SearchInput({
   placeholder,
   className,
 }: SearchInputProps) {
-  const router = useRouter();
-  const trpc = useTRPC();
-  const { user } = useSession();
-  const isViewer = isViewerRole(user?.role ?? null);
   const reactId = useId().replaceAll(":", "");
   const inputId = `${reactId}-search-input`;
   const resultsId = `${reactId}-search-results`;
 
-  const [q, setQ] = useState("");
-  const [open, setOpen] = useState(false);
-  // Selection is stored PAIRED with the hit list it was made in; a new result
-  // set naturally resets it to 0 without a reset effect.
-  const [active, setActive] = useState<{
-    readonly hits: readonly SearchHit[];
-    readonly index: number;
-  } | null>(null);
-  const debouncedQ = useDebouncedValue(q.trim(), DEBOUNCE_MS);
-
-  const enabled = debouncedQ.length >= MIN_LEN && debouncedQ.length <= MAX_LEN;
-
-  const { data, isError, isFetching } = useQuery({
-    ...trpc.search.query.queryOptions({ q: debouncedQ, scope, limit: 20 }),
+  const {
+    q,
+    setQ,
+    open,
+    setOpen,
+    containerRef,
     enabled,
-    staleTime: 30_000,
-  });
-
-  const hits = useMemo<readonly SearchHit[]>(() => {
-    const all = data ?? [];
-    // Defensive: the server already excludes project hits for a viewer; drop
-    // any that slip through so a viewer never sees a product dead-end row.
-    return isViewer ? all.filter((hit) => hit.type !== "project") : all;
-  }, [data, isViewer]);
-
-  const activeIndex = active?.hits === hits ? active.index : 0;
-  const moveActive = (delta: number) => {
-    setActive((prev) => {
-      const current = prev?.hits === hits ? prev.index : 0;
-      const upper = Math.max(hits.length - 1, 0);
-      return {
-        hits,
-        index: Math.min(Math.max(current + delta, 0), upper),
-      };
-    });
-  };
-
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  // Close on outside click.
-  useEffect(() => {
-    if (!open) return;
-    function handle(e: MouseEvent) {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, [open]);
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      setQ("");
-      setOpen(false);
-      return;
-    }
-    if (!open || hits.length === 0) return;
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      moveActive(1);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      moveActive(-1);
-    } else if (e.key === "Enter") {
-      const hit = hits.at(activeIndex);
-      if (hit) {
-        e.preventDefault();
-        setOpen(false);
-        router.push(targetUrlFor(hit, isViewer));
-      }
-    }
-  }
+    hits,
+    isError,
+    isFetching,
+    isViewer,
+    activeIndex,
+    setActiveIndex,
+    handleKeyDown,
+    navigateTo,
+  } = useSearchController(scope);
 
   const showResults = open && enabled;
-  const showError = showResults && isError;
-  const showEmpty = showResults && !isError && !isFetching && hits.length === 0;
   const activeOptionId =
     showResults && hits[activeIndex]
       ? `${resultsId}-option-${activeIndex}`
@@ -238,82 +94,16 @@ export function SearchInput({
       />
 
       {showResults && (
-        <div
-          id={resultsId}
-          role="listbox"
-          className="absolute z-50 mt-1 max-h-[420px] w-full overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-white shadow-lg"
-        >
-          {isFetching && hits.length === 0 && (
-            <div
-              role="status"
-              aria-live="polite"
-              className="px-3 py-2 text-sm text-[var(--color-muted-foreground)]"
-            >
-              Searching…
-            </div>
-          )}
-
-          {showError && (
-            <div
-              role="status"
-              aria-live="polite"
-              className="px-3 py-2 text-sm text-[var(--color-muted-foreground)]"
-            >
-              Search failed
-            </div>
-          )}
-
-          {showEmpty && (
-            <div
-              role="status"
-              aria-live="polite"
-              className="px-3 py-2 text-sm text-[var(--color-muted-foreground)]"
-            >
-              No results found
-            </div>
-          )}
-
-          {hits.map((hit, idx) => {
-            const isActive = idx === activeIndex;
-            const url = targetUrlFor(hit, isViewer);
-            const date = new Date(hit.createdAt).toLocaleDateString();
-            const badge = TYPE_BADGE[hit.type];
-            return (
-              <button
-                key={`${hit.type}-${hit.id}`}
-                id={`${resultsId}-option-${idx}`}
-                type="button"
-                role="option"
-                aria-selected={isActive}
-                onMouseEnter={() => setActive({ hits, index: idx })}
-                onClick={() => {
-                  setOpen(false);
-                  router.push(url);
-                }}
-                className={`flex w-full flex-col gap-1 border-b border-[var(--color-border)] px-3 py-2 text-left transition-colors last:border-b-0 ${
-                  isActive
-                    ? "bg-[var(--color-success)]"
-                    : "bg-white hover:bg-[var(--color-success)]"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-                    {badge.label}
-                  </span>
-                  <span className="text-[11px] text-[var(--color-muted-foreground)]">
-                    {date}
-                  </span>
-                </div>
-                <div className="truncate text-sm font-semibold text-[var(--color-foreground)]">
-                  {hit.title}
-                </div>
-                <div className="line-clamp-2 text-xs text-[var(--color-muted-foreground)]">
-                  {renderSnippet(hit.snippet)}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        <SearchResultsDropdown
+          resultsId={resultsId}
+          hits={hits}
+          activeIndex={activeIndex}
+          isError={isError}
+          isFetching={isFetching}
+          isViewer={isViewer}
+          onHoverHit={setActiveIndex}
+          onSelectHit={navigateTo}
+        />
       )}
     </div>
   );

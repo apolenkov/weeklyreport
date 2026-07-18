@@ -1,9 +1,10 @@
 /**
  * Static skeleton placeholder for the top nav-bar.
  *
- * Renders at the exact same height + horizontal layout as <NavBar> so
- * the swap from skeleton → real nav is a pure opacity/content swap
- * with zero layout shift (CLS budget = 0).
+ * Renders at approximately the same height + horizontal layout as <NavBar>
+ * so the swap from skeleton → real nav stays close to a pure opacity/content
+ * swap, minimizing layout shift (segment widths are fixed placeholders, not
+ * measured against the real nav's actual rendered content).
  *
  * Mounted as the Suspense fallback in `app/(app)/layout.tsx` while
  * the session query resolves. A `null` fallback flashes on cold reload —

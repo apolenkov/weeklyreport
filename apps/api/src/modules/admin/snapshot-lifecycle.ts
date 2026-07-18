@@ -5,7 +5,7 @@ import type {
 } from "@customreport/shared";
 
 /**
- * fix-snapshot-lifecycle-restore: the complete governed lifecycle field set
+ * The complete governed lifecycle field set
  * an admin snapshot restore writes back to a `Report`. Mirrors the fields the
  * `period-dual-state` invariant protects so a restored row can never be left
  * in a state the invariant forbids.

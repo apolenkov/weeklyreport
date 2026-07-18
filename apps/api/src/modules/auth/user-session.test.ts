@@ -18,14 +18,10 @@ const failIfProvisioned: ProvisionLeadWorkspace = vi.fn(() => {
 /**
  * Admin SAML login regression test.
  *
- * Pre-fix: `buildUserSession` cast `profile.role as 'lead' | 'head' | 'viewer'`
- * before passing it to `prisma.user.create`. Prisma's `Role` enum was
- * `{lead, head, viewer}` (no admin), so the cast lied at runtime and the DB
- * threw "Invalid enum value" on first admin SAML login.
- *
- * Post-fix: Prisma `Role` enum now includes `admin`, the cast is gone,
- * `SamlProfile.role` is typed as `DbRole`, and the session round-trips the
- * 'admin' role through to UserSession.
+ * `SamlProfile.role` is typed as `DbRole` and flows uncast into
+ * `prisma.user.create`; the Prisma `Role` enum includes `admin`, so the
+ * session must round-trip the 'admin' role through to UserSession without a
+ * runtime enum error.
  */
 describe("buildUserSession — admin SAML login", () => {
   function fakePrisma(opts: {
@@ -187,8 +183,8 @@ describe("buildUserSession — admin SAML login", () => {
     });
     // samlId matches the stored row: this test is about the create-only
     // invariant, not identity matching (that has its own describe block
-    // below) — a mismatched samlId here would now be a refusal, not a
-    // silent accept, per decide-saml-identity-and-session-pick.
+    // below) — a mismatched samlId here would be a refusal, not a
+    // silent accept.
     const profile: SamlProfile = {
       samlId: "old-saml-id",
       email: "admin@customreport.local",
@@ -363,12 +359,10 @@ describe("buildUserSession — first-login create race (P2002 reread)", () => {
   });
 });
 
-// decide-saml-identity-and-session-pick (ratified 2026-07-17): a reused email
-// pointing at a different IdP identity must not silently inherit the old
-// account's role/group. Pre-fix, the email-first lookup accepted ANY email
-// match regardless of samlId — that acceptance is the exact behavior this
-// change closes; the "reused email" case below pins the new, ratified
-// refusal in its place.
+// A reused email pointing at a different IdP identity must not silently
+// inherit the old account's role/group: an email match with a mismatched
+// samlId is refused, not accepted. The "reused email" case below pins that
+// refusal.
 describe("buildUserSession — samlId identity cross-check", () => {
   const EXISTING_USER = {
     id: "existing-user-id",

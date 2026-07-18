@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { resolveLifecycle } from "./snapshot-lifecycle.js";
 
-// fix-snapshot-lifecycle-restore: `resolveLifecycle` is the pure core of the
-// admin snapshot restore. These tests pin the two paths that matter — verbatim
+// `resolveLifecycle` is the pure core of the admin snapshot restore.
+// These tests pin the two paths that matter — verbatim
 // reinstatement when the snapshot is full-fidelity (the reopened round-trip
 // MUST NOT be flattened), and the legacy-tuple backfill when fields are absent.
 

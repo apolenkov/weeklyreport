@@ -84,7 +84,7 @@ export async function getSnapshot(
         periodEnd: r.periodEnd,
         deadline: r.deadline,
         status: r.status,
-        // fix-snapshot-lifecycle-restore: capture the complete governed
+        // Capture the complete governed
         // lifecycle set so restore can reinstate it verbatim. `findMany()`
         // above already returns every column — no query change.
         periodState: r.periodState,
