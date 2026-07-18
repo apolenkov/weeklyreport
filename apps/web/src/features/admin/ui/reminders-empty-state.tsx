@@ -1,6 +1,6 @@
 "use client";
 
-import { PlusIcon } from "./policy-form";
+import { PlusIcon } from "../../../shared/ui/icons";
 
 interface RemindersEmptyStateProps {
   /** `true` when there are no policies at all (vs. an empty search result). */

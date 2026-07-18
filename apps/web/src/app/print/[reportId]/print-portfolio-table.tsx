@@ -1,8 +1,8 @@
 import type { WeeklyPortfolioProduct } from "../../../features/report-sections/model/weekly-report-types";
+import { statusLabel } from "../../../lib/status-presentation";
 import {
   BORDER_LIGHT,
   printStatusColor,
-  printStatusLabel,
   TEXT_SECONDARY,
 } from "./print-report-theme";
 
@@ -47,7 +47,7 @@ function PrintPortfolioRow({
             backgroundColor: printStatusColor(product.status),
           }}
         >
-          {printStatusLabel(product.status)}
+          {statusLabel(product.status, "print")}
         </span>
       </td>
       <td style={{ padding: "5px 8px", color: TEXT_SECONDARY }}>
