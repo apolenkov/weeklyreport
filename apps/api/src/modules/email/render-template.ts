@@ -19,8 +19,6 @@ import {
  * nodemailer so the email is multipart (HTML + plaintext) — corporate
  * spam filters score multipart higher than HTML-only.
  */
-export type EmailKind = "deadline" | "escalation";
-
 export type EmailRenderInput =
   | { kind: "deadline"; props: DeadlineEmailProps }
   | { kind: "escalation"; props: EscalationEmailProps };

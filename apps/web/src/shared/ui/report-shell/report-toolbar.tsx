@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
  * Shared "unified pill bar" frame tokens (border / hover surface / radius /
  * padding). The single source of the period toolbar framing.
  */
-export const REPORT_TOOLBAR_FRAME_CLASS =
+const REPORT_TOOLBAR_FRAME_CLASS =
   "rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5";
 
 /**

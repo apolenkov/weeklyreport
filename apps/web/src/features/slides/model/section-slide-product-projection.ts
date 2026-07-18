@@ -20,7 +20,7 @@ import {
 
 type SectionProject = ReportSectionReadModel["projects"][number];
 
-export interface SectionRecordSummary {
+interface SectionRecordSummary {
   readonly currentItems: string[];
   readonly nextItems: string[];
   readonly risks: string[];

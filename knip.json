@@ -17,6 +17,7 @@
         "e2e/sweep/playwright.config.ts",
         "e2e/sweep/render-checklist.mjs",
         "e2e/**/*.spec.ts",
+        "e2e/integration/global-setup.ts",
         "e2e/integration/global-teardown.ts"
       ],
       "project": ["prisma/**/*.ts", "scripts/**/*.mjs", "e2e/**/*.{ts,mjs}"]

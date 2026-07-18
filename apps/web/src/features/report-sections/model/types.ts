@@ -18,7 +18,7 @@ export type { ItemStatus } from "./item-status";
 // unassigned-stage-reporting-exclusion: "unassigned" is gone — a stage is the
 // lead's own ("mine") or another lead's ("locked", read-only). A stage with no
 // assignment is excluded from the grid entirely (see buildStageGrid).
-export type StageOwnership = "mine" | "locked";
+type StageOwnership = "mine" | "locked";
 
 export interface StageAssignment {
   stageName: string;
@@ -152,17 +152,4 @@ export interface ReportPeriod {
   itemCount?: number;
   riskCount?: number;
   productCount?: number;
-}
-
-export interface HistoryEntry {
-  id: string;
-  periodId: string;
-  weekLabel: string;
-  dateRange: string;
-  status: "submitted" | "draft";
-  submittedAt?: string;
-  trafficLights: { green: number; yellow: number; red: number };
-  itemCount: number;
-  riskCount: number;
-  decisionCount: number;
 }

@@ -43,7 +43,7 @@ export interface CursorPaginationInput {
   limit?: number;
 }
 
-export interface CursorPage<T> {
+interface CursorPage<T> {
   items: T[];
   nextCursor: string | null;
 }

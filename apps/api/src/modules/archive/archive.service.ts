@@ -66,9 +66,7 @@ export interface ArchiveRepository {
  * scripts) the filter is empty — the repository's hardcoded floor still
  * keeps everyone on published rows, so widening here is safe.
  */
-export function buildArchiveReadFilter(
-  role: Role | undefined,
-): ArchiveReadFilter {
+function buildArchiveReadFilter(role: Role | undefined): ArchiveReadFilter {
   if (role === "viewer") {
     return { status: "published" };
   }

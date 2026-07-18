@@ -13,7 +13,7 @@ import type {
 
 export type SlideDensity = "document" | "presentation";
 
-export const PRESENTATION_RECORDS_PER_PAGE = 12;
+const PRESENTATION_RECORDS_PER_PAGE = 12;
 
 const COLUMN_ORDER: readonly GridColumnKey[] = [
   "current",

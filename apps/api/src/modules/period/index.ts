@@ -11,8 +11,6 @@ export {
 export {
   emitPublishSideEffects,
   type IngestionPublishHook,
-  type PublishSideEffectsDeps,
-  type PublishSideEffectsParams,
 } from "./application/publish-side-effects.js";
 export {
   buildTransition,

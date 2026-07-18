@@ -25,8 +25,8 @@ import type {
 
 import type { LeadStatus } from "../../report-sections";
 import { escalationToBlockedItem } from "./dashboard-escalations";
-import { buildKpiData, formatRelativeDeadline } from "./dashboard-kpi";
-import { buildLeadInfos, initialsFromName } from "./dashboard-leads";
+import { buildKpiData } from "./dashboard-kpi";
+import { buildLeadInfos } from "./dashboard-leads";
 
 export { formatRelativeDeadline } from "./dashboard-kpi";
 
@@ -208,9 +208,3 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
     ...review,
   };
 }
-
-// Internal exports for tests.
-export const __testing = {
-  initialsFromName,
-  formatRelativeDeadline,
-};

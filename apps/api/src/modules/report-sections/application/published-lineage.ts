@@ -113,7 +113,7 @@ export function unionPublishedLineage(
   };
 }
 
-export function intersectLineageCandidates(
+function intersectLineageCandidates(
   candidates: LineageCandidates,
   published: {
     readonly itemStableIds: ReadonlySet<string>;

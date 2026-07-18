@@ -18,11 +18,7 @@ import {
 } from "../model/sdlc-pipeline-health";
 import { CollapsedStagesIndicator } from "./sdlc-collapsed-indicator";
 
-export type { CompletenessState } from "../model/sdlc-pipeline-health";
-export {
-  computeCompleteness,
-  getProductCardStyle,
-} from "../model/sdlc-pipeline-health";
+export { getProductCardStyle } from "../model/sdlc-pipeline-health";
 
 export interface CrossAuthorEntry {
   projectId: string;

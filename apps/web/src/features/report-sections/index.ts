@@ -53,8 +53,6 @@ export { ItemEditDialog } from "./ui/item-edit-dialog";
 export type { ParentActivityOption, RecordParent } from "./ui/product-picker";
 export { ParentPicker } from "./ui/product-picker";
 export { StageChip } from "./ui/stage-chip";
-export { StageMultiSelect } from "./ui/stage-multi-select";
 export { StageStep } from "./ui/stage-step";
 export { useSlideInlineEditor } from "./ui/use-slide-inline-editor";
 export { WeeklyReportPage } from "./ui/weekly-report-page";
-export { WeeklyReportSkeleton } from "./ui/weekly-report-skeleton";

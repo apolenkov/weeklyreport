@@ -57,15 +57,3 @@ export function splitStageNames(
   }
   return out;
 }
-
-export function joinStageNames(stages: readonly string[]): string | null {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const raw of stages) {
-    const value = raw.trim();
-    if (!value || seen.has(value)) continue;
-    seen.add(value);
-    out.push(value);
-  }
-  return out.length > 0 ? out.join(", ") : null;
-}

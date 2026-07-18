@@ -2,7 +2,7 @@
 
 import type { Product } from "../model/types";
 
-export type RecordParentKind = "product" | "activity";
+type RecordParentKind = "product" | "activity";
 
 /** The chosen parent of a record — a product OR an activity (XOR). */
 export interface RecordParent {

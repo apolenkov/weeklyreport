@@ -66,7 +66,7 @@ export interface CoverageArgs {
  * stage only — an activity item's severity stays isolated, and a stage-less row
  * (a fresh create before a stage is picked) is never pre-locked by the wildcard.
  */
-export function isItemCovered(args: CoverageArgs): boolean {
+function isItemCovered(args: CoverageArgs): boolean {
   if (args.isActivityParent || args.productId === "") return false;
   if (args.stageIds.length === 0) return false;
   return (
@@ -111,7 +111,7 @@ export function resolveSaveProduct(
 }
 
 // Offer priority ranks 1..10, plus any legacy rank above 10 already on the item.
-export const MAX_ITEM_RANK = 10;
+const MAX_ITEM_RANK = 10;
 
 export function buildRankOptions(existingRank: number | null): number[] {
   const base = Array.from({ length: MAX_ITEM_RANK }, (_, i) => i + 1);

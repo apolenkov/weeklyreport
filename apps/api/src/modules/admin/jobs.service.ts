@@ -20,7 +20,7 @@ const MAX_FAILED_JOBS_LIMIT = 200;
  * `userId/role/ip` envelope are emitted automatically.
  */
 
-export interface FailedJob {
+interface FailedJob {
   id: string;
   name: string;
   failedReason: string;

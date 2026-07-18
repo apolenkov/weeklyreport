@@ -24,7 +24,7 @@ import type {
  * Coupling state for a single at-risk/blocked product.
  * Pure derived data — no side effects.
  */
-export interface ProductCoupling {
+interface ProductCoupling {
   productId: string;
   productName: string;
   /** overallStatus narrowed to at-risk/blocked */

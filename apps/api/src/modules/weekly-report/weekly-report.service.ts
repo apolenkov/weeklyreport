@@ -16,7 +16,7 @@ import {
  * GroupProduct join. The router emits `scopeAccessed` when this is
  * non-empty and the caller is not admin.
  */
-export interface CrossGroupSignal {
+interface CrossGroupSignal {
   readonly productIds: readonly string[];
   readonly groupIds: readonly string[];
 }

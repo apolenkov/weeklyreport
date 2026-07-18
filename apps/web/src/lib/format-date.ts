@@ -23,13 +23,6 @@ const ISO_PIVOT_WEEKDAY_OFFSET = 3;
 const ISO_PIVOT_JANUARY_DAY = 4;
 const ACTIVITY_JUST_NOW_THRESHOLD_SECONDS = 30;
 
-/** Format a date for display (ru-RU locale, medium style). */
-export function formatDate(date: DateInput): string {
-  if (!date) return "\u2014";
-  const d = date instanceof Date ? date : new Date(date);
-  return d.toLocaleDateString("ru-RU", { dateStyle: "medium" });
-}
-
 /** Format a date with time (ru-RU locale, short date + short time). */
 export function formatDateTime(date: DateInput): string {
   if (!date) return "\u2014";
@@ -41,27 +34,11 @@ export function formatDateTime(date: DateInput): string {
 }
 
 /**
- * Format a report period date (ru-RU locale, UTC timezone).
- * Period dates are stored as midnight UTC -- without timeZone: 'UTC',
- * users in UTC+N timezones see the previous day.
- */
-export function formatPeriodDate(date: DateInput): string {
-  if (!date) return "\u2014";
-  const d = date instanceof Date ? date : new Date(date);
-  return d.toLocaleDateString("ru-RU", {
-    timeZone: "UTC",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-/**
  * Short English month labels, indexed by `getUTCMonth()`. The single home for
  * short-date rendering (web-shared-idioms); a month-label correction here
  * propagates to every consuming surface.
  */
-export const MONTHS_SHORT = [
+const MONTHS_SHORT = [
   "Jan",
   "Feb",
   "Mar",
@@ -93,7 +70,7 @@ export function monthShortLabel(date: Date): string {
  * Short "Mon D" timestamp in UTC (e.g. "Apr 18"). UTC accessors keep the label
  * timezone-stable, matching the period-range formatters above.
  */
-export function formatTimestampShort(date: Date): string {
+function formatTimestampShort(date: Date): string {
   return `${monthShortLabel(date)} ${date.getUTCDate()}`;
 }
 

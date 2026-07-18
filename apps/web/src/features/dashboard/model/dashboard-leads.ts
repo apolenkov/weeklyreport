@@ -70,7 +70,7 @@ interface LeadQueueState {
   readonly trafficLights: readonly TrafficLight[];
 }
 
-export function initialsFromName(name: string): string {
+function initialsFromName(name: string): string {
   return sharedInitialsFromName(name) || "??";
 }
 

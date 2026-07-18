@@ -46,7 +46,6 @@ import type {
   ReportPeriod,
   RiskEntry,
   StageAssignment,
-  StageOwnership,
 } from "./types";
 
 // ---- Lead* aliases ----
@@ -54,8 +53,7 @@ import type {
 // Aliases of the canonical read-model types in ./types, with lead-mapper
 // -specific tightenings (e.g. required fields the mapper always populates).
 
-export type LeadStageOwnership = StageOwnership;
-export type LeadStageAssignment = StageAssignment;
+type LeadStageAssignment = StageAssignment;
 export type LeadProduct = Product;
 /** Mapper guarantees: priorityRank and pausedReason are always populated (null = absent). */
 export type LeadKanbanItem = KanbanItem & {
@@ -501,7 +499,7 @@ export interface LeadActivityCard {
   }[];
 }
 
-export function mapLeadActivityCards(
+function mapLeadActivityCards(
   section: ReportSectionReadModel,
 ): LeadActivityCard[] {
   return section.activities.map((activity) => ({
@@ -729,10 +727,3 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
     canRequestReopen: args.byPeriod.canRequestReopen ?? false,
   };
 }
-
-// Internal exports for tests.
-export const __testing = {
-  buildStageGrid,
-  initialsFromName,
-  clampRank,
-};

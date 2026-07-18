@@ -378,9 +378,3 @@ export interface PeriodRowFromRepo {
   totalCount: number;
   weekLabel: string | null;
 }
-
-export function sortByName<T extends { name: string }>(rows: T[]): T[] {
-  return [...rows].sort((left, right) =>
-    left.name.localeCompare(right.name, "ru"),
-  );
-}

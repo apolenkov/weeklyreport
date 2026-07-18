@@ -34,7 +34,7 @@ export function nextUtcDay(dateOnly: string): Date {
   return new Date(startOfUtcDay(dateOnly).getTime() + MS_PER_DAY);
 }
 
-export interface PeriodStamped {
+interface PeriodStamped {
   id: string;
   periodEnd: Date;
   createdAt: Date;
@@ -47,10 +47,7 @@ export interface PeriodStamped {
  * falling back to DB row order (non-deterministic across query plans). Default
  * code-unit string compare, locale-stable like the cache key.
  */
-export function comparePeriodThenCreated(
-  a: PeriodStamped,
-  b: PeriodStamped,
-): number {
+function comparePeriodThenCreated(a: PeriodStamped, b: PeriodStamped): number {
   const byPeriod = a.periodEnd.getTime() - b.periodEnd.getTime();
   if (byPeriod !== 0) return byPeriod;
   const byCreated = a.createdAt.getTime() - b.createdAt.getTime();
@@ -65,7 +62,7 @@ export function comparePeriodThenCreated(
  * `periodEnd`, then the latest `createdAt`, then the greater `id`. The most
  * recent (republished) period is authoritative for a project's status.
  */
-export function laterReport<T extends PeriodStamped>(a: T, b: T): T {
+function laterReport<T extends PeriodStamped>(a: T, b: T): T {
   return comparePeriodThenCreated(a, b) >= 0 ? a : b;
 }
 

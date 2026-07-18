@@ -20,7 +20,7 @@ export type IngestionPublishHook = (
  * `recordPeriodPublished` label unions differ in width, but method-shorthand
  * members are checked bivariantly, so either port satisfies this shape).
  */
-export interface PublishSideEffectsTelemetry {
+interface PublishSideEffectsTelemetry {
   recordPublishedReport(): void;
   recordPeriodPublished(from: PeriodStatus): void;
 }

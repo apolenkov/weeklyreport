@@ -15,7 +15,7 @@ export interface JobEnqueuer {
 }
 
 /** The subset of BullMQ `JobsOptions` the enqueuing services actually set. */
-export interface JobEnqueueOptions {
+interface JobEnqueueOptions {
   attempts?: number;
   backoff?: { type: string; delay: number };
   // Deterministic job id: BullMQ ignores a second `add` carrying an id already

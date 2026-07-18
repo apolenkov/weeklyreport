@@ -1,12 +1,12 @@
 import type { ChipChoice } from "../../../shared/ui/choice-chip-row";
 import type { ItemStatus } from "../model/types";
 
-export const CSS_PRIMARY = "var(--color-primary)";
+const CSS_PRIMARY = "var(--color-primary)";
 export const IN_PROGRESS_STATUS = "in-progress";
 // Shared quiet-chip palette for the not-in-flight states.
 const CSS_MUTED = "var(--color-muted)";
 const CSS_MUTED_FG = "var(--color-muted-foreground)";
-export const CHIP_IDLE_BORDER = "rgba(0,0,0,0.15)";
+const CHIP_IDLE_BORDER = "rgba(0,0,0,0.15)";
 
 // record-status-derived-from-risk: no free "Blocked" chip and no in-dialog
 // blocker gesture. An item's blocked / at-risk alarm is DERIVED from a

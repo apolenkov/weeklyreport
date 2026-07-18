@@ -105,7 +105,7 @@ export function TabSearch({
  * that need a categorical dimension filter (e.g. role, status, group).
  * Options include a sentinel "All" entry with value "".
  */
-export interface TabFilterOption {
+interface TabFilterOption {
   readonly value: string;
   readonly label: string;
 }

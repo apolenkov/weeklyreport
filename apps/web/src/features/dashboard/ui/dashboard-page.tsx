@@ -6,8 +6,6 @@ import { SessionContext } from "../../../lib/session-provider";
 import { DashboardContent } from "./dashboard-content";
 import { useDashboardData } from "./use-dashboard-data";
 
-export { DASHBOARD_LOAD_STALL_MS } from "./use-dashboard-query-recovery";
-
 function DashboardNoPeriod() {
   return (
     <div className="space-y-6">

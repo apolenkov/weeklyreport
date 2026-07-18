@@ -113,7 +113,7 @@ export type ForeignDecisionEntry = LeadDecisionEntry & {
   authorId: string;
 };
 
-export interface CrossAuthorStageOverride {
+interface CrossAuthorStageOverride {
   assignee: string;
   status: StageStatus;
 }
