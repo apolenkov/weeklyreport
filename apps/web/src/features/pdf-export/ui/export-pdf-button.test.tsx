@@ -192,4 +192,46 @@ describe("ExportPdfButton", () => {
       expect(button).not.toBeDisabled();
     });
   });
+
+  it("on failed job status: error toast fires, the held tab closes, and the button returns to idle", async () => {
+    const fakeTab = {
+      location: { href: "" },
+      closed: false,
+      close: vi.fn(),
+    };
+    vi.stubGlobal(
+      "open",
+      vi.fn(() => fakeTab),
+    );
+
+    const { captured } = renderButton({
+      statusQuery: {
+        jobId: JOB_ID,
+        reportId: REPORT_ID,
+        status: "failed" as const,
+        artifactUrl: null,
+        requestedAt: new Date("2026-04-14T00:00:00Z"),
+        completedAt: new Date("2026-04-14T00:00:02Z"),
+        checksum: null,
+        templateVersion: "1",
+      },
+    });
+    expectDefined(captured["pdfExport.request"]).mutationFn.mockResolvedValue({
+      jobId: JOB_ID,
+    });
+
+    const button = screen.getByRole("button", { name: "Export PDF" });
+    await userEvent.click(button);
+
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalled();
+    });
+    expect(toastError.mock.calls[0]?.[0]).toMatch(/pdf export failed/i);
+    expect(fakeTab.close).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => {
+      expect(button).toHaveAttribute("aria-busy", "false");
+      expect(button).not.toBeDisabled();
+    });
+  });
 });

@@ -112,7 +112,7 @@ function useRevokeAllSubmitted() {
         toast.success(
           `${result.revokedCount} submission${result.revokedCount === 1 ? "" : "s"} revoked.`,
         );
-        void Promise.all([
+        void Promise.allSettled([
           queryClient.invalidateQueries(trpc.weeklyReport.get.queryOptions({})),
           queryClient.invalidateQueries(trpc.review.dashboard.queryOptions()),
           queryClient.invalidateQueries(trpc.activity.live.queryOptions()),

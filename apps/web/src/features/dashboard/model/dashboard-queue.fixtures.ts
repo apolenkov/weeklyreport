@@ -57,7 +57,7 @@ export function queueSection(
   } = {},
 ): ReportSectionReadModel {
   return {
-    reportSectionId: sectionId(Number(id.slice(-1))),
+    reportSectionId: sectionId(Number(id.slice(-UUID_SUFFIX_LENGTH))),
     reportId: REPORT_ID,
     authorId: id,
     authorName: name,
@@ -88,7 +88,7 @@ export function queueActivityRow(
 ): ActivityLiveResponse["rows"][number] {
   return {
     reportId: REPORT_ID,
-    reportSectionId: sectionId(Number(id.slice(-1))),
+    reportSectionId: sectionId(Number(id.slice(-UUID_SUFFIX_LENGTH))),
     leadId: id,
     leadName: name,
     email: `${name.toLowerCase().replaceAll(" ", ".")}@example.com`,

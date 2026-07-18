@@ -1,8 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * viewer-report-surface-parity (task 5) + viewer-live-status (task 5.1/4.3): the
- * read-only viewer shell mirrors the head shell's toolbar primitives
+ * The read-only viewer shell mirrors the head shell's toolbar primitives
  * (ScopeToggle, ViewModeToggle, Export-PDF, period nav) but renders NO mutation
  * affordance, and its URLs target `/reports/...`, not `/head/report/...`.
  * Back-to-Archive is removed; the Agent-review coming-soon control stays. A

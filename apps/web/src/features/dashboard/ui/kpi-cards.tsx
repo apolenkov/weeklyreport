@@ -37,7 +37,7 @@ export function KpiCards({ data }: KpiCardsProps) {
           }}
           title={`${data.submitted} of ${data.total} leads submitted this week (${submissionPercent}%)`}
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-card)]">
             <span className="font-[family-name:var(--font-sans)] text-[11px] font-bold leading-none text-[var(--color-primary)]">
               {data.submitted}/{data.total}
             </span>

@@ -19,20 +19,20 @@ describe("TrafficLightHistoryChart", () => {
   });
 
   it("renders without crash with sample data containing nulls", () => {
-    render(
-      <TrafficLightHistoryChart
-        periods={["2026-04-21", "2026-04-28"]}
-        rows={[
-          {
-            projectId: "11111111-1111-4111-8111-111111111111",
-            projectName: "Alpha",
-            statuses: ["green", null],
-          },
-        ]}
-      />,
-    );
-    // ResponsiveContainer renders a wrapper div; assert basic mount.
-    expect(document.body.querySelector("div")).toBeTruthy();
+    expect(() =>
+      render(
+        <TrafficLightHistoryChart
+          periods={["2026-04-21", "2026-04-28"]}
+          rows={[
+            {
+              projectId: "11111111-1111-4111-8111-111111111111",
+              projectName: "Alpha",
+              statuses: ["green", null],
+            },
+          ]}
+        />,
+      ),
+    ).not.toThrow();
   });
 });
 
@@ -43,23 +43,24 @@ describe("LeadVelocityChart", () => {
   });
 
   it("renders sample lead-velocity data without crash", () => {
-    render(
-      <LeadVelocityChart
-        rows={[
-          {
-            periodLabel: "2026-04-21",
-            leads: [
-              {
-                leadId: "00000000-0000-4000-8000-000000000001",
-                leadName: "L1",
-                submittedSections: 1,
-              },
-            ],
-          },
-        ]}
-      />,
-    );
-    expect(document.body.querySelector("div")).toBeTruthy();
+    expect(() =>
+      render(
+        <LeadVelocityChart
+          rows={[
+            {
+              periodLabel: "2026-04-21",
+              leads: [
+                {
+                  leadId: "00000000-0000-4000-8000-000000000001",
+                  leadName: "L1",
+                  submittedSections: 1,
+                },
+              ],
+            },
+          ]}
+        />,
+      ),
+    ).not.toThrow();
   });
 });
 
@@ -147,7 +148,7 @@ describe("PeriodComparisonChart", () => {
   });
 
   it("renders positive delta with + prefix and red colour class", () => {
-    const { container } = render(
+    render(
       <PeriodComparisonChart
         rows={[
           {
@@ -162,8 +163,10 @@ describe("PeriodComparisonChart", () => {
         ]}
       />,
     );
-    expect(screen.getByText("+3")).toBeInTheDocument();
-    const deltaCell = container.querySelector(".text-red-600");
-    expect(deltaCell).not.toBeNull();
+    // Scoped to the delta cell itself, not container-wide, so this cannot
+    // pass on the unrelated statusB="red" status cell if deltaClass's
+    // red-mapping breaks.
+    const deltaCell = screen.getByText("+3");
+    expect(deltaCell.className).toContain("text-red-600");
   });
 });

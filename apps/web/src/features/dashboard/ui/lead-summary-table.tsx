@@ -5,49 +5,20 @@ import { ChevronDown } from "lucide-react";
 import type { RefObject } from "react";
 import { useRef, useState } from "react";
 
-import { formatRelativePast } from "../../../lib/format-date";
 import type { LeadInfo } from "../model/dashboard";
 import { LeadPrimaryAction } from "./lead-queue-actions";
 import { LeadQueueDetail } from "./lead-queue-detail";
-
-const STATUS_LABELS: Record<LeadInfo["status"], string> = {
-  submitted: "Submitted",
-  draft: "In progress",
-  pending: "Not started",
-};
-
-const STATUS_CLASSES: Record<LeadInfo["status"], string> = {
-  submitted:
-    "border-[var(--color-starbucks-accent)] bg-[var(--color-success)] text-[var(--color-primary)]",
-  draft:
-    "border-[var(--color-status-dot-at-risk)] bg-[var(--color-status-at-risk-bg)] text-[var(--color-status-at-risk-fg)]",
-  pending:
-    "border-[var(--color-border)] bg-[var(--color-muted)] text-[var(--color-muted-foreground)]",
-};
+import {
+  contentSummary,
+  freshnessLabel,
+  STATUS_CLASSES,
+  STATUS_LABELS,
+} from "./lead-row-format";
 
 interface LeadSummaryTableProps {
   readonly leads: readonly LeadInfo[];
   readonly reportId: string;
   readonly onMutated: () => void;
-}
-
-function freshnessLabel(lead: LeadInfo): string {
-  if (lead.status === "submitted") {
-    return lead.submittedAt
-      ? `Submitted ${formatRelativePast(lead.submittedAt, new Date(), "activity")}`
-      : "Submitted";
-  }
-  if (lead.lastEditAt) {
-    return `Edited ${formatRelativePast(lead.lastEditAt, new Date(), "activity")}`;
-  }
-  return lead.isStale ? "No recent edit" : "No edits yet";
-}
-
-function contentSummary(lead: LeadInfo): string {
-  const productRecords = lead.reportContentCount ?? 0;
-  const activityRecords = lead.activityCount ?? 0;
-  const total = productRecords + activityRecords;
-  return `${total} record${total === 1 ? "" : "s"} · ${lead.attentionLabel}`;
 }
 
 function LeadIdentity({ lead }: { readonly lead: LeadInfo }) {

@@ -1,11 +1,12 @@
 ## 1. Wave 1 — calibration (S-slices + defect tests)
 
-- [ ] 1.1 web-analytics, web-pdf-export, web-viewer-telemetry, web-dashboard:
+- [x] 1.1 web-analytics, web-pdf-export, web-viewer-telemetry, web-dashboard:
       regrade live violations, fix to standard, resolve seed minors
-- [ ] 1.2 Fix defect tests: bullmq pdf-export.processor terminal-attempt
-      contract; role-coverage gate reference-identity check
-- [ ] 1.3 Calibration verdict: check the wave diff for counter-gaming splits
-      before scaling the harness (memory: auto-rollout degrades)
+- [x] 1.2 Defect tests verified already fixed pre-campaign (64834f55,
+      4d3e4051, 2026-07-17); both pass targeted, no edits needed
+- [x] 1.3 Calibration verdict: splits follow real responsibilities, verifiers
+      caught one undisclosed render-token swap (accepted as ratified
+      tokenization); harness approved for scale-out
 
 ## 2. Waves 2–6 — remaining S-slices
 

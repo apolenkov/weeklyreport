@@ -25,7 +25,7 @@ type ConfirmState =
 const CONFIRM_HOLD_MS = 2400;
 
 /**
- * One-click Remind action for the Head Dashboard pulse (plan §23.4 T-F4-4).
+ * One-click Remind action for the Head Dashboard pulse.
  *
  * Uses reminders.dispatchPending with the leadId filter so the client never
  * sees lead emails — backend resolves the active rule + recipient + dedupe

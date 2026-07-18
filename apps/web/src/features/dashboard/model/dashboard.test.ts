@@ -118,7 +118,6 @@ function makeWeeklyReport(
             resolvedAt: null,
           },
         ],
-        priorities: [],
       },
       {
         reportSectionId: SECTION_B,
@@ -143,7 +142,6 @@ function makeWeeklyReport(
         ],
         risks: [],
         decisions: [],
-        priorities: [],
       },
       // Cara has NO section -> 'pending'.
     ],
@@ -330,7 +328,7 @@ describe("mapDashboardData", () => {
       review: makeReview(), // scoped review rows do NOT include Denise
       weeklyReport,
     });
-    expect(result.pendingLeads).toContain("Denise D.");
+    expect(result.pendingLeads).toEqual(["Bob L.", "Cara L.", "Denise D."]);
   });
 
   it("empty review (scoped-out caller) yields empty pendingLeads", () => {

@@ -53,7 +53,7 @@ export function DashboardSkeleton() {
 
       <Skeleton className="h-12 w-full rounded-[var(--radius)]" />
 
-      <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-white">
+      <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)]">
         <div className="flex items-center justify-between p-4">
           <Skeleton className="h-5 w-48" />
           <Skeleton className="h-4 w-4" />

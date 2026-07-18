@@ -5,26 +5,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo } from "react";
 
 import { getClientErrorDetails } from "../../../lib/client-error-reporting";
-import {
-  formatPeriodRangeWithYear,
-  isoWeekNumber,
-} from "../../../lib/format-date";
 import { useTRPC } from "../../../lib/trpc-context";
-import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
-import { ArchiveToggle } from "../../../shared/ui/report-shell/archive-toggle";
 import { ReportToolbar } from "../../../shared/ui/report-shell/report-toolbar";
-import { ScopeToggle } from "../../../shared/ui/report-shell/scope-toggle";
 import { useReportShellUrlState } from "../../../shared/ui/report-shell/use-report-shell-url-state";
-import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
 import { ExportPdfButton } from "../../pdf-export";
-import { PeriodNavigator } from "../../period";
 import { WeeklyReportPage } from "../../report-pages";
-import type { ReportPeriod } from "../../report-sections";
 import { HeadSlidesClient } from "../../slides";
+import { deriveViewerPeriods } from "./derive-viewer-periods";
 import {
   deriveViewerAuthority,
   ViewerAuthorityLabel,
 } from "./viewer-authority-label";
+import { ViewerContextControls } from "./viewer-context-controls";
 
 // Module-scope so the reference is stable across renders — a fresh literal would
 // churn the hook's `buildQuery` memoization. The viewer strips the one-shot
@@ -75,44 +67,11 @@ export function ViewerReportShell({
     }
   }, [shouldRecover, router]);
 
-  const periods: ReportPeriod[] = useMemo(() => {
-    const entries = historyQ.data?.entries ?? [];
-    const historyPeriods: ReportPeriod[] = entries.map((entry) => ({
-      id: entry.reportId,
-      weekLabel: `Week ${isoWeekNumber(new Date(entry.periodStart))}`,
-      dateRange: formatPeriodRangeWithYear(
-        new Date(entry.periodStart),
-        new Date(entry.periodEnd),
-      ),
-      archived: entry.archived,
-      sourceSectionId: "",
-      isCurrent: false,
-      isSubmitted: true,
-    }));
-
-    // Prepend the displayed period when the archive toggle hides it from
-    // compiledHistory, so the navigator trigger still resolves on this URL.
-    const seen = new Set(historyPeriods.map((p) => p.id));
-    const displayed = displayedQ.data;
-    if (displayed && displayed.status !== "no-period" && !seen.has(reportId)) {
-      return [
-        {
-          id: reportId,
-          weekLabel: `Week ${isoWeekNumber(new Date(displayed.periodStart))}`,
-          dateRange: formatPeriodRangeWithYear(
-            new Date(displayed.periodStart),
-            new Date(displayed.periodEnd),
-          ),
-          archived: false,
-          sourceSectionId: "",
-          isCurrent: false,
-          isSubmitted: true,
-        },
-        ...historyPeriods,
-      ];
-    }
-    return historyPeriods;
-  }, [historyQ.data, displayedQ.data, reportId]);
+  const periods = useMemo(
+    () =>
+      deriveViewerPeriods(historyQ.data?.entries, displayedQ.data, reportId),
+    [historyQ.data, displayedQ.data, reportId],
+  );
 
   const urlBuilder = useCallback(
     (periodId: string) =>
@@ -126,29 +85,18 @@ export function ViewerReportShell({
   const reportScope = scope === "lead" ? "lead" : "product";
 
   const contextControls = (
-    <>
-      {periods.length > 0 ? (
-        <PeriodNavigator
-          periods={periods}
-          currentPeriodId={reportId}
-          urlBuilder={urlBuilder}
-        />
-      ) : null}
-      <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
-      <div className="grow" aria-hidden="true" />
-      <AgentReviewComingSoon compact />
-      <ScopeToggle
-        value={scope}
-        onChange={setScope}
-        allowedScopes={["product", "lead"]}
-      />
-      <ViewModeToggle
-        editHref={editHref}
-        slidesHref={slidesHref}
-        mode={mode === "slides" ? "slides" : "edit"}
-        readOnly
-      />
-    </>
+    <ViewerContextControls
+      periods={periods}
+      reportId={reportId}
+      urlBuilder={urlBuilder}
+      includeArchive={includeArchive}
+      setIncludeArchive={setIncludeArchive}
+      scope={scope}
+      setScope={setScope}
+      editHref={editHref}
+      slidesHref={slidesHref}
+      mode={mode}
+    />
   );
 
   // Do not flash the terminal notice while the one-shot redirect is in flight.

@@ -1,9 +1,9 @@
 /**
  * @vitest-environment jsdom
  *
- * reopen-request-lifecycle (D2): the head-dashboard reopen queue. Renders
- * pending requests, decides them inline via respondReopenRequest, and on a
- * decision invalidates BOTH the list and the pending count.
+ * The head-dashboard reopen queue. Renders pending requests, decides them
+ * inline via respondReopenRequest, and on a decision invalidates BOTH the
+ * list and the pending count.
  */
 import "@testing-library/jest-dom/vitest";
 
