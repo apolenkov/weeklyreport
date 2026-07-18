@@ -31,9 +31,9 @@ function AlertIcon() {
 }
 
 export function BlockedAtRiskTable({ items }: BlockedAtRiskTableProps) {
-  // head-surface-uat-polish (F4): collapsed by default. The same risk content
-  // appears in the report below, so the dashboard treats this as a fast triage
-  // peek the head opens on demand rather than a permanently expanded block.
+  // Collapsed by default. The same risk content appears in the report below,
+  // so the dashboard treats this as a fast triage peek the head opens on
+  // demand rather than a permanently expanded block.
   const [expanded, setExpanded] = useState(false);
   const hasItems = items.length > 0;
   const isExpanded = hasItems && expanded;

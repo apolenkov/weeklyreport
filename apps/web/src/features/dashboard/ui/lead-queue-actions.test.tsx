@@ -126,4 +126,20 @@ describe("lead queue contextual actions", () => {
     ).toBeVisible();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
+
+  it("renders read-only text for a row with no available primary action", () => {
+    renderActions(
+      lead({
+        canOpen: false,
+        canRemind: false,
+        canReview: false,
+        canRequestChanges: false,
+        canRevoke: false,
+      }),
+    );
+
+    expect(screen.getByText("Read only")).toBeVisible();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
 });

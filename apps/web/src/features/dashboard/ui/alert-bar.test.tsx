@@ -74,16 +74,7 @@ const baseProps = {
   canSendReminder: false,
 };
 
-/**
- * VA-0a unit-rtl (high-pri) + VA-0b snapshot — verify-a11y catalog rows for
- * alert-bar.tsx:
- *
- *   Row 1 (unit-rtl/high): AlertIcon svg has aria-hidden="true"
- *   Row 2 (snapshot/high): svg with aria-hidden="true" present in rendered DOM
- *   Row 3 (snapshot/high): alert bar semantic structure — decorative SVG hidden,
- *     button type="button", aggregate pending count rendered
- */
-describe("VA-0a: AlertIcon SVG aria-hidden", () => {
+describe("AlertBar SVG aria-hidden", () => {
   it("AlertIcon svg has aria-hidden='true'", () => {
     mockRole("head");
     const { container } = render(<AlertBar {...baseProps} />);
@@ -95,17 +86,8 @@ describe("VA-0a: AlertIcon SVG aria-hidden", () => {
   });
 });
 
-describe("VA-0b: AlertBar snapshots", () => {
-  it("svg with aria-hidden='true' is present in rendered DOM (snapshot)", () => {
-    mockRole("head");
-    const { container } = render(<AlertBar {...baseProps} />);
-
-    const svgEl = container.querySelector("svg");
-    expect(svgEl).not.toBeNull();
-    expect(svgEl).toMatchSnapshot();
-  });
-
-  it("alert bar semantic structure — decorative SVG hidden, button type='button', aggregate count rendered (snapshot)", () => {
+describe("AlertBar semantic structure", () => {
+  it("decorative SVG hidden, button type='button', aggregate count rendered", () => {
     mockRole("head");
     const { container } = render(
       <AlertBar
@@ -115,10 +97,13 @@ describe("VA-0b: AlertBar snapshots", () => {
       />,
     );
 
-    // Snapshot the outermost rendered element so any structural regression
-    // (SVG aria-hidden removed, button type missing, span rendering broken)
-    // is caught immediately.
-    expect(container.firstChild).toMatchSnapshot();
+    const svgEl = container.querySelector("svg");
+    expect(svgEl).toHaveAttribute("aria-hidden", "true");
+
+    const button = screen.getByRole("button", { name: /send reminder/i });
+    expect(button).toHaveAttribute("type", "button");
+
+    expect(screen.getByText("2")).toBeInTheDocument();
   });
 });
 

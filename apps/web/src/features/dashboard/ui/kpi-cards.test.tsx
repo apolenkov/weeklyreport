@@ -1,8 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * Regression catalog: verify-a11y-recommended-flip
- * Target: apps/web/src/features/dashboard/ui/kpi-cards.tsx
+ * a11y regression coverage for apps/web/src/features/dashboard/ui/kpi-cards.tsx.
  *
  * Covers:
  *   - all unit-rtl high rows (section elements + aria-labels)
@@ -28,7 +27,7 @@ const baseData: KpiData = {
   decisionCount: 4,
 };
 
-describe("KpiCards — a11y regression (verify-a11y-recommended-flip)", () => {
+describe("KpiCards — a11y regression", () => {
   describe("Submissions card root element", () => {
     it("renders as a <section> element (not a <div>)", () => {
       render(<KpiCards data={baseData} />);

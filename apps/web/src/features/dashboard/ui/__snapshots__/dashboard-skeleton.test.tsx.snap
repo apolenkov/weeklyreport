@@ -266,7 +266,7 @@ exports[`DashboardSkeleton > matches the dashboard loading geometry 1`] = `
     data-slot="skeleton"
   />
   <div
-    class="rounded-[var(--radius)] border border-[var(--color-border)] bg-white"
+    class="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)]"
   >
     <div
       class="flex items-center justify-between p-4"

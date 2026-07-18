@@ -26,7 +26,7 @@ const Y_AXIS_DOMAIN_MAX = 4;
  */
 
 const STATUS_TO_VALUE: Record<Exclude<TrafficLightCell, null>, number> = {
-  green: 3,
+  green: STATUS_LEVEL_GREEN,
   yellow: 2,
   red: 1,
 };

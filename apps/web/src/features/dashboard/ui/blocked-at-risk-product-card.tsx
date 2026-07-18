@@ -28,7 +28,7 @@ const AVATAR_CONFIG = {
 
 // bg/fg only — the label folds into the canonical status map (statusLabel,
 // print variant). The bg/fg pair does not fit the map's single-token tone
-// shape, so it stays here, like SEVERITY_TONE and AVATAR_CONFIG (D8).
+// shape, so it stays here, like SEVERITY_TONE and AVATAR_CONFIG.
 const SEVERITY_BADGE = {
   blocked: { bg: "var(--color-status-blocked-bg)", fg: CSS_DESTRUCTIVE },
   "at-risk": {
