@@ -1,4 +1,4 @@
-import { TRPCClientError } from "@trpc/client";
+import { TRPCClientError, type TRPCClientRuntime } from "@trpc/client";
 import { observable } from "@trpc/server/observable";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -129,21 +129,21 @@ function makeOperation() {
 }
 
 interface SpySet {
-  next: ReturnType<typeof vi.fn>;
-  error: ReturnType<typeof vi.fn>;
-  complete: ReturnType<typeof vi.fn>;
+  next: ReturnType<typeof vi.fn<(value: unknown) => void>>;
+  error: ReturnType<typeof vi.fn<(err: unknown) => void>>;
+  complete: ReturnType<typeof vi.fn<() => void>>;
 }
 
 /**
  * Drives the auth-redirect link against an upstream observable and subscribes
- * with the given spy set.  All `any` interactions are contained here.
+ * with the given spy set. TRPCClientRuntime is `{}` in v11 — an empty object
+ * satisfies it exactly, no cast needed.
  */
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- TRPCClientRuntime is {} in v11; link() returns any from the generic cast */
 function runLink(upstream: ReturnType<typeof observable>, spies: SpySet): void {
-  const opLink = (createAuthRedirectLink() as any)({});
+  const runtime: TRPCClientRuntime = {};
+  const opLink = createAuthRedirectLink()(runtime);
   opLink({ next: () => upstream, op: makeOperation() }).subscribe(spies);
 }
-/* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 
 describe("createAuthRedirectLink — observable seam", () => {
   it("401 from /lead/report → assignSpy called once, errorSpy NOT called, completeSpy NOT called", () => {

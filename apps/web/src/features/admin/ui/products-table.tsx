@@ -80,7 +80,7 @@ export function ProductsTable({
                   <button
                     type="button"
                     onClick={() => onEdit(product)}
-                    className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)]"
+                    className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-white px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)]"
                     aria-label={`Edit ${product.name}`}
                   >
                     Edit
@@ -89,7 +89,7 @@ export function ProductsTable({
                     type="button"
                     onClick={() => onArchive(product)}
                     disabled={isArchiving}
-                    className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[rgba(0,0,0,0.2)] hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-white px-3 text-xs font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-border-strong)] hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label={`Archive ${product.name}`}
                   >
                     Archive
@@ -137,7 +137,7 @@ export function ProductsTable({
                 type="button"
                 onClick={() => onRestore(product)}
                 disabled={isSaving}
-                className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-white px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label={`Restore ${product.name}`}
               >
                 Restore

@@ -144,9 +144,9 @@ export async function queryDueEscalationRules(
     const report = rule.report;
     if (!report) return [];
     const { groups, unresolved } = buildEscalationGroups(report);
-    for (const leadName of unresolved) {
+    if (unresolved.length > 0) {
       logger.warn(
-        `escalation: no active group head for late lead "${leadName}" on report ${report.id}; digest skipped`,
+        `escalation: no active group head for ${unresolved.length} late lead(s) on report ${report.id}; digest skipped`,
       );
     }
     if (groups.length === 0) return [];

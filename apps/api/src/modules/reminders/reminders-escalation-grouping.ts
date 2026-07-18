@@ -59,8 +59,8 @@ function resolveActiveHead(
  * Group a report's late leads by their reporting group's active head. One
  * digest per head, aggregating that head's late leads across every group it
  * leads (a head leading two late groups still gets a single digest, matching
- * the per-head dedupe key). `unresolved` carries the names of leads with no
- * resolvable active head for the caller to log.
+ * the per-head dedupe key). `unresolved` carries the leads with no resolvable
+ * active head; the caller logs only their count, keeping names out of logs.
  */
 export function buildEscalationGroups(report: EscalationReport): {
   groups: EscalationGroupDigest[];

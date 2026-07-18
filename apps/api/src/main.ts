@@ -153,7 +153,7 @@ async function bootstrap() {
   });
   const nestLoggerAdapter = new NestAppLoggerAdapter(preBootLogger);
 
-  console.log("[bootstrap] starting customreport-api");
+  preBootLogger.info("bootstrap starting");
 
   const app = await NestFactory.create(AppModule, {
     logger: nestLoggerAdapter,
