@@ -1,9 +1,9 @@
 import type { CSSProperties } from "react";
 
 import type { WeeklyProductReport } from "../../../features/report-sections/model/weekly-report-types";
+import { statusLabel } from "../../../lib/status-presentation";
 import {
   printStatusColor,
-  printStatusLabel,
   TEXT_PRIMARY,
   TEXT_SECONDARY,
   workflowBadge,
@@ -72,7 +72,7 @@ function PrintLeadHeader({ report }: PrintLeadSectionProps) {
           backgroundColor: printStatusColor(report.status),
         }}
       >
-        {printStatusLabel(report.status)}
+        {statusLabel(report.status, "print")}
       </span>
       <span
         style={{ fontSize: "11px", color: TEXT_SECONDARY, marginLeft: "auto" }}

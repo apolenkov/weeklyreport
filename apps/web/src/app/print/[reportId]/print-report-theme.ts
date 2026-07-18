@@ -15,19 +15,6 @@ export function printStatusColor(status: string): string {
   }
 }
 
-export function printStatusLabel(status: string): string {
-  switch (status) {
-    case "on-track":
-      return "On Track";
-    case "at-risk":
-      return "At Risk";
-    case "blocked":
-      return "Blocked";
-    default:
-      return status;
-  }
-}
-
 export function workflowBadge(status: string): string {
   switch (status) {
     case "completed":
