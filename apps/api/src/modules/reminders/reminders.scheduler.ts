@@ -42,9 +42,9 @@ export class RemindersScheduler {
     private readonly organizationService: OrganizationService,
   ) {}
 
-  private logDispatchFailure(recipientEmail: string, error: unknown): void {
+  private logDispatchFailure(recipientUserId: string, error: unknown): void {
     this.logger.error("reminder dispatch failed for recipient", {
-      recipientEmail,
+      recipientUserId,
       error: error instanceof Error ? error.message : String(error),
     });
   }
@@ -111,7 +111,7 @@ export class RemindersScheduler {
           organization,
         });
       } catch (error: unknown) {
-        this.logDispatchFailure(recipient.email, error);
+        this.logDispatchFailure(recipient.userId, error);
       }
     }
   }
@@ -135,7 +135,7 @@ export class RemindersScheduler {
           organization,
         });
       } catch (error: unknown) {
-        this.logDispatchFailure(group.head.email, error);
+        this.logDispatchFailure(group.head.userId, error);
       }
     }
   }

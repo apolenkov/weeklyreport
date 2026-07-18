@@ -26,6 +26,20 @@ import { createMockTRPC } from "./mock-trpc";
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Walks the mock proxy by dotted path and returns the leaf as a plain
+ * record. The mock proxy's real type (`TRPCProxy`) is the full production
+ * router shape; these tests exercise the dynamically-built stub structure
+ * itself (pathFilter/queryOptions/mutationOptions), so a structural
+ * `Record<string, unknown>` view — not `any` — is what the assertions need.
+ */
+function leaf(proxy: unknown, ...path: string[]): Record<string, unknown> {
+  return path.reduce<Record<string, unknown>>(
+    (node, segment) => node[segment] as Record<string, unknown>,
+    proxy as Record<string, unknown>,
+  );
+}
+
 function makeWrapper(proxy: unknown) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -53,8 +67,9 @@ describe("createMockTRPC — pathFilter shape (contract pin)", () => {
     const { proxy } = createMockTRPC([
       { path: ["admin", "getOrganization"], query: {} },
     ]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- contract assertion on dynamic proxy
-    const filter = (proxy as any).admin.getOrganization.pathFilter() as unknown;
+    const pathFilter = leaf(proxy, "admin", "getOrganization")
+      .pathFilter as () => unknown;
+    const filter = pathFilter();
     expect(filter).toEqual({ queryKey: [["admin", "getOrganization"]] });
     // Old vacuous shape must NOT be present.
     expect(filter).not.toHaveProperty("tag");
@@ -64,10 +79,9 @@ describe("createMockTRPC — pathFilter shape (contract pin)", () => {
     const { proxy } = createMockTRPC([
       { path: ["admin", "jobs", "listFailed"], query: [] },
     ]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- contract assertion on dynamic proxy
-    const filter = (proxy as any).admin.jobs.listFailed.pathFilter() as {
-      queryKey: unknown;
-    };
+    const pathFilter = leaf(proxy, "admin", "jobs", "listFailed")
+      .pathFilter as () => { queryKey: unknown };
+    const filter = pathFilter();
     expect(filter.queryKey).toEqual([["admin", "jobs", "listFailed"]]);
   });
 });
@@ -84,16 +98,16 @@ describe("createMockTRPC — invalidation is non-vacuous", () => {
     ]);
     const { qc } = makeWrapper(proxy);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- seeding query via proxy contract
-    const orgOpts = (proxy as any).admin.getOrganization.queryOptions() as {
+    interface QueryOpts {
       queryKey: unknown[];
       queryFn: () => Promise<unknown>;
-    };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- seeding query via proxy contract
-    const settingsOpts = (proxy as any).admin.getSettings.queryOptions() as {
-      queryKey: unknown[];
-      queryFn: () => Promise<unknown>;
-    };
+    }
+    const orgQueryOptions = leaf(proxy, "admin", "getOrganization")
+      .queryOptions as () => QueryOpts;
+    const orgOpts = orgQueryOptions();
+    const settingsQueryOptions = leaf(proxy, "admin", "getSettings")
+      .queryOptions as () => QueryOpts;
+    const settingsOpts = settingsQueryOptions();
 
     await qc.fetchQuery(orgOpts);
     await qc.fetchQuery(settingsOpts);
@@ -103,13 +117,9 @@ describe("createMockTRPC — invalidation is non-vacuous", () => {
     expect(qc.getQueryState(settingsOpts.queryKey)?.isInvalidated).toBe(false);
 
     // Invalidate only getOrganization via its pathFilter.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- contract assertion on dynamic proxy
-    const proxyAny = proxy as any;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- contract assertion on dynamic proxy
-    const filter = proxyAny.admin.getOrganization.pathFilter() as Parameters<
-      typeof qc.invalidateQueries
-    >[0];
-    await qc.invalidateQueries(filter);
+    const pathFilter = leaf(proxy, "admin", "getOrganization")
+      .pathFilter as () => Parameters<typeof qc.invalidateQueries>[0];
+    await qc.invalidateQueries(pathFilter());
 
     // getOrganization is stale; getSettings is NOT.
     expect(qc.getQueryState(orgOpts.queryKey)?.isInvalidated).toBe(true);
@@ -167,11 +177,11 @@ describe("createMockTRPC — mutation capture", () => {
 
     const onSuccess = vi.fn();
     const onError = vi.fn();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- proxy access for test
-    const opts = (proxy as any).admin.updateOrganization.mutationOptions({
-      onSuccess,
-      onError,
-    }) as { mutationFn: (vars: unknown) => Promise<unknown> };
+    const mutationOptions = leaf(proxy, "admin", "updateOrganization")
+      .mutationOptions as (opts: Record<string, unknown>) => {
+      mutationFn: (vars: unknown) => Promise<unknown>;
+    };
+    const opts = mutationOptions({ onSuccess, onError });
 
     await opts.mutationFn({ shortName: "ACME" });
 
@@ -188,8 +198,9 @@ describe("createMockTRPC — mutation capture", () => {
 
     const onSuccess = vi.fn();
     const onError = vi.fn();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- proxy access for test
-    (proxy as any).reports.saveDraft.mutationOptions({ onSuccess, onError });
+    const mutationOptions = leaf(proxy, "reports", "saveDraft")
+      .mutationOptions as (opts: Record<string, unknown>) => unknown;
+    mutationOptions({ onSuccess, onError });
 
     const entry = captured["reports.saveDraft"];
     expect(entry).toBeDefined();

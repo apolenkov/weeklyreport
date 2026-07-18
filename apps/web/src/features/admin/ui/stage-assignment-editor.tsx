@@ -14,7 +14,7 @@ const STAGE_COLORS: Record<StageName, string> = {
   Design: "var(--color-starbucks-gold)",
   Development: "var(--color-primary)",
   Testing: "var(--color-destructive)",
-  DevOps: "#6366f1",
+  DevOps: "var(--color-stage-devops)",
   Support: "var(--color-muted-foreground)",
 };
 

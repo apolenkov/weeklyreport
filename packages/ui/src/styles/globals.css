@@ -88,6 +88,13 @@
      instead of scattered literals. Theme-blind, matching the literal it
      replaces. The 0.07/0.10 hairline variants are intentionally NOT folded here. */
   --color-border-subtle: rgba(0, 0, 0, 0.08);
+  /* Stronger neutral border — hover state for outline buttons/dialog Cancel
+     actions (names the rgba(0,0,0,0.2) literal repeated across those
+     surfaces). */
+  --color-border-strong: rgba(0, 0, 0, 0.2);
+  /* Accent-tinted hover border for the pill "Edit/Restore" action group
+     (names the rgba(0,117,74,0.3) literal repeated across admin rows). */
+  --color-border-accent-hover: rgba(0, 117, 74, 0.3);
 
   /* ---- Card & popover — elevated surfaces ---- */
   --color-card: #fffefb;
@@ -203,6 +210,13 @@
   --slide-author-3: #d5eae8; /* pale teal */
   --slide-author-4: #e8e3d9; /* sand */
   --slide-author-5: #f0dee3; /* dusty rose */
+
+  /* ---- SDLC stage label color (stage-assignment-editor) ----
+   * DevOps has no existing brand token to reuse (the other stages borrow
+   * --color-starbucks-accent, --color-primary, --color-destructive). JS-only
+   * var() reference (inline style), so plain :root — inside @theme it would
+   * be tree-shaken. */
+  --color-stage-devops: #6366f1;
 }
 
 /* ---- Compact-tier control height (responsive-compact-layout) ----
