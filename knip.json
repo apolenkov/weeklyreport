@@ -1,12 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "ignore": [
-    ".claude/**",
-    ".agents/**",
-    "openspec/**",
-    "apps/web/uat-suite/**"
-  ],
-  "ignoreBinaries": ["tail", "rg", "playwright"],
+  "ignore": ["apps/web/uat-suite/**"],
+  "ignoreBinaries": ["tail", "playwright"],
   "ignoreDependencies": ["@playwright/test", "@axe-core/playwright"],
   "workspaces": {
     ".": {
@@ -23,7 +18,7 @@
       "project": ["prisma/**/*.ts", "scripts/**/*.mjs", "e2e/**/*.{ts,mjs}"]
     },
     "apps/api": {
-      "entry": ["src/main.ts", "src/**/*.test.ts", "src/**/*.fixture.ts"],
+      "entry": ["src/**/*.test.ts", "src/**/*.fixture.ts"],
       "project": ["src/**/*.ts"],
       "ignoreDependencies": ["tsx"]
     },
@@ -31,8 +26,6 @@
       "entry": [
         "src/app/**/{page,layout,template,error,loading,not-found,route}.tsx",
         "src/app/**/{page,layout,template,error,loading,not-found,route}.ts",
-        "src/middleware.ts",
-        "src/instrumentation.ts",
         "src/**/*.test.{ts,tsx}",
         "src/test-utils/**"
       ],
@@ -40,11 +33,11 @@
       "ignoreDependencies": ["@axe-core/playwright", "tailwindcss"]
     },
     "packages/shared": {
-      "entry": ["src/index.ts", "src/**/*.test.ts"],
+      "entry": ["src/**/*.test.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/ui": {
-      "entry": ["src/index.ts", "src/**/*.test.{ts,tsx}"],
+      "entry": [],
       "project": ["src/**/*.{ts,tsx}"]
     }
   }

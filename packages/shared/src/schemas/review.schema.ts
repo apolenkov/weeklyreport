@@ -95,8 +95,6 @@ export const reviewAcknowledgementViewSchema = z.object({
   seenAt: z.coerce.date(),
 });
 
-export const reviewCommentResultSchema = recordCommentViewSchema;
-
 export const reviewVerdictResultSchema = z.object({
   verdict: reviewVerdictSchema,
   judgedVersion: z.number().int().min(1),

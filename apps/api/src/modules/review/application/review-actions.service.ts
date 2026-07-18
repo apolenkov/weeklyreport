@@ -1,11 +1,11 @@
 import {
   type PeriodStatus,
   type RecordCommentView,
+  recordCommentViewSchema,
   type ReportSectionStatus,
   type ReviewAcknowledgementView,
   reviewAcknowledgementViewSchema,
   type ReviewCommentInput,
-  reviewCommentResultSchema,
   type ReviewVerdict,
   type ReviewVerdictResult,
   reviewVerdictResultSchema,
@@ -142,7 +142,7 @@ export class ReviewActionsService {
       anchor,
       input.text,
     );
-    return reviewCommentResultSchema.parse(comment);
+    return recordCommentViewSchema.parse(comment);
   }
 
   async deleteComment(
