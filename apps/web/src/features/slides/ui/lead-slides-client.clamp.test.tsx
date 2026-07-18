@@ -32,7 +32,7 @@ vi.mock("./use-lead-slides-data", () => ({
   }),
 }));
 
-vi.mock("../../report-sections/ui/use-slide-inline-editor", () => ({
+vi.mock("./use-slide-inline-editor", () => ({
   useSlideInlineEditor: () => ({ onRowActivate: undefined, dialogs: null }),
 }));
 

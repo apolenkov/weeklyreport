@@ -3,7 +3,6 @@
 import { type RefObject, useMemo, useRef, useState } from "react";
 
 import { useFullscreen } from "../../../hooks/use-fullscreen";
-import { useSlideInlineEditor } from "../../report-sections";
 import {
   type SlideDensity,
   slidesForDensity,
@@ -17,6 +16,7 @@ import { SlideDensityControl } from "./slide-density-control";
 import { SlideEmptyState } from "./slide-empty-state";
 import { SlideSkeleton } from "./slide-skeleton";
 import { useLeadSlidesData } from "./use-lead-slides-data";
+import { useSlideInlineEditor } from "./use-slide-inline-editor";
 
 interface LeadSlidesClientProps {
   readonly initialReportId?: string | null;

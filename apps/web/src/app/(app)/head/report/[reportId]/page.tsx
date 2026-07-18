@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
-import { HeadReportShell } from "../../../../../features/report-sections/ui/head-report-shell";
-import { WeeklyReportSkeleton } from "../../../../../features/report-sections/ui/weekly-report-skeleton";
+import { HeadReportShell } from "../../../../../features/report-pages/ui/head-report-shell";
+import { WeeklyReportSkeleton } from "../../../../../features/report-pages/ui/weekly-report-skeleton";
 
 interface Props {
   params: Promise<{ reportId: string }>;

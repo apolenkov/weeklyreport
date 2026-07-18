@@ -18,8 +18,8 @@ import { useReportShellUrlState } from "../../../shared/ui/report-shell/use-repo
 import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
 import { ExportPdfButton } from "../../pdf-export";
 import { PeriodNavigator } from "../../period";
+import { WeeklyReportPage } from "../../report-pages";
 import type { ReportPeriod } from "../../report-sections";
-import { WeeklyReportPage } from "../../report-sections";
 import { HeadSlidesClient } from "../../slides";
 import {
   deriveViewerAuthority,

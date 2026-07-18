@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { LeadSectionPreviewAuth } from "../../../../../../features/report-sections/ui/lead-section-preview-auth";
+import { LeadSectionPreviewAuth } from "../../../../../../features/report-pages/ui/lead-section-preview-auth";
 import { AgentReviewComingSoon } from "../../../../../../shared/ui/report-shell/agent-review-coming-soon";
 import { RoleGate } from "../../../../../../shared/ui/role-gate";
 

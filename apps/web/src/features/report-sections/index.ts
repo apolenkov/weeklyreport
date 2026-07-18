@@ -1,17 +1,42 @@
 export { FOREIGN_ENTRY_OPACITY } from "./model/item-card-style";
-export type { CrossAuthorContentRow } from "./model/lead-cross-author";
+export type { ItemWorkflowStatus } from "./model/item-status";
+export type {
+  CrossAuthorContentRow,
+  CrossAuthorRow,
+} from "./model/lead-cross-author";
+export {
+  applyCrossAuthorStageOverrides,
+  buildCrossAuthorStageMap,
+  mapForeignDecisions,
+  mapForeignItems,
+  mapForeignRisks,
+} from "./model/lead-cross-author";
 export type {
   LeadActivityCard,
+  LeadCurrentUser,
   LeadDecisionEntry,
   LeadKanbanItem,
   LeadReviewFeedbackRecord,
   LeadRiskEntry,
   MappedLeadForm,
 } from "./model/lead-form";
-export { mapLeadFormData, mapLeadReviewFeedback } from "./model/lead-form";
+export {
+  mapLeadFormData,
+  mapLeadProducts,
+  mapLeadReviewFeedback,
+  mapLeadRisks,
+  normalizeStageName,
+  ownedStagesForProject,
+} from "./model/lead-form";
 export type { HistoryEntry } from "./model/lead-history";
+export { sectionToDraftPayload } from "./model/lead-section-draft-payload";
 export type { LeadStatus } from "./model/lead-status";
 export { deriveLeadStatus } from "./model/lead-status";
+export type { LeadSubmitReadiness } from "./model/lead-submit-readiness";
+export {
+  buildLeadSubmitPayload,
+  deriveLeadSubmitReadiness,
+} from "./model/lead-submit-readiness";
 export { MOCK_PRODUCTS } from "./model/mock-data";
 export { isBoardEmpty, splitItemBoard } from "./model/next-week-columns";
 export { resolveRecordParent } from "./model/record-parent";
@@ -44,7 +69,20 @@ export type {
   StageAssignment,
   StageStatus,
 } from "./model/types";
-export { mapWeeklyReport } from "./model/weekly-report";
+export {
+  mapWeeklyReport,
+  mapWeeklyReportLeadGroups,
+  mapWeeklyReportLeadOverview,
+} from "./model/weekly-report";
+export type {
+  LeadOverviewRow,
+  WeeklyPortfolioProduct,
+  WeeklyProductReport,
+  WeeklyProductStatus,
+  WeeklyReportDecision,
+  WeeklyReportItem,
+  WeeklyReportRisk,
+} from "./model/weekly-report-types";
 export { ActivityLanesBlock } from "./ui/activity-lanes-block";
 export { BoardColumnHeader } from "./ui/board-column-header";
 export { BoardEmptyState } from "./ui/board-empty-state";
@@ -55,5 +93,3 @@ export type { ParentActivityOption, RecordParent } from "./ui/product-picker";
 export { ParentPicker } from "./ui/product-picker";
 export { StageChip } from "./ui/stage-chip";
 export { StageStep } from "./ui/stage-step";
-export { useSlideInlineEditor } from "./ui/use-slide-inline-editor";
-export { WeeklyReportPage } from "./ui/weekly-report-page";
