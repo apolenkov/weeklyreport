@@ -65,18 +65,45 @@ instead of silently reopening in edit mode.
 ### Requirement: The save-now button clears a stale "Saved" state immediately on exit
 
 `SaveNowButton` MUST clear its `showSaved` flag synchronously whenever
-`autosave.state` transitions away from `"saved"`, in addition to the
-existing timer-based revert, so a save failure occurring inside the
-post-success revert window replaces the checkmark immediately rather than
-waiting for the timer.
+`autosave.state` transitions away from `"saved"` — including a new edit
+moving the state to `"pending"`, and a save failure moving it to `"error"` —
+in addition to the existing timer-based revert, so a stale green "Saved"
+indicator never persists over a state that is no longer actually saved. This
+MUST NOT be confused with, or require any change to, the autosave hook's
+separate `initialSavedKey` priming behavior: a freshly-loaded, unedited form
+MUST continue to render `idle` (not `pending`) on its first render, because
+`lastSavedRef` is already primed from `initialSavedKey` before `dirty` is
+first read.
 
-#### Scenario: A failure during the revert window shows the error affordance immediately
+#### Scenario: A new edit interrupts the post-save revert window
 
-- **WHEN** a save succeeds, the checkmark is showing, and a subsequent save
-  fails before the revert timer elapses
-- **THEN** the button reflects the error state immediately
-- **AND** it does not continue showing the stale success checkmark until the
-  timer fires
+- **GIVEN** `SaveNowButton` has just shown "Saved" (`showSaved === true`,
+  `autosave.state === "saved"`) inside the 1500ms revert window
+- **WHEN** the lead edits the form again and `autosave.state` becomes
+  `"pending"`
+- **THEN** the "Saved" check icon/label clears synchronously, before the
+  1500ms timer would otherwise have reverted it
+- **AND** the button reflects the true `pending` state
+
+#### Scenario: A save failure occurring inside the post-success revert window
+
+- **GIVEN** `SaveNowButton` is showing "Saved" inside the 1500ms revert
+  window
+- **WHEN** a subsequent save attempt fails and `autosave.state` becomes
+  `"error"`
+- **THEN** the checkmark is replaced by the error affordance immediately,
+  rather than waiting out the timer
+
+#### Scenario: A freshly-loaded, unedited form does not show a stale Pending
+
+- **GIVEN** a lead form is primed with `initialSavedKey` equal to the first
+  computed payload key
+- **WHEN** the form renders for the first time, with no user edits
+- **THEN** the autosave state is `idle` (not `pending`), because
+  `lastSavedRef` was already primed from `initialSavedKey` in the same
+  effect batch
+- **AND** this scenario MUST NOT be broken by any change made to satisfy the
+  scenarios above
 
 ### Requirement: The pending-reminders list uses stable keys
 
@@ -137,6 +164,12 @@ value (if any) MUST pass through unmodified.
 - **AND** the factory's `enabled: false` is not silently overwritten by
   `undefined`
 
+#### Scenario: An explicit caller override still takes precedence
+
+- **WHEN** a consumer calls the hook WITH an explicit `options.enabled`
+  value, and the query-options factory sets a different `enabled` value
+- **THEN** the caller-supplied `options.enabled` value wins
+
 ### Requirement: The web-vitals dynamic import handles rejection
 
 `reportWebVitals`'s top-level `import("web-vitals")` promise chain MUST
@@ -163,3 +196,24 @@ the trimmed name is empty.
 - **THEN** the Save button is disabled
 - **AND** no mutation is sent for a blank name even if `handleSave` is
   invoked directly (e.g. via a keyboard submit)
+
+### Requirement: Skeleton bar widths use a JIT-extractable class or inline style
+
+Dashboard skeleton bars MUST express their width using either a literal
+Tailwind class string that appears verbatim in source (e.g. via a static
+lookup map), or an inline `style={{ width }}`. This governs
+`DashboardSkeleton`
+(`apps/web/src/features/dashboard/ui/dashboard-skeleton.tsx`), which MUST
+NOT build a Tailwind width utility class via a runtime template-literal
+interpolation (e.g. `` `w-[${w}px]` ``), because Tailwind's static JIT
+scanner cannot extract a class name that only exists at runtime — the
+utility is silently never generated, and the bar renders with zero width.
+
+#### Scenario: Skeleton bars render with visible width
+
+- **GIVEN** the dashboard is in its loading state
+- **WHEN** `DashboardSkeleton` renders its header skeleton bars
+- **THEN** each bar has a non-zero, visible width matching its intended
+  value
+- **AND** no bar's width class is constructed via a runtime
+  template-literal interpolation
