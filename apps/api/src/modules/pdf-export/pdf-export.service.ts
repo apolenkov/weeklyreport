@@ -4,7 +4,6 @@ import {
   pdfExportJobSchema,
   type UserSession,
 } from "@customreport/shared";
-import jwt from "jsonwebtoken";
 
 import { requireEnv } from "../../lib/env.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
@@ -14,6 +13,7 @@ import {
   type PdfExportEnqueuer,
   type PdfExportTelemetry,
 } from "./pdf-export.ports.js";
+import { signPdfExportToken as signPdfExportTokenPure } from "./pdf-export.token.js";
 
 export class PdfExportDomainError extends Error {
   constructor(message: string) {
@@ -44,77 +44,6 @@ export interface PdfExportRepository {
   markExportFailed(jobId: string, error: string): Promise<void>;
 }
 
-/**
- * Claim shape carried in the 5-min PDF export JWT.
- *
- * The reportId claim binds the cookie to a single resource so a leaked
- * cookie cannot be reused to render arbitrary reports. The `kind` claim
- * disambiguates this token from regular session JWTs (which use a
- * different secret and a much wider claim shape) so the tRPC context
- * verifier can route it to the correct check path.
- *
- * The server-side verifier (`verifyPdfExportToken`) is wired into
- * `trpc.context.ts`; the synthetic session it produces is restricted to a
- * hard-coded allowlist of read procedures scoped to the JWT's reportId.
- */
-export interface PdfExportTokenClaims {
-  reportId: string;
-  kind: "pdf-export";
-  /**
-   * driver-findings-followups (empty-PDF fix): the session userId of the
-   * requester. The PDF worker renders `/print/<id>` under a session rebuilt
-   * for THIS user, so the exported report is scoped exactly to what the
-   * requester sees in-app (head → full report, lead/viewer → their slice).
-   * Optional for back-compat with legacy tokens that predate the claim — those
-   * fall back to the narrow viewer-synthetic session in `trpc.context.ts`.
-   */
-  requestedBy?: string;
-}
-
-const PDF_EXPORT_JWT_TTL = "5m";
-const PDF_EXPORT_KIND = "pdf-export" as const;
-// Symmetric token; pin the verify algorithm so it cannot be coerced (see
-// auth.controller.ts `SESSION_JWT_ALGORITHM`). Sign uses the jsonwebtoken
-// default, which is the same HS256.
-const PDF_EXPORT_JWT_ALGORITHM = "HS256" as const;
-const MIN_PDF_EXPORT_JWT_SECRET_LENGTH = 32;
-
-/**
- * Verify a token signed by `signPdfExportToken` against
- * `PDF_EXPORT_JWT_SECRET`. Returns the typed claim shape on success;
- * throws if the token is invalid, expired, missing the kind claim, or signed
- * with a different secret. This is the deferred verifier called from
- * `trpc.context.ts` after `verifySessionToken` fails.
- */
-export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
-  const secret = process.env.PDF_EXPORT_JWT_SECRET;
-  if (!secret || secret.length < MIN_PDF_EXPORT_JWT_SECRET_LENGTH) {
-    throw new Error(
-      "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 32 chars).",
-    );
-  }
-  const decoded = jwt.verify(token, secret, {
-    algorithms: [PDF_EXPORT_JWT_ALGORITHM],
-  });
-  if (typeof decoded !== "object") {
-    throw new TypeError("Invalid PDF export token payload");
-  }
-  const claims = decoded as Record<string, unknown>;
-  if (claims.kind !== PDF_EXPORT_KIND) {
-    throw new Error("Token is not a PDF export token (kind mismatch)");
-  }
-  if (typeof claims.reportId !== "string" || !claims.reportId) {
-    throw new Error("PDF export token missing reportId claim");
-  }
-  return {
-    reportId: claims.reportId,
-    kind: PDF_EXPORT_KIND,
-    ...(typeof claims.requestedBy === "string" && claims.requestedBy
-      ? { requestedBy: claims.requestedBy }
-      : {}),
-  };
-}
-
 export class PdfExportService {
   private readonly logger: AppLogger;
   private readonly pdfQueue: PdfExportEnqueuer | null;
@@ -137,20 +66,15 @@ export class PdfExportService {
    * time instead of silently producing a token nobody can verify.
    */
   signPdfExportToken(reportId: string, requestedBy?: string): string {
-    const secret = process.env.PDF_EXPORT_JWT_SECRET;
-    if (!secret || secret.length < MIN_PDF_EXPORT_JWT_SECRET_LENGTH) {
+    try {
+      return signPdfExportTokenPure(reportId, requestedBy);
+    } catch (error) {
       throw new PdfExportDomainError(
-        "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 32 chars).",
+        error instanceof Error
+          ? error.message
+          : "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 32 chars).",
       );
     }
-    const claims: PdfExportTokenClaims = {
-      reportId,
-      kind: PDF_EXPORT_KIND,
-      // Bind the worker's render session to the requester so the export is
-      // scoped exactly to their in-app view (empty-PDF fix).
-      ...(requestedBy ? { requestedBy } : {}),
-    };
-    return jwt.sign(claims, secret, { expiresIn: PDF_EXPORT_JWT_TTL });
   }
 
   async requestPdfExport(

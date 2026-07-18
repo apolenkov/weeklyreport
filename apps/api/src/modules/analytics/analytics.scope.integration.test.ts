@@ -12,7 +12,7 @@ import {
 import { AnalyticsPrismaRepository } from "./analytics.prisma-repository";
 
 /**
- * P0-5 cross-group leak gate. The fixture is ONE unified published period
+ * Cross-group leak gate. The fixture is ONE unified published period
  * Report holding BOTH a group-A and a group-B section (two single-group reports
  * would false-green the nested-include scope). A group-A head must see only
  * group-A projects, leads, and risks from all three analytics read paths.

@@ -93,18 +93,7 @@ export function DevRoleSwitcher() {
     logoutThen(`/auth/dev-login?${params.toString()}`);
   };
 
-  const usersByRole = (usersQ.data ?? []).reduce<
-    Record<DbRole, { id: string; email: string; name: string; role: DbRole }[]>
-  >(
-    (acc, u) => {
-      const r = u.role;
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- reduce accumulator is sparse during build (noUncheckedIndexedAccess off lies non-null)
-      acc[r] = acc[r] ?? [];
-      acc[r].push({ ...u, role: r });
-      return acc;
-    },
-    { head: [], admin: [], lead: [], viewer: [] },
-  );
+  const users = usersQ.data ?? [];
 
   const logout = () => {
     setPending(true);
@@ -146,9 +135,8 @@ export function DevRoleSwitcher() {
             </DropdownMenuItem>
           )}
           {ROLE_ORDER.flatMap((role) => {
-            const list = usersByRole[role];
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- usersByRole is a sparse accumulator; a role may have no key at runtime
-            if (!list?.length) return [];
+            const list = users.filter((u) => u.role === role);
+            if (list.length === 0) return [];
             return [
               <DropdownMenuLabel
                 key={`${role}-label`}

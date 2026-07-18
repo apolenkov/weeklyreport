@@ -35,7 +35,7 @@ describe("useServerSeededDraft", () => {
     expect(result.current.draft).toEqual({ timezone: "America/New_York" });
   });
 
-  it("does not reseed when the same server reference is passed again", () => {
+  it("keeps a dirty draft when the same server reference is passed again", () => {
     const server = { timezone: "UTC" };
     const { result, rerender } = renderHook(
       (s: Settings) => useServerSeededDraft(s),
@@ -46,6 +46,22 @@ describe("useServerSeededDraft", () => {
     rerender(server);
 
     expect(result.current.draft).toEqual({ timezone: "Europe/Berlin" });
+  });
+
+  it("does not reseed a clean draft when the same server reference is passed again", () => {
+    const server = { timezone: "UTC" };
+    const { result, rerender } = renderHook(
+      (s: Settings) => useServerSeededDraft(s),
+      { wrapper: StrictMode, initialProps: server },
+    );
+
+    // Draft is clean (no setDraft call) — passing the identical reference
+    // must not trigger a reseed render that would replace `draft` with a
+    // new-but-equal object.
+    const draftBeforeRerender = result.current.draft;
+    rerender(server);
+
+    expect(result.current.draft).toBe(draftBeforeRerender);
   });
 
   it("reseeds the next distinct server value after markClean", () => {

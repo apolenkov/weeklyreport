@@ -280,11 +280,9 @@ describe("AdminPrismaRepository (integration)", () => {
   });
 
   // -------------------------------------------------------------------
-  // fix-snapshot-lifecycle-restore: a snapshot getSnapshot → saveSnapshot
-  // round-trip MUST preserve a Report's complete governed lifecycle field
-  // set, so a restored period is never left in a state the
-  // `period-dual-state` invariant forbids (the bug the
-  // refactor-period-transition-writer gate had to exempt).
+  // A snapshot getSnapshot → saveSnapshot round-trip MUST preserve a Report's
+  // complete governed lifecycle field set, so a restored period is never left
+  // in a state the `period-dual-state` invariant forbids.
   // -------------------------------------------------------------------
 
   // These restore through the CREATE branch (capture → delete → saveSnapshot

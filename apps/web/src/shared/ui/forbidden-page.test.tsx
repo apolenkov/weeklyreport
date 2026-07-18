@@ -36,7 +36,7 @@ describe("ForbiddenPage", () => {
     expect(link).toHaveAttribute("href", "/lead/report");
   });
 
-  it("does NOT leak the user actual role into the DOM (T4)", () => {
+  it("does NOT leak the user actual role into the DOM", () => {
     // The component contract is that requiredRoles is the ONLY role-shaped
     // input — no actualRole prop exists, so there is no surface through
     // which the user's role can reach the DOM. homeHref is a pre-resolved
@@ -50,9 +50,9 @@ describe("ForbiddenPage", () => {
   });
 });
 
-// VA-0a/VA-0b: verify-a11y-recommended-flip regression coverage
-// Change: removed redundant role="main" from <main> (native element is sufficient)
-describe("ForbiddenPage — a11y regression (VA-0a/VA-0b)", () => {
+// Regression coverage for removing a redundant role="main" from <main>
+// (the native element already carries that implicit ARIA role).
+describe("ForbiddenPage — a11y regression", () => {
   it("main element has implicit semantic role=main via native element, not an explicit role attribute", () => {
     // getByRole('main') resolves via the native <main> element's implicit ARIA
     // role. The explicit role="main" attribute was removed as redundant; this

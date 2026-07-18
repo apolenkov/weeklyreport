@@ -110,9 +110,9 @@ describe("TelemetryGauges", () => {
     gauges.onModuleInit();
     expect(await gaugeValue(customreportActiveLeadsTotal)).toBe(9);
 
-    // After destroy, the collect callback becomes a no-op — the gauge
-    // value is whatever it was last set to. We verify by swapping in a
-    // throwing port: if the callback still fired, the test would error.
+    // After destroy, the collect callback is a no-op. Manually reset the
+    // gauge, then re-fetch: if destroy left a live callback, it would
+    // overwrite the reset; a no-op leaves the manual value intact.
     gauges.onModuleDestroy();
     customreportActiveLeadsTotal.set(0);
     // Re-fetching should not invoke the (now no-op) callback.

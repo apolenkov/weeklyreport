@@ -68,7 +68,7 @@ export async function createPeriodManual(
         periodEnd: input.periodEnd,
         deadline: input.deadline,
         weekLabel: input.weekLabel,
-        // refactor-period-transition-writer: lifecycle fields (periodState +
+        // Lifecycle fields (periodState +
         // legacy status/archived tuple) come from the transition builder, not
         // hand-assembled. The service resolves the initial state to
         // 'scheduled' | 'open'; both map to a draft/false legacy tuple, which
@@ -227,7 +227,7 @@ export async function unarchivePeriod(
   await openBoundaryGuarded(() =>
     prisma.report.update({
       where: { id: periodId },
-      // refactor-period-transition-writer: the caller-derived next state (read
+      // The caller-derived next state (read
       // from the surviving legacy tuple above) flows into the unarchive
       // transition, which clears `archived` and sets `periodState`.
       data: buildTransition("unarchive", { nextPeriodState }),

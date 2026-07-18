@@ -1,9 +1,9 @@
-// fix-published-empty-stage-risk-floor (task 3.4, PDF leg): the PDF top-line
-// portfolio totals re-route lives in `toAssembledReport`, a function separate
-// from the snapshot-module builder. It must count the floored `trafficLight`
-// of the mapped sections (NOT raw `projectStatuses`), so an owned stage with no
-// submitted status covered by a covers-all own risk reads red/yellow in the PDF
-// top-line, agreeing with the PDF per-product cards inside the same document.
+// The PDF top-line portfolio totals re-route lives in `toAssembledReport`, a
+// function separate from the snapshot-module builder. It must count the floored
+// `trafficLight` of the mapped sections (NOT raw `projectStatuses`), so an owned
+// stage with no submitted status covered by a covers-all own risk reads
+// red/yellow in the PDF top-line, agreeing with the PDF per-product cards
+// inside the same document.
 import { describe, expect, it } from "vitest";
 
 import { toAssembledReport } from "./pdf-export.prisma-repository";

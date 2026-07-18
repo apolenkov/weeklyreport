@@ -82,6 +82,33 @@ export type CursorQueryOptionsFactory<
   string | null | undefined
 >;
 
+/**
+ * Merge the factory-built query options with the caller's `enabled` override.
+ * The cast is narrow: consumer factories typed against the tRPC proxy still
+ * satisfy useInfiniteQuery's typings once re-widened here.
+ */
+function mergeQueryOptions<TItem>(
+  built: UseInfiniteQueryOptions<
+    CursorPage<TItem>,
+    unknown,
+    CursorPage<TItem>,
+    readonly unknown[],
+    string | null | undefined
+  >,
+  options: CursorPaginationOptions,
+): UseInfiniteQueryOptions<
+  CursorPage<TItem>,
+  unknown,
+  CursorPage<TItem>,
+  readonly unknown[],
+  string | null | undefined
+> {
+  return {
+    ...built,
+    enabled: options.enabled ?? built.enabled,
+  };
+}
+
 export function useCursorPagination<
   TItem,
   TInput extends CursorPaginationInput = CursorPaginationInput,
@@ -92,9 +119,7 @@ export function useCursorPagination<
   input: Omit<TInput, "cursor">,
   options: CursorPaginationOptions = {},
 ): CursorPaginationResult<TItem> {
-  // Build the query options from the provided factory. We keep the cast
-  // narrow so consumer factories typed against the tRPC proxy still satisfy
-  // useInfiniteQuery's typings.
+  // Build the query options from the provided factory.
   //
   // We don't memoize this on `input` reference — callers may rebuild the
   // input object each render. The memoization that matters lives inside
@@ -104,16 +129,7 @@ export function useCursorPagination<
   const built = (factory as CursorQueryOptionsFactory<TInput, TItem>)(
     input as TInput,
   );
-  const queryOptions = {
-    ...built,
-    enabled: options.enabled ?? built.enabled,
-  } as UseInfiniteQueryOptions<
-    CursorPage<TItem>,
-    unknown,
-    CursorPage<TItem>,
-    readonly unknown[],
-    string | null | undefined
-  >;
+  const queryOptions = mergeQueryOptions<TItem>(built, options);
 
   const query = useInfiniteQuery(queryOptions);
 

@@ -21,7 +21,6 @@ import {
   Globe2,
   LayoutDashboard,
   Moon,
-  Presentation,
   Settings,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -52,9 +51,8 @@ const HEAD_REPORT_ROUTE = "/head/report";
 const NAV_LINKS: readonly NavLink[] = [
   { href: "/lead/report", label: "Report", roles: ["lead"] },
   // One History page for both active and archived report periods; archived
-  // visibility is a local toggle inside the page.
-  // remove-dead-history-tab-param: the History link targets bare `/reports` —
-  // the page does not read a `tab` query param, so emitting one is dead weight.
+  // visibility is a local toggle inside the page. The link targets bare
+  // `/reports` — the page does not read a `tab` query param.
   {
     href: "/reports",
     label: "History",
@@ -204,8 +202,6 @@ function NavIcon({ href }: { readonly href: string }) {
       return <LayoutDashboard {...common} />;
     case HEAD_REPORT_ROUTE:
       return <BarChart3 {...common} />;
-    case "/head/slides":
-      return <Presentation {...common} />;
     case "/admin":
       return <Settings {...common} />;
     default:

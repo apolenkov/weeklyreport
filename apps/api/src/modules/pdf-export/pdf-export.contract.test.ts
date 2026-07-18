@@ -119,7 +119,6 @@ function createMockQueue() {
 // ---------------------------------------------------------------------------
 
 describe("PdfExportService — contract tests", () => {
-  // 1. requestPdfExport — creates job for published report
   describe("requestPdfExport", () => {
     it("creates a job for a published report", async () => {
       const service = new PdfExportService(createRepository(publishedReport));
@@ -132,7 +131,6 @@ describe("PdfExportService — contract tests", () => {
       );
     });
 
-    // 2. requestPdfExport — throws PdfExportDomainError when report not found (null)
     it("throws PdfExportDomainError when report is not found", async () => {
       const service = new PdfExportService(createRepository(publishedReport));
 
@@ -145,7 +143,6 @@ describe("PdfExportService — contract tests", () => {
       ).rejects.toThrow("PDF export requires a published report.");
     });
 
-    // 3. requestPdfExport — throws when report status is draft (not published)
     it("throws PdfExportDomainError when report is a draft", async () => {
       const service = new PdfExportService(createRepository(draftReport));
 
@@ -158,7 +155,6 @@ describe("PdfExportService — contract tests", () => {
       ).rejects.toThrow("PDF export requires a published report.");
     });
 
-    // 4. requestPdfExport — created job has status 'queued'
     it('creates a job with status "queued"', async () => {
       const service = new PdfExportService(createRepository(publishedReport));
       const job = await service.requestPdfExport(reportId, requesterSession);
@@ -166,7 +162,6 @@ describe("PdfExportService — contract tests", () => {
       expect(job.status).toBe("queued");
     });
 
-    // 5. requestPdfExport — enqueues BullMQ job when queue is provided
     it("enqueues a BullMQ job when a queue is provided", async () => {
       // The queue payload carries an authToken signed with
       // PDF_EXPORT_JWT_SECRET. Stub the secret for deterministic signing.
@@ -200,7 +195,6 @@ describe("PdfExportService — contract tests", () => {
       }
     });
 
-    // 6. requestPdfExport — works without queue (null queue)
     it("works without a queue (null queue)", async () => {
       const service = new PdfExportService(createRepository(publishedReport));
       const job = await service.requestPdfExport(reportId, requesterSession);
@@ -209,7 +203,6 @@ describe("PdfExportService — contract tests", () => {
       expect(job.status).toBe("queued");
     });
 
-    // 7. requestPdfExport — sets templateVersion to 'phase-2-pdf-v1'
     it('sets templateVersion to "phase-2-pdf-v1"', async () => {
       const service = new PdfExportService(createRepository(publishedReport));
       const job = await service.requestPdfExport(reportId, requesterSession);
@@ -275,7 +268,6 @@ describe("PdfExportService — contract tests", () => {
     });
   });
 
-  // 8. getPdfExportStatus — returns job when found
   describe("getPdfExportStatus", () => {
     it("returns the job when found", async () => {
       const service = new PdfExportService(createRepository(publishedReport));
@@ -308,7 +300,6 @@ describe("PdfExportService — contract tests", () => {
       ).rejects.toThrow(`PDF export job ${created.jobId} was not found.`);
     });
 
-    // 9. getPdfExportStatus — throws PdfExportDomainError when job not found
     it("throws PdfExportDomainError when job is not found", async () => {
       const service = new PdfExportService(createRepository(publishedReport));
       const missingJobId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -323,7 +314,6 @@ describe("PdfExportService — contract tests", () => {
     });
   });
 
-  // 10. markExportCompleted — sets status to completed with artifactUrl and checksum
   describe("markExportCompleted", () => {
     it('sets status to "completed" with artifactUrl and checksum', async () => {
       const service = new PdfExportService(createRepository(publishedReport));
@@ -340,7 +330,6 @@ describe("PdfExportService — contract tests", () => {
       expect(completed.checksum).toBe("sha256-abc123");
     });
 
-    // 11. markExportCompleted — sets completedAt timestamp
     it("sets completedAt timestamp", async () => {
       const service = new PdfExportService(createRepository(publishedReport));
       const queued = await service.requestPdfExport(reportId, requesterSession);
@@ -363,7 +352,6 @@ describe("PdfExportService — contract tests", () => {
     });
   });
 
-  // 12. markExportFailed — delegates to repository
   describe("markExportFailed", () => {
     it("delegates to the repository", async () => {
       const repo = createRepository(publishedReport);
@@ -387,10 +375,9 @@ describe("PdfExportService — contract tests", () => {
     });
   });
 
-  // 13-15. buildAuthCookies
   describe("buildAuthCookies", () => {
-    // 13. buildAuthCookies — PDF_BASE_URL is required (no in-code fallback):
-    // its absence throws rather than silently scoping the cookie to localhost.
+    // PDF_BASE_URL is required (no in-code fallback): its absence throws
+    // rather than silently scoping the cookie to localhost.
     it("throws when PDF_BASE_URL is absent (no fallback)", () => {
       const originalBaseUrl = process.env.PDF_BASE_URL;
       delete process.env.PDF_BASE_URL;
@@ -407,7 +394,6 @@ describe("PdfExportService — contract tests", () => {
       }
     });
 
-    // 14. buildAuthCookies — respects AUTH_JWT_COOKIE_NAME env
     it("respects AUTH_JWT_COOKIE_NAME env variable", () => {
       const originalCookieName = process.env.AUTH_JWT_COOKIE_NAME;
       process.env.AUTH_JWT_COOKIE_NAME = "custom_auth_token";
@@ -427,9 +413,9 @@ describe("PdfExportService — contract tests", () => {
       }
     });
 
-    // 15. buildAuthCookies — cookie is scoped via Playwright's `url` field
-    // rather than `domain`+`secure` inference.
-    // Playwright auto-derives the secure flag from the URL's protocol.
+    // Cookie is scoped via Playwright's `url` field rather than
+    // `domain`+`secure` inference. Playwright auto-derives the secure flag
+    // from the URL's protocol.
     it("passes the full PDF_BASE_URL through as the cookie url for https", () => {
       const originalBaseUrl = process.env.PDF_BASE_URL;
       process.env.PDF_BASE_URL = "https://reports.company.com";

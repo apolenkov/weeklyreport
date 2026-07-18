@@ -114,7 +114,7 @@ describe("ActivityPrismaRepository (integration)", () => {
     expect(result.rows[0]?.leadId).toBe(leadA);
   });
 
-  it("keeps the lifecycle-resolved report when a scheduled future period exists", async () => {
+  it("ignores a scheduled future-period report when resolving live activity for the current period", async () => {
     const futureReportId = "a0000000-0000-4000-a000-000000000407";
     const futureStart = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await prisma.report.create({
