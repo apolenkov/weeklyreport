@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
-import { TabHeader, TabSearch } from "./tab-header";
+import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
 
 /**
  * BullMQ DLQ admin tab.

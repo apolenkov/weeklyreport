@@ -9,6 +9,7 @@ import { useTRPC } from "../../../lib/trpc-context";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import { PlusIcon } from "../../../shared/ui/icons";
 import { SearchInput } from "../../../shared/ui/search-input";
+import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
 import { toAdminProjectInput } from "../model/admin";
 import type { MockProduct, MockUser } from "../model/admin-types";
 import {
@@ -18,7 +19,6 @@ import {
 } from "../model/product-form";
 import { ProductEditDialog } from "./product-edit-dialog";
 import { ProductsTable } from "./products-table";
-import { TabHeader, TabSearch } from "./tab-header";
 import { useProductDeepLinkExpand } from "./use-product-deep-link-expand";
 
 interface ProductsTabProps {

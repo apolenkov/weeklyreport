@@ -9,6 +9,7 @@ import {
 } from "@customreport/ui/components/ui/tabs";
 import { ComingSoonTooltip } from "@customreport/ui/components/ui/tooltip";
 
+import { TabHeader } from "../../../shared/ui/tab-header";
 import {
   IdentitySubTab,
   IntegrationsSubTab,
@@ -17,7 +18,6 @@ import {
 import { PeriodsSubTab } from "../../period";
 import type { MockSettings } from "../model/admin-types";
 import { RemindersSubTab } from "./settings-reminders-sub-tab";
-import { TabHeader } from "./tab-header";
 
 interface SettingsTabProps {
   readonly settings: MockSettings;

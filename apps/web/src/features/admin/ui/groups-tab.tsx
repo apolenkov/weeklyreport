@@ -8,6 +8,7 @@ import { invalidateAdmin } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import { PlusIcon } from "../../../shared/ui/icons";
+import { TabFilter, TabHeader, TabSearch } from "../../../shared/ui/tab-header";
 import { toReportingGroupInput } from "../model/admin";
 import type { MockGroup, MockProduct, MockUser } from "../model/admin-types";
 import {
@@ -17,7 +18,6 @@ import {
 } from "../model/group-form";
 import { GroupEditDialog } from "./group-edit-dialog";
 import { GroupsTable } from "./groups-table";
-import { TabFilter, TabHeader, TabSearch } from "./tab-header";
 
 // archive quick-filter — default "active" hides archived groups on load
 const ARCHIVE_OPTIONS = [
