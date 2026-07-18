@@ -16,3 +16,4 @@ scheduled_tasks.lock
 .claude/worktrees/
 # Codex rescue runtime — machine-local tool artifacts, not repo source.
 .agents/
+openspec/changes/all-green-exemplary-rollout/mass-review-artifact.html
