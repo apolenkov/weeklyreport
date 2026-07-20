@@ -36,9 +36,9 @@ export async function queryActiveReportId(
 }
 
 /**
- * viewer-live-status (Decision 0): the single source of truth for the
- * **current editable period** — the newest non-archived `open`/`reopened`
- * report that has actually started (`periodStart <= now`). Deliberately:
+ * The single source of truth for the **current editable period** — the
+ * newest non-archived `open`/`reopened` report that has actually started
+ * (`periodStart <= now`). Deliberately:
  *   - NO published fallback (unlike `queryActiveReportId`): the viewer gate
  *     already admits any `published` report via its first clause, so a
  *     fallback here would let the gate's id-equality match a published id and
@@ -48,8 +48,8 @@ export async function queryActiveReportId(
  *     non-archived (CONTEXT.md), and excluding archived rows keeps an
  *     archived-open period from being mistaken for the current one.
  *
- * Determinism (Decision 3): the period-creation lock is a separate change, so
- * two concurrent editable periods can share the same `periodStart`. A
+ * Determinism: the period-creation lock is a separate change, so two
+ * concurrent editable periods can share the same `periodStart`. A
  * `periodStart desc` sort alone leaves that tie to the DB's arbitrary row
  * order — and because the gate and the `latestForViewer` resolver call this
  * helper SEPARATELY, a nondeterministic tie could let them pick DIFFERENT

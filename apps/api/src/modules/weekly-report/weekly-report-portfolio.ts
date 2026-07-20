@@ -37,23 +37,25 @@ export function buildPortfolioOverview(
   }[],
 ): PortfolioProductOverview[] {
   return projects.map((project) => {
-    const statuses: TrafficLightStatus[] = [];
-    const leadNameSet = new Set<string>();
-
-    for (const section of sections) {
-      for (const sectionProject of section.projects) {
-        // null trafficLight = lead hasn't filled (nor own-risk-floored) the
-        // traffic light for this project yet; skip it so the worst-of
-        // computation isn't muddied by missing data.
-        if (
-          sectionProject.projectId === project.id &&
-          sectionProject.trafficLight !== null
-        ) {
-          statuses.push(sectionProject.trafficLight as TrafficLightStatus);
-          leadNameSet.add(section.authorName);
-        }
-      }
-    }
+    // null trafficLight = lead hasn't filled (nor own-risk-floored) the
+    // traffic light for this project yet; skip it so the worst-of
+    // computation isn't muddied by missing data.
+    const matchingByProject = sections.flatMap((section) =>
+      section.projects
+        .filter(
+          (sectionProject) =>
+            sectionProject.projectId === project.id &&
+            sectionProject.trafficLight !== null,
+        )
+        .map((sectionProject) => ({
+          trafficLight: sectionProject.trafficLight as TrafficLightStatus,
+          authorName: section.authorName,
+        })),
+    );
+    const statuses = matchingByProject.map((match) => match.trafficLight);
+    const leadNameSet = new Set(
+      matchingByProject.map((match) => match.authorName),
+    );
 
     const worstStatus = computeWorstStatus(statuses);
 

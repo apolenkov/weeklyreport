@@ -177,8 +177,8 @@ describe("WeeklyReportService — unit tests", () => {
   });
 
   it("returns no-period sentinel when no active and no explicit ID", async () => {
-    // R3a: replaces the old "throws WeeklyReportDomainError" contract.
-    // 200 response with { status: 'no-period' } prevents React Query retry storm.
+    // A 200 response with { status: 'no-period' } (not a thrown domain error)
+    // prevents React Query retry storm.
     const repo = createSpyRepository(new Map(), null);
     const service = new WeeklyReportService(repo);
 
@@ -217,7 +217,7 @@ describe("WeeklyReportService — unit tests", () => {
 /*  viewer scoping                                                     */
 /* ------------------------------------------------------------------ */
 
-describe("WeeklyReportService — viewer-live-status published-or-current gate (task 2.3)", () => {
+describe("WeeklyReportService — viewer-live-status published-or-current gate", () => {
   // viewer + current open draft → visible
   it("viewer reads the CURRENT open period (drafts included)", async () => {
     const open = makeWeeklyReport({ periodStatus: "open" });
@@ -327,7 +327,7 @@ describe("WeeklyReportService — viewer-live-status published-or-current gate (
   });
 
   // viewer + open→published race → rejected on the stale-open fetch, then the
-  // published snapshot on re-fetch (Decision 1 fail-closed ordering)
+  // published snapshot on re-fetch (fail-closed ordering)
   it("viewer race open→published is rejected, then reads the snapshot on re-fetch", async () => {
     const open = makeWeeklyReport({ periodStatus: "open" });
     const published = makeWeeklyReport({ periodStatus: "published" });

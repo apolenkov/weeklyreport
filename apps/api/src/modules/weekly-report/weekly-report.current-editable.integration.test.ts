@@ -9,8 +9,8 @@ import {
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
 
 /**
- * viewer-live-status (task 0.2): real-Prisma coverage for
- * `getCurrentEditableId()` — the single source of truth for the viewer
+ * Real-Prisma coverage for `getCurrentEditableId()` — the single source of
+ * truth for the viewer
  * published-or-current gate and the `latestForViewer` resolver. The stub
  * where-shape test (in weekly-report.prisma-repository.test.ts) pins the query;
  * this one runs the filter against Postgres and proves the behaviour:

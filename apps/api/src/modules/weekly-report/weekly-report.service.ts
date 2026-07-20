@@ -75,12 +75,12 @@ export interface WeeklyReportRepository {
   ): Promise<WeeklyReportRepositoryResult | null>;
   getActiveReportId(): Promise<string | null>;
   /**
-   * viewer-live-status (Decision 0): the single newest **editable** period —
-   * `open`/`reopened`, non-archived, `periodStart <= now`, NO published
-   * fallback. This is the one id both the viewer read gate and the
-   * `latestForViewer` resolver hinge on. Distinct from `getActiveReportId`
-   * (which carries a published fallback and no `archived` filter), so the gate
-   * cannot leak a published or archived-open period through it.
+   * The single newest **editable** period — `open`/`reopened`, non-archived,
+   * `periodStart <= now`, NO published fallback. This is the one id both the
+   * viewer read gate and the `latestForViewer` resolver hinge on. Distinct
+   * from `getActiveReportId` (which carries a published fallback and no
+   * `archived` filter), so the gate cannot leak a published or archived-open
+   * period through it.
    */
   getCurrentEditableId(): Promise<string | null>;
   /**
@@ -129,10 +129,10 @@ export class WeeklyReportService {
   constructor(private readonly repository: WeeklyReportRepository) {}
 
   /**
-   * viewer-live-status (Decision 0): passthrough to the repository's single
-   * source of truth for the current editable period id. The router resolves
-   * `latestForViewer` through this (it holds the service, not the repository),
-   * so the gate and the entry resolver share one query and cannot diverge.
+   * Passthrough to the repository's single source of truth for the current
+   * editable period id. The router resolves `latestForViewer` through this
+   * (it holds the service, not the repository), so the gate and the entry
+   * resolver share one query and cannot diverge.
    */
   getCurrentEditableId(): Promise<string | null> {
     return this.repository.getCurrentEditableId();
@@ -169,8 +169,8 @@ export class WeeklyReportService {
   }
 
   /**
-   * viewer-live-status: viewers read the Status target — any `published` report
-   * OR the current editable period (drafts included), gated published-or-current.
+   * Viewers read the Status target — any `published` report OR the current
+   * editable period (drafts included), gated published-or-current.
    * Non-viewer roles (head/lead/admin) keep their existing visibility.
    *
    * When no active Period exists the service returns
@@ -215,9 +215,9 @@ export class WeeklyReportService {
 
     const { readModel, crossGroup } = result;
 
-    // viewer-live-status (Decision 1): published-or-current read gate. A viewer
-    // may read a report iff its period is `published` OR it is the current
-    // editable period. `currentEditableId` is resolved here — AFTER the report
+    // Published-or-current read gate. A viewer may read a report iff its
+    // period is `published` OR it is the current editable period.
+    // `currentEditableId` is resolved here — AFTER the report
     // fetch — and is editable-only (no published fallback), so an
     // `open → published` race rejects (the fetched-open id no longer equals the
     // now-recomputed current id) and a mid-request new period fails closed. Every
@@ -256,11 +256,11 @@ export class WeeklyReportService {
   }
 
   /**
-   * viewer-live-status (task 1.1): resolve the **Status target** for the
-   * `/reports/latest` redirect. The target is the current editable period
-   * (Decision 0) when that period has a `session`-visible section, else the
-   * newest visible `published` report, else `null`. It must NOT search older
-   * editable periods — `getVisibleReportId` checks only the exact current id.
+   * Resolve the **Status target** for the `/reports/latest` redirect. The
+   * target is the current editable period when that period has a
+   * `session`-visible section, else the newest visible `published` report,
+   * else `null`. It must NOT search older editable periods —
+   * `getVisibleReportId` checks only the exact current id.
    */
   async latestForViewer(
     session: WeeklyReportScopeSession,
