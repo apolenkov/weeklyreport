@@ -85,10 +85,10 @@ describe("WeeklyReportPrismaRepository.getActiveReportId", () => {
   });
 });
 
-// viewer-live-status (task 0.2, fast feedback): the where-shape of the
-// current-editable query — the always-run unit counterpart to the real-Prisma
-// integration test. Pins archived:false + the editable-only filter + the
-// absence of any published fallback so the gate cannot be silently widened.
+// The where-shape of the current-editable query — the always-run unit
+// counterpart to the real-Prisma integration test. Pins archived:false + the
+// editable-only filter + the absence of any published fallback so the gate
+// cannot be silently widened.
 describe("WeeklyReportPrismaRepository.getCurrentEditableId", () => {
   it("queries editable-only, non-archived, already-started periods, newest-first", async () => {
     const findFirst = vi.fn().mockResolvedValue({ id: "current-editable-id" });
@@ -254,14 +254,14 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
   });
 });
 
-// fix-published-empty-stage-risk-floor: the LIVE (not-yet-published)
-// head/weekly portfolioOverview must floor each product card by the section
-// author's own covering risks, the SAME way leadSections/escalations are
-// floored. Before the fix this card path read raw `projectStatuses`, so the
-// bug case (owned stage status:null + own covers-all blocked risk) shipped a
-// green card alongside a red leadSection — a self-contradicting payload. This
-// drives the actual repository wiring (getWeeklyReport), so a wrong-builder
-// regression surfaces here, not just in a pure-function builder test.
+// The LIVE (not-yet-published) head/weekly portfolioOverview must floor each
+// product card by the section author's own covering risks, the SAME way
+// leadSections/escalations are floored — a card path that instead read raw
+// `projectStatuses` could ship a green card alongside a red leadSection, a
+// self-contradicting payload (owned stage status:null + own covers-all
+// blocked risk). This drives the actual repository wiring (getWeeklyReport),
+// so a wrong-builder regression surfaces here, not just in a pure-function
+// builder test.
 describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", () => {
   const REPORT_ID = "a1111111-1111-4111-8111-111111111111";
   const SECTION_ID = "a2222222-2222-4222-8222-222222222222";
@@ -503,13 +503,13 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
 });
 
 /**
- * viewer-live-status (task 3.1 / Decision 5): `compiledHistory` is shared
- * across roles, so the viewer-only `periodStatus = "published"` History
- * filter MUST be role-conditional. It applies to BOTH the list query and the
- * archive-count query (else the list and the count disagree for the viewer),
- * so a reopened period (legacy `status="published"`, `periodStatus="reopened"`)
- * is never shown to the viewer as a gate-rejected broken link — while head and
- * lead History stay unchanged (a reopened period still listed + counted).
+ * `compiledHistory` is shared across roles, so the viewer-only
+ * `periodStatus = "published"` History filter MUST be role-conditional. It
+ * applies to BOTH the list query and the archive-count query (else the list
+ * and the count disagree for the viewer), so a reopened period (legacy
+ * `status="published"`, `periodStatus="reopened"`) is never shown to the
+ * viewer as a gate-rejected broken link — while head and lead History stay
+ * unchanged (a reopened period still listed + counted).
  */
 describe("WeeklyReportPrismaRepository.getCompiledHistory", () => {
   interface QueryArg {
@@ -588,10 +588,10 @@ describe("WeeklyReportPrismaRepository.getCompiledHistory", () => {
 });
 
 /**
- * viewer-live-status (task 1.3): `latestForViewer` resolves the **Status
- * target** for the `/reports/latest` redirect. The resolver MUST:
- *   - target the current editable id (Decision 0) when that exact report has
- *     a viewer-visible section;
+ * `latestForViewer` resolves the **Status target** for the `/reports/latest`
+ * redirect. The resolver MUST:
+ *   - target the current editable id when that exact report has a
+ *     viewer-visible section;
  *   - NOT search older editable periods — fall to the published path instead;
  *   - otherwise resolve the newest viewer-visible `published` report
  *     (`sections.some(sectionScope)`, `periodStart desc`);

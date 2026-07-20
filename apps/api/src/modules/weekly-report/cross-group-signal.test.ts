@@ -7,8 +7,8 @@ import {
 import type { WeeklyReportScopeSession } from "./weekly-report.service";
 
 /**
- * Task 4.1/4.2 (add-scope-accessed-audit): falsifiable unit tests for the
- * owner-group comparison that decides whether a surfaced product is
+ * Falsifiable unit tests for the owner-group comparison that decides
+ * whether a surfaced product is
  * cross-group. The router emit guard is covered separately in
  * `scope-accessed-emit.test.ts`; the snapshot intersection is covered by
  * `weekly-report.scope-filter.integration.test.ts`.

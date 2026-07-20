@@ -106,6 +106,16 @@ function buildPortfolioOverview(
   };
 }
 
+function deriveAutoPublishedReport(report: AssembledReport): AssembledReport {
+  return assembledReportSchema.parse({
+    ...report,
+    status: "published",
+    publishedAt: new Date(),
+    publishedById: null,
+    publishedByName: "system",
+  });
+}
+
 export class PublicationService {
   private readonly logger: AppLogger;
 
@@ -179,13 +189,7 @@ export class PublicationService {
 
     this.logger.info("auto-publishing report", { activeReportId });
     const result = await this.repository.saveAutoPublishedReport(
-      assembledReportSchema.parse({
-        ...report,
-        status: "published",
-        publishedAt: new Date(),
-        publishedById: null,
-        publishedByName: "system",
-      }),
+      deriveAutoPublishedReport(report),
     );
 
     if (!result.published) {

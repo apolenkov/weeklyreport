@@ -21,10 +21,10 @@ export async function queryCompiledHistory(
   const visibleSectionWhere: Prisma.ReportWhereInput = {
     sections: { some: sectionScope },
   };
-  // viewer-live-status (task 3.1 / Decision 5): the viewer read gate is
-  // published-or-current, so a reopened period (legacy `status="published"`,
-  // `periodStatus="reopened"`) would otherwise be listed in the viewer's
-  // History as a gate-rejected broken link. Narrow the VIEWER History to
+  // The viewer read gate is published-or-current, so a reopened period
+  // (legacy `status="published"`, `periodStatus="reopened"`) would otherwise
+  // be listed in the viewer's History as a gate-rejected broken link.
+  // Narrow the VIEWER History to
   // `periodStatus="published"` only. This MUST be viewer-only —
   // `compiledHistory` is a shared `anyRoleProcedure`, and an unconditional
   // filter would silently drop reopened periods from head/lead History (a

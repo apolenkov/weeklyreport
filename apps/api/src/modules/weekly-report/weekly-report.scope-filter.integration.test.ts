@@ -159,8 +159,8 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
     expect(productIds).not.toContain(PROJECT_ID);
   });
 
-  // driver-findings-2026-06-11 finding 2: the lead "Section Preview" must show
-  // only the lead's group's products, never another group's. The preview route
+  // The lead "Section Preview" must show only the lead's group's products,
+  // never another group's. The preview route
   // (/lead/report/[id]/preview) renders the same weeklyReport.get payload, so
   // the lead session is group-scoped here exactly like a head session. (The
   // driver's "shows the whole portfolio" was a stale false-confirm: the server

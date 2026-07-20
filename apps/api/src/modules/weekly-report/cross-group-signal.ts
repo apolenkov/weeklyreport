@@ -5,7 +5,7 @@ import type {
 } from "./weekly-report.service.js";
 
 /**
- * D1: compute the cross-group audit signal from the surfaced projects.
+ * Compute the cross-group audit signal from the surfaced projects.
  *
  * A product is cross-group when its lead's `reportingGroupId` (natural
  * owner) is NOT in the caller's allowed group ids, yet it surfaced via
@@ -17,8 +17,8 @@ import type {
  * read model handed to the caller (on published periods that is the
  * snapshot-surfaced subset, not the live project rows).
  *
- * Per-request dedupe (D3) is achieved by collapsing all cross-group
- * products into one signal object — the router emits a single event.
+ * All cross-group products collapse into one signal object — the router
+ * emits a single event per request, not one per product.
  */
 export function computeCrossGroupSignal(
   session: WeeklyReportScopeSession | undefined,
@@ -30,22 +30,21 @@ export function computeCrossGroupSignal(
   if (allowedGroupIds.length === 0) return null;
 
   const allowedSet = new Set(allowedGroupIds);
-  const crossGroupProductIds: string[] = [];
-  const crossGroupGroupIdSet = new Set<string>();
+  const entries = projects
+    .map((project) => ({
+      id: project.id,
+      ownerGroupId: project.lead?.reportingGroupId ?? null,
+    }))
+    .filter(
+      (entry): entry is { id: string; ownerGroupId: string } =>
+        entry.ownerGroupId !== null && !allowedSet.has(entry.ownerGroupId),
+    );
 
-  for (const project of projects) {
-    const ownerGroupId = project.lead?.reportingGroupId ?? null;
-    if (ownerGroupId !== null && !allowedSet.has(ownerGroupId)) {
-      crossGroupProductIds.push(project.id);
-      crossGroupGroupIdSet.add(ownerGroupId);
-    }
-  }
-
-  if (crossGroupProductIds.length === 0) return null;
+  if (entries.length === 0) return null;
 
   return {
-    productIds: crossGroupProductIds,
-    groupIds: [...crossGroupGroupIdSet],
+    productIds: entries.map((entry) => entry.id),
+    groupIds: [...new Set(entries.map((entry) => entry.ownerGroupId))],
   };
 }
 
