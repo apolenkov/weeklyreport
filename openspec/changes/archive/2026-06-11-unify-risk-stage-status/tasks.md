@@ -12,35 +12,36 @@ read each existing test suite BEFORE touching its subject.
       (mapper) and list which pinned behaviors the new contract keeps
       vs replaces; note it in this file before editing code.
 
-      Intake note (2026-06-11):
-      - `use-status-risk-coupling.test.ts` — KEEP unchanged
-        (`computeCoupling`/`validateCoupling` stay; banner remains for
-        legacy data).
-      - `use-status-risk-sync.test.tsx` — Tests 1/2/5/7 (chip apply, no
-        risk auto-add/auto-delete at hook level, auto-sync apply) KEEP;
-        Tests 3/4/6 (handleRiskFilled suggestion + its loop guard)
-        REPLACED — suggestion flow removed (D4); interception/floor
-        tests land in `lead-form-sync-bridge.test.tsx` where the new
-        behavior lives. Hook args shrink to `{ onProductsChange }`.
-      - `lead-form-sync-bridge.test.tsx` — Tests 1/3/4,
-        `promoteStageStatus`, up-flow promotion KEEP. Test 2 (chip
-        on-track→at-risk applies directly) REPLACED by D2 interception
-        (dialog opens, status unapplied). Test 5 (chip-level "Clear"
-        confirm, "1 linked risk… will stay") REPLACED by the D3
-        bridge-level confirmed-removal dialog; the dev/Dev stageIds
-        canonicalization it pinned is preserved in the new test.
-      - `lead-form.test.ts` (mapper) — PRJ-2 test ("linked risks do NOT
-        override explicit chip status") REPLACED by floor tests
-        (D1 supersedes PRJ-2); cross-project isolation test KEEP (now
-        meaningful — risks are actually passed again); all other
-        mapper tests KEEP.
-      - Interception lives in the BRIDGE wrapper (task 2.1 option b):
-        the hook stays a dumb applier; `applyStatusSuggestion` (the
-        auto-sync source) bypasses interception by construction.
-      - Chip-level `pendingClear` confirm in `stage-chip.tsx` +
-        `linkedRiskCount` plumbing in `sdlc-pipeline.tsx` are
-        superseded by D3 (otherwise double dialogs on Clear) — removed
-        as orphans of this change.
+Intake note (2026-06-11):
+
+- `use-status-risk-coupling.test.ts` — KEEP unchanged
+  (`computeCoupling`/`validateCoupling` stay; banner remains for
+  legacy data).
+- `use-status-risk-sync.test.tsx` — Tests 1/2/5/7 (chip apply, no
+  risk auto-add/auto-delete at hook level, auto-sync apply) KEEP;
+  Tests 3/4/6 (handleRiskFilled suggestion + its loop guard)
+  REPLACED — suggestion flow removed (D4); interception/floor
+  tests land in `lead-form-sync-bridge.test.tsx` where the new
+  behavior lives. Hook args shrink to `{ onProductsChange }`.
+- `lead-form-sync-bridge.test.tsx` — Tests 1/3/4,
+  `promoteStageStatus`, up-flow promotion KEEP. Test 2 (chip
+  on-track→at-risk applies directly) REPLACED by D2 interception
+  (dialog opens, status unapplied). Test 5 (chip-level "Clear"
+  confirm, "1 linked risk… will stay") REPLACED by the D3
+  bridge-level confirmed-removal dialog; the dev/Dev stageIds
+  canonicalization it pinned is preserved in the new test.
+- `lead-form.test.ts` (mapper) — PRJ-2 test ("linked risks do NOT
+  override explicit chip status") REPLACED by floor tests
+  (D1 supersedes PRJ-2); cross-project isolation test KEEP (now
+  meaningful — risks are actually passed again); all other
+  mapper tests KEEP.
+- Interception lives in the BRIDGE wrapper (task 2.1 option b):
+  the hook stays a dumb applier; `applyStatusSuggestion` (the
+  auto-sync source) bypasses interception by construction.
+- Chip-level `pendingClear` confirm in `stage-chip.tsx` +
+  `linkedRiskCount` plumbing in `sdlc-pipeline.tsx` are
+  superseded by D3 (otherwise double dialogs on Clear) — removed
+  as orphans of this change.
 
 ## 1. Severity floor (D1)
 

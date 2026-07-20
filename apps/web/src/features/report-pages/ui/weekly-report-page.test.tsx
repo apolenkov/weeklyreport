@@ -97,11 +97,7 @@ function makeWeeklyReportData(
         readonly text: string;
         readonly tag: string;
         readonly workflowStatus:
-          | "in_progress"
-          | "done"
-          | "blocked"
-          | "canceled"
-          | "not_started";
+          "in_progress" | "done" | "blocked" | "canceled" | "not_started";
         readonly carriedOver: boolean;
         readonly completed: boolean;
       }[];

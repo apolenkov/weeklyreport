@@ -7,8 +7,7 @@ import type {
 } from "./reminders.service.js";
 
 export type ReminderQueuePayload =
-  | ReminderExecutionPayload
-  | { reportPeriod: string };
+  ReminderExecutionPayload | { reportPeriod: string };
 
 /**
  * Resolve the formatted period label a legacy/reaper payload requires. The

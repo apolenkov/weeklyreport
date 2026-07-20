@@ -52,9 +52,7 @@ function toReadModel(row: ActivityRow): ProjectActivity {
 }
 
 @Injectable()
-export class ProjectActivityPrismaRepository
-  implements ProjectActivityRepository
-{
+export class ProjectActivityPrismaRepository implements ProjectActivityRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(): Promise<ProjectActivity[]> {

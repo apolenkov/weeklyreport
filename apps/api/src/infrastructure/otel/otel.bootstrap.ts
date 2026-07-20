@@ -156,9 +156,9 @@ export function startOtel(
   loggerProvider = new LoggerProvider({
     resource,
     processors: [
-      new BatchLogRecordProcessor(
-        new OTLPLogExporter({ url: `${base}/v1/logs` }),
-      ),
+      new BatchLogRecordProcessor({
+        exporter: new OTLPLogExporter({ url: `${base}/v1/logs` }),
+      }),
     ],
   });
   logs.setGlobalLoggerProvider(loggerProvider);

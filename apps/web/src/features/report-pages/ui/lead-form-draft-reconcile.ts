@@ -9,10 +9,7 @@ import { sectionToDraftPayload } from "../../report-sections";
 type DraftRecord = Readonly<{ id?: string; stableId?: string }>;
 
 export type ReseedTrigger =
-  | "unchanged"
-  | "save-echo"
-  | "external-clean"
-  | "external-dirty";
+  "unchanged" | "save-echo" | "external-clean" | "external-dirty";
 
 export interface PendingSaveEcho {
   readonly persistedPayload: DraftSaveContent;

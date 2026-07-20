@@ -46,8 +46,7 @@ type LeadFormLoadedWriteActions = LeadFormHeaderWriteActions &
  */
 export interface LeadFormLoadedData {
   readonly byPeriodData:
-    | { readonly section: ReportSectionReadModel }
-    | undefined;
+    { readonly section: ReportSectionReadModel } | undefined;
   readonly toolbarVisibility: RecordVisibility;
   readonly setRecordVisibility: (next: RecordVisibility) => void;
   readonly isForeignSlidesDeck: boolean;

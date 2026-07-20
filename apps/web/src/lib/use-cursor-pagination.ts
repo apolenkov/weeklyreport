@@ -114,8 +114,7 @@ export function useCursorPagination<
   TInput extends CursorPaginationInput = CursorPaginationInput,
 >(
   factory:
-    | CursorQueryOptionsFactory<TInput, TItem>
-    | ((input: TInput) => unknown),
+    CursorQueryOptionsFactory<TInput, TItem> | ((input: TInput) => unknown),
   input: Omit<TInput, "cursor">,
   options: CursorPaginationOptions = {},
 ): CursorPaginationResult<TItem> {

@@ -45,11 +45,7 @@ export function buildReadinessProducts(
 
 /** Result of a submit attempt, surfaced to the write-actions dialog lifecycle. */
 export type SubmitOutcome =
-  | "submitted"
-  | "conflict"
-  | "error"
-  | "not-ready"
-  | "no-draft";
+  "submitted" | "conflict" | "error" | "not-ready" | "no-draft";
 
 /**
  * Projects the submit-readiness stage rows from the draft payload's stage

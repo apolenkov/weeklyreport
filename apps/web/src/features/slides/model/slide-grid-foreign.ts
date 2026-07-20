@@ -73,20 +73,18 @@ export function buildForeignRows(
         },
       };
     });
-    const decisions = ca.decisions.map(
-      (decision): ForeignGridRow => ({
-        productId: decision.productId,
-        column: "decisions",
-        row: {
-          ...base,
-          id: decision.id,
-          text: decision.text.trim(),
-          tone: "note",
-          hoverLabel: "Decision",
-          stageNames: sortStageNames(decision.stageNames),
-        },
-      }),
-    );
+    const decisions = ca.decisions.map((decision): ForeignGridRow => ({
+      productId: decision.productId,
+      column: "decisions",
+      row: {
+        ...base,
+        id: decision.id,
+        text: decision.text.trim(),
+        tone: "note",
+        hoverLabel: "Decision",
+        stageNames: sortStageNames(decision.stageNames),
+      },
+    }));
     return [...items, ...risks, ...decisions];
   });
 }

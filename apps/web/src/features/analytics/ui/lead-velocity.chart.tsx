@@ -35,15 +35,14 @@ export function buildLeadVelocityChartData(rows: LeadVelocityOutput): {
     name: leadNameById.get(id) ?? id,
   }));
 
-  const data = rows.map(
-    (r): ChartData =>
-      leadIds.reduce<ChartData>(
-        (point, id) => ({
-          ...point,
-          [id]: r.leads.find((l) => l.leadId === id)?.submittedSections ?? 0,
-        }),
-        { period: r.periodLabel },
-      ),
+  const data = rows.map((r): ChartData =>
+    leadIds.reduce<ChartData>(
+      (point, id) => ({
+        ...point,
+        [id]: r.leads.find((l) => l.leadId === id)?.submittedSections ?? 0,
+      }),
+      { period: r.periodLabel },
+    ),
   );
 
   return { data, series };

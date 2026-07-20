@@ -81,8 +81,7 @@ describe("SearchInput", () => {
 
     // `enabled` flag in useQuery options should be false until q.length >= 2.
     const lastCall = useQueryMock.mock.calls.at(-1) as
-      | [{ enabled?: boolean }, ...unknown[]]
-      | undefined;
+      [{ enabled?: boolean }, ...unknown[]] | undefined;
     expect(lastCall?.[0]?.enabled).toBe(false);
   });
 
@@ -102,14 +101,12 @@ describe("SearchInput", () => {
     // After debounce, queryOptions is invoked with the new q AND enabled=true.
     const calls = queryOptionsMock.mock.calls;
     const lastQueryOptionsArg = calls.at(-1)?.[0] as
-      | { q?: string; scope?: string }
-      | undefined;
+      { q?: string; scope?: string } | undefined;
     expect(lastQueryOptionsArg?.q).toBe("PR");
     expect(lastQueryOptionsArg?.scope).toBe("mine");
 
     const lastUseQueryArg = useQueryMock.mock.calls.at(-1)?.[0] as
-      | { enabled?: boolean }
-      | undefined;
+      { enabled?: boolean } | undefined;
     expect(lastUseQueryArg?.enabled).toBe(true);
   });
 
@@ -281,8 +278,7 @@ describe("SearchInput", () => {
     });
 
     const lastQueryOptionsArg = queryOptionsMock.mock.calls.at(-1)?.[0] as
-      | { scope?: string }
-      | undefined;
+      { scope?: string } | undefined;
     expect(lastQueryOptionsArg?.scope).toBe("all");
   });
 
@@ -405,8 +401,7 @@ describe("SearchInput", () => {
     });
 
     const lastQueryOptionsArg = queryOptionsMock.mock.calls.at(-1)?.[0] as
-      | { scope?: string }
-      | undefined;
+      { scope?: string } | undefined;
     expect(lastQueryOptionsArg?.scope).toBe("published");
   });
 

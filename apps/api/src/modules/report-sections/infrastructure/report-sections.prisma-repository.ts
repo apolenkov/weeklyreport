@@ -23,9 +23,7 @@ import {
 } from "./report-sections.save-lineage";
 
 @Injectable()
-export class ReportSectionsPrismaRepository
-  implements ReportSectionsRepository
-{
+export class ReportSectionsPrismaRepository implements ReportSectionsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /**

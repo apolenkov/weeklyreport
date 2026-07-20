@@ -29,7 +29,8 @@ import {
  * procedure-group deps interfaces. Satisfied structurally by `RouterDeps`.
  */
 export interface AdminRouterDeps
-  extends AdminSettingsDeps,
+  extends
+    AdminSettingsDeps,
     AdminUsersDeps,
     AdminCatalogDeps,
     AdminPeriodsDeps,

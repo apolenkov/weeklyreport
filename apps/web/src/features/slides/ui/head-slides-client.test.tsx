@@ -9,8 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 interface ActivityQueryResult {
   readonly data:
-    | { readonly rows: readonly { readonly id: string }[] }
-    | undefined;
+    { readonly rows: readonly { readonly id: string }[] } | undefined;
   readonly isLoading: boolean;
   readonly isError: boolean;
 }

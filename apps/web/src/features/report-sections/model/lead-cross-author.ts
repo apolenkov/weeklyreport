@@ -245,27 +245,25 @@ export function mapForeignItems(
     }));
     return ca.items
       .filter((i) => i.type === itemType)
-      .map(
-        (i): ForeignKanbanItem => ({
-          id: `foreign:${ca.authorId}:${i.id}`,
-          productId: i.projectId,
-          productName: productNameById.get(i.projectId) ?? i.projectId,
-          stageIds: i.stageNames,
-          status: applyBlockedRiskOverlay(
-            coerceWorkflowToItemStatus(i.workflowStatus),
-            { projectId: i.projectId, stageIds: i.stageNames },
-            alarmRisks,
-          ),
-          text: i.text,
-          author: shortNameFromName(ca.authorName),
-          // Foreign (read-only) items never surface a priority control, and
-          // the cross-author read model carries no paused metadata.
-          priorityRank: null,
-          pausedReason: null,
-          authorId: ca.authorId,
-          foreign: true,
-        }),
-      );
+      .map((i): ForeignKanbanItem => ({
+        id: `foreign:${ca.authorId}:${i.id}`,
+        productId: i.projectId,
+        productName: productNameById.get(i.projectId) ?? i.projectId,
+        stageIds: i.stageNames,
+        status: applyBlockedRiskOverlay(
+          coerceWorkflowToItemStatus(i.workflowStatus),
+          { projectId: i.projectId, stageIds: i.stageNames },
+          alarmRisks,
+        ),
+        text: i.text,
+        author: shortNameFromName(ca.authorName),
+        // Foreign (read-only) items never surface a priority control, and
+        // the cross-author read model carries no paused metadata.
+        priorityRank: null,
+        pausedReason: null,
+        authorId: ca.authorId,
+        foreign: true,
+      }));
   });
 }
 
@@ -278,21 +276,19 @@ export function mapForeignRisks(
   productNameById: ReadonlyMap<string, string>,
 ): ForeignRiskEntry[] {
   return rows.flatMap((ca) =>
-    ca.risks.map(
-      (r): ForeignRiskEntry => ({
-        id: `foreign:${ca.authorId}:${r.id}`,
-        productId: r.projectId,
-        productName: productNameById.get(r.projectId) ?? r.projectId,
-        stageIds: r.stageNames,
-        severity: r.severity,
-        text: r.risk,
-        impact: r.impact,
-        mitigation: r.mitigation,
-        authorName: shortNameFromName(ca.authorName),
-        authorId: ca.authorId,
-        foreign: true,
-      }),
-    ),
+    ca.risks.map((r): ForeignRiskEntry => ({
+      id: `foreign:${ca.authorId}:${r.id}`,
+      productId: r.projectId,
+      productName: productNameById.get(r.projectId) ?? r.projectId,
+      stageIds: r.stageNames,
+      severity: r.severity,
+      text: r.risk,
+      impact: r.impact,
+      mitigation: r.mitigation,
+      authorName: shortNameFromName(ca.authorName),
+      authorId: ca.authorId,
+      foreign: true,
+    })),
   );
 }
 
@@ -305,21 +301,19 @@ export function mapForeignDecisions(
   productNameById: ReadonlyMap<string, string>,
 ): ForeignDecisionEntry[] {
   return rows.flatMap((ca) =>
-    ca.decisions.map(
-      (d): ForeignDecisionEntry => ({
-        id: `foreign:${ca.authorId}:${d.id}`,
-        productId: d.productId,
-        productName: productNameById.get(d.productId) ?? d.productId,
-        text: d.text,
-        owner: d.owner,
-        impact: d.impact,
-        deadline: d.deadline
-          ? d.deadline.toISOString().slice(0, ISO_DATE_PREFIX_LENGTH)
-          : null,
-        stageIds: d.stageNames,
-        authorId: ca.authorId,
-        foreign: true,
-      }),
-    ),
+    ca.decisions.map((d): ForeignDecisionEntry => ({
+      id: `foreign:${ca.authorId}:${d.id}`,
+      productId: d.productId,
+      productName: productNameById.get(d.productId) ?? d.productId,
+      text: d.text,
+      owner: d.owner,
+      impact: d.impact,
+      deadline: d.deadline
+        ? d.deadline.toISOString().slice(0, ISO_DATE_PREFIX_LENGTH)
+        : null,
+      stageIds: d.stageNames,
+      authorId: ca.authorId,
+      foreign: true,
+    })),
   );
 }

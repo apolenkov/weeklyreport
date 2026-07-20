@@ -46,8 +46,7 @@ export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
     // (honours AUTH_JWT_COOKIE_NAME), finishing the cookie-name dedup.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- req.cookies is populated by cookie-parser at runtime; the optional chain guards the unmounted-middleware case
     const token = req.cookies?.[resolveSessionCookieName(process.env)] as
-      | string
-      | undefined;
+      string | undefined;
 
     if (!token) {
       res.status(HTTP_UNAUTHORIZED).json({ error: "Authentication required" });

@@ -26,9 +26,9 @@ import { useTRPC } from "../../../../lib/trpc-context";
 
 const TrafficLightHistoryChart = dynamic(
   () =>
-    import(
-      "../../../../features/analytics/ui/traffic-light-history.chart"
-    ).then((m) => m.TrafficLightHistoryChart),
+    import("../../../../features/analytics/ui/traffic-light-history.chart").then(
+      (m) => m.TrafficLightHistoryChart,
+    ),
   { ssr: false, loading: () => <ChartSkeleton /> },
 );
 const LeadVelocityChart = dynamic(

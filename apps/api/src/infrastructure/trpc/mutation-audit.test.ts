@@ -136,8 +136,7 @@ describe("mutation-audit middleware", () => {
 
     expect(mutation).toHaveBeenCalledTimes(1);
     const call = mutation.mock.calls[0]?.[0] as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     expect(call).toMatchObject({
       userId: "u1",
       role: "lead",
@@ -188,8 +187,7 @@ describe("mutation-audit middleware", () => {
 
     expect(mutation).toHaveBeenCalledTimes(1);
     const call = mutation.mock.calls[0]?.[0] as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     expect(call).toMatchObject({
       procedure: "failingMutation",
       target: "thing-1",
