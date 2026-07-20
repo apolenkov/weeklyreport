@@ -39,10 +39,7 @@ export interface DevRouterDeps {
 }
 
 type ReseedVariant =
-  | "small"
-  | "middle"
-  | "huge"
-  | typeof RESEED_VARIANT_MANUAL_UAT;
+  "small" | "middle" | "huge" | typeof RESEED_VARIANT_MANUAL_UAT;
 
 /** Every dev.* procedure refuses to act unless AUTH_DEV_MODE is set, so an
  * accidental deploy of this router to a production runtime cannot wipe data. */

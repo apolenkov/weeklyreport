@@ -283,10 +283,7 @@ export interface AdminRepository {
 }
 
 export type ReopenRequestStatusFilter =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "all";
+  "pending" | "approved" | "rejected" | "all";
 
 export interface ListReopenRequestsInput {
   status: ReopenRequestStatusFilter;

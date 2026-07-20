@@ -21,20 +21,12 @@
  */
 
 export type ActivityBucket =
-  | "done"
-  | "in-progress"
-  | "paused"
-  | "planned-next"
-  | "deferred";
+  "done" | "in-progress" | "paused" | "planned-next" | "deferred";
 
 export interface BucketInput {
   readonly type: "current" | "next";
   readonly workflowStatus:
-    | "planned"
-    | "in_progress"
-    | "paused"
-    | "postponed"
-    | "done";
+    "planned" | "in_progress" | "paused" | "postponed" | "done";
   readonly carriedOver: boolean;
 }
 

@@ -72,9 +72,10 @@ The split is the documented industry best practice, confirmed by research:
 
 ## Consequences
 
-- The canonical source of truth is the behavior-anchored Scenario Catalog (role +
-  route + intent + Given/When/Then), not code-anchored. See [[Behavioral
-Scenario]], [[Scenario Catalog]], [[Driver]], [[Role sweep]] in CONTEXT.md.
+- The canonical source of truth is the behavior-anchored Scenario Catalog
+  (role + route + intent + Given/When/Then), not code-anchored. See
+  [[Behavioral Scenario]], [[Scenario Catalog]], [[Driver]], [[Role sweep]]
+  in CONTEXT.md.
 - **Phase 1 does not stop the origin-class bug.** A non-blocking report means the
   same `import type` autofix would still merge green unless a human reads the
   report. A blocking guarantee arrives only with the phase-2 frozen gate. This is

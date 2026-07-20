@@ -49,18 +49,17 @@ export function buildTrafficLightHistoryChartData(
     name: row.projectName,
   }));
 
-  const data = periods.map(
-    (label, idx): ChartData =>
-      rows.reduce<ChartData>(
-        (point, row) => {
-          const cell = row.statuses[idx] ?? null;
-          return {
-            ...point,
-            [row.projectId]: cell === null ? null : STATUS_TO_VALUE[cell],
-          };
-        },
-        { period: label },
-      ),
+  const data = periods.map((label, idx): ChartData =>
+    rows.reduce<ChartData>(
+      (point, row) => {
+        const cell = row.statuses[idx] ?? null;
+        return {
+          ...point,
+          [row.projectId]: cell === null ? null : STATUS_TO_VALUE[cell],
+        };
+      },
+      { period: label },
+    ),
   );
 
   return { data, series };

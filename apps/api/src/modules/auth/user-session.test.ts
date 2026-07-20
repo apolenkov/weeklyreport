@@ -122,8 +122,7 @@ describe("buildUserSession — admin SAML login", () => {
     >;
     expect(createMock).toHaveBeenCalledTimes(1);
     const createArg = createMock.mock.calls[0]?.[0] as
-      | { data: { role: string } }
-      | undefined;
+      { data: { role: string } } | undefined;
     expect(createArg?.data.role).toBe("admin");
   });
 

@@ -13,8 +13,7 @@ import {
  * a branded `marker`) without us mirroring those internals here.
  */
 export type TrpcMiddlewareResult<T = unknown> =
-  | ({ ok: true; data: unknown } & T)
-  | ({ ok: false; error: TRPCError } & T);
+  ({ ok: true; data: unknown } & T) | ({ ok: false; error: TRPCError } & T);
 
 /**
  * tRPC Prometheus middleware.

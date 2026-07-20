@@ -50,8 +50,8 @@ function isSamlIdentityMismatch(
 ): boolean {
   return Boolean(
     existingByEmail?.samlId &&
-      profile.samlId &&
-      existingByEmail.samlId !== profile.samlId,
+    profile.samlId &&
+    existingByEmail.samlId !== profile.samlId,
   );
 }
 

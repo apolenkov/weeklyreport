@@ -15,19 +15,10 @@ import {
 const IN_PROGRESS_STATUS = "in-progress";
 
 export type ItemWorkflowStatus =
-  | "planned"
-  | "in_progress"
-  | "paused"
-  | "postponed"
-  | "done";
+  "planned" | "in_progress" | "paused" | "postponed" | "done";
 export type ItemType = "current" | "next";
 export type ItemStatus =
-  | "in-progress"
-  | "completed"
-  | "planned"
-  | "paused"
-  | "postponed"
-  | "blocked";
+  "in-progress" | "completed" | "planned" | "paused" | "postponed" | "blocked";
 
 /** Converts a stored ItemWorkflowStatus to its presentation ItemStatus.
  * Never produces 'blocked' — that is the risk-derived overlay only. */

@@ -10,9 +10,7 @@ import type {
   ReportSectionsTelemetry,
 } from "../application/report-sections-telemetry.port.js";
 
-export class ReportSectionsPrometheusTelemetry
-  implements ReportSectionsTelemetry
-{
+export class ReportSectionsPrometheusTelemetry implements ReportSectionsTelemetry {
   recordCrossAuthorRead(result: CrossAuthorReadResult): void {
     customreportCrossAuthorContentReadsTotal.inc({ result });
   }

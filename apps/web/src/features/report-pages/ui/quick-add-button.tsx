@@ -8,11 +8,7 @@ import { useEffect, useRef, useState } from "react";
  * a current item pre-set to `workflowStatus=blocked`, not a record type.
  */
 export type QuickAddKind =
-  | "current-item"
-  | "next-item"
-  | "decision"
-  | "risk"
-  | "blocker";
+  "current-item" | "next-item" | "decision" | "risk" | "blocker";
 
 const QUICK_ADD_OPTIONS: readonly { kind: QuickAddKind; label: string }[] = [
   { kind: "current-item", label: "Current week item" },

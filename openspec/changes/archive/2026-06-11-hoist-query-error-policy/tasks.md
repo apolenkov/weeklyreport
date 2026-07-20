@@ -33,11 +33,11 @@ after EVERY commit; read each diff before committing.
 ## 2. web: behavior-identical migrations (D3 rows 5-7)
 
 - [x] 2.1 `apps/web/src/components/dashboard/dashboard-page.tsx`:
-      replace the 2 query-error `useEffect` blocks at ~85-108 (reviewQ,
+      replace the 2 query-error `useEffect` blocks at ~~85-108 (reviewQ,
       weeklyQ) with hook calls carrying the same
       event/component/procedure/context and toast prefixes
       "Failed to load dashboard" / "Failed to load status report".
-      Do NOT touch the watchdog sites (~:142, ~:169) or the render-time
+      Do NOT touch the watchdog sites (~~:142, ~:169) or the render-time
       `formatClientErrorMessage` at ~:210.
       `apps/web/src/components/weekly-report/weekly-report-page.tsx`:
       same for the 1 effect at ~137-149 ("Failed to load status

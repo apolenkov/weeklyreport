@@ -173,8 +173,7 @@ export interface EscalationReminderPayload {
 }
 
 export type ReminderExecutionPayload =
-  | DeadlineReminderPayload
-  | EscalationReminderPayload;
+  DeadlineReminderPayload | EscalationReminderPayload;
 
 export class RemindersService {
   private readonly logger: AppLogger;

@@ -16,11 +16,11 @@ does it only change which report you see and how it is presented?**
 
 Top row = **Document action**; bottom row = **Context control**.
 
-| Role             | Top row (Document action)                                 | Bottom row (Context control)                                                                           |
-| ---------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Role             | Top row (Document action)                                 | Bottom row (Context control)                                                                         |
+| ---------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | lead             | Version⏳ · PDF⏳ · Fill-From · Save · **Submit Section** | Agent review² · ◀ Prev · date · Next ▶ · Show-archived¹ · Mine\|Everyone · Edit\|Slides · Toggle All |
 | head (open)      | PDF · **Publish & Lock**                                  | Agent review² · ◀ Prev · date · Next ▶ · Show-archived¹ · Product\|Leads · Edit\|Slides              |
-| head (published) | PDF · Move-to-archive · **Reopen** (neutral)              | (same context row)                                                                                     |
+| head (published) | PDF · Move-to-archive · **Reopen** (neutral)              | (same context row)                                                                                   |
 | viewer           | PDF                                                       | Agent review² · Back to Archive · ◀ Prev · date · Next ▶                                             |
 
 `⏳` = an existing inert Coming-soon control occupying its slot.

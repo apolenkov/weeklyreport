@@ -33,8 +33,7 @@ type SyncBridgeProviderProps = ComponentProps<
 >;
 
 /** The draft actions the edit stack drives, plus the item-section slice it forwards. */
-export interface LeadFormEditSectionsActions
-  extends LeadFormItemSectionsActions {
+export interface LeadFormEditSectionsActions extends LeadFormItemSectionsActions {
   readonly onProductsChange: SyncBridgeProviderProps["onProductsChange"];
   readonly onRisksChange: SyncBridgeProviderProps["onRisksChange"];
   readonly onDecisionsChange: (next: DecisionEntry[]) => void;

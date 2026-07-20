@@ -206,8 +206,8 @@ function dashboardPanelModel(
     weeklyReport,
     canSendReminder: Boolean(
       weeklyReport &&
-        weeklyReport.periodStatus !== "published" &&
-        weeklyReport.hasActiveReminderRule,
+      weeklyReport.periodStatus !== "published" &&
+      weeklyReport.hasActiveReminderRule,
     ),
     onRefreshDashboard: props.onRefreshDashboard,
   };

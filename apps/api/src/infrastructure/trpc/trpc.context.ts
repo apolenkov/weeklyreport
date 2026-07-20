@@ -187,8 +187,7 @@ export function createContextFactory(
     // config, which leaves the name at the default).
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- req.cookies is populated by cookie-parser at runtime; the optional chain guards the unmounted-middleware case
     const token = req.cookies?.[resolveSessionCookieName(process.env)] as
-      | string
-      | undefined;
+      string | undefined;
 
     if (token) {
       // The human-session steps (verify + revocation fast path + isActive +

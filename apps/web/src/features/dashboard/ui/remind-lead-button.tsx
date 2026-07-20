@@ -16,11 +16,7 @@ interface RemindLeadButtonProps {
 const NO_SECTION_CONFIRM_STATE = "no-section";
 
 type ConfirmState =
-  | "idle"
-  | "sent"
-  | "already"
-  | typeof NO_SECTION_CONFIRM_STATE
-  | "error";
+  "idle" | "sent" | "already" | typeof NO_SECTION_CONFIRM_STATE | "error";
 
 const CONFIRM_HOLD_MS = 2400;
 

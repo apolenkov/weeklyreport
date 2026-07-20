@@ -76,7 +76,7 @@ Re-verify before implementing — wiring may have moved.
   test requires a real live drive. NEEDS-LIVE-VALIDATION for canary.
   To run: start sweep servers per README, drive one role, then:
   node .claude/skills/ai-ui-driver/scripts/collect-env-feedback.mjs \
-   '{"role":"viewer","timeline":<json-from-drive>}'
+  '{"role":"viewer","timeline":<json-from-drive>}'
 - [~] 5.2 Bugsink blind test: Bugsink is currently blind (no project
   configured) — collector already correctly reports "blind" rather than
   "clean". Full stop+restart test NEEDS-LIVE-VALIDATION.

@@ -137,7 +137,7 @@ not one:
 - `PeriodScopeError` — out-of-scope (head/admin) and archived-target denial →
   `FORBIDDEN`.
 - `PeriodNotFoundError` — the report id does not exist → `NOT_FOUND`. Today both
-  `publishPeriod` (~`period.service.ts:101`) and `reopenPeriod` (~`:146`) throw a
+  `publishPeriod` (~~`period.service.ts:101`) and `reopenPeriod` (~~`:146`) throw a
   bare `new Error("Report … not found.")`, which `mapDomainError` cannot
   recognize and so surfaces as `INTERNAL_SERVER_ERROR`; replace both throw sites
   with `PeriodNotFoundError`.

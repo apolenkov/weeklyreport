@@ -215,8 +215,7 @@ describe("RemindersTab — plain-language cards", () => {
       expect(savePolicyEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
     const arg = savePolicyEntry.mutationFn.mock.calls[0]?.[0] as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     expect(arg?.id).toBe(policyDeadline.id);
     // policyDeadline is active → toggle writes active=false.
     expect(arg?.active).toBe(false);
@@ -239,8 +238,7 @@ describe("RemindersTab — plain-language cards", () => {
       expect(savePolicyEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
     const arg = savePolicyEntry.mutationFn.mock.calls[0]?.[0] as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     expect(arg?.id).toBe(policyEscalation.id);
     expect(arg?.active).toBe(true);
     expect(arg?.kind).toBe("escalation");

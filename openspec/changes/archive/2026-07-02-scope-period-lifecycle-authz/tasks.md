@@ -7,7 +7,7 @@
 ## 2. API: service authorization + archived rejection
 
 - [ ] 2.1 Add **two distinct** typed domain errors in `apps/api/src/modules/period/period.service.ts`: `PeriodScopeError` (out-of-scope / archived denial → `FORBIDDEN`) and `PeriodNotFoundError` (missing report → `NOT_FOUND`). Do **not** overload the existing `PeriodAccessError`, and do not add a mapper branch for it — it keeps carrying the UFB-052 state/policy errors unchanged (mapping it would reclassify those, a non-goal).
-- [ ] 2.2 Replace the bare `throw new Error("Report … not found.")` in **both** `publishPeriod` (~`period.service.ts:101`) and `reopenPeriod` (~`:146`) with `throw new PeriodNotFoundError(...)` so a missing report becomes `NOT_FOUND`, not `INTERNAL_SERVER_ERROR`.
+- [ ] 2.2 Replace the bare `throw new Error("Report … not found.")` in **both** `publishPeriod` (~~`period.service.ts:101`) and `reopenPeriod` (~~`:146`) with `throw new PeriodNotFoundError(...)` so a missing report becomes `NOT_FOUND`, not `INTERNAL_SERVER_ERROR`.
 - [ ] 2.3 In `publishPeriod`, reject archived reports for all roles, and for a non-admin `head` require `reportId` to equal the resolved active editable id (reject mismatch with `PeriodScopeError`); admin skips the equality check. No silent retarget.
 - [ ] 2.4 In `reopenPeriod`, accept `session`, reject archived reports for all roles, and for a non-admin `head` require `reportId` to equal the resolved latest-published non-archived id (reject mismatch with `PeriodScopeError`); admin skips the equality check. Keep the existing UFB-052 reopen-policy gates unchanged.
 
