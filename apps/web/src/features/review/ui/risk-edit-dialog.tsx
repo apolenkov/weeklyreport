@@ -18,9 +18,9 @@ interface RiskEditDialogProps {
   readonly risk: RiskEntry | null;
   readonly products: readonly Product[];
   /**
-   * activity-first-class: the section author's attached activities. When
-   * non-empty the parent picker offers them; choosing an activity hides the
-   * stage step and parents the risk to the activity instead of a product.
+   * The section author's attached activities. When non-empty the parent
+   * picker offers them; choosing an activity hides the stage step and
+   * parents the risk to the activity instead of a product.
    */
   readonly activities?: readonly ParentActivityOption[];
   readonly onSave: (
@@ -43,9 +43,9 @@ interface RiskEditDialogProps {
   readonly initialImpact?: string;
   readonly initialMitigation?: string;
   /**
-   * unify-risk-stage-status: create-mode prefill from a chip-raise
-   * interception — the clicked stage arrives pre-checked and the clicked
-   * severity pre-selected. Ignored in edit mode (the risk's own values win).
+   * Create-mode prefill from a chip-raise interception — the clicked stage
+   * arrives pre-checked and the clicked severity pre-selected. Ignored in
+   * edit mode (the risk's own values win).
    */
   readonly initialStageIds?: string[];
   readonly initialSeverity?: RiskSeverity;
@@ -70,6 +70,40 @@ interface RiskEditDialogProps {
 export function RiskEditDialog(props: RiskEditDialogProps) {
   if (!props.open) return null;
   return <RiskEditDialogContent {...props} />;
+}
+
+/**
+ * Context strip: flagged owned SDLC stages — product parents only. An
+ * activity owns no stage, so the caller suppresses this for an activity
+ * parent (preCheckedStages derives from the mount-time seed product and does
+ * not clear on a parent switch).
+ */
+function PreCheckedStagesBanner({
+  parentName,
+  preCheckedStages,
+}: {
+  readonly parentName: string;
+  readonly preCheckedStages: readonly {
+    name: string;
+    severity: RiskSeverity;
+  }[];
+}) {
+  return (
+    <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs">
+      <div className="font-medium text-amber-900">
+        {parentName} →{" "}
+        {preCheckedStages
+          .map(
+            (s) =>
+              `${s.name} (${s.severity === "blocked" ? "Blocked" : "At Risk"})`,
+          )
+          .join(" · ")}
+      </div>
+      <div className="mt-0.5 text-[11px] text-amber-700">
+        Already flagged in SDLC pipeline.
+      </div>
+    </div>
+  );
 }
 
 function RiskEditDialogContent({
@@ -156,24 +190,11 @@ function RiskEditDialogContent({
           ) : null}
         </h2>
 
-        {/* Context strip: flagged owned SDLC stages — product parents only. An
-            activity owns no stage, so suppress it there (preCheckedStages derives
-            from the mount-time seed product and does not clear on a parent switch). */}
         {!isActivityParent && preCheckedStages.length > 0 && (
-          <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs">
-            <div className="font-medium text-amber-900">
-              {parentName} →{" "}
-              {preCheckedStages
-                .map(
-                  (s) =>
-                    `${s.name} (${s.severity === "blocked" ? "Blocked" : "At Risk"})`,
-                )
-                .join(" · ")}
-            </div>
-            <div className="mt-0.5 text-[11px] text-amber-700">
-              Already flagged in SDLC pipeline.
-            </div>
-          </div>
+          <PreCheckedStagesBanner
+            parentName={parentName}
+            preCheckedStages={preCheckedStages}
+          />
         )}
 
         <RiskEditDialogFields

@@ -1,10 +1,7 @@
 /**
- * D1 regression: snapshot view transitions must not reopen the Add Risk dialog.
- *
- * Covers the risks-section copy of the addSignal snapshot bug
- * (fix-section-add-signal-reset, task 1.1): when readOnly flips
- * false → true → false the addSignal effect must NOT re-fire because
- * readOnly is no longer in the dep array.
+ * Snapshot view transitions must not reopen the Add Risk dialog: readOnly
+ * must stay out of the addSignal effect's dep array, or a snapshot flip
+ * (false → true → false) re-fires the effect and re-opens the dialog.
  *
  * Scenario (mirrors current-week-section-add-signal.test.tsx):
  *   1. addSignal=1, readOnly=false  → dialog opens

@@ -3,7 +3,7 @@ import type {
   Product,
   RiskEntry,
 } from "../../report-sections";
-import { canonicalStageName } from "../../report-sections";
+import { canonicalStageIds, canonicalStageName } from "../../report-sections";
 
 export type RiskSeverity = "at-risk" | "blocked";
 
@@ -115,4 +115,56 @@ export function resolveRiskSaveProduct(
       ? { id: risk.productId, name: risk.productName }
       : products.at(0))
   );
+}
+
+type RiskSaveEntry = RiskEntry & { impact: string; mitigation: string };
+
+/**
+ * Builds the save payload for an activity-parented risk: empty productId, no
+ * stage — an activity owns no SDLC stage (Decision 5).
+ */
+export function buildActivityRiskEntry(args: {
+  readonly existingId: string | undefined;
+  readonly activityId: string;
+  readonly activityName: string | undefined;
+  readonly severity: RiskSeverity;
+  readonly text: string;
+  readonly impact: string;
+  readonly mitigation: string;
+}): RiskSaveEntry {
+  return {
+    id: args.existingId ?? crypto.randomUUID(),
+    productId: "",
+    productName: args.activityName ?? "",
+    activityId: args.activityId,
+    activityName: args.activityName,
+    stageIds: [],
+    severity: args.severity,
+    text: args.text,
+    impact: args.impact,
+    mitigation: args.mitigation,
+  };
+}
+
+/** Builds the save payload for a product-parented risk. */
+export function buildProductRiskEntry(args: {
+  readonly existingId: string | undefined;
+  readonly product: { id: string; name: string };
+  readonly stageIds: readonly string[];
+  readonly severity: RiskSeverity;
+  readonly text: string;
+  readonly impact: string;
+  readonly mitigation: string;
+}): RiskSaveEntry {
+  return {
+    id: args.existingId ?? crypto.randomUUID(),
+    productId: args.product.id,
+    productName: args.product.name,
+    activityId: null,
+    stageIds: canonicalStageIds(args.stageIds),
+    severity: args.severity,
+    text: args.text,
+    impact: args.impact,
+    mitigation: args.mitigation,
+  };
 }

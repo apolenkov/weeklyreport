@@ -31,7 +31,6 @@
 
 import type {
   AdminProject,
-  AdminReminderRule,
   AdminSnapshot,
   AdminUser,
   AppSettings,
@@ -42,12 +41,12 @@ import type {
 import { STAGE_NAMES } from "@customreport/shared";
 
 import { formatPeriodLabel } from "../../../lib/format-date";
+import { mapReminder } from "./admin-reminder-mapper";
 import type {
   MappedAdminSnapshot,
   MockGroup,
   MockPeriod,
   MockProduct,
-  MockReminder,
   MockReminderPolicy,
   MockSettings,
   MockUser,
@@ -130,52 +129,6 @@ function mapPeriod(api: ReportPeriod): MockPeriod {
     endDate: toIsoDateString(api.periodEnd),
     deadline: toIsoDateString(api.deadline),
     status,
-  };
-}
-
-function reminderName(kind: AdminReminderRule["kind"]): string {
-  switch (kind) {
-    case "deadline":
-      return "Deadline reminder";
-    case "escalation":
-      return "Escalation digest";
-    case "follow_up":
-    default:
-      return "Follow-up reminder";
-  }
-}
-
-// "YYYY-MM-DD HH:MM" — ISO date+time truncated to minute precision.
-const ISO_DATETIME_MINUTE_LENGTH = 16;
-
-function reminderDescription(rule: AdminReminderRule): string {
-  const at = rule.fireAt
-    .toISOString()
-    .replace("T", " ")
-    .slice(0, ISO_DATETIME_MINUTE_LENGTH);
-  switch (rule.kind) {
-    case "deadline":
-      return `Send a reminder when the deadline is reached (fires at ${at} UTC).`;
-    case "escalation":
-      return `Send a T+2h escalation digest to the head with all late leads (fires at ${at} UTC).`;
-    case "follow_up":
-    default:
-      return `Send a follow-up reminder to leads who have not submitted (fires at ${at} UTC).`;
-  }
-}
-
-function mapReminder(api: AdminReminderRule): MockReminder {
-  return {
-    id: api.id,
-    name: reminderName(api.kind),
-    description: reminderDescription(api),
-    active: api.status === "active",
-    kind: api.kind,
-    fireAt: api.fireAt,
-    timezone: api.timezone,
-    version: api.version,
-    reportId: api.reportId,
-    policyId: api.policyId,
   };
 }
 

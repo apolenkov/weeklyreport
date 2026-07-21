@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
 import type { MockProduct } from "../model/admin-types";
+import { invalidateGroupProductOwnership } from "../model/group-products-invalidation";
 
 /**
  * «Products attached» section inside the Groups tab edit dialog.
@@ -50,17 +51,10 @@ export function GroupProductsEditor({
         // Attach may be a reassign: a product has one owning group, so it
         // moves from old group to new group. Invalidate ALL listGroupProducts
         // queries so the old group's list also refreshes, not just the
-        // current group, plus the batched ownership read so the lock state
-        // reflects the new edge.
+        // current group.
         await Promise.all([
           qc.invalidateQueries(trpc.admin.listGroupProducts.pathFilter()),
-          qc.invalidateQueries(
-            trpc.admin.listProductGroupOwnership.pathFilter(),
-          ),
-          // The per-product listProductGroups query still backs the Products
-          // tab's ownership chips — dropping its invalidation leaves those
-          // chips showing the pre-reassign owner.
-          qc.invalidateQueries(trpc.admin.listProductGroups.pathFilter()),
+          invalidateGroupProductOwnership(qc, trpc),
         ]);
       },
       onError: (err) => {
@@ -76,10 +70,7 @@ export function GroupProductsEditor({
           qc.invalidateQueries({
             queryKey: trpc.admin.listGroupProducts.queryKey({ groupId }),
           }),
-          qc.invalidateQueries(
-            trpc.admin.listProductGroupOwnership.pathFilter(),
-          ),
-          qc.invalidateQueries(trpc.admin.listProductGroups.pathFilter()),
+          invalidateGroupProductOwnership(qc, trpc),
         ]);
       },
       onError: (err) => {

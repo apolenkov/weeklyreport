@@ -6,6 +6,8 @@ import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
 import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
+import { JobsSkeleton } from "./jobs-skeleton";
+import { JobsTableRow } from "./jobs-table-row";
 
 /**
  * BullMQ DLQ admin tab.
@@ -20,24 +22,6 @@ import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
  */
 
 const QUEUE_NAME = "email-reminder" as const;
-const MAX_ERROR_REASON_LENGTH = 80;
-
-function formatTimestamp(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) return "—";
-  const d = new Date(ms);
-  return d.toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function truncate(s: string, max: number): string {
-  if (s.length <= max) return s;
-  return `${s.slice(0, max - 1).trimEnd()}…`;
-}
 
 export function JobsTab() {
   const trpc = useTRPC();
@@ -177,108 +161,21 @@ export function JobsTab() {
               </tr>
             </thead>
             <tbody>
-              {filteredJobs.map((job) => {
-                const isExpanded = expanded.has(job.id);
-                const isRetrying = retryingId === job.id && retryMut.isPending;
-                const reason = job.failedReason || "—";
-                const truncated = truncate(reason, MAX_ERROR_REASON_LENGTH);
-                const canExpand = reason !== truncated;
-                return (
-                  <tr
-                    key={job.id}
-                    className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]"
-                    data-testid={`jobs-row-${job.id}`}
-                  >
-                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-foreground)]">
-                      {job.id}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--color-foreground)]">
-                      {job.name}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
-                      {job.attemptsMade}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--color-foreground)]">
-                      <div
-                        className={
-                          isExpanded
-                            ? "whitespace-pre-wrap break-words text-xs"
-                            : "truncate text-xs"
-                        }
-                      >
-                        {isExpanded ? reason : truncated}
-                      </div>
-                      {canExpand && (
-                        <button
-                          type="button"
-                          onClick={() => toggleExpanded(job.id)}
-                          className="mt-1 text-[11px] font-semibold text-[var(--color-starbucks-accent)] hover:underline"
-                          aria-expanded={isExpanded}
-                          aria-label={
-                            isExpanded
-                              ? `Collapse job ${job.id} error`
-                              : `Expand job ${job.id} error`
-                          }
-                        >
-                          {isExpanded ? "Collapse" : "Expand"}
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
-                      {formatTimestamp(job.timestamp)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleRetry(job.id)}
-                        disabled={isRetrying || retryMut.isPending}
-                        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
-                        aria-label={`Retry job ${job.id}`}
-                      >
-                        {isRetrying ? "Retrying…" : "Retry"}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+              {filteredJobs.map((job) => (
+                <JobsTableRow
+                  key={job.id}
+                  job={job}
+                  isExpanded={expanded.has(job.id)}
+                  isRetrying={retryingId === job.id && retryMut.isPending}
+                  retryDisabled={retryMut.isPending}
+                  onToggleExpand={toggleExpanded}
+                  onRetry={handleRetry}
+                />
+              ))}
             </tbody>
           </table>
         </div>
       )}
-    </div>
-  );
-}
-
-function JobsSkeleton() {
-  return (
-    <div
-      className="rounded-[var(--radius)] border border-[var(--color-border)]"
-      data-testid="jobs-loading-state"
-      role="status"
-      aria-label="Loading failed jobs"
-      aria-live="polite"
-    >
-      <div className="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3">
-        {Array.from({ length: 6 }, (_, col) => (
-          <div
-            key={col}
-            className="h-4 w-20 animate-pulse rounded bg-[var(--color-border)]"
-          />
-        ))}
-      </div>
-      {Array.from({ length: 4 }, (_, row) => (
-        <div
-          key={row}
-          className="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
-        >
-          {Array.from({ length: 6 }, (_, col) => (
-            <div
-              key={col}
-              className="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-            />
-          ))}
-        </div>
-      ))}
     </div>
   );
 }

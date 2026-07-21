@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`SlideSkeleton — skeleton-list > skeleton list DOM snapshot — 4 divs with stable numeric keys 1`] = `
+exports[`SlideSkeleton — skeleton-list > matches the skeleton-list markup shape 1`] = `
 <div
   class="hidden space-y-2 lg:block"
 >

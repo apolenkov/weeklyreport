@@ -18,6 +18,7 @@ import {
   type ProductFormData,
 } from "../model/product-form";
 import { ProductEditDialog } from "./product-edit-dialog";
+import { ProductFilterBanner } from "./product-filter-banner";
 import { ProductsTable } from "./products-table";
 import { useProductDeepLinkExpand } from "./use-product-deep-link-expand";
 
@@ -212,21 +213,7 @@ export function ProductsTab({
             </button>
           }
         />
-        {productFilter && (
-          <div className="flex items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2">
-            <span className="text-sm text-[var(--color-muted-foreground)]">
-              {filterMatched
-                ? "Showing product from search"
-                : "Product from search not found"}
-            </span>
-            <a
-              href="/admin?tab=products"
-              className="text-sm font-semibold text-[var(--color-starbucks-accent)] hover:text-[var(--color-primary)]"
-            >
-              Reset
-            </a>
-          </div>
-        )}
+        {productFilter && <ProductFilterBanner filterMatched={filterMatched} />}
 
         <ProductsTable
           activeProducts={activeProducts}

@@ -37,7 +37,7 @@ describe("SlideSkeleton — skeleton-list", () => {
     expect(skeletonItems).toHaveLength(4);
   });
 
-  it("skeleton list DOM snapshot — 4 divs with stable numeric keys", () => {
+  it("matches the skeleton-list markup shape", () => {
     const { container } = render(<SlideSkeleton />);
     const listContainer = container.querySelector(".hidden.space-y-2");
     expect(listContainer).toMatchSnapshot();

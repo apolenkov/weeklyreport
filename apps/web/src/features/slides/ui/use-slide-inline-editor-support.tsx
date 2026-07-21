@@ -1,0 +1,138 @@
+import type { ReportSectionReadModel } from "@customreport/shared";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useRef } from "react";
+import { toast } from "sonner";
+
+import { invalidateLeadForm } from "../../../lib/cache-keys";
+import { isConflictError } from "../../../lib/trpc";
+import { useTRPC } from "../../../lib/trpc-context";
+import {
+  type mapLeadFormData,
+  sectionToDraftPayload,
+} from "../../report-sections";
+import type { GridRowEditableRef } from "../model/slide-grid-rows";
+import {
+  ownedStagesForProduct,
+  ownPeriodRanks,
+  resolveSlideInlineRecord,
+  toDialogActivities,
+  toDialogProducts,
+  toDialogRisks,
+} from "../model/slide-inline-edit";
+
+export type LeadSlideFormData = NonNullable<ReturnType<typeof mapLeadFormData>>;
+export type SaveOperation = "saved" | "deleted";
+
+/** The `reports.saveDraft` mutation plus its toast/conflict handling — the one
+ * write path every inline save and delete funnels through. `onSaved` clears
+ * the caller's active-edit state; a version conflict reloads instead. */
+export function useSlideDraftSaveMutation({
+  refetchSection,
+  onSaved,
+}: {
+  readonly refetchSection: () => void;
+  readonly onSaved: () => void;
+}) {
+  const trpc = useTRPC();
+  const qc = useQueryClient();
+  const saveOperationRef = useRef<SaveOperation>("saved");
+
+  const saveDraftMut = useMutation(
+    // eslint-disable-next-line react-hooks/refs -- refs are touched inside mutation callbacks (event time); the options factory just runs during render
+    trpc.reports.saveDraft.mutationOptions({
+      onSuccess: () => {
+        invalidateLeadForm(qc, trpc);
+        refetchSection();
+        onSaved();
+        toast.success(
+          saveOperationRef.current === "deleted"
+            ? "Slide record deleted"
+            : "Slide record saved",
+        );
+      },
+      onError: (err: unknown) => {
+        if (isConflictError(err)) {
+          refetchSection();
+          toast.error(
+            "This section was changed elsewhere. Reloaded the latest version — re-apply your slide edit and save again.",
+          );
+          return;
+        }
+        toast.error(err instanceof Error ? err.message : "Slide save failed");
+      },
+    }),
+  );
+
+  function saveDraftSection(
+    section: ReportSectionReadModel,
+    nextSection: ReportSectionReadModel,
+    operation: SaveOperation,
+  ) {
+    if (saveDraftMut.isPending) return;
+    saveOperationRef.current = operation;
+    saveDraftMut.mutate({
+      ...sectionToDraftPayload(nextSection),
+      version: section.version,
+    });
+  }
+
+  return { saveDraftSection, isPending: saveDraftMut.isPending };
+}
+
+/** Derives the dialog-facing option lists and the two possibly-active records
+ * (open editor / pending delete) from section + form data — pure lookups, no
+ * state of its own. */
+export function useInlineEditDialogData({
+  section,
+  formData,
+  inlineEditRef,
+  pendingDeleteRef,
+}: {
+  readonly section: ReportSectionReadModel | null;
+  readonly formData: LeadSlideFormData | null;
+  readonly inlineEditRef: GridRowEditableRef | null;
+  readonly pendingDeleteRef: GridRowEditableRef | null;
+}) {
+  const dialogProducts = useMemo(
+    () => (formData ? toDialogProducts(formData) : []),
+    [formData],
+  );
+  const dialogActivities = useMemo(
+    () => (section ? toDialogActivities(section) : []),
+    [section],
+  );
+  const dialogRanks = useMemo(
+    () => (formData ? ownPeriodRanks(formData) : []),
+    [formData],
+  );
+  const dialogRisks = useMemo(
+    () => (formData ? toDialogRisks(formData) : []),
+    [formData],
+  );
+  const inlineEditRecord = useMemo(
+    () =>
+      section && formData && inlineEditRef
+        ? resolveSlideInlineRecord(section, formData, inlineEditRef)
+        : null,
+    [formData, inlineEditRef, section],
+  );
+  const pendingDeleteRecord = useMemo(
+    () =>
+      section && formData && pendingDeleteRef
+        ? resolveSlideInlineRecord(section, formData, pendingDeleteRef)
+        : null,
+    [formData, pendingDeleteRef, section],
+  );
+  const stagesForProduct = (productId: string) =>
+    section ? ownedStagesForProduct(section, productId) : [];
+
+  return {
+    dialogProducts,
+    dialogActivities,
+    dialogRanks,
+    dialogRisks,
+    inlineEditRecord,
+    pendingDeleteRecord,
+    stagesForProduct,
+  };
+}

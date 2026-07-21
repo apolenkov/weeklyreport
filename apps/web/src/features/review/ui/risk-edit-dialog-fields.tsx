@@ -136,7 +136,7 @@ export function RiskEditDialogFields({
           onChange={onParentChange}
         />
 
-        {/* activity-first-class: the stage step is product-only. */}
+        {/* The stage step is product-only. */}
         {!isActivityParent && (
           <StageStep
             id="risk-stage"

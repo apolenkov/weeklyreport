@@ -1,13 +1,10 @@
 "use client";
 
 import type { RecordCommentView } from "@customreport/shared";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { toast } from "sonner";
 
-import { invalidateReview } from "../../../lib/cache-keys";
-import { useTRPC } from "../../../lib/trpc-context";
 import { ReviewCommentList } from "../../../shared/ui/review-comment-list";
+import { useRecordCommentMutations } from "./use-record-comment-mutations";
 
 /** A comment anchors to exactly one concrete record. */
 export interface RecordCommentAnchor {
@@ -21,6 +18,51 @@ const UUID_RE =
 
 function anchorId(anchor: RecordCommentAnchor): string | undefined {
   return anchor.itemId ?? anchor.riskId ?? anchor.decisionId;
+}
+
+interface CommentComposerFormProps {
+  readonly draft: string;
+  readonly onDraftChange: (value: string) => void;
+  readonly onSubmit: () => void;
+  readonly submitDisabled: boolean;
+  readonly isPending: boolean;
+}
+
+/** The add-comment textarea + submit button shown to a designated reviewer. */
+function CommentComposerForm({
+  draft,
+  onDraftChange,
+  onSubmit,
+  submitDisabled,
+  isPending,
+}: CommentComposerFormProps) {
+  return (
+    <form
+      className="flex flex-col gap-1.5"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (submitDisabled) return;
+        onSubmit();
+      }}
+    >
+      <textarea
+        className="min-h-[52px] w-full resize-y rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1.5 text-[12.5px] text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]"
+        placeholder="Add a review comment…"
+        value={draft}
+        onChange={(event) => onDraftChange(event.target.value)}
+        aria-label="Add a review comment"
+      />
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          className="btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-3 py-1 text-[12px] font-semibold text-[var(--color-primary-foreground)] transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={submitDisabled}
+        >
+          {isPending ? "Adding…" : "Comment"}
+        </button>
+      </div>
+    </form>
+  );
 }
 
 /**
@@ -46,34 +88,9 @@ export function RecordComments({
   readonly isAdmin: boolean;
   readonly onMutated: () => void;
 }) {
-  const trpc = useTRPC();
-  const qc = useQueryClient();
   const [draft, setDraft] = useState("");
-
-  const commentMut = useMutation(
-    trpc.review.comment.mutationOptions({
-      onSuccess: () => {
-        setDraft("");
-        invalidateReview(qc, trpc);
-        onMutated();
-      },
-      onError: (err: unknown) => {
-        toast.error(reviewErrorMessage(err, "Failed to add comment"));
-      },
-    }),
-  );
-
-  const deleteMut = useMutation(
-    trpc.review.deleteComment.mutationOptions({
-      onSuccess: () => {
-        invalidateReview(qc, trpc);
-        onMutated();
-      },
-      onError: (err: unknown) => {
-        toast.error(reviewErrorMessage(err, "Failed to delete comment"));
-      },
-    }),
-  );
+  const { submitComment, isCommentPending, deleteComment, isDeletePending } =
+    useRecordCommentMutations(anchor, () => setDraft(""), onMutated);
 
   const id = anchorId(anchor);
   // A synthetic (non-persisted) record has no real UUID — the composer stays
@@ -83,7 +100,7 @@ export function RecordComments({
   if (!hasComments && !canCompose) return null;
 
   const trimmed = draft.trim();
-  const submitDisabled = trimmed.length === 0 || commentMut.isPending;
+  const submitDisabled = trimmed.length === 0 || isCommentPending;
 
   return (
     // The md+ indent left-aligns the comment block with its anchor row's
@@ -109,8 +126,8 @@ export function RecordComments({
                 <button
                   type="button"
                   className="inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] text-[10px] font-semibold text-[var(--color-destructive)] underline-offset-2 hover:underline disabled:opacity-50"
-                  onClick={() => deleteMut.mutate({ commentId: comment.id })}
-                  disabled={deleteMut.isPending}
+                  onClick={() => deleteComment(comment.id)}
+                  disabled={isDeletePending}
                   aria-label="Delete comment"
                 >
                   Delete
@@ -122,36 +139,14 @@ export function RecordComments({
       ) : null}
 
       {canCompose ? (
-        <form
-          className="flex flex-col gap-1.5"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (submitDisabled) return;
-            commentMut.mutate({ ...anchor, text: trimmed });
-          }}
-        >
-          <textarea
-            className="min-h-[52px] w-full resize-y rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1.5 text-[12.5px] text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]"
-            placeholder="Add a review comment…"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            aria-label="Add a review comment"
-          />
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-3 py-1 text-[12px] font-semibold text-[var(--color-primary-foreground)] transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={submitDisabled}
-            >
-              {commentMut.isPending ? "Adding…" : "Comment"}
-            </button>
-          </div>
-        </form>
+        <CommentComposerForm
+          draft={draft}
+          onDraftChange={setDraft}
+          onSubmit={() => submitComment(trimmed)}
+          submitDisabled={submitDisabled}
+          isPending={isCommentPending}
+        />
       ) : null}
     </div>
   );
-}
-
-function reviewErrorMessage(err: unknown, fallback: string): string {
-  return err instanceof Error && err.message ? err.message : fallback;
 }

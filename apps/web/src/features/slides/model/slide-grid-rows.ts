@@ -5,9 +5,13 @@ import {
   STAGE_NAMES,
 } from "@customreport/shared";
 
-import type { CrossAuthorContentRow } from "../../report-sections";
-
 export type SlideTrafficStatus = TrafficLightStatus | null;
+
+/** A record's text field counts as content once trimmed non-empty — the
+ * shared predicate every row/priority-card filter uses to drop blank rows. */
+export function hasText(text: string | null | undefined): text is string {
+  return typeof text === "string" && text.trim().length > 0;
+}
 
 /** Per-row frame tone: every row is a bordered two-line card; the border hue
  * IS the status — neutral (expected work), green (done), yellow (at-risk),
@@ -60,63 +64,6 @@ export interface GridColumns {
 }
 
 export type GridColumnKey = keyof GridColumns;
-
-/** Distinct author color tokens before the cycle repeats. */
-const AUTHOR_COLOR_COUNT = 6;
-
-const INITIALS_TOKENS = 2;
-
-function initialsOf(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/u)
-    .slice(0, INITIALS_TOKENS)
-    .map((token) => token.charAt(0).toUpperCase())
-    .join("");
-}
-
-export interface AuthorRoster {
-  readonly owner: GridAuthor;
-  /** Owner first, foreign authors after in name order — legend order. */
-  readonly authors: readonly GridAuthor[];
-}
-
-export function buildAuthorRoster(
-  section: ReportSectionReadModel,
-  foreign: readonly CrossAuthorContentRow[],
-): AuthorRoster {
-  const foreignById = new Map(
-    foreign
-      .filter((row) => row.authorId !== section.authorId)
-      .map((row) => [
-        row.authorId,
-        { name: row.authorName, role: row.authorRole },
-      ]),
-  );
-  const foreignAuthors = [...foreignById.entries()].sort(([, a], [, b]) =>
-    a.name.localeCompare(b.name),
-  );
-  const owner = {
-    id: section.authorId,
-    name: section.authorName,
-    ...(section.authorRole === undefined ? {} : { role: section.authorRole }),
-    initials: initialsOf(section.authorName),
-    colorIndex: 0,
-    isOwner: true,
-  };
-  const authors = [
-    owner,
-    ...foreignAuthors.map(([id, { name, role }], index) => ({
-      id,
-      name,
-      ...(role === undefined ? {} : { role }),
-      initials: initialsOf(name),
-      colorIndex: (index + 1) % AUTHOR_COLOR_COUNT,
-      isOwner: false,
-    })),
-  ];
-  return { owner, authors };
-}
 
 const UNKNOWN_STAGE_RANK = STAGE_NAMES.length;
 

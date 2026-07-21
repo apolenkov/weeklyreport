@@ -1,21 +1,47 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { toast } from "sonner";
-
-import { useTRPC } from "../../../lib/trpc-context";
 import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
 import { ReopenRequestCard } from "./reopen-request-card";
+import {
+  type ReopenFilterStatus,
+  useReopenTabState,
+} from "./use-reopen-tab-state";
 
-type FilterStatus = "pending" | "approved" | "rejected" | "all";
-
-const FILTERS: readonly { value: FilterStatus; label: string }[] = [
+const FILTERS: readonly { value: ReopenFilterStatus; label: string }[] = [
   { value: "pending", label: "Pending" },
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },
   { value: "all", label: "All" },
 ];
+
+/** Segmented filter-status button row above the reopen-request list. */
+function ReopenFilterBar({
+  filter,
+  onChange,
+}: {
+  readonly filter: ReopenFilterStatus;
+  readonly onChange: (next: ReopenFilterStatus) => void;
+}) {
+  return (
+    <div className="flex gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] p-1">
+      {FILTERS.map((f) => (
+        <button
+          key={f.value}
+          type="button"
+          onClick={() => onChange(f.value)}
+          className={`rounded-[var(--radius-pill)] px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+            filter === f.value
+              ? "bg-[var(--color-starbucks-accent)] text-white"
+              : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)]"
+          }`}
+          aria-pressed={filter === f.value}
+        >
+          {f.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Reopen Requests tab — Head-side queue of lead-initiated reopen asks.
@@ -28,59 +54,22 @@ const FILTERS: readonly { value: FilterStatus; label: string }[] = [
  * stays in sync without polling.
  */
 export function ReopenTab() {
-  const trpc = useTRPC();
-  const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<FilterStatus>("pending");
-  const [search, setSearch] = useState("");
-  const [respondingId, setRespondingId] = useState<string | null>(null);
-  const [note, setNote] = useState("");
-
-  const listQuery = useQuery(
-    trpc.admin.listReopenRequests.queryOptions({ status: filter }),
-  );
-
-  const respondMut = useMutation(
-    trpc.admin.respondReopenRequest.mutationOptions({
-      onSuccess: ({ decision }) => {
-        toast.success(
-          decision === "approved"
-            ? "Request approved; section reopened."
-            : "Request rejected.",
-        );
-        setRespondingId(null);
-        setNote("");
-        void queryClient.invalidateQueries({
-          queryKey: trpc.admin.listReopenRequests.queryKey(),
-        });
-        void queryClient.invalidateQueries({
-          queryKey: trpc.admin.pendingReopenCount.queryKey(),
-        });
-      },
-      onError: (err) => {
-        toast.error(`Failed to process request: ${err.message}`);
-      },
-    }),
-  );
-
-  const requests = useMemo(() => listQuery.data ?? [], [listQuery.data]);
-
-  const filteredRequests = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return requests;
-    return requests.filter((r) => {
-      const haystack = [
-        r.requestedBy.name,
-        r.requestedBy.email,
-        r.report.weekLabel,
-        r.reason,
-        r.reviewNote,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [requests, search]);
+  const {
+    filter,
+    setFilter,
+    search,
+    setSearch,
+    requests,
+    filteredRequests,
+    listQuery,
+    respondingId,
+    note,
+    onNoteChange,
+    isSaving,
+    startRespond,
+    cancelRespond,
+    respond,
+  } = useReopenTabState();
 
   return (
     <div className="space-y-4">
@@ -96,25 +85,7 @@ export function ReopenTab() {
             testId="reopen-search"
           />
         }
-        actions={
-          <div className="flex gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] p-1">
-            {FILTERS.map((f) => (
-              <button
-                key={f.value}
-                type="button"
-                onClick={() => setFilter(f.value)}
-                className={`rounded-[var(--radius-pill)] px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-                  filter === f.value
-                    ? "bg-[var(--color-starbucks-accent)] text-white"
-                    : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)]"
-                }`}
-                aria-pressed={filter === f.value}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-        }
+        actions={<ReopenFilterBar filter={filter} onChange={setFilter} />}
       />
 
       {listQuery.isPending && (
@@ -124,7 +95,10 @@ export function ReopenTab() {
       )}
 
       {listQuery.isError && (
-        <div className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800">
+        <div
+          role="alert"
+          className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800"
+        >
           Failed to load requests: {listQuery.error.message}
         </div>
       )}
@@ -148,30 +122,12 @@ export function ReopenTab() {
             request={r}
             isResponding={respondingId === r.id}
             note={note}
-            isSaving={respondMut.isPending}
-            onStartRespond={() => {
-              setRespondingId(r.id);
-              setNote("");
-            }}
-            onCancelRespond={() => {
-              setRespondingId(null);
-              setNote("");
-            }}
-            onNoteChange={setNote}
-            onReject={() =>
-              respondMut.mutate({
-                id: r.id,
-                decision: "rejected",
-                note: note.trim() || undefined,
-              })
-            }
-            onApprove={() =>
-              respondMut.mutate({
-                id: r.id,
-                decision: "approved",
-                note: note.trim() || undefined,
-              })
-            }
+            isSaving={isSaving}
+            onStartRespond={() => startRespond(r.id)}
+            onCancelRespond={cancelRespond}
+            onNoteChange={onNoteChange}
+            onReject={() => respond(r.id, "rejected")}
+            onApprove={() => respond(r.id, "approved")}
           />
         ))}
       </ul>

@@ -324,6 +324,50 @@ describe("buildSlideGridModel — activity subsections", () => {
     expect(cardOf(model, "p2").noData).toBe(true);
   });
 
+  it("sorts multiple activity subsections under the same product by name", () => {
+    const model = buildSlideGridModel({
+      section: section({
+        activities: [
+          activity({
+            activityId: "a-zebra",
+            activityName: "Zebra work",
+            derivedStatus: "green",
+          }),
+          activity({
+            activityId: "a-apple",
+            activityName: "Apple work",
+            derivedStatus: "green",
+          }),
+        ],
+      }),
+    });
+    const names = cardOf(model, "p1")
+      .subsections.filter((s) => s.kind === "project")
+      .map((s) => s.name);
+    expect(names).toEqual(["Apple work", "Zebra work"]);
+  });
+
+  it("renders a record-only activity (known via activityCells but absent from section.activities) under the Shared card", () => {
+    const model = buildSlideGridModel({
+      section: section({
+        // No `activities` entry for "ghost-activity" — only a record referencing it.
+        items: [
+          item({
+            projectId: null,
+            activityId: "ghost-activity",
+            text: "orphan",
+          }),
+        ],
+      }),
+    });
+    const shared = cardOf(model, SHARED_CARD_ID);
+    const ghost = shared.subsections.find(
+      (s) => s.kind === "project" && s.id === "ghost-activity",
+    );
+    expect(ghost).toMatchObject({ name: "Activity", status: null });
+    expect(ghost?.columns.current.map((r) => r.text)).toEqual(["orphan"]);
+  });
+
   it("shows the Shared context card for a status-only unlinked activity", () => {
     const model = buildSlideGridModel({
       section: section({

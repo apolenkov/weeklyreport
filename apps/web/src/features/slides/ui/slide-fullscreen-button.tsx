@@ -55,7 +55,9 @@ export function SlideFullscreenButton({
       ) : (
         <Maximize2 className="h-4 w-4" aria-hidden="true" />
       )}
-      {variant === "floating" && (isFullscreen ? " Exit" : " Fullscreen")}
+      {/* The self-gate above means a rendered floating variant is always
+          fullscreen — the pill only ever needs to offer "Exit". */}
+      {variant === "floating" && " Exit"}
     </button>
   );
 }

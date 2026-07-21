@@ -224,11 +224,11 @@ describe("RiskEditDialog - SDLC stage selector", () => {
     expect(labels).toEqual(["Testing", "Support"]);
   });
 
-  it("W11 (3.10): switching product clears the stage selection, never selects all owned stages", () => {
-    // fix-report-surface-integrity W11: setProductAndStages must NOT default to
-    // every owned stage on a product switch — that "covers all" default is the
-    // root cause of the inflated-completeness defect. After switching, the lead
-    // marks stages explicitly, so all checkboxes start unchecked.
+  it("switching product clears the stage selection, never selects all owned stages", () => {
+    // setProductAndStages must NOT default to every owned stage on a product
+    // switch — that "covers all" default is the root cause of the
+    // inflated-completeness defect. After switching, the lead marks stages
+    // explicitly, so all checkboxes start unchecked.
     const twoProducts: Product[] = [
       { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
       { id: "p2", name: "Billing", overallStatus: "on-track", stages: [] },
@@ -543,10 +543,8 @@ describe("RiskEditDialog - SDLC stage selector", () => {
 });
 
 // ---------------------------------------------------------------------------
-// VA-0a — a11y regression catalog (high-priority unit-rtl rows)
-// Source: openspec/changes/verify-a11y-recommended-flip/design.md
-// Section: apps/web/src/components/lead/risk-edit-dialog.tsx
-// Rows: backdrop onKeyDown Escape, Cancel button, stopPropagation, autoFocus
+// a11y regression catalog: backdrop onKeyDown Escape, Cancel button,
+// stopPropagation, autoFocus.
 // ---------------------------------------------------------------------------
 
 const a11yProps = {
@@ -558,7 +556,7 @@ const a11yProps = {
   onSave: vi.fn(),
 } as const;
 
-describe("RiskEditDialog — VA-0a a11y (backdrop onKeyDown + click behavior)", () => {
+describe("RiskEditDialog — backdrop keydown/click a11y", () => {
   it("Escape on the backdrop div calls onCancel (noStaticElementInteractions justification)", () => {
     const onCancel = vi.fn();
     render(<RiskEditDialog {...a11yProps} onCancel={onCancel} />);
@@ -636,15 +634,15 @@ describe("RiskEditDialog — VA-0a a11y (backdrop onKeyDown + click behavior)", 
 });
 
 /**
- * A13/A15 regression: typed text AND selected severity must survive parent
- * re-renders that pass a new stagesForProduct function reference
- * (autosave → React Query invalidate cycle).
+ * Typed text AND selected severity must survive parent re-renders that pass a
+ * new stagesForProduct function reference (autosave → React Query
+ * invalidate cycle).
  *
  * Before fix: useEffect has stagesForProduct in deps → fires on new ref →
  *             setText('') and setSeverity('at-risk') wipe user input.
  * After fix:  stagesForProduct removed from deps → state preserved.
  */
-describe("RiskEditDialog — A13/A15 form-race regression", () => {
+describe("RiskEditDialog — form-race regression", () => {
   it("preserves typed text when parent re-renders with a new stagesForProduct ref", () => {
     const onSave = vi.fn();
     const stagesV1 = () => ["Dev", "Testing"] as const;
@@ -681,8 +679,8 @@ describe("RiskEditDialog — A13/A15 form-race regression", () => {
       />,
     );
 
-    // A13 bug: before fix, text was wiped back to '' by useEffect firing on
-    // the new stagesForProduct reference.
+    // Before fix, text was wiped back to '' by useEffect firing on the new
+    // stagesForProduct reference.
     expect(screen.getByLabelText(/^Risk \*/i)).toHaveValue(
       "user typed this — must survive",
     );
@@ -703,7 +701,7 @@ describe("RiskEditDialog — A13/A15 form-race regression", () => {
       />,
     );
 
-    // Select "✕ Blocked" severity (the user calls this "Blocker" — A15)
+    // Select "✕ Blocked" severity (the user calls this "Blocker")
     fireEvent.click(screen.getByRole("button", { name: /Blocked/i }));
     expect(screen.getByRole("button", { name: /Blocked/i })).toHaveAttribute(
       "aria-pressed",
@@ -723,7 +721,7 @@ describe("RiskEditDialog — A13/A15 form-race regression", () => {
       />,
     );
 
-    // A15 bug: before fix, severity was reset to 'at-risk' by the same useEffect.
+    // Before fix, severity was reset to 'at-risk' by the same useEffect.
     expect(screen.getByRole("button", { name: /Blocked/i })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -732,11 +730,11 @@ describe("RiskEditDialog — A13/A15 form-race regression", () => {
 });
 
 /**
- * fix-lead-surface-name-resolution: a risk row may reference a project
- * outside the lead's stage-owned `products` (cross-stage row). Saving the
- * edit dialog must preserve the original product assignment instead of
- * silently reassigning to the first stage-owned product, and the dialog
- * header must show the original product name.
+ * A risk row may reference a project outside the lead's stage-owned
+ * `products` (cross-stage row). Saving the edit dialog must preserve the
+ * original product assignment instead of silently reassigning to the first
+ * stage-owned product, and the dialog header must show the original
+ * product name.
  */
 describe("RiskEditDialog — cross-stage product preservation", () => {
   const crossStageRisk: RiskEntry = {
@@ -850,9 +848,9 @@ describe("RiskEditDialog — D12 reopen renders fresh state", () => {
 });
 
 /**
- * fix-risk-stage-integrity-impl: a lead on a product where they own zero stages
- * (stagesForProduct returns []) AND the row carries no stage of its own is a
- * dead end — there is nothing to pick, so Save is disabled and the documented
+ * A lead on a product where they own zero stages (stagesForProduct returns
+ * []) AND the row carries no stage of its own is a dead end — there is
+ * nothing to pick, so Save is disabled and the documented
  * "no stages assigned — contact admin" message shows instead of the
  * unsatisfiable "Select at least one stage." error. A cross-stage row that
  * already carries stageIds stays saveable.

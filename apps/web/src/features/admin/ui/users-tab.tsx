@@ -1,11 +1,7 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 
-import { invalidateAdmin } from "../../../lib/cache-keys";
-import { useTRPC } from "../../../lib/trpc-context";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import { PlusIcon } from "../../../shared/ui/icons";
 import { TabFilter, TabHeader, TabSearch } from "../../../shared/ui/tab-header";
@@ -19,6 +15,7 @@ import {
   userGroupFilterOptions,
   type UserStatusFilter,
 } from "../model/user-table-filters";
+import { useUserMutations } from "../model/users-tab-mutations";
 import { UserEditDialog } from "./user-edit-dialog";
 import { UsersTable } from "./users-table";
 
@@ -28,9 +25,6 @@ interface UsersTabProps {
 }
 
 export function UsersTab({ users, groups }: UsersTabProps) {
-  const trpc = useTRPC();
-  const qc = useQueryClient();
-
   const [editingUser, setEditingUser] = useState<MockUser | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MockUser | null>(null);
@@ -61,40 +55,8 @@ export function UsersTab({ users, groups }: UsersTabProps) {
   }, [activeGroups, form.groupId, groups]);
   const groupFilterOptions = userGroupFilterOptions(groups);
 
-  const onError = (err: { message: string }) => toast.error(err.message);
-  const onSuccess = (message: string, after?: () => void) => () => {
-    invalidateAdmin(qc, trpc);
-    toast.success(message);
-    after?.();
-  };
-
-  const saveUserMut = useMutation(
-    trpc.admin.saveUser.mutationOptions({
-      onSuccess: onSuccess("User saved", () => setShowDialog(false)),
-      onError,
-    }),
-  );
-
-  const deleteUserMut = useMutation(
-    trpc.admin.deleteUser.mutationOptions({
-      onSuccess: onSuccess("User deleted"),
-      onError,
-    }),
-  );
-
-  const deactivateUserMut = useMutation(
-    trpc.admin.deactivateUser.mutationOptions({
-      onSuccess: onSuccess("User deactivated"),
-      onError,
-    }),
-  );
-
-  const activateUserMut = useMutation(
-    trpc.admin.activateUser.mutationOptions({
-      onSuccess: onSuccess("User activated"),
-      onError,
-    }),
-  );
+  const { saveUserMut, deleteUserMut, deactivateUserMut, activateUserMut } =
+    useUserMutations(() => setShowDialog(false));
 
   function openAdd() {
     setEditingUser(null);

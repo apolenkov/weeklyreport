@@ -1,9 +1,10 @@
 /**
  * @vitest-environment jsdom
  *
- * Pre-extract snapshot: MetaRow [author | stage chips] in RisksSection.
- * Baseline before Wave 1 A2 extracts this markup to report-shell/meta-row.tsx.
- * After extraction, these tests must pass without changes.
+ * Characterizes the MetaRow [author | stage chips] markup rendered by
+ * RisksSection (via RiskCard), independent of where that markup lives —
+ * these assertions must keep passing across internal refactors of either
+ * component.
  */
 import "@testing-library/jest-dom/vitest";
 

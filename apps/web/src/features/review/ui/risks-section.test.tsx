@@ -118,15 +118,12 @@ describe("RisksSection LockBadge", () => {
 });
 
 // ---------------------------------------------------------------------------
-// VA-0a/VA-0b — a11y regression catalog
-// Source: openspec/changes/verify-a11y-recommended-flip/design.md
-// Section: apps/web/src/components/lead/risks-section.tsx
-// Rows: EditIcon SVG aria-hidden, DeleteIcon SVG aria-hidden,
-//       Edit button + child SVG, Delete button + child SVG,
-//       snapshot: decorative icon accessibility
+// a11y regression catalog: EditIcon SVG aria-hidden, DeleteIcon SVG
+// aria-hidden, Edit button + child SVG, Delete button + child SVG,
+// decorative icon accessibility.
 // ---------------------------------------------------------------------------
 
-describe("RisksSection — VA-0a/VA-0b a11y (aria-hidden decorative icons)", () => {
+describe("RisksSection — aria-hidden decorative icons", () => {
   // baseRisk from above: non-foreign, readOnly=false — both action buttons render.
 
   it("EditIcon SVG has aria-hidden='true'", () => {
