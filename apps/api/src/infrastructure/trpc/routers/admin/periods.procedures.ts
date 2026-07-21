@@ -111,33 +111,18 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
             await deps.periodAdminService.updatePeriodManual(input);
           if (Object.keys(diff).length > 0) {
             // Date → ISO for audit payload (aggregators serialize to JSON).
-            const changes: {
-              periodStart?: { from: string; to: string };
-              periodEnd?: { from: string; to: string };
-              deadline?: { from: string; to: string };
-              weekLabel?: { from: string | null; to: string | null };
-            } = {};
-            if (diff.periodStart) {
-              changes.periodStart = {
-                from: diff.periodStart.from.toISOString(),
-                to: diff.periodStart.to.toISOString(),
-              };
-            }
-            if (diff.periodEnd) {
-              changes.periodEnd = {
-                from: diff.periodEnd.from.toISOString(),
-                to: diff.periodEnd.to.toISOString(),
-              };
-            }
-            if (diff.deadline) {
-              changes.deadline = {
-                from: diff.deadline.from.toISOString(),
-                to: diff.deadline.to.toISOString(),
-              };
-            }
-            if (diff.weekLabel) {
-              changes.weekLabel = diff.weekLabel;
-            }
+            const toIso = (range: { from: Date; to: Date }) => ({
+              from: range.from.toISOString(),
+              to: range.to.toISOString(),
+            });
+            const changes = {
+              ...(diff.periodStart
+                ? { periodStart: toIso(diff.periodStart) }
+                : {}),
+              ...(diff.periodEnd ? { periodEnd: toIso(diff.periodEnd) } : {}),
+              ...(diff.deadline ? { deadline: toIso(diff.deadline) } : {}),
+              ...(diff.weekLabel ? { weekLabel: diff.weekLabel } : {}),
+            };
             ctx.auditLogger.periodManualEdit({
               userId: ctx.session.userId,
               role: ctx.session.role,
