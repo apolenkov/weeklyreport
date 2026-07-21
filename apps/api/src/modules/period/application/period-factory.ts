@@ -14,8 +14,8 @@ import {
 } from "../domain/period-transition.js";
 
 /**
- * refactor-auth-exemplary-layering: the single sanctioned period-creation
- * writer. Both creators — the period-creator cron scheduler and the lazy
+ * The single sanctioned period-creation writer. Both creators — the
+ * period-creator cron scheduler and the lazy
  * login-create path (`buildUserSession`) — route through here, so there is
  * exactly one formula for the deadline, the lifecycle field set, and the
  * reminder-rule materialisation.

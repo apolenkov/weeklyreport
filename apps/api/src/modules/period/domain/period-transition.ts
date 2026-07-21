@@ -1,8 +1,7 @@
 import type { PeriodState, ReportStatus } from "@customreport/shared";
 
 /**
- * refactor-period-transition-writer: the single, pure source of truth for the
- * `Report` lifecycle field set.
+ * The single, pure source of truth for the `Report` lifecycle field set.
  *
  * A `Report` row carries three coupled lifecycle representations plus audit
  * flags and timestamps:

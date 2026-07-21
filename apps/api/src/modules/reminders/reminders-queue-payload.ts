@@ -4,7 +4,7 @@ import { ReminderDomainError } from "./reminders.errors.js";
 import type {
   ReminderExecutionPayload,
   RemindersRepository,
-} from "./reminders.service.js";
+} from "./reminders.types.js";
 
 export type ReminderQueuePayload =
   ReminderExecutionPayload | { reportPeriod: string };

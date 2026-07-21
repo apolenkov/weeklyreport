@@ -1,8 +1,6 @@
-// Barrel for the report/section/period/stage schemas. This file was split
-// into domain-scoped modules (code-quality-modernization, Wave 3) while
-// preserving every previously exported symbol and import path. Importers
-// continue to use `./report` (and the package barrel `@customreport/shared`)
-// unchanged. No symbol was renamed — the legacy-misnamed `stageIds` field
+// Barrel for the report/section/period/stage schemas, re-exporting the
+// domain-scoped modules through the stable `./report` import path (and the
+// package barrel `@customreport/shared`). The legacy-misnamed `stageIds` field
 // keeps its name (TODO(STAGE-NAMING-01)).
 export * from "./period.schema";
 export * from "./report.schema";

@@ -5,10 +5,8 @@ import type {
 import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
-import {
-  type RemindersRepository,
-  RemindersService,
-} from "./reminders.service.js";
+import { RemindersService } from "./reminders.service.js";
+import type { RemindersRepository } from "./reminders.types.js";
 
 /**
  * Recipient-level scope on `listExecutions` MUST run over the full slice

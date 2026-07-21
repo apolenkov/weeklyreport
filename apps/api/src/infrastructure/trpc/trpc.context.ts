@@ -65,8 +65,8 @@ function buildLegacyPdfExportSession(reportId: string): UserSession {
 }
 
 /**
- * driver-findings-followups (empty-PDF fix): build the PDF worker's render
- * session AS THE REQUESTER. The worker drives `/print/<reportId>`, whose tRPC
+ * Build the PDF worker's render session AS THE REQUESTER. The worker drives
+ * `/print/<reportId>`, whose tRPC
  * reads are group-scoped by the session; the old viewer-synthetic session had
  * no group access and rendered an empty report for every role. We instead
  * rebuild the requester's real session from their userId (carried in the
@@ -180,8 +180,8 @@ export function createContextFactory(
     const ip = req.ip ?? "unknown";
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- synthetic/test contexts can omit req.headers despite the Express type
     const correlationId = readRequestId(req.headers?.["x-request-id"]);
-    // refactor-auth-exemplary-layering: read the cookie under the SAME resolved
-    // name the set/clear paths use. Previously this read a hardcoded
+    // Read the cookie under the SAME resolved name the set/clear paths use.
+    // Previously this read a hardcoded
     // "customreport_session" while the writer honoured AUTH_JWT_COOKIE_NAME — a
     // latent mismatch for any non-default cookie name (a no-op for every real
     // config, which leaves the name at the default).

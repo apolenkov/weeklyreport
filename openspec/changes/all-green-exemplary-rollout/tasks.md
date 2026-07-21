@@ -28,10 +28,12 @@
 - [x] 3.4 web-slides (wave 4)
 - [x] 3.5 web-landing-org-period (wave 5)
 - [x] 3.6 web-app (wave 5)
-- [ ] 3.7 api-infrastructure
-- [ ] 3.8 api-period-carryover-archive (load-bearing: period dual-state)
-- [ ] 3.9 api-comms
-- [ ] 3.10 packages-misc
+- [x] 3.7 api-infrastructure (wave 6b — schema-limit re-run; pass/pass)
+- [x] 3.8 api-period-carryover-archive (wave 6c; conservative: hygiene +
+      13 carry-filter characterization pins, dual-state writers untouched;
+      Codex cross-check skipped — CLI config error, 2 Opus lenses pass)
+- [x] 3.9 api-comms (wave 6)
+- [x] 3.10 packages-misc (wave 6)
 
 ## 4. Waves 15–16 — L-slices
 

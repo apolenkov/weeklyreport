@@ -73,10 +73,9 @@ export async function persistCarriedRowsForSection(
     (d) => d.id && !existingDecisionIds.has(d.id),
   );
 
-  // activity-first-class (Decision 6): a carried decision now persists
-  // when parented by EITHER a product OR an activity (the XOR
-  // guarantees exactly one). A record with neither is malformed and
-  // filtered out here (defense-in-depth against the CHECK).
+  // A carried decision persists when parented by EITHER a product OR an
+  // activity (the XOR guarantees exactly one). A record with neither is
+  // malformed and filtered out here (defense-in-depth against the CHECK).
   const decisionsWithParent = newDecisions.filter(
     (d) => d.productId != null || d.activityId != null,
   );

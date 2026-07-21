@@ -202,7 +202,7 @@ export type AdminUpdatePeriodManualResult = z.infer<
 >;
 
 // ---------------------------------------------------------------------------
-// v4.0: App settings (D-68)
+// App settings
 // New fields carry `.default()` so older clients (and test fixtures) that
 // pass the original 3-key payload still parse — the partial update schema
 // also keeps working unchanged.
@@ -225,7 +225,7 @@ export const reminderAudienceWireSchema = z.enum([
  * Regex guard for the `deadlineTime` HH:MM-in-24h
  * string. Pin minutes to two digits and hours to 00..23 so the admin
  * cannot persist garbage like `"25:00"` or `"9:5"` that would later
- * break the deadline-computation path (51-C consumer).
+ * break the deadline-computation path.
  */
 const deadlineTimeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -319,7 +319,7 @@ export const appSettingsUpdateSchema = z
   .partial();
 
 // ---------------------------------------------------------------------------
-// v4.0: Period read model (extended)
+// Period read model (extended)
 // ---------------------------------------------------------------------------
 
 export const periodReadModelSchema = z.object({

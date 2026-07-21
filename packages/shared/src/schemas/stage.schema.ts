@@ -1,8 +1,6 @@
 import { z } from "zod";
 
-// ---------------------------------------------------------------------------
-// v4.0: Stage & Assignment schemas (D-63)
-// ---------------------------------------------------------------------------
+// Stage & Assignment schemas
 
 export const stageSchema = z.object({
   id: z.uuid(),

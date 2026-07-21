@@ -41,8 +41,8 @@ export async function flipDueScheduledToOpen(
 
   for (const row of due) {
     try {
-      // refactor-period-transition-writer: the open transition writes the full
-      // field set (periodState='open' + the draft/false legacy tuple the
+      // The open transition writes the full field set (periodState='open' +
+      // the draft/false legacy tuple the
       // scheduled row already carries).
       const { count } = await report.updateMany({
         where: { id: row.id, periodState: "scheduled" },
@@ -161,9 +161,9 @@ export class PeriodCreatorScheduler {
 
     // Before creating, flip any 'scheduled' rows whose periodStart has been
     // reached to 'open' (the SCHEDULED→OPEN transition for periods minted
-    // ahead-of-time on a previous tick). period-uniqueness: the
-    // partial unique index now constrains this UPDATE, so the flip runs
-    // per-boundary with P2002 recovery instead of a single bulk updateMany.
+    // ahead-of-time on a previous tick). The partial unique index constrains
+    // this UPDATE, so the flip runs per-boundary with P2002 recovery instead
+    // of a single bulk updateMany.
     await flipDueScheduledToOpen(this.prisma.report, now, this.logger);
 
     await this.reconcileCarryOver();
@@ -179,8 +179,8 @@ export class PeriodCreatorScheduler {
       return { created: false, reason: "future-period-exists" };
     }
 
-    // refactor-auth-exemplary-layering: route the create through the single
-    // period factory so deadline math, the lifecycle field set, and reminder
+    // Route the create through the single period factory so deadline math,
+    // the lifecycle field set, and reminder
     // materialisation match the lazy login-create path exactly. The factory
     // anchors the next cycle to the day after the most recent period's end
     // (or `now` when the table is empty — defensive against a no-period DB),

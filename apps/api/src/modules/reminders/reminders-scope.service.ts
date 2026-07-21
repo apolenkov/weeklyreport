@@ -2,58 +2,30 @@ import type { AdminReminderExecution, UserSession } from "@customreport/shared";
 
 import { ReminderScopeError } from "./reminders.errors.js";
 import { resolveReminderDedupeKey } from "./reminders-dedupe-key.js";
+import type {
+  DispatchPendingResult,
+  RemindersScopeRepository,
+} from "./reminders-scope.types.js";
 
 const REMINDER_RULE_OUT_OF_SCOPE_MESSAGE = "reminder-rule-out-of-scope";
 
-export interface DispatchPendingResult {
-  dispatched: number;
-  alreadySent: number;
-  skipped: number;
-  reason?: string;
+/** Per-section result of {@link RemindersScopeService.classifySectionDispatch}. */
+type SectionDispatchOutcome = "alreadySent" | "dispatched" | "skipped";
+
+/** Pure tally: turns per-section outcomes into the public dispatch counters. */
+function tallyDispatchOutcomes(
+  outcomes: readonly SectionDispatchOutcome[],
+): Pick<DispatchPendingResult, "alreadySent" | "dispatched" | "skipped"> {
+  return {
+    dispatched: outcomes.filter((outcome) => outcome === "dispatched").length,
+    alreadySent: outcomes.filter((outcome) => outcome === "alreadySent").length,
+    skipped: outcomes.filter((outcome) => outcome === "skipped").length,
+  };
 }
 
-/**
- * Scope-authorization + dispatch surface of `RemindersRepository`
- * (`RemindersRepository extends` this), split out to keep
- * `reminders.service.ts` under the line budget.
- */
-export interface RemindersScopeRepository {
-  /** `ruleId`'s report id, or null when the rule is missing or reportless. */
-  getRuleReportId(ruleId: string): Promise<string | null>;
-  /** Id of an in-scope `ReportSection` on `reportId`, or null. */
-  findInScopeSectionId(
-    session: UserSession,
-    reportId: string,
-  ): Promise<string | null>;
-  /** Id of an in-scope DRAFT section on `reportId` authored by `recipientEmail`, or null. */
-  findInScopeDraftSectionId(
-    session: UserSession,
-    reportId: string,
-    recipientEmail: string,
-  ): Promise<string | null>;
-  /** Author emails of every in-scope section on `reportId`. */
-  listInScopeSectionAuthorEmails(
-    session: UserSession,
-    reportId: string,
-  ): Promise<string[]>;
-  /** Id of an in-scope `User` row for `leadId`, or null. */
-  findInScopeLeadId(
-    session: UserSession,
-    leadId: string,
-  ): Promise<string | null>;
-  /** The newest active rule for `reportId`, optionally narrowed to `ruleId`. */
-  findActiveRuleForDispatch(
-    reportId: string,
-    ruleId?: string,
-  ): Promise<{ id: string; fireAt: Date } | null>;
-  /** In-scope draft sections on `reportId`, optionally narrowed to one lead. */
-  findDraftSectionsForDispatch(
-    session: UserSession,
-    reportId: string,
-    leadId?: string,
-  ): Promise<{ email: string; notificationOptOut: boolean }[]>;
-  /** `createdAt` of the execution matching `dedupeKey` — the dispatch race-safe read-back. */
-  findExecutionCreatedAt(dedupeKey: string): Promise<Date | null>;
+/** The zero-activity result shape shared by `dispatchPendingReminders`'s two early-exit paths. */
+function noDispatchResult(reason: string): DispatchPendingResult {
+  return { dispatched: 0, alreadySent: 0, skipped: 0, reason };
 }
 
 /**
@@ -206,27 +178,14 @@ export class RemindersScopeService {
       reportId,
       ruleId,
     );
-    if (!rule) {
-      return {
-        dispatched: 0,
-        alreadySent: 0,
-        skipped: 0,
-        reason: "no-active-rule",
-      };
-    }
+    if (!rule) return noDispatchResult("no-active-rule");
     const draftSections = await this.repository.findDraftSectionsForDispatch(
       session,
       reportId,
       leadId,
     );
-    if (leadId !== undefined && draftSections.length === 0) {
-      return {
-        dispatched: 0,
-        alreadySent: 0,
-        skipped: 0,
-        reason: "no-matching-section",
-      };
-    }
+    if (leadId !== undefined && draftSections.length === 0)
+      return noDispatchResult("no-matching-section");
     return this.dispatchDraftSections(rule, draftSections);
   }
 
@@ -241,34 +200,50 @@ export class RemindersScopeService {
    * `dispatched`, mis-reporting the counter even though only one email
    * actually went out.
    */
+  private async classifySectionDispatch(
+    rule: { id: string; fireAt: Date },
+    section: { email: string; notificationOptOut: boolean },
+  ): Promise<SectionDispatchOutcome> {
+    if (section.notificationOptOut) return "skipped";
+    // Mirrors the no-payload key `requestReminderExecution` builds for this
+    // same rule/recipient below, so the read-back always finds the row
+    // this call (or a colliding earlier manual/automated one) produced.
+    const dedupeKey = resolveReminderDedupeKey(rule, section.email);
+    const beforeMs = Date.now();
+    await this.requestReminderExecution(rule.id, section.email);
+    const createdAt = await this.repository.findExecutionCreatedAt(dedupeKey);
+    return createdAt && createdAt.getTime() >= beforeMs
+      ? "dispatched"
+      : "alreadySent";
+  }
+
+  /**
+   * Sequential accumulation, one section at a time: each section's
+   * insert-then-read-back must fully resolve before the next one starts, or
+   * a fanned-out `Promise.all` could interleave inserts and read-backs across
+   * sections and reintroduce the same TOCTOU risk `classifySectionDispatch`
+   * exists to avoid.
+   */
+  private async collectDispatchOutcomes(
+    rule: { id: string; fireAt: Date },
+    remaining: readonly { email: string; notificationOptOut: boolean }[],
+    acc: readonly SectionDispatchOutcome[],
+  ): Promise<readonly SectionDispatchOutcome[]> {
+    const [section, ...rest] = remaining;
+    if (!section) return acc;
+    const outcome = await this.classifySectionDispatch(rule, section);
+    return this.collectDispatchOutcomes(rule, rest, [...acc, outcome]);
+  }
+
   private async dispatchDraftSections(
     rule: { id: string; fireAt: Date },
     draftSections: { email: string; notificationOptOut: boolean }[],
   ): Promise<DispatchPendingResult> {
-    // eslint-disable-next-line no-restricted-syntax -- Race-safe dispatch accounting must stay beside the async dedupe call; a reducer would hide the TOCTOU boundary.
-    let dispatched = 0;
-    // eslint-disable-next-line no-restricted-syntax -- Race-safe dispatch accounting must stay beside the async dedupe call; a reducer would hide the TOCTOU boundary.
-    let alreadySent = 0;
-    // eslint-disable-next-line no-restricted-syntax -- Race-safe dispatch accounting must stay beside the async dedupe call; a reducer would hide the TOCTOU boundary.
-    let skipped = 0;
-    for (const section of draftSections) {
-      if (section.notificationOptOut) {
-        skipped++;
-        continue;
-      }
-      // Mirrors the no-payload key `requestReminderExecution` builds for this
-      // same rule/recipient below, so the read-back always finds the row
-      // this call (or a colliding earlier manual/automated one) produced.
-      const dedupeKey = resolveReminderDedupeKey(rule, section.email);
-      const beforeMs = Date.now();
-      await this.requestReminderExecution(rule.id, section.email);
-      const createdAt = await this.repository.findExecutionCreatedAt(dedupeKey);
-      if (createdAt && createdAt.getTime() >= beforeMs) {
-        dispatched++;
-      } else {
-        alreadySent++;
-      }
-    }
-    return { dispatched, alreadySent, skipped };
+    const outcomes = await this.collectDispatchOutcomes(
+      rule,
+      draftSections,
+      [],
+    );
+    return tallyDispatchOutcomes(outcomes);
   }
 }

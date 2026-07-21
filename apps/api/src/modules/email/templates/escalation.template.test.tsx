@@ -21,6 +21,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   EscalationEmail,
+  escalationEmailPlaintext,
   type EscalationEmailProps,
 } from "./escalation.template.js";
 
@@ -142,5 +143,40 @@ describe("EscalationEmail — deterministic render snapshot", () => {
       React.createElement(EscalationEmail, propsClone),
     );
     expect(html1).toBe(html2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// unit / high: escalationEmailPlaintext exact-output pin
+// ---------------------------------------------------------------------------
+
+describe("escalationEmailPlaintext — literal output", () => {
+  it("produces the exact literal plaintext body for baseProps", () => {
+    expect(escalationEmailPlaintext(baseProps)).toBe(
+      [
+        "Hello Carol,",
+        "",
+        "The following leads have not submitted their section of the 2026-04-13 → 2026-04-19 weekly report (2026-04-19):",
+        "",
+        "  - Alice — Backend (deadline 2026-04-20T15:00:00.000Z)",
+        "  - Bob — Frontend (deadline 2026-04-20T15:00:00.000Z)",
+        "",
+        "— Demo (Weekly status reporting for Example Software Department)",
+      ].join("\n"),
+    );
+  });
+
+  it("uses the singular 'lead' phrasing for exactly one late lead", () => {
+    expect(escalationEmailPlaintext({ ...baseProps, lateLeads: [leadA] })).toBe(
+      [
+        "Hello Carol,",
+        "",
+        "The following lead have not submitted their section of the 2026-04-13 → 2026-04-19 weekly report (2026-04-19):",
+        "",
+        "  - Alice — Backend (deadline 2026-04-20T15:00:00.000Z)",
+        "",
+        "— Demo (Weekly status reporting for Example Software Department)",
+      ].join("\n"),
+    );
   });
 });
