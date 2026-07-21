@@ -1,10 +1,7 @@
 import type {
-  DbRole,
   ReportSectionReadModel,
-  RiskSeverity,
   TrafficLightStatus,
 } from "@customreport/shared";
-import { shortNameFromName, stageNamesMatch } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
@@ -21,11 +18,24 @@ import {
 import { applyRevokeTransition } from "../application/revoke-transition";
 import type { ReopenEligibilityFacts } from "../domain/lead-form-shared";
 import {
-  initialsFromName,
   LeadFormDomainError,
   reopenBlockedMessage,
   ReopenRequestError,
 } from "../domain/lead-form-shared";
+import {
+  isCarryable,
+  toFilledDecisionRows,
+  toFilledItemRows,
+  toFilledRiskRows,
+} from "./fill-from.derive.js";
+import {
+  buildCrossAuthorStatusRows,
+  indexForeignSections,
+} from "./lead-form-cross-author.derive.js";
+import {
+  buildCrossAuthorContentRows,
+  groupCrossAuthorAuthors,
+} from "./lead-form-cross-author-content.derive.js";
 import { queryPublishedLineage } from "./published-lineage.query.js";
 import { reportSectionFullInclude } from "./report-sections.include";
 import { mapPrismaToReportSection } from "./report-sections.mappers";
@@ -322,12 +332,15 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         })
       ).map((row) => row.activityId),
     );
-    const isCarryable = (row: { activityId: string | null }): boolean =>
-      row.activityId === null || targetActivityIds.has(row.activityId);
-
-    const itemsToCopy = source.items.filter(isCarryable);
-    const risksToCopy = source.risks.filter(isCarryable);
-    const decisionsToCopy = source.decisions.filter(isCarryable);
+    const itemsToCopy = source.items.filter((row) =>
+      isCarryable(row, targetActivityIds),
+    );
+    const risksToCopy = source.risks.filter((row) =>
+      isCarryable(row, targetActivityIds),
+    );
+    const decisionsToCopy = source.decisions.filter((row) =>
+      isCarryable(row, targetActivityIds),
+    );
     const copiedItems =
       itemsToCopy.length + risksToCopy.length + decisionsToCopy.length;
 
@@ -364,39 +377,14 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           // XOR parent — carry activityId (product FK null) only when re-attached.
           if (itemsToCopy.length > 0) {
             await tx.item.createMany({
-              data: itemsToCopy.map((i) => ({
-                reportSectionId: targetSectionId,
-                projectId: i.projectId,
-                activityId: i.activityId,
-                type: "current",
-                text: i.text,
-                tag: i.tag,
-                // Fill From flips next → current, so next-only statuses must
-                // land in the current vocabulary (same remap as carry-over).
-                workflowStatus:
-                  i.workflowStatus === "planned" ||
-                  i.workflowStatus === "postponed"
-                    ? "in_progress"
-                    : i.workflowStatus,
-                carriedOver: false,
-                stageNames: i.stageNames,
-              })),
+              data: toFilledItemRows(itemsToCopy, targetSectionId),
             });
           }
 
           // Copy risks from source (same XOR-parent carry rule as items).
           if (risksToCopy.length > 0) {
             await tx.risk.createMany({
-              data: risksToCopy.map((r) => ({
-                reportSectionId: targetSectionId,
-                projectId: r.projectId,
-                activityId: r.activityId,
-                risk: r.risk,
-                impact: r.impact,
-                mitigation: r.mitigation,
-                severity: r.severity,
-                stageNames: r.stageNames,
-              })),
+              data: toFilledRiskRows(risksToCopy, targetSectionId),
             });
           }
 
@@ -405,17 +393,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           // product case always. isCarryable(null activityId) == true handles both.
           if (decisionsToCopy.length > 0) {
             await tx.decision.createMany({
-              data: decisionsToCopy.map((d) => ({
-                reportSectionId: targetSectionId,
-                text: d.text,
-                owner: d.owner,
-                deadline: d.deadline ?? null,
-                impact: d.impact,
-                resolvedAt: d.resolvedAt ?? null,
-                stageNames: d.stageNames,
-                productId: d.productId,
-                activityId: d.activityId,
-              })),
+              data: toFilledDecisionRows(decisionsToCopy, targetSectionId),
             });
           }
         },
@@ -563,87 +541,8 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       },
     });
 
-    // Persisted-traffic lookup: "authorId::projectId::stageId" → green/yellow/red.
-    const statusMap = new Map<string, TrafficLightStatus>();
-    // Per-author covering risks, grouped by projectId for the stage match.
-    const risksByAuthor = new Map<
-      string,
-      { projectId: string | null; severity: string; stageNames: string[] }[]
-    >();
-    for (const s of sections) {
-      for (const ss of s.stageStatuses) {
-        if (ss.status !== null) {
-          statusMap.set(
-            `${s.authorId}::${ss.projectId}::${ss.stageId}`,
-            ss.status,
-          );
-        }
-      }
-      risksByAuthor.set(s.authorId, s.risks);
-    }
-
-    // Group by (projectId, authorId)
-    const grouped = new Map<
-      string,
-      {
-        projectId: string;
-        projectName: string;
-        authorId: string;
-        authorInitials: string;
-        authorShortName: string;
-        stageNames: Set<string>;
-        stageEntries: {
-          stageName: string;
-          status: StageTrafficStatus;
-        }[];
-      }
-    >();
-
-    for (const row of others) {
-      if (row.project.archived) continue;
-      const key = `${row.projectId}::${row.user.id}`;
-      const persisted =
-        statusMap.get(`${row.user.id}::${row.projectId}::${row.stageId}`) ??
-        null;
-      const stageStatus = this.deriveForeignStageStatus(
-        row.stage.name,
-        row.projectId,
-        risksByAuthor.get(row.user.id) ?? [],
-        persisted,
-      );
-      const existing = grouped.get(key);
-      if (!existing) {
-        grouped.set(key, {
-          projectId: row.projectId,
-          projectName: row.project.name,
-          authorId: row.user.id,
-          // Derive display forms server-side (ADR 0006): the two-letter mark for
-          // avatars/micro-chips, and the SHORT form ("Каштанова М.А.") for the
-          // cross-author stage label. Only these leave the method — never the
-          // full ФИО.
-          authorInitials: initialsFromName(row.user.name),
-          authorShortName: shortNameFromName(row.user.name),
-          stageNames: new Set([row.stage.name]),
-          stageEntries: [{ stageName: row.stage.name, status: stageStatus }],
-        });
-      } else {
-        existing.stageNames.add(row.stage.name);
-        existing.stageEntries.push({
-          stageName: row.stage.name,
-          status: stageStatus,
-        });
-      }
-    }
-
-    return [...grouped.values()].map((g) => ({
-      projectId: g.projectId,
-      projectName: g.projectName,
-      authorId: g.authorId,
-      authorInitials: g.authorInitials,
-      authorShortName: g.authorShortName,
-      stageNames: [...g.stageNames],
-      stages: g.stageEntries,
-    }));
+    const { statusMap, risksByAuthor } = indexForeignSections(sections);
+    return buildCrossAuthorStatusRows(others, statusMap, risksByAuthor);
   }
 
   async getCrossAuthorContent(
@@ -676,50 +575,14 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     // Per-author set of shared, non-archived projectIds + the author's stage
     // assignments on those products (the chips come from assignments, not the
     // section — a co-owner's stage exists even with no persisted status row).
-    const authorProjectMap = new Map<
-      string,
-      {
-        authorId: string;
-        authorName: string;
-        authorRole: DbRole;
-        sharedProjectIds: Set<string>;
-        stageAssignments: {
-          projectId: string;
-          stageId: string;
-          stageName: string;
-        }[];
-      }
-    >();
-    for (const row of others) {
-      const assignment = {
-        projectId: row.projectId,
-        stageId: row.stageId,
-        stageName: row.stage.name,
-      };
-      const existing = authorProjectMap.get(row.user.id);
-      if (existing) {
-        existing.sharedProjectIds.add(row.projectId);
-        existing.stageAssignments.push(assignment);
-      } else {
-        authorProjectMap.set(row.user.id, {
-          authorId: row.user.id,
-          authorName: row.user.name,
-          authorRole: row.user.role,
-          sharedProjectIds: new Set([row.projectId]),
-          stageAssignments: [assignment],
-        });
-      }
-    }
-
     // `coOwnsShared` is the co-ownership authorization signal (D6b): true iff
     // the caller co-owns at least one shared, non-archived product. It is kept
     // separate from row-emptiness so the service can label a denied read
     // (co-owns nothing) distinctly from a legitimately empty one (co-owns a
     // product but the co-owner authored no records).
-    const coOwnsShared = authorProjectMap.size > 0;
+    const { authorEntries, coOwnsShared, otherUserIds } =
+      groupCrossAuthorAuthors(others);
     if (!coOwnsShared) return { coOwnsShared: false, rows: [] };
-
-    const otherUserIds = [...authorProjectMap.keys()];
 
     // Step 2: fetch foreign sections + covering risks (for risk-derived chips).
     const sections = await this.prisma.reportSection.findMany({
@@ -769,101 +632,9 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     });
 
     // Step 3: build per-author rows filtered to shared products only.
-    const rows: CrossAuthorSectionRow[] = [];
-    for (const section of sections) {
-      const authorEntry = authorProjectMap.get(section.authorId);
-      if (!authorEntry) continue;
-      const sharedIds = authorEntry.sharedProjectIds;
-
-      // Risk-derived foreign stage chips (canonical rule), reusing the same
-      // derivation as the status-only read. The author's stage assignments on
-      // shared products (collected above) define which chips exist; the
-      // section's persisted statuses provide the empty/non-empty base.
-      const persistedStatus = new Map<string, TrafficLightStatus>();
-      for (const ss of section.stageStatuses) {
-        if (ss.status !== null) {
-          persistedStatus.set(`${ss.projectId}::${ss.stageId}`, ss.status);
-        }
-      }
-      const stages = authorEntry.stageAssignments.map((sa) => ({
-        projectId: sa.projectId,
-        stageName: sa.stageName,
-        status: this.deriveForeignStageStatus(
-          sa.stageName,
-          sa.projectId,
-          section.risks,
-          persistedStatus.get(`${sa.projectId}::${sa.stageId}`) ?? null,
-        ),
-      }));
-
-      rows.push({
-        authorId: authorEntry.authorId,
-        authorName: authorEntry.authorName,
-        authorRole: authorEntry.authorRole,
-        sharedProductIds: [...sharedIds],
-        stages,
-        // activity-first-class: the cross-lead grid is product-scoped — an
-        // activity-parented row (null product FK) belongs to no shared product,
-        // so the type-guard filter both narrows the type and excludes it.
-        items: section.items.filter(
-          (i): i is typeof i & { projectId: string } =>
-            i.projectId != null && sharedIds.has(i.projectId),
-        ),
-        risks: section.risks
-          .filter(
-            (r): r is typeof r & { projectId: string } =>
-              r.projectId != null && sharedIds.has(r.projectId),
-          )
-          // The DB column is a plain String (Risk_severity_check CHECK backs
-          // the two-value vocabulary); narrow the Prisma-typed string here.
-          .map((r) => ({ ...r, severity: r.severity as RiskSeverity })),
-        decisions: section.decisions.filter(
-          (d): d is typeof d & { productId: string } =>
-            d.productId != null && sharedIds.has(d.productId),
-        ),
-      });
-    }
-
-    return { coOwnsShared, rows };
-  }
-
-  /**
-   * Risk-derived foreign stage status. Mirrors `deriveEffectiveStageStatus`
-   * (apps/web/src/lib/stage-status.ts) with `items: []` — the foreign blocked-
-   * item path is intentionally NOT consulted here.
-   *
-   * Precedence over covering risks (those whose `stageNames` name this stage,
-   * Dev↔Development aliased): blocked → red, any other severity → yellow.
-   * With no covering risk the persisted traffic is used only as the
-   * empty/non-empty base — a persisted yellow/red with no backing risk
-   * collapses to green; a null base stays null.
-   */
-  private deriveForeignStageStatus(
-    stageName: string,
-    projectId: string,
-    risks: readonly {
-      // Nullable: an activity-parented risk carries no product FK and never
-      // matches `projectId` below, so it colours no product stage.
-      projectId: string | null;
-      severity: string;
-      stageNames: string[];
-    }[],
-    persisted: StageTrafficStatus,
-  ): StageTrafficStatus {
-    const covering = risks.filter(
-      (r) =>
-        r.projectId === projectId &&
-        // An empty stageNames is the canonical "covers all assigned stages"
-        // marker (mirrors riskCoversStage in stage-tags.ts and the Add-Risk
-        // dialog default). Without this, a co-lead's covers-all blocked risk
-        // would colour no foreign stage and product health would read green.
-        (r.stageNames.length === 0 ||
-          r.stageNames.some((name) => stageNamesMatch(name, stageName))),
-    );
-    if (covering.some((r) => r.severity === "blocked")) return "red";
-    if (covering.length > 0) return "yellow";
-    // No covering risk: the stage is on-track if it was touched at all,
-    // otherwise empty. The persisted traffic value itself never colours.
-    return persisted === null ? null : "green";
+    return {
+      coOwnsShared,
+      rows: buildCrossAuthorContentRows(sections, authorEntries),
+    };
   }
 }

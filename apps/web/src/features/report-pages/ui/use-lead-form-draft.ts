@@ -30,12 +30,9 @@ import {
   type LeadFormLoadedContext,
   type SubmitOutcome,
 } from "./lead-form-submit-context";
-import type { RiskPrefillRequest } from "./lead-form-sync-bridge";
+import { useLeadFormQuickAdd } from "./use-lead-form-quick-add";
 
-export interface QuickAddItem {
-  readonly week: "current" | "next";
-  readonly seq: number;
-}
+export type { QuickAddItem } from "./use-lead-form-quick-add";
 
 interface UseLeadFormDraftArgs {
   readonly serverSection: ReportSectionReadModel | null | undefined;
@@ -52,9 +49,10 @@ interface UseLeadFormDraftArgs {
 /**
  * The deep draft module: owns the editable section, autosave + save-echo
  * reconciliation, optimistic-lock version, submit readiness + submit, and every
- * draft merge behind one handle. Live view-model inputs a callback needs enter
- * as plain render args (`loaded`); the SINGLE module-internal ref (`loadedRef`)
- * bridges render into the quick-add callbacks, so no ref crosses a file boundary.
+ * draft merge behind one handle. The modal quick-add + blocker-prefill cluster
+ * lives in `useLeadFormQuickAdd`; its results are spread onto this handle so the
+ * public shape is unchanged. Live view-model inputs a callback needs enter as
+ * the plain `loaded` render arg, forwarded to that hook — no ref crosses here.
  */
 export function useLeadFormDraft({
   serverSection,
@@ -69,18 +67,8 @@ export function useLeadFormDraft({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [draftSection, setDraftSection] =
     useState<ReportSectionReadModel | null>(null);
-  const [pendingQuickAdd, setPendingQuickAdd] = useState<QuickAddItem | null>(
-    null,
-  );
-  const [pendingRiskPrefill, setPendingRiskPrefill] =
-    useState<RiskPrefillRequest | null>(null);
   const lastServerDraftKeyRef = useRef<string | null>(null);
   const pendingSaveEchoesRef = useRef<readonly PendingSaveEcho[]>([]);
-  // The one sanctioned render->callback bridge: the live loaded context a
-  // quick-add merge callback reads after commit.
-  const loadedRef = useRef(loaded);
-  // eslint-disable-next-line react-hooks/refs -- the one sanctioned render->callback bridge (see comment above)
-  loadedRef.current = loaded;
 
   const [version, setVersion] = useState(1);
   const versionRef = useRef(1);
@@ -184,34 +172,9 @@ export function useLeadFormDraft({
     setDraftSection((prev) => (prev ? applyDraftPatch(prev, patch) : prev));
   }, []);
 
-  const routeToBlocker = useCallback(
-    (prefill: Omit<RiskPrefillRequest, "signal">) => {
-      setPendingRiskPrefill((prev) => ({
-        signal: (prev?.signal ?? 0) + 1,
-        ...prefill,
-      }));
-    },
-    [],
-  );
-
-  const quickAdd = useCallback((week: "current" | "next") => {
-    setPendingQuickAdd((prev) => ({ week, seq: (prev?.seq ?? 0) + 1 }));
-  }, []);
-  const clearQuickAdd = useCallback(() => setPendingQuickAdd(null), []);
-  const clearRiskPrefill = useCallback(() => setPendingRiskPrefill(null), []);
-
-  const quickAddSave = useCallback(
-    (item: LeadFormLoadedContext["currentWeekItems"][number]) => {
-      if (!pendingQuickAdd) return;
-      const context = loadedRef.current;
-      const week = pendingQuickAdd.week;
-      const base =
-        week === "next" ? context.nextWeekItems : context.currentWeekItems;
-      apply({ kind: "week-items", week, items: [...base, item] });
-      setPendingQuickAdd(null);
-    },
-    [pendingQuickAdd, apply],
-  );
+  // Modal quick-add + blocker-prefill cluster. Kept out of this core because it
+  // touches neither the optimistic-lock version nor the dual-state write path.
+  const quickAddCluster = useLeadFormQuickAdd({ apply, loaded });
 
   const readinessProducts = useMemo(
     () =>
@@ -271,12 +234,6 @@ export function useLeadFormDraft({
     submitReadiness,
     handleConflict,
     apply,
-    quickAdd,
-    pendingQuickAdd,
-    quickAddSave,
-    clearQuickAdd,
-    routeToBlocker,
-    pendingRiskPrefill,
-    clearRiskPrefill,
+    ...quickAddCluster,
   };
 }

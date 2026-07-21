@@ -3,10 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useContext, useMemo } from "react";
 
-import {
-  formatPeriodRangeWithYear,
-  isoWeekNumber,
-} from "../../../lib/format-date";
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
 import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
@@ -23,6 +19,7 @@ import { ExportPdfButton } from "../../pdf-export";
 import { HeadPublishLockAction, PeriodNavigator } from "../../period";
 import type { ReportPeriod } from "../../report-sections";
 import { HeadSlidesClient } from "../../slides";
+import { deriveHeadPeriods } from "./head-report-periods";
 import { WeeklyReportPage } from "./weekly-report-page";
 
 // Module-scope so the reference is stable across renders — a fresh literal would
@@ -81,57 +78,16 @@ export function HeadReportShell({
   // history and the old code prepended nothing.
   const activeQ = useQuery(trpc.weeklyReport.get.queryOptions({}));
 
-  const periods: ReportPeriod[] = useMemo(() => {
-    const entries = historyQ.data?.entries ?? [];
-    const historyPeriods: ReportPeriod[] = entries.map((entry) => ({
-      id: entry.reportId,
-      weekLabel: `Week ${isoWeekNumber(new Date(entry.periodStart))}`,
-      dateRange: formatPeriodRangeWithYear(
-        new Date(entry.periodStart),
-        new Date(entry.periodEnd),
+  const periods: ReportPeriod[] = useMemo(
+    () =>
+      deriveHeadPeriods(
+        historyQ.data?.entries ?? [],
+        activeQ.data,
+        displayedQ.data,
+        reportId,
       ),
-      archived: entry.archived,
-      sourceSectionId: "",
-      isCurrent: false,
-      isSubmitted: true,
-    }));
-
-    // Prepend any period the navigator must reach that compiledHistory (which
-    // lists only published + archived weeks) omits: the CURRENT week (so the
-    // chevron can always return to it — item 3) and the DISPLAYED week (finding
-    // 4: so the trigger resolves on `/head/report/<id>`). Each entry's id MUST
-    // be its reportId so the navigator's `p.id === pathReportId` match works.
-    const seen = new Set(historyPeriods.map((p) => p.id));
-    const toPeriod = (
-      id: string,
-      data: { periodStart: Date; periodEnd: Date; periodStatus: string },
-    ): ReportPeriod => ({
-      id,
-      weekLabel: `Week ${isoWeekNumber(new Date(data.periodStart))}`,
-      dateRange: formatPeriodRangeWithYear(
-        new Date(data.periodStart),
-        new Date(data.periodEnd),
-      ),
-      archived: false,
-      sourceSectionId: "",
-      // Mirror mapWeeklyReport: a non-published period is the current week.
-      isCurrent: data.periodStatus !== "published",
-      isSubmitted: true,
-    });
-
-    const prepended: ReportPeriod[] = [];
-    const active = activeQ.data;
-    if (active && active.status !== "no-period" && !seen.has(active.reportId)) {
-      prepended.push(toPeriod(active.reportId, active));
-      seen.add(active.reportId);
-    }
-    const displayed = displayedQ.data;
-    if (displayed && displayed.status !== "no-period" && !seen.has(reportId)) {
-      prepended.push(toPeriod(reportId, displayed));
-      seen.add(reportId);
-    }
-    return [...prepended, ...historyPeriods];
-  }, [historyQ.data, activeQ.data, displayedQ.data, reportId]);
+    [historyQ.data, activeQ.data, displayedQ.data, reportId],
+  );
 
   // Period navigation preserves the current view state (mode, authorId, scope,
   // show-archived) — all already live in the URL, so `buildQuery({})` carries

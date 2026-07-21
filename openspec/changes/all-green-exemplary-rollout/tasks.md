@@ -37,16 +37,22 @@
 
 ## 4. Waves 15–16 — L-slices
 
-- [ ] 4.1 web-report-pages
-- [ ] 4.2 api-sections-review
+- [x] 4.1 web-report-pages (wave 7; lead-form.tsx builder split skipped —
+      trips the ratified declared-interface-seam guard; sync-bridge PERM
+      max-lines exemption now technically retireable, see 5.1)
+- [x] 4.2 api-sections-review (wave 7; 2 Opus lenses + Codex cross-review
+      pass on invariants — Codex archaeology-comment majors fixed by
+      orchestrator pre-commit)
 
 ## 5. Final sweep
 
 - [ ] 5.1 Tear down obsolete eslint.config.ts exemptions (PERM blocks stay)
 - [ ] 5.1b Evaluate tsconfig lib ES2024 bump + Map.groupBy to replace the
-      O(n^2) `new Map(acc).set()` immutable grouping folds W5 verifiers
-      flagged (9 minor sites in report-sections groupers/stage-tags/
-      next-week-columns) — runtime-compat decision, needs Sasha's sign-off
+      O(n^2) `new Map(acc).set()` immutable grouping folds the W5-W7
+      verifiers flagged (web report-sections groupers/stage-tags/
+      next-week-columns; api reminders-escalation-grouping,
+      report-sections.mappers, lead-form-cross-author(+content).derive)
+      — runtime-compat decision, needs Sasha's sign-off
 - [ ] 5.2 Full gate: typecheck + lint (incl. depcruise, knip) + full vitest
 - [ ] 5.3 Codex spot-review of a random sample across waves
 - [ ] 5.4 Archive this change; update campaign artifacts
