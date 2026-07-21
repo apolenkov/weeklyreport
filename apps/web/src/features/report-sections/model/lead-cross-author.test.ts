@@ -14,13 +14,15 @@ import { workflowToItemStatus } from "./item-status";
 import {
   applyCrossAuthorStageOverrides,
   buildCrossAuthorStageMap,
+  type CrossAuthorRow,
+} from "./lead-cross-author";
+import {
   coerceWorkflowToItemStatus,
   type CrossAuthorContentRow,
-  type CrossAuthorRow,
   mapForeignDecisions,
   mapForeignItems,
   mapForeignRisks,
-} from "./lead-cross-author";
+} from "./lead-cross-author-content";
 import type { LeadProduct } from "./lead-form";
 
 describe("buildCrossAuthorStageMap", () => {

@@ -6,13 +6,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { formatPeriodLabel, formatPeriodRange } from "../../../lib/format-date";
 import { useTRPC } from "../../../lib/trpc-context";
-import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
 import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
 import { usePeriodMutations } from "../model/use-period-mutations";
+import { PeriodsActiveSection } from "./periods-active-section";
 import { PeriodsArchiveSection } from "./periods-archive-section";
-import { CreatePeriodDialog } from "./periods-tab-dialog";
+import { PeriodsTabDialogs } from "./periods-tab-dialogs";
 import { PlusIcon } from "./periods-tab-icons";
-import { PeriodTable } from "./periods-tab-table";
 
 /**
  * Admin → Periods tab.
@@ -28,9 +27,9 @@ import { PeriodTable } from "./periods-tab-table";
  *   └────────────────────────────────────────────────────┘
  *
  * Row-level actions surface as inline icon buttons. The row table, icon
- * set, the create/edit dialog, and the seven lifecycle mutations live in
- * sibling modules (periods-tab-table / periods-tab-icons /
- * periods-tab-dialog / use-period-mutations).
+ * set, the create/edit/delete dialogs, and the seven lifecycle mutations
+ * live in sibling modules (periods-tab-table / periods-tab-icons /
+ * periods-tab-dialogs / use-period-mutations).
  *
  * `period.publish` and `period.reopen` are head-procedures (admin role is
  * aliased to head, so they're callable here). Archive + Unarchive are
@@ -108,11 +107,11 @@ export function PeriodsTab() {
   });
 
   const allActiveRows = useMemo(
-    () => (activeQuery.data ?? []) as PeriodListItem[],
+    () => activeQuery.data ?? [],
     [activeQuery.data],
   );
   const archiveRows = useMemo(
-    () => (archiveQuery.data ?? []) as PeriodListItem[],
+    () => archiveQuery.data ?? [],
     [archiveQuery.data],
   );
 
@@ -130,6 +129,22 @@ export function PeriodsTab() {
         .includes(needle),
     );
   }, [allActiveRows, search]);
+
+  // Shared across both the active table and the archive section — every
+  // row-level action is wired identically regardless of which bucket the
+  // row lives in.
+  const rowActions = {
+    onPublish: (row: PeriodListItem) => publishMut.mutate({ reportId: row.id }),
+    onReopen: (row: PeriodListItem) => reopenMut.mutate({ reportId: row.id }),
+    onArchive: (row: PeriodListItem) => archiveMut.mutate({ periodId: row.id }),
+    onUnarchive: (row: PeriodListItem) =>
+      unarchiveMut.mutate({ periodId: row.id }),
+    onDelete: (row: PeriodListItem) => setDeleteConfirm(row),
+    onEdit: (row: PeriodListItem) => {
+      dialogTriggerRef.current = document.activeElement as HTMLElement;
+      setEditingRow(row);
+    },
+  };
 
   return (
     <div className="space-y-6">
@@ -164,49 +179,11 @@ export function PeriodsTab() {
       />
 
       {/* ---- Active section ----------------------------------------- */}
-      <section aria-labelledby="periods-active-heading" className="space-y-3">
-        <header className="flex items-baseline justify-between">
-          <h3
-            id="periods-active-heading"
-            className="font-[family-name:var(--font-sans)] text-base font-semibold text-[var(--color-foreground)]"
-          >
-            Active
-          </h3>
-          <span className="text-xs text-[var(--color-muted-foreground)]">
-            scheduled · open · published
-          </span>
-        </header>
-
-        {activeQuery.isLoading ? (
-          <div
-            className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-muted-foreground)]"
-            data-testid="periods-active-loading"
-          >
-            Loading…
-          </div>
-        ) : activeRows.length === 0 ? (
-          <div
-            className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-muted-foreground)]"
-            data-testid="periods-active-empty"
-          >
-            No active periods.
-          </div>
-        ) : (
-          <PeriodTable
-            testIdPrefix="active"
-            rows={activeRows}
-            onPublish={(row) => publishMut.mutate({ reportId: row.id })}
-            onReopen={(row) => reopenMut.mutate({ reportId: row.id })}
-            onArchive={(row) => archiveMut.mutate({ periodId: row.id })}
-            onUnarchive={(row) => unarchiveMut.mutate({ periodId: row.id })}
-            onDelete={(row) => setDeleteConfirm(row)}
-            onEdit={(row) => {
-              dialogTriggerRef.current = document.activeElement as HTMLElement;
-              setEditingRow(row);
-            }}
-          />
-        )}
-      </section>
+      <PeriodsActiveSection
+        isLoading={activeQuery.isLoading}
+        rows={activeRows}
+        {...rowActions}
+      />
 
       {/* ---- Archive section ---------------------------------------- */}
       <PeriodsArchiveSection
@@ -214,68 +191,42 @@ export function PeriodsTab() {
         onToggle={() => setShowArchive((prev) => !prev)}
         isLoading={archiveQuery.isLoading}
         rows={archiveRows}
-        onPublish={(row) => publishMut.mutate({ reportId: row.id })}
-        onReopen={(row) => reopenMut.mutate({ reportId: row.id })}
-        onArchive={(row) => archiveMut.mutate({ periodId: row.id })}
-        onUnarchive={(row) => unarchiveMut.mutate({ periodId: row.id })}
-        onDelete={(row) => setDeleteConfirm(row)}
-        onEdit={(row) => {
-          dialogTriggerRef.current = document.activeElement as HTMLElement;
-          setEditingRow(row);
-        }}
+        {...rowActions}
       />
 
-      {/* «New period» creation dialog ----------------------- */}
-      {showCreate && (
-        <CreatePeriodDialog
-          mode="create"
-          onCancel={() => setShowCreate(false)}
-          onSubmit={(values) =>
-            // Create-mode never emits `null` for weekLabel; narrow the
-            // dialog's union back to the create-schema's `string | undefined`
-            // expectation. The dialog guarantees this — but TS can't see
-            // through the mode discriminator.
-            createMut.mutate({
-              periodStart: values.periodStart,
-              periodEnd: values.periodEnd,
-              deadline: values.deadline,
-              weekLabel: values.weekLabel ?? undefined,
-            })
-          }
-          isPending={createMut.isPending}
-        />
-      )}
-
-      {/* «Edit period» dialog — same component, edit mode --- */}
-      {editingRow && (
-        <CreatePeriodDialog
-          mode="edit"
-          initialValues={editingRow}
-          onCancel={() => setEditingRow(null)}
-          onSubmit={(values) =>
-            updateMut.mutate({
-              reportId: editingRow.id,
-              ...values,
-            })
-          }
-          isPending={updateMut.isPending}
-        />
-      )}
-
-      {/* Delete confirmation dialog */}
-      {deleteConfirm && (
-        <ConfirmationDialog
-          open={true}
-          title="Delete period?"
-          description="This will permanently delete the period and all draft sections. This action cannot be undone."
-          confirmLabel={deleteMut.isPending ? "Deleting…" : "Delete"}
-          variant="delete"
-          testId="periods-delete-dialog"
-          isPending={deleteMut.isPending}
-          onClose={() => setDeleteConfirm(null)}
-          onConfirm={() => deleteMut.mutate({ reportId: deleteConfirm.id })}
-        />
-      )}
+      <PeriodsTabDialogs
+        showCreate={showCreate}
+        onCancelCreate={() => setShowCreate(false)}
+        onSubmitCreate={(values) =>
+          // Create-mode never emits `null` for weekLabel; narrow the
+          // dialog's union back to the create-schema's `string | undefined`
+          // expectation. The dialog guarantees this — but TS can't see
+          // through the mode discriminator.
+          createMut.mutate({
+            periodStart: values.periodStart,
+            periodEnd: values.periodEnd,
+            deadline: values.deadline,
+            weekLabel: values.weekLabel ?? undefined,
+          })
+        }
+        createIsPending={createMut.isPending}
+        editingRow={editingRow}
+        onCancelEdit={() => setEditingRow(null)}
+        onSubmitEdit={(values) =>
+          editingRow &&
+          updateMut.mutate({
+            reportId: editingRow.id,
+            ...values,
+          })
+        }
+        editIsPending={updateMut.isPending}
+        deleteConfirm={deleteConfirm}
+        deleteIsPending={deleteMut.isPending}
+        onCloseDelete={() => setDeleteConfirm(null)}
+        onConfirmDelete={() =>
+          deleteConfirm && deleteMut.mutate({ reportId: deleteConfirm.id })
+        }
+      />
     </div>
   );
 }

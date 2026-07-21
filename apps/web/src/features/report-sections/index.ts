@@ -1,16 +1,16 @@
 export { FOREIGN_ENTRY_OPACITY } from "./model/item-card-style";
 export type { ItemWorkflowStatus } from "./model/item-status";
-export type {
-  CrossAuthorContentRow,
-  CrossAuthorRow,
-} from "./model/lead-cross-author";
+export type { CrossAuthorRow } from "./model/lead-cross-author";
 export {
   applyCrossAuthorStageOverrides,
   buildCrossAuthorStageMap,
+} from "./model/lead-cross-author";
+export type { CrossAuthorContentRow } from "./model/lead-cross-author-content";
+export {
   mapForeignDecisions,
   mapForeignItems,
   mapForeignRisks,
-} from "./model/lead-cross-author";
+} from "./model/lead-cross-author-content";
 export type {
   LeadActivityCard,
   LeadCurrentUser,
@@ -38,7 +38,11 @@ export {
   deriveLeadSubmitReadiness,
 } from "./model/lead-submit-readiness";
 export { MOCK_PRODUCTS } from "./model/mock-data";
-export { isBoardEmpty, splitItemBoard } from "./model/next-week-columns";
+export {
+  isBoardEmpty,
+  type ItemColumn,
+  splitItemBoard,
+} from "./model/next-week-columns";
 export { resolveRecordParent } from "./model/record-parent";
 export { reportHasContent } from "./model/report-content";
 export {

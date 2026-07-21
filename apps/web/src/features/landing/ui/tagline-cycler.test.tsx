@@ -30,14 +30,14 @@ describe("TaglineCycler", () => {
     expect(LANDING_TAGLINES).toContain(el.textContent);
   });
 
-  // VA-0a: p element has implicit paragraph role — no role="text" override present
+  // p element has implicit paragraph role — no role="text" override present
   it("p element has no explicit role attribute (implicit paragraph role only)", () => {
     render(<TaglineCycler />);
     const el = screen.getByRole("paragraph");
     expect(el).not.toHaveAttribute("role");
   });
 
-  // VA-0a: getByRole('paragraph') resolves after role="text" removal
+  // getByRole('paragraph') resolves since there is no role="text" override
   it("getByRole('paragraph') locates the element without a role override", () => {
     render(<TaglineCycler />);
     // If role="text" were still present, 'paragraph' query would fail

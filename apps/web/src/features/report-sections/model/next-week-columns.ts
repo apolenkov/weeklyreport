@@ -65,23 +65,23 @@ function activityLanes(
   });
 }
 
+function groupKeyFor(item: KanbanItem): string {
+  const tags =
+    item.stageIds && item.stageIds.length > 0
+      ? item.stageIds
+      : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
+        splitStageNames(item.stageName);
+  return tags.length > 0
+    ? `${item.productName} · ${tags.join(", ")}`
+    : item.productName;
+}
+
 function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
-  const map = new Map<string, KanbanItem[]>();
-  for (const item of items) {
-    const tags =
-      item.stageIds && item.stageIds.length > 0
-        ? item.stageIds
-        : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-          splitStageNames(item.stageName);
-    const key =
-      tags.length > 0
-        ? `${item.productName} · ${tags.join(", ")}`
-        : item.productName;
+  return items.reduce((map, item) => {
+    const key = groupKeyFor(item);
     const group = map.get(key) ?? [];
-    group.push(item);
-    map.set(key, group);
-  }
-  return map;
+    return new Map(map).set(key, [...group, item]);
+  }, new Map<string, KanbanItem[]>());
 }
 
 /**

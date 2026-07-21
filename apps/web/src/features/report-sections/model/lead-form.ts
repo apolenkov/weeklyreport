@@ -155,16 +155,12 @@ export function ownedStagesForProject(
   section: ReportSectionReadModel,
   projectId: string | undefined,
 ): string[] {
-  const rawOwned: string[] = [];
-  if (projectId) {
-    const project = section.projects.find((p) => p.projectId === projectId);
-    for (const stage of project?.ownedStages ?? [])
-      rawOwned.push(stage.stageName);
-  } else {
-    for (const project of section.projects)
-      for (const stage of project.ownedStages ?? [])
-        rawOwned.push(stage.stageName);
-  }
+  const projects = projectId
+    ? section.projects.filter((p) => p.projectId === projectId)
+    : section.projects;
+  const rawOwned = projects.flatMap(
+    (project) => project.ownedStages?.map((stage) => stage.stageName) ?? [],
+  );
   return STAGE_NAMES.filter((canonical) =>
     rawOwned.some((raw) => stageNamesMatch(canonical, raw)),
   );
@@ -218,17 +214,66 @@ export { normalizeStageName, stageNamesMatch };
  * and collapses a stale, unbacked at-risk/blocked down to on-track. Either way
  * it stays non-empty, so completeness rightly counts it as filled.
  */
+interface OwnedStageInput {
+  stageName: string;
+  status?: TrafficLightStatus | null;
+}
+interface StageRisk {
+  stageIds?: readonly string[];
+  severity: RiskSeverity;
+}
+
+/**
+ * Build the grid row for a stage this lead OWNS. Split out of `buildStageGrid`
+ * so that function stays a thin filter+map over `STAGE_NAMES`.
+ *
+ * An untouched stage keeps raw `status: "empty"` (the chip distinction reads
+ * it; completeness counts it via `coveredByOwnRisk` below, not via this
+ * status). A touched stage derives floor-up / collapse-down from covering
+ * risks (unify-risk-stage-status: empty/undefined stageIds means the risk
+ * covers every owned stage — routed through `riskCoversStage` so the read
+ * model agrees with the live form on legacy stage-less risks).
+ */
+function deriveOwnedStageRow(
+  stageName: string,
+  ownedStage: OwnedStageInput,
+  ownerLabel: string,
+  risks: readonly StageRisk[],
+): LeadStageAssignment {
+  const explicit = trafficToStageStatus(ownedStage.status ?? null);
+  return {
+    stageName,
+    status:
+      explicit === "empty"
+        ? "empty"
+        : deriveEffectiveStageStatus(
+            explicit,
+            risks.filter((r) => riskCoversStage(r, stageName)),
+            [],
+          ),
+    ownership: "mine" as const,
+    // Stage owner labels render the short form ("Иванов В.П."); the full ФИО
+    // is reserved for the top user badge. Avatar chips keep 2-letter initials.
+    assignee: shortNameFromName(ownerLabel),
+    // fix-report-surface-integrity: flag a stage the lead's OWN risk
+    // EXPLICITLY names (strict — non-empty stageIds). A covers-all (`[]`) or
+    // legacy stage-less risk is excluded, so it never inflates the counter.
+    // The raw `status` above is left untouched — the chip distinguishes a
+    // risk-covered empty stage from an explicitly-set one.
+    coveredByOwnRisk: risks.some(
+      (r) =>
+        Array.isArray(r.stageIds) &&
+        r.stageIds.length > 0 &&
+        riskCoversStage(r, stageName),
+    ),
+  };
+}
+
 function buildStageGrid(
   ownerLabel: string,
-  ownedStages: readonly {
-    stageName: string;
-    status?: TrafficLightStatus | null;
-  }[],
+  ownedStages: readonly OwnedStageInput[],
   stageSet: readonly { stageName: string }[] = [],
-  risks: readonly {
-    stageIds?: readonly string[];
-    severity: RiskSeverity;
-  }[] = [],
+  risks: readonly StageRisk[] = [],
 ): LeadStageAssignment[] {
   // unassigned-stage-reporting-exclusion: membership is assignment-driven —
   // a stage renders only if it is in the product's `stageSet` (assigned to some
@@ -241,40 +286,7 @@ function buildStageGrid(
     const ownedStage =
       ownedStages.find((s) => stageNamesMatch(s.stageName, stageName)) ?? null;
     if (ownedStage) {
-      const explicit = trafficToStageStatus(ownedStage.status ?? null);
-      return {
-        stageName,
-        // An untouched stage keeps raw `status: "empty"` (the chip distinction
-        // reads it; completeness counts it via `coveredByOwnRisk` below, not via
-        // this status). A touched stage derives floor-up / collapse-down from
-        // covering risks.
-        // unify-risk-stage-status: empty/undefined stageIds means the risk
-        // covers every owned stage — route through `riskCoversStage` so the
-        // read model agrees with the live form on legacy stage-less risks.
-        status:
-          explicit === "empty"
-            ? "empty"
-            : deriveEffectiveStageStatus(
-                explicit,
-                risks.filter((r) => riskCoversStage(r, stageName)),
-                [],
-              ),
-        ownership: "mine" as const,
-        // Stage owner labels render the short form ("Иванов В.П."); the full ФИО
-        // is reserved for the top user badge. Avatar chips keep 2-letter initials.
-        assignee: shortNameFromName(ownerLabel),
-        // fix-report-surface-integrity: flag a stage the lead's OWN risk
-        // EXPLICITLY names (strict — non-empty stageIds). A covers-all (`[]`) or
-        // legacy stage-less risk is excluded, so it never inflates the counter.
-        // The raw `status` above is left untouched — the chip distinguishes a
-        // risk-covered empty stage from an explicitly-set one.
-        coveredByOwnRisk: risks.some(
-          (r) =>
-            Array.isArray(r.stageIds) &&
-            r.stageIds.length > 0 &&
-            riskCoversStage(r, stageName),
-        ),
-      };
+      return deriveOwnedStageRow(stageName, ownedStage, ownerLabel, risks);
     }
     // unassigned-stage-reporting-exclusion: in the product's stage set but not
     // owned by this lead — foreign-owned, rendered read-only (`locked`). In
@@ -581,6 +593,32 @@ export interface LeadReviewFeedbackRecord {
 }
 
 /**
+ * Reshape one record collection (items / risks / decisions) into feedback
+ * rows: records with zero reviewer comments are dropped, the rest carry an
+ * id-fallback of `""` and the caller-resolved kind/text/label. Shared by the
+ * three `mapLeadReviewFeedback` branches below so they differ only in which
+ * fields feed `textOf` / `labelOf`.
+ */
+function toFeedbackRecords<
+  T extends { id?: string | null; comments?: readonly RecordCommentView[] },
+>(
+  records: readonly T[],
+  kind: LeadReviewFeedbackRecord["kind"],
+  textOf: (record: T) => string,
+  labelOf: (record: T) => string,
+): LeadReviewFeedbackRecord[] {
+  return records
+    .filter((record) => (record.comments?.length ?? 0) > 0)
+    .map((record) => ({
+      id: record.id ?? "",
+      kind,
+      productName: labelOf(record),
+      text: textOf(record),
+      comments: record.comments ?? [],
+    }));
+}
+
+/**
  * Collect every item/risk/decision on the section that carries ≥1 reviewer
  * comment, keyed to the record's own text + resolved product name. Records with
  * no comments are dropped (nothing to surface). The comment payload rides the
@@ -606,40 +644,28 @@ export function mapLeadReviewFeedback(
     if (activityId) return activityIndex.get(activityId) ?? "Unknown";
     return "Unknown";
   };
-  const hasComments = (comments: readonly RecordCommentView[] | undefined) =>
-    (comments?.length ?? 0) > 0;
 
-  const items: LeadReviewFeedbackRecord[] = section.items
-    .filter((item) => hasComments(item.comments))
-    .map((item) => ({
-      id: item.id ?? "",
-      kind: "item",
-      productName: labelFor(item.projectId, item.activityId),
-      text: item.text,
-      comments: item.comments ?? [],
-    }));
-  const risks: LeadReviewFeedbackRecord[] = section.risks
-    .filter((risk) => hasComments(risk.comments))
-    .map((risk) => ({
-      id: risk.id ?? "",
-      kind: "risk",
-      productName: labelFor(risk.projectId, risk.activityId),
-      text: risk.risk,
-      comments: risk.comments ?? [],
-    }));
-  const decisions: LeadReviewFeedbackRecord[] = section.decisions
-    .filter((decision) => hasComments(decision.comments))
-    .map((decision) => ({
-      id: decision.id ?? "",
-      kind: "decision",
-      productName: labelFor(
-        decision.productId ?? undefined,
-        decision.activityId,
-      ),
-      text: decision.text,
-      comments: decision.comments ?? [],
-    }));
-  return [...items, ...risks, ...decisions];
+  return [
+    ...toFeedbackRecords(
+      section.items,
+      "item",
+      (item) => item.text,
+      (item) => labelFor(item.projectId, item.activityId),
+    ),
+    ...toFeedbackRecords(
+      section.risks,
+      "risk",
+      (risk) => risk.risk,
+      (risk) => labelFor(risk.projectId, risk.activityId),
+    ),
+    ...toFeedbackRecords(
+      section.decisions,
+      "decision",
+      (decision) => decision.text,
+      (decision) =>
+        labelFor(decision.productId ?? undefined, decision.activityId),
+    ),
+  ];
 }
 
 // ---- Composer ----

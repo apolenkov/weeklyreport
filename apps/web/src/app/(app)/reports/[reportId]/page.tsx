@@ -11,13 +11,13 @@ interface Props {
 /**
  * Published Report Viewer.
  *
- * viewer-report-surface-parity (task 5): the page now renders the read-only
- * `ViewerReportShell` (the analogue of `HeadReportShell`) instead of mounting
- * `WeeklyReportPage` directly. The shell adds toolbar parity — ScopeToggle,
- * ViewModeToggle, period navigation, Export-PDF — and resolves `?mode=slides`
- * into real slides, fixing the previously inert viewer `/present` deep link.
- * All mutation affordances stay off the viewer (no HeadPublishLockAction; the
- * page gates Publish/Reopen/Move-to-archive on head/admin only).
+ * The page renders the read-only `ViewerReportShell` (the analogue of
+ * `HeadReportShell`) instead of mounting `WeeklyReportPage` directly. The
+ * shell adds toolbar parity — ScopeToggle, ViewModeToggle, period navigation,
+ * Export-PDF — and resolves `?mode=slides` into real slides, fixing the
+ * previously inert viewer `/present` deep link. All mutation affordances
+ * stay off the viewer (no HeadPublishLockAction; the page gates
+ * Publish/Reopen/Move-to-archive on head/admin only).
  */
 export default async function PublishedReportPage({
   params,

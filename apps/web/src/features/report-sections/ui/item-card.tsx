@@ -1,23 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-import {
-  coveringRisksForItem,
-  highestAlarmSeverity,
-} from "../../../lib/item-alarm";
+import { deriveCardStatus } from "../model/item-card-status";
 import {
   cardContainerStyle,
   STATUS_BADGE,
   type StatusBadge,
 } from "../model/item-card-style";
-import type { ItemStatus, KanbanItem, RiskEntry } from "../model/types";
+import type { KanbanItem, RiskEntry } from "../model/types";
 import { ItemCardActions } from "./item-card-actions";
 import { ItemCardBadges } from "./item-card-badges";
 import {
   deriveItemCardStageTags,
   ItemCardStageTagsRow,
 } from "./item-card-stage-tags";
+import { ItemInlineTextEditor } from "./item-inline-text-editor";
 
 interface ItemCardProps {
   readonly item: KanbanItem;
@@ -60,77 +56,6 @@ interface ItemCardProps {
    * section passes none.
    */
   readonly risks?: readonly RiskEntry[];
-}
-
-interface DerivedCardStatus {
-  displayStatus: ItemStatus | "at-risk";
-  isBlocked: boolean;
-  isPlanned: boolean;
-  alarmLocked: boolean;
-  /**
-   * Set when the flooring covering risk belongs to ANOTHER author — the current
-   * lead cannot resolve it alone, so the lock affordance names that author.
-   */
-  lockAuthorName?: string;
-}
-
-/**
- * The author whose foreign covering risk floors the item, or undefined — only
- * when an own risk does NOT already produce the same floor (that one the lead
- * could resolve themselves, so the generic lock copy applies).
- */
-function foreignLockAuthor(
-  covering: readonly RiskEntry[],
-  alarm: "at-risk" | "blocked" | null,
-): string | undefined {
-  const own = highestAlarmSeverity(covering.filter((r) => r.foreign !== true));
-  if (alarm === null || own === alarm) return undefined;
-  return covering.find((r) => r.foreign === true && r.severity === alarm)
-    ?.authorName;
-}
-
-/**
- * Resolve the pill the card shows. The at-risk/blocked alarm is the roll-up of
- * the covering risks (the item-card analogue of the stage-chip floor), never a
- * free item status. Product-parented items only — an activity item's severity
- * stays isolated; the in-progress gate leaves completed/planned on their
- * progress pill. A derived alarm locks the pill (resolve the covering
- * risk/blocker to change it); a co-owner's flooring risk names its author.
- */
-function deriveCardStatus(
-  item: KanbanItem,
-  risks: readonly RiskEntry[] | undefined,
-): DerivedCardStatus {
-  // No risk set threaded in, OR a foreign (cross-author) item: trust item.status
-  // as-is. Foreign items are mixed into the own-item arrays but carry their
-  // author's already-overlaid status (mapForeignItems) — deriving them against
-  // the merged risk set would floor them against the wrong risks.
-  if (risks === undefined || item.foreign === true) {
-    return {
-      displayStatus: item.status,
-      isBlocked: item.status === "blocked",
-      isPlanned: item.status === "planned",
-      alarmLocked: false,
-    };
-  }
-  // Stored `blocked` is unrepresentable: the DB CHECK and Zod reject it, and
-  // workflowToItemStatus never produces it — an own item's status arrives here
-  // as a pure Progress value. `blocked` appears only as the risk-derived alarm
-  // below (or pre-baked on foreign rows, which returned early above).
-  const covering =
-    item.activityId == null && item.productId !== ""
-      ? coveringRisksForItem(item, risks)
-      : [];
-  const derivedAlarm = highestAlarmSeverity(covering);
-  const displayStatus: ItemStatus | "at-risk" = derivedAlarm ?? item.status;
-  const lockAuthorName = foreignLockAuthor(covering, derivedAlarm);
-  return {
-    displayStatus,
-    isBlocked: displayStatus === "blocked",
-    isPlanned: displayStatus === "planned",
-    alarmLocked: derivedAlarm !== null,
-    ...(lockAuthorName ? { lockAuthorName } : {}),
-  };
 }
 
 export function ItemCard({
@@ -249,55 +174,5 @@ export function ItemCard({
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- * Inline text editor mounted only while edit mode is on: `draft` initializes
- * from the committed text on mount, and the caller keys this component by
- * `item.text`, so an external text change remounts it — replacing the old
- * reset-in-effect. The textarea always shows the full, untruncated text.
- */
-function ItemInlineTextEditor({
-  initialText,
-  onCommit,
-}: {
-  readonly initialText: string;
-  readonly onCommit: (next: string) => void;
-}) {
-  const [draft, setDraft] = useState(initialText);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  useEffect(() => {
-    // Defer focus so the textarea exists in the DOM.
-    const id = requestAnimationFrame(() => {
-      textareaRef.current?.focus();
-      textareaRef.current?.select();
-    });
-    return () => cancelAnimationFrame(id);
-  }, []);
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      onCommit(draft);
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      // Cancel: re-emit original text, parent clears edit mode.
-      onCommit(initialText);
-    }
-  }
-
-  return (
-    <textarea
-      ref={textareaRef}
-      className="w-full resize-y rounded-md border border-[var(--color-starbucks-accent)] bg-white px-2 py-1.5 text-sm text-[var(--color-foreground)] focus:outline-none focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
-      style={{ minHeight: "52px" }}
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => onCommit(draft)}
-      onKeyDown={handleKeyDown}
-      aria-label="Edit item text"
-    />
   );
 }

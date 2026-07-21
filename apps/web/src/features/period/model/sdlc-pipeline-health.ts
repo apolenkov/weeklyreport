@@ -9,13 +9,12 @@ import type {
 import { STATUS_CONFIG, trafficToStageStatus } from "../../report-sections";
 import type { CrossAuthorEntry } from "../ui/sdlc-pipeline";
 
-// apply-status-palette (memo T5 opt 3 + user feedback 2026-06-10): every
-// product card shares ONE body — neutral card surface, neutral ring — and
-// only the 4px left-stripe color changes with the HEALTH status.
-// rethink-pipeline-state-vs-completeness: the left edge is ALWAYS solid and
-// only carries health (severity). The completeness signal lives on the right
-// (dashed ring + N/M counter) and never shares this hue. paddingLeft
-// compensates the 3px-wider left border so content padding reads equal.
+// Every product card shares ONE body — neutral card surface, neutral ring —
+// and only the 4px left-stripe color changes with the HEALTH status. The
+// left edge is ALWAYS solid and only carries health (severity); the
+// completeness signal lives on the right (dashed ring + N/M counter) and
+// never shares this hue. paddingLeft compensates the 3px-wider left border
+// so content padding reads equal.
 const STRIPE_BY_STATUS: Record<StageStatus, string> = {
   blocked: "var(--color-chip-blocked-border)",
   "at-risk": "var(--color-status-at-risk-border)",
@@ -27,13 +26,11 @@ const STRIPE_BY_STATUS: Record<StageStatus, string> = {
 // (blocked > at-risk > on-track > empty; empty = nothing set yet).
 const worstStatusOf = worstCanonicalStatus;
 
-// pipeline-tooltip-and-indicator (reverses #90): the collapsed `+N more`
-// indicator colours by the FULL status scale of the hidden stages, by
-// precedence — red if any blocked, else yellow if any at-risk, else grey if any
-// is unfilled (empty), else green when every hidden stage is
-// on-track. This lets the lead trace the product's left health stripe to the
-// collapsed stages at a glance (the earlier "neutral unless blocked/at-risk"
-// hid the green/grey distinction the reviewer asked for).
+// The collapsed `+N more` indicator colours by the FULL status scale of the
+// hidden stages, by precedence — red if any blocked, else yellow if any
+// at-risk, else grey if any is unfilled (empty), else green when every
+// hidden stage is on-track. This lets the lead trace the product's left
+// health stripe to the collapsed stages at a glance.
 export function collapsedIndicatorColors(statuses: readonly StageStatus[]): {
   border: string;
   text: string;
@@ -61,12 +58,12 @@ function worstOwnStatus(stages: StageAssignment[]): StageStatus {
 }
 
 /**
- * rethink-pipeline-state-vs-completeness (2.1): a stage status raised by ANY
- * stage owner — including another lead on a shared product — must light the
- * left edge. Foreign status arrives RISK-DERIVED via `crossAuthors[].stages`
- * (the server folds covering risks into the per-stage traffic light), so the
- * health hue is max(own worst stage, worst foreign stage). An `empty`/`null`
- * foreign stage contributes nothing.
+ * A stage status raised by ANY stage owner — including another lead on a
+ * shared product — must light the left edge. Foreign status arrives
+ * RISK-DERIVED via `crossAuthors[].stages` (the server folds covering risks
+ * into the per-stage traffic light), so the health hue is max(own worst
+ * stage, worst foreign stage). An `empty`/`null` foreign stage contributes
+ * nothing.
  */
 function worstForeignSeverity(
   productId: string,
@@ -90,18 +87,16 @@ export function productHealthStatus(
 }
 
 /**
- * fix-report-surface-integrity W11 (reverses the earlier
- * rethink-pipeline-state-vs-completeness D1 invariant): own-input completeness,
- * over the lead's OWN stages only. A stage counts as filled when EITHER the lead
- * set an explicit status on it (status !== "empty") OR the lead deliberately
- * staged their OWN risk on it (the RAW `coveredByOwnRisk` flag — a stage they
- * addressed via the risk surface). It MUST still be fed the RAW product (the
- * mapper/bridge derive `coveredByOwnRisk` strictly from persisted own risks that
- * EXPLICITLY name the stage), NEVER the risk-derived render-time severity floor:
- * the floor colors empty AND foreign-covered stages, so counting it would inflate
- * the counter for stages the lead never touched. The old "all stages checked"
- * footgun is removed at the source — the Add Risk dialog no longer defaults to
- * every owned stage (W11 task 3.10). Foreign severity never touches this counter.
+ * Own-input completeness, over the lead's OWN stages only. A stage counts as
+ * filled when EITHER the lead set an explicit status on it
+ * (status !== "empty") OR the lead deliberately staged their OWN risk on it
+ * (the RAW `coveredByOwnRisk` flag — a stage they addressed via the risk
+ * surface). It MUST still be fed the RAW product (the mapper/bridge derive
+ * `coveredByOwnRisk` strictly from persisted own risks that EXPLICITLY name
+ * the stage), NEVER the risk-derived render-time severity floor: the floor
+ * colors empty AND foreign-covered stages, so counting it would inflate the
+ * counter for stages the lead never touched. Foreign severity never touches
+ * this counter.
  */
 export interface CompletenessState {
   filled: number;

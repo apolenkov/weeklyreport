@@ -69,7 +69,7 @@ describe("PeriodNavigator (lead)", () => {
     mockPathname = "/lead/report";
   });
 
-  // VA-0a: a11y regression tests — decorative SVGs stay hidden.
+  // a11y regression tests — decorative SVGs stay hidden.
   describe("a11y — decorative SVG aria-hidden", () => {
     it("ChevronLeft SVG in Previous button has aria-hidden='true'", () => {
       render(<PeriodNavigator periods={PERIODS} />);
@@ -109,7 +109,7 @@ describe("PeriodNavigator (lead)", () => {
     });
   });
 
-  // VA-0b: container group role.
+  // container group role.
   it("container div has role='group' with the period navigation aria-label", () => {
     render(<PeriodNavigator periods={PERIODS} />);
     expect(

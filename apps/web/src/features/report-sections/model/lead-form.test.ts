@@ -12,6 +12,7 @@ import {
   mapLeadPeriods,
   mapLeadPriorities,
   mapLeadProducts,
+  mapLeadReviewFeedback,
   mapLeadRisks,
   ownedStagesForProject,
   stageNamesMatch,
@@ -881,6 +882,155 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
     expect(expectDefined(mapped[1]).text).toBe("P5");
     // rank=0 is clamped to 1 (clampRank guard).
     expect(expectDefined(mapped[2]).rank).toBe(1);
+  });
+});
+
+describe("mapLeadReviewFeedback", () => {
+  it("drops items/risks/decisions with no comments and keeps ones that carry ≥1", () => {
+    const section = baseSection({
+      projects: [
+        { projectId: PROJECT_A, projectName: "CRM", trafficLight: "green" },
+      ],
+      items: [
+        {
+          id: "i-commented",
+          projectId: PROJECT_A,
+          type: "current",
+          text: "Commented item",
+          tag: "x",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+          comments: [
+            {
+              id: "c1",
+              reviewerId: "reviewer-1",
+              reviewerName: "Head",
+              text: "Looks good",
+              createdAt: new Date("2026-04-20T12:00:00Z"),
+            },
+          ],
+        },
+        {
+          id: "i-silent",
+          projectId: PROJECT_A,
+          type: "current",
+          text: "Silent item",
+          tag: "x",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+        },
+      ],
+    });
+
+    const feedback = mapLeadReviewFeedback(section);
+
+    expect(feedback).toHaveLength(1);
+    expect(expectDefined(feedback[0]).id).toBe("i-commented");
+    expect(expectDefined(feedback[0]).kind).toBe("item");
+    expect(expectDefined(feedback[0]).text).toBe("Commented item");
+    expect(expectDefined(feedback[0]).productName).toBe("CRM");
+    expect(expectDefined(feedback[0]).comments).toHaveLength(1);
+  });
+
+  it("falls back to id '' when the record carries no id", () => {
+    const section = baseSection({
+      risks: [
+        {
+          risk: "Vendor delay",
+          impact: "Slip",
+          mitigation: "Escalate",
+          severity: "at-risk",
+          comments: [
+            {
+              id: "c1",
+              reviewerId: "reviewer-1",
+              reviewerName: "Head",
+              text: "Noted",
+              createdAt: new Date("2026-04-20T12:00:00Z"),
+            },
+          ],
+        },
+      ],
+    });
+
+    const feedback = mapLeadReviewFeedback(section);
+    expect(expectDefined(feedback[0]).id).toBe("");
+    expect(expectDefined(feedback[0]).kind).toBe("risk");
+    expect(expectDefined(feedback[0]).text).toBe("Vendor delay");
+  });
+
+  it("resolves an activity-parented decision's label from the activity name", () => {
+    const section = baseSection({
+      activities: [activityA],
+      decisions: [
+        {
+          id: "d1",
+          activityId: ACTIVITY_A,
+          text: "Keep rotation weekly",
+          owner: "Тимлид 1",
+          impact: "Predictable load",
+          comments: [
+            {
+              id: "c1",
+              reviewerId: "reviewer-1",
+              reviewerName: "Head",
+              text: "Ack",
+              createdAt: new Date("2026-04-20T12:00:00Z"),
+            },
+          ],
+        },
+      ],
+    });
+
+    const feedback = mapLeadReviewFeedback(section);
+    expect(expectDefined(feedback[0]).kind).toBe("decision");
+    expect(expectDefined(feedback[0]).productName).toBe("Jira triage duty");
+  });
+
+  it("resolves 'Unknown' for a decision with neither productId nor activityId", () => {
+    const section = baseSection({
+      decisions: [
+        {
+          id: "d1",
+          text: "Orphaned decision",
+          owner: "Head",
+          impact: "Impact",
+          comments: [
+            {
+              id: "c1",
+              reviewerId: "reviewer-1",
+              reviewerName: "Head",
+              text: "Ack",
+              createdAt: new Date("2026-04-20T12:00:00Z"),
+            },
+          ],
+        },
+      ],
+    });
+
+    const feedback = mapLeadReviewFeedback(section);
+    expect(expectDefined(feedback[0]).productName).toBe("Unknown");
+  });
+
+  it("returns an empty array when nothing on the section carries comments", () => {
+    const section = baseSection({
+      projects: [
+        { projectId: PROJECT_A, projectName: "CRM", trafficLight: "green" },
+      ],
+      items: [
+        {
+          id: "i1",
+          projectId: PROJECT_A,
+          type: "current",
+          text: "No feedback yet",
+          tag: "x",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+        },
+      ],
+    });
+
+    expect(mapLeadReviewFeedback(section)).toEqual([]);
   });
 });
 

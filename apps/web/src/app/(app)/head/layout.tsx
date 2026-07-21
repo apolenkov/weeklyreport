@@ -7,7 +7,8 @@ import { RoleGate } from "../../../shared/ui/role-gate";
  * SSR role gate for /head/* routes.
  *
  * Mirrors the api's headProcedure — only roles that act as head pass the
- * gate. admin is included because adminProcedure === headProcedure.
+ * gate. admin is included because headProcedure's own allow-list covers
+ * admin too, not because adminProcedure and headProcedure are the same gate.
  */
 const REQUIRED: readonly Role[] = ["head", "admin"];
 

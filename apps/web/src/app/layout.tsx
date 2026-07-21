@@ -31,9 +31,9 @@ const sourceSans = Source_Sans_3({
   variable: "--font-source-sans-3",
 });
 
-// Vercel audit 2026-05-22: titles were blank on SSR (set later by a client
-// effect). Set them server-side via the Metadata API so the document title is
-// correct on first paint and shareable links resolve a real title.
+// Titles were blank on SSR (set later by a client effect). Set them
+// server-side via the Metadata API so the document title is correct on
+// first paint and shareable links resolve a real title.
 export async function generateMetadata(): Promise<Metadata> {
   const org = await getOrgPublic();
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- getOrgPublic can resolve to no org (unseeded/early boot); the fallback brands metadata resiliently

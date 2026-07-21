@@ -1,32 +1,16 @@
 "use client";
 
-import { DAYS_PER_WEEK, type PeriodListItem } from "@customreport/shared";
+import type { PeriodListItem } from "@customreport/shared";
 import { useRef, useState } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
-
-const ISO_DATE_LENGTH = 10;
-const ISO_DATETIME_LOCAL_LENGTH = 16;
-const NEXT_MONDAY_OFFSET_BASE = DAYS_PER_WEEK + 1;
-
-/**
- * Compute the scheduler-aligned default start date. Manual periods are not
- * restricted to Mondays; this only keeps the untouched create dialog aligned
- * with the automatic weekly cadence.
- */
-function nextMonday(from: Date): string {
-  const d = new Date(from);
-  // getUTCDay: 0=Sun, 1=Mon..6=Sat. For Sun add 1 day; for any other
-  // weekday add (NEXT_MONDAY_OFFSET_BASE - day) % DAYS_PER_WEEK days. For
-  // Monday this evaluates to 0 → returns `from` unchanged.
-  const day = d.getUTCDay();
-  const offset =
-    day === 0 ? 1 : (NEXT_MONDAY_OFFSET_BASE - day) % DAYS_PER_WEEK;
-  d.setUTCDate(d.getUTCDate() + offset);
-  d.setUTCHours(0, 0, 0, 0);
-  // Render as `YYYY-MM-DD` for the <input type="date"> value.
-  return d.toISOString().slice(0, ISO_DATE_LENGTH);
-}
+import { CreatePeriodFields } from "./periods-tab-dialog-fields";
+import {
+  computeDeadlineError,
+  dateInputValue,
+  dateTimeInputValue,
+  nextMonday,
+} from "./periods-tab-dialog-helpers";
 
 export interface CreatePeriodValues {
   periodStart: Date;
@@ -36,30 +20,6 @@ export interface CreatePeriodValues {
   periodEnd?: Date;
   deadline?: Date;
   weekLabel?: string | null;
-}
-
-/**
- * Render a UTC Date as the `YYYY-MM-DD` value that
- * `<input type="date">` expects. Used both by the next-Monday default
- * and by the edit-mode prefill of an existing row's envelope. The slice
- * matches the existing create-path `${periodStart}T00:00:00.000Z` round-trip
- * so a no-op edit round-trips without spurious diff.
- */
-function dateInputValue(d: Date): string {
-  return d.toISOString().slice(0, ISO_DATE_LENGTH);
-}
-
-/**
- * Render a UTC Date as the `YYYY-MM-DDTHH:MM` value that
- * `<input type="datetime-local">` expects. The field is UTC wall-clock on
- * both read and write: this slice produces the UTC wall-clock string, and
- * handleSubmit parses it back with an explicit `:00.000Z` suffix. Treating
- * the value as UTC on both sides keeps the round-trip stable in every
- * timezone — a bare `new Date(value)` parse would read it as local time and
- * drift the stored deadline for any non-UTC admin.
- */
-function dateTimeInputValue(d: Date): string {
-  return d.toISOString().slice(0, ISO_DATETIME_LOCAL_LENGTH);
 }
 
 export function CreatePeriodDialog({
@@ -130,23 +90,11 @@ export function CreatePeriodDialog({
     });
   }
 
-  // Deadline range validation: must fall within [periodStart, periodEnd]
-  // when both are set.
-  const deadlineError: string | null = (() => {
-    if (!deadline) return null;
-    // Parse the datetime-local value as UTC wall-clock to match the submit
-    // parse and the UTC-parsed start/end bounds below.
-    const dl = new Date(`${deadline}:00.000Z`);
-    if (periodStart) {
-      const start = new Date(`${periodStart}T00:00:00.000Z`);
-      if (dl < start) return "Deadline cannot be before period start.";
-    }
-    if (periodEnd) {
-      const end = new Date(`${periodEnd}T23:59:59.999Z`);
-      if (dl > end) return "Deadline cannot be after period end.";
-    }
-    return null;
-  })();
+  const deadlineError = computeDeadlineError({
+    deadline,
+    periodStart,
+    periodEnd,
+  });
 
   const canSubmit = periodStart !== "" && !isPending && !deadlineError;
   const title = isEdit ? "Edit period" : "New period";
@@ -184,94 +132,17 @@ export function CreatePeriodDialog({
         <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
           {description}
         </p>
-        <div className="mt-4 space-y-4">
-          <div>
-            <label
-              htmlFor="period-start"
-              className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-            >
-              Period start <span className="text-[#991b1b]">*</span>
-            </label>
-            <input
-              id="period-start"
-              type="date"
-              value={periodStart}
-              onChange={(e) => setPeriodStart(e.target.value)}
-              required
-              // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
-              autoFocus
-              data-testid="periods-create-start"
-              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="period-end"
-              className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-            >
-              Period end{" "}
-              <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
-                (optional)
-              </span>
-            </label>
-            <input
-              id="period-end"
-              type="date"
-              value={periodEnd}
-              onChange={(e) => setPeriodEnd(e.target.value)}
-              data-testid="periods-create-end"
-              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="period-deadline"
-              className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-            >
-              Deadline{" "}
-              <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
-                (optional)
-              </span>
-            </label>
-            <input
-              id="period-deadline"
-              type="datetime-local"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-              data-testid="periods-create-deadline"
-              className={`w-full rounded-[var(--radius-sm)] border px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] ${deadlineError ? "border-red-400 focus:border-red-400 bg-red-50" : "border-[var(--color-border)] focus:border-[var(--color-starbucks-accent)] bg-white"}`}
-            />
-            {deadlineError && (
-              <p
-                data-testid="periods-deadline-error"
-                className="mt-1 text-xs text-red-600"
-              >
-                {deadlineError}
-              </p>
-            )}
-          </div>
-          <div>
-            <label
-              htmlFor="period-label"
-              className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-            >
-              Period label{" "}
-              <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
-                (optional)
-              </span>
-            </label>
-            <input
-              id="period-label"
-              type="text"
-              value={weekLabel}
-              onChange={(e) => setWeekLabel(e.target.value)}
-              maxLength={64}
-              placeholder="e.g. Sprint 12 catch-up"
-              data-testid="periods-create-label"
-              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-            />
-          </div>
-        </div>
+        <CreatePeriodFields
+          periodStart={periodStart}
+          onPeriodStartChange={setPeriodStart}
+          periodEnd={periodEnd}
+          onPeriodEndChange={setPeriodEnd}
+          deadline={deadline}
+          onDeadlineChange={setDeadline}
+          deadlineError={deadlineError}
+          weekLabel={weekLabel}
+          onWeekLabelChange={setWeekLabel}
+        />
         <div className="mt-6 flex justify-end gap-3">
           <button
             type="button"
