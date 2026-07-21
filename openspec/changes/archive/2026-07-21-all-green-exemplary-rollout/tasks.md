@@ -46,7 +46,9 @@
 
 ## 5. Final sweep
 
-- [ ] 5.1 Tear down obsolete eslint.config.ts exemptions (PERM blocks stay)
+- [x] 5.1 Tear down obsolete eslint.config.ts exemptions — 3 retired
+      (sync-bridge max-lines, next-week-section complexity,
+      trpc.middleware cognitive-complexity); PERM blocks stay
 - [x] 5.1b ES2024 lib bump + Map.groupBy across all 11 flagged fold sites
       (Sasha signed off 2026-07-21). Council verify: 2 Opus lenses pass
       with zero findings, Codex pass with sparse-array-robustness minors
