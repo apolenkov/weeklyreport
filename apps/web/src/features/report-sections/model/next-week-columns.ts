@@ -77,11 +77,7 @@ function groupKeyFor(item: KanbanItem): string {
 }
 
 function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
-  return items.reduce((map, item) => {
-    const key = groupKeyFor(item);
-    const group = map.get(key) ?? [];
-    return new Map(map).set(key, [...group, item]);
-  }, new Map<string, KanbanItem[]>());
+  return Map.groupBy(items, groupKeyFor);
 }
 
 /**

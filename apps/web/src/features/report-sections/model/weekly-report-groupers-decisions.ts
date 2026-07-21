@@ -71,18 +71,33 @@ export function groupDecisionsByProject(
   sections: readonly ReportSectionReadModel[],
   projectNames: ReadonlyMap<string, string>,
 ): Map<string, WeeklyReportDecision[]> {
-  return sections.reduce((map, section) => {
-    return section.decisions.reduce((innerMap, decision, idx) => {
-      // activity-first-class: activity-parented decisions render under their
-      // activity, not a product — skip so they never fall back to firstProject.
-      if (decision.activityId != null) return innerMap;
+  const entries = sections.flatMap((section) =>
+    // activity-first-class: activity-parented decisions render under their
+    // activity, not a product — skipped so they never fall back to firstProject.
+    // `idx` is the decision's ordinal within its section (seeds the fallback id).
+    section.decisions.flatMap((decision, idx) => {
+      if (decision.activityId != null) return [];
       const target = resolveDecisionProduct(section, projectNames, decision);
-      if (!target) return innerMap;
-      const list = innerMap.get(target.projectId) ?? [];
-      const mapped = deriveWeeklyReportDecision(section, target, decision, idx);
-      return new Map(innerMap).set(target.projectId, [...list, mapped]);
-    }, map);
-  }, new Map<string, WeeklyReportDecision[]>());
+      if (!target) return [];
+      return [{ section, target, decision, idx }];
+    }),
+  );
+
+  return new Map(
+    [...Map.groupBy(entries, (entry) => entry.target.projectId)].map(
+      ([projectId, group]) => [
+        projectId,
+        group.map((entry) =>
+          deriveWeeklyReportDecision(
+            entry.section,
+            entry.target,
+            entry.decision,
+            entry.idx,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 /**
@@ -92,40 +107,52 @@ export function groupDecisionsByProject(
 export function groupPrioritiesByProject(
   sections: readonly ReportSectionReadModel[],
 ): Map<string, WeeklyReportPriority[]> {
-  return sections.reduce((map, section) => {
-    const priorityItems = section.items
+  // Each section's priority items are rank-sorted, then concatenated in section
+  // order — a product owned by two sections keeps each section's sorted block.
+  const entries = sections.flatMap((section) =>
+    section.items
       .filter(
         (i): i is SectionItem & { projectId: string } =>
           // activity-first-class: a product priority is product-parented; skip
           // activity items (projectId null).
           i.priorityRank != null && i.projectId != null,
       )
-      .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0));
+      .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0)),
+  );
 
-    return priorityItems.reduce((innerMap, item) => {
-      const list = innerMap.get(item.projectId) ?? [];
-      return new Map(innerMap).set(item.projectId, [
-        ...list,
-        { rank: item.priorityRank ?? 1, text: item.text },
-      ]);
-    }, map);
-  }, new Map<string, WeeklyReportPriority[]>());
+  return new Map(
+    [...Map.groupBy(entries, (item) => item.projectId)].map(
+      ([projectId, items]) => [
+        projectId,
+        items.map((item) => ({
+          rank: item.priorityRank ?? 1,
+          text: item.text,
+        })),
+      ],
+    ),
+  );
 }
 
 /** Report-wide projectId → the (deduped) list of authors who own it. */
 export function buildProductToAuthorMap(
   sections: readonly ReportSectionReadModel[],
 ): Map<string, string[]> {
-  return sections.reduce((map, section) => {
-    return section.projects.reduce((innerMap, project) => {
-      const authors = innerMap.get(project.projectId) ?? [];
-      if (authors.includes(section.authorId)) return innerMap;
-      return new Map(innerMap).set(project.projectId, [
-        ...authors,
-        section.authorId,
-      ]);
-    }, map);
-  }, new Map<string, string[]>());
+  const entries = sections.flatMap((section) =>
+    section.projects.map((project) => ({
+      projectId: project.projectId,
+      authorId: section.authorId,
+    })),
+  );
+
+  return new Map(
+    [...Map.groupBy(entries, (entry) => entry.projectId)].map(
+      ([projectId, group]) => [
+        projectId,
+        // Dedupe authors, keeping first-owning-section order.
+        [...new Set(group.map((entry) => entry.authorId))],
+      ],
+    ),
+  );
 }
 
 /**

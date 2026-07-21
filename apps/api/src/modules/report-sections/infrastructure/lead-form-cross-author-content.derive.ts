@@ -47,33 +47,27 @@ export function groupCrossAuthorAuthors(
   coOwnsShared: boolean;
   otherUserIds: string[];
 } {
-  const authorEntries = others.reduce<Map<string, CrossAuthorEntry>>(
-    (acc, row) => {
-      const assignment = {
-        projectId: row.projectId,
-        stageId: row.stageId,
-        stageName: row.stage.name,
-      };
-      const existing = acc.get(row.user.id);
-      if (existing) {
-        return new Map(acc).set(row.user.id, {
-          ...existing,
-          sharedProjectIds: new Set([
-            ...existing.sharedProjectIds,
-            row.projectId,
-          ]),
-          stageAssignments: [...existing.stageAssignments, assignment],
-        });
-      }
-      return new Map(acc).set(row.user.id, {
-        authorId: row.user.id,
-        authorName: row.user.name,
-        authorRole: row.user.role,
-        sharedProjectIds: new Set([row.projectId]),
-        stageAssignments: [assignment],
-      });
-    },
-    new Map(),
+  const authorEntries = new Map<string, CrossAuthorEntry>(
+    [...Map.groupBy(others, (row) => row.user.id)].flatMap(([userId, rows]) => {
+      const [head] = rows;
+      if (!head) return [];
+      return [
+        [
+          userId,
+          {
+            authorId: head.user.id,
+            authorName: head.user.name,
+            authorRole: head.user.role,
+            sharedProjectIds: new Set(rows.map((r) => r.projectId)),
+            stageAssignments: rows.map((r) => ({
+              projectId: r.projectId,
+              stageId: r.stageId,
+              stageName: r.stage.name,
+            })),
+          },
+        ] as const,
+      ];
+    }),
   );
 
   return {

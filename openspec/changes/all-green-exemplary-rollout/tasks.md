@@ -47,12 +47,12 @@
 ## 5. Final sweep
 
 - [ ] 5.1 Tear down obsolete eslint.config.ts exemptions (PERM blocks stay)
-- [ ] 5.1b Evaluate tsconfig lib ES2024 bump + Map.groupBy to replace the
-      O(n^2) `new Map(acc).set()` immutable grouping folds the W5-W7
-      verifiers flagged (web report-sections groupers/stage-tags/
-      next-week-columns; api reminders-escalation-grouping,
-      report-sections.mappers, lead-form-cross-author(+content).derive)
-      — runtime-compat decision, needs Sasha's sign-off
+- [x] 5.1b ES2024 lib bump + Map.groupBy across all 11 flagged fold sites
+      (Sasha signed off 2026-07-21). Council verify: 2 Opus lenses pass
+      with zero findings, Codex pass with sparse-array-robustness minors
+      (unreachable on dense Prisma/product inputs). Browser floor made
+      explicit via apps/web browserslist (chrome/edge 117+, firefox 119+,
+      safari 17.4+ — Map.groupBy baseline)
 - [x] 5.2 Full gate: typecheck + lint (incl. depcruise, knip) + full vitest —
       green (1727 api / 2026 web / 12 shared tests)
 - [x] 5.3 Codex spot-review, 8-file sample across waves 3-7: NO behavior,
@@ -63,5 +63,5 @@
       composer 99) are in-wave-ratified single-responsibility units — the
       reject-list forbids splitting them further just to satisfy the
       counter; left as documented stragglers for Sasha's review
-- [ ] 5.4 Archive this change — BLOCKED on Sasha: 5.1b (ES2024/Map.groupBy
-      decision) and the 5.3 straggler adjudication need sign-off first
+- [x] 5.4 Archive this change (Sasha signed off on 5.1b and accepted the
+      5.3 stragglers as ratified single-responsibility units, 2026-07-21)

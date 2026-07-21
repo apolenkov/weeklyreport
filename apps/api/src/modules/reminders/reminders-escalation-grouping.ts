@@ -62,29 +62,6 @@ interface ResolvedSection {
 }
 
 /**
- * Resolve one section's active head and shape its late-lead entry, or null
- * when the section has no resolvable active head (an unresolved lead).
- */
-function resolveSection(
-  section: EscalationReport["sections"][number],
-  deadlineIso: string,
-): ResolvedSection | null {
-  const head = resolveActiveHead(section.author.reportingGroup);
-  if (!head) return null;
-  return {
-    head,
-    lateLead: {
-      leadName: section.author.name,
-      // The lead's reporting group names their section in the digest; a
-      // resolved head guarantees the group is present, so the fallback only
-      // guards the type.
-      sectionTitle: section.author.reportingGroup?.name ?? "Untitled section",
-      deadlineIso,
-    },
-  };
-}
-
-/**
  * Group a report's late leads by their reporting group's active head. One
  * digest per head, aggregating that head's late leads across every group it
  * leads (a head leading two late groups still gets a single digest, matching
@@ -96,32 +73,45 @@ export function buildEscalationGroups(report: EscalationReport): {
   unresolved: string[];
 } {
   const deadlineIso = report.deadline.toISOString();
-  const resolved = report.sections
-    .map((section) => resolveSection(section, deadlineIso))
-    .filter((entry): entry is ResolvedSection => entry !== null);
+  // One head resolution per section, reused for both the digests and the
+  // unresolved-lead tally.
+  const evaluated = report.sections.map((section) => ({
+    section,
+    head: resolveActiveHead(section.author.reportingGroup),
+  }));
 
-  const unresolved = report.sections
-    .filter(
-      (section) => resolveActiveHead(section.author.reportingGroup) === null,
-    )
-    .map((section) => section.author.name);
+  const unresolved = evaluated.flatMap(({ section, head }) =>
+    head === null ? [section.author.name] : [],
+  );
 
-  // One digest per distinct head, first-appearance order: keep only each
-  // head's first resolved entry, then fold every resolved entry addressed to
-  // that head into its lateLeads.
-  const groups = resolved
-    .filter(
-      (entry, index) =>
-        resolved.findIndex(
-          (other) => other.head.userId === entry.head.userId,
-        ) === index,
-    )
-    .map(({ head }) => ({
-      head,
-      lateLeads: resolved
-        .filter((entry) => entry.head.userId === head.userId)
-        .map((entry) => entry.lateLead),
-    }));
+  const resolved = evaluated.flatMap<ResolvedSection>(({ section, head }) =>
+    head === null
+      ? []
+      : [
+          {
+            head,
+            lateLead: {
+              leadName: section.author.name,
+              // A resolved head guarantees the reporting group is present, so
+              // the fallback only guards the type.
+              sectionTitle:
+                section.author.reportingGroup?.name ?? "Untitled section",
+              deadlineIso,
+            },
+          },
+        ],
+  );
+
+  // One digest per distinct head, first-appearance order; each head's late
+  // leads follow in encounter order.
+  const groups = [
+    ...Map.groupBy(resolved, (entry) => entry.head.userId).values(),
+  ].flatMap((entries) => {
+    const [first] = entries;
+    return first
+      ? [{ head: first.head, lateLeads: entries.map((e) => e.lateLead) }]
+      : [];
+  });
 
   return { groups, unresolved };
 }
