@@ -127,6 +127,11 @@ export default defineConfig({
         // via /auth/dev-login JWT cookies; AUTH_STUB=true would short-circuit
         // the redirect logic and break auth-guards.integration.spec.ts.
         NEXT_PUBLIC_AUTH_STUB: "false",
+        // Keep the Agentation widget out of headless runs (mirrors
+        // e2e/sweep/playwright.config.ts): its persistent EventSource makes
+        // `networkidle` unreachable, deterministically timing out the
+        // pdf-export processor's page.goto and any waitForLoadState.
+        NEXT_PUBLIC_DISABLE_DEVTOOLS: "true",
         NODE_ENV: "test",
       },
     },
