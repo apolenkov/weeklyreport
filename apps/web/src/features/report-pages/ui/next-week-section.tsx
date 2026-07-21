@@ -1,20 +1,16 @@
 "use client";
 
 import { useEditableListDialog } from "../../../hooks/use-editable-list-dialog";
-import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import {
-  ActivityLanesBlock,
-  BoardColumnHeader,
   isBoardEmpty,
   ItemCard,
-  ItemEditDialog,
   type KanbanItem,
   type Product,
   type RiskEntry,
   splitItemBoard,
 } from "../../report-sections";
-
-const MAX_GRID_COLUMNS = 3;
+import { NextWeekBoardGrid } from "./next-week-board-grid";
+import { NextWeekDialogs } from "./next-week-dialogs";
 
 interface NextWeekSectionProps {
   readonly items: KanbanItem[];
@@ -174,10 +170,6 @@ export function NextWeekSection({
   // Activity lanes render in their own lighter block BELOW the grid — never
   // as peer product columns.
   const board = splitItemBoard(products, items, activities);
-  const visibleColumnCount = Math.min(
-    Math.max(board.productColumns.length, 1),
-    MAX_GRID_COLUMNS,
-  );
 
   const renderItem = (item: KanbanItem) => (
     <ItemCard
@@ -193,6 +185,17 @@ export function NextWeekSection({
     />
   );
 
+  const editItem =
+    dialogState.open && dialogState.mode === "edit" ? dialogState.entity : null;
+  const createSeedProductId =
+    dialogState.open && dialogState.mode === "create"
+      ? dialogState.seedProductId
+      : undefined;
+  const createSeedActivityId =
+    dialogState.open && dialogState.mode === "create"
+      ? dialogState.seedActivityId
+      : undefined;
+
   return (
     <div
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrollable region must be keyboard-focusable (axe scrollable-region-focusable); the static rule does not model that WCAG exception
@@ -202,79 +205,32 @@ export function NextWeekSection({
       className="max-h-[420px] overflow-y-auto"
       style={{ scrollbarWidth: "thin" }}
     >
-      <div
-        className="grid gap-4"
-        style={{
-          gridTemplateColumns: `repeat(${visibleColumnCount}, minmax(0, 1fr))`,
-        }}
-      >
-        {board.productColumns.map((col) => (
-          <div key={col.key}>
-            <BoardColumnHeader
-              col={col}
-              readOnly={readOnly}
-              showProductAdd={hasMultipleProducts === true}
-              onAdd={openCreate}
-            />
-            {col.items.length === 0 ? (
-              <div
-                className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-[var(--color-surface-hover)] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
-                style={{ minHeight: 150 }}
-              >
-                No items yet
-              </div>
-            ) : (
-              <div className="space-y-2">{col.items.map(renderItem)}</div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      <ActivityLanesBlock
-        lanes={board.activityLanes}
+      <NextWeekBoardGrid
+        productColumns={board.productColumns}
+        activityLanes={board.activityLanes}
         readOnly={readOnly}
+        hasMultipleProducts={hasMultipleProducts === true}
         onAdd={openCreate}
         renderItem={renderItem}
       />
 
-      <ItemEditDialog
-        key={dialogKey}
+      <NextWeekDialogs
+        dialogKey={dialogKey}
         open={dialogState.open}
-        item={
-          dialogState.open && dialogState.mode === "edit"
-            ? dialogState.entity
-            : null
-        }
+        editItem={editItem}
         products={products ?? []}
         activities={activities}
-        week="next"
         currentUserName={currentUserName}
-        defaultProductId={
-          dialogState.open && dialogState.mode === "create"
-            ? dialogState.seedProductId
-            : undefined
-        }
-        defaultActivityId={
-          dialogState.open && dialogState.mode === "create"
-            ? dialogState.seedActivityId
-            : undefined
-        }
+        createSeedProductId={createSeedProductId}
+        createSeedActivityId={createSeedActivityId}
         stagesForProduct={stagesForProduct}
         ownPeriodRanks={ownPeriodRanks}
         risks={risks}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
-      />
-
-      <ConfirmDeleteDialog
-        open={pendingDelete !== null}
-        title="Delete next-week item?"
-        preview={pendingDelete?.text ?? ""}
-        subtitle={
-          pendingDelete ? `From ${pendingDelete.productName}` : undefined
-        }
-        onConfirm={confirmDelete}
-        onCancel={clearPendingDelete}
+        pendingDelete={pendingDelete}
+        onConfirmDelete={confirmDelete}
+        onCancelDelete={clearPendingDelete}
       />
     </div>
   );

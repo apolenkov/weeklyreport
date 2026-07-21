@@ -16,6 +16,38 @@ import {
   deriveEffectiveProductStatus,
 } from "./report-sections.status-derivation";
 
+// Groups the author's non-archived stage assignments by projectId, preserving
+// per-project assignment order. Each entry
+// carries the product's full cross-lead `stageAssignments` (via the row's
+// `project` relation) so the per-product `stageSet` can be derived downstream.
+function groupAuthorAssignmentsByProject(
+  stageAssignments: PrismaReportSectionWithRelations["author"]["stageAssignments"],
+) {
+  return stageAssignments
+    .filter((assignment) => !assignment.project.archived)
+    .reduce<
+      Map<
+        string,
+        {
+          project: (typeof stageAssignments)[number]["project"];
+          assignments: typeof stageAssignments;
+        }
+      >
+    >((acc, assignment) => {
+      const current = acc.get(assignment.projectId);
+      if (current) {
+        return new Map(acc).set(assignment.projectId, {
+          ...current,
+          assignments: [...current.assignments, assignment],
+        });
+      }
+      return new Map(acc).set(assignment.projectId, {
+        project: assignment.project,
+        assignments: [assignment],
+      });
+    }, new Map());
+}
+
 // review-acknowledgement: project the joined RecordComment rows onto the
 // read-model comment view (flat; reviewer display name rides along).
 function toCommentViews(comments: readonly RecordCommentRow[]) {
@@ -60,28 +92,11 @@ export function mapPrismaToReportSection(
       (ss) => [`${ss.projectId}::${ss.stageId}`, ss.status] as const,
     ),
   );
-  const assignmentsByProjectId = new Map<
-    string,
-    {
-      // Carries `stageAssignments` (the product's full cross-lead set) so the
-      // per-product `stageSet` can be derived below.
-      project: (typeof row.author.stageAssignments)[number]["project"];
-      assignments: typeof row.author.stageAssignments;
-    }
-  >();
-
-  for (const assignment of row.author.stageAssignments) {
-    if (assignment.project.archived) continue;
-    const current = assignmentsByProjectId.get(assignment.projectId);
-    if (current) {
-      current.assignments.push(assignment);
-    } else {
-      assignmentsByProjectId.set(assignment.projectId, {
-        project: assignment.project,
-        assignments: [assignment],
-      });
-    }
-  }
+  // Carries each product's full cross-lead `stageAssignments` (via the row's
+  // `project` relation) so the per-product `stageSet` can be derived below.
+  const assignmentsByProjectId = groupAuthorAssignmentsByProject(
+    row.author.stageAssignments,
+  );
 
   // fix-lead-surface-name-resolution: name-only entries for projects that
   // items/risks/decisions reference but the author owns no stage on, so
@@ -91,7 +106,6 @@ export function mapPrismaToReportSection(
   // name in `projects` and win on conflict (design Decision 3). Archived
   // referenced projects resolve too (design Open Question 2): the name is
   // not secret and a placeholder would misread as data loss.
-  const referencedNamesById = new Map<string, string>();
   const referencedRows = [
     ...row.items.map((i) => ({ projectId: i.projectId, project: i.project })),
     ...row.risks.map((r) => ({ projectId: r.projectId, project: r.project })),
@@ -100,11 +114,13 @@ export function mapPrismaToReportSection(
       project: d.project,
     })),
   ];
-  for (const { projectId, project } of referencedRows) {
-    if (!projectId || !project?.name) continue;
-    if (assignmentsByProjectId.has(projectId)) continue;
-    referencedNamesById.set(projectId, project.name);
-  }
+  const referencedNamesById = new Map<string, string>(
+    referencedRows.flatMap(({ projectId, project }) =>
+      projectId && project?.name && !assignmentsByProjectId.has(projectId)
+        ? ([[projectId, project.name]] as [string, string][])
+        : [],
+    ),
+  );
   const referencedProjects = [...referencedNamesById.entries()]
     .map(([projectId, projectName]) => ({ projectId, projectName }))
     .sort((a, b) => a.projectName.localeCompare(b.projectName, "ru"));

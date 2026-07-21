@@ -21,6 +21,16 @@ import {
   captureRecordComments,
   reinsertRecordComments,
 } from "./report-sections.save-lineage";
+import {
+  clearSectionChildRows,
+  isPersistableDecision,
+  toActivityStatusRows,
+  toDecisionRows,
+  toItemRows,
+  toProjectStatusRows,
+  toRiskRows,
+  toStageStatusRows,
+} from "./save-section.derive";
 
 @Injectable()
 export class ReportSectionsPrismaRepository implements ReportSectionsRepository {
@@ -157,40 +167,14 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
           // is NOT re-inserted → it hard-dies with the record it flagged.
           const capturedComments = await captureRecordComments(tx, sectionId);
 
-          await tx.projectStatus.deleteMany({
-            where: { reportSectionId: sectionId },
-          });
-          await tx.stageStatus.deleteMany({
-            where: { reportSectionId: sectionId },
-          });
-          await tx.activityStatus.deleteMany({
-            where: { reportSectionId: sectionId },
-          });
-          await tx.item.deleteMany({ where: { reportSectionId: sectionId } });
-          await tx.risk.deleteMany({ where: { reportSectionId: sectionId } });
-          await tx.decision.deleteMany({
-            where: { reportSectionId: sectionId },
-          });
+          await clearSectionChildRows(tx, sectionId);
 
-          const projectData = section.projects.map((p) => ({
-            reportSectionId: sectionId,
-            projectId: p.projectId,
-            status: p.trafficLight,
-          }));
-
+          const projectData = toProjectStatusRows(section, sectionId);
           if (projectData.length > 0) {
             await tx.projectStatus.createMany({ data: projectData });
           }
 
-          const stageStatusData = section.projects.flatMap((project) =>
-            (project.ownedStages ?? []).map((stage) => ({
-              reportSectionId: sectionId,
-              projectId: project.projectId,
-              stageId: stage.stageId,
-              status: stage.status ?? null,
-            })),
-          );
-
+          const stageStatusData = toStageStatusRows(section, sectionId);
           if (stageStatusData.length > 0) {
             await tx.stageStatus.createMany({ data: stageStatusData });
           }
@@ -199,85 +183,29 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
           // read model. Every id here came from the seeded server-side set —
           // mergeSection folds client statuses onto section.activities and the
           // service rejects any unattached activityId before this runs.
-          const activityStatusData = section.activities.map((activity) => ({
-            reportSectionId: sectionId,
-            activityId: activity.activityId,
-            status: activity.status,
-            note: activity.note ?? null,
-          }));
-
+          const activityStatusData = toActivityStatusRows(section, sectionId);
           if (activityStatusData.length > 0) {
             await tx.activityStatus.createMany({ data: activityStatusData });
           }
 
           if (section.items.length > 0) {
             await tx.item.createMany({
-              data: section.items.map((i) => ({
-                // The DB mints the id — rows are recreated wholesale, so trusting
-                // a client-supplied PK only risks a cross-section P2002 collision.
-                reportSectionId: sectionId,
-                // Preserve the durable lineage key through the recreate. Undefined
-                // for a brand-new record → omitted so the `@default(uuid())` mints
-                // one; never `?? null` (the column is NOT NULL).
-                stableId: i.stableId,
-                // XOR parent: product-parented rows write projectId; activity-
-                // parented rows write activityId (product FK null). The hand-written
-                // CHECK is the backstop; the write schema already enforced XOR.
-                projectId: i.projectId ?? null,
-                activityId: i.activityId ?? null,
-                type: i.type,
-                text: i.text,
-                tag: i.tag,
-                workflowStatus: i.workflowStatus,
-                carriedOver: i.carriedOver,
-                priorityRank: i.priorityRank ?? null,
-                pausedReason: i.pausedReason ?? null,
-                stageNames: i.stageIds ?? [],
-              })),
+              data: toItemRows(section, sectionId),
             });
           }
 
           if (section.risks.length > 0) {
             await tx.risk.createMany({
-              data: section.risks.map((r) => ({
-                reportSectionId: sectionId,
-                // Preserve the durable lineage key (see items above).
-                stableId: r.stableId,
-                // XOR parent (see items above).
-                projectId: r.projectId ?? null,
-                activityId: r.activityId ?? null,
-                risk: r.risk,
-                impact: r.impact,
-                mitigation: r.mitigation,
-                severity: r.severity,
-                stageNames: r.stageIds ?? [],
-              })),
+              data: toRiskRows(section, sectionId),
             });
           }
 
-          // activity-first-class (Decision 6): persist a decision parented by
-          // EITHER a product OR an activity (the write schema's XOR guarantees
-          // exactly one). The old productId-only filter silently dropped every
-          // activity-parented decision.
           const decisionsToSave = section.decisions.filter(
-            (d) => d.productId != null || d.activityId != null,
+            isPersistableDecision,
           );
           if (decisionsToSave.length > 0) {
             await tx.decision.createMany({
-              data: decisionsToSave.map((d) => ({
-                reportSectionId: sectionId,
-                // Preserve the durable lineage key (see items above).
-                stableId: d.stableId,
-                text: d.text,
-                owner: d.owner,
-                deadline: d.deadline ?? null,
-                impact: d.impact,
-                resolvedAt: d.resolvedAt ?? null,
-                stageNames: d.stageIds ?? [],
-                // XOR parent (product FK null for the activity case).
-                productId: d.productId ?? null,
-                activityId: d.activityId ?? null,
-              })),
+              data: toDecisionRows(decisionsToSave, sectionId),
             });
           }
 
