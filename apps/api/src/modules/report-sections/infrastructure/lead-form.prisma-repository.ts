@@ -286,9 +286,17 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     // One scoped, race-safe write: the `author` group-scope filter spreads into
     // the `where` so a head flips only their own group's submitted sections
     // (admin scope is `{}` → every submitted section). A single `updateMany` is
-    // atomic, so no surrounding transaction is needed.
+    // atomic, so no surrounding transaction is needed. The periodStatus filter
+    // is the same published-period gate the single revoke enforces in the
+    // service — a closed published report's sections (backing the frozen
+    // viewer snapshot) match zero rows here by construction.
     const result = await this.prisma.reportSection.updateMany({
-      where: { reportId, status: "submitted", ...scope },
+      where: {
+        reportId,
+        status: "submitted",
+        report: { periodStatus: { in: ["open", "reopened"] } },
+        ...scope,
+      },
       data: {
         status: "draft",
         revokedAt: new Date(),

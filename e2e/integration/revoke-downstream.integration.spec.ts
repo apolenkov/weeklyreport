@@ -263,22 +263,19 @@ test.describe("Revoke downstream effects (integration)", () => {
   });
 
   // -------------------------------------------------------------------------
-  // SC-166: Revoke on a published-period section
+  // SC-166: Revoke on a published-period section is rejected
   //
-  // BACKEND GAP: LeadFormService.revokeSubmission checks only
-  //   `section.status !== "submitted"` — there is no periodStatus guard.
-  // The dashboard's UI-level `canRevoke` (dashboard-leads.ts) DOES gate on
-  // `periodStatus === "open" || "reopened"`, but that only protects the
-  // CURRENT period — it cannot help PUBLISHED_REPORT here because the
-  // dashboard never loads a past period's queue in the first place (no route
-  // reaches it). So the backend method remains the only enforcement point
-  // for this exact report, and it has none. This asserts the current
-  // (missing-guard) behavior directly against the API — see suspectedBugs.
-  // When a guard is added, flip the expectation to `status` staying
-  // "submitted" and the response status reflecting a rejected mutation.
+  // The dashboard's UI-level `canRevoke` (dashboard-leads.ts) gates on
+  // `periodStatus === "open" || "reopened"`, but only for the CURRENT
+  // period — the dashboard never loads a past period's queue, so
+  // LeadFormService.revokeSubmission's own periodStatus gate is the only
+  // enforcement point for a closed published report. This drives the exact
+  // tRPC wire call to pin that the service-layer gate rejects the mutation
+  // and the section's submitted state (backing the frozen viewer snapshot)
+  // survives.
   // -------------------------------------------------------------------------
 
-  test("SC-166: revoke on published-period section succeeds (no backend periodStatus guard)", async ({
+  test("SC-166: revoke on published-period section is rejected by the periodStatus gate", async ({
     headPage,
   }) => {
     // Verify seed precondition: published report exists with Maria's section
@@ -298,10 +295,11 @@ test.describe("Revoke downstream effects (integration)", () => {
       MARIA_PUBLISHED_SECTION_ID,
     );
 
-    // BACKEND GAP: no periodStatus guard → the mutation succeeds (200), and
-    // the section becomes draft even though its report is published.
-    expect(status).toBe(200);
+    // LeadFormConstraintError maps to BAD_REQUEST on the wire.
+    expect(status).toBe(400);
 
+    // The section never leaves submitted — poll briefly to catch a delayed
+    // write rather than sampling a single instant.
     await expect
       .poll(
         async () =>
@@ -310,8 +308,8 @@ test.describe("Revoke downstream effects (integration)", () => {
               where: { id: MARIA_PUBLISHED_SECTION_ID },
             })
           )?.status,
-        { timeout: 10_000 },
+        { timeout: 5_000 },
       )
-      .toBe("draft");
+      .toBe("submitted");
   });
 });
