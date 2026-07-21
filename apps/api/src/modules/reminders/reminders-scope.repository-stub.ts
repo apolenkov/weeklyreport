@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 
-import type { RemindersScopeRepository } from "./reminders-scope.service.js";
+import type { RemindersScopeRepository } from "./reminders-scope.types.js";
 
 /**
  * The 8 scope-authorization/dispatch methods of `RemindersRepository`,

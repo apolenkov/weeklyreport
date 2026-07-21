@@ -5,8 +5,8 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 import { requireEnv } from "../../lib/env.js";
 import { OrganizationService } from "../organization/index.js";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository";
-import type { DueDeadlineRule, DueEscalationRule } from "./reminders.service";
 import { RemindersService } from "./reminders.service";
+import type { DueDeadlineRule, DueEscalationRule } from "./reminders.types";
 
 /** Length of an ISO calendar date (`YYYY-MM-DD`) after `toISOString().slice(0, n)`. */
 const ISO_DATE_LENGTH = 10;

@@ -89,20 +89,16 @@ export function EscalationEmail({
 }
 
 export function escalationEmailPlaintext(props: EscalationEmailProps): string {
-  const lines = [
+  return [
     `Hello ${props.headName},`,
     "",
     `The following lead${props.lateLeads.length === 1 ? "" : "s"} have not submitted their section of the ${props.reportPeriod} weekly report (${props.cycleDate}):`,
     "",
-  ];
-  for (const lead of props.lateLeads) {
-    lines.push(
-      `  - ${lead.leadName} — ${lead.sectionTitle} (deadline ${lead.deadlineIso})`,
-    );
-  }
-  lines.push(
+    ...props.lateLeads.map(
+      (lead) =>
+        `  - ${lead.leadName} — ${lead.sectionTitle} (deadline ${lead.deadlineIso})`,
+    ),
     "",
     `— ${props.organization.shortName} (Weekly status reporting for ${props.organization.fullName})`,
-  );
-  return lines.join("\n");
+  ].join("\n");
 }

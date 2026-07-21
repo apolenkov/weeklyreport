@@ -1,8 +1,12 @@
 import { Injectable, Logger } from "@nestjs/common";
+import type { ReminderPolicy } from "@prisma/client";
 import { DateTime } from "luxon";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
+
+/** Outcome of applying one policy to one period — see {@link PolicyApplicatorService.applyToPeriod}. */
+type PolicyApplyOutcome = "created" | "skipped" | "updated";
 
 /**
  * The seam that turns ReminderPolicy templates into concrete ReminderRule
@@ -104,91 +108,129 @@ export class PolicyApplicatorService {
       where: { active: true },
     });
 
-    // eslint-disable-next-line no-restricted-syntax -- Side-effectful async DB loop reports per-policy outcomes; a reduce would obscure the upsert/error paths it counts.
-    let created = 0;
-    // eslint-disable-next-line no-restricted-syntax -- Side-effectful async DB loop reports per-policy outcomes; a reduce would obscure the upsert/error paths it counts.
-    let updated = 0;
-    // eslint-disable-next-line no-restricted-syntax -- Side-effectful async DB loop reports per-policy outcomes; a reduce would obscure the upsert/error paths it counts.
-    let skipped = 0;
-
-    for (const policy of policies) {
-      // Snapshot restore passes the pairs its own transaction just wrote:
-      // re-materializing those would clobber the restored rows' status and
-      // fireAt (e.g. force a deliberately paused rule back to active).
-      if (excludePolicyIds?.has(policy.id)) {
-        skipped += 1;
-        continue;
-      }
-      const fireAt = this.computeFireAt(
-        period.deadline,
-        policy.offsetMinutes,
-        policy.timezone,
-      );
-      // Skip a policy outside its validity window, or — when `now` is given —
-      // one whose instant has already elapsed (it would fire stale, since the
-      // scheduler has no elapsed-fireAt lower bound). One gate, one skip path.
-      const elapsed = now !== undefined && fireAt.getTime() <= now.getTime();
-      if (!PolicyApplicatorService.policyAppliesTo(policy, period) || elapsed) {
-        skipped += 1;
-        continue;
-      }
-
-      try {
-        // Look up existing first so we can report created vs updated;
-        // the upsert itself is the source of truth for idempotency.
-        const existing = await this.prisma.reminderRule.findUnique({
-          where: {
-            reportId_policyId: { reportId: period.id, policyId: policy.id },
-          },
-          select: { id: true },
-        });
-
-        await this.prisma.reminderRule.upsert({
-          where: {
-            reportId_policyId: { reportId: period.id, policyId: policy.id },
-          },
-          create: {
-            reportId: period.id,
-            policyId: policy.id,
-            fireAt,
-            kind: policy.kind,
-            timezone: policy.timezone,
-            status: "active",
-          },
-          update: {
-            fireAt,
-            kind: policy.kind,
-            timezone: policy.timezone,
-            status: "active",
-          },
-        });
-
-        if (existing) {
-          updated += 1;
-        } else {
-          created += 1;
-        }
-      } catch (error: unknown) {
-        // Unscoped: any P2002 here is the (reportId, policyId) race — the
-        // swallow-any behavior this loop has always had.
-        if (isUniqueViolation(error)) {
-          // Two concurrent applyToPeriod calls raced on the same
-          // (reportId, policyId). The unique index prevents duplicates;
-          // log + continue so the loop finishes the rest of the
-          // policies for this period.
-          this.logger.warn(
-            `applyToPeriod race on (period=${period.id}, policy=${policy.id}); rule already exists`,
-          );
-          skipped += 1;
-          continue;
-        }
-        throw error;
-      }
-    }
+    const outcomes = await this.collectPolicyOutcomes(
+      policies,
+      period,
+      now,
+      excludePolicyIds,
+      [],
+    );
+    const tally = {
+      created: outcomes.filter((outcome) => outcome === "created").length,
+      updated: outcomes.filter((outcome) => outcome === "updated").length,
+      skipped: outcomes.filter((outcome) => outcome === "skipped").length,
+    };
 
     this.logger.log(
-      `applyToPeriod period=${period.id}: created=${created} updated=${updated} skipped=${skipped}`,
+      `applyToPeriod period=${period.id}: created=${tally.created} updated=${tally.updated} skipped=${tally.skipped}`,
     );
-    return { created, updated, skipped };
+    return tally;
+  }
+
+  /**
+   * Sequential accumulation, one policy at a time: each policy's
+   * findUnique-then-upsert must fully resolve before the next one starts, so
+   * a policy's own P2002 recovery (log + continue) cannot interleave with —
+   * or be masked by — a concurrently-inflight sibling policy's write.
+   */
+  private async collectPolicyOutcomes(
+    remaining: readonly ReminderPolicy[],
+    period: { id: string; deadline: Date },
+    now: Date | undefined,
+    excludePolicyIds: ReadonlySet<string> | undefined,
+    acc: readonly PolicyApplyOutcome[],
+  ): Promise<readonly PolicyApplyOutcome[]> {
+    const [policy, ...rest] = remaining;
+    if (!policy) return acc;
+    const outcome = await this.applyPolicyToPeriod(
+      policy,
+      period,
+      now,
+      excludePolicyIds,
+    );
+    return this.collectPolicyOutcomes(rest, period, now, excludePolicyIds, [
+      ...acc,
+      outcome,
+    ]);
+  }
+
+  /**
+   * Apply one policy to one period: validity/elapsed gate, then an
+   * idempotent upsert against `uq_rule_report_policy`. A P2002 during the
+   * upsert is the (reportId, policyId) race between two concurrent
+   * `applyToPeriod` calls — logged and reported as `"skipped"` rather than
+   * thrown, the swallow-any behavior this path has always had.
+   */
+  private async applyPolicyToPeriod(
+    policy: ReminderPolicy,
+    period: { id: string; deadline: Date },
+    now: Date | undefined,
+    excludePolicyIds: ReadonlySet<string> | undefined,
+  ): Promise<PolicyApplyOutcome> {
+    // Snapshot restore passes the pairs its own transaction just wrote:
+    // re-materializing those would clobber the restored rows' status and
+    // fireAt (e.g. force a deliberately paused rule back to active).
+    if (excludePolicyIds?.has(policy.id)) {
+      return "skipped";
+    }
+    const fireAt = this.computeFireAt(
+      period.deadline,
+      policy.offsetMinutes,
+      policy.timezone,
+    );
+    // Skip a policy outside its validity window, or — when `now` is given —
+    // one whose instant has already elapsed (it would fire stale, since the
+    // scheduler has no elapsed-fireAt lower bound). One gate, one skip path.
+    const elapsed = now !== undefined && fireAt.getTime() <= now.getTime();
+    if (!PolicyApplicatorService.policyAppliesTo(policy, period) || elapsed) {
+      return "skipped";
+    }
+
+    try {
+      // Look up existing first so we can report created vs updated;
+      // the upsert itself is the source of truth for idempotency.
+      const existing = await this.prisma.reminderRule.findUnique({
+        where: {
+          reportId_policyId: { reportId: period.id, policyId: policy.id },
+        },
+        select: { id: true },
+      });
+
+      await this.prisma.reminderRule.upsert({
+        where: {
+          reportId_policyId: { reportId: period.id, policyId: policy.id },
+        },
+        create: {
+          reportId: period.id,
+          policyId: policy.id,
+          fireAt,
+          kind: policy.kind,
+          timezone: policy.timezone,
+          status: "active",
+        },
+        update: {
+          fireAt,
+          kind: policy.kind,
+          timezone: policy.timezone,
+          status: "active",
+        },
+      });
+
+      return existing ? "updated" : "created";
+    } catch (error: unknown) {
+      // Unscoped: any P2002 here is the (reportId, policyId) race — the
+      // swallow-any behavior this loop has always had.
+      if (isUniqueViolation(error)) {
+        // Two concurrent applyToPeriod calls raced on the same
+        // (reportId, policyId). The unique index prevents duplicates;
+        // log + continue so the loop finishes the rest of the
+        // policies for this period.
+        this.logger.warn(
+          `applyToPeriod race on (period=${period.id}, policy=${policy.id}); rule already exists`,
+        );
+        return "skipped";
+      }
+      throw error;
+    }
   }
 }

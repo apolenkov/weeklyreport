@@ -71,6 +71,32 @@ const TRPC_ERROR_HTTP_STATUS: Record<string, string> = {
   INTERNAL_SERVER_ERROR: "500",
 };
 
+/**
+ * Normalize a `TRPCError.cause` into a log-safe descriptor. Drilling into the
+ * cause is what surfaces the real failure (Prisma error, ZodError, raw Error)
+ * instead of the generic 'Unexpected error' wrapper from trpc.error-mapper.ts —
+ * a TRPCError with code=INTERNAL_SERVER_ERROR is otherwise opaque. tRPC
+ * normalizes thrown values via getCauseFromUnknown, so the meaningful detail is
+ * always an Error; a non-Error/undefined cause carries nothing to log.
+ *
+ * Stack frames leak file paths + library internals to the log aggregator, so
+ * only `code`/`meta` are surfaced — Prisma's pair already identifies the failed
+ * query.
+ */
+export function deriveCauseInfo(cause: unknown) {
+  if (!(cause instanceof Error)) return undefined;
+  return {
+    name: cause.constructor.name,
+    message: cause.message,
+    ...("code" in cause
+      ? { causeCode: (cause as { code?: unknown }).code }
+      : {}),
+    ...("meta" in cause
+      ? { causeMeta: (cause as { meta?: unknown }).meta }
+      : {}),
+  };
+}
+
 function observeTrpcDuration(
   type: string,
   path: string,
@@ -191,31 +217,7 @@ export const loggingMiddleware = t.middleware(
         TRPC_ERROR_HTTP_STATUS[result.error.code] ?? "500",
         duration,
       );
-      // Drill into TRPCError.cause so the log stream surfaces the real failure
-      // (Prisma error, ZodError, raw Error, etc.) instead of just the generic
-      // 'Unexpected error' wrapper from trpc.error-mapper.ts. This is the
-      // single biggest payoff for backend debuggability — a TRPCError with
-      // code=INTERNAL_SERVER_ERROR is otherwise opaque.
-      // TRPCError.cause is Error | undefined (tRPC normalizes thrown values via
-      // getCauseFromUnknown), so the meaningful detail is always an Error here;
-      // a non-Error/undefined cause carries nothing to log.
-      const cause = result.error.cause;
-      const causeInfo =
-        cause instanceof Error
-          ? {
-              name: cause.constructor.name,
-              message: cause.message,
-              // Stack frames leak file paths + library internals to the log
-              // aggregator — surface code/meta only. Prisma's `code` + `meta`
-              // are already enough to identify the failed query.
-              ...("code" in cause
-                ? { causeCode: (cause as { code?: unknown }).code }
-                : {}),
-              ...("meta" in cause
-                ? { causeMeta: (cause as { meta?: unknown }).meta }
-                : {}),
-            }
-          : undefined;
+      const causeInfo = deriveCauseInfo(result.error.cause);
 
       ctx.logger.error("trpc request end", {
         phase: TRPC_REQUEST_LOG_PHASE,
@@ -376,7 +378,7 @@ const isAuthed = t.middleware(({ ctx, next }) => {
  * report X could be used to read report Y.
  *
  * The allowlist intentionally hard-codes paths instead of a per-procedure
- * opt-in: the v6.0 print page calls only `weeklyReport.get` and
+ * opt-in: the print page calls only `weeklyReport.get` and
  * `archive.detail`. New PDF-print pages must add their procedure here.
  *
  * Applied via `protectedProcedure` so every authenticated path inherits

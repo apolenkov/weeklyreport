@@ -9,8 +9,8 @@ import {
 } from "./carry-over.service";
 
 /**
- * lead-report-surface-polish: automatic carry-over runs when
- * a period becomes OPEN — never for a `scheduled` period, whose source is
+ * Automatic carry-over runs when a period becomes OPEN — never for a
+ * `scheduled` period, whose source is
  * still being edited and whose `(source, target)` dedupe key must not be
  * burned early. Three call sites share this orchestrator: the login
  * provisioning path, the scheduler's per-tick reconcile loop, and the manual

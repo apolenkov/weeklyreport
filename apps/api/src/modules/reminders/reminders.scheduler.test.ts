@@ -6,12 +6,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { OrganizationService } from "../organization/organization.service";
 import { RemindersScheduler } from "./reminders.scheduler";
-import {
-  type DueDeadlineRule,
-  type DueEscalationRule,
-  type RemindersRepository,
-  RemindersService,
-} from "./reminders.service";
+import { RemindersService } from "./reminders.service";
+import type {
+  DueDeadlineRule,
+  DueEscalationRule,
+  RemindersRepository,
+} from "./reminders.types";
 import { unusedRemindersScopeStubs } from "./reminders-scope.repository-stub.js";
 
 // Stub OrganizationService used by the scheduler to snapshot the brand

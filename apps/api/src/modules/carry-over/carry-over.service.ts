@@ -71,8 +71,8 @@ export interface CarryOverRepository {
 }
 
 /**
- * activity-first-class (Decision 0.3): a carried record needs a live parent in
- * the target period. A product-parented record (no `activityId` — the XOR then
+ * A carried record needs a live parent in the target period. A product-parented
+ * record (no `activityId` — the XOR then
  * guarantees a product FK) always qualifies, the product survives. An
  * activity-parented record carries only when its activity is re-attached to the
  * author's target section; an archived/detached activity's records are dropped.
@@ -161,8 +161,8 @@ export class CarryOverService {
       const targetActivityIds = new Set(
         targetSection.activities.map((activity) => activity.activityId),
       );
-      // introduce-durable-record-identity: never carry a lineage the target
-      // section already holds. The new `@@unique([reportSectionId, stableId])`
+      // Never carry a lineage the target section already holds. The
+      // `@@unique([reportSectionId, stableId])`
       // would otherwise make the item insert silently skip (leaving an orphan
       // CarryOverRecord) or trip P2002 on the decision insert (misread as a
       // dedupe-key race). Filtering here keeps carry-over idempotent by lineage,

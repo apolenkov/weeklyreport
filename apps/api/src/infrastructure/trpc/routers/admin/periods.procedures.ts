@@ -11,10 +11,10 @@ import type {
   ReopenRequestAdminService,
 } from "../../../../modules/admin/index.js";
 import { mapDomainError } from "../../trpc.error-mapper.js";
-import { adminProcedure, headProcedure } from "../../trpc.middleware.js";
+import { adminProcedure } from "../../trpc.middleware.js";
+import { createReopenRequestsProcedures } from "./reopen-requests.procedures.js";
 
 const MAX_PERIOD_LIST_LIMIT = 200;
-const MAX_REOPEN_NOTE_LENGTH = 500;
 
 export interface AdminPeriodsDeps {
   periodAdminService: PeriodAdminService;
@@ -192,60 +192,6 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
           throw mapDomainError(error);
         }
       }),
-    // Reopen requests — Lead-initiated, Head-decided. Lead's
-    // `leadForm.requestReopen` persists status=pending; head dashboard + Admin
-    // "Reopen Requests" tab consume these. ADR 0008: gate is `headProcedure`
-    // (head + admin), not `adminProcedure` — head ≠ admin in real deploy, and
-    // reopen-decisioning is a head capability.
-    listReopenRequests: headProcedure
-      .input(
-        z
-          .object({
-            status: z
-              .enum(["pending", "approved", "rejected", "all"])
-              .default("pending"),
-          })
-          .optional(),
-      )
-      .query(async ({ input, ctx }) => {
-        try {
-          return await deps.reopenRequestAdminService.listReopenRequests({
-            status: input?.status,
-            session: ctx.session,
-          });
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-    respondReopenRequest: headProcedure
-      .input(
-        z.object({
-          id: z.uuid(),
-          decision: z.enum(["approved", "rejected"]),
-          note: z.string().max(MAX_REOPEN_NOTE_LENGTH).optional(),
-        }),
-      )
-      .mutation(async ({ input, ctx }) => {
-        try {
-          return await deps.reopenRequestAdminService.respondReopenRequest({
-            id: input.id,
-            decision: input.decision,
-            note: input.note,
-            decidedBy: ctx.session.userId,
-            session: ctx.session,
-          });
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-    pendingReopenCount: headProcedure.query(async ({ ctx }) => {
-      try {
-        return await deps.reopenRequestAdminService.pendingReopenCount(
-          ctx.session,
-        );
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    }),
+    ...createReopenRequestsProcedures(deps),
   };
 }

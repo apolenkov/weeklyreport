@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import type {
   DeadlineReminderPayload,
   EscalationReminderPayload,
-} from "./reminders.service.js";
+} from "./reminders.types.js";
 import { buildQueuePayload } from "./reminders-queue-payload.js";
 
 const RECIPIENT_EMAIL = "lead@test.local";

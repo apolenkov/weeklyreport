@@ -5,10 +5,8 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import {
-  type RemindersRepository,
-  RemindersService,
-} from "./reminders.service";
+import { RemindersService } from "./reminders.service";
+import type { RemindersRepository } from "./reminders.types";
 import {
   buildReminderDedupeKey,
   resolveReminderDedupeKey,

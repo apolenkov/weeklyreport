@@ -7,6 +7,7 @@ import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   adminProcedure,
   anyRoleProcedure,
+  deriveCauseInfo,
   headProcedure,
   leadershipProcedure,
   leadProcedure,
@@ -405,5 +406,38 @@ describe("tRPC logging middleware", () => {
     expect(expectDefined(logger.info.mock.calls[1])[1]).toMatchObject({
       userId: null,
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deriveCauseInfo — cause normalization for the error-branch log
+// ---------------------------------------------------------------------------
+
+describe("deriveCauseInfo", () => {
+  it("surfaces name + message + code + meta for a Prisma-shaped error", () => {
+    const prismaError = Object.assign(new Error("Unique constraint failed"), {
+      code: "P2002",
+      meta: { target: ["email"] },
+    });
+
+    expect(deriveCauseInfo(prismaError)).toEqual({
+      name: "Error",
+      message: "Unique constraint failed",
+      causeCode: "P2002",
+      causeMeta: { target: ["email"] },
+    });
+  });
+
+  it("returns only name + message for a plain Error (no code/meta)", () => {
+    expect(deriveCauseInfo(new TypeError("boom"))).toEqual({
+      name: "TypeError",
+      message: "boom",
+    });
+  });
+
+  it("returns undefined for a non-Error cause", () => {
+    expect(deriveCauseInfo("just a string")).toBeUndefined();
+    expect(deriveCauseInfo(undefined)).toBeUndefined();
+    expect(deriveCauseInfo({ code: "P2002" })).toBeUndefined();
   });
 });

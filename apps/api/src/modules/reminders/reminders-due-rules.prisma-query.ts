@@ -1,8 +1,5 @@
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import type {
-  DueDeadlineRule,
-  DueEscalationRule,
-} from "./reminders.service.js";
+import type { DueDeadlineRule, DueEscalationRule } from "./reminders.types.js";
 import { buildEscalationGroups } from "./reminders-escalation-grouping.js";
 import { formatPeriodLabel } from "./reminders-row-mappers.js";
 

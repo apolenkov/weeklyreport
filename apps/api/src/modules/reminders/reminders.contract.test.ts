@@ -6,11 +6,8 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
-import {
-  ReminderDomainError,
-  type RemindersRepository,
-  RemindersService,
-} from "./reminders.service";
+import { ReminderDomainError, RemindersService } from "./reminders.service";
+import type { RemindersRepository } from "./reminders.types";
 import { unusedRemindersScopeStubs } from "./reminders-scope.repository-stub.js";
 
 // ---------------------------------------------------------------------------
