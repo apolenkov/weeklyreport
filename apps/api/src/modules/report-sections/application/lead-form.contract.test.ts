@@ -150,6 +150,44 @@ describe("LeadFormService — revokeSubmission", () => {
       service.revokeSubmission(SECTION_ID, OTHER_USER_ID, {}),
     ).rejects.toThrow(`Section ${SECTION_ID} not found.`);
   });
+
+  it("rejects a submitted section of a PUBLISHED period", async () => {
+    // The dashboard only surfaces revoke for the current period, so this gate
+    // is the sole protection for closed published reports — without it any
+    // direct caller could flip published-snapshot-backed content to draft.
+    const repo = createMockRepository({
+      getSectionByIdScoped: vi
+        .fn()
+        .mockResolvedValue(structuredClone(submittedSection)),
+      getReportPeriodStatusForSection: vi.fn().mockResolvedValue("published"),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.revokeSubmission(SECTION_ID, OTHER_USER_ID, {}),
+    ).rejects.toBeInstanceOf(LeadFormConstraintError);
+    await expect(
+      service.revokeSubmission(SECTION_ID, OTHER_USER_ID, {}),
+    ).rejects.toThrow("Cannot revoke a submission in a published report.");
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.revokeSectionSubmission).not.toHaveBeenCalled();
+  });
+
+  it("allows revoke on a REOPENED period", async () => {
+    // periodStatus='reopened' means the period is editable again — the gate
+    // must not block it (mirrors the fillFrom published-only gate).
+    const repo = createMockRepository({
+      getSectionByIdScoped: vi
+        .fn()
+        .mockResolvedValue(structuredClone(submittedSection)),
+      getReportPeriodStatusForSection: vi.fn().mockResolvedValue("reopened"),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.revokeSubmission(SECTION_ID, OTHER_USER_ID, {}),
+    ).resolves.toEqual({ success: true });
+  });
 });
 
 // ---------------------------------------------------------------------------

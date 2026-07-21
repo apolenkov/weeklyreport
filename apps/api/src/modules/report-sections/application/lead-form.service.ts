@@ -83,8 +83,26 @@ export class LeadFormService {
       );
     }
 
+    // Same published-period gate as fillFrom/saveDraft: the dashboard only
+    // surfaces revoke for the CURRENT period, so this alone protects closed
+    // published reports; a reopened period stays revocable.
+    await this.assertPeriodNotPublished(sectionId, "revoke a submission in");
+
     await this.repository.revokeSectionSubmission(sectionId, revokedByUserId);
     return { success: true };
+  }
+
+  /**
+   * Rejects when the section's report is a still-published period. Message
+   * template — grep anchors for the exact thrown strings:
+   * "Cannot fill a section of a published report." /
+   * "Cannot revoke a submission in a published report."
+   */
+  private async assertPeriodNotPublished(sectionId: string, action: string) {
+    const status =
+      await this.repository.getReportPeriodStatusForSection(sectionId);
+    if (status === "published")
+      throw new LeadFormConstraintError(`Cannot ${action} a published report.`);
   }
 
   /** Fill current form from a past period's data. */
@@ -122,13 +140,7 @@ export class LeadFormService {
     // fillFrom was the one gap. Gate on periodStatus (the searchable column):
     // a reopened period (periodStatus='reopened') is editable again and is
     // excluded from the viewer's published search, so it stays allowed.
-    const periodStatus =
-      await this.repository.getReportPeriodStatusForSection(targetSectionId);
-    if (periodStatus === "published") {
-      throw new LeadFormConstraintError(
-        "Cannot fill a section of a published report.",
-      );
-    }
+    await this.assertPeriodNotPublished(targetSectionId, "fill a section of");
 
     // Resolve-not-delete (ADR 0015) also binds Fill From: it delete-recreates
     // the target's items/decisions with fresh identity, which would silently
