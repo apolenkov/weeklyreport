@@ -85,12 +85,11 @@ export function JobsTab() {
   }
 
   function toggleExpanded(jobId: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(jobId)) next.delete(jobId);
-      else next.add(jobId);
-      return next;
-    });
+    setExpanded((prev) =>
+      prev.has(jobId)
+        ? new Set([...prev].filter((id) => id !== jobId))
+        : new Set([...prev, jobId]),
+    );
   }
 
   return (

@@ -53,6 +53,15 @@
       next-week-columns; api reminders-escalation-grouping,
       report-sections.mappers, lead-form-cross-author(+content).derive)
       — runtime-compat decision, needs Sasha's sign-off
-- [ ] 5.2 Full gate: typecheck + lint (incl. depcruise, knip) + full vitest
-- [ ] 5.3 Codex spot-review of a random sample across waves
-- [ ] 5.4 Archive this change; update campaign artifacts
+- [x] 5.2 Full gate: typecheck + lint (incl. depcruise, knip) + full vitest —
+      green (1727 api / 2026 web / 12 shared tests)
+- [x] 5.3 Codex spot-review, 8-file sample across waves 3-7: NO behavior,
+      query/order, or side-effect drift found. Structural verdicts
+      adjudicated: 2 mechanical mutation minors fixed (jobs-tab Set toggle,
+      periods audit payload); the "still >50-line function" majors
+      (JobsTab 156, createAdminPeriodsProcedures 167, use-item-edit-dialog
+      composer 99) are in-wave-ratified single-responsibility units — the
+      reject-list forbids splitting them further just to satisfy the
+      counter; left as documented stragglers for Sasha's review
+- [ ] 5.4 Archive this change — BLOCKED on Sasha: 5.1b (ES2024/Map.groupBy
+      decision) and the 5.3 straggler adjudication need sign-off first
