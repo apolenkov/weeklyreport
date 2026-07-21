@@ -67,41 +67,28 @@ function placeAt(
     : { scope: "activity", key: activityId, column, row };
 }
 
-/** Immutably appends `row` to `key`'s bucket in `map`, creating the bucket (and
- * the map entry) on first use. */
-function withRow(
-  map: ReadonlyMap<string, CellBuckets>,
-  key: string,
-  column: GridColumnKey,
-  row: GridRow,
+/** Group placements into per-key {@link CellBuckets}: keys in first-appearance
+ * order, each column's rows in encounter order. */
+function bucketsByKey(
+  placements: readonly RowPlacement[],
 ): ReadonlyMap<string, CellBuckets> {
-  const bucket = map.get(key) ?? emptyBuckets();
-  return new Map(map).set(key, {
-    ...bucket,
-    [column]: [...bucket[column], row],
-  });
-}
-
-function placeRow(acc: CollectedCells, next: RowPlacement): CollectedCells {
-  return next.scope === "product"
-    ? {
-        ...acc,
-        productLevel: withRow(
-          acc.productLevel,
-          next.key,
-          next.column,
-          next.row,
-        ),
-      }
-    : {
-        ...acc,
-        activityCells: withRow(
-          acc.activityCells,
-          next.key,
-          next.column,
-          next.row,
-        ),
-      };
+  return new Map(
+    [...Map.groupBy(placements, (placement) => placement.key)].map(
+      ([key, group]) => {
+        const column = (col: GridColumnKey): readonly GridRow[] =>
+          group.filter((p) => p.column === col).map((p) => p.row);
+        return [
+          key,
+          {
+            current: column("current"),
+            next: column("next"),
+            risks: column("risks"),
+            decisions: column("decisions"),
+          },
+        ];
+      },
+    ),
+  );
 }
 
 type ResolveProductKey = (productId: string | null | undefined) => string;
@@ -197,10 +184,12 @@ export function collectCells(input: {
     ...foreignPlacements(foreignRows, knownProductIds),
   ];
 
-  return placements.reduce<CollectedCells>(placeRow, {
-    productLevel: new Map(),
-    activityCells: new Map(),
-  });
+  return {
+    productLevel: bucketsByKey(placements.filter((p) => p.scope === "product")),
+    activityCells: bucketsByKey(
+      placements.filter((p) => p.scope === "activity"),
+    ),
+  };
 }
 
 export function finalizeColumns(

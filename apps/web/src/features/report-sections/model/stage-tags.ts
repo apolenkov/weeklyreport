@@ -15,10 +15,7 @@ export function canonicalStageName(name: string): string {
  * canonical stage name (stage-label-canonicalization spec 1.2).
  */
 export function canonicalStageIds(ids: readonly string[]): string[] {
-  return ids.reduce<string[]>((acc, id) => {
-    const canonical = canonicalStageName(id);
-    return acc.includes(canonical) ? acc : [...acc, canonical];
-  }, []);
+  return [...new Set(ids.map(canonicalStageName))];
 }
 
 /**
@@ -42,12 +39,12 @@ export function splitStageNames(
     return [];
   }
 
-  return stageName
-    .split(STAGE_SPLIT_RE)
-    .map((raw) => raw.trim())
-    .filter((value) => value.length > 0)
-    .reduce<string[]>(
-      (acc, value) => (acc.includes(value) ? acc : [...acc, value]),
-      [],
-    );
+  return [
+    ...new Set(
+      stageName
+        .split(STAGE_SPLIT_RE)
+        .map((raw) => raw.trim())
+        .filter((value) => value.length > 0),
+    ),
+  ];
 }

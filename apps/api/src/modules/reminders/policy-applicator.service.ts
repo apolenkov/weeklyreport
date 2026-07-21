@@ -140,18 +140,21 @@ export class PolicyApplicatorService {
     excludePolicyIds: ReadonlySet<string> | undefined,
     acc: readonly PolicyApplyOutcome[],
   ): Promise<readonly PolicyApplyOutcome[]> {
-    const [policy, ...rest] = remaining;
-    if (!policy) return acc;
-    const outcome = await this.applyPolicyToPeriod(
-      policy,
-      period,
-      now,
-      excludePolicyIds,
+    // `await accPromise` before each policy's write keeps the fold strictly
+    // sequential — a policy's own upsert fully resolves before the next starts.
+    return remaining.reduce<Promise<readonly PolicyApplyOutcome[]>>(
+      async (accPromise, policy) => {
+        const outcomes = await accPromise;
+        const outcome = await this.applyPolicyToPeriod(
+          policy,
+          period,
+          now,
+          excludePolicyIds,
+        );
+        return [...outcomes, outcome];
+      },
+      Promise.resolve(acc),
     );
-    return this.collectPolicyOutcomes(rest, period, now, excludePolicyIds, [
-      ...acc,
-      outcome,
-    ]);
   }
 
   /**

@@ -23,29 +23,21 @@ import {
 function groupAuthorAssignmentsByProject(
   stageAssignments: PrismaReportSectionWithRelations["author"]["stageAssignments"],
 ) {
-  return stageAssignments
-    .filter((assignment) => !assignment.project.archived)
-    .reduce<
-      Map<
-        string,
-        {
-          project: (typeof stageAssignments)[number]["project"];
-          assignments: typeof stageAssignments;
-        }
-      >
-    >((acc, assignment) => {
-      const current = acc.get(assignment.projectId);
-      if (current) {
-        return new Map(acc).set(assignment.projectId, {
-          ...current,
-          assignments: [...current.assignments, assignment],
-        });
-      }
-      return new Map(acc).set(assignment.projectId, {
-        project: assignment.project,
-        assignments: [assignment],
-      });
-    }, new Map());
+  const active = stageAssignments.filter(
+    (assignment) => !assignment.project.archived,
+  );
+  return new Map(
+    [...Map.groupBy(active, (assignment) => assignment.projectId)].flatMap(
+      ([projectId, assignments]) => {
+        const [head] = assignments;
+        // Map.groupBy never yields an empty group; the guard narrows the type
+        // and the head's `project` relation is shared across the group.
+        return head
+          ? [[projectId, { project: head.project, assignments }] as const]
+          : [];
+      },
+    ),
+  );
 }
 
 // review-acknowledgement: project the joined RecordComment rows onto the

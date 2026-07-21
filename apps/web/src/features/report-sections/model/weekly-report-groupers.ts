@@ -128,7 +128,10 @@ function deriveWeeklyReportItem(
 export function groupItemsByProject(
   sections: readonly ReportSectionReadModel[],
 ): Map<string, { current: WeeklyReportItem[]; next: WeeklyReportItem[] }> {
-  return sections.reduce((map, section) => {
+  // activity-first-class: activity-parented items (projectId null) render under
+  // their activity, not a product column — filtered out so the item's
+  // `projectId` narrows to `string` for the group key.
+  const entries = sections.flatMap((section) => {
     const initials = initialsFromName(section.authorName);
     // record-status-derived-from-risk: the covering risks the head badge overlay
     // reads (blocked-only) — same shape the lead card derives from.
@@ -138,33 +141,35 @@ export function groupItemsByProject(
       severity: risk.severity,
       text: risk.risk,
     }));
-    // activity-first-class: activity-parented items (projectId null) render
-    // under their activity, not a product column — filtered out here so the
-    // reduce below can narrow `item.projectId` to `string` via a type guard.
     return section.items
       .filter(
         (item): item is SectionItem & { projectId: string } =>
           item.projectId != null,
       )
-      .reduce((innerMap, item) => {
-        const bucket = innerMap.get(item.projectId) ?? {
-          current: [],
-          next: [],
-        };
-        const mapped = deriveWeeklyReportItem(
-          item,
-          section,
-          initials,
-          alarmRisks,
-          bucket[item.type].length,
-        );
-        const nextBucket = {
-          ...bucket,
-          [item.type]: [...bucket[item.type], mapped],
-        };
-        return new Map(innerMap).set(item.projectId, nextBucket);
-      }, map);
-  }, new Map<string, { current: WeeklyReportItem[]; next: WeeklyReportItem[] }>());
+      .map((item) => ({ item, section, initials, alarmRisks }));
+  });
+
+  return new Map(
+    [...Map.groupBy(entries, (entry) => entry.item.projectId)].map(
+      ([projectId, group]) => {
+        // `index` is the row's position within its (projectId, type) bucket —
+        // filtering to a single type preserves that per-type ordinal.
+        const rows = (type: SectionItem["type"]) =>
+          group
+            .filter((entry) => entry.item.type === type)
+            .map((entry, index) =>
+              deriveWeeklyReportItem(
+                entry.item,
+                entry.section,
+                entry.initials,
+                entry.alarmRisks,
+                index,
+              ),
+            );
+        return [projectId, { current: rows("current"), next: rows("next") }];
+      },
+    ),
+  );
 }
 
 /** One risk re-shaped into its head-report row; `index` seeds the fallback id. */
@@ -205,24 +210,32 @@ export function groupRisksByProject(
   sections: readonly ReportSectionReadModel[],
   projectNames: ReadonlyMap<string, string>,
 ): Map<string, WeeklyReportRisk[]> {
-  return sections.reduce((map, section) => {
-    // activity-first-class: activity-parented risks (projectId null) render
-    // under their activity, not a product column — filtered out here so the
-    // reduce below can narrow `risk.projectId` to `string` via a type guard.
-    return section.risks
+  // activity-first-class: activity-parented risks (projectId null) render under
+  // their activity, not a product column — filtered out so the risk's
+  // `projectId` narrows to `string` for the group key.
+  const entries = sections.flatMap((section) =>
+    section.risks
       .filter(
         (risk): risk is SectionRisk & { projectId: string } =>
           risk.projectId != null,
       )
-      .reduce((innerMap, risk) => {
-        const list = innerMap.get(risk.projectId) ?? [];
-        const mapped = deriveWeeklyReportRisk(
-          section,
-          projectNames,
-          risk,
-          list.length,
-        );
-        return new Map(innerMap).set(risk.projectId, [...list, mapped]);
-      }, map);
-  }, new Map<string, WeeklyReportRisk[]>());
+      .map((risk) => ({ section, risk })),
+  );
+
+  return new Map(
+    [...Map.groupBy(entries, (entry) => entry.risk.projectId)].map(
+      ([projectId, group]) => [
+        projectId,
+        // `index` seeds the fallback id — the risk's position within its product.
+        group.map((entry, index) =>
+          deriveWeeklyReportRisk(
+            entry.section,
+            projectNames,
+            entry.risk,
+            index,
+          ),
+        ),
+      ],
+    ),
+  );
 }

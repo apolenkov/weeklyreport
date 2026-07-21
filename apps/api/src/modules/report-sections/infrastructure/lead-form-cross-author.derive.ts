@@ -99,16 +99,6 @@ interface ForeignAssignmentRow {
   user: { id: string; name: string };
 }
 
-interface StatusRowAccum {
-  projectId: string;
-  projectName: string;
-  authorId: string;
-  authorInitials: string;
-  authorShortName: string;
-  stageNames: Set<string>;
-  stageEntries: { stageName: string; status: StageTrafficStatus }[];
-}
-
 /**
  * Groups foreign stage assignments by (projectId, authorId) into status rows,
  * preserving first-seen insertion order. Archived-project rows are dropped.
@@ -119,50 +109,41 @@ export function buildCrossAuthorStatusRows(
   statusMap: ReadonlyMap<string, TrafficLightStatus>,
   risksByAuthor: ReadonlyMap<string, ForeignRisk[]>,
 ): CrossAuthorStatusRow[] {
-  const grouped = others
+  const withStatus = others
     .filter((row) => !row.project.archived)
-    .reduce<Map<string, StatusRowAccum>>((acc, row) => {
-      const key = `${row.projectId}::${row.user.id}`;
+    .map((row) => {
       const persisted =
         statusMap.get(`${row.user.id}::${row.projectId}::${row.stageId}`) ??
         null;
-      const stageStatus = deriveForeignStageStatus(
+      const status = deriveForeignStageStatus(
         row.stage.name,
         row.projectId,
         risksByAuthor.get(row.user.id) ?? [],
         persisted,
       );
-      const stageEntry = { stageName: row.stage.name, status: stageStatus };
-      const existing = acc.get(key);
-      if (existing) {
-        return new Map(acc).set(key, {
-          ...existing,
-          stageNames: new Set([...existing.stageNames, row.stage.name]),
-          stageEntries: [...existing.stageEntries, stageEntry],
-        });
-      }
-      return new Map(acc).set(key, {
-        projectId: row.projectId,
-        projectName: row.project.name,
-        authorId: row.user.id,
+      return { row, stageEntry: { stageName: row.stage.name, status } };
+    });
+
+  return [
+    ...Map.groupBy(withStatus, ({ row }) => `${row.projectId}::${row.user.id}`),
+  ].flatMap(([, group]) => {
+    const [head] = group;
+    if (!head) return [];
+    const stageEntries = group.map((entry) => entry.stageEntry);
+    return [
+      {
+        projectId: head.row.projectId,
+        projectName: head.row.project.name,
+        authorId: head.row.user.id,
         // Derive display forms server-side (ADR 0006): the two-letter mark for
         // avatars/micro-chips, and the SHORT form ("Каштанова М.А.") for the
         // cross-author stage label. Only these leave the method — never the
         // full ФИО.
-        authorInitials: initialsFromName(row.user.name),
-        authorShortName: shortNameFromName(row.user.name),
-        stageNames: new Set([row.stage.name]),
-        stageEntries: [stageEntry],
-      });
-    }, new Map());
-
-  return [...grouped.values()].map((g) => ({
-    projectId: g.projectId,
-    projectName: g.projectName,
-    authorId: g.authorId,
-    authorInitials: g.authorInitials,
-    authorShortName: g.authorShortName,
-    stageNames: [...g.stageNames],
-    stages: g.stageEntries,
-  }));
+        authorInitials: initialsFromName(head.row.user.name),
+        authorShortName: shortNameFromName(head.row.user.name),
+        stageNames: [...new Set(stageEntries.map((e) => e.stageName))],
+        stages: stageEntries,
+      },
+    ];
+  });
 }
