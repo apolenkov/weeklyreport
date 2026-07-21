@@ -283,6 +283,7 @@ describe("tRPC logging middleware", () => {
     const result = await caller.publicRoute();
     expect(result).toBe("public-ok");
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(logger.info).toHaveBeenCalledTimes(2);
 
     const [startMsg, startMeta] = expectDefined(logger.info.mock.calls[0]) as [
@@ -312,6 +313,7 @@ describe("tRPC logging middleware", () => {
       status: "success",
     });
     expect(typeof (endMeta as { duration: number }).duration).toBe("number");
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(logger.error).not.toHaveBeenCalled();
   });
 
@@ -331,12 +333,14 @@ describe("tRPC logging middleware", () => {
 
     await expect(caller.protectedRoute()).rejects.toBeInstanceOf(TRPCError);
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(logger.info).toHaveBeenCalledTimes(1);
     expect(expectDefined(logger.info.mock.calls[0])[1]).toMatchObject({
       stage: "start",
       userId: null,
     });
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(logger.error).toHaveBeenCalledTimes(1);
     const [endMsg, endMeta] = expectDefined(logger.error.mock.calls[0]) as [
       unknown,
@@ -376,6 +380,7 @@ describe("tRPC logging middleware", () => {
 
     await caller.protectedRoute();
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(logger.info).toHaveBeenCalledTimes(2);
     expect(expectDefined(logger.info.mock.calls[0])[1]).toMatchObject({
       userId: "authed-42",
