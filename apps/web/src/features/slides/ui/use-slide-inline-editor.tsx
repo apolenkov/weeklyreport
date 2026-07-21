@@ -1,20 +1,13 @@
 "use client";
 
 import type { ReportSectionReadModel } from "@customreport/shared";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 
-import { invalidateLeadForm } from "../../../lib/cache-keys";
-import { isConflictError } from "../../../lib/trpc";
-import { useTRPC } from "../../../lib/trpc-context";
 import {
   type DecisionEntry,
   type KanbanItem,
-  type mapLeadFormData,
   type RiskEntry,
-  sectionToDraftPayload,
 } from "../../report-sections";
 import type { GridRowEditableRef } from "../model/slide-grid-rows";
 import {
@@ -23,22 +16,18 @@ import {
   applySlideInlineRiskEdit,
   deleteSlideInlineRecord,
 } from "../model/slide-inline-draft";
-import {
-  ownedStagesForProduct,
-  ownPeriodRanks,
-  resolveSlideInlineRecord,
-  toDialogActivities,
-  toDialogProducts,
-  toDialogRisks,
-} from "../model/slide-inline-edit";
+import { resolveSlideInlineRecord } from "../model/slide-inline-edit";
 import {
   getActiveDecisionRecord,
   getActiveItemRecord,
   getActiveRiskRecord,
   SlideInlineEditorDialogs,
 } from "./slide-inline-editor-dialogs";
-
-type LeadSlideFormData = NonNullable<ReturnType<typeof mapLeadFormData>>;
+import {
+  type LeadSlideFormData,
+  useInlineEditDialogData,
+  useSlideDraftSaveMutation,
+} from "./use-slide-inline-editor-support";
 
 interface UseSlideInlineEditorArgs {
   readonly section: ReportSectionReadModel | null;
@@ -52,95 +41,128 @@ interface SlideInlineEditor {
   readonly dialogs: ReactNode;
 }
 
-export function useSlideInlineEditor({
+type ActiveRecord = { readonly ref: GridRowEditableRef } | null;
+type ApplyEdit<T> = (
+  section: ReportSectionReadModel,
+  stableId: string,
+  next: T,
+) => ReportSectionReadModel;
+type SaveDraftSection = (
+  section: ReportSectionReadModel,
+  nextSection: ReportSectionReadModel,
+  operation: "saved" | "deleted",
+) => void;
+
+/** Shared body of the three inline-edit save handlers: no-op when the section
+ * or the corresponding active record is absent, otherwise apply the edit and
+ * hand the resulting section to the draft-save mutation. */
+function saveActiveRecord<T>(
+  section: ReportSectionReadModel | null,
+  active: ActiveRecord,
+  applyEdit: ApplyEdit<T>,
+  next: T,
+  saveDraftSection: SaveDraftSection,
+) {
+  if (section === null || active === null) return;
+  saveDraftSection(
+    section,
+    applyEdit(section, active.ref.stableId, next),
+    "saved",
+  );
+}
+
+/** The four commands that resolve to a `saveDraftSection` call: delete the
+ * pending record, or save whichever row kind is currently open. */
+function useInlineSaveHandlers({
+  section,
+  inlineEditRecord,
+  pendingDeleteRef,
+  saveDraftSection,
+}: {
+  readonly section: ReportSectionReadModel | null;
+  readonly inlineEditRecord: ReturnType<
+    typeof useInlineEditDialogData
+  >["inlineEditRecord"];
+  readonly pendingDeleteRef: GridRowEditableRef | null;
+  readonly saveDraftSection: SaveDraftSection;
+}) {
+  const activeItem = getActiveItemRecord(inlineEditRecord);
+  const activeRisk = getActiveRiskRecord(inlineEditRecord);
+  const activeDecision = getActiveDecisionRecord(inlineEditRecord);
+
+  function onConfirmDelete() {
+    if (section === null || pendingDeleteRef === null) return;
+    saveDraftSection(
+      section,
+      deleteSlideInlineRecord(section, pendingDeleteRef),
+      "deleted",
+    );
+  }
+  function onItemSave(next: KanbanItem) {
+    saveActiveRecord(
+      section,
+      activeItem,
+      applySlideInlineItemEdit,
+      next,
+      saveDraftSection,
+    );
+  }
+  function onRiskSave(next: RiskEntry) {
+    saveActiveRecord(
+      section,
+      activeRisk,
+      applySlideInlineRiskEdit,
+      next,
+      saveDraftSection,
+    );
+  }
+  function onDecisionSave(next: DecisionEntry) {
+    saveActiveRecord(
+      section,
+      activeDecision,
+      applySlideInlineDecisionEdit,
+      next,
+      saveDraftSection,
+    );
+  }
+
+  return { onConfirmDelete, onItemSave, onRiskSave, onDecisionSave };
+}
+
+/** Owns the two pieces of inline-edit state (which row is open / pending
+ * delete) and composes the derived dialog data with the save/delete/activate
+ * commands into the shape `SlideInlineEditorDialogs` expects. */
+function useInlineEditCommands({
   section,
   formData,
   canInlineEdit,
   refetchSection,
-}: UseSlideInlineEditorArgs): SlideInlineEditor {
-  const trpc = useTRPC();
-  const qc = useQueryClient();
+}: UseSlideInlineEditorArgs) {
   const [inlineEditRef, setInlineEditRef] = useState<GridRowEditableRef | null>(
     null,
   );
   const [pendingDeleteRef, setPendingDeleteRef] =
     useState<GridRowEditableRef | null>(null);
-  const saveOperationRef = useRef<"saved" | "deleted">("saved");
-
-  const saveDraftMut = useMutation(
-    // eslint-disable-next-line react-hooks/refs -- refs are touched inside mutation callbacks (event time); the options factory just runs during render
-    trpc.reports.saveDraft.mutationOptions({
-      onSuccess: () => {
-        invalidateLeadForm(qc, trpc);
-        refetchSection();
-        setInlineEditRef(null);
-        setPendingDeleteRef(null);
-        toast.success(
-          saveOperationRef.current === "deleted"
-            ? "Slide record deleted"
-            : "Slide record saved",
-        );
-      },
-      onError: (err: unknown) => {
-        if (isConflictError(err)) {
-          refetchSection();
-          toast.error(
-            "This section was changed elsewhere. Reloaded the latest version — re-apply your slide edit and save again.",
-          );
-          return;
-        }
-        toast.error(err instanceof Error ? err.message : "Slide save failed");
-      },
-    }),
-  );
-
-  const dialogProducts = useMemo(
-    () => (formData ? toDialogProducts(formData) : []),
-    [formData],
-  );
-  const dialogActivities = useMemo(
-    () => (section ? toDialogActivities(section) : []),
-    [section],
-  );
-  const dialogRanks = useMemo(
-    () => (formData ? ownPeriodRanks(formData) : []),
-    [formData],
-  );
-  const dialogRisks = useMemo(
-    () => (formData ? toDialogRisks(formData) : []),
-    [formData],
-  );
-  const inlineEditRecord = useMemo(
-    () =>
-      section && formData && inlineEditRef
-        ? resolveSlideInlineRecord(section, formData, inlineEditRef)
-        : null,
-    [formData, inlineEditRef, section],
-  );
-  const pendingDeleteRecord = useMemo(
-    () =>
-      section && formData && pendingDeleteRef
-        ? resolveSlideInlineRecord(section, formData, pendingDeleteRef)
-        : null,
-    [formData, pendingDeleteRef, section],
-  );
-  const activeItem = getActiveItemRecord(inlineEditRecord);
-  const activeRisk = getActiveRiskRecord(inlineEditRecord);
-  const activeDecision = getActiveDecisionRecord(inlineEditRecord);
-  const stagesForProduct = (productId: string) =>
-    section ? ownedStagesForProduct(section, productId) : [];
-
-  function saveDraftSection(
-    nextSection: ReportSectionReadModel,
-    operation: "saved" | "deleted",
-  ) {
-    if (!canInlineEdit || section === null || saveDraftMut.isPending) return;
-    saveOperationRef.current = operation;
-    saveDraftMut.mutate({
-      ...sectionToDraftPayload(nextSection),
-      version: section.version,
-    });
-  }
+  const clearActive = () => {
+    setInlineEditRef(null);
+    setPendingDeleteRef(null);
+  };
+  const { saveDraftSection } = useSlideDraftSaveMutation({
+    refetchSection,
+    onSaved: clearActive,
+  });
+  const dialogData = useInlineEditDialogData({
+    section,
+    formData,
+    inlineEditRef,
+    pendingDeleteRef,
+  });
+  const saveHandlers = useInlineSaveHandlers({
+    section,
+    inlineEditRecord: dialogData.inlineEditRecord,
+    pendingDeleteRef,
+    saveDraftSection,
+  });
 
   function handleRowActivate(ref: GridRowEditableRef) {
     if (!canInlineEdit || section === null || formData === null) return;
@@ -149,61 +171,43 @@ export function useSlideInlineEditor({
   }
 
   function requestInlineDelete() {
-    if (inlineEditRecord === null || saveDraftMut.isPending) return;
-    setPendingDeleteRef(inlineEditRecord.ref);
-  }
-
-  function confirmInlineDelete() {
-    if (section === null || pendingDeleteRef === null) return;
-    saveDraftSection(
-      deleteSlideInlineRecord(section, pendingDeleteRef),
-      "deleted",
-    );
-  }
-
-  function handleItemSave(next: KanbanItem) {
-    if (section === null || activeItem === null) return;
-    saveDraftSection(
-      applySlideInlineItemEdit(section, activeItem.ref.stableId, next),
-      "saved",
-    );
-  }
-
-  function handleRiskSave(next: RiskEntry) {
-    if (section === null || activeRisk === null) return;
-    saveDraftSection(
-      applySlideInlineRiskEdit(section, activeRisk.ref.stableId, next),
-      "saved",
-    );
-  }
-
-  function handleDecisionSave(next: DecisionEntry) {
-    if (section === null || activeDecision === null) return;
-    saveDraftSection(
-      applySlideInlineDecisionEdit(section, activeDecision.ref.stableId, next),
-      "saved",
-    );
+    if (dialogData.inlineEditRecord === null) return;
+    setPendingDeleteRef(dialogData.inlineEditRecord.ref);
   }
 
   return {
+    ...dialogData,
+    ...saveHandlers,
     onRowActivate: canInlineEdit ? handleRowActivate : undefined,
+    onCancelEdit: () => setInlineEditRef(null),
+    onRequestDelete: requestInlineDelete,
+    onCancelDelete: () => setPendingDeleteRef(null),
+  };
+}
+
+export function useSlideInlineEditor(
+  args: UseSlideInlineEditorArgs,
+): SlideInlineEditor {
+  const commands = useInlineEditCommands(args);
+  return {
+    onRowActivate: commands.onRowActivate,
     dialogs: (
       <SlideInlineEditorDialogs
-        inlineEditRecord={inlineEditRecord}
-        pendingDeleteRecord={pendingDeleteRecord}
-        currentUserName={formData?.currentUser.name}
-        dialogProducts={dialogProducts}
-        dialogActivities={dialogActivities}
-        dialogRanks={dialogRanks}
-        dialogRisks={dialogRisks}
-        stagesForProduct={stagesForProduct}
-        onItemSave={handleItemSave}
-        onRiskSave={handleRiskSave}
-        onDecisionSave={handleDecisionSave}
-        onCancelEdit={() => setInlineEditRef(null)}
-        onRequestDelete={requestInlineDelete}
-        onConfirmDelete={confirmInlineDelete}
-        onCancelDelete={() => setPendingDeleteRef(null)}
+        inlineEditRecord={commands.inlineEditRecord}
+        pendingDeleteRecord={commands.pendingDeleteRecord}
+        currentUserName={args.formData?.currentUser.name}
+        dialogProducts={commands.dialogProducts}
+        dialogActivities={commands.dialogActivities}
+        dialogRanks={commands.dialogRanks}
+        dialogRisks={commands.dialogRisks}
+        stagesForProduct={commands.stagesForProduct}
+        onItemSave={commands.onItemSave}
+        onRiskSave={commands.onRiskSave}
+        onDecisionSave={commands.onDecisionSave}
+        onCancelEdit={commands.onCancelEdit}
+        onRequestDelete={commands.onRequestDelete}
+        onConfirmDelete={commands.onConfirmDelete}
+        onCancelDelete={commands.onCancelDelete}
       />
     ),
   };

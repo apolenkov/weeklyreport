@@ -32,8 +32,8 @@ function SlideEscHint({ isFullscreen }: { readonly isFullscreen: boolean }) {
 
   // Keep the polite live region in the DOM the whole time we are fullscreen and
   // toggle only its text — several screen readers miss a region that mounts
-  // already populated, so it must exist (empty) before the text is injected
-  // (review fix). When dismissed it collapses to an empty sr-only node.
+  // already populated, so it must exist (empty) before the text is injected.
+  // When dismissed it collapses to an empty sr-only node.
   return (
     <div
       role="status"
@@ -50,10 +50,10 @@ function SlideEscHint({ isFullscreen }: { readonly isFullscreen: boolean }) {
 }
 
 /**
- * add-slide-fullscreen-exit-affordance: the in-fullscreen overlay shared by
- * every slide deck — the persistent floating "Exit" pill plus the transient
- * Esc hint. Both must render INSIDE the fullscreened element; both self-gate on
- * `isFullscreen`. The deck-level `useFullscreen` owner supplies the state.
+ * The in-fullscreen overlay shared by every slide deck — the persistent
+ * floating "Exit" pill plus the transient Esc hint. Both must render INSIDE
+ * the fullscreened element; both self-gate on `isFullscreen`. The deck-level
+ * `useFullscreen` owner supplies the state.
  */
 export function DeckFullscreenOverlay({
   isFullscreen,

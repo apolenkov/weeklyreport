@@ -7,16 +7,18 @@ import {
   buildOwnRiskRow,
   collapseAuthorSeries,
   type GridAuthor,
+  type GridColumnKey,
   type GridColumns,
   type GridRow,
+  hasText,
   sortCellRows,
 } from "./slide-grid-rows";
 
 export interface CellBuckets {
-  readonly current: GridRow[];
-  readonly next: GridRow[];
-  readonly risks: GridRow[];
-  readonly decisions: GridRow[];
+  readonly current: readonly GridRow[];
+  readonly next: readonly GridRow[];
+  readonly risks: readonly GridRow[];
+  readonly decisions: readonly GridRow[];
 }
 
 export const emptyBuckets = (): CellBuckets => ({
@@ -25,10 +27,6 @@ export const emptyBuckets = (): CellBuckets => ({
   risks: [],
   decisions: [],
 });
-
-function hasText(text: string | null | undefined): text is string {
-  return typeof text === "string" && text.trim().length > 0;
-}
 
 /** An activity subsection lives under its single linked product; zero or
  * multiple links place it on the Shared context card (no duplication). */
@@ -47,6 +45,135 @@ export interface CollectedCells {
   readonly activityCells: ReadonlyMap<string, CellBuckets>;
 }
 
+/** Where a single row lands: the product-level map keyed by product id (or the
+ * shared card), or the per-activity map keyed by activity id. An activity
+ * parent always wins over a product parent — mirrors the pre-refactor
+ * `bucketFor(productId, activityId)` routing. */
+interface RowPlacement {
+  readonly scope: "product" | "activity";
+  readonly key: string;
+  readonly column: GridColumnKey;
+  readonly row: GridRow;
+}
+
+function placeAt(
+  productKey: string,
+  activityId: string | null | undefined,
+  column: GridColumnKey,
+  row: GridRow,
+): RowPlacement {
+  return activityId == null
+    ? { scope: "product", key: productKey, column, row }
+    : { scope: "activity", key: activityId, column, row };
+}
+
+/** Immutably appends `row` to `key`'s bucket in `map`, creating the bucket (and
+ * the map entry) on first use. */
+function withRow(
+  map: ReadonlyMap<string, CellBuckets>,
+  key: string,
+  column: GridColumnKey,
+  row: GridRow,
+): ReadonlyMap<string, CellBuckets> {
+  const bucket = map.get(key) ?? emptyBuckets();
+  return new Map(map).set(key, {
+    ...bucket,
+    [column]: [...bucket[column], row],
+  });
+}
+
+function placeRow(acc: CollectedCells, next: RowPlacement): CollectedCells {
+  return next.scope === "product"
+    ? {
+        ...acc,
+        productLevel: withRow(
+          acc.productLevel,
+          next.key,
+          next.column,
+          next.row,
+        ),
+      }
+    : {
+        ...acc,
+        activityCells: withRow(
+          acc.activityCells,
+          next.key,
+          next.column,
+          next.row,
+        ),
+      };
+}
+
+type ResolveProductKey = (productId: string | null | undefined) => string;
+
+function ownItemPlacements(
+  section: ReportSectionReadModel,
+  owner: GridAuthor,
+  resolveProductKey: ResolveProductKey,
+): readonly RowPlacement[] {
+  return section.items
+    .filter((item) => hasText(item.text))
+    .map((item, index) =>
+      placeAt(
+        resolveProductKey(item.projectId),
+        item.activityId,
+        item.type === "current" ? "current" : "next",
+        buildOwnItemRow(item, owner, index),
+      ),
+    );
+}
+
+function ownRiskPlacements(
+  section: ReportSectionReadModel,
+  owner: GridAuthor,
+  resolveProductKey: ResolveProductKey,
+): readonly RowPlacement[] {
+  return section.risks
+    .filter((risk) => hasText(risk.risk))
+    .map((risk, index) =>
+      placeAt(
+        resolveProductKey(risk.projectId),
+        risk.activityId,
+        "risks",
+        buildOwnRiskRow(risk, owner, index),
+      ),
+    );
+}
+
+function ownDecisionPlacements(
+  section: ReportSectionReadModel,
+  owner: GridAuthor,
+  resolveProductKey: ResolveProductKey,
+): readonly RowPlacement[] {
+  return section.decisions
+    .filter((decision) => hasText(decision.text))
+    .map((decision, index) =>
+      placeAt(
+        resolveProductKey(decision.productId),
+        decision.activityId,
+        "decisions",
+        buildOwnDecisionRow(decision, owner, index),
+      ),
+    );
+}
+
+/** Foreign rows never carry an activity parent and only land on products the
+ * deck already shows — unknown-product rows are dropped, never folded to the
+ * shared card. */
+function foreignPlacements(
+  foreignRows: readonly ForeignGridRow[],
+  knownProductIds: ReadonlySet<string>,
+): readonly RowPlacement[] {
+  return foreignRows
+    .filter(({ productId }) => knownProductIds.has(productId))
+    .map(({ row, productId, column }) => ({
+      scope: "product" as const,
+      key: productId,
+      column,
+      row,
+    }));
+}
+
 /** Distribute own + foreign rows into per-product product-level buckets and
  * per-activity buckets. Rows on unknown products fold into the shared card;
  * foreign rows land only on products the deck already shows. */
@@ -58,53 +185,22 @@ export function collectCells(input: {
   readonly sharedCardId: string;
 }): CollectedCells {
   const { section, owner, foreignRows, knownProductIds, sharedCardId } = input;
-  const productLevel = new Map<string, CellBuckets>();
-  const activityCells = new Map<string, CellBuckets>();
-  const productBucket = (productId: string | null | undefined): CellBuckets => {
-    const key =
-      productId != null && knownProductIds.has(productId)
-        ? productId
-        : sharedCardId;
-    const existing = productLevel.get(key) ?? emptyBuckets();
-    productLevel.set(key, existing);
-    return existing;
-  };
-  const bucketFor = (
-    productId: string | null | undefined,
-    activityId: string | null | undefined,
-  ): CellBuckets => {
-    if (activityId == null) return productBucket(productId);
-    const existing = activityCells.get(activityId) ?? emptyBuckets();
-    activityCells.set(activityId, existing);
-    return existing;
-  };
+  const resolveProductKey: ResolveProductKey = (productId) =>
+    productId != null && knownProductIds.has(productId)
+      ? productId
+      : sharedCardId;
 
-  section.items
-    .filter((item) => hasText(item.text))
-    .forEach((item, index) => {
-      const cells = bucketFor(item.projectId, item.activityId);
-      const rows = item.type === "current" ? cells.current : cells.next;
-      rows.push(buildOwnItemRow(item, owner, index));
-    });
-  section.risks
-    .filter((risk) => hasText(risk.risk))
-    .forEach((risk, index) => {
-      bucketFor(risk.projectId, risk.activityId).risks.push(
-        buildOwnRiskRow(risk, owner, index),
-      );
-    });
-  section.decisions
-    .filter((decision) => hasText(decision.text))
-    .forEach((decision, index) => {
-      bucketFor(decision.productId, decision.activityId).decisions.push(
-        buildOwnDecisionRow(decision, owner, index),
-      );
-    });
-  for (const { row, productId, column } of foreignRows) {
-    if (!knownProductIds.has(productId)) continue;
-    productBucket(productId)[column].push(row);
-  }
-  return { productLevel, activityCells };
+  const placements = [
+    ...ownItemPlacements(section, owner, resolveProductKey),
+    ...ownRiskPlacements(section, owner, resolveProductKey),
+    ...ownDecisionPlacements(section, owner, resolveProductKey),
+    ...foreignPlacements(foreignRows, knownProductIds),
+  ];
+
+  return placements.reduce<CollectedCells>(placeRow, {
+    productLevel: new Map(),
+    activityCells: new Map(),
+  });
 }
 
 export function finalizeColumns(
@@ -128,44 +224,4 @@ export function columnsRowCount(columns: GridColumns): number {
     columns.risks.length +
     columns.decisions.length
   );
-}
-
-export interface GridPriorityCard {
-  readonly id: string;
-  readonly productId: string;
-  readonly rank: number;
-  readonly text: string;
-  readonly productName: string;
-  readonly authorId: string;
-}
-
-/** Own ranked items only (foreign rows never carry a rank), ascending rank;
- * ties keep input order — the section author is the only rank source today. */
-export function buildPriorityStrip(input: {
-  readonly section: ReportSectionReadModel;
-  readonly productNameById: ReadonlyMap<string, string>;
-  readonly activityHomeById: ReadonlyMap<string, string>;
-  readonly sharedCardId: string;
-  readonly sharedCardName: string;
-}): readonly GridPriorityCard[] {
-  const { section, productNameById, activityHomeById } = input;
-  const cards = section.items.flatMap((item, index) => {
-    const rank = item.priorityRank;
-    if (rank == null || !hasText(item.text)) return [];
-    const homeProductId =
-      item.activityId != null
-        ? (activityHomeById.get(item.activityId) ?? input.sharedCardId)
-        : (item.projectId ?? input.sharedCardId);
-    return [
-      {
-        id: item.id ?? item.stableId ?? `priority-${String(index)}`,
-        productId: homeProductId,
-        rank,
-        text: item.text.trim(),
-        productName: productNameById.get(homeProductId) ?? input.sharedCardName,
-        authorId: section.authorId,
-      },
-    ];
-  });
-  return [...cards].sort((a, b) => a.rank - b.rank);
 }

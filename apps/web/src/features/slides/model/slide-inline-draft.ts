@@ -31,7 +31,6 @@ export function applySlideInlineItemEdit(
             ...parentFields,
             text: item.text,
             workflowStatus,
-            stageName: null,
             priorityRank: item.priorityRank ?? null,
             pausedReason:
               workflowStatus === "paused" ? (item.pausedReason ?? null) : null,
@@ -64,7 +63,6 @@ export function applySlideInlineRiskEdit(
             impact: risk.impact,
             mitigation: risk.mitigation,
             severity: risk.severity,
-            stageName: null,
           }
         : existing,
     ),
@@ -98,7 +96,6 @@ export function applySlideInlineDecisionEdit(
             owner: decision.owner,
             impact: decision.impact,
             deadline: decision.deadline ? new Date(decision.deadline) : null,
-            stageName: null,
           }
         : existing,
     ),

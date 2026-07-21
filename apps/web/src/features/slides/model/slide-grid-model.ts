@@ -2,25 +2,25 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 
 import { worstTrafficStatus } from "../../../lib/status-presentation";
 import type { CrossAuthorContentRow } from "../../report-sections";
-import {
-  activityHomeProduct,
-  buildPriorityStrip,
-  collectCells,
-  columnsRowCount,
-  emptyBuckets,
-  finalizeColumns,
-  type GridPriorityCard,
-} from "./slide-grid-cells";
+import { buildAuthorRoster } from "./slide-grid-authors";
+import { activityHomeProduct, collectCells } from "./slide-grid-cells";
 import { buildForeignRows } from "./slide-grid-foreign";
 import {
-  buildAuthorRoster,
+  buildPriorityStrip,
+  type GridPriorityCard,
+} from "./slide-grid-priority";
+import {
   type GridAuthor,
   type GridColumns,
   type SlideTrafficStatus,
   sortStageNames,
 } from "./slide-grid-rows";
+import {
+  buildProductSubsections,
+  deriveProductCards,
+} from "./slide-grid-subsections";
 
-export type { GridPriorityCard } from "./slide-grid-cells";
+export type { GridPriorityCard } from "./slide-grid-priority";
 export type {
   GridAuthor,
   GridColumnKey,
@@ -93,6 +93,75 @@ function uniqueProducts(
   });
 }
 
+interface ProductLookup {
+  readonly realProducts: ReportSectionReadModel["projects"];
+  readonly knownProductIds: ReadonlySet<string>;
+  readonly productNameById: ReadonlyMap<string, string>;
+}
+
+function deriveProductLookup(section: ReportSectionReadModel): ProductLookup {
+  const realProducts = uniqueProducts(section.projects);
+  const knownProductIds = new Set(realProducts.map((p) => p.projectId));
+  const productNameById = new Map<string, string>([
+    ...realProducts.map(
+      (p) => [p.projectId, p.projectName] as readonly [string, string],
+    ),
+    [SHARED_CARD_ID, SHARED_CARD_NAME],
+    ...(section.referencedProjects ?? []).map(
+      (p) => [p.projectId, p.projectName] as readonly [string, string],
+    ),
+  ]);
+  return { realProducts, knownProductIds, productNameById };
+}
+
+function buildActivityHomeById(
+  section: ReportSectionReadModel,
+  knownProductIds: ReadonlySet<string>,
+): ReadonlyMap<string, string> {
+  return new Map(
+    section.activities.map((activity) => [
+      activity.activityId,
+      activityHomeProduct(
+        activity.linkedProducts,
+        knownProductIds,
+        SHARED_CARD_ID,
+      ),
+    ]),
+  );
+}
+
+type HeaderSummary = Pick<
+  SlideGridModel,
+  "counters" | "onTrack" | "worstStatus"
+>;
+
+/** "N of M products on track" and the header counters/worst-status chip —
+ * always derived from real product cards, never the pseudo Shared card. */
+function buildHeaderSummary(
+  realCards: readonly GridProductCard[],
+  products: readonly GridProductCard[],
+  priorityStrip: readonly GridPriorityCard[],
+): HeaderSummary {
+  const scored = realCards.filter(
+    (card) => !card.noData && card.status != null,
+  );
+  const allColumns = products.flatMap((card) =>
+    card.subsections.map((subsection) => subsection.columns),
+  );
+  return {
+    worstStatus: worstTrafficStatus(realCards.map((card) => card.status)),
+    counters: {
+      current: allColumns.reduce((sum, c) => sum + c.current.length, 0),
+      risks: allColumns.reduce((sum, c) => sum + c.risks.length, 0),
+      priorities: priorityStrip.length,
+    },
+    onTrack: {
+      on: scored.filter((card) => card.status === "green").length,
+      total: scored.length,
+    },
+  };
+}
+
 /**
  * Pure view model for the by-product slide grid: products → (product-level +
  * per-activity subsections) → four sorted, author-collapsed record columns,
@@ -108,18 +177,8 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
   const authorOrder = new Map(
     roster.authors.map((author, index) => [author.id, index]),
   );
-
-  const realProducts = uniqueProducts(section.projects);
-  const knownProductIds = new Set(realProducts.map((p) => p.projectId));
-  const productNameById = new Map<string, string>([
-    ...realProducts.map(
-      (p) => [p.projectId, p.projectName] as readonly [string, string],
-    ),
-    [SHARED_CARD_ID, SHARED_CARD_NAME],
-    ...(section.referencedProjects ?? []).map(
-      (p) => [p.projectId, p.projectName] as readonly [string, string],
-    ),
-  ]);
+  const { realProducts, knownProductIds, productNameById } =
+    deriveProductLookup(section);
 
   const { productLevel, activityCells } = collectCells({
     section,
@@ -128,93 +187,24 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
     knownProductIds,
     sharedCardId: SHARED_CARD_ID,
   });
+  const activityHomeById = buildActivityHomeById(section, knownProductIds);
 
-  const activityHomeById = new Map(
-    section.activities.map((activity) => [
-      activity.activityId,
-      activityHomeProduct(
-        activity.linkedProducts,
-        knownProductIds,
-        SHARED_CARD_ID,
-      ),
-    ]),
-  );
-  const activityMeta = new Map(
-    section.activities.map((activity) => [activity.activityId, activity]),
-  );
+  const subsectionsByProduct = buildProductSubsections({
+    section,
+    productLevel,
+    activityCells,
+    activityHomeById,
+    authorOrder,
+    sharedCardId: SHARED_CARD_ID,
+  });
+  const { realCards, products } = deriveProductCards({
+    realProducts,
+    subsectionsByProduct,
+    productStatuses,
+    sharedCardId: SHARED_CARD_ID,
+    sharedCardName: SHARED_CARD_NAME,
+  });
 
-  const subsectionsByProduct = new Map<string, readonly GridSubsection[]>();
-  const addSubsection = (productId: string, subsection: GridSubsection) => {
-    const list = subsectionsByProduct.get(productId) ?? [];
-    subsectionsByProduct.set(productId, [...list, subsection]);
-  };
-  for (const [productId, cells] of productLevel) {
-    addSubsection(productId, {
-      kind: "product-level",
-      id: `${productId}-product-level`,
-      name: "Product-level",
-      status: null,
-      showStages: true,
-      columns: finalizeColumns(cells, authorOrder),
-    });
-  }
-  // Every attached activity gets a project subsection — status-only ones (no
-  // records this period) render as a labeled header row with empty columns, so
-  // projects read like Product-level lines instead of a separate pill lane.
-  const recordOnlyActivityIds = [...activityCells.keys()].filter(
-    (activityId) => !activityMeta.has(activityId),
-  );
-  [
-    ...section.activities.map((activity) => activity.activityId),
-    ...recordOnlyActivityIds,
-  ]
-    .map((activityId) => {
-      const meta = activityMeta.get(activityId);
-      return {
-        home: activityHomeById.get(activityId) ?? SHARED_CARD_ID,
-        subsection: {
-          kind: "project" as const,
-          id: activityId,
-          name: meta?.activityName ?? "Activity",
-          status: meta ? (meta.derivedStatus ?? meta.status) : null,
-          showStages: false,
-          columns: finalizeColumns(
-            activityCells.get(activityId) ?? emptyBuckets(),
-            authorOrder,
-          ),
-        },
-      };
-    })
-    .sort((a, b) => a.subsection.name.localeCompare(b.subsection.name))
-    .forEach(({ home, subsection }) => {
-      addSubsection(home, subsection);
-    });
-
-  const toCard = (id: string, name: string): GridProductCard => {
-    const subsections = subsectionsByProduct.get(id) ?? [];
-    const rowCount = subsections.reduce(
-      (sum, subsection) => sum + columnsRowCount(subsection.columns),
-      0,
-    );
-    return {
-      id,
-      name,
-      status: productStatuses.get(id) ?? null,
-      // A status-only project header is data: keep the card open for it.
-      noData: rowCount === 0 && !subsections.some((s) => s.kind === "project"),
-      subsections,
-    };
-  };
-  const realCards = realProducts.map((p) => toCard(p.projectId, p.projectName));
-  const sharedCard = toCard(SHARED_CARD_ID, SHARED_CARD_NAME);
-  const products = sharedCard.noData ? realCards : [...realCards, sharedCard];
-
-  const scored = realCards.filter(
-    (card) => !card.noData && card.status != null,
-  );
-  const allColumns = products.flatMap((card) =>
-    card.subsections.map((subsection) => subsection.columns),
-  );
   const priorityStrip = buildPriorityStrip({
     section,
     productNameById,
@@ -222,20 +212,12 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
     sharedCardId: SHARED_CARD_ID,
     sharedCardName: SHARED_CARD_NAME,
   });
+
   return {
     authors: roster.authors,
-    worstStatus: worstTrafficStatus(realCards.map((card) => card.status)),
-    counters: {
-      current: allColumns.reduce((sum, c) => sum + c.current.length, 0),
-      risks: allColumns.reduce((sum, c) => sum + c.risks.length, 0),
-      priorities: priorityStrip.length,
-    },
-    onTrack: {
-      on: scored.filter((card) => card.status === "green").length,
-      total: scored.length,
-    },
     priorityStrip,
     products,
+    ...buildHeaderSummary(realCards, products, priorityStrip),
   };
 }
 

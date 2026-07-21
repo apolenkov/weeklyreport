@@ -21,14 +21,14 @@ import { useSlideInlineEditor } from "./use-slide-inline-editor";
 interface LeadSlidesClientProps {
   readonly initialReportId?: string | null;
   readonly chrome?: "full" | "content";
-  /** W9.A: when provided, this ref is applied to the deck root div so the
-   *  caller (lead-form header) can host the fullscreen button. */
+  /** When provided, this ref is applied to the deck root div so the caller
+   *  (lead-form header) can host the fullscreen button. */
   readonly deckRef?: RefObject<HTMLDivElement | null>;
   /**
-   * add-slide-fullscreen-exit-affordance: on the lead-form-hosted path the
-   * caller owns the single `useFullscreen` hook and threads its state here, so
-   * the deck's floating pill + Esc hint are presentational and add no second
-   * listener. Absent on the standalone path, where the deck owns the hook.
+   * On the lead-form-hosted path the caller owns the single `useFullscreen`
+   * hook and threads its state here, so the deck's floating pill + Esc hint
+   * are presentational and add no second listener. Absent on the standalone
+   * path, where the deck owns the hook.
    */
   readonly isFullscreen?: boolean;
   readonly onToggle?: () => void;
@@ -54,10 +54,10 @@ export function LeadSlidesClient({
   const [density, setDensity] = useState<SlideDensity>("document");
   const internalDeckRef = useRef<HTMLDivElement>(null);
   const deckRef = externalDeckRef ?? internalDeckRef;
-  // add-slide-fullscreen-exit-affordance: the lead-form-hosted path passes
-  // isFullscreen/onToggle (it owns the single hook), so the local hook is
-  // disabled to keep exactly one `f`/fullscreenchange listener. The standalone
-  // path owns the hook here and returns focus to its toolbar toggle on exit.
+  // The lead-form-hosted path passes isFullscreen/onToggle (it owns the single
+  // hook), so the local hook is disabled to keep exactly one fullscreenchange
+  // listener. The standalone path owns the hook here and returns focus to its
+  // toolbar toggle on exit.
   const hosted = externalOnToggle !== undefined;
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const localFs = useFullscreen(internalDeckRef, toggleButtonRef, !hosted);

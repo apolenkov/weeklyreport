@@ -5,10 +5,10 @@ import { Gauge } from "lucide-react";
 import type { SectionSlideModel } from "../model/section-slide-contracts";
 
 /**
- * head-slides-carousel-fullscreen: the head deck's slide navigation — a
- * horizontal carousel of slide cards above the active slide, replacing the
- * former left sidebar list. Selecting a card activates that slide; arrow-key
- * navigation is owned by the parent deck section.
+ * The head deck's slide navigation — a horizontal carousel of slide cards
+ * above the active slide, replacing the former left sidebar list. Selecting a
+ * card activates that slide; arrow-key navigation is owned by the parent deck
+ * section.
  *
  * Cards deliberately carry NO status badge or status text: the slide status
  * (Blocked / Review / Ready) renders exactly once, on the active slide header
@@ -42,8 +42,8 @@ export function HeadSlideCarousel({
             className={[
               "flex w-[180px] shrink-0 flex-col gap-1 rounded-[var(--radius)] border px-3 py-2.5 text-left transition-colors",
               selected
-                ? "border-[var(--color-starbucks-accent)] bg-white shadow-[0_0_0_2px_rgba(0,117,74,0.13)]"
-                : "border-[rgba(0,0,0,0.10)] bg-white hover:border-[var(--color-border)]",
+                ? "border-[var(--color-starbucks-accent)] bg-[var(--color-card)] shadow-[0_0_0_2px_rgba(0,117,74,0.13)]"
+                : "border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] hover:border-[var(--color-border)]",
             ].join(" ")}
           >
             <span className="truncate text-sm font-semibold text-[var(--color-foreground)]">

@@ -48,6 +48,15 @@ describe("lead slide periods", () => {
     expect(options[2]?.label).toContain("(Archived)");
   });
 
+  it("leaves a plain (non-current, non-archived) option's label without a suffix", () => {
+    const options = buildLeadSlidePeriodOptions(
+      [historyEntry(PUBLISHED_REPORT_ID, "2026-05-04T00:00:00.000Z")],
+      CURRENT_REPORT_ID,
+    );
+    expect(options[0]?.label).not.toContain("(Current)");
+    expect(options[0]?.label).not.toContain("(Archived)");
+  });
+
   it("resolves requested, active, and newest non-archived report ids", () => {
     const options = buildLeadSlidePeriodOptions(
       [
@@ -71,6 +80,24 @@ describe("lead slide periods", () => {
         activeReportId: PUBLISHED_REPORT_ID,
       }),
     ).toBe(PUBLISHED_REPORT_ID);
+    expect(
+      resolveLeadSlideReportId({
+        options,
+        requestedReportId: null,
+        activeReportId: null,
+      }),
+    ).toBe(PUBLISHED_REPORT_ID);
+  });
+
+  it("falls back to the newest option even when every option is archived", () => {
+    const options = buildLeadSlidePeriodOptions(
+      [
+        historyEntry(ARCHIVED_REPORT_ID, "2026-04-27T00:00:00.000Z", true),
+        historyEntry(PUBLISHED_REPORT_ID, "2026-05-04T00:00:00.000Z", true),
+      ],
+      null,
+    );
+
     expect(
       resolveLeadSlideReportId({
         options,
