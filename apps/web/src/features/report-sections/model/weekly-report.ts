@@ -8,8 +8,10 @@
  *                      decisions / priorities)
  *
  * The presentation types live in `./weekly-report-types` and the section
- * grouping/formatting helpers in `./weekly-report-groupers`; both are
- * re-exported here so existing importers are unaffected.
+ * grouping/formatting helpers in `./weekly-report-groupers` (item/risk
+ * re-slicing) and `./weekly-report-groupers-decisions` (decisions/priorities/
+ * authors/escalations); all are re-exported here so existing importers are
+ * unaffected.
  *
  * How the slices are derived:
  * - `weeklyReport.get` returns `leadSections: ReportSectionReadModel[]` (sliced
@@ -35,14 +37,16 @@ import {
 import { reportHasContent } from "./report-content";
 import {
   buildProjectNameMap,
-  groupDecisionsByProject,
   groupItemsByProject,
-  groupPrioritiesByProject,
   groupRisksByProject,
   initialsFromName,
   statusLabelFor,
   trafficToProductStatus,
 } from "./weekly-report-groupers";
+import {
+  groupDecisionsByProject,
+  groupPrioritiesByProject,
+} from "./weekly-report-groupers-decisions";
 import {
   buildWeeklyReportProjectionContext,
   type ProjectedWeeklyProduct,

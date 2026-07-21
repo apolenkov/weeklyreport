@@ -1,9 +1,8 @@
 /**
  * Regression tests for PulseBackground.
  *
- * The decorative ECG/heartbeat SVG layer was removed 2026-06-23 along
- * with the rest of the pulse motif. The background is now a static
- * container (gradient + dot grid), kept fully out of the a11y tree via
+ * The background is a static container (gradient + dot grid), with no
+ * decorative ECG/heartbeat SVG layer, kept fully out of the a11y tree via
  * aria-hidden on the wrapper.
  */
 import { render } from "@testing-library/react";

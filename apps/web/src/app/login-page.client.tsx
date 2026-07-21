@@ -3,9 +3,7 @@
 import {
   DEFAULT_ORGANIZATION_IDENTITY,
   type OrganizationPublic,
-  sessionRoleSchema,
 } from "@customreport/shared";
-import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -15,10 +13,9 @@ import { type LastRoleRecord, readLastRole } from "../lib/last-role";
 import { sanitizeNext } from "../lib/safe-next";
 import { useTRPC } from "../lib/trpc-context";
 import { webEnv } from "../lib/web-env";
+import { LastRoleCard, PrimaryCta } from "./login-page-controls";
 import {
   defaultRedirectFor,
-  DEV_EMAIL_FOR_ROLE,
-  devLoginHref,
   FALLBACK_REDIRECT,
   getSessionRole,
   ROLE_LABEL,
@@ -149,38 +146,6 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
       ? "/auth/saml/login"
       : `/auth/saml/login?next=${encodeURIComponent(safeNext)}`;
 
-  // All three AUTH_STUB card states (skeleton / last-session hint /
-  // role picker) share one min-height — just above the natural height
-  // of the tallest state, the role picker (112.5px measured: label +
-  // two button rows + padding + border). Equal heights keep the
-  // divider and footer below from shifting when hydration swaps one
-  // state for another.
-  const stubCardClassName =
-    "min-h-[113px] rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left";
-
-  // Always visible in both the last-session hint and the no-hint
-  // picker (UFB rev 2026-06-10: the «Change role» toggle expanded the
-  // card past its reserved height — another layout jump — so the grid
-  // is now permanent and every card state has the same structure).
-  const roleOptionsList = (
-    <ul
-      className="mt-2 grid grid-cols-2 gap-1.5"
-      data-testid="last-role-switcher"
-    >
-      {sessionRoleSchema.options.map((role) => (
-        <li key={role}>
-          <a
-            href={devLoginHref(role, DEV_EMAIL_FOR_ROLE[role])}
-            className="block rounded border border-[#ece8e2] bg-white px-2 py-1.5 text-center text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
-            data-testid={`last-role-option-${role}`}
-          >
-            {ROLE_LABEL[role]}
-          </a>
-        </li>
-      ))}
-    </ul>
-  );
-
   return (
     <main id="main-content" className="flex min-h-svh">
       {/* a11y (page-has-heading-one): the landing page's visible brand is the
@@ -219,48 +184,11 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
             Status Reporting System
           </p>
 
-          {/* When a last-role hint exists, the primary CTA points at that
-              role's dev-login (one-click resume). Falls back to admin in stub
-              mode / SSO in real mode. */}
-          <a
-            href={
-              AUTH_STUB
-                ? lastRole
-                  ? devLoginHref(lastRole.role, lastRole.email)
-                  : devLoginHref("admin", DEV_EMAIL_FOR_ROLE.admin)
-                : ssoHref
-            }
-            className="flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-4 font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-white transition-[background-color,opacity,transform] hover:bg-[var(--color-primary)] hover:-translate-y-px active:translate-y-0 active:opacity-90"
-            style={{
-              minHeight: "52px",
-              boxShadow: "0 2px 12px rgba(0,98,65,0.2)",
-            }}
-            aria-label={
-              AUTH_STUB
-                ? lastRole
-                  ? `Enter application as ${lastRole.name} (${ROLE_LABEL[lastRole.role]})`
-                  : "Enter application as admin"
-                : "Sign in with corporate SSO"
-            }
-            data-testid="primary-cta"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-              <polyline points="10 17 15 12 10 7" />
-              <line x1="15" y1="12" x2="3" y2="12" />
-            </svg>
-            {AUTH_STUB ? "Enter Application" : "Sign in with SSO"}
-          </a>
+          <PrimaryCta
+            authStub={AUTH_STUB}
+            lastRole={lastRole}
+            ssoHref={ssoHref}
+          />
 
           <div
             className="mt-6 flex min-h-8 items-start justify-center text-xs leading-4 tracking-[0.02em] text-[var(--color-muted-foreground)]"
@@ -276,46 +204,18 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
           </div>
 
           {/* The container always renders at the same height in AUTH_STUB
-              mode (see stubCardClassName): a collapse when no hint is stored
-              would read as a layout jump (skeleton appears, then vanishes),
-              and without a hint the login page would offer NO way to pick a
-              role. Skeleton while loading, last-session hint when stored, or a
-              direct role picker otherwise. In production (AUTH_STUB=false)
-              this block never renders. */}
+              mode (see LastRoleCard's shared min-height): a collapse when no
+              hint is stored would read as a layout jump (skeleton appears,
+              then vanishes), and without a hint the login page would offer NO
+              way to pick a role. Skeleton while loading, last-session hint
+              when stored, or a direct role picker otherwise. In production
+              (AUTH_STUB=false) this block never renders. */}
           {AUTH_STUB && (
             <div className="mt-4">
-              {!lastRoleLoaded ? (
-                <div
-                  className={stubCardClassName}
-                  data-testid="last-role-hint-skeleton"
-                  aria-hidden="true"
-                >
-                  <Skeleton className="h-3.5 w-40" />
-                  <div className="mt-2 grid grid-cols-2 gap-1.5">
-                    {sessionRoleSchema.options.map((role) => (
-                      <Skeleton key={role} className="h-[30px] rounded" />
-                    ))}
-                  </div>
-                </div>
-              ) : lastRole ? (
-                <div className={stubCardClassName} data-testid="last-role-hint">
-                  <p className="text-xs leading-snug text-[var(--color-muted-foreground)]">
-                    Last session:{" "}
-                    <span className="font-semibold text-[var(--color-foreground)]">
-                      {lastRole.name}
-                    </span>{" "}
-                    · {ROLE_LABEL[lastRole.role]}
-                  </p>
-                  {roleOptionsList}
-                </div>
-              ) : (
-                <div className={stubCardClassName} data-testid="role-picker">
-                  <p className="text-xs leading-snug text-[var(--color-muted-foreground)]">
-                    Enter as a specific role:
-                  </p>
-                  {roleOptionsList}
-                </div>
-              )}
+              <LastRoleCard
+                lastRoleLoaded={lastRoleLoaded}
+                lastRole={lastRole}
+              />
             </div>
           )}
 

@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * viewer-live-status (task 4.2/4.3): `/reports/latest` resolves the Status
- * target (`reports.latestForViewer`) and redirects with the recovery marker.
+ * `/reports/latest` resolves the Status target (`reports.latestForViewer`)
+ * and redirects with the recovery marker.
  * This suite pins each runtime branch: a resolved reportId triggers
  * `router.replace(/reports/<id>?source=status&recovery=<value>)` and keeps the
  * resolving copy; the recovery flag is PROPAGATED (not hard-coded 0); a null

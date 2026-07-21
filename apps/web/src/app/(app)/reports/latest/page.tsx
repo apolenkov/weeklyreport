@@ -7,8 +7,8 @@ import { useEffect } from "react";
 import { useTRPC } from "../../../../lib/trpc-context";
 
 /**
- * viewer-live-status (task 4.2/4.3): `/reports/latest` resolves the **Status
- * target** — the current editable period (when viewer-visible), else the newest
+ * `/reports/latest` resolves the **Status target** — the current editable
+ * period (when viewer-visible), else the newest
  * viewer-visible published report (`reports.latestForViewer`) — and navigates
  * there, or renders the empty state when none qualifies.
  *

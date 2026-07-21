@@ -5,17 +5,19 @@ import type {
 
 import { statusLabel } from "../../../lib/status-presentation";
 import {
-  buildProductToAuthorMap,
   buildProjectNameMap,
-  findNeedsAttention,
-  groupDecisionsByProject,
   groupItemsByProject,
-  groupPrioritiesByProject,
   groupRisksByProject,
   initialsFromName,
   statusLabelFor,
   trafficToProductStatus,
 } from "./weekly-report-groupers";
+import {
+  buildProductToAuthorMap,
+  findNeedsAttention,
+  groupDecisionsByProject,
+  groupPrioritiesByProject,
+} from "./weekly-report-groupers-decisions";
 import type {
   WeeklyPortfolioProduct,
   WeeklyProductReport,

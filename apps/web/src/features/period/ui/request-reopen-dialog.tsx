@@ -35,8 +35,8 @@ interface RequestReopenDialogProps {
  * un-submit them (only Head can revoke). This is the polite path: the
  * Lead writes a one-line reason and the request goes to Head.
  *
- * Backend: leadForm.requestReopen mutation already exists from Phase
- * 21-04 (`apps/api/src/modules/report-sections/lead-form.service.ts`).
+ * Backend: leadForm.requestReopen mutation already exists
+ * (`apps/api/src/modules/report-sections/lead-form.service.ts`).
  */
 export function RequestReopenDialog({
   open,

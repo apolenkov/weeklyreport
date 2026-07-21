@@ -22,12 +22,12 @@
 
 ## 3. Waves 7–14 — M-slices
 
-- [ ] 3.1 web-admin
-- [ ] 3.2 web-report-sections
-- [ ] 3.3 web-review
-- [ ] 3.4 web-slides
-- [ ] 3.5 web-landing-org-period
-- [ ] 3.6 web-app
+- [x] 3.1 web-admin (wave 4)
+- [x] 3.2 web-report-sections (wave 5)
+- [x] 3.3 web-review (wave 4)
+- [x] 3.4 web-slides (wave 4)
+- [x] 3.5 web-landing-org-period (wave 5)
+- [x] 3.6 web-app (wave 5)
 - [ ] 3.7 api-infrastructure
 - [ ] 3.8 api-period-carryover-archive (load-bearing: period dual-state)
 - [ ] 3.9 api-comms
@@ -41,6 +41,10 @@
 ## 5. Final sweep
 
 - [ ] 5.1 Tear down obsolete eslint.config.ts exemptions (PERM blocks stay)
+- [ ] 5.1b Evaluate tsconfig lib ES2024 bump + Map.groupBy to replace the
+      O(n^2) `new Map(acc).set()` immutable grouping folds W5 verifiers
+      flagged (9 minor sites in report-sections groupers/stage-tags/
+      next-week-columns) — runtime-compat decision, needs Sasha's sign-off
 - [ ] 5.2 Full gate: typecheck + lint (incl. depcruise, knip) + full vitest
 - [ ] 5.3 Codex spot-review of a random sample across waves
 - [ ] 5.4 Archive this change; update campaign artifacts

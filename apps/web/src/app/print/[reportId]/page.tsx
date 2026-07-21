@@ -5,7 +5,7 @@ import { getPrintRouteContext } from "../../../lib/server/get-print-route-contex
 import { PrintReportTemplate } from "./print-report-template";
 
 /* ------------------------------------------------------------------ */
-/*  Print route — thin async SERVER gate (W2 task 3.3)                */
+/*  Print route — thin async SERVER gate                              */
 /*                                                                    */
 /*  `/print/[reportId]` is the PDF worker's render template ONLY. The */
 /*  route is NOT under the proxy.ts auth matcher, so this gate handles */

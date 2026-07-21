@@ -1,0 +1,46 @@
+import { TEXT_PRIMARY, TEXT_SECONDARY } from "./print-report-theme";
+
+export const PRINT_STATE = {
+  loading: "loading",
+  error: "error",
+  ready: "ready",
+} as const;
+
+export const SHELL_STYLE = {
+  backgroundColor: "#ffffff",
+  color: TEXT_PRIMARY,
+  fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
+  fontSize: "12px",
+  maxWidth: "210mm",
+  margin: "0 auto",
+  padding: "24px",
+} as const;
+
+interface PrintReportShellProps {
+  readonly reportId: string;
+}
+
+export function LoadingShell({ reportId }: PrintReportShellProps) {
+  return (
+    <main
+      data-print-state={PRINT_STATE.loading}
+      style={SHELL_STYLE}
+      aria-busy="true"
+    >
+      <p style={{ color: TEXT_SECONDARY }}>Loading report {reportId} …</p>
+    </main>
+  );
+}
+
+export function ErrorShell({ reportId }: PrintReportShellProps) {
+  return (
+    <main data-print-state={PRINT_STATE.error} style={SHELL_STYLE} role="alert">
+      <h1 style={{ margin: "0 0 8px", fontSize: "16px", color: "#c82014" }}>
+        Report could not be rendered
+      </h1>
+      <p style={{ color: TEXT_SECONDARY }}>
+        Report {reportId} failed to load and cannot be exported.
+      </p>
+    </main>
+  );
+}

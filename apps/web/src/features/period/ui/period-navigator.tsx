@@ -11,6 +11,7 @@ import {
   PeriodListboxPanel,
   SubmittedBadge,
 } from "./period-listbox-panel";
+import { ChevronLeft, ChevronRight } from "./period-navigator-icons";
 
 // Lead-form addressable URL base. Period nav emits path-segment
 // URLs (`/lead/report/<reportId>`) so each week is bookmarkable.
@@ -43,40 +44,6 @@ interface PeriodNavigatorProps {
    * when `showLeadSubmissionMarkers` is set and this value is non-null.
    */
   readonly leadSubmittedAt?: Date | string | null;
-}
-
-function ChevronLeft() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3.5 w-3.5"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M15 18l-6-6 6-6" />
-    </svg>
-  );
-}
-
-function ChevronRight() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3.5 w-3.5"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M9 18l6-6-6-6" />
-    </svg>
-  );
 }
 
 const PERIOD_NAV_ARROW_BUTTON_CLASS =

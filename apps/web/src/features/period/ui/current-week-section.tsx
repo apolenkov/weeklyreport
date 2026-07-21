@@ -6,81 +6,17 @@ import type { EditableListDialogState } from "../../../hooks/use-editable-list-d
 import { useEditableListDialog } from "../../../hooks/use-editable-list-dialog";
 import { usePauseReason } from "../../../hooks/use-pause-reason";
 import { useScrollFade } from "../../../hooks/use-scroll-fade";
-import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import type { KanbanItem, Product, RiskEntry } from "../../report-sections";
+import type { KanbanItem } from "../../report-sections";
 import {
-  ActivityLanesBlock,
-  BoardColumnHeader,
   BoardEmptyState,
   isBoardEmpty,
   ItemCard,
-  ItemEditDialog,
   splitItemBoard,
 } from "../../report-sections";
-import { PauseReasonDialog } from "./pause-reason-dialog";
-
-const MAX_GRID_COLUMNS = 3;
-
-interface CurrentWeekSectionProps {
-  readonly items: KanbanItem[];
-  /**
-   * record-status-derived-from-risk: own risks forwarded to each ItemCard so
-   * its at-risk/blocked pill derives from the covering risks, never a free item
-   * status.
-   */
-  readonly risks?: readonly RiskEntry[];
-  readonly readOnly?: boolean;
-  /**
-   * Controlled-component callback fired with the next items array on add /
-   * inline-edit / delete. The parent must merge this back into its raw
-   * `draftSection.items` keyed by id, preserving non-presentation fields
-   * (tag, workflowStatus, carriedOver, completed, type).
-   */
-  readonly onItemsChange?: (items: KanbanItem[]) => void;
-  /**
-   * Author label used as the default `author` for newly-created items.
-   * Falls back to "You" when undefined.
-   */
-  readonly currentUserName?: string;
-  /**
-   * Used as the seed product for the empty-state `+ Add` button. Without
-   * this prop the section would have no per-product group to attach the
-   * Add button to once all items are deleted, leaving a dead section.
-   */
-  readonly products?: readonly Product[];
-  /**
-   * activity-first-class: the author's attached activities forwarded to
-   * ItemEditDialog so the parent picker can offer them alongside products.
-   */
-  readonly activities?: readonly { id: string; name: string }[];
-  /**
-   * 35-04: stages-the-lead-owns selector forwarded to ItemEditDialog so
-   * the SDLC stage dropdown is scoped to the active project.
-   */
-  readonly stagesForProduct?: (productId: string) => readonly string[];
-  /**
-   * All priority ranks already in use by own items for the full period
-   * (current + next week). Forwarded to ItemEditDialog so taken ranks are
-   * disabled in the picker. The dialog subtracts the edited item's own
-   * current rank before computing the disabled set.
-   */
-  readonly ownPeriodRanks?: readonly number[];
-  readonly addSignal?: number;
-  /**
-   * Resolve-not-delete (ADR 0015): item ids whose lineage appeared in a
-   * published report — the card shows the marker and withholds Delete.
-   */
-  readonly publishedLockedIds?: ReadonlySet<string>;
-  /** In-place move action (same durable identity; see ItemCardActions). */
-  readonly onMarkComplete?: (id: string) => void;
-  /** In-place move action (same durable identity; see ItemCardActions). */
-  readonly onMoveToNextWeek?: (id: string) => void;
-  /**
-   * require-paused-item-reason: pause an in-progress item with a required
-   * reason. The section owns the reason prompt; this persists the result.
-   */
-  readonly onPauseItem?: (id: string, reason: string) => void;
-}
+import { AddItemButton } from "./current-week-add-button";
+import { CurrentWeekBoardGrid } from "./current-week-board-grid";
+import { CurrentWeekDialogs } from "./current-week-dialogs";
+import type { CurrentWeekSectionProps } from "./current-week-section.types";
 
 function deriveDialogProps(dialogState: EditableListDialogState<KanbanItem>): {
   editItem: KanbanItem | null;
@@ -145,23 +81,10 @@ export function CurrentWeekSection({
   });
 
   const globalAddButton = !readOnly && (
-    <div className="flex justify-end">
-      <button
-        type="button"
-        className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[40px] min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-        onClick={() =>
-          defaultProduct && openCreate({ productId: defaultProduct.id })
-        }
-        disabled={!defaultProduct}
-        title={
-          defaultProduct
-            ? `Add item to ${defaultProduct.name}`
-            : "No products assigned — contact admin"
-        }
-      >
-        + Add Item
-      </button>
-    </div>
+    <AddItemButton
+      defaultProduct={defaultProduct}
+      onAdd={(productId) => openCreate({ productId })}
+    />
   );
 
   function handleDelete(id: string) {
@@ -245,76 +168,35 @@ export function CurrentWeekSection({
         className="max-h-[420px] overflow-y-auto"
         style={{ scrollbarWidth: "thin" }}
       >
-        <div
-          className="grid gap-4"
-          style={{
-            gridTemplateColumns: `repeat(${Math.min(Math.max(board.productColumns.length, 1), MAX_GRID_COLUMNS)}, minmax(0, 1fr))`,
-          }}
-        >
-          {board.productColumns.map((col) => (
-            <div key={col.key} className="min-w-0">
-              <BoardColumnHeader
-                col={col}
-                readOnly={readOnly}
-                showProductAdd={hasMultipleProducts}
-                onAdd={openCreate}
-              />
-              {col.items.length === 0 ? (
-                <div
-                  className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-[var(--color-surface-hover)] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
-                  style={{ minHeight: 150 }}
-                >
-                  No items yet
-                </div>
-              ) : (
-                <div className="space-y-2">{col.items.map(renderItem)}</div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <ActivityLanesBlock
-          lanes={board.activityLanes}
+        <CurrentWeekBoardGrid
+          productColumns={board.productColumns}
+          activityLanes={board.activityLanes}
           readOnly={readOnly}
+          hasMultipleProducts={hasMultipleProducts}
           onAdd={openCreate}
           renderItem={renderItem}
         />
 
-        {/* Edit / Add modal — single instance shared across all columns. */}
-        <ItemEditDialog
-          key={dialogKey}
+        <CurrentWeekDialogs
+          dialogKey={dialogKey}
           open={dialogState.open}
-          item={dlg.editItem}
+          editItem={dlg.editItem}
           products={products ?? []}
           activities={activities}
-          week="current"
           currentUserName={currentUserName}
-          defaultProductId={dlg.createSeedProductId}
-          defaultActivityId={dlg.createSeedActivityId}
+          createSeedProductId={dlg.createSeedProductId}
+          createSeedActivityId={dlg.createSeedActivityId}
           stagesForProduct={stagesForProduct}
           ownPeriodRanks={ownPeriodRanks}
           risks={risks}
           onSave={handleDialogSave}
           onCancel={handleDialogCancel}
-        />
-
-        <ConfirmDeleteDialog
-          open={pendingDelete !== null}
-          title="Delete item?"
-          preview={pendingDelete?.text ?? ""}
-          subtitle={
-            pendingDelete ? `From ${pendingDelete.productName}` : undefined
-          }
-          onConfirm={confirmDelete}
-          onCancel={clearPendingDelete}
-        />
-
-        <PauseReasonDialog
-          open={pause.pending !== null}
-          preview={pause.pending?.text ?? ""}
-          initialReason={pause.pending?.pausedReason ?? ""}
-          onConfirm={pause.confirm}
-          onCancel={pause.cancel}
+          pendingDelete={pendingDelete}
+          onConfirmDelete={confirmDelete}
+          onCancelDelete={clearPendingDelete}
+          pausePending={pause.pending}
+          onConfirmPause={pause.confirm}
+          onCancelPause={pause.cancel}
         />
       </div>
       {canScrollDown && (
