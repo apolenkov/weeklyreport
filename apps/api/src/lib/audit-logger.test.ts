@@ -10,6 +10,15 @@ interface Captured {
   context?: Record<string, unknown>;
 }
 
+const sensitiveFields = {
+  samlAssertion: "signed-assertion",
+  nameID: "person@example.com",
+  cookie: "session=secret",
+  token: "bearer-token",
+  password: "secret",
+  authorization: "Bearer secret",
+};
+
 function makeCapturingLogger(): { logger: AppLogger; entries: Captured[] } {
   const entries: Captured[] = [];
   const push =
@@ -149,36 +158,39 @@ describe("createAuditLogger", () => {
     });
   });
 
-  it("no SAML / cookie / token field can leak into the audit envelope", () => {
+  it("drops unexpected sensitive fields instead of spreading caller input", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     audit.loginSuccess({
+      ...sensitiveFields,
       userId: "u1",
       role: "lead",
       ip: "10.0.0.1",
     });
     audit.roleDenied({
+      ...sensitiveFields,
       userId: "u2",
       role: "viewer",
       attemptedRole: "head",
       ip: "10.0.0.4",
     });
 
-    const forbidden = [
-      "samlAssertion",
-      "nameID",
-      "cookie",
-      "token",
-      "password",
-      "authorization",
-    ];
-    for (const entry of entries) {
-      const keys = Object.keys(entry.context ?? {});
-      for (const banned of forbidden) {
-        expect(keys).not.toContain(banned);
-      }
-    }
+    expect(entries.map(({ context }) => context)).toEqual([
+      {
+        event: "login-success",
+        userId: "u1",
+        role: "lead",
+        ip: "10.0.0.1",
+      },
+      {
+        event: "role-denied",
+        userId: "u2",
+        role: "viewer",
+        attemptedRole: "head",
+        ip: "10.0.0.4",
+      },
+    ]);
   });
 });
 
@@ -399,11 +411,12 @@ describe("createAuditLogger — policySave / policyRemove", () => {
     });
   });
 
-  it("PII-safe — no SAML/cookie/token leak through the policy envelope", () => {
+  it("drops unexpected sensitive fields from policy envelopes", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     audit.policySave({
+      ...sensitiveFields,
       userId: "admin-3",
       role: "admin",
       ip: "10.0.0.7",
@@ -412,26 +425,64 @@ describe("createAuditLogger — policySave / policyRemove", () => {
       action: "create",
     });
     audit.policyRemove({
+      ...sensitiveFields,
       userId: "admin-3",
       role: "admin",
       ip: "10.0.0.7",
       policyId: "33333333-3333-4333-8333-333333333330",
     });
 
-    const forbidden = [
-      "samlAssertion",
-      "nameID",
-      "cookie",
-      "token",
-      "password",
-      "authorization",
-    ];
-    for (const entry of entries) {
-      const keys = Object.keys(entry.context ?? {});
-      for (const banned of forbidden) {
-        expect(keys).not.toContain(banned);
-      }
-    }
+    expect(entries.map(({ context }) => context)).toEqual([
+      {
+        event: "admin.policy.save",
+        userId: "admin-3",
+        role: "admin",
+        ip: "10.0.0.7",
+        policyId: "33333333-3333-4333-8333-333333333330",
+        kind: "escalation",
+        action: "create",
+      },
+      {
+        event: "admin.policy.remove",
+        userId: "admin-3",
+        role: "admin",
+        ip: "10.0.0.7",
+        policyId: "33333333-3333-4333-8333-333333333330",
+      },
+    ]);
+  });
+});
+
+describe("createAuditLogger — organizationUpdate", () => {
+  it("emits the complete name transition with admin attribution on info", () => {
+    const { logger, entries } = makeCapturingLogger();
+
+    createAuditLogger(logger).organizationUpdate({
+      userId: "admin-4",
+      role: "admin",
+      ip: "10.0.0.8",
+      previousShortName: "CD",
+      previousFullName: "Software Development",
+      nextShortName: "Demo",
+      nextFullName: "Example Software Department",
+    });
+
+    expect(entries).toEqual([
+      {
+        level: "info",
+        message: "audit",
+        context: {
+          event: "admin.organization.update",
+          userId: "admin-4",
+          role: "admin",
+          ip: "10.0.0.8",
+          previousShortName: "CD",
+          previousFullName: "Software Development",
+          nextShortName: "Demo",
+          nextFullName: "Example Software Department",
+        },
+      },
+    ]);
   });
 });
 
@@ -666,6 +717,7 @@ describe("createAuditLogger — scopeAccessed", () => {
     const audit = createAuditLogger(logger);
 
     audit.scopeAccessed({
+      ...sensitiveFields,
       userId: "head-1",
       role: "head",
       ip: "10.0.0.10",
@@ -695,18 +747,6 @@ describe("createAuditLogger — scopeAccessed", () => {
       groupIds: ["33333333-3333-4333-8333-333333333333"],
       resourceId: "44444444-4444-4444-8444-444444444444",
     });
-    // Whitelist — row contents must never appear on the envelope.
-    const banned = [
-      "samlAssertion",
-      "nameID",
-      "cookie",
-      "token",
-      "password",
-      "authorization",
-    ];
-    for (const key of banned) {
-      expect(Object.keys(entry.context ?? {})).not.toContain(key);
-    }
   });
 
   it("no-op logger stays silent and does not throw", () => {

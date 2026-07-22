@@ -84,12 +84,6 @@ export interface LoggerOptions {
   minLevel?: LogLevel;
   /** Directory for the active log file and gzip archives. If omitted, file logging is disabled. */
   logDir?: string;
-  /**
-   * Legacy: maximum number of files retained.
-   * @deprecated use `maxAgeDays` instead. Retained only for back-compat;
-   * `maxAgeDays` (default 30) takes precedence when both are set.
-   */
-  maxFiles?: number;
   /** Service name included in every log entry. */
   service?: string;
   /**
