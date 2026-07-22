@@ -1,9 +1,6 @@
 "use client";
 
 import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
-import { useQuery } from "@tanstack/react-query";
-
-import { useTRPC } from "../../../lib/trpc-context";
 
 /**
  * Read-only surface for external integrations. The messaging card names the
@@ -22,25 +19,6 @@ import { useTRPC } from "../../../lib/trpc-context";
  * work yet.
  */
 export function IntegrationsSubTab() {
-  const trpc = useTRPC();
-  const statusQ = useQuery(trpc.admin.integrationsStatus.queryOptions());
-
-  if (statusQ.isLoading) {
-    return (
-      <p className="text-sm text-[var(--color-muted-foreground)]">
-        Loading integrations status…
-      </p>
-    );
-  }
-
-  if (statusQ.isError || !statusQ.data) {
-    return (
-      <p className="text-sm text-red-600">
-        Failed to load integrations status.
-      </p>
-    );
-  }
-
   return (
     <div className="max-w-2xl space-y-4">
       <p className="text-sm text-[var(--color-muted-foreground)]">

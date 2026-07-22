@@ -17,9 +17,8 @@ interface DecisionsSectionProps {
   readonly readOnly?: boolean;
   readonly onChange?: (decisions: DecisionEntry[]) => void;
   /**
-   * Optional default product label for newly-added decisions. The decision
-   * schema is department-scoped (no projectId), so this only seeds the chip
-   * shown above the input. Falls back to "Department".
+   * Optional product label for a newly added decision when the saved value is
+   * empty. The final generic label is "Group".
    */
   readonly defaultProductName?: string;
   /**
@@ -29,24 +28,23 @@ interface DecisionsSectionProps {
    */
   readonly currentUserName?: string;
   /**
-   * unify-record-dialogs: stages owned on the SELECTED product — passed through
-   * to the dialog so a decision is product-scoped like an item/risk.
+   * Stages owned on the selected product, passed through so changing the
+   * product re-scopes the available stages.
    */
   readonly stagesForProduct?: (productId: string) => readonly string[];
-  /** R4-B: products the lead is assigned to, passed through to the dialog. */
+  /** Products assigned to the lead, passed through to the dialog. */
   readonly products?: readonly Product[];
   /**
-   * activity-first-class: the author's attached activities, forwarded to the
-   * dialog so a decision can be scoped to an activity (Decision 0.4 — parity
-   * with the item/risk sections).
+   * The author's attached activities, forwarded so a decision can use an
+   * activity rather than a product as its parent.
    */
   readonly activities?: readonly ParentActivityOption[];
   readonly defaultProductId?: string;
   readonly addSignal?: number;
   /**
-   * Resolve-not-delete (ADR 0015): decision ids whose lineage appeared in a
-   * published report. Locked rows show the "In published report" marker and
-   * withhold Delete (the server rejects the drop anyway).
+   * Decision ids whose lineage appeared in a published report. These rows
+   * remain resolvable but cannot be deleted because published history is
+   * immutable and the server rejects the deletion.
    */
   readonly publishedLockedIds?: ReadonlySet<string>;
 }
@@ -64,10 +62,9 @@ export function DecisionsSection({
   addSignal = 0,
   publishedLockedIds,
 }: DecisionsSectionProps) {
-  // Shared dialog lifecycle (DialogState union, D1 readOnly-ref add-signal
-  // effect, D13 openSeq remount key, pending-delete). Create mode has no
-  // seed product — the dialog gets defaultProductId directly as a prop — so
-  // requireSeed stays false.
+  // The shared lifecycle keeps read-only transitions from consuming an add
+  // signal, remounts state for every open, and tracks pending deletion. Create
+  // mode receives defaultProductId directly, so it does not require a seed.
   const {
     dialogState,
     dialogKey,

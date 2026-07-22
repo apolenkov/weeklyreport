@@ -92,9 +92,9 @@ function getFirstCardStyle(container: HTMLElement): string {
   return (card as HTMLElement | null)?.getAttribute("style") ?? "";
 }
 
-// ---- Component: SdlcPipeline D1 live stripe color from own stages ----
+// ---- Live stripe color from own stages ----
 
-describe("SdlcPipeline — D1 live stripe color from own stages", () => {
+describe("SdlcPipeline — live stripe color from own stages", () => {
   it("stripe is blocked color when one own stage is blocked (overallStatus ignored)", () => {
     // PRODUCT_WITH_ALL_FILLED: Dev=blocked/mine — worstOwnStatus = blocked
     const { container } = render(
@@ -218,9 +218,8 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
     expect(pill?.dataset.complete).toBe("true");
   });
 
-  it("W11: an empty own stage covered by the lead's OWN risk COUNTS toward completeness", () => {
-    // fix-report-surface-integrity W11 (reverses the old lead-pipeline-card
-    // invariant): a stage the lead deliberately staged a risk on is addressed,
+  it("an empty own stage covered by the lead's OWN risk COUNTS toward completeness", () => {
+    // A stage the lead deliberately staged a risk on is addressed,
     // so the raw `coveredByOwnRisk` flag counts it even while raw status stays
     // "empty". Design=empty BUT coveredByOwnRisk → 2/2, complete. The flag lives
     // on the RAW product (mapper/bridge derive it from persisted own risks), so
@@ -255,7 +254,7 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
     expect(pill?.dataset.complete).toBe("true");
   });
 
-  it("W11: a display-only floored empty stage (no OWN-risk flag) still does NOT count", () => {
+  it("a display-only floored empty stage (no OWN-risk flag) still does NOT count", () => {
     // The render-time floor on `products` (a foreign risk, or any display floor)
     // pushes Design to at-risk for the chip, but the RAW product carries no
     // coveredByOwnRisk flag → completeness reads 1/2, incomplete. This is the
@@ -386,7 +385,7 @@ describe("SdlcPipeline — health and completeness are independent", () => {
   });
 });
 
-// ---- 2.1: foreign stage-owner risk lights the left edge ----
+// ---- Foreign stage-owner risk lights the left edge ----
 
 describe("SdlcPipeline — left edge reflects any stage owner's risk", () => {
   it("a cross-author blocked stage recolors the left edge even when own stages are on-track", () => {
@@ -434,7 +433,7 @@ describe("SdlcPipeline — left edge reflects any stage owner's risk", () => {
   });
 });
 
-// ---- Task 4.3: co-lead blocked stage — initials chip, no counts ----
+// ---- Co-lead blocked stage — initials chip, no counts ----
 //
 // A locked stage produced by applyCrossAuthorStageOverrides carries:
 //   ownership: "locked", assignee: "<initials>", status: (risk-derived)
@@ -442,7 +441,7 @@ describe("SdlcPipeline — left edge reflects any stage owner's risk", () => {
 // MUST NOT render any item/risk count text (those fields were removed from
 // the CrossAuthorRow shape entirely).
 
-describe("SdlcPipeline — 4.3 co-lead blocked locked chip: initials, no counts", () => {
+describe("SdlcPipeline — co-lead blocked locked chip: initials, no counts", () => {
   // Product with one own stage and one locked (co-lead) stage that is blocked.
   const PRODUCT_WITH_LOCKED_BLOCKED: Product = {
     id: "p-colead",
@@ -529,13 +528,13 @@ describe("SdlcPipeline — 4.3 co-lead blocked locked chip: initials, no counts"
     const lockedBtn = document.querySelector<HTMLButtonElement>(
       'button[aria-label="Testing: blocked"]',
     );
-    expect(lockedBtn).toBeDefined();
+    expect(lockedBtn).toBeInstanceOf(HTMLElement);
     lockedBtn?.click();
     expect(document.querySelector('[role="menu"]')).toBeNull();
   });
 });
 
-// ---- align-pipeline-arrows: structural contract (D1 + D2) ----
+// ---- Pipeline arrow structural contract ----
 // jsdom has no layout engine; these tests pin the structural contract only:
 // - stages row is top-aligned (items-start)
 // - each [arrow, chip] cell is top-aligned (items-start)
@@ -556,7 +555,7 @@ function getStagesRow(container: HTMLElement): HTMLElement | null {
 }
 
 describe("SdlcPipeline — align-pipeline-arrows structural contract", () => {
-  it("stages row carries items-start (D2)", () => {
+  it("stages row carries items-start", () => {
     const { container } = render(
       <SdlcPipeline products={[BASE_PRODUCT]} readOnly={false} />,
     );
@@ -566,7 +565,7 @@ describe("SdlcPipeline — align-pipeline-arrows structural contract", () => {
     expect(row?.className).not.toContain("items-center");
   });
 
-  it("each [arrow, chip] cell carries items-start (D2)", () => {
+  it("each [arrow, chip] cell carries items-start", () => {
     const { container } = render(
       <SdlcPipeline products={[BASE_PRODUCT]} readOnly={false} />,
     );
@@ -581,7 +580,7 @@ describe("SdlcPipeline — align-pipeline-arrows structural contract", () => {
     }
   });
 
-  it("arrow wrapper carries STAGE_CHIP_BOX_HEIGHT as inline height (D1)", () => {
+  it("arrow wrapper carries STAGE_CHIP_BOX_HEIGHT as inline height", () => {
     // BASE_PRODUCT has 2 stages → 1 arrow (idx > 0)
     const { container } = render(
       <SdlcPipeline products={[BASE_PRODUCT]} readOnly={false} />,
@@ -696,7 +695,7 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     );
     const indicator = container.querySelector(COLLAPSED_INDICATOR);
     expect(indicator).not.toBeNull();
-    // #89: the indicator stays inert — role="img", never a keyboard tab stop.
+    // The indicator stays inert — role="img", never a keyboard tab stop.
     expect(indicator?.getAttribute("role")).toBe("img");
     expect(indicator?.getAttribute("tabindex")).toBeNull();
     // Visible count of collapsed stages (Testing + DevOps hidden).
@@ -712,7 +711,7 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     expect(renderedStageNames(container)).toEqual(["Dev"]);
   });
 
-  it("#89: hovering +N more reveals the hidden stages through the shared Radix tooltip", async () => {
+  it("hovering +N more reveals the hidden stages through the shared Radix tooltip", async () => {
     render(
       <SdlcPipeline
         products={[PRODUCT_OWN_FOREIGN_VACANT]}
@@ -775,7 +774,7 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     expect(content?.classList.contains("bg-foreground")).toBe(false);
   });
 
-  it("#90: the +N more indicator takes the worst hidden status colour (at-risk)", () => {
+  it("the +N more indicator takes the worst hidden status colour (at-risk)", () => {
     // PRODUCT_OWN_FOREIGN_VACANT hides Testing(at-risk) + DevOps(empty);
     // worst = at-risk → the indicator border + text use the at-risk tokens.
     const { container } = render(
@@ -790,7 +789,7 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
       "var(--color-chip-at-risk-border)",
     );
     expect(indicator?.style.color).toBe("var(--color-chip-at-risk-text)");
-    // #90 MUST NOT: the indicator colour does not bleed into product health.
+    // The indicator colour must not bleed into product health.
     // Own Dev is on-track and there is no foreign severity, so the left stripe
     // stays on-track even though the indicator went at-risk.
     expect(getFirstCardStyle(container)).toContain(
@@ -798,7 +797,7 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     );
   });
 
-  it("#90 (cross-author): a hidden foreign blocked stage colours the indicator red", () => {
+  it("a hidden foreign blocked stage colours the indicator red", () => {
     // The live Mine-mode shape (the one the suite previously never exercised):
     // the foreign DevOps stage is unassigned/empty in the lead's OWN grid, and
     // its real blocked severity arrives only via crossAuthors. The indicator

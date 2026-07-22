@@ -21,21 +21,18 @@ interface DecisionEditDialogProps {
    */
   readonly defaultOwner?: string;
   /**
-   * unify-record-dialogs: SDLC stages owned on the SELECTED product. A decision
-   * is now product-scoped like an item/risk — changing the product re-scopes its
-   * stage options (it no longer draws from the department-wide union).
+   * SDLC stages owned on the selected product. Changing the product re-scopes
+   * the decision's stage options instead of using a department-wide union.
    */
   readonly stagesForProduct?: (productId: string) => readonly string[];
   /**
-   * R4-B: products the lead is assigned to. When more than one, the dialog
-   * shows a product picker so the lead can scope the decision to a product.
+   * Products assigned to the lead. Multiple products enable the picker used to
+   * scope the decision.
    */
   readonly products?: readonly Product[];
   /**
-   * activity-first-class: the section author's attached activities. When
-   * non-empty the parent picker offers them; choosing an activity hides the
-   * stage step and parents the decision to the activity instead of a product
-   * (Decision 0.4 — parity with the item/risk dialogs).
+   * The section author's attached activities. Choosing one as the parent hides
+   * the stage step because activities, unlike products, do not own stages.
    */
   readonly activities?: readonly ParentActivityOption[];
   readonly defaultProductId?: string;
@@ -45,12 +42,9 @@ interface DecisionEditDialogProps {
 }
 
 /**
- * D12 mount/unmount shell (react-compiler-safe): the outer component returns
- * null when closed and mounts the inner content otherwise. Mount = fresh
- * useState from props; close = unmount. No useEffect reset is needed — the
- * remount is the structural reset, and the parent's openSeq dialogKey forces
- * a fresh mount on every open. This makes the A13 invariant (products /
- * stagesForProduct never read in any deps array) structural.
+ * The outer component unmounts the dialog content when closed. Each mount
+ * initializes fresh state from props, so no reset effect or prop dependency
+ * list is needed; the parent's per-open dialog key guarantees a fresh mount.
  */
 export function DecisionEditDialog(props: DecisionEditDialogProps) {
   if (!props.open) return null;
@@ -123,9 +117,8 @@ function DecisionEditDialogContent({
           {headerVerb}
         </h2>
 
-        {/* unify-record-dialogs: two-column layout mirroring the risk dialog —
-            prose on the left, a CLASSIFICATION panel (Product + Stages) on the
-            right. A decision carries no status/severity, so the panel is leaner. */}
+        {/* The risk-dialog layout keeps prose on the left and product/stage
+            classification on the right. Decisions have no status or severity. */}
         <DecisionEditDialogFields
           text={text}
           onTextChange={onTextChange}

@@ -21,10 +21,9 @@ interface HeadPublishLockActionProps {
 }
 
 /**
- * head-surface-uat-polish (F1): the slides-mode header hosts the same
- * Publish & Lock / Reopen action the edit-mode page offers, so the head can
- * lock a period straight from the review deck (this replaced the removed
- * "Open focused report" drill-in link). Self-contained: it fetches the
+ * The slides-mode header hosts the same Publish & Lock / Reopen action the
+ * edit-mode page offers, so the head can lock a period straight from the
+ * review deck without a detour into edit mode. Self-contained: it fetches the
  * displayed period, derives the publish gating, and owns the publish/reopen
  * mutations — mirroring `WeeklyReportPage` (the publish gating + cache
  * invalidation are the same). Renders nothing for non-head/admin roles or when
