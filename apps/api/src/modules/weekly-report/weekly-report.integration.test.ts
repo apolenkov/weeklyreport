@@ -1,299 +1,228 @@
-import {
-  type WeeklyReportReadModel,
-  weeklyReportReadModelSchema,
-} from "@customreport/shared";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
-  type WeeklyReportRepository,
-  WeeklyReportService,
-} from "./weekly-report.service";
+  cleanDatabase,
+  createTestPrisma,
+  disconnectTestPrisma,
+  seedTestData,
+  TEST_IDS,
+} from "../../test-utils/prisma-test-helper";
+import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
+import { WeeklyReportService } from "./weekly-report.service";
 
-/* ------------------------------------------------------------------ */
-/*  Fixed test UUIDs                                                   */
-/* ------------------------------------------------------------------ */
+const stageId = "a0000000-0000-4000-a000-000000000701";
+const secondStageId = "a0000000-0000-4000-a000-000000000702";
+const secondLeadId = "a0000000-0000-4000-a000-000000000703";
 
-const reportId = "aaa11111-1111-4111-8111-111111111111";
-const sectionId1 = "bbb22222-2222-4222-8222-222222222222";
-const authorId1 = "ddd44444-4444-4444-8444-444444444444";
-const projectId1 = "fff66666-6666-4666-8666-666666666666";
-const projectId2 = "11166666-6666-4666-8666-666666666666";
+describe("WeeklyReportService with Prisma (integration)", () => {
+  const prisma = createTestPrisma();
+  const service = new WeeklyReportService(
+    new WeeklyReportPrismaRepository(prisma as unknown as PrismaService),
+  );
 
-/* ------------------------------------------------------------------ */
-/*  Fixture helpers                                                    */
-/* ------------------------------------------------------------------ */
-
-function makeWeeklyReport(
-  overrides: Partial<WeeklyReportReadModel> = {},
-): WeeklyReportReadModel {
-  return weeklyReportReadModelSchema.parse({
-    reportId,
-    periodStart: new Date("2026-04-14"),
-    periodEnd: new Date("2026-04-18"),
-    deadline: new Date("2026-04-17T15:00:00.000Z"),
-    periodStatus: "open",
-    weekLabel: "W16-2026",
-    submissionCount: 2,
-    totalLeads: 6,
-    hasActiveReminderRule: true,
-    portfolioOverview: [
-      {
-        productId: projectId1,
-        productName: "CRM Platform",
-        worstStatus: "green",
-        stageCount: 2,
-        leadNames: ["Lead A"],
-      },
-    ],
-    leadSections: [
-      {
-        reportSectionId: sectionId1,
-        reportId,
-        authorId: authorId1,
-        authorName: "Lead A",
-        version: 1,
-        status: "submitted",
-        submittedAt: new Date("2026-04-16T10:00:00.000Z"),
-        projects: [
-          {
-            projectId: projectId1,
-            projectName: "CRM Platform",
-            trafficLight: "green",
-          },
-        ],
-        items: [
-          {
-            id: "77777777-7777-4777-8777-777777777777",
-            projectId: projectId1,
-            type: "current",
-            text: "OAuth2 integration",
-            tag: "feature",
-            workflowStatus: "in_progress",
-            carriedOver: false,
-          },
-        ],
-        risks: [],
-        decisions: [],
-      },
-    ],
-    escalations: [],
-    ...overrides,
+  beforeEach(async () => {
+    await cleanDatabase(prisma);
   });
-}
 
-function createSpyRepository(
-  reports: Map<string, WeeklyReportReadModel>,
-  activeId: string | null = null,
-  currentEditableId: string | null = null,
-): WeeklyReportRepository {
-  return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
-    getWeeklyReport: vi.fn(async (id: string) => {
-      const readModel = structuredClone(reports.get(id) ?? null);
-      if (!readModel) return null;
-      return { readModel, crossGroup: null };
-    }),
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
-    getActiveReportId: vi.fn(async () => activeId),
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
-    getCurrentEditableId: vi.fn(async () => currentEditableId),
-    getLatestPublishedNonArchivedId: vi.fn(() => Promise.resolve(null)),
-    getCompiledHistory: vi.fn(() =>
-      Promise.resolve({ reports: [], archiveCount: 0 }),
-    ),
-    getVisibleReportId: vi.fn(() => Promise.resolve(null)),
-    getLatestPublishedVisibleId: vi.fn(() => Promise.resolve(null)),
-  };
-}
+  afterAll(async () => {
+    await cleanDatabase(prisma);
+    await disconnectTestPrisma();
+  });
 
-/* ------------------------------------------------------------------ */
-/*  Integration tests — complementary to weekly-report.service.test.ts */
-/* ------------------------------------------------------------------ */
+  async function seedSubmittedReport() {
+    const data = await seedTestData(prisma);
+    await prisma.reportSection.update({
+      where: { id: data.section.id },
+      data: { status: "submitted", submittedAt: new Date("2026-04-10") },
+    });
+    await prisma.stage.create({
+      data: { id: stageId, name: "Development", sortOrder: 1 },
+    });
+    await prisma.stageAssignment.create({
+      data: {
+        userId: data.lead.id,
+        projectId: data.project.id,
+        stageId,
+      },
+    });
+    await prisma.projectStatus.create({
+      data: {
+        reportSectionId: data.section.id,
+        projectId: data.project.id,
+        status: "green",
+      },
+    });
+    return data;
+  }
 
-describe("WeeklyReportService — integration (data shape)", () => {
-  it("active period returns compiled report with all submitted sections", async () => {
-    const report = makeWeeklyReport({ submissionCount: 2, totalLeads: 6 });
-    const reports = new Map([[reportId, report]]);
-    const service = new WeeklyReportService(
-      createSpyRepository(reports, reportId),
-    );
+  it("loads the persisted active report when reportId is omitted", async () => {
+    const data = await seedSubmittedReport();
 
     const result = await service.getWeeklyReport();
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
-    expect(result.reportId).toBe(reportId);
-    expect(result.submissionCount).toBe(2);
-    expect(result.totalLeads).toBe(6);
-    expect(result.leadSections).toHaveLength(1);
+    expect(result.reportId).toBe(data.report.id);
+    expect(result.submissionCount).toBe(1);
+    expect(result.totalLeads).toBe(1);
     expect(expectDefined(result.leadSections[0]).status).toBe("submitted");
   });
 
-  it("portfolio overview carries worst-case aggregation", async () => {
-    const report = makeWeeklyReport({
-      portfolioOverview: [
-        {
-          productId: projectId1,
-          productName: "CRM Platform",
-          worstStatus: "red",
-          stageCount: 3,
-          leadNames: ["Lead A", "Lead B"],
-        },
-        {
-          productId: projectId2,
-          productName: "Mobile App",
-          worstStatus: "green",
-          stageCount: 1,
-          leadNames: ["Lead C"],
-        },
-      ],
+  it("aggregates the persisted worst product status across leads", async () => {
+    const data = await seedSubmittedReport();
+    await prisma.user.create({
+      data: {
+        id: secondLeadId,
+        email: "lead2@test.local",
+        name: "Test Lead 2",
+        lastName: "Test",
+        firstName: "Lead 2",
+        role: "lead",
+        samlId: "lead-test-2",
+        reportingGroupId: TEST_IDS.group,
+      },
     });
-    const reports = new Map([[reportId, report]]);
-    const service = new WeeklyReportService(createSpyRepository(reports));
+    const section = await prisma.reportSection.create({
+      data: { reportId: data.report.id, authorId: secondLeadId },
+    });
+    await prisma.stage.create({
+      data: { id: secondStageId, name: "QA", sortOrder: 2 },
+    });
+    await prisma.stageAssignment.create({
+      data: {
+        userId: secondLeadId,
+        projectId: data.project.id,
+        stageId: secondStageId,
+      },
+    });
+    await prisma.projectStatus.create({
+      data: {
+        reportSectionId: section.id,
+        projectId: data.project.id,
+        status: "red",
+      },
+    });
 
-    const result = await service.getWeeklyReport(reportId);
+    const result = await service.getWeeklyReport(data.report.id);
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
-    expect(result.portfolioOverview).toHaveLength(2);
-    expect(expectDefined(result.portfolioOverview[0]).worstStatus).toBe("red");
-    expect(expectDefined(result.portfolioOverview[1]).worstStatus).toBe(
-      "green",
+    expect(result.portfolioOverview).toEqual([
+      expect.objectContaining({
+        productId: data.project.id,
+        worstStatus: "red",
+        stageCount: 2,
+        leadNames: ["Test Lead 1", "Test Lead 2"],
+      }),
+    ]);
+  });
+
+  it("derives blocked escalations from persisted risks", async () => {
+    const data = await seedSubmittedReport();
+    await prisma.risk.create({
+      data: {
+        reportSectionId: data.section.id,
+        projectId: data.project.id,
+        risk: "Deployment is blocked",
+        impact: "Release delay",
+        mitigation: "Escalate dependency",
+        severity: "blocked",
+      },
+    });
+
+    const result = await service.getWeeklyReport(data.report.id);
+
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
+    expect(result.escalations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "blocked",
+          description: "Deployment is blocked",
+        }),
+        expect.objectContaining({ type: "at_risk" }),
+      ]),
     );
   });
 
-  it("escalations contain blocked items", async () => {
-    const report = makeWeeklyReport({
-      escalations: [
-        {
-          type: "blocked",
-          productName: "Data Analytics",
-          stageName: "Dev",
-          leadName: "Maria K.",
-          description: "ETL memory leak OOM",
-        },
-        {
-          type: "at_risk",
-          productName: "CRM",
-          stageName: "Dev",
-          leadName: "Lead A",
-          description: "OAuth2 partner API limits",
-        },
-      ],
-    });
-    const reports = new Map([[reportId, report]]);
-    const service = new WeeklyReportService(createSpyRepository(reports));
+  it("returns empty collections for a persisted report without sections", async () => {
+    const data = await seedTestData(prisma);
+    await prisma.reportSection.delete({ where: { id: data.section.id } });
 
-    const result = await service.getWeeklyReport(reportId);
+    const result = await service.getWeeklyReport(data.report.id);
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
-    expect(result.escalations).toHaveLength(2);
-    expect(expectDefined(result.escalations[0]).type).toBe("blocked");
-    expect(expectDefined(result.escalations[1]).type).toBe("at_risk");
-  });
-
-  it("empty report returns empty sections", async () => {
-    const report = makeWeeklyReport({
-      submissionCount: 0,
-      totalLeads: 6,
-      portfolioOverview: [],
-      leadSections: [],
-      escalations: [],
-    });
-    const reports = new Map([[reportId, report]]);
-    const service = new WeeklyReportService(createSpyRepository(reports));
-
-    const result = await service.getWeeklyReport(reportId);
-
-    expect(result.status).toBe("active");
-    if (result.status !== "active") throw new Error("expected active");
-    expect(result.leadSections).toHaveLength(0);
-    expect(result.portfolioOverview).toHaveLength(0);
-    expect(result.escalations).toHaveLength(0);
+    expect(result.leadSections).toEqual([]);
+    expect(result.portfolioOverview).toHaveLength(1);
+    expect(result.escalations).toEqual([]);
     expect(result.submissionCount).toBe(0);
   });
 
-  it("historical period returns published data unchanged", async () => {
-    const report = makeWeeklyReport({
-      periodStatus: "published",
-      submissionCount: 6,
-      totalLeads: 6,
+  it("reads a persisted published report without changing its lifecycle", async () => {
+    const data = await seedSubmittedReport();
+    await prisma.report.update({
+      where: { id: data.report.id },
+      data: {
+        status: "published",
+        periodStatus: "published",
+        periodState: "published",
+      },
     });
-    const reports = new Map([[reportId, report]]);
-    const service = new WeeklyReportService(createSpyRepository(reports));
 
-    const result = await service.getWeeklyReport(reportId);
+    const result = await service.getWeeklyReport(data.report.id);
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
     expect(result.periodStatus).toBe("published");
-    expect(result.submissionCount).toBe(6);
+    expect(result.submissionCount).toBe(1);
   });
 
-  it("lead sections include items, risks, and decisions", async () => {
-    const report = makeWeeklyReport({
-      leadSections: [
-        {
-          reportSectionId: sectionId1,
-          reportId,
-          authorId: authorId1,
-          authorName: "Lead A",
-          version: 1,
-          status: "submitted",
-          submittedAt: new Date("2026-04-16T10:00:00.000Z"),
-          projects: [
-            {
-              projectId: projectId1,
-              projectName: "CRM",
-              trafficLight: "yellow",
-            },
-          ],
-          items: [
-            {
-              id: "77777777-7777-4777-8777-777777777777",
-              projectId: projectId1,
-              type: "current",
-              text: "Feature X",
-              tag: "dev",
-              workflowStatus: "done",
-              carriedOver: false,
-            },
-          ],
-          risks: [
-            {
-              id: "99999999-9999-4999-8999-999999999999",
-              projectId: projectId1,
-              risk: "Deadline slip",
-              impact: "Revenue",
-              mitigation: "Hire contractor",
-              severity: "at-risk",
-            },
-          ],
-          decisions: [
-            {
-              id: "aaaa9999-9999-4999-8999-999999999999",
-              text: "Upgrade to PG16",
-              owner: "Alice",
-              impact: "Performance",
-            },
-          ],
-          activities: [],
+  it("maps persisted items, risks, and decisions into lead sections", async () => {
+    const data = await seedSubmittedReport();
+    await Promise.all([
+      prisma.item.create({
+        data: {
+          reportSectionId: data.section.id,
+          projectId: data.project.id,
+          type: "current",
+          text: "Ship feature",
+          tag: "feature",
+          workflowStatus: "done",
         },
-      ],
-    });
-    const reports = new Map([[reportId, report]]);
-    const service = new WeeklyReportService(createSpyRepository(reports));
+      }),
+      prisma.risk.create({
+        data: {
+          reportSectionId: data.section.id,
+          projectId: data.project.id,
+          risk: "Deadline slip",
+          impact: "Revenue",
+          mitigation: "Add capacity",
+          severity: "at-risk",
+        },
+      }),
+      prisma.decision.create({
+        data: {
+          reportSectionId: data.section.id,
+          productId: data.project.id,
+          text: "Upgrade PostgreSQL",
+          owner: "Test Lead 1",
+          impact: "Performance",
+        },
+      }),
+    ]);
 
-    const result = await service.getWeeklyReport(reportId);
+    const result = await service.getWeeklyReport(data.report.id);
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
     const section = expectDefined(result.leadSections[0]);
-
-    expect(section.items).toHaveLength(1);
-    expect(section.risks).toHaveLength(1);
-    expect(section.decisions).toHaveLength(1);
+    expect(section.items.map((item) => item.text)).toEqual(["Ship feature"]);
+    expect(section.risks.map((risk) => risk.risk)).toEqual(["Deadline slip"]);
+    expect(section.decisions.map((decision) => decision.text)).toEqual([
+      "Upgrade PostgreSQL",
+    ]);
   });
 });

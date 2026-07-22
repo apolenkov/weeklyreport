@@ -1,30 +1,62 @@
-/**
- * Telegram activation integration test scaffold.
- *
- * Skipped in CI unless TG_BOT_TOKEN env is set. Provides the one-flag-flip
- * gate for activating the real Telegram bot adapter: set TG_BOT_TOKEN and
- * run this file.
- *
- * See .planning/phases/55-telegram/55-PHASE-SUMMARY.md "Activation Playbook".
- */
-import { describe, expect, it } from "vitest";
+import { Module } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+import { ClsModule } from "nestjs-cls";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const hasBotToken = !!process.env.TG_BOT_TOKEN?.trim();
+import { TelegramModule } from "./telegram.module.js";
 
-describe.skipIf(!hasBotToken)("Telegram activation (real bot)", () => {
-  it("TG_BOT_TOKEN is set and non-empty", () => {
-    const token = process.env.TG_BOT_TOKEN?.trim();
-    expect(token).toBeTruthy();
-    expect(typeof token).toBe("string");
+const botToken = process.env.TG_BOT_TOKEN?.trim();
+const ACTIVATION_ENV = {
+  APP_BASE_URL: "http://localhost:3000",
+  AUTH_DEV_MODE: "false",
+  AUTH_JWT_SECRET: "activation-test-secret-at-least-32-chars",
+  DATABASE_URL:
+    "postgresql://customreport:localdev@localhost:5432/customreport_test",
+  FRONTEND_URL: "http://localhost:3000",
+  HEAP_HEALTH_THRESHOLD_BYTES: "536870912",
+  LOG_LEVEL: "info",
+  NODE_ENV: "test",
+  OTEL_SDK_DISABLED: "true",
+  OTEL_TRACES_SAMPLER_ARG: "0",
+  PDF_BASE_URL: "http://localhost:3000",
+  PDF_EXPORT_JWT_SECRET: "activation-test-pdf-secret-at-least-32",
+  PDF_OUTPUT_DIR: "storage/pdf-activation-test",
+  PORT: "3002",
+  REDIS_HOST: "localhost",
+  REDIS_MAXMEMORY_BYTES: "209715200",
+  REDIS_PORT: "6379",
+} as const;
+
+@Module({
+  imports: [
+    ClsModule.forRoot({
+      global: true,
+      middleware: { mount: false, generateId: false },
+    }),
+    TelegramModule,
+  ],
+})
+class TelegramActivationTestModule {}
+
+describe.skipIf(!botToken)("Telegram activation (real bot)", () => {
+  beforeEach(() => {
+    Object.entries(ACTIVATION_ENV).forEach(([key, value]) => {
+      vi.stubEnv(key, value);
+    });
   });
 
-  it("TelegramModule would construct a real adapter when TG_BOT_TOKEN is set", () => {
-    // TODO(Phase-55-activation): once RealTelegramAdapter is implemented,
-    // import selectTelegramAdapter() from telegram.module and assert:
-    //   const adapter = selectTelegramAdapter();
-    //   expect(adapter).toBeInstanceOf(RealTelegramAdapter);
-    // Also: nock `https://api.telegram.org/bot${token}/sendMessage` and
-    // assert the adapter calls it with { chat_id, text } shape.
-    expect(process.env.TG_BOT_TOKEN?.length).toBeGreaterThan(0);
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("fails loud through TelegramModule until a real adapter is bound", async () => {
+    await expect(
+      NestFactory.createApplicationContext(TelegramActivationTestModule, {
+        abortOnError: false,
+        logger: false,
+      }),
+    ).rejects.toThrow(
+      "Not implemented — see TODO(Phase-55-activation). Telegram bot not configured",
+    );
   });
 });

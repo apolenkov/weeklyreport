@@ -182,29 +182,29 @@ re-verify post-harden.
 
 ## 15. api-lib (S — 4 files, 6 minors)
 
-- [ ] 15.1 `apps/api/src/lib/audit-logger.test.ts` — 2 minors
-- [ ] 15.2 `apps/api/src/lib/business-date.test.ts` — 2 minors
-- [ ] 15.3 `apps/api/src/lib/group-scope.ts` — 1 minor
-- [ ] 15.4 `apps/api/src/lib/logger.ts` — 1 minor
+- [x] 15.1 `apps/api/src/lib/audit-logger.test.ts` — 2 minors
+- [x] 15.2 `apps/api/src/lib/business-date.test.ts` — 2 minors
+- [x] 15.3 `apps/api/src/lib/group-scope.ts` — 1 minor
+- [x] 15.4 `apps/api/src/lib/logger.ts` — 1 minor
 
 Note: `audit-logger.test.ts` overlaps `harden-test-suite-quality`;
 re-verify post-harden.
 
 ## 16. api-report-pub-search (S — 3 files, 6 minors)
 
-- [ ] 16.1 `apps/api/src/modules/publication/publication.module.ts` — 1 minor
-- [ ] 16.2 `apps/api/src/modules/published-report-snapshot.ts` — 1 minor
-- [ ] 16.3 `apps/api/src/modules/report-sections/application/report-sections.contract.test.ts` — 4 minors
+- [x] 16.1 `apps/api/src/modules/publication/publication.module.ts` — 1 minor
+- [x] 16.2 `apps/api/src/modules/published-report-snapshot.ts` — 1 minor
+- [x] 16.3 `apps/api/src/modules/report-sections/application/report-sections.contract.test.ts` — 4 minors
 
 ## 17. api-sections-review (S — 2 files, 4 minors)
 
 - [ ] 17.1 `apps/api/src/modules/review/application/review-actions.service.ts` — 2 minors
-- [ ] 17.2 `apps/api/src/modules/review/application/review.contract.test.ts` — 2 minors
+- [x] 17.2 `apps/api/src/modules/review/application/review.contract.test.ts` — 2 minors
 
 ## 18. api-modules-other (S — 2 files, 4 minors)
 
-- [ ] 18.1 `apps/api/src/modules/telegram/activation.integration.test.ts` — 2 minors
-- [ ] 18.2 `apps/api/src/modules/weekly-report/weekly-report.integration.test.ts` — 2 minors
+- [x] 18.1 `apps/api/src/modules/telegram/activation.integration.test.ts` — 2 minors
+- [x] 18.2 `apps/api/src/modules/weekly-report/weekly-report.integration.test.ts` — 2 minors
 
 ## 19. web-dashboard (S — 2 files, 4 minors)
 
