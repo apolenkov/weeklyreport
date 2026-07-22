@@ -4,9 +4,13 @@
 // stage with no submitted status covered by a covers-all own risk reads
 // red/yellow in the PDF top-line, agreeing with the PDF per-product cards
 // inside the same document.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { toAssembledReport } from "./pdf-export.prisma-repository";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import {
+  PdfExportPrismaRepository,
+  toAssembledReport,
+} from "./pdf-export.prisma-repository";
 
 const REPORT_ID = "659b2767-0f86-41e2-b025-49730ca010e4";
 const SECTION_ID = "2a223d8b-c4b2-473c-8a7b-15ecc52195c7";
@@ -111,5 +115,24 @@ describe("toAssembledReport — PDF portfolio totals floor (Shape B)", () => {
       yellow: 1,
       green: 0,
     });
+  });
+});
+
+describe("PdfExportPrismaRepository published floor", () => {
+  it("returns null for a legacy-published report that is reopened", async () => {
+    const findUnique = vi.fn().mockResolvedValue(null);
+    const prisma = { report: { findUnique } } as unknown as PrismaService;
+    const repo = new PdfExportPrismaRepository(prisma);
+
+    await expect(repo.getPublishedReport(REPORT_ID)).resolves.toBeNull();
+    expect(findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: REPORT_ID,
+          status: "published",
+          periodStatus: "published",
+        },
+      }),
+    );
   });
 });

@@ -56,3 +56,23 @@ different keys.
 - **WHEN** two cache-key inputs are identical except for a nested object
   key's value
 - **THEN** the two inputs hash to different cache keys
+
+### Requirement: Published-floor analytics queries exclude reopened periods
+
+Published-floor analytics queries MUST require both legacy `status:
+'published'` and `periodStatus: 'published'`. A legacy-published report whose
+period is currently reopened MUST be absent from `trafficLightHistory`,
+`leadVelocity`, and `periodComparison` until it is re-published.
+
+#### Scenario: A reopened period is absent from analytics
+
+- **GIVEN** a report with `status: 'published'` and `periodStatus: 'reopened'`
+- **WHEN** any published-floor analytics query covers that report's period
+- **THEN** the query returns no data derived from that report
+
+#### Scenario: A re-published period reappears in analytics
+
+- **GIVEN** the same report has been re-published and its `periodStatus` is
+  `'published'` again
+- **WHEN** any published-floor analytics query covers that report's period
+- **THEN** the report's re-published sections are included normally

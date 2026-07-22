@@ -113,8 +113,7 @@ export function usePdfExportJob({
     }
   }, [statusQ.data, statusQ.isError, jobId]);
 
-  const isExportable =
-    periodStatus === "published" || periodStatus === "reopened";
+  const isExportable = periodStatus === "published";
   const isGenerating = requestMut.isPending || jobId !== null;
   const disabled = !isExportable || isGenerating;
 
