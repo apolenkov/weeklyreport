@@ -2,32 +2,62 @@
  * @vitest-environment node
  */
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import type { ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import { describe, expect, it } from "vitest";
+type DynamicCall = Readonly<{
+  loader: () => Promise<unknown>;
+  options: Readonly<{ loading?: () => ReactNode; ssr?: boolean }>;
+}>;
 
-const trendsSource = readFileSync(
-  resolve(process.cwd(), "src/app/(app)/reports/trends/page.tsx"),
-  "utf8",
+const dynamicCalls = vi.hoisted(() => [] as DynamicCall[]);
+const chartComponents = vi.hoisted(() => ({
+  history: () => null,
+  velocity: () => null,
+  comparison: () => null,
+}));
+
+vi.mock("next/dynamic", () => ({
+  default: (loader: DynamicCall["loader"], options: DynamicCall["options"]) => {
+    dynamicCalls.push({ loader, options });
+    return () => null;
+  },
+}));
+vi.mock(
+  "../../../../features/analytics/ui/traffic-light-history.chart",
+  () => ({ TrafficLightHistoryChart: chartComponents.history }),
 );
+vi.mock("../../../../features/analytics/ui/lead-velocity.chart", () => ({
+  LeadVelocityChart: chartComponents.velocity,
+}));
+vi.mock("../../../../features/analytics/ui/period-comparison.chart", () => ({
+  PeriodComparisonChart: chartComponents.comparison,
+}));
+
+beforeAll(async () => {
+  await import("./page");
+});
 
 describe("Trends chunk loading", () => {
   it.each([
-    "features/analytics/ui/traffic-light-history.chart",
-    "features/analytics/ui/lead-velocity.chart",
-    "features/analytics/ui/period-comparison.chart",
-  ])("loads %s through its concrete module", (modulePath) => {
-    expect(trendsSource).toContain(`\"../../../../${modulePath}\"`);
-  });
+    ["traffic-light history", 0, chartComponents.history],
+    ["lead velocity", 1, chartComponents.velocity],
+    ["period comparison", 2, chartComponents.comparison],
+  ] as const)(
+    "loads the %s chart from its concrete module",
+    async (_name, index, chart) => {
+      await expect(dynamicCalls[index]?.loader()).resolves.toBe(chart);
+    },
+  );
 
-  it("keeps client-only chart loading and local skeleton fallbacks", () => {
-    expect(trendsSource.match(/ssr: false/g)).toHaveLength(3);
-    expect(
-      trendsSource.match(/loading: \(\) => <ChartSkeleton \/>/g),
-    ).toHaveLength(3);
-    expect(trendsSource).not.toContain(
-      'import("../../../../features/analytics")',
-    );
+  it("configures every chart as client-only with a local skeleton", () => {
+    expect(dynamicCalls).toHaveLength(3);
+    dynamicCalls.forEach(({ options }) => {
+      expect(options.ssr).toBe(false);
+      expect(options.loading).toBeTypeOf("function");
+      const loading = options.loading as () => ReactNode;
+      expect(renderToStaticMarkup(loading())).toContain("animate-pulse");
+    });
   });
 });

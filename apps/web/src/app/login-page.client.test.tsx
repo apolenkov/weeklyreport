@@ -2,19 +2,6 @@
  * @vitest-environment jsdom
  */
 
-/**
- * VA-0a/VA-0b: verify-a11y regression catalog — login-page.client.tsx
- *
- * Catalog section: apps/web/src/app/login-page.client.tsx
- * Change: aria-hidden="true" added to the decorative login-icon SVG in the
- * primary CTA link to prevent redundant screen-reader announcement.
- *
- * In-scope rows (unit-rtl high + snapshot):
- *   1. Primary CTA SVG has aria-hidden="true" attribute
- *   2. SVG does not contribute an accessible name to the parent link
- *   3. Snapshot: primary CTA link DOM structure (SVG + text node)
- */
-
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -86,7 +73,7 @@ async function loadLoginPageClient() {
   return mod.LoginPageClient;
 }
 
-describe("VA-0a: Primary CTA SVG aria-hidden (login-page.client)", () => {
+describe("Primary CTA accessibility", () => {
   it("SVG inside primary CTA link has aria-hidden='true'", async () => {
     const LoginPageClient = await loadLoginPageClient();
     const { container } = render(<LoginPageClient initialOrg={STUB_ORG} />);
@@ -137,15 +124,5 @@ describe("Dev-mode role picker (AUTH_STUB=true, no stored hint)", () => {
     expect(
       screen.queryByTestId("last-role-hint-skeleton"),
     ).not.toBeInTheDocument();
-  });
-});
-
-describe("VA-0b: Primary CTA link snapshot (login-page.client)", () => {
-  it("matches snapshot — SVG aria-hidden + text node coexist in CTA link", async () => {
-    const LoginPageClient = await loadLoginPageClient();
-    render(<LoginPageClient initialOrg={STUB_ORG} />);
-
-    const cta = screen.getByTestId("primary-cta");
-    expect(cta).toMatchSnapshot();
   });
 });

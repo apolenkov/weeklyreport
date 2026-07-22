@@ -3,6 +3,7 @@
  */
 
 import { render, screen, waitFor } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import {
   afterEach,
   beforeEach,
@@ -14,26 +15,6 @@ import {
 } from "vitest";
 
 import { LAST_ROLE_STORAGE_KEY } from "../lib/last-role";
-
-/**
- * Landing-page last-role hint tests.
- *
- * Coverage:
- *   - hint is hidden when no record is stored
- *   - hint renders name + role label when a record exists (AUTH_STUB)
- *   - primary CTA href points at the persisted role's dev-login URL
- *   - the hint card always shows the 4-role picker (rev 2026-06-10:
- *     the «Change role» toggle was removed — expanding past the
- *     card's reserved height read as a layout jump)
- *   - each picker option links to the correct seeded email
- *
- * We test LoginPageClient directly (the client component) — the RSC
- * wrapper page.tsx is a thin async server shell tested via E2E, not unit.
- * See vitest.config.ts coverage.exclude: 'src/app/ ** /page.tsx'.
- *
- * AUTH_STUB is read at module-eval time from the env, so we must set
- * it before importing the client module.
- */
 
 const useQueryMock = vi.fn();
 const useSearchParamsMock = vi.fn();
@@ -96,6 +77,12 @@ const STUB_ORG = {
   fullName: "Example Software Department",
 };
 
+const HEAD_ROLE = {
+  role: "head",
+  email: "head@customreport.local",
+  name: "Антон К.",
+} as const;
+
 let storage: Storage;
 
 beforeEach(() => {
@@ -134,43 +121,28 @@ async function loadLoginPageClient() {
   return mod.LoginPageClient;
 }
 
-// ---------------------------------------------------------------------------
-// Login page skeleton prevents layout shift (CLS)
-// ---------------------------------------------------------------------------
-//
+function storeLastRole(record: object) {
+  storage.setItem(LAST_ROLE_STORAGE_KEY, JSON.stringify(record));
+}
+
 // The last-role hint section uses lastRoleLoaded state to show a skeleton
 // before localStorage is read (in AUTH_STUB mode). This prevents CLS by
 // keeping the container at a stable min-height. Production (AUTH_STUB=false)
 // never shows the section, so CLS cannot occur there.
-//
-// This describe block pins the skeleton rendering behavior: the skeleton must
-// be present with aria-hidden="true" on initial render before the useEffect
-// fires and sets lastRoleLoaded=true (which replaces it with the real hint).
-// ---------------------------------------------------------------------------
 describe("Landing page — CLS skeleton", () => {
-  it("renders last-role-hint-skeleton with aria-hidden before hydration (AUTH_STUB mode)", async () => {
-    // Simulate pre-hydration state: store a role hint so the section has
-    // reason to render. The skeleton should still show before useEffect fires.
-    storage.setItem(
-      LAST_ROLE_STORAGE_KEY,
-      JSON.stringify({
-        role: "head",
-        email: "head@customreport.local",
-        name: "Антон К.",
-      }),
-    );
-
+  it("renders an aria-hidden last-role skeleton before hydration", async () => {
     const LoginPageClient = await loadLoginPageClient();
-    const { unmount } = render(<LoginPageClient initialOrg={STUB_ORG} />);
+    const markup = renderToStaticMarkup(
+      <LoginPageClient initialOrg={STUB_ORG} />,
+    );
+    const container = document.createElement("div");
+    container.innerHTML = markup;
 
-    // After render+effects, lastRoleLoaded=true → skeleton is gone, real hint shown.
-    const hint = await screen.findByTestId("last-role-hint");
-    expect(hint).toBeInTheDocument();
-
-    // The skeleton must NOT be in the DOM once the hint is loaded.
-    expect(screen.queryByTestId("last-role-hint-skeleton")).toBeNull();
-
-    unmount();
+    const skeleton = container.querySelector(
+      "[data-testid='last-role-hint-skeleton']",
+    );
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveAttribute("aria-hidden", "true");
   });
 
   it("does not render last-role-hint section in production mode (no AUTH_STUB)", async () => {
@@ -212,14 +184,7 @@ describe("Landing page — last-role hint", () => {
   });
 
   it("renders the hint with name + role label after a record is stored", async () => {
-    storage.setItem(
-      LAST_ROLE_STORAGE_KEY,
-      JSON.stringify({
-        role: "head",
-        email: "head@customreport.local",
-        name: "Антон К.",
-      }),
-    );
+    storeLastRole(HEAD_ROLE);
 
     const LoginPageClient = await loadLoginPageClient();
     render(<LoginPageClient initialOrg={STUB_ORG} />);
@@ -231,14 +196,11 @@ describe("Landing page — last-role hint", () => {
   });
 
   it("points the primary CTA at the persisted role dev-login URL", async () => {
-    storage.setItem(
-      LAST_ROLE_STORAGE_KEY,
-      JSON.stringify({
-        role: "lead",
-        email: "lead1@customreport.local",
-        name: "Lead 1",
-      }),
-    );
+    storeLastRole({
+      role: "lead",
+      email: "lead1@customreport.local",
+      name: "Lead 1",
+    });
 
     const LoginPageClient = await loadLoginPageClient();
     render(<LoginPageClient initialOrg={STUB_ORG} />);
@@ -253,14 +215,7 @@ describe("Landing page — last-role hint", () => {
   });
 
   it("hint card always shows the 4-role picker (lead/head/admin/viewer)", async () => {
-    storage.setItem(
-      LAST_ROLE_STORAGE_KEY,
-      JSON.stringify({
-        role: "head",
-        email: "head@customreport.local",
-        name: "Антон К.",
-      }),
-    );
+    storeLastRole(HEAD_ROLE);
 
     const LoginPageClient = await loadLoginPageClient();
     render(<LoginPageClient initialOrg={STUB_ORG} />);
@@ -276,14 +231,7 @@ describe("Landing page — last-role hint", () => {
   });
 
   it("each picker option links to the seeded email and role default", async () => {
-    storage.setItem(
-      LAST_ROLE_STORAGE_KEY,
-      JSON.stringify({
-        role: "head",
-        email: "head@customreport.local",
-        name: "Антон К.",
-      }),
-    );
+    storeLastRole(HEAD_ROLE);
 
     const LoginPageClient = await loadLoginPageClient();
     render(<LoginPageClient initialOrg={STUB_ORG} />);
