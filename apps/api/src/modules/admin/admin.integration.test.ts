@@ -131,6 +131,46 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(expectDefined(savedProject).name).toBe("New Admin Project");
   });
 
+  it("restores a deactivated user through the create branch", async () => {
+    await prisma.user.update({
+      where: { id: testData.head.id },
+      data: { isActive: false },
+    });
+    const snapshot = await repo.getSnapshot();
+
+    await prisma.user.delete({ where: { id: testData.head.id } });
+
+    const restoredSnapshot = await repo.saveSnapshot(snapshot);
+    const restoredUser = expectDefined(
+      await prisma.user.findUnique({ where: { id: testData.head.id } }),
+    );
+    expect(restoredUser.isActive).toBe(false);
+    expect(
+      expectDefined(
+        restoredSnapshot.users.find((user) => user.id === testData.head.id),
+      ).isActive,
+    ).toBe(false);
+  });
+
+  it("restores a deactivated user through the update branch", async () => {
+    await prisma.user.update({
+      where: { id: testData.head.id },
+      data: { isActive: false },
+    });
+    const snapshot = await repo.getSnapshot();
+
+    await prisma.user.update({
+      where: { id: testData.head.id },
+      data: { isActive: true },
+    });
+
+    await repo.saveSnapshot(snapshot);
+    const restoredUser = expectDefined(
+      await prisma.user.findUnique({ where: { id: testData.head.id } }),
+    );
+    expect(restoredUser.isActive).toBe(false);
+  });
+
   // add-structured-user-name (review finding P2): the denormalized `User.name`
   // is recomputed from the structured parts SERVER-SIDE on every snapshot write,
   // so a client/import that supplies a name disagreeing with the parts cannot

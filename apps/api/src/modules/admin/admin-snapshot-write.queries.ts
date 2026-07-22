@@ -86,6 +86,7 @@ async function upsertUsers(
           position: user.position,
           role: user.role,
           reportingGroupId,
+          isActive: user.isActive,
         },
       });
     } else {
@@ -101,6 +102,7 @@ async function upsertUsers(
           role: user.role,
           samlId: user.email,
           reportingGroupId,
+          isActive: user.isActive,
         },
       });
     }
