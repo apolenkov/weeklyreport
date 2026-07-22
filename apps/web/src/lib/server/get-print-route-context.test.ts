@@ -13,12 +13,10 @@ vi.mock("next/headers", () => ({
 import { decodePrintGateResponse } from "./get-print-route-context";
 
 /**
- * fix-report-surface-integrity W2 (task 3.3): `printGate` returns an OBJECT
- * (`{ session, isPdfExport, pdfReportId }`), not the bare session `auth.me`
- * returns. The decoder was adapted from `get-server-session`'s bare-session
- * shape, so prove it pulls the three fields out of the realistic
- * superjson-batched body — the one real-integration seam the gate's mocks
- * bypass.
+ * `printGate` returns `{ session, isPdfExport, pdfReportId }`, not the bare
+ * session returned by `auth.me`. Prove the decoder pulls all three fields out
+ * of the realistic superjson-batched body because route-gate mocks bypass
+ * this integration seam.
  */
 
 const SESSION = {

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useRef, useState } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { useDialogFocus } from "./use-dialog-focus";
 
@@ -75,5 +75,31 @@ describe("useDialogFocus focus restore", () => {
     expect(document.activeElement).toBe(screen.getByLabelText("field"));
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(document.activeElement).toBe(trigger);
+  });
+});
+
+describe("useDialogFocus keyboard handling", () => {
+  it("wraps focus in both directions at the dialog boundaries", () => {
+    render(<Harness autoFocusField={false} />);
+    fireEvent.click(screen.getByTestId("trigger"));
+
+    const first = screen.getByLabelText("field");
+    const last = screen.getByRole("button", { name: "Close" });
+    expect(document.activeElement).toBe(first);
+
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(last);
+
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(document.activeElement).toBe(first);
+  });
+
+  it("calls onClose when Escape is pressed", () => {
+    const onClose = vi.fn();
+    render(<Dialog onClose={onClose} autoFocusField={false} />);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(onClose).toHaveBeenCalledOnce();
   });
 });

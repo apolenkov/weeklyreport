@@ -11,11 +11,10 @@ import {
 } from "./api-url";
 
 /**
- * fix-report-surface-integrity W2 (task 3.3): server-only helper for the
- * `/print/[reportId]` route gate. Reads the session cookie via Next.js
- * `cookies()` and resolves the API's `auth.printGate` tRPC procedure, which
- * surfaces the PDF-worker-vs-human discriminator (`isPdfExport` +
- * `pdfReportId`) alongside the session.
+ * Server-only helper for the `/print/[reportId]` route gate. Reads the session
+ * cookie via Next.js `cookies()` and resolves the API's `auth.printGate` tRPC
+ * procedure, which surfaces the PDF-worker-vs-human discriminator
+ * (`isPdfExport` + `pdfReportId`) alongside the session.
  *
  * The `/print` route is NOT under the proxy.ts auth matcher, so the gate must
  * handle the no-session case itself — this helper resolves to a context with
