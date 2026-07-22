@@ -246,7 +246,7 @@ const SMALL_DATASET: TierDataset = {
       leadId: LEAD_1_ID,
       leadLabel: VASILY_LABEL,
       productId: PROD_INTEGRATIONS,
-      // small-seed-three-colors: Integrations is the YELLOW example — an at-risk
+      // Integrations is the YELLOW example — an at-risk
       // stage (below), never blocked.
       productLight: TrafficLightStatus.yellow,
       sectionStatus: ReportSectionStatus.draft,
@@ -283,7 +283,7 @@ const SMALL_DATASET: TierDataset = {
         stage: "Development",
       },
     },
-    // BI — the internal product, the GREEN showcase (small-seed-three-colors).
+    // BI is the internal product and the GREEN showcase.
     // Vasily still owns EXACTLY TWO stages (Planning, Development). The rest are
     // broadly staffed by co-owners — Maria on Analysis/Design/Testing, Igor on
     // DevOps (all on-track, see their sections) — EXCEPT Support, deliberately
@@ -326,7 +326,7 @@ const SMALL_DATASET: TierDataset = {
       },
     },
     // --- Maria (co-owner) — owns Testing; foreign content on Portal --------
-    // head-dashboard-declutter: Maria is the ONE SUBMITTED lead so the head
+    // Maria is the ONE SUBMITTED lead so the head
     // dashboard shows a Revoke affordance. All her contributions are flipped to
     // `submitted` (seedActiveLeadSection submits the section only when EVERY
     // contribution is submitted). Submission is orthogonal to product health and
@@ -373,7 +373,7 @@ const SMALL_DATASET: TierDataset = {
       leadLabel: MARIA_LABEL,
       productId: PROD_INTEGRATIONS,
       productLight: TrafficLightStatus.green,
-      sectionStatus: ReportSectionStatus.submitted, // D5: Maria submitted (see above)
+      sectionStatus: ReportSectionStatus.submitted,
       ownedStages: ["Testing"],
       items: [
         {
@@ -405,7 +405,7 @@ const SMALL_DATASET: TierDataset = {
       leadLabel: MARIA_LABEL,
       productId: PROD_BI,
       productLight: TrafficLightStatus.green,
-      sectionStatus: ReportSectionStatus.submitted, // D5: Maria submitted (see above)
+      sectionStatus: ReportSectionStatus.submitted,
       ownedStages: ["Analysis", "Design", "Testing"],
       items: [
         {
@@ -430,7 +430,7 @@ const SMALL_DATASET: TierDataset = {
       leadId: LEAD_IGOR_ID,
       leadLabel: IGOR_LABEL,
       productId: PROD_BI,
-      // small-seed-three-colors: BI is the green showcase — Igor's DevOps is
+      // BI is the green showcase — Igor's DevOps is
       // on-track here (the cluster blocker lives on the Portal, see below).
       productLight: TrafficLightStatus.green,
       sectionStatus: ReportSectionStatus.draft,
@@ -460,7 +460,7 @@ const SMALL_DATASET: TierDataset = {
       },
     },
     // Igor also owns DevOps on Portal and Integrations (consistent role).
-    // small-seed-three-colors: the cluster blocker lives on the Portal now — a
+    // The cluster blocker lives on the Portal — a
     // FOREIGN-owned blocked stage, so Vasily sees his co-owned Portal go red on
     // a stage he does not own (Product context demo), while BI stays green.
     {
@@ -889,7 +889,7 @@ async function seedReports(): Promise<void> {
   });
 }
 
-// head-dashboard-declutter: one active reminder policy + rule for the
+// One active reminder policy + rule for the
 // active period so the head's per-lead Remind action both renders (the
 // `hasActiveReminderRule` gate counts active ReminderPolicies whose validity
 // window covers `Report.deadline`) and actually dispatches (`reminders.

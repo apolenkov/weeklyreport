@@ -322,7 +322,7 @@ async function main() {
   await prisma.item.deleteMany({});
   await prisma.stageStatus.deleteMany({});
   await prisma.projectStatus.deleteMany({});
-  // project-activity-reporting: delete before ReportingGroup/User/Project.
+  // Delete activities before ReportingGroup/User/Project.
   // ActivityStatus.activityId and ProjectActivity.groupId are RESTRICT, so
   // statuses drop before their activities and activities before their group.
   await prisma.activityStatus.deleteMany({});
@@ -671,7 +671,7 @@ async function main() {
   // single-Development assignment — the dashboard variety they provide is
   // still useful and the all-7 case only needs one fixture.
   console.log(
-    "[seed-simple] Creating stage assignments (W6: Vasily=Dev/Test/DevOps/Support, Boris=Plan, Victor=Analysis, Galina=Design on PROD_CRM)...",
+    "[seed-simple] Creating stage assignments (Vasily=Dev/Test/DevOps/Support, Boris=Plan, Victor=Analysis, Galina=Design on PROD_CRM)...",
   );
   const allStageIds = [
     STAGE_PLAN,
@@ -1582,7 +1582,7 @@ async function main() {
 
   }
 
-  // W6: 3-contributor cross-author overlay on PROD_CRM.
+  // Three-contributor cross-author overlay on PROD_CRM.
   // Boris (section 407, Planning) — CW item + NW item + Risk + Decision + Priority.
   // Victor (section 408, Analysis) — same 5-section spread.
   // Galina (section 409, Design) — same 5-section spread.
@@ -1595,7 +1595,7 @@ async function main() {
       id: "a0000000-0000-4000-8000-000000006791",
       reportSectionId: borisSectionId,
       projectId: PROD_CRM_SALES,
-      // D4: Boris has no own seeded StageStatus rows on PROD_CRM_SALES, so this
+      // Boris has no own seeded StageStatus rows on PROD_CRM_SALES, so this
       // row must not claim a severity — a status hue needs a visible stage
       // correlate. Green is the calm default the app itself would aggregate to.
       status: TrafficLightStatus.green,
@@ -1678,12 +1678,11 @@ async function main() {
       stageNames: ["Planning"],
     },
   });
-  // fix-lead-surface-name-resolution: cross-stage reproducer. Boris owns
+  // This cross-stage reproducer uses a project where Boris owns
   // NO StageAssignment on PROD_PAYMENTS («Платёжный шлюз»), so this risk
   // and decision reference a project outside his stage-owned `projects`.
-  // Pre-fix these rendered "Unknown" (risk) / "Group" (decision) on
-  // /lead/report; post-fix they must show the real product name via the
-  // read model's name-only `referencedProjects`.
+  // They must show the real product name on /lead/report via the read model's
+  // name-only `referencedProjects`.
   await prisma.risk.create({
     data: {
       id: "a0000000-0000-4000-8000-000000009003",
@@ -1814,7 +1813,7 @@ async function main() {
     },
   });
 
-  // C3 (project-activity-reporting): stage-less Project Activities beside the
+  // Seed stage-less Project Activities beside the
   // products, so the assembled report's "Project Activities" band renders out
   // of the box. Mirrors the per-section ProjectStatus seeding above — 2..4
   // activities per product (groupId from the product's group; the product is
@@ -1826,7 +1825,7 @@ async function main() {
   // (402, 404) get a full spread so the band stays meaningful under the §7
   // submitted-only filter.
   console.log(
-    "[seed-simple] Creating project activities + weekly statuses (C3)...",
+    "[seed-simple] Creating project activities + weekly statuses...",
   );
   type ActivitySeed = {
     productId: string;
@@ -2025,7 +2024,7 @@ async function main() {
   // lead M:M link, a product LABEL link (linkedProducts still renders), the
   // section + its ActivityStatus, and activity-parented records — exercising the
   // activity-only-submit relaxation end to end.
-  console.log("[seed-simple] Creating activity-only lead + section (Q4)...");
+  console.log("[seed-simple] Creating activity-only lead + section...");
   await prisma.projectActivity.create({
     data: {
       id: ACTIVITY_ONLY_ID,
@@ -2230,7 +2229,7 @@ async function main() {
   // the viewer access to it. Lets the dashboard render with a
   // configured leader and a viewer who already sees the group's reports.
   console.log(
-    "[seed-simple] Setting group leader + viewer access (UFB-039)...",
+    "[seed-simple] Setting group leader + viewer access...",
   );
   await prisma.reportingGroup.update({
     where: { id: DEFAULT_REPORTING_GROUP_ID },
