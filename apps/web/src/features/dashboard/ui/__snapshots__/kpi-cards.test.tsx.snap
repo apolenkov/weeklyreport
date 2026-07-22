@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`KpiCards — a11y regression > Snapshots — visual layout and CSS preservation > snapshot: full DOM snapshot of KpiCards (layout preservation) 1`] = `
+exports[`KpiCards — a11y regression > layout snapshot > snapshot: full DOM snapshot of KpiCards (layout preservation) 1`] = `
 <div
   class="grid gap-3 sm:grid-cols-3"
 >
