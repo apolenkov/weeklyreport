@@ -2,39 +2,13 @@ import {
   type SubmissionDashboardRow,
   submissionDashboardRowSchema,
 } from "@customreport/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { type ReviewRepository, ReviewService } from "./review.service";
 
-/* ------------------------------------------------------------------ */
-/*  Fixed test UUIDs                                                   */
-/* ------------------------------------------------------------------ */
-
-const reportId = "22222222-2222-4222-8222-222222222222";
-
-/* ------------------------------------------------------------------ */
-/*  In-memory mock repository                                          */
-/* ------------------------------------------------------------------ */
-
-function createRepository(rows: SubmissionDashboardRow[]): ReviewRepository {
-  return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async ReviewRepository contract (no awaitable work in the stub)
-    async getSubmissionDashboard(activeReportId, _session) {
-      if (activeReportId !== reportId) {
-        return [];
-      }
-
-      return structuredClone(rows);
-    },
-  };
-}
-
+const REPORT_ID = "22222222-2222-4222-8222-222222222222";
 const ADMIN_SESSION = { role: "admin" as const };
-
-/* ------------------------------------------------------------------ */
-/*  Fixtures                                                           */
-/* ------------------------------------------------------------------ */
 
 function makeRow(
   overrides: Partial<SubmissionDashboardRow> & {
@@ -51,77 +25,25 @@ function makeRow(
   };
 }
 
-/* ------------------------------------------------------------------ */
-/*  Tests                                                              */
-/* ------------------------------------------------------------------ */
+function createRepository(rows: SubmissionDashboardRow[]): ReviewRepository {
+  return {
+    getSubmissionDashboard: (activeReportId) =>
+      Promise.resolve(
+        activeReportId === REPORT_ID ? structuredClone(rows) : [],
+      ),
+  };
+}
 
-describe("ReviewService — contract tests", () => {
-  it("returns empty array for report with no sections", async () => {
+describe("ReviewService output contract", () => {
+  it("returns an empty dashboard when the repository has no rows", async () => {
     const service = new ReviewService(createRepository([]));
 
-    const rows = await service.getSubmissionDashboard(reportId, ADMIN_SESSION);
-
-    expect(rows).toEqual([]);
+    await expect(
+      service.getSubmissionDashboard(REPORT_ID, ADMIN_SESSION),
+    ).resolves.toEqual([]);
   });
 
-  it("sorts drafts before submitted", async () => {
-    const rows: SubmissionDashboardRow[] = [
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000001",
-        leadName: "Alpha",
-        status: "submitted",
-        submittedAt: new Date("2026-04-09T10:00:00.000Z"),
-      }),
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000002",
-        leadName: "Bravo",
-        status: "draft",
-      }),
-    ];
-
-    const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(
-      reportId,
-      ADMIN_SESSION,
-    );
-
-    expect(result.map((r) => r.status)).toEqual(["draft", "submitted"]);
-  });
-
-  it("within same status, sorts by leadName using Russian locale collation", async () => {
-    const rows: SubmissionDashboardRow[] = [
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000003",
-        leadName: "Charlie",
-        status: "draft",
-      }),
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000001",
-        leadName: "Alpha",
-        status: "draft",
-      }),
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000002",
-        leadName: "Bravo",
-        status: "draft",
-      }),
-    ];
-
-    const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(
-      reportId,
-      ADMIN_SESSION,
-    );
-
-    expect(result.map((r) => r.leadName)).toEqual([
-      "Alpha",
-      "Bravo",
-      "Charlie",
-    ]);
-  });
-
-  it("validates output through Zod schema — extra fields are stripped", async () => {
-    // Simulate a repository returning rows with an extra unknown field
+  it("strips unknown repository fields from dashboard rows", async () => {
     const rowWithExtra = {
       leadId: "00000000-0000-4000-8000-000000000001",
       leadName: "Lead A",
@@ -129,247 +51,111 @@ describe("ReviewService — contract tests", () => {
       projectNames: ["Project X"],
       status: "draft" as const,
       submittedAt: null,
-      extraField: "should be stripped",
+      extraField: "not part of the contract",
     };
-
-    const repo: ReviewRepository = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async ReviewRepository contract (no awaitable work in the stub)
-      async getSubmissionDashboard() {
-        return [structuredClone(rowWithExtra)];
-      },
+    const repository: ReviewRepository = {
+      getSubmissionDashboard: () => Promise.resolve([rowWithExtra]),
     };
+    const service = new ReviewService(repository);
 
-    const service = new ReviewService(repo);
     const result = await service.getSubmissionDashboard(
-      reportId,
+      REPORT_ID,
       ADMIN_SESSION,
     );
 
     expect(result).toHaveLength(1);
     expect("extraField" in expectDefined(result[0])).toBe(false);
-
-    // Also verify the result parses cleanly through the schema
-    const parsed = submissionDashboardRowSchema.array().parse(result);
-    expect(parsed).toEqual(result);
+    expect(submissionDashboardRowSchema.array().parse(result)).toEqual(result);
   });
 
-  it("handles single section", async () => {
-    const rows: SubmissionDashboardRow[] = [
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000001",
-        leadName: "Solo Lead",
-        status: "submitted",
-        submittedAt: new Date("2026-04-10T08:00:00.000Z"),
-        projectNames: ["Only Project"],
-      }),
-    ];
-
-    const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(
-      reportId,
-      ADMIN_SESSION,
-    );
-
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({
-      leadName: "Solo Lead",
-      status: "submitted",
-      projectNames: ["Only Project"],
-    });
-  });
-
-  it("handles all sections submitted", async () => {
-    const rows: SubmissionDashboardRow[] = [
+  it("sorts a cloned result without mutating repository-owned rows", async () => {
+    const rows = [
       makeRow({
         leadId: "00000000-0000-4000-8000-000000000002",
         leadName: "Bravo",
         status: "submitted",
-        submittedAt: new Date("2026-04-09T11:00:00.000Z"),
-      }),
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000001",
-        leadName: "Alpha",
-        status: "submitted",
         submittedAt: new Date("2026-04-09T10:00:00.000Z"),
       }),
-    ];
-
-    const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(
-      reportId,
-      ADMIN_SESSION,
-    );
-
-    expect(result.every((r) => r.status === "submitted")).toBe(true);
-    expect(result.map((r) => r.leadName)).toEqual(["Alpha", "Bravo"]);
-  });
-
-  it("handles all sections draft", async () => {
-    const rows: SubmissionDashboardRow[] = [
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000002",
-        leadName: "Zulu",
-      }),
       makeRow({
         leadId: "00000000-0000-4000-8000-000000000001",
         leadName: "Alpha",
-      }),
-    ];
-
-    const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(
-      reportId,
-      ADMIN_SESSION,
-    );
-
-    expect(result.every((r) => r.status === "draft")).toBe(true);
-    expect(result.map((r) => r.leadName)).toEqual(["Alpha", "Zulu"]);
-  });
-
-  it("Russian names sort correctly (Андрей before Борис before Яков)", async () => {
-    const rows: SubmissionDashboardRow[] = [
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000003",
-        leadName: "Яков",
-        status: "draft",
-      }),
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000001",
-        leadName: "Андрей",
-        status: "draft",
-      }),
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000002",
-        leadName: "Борис",
-        status: "draft",
-      }),
-    ];
-
-    const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(
-      reportId,
-      ADMIN_SESSION,
-    );
-
-    expect(result.map((r) => r.leadName)).toEqual(["Андрей", "Борис", "Яков"]);
-  });
-
-  it("returns correct submitted count", async () => {
-    const rows: SubmissionDashboardRow[] = [
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000001",
-        leadName: "A",
         status: "submitted",
-        submittedAt: new Date(),
-      }),
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000002",
-        leadName: "B",
-        status: "draft",
+        submittedAt: new Date("2026-04-09T09:00:00.000Z"),
       }),
       makeRow({
         leadId: "00000000-0000-4000-8000-000000000003",
-        leadName: "C",
-        status: "submitted",
-        submittedAt: new Date(),
+        leadName: "Zulu",
       }),
     ];
+    const repository: ReviewRepository = {
+      getSubmissionDashboard: () => Promise.resolve(rows),
+    };
+    const service = new ReviewService(repository);
 
-    const service = new ReviewService(createRepository(rows));
     const result = await service.getSubmissionDashboard(
-      reportId,
+      REPORT_ID,
       ADMIN_SESSION,
     );
 
-    const submittedCount = result.filter(
-      (r) => r.status === "submitted",
-    ).length;
-    const draftCount = result.filter((r) => r.status === "draft").length;
-    expect(submittedCount).toBe(2);
-    expect(draftCount).toBe(1);
-    expect(result).toHaveLength(3);
-  });
-
-  it("returns empty for non-matching reportId", async () => {
-    const rows: SubmissionDashboardRow[] = [
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000001",
-        leadName: "A",
-      }),
-    ];
-
-    const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(
-      "99999999-9999-4999-8999-999999999999",
-      ADMIN_SESSION,
-    );
-
-    expect(result).toEqual([]);
-  });
-
-  it("excludes non-lead roles from dashboard", async () => {
-    const rows: SubmissionDashboardRow[] = [
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000001",
-        leadName: "Lead A",
-        role: "lead",
-      }),
-      // Only leads appear in the dashboard
-    ];
-
-    const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(
-      reportId,
-      ADMIN_SESSION,
-    );
-
-    expect(result.every((r) => r.role === "lead")).toBe(true);
-  });
-
-  it("mixed statuses with Russian names sort correctly", async () => {
-    const rows: SubmissionDashboardRow[] = [
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000004",
-        leadName: "Григорий",
-        status: "submitted",
-        submittedAt: new Date("2026-04-09T12:00:00.000Z"),
-      }),
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000003",
-        leadName: "Яков",
-        status: "draft",
-      }),
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000005",
-        leadName: "Алексей",
-        status: "submitted",
-        submittedAt: new Date("2026-04-09T11:00:00.000Z"),
-      }),
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000001",
-        leadName: "Андрей",
-        status: "draft",
-      }),
-      makeRow({
-        leadId: "00000000-0000-4000-8000-000000000002",
-        leadName: "Борис",
-        status: "draft",
-      }),
-    ];
-
-    const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(
-      reportId,
-      ADMIN_SESSION,
-    );
-
-    // Drafts first, sorted by Russian name; then submitted, sorted by Russian name
-    expect(result.map((r) => `${r.status}:${r.leadName}`)).toEqual([
-      "draft:Андрей",
-      "draft:Борис",
-      "draft:Яков",
-      "submitted:Алексей",
-      "submitted:Григорий",
+    expect(result.map(({ leadName }) => leadName)).toEqual([
+      "Zulu",
+      "Alpha",
+      "Bravo",
     ]);
+    expect(rows.map(({ leadName }) => leadName)).toEqual([
+      "Bravo",
+      "Alpha",
+      "Zulu",
+    ]);
+  });
+
+  it("uses Russian collation for equal-status lead names", async () => {
+    const service = new ReviewService(
+      createRepository([
+        makeRow({
+          leadId: "00000000-0000-4000-8000-000000000001",
+          leadName: "Alpha",
+        }),
+        makeRow({
+          leadId: "00000000-0000-4000-8000-000000000002",
+          leadName: "Альфа",
+        }),
+      ]),
+    );
+
+    const result = await service.getSubmissionDashboard(
+      REPORT_ID,
+      ADMIN_SESSION,
+    );
+
+    expect(result.map(({ leadName }) => leadName)).toEqual(["Альфа", "Alpha"]);
+  });
+
+  it("passes the ru locale to name collation explicitly", async () => {
+    // The outcome above cannot pin the locale ARGUMENT on a host whose
+    // default ICU locale is already ru-RU (dropping "ru" changes nothing
+    // there), so the explicit-locale contract is pinned at the call site.
+    const localeCompare = vi.spyOn(String.prototype, "localeCompare");
+    try {
+      const service = new ReviewService(
+        createRepository([
+          makeRow({
+            leadId: "00000000-0000-4000-8000-000000000001",
+            leadName: "Alpha",
+          }),
+          makeRow({
+            leadId: "00000000-0000-4000-8000-000000000002",
+            leadName: "Альфа",
+          }),
+        ]),
+      );
+      await service.getSubmissionDashboard(REPORT_ID, ADMIN_SESSION);
+
+      expect(localeCompare).toHaveBeenCalled();
+      const locales = localeCompare.mock.calls.map(([, locale]) => locale);
+      expect(locales).toContain("ru");
+    } finally {
+      localeCompare.mockRestore();
+    }
   });
 });
