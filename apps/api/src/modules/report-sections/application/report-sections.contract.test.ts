@@ -352,6 +352,7 @@ describe("ReportSectionsService — saveDraft error paths", () => {
       tag: "tag",
       workflowStatus: "in_progress" as const,
       carriedOver: false,
+      stageIds: ["Development"],
     }));
 
     await expect(
@@ -373,6 +374,7 @@ describe("ReportSectionsService — saveDraft error paths", () => {
               tag: "bug",
               workflowStatus: "in_progress",
               carriedOver: false,
+              stageIds: ["Development"],
             },
           ],
         }),
@@ -394,6 +396,7 @@ describe("ReportSectionsService — saveDraft error paths", () => {
               tag: "bug",
               workflowStatus: "in_progress",
               carriedOver: false,
+              stageIds: ["Development"],
             },
           ],
         }),
@@ -977,9 +980,11 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
         validDraft({
           decisions: [
             {
+              productId: PROJECT_ID_1,
               text: "",
               owner: "Owner",
               impact: "Impact",
+              stageIds: ["Development"],
             },
           ],
         }),
@@ -995,9 +1000,11 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
         validDraft({
           decisions: [
             {
+              productId: PROJECT_ID_1,
               text: "Valid decision",
               owner: "",
               impact: "Impact",
+              stageIds: ["Development"],
             },
           ],
         }),

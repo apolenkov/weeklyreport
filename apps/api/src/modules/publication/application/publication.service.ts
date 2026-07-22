@@ -67,6 +67,18 @@ export interface PublicationRepository {
 // boundary — the service depends on the port, not the concrete prisma class.
 export const PUBLICATION_REPOSITORY = Symbol("PublicationRepository");
 
+export interface PublicationIngestionQueue {
+  enqueue: IngestionPublishHook;
+}
+
+export class NoopIngestionQueue implements PublicationIngestionQueue {
+  // Ingestion is deferred; replace this module provider with a queue-backed
+  // implementation when publication-time ingestion is activated.
+  enqueue(_sectionIds: readonly string[]): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
 function compareSections(
   left: ReportSectionReadModel,
   right: ReportSectionReadModel,
@@ -121,16 +133,8 @@ export class PublicationService {
 
   constructor(
     private readonly repository: PublicationRepository,
-    logger?: AppLogger,
-    /**
-     * On every successful publish, called with the list of section ids
-     * that just landed in the published report.
-     * Defaults to a no-op so existing tests / fixtures stay green.
-     * Errors are swallowed below — publish never fails because of
-     * ingestion bookkeeping.
-     */
-    private readonly ingestionHook: IngestionPublishHook = () =>
-      Promise.resolve(undefined),
+    logger: AppLogger | undefined,
+    private readonly ingestionQueue: PublicationIngestionQueue,
     private readonly telemetry: PublicationTelemetry = NOOP_PUBLICATION_TELEMETRY,
   ) {
     this.logger = logger ?? createNullLogger();
@@ -209,7 +213,7 @@ export class PublicationService {
     await emitPublishSideEffects(
       {
         telemetry: this.telemetry,
-        ingestionHook: this.ingestionHook,
+        ingestionHook: (sectionIds) => this.ingestionQueue.enqueue(sectionIds),
         // publishAuto has never invalidated the analytics cache (no
         // `invalidateAnalyticsCache` collaborator is wired here) — that stays
         // as-is; only `period.publish` does.

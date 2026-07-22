@@ -11,6 +11,7 @@ import {
 import { PublicationPrometheusTelemetry } from "../infrastructure/publication-prometheus-telemetry.adapter.js";
 import {
   type AutoPublishResult,
+  NoopIngestionQueue,
   type PublicationRepository,
   PublicationService,
 } from "./publication.service";
@@ -20,6 +21,7 @@ import {
 /* ------------------------------------------------------------------ */
 
 const reportId = "22222222-2222-4222-8222-222222222222";
+const noopIngestionQueue = new NoopIngestionQueue();
 
 /* ------------------------------------------------------------------ */
 /*  Section / report factories                                         */
@@ -186,7 +188,11 @@ const assembledReport: AssembledReport = makeReport({
 describe("PublicationService", () => {
   describe("getAssembledReport", () => {
     it("returns the assembled report for the active report, sorted by authorName", async () => {
-      const service = new PublicationService(createRepository(assembledReport));
+      const service = new PublicationService(
+        createRepository(assembledReport),
+        undefined,
+        noopIngestionQueue,
+      );
 
       const result = await service.getAssembledReport(reportId);
 
@@ -199,7 +205,11 @@ describe("PublicationService", () => {
     });
 
     it("throws when report not found (null from repo)", async () => {
-      const service = new PublicationService(createRepository(null));
+      const service = new PublicationService(
+        createRepository(null),
+        undefined,
+        noopIngestionQueue,
+      );
 
       await expect(
         service.getAssembledReport("99999999-9999-4999-8999-999999999999"),
@@ -241,7 +251,11 @@ describe("PublicationService", () => {
         ],
       });
 
-      const service = new PublicationService(createRepository(report));
+      const service = new PublicationService(
+        createRepository(report),
+        undefined,
+        noopIngestionQueue,
+      );
       const result = await service.getAssembledReport(reportId);
 
       expect(result.portfolioOverview).toEqual({
@@ -280,7 +294,11 @@ describe("PublicationService", () => {
         ],
       });
 
-      const service = new PublicationService(createRepository(report));
+      const service = new PublicationService(
+        createRepository(report),
+        undefined,
+        noopIngestionQueue,
+      );
       const result = await service.getAssembledReport(reportId);
 
       expect(result.portfolioOverview).toEqual({
@@ -294,7 +312,11 @@ describe("PublicationService", () => {
         sections: [sectionAlpha, sectionBravo, sectionCharlie],
       });
 
-      const service = new PublicationService(createRepository(report));
+      const service = new PublicationService(
+        createRepository(report),
+        undefined,
+        noopIngestionQueue,
+      );
       const result = await service.getAssembledReport(reportId);
 
       expect(result.portfolioOverview.status).toBe("red");
@@ -346,7 +368,11 @@ describe("PublicationService", () => {
         ],
       });
 
-      const service = new PublicationService(createRepository(report));
+      const service = new PublicationService(
+        createRepository(report),
+        undefined,
+        noopIngestionQueue,
+      );
       const result = await service.getAssembledReport(reportId);
 
       // 2 green, 1 yellow, 1 red; null is skipped
@@ -400,7 +426,11 @@ describe("PublicationService", () => {
         ],
       });
 
-      const service = new PublicationService(createRepository(report));
+      const service = new PublicationService(
+        createRepository(report),
+        undefined,
+        noopIngestionQueue,
+      );
       const result = await service.getAssembledReport(reportId);
 
       expect(result.sections.map((s) => s.authorName)).toEqual([
@@ -416,7 +446,11 @@ describe("PublicationService", () => {
     // publishedById stays null and publishedByName='system' so the head
     // dashboard can show a "auto-published" badge by comparing.
     it("publishAuto stamps system attribution (publishedById=null)", async () => {
-      const service = new PublicationService(createRepository(assembledReport));
+      const service = new PublicationService(
+        createRepository(assembledReport),
+        undefined,
+        noopIngestionQueue,
+      );
 
       const published = expectPublished(await service.publishAuto(reportId));
 
@@ -427,7 +461,11 @@ describe("PublicationService", () => {
     });
 
     it("publishAuto is idempotent on already-published reports (no throw, returns current)", async () => {
-      const service = new PublicationService(createRepository(assembledReport));
+      const service = new PublicationService(
+        createRepository(assembledReport),
+        undefined,
+        noopIngestionQueue,
+      );
 
       const first = expectPublished(await service.publishAuto(reportId));
       const second = expectPublished(await service.publishAuto(reportId));
@@ -455,7 +493,11 @@ describe("PublicationService", () => {
         ...createRepository(alreadyPublished),
         saveAutoPublishedReport,
       };
-      const service = new PublicationService(repository);
+      const service = new PublicationService(
+        repository,
+        undefined,
+        noopIngestionQueue,
+      );
 
       const result = await service.publishAuto(reportId);
 
@@ -474,7 +516,11 @@ describe("PublicationService", () => {
     it("publishAuto real write reports wasAlreadyPublished=false and writes exactly once", async () => {
       const repository = createRepository(assembledReport);
       const saveSpy = vi.spyOn(repository, "saveAutoPublishedReport");
-      const service = new PublicationService(repository);
+      const service = new PublicationService(
+        repository,
+        undefined,
+        noopIngestionQueue,
+      );
 
       const result = await service.publishAuto(reportId);
 
@@ -491,7 +537,7 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         createRepository(assembledReport),
         undefined,
-        undefined,
+        noopIngestionQueue,
         new PublicationPrometheusTelemetry(),
       );
       const submittedBefore = await getCounterValue(
@@ -531,7 +577,9 @@ describe("PublicationService", () => {
           return { published: false as const };
         },
       };
-      const service = new PublicationService(repository, undefined, ingestion);
+      const service = new PublicationService(repository, undefined, {
+        enqueue: ingestion,
+      });
       const submittedBefore = await getCounterValue(
         customreportReportsSubmittedTotal,
         { state: "published" },
@@ -565,7 +613,7 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         createRepository(assembledReport),
         undefined,
-        ingestion,
+        { enqueue: ingestion },
       );
 
       const published = expectPublished(await service.publishAuto(reportId));
@@ -584,7 +632,7 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         createRepository(report),
         undefined,
-        ingestion,
+        { enqueue: ingestion },
       );
 
       await service.publishAuto(reportId);
@@ -607,7 +655,7 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         createRepository(assembledReport),
         logger,
-        ingestion,
+        { enqueue: ingestion },
       );
 
       const result = await service.publishAuto(reportId);
