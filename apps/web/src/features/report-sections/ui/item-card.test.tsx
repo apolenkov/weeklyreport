@@ -1,14 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * Regression catalog: verify-a11y-recommended-flip
- * Source: apps/web/src/components/lead/item-card.tsx
- *
- * In-scope rows (unit-rtl/high + snapshot):
- *  - Priority rank badge: role="img" and aria-label
- *  - Stage tags container: role="img" and aria-label
- *  - EditIcon / DeleteIcon SVGs: aria-hidden (snapshot)
- *  - Full card DOM structure (snapshot)
+ * Source: apps/web/src/features/report-sections/ui/item-card.tsx
  */
 import "@testing-library/jest-dom/vitest";
 
@@ -28,7 +21,7 @@ const BASE_ITEM: KanbanItem = {
   author: "Alice Lead",
 };
 
-describe("ItemCard — priority rank badge a11y (unit-rtl/high)", () => {
+describe("ItemCard — priority rank badge accessibility", () => {
   it("priority rank badge has role='img'", () => {
     render(<ItemCard item={{ ...BASE_ITEM, priorityRank: 2 }} />);
     // Two role="img" elements: priority badge and stage-tags container.
@@ -44,7 +37,7 @@ describe("ItemCard — priority rank badge a11y (unit-rtl/high)", () => {
   });
 });
 
-describe("ItemCard — stage tags container a11y (unit-rtl/high)", () => {
+describe("ItemCard — stage tags container accessibility", () => {
   it("stage tags container has role='img'", () => {
     render(<ItemCard item={{ ...BASE_ITEM, stageIds: ["S1", "S2"] }} />);
     const container = screen.getByRole("img", {
@@ -94,7 +87,7 @@ describe("ItemCard — SVG icon aria-hidden (snapshot)", () => {
   });
 });
 
-describe("ItemCard — compact touch floor (responsive-compact-layout)", () => {
+describe("ItemCard — compact touch floor", () => {
   // jsdom cannot evaluate media queries, so the accepted teeth are class
   // assertions: the icon buttons must derive their size from the shared
   // toolbar token (32px on desktop, the 44px touch floor below `md`), never
@@ -120,7 +113,7 @@ describe("ItemCard — card DOM structure (snapshot)", () => {
   });
 });
 
-describe("ItemCard — uniform height (lead-item-card-uniformity, B1)", () => {
+describe("ItemCard — uniform height", () => {
   // Same fixed height as the section-level empty-state placeholder ("No
   // items yet" in current-week-section.tsx / next-week-section.tsx) — the
   // reference every populated card must match.
@@ -168,7 +161,7 @@ describe("ItemCard — uniform height (lead-item-card-uniformity, B1)", () => {
   });
 });
 
-describe("ItemCard — body text truncation + tooltip (lead-item-card-uniformity, B2)", () => {
+describe("ItemCard — body text truncation + tooltip", () => {
   const LONG_TEXT =
     "A very long piece of item text that keeps going and going and going well past what three clamped lines can comfortably show in the card.";
 
@@ -186,7 +179,7 @@ describe("ItemCard — body text truncation + tooltip (lead-item-card-uniformity
   });
 });
 
-describe("ItemCard — record-status-derived-from-risk (risk-derived alarm)", () => {
+describe("ItemCard — risk-derived alarm status", () => {
   const inProgress: KanbanItem = {
     ...BASE_ITEM,
     stageIds: ["Development"],
@@ -239,7 +232,7 @@ describe("ItemCard — record-status-derived-from-risk (risk-derived alarm)", ()
     expect(screen.queryByText("Blocked")).not.toBeInTheDocument();
   });
 
-  it("never floors an activity-parented item (Q1 Phase-1 severity isolation)", () => {
+  it("never floors an activity-parented item", () => {
     render(
       <ItemCard
         item={{
@@ -274,7 +267,7 @@ describe("ItemCard — record-status-derived-from-risk (risk-derived alarm)", ()
   });
 });
 
-describe("ItemCard — foreign covering-risk attribution (record-status-ux-polish §3)", () => {
+describe("ItemCard — foreign covering-risk attribution", () => {
   const inProgress: KanbanItem = {
     ...BASE_ITEM,
     stageIds: ["Development"],
@@ -323,7 +316,7 @@ describe("ItemCard — foreign covering-risk attribution (record-status-ux-polis
   });
 });
 
-describe("ItemCard — move-to-current-week action (F4)", () => {
+describe("ItemCard — move-to-current-week action", () => {
   it("renders the Move to current week button when the handler is passed", () => {
     render(<ItemCard item={BASE_ITEM} onMoveToCurrentWeek={() => undefined} />);
     expect(
@@ -356,7 +349,7 @@ describe("ItemCard — move-to-current-week action (F4)", () => {
   });
 });
 
-describe("ItemCard — pause action and reason display (F5)", () => {
+describe("ItemCard — pause action and reason display", () => {
   it("shows the Pause button for an in-progress item when the handler is passed", () => {
     render(<ItemCard item={BASE_ITEM} onPause={() => undefined} />);
     expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();

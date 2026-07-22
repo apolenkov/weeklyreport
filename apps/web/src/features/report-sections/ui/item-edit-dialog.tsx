@@ -9,7 +9,6 @@ import { CURRENT_WEEK_CHOICES, NEXT_WEEK_CHOICES } from "./item-status-choices";
 import type { ParentActivityOption } from "./product-picker";
 import { useItemEditDialog } from "./use-item-edit-dialog";
 
-/** The prefill an item's alarm gesture hands to blocker (risk) creation. */
 interface ItemEditDialogProps {
   /** Open/close state. Caller controls so it can wire submit/cancel. */
   readonly open: boolean;

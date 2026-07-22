@@ -882,7 +882,7 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
       />,
     );
     const indicator = container.querySelector<HTMLElement>(COLLAPSED_INDICATOR);
-    expect(indicator?.style.borderColor).toBe("rgba(0, 0, 0, 0.15)");
+    expect(indicator?.style.borderColor).toBe("var(--color-border)");
     expect(indicator?.style.color).toBe("var(--color-muted-foreground)");
   });
 
