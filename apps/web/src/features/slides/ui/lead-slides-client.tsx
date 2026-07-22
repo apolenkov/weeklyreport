@@ -20,7 +20,6 @@ import { useSlideInlineEditor } from "./use-slide-inline-editor";
 
 interface LeadSlidesClientProps {
   readonly initialReportId?: string | null;
-  readonly chrome?: "full" | "content";
   /** When provided, this ref is applied to the deck root div so the caller
    *  (lead-form header) can host the fullscreen button. */
   readonly deckRef?: RefObject<HTMLDivElement | null>;

@@ -183,7 +183,6 @@ function LoadedReportContent({
     return (
       <LeadSlidesClient
         initialReportId={data.targetReportId || props.pinnedReportId || null}
-        chrome="content"
         deckRef={props.deckRef}
         isFullscreen={props.slidesFullscreen.isFullscreen}
         onToggle={props.slidesFullscreen.toggle}

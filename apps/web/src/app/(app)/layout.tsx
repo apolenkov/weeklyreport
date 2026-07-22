@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
-import { Suspense } from "react";
 
 import { SessionProvider } from "../../lib/session-provider";
 import { NavBar } from "../../shared/ui/navigation/nav-bar";
-import { NavBarSkeleton } from "../../shared/ui/navigation/nav-bar-skeleton";
 
 type AppGroupLayoutProps = Readonly<{
   children: ReactNode;
@@ -16,19 +14,14 @@ type AppGroupLayoutProps = Readonly<{
  * useSession() to read { user, isLoading, isAuthenticated }. The provider
  * itself fetches the current session via the auth.me tRPC query — works
  * identically in stub mode (DEV_SESSION fallback) and real mode (verified
- * cookie). proxy.ts keeps unauthenticated users out before they ever reach
- * this layout (in real mode), so SessionProvider's null branch is mostly a
- * safety net for the brief window before the query resolves.
+ * cookie). NavBar owns the loading skeleton that reserves its brand, identity,
+ * and action slots while that query resolves. proxy.ts keeps unauthenticated
+ * users out before they ever reach this layout in real mode.
  */
 export default function AppGroupLayout({ children }: AppGroupLayoutProps) {
   return (
     <SessionProvider>
-      {/* skeleton fallback eliminates the nav-bar FOUC flash on
-          cold reload. NavBarSkeleton matches NavBar height exactly so
-          the swap is opacity-only, zero CLS. */}
-      <Suspense fallback={<NavBarSkeleton />}>
-        <NavBar />
-      </Suspense>
+      <NavBar />
       {children}
     </SessionProvider>
   );

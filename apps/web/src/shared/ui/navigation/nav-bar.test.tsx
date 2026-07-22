@@ -353,6 +353,19 @@ describe("NavBar — role-aware visibility", () => {
     expectLinkMissing(container, "/lead/report");
   });
 
+  it("renders its internal layout skeleton while the session is loading", () => {
+    setRole(null);
+    const { container } = render(<NavBar />);
+
+    expect(
+      container.querySelector('[aria-label="Profile loading"]'),
+    ).not.toBeNull();
+    expect(
+      container.querySelector('[aria-label="Main navigation"]'),
+    ).toBeEmptyDOMElement();
+    expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(6);
+  });
+
   it("hidden links are absent from the DOM (filtered before render — not CSS-hidden)", () => {
     // T0 invariant from the plan: queryByText returning null is the proof.
     // Critical: a hostile viewer who reads the rendered HTML must see no

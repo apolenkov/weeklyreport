@@ -14,10 +14,8 @@ interface AccordionSectionProps {
   readonly defaultOpen?: boolean;
   /**
    * Set by the parent's "Toggle All" button to force every section into the
-   * same state. The section mirrors `groupExpanded` into its local state on
-   * every change; local clicks afterwards still toggle individual sections.
-   * "Toggle All" always flips this value, so the mirror fires on each press
-   * without a separate counter.
+   * same state. Each prop change clears the current individual override;
+   * local clicks then override that group command until the next change.
    */
   readonly groupExpanded?: boolean;
   readonly testId?: string;
@@ -38,21 +36,18 @@ export function AccordionSection({
   actions,
   children,
 }: AccordionSectionProps) {
-  // A local toggle is stored PAIRED with the groupExpanded value it was made
-  // under: the expand-all/collapse-all toolbar only ever arrives as a value
-  // CHANGE, which makes the stored override stale, so the group command wins —
-  // the old mirror-into-local effect, without the effect. With no group prop
-  // the override always matches (undefined) and defaultOpen seeds the state.
-  const [override, setOverride] = useState<{
-    readonly group: boolean | undefined;
-    readonly value: boolean;
-  } | null>(null);
-  const expanded =
-    override !== null && override.group === groupExpanded
-      ? override.value
-      : (groupExpanded ?? defaultOpen);
+  const [expansion, setExpansion] = useState<{
+    readonly groupExpanded: boolean | undefined;
+    readonly override: boolean | null;
+  }>({ groupExpanded, override: null });
+  const groupChanged = expansion.groupExpanded !== groupExpanded;
+  if (groupChanged) {
+    setExpansion({ groupExpanded, override: null });
+  }
+  const currentOverride = groupChanged ? null : expansion.override;
+  const expanded = currentOverride ?? groupExpanded ?? defaultOpen;
   const setExpanded = (value: boolean) =>
-    setOverride({ group: groupExpanded, value });
+    setExpansion({ groupExpanded, override: value });
   // Stable id on the collapsible panel so both toggles can point their
   // aria-controls at it; derived from testId when present, else a unique id.
   const generatedId = useId();

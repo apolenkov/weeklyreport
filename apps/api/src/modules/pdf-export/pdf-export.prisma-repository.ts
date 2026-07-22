@@ -9,7 +9,7 @@ import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { groupScopeFilter } from "../../lib/group-scope.js";
+import { canReadReport } from "../../lib/report-read-access.js";
 import { computePortfolioOverviewFromReadSections } from "../published-report-snapshot.js";
 import {
   mapPrismaToReportSection,
@@ -65,22 +65,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
     session: UserSession,
     reportId: string,
   ): Promise<boolean> {
-    if (session.role === "admin") {
-      const report = await this.prisma.report.findUnique({
-        where: { id: reportId },
-        select: { id: true },
-      });
-      return report !== null;
-    }
-
-    const report = await this.prisma.report.findFirst({
-      where: {
-        id: reportId,
-        sections: { some: groupScopeFilter(session, "reportSection") },
-      },
-      select: { id: true },
-    });
-    return report !== null;
+    return canReadReport(session, reportId, this.prisma);
   }
 
   async createExportJob(
