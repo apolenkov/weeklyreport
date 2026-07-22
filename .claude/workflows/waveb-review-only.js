@@ -5,47 +5,35 @@ export const meta = {
   phases: [{ title: "Verify" }, { title: "Gate" }, { title: "Codex" }],
 };
 
-const REPO = "/home/user/work/customreport";
+const REPO = "/home/user/work/weeklyreport";
 
-// ---- the change under review (make-publish-atomic, #16) ----
+// ---- the change under review (needs-attention-to-good, calibration slices 22+23) ----
 const CHANGE = {
-  name: "make-publish-atomic",
-  // Explicit scope — ONLY these files are this change's work. Concurrent
-  // parallel-session edits outside this list must be IGNORED.
+  name: "needs-attention-to-good",
+  // Explicit scope — ONLY these files are this slice's work. Concurrent edits
+  // outside this list must be IGNORED. report-slides.tsx is DELETED (tracked).
   scopeTracked: [
-    "apps/api/src/infrastructure/trpc/trpc.router.ts",
-    "apps/api/src/modules/period/__tests__/lifecycle-write-gate.test.ts",
-    "apps/api/src/modules/period/period.contract.test.ts",
-    "apps/api/src/modules/period/period.integration.test.ts",
-    "apps/api/src/modules/period/period.prisma-repository.ts",
-    "apps/api/src/modules/period/period.service.test.ts",
-    "apps/api/src/modules/period/period.service.ts",
-    "apps/api/src/modules/publication/publication.contract.test.ts",
-    "apps/api/src/modules/publication/publication.integration.test.ts",
-    "apps/api/src/modules/publication/publication.prisma-repository.ts",
-    "apps/api/src/modules/publication/publication.service.test.ts",
-    "apps/api/src/modules/publication/publication.service.ts",
+    "apps/web/src/features/slides/ui/head-slides-client.test.tsx",
+    "apps/web/src/features/slides/ui/head-slides-client.tsx",
+    "apps/web/src/features/slides/ui/lead-slides-client.clamp.test.tsx",
+    "apps/web/src/features/slides/ui/lead-slides-client.test.tsx",
+    "apps/web/src/features/slides/ui/lead-slides-client.tsx",
+    "apps/web/src/features/slides/ui/report-slides.tsx",
+    "apps/web/src/features/viewer/ui/viewer-report-shell.test.tsx",
+    "openspec/changes/needs-attention-to-good/tasks.md",
   ],
-  scopeNew: [
-    "apps/api/src/modules/period/period.publish-atomicity.integration.test.ts",
-    "apps/api/src/infrastructure/trpc/review-publish-target.test.ts",
-  ],
+  scopeNew: [],
   mustCover: [
-    "period.prisma-repository publishPeriod: tx.report.updateMany({where:{id, periodStatus:{not:'published'}}, data: buildTransition('publish',...)}) capturing {count}; count===0 -> no-op (NO snapshot rebuild); count===1 -> findUniqueOrThrow(reportFullIncludeForSnapshot) + snapshot write in the SAME $transaction.",
-    "period.service publishPeriod: both counters (customreportReportsSubmittedTotal, customreportPeriodStateTransitionsTotal) AND the ingestion enqueue run ONLY when count===1; the transition counter from-label is the row's prior periodStatus (open vs reopened), never hardcoded.",
-    "publication.service publishReport: conditional write on periodStatus!='published' (NOT legacy status); fast-path rejection tests periodStatus==='published' (so a reopened period stays publishable); prior periodStatus surfaced for the from-label.",
-    "publication.service: snapshot rebuild + ingestion enqueue + both counters gated on count===1; zero-transition returns the already-published assembled report (same idempotent choice as the period path), never a second rebuild.",
-    "trpc.router review.publish + review.assembledReport resolve target via getCurrentEditableId (newest non-archived open/reopened, periodStart<=now, periodStart desc then id desc), replacing ctx.session.activeReportId; review.dashboard moved off its looser inline query onto the SAME resolver; dead activeReportId null-checks removed for publish/assembledReport; dashboard keeps its empty-result response.",
-    "resolver-returns-nothing: review.publish/assembledReport raise a domain 'no active period' error mapped to a tRPC error (NOT acting on a stale id); dashboard keeps empty-result.",
-    "getCurrentEditableId reused unchanged (NOT getActiveReportId, which adds a published fallback the publish/dashboard paths must not have); not forked.",
-    "period-dual-state CI matcher (lifecycle-write-gate.test.ts) extended to recognize report.updateMany as a guarded buildTransition-sourced lifecycle write — and STILL HAS TEETH: a raw updateMany of lifecycle fields NOT sourced from buildTransition would still trip it (the matcher was not loosened to a blanket allow).",
-    "characterization tests added and now PASS (FAIL before fix): two concurrent publishPeriod transition ONCE; concurrent review.publish same; DB-resolved target wins over a stale activeReportId; reopened period republishable emitting from:'reopened'.",
-    "telemetry-contract tests: a redundant concurrent publish increments each counter EXACTLY once for BOTH paths; from-label carries actual prior periodStatus, never hardcoded from:'open'.",
+    "viewer-report-shell.test.tsx: every comment that referenced OpenSpec change/task IDs ('viewer-live-status (task 5.1)' etc.) is rewritten to state the load-bearing WHY only. ANTI-GAMING: no re-labeled archaeology (issue IDs, dates, 'per spec X' as substitutes) anywhere in the file.",
+    "viewer-report-shell.test.tsx addressed-older-period test: fixtures are now dispatched by QUERY IDENTITY (key/procedure path), not mockImplementationOnce call order/count; an added or reordered hook call cannot silently swap fixtures. The test's assertions prove the SAME behaviors as before — nothing weakened or deleted.",
+    "report-slides.tsx (shallow variant->mode wrapper) is deleted; every former consumer (lead-slides-client, head-slides-client and their tests) now uses StatusSlideDeck directly with the correct mode prop; no import of ReportSlides remains anywhere in the repo.",
+    "slide-grid-cells.test.ts is UNTOUCHED (its seed finding was stale — already fixed by harden-test-suite-quality) and the stale re-grade is recorded in needs-attention-to-good/tasks.md wave notes per the campaign's checklist rule.",
+    "tasks.md ticks for slices 22/23 accurately reflect what was done vs recorded-stale; no unrelated task ticked.",
   ],
   reachability:
-    "Under a double-click or two concurrent head tabs, can EITHER publish path still transition the period twice, rebuild the snapshot twice, or double-increment a counter? Any path where the from-label is hardcoded 'open' for a reopened period, or where review.publish still acts on a stale ctx.session.activeReportId instead of the DB-resolved target?",
+    "Grep-level: does any file still import/reference ReportSlides or pass 'variant' where 'mode' is expected? Does any comment in viewer-report-shell.test.tsx still smuggle change/task archaeology, including re-labeled forms? Is there any remaining ordering-dependence in the mock dispatch (a mockImplementationOnce chain whose meaning changes if a hook is added)?",
   regression:
-    "Does a legitimate single publish still transition the row, rebuild the snapshot once, enqueue ingestion once, increment both counters once? Does a reopened period still publish (periodStatus-keyed fast-path must not reject it)? Do review.dashboard / assembledReport / publish now ALL resolve the identical period? Is the zero-transition idempotent result the same shape across both paths (not a 500)? Does the dual-state matcher still pass with updateMany recognized AND still reject a non-buildTransition lifecycle updateMany?",
+    "Do lead and head slide surfaces render identically to before (mode mapping correct for both)? Do all touched test suites still assert the same behaviors (no deleted/weakened assertion vs HEAD)? Do the touched files pass eslint --max-warnings 0 and the web typecheck?",
 };
 
 const VERIFY_SCHEMA = {
