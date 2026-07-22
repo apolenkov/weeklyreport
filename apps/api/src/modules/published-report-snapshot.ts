@@ -115,19 +115,59 @@ export function effectiveProjectStatus(
   });
 }
 
+interface ProjectOccurrence {
+  section: ReportSectionReadModel;
+  project: ReportSectionReadModel["projects"][number];
+}
+
+/** Group every section-level occurrence by its stable product identity. */
+function groupProjectOccurrences(
+  sections: readonly ReportSectionReadModel[],
+): Map<string, ProjectOccurrence[]> {
+  return Map.groupBy(
+    sections.flatMap((section) =>
+      section.projects.map((project) => ({ project, section })),
+    ),
+    ({ project }) => project.projectId,
+  );
+}
+
+/** Prefer the frozen cross-lead union while retaining legacy snapshot support. */
+function computePublishedStageCount(
+  occurrences: readonly ProjectOccurrence[],
+): number {
+  const stageSetCounts = occurrences.flatMap(({ project }) =>
+    project.stageSet === undefined ? [] : [project.stageSet.length],
+  );
+
+  return stageSetCounts.length > 0
+    ? Math.max(...stageSetCounts)
+    : Math.max(
+        0,
+        ...occurrences.map(({ project }) => project.ownedStages?.length ?? 0),
+      );
+}
+
 export function computePortfolioOverviewFromReadSections(
   sections: readonly ReportSectionReadModel[],
 ): PortfolioOverview {
-  const totals = { green: 0, yellow: 0, red: 0 };
-
-  for (const section of sections) {
-    for (const project of section.projects) {
-      const status = effectiveProjectStatus(section, project);
-      if (status === "green" || status === "yellow" || status === "red") {
-        totals[status]++;
-      }
-    }
-  }
+  const totals = [...groupProjectOccurrences(sections).values()]
+    .map((occurrences) =>
+      computeWorstStatus(
+        occurrences.flatMap(({ project, section }) => {
+          const status = effectiveProjectStatus(section, project);
+          return status === null ? [] : [status];
+        }),
+      ),
+    )
+    .filter((status): status is TrafficLightStatus => status !== null)
+    .reduce<PortfolioOverview["totals"]>(
+      (current, status) => ({
+        ...current,
+        [status]: current[status] + 1,
+      }),
+      { green: 0, yellow: 0, red: 0 },
+    );
 
   const status: PortfolioOverview["status"] =
     totals.red > 0 ? "red" : totals.yellow > 0 ? "yellow" : "green";
@@ -138,52 +178,34 @@ export function computePortfolioOverviewFromReadSections(
 export function buildPortfolioProductsFromSnapshotSections(
   sections: readonly ReportSectionReadModel[],
 ): PortfolioProductOverview[] {
-  const byProduct = new Map<
-    string,
-    {
-      productId: string;
-      productName: string;
-      statuses: TrafficLightStatus[];
-      stageCount: number;
-      leadNames: Set<string>;
-    }
-  >();
+  return [...groupProjectOccurrences(sections).values()]
+    .flatMap((occurrences) => {
+      const representative = occurrences[0];
+      if (!representative) return [];
 
-  for (const section of sections) {
-    for (const project of section.projects) {
-      const current = byProduct.get(project.projectId) ?? {
-        productId: project.projectId,
-        productName: project.projectName,
-        statuses: [],
-        stageCount: 0,
-        leadNames: new Set<string>(),
-      };
-
-      current.stageCount = Math.max(
-        current.stageCount,
-        project.ownedStages?.length ?? 0,
+      const contributions = occurrences.map(({ project, section }) => ({
+        leadName: section.authorName,
+        status: effectiveProjectStatus(section, project),
+      }));
+      const statuses = contributions.flatMap(({ status }) =>
+        status === null ? [] : [status],
+      );
+      const leadNames = contributions.flatMap(({ leadName, status }) =>
+        status === null ? [] : [leadName],
       );
 
-      const status = effectiveProjectStatus(section, project);
-      if (status === "green" || status === "yellow" || status === "red") {
-        current.statuses.push(status);
-        current.leadNames.add(section.authorName);
-      }
-
-      byProduct.set(project.projectId, current);
-    }
-  }
-
-  return [...byProduct.values()]
-    .map((product) => ({
-      productId: product.productId,
-      productName: product.productName,
-      worstStatus: computeWorstStatus(product.statuses),
-      stageCount: product.stageCount,
-      leadNames: [...product.leadNames].sort((a, b) =>
-        a.localeCompare(b, "ru"),
-      ),
-    }))
+      return [
+        {
+          productId: representative.project.projectId,
+          productName: representative.project.projectName,
+          worstStatus: computeWorstStatus(statuses),
+          stageCount: computePublishedStageCount(occurrences),
+          leadNames: [...new Set(leadNames)].sort((a, b) =>
+            a.localeCompare(b, "ru"),
+          ),
+        },
+      ];
+    })
     .sort((a, b) => a.productName.localeCompare(b.productName, "ru"));
 }
 
