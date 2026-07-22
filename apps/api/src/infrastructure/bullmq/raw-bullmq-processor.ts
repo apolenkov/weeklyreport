@@ -60,6 +60,12 @@ export abstract class RawBullMqProcessor<TData extends JobTraceContext>
     this.worker.on("failed", (job, error) => {
       this.onJobFailed(job, error);
     });
+    this.worker.on("error", (error) => {
+      this.logger.error("BullMQ worker connection error", {
+        queueName: this.queueName,
+        message: error.message,
+      });
+    });
   }
 
   async onModuleDestroy(): Promise<void> {

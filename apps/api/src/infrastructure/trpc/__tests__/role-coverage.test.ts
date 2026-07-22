@@ -22,19 +22,21 @@ import { createAppRouter } from "../trpc.router.js";
 // Default-deny coverage gate.
 //
 // Walks `appRouter._def.procedures` and asserts every leaf procedure was
-// constructed via one of the five recognised base procedures:
+// constructed via one of the eight recognised base procedures:
 //   - publicProcedure
 //   - protectedProcedure
 //   - leadProcedure
 //   - headProcedure
 //   - viewerProcedure
 //   - adminProcedure   (admin-only, not a head alias)
+//   - anyRoleProcedure
+//   - leadershipProcedure
 //
 // Detection strategy: each tRPC procedure carries `_def.middlewares` — an
-// array whose first slot is the shared `loggingMiddleware` reference and
-// whose second slot (when present) is the auth/role middleware reference.
-// We capture those identities at module init from a starter procedure for
-// each base, then assert every router leaf matches one of those identities.
+// array whose first slots are the shared metrics, logging, and (when present)
+// auth/role middleware references. We capture the full identities at module
+// init from a starter procedure for each base, then assert every router leaf
+// matches one of those chains.
 //
 // A procedure built directly on `t.procedure` without a recognised base is
 // the failure mode the gate fires on. The mutation-test in the second `it()`
@@ -182,7 +184,7 @@ function collectLeafProcedures(router: {
  * paths. Empty result means full coverage. Used both for the real AppRouter
  * (must be empty) and the synthetic mutation test (must be non-empty).
  */
-export function findUncoveredProcedures(router: {
+function findUncoveredProcedures(router: {
   _def: {
     procedures: Record<string, unknown>;
     record?: Record<string, unknown>;
@@ -201,7 +203,7 @@ export function findUncoveredProcedures(router: {
 }
 
 describe("default-deny coverage gate", () => {
-  it("every AppRouter leaf procedure uses one of the five recognised role bases", () => {
+  it("every AppRouter leaf procedure uses one of the eight recognised role bases", () => {
     // Build the AppRouter with stub deps — we never invoke any procedure here,
     // we only inspect _def.middlewares identity. The deps shape is satisfied
     // by `{}` casts because nothing reads them at construction time.
@@ -217,7 +219,7 @@ describe("default-deny coverage gate", () => {
           .map((p) => `  - ${p}`)
           .join(
             "\n",
-          )}\nFix: rebuild on publicProcedure / protectedProcedure / leadProcedure / headProcedure / viewerProcedure.`,
+          )}\nFix: rebuild on publicProcedure / protectedProcedure / leadProcedure / headProcedure / viewerProcedure / adminProcedure / anyRoleProcedure / leadershipProcedure.`,
       );
     }
 

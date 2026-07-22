@@ -13,13 +13,11 @@ import { verifyPdfExportToken } from "../../modules/pdf-export/index.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { hydrateSession } from "./trpc.session-hydration.js";
 
-export { clearOrgCache } from "./trpc.session-hydration.js";
-// Re-exported: human-session-resolver.test.ts and trpc.context.test.ts still
-// import resolveHumanSession/HumanSessionDeps from this module.
 export {
   type HumanSessionDeps,
   resolveHumanSession,
 } from "../../lib/human-session.js";
+export { clearOrgCache } from "./trpc.session-hydration.js";
 
 // DEV_SESSION must carry reportingGroupId so groupScopeFilter scopes
 // the activity panel to the head's group in dev / integration mode.
@@ -289,18 +287,3 @@ export function createContextFactory(
     };
   };
 }
-
-/**
- * DEV_SESSION sets activeReportSectionId to null because it is a head user.
- * For lead users in production, the JWT will contain the sectionId.
- * This dynamic lookup serves as a fallback for any session missing the sectionId
- * (e.g. dev mode, or token issued before the section was created).
- *
- * Heads have no ReportSection of their own, so findFirst returns null and the
- * session keeps activeReportSectionId = null. That is correct -- head users
- * use the review.* endpoints which filter by reportId, not sectionId.
- *
- * The hydration pipeline itself (viewer group access, reporting-group name,
- * organization identity, section-id resolution) lives in
- * `trpc.session-hydration.ts` — imported above as `hydrateSession`.
- */

@@ -1,5 +1,3 @@
-import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
-
 import type { OrganizationService } from "../../../modules/organization/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import { publicProcedure, router } from "../trpc.middleware.js";
@@ -11,9 +9,6 @@ export interface OrganizationRouterDeps {
    *    anonymous landing hero.
    *  - `admin.getOrganization` / `admin.updateOrganization` manage the
    *    singleton row from the Settings → Identity tab.
-   * Optional so existing role-coverage test fixtures that build the
-   * router with `{}` deps keep compiling — those tests stub the entire
-   * `deps` argument and never exercise the org.* paths.
    */
   organizationService?: OrganizationService;
 }
@@ -27,10 +22,7 @@ export function createOrganizationRouter(deps: OrganizationRouterDeps) {
     getPublic: publicProcedure.query(async () => {
       try {
         if (!deps.organizationService) {
-          // Fallback for in-memory test fixtures. Generic
-          // identity — the concrete tenant brand lives in the seed
-          // file / admin-edited Organization row, never here.
-          return DEFAULT_ORGANIZATION_IDENTITY;
+          throw new Error("OrganizationService is not configured");
         }
         return await deps.organizationService.getPublic();
       } catch (error) {

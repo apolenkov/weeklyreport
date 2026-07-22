@@ -85,11 +85,8 @@ function buildCaller(
       Promise.resolve(cb(tx)),
     ),
   };
-  // The router delegates to the focused service backed by AdminPrismaRepository.
-  // The same mock `prisma` keeps every assertion
-  // (where-clause shape, tx branch, funnel metric) still exercises the same
-  // Prisma calls, just through the real production seam instead of the
-  // router touching `deps.prisma` directly.
+  // Keep the service and repository in the test path so assertions cover the
+  // same where clauses, transaction branches, and metrics as production.
   const reopenRequestAdminService = new ReopenRequestAdminService(
     new AdminPrismaRepository(prisma as never),
     undefined,
@@ -117,7 +114,7 @@ async function counterValue(state: string): Promise<number> {
 }
 
 describe("reopen procedures — gate (ADR 0008)", () => {
-  it("a head may list, count, and respond", async () => {
+  it("a head may list and count", async () => {
     const { caller } = buildCaller("head");
     await expect(caller.admin.listReopenRequests({})).resolves.toEqual([]);
     await expect(caller.admin.pendingReopenCount()).resolves.toEqual({
