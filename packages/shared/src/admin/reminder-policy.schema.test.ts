@@ -63,4 +63,24 @@ describe("reminderPolicySchema", () => {
       );
     }
   });
+
+  it("accepts a policy that remains valid forever", () => {
+    const result = reminderPolicySchema.safeParse({
+      ...validPolicy,
+      validUntil: null,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts equal validity-window boundaries", () => {
+    const boundary = new Date("2026-07-01T00:00:00.000Z");
+    const result = reminderPolicySchema.safeParse({
+      ...validPolicy,
+      validFrom: boundary,
+      validUntil: boundary,
+    });
+
+    expect(result.success).toBe(true);
+  });
 });

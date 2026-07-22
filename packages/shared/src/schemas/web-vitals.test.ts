@@ -14,6 +14,17 @@ describe("webVitalBeaconSchema — value bounds", () => {
   });
 
   it.each([
+    ["a negative value", { name: "LCP", value: -1, id: "negative-sample" }],
+    ["an empty id", { name: "LCP", value: 1, id: "" }],
+    [
+      "an unsupported metric name",
+      { name: "FID", value: 1, id: "unsupported-sample" },
+    ],
+  ])("rejects %s", (_label, beacon) => {
+    expect(() => webVitalBeaconSchema.parse(beacon)).toThrow();
+  });
+
+  it.each([
     ["LCP", 2500],
     ["CLS", 0.1],
     ["FCP", 1800],

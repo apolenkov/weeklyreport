@@ -4,19 +4,25 @@ import { describe, expect, it } from "vitest";
 
 import { roleSchema, userSessionSchema } from "./auth";
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
 const uuid = () => randomUUID();
 
 const validSession = () => ({
   userId: uuid(),
   email: "lead@company.com",
   name: "Test Lead",
+  lastName: "Lead",
+  firstName: "Test",
+  middleName: null,
   role: "lead" as const,
   activeReportId: uuid(),
   activeReportSectionId: uuid(),
+  reportingGroupId: uuid(),
+  reportingGroupName: "G".repeat(200),
+  viewerGroupAccess: [uuid()],
+  organization: {
+    shortName: "O".repeat(16),
+    fullName: "O".repeat(200),
+  },
 });
 
 // ---------------------------------------------------------------------------
@@ -43,6 +49,13 @@ describe("roleSchema", () => {
   it("rejects empty string", () => {
     expect(roleSchema.safeParse("").success).toBe(false);
   });
+
+  it.each(["LEAD", "Lead", "director", null, undefined, 1])(
+    "rejects %j",
+    (role) => {
+      expect(roleSchema.safeParse(role).success).toBe(false);
+    },
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -51,8 +64,12 @@ describe("roleSchema", () => {
 
 describe("userSessionSchema — required fields", () => {
   it("accepts valid session with all fields", () => {
-    const result = userSessionSchema.safeParse(validSession());
+    const session = validSession();
+    const result = userSessionSchema.safeParse(session);
     expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toMatchObject(session);
+    }
   });
 
   it("rejects missing userId", () => {
@@ -95,6 +112,41 @@ describe("userSessionSchema — required fields", () => {
     const session = { ...validSession(), email: "not-an-email" };
     const result = userSessionSchema.safeParse(session);
     expect(result.success).toBe(false);
+  });
+});
+
+describe("userSessionSchema — hydrated identity bounds", () => {
+  it.each([
+    ["reporting group name", { reportingGroupName: "" }],
+    ["long reporting group name", { reportingGroupName: "G".repeat(201) }],
+    [
+      "empty organization short name",
+      { organization: { shortName: "", fullName: "Org" } },
+    ],
+    [
+      "long organization short name",
+      { organization: { shortName: "O".repeat(17), fullName: "Org" } },
+    ],
+    [
+      "empty organization full name",
+      { organization: { shortName: "Org", fullName: "" } },
+    ],
+    [
+      "long organization full name",
+      { organization: { shortName: "Org", fullName: "O".repeat(201) } },
+    ],
+    ["invalid viewer group access", { viewerGroupAccess: ["not-a-uuid"] }],
+  ])("rejects %s", (_label, override) => {
+    expect(
+      userSessionSchema.safeParse({ ...validSession(), ...override }).success,
+    ).toBe(false);
+  });
+
+  it("rejects invalid name-part types", () => {
+    expect(
+      userSessionSchema.safeParse({ ...validSession(), firstName: null })
+        .success,
+    ).toBe(false);
   });
 });
 
