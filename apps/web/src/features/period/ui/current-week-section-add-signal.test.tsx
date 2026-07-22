@@ -1,9 +1,8 @@
 /**
- * D1 regression: snapshot view transitions must not reopen the Add Item dialog.
+ * Snapshot view transitions must not reopen the Add Item dialog.
  *
- * Covers the snapshot-trigger bug fix (fix-lead-surface-snapshot-and-fillfrom,
- * task 1.1): when readOnly flips false → true → false the addSignal effect must
- * NOT re-fire because readOnly is no longer in the dep array.
+ * When readOnly flips false → true → false, the addSignal effect must not
+ * re-fire because readOnly is not one of its dependencies.
  *
  * Scenario (mirrors real usage):
  *   1. addSignal=1, readOnly=false  → dialog opens
@@ -20,11 +19,11 @@ import { CurrentWeekSection } from "./current-week-section";
 
 const products = MOCK_PRODUCTS.slice(0, 1);
 
-describe("CurrentWeekSection — addSignal snapshot regression (D1)", () => {
+describe("CurrentWeekSection — addSignal snapshot regression", () => {
   it("does not reopen the dialog when readOnly toggles false→true→false with stale addSignal", () => {
     // Step 1: counter starts idle at 0 (parent's initial state); the "+ Add"
     // click advances it 0→1 → effect fires, dialog opens. (Mounting straight at
-    // a non-zero signal models a remount, which must NOT auto-open — D16.)
+    // a non-zero signal models a remount, which must not auto-open.)
     const { rerender } = render(
       <CurrentWeekSection
         items={[]}

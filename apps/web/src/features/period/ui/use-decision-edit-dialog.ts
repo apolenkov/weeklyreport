@@ -74,8 +74,8 @@ export function useDecisionEditDialog({
   const owner = seed.owner;
   const [impact, setImpact] = useState(seed.impact);
   const [deadline, setDeadline] = useState(seed.deadline);
-  // activity-first-class: the decision's parent — a product OR an attached
-  // activity (XOR). Seeded from the bound row on edit, or the create-mode
+  // A decision's parent is either a product or an attached activity. It is
+  // seeded from the bound row on edit, or from the create-mode
   // default product (falling back to the first activity for an activity-only
   // lead with no products). Shared seed rule with the item/risk dialogs.
   const [parent, setParent] = useState<RecordParent>(() =>
@@ -86,14 +86,13 @@ export function useDecisionEditDialog({
     ),
   );
   const isActivityParent = parent.kind === "activity";
-  // unify-record-dialogs: no stage pre-selected on create (mirrors item/risk);
-  // edit restores the saved stages. Required + single-owned-stage auto-apply
+  // Create mode begins without a selected stage, while edit mode restores the
+  // saved stages. Required-stage validation and single-stage auto-selection
   // live in handleSave.
   const [stageIds, setStageIds] = useState<string[]>(seed.stageIds);
 
-  // unify-record-dialogs: switching the parent re-scopes the stage options and
-  // clears the prior selection, exactly like the item/risk dialogs (never
-  // default to all owned stages — W11 3.10). Switching to an activity hides the
+  // Switching the parent re-scopes the stage options and clears the prior
+  // selection rather than selecting every owned stage. An activity hides the
   // stage step; switching back to a product re-shows it empty.
   function setParentAndStages(nextParent: RecordParent) {
     setParent(nextParent);
@@ -103,12 +102,10 @@ export function useDecisionEditDialog({
 
   const headerVerb = isCreate ? "Add Decision" : "Edit Decision";
 
-  // require-stage-on-items-and-decisions: a PRODUCT-parented decision must carry
-  // a concrete stage when the lead owns stages — mirrors the risk/item dialogs. A
-  // single owned stage is implicitly selected so the lead can save without a
-  // click; zero owned stages with nothing to carry is a dead end (Save disabled).
-  // An ACTIVITY-parented decision owns no stage (Decision 5), so the stage step
-  // is hidden and never validated.
+  // A product-parented decision must carry a concrete stage when the lead owns
+  // stages. A single owned stage is implicitly selected; zero owned stages with
+  // nothing to carry is a dead end. Activity parents own no stage, so the stage
+  // step is hidden and never validated.
   const availableStages = isActivityParent
     ? []
     : (stagesForProduct?.(parent.id) ?? []);
@@ -169,9 +166,8 @@ export function useDecisionEditDialog({
       impact: im,
       deadline,
     });
-    // activity-first-class: an activity parent yields an activity-parented
-    // decision (empty productId, no stage); a product parent keeps today's
-    // output. XOR is enforced by the write schema server-side.
+    // Activity parents produce an empty productId and no stage; product parents
+    // retain product and stage data. The write schema enforces the XOR.
     if (isActivityParent) {
       onSave(
         buildActivityDecisionSave({

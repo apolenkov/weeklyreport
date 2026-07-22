@@ -128,7 +128,7 @@ export function IdentitySubTab() {
           name="org-full-name"
           type="text"
           autoComplete="off"
-          maxLength={200}
+          maxLength={MAX_FULL_NAME_LENGTH}
           value={fullName}
           onChange={(e) => {
             setIsDirty(true);
@@ -138,7 +138,8 @@ export function IdentitySubTab() {
         />
         <div className="mt-1 flex items-center justify-between text-xs">
           <span className="text-[var(--color-muted-foreground)]">
-            Shown on the landing hero and in PDF report headers (max 200 chars).
+            Shown on the landing hero and in PDF report headers (max{" "}
+            {MAX_FULL_NAME_LENGTH} chars).
           </span>
           <span
             className={
@@ -147,7 +148,7 @@ export function IdentitySubTab() {
                 : "text-[var(--color-muted-foreground)]"
             }
           >
-            {fullName.length}/200
+            {fullName.length}/{MAX_FULL_NAME_LENGTH}
           </span>
         </div>
       </div>

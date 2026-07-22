@@ -6,9 +6,8 @@
  * has a shareable URL and the browser back button walks the period
  * history one week at a time. The legacy `?period=` query was retired.
  *
- * fix-lead-stripe-and-archived-badges (D3): the native <select> is now a
- * custom keyboard-accessible listbox (combobox trigger + portaled panel)
- * so archived options can carry a neutral "Archived" badge.
+ * The custom keyboard-accessible listbox replaces a native select so archived
+ * options can carry a neutral "Archived" badge.
  */
 import "@testing-library/jest-dom/vitest";
 
@@ -119,7 +118,7 @@ describe("PeriodNavigator (lead)", () => {
     ).toBeInTheDocument();
   });
 
-  // ---- Custom listbox contract (D3) ----
+  // ---- Custom listbox contract ----
   describe("custom listbox", () => {
     it("trigger exposes the combobox a11y contract and starts closed", () => {
       render(<PeriodNavigator periods={PERIODS} />);
@@ -333,7 +332,7 @@ describe("PeriodNavigator (lead)", () => {
     expect(getTrigger()).toHaveTextContent("Apr 21–27, 2026 (Current)");
   });
 
-  // ---- W4: per-instance scoped listbox/option ids ----
+  // ---- Per-instance scoped listbox/option ids ----
   // Two navigators can coexist on one page (e.g. a future dual-pane layout, or
   // a stacked toolbar). Module-level constant ids would collide, breaking the
   // listbox/option DOM-id contract that `aria-controls` and
@@ -396,11 +395,11 @@ describe("PeriodNavigator (lead)", () => {
     });
   });
 
-  // ---- W3: per-lead submitted markers ----
+  // ---- Per-lead submitted markers ----
   // The submitted marker is opt-in per instance via `showLeadSubmissionMarkers`
   // + `leadSubmittedAt`, sourced ONLY from the current lead's section
   // submittedAt — never the head shell's fabricated `isSubmitted`.
-  describe("lead submission markers (W3)", () => {
+  describe("lead submission markers", () => {
     const SUBMITTED_AT = new Date("2026-04-22T17:42:00.000Z");
 
     it("shows the submitted marker on the selected period when enabled and submittedAt is set", () => {

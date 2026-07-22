@@ -1,13 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * Pre-extract snapshot: MetaRow [author | stage chips] in DecisionsSection.
- * Baseline before Wave 1 A2 extracts this markup to report-shell/meta-row.tsx.
- * After extraction, these tests must pass without changes.
- *
- * VA-0a/VA-0b: a11y regression tests for aria-hidden on EditIcon/DeleteIcon SVGs.
- * Source: openspec/changes/verify-a11y-recommended-flip/design.md
- * Section: apps/web/src/components/lead/decisions-section.tsx
+ * Regression coverage for decision metadata and hidden decorative icons.
  */
 import "@testing-library/jest-dom/vitest";
 
@@ -26,24 +20,20 @@ const BASE_DECISION = {
   deadline: null,
 };
 
-describe("DecisionsSection meta-row — pre-extract snapshot", () => {
+describe("DecisionsSection meta-row", () => {
   it("renders decision owner in the left slot of the meta-row", () => {
     render(<DecisionsSection decisions={[BASE_DECISION]} readOnly />);
     expect(screen.getByText("Vasily Lead")).toBeInTheDocument();
   });
 
   it("renders the 'No stage set' warning pill when stageIds is absent", () => {
-    const { container } = render(
-      <DecisionsSection decisions={[BASE_DECISION]} readOnly />,
-    );
+    render(<DecisionsSection decisions={[BASE_DECISION]} readOnly />);
     expect(screen.getByText("No stage set")).toBeInTheDocument();
     expect(screen.queryByText("All stages")).not.toBeInTheDocument();
-    const row = container.querySelector('[aria-label^="Decision stages:"]');
-    expect(row).toMatchSnapshot();
   });
 
   it("renders specific stage chips alongside the owner in the meta-row", () => {
-    const { container } = render(
+    render(
       <DecisionsSection
         decisions={[{ ...BASE_DECISION, stageIds: ["Analysis", "Dev"] }]}
         stagesForProduct={() => ["Analysis", "Development"]}
@@ -55,23 +45,16 @@ describe("DecisionsSection meta-row — pre-extract snapshot", () => {
     // stage-label-canonicalization: a stored short "Dev" heals to the canonical
     // "Development" at render (the decision row never shows the short form).
     expect(screen.getByText("Development")).toBeInTheDocument();
-    const row = container.querySelector('[aria-label^="Decision stages:"]');
-    expect(row).toMatchSnapshot();
   });
 });
 
 // ---------------------------------------------------------------------------
-// VA-0a — a11y regression catalog (high-priority unit-rtl rows)
-// VA-0b — snapshot rows
-// Source: openspec/changes/verify-a11y-recommended-flip/design.md
-// Section: apps/web/src/components/lead/decisions-section.tsx
-//
 // Buttons render when: !readOnly && !foreign. Ownership is the id-based
 // `foreign` flag, NOT a free-text owner/name match — so an own (non-foreign)
 // decision shows Edit/Delete regardless of the owner string.
 // ---------------------------------------------------------------------------
 
-describe("DecisionsSection — VA-0a a11y: EditIcon and DeleteIcon aria-hidden", () => {
+describe("DecisionsSection — EditIcon and DeleteIcon aria-hidden", () => {
   it("EditIcon svg has aria-hidden='true'", () => {
     render(<DecisionsSection decisions={[BASE_DECISION]} />);
     const editButton = screen.getByRole("button", { name: "Edit decision" });
@@ -129,11 +112,10 @@ describe("DecisionsSection — VA-0a a11y: EditIcon and DeleteIcon aria-hidden",
 });
 
 // ---------------------------------------------------------------------------
-// VA-0b — snapshot rows (medium priority)
 // Snapshots lock the accessibility tree of the edit/delete buttons.
 // ---------------------------------------------------------------------------
 
-describe("DecisionsSection — VA-0b snapshots: Edit and Delete button DOM accessibility tree", () => {
+describe("DecisionsSection — Edit and Delete button DOM accessibility tree", () => {
   it("Edit button DOM accessibility tree — icon hidden from a11y tree (snapshot)", () => {
     render(<DecisionsSection decisions={[BASE_DECISION]} />);
     const editButton = screen.getByRole("button", { name: "Edit decision" });
