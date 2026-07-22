@@ -18,6 +18,7 @@ import {
 import { applyRevokeTransition } from "../application/revoke-transition";
 import type { ReopenEligibilityFacts } from "../domain/lead-form-shared";
 import {
+  LeadFormConstraintError,
   LeadFormDomainError,
   reopenBlockedMessage,
   ReopenRequestError,
@@ -355,6 +356,23 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     try {
       await this.prisma.$transaction(
         async (tx) => {
+          const gate = await tx.$queryRaw<
+            { periodStatus: string }[]
+          >`SELECT report."periodStatus"
+            FROM "Report" AS report
+            INNER JOIN "ReportSection" AS section
+              ON section."reportId" = report."id"
+            WHERE section."id" = ${targetSectionId}
+            FOR UPDATE OF report`;
+          if (
+            gate[0]?.periodStatus !== "open" &&
+            gate[0]?.periodStatus !== "reopened"
+          ) {
+            throw new LeadFormConstraintError(
+              "Cannot fill a section of a published report.",
+            );
+          }
+
           // Optimistic-concurrency compare-and-set on the TARGET, first so a
           // conflict aborts before any deleteMany — Fill From's delete-then-
           // recreate must not clobber a target a second writer just advanced.

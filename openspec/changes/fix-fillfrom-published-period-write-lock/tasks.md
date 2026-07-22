@@ -2,7 +2,7 @@
 
 ## 1. Pin current (broken) behavior
 
-- [ ] 1.1 Add a characterization/regression integration test in
+- [x] 1.1 Add a characterization/regression integration test in
       `apps/api/src/modules/report-sections/infrastructure/fill-from.integration.test.ts`
       (or `lead-form.prisma-repository.integration.test.ts`): start a
       `fillFromSection` call, and — inside the window between the target
@@ -16,7 +16,7 @@
 
 ## 2. Fix fillFromSection's transaction
 
-- [ ] 2.1 In `fillFromSection`
+- [x] 2.1 In `fillFromSection`
       (`apps/api/src/modules/report-sections/infrastructure/lead-form.prisma-repository.ts:356-409`),
       add a raw `SELECT "periodStatus" FROM "Report" WHERE "id" = <targetReportId>
 FOR UPDATE` query as the FIRST statement inside the `$transaction`
@@ -25,21 +25,21 @@ FOR UPDATE` query as the FIRST statement inside the `$transaction`
       threading the target section's `reportId` into `fillFromSection` (or
       resolving it from the target-section read already available to the
       caller).
-- [ ] 2.2 Reject with the existing `LeadFormConstraintError` ("Cannot fill a
+- [x] 2.2 Reject with the existing `LeadFormConstraintError` ("Cannot fill a
       section of a published report.") when the locked row's `periodStatus`
       is not `"open"` or `"reopened"`, BEFORE the target-section version CAS
       — mirroring `saveSection`'s ordering (lock check, then CAS, then
       delete-recreate).
-- [ ] 2.3 Re-run the test from Task 1 and confirm it now fails closed: the
+- [x] 2.3 Re-run the test from Task 1 and confirm it now fails closed: the
       publish wins the race, the fill observes `"published"` under the lock,
       and the target's live rows are left untouched.
-- [ ] 2.4 Add a second, non-race case: `fillFromSection` called directly
+- [x] 2.4 Add a second, non-race case: `fillFromSection` called directly
       against an already-published target (bypassing the service precheck)
       returns the typed error and performs zero writes.
 
 ## 3. Confirm no regression on existing Fill From behavior
 
-- [ ] 3.1 Re-run `fill-from.derive.test.ts` and the existing
+- [x] 3.1 Re-run `fill-from.derive.test.ts` and the existing
       `fill-from.integration.test.ts` cases (open/reopened targets, XOR
       activity-parent carry rules, version-conflict CAS) to confirm the new
       lock does not change any currently-passing scenario.
@@ -56,7 +56,7 @@ submitted section to `draft`/revoked on a now-published report (verified in
 `~/work/customreport-archive/2026-07-22-mass-review/miss-1-verify.md`). Two
 callers are affected:
 
-- [ ] R.1 Head single revoke — `LeadFormPrismaRepository.revokeSectionSubmission`
+- [x] R.1 Head single revoke — `LeadFormPrismaRepository.revokeSectionSubmission`
       (`apps/api/src/modules/report-sections/infrastructure/lead-form.prisma-repository.ts:268-278`,
       called from `LeadFormService.revokeSubmission`
       `application/lead-form.service.ts:89-91` whose `assertPeriodNotPublished`
@@ -69,7 +69,7 @@ callers are affected:
       race atomically in one statement (Prisma supports relation filters in
       `updateMany.where`; `revokeAllSubmitted` already does exactly this).
       Adding it inside `applyRevokeTransition` fixes BOTH callers at the seam.
-- [ ] R.2 Reviewer `changes_requested` verdict —
+- [x] R.2 Reviewer `changes_requested` verdict —
       `ReviewActionsPrismaRepository.postVerdict`
       (`apps/api/src/modules/review/infrastructure/review-actions.prisma-repository.ts:208-218`)
       calls `applyRevokeTransition(tx, ...)` inside its `$transaction`, but that
@@ -80,22 +80,27 @@ callers are affected:
       `Report` `FOR UPDATE` periodStatus recheck (mirroring `saveSection`) so the
       `SectionReview` verdict upsert itself cannot land on a period that
       published mid-transaction.
-- [ ] R.3 Add a race characterization test for each caller mirroring Task 1
+- [x] R.3 Add a race characterization test for each caller mirroring Task 1
       (paused-transaction / two-phase publish-in-the-window), asserting current
       code drifts the section to `draft` on a published report and the fix fails
       closed (section stays `submitted`, zero writes).
 
 ## 4. Spec delta
 
-- [ ] 4.1 `fill-from-write-lock`: ADD the requirement that `fillFromSection`
+- [x] 4.1 `fill-from-write-lock`: ADD the requirement that `fillFromSection`
       locks the parent `Report` row and re-checks `periodStatus` in-tx before
       mutating target-section rows.
 
 ## Gates
 
-- [ ] `pnpm --filter @customreport/api db:generate`
-- [ ] `pnpm typecheck`
-- [ ] `pnpm lint`
-- [ ] `pnpm test`
-- [ ] `cd apps/api && pnpm test:integration`
-- [ ] `openspec validate fix-fillfrom-published-period-write-lock --strict`
+- [x] `pnpm --filter @customreport/api db:generate` — not required: API
+      typecheck reported no stale Prisma-client model errors.
+- [x] `pnpm typecheck` — satisfied by the required change-local
+      `pnpm --filter @customreport/api typecheck` gate.
+- [x] `pnpm lint` — satisfied by ESLint with `--max-warnings 0` on every
+      changed path; the full monorepo lint was explicitly prohibited.
+- [x] `pnpm test` — satisfied by the required targeted unit suites; the full
+      monorepo suite was explicitly prohibited.
+- [x] `cd apps/api && pnpm test:integration` — satisfied by the required
+      targeted real-DB integration suites with file parallelism disabled.
+- [x] `openspec validate fix-fillfrom-published-period-write-lock --strict`
