@@ -26,7 +26,7 @@ import {
 
 /**
  * Aggregated deps for the admin tRPC namespace — union of the six
- * procedure-group deps interfaces. Satisfied structurally by `RouterDeps`.
+ * procedure-group deps interfaces. Satisfied structurally by `AppRouterDeps`.
  */
 export interface AdminRouterDeps
   extends

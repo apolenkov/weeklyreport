@@ -78,7 +78,7 @@ export function DashboardRevokeAllControl({
         title="Revoke All Submissions?"
         description={`Revoke all ${submittedCount} submitted lead${submittedCount === 1 ? "" : "s"}? Their forms return to Draft status.`}
         confirmLabel={`Revoke ${submittedCount} Submission${submittedCount === 1 ? "" : "s"}`}
-        variant="revoke"
+        variant="destructive"
       />
     </>
   );

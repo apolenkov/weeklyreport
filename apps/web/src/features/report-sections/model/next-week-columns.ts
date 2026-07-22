@@ -31,8 +31,7 @@ export interface LaneActivity {
  * "+ Add" CTA, so the reporting structure is visible before anything is filled.
  * Any activity that owns rows but is not in the attached list (defensive — the
  * write path forbids it) is appended so no row is ever dropped. With no attached
- * activities supplied, lanes fall back to the activities that own rows (the
- * legacy items-derived behavior, kept for `buildItemColumns` callers).
+ * activities supplied, lanes fall back to the activities that own rows.
  */
 function activityLanes(
   items: KanbanItem[],
@@ -122,14 +121,6 @@ export function splitItemBoard(
     ),
     activityLanes: lanes,
   };
-}
-
-export function buildItemColumns(
-  products: readonly Product[] | undefined,
-  items: KanbanItem[],
-): ItemColumn[] {
-  const board = splitItemBoard(products, items);
-  return [...board.productColumns, ...board.activityLanes];
 }
 
 /**

@@ -230,7 +230,6 @@ export function FillFromButton({
             </>
           }
           confirmLabel="Replace & Fill"
-          variant="fill-from"
           onConfirm={handleConfirm}
           onClose={handleCancel}
         />

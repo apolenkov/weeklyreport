@@ -230,10 +230,7 @@ function sectionScopeWhere(
   session: ArchiveScopeSession | undefined,
 ): Record<string, unknown> | undefined {
   if (!session) return undefined;
-  const scope = groupScopeFilter(
-    session as Parameters<typeof groupScopeFilter>[0],
-    "reportSection",
-  );
+  const scope = groupScopeFilter(session, "reportSection");
   if (Object.keys(scope).length === 0) return undefined;
   return scope;
 }

@@ -225,7 +225,7 @@ describe("ConfirmationDialog", () => {
           </>
         }
         confirmLabel="Deleting…"
-        variant="delete"
+        variant="destructive"
         isPending={true}
       />,
     );

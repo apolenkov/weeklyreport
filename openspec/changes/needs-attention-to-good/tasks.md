@@ -68,28 +68,27 @@ either fixed or recorded as a stale re-grade in the wave notes.
 - [x] 3.4 `apps/api/src/infrastructure/trpc/__tests__/role-claim.contract.test.ts` — 2 minors
 - [x] 3.5 `apps/api/src/infrastructure/trpc/__tests__/role-coverage.test.ts` — 4 minors
 - [x] 3.6 `apps/api/src/infrastructure/trpc/reopen-requests.router.test.ts` — 2 minors
-- [ ] 3.7 `apps/api/src/infrastructure/trpc/routers/organization.router.ts` — 2 minors —
-      silent identity fallback removed; required dependency typing remains
-      blocked by the slice boundary because `AppRouterDeps.organizationService`
-      is optional in out-of-slice `trpc.router.ts`.
+- [x] 3.7 `apps/api/src/infrastructure/trpc/routers/organization.router.ts` — 2 minors —
+      removed the silent identity fallback and made
+      `AppRouterDeps.organizationService` required.
 - [x] 3.8 `apps/api/src/infrastructure/trpc/trpc.context.ts` — 2 minors
 - [x] 3.9 `apps/api/src/infrastructure/trpc/trpc.session-hydration.ts` — 3 minors
 
 ## 4. web-shared (L — 9 files, 19 minors)
 
 - [x] 4.1 `apps/web/src/shared/ui/confirm-delete-dialog.tsx` — 2 minors
-- [ ] 4.2 `apps/web/src/shared/ui/confirmation-dialog.tsx` — 2 minors —
-      themed surface fixed; narrowing `variant` requires updating the
-      out-of-slice `fill-from-button.tsx` caller that passes `"fill-from"`.
+- [x] 4.2 `apps/web/src/shared/ui/confirmation-dialog.tsx` — 2 minors —
+      themed surface fixed; `variant` now expresses only the standard and
+      destructive visual treatments, with callers mapped accordingly.
 - [x] 4.3 `apps/web/src/shared/ui/forbidden-page.test.tsx` — 3 minors
 - [x] 4.4 `apps/web/src/shared/ui/icons.test.tsx` — 2 minors
-- [ ] 4.5 `apps/web/src/shared/ui/report-shell/agent-review-coming-soon.test.tsx` — 2 minors —
-      archaeology removed; renaming the suite requires creating an out-of-slice
-      replacement path.
+- [x] 4.5 `apps/web/src/shared/ui/report-shell/report-surface-controls.test.tsx` — 2 minors —
+      archaeology removed and the suite renamed for its cross-surface control
+      and redirect coverage.
 - [x] 4.6 `apps/web/src/shared/ui/report-shell/archive-toggle.test.tsx` — 1 minor
-- [ ] 4.7 `apps/web/src/shared/ui/report-shell/report-shell.test.tsx` — 3 minors —
-      archaeology and redundant assertions fixed; renaming the suite requires
-      creating an out-of-slice replacement path.
+- [x] 4.7 `apps/web/src/shared/ui/report-shell/report-shell-primitives.test.tsx` — 3 minors —
+      archaeology and redundant assertions fixed; the suite and snapshot now
+      name the report-shell primitives they cover.
 - [x] 4.8 `apps/web/src/shared/ui/report-shell/scope-toggle.test.tsx` — 3 minors
 - [x] 4.9 `apps/web/src/shared/ui/sdlc-tooltip.tsx` — 1 minor
 
@@ -97,12 +96,13 @@ either fixed or recorded as a stale re-grade in the wave notes.
 
 - [x] 5.1 `apps/web/src/features/report-sections/model/item-status.test.ts` — 1 minor
 - [x] 5.2 `apps/web/src/features/report-sections/model/lead-section-draft-payload.test.ts` — 1 minor
-- [ ] 5.3 `apps/web/src/features/report-sections/model/lead-submit-readiness.ts` — 2 minors —
-      Map construction fixed; explicit-red promotion remains because correcting
-      it requires updating the out-of-slice `lead-submit-readiness.test.ts`.
-- [ ] 5.4 `apps/web/src/features/report-sections/model/next-week-columns.ts` — 1 minor —
-      live finding confirmed, but removing the dead export requires updating
-      the out-of-slice `next-week-columns.test.ts` that imports it.
+- [x] 5.3 `apps/web/src/features/report-sections/model/lead-submit-readiness.ts` — 2 minors —
+      Map construction fixed; **REFUTED-BY-SPEC:** the explicit-red finding
+      assumed chip-authored red is legitimate, but `status-risk-unification` /
+      "Risks are the single source of truth for at-risk/blocked" requires risk
+      rows to carry severity, so submit normalizes stale orphan red to green.
+- [x] 5.4 `apps/web/src/features/report-sections/model/next-week-columns.ts` — 1 minor —
+      removed the dead `buildItemColumns` export and its test-only coverage.
 - [x] 5.5 `apps/web/src/features/report-sections/model/stage-chip-config.ts` — 4 minors
 - [x] 5.6 `apps/web/src/features/report-sections/ui/item-card.test.tsx` — 2 minors
 - [x] 5.7 `apps/web/src/features/report-sections/ui/item-edit-dialog.test.tsx` — 2 minors
@@ -123,10 +123,9 @@ Note: `head-journey` and `status-risk-sync` are also touched by
 ## 7. api-period-carryover-archive (M — 6 files, 12 minors)
 
 - [x] 7.1 `apps/api/src/modules/archive/archive.contract.test.ts` — 2 minors
-- [ ] 7.2 `apps/api/src/modules/archive/archive.prisma-repository.ts` — 1 minor —
-      **blocked by slice boundary:** removing the assertion requires changing
-      `groupScopeFilter` to accept its actual three-field session dependency or
-      widening `ArchiveScopeSession`; both definitions live outside this slice.
+- [x] 7.2 `apps/api/src/modules/archive/archive.prisma-repository.ts` — 1 minor —
+      narrowed `groupScopeFilter` to the three session fields it reads and
+      removed the repository cast.
 - [x] 7.3 `apps/api/src/modules/archive/archive.service.test.ts` — 2 minors
 - [x] 7.4 `apps/api/src/modules/period/__tests__/lifecycle-write-gate.test.ts` — 1 minor
 - [x] 7.5 `apps/api/src/modules/period/infrastructure/auto-publisher.scheduler.test.ts` — 2 minors
@@ -140,12 +139,10 @@ Note: `archive.service.test.ts` and `lifecycle-write-gate.test.ts` overlap
 - [x] 8.1 `apps/web/src/hooks/use-status-risk.ts` — 1 minor — **stale:**
       the live file no longer contains the `F10` phase/ticket reference.
 - [x] 8.2 `apps/web/src/lib/query-client.ts` — 2 minors
-- [ ] 8.3 `apps/web/src/lib/role-home.ts` — 1 minor — **blocked by slice
-      boundary:** removing the shallow wrapper requires updating its production
-      callers and tests outside this slice.
-- [ ] 8.4 `apps/web/src/lib/role-visibility.ts` — 2 minors — **blocked by slice
-      boundary:** removing the dead module requires deleting its out-of-slice
-      test, its only caller.
+- [x] 8.3 `apps/web/src/lib/role-home.ts` — 1 minor — removed the shallow wrapper
+      after moving production and test callers to the shared `ROLE_HOME_PATH`.
+- [x] 8.4 `apps/web/src/lib/role-visibility.ts` — 2 minors — whole-repo search
+      confirmed only its own test referenced it; deleted both files.
 - [x] 8.5 `apps/web/src/lib/server/get-print-route-context.test.ts` — 1 minor
 - [x] 8.6 `apps/web/src/lib/server/get-print-route-context.ts` — 1 minor
 - [x] 8.7 `apps/web/src/lib/trpc-provider.test.tsx` — 2 minors
@@ -177,9 +174,9 @@ Suspense boundary removal); re-verify the remaining minor still applies.
       backstop for open/scheduled rows.
 - [x] 10.3 `apps/api/src/modules/admin/admin-reminder-policy.queries.ts` — 1 minor
 - [x] 10.4 `apps/api/src/modules/admin/session-revocation.service.test.ts` — 1 minor
-- [ ] 10.5 `apps/api/src/modules/auth/auth.e2e.spec.ts` — 2 minors — duplicate
-      round-trip removed; renaming this unit suite requires creating an
-      out-of-slice replacement path, so the filename finding remains open.
+- [x] 10.5 `apps/api/src/modules/auth/auth.controller.cookie.test.ts` — 2 minors —
+      duplicate round-trip removed and the remaining in-process cookie suite
+      renamed to match its unit scope.
 
 ## 11. prisma (S — 3 files, 8 minors)
 

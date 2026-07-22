@@ -5,15 +5,7 @@ import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../lib/use-dialog-focus";
 
-type ConfirmationDialogVariant =
-  | "submit"
-  | "publish"
-  | "reopen"
-  | "revoke"
-  | "fill-from"
-  | "version-restore"
-  | "delete"
-  | "default";
+type ConfirmationDialogVariant = "default" | "destructive";
 
 interface ConfirmationDialogProps {
   /** Whether the dialog is visible */
@@ -40,15 +32,8 @@ interface ConfirmationDialogProps {
   readonly children?: React.ReactNode;
 }
 
-const DESTRUCTIVE_VARIANTS = new Set<ConfirmationDialogVariant>([
-  "delete",
-  "revoke",
-]);
-
 /**
- * Reusable confirmation dialog for all confirmation actions:
- * Submit, Publish, Reopen, Revoke, Fill From, Version Restore, Delete
- *
+ * Reusable confirmation dialog for confirmation actions.
  * - Traps focus inside the dialog and restores it to the trigger on close
  *   (via the shared `useDialogFocus` primitive)
  * - Closes on Escape
@@ -70,7 +55,7 @@ export function ConfirmationDialog({
 }: ConfirmationDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  const isDestructive = DESTRUCTIVE_VARIANTS.has(variant);
+  const isDestructive = variant === "destructive";
 
   useDialogFocus({ open, onClose, containerRef: dialogRef });
 

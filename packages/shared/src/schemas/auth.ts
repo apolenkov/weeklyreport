@@ -42,7 +42,7 @@ export const ROLE_LABEL: Record<Role | DbRole, string> = {
 /**
  * Canonical per-role post-login landing route. One home backing all three
  * landing surfaces — the api dev-login fallback, the web login default, and
- * `roleHomePath` (brand link / role-gate) — so a role's landing cannot diverge
+ * `ROLE_HOME_PATH` consumers (brand link / role-gate) — so a role's landing cannot diverge
  * between tiers. Exhaustive on the role enum with NO runtime fallback here:
  * a non-`Role` runtime value (persisted/retired role) is the web call site's
  * concern, guarded there. The viewer lands on `/reports/latest`, its canonical

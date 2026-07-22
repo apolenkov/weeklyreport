@@ -8,7 +8,7 @@ import { ROLE_HOME_PATH, sessionRoleSchema } from "@customreport/shared";
 
 // The per-role display label, landing route, and dev-login email are homed
 // once in `@customreport/shared` (web-shared-idioms) so the login page, dev
-// role-switcher, api dev-login, and `roleHomePath` cannot drift. Re-exported
+// role-switcher, api dev-login, and role gates cannot drift. Re-exported
 // here for the login-page consumers that already import from this module.
 export { ROLE_LABEL } from "@customreport/shared";
 

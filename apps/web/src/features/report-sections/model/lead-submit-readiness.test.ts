@@ -53,7 +53,7 @@ const baseInput: LeadSubmitReadinessInput = {
 };
 
 describe("deriveLeadSubmitReadiness", () => {
-  it("identifies unset statuses and every status the submit payload promotes", () => {
+  it("identifies only unset statuses as submit-time promotions", () => {
     const readiness = deriveLeadSubmitReadiness(baseInput);
 
     expect(readiness.unsetStatuses.map((item) => item.label)).toEqual([
@@ -65,7 +65,6 @@ describe("deriveLeadSubmitReadiness", () => {
       "Portal",
       "Hiring",
       "Portal / Development",
-      "Portal / Testing",
     ]);
     expect(readiness.canOpenConfirmation).toBe(true);
   });
@@ -116,16 +115,29 @@ describe("deriveLeadSubmitReadiness", () => {
 });
 
 describe("buildLeadSubmitPayload", () => {
-  it("preserves the existing product, activity, and stage promotion rules", () => {
+  // "Risks are the single source of truth for at-risk/blocked": submit stores
+  // chip-authored stage state as On Track; risk rows carry any severity floor.
+  it("promotes an unset stage to green and includes it in the warning", () => {
     const payload = buildLeadSubmitPayload(draft, 7);
+    const readiness = deriveLeadSubmitReadiness(baseInput);
 
     expect(payload.version).toBe(7);
     expect(payload.projectStatuses[0]?.status).toBe("green");
     expect(payload.activityStatuses[0]?.status).toBe("green");
-    expect(payload.stageStatuses.map((status) => status.status)).toEqual([
-      "green",
-      "green",
-    ]);
+    expect(payload.stageStatuses[0]?.status).toBe("green");
+    expect(readiness.unsetStatuses.map((status) => status.id)).toContain(
+      "stage:product-1:stage-1",
+    );
     expect(payload.confirmed).toBe(true);
+  });
+
+  it("coerces a stale orphan red stage to green without warning", () => {
+    const payload = buildLeadSubmitPayload(draft, 7);
+    const readiness = deriveLeadSubmitReadiness(baseInput);
+
+    expect(payload.stageStatuses[1]?.status).toBe("green");
+    expect(readiness.unsetStatuses.map((status) => status.id)).not.toContain(
+      "stage:product-1:stage-2",
+    );
   });
 });
