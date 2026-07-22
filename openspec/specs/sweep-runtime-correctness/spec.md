@@ -71,7 +71,11 @@ membership when the claim is "changed to a different value") is a defect,
 not a passing test. Doc comments and file-header comments MUST describe what
 the code actually does; a comment stating the opposite of the executed
 behavior (including a comment claiming code "no longer exists" when it is
-still defined and called) MUST be corrected to match the code.
+still defined and called) MUST be corrected to match the code. A pure
+decision-ladder function that determines a user-visible outcome MUST have
+each of its branches directly covered, and an assertion against a
+locally-declared fixture value MUST NOT be treated as coverage of the
+function under test unless that value is actually passed to it.
 
 #### Scenario: An accessible-name test attributes its pass to the wrong mechanism
 
@@ -172,6 +176,23 @@ still defined and called) MUST be corrected to match the code.
   assert the component's actual current rendering (e.g. a visible label
   alongside the icon)
 
+#### Scenario: A decision-ladder function's branches are unexercised
+
+- **WHEN** a pure function resolves a user-visible outcome from multiple
+  ranked or filtered inputs (e.g. a badge/status resolver that filters
+  stale entries and ranks competing states)
+- **THEN** each branch of the ladder (each filter condition and each
+  ranking outcome) has a direct test driving it, not only an end-to-end
+  render test that happens to exercise one branch
+
+#### Scenario: An assertion targets a fixture value never passed to the function under test
+
+- **WHEN** a test declares a fixture value and asserts on that same fixture
+  value directly (e.g. `expect(localFixture).toEqual(...)`) rather than on
+  the return value of the function under test
+- **THEN** the assertion is deleted or rewritten to assert on the function's
+  actual output for an input that exercises the claimed path
+
 ### Requirement: API tests and their subject doc comments MUST be able to fail for the behavior they name
 
 Every test in `apps/api` MUST assert on the specific behavior its title or
@@ -182,7 +203,11 @@ order, or probing keys a return type structurally never carries) is a
 defect, not a passing test. Doc comments (JSDoc/docstrings) on a function
 MUST describe what the function's code actually does; a comment stating the
 opposite of the executed branch MUST be corrected to match the code, not the
-other way around, unless the code itself is the confirmed bug.
+other way around, unless the code itself is the confirmed bug. A test that
+asserts a metric/telemetry side effect MUST wire the real
+telemetry/metrics collaborator, not a no-op stub, and MUST NOT
+reimplement the production guard logic it claims to cover in place of
+calling through to it.
 
 #### Scenario: A guard test asserts a hardcoded count instead of deriving it
 
@@ -223,3 +248,63 @@ other way around, unless the code itself is the confirmed bug.
 - **THEN** the test is rewritten to assert only what the harness can actually
   prove, and any claim the harness cannot support is removed from its
   title and comments
+
+#### Scenario: A telemetry assertion is built on a no-op collaborator
+
+- **WHEN** a test asserts that an operation "skews no metric" or otherwise
+  checks a counter/gauge is unchanged after a code path runs
+- **AND** the service under test was constructed with a no-op telemetry
+  implementation instead of the real metrics collaborator
+- **THEN** the test is rebuilt with the real telemetry collaborator (as any
+  sibling test in the same file that does assert a metric change already
+  does), so the assertion can fail if the service starts incrementing the
+  counter wrongly
+
+#### Scenario: A test reimplements the guard it claims to cover
+
+- **WHEN** a test file defines a local helper that duplicates the logic of a
+  production guard (e.g. a router procedure's authorization/rate-limit
+  check) instead of calling through to the real guard
+- **THEN** the test is rewritten to exercise the real guard (the router
+  procedure itself, or the shared function it delegates to, exported for
+  direct testing), and the local reimplementation is deleted
+
+### Requirement: Integration and e2e specs MUST assert the behavior under test, not values the test itself wrote
+
+An `e2e/integration` spec MUST NOT rely solely on a database/API value the
+test's own setup wrote as proof that a UI-visible behavior occurred. When a
+test title claims a UI effect (a locked-state affordance, an updated view
+after navigation, a restored edit capability), the spec MUST assert that
+UI-visible effect directly, in addition to any underlying data-state check.
+A spec MUST navigate only to routes that exist in the application. A spec
+that asserts a count changed by an expected delta after a write MUST wait
+for that write's request/response (or an equivalent settled-state signal)
+before reading the count, so a genuine duplicate-write regression cannot
+race past the assertion.
+
+#### Scenario: A "lead sees locked" test asserts only the status the test wrote
+
+- **WHEN** a spec navigates to a role's page specifically to check that a
+  lifecycle state change is reflected in that role's UI
+- **THEN** the spec asserts the role's actual rendered UI state (e.g. a
+  locked banner, disabled controls, updated content) for that state
+- **AND** does not rely solely on re-reading the database/API value the test
+  itself wrote during setup
+
+#### Scenario: A spec navigates to a route that does not exist
+
+- **WHEN** a spec calls `goto()` (or equivalent navigation) with a path
+- **THEN** that path is a route the application actually serves
+- **AND** the spec asserts a render signal (e.g. a heading or a known
+  locator) so a 404 or failed render fails the test, not only a
+  seed-derived data assertion that is independent of whether the page
+  rendered
+
+#### Scenario: A count assertion races a pending write
+
+- **WHEN** a spec triggers a save/mutation via a UI action and then reads a
+  count that the mutation is expected to change by a known delta
+- **THEN** the spec waits for the mutation's request/response (or an
+  equivalent settled-state UI signal) before reading the count
+- **AND** the pre-write and expected post-write values are distinguishable,
+  so a duplicate write reliably fails the assertion

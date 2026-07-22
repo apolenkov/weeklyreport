@@ -120,7 +120,7 @@
 
 ## 12. Gates
 
-- [ ] 12.1 `pnpm --filter @customreport/api db:generate`
+- [x] 12.1 `pnpm --filter @customreport/api db:generate` (run green as gate step 1 during verification)
 - [x] 12.2 `pnpm --filter @customreport/api exec vitest run src/lib/audit-logger.test.ts src/modules/admin/reopen-request-admin.service.test.ts src/modules/archive/archive.service.test.ts src/modules/period/__tests__/lifecycle-write-gate.test.ts src/modules/reminders/reminders.service.test.ts`
 - [x] 12.3 `cd apps/web && pnpm exec vitest run src/features/review/ui/section-verdict-control.test.tsx src/features/slides/model/slide-grid-cells.test.ts src/lib/client-logger.test.ts`
 - [x] 12.4 Change-local typecheck: `pnpm --filter @customreport/api typecheck`

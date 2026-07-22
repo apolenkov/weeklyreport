@@ -41,6 +41,12 @@ The lead report toolbar and slide hero MUST present their controls with consiste
    collapsed. The slot MUST be reserved (rendered, disabled when there is nothing
    to collapse — not removed from the DOM) so adding or removing sections within a
    session never makes the control appear/disappear and shift the row.
+7. Activating the collapse/expand-all control MUST apply to every section,
+   including a section a user previously expanded or collapsed individually,
+   on every press — not only the first press after the individual override
+   was made. An individual section override MUST NOT survive a second (or
+   later) Toggle-All command that happens to return the group to the same
+   expanded/collapsed value the override was made under.
 
 #### Scenario: the version coming-soon control sits among icon buttons
 
@@ -90,6 +96,17 @@ The lead report toolbar and slide hero MUST present their controls with consiste
 - **WHEN** a lead with an empty edit report (nothing to collapse) adds a section
 - **THEN** the trailing control stayed in its reserved slot the whole time
   (disabled while empty, then enabled), so its position never shifted
+
+#### Scenario: Expand All wins after a full Toggle-All cycle
+
+- **WHEN** a lead individually collapses one section while all sections are
+  expanded (`groupExpanded=true`), then presses the trailing control twice —
+  once to collapse all, once to expand all again (`groupExpanded` goes
+  `true → false → true`)
+- **THEN** the individually-collapsed section is expanded after the second
+  press, honoring "Expand All"
+- **AND** this holds regardless of how many Toggle-All cycles occur before or
+  after the individual override
 
 ### Requirement: The lead context toolbar stays reachable on scroll
 
