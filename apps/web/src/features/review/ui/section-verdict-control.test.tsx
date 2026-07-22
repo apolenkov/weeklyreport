@@ -5,42 +5,74 @@ import "@testing-library/jest-dom/vitest";
 
 import type { SectionReviewView } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
+import { createMockTRPC } from "../../../test-utils/mock-trpc";
+
+const toastSuccess = vi.fn<(...args: unknown[]) => void>();
+const toastError = vi.fn<(...args: unknown[]) => void>();
+vi.mock("sonner", () => ({
+  toast: {
+    success: (...args: unknown[]) => toastSuccess(...args),
+    error: (...args: unknown[]) => toastError(...args),
+  },
+}));
+
+const invalidateReviewMock = vi.fn<(...args: unknown[]) => void>();
+vi.mock("../../../lib/cache-keys", () => ({
+  invalidateReview: (...args: unknown[]) => invalidateReviewMock(...args),
+}));
 
 import { resolveBadge, SectionVerdictControl } from "./section-verdict-control";
 
-vi.mock("../../../lib/trpc-context", () => ({
-  useTRPC: () => ({
-    review: {
-      verdict: {
-        mutationOptions: (options: Record<string, unknown>) => ({
-          ...options,
-          mutationFn: () =>
-            Promise.resolve({ unsubmitted: false, verdict: "approved" }),
-        }),
-      },
-    },
-  }),
-}));
+const REPORT_SECTION_ID = "11111111-1111-4111-8111-111111111111";
+const VERSION = 1;
 
-function renderWithClient(ui: ReactElement) {
-  return render(
-    <QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>,
-  );
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
 }
 
-function renderControl(canReview: boolean) {
-  return renderWithClient(
+function renderControl(options: {
+  readonly canReview: boolean;
+  readonly onMutated?: () => void;
+}) {
+  const onMutated = options.onMutated ?? vi.fn<() => void>();
+  const { proxy, captured } = createMockTRPC([
+    { path: ["review", "verdict"], mutation: true },
+  ]);
+
+  function Wrapper({ children }: { readonly children: ReactNode }) {
+    return (
+      <QueryClientProvider client={makeQueryClient()}>
+        <TRPCProxyContext.Provider value={proxy}>
+          {children}
+        </TRPCProxyContext.Provider>
+      </QueryClientProvider>
+    );
+  }
+
+  render(
     <SectionVerdictControl
-      reportSectionId="11111111-1111-4111-8111-111111111111"
-      version={1}
+      reportSectionId={REPORT_SECTION_ID}
+      version={VERSION}
       reviews={[]}
-      canReview={canReview}
-      onMutated={vi.fn()}
+      canReview={options.canReview}
+      onMutated={onMutated}
     />,
+    { wrapper: Wrapper },
   );
+
+  return { captured, onMutated };
 }
 
 const review = (
@@ -85,27 +117,100 @@ describe("resolveBadge", () => {
 });
 
 describe("SectionVerdictControl — verdict buttons", () => {
-  it("renders Approve / Request changes only for a designated reviewer", () => {
-    renderControl(false);
+  beforeEach(() => {
+    toastSuccess.mockClear();
+    toastError.mockClear();
+    invalidateReviewMock.mockClear();
+  });
+
+  it("hides Approve / Request changes when the viewer is not a designated reviewer", () => {
+    renderControl({ canReview: false });
     expect(
       screen.queryByRole("button", { name: "Approve" }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Request changes" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("both verdict buttons floor at the touch target below md (responsive-compact-layout)", () => {
-    // jsdom cannot evaluate media queries; the class assertions are the teeth.
-    // The pills keep their desktop density (py-0.5, ~21px) and only the hit
-    // area grows on the phone-floored review surface.
-    renderControl(true);
+  it("shows both verdict actions for a designated reviewer", () => {
+    renderControl({ canReview: true });
+    expect(screen.getByRole("button", { name: "Approve" })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Request changes" }),
+    ).toBeEnabled();
+  });
 
-    const approve = screen.getByRole("button", { name: "Approve" });
-    const requestChanges = screen.getByRole("button", {
-      name: "Request changes",
+  it("Approve submits approved+version, toasts, invalidates review cache, and notifies parent", async () => {
+    const { captured, onMutated } = renderControl({ canReview: true });
+    const mutationFn = expectDefined(captured["review.verdict"]).mutationFn;
+    mutationFn.mockResolvedValue({
+      unsubmitted: false,
+      verdict: "approved",
+      judgedVersion: VERSION,
     });
-    for (const button of [approve, requestChanges]) {
-      expect(button.className).toContain(
-        "max-md:min-h-[var(--touch-target-min)]",
+
+    await userEvent.click(screen.getByRole("button", { name: "Approve" }));
+
+    await waitFor(() => {
+      expect(mutationFn).toHaveBeenCalledTimes(1);
+    });
+    expect(mutationFn.mock.calls[0]?.[0]).toEqual({
+      reportSectionId: REPORT_SECTION_ID,
+      verdict: "approved",
+      version: VERSION,
+    });
+    await waitFor(() => {
+      expect(toastSuccess).toHaveBeenCalledWith("Section approved");
+    });
+    expect(invalidateReviewMock).toHaveBeenCalledTimes(1);
+    expect(onMutated).toHaveBeenCalledTimes(1);
+  });
+
+  it("Request changes with unsubmit toasts the lead-return message and invalidates", async () => {
+    const { captured, onMutated } = renderControl({ canReview: true });
+    const mutationFn = expectDefined(captured["review.verdict"]).mutationFn;
+    mutationFn.mockResolvedValue({
+      unsubmitted: true,
+      verdict: "changes_requested",
+      judgedVersion: VERSION,
+    });
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Request changes" }),
+    );
+
+    await waitFor(() => {
+      expect(mutationFn.mock.calls[0]?.[0]).toEqual({
+        reportSectionId: REPORT_SECTION_ID,
+        verdict: "changes_requested",
+        version: VERSION,
+      });
+    });
+    await waitFor(() => {
+      expect(toastSuccess).toHaveBeenCalledWith(
+        "Changes requested — section returned to the lead",
       );
-    }
+    });
+    expect(invalidateReviewMock).toHaveBeenCalledTimes(1);
+    expect(onMutated).toHaveBeenCalledTimes(1);
+  });
+
+  it("Request changes without unsubmit toasts the plain changes message", async () => {
+    const { captured } = renderControl({ canReview: true });
+    const mutationFn = expectDefined(captured["review.verdict"]).mutationFn;
+    mutationFn.mockResolvedValue({
+      unsubmitted: false,
+      verdict: "changes_requested",
+      judgedVersion: VERSION,
+    });
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Request changes" }),
+    );
+
+    await waitFor(() => {
+      expect(toastSuccess).toHaveBeenCalledWith("Changes requested");
+    });
   });
 });

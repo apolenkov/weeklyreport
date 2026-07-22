@@ -208,19 +208,21 @@ re-verify post-harden.
 
 ## 19. web-dashboard (S — 2 files, 4 minors)
 
-- [ ] 19.1 `apps/web/src/features/dashboard/ui/kpi-cards.test.tsx` — 3 minors
-- [ ] 19.2 `apps/web/src/features/dashboard/ui/reopen-request-row.tsx` — 1 minor
+- [x] 19.1 `apps/web/src/features/dashboard/ui/kpi-cards.test.tsx` — 3 minors
+- [x] 19.2 `apps/web/src/features/dashboard/ui/reopen-request-row.tsx` — 1 minor
 
 ## 20. api-analytics-activity-obs (S — 3 files, 3 minors)
 
-- [ ] 20.1 `apps/api/src/modules/analytics/analytics.cache.test.ts` — 1 minor
-- [ ] 20.2 `apps/api/src/modules/analytics/analytics.tz.test.ts` — 1 minor
-- [ ] 20.3 `apps/api/src/modules/observability/web-vitals.controller.test.ts` — 1 minor
+- [x] 20.1 `apps/api/src/modules/analytics/analytics.cache.test.ts` — 1 minor
+- [x] 20.2 `apps/api/src/modules/analytics/analytics.tz.test.ts` — 1 minor
+- [x] 20.3 `apps/api/src/modules/observability/web-vitals.controller.test.ts` — 1 minor
 
 ## 21. web-review (S — 2 files, 3 minors)
 
-- [ ] 21.1 `apps/web/src/features/review/ui/review-acknowledge-bar.test.tsx` — 1 minor
-- [ ] 21.2 `apps/web/src/features/review/ui/section-verdict-control.test.tsx` — 2 minors
+- [x] 21.1 `apps/web/src/features/review/ui/review-acknowledge-bar.test.tsx` — 1 minor
+- [x] 21.2 `apps/web/src/features/review/ui/section-verdict-control.test.tsx` — 2 minors —
+      re-verified post-`harden-test-suite-quality`: both findings still held
+      (no click coverage; pure className pin remained); fixed in-place.
 
 Note: `section-verdict-control.test.tsx` overlaps
 `harden-test-suite-quality`; re-verify post-harden.
