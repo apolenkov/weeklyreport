@@ -19,8 +19,8 @@ import type { PeriodRowFromRepo } from "./admin-shared";
  * count) is fetched in a single grouped query so the list endpoint
  * stays at O(1) round-trips regardless of page size.
  *
- * Uses the `(periodState, periodStart desc)` composite index from
- * 51-C — no plan-time index gap.
+ * Uses the `(periodState, periodStart desc)` composite index so filtering and
+ * ordering stay on the same access path.
  */
 export async function listPeriodsByState(
   prisma: PrismaService,
@@ -168,7 +168,7 @@ export async function readPeriodById(
 }
 
 /**
- * A27: read a Report's status fields for delete-guard checks.
+ * Read a Report's status fields for delete-guard checks.
  * Returns null if not found.
  */
 export async function readReportForDelete(
@@ -187,7 +187,7 @@ export async function readReportForDelete(
 }
 
 /**
- * A27: delete a Report and cascade-delete all child rows via Prisma relations
+ * Delete a Report and cascade-delete all child rows via Prisma relations
  * (onDelete: Cascade on ReportSection, Item, Risk, Decision, Priority, etc.).
  */
 export async function deleteReport(
