@@ -1,10 +1,9 @@
 /**
  * @vitest-environment jsdom
  *
- * Tasks 3.1–3.3: verify AgentReviewComingSoon is mounted on every on-screen
- * report surface added by the mount-agent-review-placeholder change, that the
- * print page carries zero such controls, and that every mounted control keeps
- * aria-disabled="true" and the expected English copy.
+ * Verifies that AgentReviewComingSoon is mounted on every on-screen report
+ * surface, that the print page carries zero such controls, and that every
+ * mounted control keeps aria-disabled="true" and the expected English copy.
  */
 
 import "@testing-library/jest-dom/vitest";
@@ -18,20 +17,17 @@ import type { PrintRouteContext } from "../../../lib/server/get-print-route-cont
 
 /* ---- Module mocks (must be hoisted above all imports of the SUT) ---- */
 
-// fix-report-surface-integrity W2 (task 3.3): the present routes now
-// `permanentRedirect` to `?mode=slides` and the print route is a server gate
-// that `permanentRedirect`s humans / `redirect`s no-session. Mock both so the
-// SUT calls are observable; real Next throws to halt rendering, so the mocks
-// throw a tagged error too (the SUT never renders past the redirect).
+// Present routes permanently redirect to slides mode, while the print gate
+// uses role-dependent temporary redirects. The mocks throw like Next does so
+// redirect calls remain observable and rendering stops at the same boundary.
 const permanentRedirect = vi.fn((url: string) => {
   throw new Error(`NEXT_PERMANENT_REDIRECT:${url}`);
 });
 const redirect = vi.fn((url: string) => {
   throw new Error(`NEXT_REDIRECT:${url}`);
 });
-// viewer-report-surface-parity: PublishedReportPage now renders the real
-// ViewerReportShell, which uses the navigation hooks for its URL-backed scope /
-// view-mode / archive toggles. Stub them so the shell mounts in jsdom.
+// ViewerReportShell uses navigation hooks for URL-backed controls; stable
+// stubs let the real shell mount in jsdom.
 vi.mock("next/navigation", () => ({
   permanentRedirect: (url: string) => permanentRedirect(url),
   redirect: (url: string) => redirect(url),
@@ -54,11 +50,8 @@ vi.mock("../../../features/report-pages/ui/lead-section-preview-auth", () => ({
 }));
 
 vi.mock("../../../features/report-pages/ui/weekly-report-page", () => ({
-  // viewer-report-surface-parity: the viewer now wraps WeeklyReportPage in
-  // ViewerReportShell, which routes the full bottom-row controls (agent-review
-  // placeholder + Back-to-Archive + scope/view-mode toggles) through the
-  // `contextControls` slot. Render that slot so the viewer's single placeholder
-  // and Back-to-Archive link stay observable in these surface-audit tests.
+  // Render the context-controls slot so viewer controls remain observable in
+  // the surface audit.
   WeeklyReportPage: ({ contextControls }: { contextControls?: ReactNode }) => (
     <div data-testid="weekly-report-page-stub">
       <h1>Status Report</h1>
@@ -236,12 +229,9 @@ describe("PublishedReportPage — agent-review placeholder", () => {
   });
 });
 
-// unify-top-action-toolbars task 2.0 / D4: the viewer used to render its OWN
-// <h1>Status Report</h1> + Report-ID block ABOVE WeeklyReportPage, which
-// renders the same title — doubling it on screen. The wrapper now owns NO title
-// and routes its actions through the page's `contextControlsLeading` slot, so
-// the title shows exactly once.
-describe("PublishedReportPage — single title + header actions (task 2.0)", () => {
+// WeeklyReportPage owns the title, while the wrapper routes actions through
+// the context-controls slot; this keeps a single heading on screen.
+describe("PublishedReportPage — single title + header actions", () => {
   it("renders exactly one Status Report title and no wrapper-level Report-ID", async () => {
     const ui = (await PublishedReportPage({
       params: paramsOf(TEST_REPORT_ID),
@@ -264,8 +254,7 @@ describe("PublishedReportPage — single title + header actions (task 2.0)", () 
     const contextControls = screen.getByTestId(
       "weekly-report-context-controls",
     );
-    // viewer-live-status (task 5.1): Back-to-Archive is removed; the Agent-review
-    // coming-soon control stays (deferred-feature-pattern contract).
+    // The deferred Agent-review control remains visible without an archive link.
     expect(
       within(contextControls).queryByRole("link", {
         name: /back to archive/i,
@@ -276,12 +265,8 @@ describe("PublishedReportPage — single title + header actions (task 2.0)", () 
     ).toBeInTheDocument();
   });
 
-  // fix-report-surface-integrity W2 (task 3.3, report-toolbar-parity): the
-  // standalone Present and browser-Print links are GONE from the viewer
-  // toolbar. Presentation is reached via `?mode=slides`; the only export is
-  // the single labeled Export-PDF rendered by WeeklyReportPage's trailing
-  // group (the now-broken `/print` deep link is removed — the print route
-  // 308-redirects humans away).
+  // Presentation is selected through slides mode and PDF export is the only
+  // print surface exposed by the viewer toolbar.
   it("renders no standalone Present or browser-Print links", async () => {
     const ui = (await PublishedReportPage({
       params: paramsOf(TEST_REPORT_ID),
@@ -297,7 +282,7 @@ describe("PublishedReportPage — single title + header actions (task 2.0)", () 
   });
 });
 
-/* ---- Present routes — now 308-redirect to slides mode (W2 task 3.3) ---- */
+/* ---- Present routes — 308 redirect to slides mode ---- */
 
 describe("HeadReportPresentPage — 308 redirect to slides", () => {
   it("permanentRedirects to /head/report/[id]?mode=slides", async () => {
@@ -361,7 +346,7 @@ describe("LeadReportPreviewPage — agent-review placeholder", () => {
 
 /* ---- Print route — server gate: worker renders, human/no-session redirect ---- */
 
-describe("PrintReportPage — PDF-worker-vs-human server gate (W2 task 3.3)", () => {
+describe("PrintReportPage — PDF-worker-vs-human server gate", () => {
   it("renders the print template for the PDF worker bound to this report", async () => {
     permanentRedirect.mockClear();
     redirect.mockClear();

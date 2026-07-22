@@ -31,53 +31,67 @@ either fixed or recorded as a stale re-grade in the wave notes.
 
 ## 1. web-landing-org-period (L — 11 files, 24 minors)
 
-- [ ] 1.1 `apps/web/src/features/organization/ui/settings-identity-sub-tab.tsx` — 2 minors
-- [ ] 1.2 `apps/web/src/features/organization/ui/settings-integrations-sub-tab.tsx` — 2 minors
-- [ ] 1.3 `apps/web/src/features/period/ui/current-week-section-add-signal.test.tsx` — 2 minors
-- [ ] 1.4 `apps/web/src/features/period/ui/decision-edit-dialog.tsx` — 2 minors
-- [ ] 1.5 `apps/web/src/features/period/ui/decisions-section.snapshot.test.tsx` — 3 minors
-- [ ] 1.6 `apps/web/src/features/period/ui/decisions-section.tsx` — 2 minors
-- [ ] 1.7 `apps/web/src/features/period/ui/head-publish-lock-action.tsx` — 1 minor
-- [ ] 1.8 `apps/web/src/features/period/ui/period-navigator.test.tsx` — 3 minors
-- [ ] 1.9 `apps/web/src/features/period/ui/periods-tab-icons.tsx` — 2 minors
-- [ ] 1.10 `apps/web/src/features/period/ui/sdlc-pipeline.test.tsx` — 2 minors
-- [ ] 1.11 `apps/web/src/features/period/ui/use-decision-edit-dialog.ts` — 3 minors
+- [ ] 1.1 `apps/web/src/features/organization/ui/settings-identity-sub-tab.tsx` — 2 minors —
+      all UI uses now reference the local constant; sourcing it from the server
+      schema remains blocked by the slice boundary because
+      `packages/shared/src/schemas/organization.ts` does not export it.
+- [x] 1.2 `apps/web/src/features/organization/ui/settings-integrations-sub-tab.tsx` — 2 minors —
+      removed the discarded status query; the AI literals are a non-issue while
+      the card is explicitly inert and Coming Soon with no provider state seam.
+- [x] 1.3 `apps/web/src/features/period/ui/current-week-section-add-signal.test.tsx` — 2 minors
+- [x] 1.4 `apps/web/src/features/period/ui/decision-edit-dialog.tsx` — 2 minors
+- [x] 1.5 `apps/web/src/features/period/ui/decisions-section.snapshot.test.tsx` — 3 minors
+- [x] 1.6 `apps/web/src/features/period/ui/decisions-section.tsx` — 2 minors
+- [x] 1.7 `apps/web/src/features/period/ui/head-publish-lock-action.tsx` — 1 minor
+- [x] 1.8 `apps/web/src/features/period/ui/period-navigator.test.tsx` — 3 minors
+- [x] 1.9 `apps/web/src/features/period/ui/periods-tab-icons.tsx` — 2 minors
+- [x] 1.10 `apps/web/src/features/period/ui/sdlc-pipeline.test.tsx` — 2 minors
+- [x] 1.11 `apps/web/src/features/period/ui/use-decision-edit-dialog.ts` — 3 minors
 
 ## 2. web-report-pages (L — 9 files, 21 minors)
 
-- [ ] 2.1 `apps/web/src/features/report-pages/ui/activity-status-strip.test.tsx` — 3 minors
-- [ ] 2.2 `apps/web/src/features/report-pages/ui/head-report-shell.tsx` — 1 minor
-- [ ] 2.3 `apps/web/src/features/report-pages/ui/lead-form-dialogs.tsx` — 4 minors
-- [ ] 2.4 `apps/web/src/features/report-pages/ui/lead-form-sync-bridge.tsx` — 3 minors
-- [ ] 2.5 `apps/web/src/features/report-pages/ui/next-week-section.tsx` — 2 minors
-- [ ] 2.6 `apps/web/src/features/report-pages/ui/unified-activity-section.tsx` — 2 minors
-- [ ] 2.7 `apps/web/src/features/report-pages/ui/use-lead-form-add-signals.test.tsx` — 1 minor
-- [ ] 2.8 `apps/web/src/features/report-pages/ui/use-lead-form-redirects.ts` — 2 minors
-- [ ] 2.9 `apps/web/src/features/report-pages/ui/weekly-report-skeleton.test.tsx` — 3 minors
+- [x] 2.1 `apps/web/src/features/report-pages/ui/activity-status-strip.test.tsx` — 3 minors
+- [x] 2.2 `apps/web/src/features/report-pages/ui/head-report-shell.tsx` — 1 minor
+- [x] 2.3 `apps/web/src/features/report-pages/ui/lead-form-dialogs.tsx` — 4 minors
+- [x] 2.4 `apps/web/src/features/report-pages/ui/lead-form-sync-bridge.tsx` — 3 minors
+- [x] 2.5 `apps/web/src/features/report-pages/ui/next-week-section.tsx` — 2 minors
+- [x] 2.6 `apps/web/src/features/report-pages/ui/unified-activity-section.tsx` — 2 minors
+- [x] 2.7 `apps/web/src/features/report-pages/ui/use-lead-form-add-signals.test.tsx` — 1 minor
+- [x] 2.8 `apps/web/src/features/report-pages/ui/use-lead-form-redirects.ts` — 2 minors
+- [x] 2.9 `apps/web/src/features/report-pages/ui/weekly-report-skeleton.test.tsx` — 3 minors
 
 ## 3. api-infrastructure (L — 9 files, 19 minors)
 
-- [ ] 3.1 `apps/api/src/infrastructure/bullmq/raw-bullmq-processor.ts` — 1 minor
-- [ ] 3.2 `apps/api/src/infrastructure/email/email-dispatch.integration.test.ts` — 2 minors
-- [ ] 3.3 `apps/api/src/infrastructure/health/prisma.health.ts` — 1 minor
-- [ ] 3.4 `apps/api/src/infrastructure/trpc/__tests__/role-claim.contract.test.ts` — 2 minors
-- [ ] 3.5 `apps/api/src/infrastructure/trpc/__tests__/role-coverage.test.ts` — 4 minors
-- [ ] 3.6 `apps/api/src/infrastructure/trpc/reopen-requests.router.test.ts` — 2 minors
-- [ ] 3.7 `apps/api/src/infrastructure/trpc/routers/organization.router.ts` — 2 minors
-- [ ] 3.8 `apps/api/src/infrastructure/trpc/trpc.context.ts` — 2 minors
-- [ ] 3.9 `apps/api/src/infrastructure/trpc/trpc.session-hydration.ts` — 3 minors
+- [x] 3.1 `apps/api/src/infrastructure/bullmq/raw-bullmq-processor.ts` — 1 minor
+- [x] 3.2 `apps/api/src/infrastructure/email/email-dispatch.integration.test.ts` — 2 minors
+- [x] 3.3 `apps/api/src/infrastructure/health/prisma.health.ts` — 1 minor
+- [x] 3.4 `apps/api/src/infrastructure/trpc/__tests__/role-claim.contract.test.ts` — 2 minors
+- [x] 3.5 `apps/api/src/infrastructure/trpc/__tests__/role-coverage.test.ts` — 4 minors
+- [x] 3.6 `apps/api/src/infrastructure/trpc/reopen-requests.router.test.ts` — 2 minors
+- [ ] 3.7 `apps/api/src/infrastructure/trpc/routers/organization.router.ts` — 2 minors —
+      silent identity fallback removed; required dependency typing remains
+      blocked by the slice boundary because `AppRouterDeps.organizationService`
+      is optional in out-of-slice `trpc.router.ts`.
+- [x] 3.8 `apps/api/src/infrastructure/trpc/trpc.context.ts` — 2 minors
+- [x] 3.9 `apps/api/src/infrastructure/trpc/trpc.session-hydration.ts` — 3 minors
 
 ## 4. web-shared (L — 9 files, 19 minors)
 
-- [ ] 4.1 `apps/web/src/shared/ui/confirm-delete-dialog.tsx` — 2 minors
-- [ ] 4.2 `apps/web/src/shared/ui/confirmation-dialog.tsx` — 2 minors
-- [ ] 4.3 `apps/web/src/shared/ui/forbidden-page.test.tsx` — 3 minors
-- [ ] 4.4 `apps/web/src/shared/ui/icons.test.tsx` — 2 minors
-- [ ] 4.5 `apps/web/src/shared/ui/report-shell/agent-review-coming-soon.test.tsx` — 2 minors
-- [ ] 4.6 `apps/web/src/shared/ui/report-shell/archive-toggle.test.tsx` — 1 minor
-- [ ] 4.7 `apps/web/src/shared/ui/report-shell/report-shell.test.tsx` — 3 minors
-- [ ] 4.8 `apps/web/src/shared/ui/report-shell/scope-toggle.test.tsx` — 3 minors
-- [ ] 4.9 `apps/web/src/shared/ui/sdlc-tooltip.tsx` — 1 minor
+- [x] 4.1 `apps/web/src/shared/ui/confirm-delete-dialog.tsx` — 2 minors
+- [ ] 4.2 `apps/web/src/shared/ui/confirmation-dialog.tsx` — 2 minors —
+      themed surface fixed; narrowing `variant` requires updating the
+      out-of-slice `fill-from-button.tsx` caller that passes `"fill-from"`.
+- [x] 4.3 `apps/web/src/shared/ui/forbidden-page.test.tsx` — 3 minors
+- [x] 4.4 `apps/web/src/shared/ui/icons.test.tsx` — 2 minors
+- [ ] 4.5 `apps/web/src/shared/ui/report-shell/agent-review-coming-soon.test.tsx` — 2 minors —
+      archaeology removed; renaming the suite requires creating an out-of-slice
+      replacement path.
+- [x] 4.6 `apps/web/src/shared/ui/report-shell/archive-toggle.test.tsx` — 1 minor
+- [ ] 4.7 `apps/web/src/shared/ui/report-shell/report-shell.test.tsx` — 3 minors —
+      archaeology and redundant assertions fixed; renaming the suite requires
+      creating an out-of-slice replacement path.
+- [x] 4.8 `apps/web/src/shared/ui/report-shell/scope-toggle.test.tsx` — 3 minors
+- [x] 4.9 `apps/web/src/shared/ui/sdlc-tooltip.tsx` — 1 minor
 
 ## 5. web-report-sections (M — 8 files, 14 minors)
 

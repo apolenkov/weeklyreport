@@ -113,7 +113,7 @@ export function ConfirmDeleteDialog({
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop-close propagation for inside clicks; no keyboard equivalent needed */}
       <div
         ref={surfaceRef}
-        className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
+        className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-delete-title"
@@ -164,7 +164,7 @@ export function ConfirmDeleteDialog({
           <button
             ref={confirmRef}
             type="button"
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-destructive)] bg-[var(--color-destructive)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#a02020]"
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-destructive)] bg-[var(--color-destructive)] px-4 text-sm font-semibold text-[var(--color-destructive-foreground)] transition-[filter] hover:brightness-90"
             onClick={onConfirm}
           >
             {confirmLabel}
