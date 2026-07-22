@@ -10,6 +10,7 @@ import {
   computePortfolioOverviewFromReadSections,
 } from "./published-report-snapshot";
 import { buildEscalationsFromReadSections } from "./report-escalations";
+import { buildPortfolioOverview } from "./weekly-report/weekly-report-portfolio";
 
 const REPORT_ID = "659b2767-0f86-41e2-b025-49730ca010e4";
 const SECTION_ID = "2a223d8b-c4b2-473c-8a7b-15ecc52195c7";
@@ -20,6 +21,19 @@ const SECOND_PRODUCT = "65064b76-3bec-428d-b2f6-7bf30476909a";
 const OWNED_STAGE_ID = "6366e7ef-e694-454f-863a-7e112ebbc48f";
 const SECOND_STAGE_ID = "71e9d6a6-7455-4864-8de9-a48b2f25b13f";
 const OWNED_STAGE_NAME = "Development";
+const SECOND_SECTION_ID = "3b334e9c-d5c3-484d-9b8c-26fdd63206d8";
+const SECOND_AUTHOR_ID = "7faa772b-dbd6-4a17-a4eb-85f006fcd0e1";
+const FIRST_STAGE = {
+  stageId: OWNED_STAGE_ID,
+  stageName: OWNED_STAGE_NAME,
+  sortOrder: 0,
+};
+const SECOND_STAGE = {
+  stageId: SECOND_STAGE_ID,
+  stageName: "Testing",
+  sortOrder: 1,
+};
+const CO_OWNED_STAGE_SET = [FIRST_STAGE, SECOND_STAGE];
 
 function makeSection(
   overrides: Partial<ReportSectionReadModel> = {},
@@ -47,6 +61,75 @@ function makeSection(
     ...overrides,
   });
 }
+
+/** Build two section occurrences of one cross-lead product. */
+function makeCoOwnedProductSections(): ReportSectionReadModel[] {
+  return [
+    makeSection({
+      authorName: "Alice Lead",
+      projects: [
+        {
+          projectId: OWNED_PRODUCT,
+          projectName: "CRM Portal",
+          trafficLight: "green",
+          ownedStages: [{ ...FIRST_STAGE, status: "green" }],
+          stageSet: CO_OWNED_STAGE_SET,
+        },
+      ],
+    }),
+    makeSection({
+      reportSectionId: SECOND_SECTION_ID,
+      authorId: SECOND_AUTHOR_ID,
+      authorName: "Bob Lead",
+      projects: [
+        {
+          projectId: OWNED_PRODUCT,
+          projectName: "CRM Portal",
+          trafficLight: "red",
+          ownedStages: [{ ...SECOND_STAGE, status: "red" }],
+          stageSet: CO_OWNED_STAGE_SET,
+        },
+      ],
+    }),
+  ];
+}
+
+describe("published portfolio math for a co-owned product", () => {
+  const sections = makeCoOwnedProductSections();
+
+  it("counts the worst status once per distinct product", () => {
+    const { totals } = computePortfolioOverviewFromReadSections(sections);
+    const countedProducts = totals.green + totals.yellow + totals.red;
+
+    expect(totals).toEqual({ green: 0, yellow: 0, red: 1 });
+    expect(countedProducts).toBe(1);
+  });
+
+  it("counts the product-wide stage union", () => {
+    const products = buildPortfolioProductsFromSnapshotSections(sections);
+
+    expect(products[0]?.stageCount).toBe(2);
+  });
+
+  it("matches the live portfolio stage count for the same assignments", () => {
+    const publishedProducts =
+      buildPortfolioProductsFromSnapshotSections(sections);
+    const liveProducts = buildPortfolioOverview(
+      [
+        {
+          id: OWNED_PRODUCT,
+          name: "CRM Portal",
+          stageAssignments: CO_OWNED_STAGE_SET.map(({ stageId }) => ({
+            id: stageId,
+          })),
+        },
+      ],
+      sections,
+    );
+
+    expect(publishedProducts[0]?.stageCount).toBe(liveProducts[0]?.stageCount);
+  });
+});
 
 describe("buildEscalationsFromReadSections", () => {
   it("emits a blocked escalation from a blocked-severity risk (with its stage)", () => {
