@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  formatDateTime,
   formatPeriodRangeWithYear,
   joinPeriodLabel,
 } from "../../../lib/format-date";
@@ -16,16 +17,6 @@ interface DashboardReopenRequest {
     readonly periodEnd: string;
     readonly weekLabel: string | null;
   };
-}
-
-function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 interface ReopenRequestRowProps {
@@ -74,7 +65,7 @@ export function ReopenRequestRow({
             </span>
           </div>
           <div className="text-xs text-[var(--color-muted-foreground)]">
-            Requested {formatTimestamp(r.createdAt)}
+            Requested {formatDateTime(r.createdAt)}
           </div>
         </div>
         {!isResponding && (
