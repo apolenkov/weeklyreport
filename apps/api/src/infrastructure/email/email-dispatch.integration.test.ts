@@ -95,8 +95,10 @@ beforeAll(async () => {
 const PERIOD = "2026-06-02 → 2026-06-08";
 const ORG = { shortName: "TEST", fullName: "Test Organisation" };
 
-// Stub RemindersService — only markReminderSent needs to resolve without error.
+// Stub RemindersService — the transport test represents the worker that wins
+// the atomic send claim and then records successful delivery.
 const remindersStub = {
+  claimExecutionForSending: vi.fn().mockResolvedValue(true),
   markReminderSent: vi.fn().mockResolvedValue(undefined),
 };
 
@@ -114,114 +116,127 @@ interface ProcessorSeam {
 // Tests
 // ---------------------------------------------------------------------------
 
+// Local OrbStack port-forwarding holds a server-speaks-first protocol's opening
+// byte (the SMTP 220 banner) for ~8-10s regardless of port; each SMTP dispatch
+// therefore needs headroom well beyond the default 5s per-test budget.
+const SMTP_GREETING_HEADROOM_MS = 30_000;
+
 describe("email-dispatch integration (P8)", () => {
-  it("deadline reminder: message arrives in Mailpit with correct recipient and subject", async (ctx) => {
-    if (!mailpitUp) {
-      ctx.skip();
-      return;
-    }
+  it(
+    "deadline reminder: message arrives in Mailpit with correct recipient and subject",
+    { timeout: SMTP_GREETING_HEADROOM_MS },
+    async (ctx) => {
+      if (!mailpitUp) {
+        ctx.skip();
+        return;
+      }
 
-    // Use a unique recipient per run to avoid cross-talk with other messages.
-    const recipient = `deadline-dispatch-${Date.now()}@test.local`;
+      // Use a unique recipient per run to avoid cross-talk with other messages.
+      const recipient = `deadline-dispatch-${Date.now()}@test.local`;
 
-    // Purge inbox before dispatching so we can assert on a clean slate.
-    await clearMessages();
+      // Purge inbox before dispatching so we can assert on a clean slate.
+      await clearMessages();
 
-    const emailService = new EmailService(SMTP_ENV);
-    const processor = new EmailReminderProcessor(
-      remindersStub as never,
-      emailService,
-      SMTP_ENV,
-      adminStub as never,
-    );
+      const emailService = new EmailService(SMTP_ENV);
+      const processor = new EmailReminderProcessor(
+        remindersStub as never,
+        emailService,
+        SMTP_ENV,
+        adminStub as never,
+      );
 
-    const executionId = `exec-integration-${Date.now()}`;
+      const executionId = `exec-integration-${Date.now()}`;
 
-    const jobData = {
-      executionId,
-      recipientEmail: recipient,
-      kind: "deadline" as const,
-      leadName: "Integration Tester",
-      reportPeriod: PERIOD,
-      deadlineIso: new Date("2026-06-08T09:00:00.000Z").toISOString(),
-      sectionUrl: "http://localhost:3000/lead/report?reportId=test",
-      organization: ORG,
-    };
+      const jobData = {
+        executionId,
+        recipientEmail: recipient,
+        kind: "deadline" as const,
+        leadName: "Integration Tester",
+        reportPeriod: PERIOD,
+        deadlineIso: new Date("2026-06-08T09:00:00.000Z").toISOString(),
+        sectionUrl: "http://localhost:3000/lead/report?reportId=test",
+        organization: ORG,
+      };
 
-    // Call processJob directly — bypasses BullMQ/Redis entirely.
-    await (processor as unknown as ProcessorSeam).processJob({
-      data: jobData,
-    } as Job<unknown>);
+      // Call processJob directly — bypasses BullMQ/Redis entirely.
+      await (processor as unknown as ProcessorSeam).processJob({
+        data: jobData,
+      } as Job<unknown>);
 
-    // Poll Mailpit until the message appears (up to 3 s).
-    const message = await pollForMessage(recipient);
+      // Poll Mailpit until the message appears (up to 3 s).
+      const message = await pollForMessage(recipient);
 
-    expect(message).not.toBeNull();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- non-null asserted right after an explicit not-null check
-    const msg = message!;
+      expect(message).not.toBeNull();
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- non-null asserted right after an explicit not-null check
+      const msg = message!;
 
-    // Recipient
-    expect(msg.To.some((a) => a.Address === recipient)).toBe(true);
+      // Recipient
+      expect(msg.To.some((a) => a.Address === recipient)).toBe(true);
 
-    // Subject: "[TEST] Reminder: <period> report section due in 24h"
-    expect(msg.Subject).toContain("[TEST]");
-    expect(msg.Subject).toContain("Reminder:");
-    expect(msg.Subject.toLowerCase()).toContain("report section due");
+      // Subject: "[TEST] Reminder: <period> report section due in 24h"
+      expect(msg.Subject).toContain("[TEST]");
+      expect(msg.Subject).toContain("Reminder:");
+      expect(msg.Subject.toLowerCase()).toContain("report section due");
 
-    // Processor must have marked the execution as sent.
-    expect(remindersStub.markReminderSent).toHaveBeenCalledWith(executionId);
-  });
+      // Processor must have marked the execution as sent.
+      expect(remindersStub.markReminderSent).toHaveBeenCalledWith(executionId);
+    },
+  );
 
-  it("escalation reminder: message arrives in Mailpit addressed to head with escalation subject", async (ctx) => {
-    if (!mailpitUp) {
-      ctx.skip();
-      return;
-    }
+  it(
+    "escalation reminder: message arrives in Mailpit addressed to head with escalation subject",
+    { timeout: SMTP_GREETING_HEADROOM_MS },
+    async (ctx) => {
+      if (!mailpitUp) {
+        ctx.skip();
+        return;
+      }
 
-    const headRecipient = `escalation-dispatch-${Date.now()}@test.local`;
+      const headRecipient = `escalation-dispatch-${Date.now()}@test.local`;
 
-    await clearMessages();
+      await clearMessages();
 
-    const emailService = new EmailService(SMTP_ENV);
-    const processor = new EmailReminderProcessor(
-      remindersStub as never,
-      emailService,
-      SMTP_ENV,
-      adminStub as never,
-    );
+      const emailService = new EmailService(SMTP_ENV);
+      const processor = new EmailReminderProcessor(
+        remindersStub as never,
+        emailService,
+        SMTP_ENV,
+        adminStub as never,
+      );
 
-    const executionId = `exec-escalation-${Date.now()}`;
+      const executionId = `exec-escalation-${Date.now()}`;
 
-    const jobData = {
-      executionId,
-      recipientEmail: headRecipient,
-      kind: "escalation" as const,
-      headName: "Head Tester",
-      cycleDate: "2026-06-08",
-      reportPeriod: PERIOD,
-      lateLeads: [
-        {
-          leadName: "Late Lead",
-          sectionTitle: "Q&A",
-          deadlineIso: new Date("2026-06-08T09:00:00.000Z").toISOString(),
-        },
-      ],
-      organization: ORG,
-    };
+      const jobData = {
+        executionId,
+        recipientEmail: headRecipient,
+        kind: "escalation" as const,
+        headName: "Head Tester",
+        cycleDate: "2026-06-08",
+        reportPeriod: PERIOD,
+        lateLeads: [
+          {
+            leadName: "Late Lead",
+            sectionTitle: "Q&A",
+            deadlineIso: new Date("2026-06-08T09:00:00.000Z").toISOString(),
+          },
+        ],
+        organization: ORG,
+      };
 
-    await (processor as unknown as ProcessorSeam).processJob({
-      data: jobData,
-    } as Job<unknown>);
+      await (processor as unknown as ProcessorSeam).processJob({
+        data: jobData,
+      } as Job<unknown>);
 
-    const message = await pollForMessage(headRecipient);
-    expect(message).not.toBeNull();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- non-null asserted right after an explicit not-null check
-    const msg = message!;
+      const message = await pollForMessage(headRecipient);
+      expect(message).not.toBeNull();
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- non-null asserted right after an explicit not-null check
+      const msg = message!;
 
-    expect(msg.To.some((a) => a.Address === headRecipient)).toBe(true);
-    // Subject: "[TEST] Action required: 1 late report section (2026-06-08)"
-    expect(msg.Subject).toContain("[TEST]");
-    expect(msg.Subject).toContain("Action required:");
-    expect(msg.Subject).toContain("late report section");
-  });
+      expect(msg.To.some((a) => a.Address === headRecipient)).toBe(true);
+      // Subject: "[TEST] Action required: 1 late report section (2026-06-08)"
+      expect(msg.Subject).toContain("[TEST]");
+      expect(msg.Subject).toContain("Action required:");
+      expect(msg.Subject).toContain("late report section");
+    },
+  );
 });
