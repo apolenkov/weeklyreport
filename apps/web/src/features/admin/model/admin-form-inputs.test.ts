@@ -1,14 +1,15 @@
 import { composeName } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { type AdminUserFormInput, toAdminUserInput } from "./admin-form-inputs";
+import {
+  type AdminUserFormInput,
+  toAdminProjectInput,
+  toAdminUserInput,
+  UnresolvedProjectLeadError,
+} from "./admin-form-inputs";
 
-/**
- * add-structured-user-name (review finding P2): `toAdminUserInput` is the
- * client-side owner of the `name === composeName(parts)` invariant for the admin
- * Users tab. It MUST recompute `name` from the trimmed surname-first parts and
- * never carry a separately-entered display name.
- */
+// The mapper owns the `name === composeName(parts)` invariant so the Users tab
+// cannot submit a separately-entered display name that drifts from its parts.
 const baseForm: AdminUserFormInput = {
   lastName: "Иванов",
   firstName: "Пётр",
@@ -61,4 +62,37 @@ describe("toAdminUserInput", () => {
     const result = toAdminUserInput(baseForm, "the-existing-id");
     expect(result.id).toBe("the-existing-id");
   });
+});
+
+describe("toAdminProjectInput", () => {
+  it("uses the caller-resolved lead name", () => {
+    const result = toAdminProjectInput(
+      {
+        name: " Platform ",
+        leadOwnerId: "lead-1",
+        leadName: " Lead One ",
+      },
+      "project-1",
+    );
+
+    expect(result).toMatchObject({
+      id: "project-1",
+      name: "Platform",
+      leadId: "lead-1",
+      leadName: "Lead One",
+    });
+  });
+
+  it.each([undefined, "", " ".repeat(3)])(
+    "fails when the caller has not resolved a lead name (%s)",
+    (leadName) => {
+      expect(() =>
+        toAdminProjectInput({
+          name: "Platform",
+          leadOwnerId: "missing-lead",
+          leadName,
+        }),
+      ).toThrow(new UnresolvedProjectLeadError("missing-lead"));
+    },
+  );
 });

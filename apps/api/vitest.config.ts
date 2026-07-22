@@ -21,12 +21,6 @@ export default defineConfig({
       "**/*.eval.test.ts",
       "**/dist/**",
       "**/node_modules/**",
-      // TODO(fix-xml-crypto-xmldom-onerror): samlify-level errorHandler/mimeType
-      // patched (patches/samlify@2.13.1.patch), but xml-crypto@6.1.2 still
-      // calls parseFromString without mimeType in 11 places. Patching xml-crypto
-      // touches the production @node-saml path — needs a separate change with
-      // full SAML regression coverage. Skip until then.
-      "**/saml.samlify.test.ts",
     ],
     coverage: {
       provider: "v8",

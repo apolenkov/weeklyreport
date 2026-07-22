@@ -1,20 +1,9 @@
 /**
- * 38-03 — SAML hardening integration test (samlify-mock IdP).
+ * SAML signature integration tests using a samlify mock IdP.
  *
- * Asserts that the XML-DSig invariants we rely on hold under a deterministic
- * adversary by round-tripping signed responses through a samlify mock IdP.
- *
- * Two claims tested here:
- *
- *   1. SIGNED-ASSERTION VALIDATION
- *      A response signed with the IdP's private key, parsed by the SP,
- *      succeeds and yields the expected user attributes (issuer, audience,
- *      nameID, etc.). This is the happy path for a Keycloak login.
- *
- *   2. SIGNATURE TAMPER REJECTION
- *      A response whose signature has been mutated (one byte flipped) MUST
- *      be rejected by the SP. Catches flipped-bit / man-in-the-middle
- *      attacks against the assertion blob.
+ * The live smoke test covers construction and metadata generation. Signed
+ * assertion validation and tamper rejection remain explicit deferred cases
+ * because the installed crypto stack cannot currently mint a response.
  *
  * Cert-pinning + replay-rejection (validateInResponseTo) are config-level
  * concerns enforced by `@node-saml/passport-saml` itself in production
@@ -36,9 +25,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import samlify from "samlify";
-import { beforeAll, describe, expect, it } from "vitest";
-
-import { expectDefined } from "../../test-utils/expect-defined.js";
+import { describe, expect, it } from "vitest";
 
 // `validator` shipped by samlify is required-but-not-bundled to avoid the
 // xmldom transitive surface. We swap in a permissive validator for tests
@@ -56,14 +43,6 @@ const idpKey = readFileSync(resolve(fixtures, "idp-key.pem"), "utf8");
 const idpCert = readFileSync(resolve(fixtures, "idp-cert.pem"), "utf8");
 const spKey = readFileSync(resolve(fixtures, "sp-key.pem"), "utf8");
 const spCert = readFileSync(resolve(fixtures, "sp-cert.pem"), "utf8");
-
-const TEST_USER = {
-  nameID: "mock-user-1",
-  nameIDFormat: "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified",
-  email: "mock@customreport.test",
-  displayName: "Mock User",
-  role: "lead",
-};
 
 type IdPInstance = ReturnType<typeof samlify.IdentityProvider>;
 type SPInstance = ReturnType<typeof samlify.ServiceProvider>;
@@ -109,109 +88,19 @@ function buildSP(useIdpCert: string): SPInstance {
   } as Parameters<typeof samlify.ServiceProvider>[0]);
 }
 
-async function mintSignedResponse(
-  idp: IdPInstance,
-  sp: SPInstance,
-): Promise<string> {
-  // samlify exposes createLoginResponse which signs the assertion + (when
-  // configured) the response. Returns { id, context: base64-encoded XML }.
-  // requestInfo=null tells samlify to skip the InResponseTo wiring (we're
-  // not chaining off a parsed AuthnRequest in the mock). With `{}` the
-  // library tries to read requestInfo.extract.request.id and crashes; with
-  // null the safe-get path falls back to an empty InResponseTo.
-  //
-  // Call as idp.createLoginResponse(...) directly — assigning the method
-  // to a variable loses `this`, which samlify needs to access entitySetting
-  // and entityMeta from within the IdP wrapper.
-  const result = await (
-    idp as unknown as {
-      createLoginResponse: (
-        sp: SPInstance,
-        reqInfo: null,
-        binding: string,
-        user: typeof TEST_USER,
-      ) => Promise<{ id: string; context: string }>;
-    }
-  ).createLoginResponse(
-    sp,
-    null,
-    samlify.Constants.wording.binding.post,
-    TEST_USER,
-  );
-  return result.context;
-}
+describe("SAML hardening — samlify mock IdP integration", () => {
+  it("constructs the mock IdP and certificate-pinned SP metadata", () => {
+    const idpMetadata = buildIdP().getMetadata();
+    const spMetadata = buildSP(idpCert).getMetadata();
 
-// PARTIAL FIX (samlify-xmldom-onError):
-//   - samlify@2.13.1 patched via pnpm: errorHandler→onError + parseFromString
-//     mimeType default — see patches/samlify@2.13.1.patch
-//   - xml-crypto@6.1.2 (transitive) still calls parseFromString without
-//     mimeType in 11 places; that patch touches the production @node-saml
-//     path so we hold it for a separate change with full SAML regression
-//     coverage. Tracked as openspec/changes/fix-xml-crypto-xmldom-onerror/.
-// Skip stays until xml-crypto is patched. Runtime SAML (@node-saml) works
-// because it depends on xml-crypto for signature ops but on @xmldom 0.9
-// for actual DOM parsing — that path has its own error handling that
-// doesn't trip the missing-mimeType issue at the moment.
-describe.skip("38-03 SAML hardening — samlify mock IdP integration", () => {
-  let idp: IdPInstance;
-  let sp: SPInstance;
-
-  beforeAll(() => {
-    idp = buildIdP();
-    sp = buildSP(idpCert);
+    expect(idpMetadata).toContain('entityID="http://idp.test/metadata"');
+    expect(spMetadata).toContain('entityID="http://sp.test/metadata"');
+    expect(spMetadata).toContain("X509Certificate");
   });
 
-  it("signed-assertion validation: a freshly signed response parses cleanly", async () => {
-    const responseB64 = await mintSignedResponse(idp, sp);
-
-    const result = await sp.parseLoginResponse(
-      idp,
-      samlify.Constants.wording.binding.post,
-      { body: { SAMLResponse: responseB64 } },
-    );
-
-    const extract = (
-      result as {
-        extract: {
-          nameID?: string;
-          issuer?: string;
-          audience?: string;
-        };
-      }
-    ).extract;
-    // Samlify's default loginResponseTemplate uses `email` as the NameID
-    // payload; non-empty extraction proves the assertion was decoded
-    // post-signature-verification.
-    expect(extract.nameID).toBeTruthy();
-    expect(extract.issuer).toBe("http://idp.test/metadata");
-    expect(extract.audience).toBe("http://sp.test/metadata");
-  });
-
-  it("signature tamper rejection: mutating one byte of the signed XML rejects", async () => {
-    const responseB64 = await mintSignedResponse(idp, sp);
-    const xml = Buffer.from(responseB64, "base64").toString("utf8");
-
-    // Locate the SignatureValue and flip one base64 char inside it. The
-    // SignatureValue is the canonical "signed bytes" — any mutation must
-    // cause the canonicalised hash to disagree with the decrypted signature.
-    const sigMatch = /<ds:SignatureValue>([\s\S]+?)<\/ds:SignatureValue>/.exec(
-      xml,
-    );
-    expect(sigMatch).not.toBeNull();
-    const original = expectDefined(expectDefined(sigMatch)[1]);
-    // Flip middle character. Avoid the trailing '=' padding.
-    const mid = Math.floor(original.length / 2);
-    const flipped =
-      original.slice(0, mid) +
-      (original[mid] === "A" ? "B" : "A") +
-      original.slice(mid + 1);
-    const tampered = xml.replace(original, flipped);
-    const tamperedB64 = Buffer.from(tampered, "utf8").toString("base64");
-
-    await expect(
-      sp.parseLoginResponse(idp, samlify.Constants.wording.binding.post, {
-        body: { SAMLResponse: tamperedB64 },
-      }),
-    ).rejects.toThrow();
-  });
+  // xml-crypto@6.1.2 cannot mint either response under @xmldom/xmldom@0.9
+  // because it omits the required MIME type. Patching that production SAML
+  // dependency requires regression coverage outside this mock-only suite.
+  it.todo("validates and parses a freshly signed assertion");
+  it.todo("rejects a signed assertion whose signature bytes were mutated");
 });
