@@ -21,8 +21,11 @@ test.describe("Head journey (integration)", () => {
     await expect(
       headPage.getByRole("heading", { name: "Dashboard" }),
     ).toBeVisible({ timeout: 15_000 });
+    // The Submissions KPI counts the head's GROUP-SCOPED leads (4 in seed —
+    // totalLeads comes from the scoped leadUsers fetch, not all lead users)
+    // and all four have submitted; report sections are the 4/2 counts below.
     await expect(
-      headPage.getByLabel("Submissions: 4 of 6, 2 pending"),
+      headPage.getByLabel("Submissions: 4 of 4, 0 pending"),
     ).toBeVisible();
 
     // DB-level truth: seed creates 6 active-report sections (4 submitted, 2 draft).

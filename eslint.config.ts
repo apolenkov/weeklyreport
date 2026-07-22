@@ -184,6 +184,9 @@ export default defineConfig([
     ".agents/**",
     "**/coverage/**",
     "**/.turbo/**",
+    // Playwright's HTML report ships minified vendor bundles; linting a
+    // generated artifact dir gates the repo on third-party build output.
+    "**/playwright-report/**",
     "**/prisma/generated/**",
     "prisma/seed.ts",
     "prisma/seed-simple.ts",
