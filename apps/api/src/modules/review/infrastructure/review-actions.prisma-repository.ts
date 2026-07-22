@@ -6,7 +6,10 @@ import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { applyRevokeTransition } from "../../report-sections/index.js";
-import { ReviewVersionConflictError } from "../application/review.service.js";
+import {
+  ReviewConstraintError,
+  ReviewVersionConflictError,
+} from "../application/review.service.js";
 import type {
   PostVerdictParams,
   RecordAnchor,
@@ -164,6 +167,23 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
     params: PostVerdictParams,
   ): Promise<{ unsubmitted: boolean }> {
     return this.prisma.$transaction(async (tx) => {
+      const gate = await tx.$queryRaw<
+        { periodStatus: string }[]
+      >`SELECT report."periodStatus"
+        FROM "Report" AS report
+        INNER JOIN "ReportSection" AS section
+          ON section."reportId" = report."id"
+        WHERE section."id" = ${params.sectionId}
+        FOR UPDATE OF report`;
+      if (
+        gate[0]?.periodStatus !== "open" &&
+        gate[0]?.periodStatus !== "reopened"
+      ) {
+        throw new ReviewConstraintError(
+          "This period is not editable; a verdict cannot be recorded.",
+        );
+      }
+
       // Version lock for BOTH verdict values, taken as a guarded WRITE rather
       // than a plain read: the no-op update row-locks the section for the rest
       // of this transaction, so a concurrent lead re-submit either committed

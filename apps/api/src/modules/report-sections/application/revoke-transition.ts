@@ -32,6 +32,7 @@ export async function applyRevokeTransition(
     where: {
       id: sectionId,
       status: "submitted",
+      report: { periodStatus: { in: ["open", "reopened"] } },
       ...(expectedVersion === undefined ? {} : { version: expectedVersion }),
     },
     data: {
