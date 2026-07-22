@@ -104,6 +104,15 @@ export function findLifecycleViolationsInSource(
     }
   };
 
+  const scanDataInitializer = (initializer: ts.Expression, method: string) => {
+    const objects = ts.isObjectLiteralExpression(initializer)
+      ? [initializer]
+      : ts.isArrayLiteralExpression(initializer)
+        ? initializer.elements.filter(ts.isObjectLiteralExpression)
+        : [];
+    objects.forEach((object) => scanDataObject(object, method));
+  };
+
   const fullText = sf.getFullText();
 
   // True when the statement enclosing `node` carries the exempt marker in a
@@ -151,12 +160,16 @@ export function findLifecycleViolationsInSource(
             if (
               ts.isPropertyAssignment(prop) &&
               ts.isIdentifier(prop.name) &&
-              (prop.name.text === "data" ||
-                prop.name.text === "create" ||
-                prop.name.text === "update") &&
+              (prop.name.text === "create" || prop.name.text === "update") &&
               ts.isObjectLiteralExpression(prop.initializer)
             ) {
               scanDataObject(prop.initializer, method);
+            } else if (
+              ts.isPropertyAssignment(prop) &&
+              ts.isIdentifier(prop.name) &&
+              prop.name.text === "data"
+            ) {
+              scanDataInitializer(prop.initializer, method);
             }
           }
         }
@@ -277,6 +290,28 @@ describe("lifecycle-write-gate (refactor-period-transition-writer)", () => {
       findLifecycleViolationsInSource(compliant, "synthetic.ts"),
     ).toHaveLength(0);
   });
+
+  it.each(["createMany", "createManyAndReturn"])(
+    "self-test: report.%s array lifecycle writes are in scope",
+    (method) => {
+      const offending = `
+      async function bad(prisma: any) {
+        await prisma.report.${method}({
+          data: [
+            { periodState: "scheduled" },
+            { status: "draft", archived: false },
+          ],
+        });
+      }
+    `;
+
+      expect(
+        findLifecycleViolationsInSource(offending, "synthetic.ts")
+          .map((violation) => violation.field)
+          .sort(),
+      ).toEqual(["archived", "periodState", "status"]);
+    },
+  );
 
   it("self-test: a bare report delegate identifier is in scope", () => {
     const schedulerShape = `

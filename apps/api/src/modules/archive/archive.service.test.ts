@@ -1,6 +1,7 @@
 import type {
   ArchiveReportDetail,
   ArchiveReportSummary,
+  ReportSectionReadModel,
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
@@ -11,6 +12,38 @@ import {
 } from "./archive.service";
 
 const reportId = "22222222-2222-4222-8222-222222222222";
+
+function makeSection(
+  reportSectionId: string,
+  authorId: string,
+  authorName: string,
+): ReportSectionReadModel {
+  return {
+    reportSectionId,
+    reportId,
+    authorId,
+    authorName,
+    version: 1,
+    status: "submitted",
+    submittedAt: new Date("2026-04-09T10:00:00.000Z"),
+    projects: [],
+    items: [],
+    risks: [],
+    decisions: [],
+    activities: [],
+  };
+}
+
+const zuluSection = makeSection(
+  "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  "33333333-3333-4333-8333-333333333334",
+  "Zulu Lead",
+);
+const alphaSection = makeSection(
+  "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "33333333-3333-4333-8333-333333333333",
+  "Alpha Lead",
+);
 
 const olderSummary: ArchiveReportSummary = {
   reportId: "11111111-1111-4111-8111-111111111111",
@@ -43,7 +76,7 @@ const latestDetail: ArchiveReportDetail = {
       status: "yellow",
       totals: { green: 1, yellow: 2, red: 0 },
     },
-    sections: [],
+    sections: [zuluSection, alphaSection],
   },
 };
 
@@ -78,12 +111,19 @@ describe("ArchiveService", () => {
     expect(result.nextCursor).toBeNull();
   });
 
-  it("returns immutable detail for a published report", async () => {
-    const service = new ArchiveService(createRepository());
+  it("sorts detail sections without mutating the repository result", async () => {
+    const repository = createRepository();
+    repository.getArchiveReport = vi.fn().mockResolvedValue(latestDetail);
+    const service = new ArchiveService(repository);
     const detail = await service.getArchiveReport(reportId);
 
-    expect(detail.report.status).toBe("published");
-    expect(detail.summary.portfolioStatus).toBe("yellow");
+    expect(detail.report.sections.map(({ authorName }) => authorName)).toEqual([
+      "Alpha Lead",
+      "Zulu Lead",
+    ]);
+    expect(
+      latestDetail.report.sections.map(({ authorName }) => authorName),
+    ).toEqual(["Zulu Lead", "Alpha Lead"]);
   });
 
   it("rejects missing archive detail lookups", async () => {

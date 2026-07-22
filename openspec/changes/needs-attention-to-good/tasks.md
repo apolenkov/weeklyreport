@@ -81,35 +81,42 @@ either fixed or recorded as a stale re-grade in the wave notes.
 
 ## 5. web-report-sections (M — 8 files, 14 minors)
 
-- [ ] 5.1 `apps/web/src/features/report-sections/model/item-status.test.ts` — 1 minor
-- [ ] 5.2 `apps/web/src/features/report-sections/model/lead-section-draft-payload.test.ts` — 1 minor
-- [ ] 5.3 `apps/web/src/features/report-sections/model/lead-submit-readiness.ts` — 2 minors
-- [ ] 5.4 `apps/web/src/features/report-sections/model/next-week-columns.ts` — 1 minor
-- [ ] 5.5 `apps/web/src/features/report-sections/model/stage-chip-config.ts` — 4 minors
-- [ ] 5.6 `apps/web/src/features/report-sections/ui/item-card.test.tsx` — 2 minors
-- [ ] 5.7 `apps/web/src/features/report-sections/ui/item-edit-dialog.test.tsx` — 2 minors
-- [ ] 5.8 `apps/web/src/features/report-sections/ui/item-edit-dialog.tsx` — 1 minor
+- [x] 5.1 `apps/web/src/features/report-sections/model/item-status.test.ts` — 1 minor
+- [x] 5.2 `apps/web/src/features/report-sections/model/lead-section-draft-payload.test.ts` — 1 minor
+- [ ] 5.3 `apps/web/src/features/report-sections/model/lead-submit-readiness.ts` — 2 minors —
+      Map construction fixed; explicit-red promotion remains because correcting
+      it requires updating the out-of-slice `lead-submit-readiness.test.ts`.
+- [ ] 5.4 `apps/web/src/features/report-sections/model/next-week-columns.ts` — 1 minor —
+      live finding confirmed, but removing the dead export requires updating
+      the out-of-slice `next-week-columns.test.ts` that imports it.
+- [x] 5.5 `apps/web/src/features/report-sections/model/stage-chip-config.ts` — 4 minors
+- [x] 5.6 `apps/web/src/features/report-sections/ui/item-card.test.tsx` — 2 minors
+- [x] 5.7 `apps/web/src/features/report-sections/ui/item-edit-dialog.test.tsx` — 2 minors
+- [x] 5.8 `apps/web/src/features/report-sections/ui/item-edit-dialog.tsx` — 1 minor
 
 ## 6. e2e (M — 6 files, 13 minors)
 
-- [ ] 6.1 `e2e/integration/global-setup.ts` — 2 minors
-- [ ] 6.2 `e2e/integration/head-journey.integration.spec.ts` — 3 minors
-- [ ] 6.3 `e2e/integration/helpers/seed-ids.ts` — 1 minor
-- [ ] 6.4 `e2e/integration/lead-journey.integration.spec.ts` — 3 minors
-- [ ] 6.5 `e2e/integration/mobile-no-horizontal-scroll.integration.spec.ts` — 3 minors
-- [ ] 6.6 `e2e/integration/status-risk-sync.integration.spec.ts` — 1 minor
+- [x] 6.1 `e2e/integration/global-setup.ts` — 2 minors
+- [x] 6.2 `e2e/integration/head-journey.integration.spec.ts` — 3 minors
+- [x] 6.3 `e2e/integration/helpers/seed-ids.ts` — 1 minor
+- [x] 6.4 `e2e/integration/lead-journey.integration.spec.ts` — 3 minors
+- [x] 6.5 `e2e/integration/mobile-no-horizontal-scroll.integration.spec.ts` — 3 minors
+- [x] 6.6 `e2e/integration/status-risk-sync.integration.spec.ts` — 1 minor
 
 Note: `head-journey` and `status-risk-sync` are also touched by
 `harden-test-suite-quality`; re-verify against their post-harden state.
 
 ## 7. api-period-carryover-archive (M — 6 files, 12 minors)
 
-- [ ] 7.1 `apps/api/src/modules/archive/archive.contract.test.ts` — 2 minors
-- [ ] 7.2 `apps/api/src/modules/archive/archive.prisma-repository.ts` — 1 minor
-- [ ] 7.3 `apps/api/src/modules/archive/archive.service.test.ts` — 2 minors
-- [ ] 7.4 `apps/api/src/modules/period/__tests__/lifecycle-write-gate.test.ts` — 1 minor
-- [ ] 7.5 `apps/api/src/modules/period/infrastructure/auto-publisher.scheduler.test.ts` — 2 minors
-- [ ] 7.6 `apps/api/src/modules/period/infrastructure/period-creator.scheduler.test.ts` — 4 minors
+- [x] 7.1 `apps/api/src/modules/archive/archive.contract.test.ts` — 2 minors
+- [ ] 7.2 `apps/api/src/modules/archive/archive.prisma-repository.ts` — 1 minor —
+      **blocked by slice boundary:** removing the assertion requires changing
+      `groupScopeFilter` to accept its actual three-field session dependency or
+      widening `ArchiveScopeSession`; both definitions live outside this slice.
+- [x] 7.3 `apps/api/src/modules/archive/archive.service.test.ts` — 2 minors
+- [x] 7.4 `apps/api/src/modules/period/__tests__/lifecycle-write-gate.test.ts` — 1 minor
+- [x] 7.5 `apps/api/src/modules/period/infrastructure/auto-publisher.scheduler.test.ts` — 2 minors
+- [x] 7.6 `apps/api/src/modules/period/infrastructure/period-creator.scheduler.test.ts` — 4 minors
 
 Note: `archive.service.test.ts` and `lifecycle-write-gate.test.ts` overlap
 `harden-test-suite-quality`; re-verify post-harden.
