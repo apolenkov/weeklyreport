@@ -130,16 +130,8 @@ async function resolveSectionId(
 }
 
 /**
- * Composes the four hydration helpers in their canonical order:
- * resolveSectionId → hydrateViewerGroupAccess → hydrateReportingGroupName
- * → hydrateOrganization.
- *
- * File-local and NOT exported beyond this module (D3): no HydrationStep
- * enum, no mocking seam. The factory-level tests already cover the contract.
- *
- * The PDF-export path (`buildPdfExportSession`) runs this same pipeline so
- * the worker renders AS THE REQUESTER (empty-PDF fix); only legacy tokens
- * without a `requestedBy` claim keep the narrow, unhydrated viewer session.
+ * A fixed pipeline keeps request and PDF-export sessions aligned on mutable
+ * authorization scope; file-local steps prevent callers from skipping one.
  */
 export async function hydrateSession(
   session: UserSession,

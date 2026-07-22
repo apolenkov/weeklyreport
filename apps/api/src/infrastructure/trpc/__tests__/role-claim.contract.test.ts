@@ -9,8 +9,8 @@ import {
 } from "../../../modules/auth/index.js";
 
 // ---------------------------------------------------------------------------
-// Contract test (structured-user-name): the SAML assertion no longer
-// carries a role. verifySamlProfile defaults EVERY provisioned user to viewer
+// The SAML assertion carries no role. verifySamlProfile defaults EVERY
+// provisioned user to viewer
 // (least privilege); roles are admin-assigned afterwards. This test pins that
 // posture through the full SAML → JWT → ctx.session.role pipeline: regardless
 // of any asserted role, the session round-trips as viewer.
@@ -106,8 +106,8 @@ describe("SAML profile → JWT → session.role round-trip (role-free)", () => {
   });
 });
 
-// add-structured-user-name (review finding P2/P3): the new name-part fields were
-// added to `userSessionSchema` as OPTIONAL. signSession/verifySessionToken run
+// The name-part fields are optional in `userSessionSchema`.
+// signSession/verifySessionToken run
 // `.parse()`, and Zod STRIPS unknown keys — so if the schema had omitted the
 // parts they would be silently dropped on every request with a green typecheck.
 // This test pins that they survive the sign → verify round-trip.

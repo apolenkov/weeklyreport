@@ -1,5 +1,5 @@
 /**
- * P8 — Email dispatch integration test.
+ * Email dispatch integration test.
  *
  * Verifies that EmailReminderProcessor.processJob() sends a real SMTP
  * message through the local Mailpit catcher and that the message
@@ -121,7 +121,7 @@ interface ProcessorSeam {
 // therefore needs headroom well beyond the default 5s per-test budget.
 const SMTP_GREETING_HEADROOM_MS = 30_000;
 
-describe("email-dispatch integration (P8)", () => {
+describe("email-dispatch integration", () => {
   it(
     "deadline reminder: message arrives in Mailpit with correct recipient and subject",
     { timeout: SMTP_GREETING_HEADROOM_MS },
@@ -237,6 +237,7 @@ describe("email-dispatch integration (P8)", () => {
       expect(msg.Subject).toContain("[TEST]");
       expect(msg.Subject).toContain("Action required:");
       expect(msg.Subject).toContain("late report section");
+      expect(remindersStub.markReminderSent).toHaveBeenCalledWith(executionId);
     },
   );
 });

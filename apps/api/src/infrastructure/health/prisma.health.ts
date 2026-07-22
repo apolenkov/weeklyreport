@@ -15,8 +15,10 @@ export class PrismaHealthIndicator {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
       return this.healthIndicator.check(key).up();
-    } catch {
-      return this.healthIndicator.check(key).down();
+    } catch (error) {
+      return this.healthIndicator.check(key).down({
+        message: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 }
