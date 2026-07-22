@@ -112,7 +112,10 @@ test.describe("Head journey (integration)", () => {
   test("head sees portfolio overview with traffic lights from seeded ProjectStatus rows", async ({
     headPage,
   }) => {
-    await headPage.goto("/dashboard");
+    await headPage.goto("/head/dashboard");
+    await expect(
+      headPage.getByRole("heading", { name: "Dashboard" }),
+    ).toBeVisible({ timeout: 15_000 });
 
     // Truth from DB: there must be ProjectStatus rows for the active report's
     // sections (seed creates ~10 of them, skipping Sergey).

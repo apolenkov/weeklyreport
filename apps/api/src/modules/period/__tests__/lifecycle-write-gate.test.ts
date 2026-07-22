@@ -138,11 +138,12 @@ export function findLifecycleViolationsInSource(
     ) {
       const method = node.expression.name.text;
       const receiver = node.expression.expression;
-      // Receiver must end in `.report` (the Prisma model delegate) — this is
-      // what scopes the gate to Report and ignores reportSection.update etc.
+      // The Prisma Report delegate is either reached as `client.report` or
+      // passed into a helper under the narrow `report` identifier.
       const isReportDelegate =
-        ts.isPropertyAccessExpression(receiver) &&
-        receiver.name.text === "report";
+        (ts.isPropertyAccessExpression(receiver) &&
+          receiver.name.text === "report") ||
+        (ts.isIdentifier(receiver) && receiver.text === "report");
       if (isReportDelegate && WRITE_METHODS.has(method) && !isExempt(node)) {
         const arg = node.arguments[0];
         if (arg && ts.isObjectLiteralExpression(arg)) {
@@ -275,6 +276,23 @@ describe("lifecycle-write-gate (refactor-period-transition-writer)", () => {
     expect(
       findLifecycleViolationsInSource(compliant, "synthetic.ts"),
     ).toHaveLength(0);
+  });
+
+  it("self-test: a bare report delegate identifier is in scope", () => {
+    const schedulerShape = `
+      async function flipDueScheduledToOpen(report: any) {
+        await report.updateMany({
+          where: { id: "x", periodState: "scheduled" },
+          data: { periodState: "open", status: "draft" },
+        });
+      }
+    `;
+
+    expect(
+      findLifecycleViolationsInSource(schedulerShape, "synthetic.ts")
+        .map((violation) => violation.field)
+        .sort(),
+    ).toEqual(["periodState", "status"]);
   });
 
   it("self-test: a call-site marker exempts the write", () => {

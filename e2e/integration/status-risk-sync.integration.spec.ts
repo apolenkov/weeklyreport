@@ -210,7 +210,14 @@ test.describe("Status<->Risk sync (integration)", () => {
     await page
       .locator("#risk-text")
       .fill("Updated risk text from integration test");
+    const editSaveResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes("reports.saveDraft") &&
+        response.request().method() === "POST",
+      { timeout: 15_000 },
+    );
     await page.getByRole("button", { name: /^Save Risk$/ }).click();
+    await editSaveResponse;
 
     const after = await prisma.risk.count({
       where: {

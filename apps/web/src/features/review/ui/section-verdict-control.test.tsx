@@ -3,12 +3,13 @@
  */
 import "@testing-library/jest-dom/vitest";
 
+import type { SectionReviewView } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { SectionVerdictControl } from "./section-verdict-control";
+import { resolveBadge, SectionVerdictControl } from "./section-verdict-control";
 
 vi.mock("../../../lib/trpc-context", () => ({
   useTRPC: () => ({
@@ -41,6 +42,47 @@ function renderControl(canReview: boolean) {
     />,
   );
 }
+
+const review = (
+  verdict: SectionReviewView["verdict"],
+  isCurrent: boolean,
+): SectionReviewView => ({
+  reviewerId: "11111111-1111-4111-8111-111111111112",
+  reviewerName: "Reviewer",
+  verdict,
+  judgedVersion: 1,
+  isCurrent,
+  createdAt: new Date("2026-07-22T12:00:00.000Z"),
+});
+
+describe("resolveBadge", () => {
+  it("filters stale verdicts into the awaiting state", () => {
+    expect(resolveBadge([review("changes_requested", false)])).toEqual({
+      kind: "awaiting",
+      label: "Awaiting review",
+    });
+  });
+
+  it("ranks current changes requested above current approval", () => {
+    expect(
+      resolveBadge([
+        review("approved", true),
+        review("changes_requested", true),
+      ]),
+    ).toEqual({ kind: "changes", label: "Changes requested" });
+  });
+
+  it("distinguishes no verdicts from an explicit awaiting state", () => {
+    expect(resolveBadge([])).toEqual({
+      kind: "none",
+      label: "Not reviewed",
+    });
+    expect(resolveBadge([review("approved", false)])).toEqual({
+      kind: "awaiting",
+      label: "Awaiting review",
+    });
+  });
+});
 
 describe("SectionVerdictControl — verdict buttons", () => {
   it("renders Approve / Request changes only for a designated reviewer", () => {

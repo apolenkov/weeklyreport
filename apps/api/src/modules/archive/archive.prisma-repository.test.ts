@@ -18,6 +18,18 @@ function createRepository() {
 }
 
 describe("ArchivePrismaRepository published floor", () => {
+  it("requests latest-published reports first regardless of insertion order", async () => {
+    const { repository, findMany } = createRepository();
+
+    await repository.listArchiveReports();
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+      }),
+    );
+  });
+
   it("keeps the published floor when a list filter requests drafts", async () => {
     const { repository, findMany } = createRepository();
 
