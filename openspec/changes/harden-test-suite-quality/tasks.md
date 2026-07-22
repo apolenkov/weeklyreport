@@ -128,5 +128,5 @@
 - [x] 12.5 Change-local ESLint on every changed TypeScript path with
       `--max-warnings 0`
 - [x] 12.6 Change-local API and web unit suites from 12.2 and 12.3
-- [ ] 12.7 `pnpm test:e2e:integration`
+- [x] 12.7 `pnpm test:e2e:integration` (run by the orchestrator post-implementation: 48 passed / 1 skipped, 1.8m — includes the three edited specs)
 - [x] 12.8 `openspec validate harden-test-suite-quality --strict`

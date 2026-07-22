@@ -12,8 +12,8 @@ export const meta = {
   ],
 };
 
-const REPO = "/Users/wrk/work/customreport";
-const BASE_SHA = "d5642688";
+const REPO = "/Users/ap/work/weeklyreport";
+const BASE_SHA = "41b0149f";
 
 const STANDARDS = [
   "Exemplary code standard: functional/immutable (const, pure fns, map/filter/reduce + spread; avoid let/mutation); files < 250 lines; functions <= 50 lines; cognitive complexity < 10.",
@@ -32,57 +32,48 @@ const STANDARDS = [
 // liveVerify: true -> after a green gate, a live browser drive of the proposal's
 //                     verification section must also pass before commit/handover.
 const CHANGES = [
-  // sweep15 — 2026-07-15 external-review wave. P1 correctness first (all
-  // high-stakes: orchestrator diff-reviews and commits), then P2 themes.
-  // Order is load-bearing: placeholder-data-gating before head-slides-activity-gate
-  // (same query consumers); slides changes are separated by the sequential run.
-  // sweep15-status-derivation-ssot: committed 64bd6cae (orchestrator diff-review passed).
-  // sweep15-placeholder-data-gating: committed afe0ff96 (orchestrator diff-review passed).
-  // sweep15-head-slides-activity-gate: committed e031f8df (orchestrator diff-review passed).
-  { name: "sweep15-live-report-type-ssot", stakes: "high" },
-  { name: "sweep15-dashboard-draft-drilldown", stakes: "high" },
-  { name: "sweep15-slide-status-accessible-label", stakes: "high" },
-  { name: "sweep15-viewer-authority-labeling", stakes: "high" },
+  // Wave 1 — mass-review 2026-07-22 fix wave (28 majors, 7 seam-grouped changes).
+  // Priority order from the handoff: the reopen read-model leak (analytics+pdf)
+  // and the fillFrom/revoke TOCTOU write-lock are the most serious — both
+  // high-stakes (orchestrator diff-reviews and commits). The rest are
+  // low-stakes: 2 Opus adversarial lenses + the full gate guard the commit.
+  // Implementation is orchestrator-driven: the main session runs `codex exec`
+  // itself (a background process inside a subagent gets orphaned when the
+  // harness forces StructuredOutput — verified 2026-07-22), then this workflow
+  // runs verify/gate/commit over the finished tree via skipImplement.
+  // Exactly ONE active entry at a time; done/queued entries live below.
+  //
+  // Done:
+  //   fix-reopen-legacy-status-read-model-leak: committed 4410ea52
+  //     (orchestrator diff-review passed; both lenses clean, full gate green).
+  //   fix-fillfrom-published-period-write-lock: committed f2431d00
+  //     (orchestrator diff-review passed; 0 blockers, follow-up minors in
+  //      ~/work/customreport-archive/2026-07-22-wave1/followups.md).
+  //   (interleaved: e4eb2a04 revived the email-dispatch integration tests —
+  //    pre-existing stub drift exposed once Mailpit came up.)
+  //
+  // Queue (activate one by one, orchestrator implements first):
+  //   { name: "fix-published-snapshot-portfolio-math", stakes: "low",
+  //     commitSubject: "fix(api): correct portfolio math in published snapshots" },
+  //   { name: "fix-admin-snapshot-preserve-isactive", stakes: "low",
+  //     commitSubject: "fix(api): admin snapshot edits preserve isActive" },
+  //   { name: "fix-web-product-code-defects", stakes: "low",
+  //     commitSubject: "fix(web): product-code defects from the mass-review" },
+  //   { name: "harden-test-suite-quality", stakes: "low",
+  //     commitSubject: "test: harden test-suite quality (assertions with teeth)" },
+  //   fix-archive-published-floor-override: committed 08f27a21 (in-workflow;
+  //     both lenses clean, full gate green).
+  //   fix-published-snapshot-portfolio-math: committed 8f4963ba (in-workflow;
+  //     both lenses clean, full gate green).
+  //   fix-admin-snapshot-preserve-isactive: committed f6a110a1 (in-workflow;
+  //     both lenses clean, one shared minor -> followups.md F5).
+  //   fix-web-product-code-defects: committed 5cae753e (in-workflow; lenses
+  //     clean, one comment-rationale minor fixed separately in 41c78b58).
   {
-    name: "sweep15-api-boundary-ports",
+    name: "harden-test-suite-quality",
     stakes: "low",
-    commitSubject:
-      "refactor(api): route app-layer telemetry and enqueue through owned ports",
-  },
-  {
-    name: "sweep15-web-type-and-module-hygiene",
-    stakes: "low",
-    commitSubject:
-      "refactor(web): shared PeriodStatus and split the oversized report modules",
-  },
-  {
-    name: "sweep15-web-perf-practices",
-    stakes: "low",
-    commitSubject:
-      "perf(web): tab-scoped admin queries, direct dynamic imports, next/font",
-  },
-  {
-    name: "sweep15-simplify-dedup",
-    stakes: "low",
-    commitSubject:
-      "refactor(api,web): remove pass-through layers and dedup status helpers",
-  },
-  {
-    name: "sweep15-ux-lead-completion",
-    stakes: "low",
-    commitSubject: "feat(web): sticky lead actions and readiness summary",
-  },
-  { name: "sweep15-ux-head-dashboard-queue", stakes: "high" },
-  {
-    name: "sweep15-ux-admin-polish",
-    stakes: "low",
-    commitSubject:
-      "feat(web): admin action hierarchy and slide presentation density",
-  },
-  {
-    name: "sweep15-spec-product-map",
-    stakes: "low",
-    commitSubject: "docs(openspec): product capability map and spec purposes",
+    skipImplement: true,
+    commitSubject: "test: harden test-suite quality (assertions with teeth)",
   },
 ];
 // ---------------------------------------------------------------------------------------
@@ -179,7 +170,7 @@ const specPointer = (name) =>
   [
     `Read the FULL spec first and implement EVERY task exactly:`,
     `  openspec/changes/${name}/proposal.md`,
-    `  openspec/changes/${name}/design.md`,
+    `  openspec/changes/${name}/design.md   (if present — wave-1 changes may have none)`,
     `  openspec/changes/${name}/tasks.md`,
     `  openspec/changes/${name}/specs/   (delta specs — the normative requirements)`,
     `Plan anchors (line numbers) may be slightly stale; trust the current code.`,
@@ -233,7 +224,7 @@ async function processChange(CHANGE, index) {
 
   // ---- Implement (Codex lane — GPT writes, Claude reviews) ----
   phase("Implement");
-  const implPrompt = [
+  const codexTask = [
     `Implement ONE OpenSpec change on a SHARED working tree.`,
     ``,
     `1. Objective: implement the OpenSpec change "${CHANGE.name}" at ${REPO} (branch main, MVP phase), including its unit and real-DB integration tests, leaving ALL edits uncommitted in the working tree.`,
@@ -248,7 +239,7 @@ async function processChange(CHANGE, index) {
     `- Do NOT touch any file unrelated to this change.`,
     `- Hard repo standards (violating any fails review):`,
     ...STANDARDS.map((s, i) => `  ${i + 1}. ${s}`),
-    `- Tests: write/repair the unit + real-DB integration tests the tasks specify. Test DB is UP (customreport_test). Integration tests self-fixture (Prisma 7 reset does not auto-seed). Mirror existing patterns.`,
+    `- Tests: write/repair the unit + real-DB integration tests the tasks specify. Test DB is UP (customreport_test). Integration tests self-fixture (Prisma 7 reset does not auto-seed). Mirror existing patterns. Run an integration test file from apps/api as: DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_test pnpm exec vitest run <file> --config vitest.integration.config.ts (check the actual script in apps/api/package.json first).`,
     ``,
     `5. Verification — run change-local checks YOURSELF (NEVER the full monorepo suite, NEVER migrate-reset):`,
     `  pnpm --filter @customreport/api db:generate   # only if Prisma-client TS errors (TS2339 on a known model)`,
@@ -258,15 +249,37 @@ async function processChange(CHANGE, index) {
     ``,
     `When done, return ONLY a prose summary: one paragraph on what you actually changed and the result of your change-local checks. (You do NOT need to list files — the harness derives the changed set from git directly.)`,
   ].join("\n");
+
+  // The Codex lane is driven inline (no custom agentType: the agent registry is
+  // frozen at session start, so a repo-defined agent is invisible to this run).
+  // The default subagent only forwards the task to `codex exec` and babysits it;
+  // GPT writes every line of code — the cross-vendor property is preserved.
+  const implPrompt = [
+    `You are the Codex implementation lane for a waveb harness. The codex CLI (GPT) writes the code; you ONLY forward the task, babysit the run, and report. You NEVER edit repository files yourself and NEVER touch git (no add/commit/reset).`,
+    ``,
+    `Protocol:`,
+    `1. Run \`mktemp -d\` to get a private TASKDIR. Write the ENTIRE task from the fenced block below (verbatim, fence lines excluded) to TASKDIR/codex-task.md.`,
+    `2. Launch Codex with a BACKGROUND Bash call (run_in_background: true — implementation runs take 20-60 minutes), substituting the real TASKDIR path:`,
+    `   codex exec --cd ${REPO} --sandbox workspace-write -c sandbox_workspace_write.network_access=true --output-last-message TASKDIR/codex-last.md - < TASKDIR/codex-task.md > TASKDIR/codex-run.log 2>&1`,
+    `   (network_access lets Codex run the real-DB tests against localhost postgres. \`-\` reads the prompt from stdin — do not inline it as a shell argument.)`,
+    `3. When the background command exits, read TASKDIR/codex-last.md; if missing or empty, read the tail of TASKDIR/codex-run.log instead.`,
+    `4. Liveness: run \`git -C ${REPO} status --porcelain\` and confirm Codex actually left edits on the working tree. An exit with zero edits is a FAILED run — report that honestly; do NOT fabricate a summary and do NOT "finish the job" yourself.`,
+    `5. If the codex CLI itself fails to start, retry the launch once, then report the failure.`,
+    ``,
+    `Return ONLY a prose summary paragraph: what Codex reports it changed and the results of the change-local checks it ran — based strictly on codex-last.md and the observed git status.`,
+    ``,
+    `===== CODEX TASK (forward verbatim) =====`,
+    codexTask,
+    `===== END CODEX TASK =====`,
+  ].join("\n");
   const implOpts = (label) => ({
     label,
     phase: "Implement",
-    // PROVENANCE: codex-implementer -> grok (spend cap, 2026-07-15 ~08:00) ->
-    // in-harness Claude (classifier denied grok, ~09:30) -> codex-implementer
-    // again (user reset the Codex cap, ~10:30).
-    agentType: "codex-implementer",
+    // PROVENANCE: codex-implementer agentType -> grok (spend cap, 2026-07-15) ->
+    // in-harness Claude (classifier denied grok) -> codex-implementer again ->
+    // inline codex-exec driver (2026-07-22: agentType registry is session-frozen).
     model: "sonnet",
-    effort: "medium",
+    effort: "low",
     schema: IMPL_SCHEMA,
   });
 
@@ -288,7 +301,7 @@ async function processChange(CHANGE, index) {
       },
     );
     const changedFiles = (scope?.dirtyPaths || []).filter((p) => {
-      if (p.startsWith(".claude/")) return false;
+      if (p.startsWith(".claude/") || p.startsWith(".codex/")) return false;
       return CHANGE.skipImplement ? true : !preexistingDirty.includes(p);
     });
     return { scope, changedFiles };
@@ -350,10 +363,10 @@ async function processChange(CHANGE, index) {
   const diffCmd = `cd ${REPO} && /usr/bin/git --no-pager diff HEAD -- ${scopeArg}`;
   const verifyHead = [
     `Adversarially verify an UNCOMMITTED change on the working tree at ${REPO} for: ${CHANGE.name}.`,
-    `Read the intent FIRST: openspec/changes/${CHANGE.name}/proposal.md, design.md, tasks.md, and the delta specs under openspec/changes/${CHANGE.name}/specs/ (the normative requirements).`,
+    `Read the intent FIRST: openspec/changes/${CHANGE.name}/proposal.md, design.md (if present), tasks.md, and the delta specs under openspec/changes/${CHANGE.name}/specs/ (the normative requirements).`,
     `Read the actual change: run \`${diffCmd}\`. This change's files are: ${changedFiles.join(", ")}. Any of these that is NEWLY CREATED will not appear in the diff — read those in full. IGNORE any other dirty file: not this change.`,
     `READ THE TEST DIFF BEFORE THE CODE DIFF: implement lanes have quietly loosened existing test assertions to fit their change — any weakened/deleted assertion in a pre-existing test is at least "major".`,
-    `Use codegraph_explore to trace call paths around changed symbols. Be skeptical; default to finding a hole, not approving.`,
+    `Trace call paths around changed symbols (grep/read the callers). Be skeptical; default to finding a hole, not approving.`,
     `SCOPE DISCIPLINE (loop-termination rule): before rating a finding "blocker" or "major", check it against THIS change's DECLARED scope (tasks.md + design.md Goals/Non-Goals + the proposal's disposition table of refuted claims). A Non-Goal, a refuted-and-dispositioned claim, or a pre-existing / cross-cutting concern the change does not claim to fix is severity "minor" + a FOLLOW-UP — NEVER a blocker. Only the change's OWN new code being wrong, a regression it introduces, or a legitimate flow it breaks is blocker/major.`,
     ``,
   ].join("\n");
@@ -421,7 +434,7 @@ async function processChange(CHANGE, index) {
       `2. cd ${REPO} && pnpm typecheck`,
       `3. cd ${REPO} && pnpm lint            # eslint . && stylelint && lint:prisma:typecheck — the full lint, not just eslint`,
       `4. cd ${REPO} && pnpm test            # full unit suite (excludes *.integration.test.ts)`,
-      `5. cd ${REPO} && pnpm --filter @customreport/api test:integration   # the FULL api real-DB integration suite, single-worker; postgres container customreport-postgres-1 must be up. Do NOT wrap vitest in rtk. Report integrationTests=fail if ANY integration file fails, and list every failing file in redFiles.`,
+      `5. cd ${REPO}/apps/api && DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_test pnpm test:integration   # the FULL api real-DB integration suite, single-worker; postgres container weeklyreport-postgres-1 is up. Do NOT wrap vitest in rtk. Report integrationTests=fail if ANY integration file fails, and list every failing file in redFiles.`,
       ``,
       `For each of typecheck/lint/unitTests/integrationTests report pass|fail|skip. redFiles = failing test files (empty if none). summary = a short digest; for ANY failure include the precise error excerpt (file, message) so the orchestrator can act without re-running.`,
     ].join("\n"),
@@ -450,7 +463,7 @@ async function processChange(CHANGE, index) {
             `Live-verify an UNCOMMITTED change in the REAL browser: ${CHANGE.name} at ${REPO}.`,
             `Execute the manual/live verification steps from openspec/changes/${CHANGE.name}/proposal.md (its verification section) and tasks.md against a live app.`,
             `Boot recipe (docker web/api images are STALE — run from source):`,
-            `- API from source: cd ${REPO}/apps/api && (pnpm dev in a BACKGROUND shell); serves :3002. Postgres container customreport-postgres-1 is already up (DB customreport_dev).`,
+            `- API from source: cd ${REPO}/apps/api && (pnpm dev in a BACKGROUND shell); serves :3002. Postgres container weeklyreport-postgres-1 is already up (DB customreport_dev).`,
             `- Web from source: cd ${REPO}/apps/web && (pnpm dev in a BACKGROUND shell); serves :3000. Wait for both to answer before driving.`,
             `- Dev auth: POST /auth/dev-login on the API :3002 as lead1@ (AUTH_DEV_MODE); the cookie works cross-port on :3000.`,
             `- Drive with the Playwright MCP browser tools (load them via ToolSearch: query "playwright browser", max_results 30).`,
@@ -526,7 +539,7 @@ async function processChange(CHANGE, index) {
       `Body: one short paragraph summarizing the change per its proposal's Why section (read openspec/changes/${CHANGE.name}/proposal.md). No ticket/BL prefixes.`,
       `End the commit message with exactly these trailer lines:`,
       `  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`,
-      `  Claude-Session: https://claude.ai/code/session_01QUUqyN76KZrtARyVcFg8i7`,
+      `  Claude-Session: https://claude.ai/code/session_014x5sxteUUdxcf7XAJVfXAi`,
       `If a pre-commit hook reformats staged files, re-add them and retry the commit once. Report committed, the new short sha, and a one-line summary listing the committed paths.`,
     ].join("\n"),
     {
