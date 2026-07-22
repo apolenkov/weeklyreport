@@ -11,10 +11,10 @@ import {
   DeckFullscreenOverlay,
   DeckToolbarControls,
 } from "./deck-fullscreen-overlay";
-import { ReportSlides } from "./report-slides";
 import { SlideDensityControl } from "./slide-density-control";
 import { SlideEmptyState } from "./slide-empty-state";
 import { SlideSkeleton } from "./slide-skeleton";
+import { StatusSlideDeck } from "./status-slide-deck";
 import { useLeadSlidesData } from "./use-lead-slides-data";
 import { useSlideInlineEditor } from "./use-slide-inline-editor";
 
@@ -119,11 +119,11 @@ export function LeadSlidesClient({
           : undefined
       }
     >
-      <ReportSlides
+      <StatusSlideDeck
         slides={slides}
         selectedIndex={selectedIndex}
         onSelect={setSelectedIndex}
-        variant="lead"
+        mode="lead"
         onRowActivate={inlineEditor.onRowActivate}
         toolbar={
           <div className="flex flex-wrap items-center justify-between gap-2">

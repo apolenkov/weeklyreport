@@ -16,15 +16,18 @@ interface ActivityQueryResult {
 
 const mockActivityQuery = vi.hoisted(() => vi.fn<() => ActivityQueryResult>());
 
-vi.mock("./report-slides", () => ({
-  ReportSlides: ({
+vi.mock("./status-slide-deck", () => ({
+  StatusSlideDeck: ({
     slides,
     toolbar,
   }: {
     slides: unknown[];
     toolbar?: ReactNode;
   }) => (
-    <div data-testid="report-slides" data-slide-count={String(slides.length)}>
+    <div
+      data-testid="status-slide-deck"
+      data-slide-count={String(slides.length)}
+    >
       {toolbar}
       {slides.map((slide) => JSON.stringify(slide)).join(" ")}
     </div>
@@ -135,7 +138,7 @@ describe("HeadSlidesClient — enableActivity gating", () => {
 
   it("viewer (enableActivity=false): no activity-derived slides even when rows are present", () => {
     render(<HeadSlidesClient enableActivity={false} />);
-    expect(screen.getByTestId("report-slides")).toHaveAttribute(
+    expect(screen.getByTestId("status-slide-deck")).toHaveAttribute(
       "data-slide-count",
       "0",
     );
@@ -145,7 +148,7 @@ describe("HeadSlidesClient — enableActivity gating", () => {
     render(<HeadSlidesClient />);
     const activityCall = activityQueryCall();
     expect(activityCall?.enabled).toBe(true);
-    expect(screen.getByTestId("report-slides")).toHaveAttribute(
+    expect(screen.getByTestId("status-slide-deck")).toHaveAttribute(
       "data-slide-count",
       String(ACTIVITY_ROWS.length),
     );
@@ -209,7 +212,7 @@ describe("HeadSlidesClient — activity fallback states", () => {
     render(<HeadSlidesClient />);
 
     expect(screen.getByTestId("slide-skeleton")).toBeInTheDocument();
-    expect(screen.queryByTestId("report-slides")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("status-slide-deck")).not.toBeInTheDocument();
   });
 
   it("shows the error state for an empty report when activity fails", () => {
@@ -223,7 +226,7 @@ describe("HeadSlidesClient — activity fallback states", () => {
 
     expect(screen.getByText("Slides could not load")).toBeInTheDocument();
     expect(screen.queryByTestId("slide-skeleton")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("report-slides")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("status-slide-deck")).not.toBeInTheDocument();
   });
 });
 
@@ -242,6 +245,6 @@ describe("HeadSlidesClient report-key transitions", () => {
       expect(screen.queryByText(/Report A slide/)).not.toBeInTheDocument();
     });
     expect(screen.getByTestId("slide-skeleton")).toBeInTheDocument();
-    expect(screen.queryByTestId("report-slides")).toBeNull();
+    expect(screen.queryByTestId("status-slide-deck")).toBeNull();
   });
 });

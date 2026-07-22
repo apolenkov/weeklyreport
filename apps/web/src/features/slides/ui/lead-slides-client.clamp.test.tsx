@@ -40,8 +40,8 @@ vi.mock("../../../hooks/use-fullscreen", () => ({
   useFullscreen: () => ({ isFullscreen: false, toggle: () => undefined }),
 }));
 
-vi.mock("./report-slides", () => ({
-  ReportSlides: ({
+vi.mock("./status-slide-deck", () => ({
+  StatusSlideDeck: ({
     slides,
     selectedIndex,
     onSelect,

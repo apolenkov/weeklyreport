@@ -52,8 +52,8 @@ vi.mock("../../../lib/use-query-error-handler", () => ({
   useQueryErrorHandler: () => undefined,
 }));
 
-vi.mock("./report-slides", () => ({
-  ReportSlides: ({
+vi.mock("./status-slide-deck", () => ({
+  StatusSlideDeck: ({
     onRowActivate,
     toolbar,
   }: {
@@ -61,7 +61,7 @@ vi.mock("./report-slides", () => ({
     toolbar?: ReactNode;
   }) => (
     <div
-      data-testid="report-slides"
+      data-testid="status-slide-deck"
       data-editable={String(onRowActivate !== undefined)}
     >
       {toolbar}
@@ -276,7 +276,7 @@ afterEach(() => {
 describe("LeadSlidesClient inline slide editing", () => {
   it("exposes a reversible density control in the hosted report deck", async () => {
     renderHarness();
-    await screen.findByTestId("report-slides");
+    await screen.findByTestId("status-slide-deck");
     const document = screen.getByRole("button", { name: "Document" });
     const presentation = screen.getByRole("button", {
       name: "Presentation",
@@ -291,9 +291,9 @@ describe("LeadSlidesClient inline slide editing", () => {
 
   it("opens an own item row and saves through reports.saveDraft", async () => {
     const { captured } = renderHarness();
-    await screen.findByTestId("report-slides");
+    await screen.findByTestId("status-slide-deck");
 
-    expect(screen.getByTestId("report-slides")).toHaveAttribute(
+    expect(screen.getByTestId("status-slide-deck")).toHaveAttribute(
       "data-editable",
       "true",
     );
@@ -325,7 +325,7 @@ describe("LeadSlidesClient inline slide editing", () => {
 
   it("deletes an open item through confirmation and the draft save payload", async () => {
     const { captured } = renderHarness();
-    await screen.findByTestId("report-slides");
+    await screen.findByTestId("status-slide-deck");
 
     fireEvent.click(screen.getByTestId("activate-row"));
     fireEvent.click(screen.getByTestId("delete-item"));
@@ -348,9 +348,9 @@ describe("LeadSlidesClient inline slide editing", () => {
 
   it("does not bind row activation for a foreign author deck", async () => {
     renderHarness({ search: `authorId=${OTHER_AUTHOR_ID}` });
-    await screen.findByTestId("report-slides");
+    await screen.findByTestId("status-slide-deck");
 
-    expect(screen.getByTestId("report-slides")).toHaveAttribute(
+    expect(screen.getByTestId("status-slide-deck")).toHaveAttribute(
       "data-editable",
       "false",
     );
@@ -360,9 +360,9 @@ describe("LeadSlidesClient inline slide editing", () => {
 
   it("does not bind row activation when byPeriod marks the section read-only", async () => {
     renderHarness({ readOnly: true });
-    await screen.findByTestId("report-slides");
+    await screen.findByTestId("status-slide-deck");
 
-    expect(screen.getByTestId("report-slides")).toHaveAttribute(
+    expect(screen.getByTestId("status-slide-deck")).toHaveAttribute(
       "data-editable",
       "false",
     );
@@ -370,9 +370,9 @@ describe("LeadSlidesClient inline slide editing", () => {
 
   it("does not bind row activation for a submitted section", async () => {
     renderHarness({ section: makeSection({ status: "submitted" }) });
-    await screen.findByTestId("report-slides");
+    await screen.findByTestId("status-slide-deck");
 
-    expect(screen.getByTestId("report-slides")).toHaveAttribute(
+    expect(screen.getByTestId("status-slide-deck")).toHaveAttribute(
       "data-editable",
       "false",
     );
