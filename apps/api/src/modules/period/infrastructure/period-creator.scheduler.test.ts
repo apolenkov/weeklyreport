@@ -55,8 +55,8 @@ function makePrismaStub(opts: {
   mostRecent: { id: string; periodEnd: Date } | null;
   createdId?: string;
   // A pre-existing draft in the factory's target window (defaults to none).
-  // refactor-auth-exemplary-layering: the scheduler now creates via the period
-  // factory, which does a find-by-bounds before creating; the most-recent
+  // The scheduler creates via the period factory, which does a find-by-bounds
+  // before creating; the most-recent
   // lookup (orderBy) and that find share the `report.findFirst` mock, so the
   // stub branches on whether the call carries an `orderBy`.
   existingInWindow?: {
@@ -87,7 +87,7 @@ function makePrismaStub(opts: {
           // matches the real prisma client surface.
           periodState: data.periodState,
         })),
-      // period-uniqueness: the flip reads due scheduled rows then updates each.
+      // The flip reads due scheduled rows then updates each.
       // The runOnce-level tests exercise the create/skip paths, so the default
       // is "no due scheduled rows" — the flip is a no-op. The flip's own
       // recovery is covered by the focused flipDueScheduledToOpen tests below.
@@ -210,7 +210,7 @@ describe("PeriodCreatorScheduler", () => {
     });
   });
 
-  it("HF10: reconciles carry-over for every fresh-open period, then the just-created one", async () => {
+  it("reconciles carry-over for every fresh-open period, then the just-created one", async () => {
     const prisma = makePrismaStub({
       mostRecent: {
         id: "period-old",
@@ -255,7 +255,7 @@ describe("PeriodCreatorScheduler", () => {
     });
   });
 
-  it("HF10: a scheduled-born creation does not fire carry-over at mint time", async () => {
+  it("a scheduled-born creation does not fire carry-over at mint time", async () => {
     const prisma = makePrismaStub({
       mostRecent: {
         id: "period-old",
@@ -352,7 +352,7 @@ describe("PeriodCreatorScheduler", () => {
 });
 
 // ---------------------------------------------------------------------------
-// flipDueScheduledToOpen — per-boundary SCHEDULED→OPEN recovery (D5)
+// flipDueScheduledToOpen — per-boundary SCHEDULED→OPEN recovery
 // ---------------------------------------------------------------------------
 
 const W = new Date("2026-05-11T00:00:00.000Z");

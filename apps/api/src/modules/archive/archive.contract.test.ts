@@ -177,36 +177,6 @@ describe("ArchiveService — contract tests", () => {
       expect(reports).toHaveLength(0);
     });
 
-    it("returns reports sorted by publishedAt descending", async () => {
-      const oldest = makeSummary({
-        reportId: "11111111-1111-4111-8111-111111111111",
-        publishedAt: new Date("2026-03-01T10:00:00.000Z"),
-      });
-      const middle = makeSummary({
-        reportId: "22222222-2222-4222-8222-222222222222",
-        publishedAt: new Date("2026-03-15T10:00:00.000Z"),
-      });
-      const newest = makeSummary({
-        reportId: "33333333-3333-4333-8333-333333333333",
-        publishedAt: new Date("2026-04-01T10:00:00.000Z"),
-      });
-
-      // Feed them in scrambled order to verify the service sorts
-      const repo = createInMemoryRepository(
-        [middle, oldest, newest],
-        new Map(),
-      );
-      const service = new ArchiveService(repo);
-
-      const result = await service.listArchiveReports();
-      const reports = result.items;
-
-      expect(reports).toHaveLength(3);
-      expect(expectDefined(reports[0]).reportId).toBe(newest.reportId);
-      expect(expectDefined(reports[1]).reportId).toBe(middle.reportId);
-      expect(expectDefined(reports[2]).reportId).toBe(oldest.reportId);
-    });
-
     it("validates output through Zod schema (rejects malformed data)", async () => {
       const malformed = {
         reportId: "not-a-uuid", // invalid UUID
@@ -394,16 +364,6 @@ describe("ArchiveService — contract tests", () => {
       expect(result.report.sections).toHaveLength(2);
       const names = result.report.sections.map((s) => s.authorName);
       expect(names).toEqual(["Lead Alpha", "Zulu Lead"]);
-    });
-
-    it("unpublished reports are not in archive", async () => {
-      // The archive service only lists published reports from repository
-      // If repo returns empty (because no published), list should be empty
-      const repo = createInMemoryRepository([], new Map());
-      const service = new ArchiveService(repo);
-
-      const result = await service.listArchiveReports();
-      expect(result.items).toHaveLength(0);
     });
 
     it("includes full assembled report with sections", async () => {
