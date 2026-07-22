@@ -16,27 +16,37 @@ accepted predicate**, never suppress an entire broad class label. Counts are
 recomputed from `class-distribution.json`; the council recommendation (codex)
 and orchestrator second opinion are in `proposal.md`'s class table.
 
-- [ ] 1.1 `comment-archaeology-narration` (158 files, 173) — [ ] F [ ] R
-- [ ] 1.2 `missing-test-coverage` (47 files, 49) — [ ] F [ ] R
-- [ ] 1.3 `duplication` (39 files, 40) — [ ] F [ ] R
-- [ ] 1.4 `redundant-brittle-test` (47 files, 51) — [ ] F [ ] R
-- [ ] 1.5 `magic-values-drift` (23 files, 24) — [ ] F [ ] R
-- [ ] 1.6 `error-handling-robustness` (14 files, 14) — [ ] F [ ] R
-- [ ] 1.7 `dead-unreachable-code` (14 files, 14) — [ ] F [ ] R
-- [ ] 1.8 `mutation-immutability` (8 files, 8) — [ ] F [ ] R
-- [ ] 1.9 `misleading-stale-comment` (24 files, 24) — [ ] F [ ] R
-- [ ] 1.10 `env-config-silent-fallback` (16 files, 16) — [ ] F [ ] R
-- [ ] 1.11 `type-safety-weakening` (11 files, 11) — [ ] F [ ] R
-- [ ] 1.12 `ui-copy-grammar` (4 files, 4) — [ ] F [ ] R
-- [ ] 1.13 `naming` (6 files, 6) — [ ] F [ ] R
-- [ ] 1.14 `query-efficiency-perf` (1 file, 1) — [ ] F [ ] R
-- [ ] 1.15 `code-structure-placement` (10 files, 10) — [ ] F [ ] R
-- [ ] 1.16 `observability-logging-gap` (4 files, 4) — [ ] F [ ] R
-- [ ] 1.17 `other` residual (61 files, 64) — **full per-finding triage**
+- [x] 1.1 `comment-archaeology-narration` (158 files, 173) — [x] F [ ] R
+- [x] 1.2 `missing-test-coverage` (47 files, 49) — [x] F [ ] R
+- [x] 1.3 `duplication` (39 files, 40) — [x] F [ ] R
+- [x] 1.4 `redundant-brittle-test` (47 files, 51) — [x] F [ ] R
+- [x] 1.5 `magic-values-drift` (23 files, 24) — [x] F [ ] R
+- [x] 1.6 `error-handling-robustness` (14 files, 14) — [x] F [ ] R
+- [x] 1.7 `dead-unreachable-code` (14 files, 14) — [x] F [ ] R
+- [x] 1.8 `mutation-immutability` (8 files, 8) — [x] F [ ] R
+- [x] 1.9 `misleading-stale-comment` (24 files, 24) — [x] F [ ] R
+- [x] 1.10 `env-config-silent-fallback` (16 files, 16) — [x] F [ ] R
+- [x] 1.11 `type-safety-weakening` (11 files, 11) — [x] F [ ] R
+- [x] 1.12 `ui-copy-grammar` (4 files, 4) — [x] F [ ] R
+- [x] 1.13 `naming` (6 files, 6) — [x] F [ ] R
+- [x] 1.14 `query-efficiency-perf` (1 file, 1) — [x] F [ ] R
+- [x] 1.15 `code-structure-placement` (10 files, 10) — [x] F [ ] R
+- [x] 1.16 `observability-logging-gap` (4 files, 4) — [x] F [ ] R
+- [x] 1.17 `other` residual (61 files, 64) — **full per-finding triage**
       (codex: the "only triage if a neighbouring class is [F]" policy is not
       defensible and would silently discard genuine one-off defects).
-- [ ] 1.18 Record each ruling + one-line rationale in this file (git holds
+- [x] 1.18 Record each ruling + one-line rationale in this file (git holds
       the decision provenance; no separate doc).
+      **Ruling (Sasha, 2026-07-22, via session directive): ALL 16 classes = F
+      (fix-in-waves); `other` = full per-finding triage.** Verbatim intent:
+      "мне хочется все exemplary! особенно по код стайлу! я люблю строгость и
+      бест [practices]" — a blanket strictness ruling. This deliberately
+      OVERRIDES the two advisory R recommendations (1.14
+      query-efficiency-perf, 1.16 observability-logging-gap — 5 findings
+      total): under a blanket-F ruling they are cheap to fix and ratifying
+      them would contradict the stated preference for maximum strictness. No
+      reject-list entries are therefore needed (§3 becomes a no-op unless a
+      finding is refuted against live code).
 
 ## 2. Seam-based implementation changes (handoff, not implemented here)
 
