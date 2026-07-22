@@ -25,10 +25,14 @@ import {
 } from "./analytics-period-math.js";
 
 /**
- * Parity: only published reports are visible to the
- * analytics surface, identical to ArchivePrismaRepository.PUBLISHED_FLOOR.
+ * Analytics reads live sections, so both lifecycle fields must confirm that
+ * editing is closed. Archive additionally requires `archived: true` and reads
+ * only the frozen snapshot.
  */
-const PUBLISHED_FLOOR = { status: "published" as const };
+const PUBLISHED_FLOOR = {
+  status: "published" as const,
+  periodStatus: "published" as const,
+};
 
 @Injectable()
 export class AnalyticsPrismaRepository implements AnalyticsRepository {

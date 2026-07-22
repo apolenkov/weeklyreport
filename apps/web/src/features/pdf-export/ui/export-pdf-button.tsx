@@ -13,9 +13,8 @@ interface ExportPdfButtonProps {
 /**
  * Export PDF button.
  *
- * The button is disabled only for never-published open periods. Reopened
- * periods are still backed by a published report row and can be exported.
- * See `usePdfExportJob` for the request/poll/deliver flow it wires up.
+ * Export stays disabled while a report is editable, including during a reopen,
+ * because the backend only exports the genuinely published read model.
  */
 export function ExportPdfButton({
   reportId,
@@ -49,7 +48,7 @@ export function ExportPdfButton({
       </ToolbarIconButton>
       {!isExportable ? (
         <span id={disabledReasonId} className="sr-only">
-          Publish the report first to export PDF.
+          Publish or re-publish the report to export PDF.
         </span>
       ) : null}
       {fallbackUrl !== null ? (

@@ -72,6 +72,7 @@ describe("Analytics day-range matching (integration)", () => {
         deadline: new Date(args.periodEnd),
         status: "published",
         periodState: "published",
+        periodStatus: "published",
         ...(args.createdAt ? { createdAt: new Date(args.createdAt) } : {}),
       },
     });
@@ -308,7 +309,7 @@ describe("Analytics group scoping (integration)", () => {
     // Publish the seeded unified period and submit its group-A section.
     await prisma.report.update({
       where: { id: testData.report.id },
-      data: { status: "published" },
+      data: { status: "published", periodStatus: "published" },
     });
     await prisma.reportSection.update({
       where: { id: testData.section.id },

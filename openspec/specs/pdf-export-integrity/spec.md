@@ -205,3 +205,29 @@ is added to the queue.
 - **WHEN** the caller calls `requestPdfExport` for that report
 - **THEN** the request is rejected
 - **AND** no job is enqueued
+
+### Requirement: PDF export eligibility excludes reopened periods
+
+PDF export eligibility MUST require both legacy `status: 'published'` and
+`periodStatus: 'published'`. The repository MUST return `null`, the service
+MUST raise `PdfExportDomainError` without creating or enqueueing a job, and the
+web export control MUST remain disabled while a period is reopened.
+
+#### Scenario: A reopened report cannot be exported
+
+- **GIVEN** a report with `status: 'published'` and `periodStatus: 'reopened'`
+- **WHEN** PDF export is requested
+- **THEN** the request raises `PdfExportDomainError`
+- **AND** no export job is created or enqueued
+
+#### Scenario: The web control agrees with backend eligibility
+
+- **GIVEN** a report whose `periodStatus` is `'reopened'`
+- **WHEN** the Export PDF control renders
+- **THEN** the control is disabled
+
+#### Scenario: A genuinely published report remains exportable
+
+- **GIVEN** a report with `status: 'published'` and `periodStatus: 'published'`
+- **WHEN** PDF export is requested by an in-scope caller
+- **THEN** the request proceeds normally

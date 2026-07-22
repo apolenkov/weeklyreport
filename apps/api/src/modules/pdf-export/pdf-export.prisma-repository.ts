@@ -46,7 +46,11 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
 
   async getPublishedReport(reportId: string): Promise<AssembledReport | null> {
     const report = await this.prisma.report.findUnique({
-      where: { id: reportId, status: "published" },
+      where: {
+        id: reportId,
+        status: "published",
+        periodStatus: "published",
+      },
       include: reportFullInclude,
     });
 

@@ -68,7 +68,7 @@ const draftReport: AssembledReport = {
 };
 
 function createRepository(
-  report: AssembledReport,
+  report: AssembledReport | null,
   capture?: { lastRequestedBy?: string },
   canRead = true,
 ): PdfExportRepository {
@@ -97,7 +97,9 @@ function createRepository(
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in this in-memory stub)
     async getPublishedReport(activeReportId: string) {
-      return activeReportId === reportId ? structuredClone(report) : null;
+      return activeReportId === reportId && report !== null
+        ? structuredClone(report)
+        : null;
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in this in-memory stub)
     async saveExportJob(job: PdfExportJob) {
@@ -118,6 +120,21 @@ function createRepository(
 }
 
 describe("PdfExportService", () => {
+  it("rejects a reopened report without creating or enqueuing a job", async () => {
+    const repository = createRepository(null);
+    const createExportJob = vi.spyOn(repository, "createExportJob");
+    const queue = { enqueue: vi.fn() };
+    const service = new PdfExportService(repository, undefined, queue);
+
+    await expect(
+      service.requestPdfExport(reportId, requesterSession),
+    ).rejects.toThrow(
+      new PdfExportDomainError("PDF export requires a published report."),
+    );
+    expect(createExportJob).not.toHaveBeenCalled();
+    expect(queue.enqueue).not.toHaveBeenCalled();
+  });
+
   it("rejects export requests for unpublished reports", async () => {
     const service = new PdfExportService(createRepository(draftReport));
 

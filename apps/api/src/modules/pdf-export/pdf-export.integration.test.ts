@@ -162,6 +162,7 @@ describe("cookie seam — service against real Prisma repo", () => {
       where: { id: testData.report.id },
       data: {
         status: "published",
+        periodStatus: "published",
         publishedAt: new Date("2026-04-15T10:00:00.000Z"),
         publishedById: testData.head.id,
       },
@@ -213,6 +214,7 @@ describe("cookie seam — service against real Prisma repo", () => {
       where: { id: testData.report.id },
       data: {
         status: "published",
+        periodStatus: "published",
         publishedAt: new Date("2026-04-15T10:00:00.000Z"),
         publishedById: testData.head.id,
       },

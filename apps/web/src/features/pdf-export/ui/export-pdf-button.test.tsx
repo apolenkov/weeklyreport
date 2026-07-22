@@ -91,6 +91,15 @@ describe("ExportPdfButton", () => {
     vi.unstubAllGlobals();
   });
 
+  it("stays disabled while the report is reopened", () => {
+    renderButton({ statusQuery: COMPLETED_STATUS, periodStatus: "reopened" });
+
+    expect(screen.getByRole("button", { name: "Export PDF" })).toBeDisabled();
+    expect(
+      screen.getByText("Publish or re-publish the report to export PDF."),
+    ).toHaveClass("sr-only");
+  });
+
   it("calls window.open synchronously in the click handler before the mutation", async () => {
     const openMock = vi.fn(() => ({
       location: { href: "" },
