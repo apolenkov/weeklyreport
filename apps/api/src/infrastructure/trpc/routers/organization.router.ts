@@ -10,7 +10,7 @@ export interface OrganizationRouterDeps {
    *  - `admin.getOrganization` / `admin.updateOrganization` manage the
    *    singleton row from the Settings → Identity tab.
    */
-  organizationService?: OrganizationService;
+  organizationService: OrganizationService;
 }
 
 // Public read-only surface for the anonymous landing page. Returns
@@ -21,9 +21,6 @@ export function createOrganizationRouter(deps: OrganizationRouterDeps) {
   return router({
     getPublic: publicProcedure.query(async () => {
       try {
-        if (!deps.organizationService) {
-          throw new Error("OrganizationService is not configured");
-        }
         return await deps.organizationService.getPublic();
       } catch (error) {
         throw mapDomainError(error);

@@ -111,7 +111,7 @@ function stagePromotions(
   labels: Pick<ReturnType<typeof statusLabelMaps>, "products" | "stages">,
 ): LeadSubmitStatusIdentity[] {
   return (input.draftPayload?.stageStatuses ?? []).flatMap((status) => {
-    if (status.status === "green") return [];
+    if (status.status != null) return [];
     const product = labels.products.get(status.projectId) ?? "Unnamed product";
     const stage =
       labels.stages.get(`${status.projectId}:${status.stageId}`) ??
@@ -187,7 +187,7 @@ export function buildLeadSubmitPayload(
     })),
     stageStatuses: (draftPayload.stageStatuses ?? []).map((status) => ({
       ...status,
-      status: status.status === "green" ? status.status : ("green" as const),
+      status: "green" as const,
     })),
     confirmed: true as const,
   };

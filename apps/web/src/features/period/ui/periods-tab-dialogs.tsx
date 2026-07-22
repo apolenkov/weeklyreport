@@ -67,7 +67,7 @@ export function PeriodsTabDialogs({
           title="Delete period?"
           description="This will permanently delete the period and all draft sections. This action cannot be undone."
           confirmLabel={deleteIsPending ? "Deleting…" : "Delete"}
-          variant="delete"
+          variant="destructive"
           testId="periods-delete-dialog"
           isPending={deleteIsPending}
           onClose={onCloseDelete}

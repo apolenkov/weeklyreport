@@ -10,7 +10,7 @@
  * server gate (worker-vs-human discriminator), so the CSS-safety assertions
  * target the extracted client `PrintReportTemplate` directly. The gate's
  * redirect/render branches are covered in
- * shared/ui/report-shell/agent-review-coming-soon.test.tsx.
+ * shared/ui/report-shell/report-surface-controls.test.tsx.
  *
  * All assertions target the hardcoded print CSS string; no row in scope
  * involves keyboard, dialog, or focus behavior.

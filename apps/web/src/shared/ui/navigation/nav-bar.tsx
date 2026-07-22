@@ -4,6 +4,7 @@ import {
   DEFAULT_ORGANIZATION_IDENTITY,
   initials as deriveInitials,
   type Role,
+  ROLE_HOME_PATH,
   ROLE_LABEL,
 } from "@customreport/shared";
 import { ComingSoonIconButton } from "@customreport/ui/components/coming-soon-control";
@@ -26,7 +27,6 @@ import {
 import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 
-import { roleHomePath } from "../../../lib/role-home";
 import { isViewer } from "../../../lib/role-predicates";
 import { useSession } from "../../../lib/session-provider";
 import { webEnv } from "../../../lib/web-env";
@@ -143,9 +143,7 @@ function isActiveLink(
   return pathname.startsWith(href);
 }
 
-// Per-role home is centralised in `lib/role-home.ts` and reused by the
-// dev-login redirect, so admin and head resolve to distinct destinations.
-const getLogoHref = roleHomePath;
+const getLogoHref = (role: Role) => ROLE_HOME_PATH[role];
 
 function subscribeHydrationStore() {
   return () => undefined;

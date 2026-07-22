@@ -19,10 +19,7 @@ export class ReviewPrismaRepository implements ReviewRepository {
     activeReportId: string,
     session: DashboardScopeSession,
   ): Promise<SubmissionDashboardRow[]> {
-    const scope = groupScopeFilter(
-      session as Parameters<typeof groupScopeFilter>[0],
-      "reportSection",
-    );
+    const scope = groupScopeFilter(session, "reportSection");
     const sections = await this.prisma.reportSection.findMany({
       where: { reportId: activeReportId, ...scope },
       include: {

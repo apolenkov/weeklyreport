@@ -15,8 +15,8 @@ import Link from "next/link";
  * Only `requiredRoles` is rendered into the DOM. The user's actual role is
  * intentionally NOT displayed, so a hostile viewer cannot enumerate role
  * state by hitting protected routes. `homeHref` is a pre-resolved path the
- * caller computes from the session (via `roleHomePath`, or `/` for
- * anonymous), keeping this component role-agnostic.
+ * caller computes from the shared role-home map (or `/` for anonymous),
+ * keeping this component role-agnostic.
  */
 export interface ForbiddenPageProps {
   readonly requiredRoles: readonly Role[];

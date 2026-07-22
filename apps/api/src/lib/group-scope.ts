@@ -45,8 +45,13 @@ export interface GroupScopeOptions {
   useExplicitGroupProducts?: boolean;
 }
 
+type GroupScopeSession = Pick<
+  UserSession,
+  "role" | "reportingGroupId" | "viewerGroupAccess"
+>;
+
 export function groupScopeFilter(
-  session: UserSession,
+  session: GroupScopeSession,
   target: ScopeTarget,
   options: GroupScopeOptions = {},
 ): Record<string, unknown> {

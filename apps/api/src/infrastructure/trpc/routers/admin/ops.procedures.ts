@@ -36,7 +36,7 @@ export interface AdminOpsDeps {
 
 /**
  * drain-admin-router: resolve the action-log service or fail loudly.
- * Optional on `RouterDeps` only so role-coverage fixtures build with `{}`
+ * Optional on `AppRouterDeps` only so role-coverage fixtures build with `{}`
  * deps; a real boot always wires it, so `undefined` here is a config bug.
  */
 function requireActionLogService(deps: AdminOpsDeps): ActionLogService {

@@ -47,7 +47,7 @@ import { createTelemetryRouter } from "./routers/telemetry.router.js";
 import { createWeeklyReportRouter } from "./routers/weekly-report.router.js";
 import { router } from "./trpc.middleware.js";
 
-interface RouterDeps {
+export interface AppRouterDeps {
   prisma: PrismaClient;
   /**
    * Validated env, threaded from main.ts. Read for the Telegram
@@ -73,17 +73,7 @@ interface RouterDeps {
   reminderAdminService: ReminderAdminService;
   periodAdminService: PeriodAdminService;
   reopenRequestAdminService: ReopenRequestAdminService;
-  /**
-   * Organization identity surface.
-   *  - `org.getPublic` (publicProcedure) reads shortName/fullName for the
-   *    anonymous landing hero.
-   *  - `admin.getOrganization` / `admin.updateOrganization` manage the
-   *    singleton row from the Settings → Identity tab.
-   * Optional so existing role-coverage test fixtures that build the
-   * router with `{}` deps keep compiling — those tests stub the entire
-   * `deps` argument and never exercise the org.* paths.
-   */
-  organizationService?: OrganizationService;
+  organizationService: OrganizationService;
   remindersService: RemindersService;
   /**
    * lead-report-surface-polish: best-effort auto carry-over, fired
@@ -172,7 +162,7 @@ interface RouterDeps {
   actionLogService?: ActionLogService;
 }
 
-export function createAppRouter(deps: RouterDeps) {
+export function createAppRouter(deps: AppRouterDeps) {
   return router({
     // === Auth namespace ===
     auth: createAuthRouter(),

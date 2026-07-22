@@ -76,7 +76,7 @@ export function RevokeSectionButton({
         title="Revoke Submission?"
         description={`Revoke ${leadName}'s submission? Their form returns to Draft status.`}
         confirmLabel="Revoke"
-        variant="revoke"
+        variant="destructive"
       />
     </>
   );

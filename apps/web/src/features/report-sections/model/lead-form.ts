@@ -360,7 +360,7 @@ export function mapLeadItems(
   );
   // Rows with EITHER parent render in the week sections — product rows under
   // their product column, activity rows under their activity lane
-  // (buildItemColumns). A row with neither parent is malformed and stays
+  // (splitItemBoard). A row with neither parent is malformed and stays
   // excluded.
   return section.items
     .filter(

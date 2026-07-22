@@ -20,7 +20,7 @@ import {
 
 /**
  * review-acknowledgement: resolve the review-actions service or fail loudly.
- * Optional on `RouterDeps` only so role-coverage fixtures build with `{}` deps;
+ * Optional on `AppRouterDeps` only so role-coverage fixtures build with `{}` deps;
  * a real boot always wires it, so `undefined` here is a config bug, not a
  * user-reachable state.
  */

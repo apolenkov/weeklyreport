@@ -1,7 +1,6 @@
-import type { Role } from "@customreport/shared";
+import { type Role, ROLE_HOME_PATH } from "@customreport/shared";
 import type { ReactNode } from "react";
 
-import { roleHomePath } from "../../lib/role-home";
 import { getServerSession } from "../../lib/server/get-server-session";
 import { ForbiddenPage } from "./forbidden-page";
 
@@ -12,7 +11,8 @@ import { ForbiddenPage } from "./forbidden-page";
  * sessions get the children back unwrapped (no extra DOM element); denied
  * visitors (no session, or role outside `allowedRoles`) get the in-page
  * `ForbiddenPage` wall at the requested URL — never a redirect — with
- * `homeHref` resolved via `roleHomePath`, or `/` for anonymous visitors.
+ * `homeHref` resolved via the shared role-home map, or `/` for anonymous
+ * visitors.
  *
  * UX gate ONLY — layouts do not re-render on soft navigation and a layout
  * gate does not stop a page segment's server code. The actual security
@@ -35,7 +35,7 @@ export async function RoleGate({
   return (
     <ForbiddenPage
       requiredRoles={allowedRoles}
-      homeHref={session ? roleHomePath(session.role) : "/"}
+      homeHref={session ? ROLE_HOME_PATH[session.role] : "/"}
     />
   );
 }

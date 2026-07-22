@@ -1,9 +1,8 @@
-import type { UserSession } from "@customreport/shared";
+import { ROLE_HOME_PATH, type UserSession } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { roleHomePath } from "../../lib/role-home";
 // `server-only` inside get-server-session is aliased to a stub in
 // apps/web/vitest.config.ts, so the module itself is importable here; the
 // network-touching getServerSession is mocked below.
@@ -66,7 +65,7 @@ describe("RoleGate (ui-role-route-access)", () => {
     expect(
       screen.getByText(/reserved for the head or admin role/i),
     ).toBeInTheDocument();
-    expectForbiddenWall(roleHomePath("viewer"));
+    expectForbiddenWall(ROLE_HOME_PATH.viewer);
   });
 
   it("denies an anonymous visitor with the / home fallback", async () => {
@@ -80,13 +79,13 @@ describe("RoleGate (ui-role-route-access)", () => {
   it('allowedRoles=["lead"] denies head, with head home', async () => {
     mockedGetServerSession.mockResolvedValue(sessionWithRole("head"));
     await renderGate(["lead"]);
-    expectForbiddenWall(roleHomePath("head"));
+    expectForbiddenWall(ROLE_HOME_PATH.head);
   });
 
   it('allowedRoles=["lead"] denies admin, with admin home', async () => {
     mockedGetServerSession.mockResolvedValue(sessionWithRole("admin"));
     await renderGate(["lead"]);
-    expectForbiddenWall(roleHomePath("admin"));
+    expectForbiddenWall(ROLE_HOME_PATH.admin);
   });
 
   it('allowedRoles=["lead"] allows lead', async () => {

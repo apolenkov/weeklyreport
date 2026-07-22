@@ -80,11 +80,7 @@ export function scopeWhere(
   options: GroupScopeOptions = {},
 ): Record<string, unknown> | undefined {
   if (!session) return undefined;
-  const scope = groupScopeFilter(
-    session as Parameters<typeof groupScopeFilter>[0],
-    target,
-    options,
-  );
+  const scope = groupScopeFilter(session, target, options);
   if (Object.keys(scope).length === 0) return undefined;
   return scope;
 }
@@ -100,8 +96,5 @@ export function historySectionScope(
 ): Record<string, unknown> {
   return session.role === "lead"
     ? { authorId: session.userId }
-    : groupScopeFilter(
-        session as Parameters<typeof groupScopeFilter>[0],
-        "reportSection",
-      );
+    : groupScopeFilter(session, "reportSection");
 }
