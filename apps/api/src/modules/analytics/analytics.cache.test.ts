@@ -1,94 +1,79 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AnalyticsCachePort } from "./analytics.service.js";
+import {
+  createRedisReadThroughCache,
+  type RedisReadThroughCache,
+} from "../../infrastructure/cache/read-through-cache.js";
+import type { EnvConfig } from "../../infrastructure/config/env.schema";
+import { AnalyticsCache } from "./analytics.cache.js";
 
-/**
- * Contract test for the AnalyticsCachePort behavior:
- * - Reads short-circuit on cache hit.
- * - Invalidation removes only `customreport:analytics:*` prefixed keys.
- *
- * The real AnalyticsCache (Redis-backed, in analytics.cache.ts) wraps the
- * same contract; this test uses an in-memory fake so no Redis is required.
- */
+vi.mock("../../infrastructure/cache/read-through-cache.js", () => ({
+  createRedisReadThroughCache: vi.fn(),
+}));
 
-interface InvalidatableCache extends AnalyticsCachePort {
-  invalidateAll(): Promise<void>;
+interface InMemoryCache {
+  readonly cache: RedisReadThroughCache;
+  readonly values: Map<string, unknown>;
 }
 
-function inMemoryCache(): {
-  cache: InvalidatableCache;
-  store: Map<string, string>;
-} {
-  const store = new Map<string, string>();
+function createInMemoryCache(): InMemoryCache {
+  const values = new Map<string, unknown>();
   return {
-    store,
+    values,
     cache: {
       async getOrCompute<T>(key: string, fn: () => Promise<T>): Promise<T> {
-        const hit = store.get(key);
-        if (hit !== undefined) return JSON.parse(hit) as T;
-        const fresh = await fn();
-        store.set(key, JSON.stringify(fresh));
-        return fresh;
+        if (values.has(key)) return values.get(key) as T;
+        const value = await fn();
+        values.set(key, value);
+        return value;
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- implements InvalidatableCache interface (Promise<void> return type required by the port contract; no awaitable work in this in-memory stub)
-      async invalidateAll() {
-        for (const k of Array.from(store.keys())) {
-          if (k.startsWith("customreport:analytics:")) store.delete(k);
+      invalidateByPrefix(prefix: string): Promise<void> {
+        for (const key of values.keys()) {
+          if (key.startsWith(prefix)) values.delete(key);
         }
+        return Promise.resolve();
       },
+      close: () => Promise.resolve(),
     },
   };
 }
 
-describe("AnalyticsCache contract", () => {
-  it("hits the cache on the second call to the same key", async () => {
-    const { cache } = inMemoryCache();
-    // eslint-disable-next-line @typescript-eslint/require-await -- fn parameter typed as () => Promise<T>; async is required to satisfy the contract (no awaitable work in this stub)
-    const fn = vi.fn(async () => ({ ok: true }));
+const ENV = {} as EnvConfig;
 
-    await cache.getOrCompute("customreport:analytics:k", fn);
-    await cache.getOrCompute("customreport:analytics:k", fn);
+describe("AnalyticsCache", () => {
+  let backing: InMemoryCache;
+  let cache: AnalyticsCache;
 
-    expect(fn).toHaveBeenCalledTimes(1);
+  beforeEach(() => {
+    backing = createInMemoryCache();
+    vi.mocked(createRedisReadThroughCache).mockReturnValue(backing.cache);
+    cache = new AnalyticsCache(ENV);
   });
 
-  it("invalidateAll clears prefixed keys and leaves others alone", async () => {
-    const { cache, store } = inMemoryCache();
+  it("delegates read-through caching to the production cache seam", async () => {
+    const getOrCompute = vi.spyOn(backing.cache, "getOrCompute");
+    const compute = vi.fn(() => Promise.resolve({ ok: true }));
 
-    // eslint-disable-next-line @typescript-eslint/require-await -- fn parameter typed as () => Promise<T>; async is required to satisfy the contract (no awaitable work in this stub)
-    await cache.getOrCompute("customreport:analytics:a", async () => ({
-      a: 1,
-    }));
-    // eslint-disable-next-line @typescript-eslint/require-await -- fn parameter typed as () => Promise<T>; async is required to satisfy the contract (no awaitable work in this stub)
-    await cache.getOrCompute("customreport:analytics:b", async () => ({
-      b: 2,
-    }));
-    store.set("other:keep", "preserved");
+    await cache.getOrCompute("customreport:analytics:k", compute);
+    await cache.getOrCompute("customreport:analytics:k", compute);
+
+    expect(getOrCompute).toHaveBeenCalledTimes(2);
+    expect(compute).toHaveBeenCalledTimes(1);
+  });
+
+  it("invalidateAll delegates the analytics prefix and preserves other keys", async () => {
+    const invalidateByPrefix = vi.spyOn(backing.cache, "invalidateByPrefix");
+    backing.values.set("customreport:analytics:a", { a: 1 });
+    backing.values.set("customreport:analytics:b", { b: 2 });
+    backing.values.set("other:keep", "preserved");
 
     await cache.invalidateAll();
 
-    expect(store.has("customreport:analytics:a")).toBe(false);
-    expect(store.has("customreport:analytics:b")).toBe(false);
-    expect(store.has("other:keep")).toBe(true);
-  });
-
-  it("serialises and deserialises payloads correctly", async () => {
-    const { cache } = inMemoryCache();
-    const value = {
-      periods: ["2026-04-21"],
-      rows: [{ projectId: "p", name: "A" }],
-    };
-    const seen = await cache.getOrCompute(
-      "customreport:analytics:roundtrip",
-      // eslint-disable-next-line @typescript-eslint/require-await -- fn parameter typed as () => Promise<T>; async is required to satisfy the contract (no awaitable work in this stub)
-      async () => value,
+    expect(invalidateByPrefix).toHaveBeenCalledExactlyOnceWith(
+      "customreport:analytics:",
     );
-    const cached = await cache.getOrCompute(
-      "customreport:analytics:roundtrip",
-      // eslint-disable-next-line @typescript-eslint/require-await -- fn parameter typed as () => Promise<T>; async is required to satisfy the contract (no awaitable work in this stub)
-      async () => ({ unreached: true }),
-    );
-    expect(seen).toEqual(value);
-    expect(cached).toEqual(value);
+    expect([...backing.values.entries()]).toEqual([
+      ["other:keep", "preserved"],
+    ]);
   });
 });

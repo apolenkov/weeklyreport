@@ -1,127 +1,69 @@
-import type { UserSession } from "@customreport/shared";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {
-  type AnalyticsCachePort,
-  type AnalyticsRepository,
-  AnalyticsService,
-} from "./analytics.service.js";
+import { groupReportsByLabel, isoDateOnly } from "./analytics-period-math.js";
 
-const session: UserSession = {
-  userId: "a0000000-0000-4000-8000-0000000000tz",
-  email: "tz@test.local",
-  name: "TZ Head",
-  role: "head",
-  activeReportId: null,
-  activeReportSectionId: null,
-  reportingGroupId: "a0000000-0000-4000-8000-0000000group-tz",
-};
+// Analytics period labels must remain UTC-stable across process time zones.
 
-/**
- * TZ-stability gate.
- *
- * The Prisma repository formats period labels via
- * `Date.prototype.toISOString().slice(0, 10)`. Because `toISOString` always
- * returns UTC, the labels MUST be byte-identical regardless of
- * `process.env.TZ`. This test flips TZ between Europe/Moscow and UTC and
- * asserts the service produces identical labels for the same fixture.
- *
- * The fakeRepo below returns pre-computed labels — that is intentional. The
- * real defense lives in analytics.prisma-repository.ts where the format
- * function is fixed at compile time. This test asserts the service-level
- * contract: AnalyticsService does not re-format labels through any
- * TZ-sensitive path.
- */
+// Europe/Moscow (UTC+3) is already 2026-04-29 for this instant.
+const NEAR_MIDNIGHT_UTC = new Date("2026-04-28T23:30:00.000Z");
+const EXPECTED_UTC_LABEL = "2026-04-28";
 
-const fixedHistory = {
-  periods: ["2026-04-21", "2026-04-28"],
-  rows: [
-    {
-      projectId: "11111111-1111-4111-8111-111111111111",
-      projectName: "P",
-      statuses: ["green" as const, "red" as const],
-    },
-  ],
-};
-
-const fixedVelocity = [
-  { periodLabel: "2026-04-21", leads: [] },
-  { periodLabel: "2026-04-28", leads: [] },
-];
-
-const fixedComparison = { rows: [] };
-
-function fakeRepo(): AnalyticsRepository {
-  return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository port (no awaitable work in the stub)
-    async trafficLightHistory() {
-      return fixedHistory;
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository port (no awaitable work in the stub)
-    async leadVelocity() {
-      return fixedVelocity;
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository port (no awaitable work in the stub)
-    async periodComparison() {
-      return fixedComparison;
-    },
-  };
-}
-
-function noopCache(): AnalyticsCachePort {
-  return {
-    async getOrCompute<T>(_k: string, fn: () => Promise<T>) {
-      return fn();
-    },
-  };
+function underTZ<T>(tz: string, fn: () => T): T {
+  const previous = process.env.TZ;
+  process.env.TZ = tz;
+  try {
+    return fn();
+  } finally {
+    if (previous === undefined) {
+      delete process.env.TZ;
+    } else {
+      process.env.TZ = previous;
+    }
+  }
 }
 
 describe("Analytics labels are TZ-stable", () => {
-  let originalTZ: string | undefined;
+  it("isoDateOnly matches under Europe/Moscow and UTC for near-midnight samples", () => {
+    // Samples that local-time formatters would split across calendar days.
+    const samples = [
+      NEAR_MIDNIGHT_UTC,
+      new Date("2026-04-28T00:30:00.000Z"),
+      new Date("2026-10-25T21:00:00.000Z"),
+    ];
+    const expected = ["2026-04-28", "2026-04-28", "2026-10-25"];
 
-  beforeEach(() => {
-    originalTZ = process.env.TZ;
+    const moscow = underTZ("Europe/Moscow", () => samples.map(isoDateOnly));
+    const utc = underTZ("UTC", () => samples.map(isoDateOnly));
+
+    expect(moscow).toEqual(utc);
+    expect(moscow).toEqual(expected);
   });
 
-  afterEach(() => {
-    if (originalTZ === undefined) {
-      delete process.env.TZ;
-    } else {
-      process.env.TZ = originalTZ;
-    }
-  });
+  it("groupReportsByLabel keys match under Europe/Moscow and UTC", () => {
+    const reports = [{ periodEnd: NEAR_MIDNIGHT_UTC }];
 
-  it("produces identical labels under Europe/Moscow and UTC", async () => {
-    const svc = new AnalyticsService(fakeRepo(), noopCache());
-    const inputs = { periodFrom: "2026-04-01", periodTo: "2026-04-30" };
+    const moscowKeys = underTZ("Europe/Moscow", () => [
+      ...groupReportsByLabel(reports).keys(),
+    ]);
+    const utcKeys = underTZ("UTC", () => [
+      ...groupReportsByLabel(reports).keys(),
+    ]);
 
-    process.env.TZ = "Europe/Moscow";
-    const moscowHistory = await svc.trafficLightHistory(inputs, session);
-    const moscowVelocity = await svc.leadVelocity(inputs, session);
-
-    process.env.TZ = "UTC";
-    const utcHistory = await svc.trafficLightHistory(inputs, session);
-    const utcVelocity = await svc.leadVelocity(inputs, session);
-
-    expect(moscowHistory.periods.join("|")).toBe(utcHistory.periods.join("|"));
-    expect(moscowVelocity.map((r) => r.periodLabel)).toEqual(
-      utcVelocity.map((r) => r.periodLabel),
-    );
+    expect(moscowKeys).toEqual(utcKeys);
+    expect(moscowKeys).toEqual([EXPECTED_UTC_LABEL]);
   });
 
   it("Date.toISOString().slice(0,10) is itself TZ-stable", () => {
-    // Belt-and-suspenders sanity check on the underlying primitive used by
-    // analytics.prisma-repository.ts. If this assertion ever fails, the
-    // Node runtime semantics changed — escalate.
-    const sample = new Date("2026-04-28T23:30:00.000Z");
-
-    process.env.TZ = "Europe/Moscow";
-    const moscowLabel = sample.toISOString().slice(0, 10);
-
-    process.env.TZ = "UTC";
-    const utcLabel = sample.toISOString().slice(0, 10);
+    // Sanity check on the Node primitive isoDateOnly wraps. If this fails,
+    // runtime semantics changed — escalate.
+    const moscowLabel = underTZ("Europe/Moscow", () =>
+      NEAR_MIDNIGHT_UTC.toISOString().slice(0, 10),
+    );
+    const utcLabel = underTZ("UTC", () =>
+      NEAR_MIDNIGHT_UTC.toISOString().slice(0, 10),
+    );
 
     expect(moscowLabel).toBe(utcLabel);
-    expect(moscowLabel).toBe("2026-04-28");
+    expect(moscowLabel).toBe(EXPECTED_UTC_LABEL);
   });
 });

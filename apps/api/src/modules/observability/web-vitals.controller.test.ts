@@ -1,3 +1,4 @@
+import { MAX_WEB_VITAL_VALUE } from "@customreport/shared";
 import { BadRequestException } from "@nestjs/common";
 import type { Histogram } from "prom-client";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -84,6 +85,18 @@ describe("WebVitalsController.record", () => {
   it("rejects a negative value with 400 and records nothing", async () => {
     expect(() =>
       controller.record({ name: "LCP", value: -1e308, id: "x" }),
+    ).toThrow(BadRequestException);
+
+    expect(await countFor(webVitalLcp, "other")).toBe(0);
+  });
+
+  it("rejects a value above the shared maximum with 400 and records nothing", async () => {
+    expect(() =>
+      controller.record({
+        name: "LCP",
+        value: MAX_WEB_VITAL_VALUE + 1,
+        id: "oversized",
+      }),
     ).toThrow(BadRequestException);
 
     expect(await countFor(webVitalLcp, "other")).toBe(0);
