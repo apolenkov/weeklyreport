@@ -51,8 +51,7 @@ export function HeadReportShell({
   const departmentLabel =
     sessionState?.organization?.fullName ?? "CustomReport";
 
-  // head-toolbar-semantics: the head report view state — scope (Product/Leads)
-  // and the show-archived filter — lives in the URL so navigation, refresh, and
+  // Scope and the show-archived filter live in the URL so navigation, refresh, and
   // shared links all restore the selection. `mode` is already a route concern
   // (`?mode=slides`), resolved server-side and passed in as the `mode` prop. The
   // head strips nothing (no one-shot markers), so `stripParams` is empty.
@@ -63,19 +62,17 @@ export function HeadReportShell({
     trpc.reports.compiledHistory.queryOptions({ includeArchive }),
   );
 
-  // driver-findings-2026-06-11 finding 4: compiledHistory lists only
-  // published + archived periods, so the active week (the one the body shows
-  // on `/head/report/<activeId>`) is absent and the navigator falls back to
+  // Compiled history lists only published and archived periods, so the active
+  // week shown on `/head/report/<activeId>` is absent and the navigator falls back to
   // periods[0] (latest published). Fetch the displayed report and prepend it
   // when it is not already in history. Same query key as WeeklyReportPage's
   // identical call, so React Query dedupes — no extra network request.
   const displayedQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
 
-  // driver-findings-followups item 3: also fetch the CURRENT (active) period
-  // independent of the displayed one. Without a reportId the server returns the
-  // session's active period, so the navigator can always chevron back to the
-  // current week — even from a published week, where the displayed period IS in
-  // history and the old code prepended nothing.
+  // Fetch the current active period independently of the displayed one. Without
+  // a reportId the server returns the session's active period, so the navigator
+  // can always chevron back to the current week — even when the displayed
+  // period is itself a published, historical one.
   const activeQ = useQuery(trpc.weeklyReport.get.queryOptions({}));
 
   const periods: ReportPeriod[] = useMemo(
@@ -103,15 +100,13 @@ export function HeadReportShell({
   const editHref = `/head/report/${encodeURIComponent(reportId)}${buildQuery({ mode: null })}`;
   const slidesHref = `/head/report/${encodeURIComponent(reportId)}${buildQuery({ mode: "slides" })}`;
 
-  // Grouping axis for the form-mode status pane (UAT 2026-05-22): product (the
-  // classic per-product list) or lead (products bucketed under each lead). Held
+  // The form-mode status pane groups by product or by lead. The selection stays
   // in the URL (`?scope=lead`) so it survives navigation / refresh — `scope` /
   // `setScope` come from the shared URL-state hook above.
   const reportScope = scope === "lead" ? "lead" : "product";
 
-  // head-toolbar-parity D2: the department context label moved off the toolbar
-  // (which is now control-only, two rows) onto the page header line beside the
-  // title — it is a label, not a control.
+  // The department context belongs on the page header beside the title because
+  // it is a label, while the toolbar contains controls only.
   const headerContextLabel = (
     <ReportToolbarCenterLabel
       label={departmentLabel}
@@ -119,12 +114,9 @@ export function HeadReportShell({
     />
   );
 
-  // report-toolbar-layout: the head Context-control row (bottom). The inert
-  // Agent-review placeholder leads the group (head-toolbar-semantics: compact,
-  // leading edge); period navigation, the show-archived filter, and the
-  // segmented scope / view-mode toggles follow.
-  // head-slides-lead-parity (S6): the slide-header Agent-review slot was removed
-  // from the deck, so the toolbar context row now hosts the single placeholder
+  // The context row carries period navigation, the archive filter, the inert
+  // Agent-review placeholder, and the scope and view-mode toggles. The deck has
+  // no separate Agent-review slot, so the toolbar hosts the single placeholder
   // in BOTH form and slides mode — exactly one per surface, no double-mount.
   const contextControls = (
     <>
@@ -147,9 +139,8 @@ export function HeadReportShell({
     </>
   );
 
-  // report-toolbar-parity: exactly one labeled Export-PDF lives in the shared
-  // toolbar's trailing group. In head form mode the rendered toolbar IS this
-  // one (passed into WeeklyReportPage's `toolbar` slot), so the export action
+  // Exactly one labeled Export-PDF lives in the shared toolbar's trailing group.
+  // In head form mode this toolbar is passed into WeeklyReportPage, so the action
   // must be built here. It renders only for a resolvable active period, with
   // the displayed period's lifecycle status driving its enabled state.
   const displayed = displayedQ.data;
@@ -161,7 +152,7 @@ export function HeadReportShell({
       />
     ) : undefined;
 
-  // report-toolbar-layout: in slides mode the shell renders the toolbar itself
+  // In slides mode the shell renders the toolbar itself
   // (slides has no WeeklyReportPage). The bordered toolbar carries only the
   // Context-control bar (period nav + scope / view-mode toggles); the labeled
   // Export-PDF document action lives on the slides header line below. Publish &
@@ -183,12 +174,10 @@ export function HeadReportShell({
               </div>
               {headerContextLabel}
             </div>
-            {/* report-toolbar-layout: the document actions sit on the header
-                line, not inside the bordered toolbar. head-surface-uat-polish
-                (F1): the per-slide "Open focused report" drill-in link (a
-                duplicate of the deck's own slide navigation) was replaced by the
-                same Publish & Lock / Reopen action the edit mode offers, so the
-                head can lock straight from the review deck. */}
+            {/* Document actions sit on the header line, not inside the bordered
+                toolbar. The deck already provides focused-report navigation, so
+                this slot exposes the Publish & Lock / Reopen action and lets the
+                head lock directly from the review deck. */}
             <DocumentActionGroup>
               {exportPdf}
               <HeadPublishLockAction reportId={reportId} />

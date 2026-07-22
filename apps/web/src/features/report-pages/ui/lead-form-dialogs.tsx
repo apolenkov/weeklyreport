@@ -45,8 +45,8 @@ interface LeadFormDialogsProps {
   readonly quickAdd: LeadFormDialogsQuickAdd;
   readonly writeActions: LeadFormDialogsWriteActions;
   /**
-   * simplify-stage-status-interaction (D4): count of the lead's own unset
-   * stages. Derived in `LeadForm` from `draftPayload.stageStatuses` — the
+   * Count of the lead's own unset stages. Derived in `LeadForm` from
+   * `draftPayload.stageStatuses` — the
    * same single count feeds the submit coercion, so the warning here and the
    * coercion can never disagree.
    */
@@ -57,8 +57,7 @@ interface LeadFormDialogsProps {
 
 /**
  * The lead form's dialog cluster: submit confirmation, the quick-add item
- * dialog host, request-reopen, and revoke confirmation. Pure relocation from
- * `LeadForm` — markup and mount/`open` semantics unchanged.
+ * dialog host, request-reopen, and revoke confirmation.
  */
 export function LeadFormDialogs({
   viewModel,
@@ -67,8 +66,8 @@ export function LeadFormDialogs({
   unsetOwnStageCount,
   draftSection,
 }: LeadFormDialogsProps) {
-  // 35-04: per-project stages-the-lead-owns selector for the quick-add item
-  // dialog, scoped per project like the section-hosted dialogs.
+  // Scope the quick-add stage selector to the stages the lead owns for that
+  // project, matching the section-hosted dialogs.
   const stagesForProduct: StagesForProduct = (productId) =>
     ownedStagesForProject(draftSection, productId);
   const {
@@ -100,7 +99,7 @@ export function LeadFormDialogs({
               Your report will be locked and visible to the group head. You will
               not be able to make changes after submission.
             </p>
-            {/* 7c.5: the submit summary counts the lead's OWN records only —
+            {/* The submit summary counts the lead's own records only —
                 it reflects what will actually be submitted, never the foreign
                 read-only records merged in for the Everyone lens. */}
             <div className="mt-3 space-y-1 text-sm">
@@ -131,9 +130,8 @@ export function LeadFormDialogs({
                 </span>
               </div>
             </div>
-            {/* simplify-stage-status-interaction (D4): warn that unset own
-                stages will be promoted to On Track on submit — announced, not
-                silent. Omitted when nothing is unset. */}
+            {/* Warn that unset own stages will be promoted to On Track on submit
+                so the coercion is explicit. Omitted when nothing is unset. */}
             {unsetOwnStageCount > 0 && (
               <p className="mt-3 text-sm text-[var(--color-muted-foreground)]">
                 {unsetOwnStageCount} stage

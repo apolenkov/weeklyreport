@@ -33,7 +33,8 @@ interface UnifiedActivitySectionProps {
    * record-status-derived-from-risk: own risks, forwarded to each ItemCard so an
    * own product item's at-risk/blocked pill derives from its covering risks here
    * too — parity with the classic Current/Next Week view. Activity items in this
-   * view are guarded off derivation inside ItemCard (Q1 isolation).
+   * view are excluded from derivation inside ItemCard because they have no
+   * product-stage parent.
    */
   readonly risks?: readonly RiskEntry[];
   readonly readOnly?: boolean;
@@ -56,7 +57,6 @@ interface UnifiedActivitySectionProps {
   readonly onMarkComplete?: (id: string) => void;
   /** In-place move action for current-week open items. */
   readonly onMoveToNextWeek?: (id: string) => void;
-  /** Route an uncovered item's alarm gesture to blocker (risk) creation. */
 }
 
 interface EditState {

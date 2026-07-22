@@ -3,18 +3,14 @@ import { describe, expect, it } from "vitest";
 
 import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 
-// VA-0a/VA-0b: a11y regression tests for the role="status" root added in the
-// Biome recommended-flip change. See openspec/changes/verify-a11y-recommended-flip.
-
 /**
  * DOM-parity tests for the WeeklyReportSkeleton.
  *
- * The skeleton mirrors {@link WeeklyReportPage}'s 5 top-level sections:
+ * The skeleton mirrors {@link WeeklyReportPage}'s 4 top-level sections:
  *   1. page header (title + Live pill | 2 action buttons)
  *   2. period nav shell
- *   3. AI Insights card
- *   4. Portfolio overview card (sm:grid-cols-2 of 6 product cards)
- *   5. per-product accordions × 6
+ *   3. Portfolio overview card (sm:grid-cols-2 of 6 product cards)
+ *   4. per-product accordions × 6
  *
  * These tests pin the structural contract — adding/removing a section
  * on the real page without updating the skeleton would now break a test.
@@ -62,8 +58,6 @@ describe("WeeklyReportSkeleton", () => {
     expect(accordionList.children).toHaveLength(6);
   });
 
-  // --- VA-0a: role="status" root element (high-priority unit-rtl rows) ---
-
   it("root element has role='status'", () => {
     const { container } = render(<WeeklyReportSkeleton />);
     const root = getRoot(container);
@@ -78,9 +72,7 @@ describe("WeeklyReportSkeleton", () => {
     expect(root).toBeInTheDocument();
   });
 
-  // --- VA-0b: DOM snapshot pins the semantic role accessibility tree ---
-
-  it("snapshot: root element exposes role=status with aria-busy and aria-label", () => {
+  it("root element exposes the pinned accessibility attributes", () => {
     render(<WeeklyReportSkeleton />);
     const root = screen.getByRole("status", {
       name: /loading status report/i,
@@ -92,6 +84,11 @@ describe("WeeklyReportSkeleton", () => {
       ariaBusy: root.getAttribute("aria-busy"),
       ariaLabel: root.getAttribute("aria-label"),
       testId: root.dataset.testid,
-    }).toMatchSnapshot();
+    }).toEqual({
+      role: "status",
+      ariaBusy: "true",
+      ariaLabel: "Loading status report",
+      testId: "weekly-report-skeleton",
+    });
   });
 });
