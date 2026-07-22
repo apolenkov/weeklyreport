@@ -4,7 +4,7 @@
  */
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { AccordionSection } from "./accordion-section";
@@ -62,3 +62,48 @@ describe("AccordionSection — aria-controls", () => {
     );
   });
 });
+
+describe("AccordionSection — group commands", () => {
+  it("expands an individually collapsed section after a full group cycle", () => {
+    const { rerender } = renderSection(true);
+    const toggle = screen.getByRole("button", { name: "Risks" });
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    rerender(section(false));
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    rerender(section(true));
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("honors an individual override until the next group command", () => {
+    const { rerender } = renderSection(false);
+    const toggle = screen.getByRole("button", { name: "Risks" });
+
+    rerender(section(true));
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    rerender(section(false));
+    rerender(section(true));
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+  });
+});
+
+function section(groupExpanded: boolean) {
+  return (
+    <AccordionSection
+      icon={HIDDEN_ICON}
+      title="Risks"
+      groupExpanded={groupExpanded}
+    >
+      <p>Panel body</p>
+    </AccordionSection>
+  );
+}
+
+function renderSection(groupExpanded: boolean) {
+  return render(section(groupExpanded));
+}
