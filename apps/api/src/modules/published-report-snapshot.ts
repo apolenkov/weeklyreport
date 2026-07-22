@@ -40,12 +40,9 @@ export function buildAssembledReportFromPrismaRow(
   const sections = row.sections.map((section) =>
     mapPrismaToReportSection(section),
   );
-  // fix-published-empty-stage-risk-floor (D3 / blind-spot #7): compute the
-  // top-line portfolio totals from the floored `trafficLight` of the mapped
-  // sections, NOT from raw `projectStatuses`. The mapper already floors each
-  // product card by the author's own covering risks; counting the same source
-  // keeps the per-product cards and the top-line totals in agreement inside the
-  // same snapshot.
+  // The mapper floors each product's traffic light by the author's covering
+  // risks. Deriving totals from those mapped sections keeps product cards and
+  // top-line totals consistent within the snapshot.
   const portfolioOverview = computePortfolioOverviewFromReadSections(sections);
 
   return assembledReportSchema.parse({
@@ -93,16 +90,7 @@ export function filterSnapshotSections(
   });
 }
 
-/**
- * fix-published-empty-stage-risk-floor: the read-model snapshot readers receive
- * `ReportSectionReadModel`s directly (the persisted read model, or a
- * schema-built fixture) and must NOT trust the stored `project.trafficLight` —
- * it can be a stale green that predates the author's own covering risk. Fold
- * the section author's own risks (scoped to the product) over the owned stages
- * the same way the mapper does, so the snapshot readers agree with the PDF and
- * slide surfaces. Idempotent: re-flooring an already-floored trafficLight is a
- * no-op.
- */
+/** Re-flooring keeps stale stored traffic lights aligned with product risks. */
 export function effectiveProjectStatus(
   section: ReportSectionReadModel,
   project: ReportSectionReadModel["projects"][number],
