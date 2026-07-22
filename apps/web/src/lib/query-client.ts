@@ -21,8 +21,7 @@ const DEFAULT_QUERY_RETRY_COUNT = 3;
 /**
  * Retry predicate for the query client. A deterministic client error (4xx /
  * Zod `BAD_REQUEST` / `NOT_FOUND`) cannot succeed on retry, so it fails once;
- * transient errors keep the TanStack default count (driver finding 1:
- * a malformed `reportId` was retried 3× — observed 207/400/400/400).
+ * transient errors keep the TanStack default count.
  */
 export function shouldRetryQuery(
   failureCount: number,
@@ -40,8 +39,7 @@ export function makeQueryClient(): QueryClient {
       queries: {
         staleTime: STALE_TIME_MS,
         refetchOnWindowFocus: true,
-        // Driver finding 1: skip retrying deterministic 4xx (a malformed
-        // reportId fails once, not 1 + 3 retries). See shouldRetryQuery.
+        // Deterministic client errors cannot succeed on retry.
         retry: shouldRetryQuery,
       },
       dehydrate: {
