@@ -1,5 +1,5 @@
 /**
- * E2E-04: Lead journey integration tests.
+ * Lead journey integration tests.
  *
  * Drives login -> /lead/report -> fill -> autosave -> submit -> locked,
  * with DB-level assertions via the shared Prisma helper.
@@ -79,7 +79,6 @@ test.describe("Lead journey (integration)", () => {
   });
 
   test("lead submit locks the form — section.status becomes submitted in DB", async ({
-    leadPage: _leadPage,
     browser,
   }) => {
     // Use Olga (draft, has 2 items already — minimum viable submit candidate).
@@ -194,16 +193,13 @@ test.describe("Lead journey (integration)", () => {
     await context.close();
   });
 
-  test("lead sees only their own data — direct tRPC call returns only their section", async ({
+  test("lead page renders only their own seeded section data", async ({
     leadPage,
   }) => {
     await leadPage.goto("/lead/report");
 
-    // The leadPage fixture is logged in as lead 1.
-    // A direct call to a "get my section" procedure should return ONLY
-    // lead 1's section. Without knowing the exact procedure name, rely on
-    // a DB-level assertion from the seed (deterministic): lead 1 has exactly
-    // one active section.
+    // The seed precondition gives lead 1 exactly one active section; the UI
+    // assertions below verify that other leads' data is not rendered.
     const lead1Sections = await prisma.reportSection.findMany({
       where: {
         reportId: ACTIVE_REPORT_ID,
@@ -212,8 +208,7 @@ test.describe("Lead journey (integration)", () => {
     });
     expect(lead1Sections).toHaveLength(1);
 
-    // UI-side: page should NOT render other leads' display names anywhere.
-    // (Heads see those names; leads should not.)
+    // Heads see these names, but a lead's report must not expose them.
     const html = await leadPage.content();
     expect(html).not.toContain("Мария К.");
     expect(html).not.toContain("Игорь В.");

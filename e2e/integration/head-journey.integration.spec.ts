@@ -1,5 +1,5 @@
 /**
- * E2E-05: Head journey integration tests.
+ * Head journey integration tests.
  *
  * Dashboard -> weekly report -> Publish & Lock -> revoke, with DB-level
  * verification of report.status and report.publishedAt.
@@ -17,9 +17,13 @@ test.describe("Head journey (integration)", () => {
   test("head dashboard renders with seeded data (4 submitted / 2 draft)", async ({
     headPage,
   }) => {
-    await headPage.goto("/admin");
-    // Page should reach interactive state without auth redirect.
-    await expect(headPage).toHaveURL(/\/admin/);
+    await headPage.goto("/head/dashboard");
+    await expect(
+      headPage.getByRole("heading", { name: "Dashboard" }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      headPage.getByLabel("Submissions: 4 of 6, 2 pending"),
+    ).toBeVisible();
 
     // DB-level truth: seed creates 6 active-report sections (4 submitted, 2 draft).
     const submitted = await prisma.reportSection.count({
@@ -90,12 +94,14 @@ test.describe("Head journey (integration)", () => {
     const confirm = headPage.getByRole("button", {
       name: /^(revoke|reopen|confirm|yes)/i,
     });
-    if (await confirm.count()) await confirm.last().click();
-
-    await headPage.waitForResponse(
-      (r) => r.url().includes("/trpc/") && r.request().method() === "POST",
+    const reopenResponse = headPage.waitForResponse(
+      (r) =>
+        r.url().includes("/trpc/period.reopen") &&
+        r.request().method() === "POST",
       { timeout: 15_000 },
     );
+    if (await confirm.count()) await confirm.last().click();
+    await reopenResponse;
 
     const report = await prisma.report.findUnique({
       where: { id: ACTIVE_REPORT_ID },

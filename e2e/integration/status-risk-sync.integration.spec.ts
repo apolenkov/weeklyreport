@@ -1,9 +1,8 @@
 /**
  * Status <-> Risk coordination integration tests.
  *
- * Current product rule (simplify-stage-status-interaction): a stage chip has
- * no status menu and cannot author at-risk/blocked at all — it is a plain
- * toggle between unset and On Track. At-risk/blocked are authored only as
+ * A stage chip has no status menu and cannot author at-risk/blocked at all —
+ * it is a plain toggle between unset and On Track. At-risk/blocked are authored only as
  * Risk rows in the Risks & Blockers section; a covering risk floors the
  * chip's displayed severity at render time without writing anything onto the
  * stage itself. Toggling a chip must never create a phantom Risk row, and
@@ -53,9 +52,8 @@ test.describe("Status<->Risk sync (integration)", () => {
     // Count of Olga's owned stages with an EXPLICIT (non-null) status,
     // regardless of color. This is the migration-agnostic invariant to poll:
     // any autosave collapses a stale unbacked at-risk/blocked reading down to
-    // green (the orphan-severity migration doc'd in
-    // simplify-stage-status-interaction), which would make a `status:
-    // "green"` count drift for reasons unrelated to this test's own click.
+    // green, which would make a `status: "green"` count drift for reasons
+    // unrelated to this test's own click.
     // Collapsing null<->non-null never happens on its own, so this total
     // only moves by the toggle this test performs.
     const explicitStatusBefore = await prisma.stageStatus.count({
@@ -68,19 +66,37 @@ test.describe("Status<->Risk sync (integration)", () => {
       },
     });
 
-    // simplify-stage-status-interaction: the chip has no status menu — it is
-    // a plain On Track<->unset toggle. An editable, UNCOVERED chip's
-    // aria-label ends in "status set"; a chip floored by a covering risk
-    // instead ends in "by risk" and ignores the click, so this selector
-    // reaches only a chip the click can actually change. DOM order is
-    // stable across the toggle (only this chip's own status flips), so
-    // `.first()` keeps referring to the same physical stage before and
-    // after the click.
-    const chip = page
-      .locator('button[aria-label$="status set"], button[aria-label$=": empty"]')
+    // The chip is a plain On Track<->unset toggle. An editable, uncovered chip's
+    // aria-label ends in "status set"; an unset chip ends in ": empty", and
+    // a chip floored by a covering risk instead ends in "by risk" and ignores
+    // the click, so this selector
+    // reaches only a chip the click can actually change. Capture its product
+    // and stage identity, then use those stable values to re-resolve the same
+    // chip after each React render.
+    const initiallySetChip = page
+      .locator('button[aria-label$="status set"]')
       .first();
-    await expect(chip).toBeVisible({ timeout: 15_000 });
-    const initialLabel = await chip.getAttribute("aria-label");
+    await expect(initiallySetChip).toBeVisible({ timeout: 15_000 });
+    const initialLabel = await initiallySetChip.getAttribute("aria-label");
+    if (!initialLabel) throw new Error("Stage chip has no accessible label");
+    const stageName = initialLabel.slice(0, initialLabel.indexOf(":"));
+    const productName = await initiallySetChip.evaluate((button) =>
+      button
+        .closest(".rounded-xl")
+        ?.querySelector("span.font-semibold")
+        ?.textContent?.trim(),
+    );
+    if (!productName) throw new Error("Stage chip has no product container");
+    const productCard = page.locator("div.rounded-xl").filter({
+      has: page.getByText(productName, { exact: true }),
+    });
+    const escapedStageName = stageName.replace(
+      /[.*+?^${}()|[\]\\]/g,
+      String.raw`\$&`,
+    );
+    const chip = productCard.getByRole("button", {
+      name: new RegExp(`^${escapedStageName}:`),
+    });
 
     await chip.click(); // on-track -> unset (empty)
     await expect(chip).toHaveAttribute("aria-label", /: empty$/);
@@ -119,7 +135,7 @@ test.describe("Status<->Risk sync (integration)", () => {
     // Restore: click again (empty -> on-track) so the draft's persisted
     // state is unchanged for any test that runs after this one.
     await chip.click();
-    await expect(chip).toHaveAttribute("aria-label", initialLabel!);
+    await expect(chip).toHaveAttribute("aria-label", initialLabel);
 
     await expect
       .poll(

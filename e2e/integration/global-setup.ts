@@ -24,8 +24,8 @@ export function findRepoRoot(startDir: string): string {
 /**
  * Runs ONCE before any integration test.
  *
- * - `prisma migrate reset --force --skip-seed` drops + recreates schema, no auto-seed
- * - then `tsx prisma/seed.ts` runs the canonical seed against E2E_DATABASE_URL
+ * - `prisma migrate reset --force` drops + recreates schema without auto-seeding
+ * - `prisma db seed` runs the configured canonical seed against E2E_DATABASE_URL
  *
  * MUST run against E2E_DATABASE_URL — never the dev DATABASE_URL. The
  * playwright.integration.config.ts already throws if E2E_DATABASE_URL is unset,
@@ -37,15 +37,9 @@ export default async function globalSetup(): Promise<void> {
 
   const repoRoot = findRepoRoot(__dirname);
 
-  // Prisma 7 + prisma.config.ts: `migrate reset` does NOT auto-invoke the
-  // `migrations.seed` command despite the docs implying otherwise. Empirically
-  // verified at this commit — running `prisma migrate reset --force` against
-  // an empty e2e DB leaves it with 0 rows. We therefore chain an explicit
-  // `prisma db seed` after the reset. Without this, dev-login spawns
-  // ad-hoc users/reports on demand, polluting the DB and causing
-  // `prisma.reportSection.update()` calls in cross-role specs to miss the
-  // seeded composite key. This was the root cause of multiple Phase 27
-  // integration failures attributed (incorrectly) to per-spec bugs.
+  // Prisma 7 does not auto-invoke the configured seed command after a reset.
+  // Seed explicitly so dev-login cannot create ad-hoc records that replace
+  // the deterministic users and reports required by cross-role specs.
   console.log("[e2e] Resetting integration database...");
   execSync("pnpm exec prisma migrate reset --force", {
     cwd: repoRoot,
