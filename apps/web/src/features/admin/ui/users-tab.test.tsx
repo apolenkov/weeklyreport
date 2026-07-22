@@ -1,18 +1,3 @@
-/**
- * verify-a11y VA-0a — UsersTab dialog keyboard / click behavior tests.
- *
- * In-scope rows (unit-rtl high):
- *   - Escape key closes dialog (backdrop biome-ignore noStaticElementInteractions)
- *   - Cancel button closes dialog
- *   - Clicking backdrop closes dialog
- *   - Clicking inside dialog does NOT close it (stopPropagation)
- *
- * tRPC is stubbed via TRPCProxyContext the same way sibling tests do it.
- * The component wires Escape via document.addEventListener in useEffect;
- * backdrop onClick calls setShowDialog(false) directly; inner dialog
- * onClick calls e.stopPropagation().
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   fireEvent,
@@ -121,12 +106,11 @@ function openDialog() {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("UsersTab — dialog keyboard and click behavior (VA-0a)", () => {
+describe("UsersTab — dialog keyboard and click behavior", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // catalog row: "dialog backdrop biome-ignore noStaticElementInteractions — Escape closes dialog"
   it("pressing Escape removes the dialog from the DOM", () => {
     renderTab();
 
@@ -139,7 +123,6 @@ describe("UsersTab — dialog keyboard and click behavior (VA-0a)", () => {
     expect(screen.queryByTestId("crud-sheet")).not.toBeInTheDocument();
   });
 
-  // catalog row: "dialog backdrop biome-ignore noStaticElementInteractions — Cancel button closes dialog"
   it("clicking Cancel removes the dialog from the DOM", () => {
     renderTab();
 
@@ -151,7 +134,6 @@ describe("UsersTab — dialog keyboard and click behavior (VA-0a)", () => {
     expect(screen.queryByTestId("crud-sheet")).not.toBeInTheDocument();
   });
 
-  // catalog row: "dialog inner div biome-ignore useKeyWithClickEvents — clicking backdrop closes dialog"
   it("clicking the backdrop div (data-testid=crud-sheet) removes the dialog from the DOM", () => {
     renderTab();
 
@@ -163,7 +145,6 @@ describe("UsersTab — dialog keyboard and click behavior (VA-0a)", () => {
     expect(screen.queryByTestId("crud-sheet")).not.toBeInTheDocument();
   });
 
-  // catalog row: "dialog inner div biome-ignore useKeyWithClickEvents — clicking inside dialog does NOT close it (stopPropagation)"
   it("clicking inside the dialog panel (role=dialog) does NOT remove the dialog", () => {
     renderTab();
 
@@ -176,10 +157,7 @@ describe("UsersTab — dialog keyboard and click behavior (VA-0a)", () => {
   });
 });
 
-// D4 (design): pin the non-vacuous invalidation fix — after Save success
-// invalidateAdmin must call invalidateQueries with the specific
-// admin.getOrganization queryKey (not the vacuous { tag } filter).
-describe("UsersTab — invalidation contract (D4)", () => {
+describe("UsersTab — invalidation contract", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -213,8 +191,7 @@ describe("UsersTab — invalidation contract (D4)", () => {
   });
 });
 
-// admin-dialog-focus-management (autofocus-admin-dialogs)
-describe("UsersTab — focus management (autofocus-admin-dialogs)", () => {
+describe("UsersTab — focus management", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -256,7 +233,7 @@ describe("UsersTab — focus management (autofocus-admin-dialogs)", () => {
   });
 });
 
-describe("UsersTab — delete modal focus management (dialog-listbox-a11y)", () => {
+describe("UsersTab — delete modal focus management", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -348,7 +325,7 @@ describe("UsersTab — delete modal focus management (dialog-listbox-a11y)", () 
   });
 });
 
-describe("UsersTab — role label rendering (unify-role-label-presentation)", () => {
+describe("UsersTab — role label rendering", () => {
   it("renders the head role's badge with the shared label, not the raw token", () => {
     const headUser: MockUser = { ...USER, id: "u2", role: "head" };
     renderTab([headUser]);

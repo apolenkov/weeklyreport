@@ -64,7 +64,7 @@ describe("admin tab alert labels", () => {
   it("renders DLQ count on the Jobs tab and keeps polling", () => {
     useQueryMock.mockReturnValue({ data: { count: 2 } });
 
-    render(<JobsTabLabel active />);
+    render(<JobsTabLabel />);
 
     const count = screen.getByTestId("jobs-tab-count");
     expect(screen.getByText("jobs")).toBeInTheDocument();
@@ -82,7 +82,7 @@ describe("admin tab alert labels", () => {
   it("caps large tab counts without growing the tab", () => {
     useQueryMock.mockReturnValue({ data: { count: 142 } });
 
-    render(<JobsTabLabel active={false} />);
+    render(<JobsTabLabel />);
 
     const count = screen.getByTestId("jobs-tab-count");
     expect(count).toHaveTextContent("99+");
