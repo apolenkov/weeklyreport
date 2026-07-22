@@ -123,36 +123,49 @@ Note: `archive.service.test.ts` and `lifecycle-write-gate.test.ts` overlap
 
 ## 8. web-lib (M — 8 files, 11 minors)
 
-- [ ] 8.1 `apps/web/src/hooks/use-status-risk.ts` — 1 minor
-- [ ] 8.2 `apps/web/src/lib/query-client.ts` — 2 minors
-- [ ] 8.3 `apps/web/src/lib/role-home.ts` — 1 minor
-- [ ] 8.4 `apps/web/src/lib/role-visibility.ts` — 2 minors
-- [ ] 8.5 `apps/web/src/lib/server/get-print-route-context.test.ts` — 1 minor
-- [ ] 8.6 `apps/web/src/lib/server/get-print-route-context.ts` — 1 minor
-- [ ] 8.7 `apps/web/src/lib/trpc-provider.test.tsx` — 2 minors
-- [ ] 8.8 `apps/web/src/lib/use-dialog-focus.test.tsx` — 1 minor
+- [x] 8.1 `apps/web/src/hooks/use-status-risk.ts` — 1 minor — **stale:**
+      the live file no longer contains the `F10` phase/ticket reference.
+- [x] 8.2 `apps/web/src/lib/query-client.ts` — 2 minors
+- [ ] 8.3 `apps/web/src/lib/role-home.ts` — 1 minor — **blocked by slice
+      boundary:** removing the shallow wrapper requires updating its production
+      callers and tests outside this slice.
+- [ ] 8.4 `apps/web/src/lib/role-visibility.ts` — 2 minors — **blocked by slice
+      boundary:** removing the dead module requires deleting its out-of-slice
+      test, its only caller.
+- [x] 8.5 `apps/web/src/lib/server/get-print-route-context.test.ts` — 1 minor
+- [x] 8.6 `apps/web/src/lib/server/get-print-route-context.ts` — 1 minor
+- [x] 8.7 `apps/web/src/lib/trpc-provider.test.tsx` — 2 minors
+- [x] 8.8 `apps/web/src/lib/use-dialog-focus.test.tsx` — 1 minor
 
 Note: `use-status-risk.ts` is also touched by `fix-web-product-code-defects`
 (dead-field deletion); re-verify the remaining minor still applies.
 
 ## 9. web-app (M — 5 files, 10 minors)
 
-- [ ] 9.1 `apps/web/src/app/(app)/layout.tsx` — 1 minor
-- [ ] 9.2 `apps/web/src/app/(app)/reports/trends/loading-contract.test.ts` — 3 minors
-- [ ] 9.3 `apps/web/src/app/login-page.client.test.tsx` — 3 minors
-- [ ] 9.4 `apps/web/src/app/page.test.tsx` — 2 minors
-- [ ] 9.5 `apps/web/src/app/print/[reportId]/print-portfolio-table.test.tsx` — 1 minor
+- [x] 9.1 `apps/web/src/app/(app)/layout.tsx` — 1 minor — **stale re-grade:**
+      the live comment already assigns the loading skeleton to `NavBar`; the
+      obsolete layout-fallback FOUC claim is no longer present.
+- [x] 9.2 `apps/web/src/app/(app)/reports/trends/loading-contract.test.ts` — 3 minors
+- [x] 9.3 `apps/web/src/app/login-page.client.test.tsx` — 3 minors
+- [x] 9.4 `apps/web/src/app/page.test.tsx` — 2 minors
+- [x] 9.5 `apps/web/src/app/print/[reportId]/print-portfolio-table.test.tsx` — 1 minor
 
 Note: `layout.tsx` is also touched by `fix-web-product-code-defects` (dead
 Suspense boundary removal); re-verify the remaining minor still applies.
 
 ## 10. api-auth-admin (M — 5 files, 9 minors)
 
-- [ ] 10.1 `apps/api/src/modules/admin/action-log.prisma-repository.ts` — 1 minor
-- [ ] 10.2 `apps/api/src/modules/admin/admin-period.queries.ts` — 4 minors
-- [ ] 10.3 `apps/api/src/modules/admin/admin-reminder-policy.queries.ts` — 1 minor
-- [ ] 10.4 `apps/api/src/modules/admin/session-revocation.service.test.ts` — 1 minor
-- [ ] 10.5 `apps/api/src/modules/auth/auth.e2e.spec.ts` — 2 minors
+- [x] 10.1 `apps/api/src/modules/admin/action-log.prisma-repository.ts` — 1 minor
+- [x] 10.2 `apps/api/src/modules/admin/admin-period.queries.ts` — 4 minors —
+      **stale re-grade:** the all-state overlap gate matches the repository's
+      explicit "any existing Report" contract; archived and published rows remain
+      historical reports, while the partial index is only a concurrent-write
+      backstop for open/scheduled rows.
+- [x] 10.3 `apps/api/src/modules/admin/admin-reminder-policy.queries.ts` — 1 minor
+- [x] 10.4 `apps/api/src/modules/admin/session-revocation.service.test.ts` — 1 minor
+- [ ] 10.5 `apps/api/src/modules/auth/auth.e2e.spec.ts` — 2 minors — duplicate
+      round-trip removed; renaming this unit suite requires creating an
+      out-of-slice replacement path, so the filename finding remains open.
 
 ## 11. prisma (S — 3 files, 8 minors)
 

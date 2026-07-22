@@ -77,7 +77,7 @@ export async function saveReminderPolicy(
  * `ON DELETE SET NULL`, so we delete the `ReminderRule` rows explicitly first
  * (their `ReminderExecution` rows cascade with them) rather than orphaning
  * them, then delete the `ReminderPolicy` itself. This is a true delete — the
- * previous archive/soft-delete semantics are gone (D9).
+ * previous archive/soft-delete semantics are gone.
  */
 export async function deleteReminderPolicy(
   prisma: PrismaService,
