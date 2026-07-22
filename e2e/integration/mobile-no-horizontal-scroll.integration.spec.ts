@@ -1,5 +1,5 @@
 /**
- * MOB-01 (Phase 30-04): mobile no-horizontal-scroll contract.
+ * Mobile no-horizontal-scroll contract.
  *
  * Asserts that on mobile viewports (iPhone 14: 390x844, Pixel 7: 412x915)
  * the document does not scroll horizontally. Two assertions per page:
@@ -7,12 +7,9 @@
  *   1. CSS-level: html[overflow-x] must NOT be 'scroll' / 'auto'.
  *   2. Pixel-level: documentElement.scrollWidth <= window.innerWidth.
  *
- * The spec self-skips on the desktop chromium-integration project — it
- * only ever runs on mobile-ios / mobile-android.
- *
- * Per the 30-04 plan: it is acceptable for some pages to fail on the
- * very first run (e.g. head dashboard portfolio table at 375px) — the
- * failure is the SIGNAL 30-05 must fix.
+ * The @MOB-01 tag routes this spec only to mobile-ios / mobile-android;
+ * chromium-integration excludes it via grepInvert. The project assertion
+ * below fails loudly if that routing contract regresses.
  */
 
 import { test, expect } from "@playwright/test";

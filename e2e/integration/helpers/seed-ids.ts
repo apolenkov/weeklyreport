@@ -4,7 +4,7 @@
  * Re-exports from prisma/seed-constants.ts so spec files NEVER hardcode UUIDs
  * or emails. If the seed changes, this file changes — specs stay stable.
  *
- * Why a relative `../../../../../prisma/...` path: the integration suite has
+ * Why a relative `../../../prisma/...` path: the integration suite has
  * its own tsconfig (extends apps/web/e2e/tsconfig.json which uses CommonJS +
  * Node moduleResolution + no path aliases). It cannot import via the workspace
  * package alias the way runtime code does. Direct relative import is the
