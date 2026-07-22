@@ -112,6 +112,14 @@ export interface AdminProjectFormInput {
   archived?: boolean;
 }
 
+export class UnresolvedProjectLeadError extends Error {
+  override readonly name = "UnresolvedProjectLeadError";
+
+  constructor(readonly leadOwnerId: string) {
+    super(`No lead name resolved for owner ${leadOwnerId}`);
+  }
+}
+
 /**
  * Maps the Products tab form state to the `adminProjectSchema` payload.
  * `leadName` is required by the schema; if the form does not carry it, callers
@@ -127,12 +135,17 @@ export function toAdminProjectInput(
   leadId: string;
   leadName: string;
 } {
+  const leadName = form.leadName?.trim();
+  if (!leadName) {
+    throw new UnresolvedProjectLeadError(form.leadOwnerId);
+  }
+
   return {
     id: existingId ?? newId(),
     name: form.name.trim(),
     archived: form.archived ?? false,
     leadId: form.leadOwnerId,
-    leadName: (form.leadName ?? "").trim() || "Unknown Lead",
+    leadName,
   };
 }
 

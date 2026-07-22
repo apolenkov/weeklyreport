@@ -2,8 +2,8 @@
  * SIMPLE seed — minimal demo data for live presentation.
  *
  * Clean slate with just enough rows to show every feature without overwhelming:
- *   - 1 head, 1 viewer, 1 admin, 6 leads (RU names)
- *   - 6 products (one per lead)
+ *   - 1 head, 1 viewer, 1 admin, 10 leads (RU names)
+ *   - 9 products
  *   - 7 SDLC stages
  *   - 8 reports (active, published, archived history, scheduled future)
  *   - Per-lead: project + stage status, items, risk, decisions, priorities
