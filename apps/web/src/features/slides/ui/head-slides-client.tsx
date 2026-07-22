@@ -13,10 +13,10 @@ import {
   type SlideDensity,
   slidesForDensity,
 } from "../model/slide-density-pagination";
-import { ReportSlides } from "./report-slides";
 import { SlideDensityControl } from "./slide-density-control";
 import { SlideEmptyState } from "./slide-empty-state";
 import { SlideSkeleton } from "./slide-skeleton";
+import { StatusSlideDeck } from "./status-slide-deck";
 
 interface HeadSlidesClientProps {
   /** When provided, loads slides for that specific report period instead of
@@ -124,11 +124,11 @@ export function HeadSlidesClient({
   }
 
   return (
-    <ReportSlides
+    <StatusSlideDeck
       slides={slides}
       selectedIndex={selectedIndex}
       onSelect={setSelectedIndex}
-      variant="head"
+      mode="head"
       toolbar={<SlideDensityControl value={density} onChange={setDensity} />}
     />
   );

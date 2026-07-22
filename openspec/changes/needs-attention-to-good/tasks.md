@@ -224,15 +224,17 @@ Note: `section-verdict-control.test.tsx` overlaps
 
 ## 22. api-modules — web-slides (S — 2 files, 2 minors)
 
-- [ ] 22.1 `apps/web/src/features/slides/model/slide-grid-cells.test.ts` — 1 minor
-- [ ] 22.2 `apps/web/src/features/slides/ui/report-slides.tsx` — 1 minor
+- [x] 22.1 `apps/web/src/features/slides/model/slide-grid-cells.test.ts` — 1 minor —
+      **stale re-grade:** `harden-test-suite-quality` already removed the dead
+      variable and its type-only import.
+- [x] 22.2 `apps/web/src/features/slides/ui/report-slides.tsx` — 1 minor
 
 Note: `slide-grid-cells.test.ts` overlaps `harden-test-suite-quality`;
 re-verify post-harden.
 
 ## 23. web-viewer-telemetry (S — 1 file, 2 minors)
 
-- [ ] 23.1 `apps/web/src/features/viewer/ui/viewer-report-shell.test.tsx` — 2 minors
+- [x] 23.1 `apps/web/src/features/viewer/ui/viewer-report-shell.test.tsx` — 2 minors
 
 ## 24. Gates (per slice, then once at the end)
 

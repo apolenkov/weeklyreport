@@ -142,7 +142,9 @@ afterEach(() => {
   mockPathname.mockReturnValue("/reports/test-report-001");
   mockSearchParams.mockReturnValue(new URLSearchParams());
   mockReplace.mockReset();
-  vi.mocked(useQuery).mockClear();
+  // mockReset (not mockClear) so a test-installed persistent implementation
+  // cannot leak into the next test — reset restores the vi.fn factory impl.
+  vi.mocked(useQuery).mockReset();
 });
 
 describe("ViewerReportShell — read-only toolbar parity", () => {
@@ -156,11 +158,11 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     expect(
       within(contextControls).getByRole("link", { name: /slides/i }),
     ).toBeInTheDocument();
-    // viewer-live-status (task 5.1): Agent-review stays (deferred-feature-pattern).
+    // Keep deferred functionality visible without making it interactive.
     expect(
       within(contextControls).getByTestId("agent-review-coming-soon"),
     ).toBeInTheDocument();
-    // viewer-live-status (task 5.1): Back-to-Archive is removed.
+    // The viewer navigates periods in place and must not expose an archive exit.
     expect(
       within(contextControls).queryByRole("link", { name: /back to archive/i }),
     ).not.toBeInTheDocument();
@@ -190,8 +192,7 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     ).not.toBeInTheDocument();
   });
 
-  // viewer-report-surface-parity (review P3): the read-only viewer surface
-  // labels the non-slides segment "Report", never the misleading "Edit"/pencil.
+  // A read-only surface must not label its non-slides view as an edit action.
   it("labels the non-slides view-mode segment 'Report', not 'Edit'", () => {
     render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
     expect(screen.getByRole("link", { name: "Report" })).toBeInTheDocument();
@@ -219,9 +220,8 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     expect(slidesHref).toContain("scope=lead");
   });
 
-  // viewer-live-status (task 4.3): the one-shot source/recovery markers from the
-  // Status entry redirect must NOT leak into in-shell navigation links, else a
-  // later History selection would be misread as a Status navigation.
+  // One-shot recovery markers must not leak into in-shell navigation links,
+  // or a later History selection would be misread as a Status navigation.
   it("strips the source/recovery markers from navigation links", () => {
     mockSearchParams.mockReturnValue(
       new URLSearchParams("source=status&recovery=0&scope=lead"),
@@ -239,45 +239,61 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
   it("selects the addressed older period instead of the newest history entry", () => {
     const addressedReportId = "2026-W16";
     mockPathname.mockReturnValue(`/reports/${addressedReportId}`);
-    vi.mocked(useQuery)
-      .mockImplementationOnce(
-        () =>
-          ({
-            data: {
-              entries: [
-                {
-                  reportId: "2026-W17",
-                  periodStart: "2026-04-21T00:00:00.000Z",
-                  periodEnd: "2026-04-27T00:00:00.000Z",
-                  archived: false,
-                },
-                {
-                  reportId: addressedReportId,
-                  periodStart: "2026-04-14T00:00:00.000Z",
-                  periodEnd: "2026-04-20T00:00:00.000Z",
-                  archived: false,
-                },
-              ],
-            },
-            isLoading: false,
-            isError: false,
-          }) as unknown as ReturnType<typeof useQuery>,
-      )
-      .mockImplementationOnce(
-        () =>
-          ({
-            data: {
-              status: "active",
-              reportId: addressedReportId,
-              periodStart: "2026-04-14T00:00:00.000Z",
-              periodEnd: "2026-04-20T00:00:00.000Z",
-              periodStatus: "published",
-            },
-            isLoading: false,
-            isError: false,
-            error: null,
-          }) as unknown as ReturnType<typeof useQuery>,
-      );
+    const resultsByQuery = new Map<unknown, ReturnType<typeof useQuery>>([
+      [
+        "reports.compiledHistory",
+        {
+          data: {
+            entries: [
+              {
+                reportId: "2026-W17",
+                periodStart: "2026-04-21T00:00:00.000Z",
+                periodEnd: "2026-04-27T00:00:00.000Z",
+                archived: false,
+              },
+              {
+                reportId: addressedReportId,
+                periodStart: "2026-04-14T00:00:00.000Z",
+                periodEnd: "2026-04-20T00:00:00.000Z",
+                archived: false,
+              },
+            ],
+          },
+          isLoading: false,
+          isError: false,
+        } as unknown as ReturnType<typeof useQuery>,
+      ],
+      [
+        "weeklyReport.get",
+        {
+          data: {
+            status: "active",
+            reportId: addressedReportId,
+            periodStart: "2026-04-14T00:00:00.000Z",
+            periodEnd: "2026-04-20T00:00:00.000Z",
+            periodStatus: "published",
+          },
+          isLoading: false,
+          isError: false,
+          error: null,
+        } as unknown as ReturnType<typeof useQuery>,
+      ],
+      [
+        "pdfExport.status",
+        {
+          data: undefined,
+          isLoading: false,
+          isError: false,
+          error: null,
+        } as unknown as ReturnType<typeof useQuery>,
+      ],
+    ]);
+    vi.mocked(useQuery).mockImplementation((options) => {
+      const queryId = options.queryKey[0];
+      const result = resultsByQuery.get(queryId);
+      if (!result) throw new Error(`Unexpected query: ${String(queryId)}`);
+      return result;
+    });
 
     render(<ViewerReportShell reportId={addressedReportId} mode="form" />);
 
@@ -300,9 +316,9 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
   });
 });
 
-// viewer-live-status (task 4.3): one-shot race recovery on the report route.
-// A published-or-current gate rejection surfaces as an invalid-link NOT_FOUND.
-describe("ViewerReportShell — one-shot race recovery (task 4.3)", () => {
+// Recovery is limited to the report route because a rejected stale link
+// surfaces there as an invalid-link NOT_FOUND.
+describe("ViewerReportShell — one-shot race recovery", () => {
   function makeGetErrorImpl() {
     return (opts: { queryKey?: readonly unknown[] }) => {
       if (opts.queryKey?.[0] === "weeklyReport.get") {
