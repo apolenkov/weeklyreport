@@ -5,9 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ArchiveToggle } from "./archive-toggle";
 
-// head-toolbar-parity D4 + polish-lead-toolbar 1.1 contract: 32px icon button
-// via ToolbarIconButton, switch semantics preserved, and NO numeric count badge
-// (the count read as a "press me" CTA, so the toggle is a quiet inert indicator).
+// The toggle stays a quiet icon-only indicator: switch semantics are preserved,
+// while a numeric badge would incorrectly suggest a separate action.
 describe("ArchiveToggle", () => {
   it("renders as a quiet indicator with no numeric count text", () => {
     render(<ArchiveToggle checked={false} onChange={vi.fn()} />);

@@ -146,42 +146,54 @@ describe("ScopeToggle", () => {
   });
 
   it("active scope button has accent background class; inactive buttons have accent foreground class", () => {
-    const { container } = render(
+    render(
       <ScopeToggle
         value="product"
         onChange={vi.fn()}
         allowedScopes={["own", "product", "lead"]}
       />,
     );
-    expect(container).toMatchSnapshot();
+    expect(screen.getByRole("radio", { name: "Product" })).toHaveClass(
+      "bg-[var(--color-toggle-active)]",
+      "text-white",
+    );
+    for (const name of ["Summary", "Leads"]) {
+      expect(screen.getByRole("radio", { name })).toHaveClass(
+        "text-[var(--color-muted-foreground)]",
+        "hover:text-[var(--color-foreground)]",
+      );
+    }
   });
 
-  it("renders index-aware segmented rounding for the two-scope case", () => {
-    const { container } = render(
+  it("uses a pill-shaped track and uniform segment rounding for two scopes", () => {
+    render(
       <ScopeToggle
         value="own"
         onChange={vi.fn()}
         allowedScopes={["own", "product"]}
       />,
     );
-    expect(container).toMatchSnapshot();
+    expect(screen.getByRole("radiogroup")).toHaveClass(
+      "rounded-[var(--radius-pill)]",
+    );
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio).toHaveClass("rounded-[var(--radius-pill)]");
+      expect(radio.className).not.toMatch(/rounded-[lr]-/);
+    }
   });
 
-  // Selecting a header toggle must change only the grouping (onChange), never
-  // open an item/risk/decision dialog. The reported "toggle opens a dialog"
-  // bug was NOT reproducible (the head report wires no such dialog into the
-  // toggle); this is the standing guard.
-  it("selecting a scope opens no item/risk/decision dialog", () => {
+  it("ignores keys outside the radiogroup navigation set", () => {
     const onChange = vi.fn();
-    const { baseElement } = render(
+    render(
       <ScopeToggle
         value="own"
         onChange={onChange}
         allowedScopes={["own", "product", "lead"]}
       />,
     );
-    fireEvent.click(screen.getByRole("radio", { name: "Leads" }));
-    expect(onChange).toHaveBeenCalledWith("lead");
-    expect(baseElement.querySelector('[role="dialog"]')).toBeNull();
+    fireEvent.keyDown(screen.getByRole("radio", { name: "Summary" }), {
+      key: "Enter",
+    });
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

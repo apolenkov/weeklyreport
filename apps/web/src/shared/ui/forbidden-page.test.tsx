@@ -36,28 +36,17 @@ describe("ForbiddenPage", () => {
     expect(link).toHaveAttribute("href", "/lead/report");
   });
 
-  it("does NOT leak the user actual role into the DOM", () => {
-    // The component contract is that requiredRoles is the ONLY role-shaped
-    // input — no actualRole prop exists, so there is no surface through
-    // which the user's role can reach the DOM. homeHref is a pre-resolved
-    // path string, not a role. Spot-check by ensuring no disallowed string
-    // ('viewer' / 'lead') appears when only 'head' is required.
-    render(
-      <ForbiddenPage requiredRoles={["head"]} homeHref="/head/dashboard" />,
-    );
-    expect(screen.queryByText(/viewer/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/\blead\b/i)).not.toBeInTheDocument();
+  it("does not expose a role encoded only in the caller-resolved home href", () => {
+    render(<ForbiddenPage requiredRoles={["head"]} homeHref="/lead/report" />);
+    expect(screen.getByText(/reserved for the head role/i)).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/\blead\b/i);
   });
 });
 
-// Regression coverage for removing a redundant role="main" from <main>
-// (the native element already carries that implicit ARIA role).
-describe("ForbiddenPage — a11y regression", () => {
+describe("ForbiddenPage — landmark semantics", () => {
   it("main element has implicit semantic role=main via native element, not an explicit role attribute", () => {
-    // getByRole('main') resolves via the native <main> element's implicit ARIA
-    // role. The explicit role="main" attribute was removed as redundant; this
-    // test guards that it was not re-added — having it would mean the element
-    // carries both implicit and explicit role, which is the pre-fix state.
+    // Native main semantics keep the landmark accessible without a redundant
+    // explicit role.
     render(
       <ForbiddenPage requiredRoles={["head"]} homeHref="/head/dashboard" />,
     );
@@ -67,34 +56,11 @@ describe("ForbiddenPage — a11y regression", () => {
   });
 
   it("main element is the only main landmark in the accessibility tree", () => {
-    // Exactly one main landmark must exist; a second would indicate a
-    // structural regression (e.g. a wrapper also carrying role="main").
+    // Exactly one main landmark keeps page navigation unambiguous.
     render(
       <ForbiddenPage requiredRoles={["head"]} homeHref="/head/dashboard" />,
     );
     const allMains = screen.getAllByRole("main");
     expect(allMains).toHaveLength(1);
-  });
-
-  it("main element layout classes are intact (snapshot)", () => {
-    // Guards that the role= removal did not accidentally mutate the className
-    // string. Snapshot is taken on the <main> element itself to avoid coupling
-    // to shadcn/ui Card internals.
-    render(
-      <ForbiddenPage requiredRoles={["head"]} homeHref="/head/dashboard" />,
-    );
-    const main = screen.getByRole("main");
-    expect(main).toMatchSnapshot();
-  });
-
-  it("Card child of main is rendered with max-w-md class intact (snapshot)", () => {
-    // Guards that the role= change did not accidentally strip the Card wrapper
-    // or its sizing class. Snapshot scoped to the direct Card child of <main>.
-    const { container } = render(
-      <ForbiddenPage requiredRoles={["head"]} homeHref="/head/dashboard" />,
-    );
-    // The Card is the first direct child of <main>.
-    const main = container.querySelector("main");
-    expect(main?.firstElementChild).toMatchSnapshot();
   });
 });

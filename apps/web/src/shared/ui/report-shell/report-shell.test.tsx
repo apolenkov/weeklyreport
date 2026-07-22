@@ -66,18 +66,18 @@ describe("ArchiveToggle", () => {
 describe("MetaRow", () => {
   it("renders author name", () => {
     render(<MetaRow authorName="Alice" stageTags={[]} />);
-    expect(screen.getByText("Alice")).toBeDefined();
+    expect(screen.getByText("Alice")).toBeInTheDocument();
   });
 
   it("renders All stages chip when stageTags is empty", () => {
     render(<MetaRow authorName="Alice" stageTags={[]} />);
-    expect(screen.getByText("All stages")).toBeDefined();
+    expect(screen.getByText("All stages")).toBeInTheDocument();
   });
 
   it("renders individual stage chips", () => {
     render(<MetaRow authorName="Alice" stageTags={["Planning", "Dev"]} />);
-    expect(screen.getByText("Planning")).toBeDefined();
-    expect(screen.getByText("Dev")).toBeDefined();
+    expect(screen.getByText("Planning")).toBeInTheDocument();
+    expect(screen.getByText("Dev")).toBeInTheDocument();
   });
 
   it("renders empty string when authorName is null", () => {
@@ -103,8 +103,8 @@ describe("AccordionSection", () => {
         <p>Content here</p>
       </AccordionSection>,
     );
-    expect(screen.getByText("Risks")).toBeDefined();
-    expect(screen.getByText("Content here")).toBeDefined();
+    expect(screen.getByText("Risks")).toBeInTheDocument();
+    expect(screen.getByText("Content here")).toBeInTheDocument();
   });
 
   it("is expanded by default", () => {
@@ -136,7 +136,7 @@ describe("AccordionSection", () => {
         Content
       </AccordionSection>,
     );
-    expect(screen.getByText("3")).toBeDefined();
+    expect(screen.getByText("3")).toBeInTheDocument();
   });
 
   it("mirrors groupExpanded into local state when it changes", () => {
@@ -156,7 +156,6 @@ describe("AccordionSection", () => {
     expect(btn).toHaveAttribute("aria-expanded", "false");
   });
 
-  // VA-0a: ChevronDown SVG aria-hidden (no actions path)
   it("ChevronDown SVG inside primary toggle button has aria-hidden='true' (no actions)", () => {
     const { container } = render(
       <AccordionSection icon={null} title="Risks">
@@ -168,7 +167,6 @@ describe("AccordionSection", () => {
     expect(svg).toHaveAttribute("aria-hidden", "true");
   });
 
-  // VA-0a: Primary toggle button has role=button and aria-expanded
   it("primary toggle button has role=button and aria-expanded reflecting state", () => {
     render(
       <AccordionSection icon={null} title="Items" defaultOpen={false}>
@@ -181,7 +179,6 @@ describe("AccordionSection", () => {
     expect(btn).toHaveAttribute("aria-expanded", "true");
   });
 
-  // VA-0a: Secondary chevron button (actions path) has aria-expanded, aria-label, and ChevronDown aria-hidden
   it("secondary chevron button has aria-expanded, aria-label, and ChevronDown with aria-hidden when actions provided", () => {
     render(
       <AccordionSection
@@ -203,7 +200,6 @@ describe("AccordionSection", () => {
     expect(svg).toHaveAttribute("aria-hidden", "true");
   });
 
-  // VA-0a: Screen reader semantics — main toggle aria-expanded + SVG hidden
   it("main toggle button exposes aria-expanded for screen readers and SVG is hidden from a11y tree", () => {
     render(
       <AccordionSection icon={null} title="Decisions" defaultOpen={true}>
@@ -217,7 +213,6 @@ describe("AccordionSection", () => {
     expect(svg).toHaveAttribute("aria-hidden", "true");
   });
 
-  // VA-0a: Screen reader semantics — secondary chevron aria-label reflects Expand/Collapse
   it("secondary chevron button aria-label reflects Expand/Collapse + title for screen readers", () => {
     const { rerender } = render(
       <AccordionSection
@@ -252,7 +247,6 @@ describe("AccordionSection", () => {
     ).toHaveAttribute("aria-label", "Expand Blockers");
   });
 
-  // VA-0b: Snapshot — no actions
   it("snapshot: AccordionSection with no actions", () => {
     const { container } = render(
       <AccordionSection icon={null} title="Risks" defaultOpen={true}>
@@ -262,7 +256,6 @@ describe("AccordionSection", () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  // VA-0b: Snapshot — with actions
   it("snapshot: AccordionSection with actions (two ChevronDowns, both aria-hidden)", () => {
     const { container } = render(
       <AccordionSection
@@ -278,16 +271,14 @@ describe("AccordionSection", () => {
   });
 });
 
-// MetaRow — VA-0a + VA-0b a11y additions ------------------------------------
+// MetaRow accessibility --------------------------------------------------------
 
 describe("MetaRow a11y", () => {
-  // VA-0a: root container has role="group"
   it("root container div has role='group'", () => {
     render(<MetaRow authorName="Alice" stageTags={[]} />);
     expect(screen.getByRole("group")).toBeInTheDocument();
   });
 
-  // VA-0a: root container aria-label matches ariaLabel prop
   it("root container has aria-label matching ariaLabel prop", () => {
     render(
       <MetaRow authorName="Alice" stageTags={[]} ariaLabel="Section meta" />,
@@ -296,7 +287,6 @@ describe("MetaRow a11y", () => {
     expect(group).toHaveAttribute("aria-label", "Section meta");
   });
 
-  // VA-0a: group accessible via getByRole with name
   it("div is accessible via getByRole('group', { name }) when ariaLabel given", () => {
     render(
       <MetaRow
@@ -310,7 +300,6 @@ describe("MetaRow a11y", () => {
     ).toBeInTheDocument();
   });
 
-  // VA-0a: render with ariaLabel prop — group has aria-label
   it("group role container receives aria-label when ariaLabel prop is provided", () => {
     const { container } = render(
       <MetaRow authorName="X" stageTags={[]} ariaLabel="My label" />,
@@ -319,13 +308,11 @@ describe("MetaRow a11y", () => {
     expect(container.firstChild).toHaveAttribute("aria-label", "My label");
   });
 
-  // VA-0a: foreign indicator span has role="img"
   it("foreign indicator span has role='img' when foreign=true and authorName truthy", () => {
     render(<MetaRow authorName="Alice" stageTags={[]} foreign={true} />);
     expect(screen.getByRole("img")).toBeInTheDocument();
   });
 
-  // VA-0a: foreign indicator span has correct aria-label
   it("foreign indicator span has aria-label='Read-only — authored by another lead'", () => {
     render(<MetaRow authorName="Alice" stageTags={[]} foreign={true} />);
     expect(screen.getByRole("img")).toHaveAttribute(
@@ -334,7 +321,6 @@ describe("MetaRow a11y", () => {
     );
   });
 
-  // VA-0a: foreign indicator only when foreign=true AND authorName truthy
   it("foreign indicator absent when foreign=false", () => {
     render(<MetaRow authorName="Alice" stageTags={[]} foreign={false} />);
     expect(screen.queryByRole("img")).toBeNull();
@@ -350,14 +336,12 @@ describe("MetaRow a11y", () => {
     expect(screen.queryByRole("img")).toBeNull();
   });
 
-  // VA-0a: render without ariaLabel — group has no aria-label
   it("group role container has no aria-label when ariaLabel prop is undefined", () => {
     const { container } = render(<MetaRow authorName="Y" stageTags={[]} />);
     expect(container.firstChild).toHaveAttribute("role", "group");
     expect(container.firstChild).not.toHaveAttribute("aria-label");
   });
 
-  // VA-0b: Snapshot — root structure with role group
   it("snapshot: root structure with role='group'", () => {
     const { container } = render(
       <MetaRow
@@ -369,7 +353,6 @@ describe("MetaRow a11y", () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  // VA-0b: Snapshot — foreign indicator with role img
   it("snapshot: foreign indicator with role='img' when foreign=true", () => {
     const { container } = render(
       <MetaRow authorName="Alice" stageTags={[]} foreign={true} />,

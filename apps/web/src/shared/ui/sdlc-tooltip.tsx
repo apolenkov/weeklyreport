@@ -9,7 +9,6 @@
  * Usage:
  *   <SdlcTooltipProvider>
  *     <App />
- *     <SdlcTooltip />
  *   </SdlcTooltipProvider>
  *
  * Consumers (e.g. StageChip) call `useSdlcTooltip()` and invoke

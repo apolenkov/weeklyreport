@@ -1,9 +1,3 @@
-/**
- * Characterization pin (sweep-doc-truth-and-canon-dupes task 1.3): asserts
- * the shared `PlusIcon`'s markup matches what `policy-form.tsx`'s local copy
- * currently renders (viewBox, stroke, strokeWidth, `<line>` coordinates),
- * taken before that local copy and its re-export are removed.
- */
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -17,6 +11,8 @@ describe("PlusIcon", () => {
     expect(svg).toHaveAttribute("viewBox", "0 0 24 24");
     expect(svg).toHaveAttribute("stroke", "currentColor");
     expect(svg).toHaveAttribute("stroke-width", "2");
+    expect(svg).toHaveAttribute("stroke-linecap", "round");
+    expect(svg).toHaveAttribute("stroke-linejoin", "round");
     expect(svg).toHaveAttribute("fill", "none");
     expect(svg).toHaveAttribute("aria-hidden", "true");
 
