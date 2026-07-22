@@ -74,8 +74,8 @@ function statusLabelMaps(input: LeadSubmitReadinessInput) {
 
 function projectPromotions(
   input: LeadSubmitReadinessInput,
+  labels: ReadonlyMap<string, string>,
 ): LeadSubmitStatusIdentity[] {
-  const labels = statusLabelMaps(input).products;
   return (input.draftPayload?.projectStatuses ?? []).flatMap((status) =>
     status.status == null
       ? [
@@ -91,8 +91,8 @@ function projectPromotions(
 
 function activityPromotions(
   input: LeadSubmitReadinessInput,
+  labels: ReadonlyMap<string, string>,
 ): LeadSubmitStatusIdentity[] {
-  const labels = statusLabelMaps(input).activities;
   return (input.draftPayload?.activityStatuses ?? []).flatMap((status) =>
     status.status == null
       ? [
@@ -108,8 +108,8 @@ function activityPromotions(
 
 function stagePromotions(
   input: LeadSubmitReadinessInput,
+  labels: Pick<ReturnType<typeof statusLabelMaps>, "products" | "stages">,
 ): LeadSubmitStatusIdentity[] {
-  const labels = statusLabelMaps(input);
   return (input.draftPayload?.stageStatuses ?? []).flatMap((status) => {
     if (status.status === "green") return [];
     const product = labels.products.get(status.projectId) ?? "Unnamed product";
@@ -147,10 +147,11 @@ function unsetStatuses(
 export function deriveLeadSubmitReadiness(
   input: LeadSubmitReadinessInput,
 ): LeadSubmitReadiness {
+  const labels = statusLabelMaps(input);
   const willAutoPromote = [
-    ...projectPromotions(input),
-    ...activityPromotions(input),
-    ...stagePromotions(input),
+    ...projectPromotions(input, labels.products),
+    ...activityPromotions(input, labels.activities),
+    ...stagePromotions(input, labels),
   ];
   const blockingIssues = [
     ...(input.draftPayload

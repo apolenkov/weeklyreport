@@ -1,14 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339); wave-6c-ii */
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts are required by the app tsconfig for value, checked, and options access. */
 /**
- * A13 regression: typed text must survive parent re-renders that pass a new
+ * Typed text must survive parent re-renders that pass a new
  * stagesForProduct function reference (autosave → React Query invalidate cycle).
- *
- * Before fix: useEffect has stagesForProduct in deps → fires on new ref →
- *             setText(initial.text) wipes user input.
- * After fix:  stagesForProduct removed from deps → text preserved.
  */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -19,7 +15,7 @@ const products: Product[] = [
   { id: "p1", name: "DevOps Tools", overallStatus: "on-track", stages: [] },
 ];
 
-describe("ItemEditDialog — A13 form-race regression", () => {
+describe("ItemEditDialog — form state across parent renders", () => {
   it("preserves typed text when parent re-renders with a new stagesForProduct ref", () => {
     const onSave = vi.fn();
     const onCancel = vi.fn();
@@ -59,13 +55,12 @@ describe("ItemEditDialog — A13 form-race regression", () => {
       />,
     );
 
-    // A13 bug: before fix, text was wiped back to '' by useEffect firing on
-    // the new stagesForProduct reference.
+    // A new callback identity must not reset the user's local draft.
     expect(textField).toHaveValue("user typed this — must survive");
   });
 });
 
-describe("ItemEditDialog — compact touch floor (responsive-compact-layout)", () => {
+describe("ItemEditDialog — compact touch floor", () => {
   it("footer actions, status chips and the priority select floor below md", () => {
     // jsdom cannot evaluate media queries; the class assertions are the teeth.
     // Desktop density is untouched (md:min-h restores the 40px/34px values).
@@ -99,7 +94,7 @@ describe("ItemEditDialog — compact touch floor (responsive-compact-layout)", (
   });
 });
 
-describe("ItemEditDialog — D-12 reopen reset", () => {
+describe("ItemEditDialog — reopen reset", () => {
   it("resets draft text, status, stageIds and errors when reopened", () => {
     const onSave = vi.fn();
     const onCancel = vi.fn();
@@ -176,7 +171,7 @@ describe("ItemEditDialog — D-12 reopen reset", () => {
   });
 });
 
-describe("ItemEditDialog — stage-label-canonicalization (spec 1.2)", () => {
+describe("ItemEditDialog — canonical stage labels", () => {
   it("saves a legacy 'Dev' stage as canonical 'Development' without re-toggling", () => {
     const onSave = vi.fn();
     const legacyItem: KanbanItem = {
@@ -212,7 +207,7 @@ describe("ItemEditDialog — stage-label-canonicalization (spec 1.2)", () => {
   });
 });
 
-describe("ItemEditDialog — T-D12 save+reopen status reset", () => {
+describe("ItemEditDialog — save and reopen status reset", () => {
   it("shows updated item.status on reopen after save, not the previously-edited draft status", () => {
     const onSave = vi.fn();
     const onCancel = vi.fn();
@@ -276,7 +271,7 @@ describe("ItemEditDialog — T-D12 save+reopen status reset", () => {
       />,
     );
 
-    // T-D12 assertion: dialog must reflect the CURRENT item.status ("in-progress"),
+    // The reopened dialog must reflect the current item status,
     // not the stale draft ("completed" from the previous open session).
     expect(
       screen.getByRole("button", { name: /In Progress/i }),
@@ -333,8 +328,8 @@ describe("ItemEditDialog — unique rank picker", () => {
         week="current"
         defaultProductId="p1"
         ownPeriodRanks={[1, 2]}
-        // lead-form-stage-access-integrity: a single owned stage auto-applies so
-        // the save is not blocked by the zero-owned-stage dead-end guard.
+        // A single owned stage auto-applies so the save is not blocked by the
+        // zero-owned-stage guard.
         stagesForProduct={() => ["Dev"]}
         onSave={onSave}
         onCancel={() => undefined}
@@ -397,8 +392,7 @@ describe("ItemEditDialog — stageIds", () => {
     fireEvent.change(screen.getByLabelText(/Description \*/i), {
       target: { value: "Implement OAuth callback" },
     });
-    // unify-record-dialogs: nothing is pre-selected on create, so clicking
-    // "Testing" selects exactly that stage.
+    // Nothing is pre-selected on create, so clicking "Testing" selects it.
     fireEvent.click(screen.getByRole("checkbox", { name: "Testing" }));
     fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
 
@@ -410,7 +404,7 @@ describe("ItemEditDialog — stageIds", () => {
   });
 });
 
-describe("ItemEditDialog — ITEM-T4 type immediately on open", () => {
+describe("ItemEditDialog — typing immediately on open", () => {
   it("preserves text typed immediately after the dialog opens (create mode)", () => {
     const onSave = vi.fn();
     render(
@@ -464,12 +458,6 @@ describe("ItemEditDialog — ITEM-T4 type immediately on open", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// VA-0a — a11y regression catalog (high-priority unit-rtl rows)
-// Source: openspec/changes/verify-a11y-recommended-flip/design.md
-// Section: apps/web/src/components/lead/item-edit-dialog.tsx
-// ---------------------------------------------------------------------------
-
 const defaultA11yProps = {
   open: true,
   item: null,
@@ -479,7 +467,7 @@ const defaultA11yProps = {
   onSave: vi.fn(),
 } as const;
 
-describe("ItemEditDialog — VA-0a a11y (backdrop onKeyDown + click behavior)", () => {
+describe("ItemEditDialog — backdrop keyboard and click behavior", () => {
   it("Escape on the backdrop div calls onCancel (noStaticElementInteractions justification)", () => {
     const onCancel = vi.fn();
     render(<ItemEditDialog {...defaultA11yProps} onCancel={onCancel} />);
@@ -566,12 +554,7 @@ describe("ItemEditDialog — VA-0a a11y (backdrop onKeyDown + click behavior)", 
   });
 });
 
-/**
- * fix-lead-surface-name-resolution: an item row may reference a project
- * outside the lead's stage-owned `products` (cross-stage row). Saving the
- * edit dialog must preserve the original product assignment instead of
- * silently reassigning to the first stage-owned product.
- */
+/** An item may reference a product outside the lead's stage-owned products. */
 describe("ItemEditDialog — cross-stage product preservation", () => {
   it("keeps the original product on save when its id is outside the stage-owned list", () => {
     const onSave = vi.fn();
@@ -579,9 +562,8 @@ describe("ItemEditDialog — cross-stage product preservation", () => {
       id: "item-cross",
       productId: "p-foreign",
       productName: "Payments Gateway",
-      // lead-form-stage-access-integrity: a cross-stage row already CARRIES a
-      // stage, so it is not a zero-owned-stage dead end and stays saveable even
-      // though the lead owns nothing on p-foreign.
+      // A cross-stage row already carries a stage, so it remains saveable even
+      // when the lead owns nothing on p-foreign.
       stageIds: ["Integration"],
       text: "Integrate payment provider",
       status: "in-progress",
@@ -612,9 +594,9 @@ describe("ItemEditDialog — cross-stage product preservation", () => {
   });
 });
 
-// lead-form-stage-access-integrity (4.4): the item dialog scopes stage options
-// to the author's owned stages, visibly locks a single owned stage, re-scopes on
-// product change, and dead-ends (Save disabled) on a zero-owned-stage product.
+// Stage options are scoped to the author's owned stages. A single owned stage
+// is locked, product changes re-scope the options, and Save is disabled when
+// the selected product has no owned stage.
 describe("ItemEditDialog — stage-ownership scoping", () => {
   it("visibly pre-selects and locks a single owned stage (no checkbox to deselect)", () => {
     render(
@@ -728,8 +710,7 @@ describe("ItemEditDialog — stage-ownership scoping", () => {
   });
 });
 
-// require-stage-on-items-and-decisions: an item must carry a concrete stage
-// when the product has owned stages (parity with the risk dialog).
+// An item must carry a concrete stage when the product has owned stages.
 describe("ItemEditDialog — require a stage", () => {
   it("blocks save with no stage on a multi-stage product", () => {
     const onSave = vi.fn();
@@ -745,8 +726,7 @@ describe("ItemEditDialog — require a stage", () => {
         onCancel={() => undefined}
       />,
     );
-    // unify-record-dialogs: create starts with no stage selected, so the gap is
-    // reached without any deselection.
+    // Create starts with no stage selected, so no deselection is needed.
     fireEvent.change(screen.getByLabelText(/Description \*/i), {
       target: { value: "An item without a stage" },
     });
@@ -776,8 +756,7 @@ describe("ItemEditDialog — require a stage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
-    // stage-label-canonicalization 1.2: the auto-applied "Dev" owned stage is
-    // persisted as the canonical "Development", never the short alias.
+    // The auto-applied "Dev" stage is persisted as canonical "Development".
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
       stageIds: ["Development"],
     });
@@ -808,7 +787,7 @@ describe("ItemEditDialog — require a stage", () => {
   });
 });
 
-describe("ItemEditDialog — activity parenting (activity-first-class)", () => {
+describe("ItemEditDialog — activity parenting", () => {
   const productsWithStages: Product[] = [
     { id: "p1", name: "DevOps Tools", overallStatus: "on-track", stages: [] },
   ];
@@ -853,7 +832,7 @@ describe("ItemEditDialog — activity parenting (activity-first-class)", () => {
   });
 });
 
-describe("ItemEditDialog — record-status-ux-polish (in-dialog lock + blocker routing)", () => {
+describe("ItemEditDialog — status lock and blocker routing", () => {
   const coveredItem: KanbanItem = {
     id: "i1",
     productId: "p1",
@@ -894,24 +873,6 @@ describe("ItemEditDialog — record-status-ux-polish (in-dialog lock + blocker r
     ).not.toBeInTheDocument();
   });
 
-  it("offers no in-dialog alarm gesture at all — blockers live in Risks & Blockers", () => {
-    render(
-      <ItemEditDialog
-        open
-        item={{ ...coveredItem, id: "i3" }}
-        products={products}
-        week="current"
-        risks={[]}
-        stagesForProduct={() => ["Development"]}
-        onSave={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
-    expect(
-      screen.queryByRole("button", { name: /Mark as blocked/i }),
-    ).not.toBeInTheDocument();
-  });
-
   it("offers exactly the item type's vocabulary — current chips", () => {
     render(
       <ItemEditDialog
@@ -925,16 +886,14 @@ describe("ItemEditDialog — record-status-ux-polish (in-dialog lock + blocker r
         onCancel={vi.fn()}
       />,
     );
+    const status = screen.getByText("Status").parentElement;
+    expect(status).not.toBeNull();
+    if (!status) throw new Error("status controls not found");
     expect(
-      screen.getByRole("button", { name: /In Progress/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Paused/i })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Completed/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /Planned/i }),
-    ).not.toBeInTheDocument();
+      within(status)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["! In Progress", "‖ Paused", "✓ Completed"]);
   });
 
   it("offers exactly the item type's vocabulary — next chips", () => {

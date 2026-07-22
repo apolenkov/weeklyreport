@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { sectionToDraftPayload } from "./lead-section-draft-payload";
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
+const ITEM_ID = "99999999-9999-4999-8999-999999999999";
+const STABLE_ITEM_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
 function makeSection(
   overrides: Partial<ReportSectionReadModel> = {},
@@ -62,7 +64,102 @@ function makeDecision(overrides: Record<string, string>) {
   };
 }
 
+function makeItem(
+  overrides: Partial<ReportSectionReadModel["items"][number]> = {},
+): ReportSectionReadModel["items"][number] {
+  return {
+    id: ITEM_ID,
+    stableId: STABLE_ITEM_ID,
+    projectId: PROJECT_ID,
+    activityId: null,
+    type: "current",
+    text: "Implement the report",
+    tag: "delivery",
+    workflowStatus: "in_progress",
+    carriedOver: false,
+    stageIds: ["Development"],
+    priorityRank: 1,
+    pausedReason: null,
+    ...overrides,
+  };
+}
+
 describe("sectionToDraftPayload", () => {
+  it("maps product, stage, and activity statuses", () => {
+    const payload = sectionToDraftPayload(
+      makeSection({
+        projects: [
+          {
+            projectId: PROJECT_ID,
+            projectName: "Portal",
+            trafficLight: "yellow",
+            ownedStages: [
+              {
+                stageId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                stageName: "Development",
+                sortOrder: 3,
+                status: "red",
+              },
+            ],
+          },
+        ],
+        activities: [
+          {
+            activityId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            activityName: "Hiring",
+            status: "green",
+            note: "Two interviews",
+            linkedProducts: [],
+            derivedStatus: null,
+          },
+        ],
+      }),
+    );
+
+    expect(payload.projectStatuses).toEqual([
+      { projectId: PROJECT_ID, status: "yellow" },
+    ]);
+    expect(payload.stageStatuses).toEqual([
+      {
+        projectId: PROJECT_ID,
+        stageId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        status: "red",
+      },
+    ]);
+    expect(payload.activityStatuses).toEqual([
+      {
+        activityId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        status: "green",
+        note: "Two interviews",
+      },
+    ]);
+  });
+
+  it("filters blank items and retains pausedReason only for paused items", () => {
+    const payload = sectionToDraftPayload(
+      makeSection({
+        items: [
+          makeItem({ text: " ".repeat(3) }),
+          makeItem({
+            id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+            workflowStatus: "paused",
+            pausedReason: "Waiting for security review",
+          }),
+          makeItem({
+            id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+            pausedReason: "Stale reason",
+          }),
+        ],
+      }),
+    );
+
+    expect(payload.items).toHaveLength(2);
+    expect(payload.items.map((item) => item.pausedReason)).toEqual([
+      "Waiting for security review",
+      null,
+    ]);
+  });
+
   it("excludes a risk whose impact is whitespace-only", () => {
     const payload = sectionToDraftPayload(
       makeSection({ risks: [makeRisk(" ".repeat(3))] }),

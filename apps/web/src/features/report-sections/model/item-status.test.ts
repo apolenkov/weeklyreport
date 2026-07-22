@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyBlockedRiskOverlay,
+  deriveHeadItemStatus,
   deriveItemStatus,
   itemStatusToWorkflow,
   type ItemWorkflowStatus,
   workflowToItemStatus,
 } from "./item-status";
+
+const BLOCKING_RISK = {
+  productId: "product-1",
+  stageIds: ["Development"],
+  severity: "blocked" as const,
+  text: "Release is blocked",
+};
 
 const PROGRESS_PAIRS: readonly (readonly [
   ItemWorkflowStatus,
@@ -98,5 +107,41 @@ describe("deriveItemStatus", () => {
     expect(deriveItemStatus({ workflowStatus: null, type: "current" })).toBe(
       "in-progress",
     );
+  });
+});
+
+describe("risk overlay", () => {
+  it("floors an in-progress base status to blocked", () => {
+    expect(
+      applyBlockedRiskOverlay(
+        "in-progress",
+        { projectId: "product-1", stageIds: ["Development"] },
+        [BLOCKING_RISK],
+      ),
+    ).toBe("blocked");
+  });
+
+  it("leaves the base status unchanged for an at-risk covering risk", () => {
+    expect(
+      applyBlockedRiskOverlay(
+        "in-progress",
+        { projectId: "product-1", stageIds: ["Development"] },
+        [{ ...BLOCKING_RISK, severity: "at-risk" }],
+      ),
+    ).toBe("in-progress");
+  });
+
+  it("derives the head status from stored progress and covering risks", () => {
+    expect(
+      deriveHeadItemStatus(
+        {
+          workflowStatus: "in_progress",
+          type: "current",
+          projectId: "product-1",
+          stageIds: ["Development"],
+        },
+        [BLOCKING_RISK],
+      ),
+    ).toBe("blocked");
   });
 });
