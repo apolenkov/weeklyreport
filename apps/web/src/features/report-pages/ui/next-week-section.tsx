@@ -35,9 +35,9 @@ interface NextWeekSectionProps {
   readonly currentUserName?: string;
   /** Used to seed empty-state `+ Add` button when no items exist. */
   readonly products?: readonly Product[];
-  /** activity-first-class: attached activities forwarded to the parent picker. */
+  /** Attached activities forwarded to the parent picker. */
   readonly activities?: readonly { id: string; name: string }[];
-  /** 35-04: forwarded to ItemEditDialog for the SDLC stage selector. */
+  /** Forwarded to ItemEditDialog for the SDLC stage selector. */
   readonly stagesForProduct?: (productId: string) => readonly string[];
   /**
    * All priority ranks already in use by own items for the full period
@@ -75,9 +75,8 @@ export function NextWeekSection({
   const defaultProduct = products?.[0];
   const defaultProductId = defaultProduct?.id;
 
-  // Shared dialog lifecycle (DialogState union, D1 readOnly-ref add-signal
-  // effect, D13 openSeq remount key, pending-delete). requireSeed: this
-  // section can only open create mode when a product column exists.
+  // The shared lifecycle ignores add signals while read-only and remounts the
+  // dialog for each open. This section requires a product column for create mode.
   const {
     dialogState,
     dialogKey,

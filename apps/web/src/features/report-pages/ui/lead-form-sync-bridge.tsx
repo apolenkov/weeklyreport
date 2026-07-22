@@ -27,10 +27,9 @@ import {
   coveringRisksForStage,
 } from "./lead-form-risk-coverage";
 
-// simplify-stage-status-interaction (D1/D2): clicking a chip whose displayed
-// severity is floored by a covering risk (own or foreign) no longer authors or
-// lowers the status — the chip is a plain On Track/unset toggle. The lead
-// changes an at-risk/blocked stage by editing its risk in the Risks section.
+// A chip whose displayed severity is floored by a covering risk cannot author
+// or lower that status. The lead changes an at-risk or blocked stage by editing
+// its risk in the Risks section.
 const COVERED_STAGE_HINT_MESSAGE =
   "This stage's status comes from a covering risk. Resolve it in Risks & Blockers to change the stage.";
 
@@ -44,7 +43,7 @@ const COVERED_STAGE_HINT_MESSAGE =
  * sync hook + confirmation dialog state; <Pipeline> and <Risks> are thin
  * consumers that read from React context.
  *
- * Public surface (used by 22-01 lead-form.tsx):
+ * Public surface:
  *   <LeadFormSyncBridge.Provider products={...} risks={...} ...>
  *     ...accordions...
  *       <LeadFormSyncBridge.Pipeline />
@@ -54,9 +53,8 @@ const COVERED_STAGE_HINT_MESSAGE =
  */
 
 /**
- * unify-risk-stage-status (D2): payload of a chip-raise interception.
- * Carried through context into RisksSection, which opens RiskEditDialog in
- * create mode prefilled with it on every `signal` increment.
+ * Payload of a chip-raise interception, carried through context into
+ * RisksSection so each `signal` increment opens a prefilled RiskEditDialog.
  */
 export interface RiskPrefillRequest {
   /** Monotonic counter — a new dialog open per increment. */
@@ -76,32 +74,32 @@ interface BridgeContextValue {
   products: Product[];
   risks: RiskEntry[];
   readOnly: boolean;
-  /** activity-first-class: attached activities forwarded into the risk parent picker. */
+  /** Attached activities forwarded into the risk parent picker. */
   activities?: readonly { id: string; name: string }[];
   /**
-   * 35-04: stages-the-lead-owns selector forwarded into RisksSection ->
+   * Stages-the-lead-owns selector forwarded into RisksSection and
    * RiskEditDialog so the SDLC stage dropdown is per-project. Optional
    * because the harness used in tests doesn't always feed it.
    */
   stagesForProduct?: (productId: string) => readonly string[];
   /**
-   * P5: Display name of the section author. Forwarded into RisksSection
-   * for the unified [author …… chip] meta-row.
+   * Display name of the section author, forwarded into RisksSection for the
+   * unified author meta-row.
    */
   sectionAuthorName?: string;
   risksAddSignal?: number;
-  /** F1: cross-author entries for the current report period. */
+  /** Cross-author entries for the current report period. */
   crossAuthors?: readonly CrossAuthorEntry[];
   /**
-   * lead-mine-hide-unowned-stages: the record visibility mode, forwarded to
-   * SdlcPipeline so Mine renders only the lead's own stage chips. Optional —
+   * The record visibility mode, forwarded to SdlcPipeline so Mine renders only
+   * the lead's own stage chips. Optional —
    * tests / non-lead callers omit it and the pipeline defaults to "everyone".
    */
   visibilityMode?: "mine" | "everyone";
-  /** W5: merged risks (own + foreign) for visual rendering only. The sync hook
+  /** Merged risks (own + foreign) for visual rendering only. The sync hook
    * still operates on `risks` (own-only) to avoid false-positive mutations. */
   displayRisks?: RiskEntry[];
-  /** D2: pending chip-raise prefill for RisksSection's create dialog. */
+  /** Pending chip-raise prefill for RisksSection's create dialog. */
   riskPrefill: RiskPrefillRequest | null;
   handleStageStatusChange: (
     productId: string,
@@ -129,27 +127,27 @@ interface LeadFormSyncBridgeProviderProps {
   readonly onProductsChange: (next: Product[]) => void;
   readonly onRisksChange: (next: RiskEntry[]) => void;
   readonly readOnly?: boolean;
-  /** activity-first-class: attached activities forwarded into the risk parent picker. */
+  /** Attached activities forwarded into the risk parent picker. */
   readonly activities?: readonly { id: string; name: string }[];
   /**
-   * 35-04: per-project stages-the-lead-owns lookup. Forwarded by the
-   * Risks consumer into RiskEditDialog. Optional — tests can omit it.
+   * Per-project stages-the-lead-owns lookup, forwarded by the Risks consumer
+   * into RiskEditDialog. Optional because tests can omit it.
    */
   readonly stagesForProduct?: (productId: string) => readonly string[];
   /**
-   * P5: Display name of the section author. Forwarded into RisksSection
-   * for the unified [author …… chip] meta-row.
+   * Display name of the section author, forwarded into RisksSection for the
+   * unified author meta-row.
    */
   readonly sectionAuthorName?: string;
   readonly risksAddSignal?: number;
-  /** F1: cross-author entries for shared products. */
+  /** Cross-author entries for shared products. */
   readonly crossAuthors?: readonly CrossAuthorEntry[];
   /**
-   * lead-mine-hide-unowned-stages: record visibility mode forwarded to the
-   * pipeline. Optional — defaults to "everyone" (full grid) when omitted.
+   * Record visibility mode forwarded to the pipeline. Optional — defaults to
+   * "everyone" (full grid) when omitted.
    */
   readonly visibilityMode?: "mine" | "everyone";
-  /** W5: merged risks for visual rendering; own-only risks drive sync hook. */
+  /** Merged risks for rendering; own-only risks drive the sync hook. */
   readonly displayRisks?: RiskEntry[];
   /**
    * A one-shot risk-prefill routed from OUTSIDE the pipeline — the quick-add
@@ -177,20 +175,18 @@ function Provider({
   externalRiskPrefill,
   children,
 }: LeadFormSyncBridgeProviderProps) {
-  // D2: chip-raise interception payload, consumed by RisksSection. Shared with
-  // the external prefill channel (quick-add "Blocker" / item-dialog alarm) so a
-  // single create-dialog open source stays canonical.
+  // RisksSection consumes the chip-raise payload. Sharing it with the external
+  // quick-add and item-alarm channel keeps one canonical dialog-open source.
   const [riskPrefill, setRiskPrefill] = useState<RiskPrefillRequest | null>(
     null,
   );
 
   // Fold an external one-shot prefill into the same channel. The external
-  // source (`externalRiskPrefill`) lives in the PERSISTENT parent (lead-form),
+  // source (`externalRiskPrefill`) lives in the persistent parent (lead-form),
   // while this Provider remounts on the slides<->edit toggle. Seed the guard ref
   // from the mount-time signal and open only on a strict increase, so a remount
-  // that re-reads a still-set stale prefill does NOT reopen the dialog (the D16
-  // stale-signal fix, mirrored from `useEditableListDialog`); a genuine later
-  // quick-add still advances past it and opens.
+  // that re-reads a still-set stale prefill does not reopen the dialog. A
+  // genuine later quick-add still advances past it and opens.
   const lastExternalSignal = useRef(externalRiskPrefill?.signal ?? 0);
   useEffect(() => {
     if (!externalRiskPrefill) return;
@@ -208,9 +204,8 @@ function Provider({
   const handleStageStatusChange = useCallback(
     (productId: string, stageName: string, newStatus: StageStatus) => {
       if (readOnly) return;
-      // simplify-stage-status-interaction (D1/D2): the chip is a plain On
-      // Track/unset toggle. An OWN covering risk floors the chip's displayed
-      // severity, and the chip no longer authors or lowers it — so a click on a
+      // The chip is a plain On Track/unset toggle. An own covering risk floors
+      // its displayed severity, and the chip no longer authors or lowers it, so a
       // floored chip changes nothing and points the lead at the Risks section,
       // where the risk is the single lever. Only own risks floor the live chip
       // (`applyRiskSeverityFloor` runs on own risks), so the block gates on own
@@ -234,13 +229,13 @@ function Provider({
       // (foreign risks belong to other authors).
       const ownNext = next.filter((r) => !r.foreign);
 
-      // rethink-pipeline-state-vs-completeness: adding or removing a risk MUST
-      // NOT persist a derived status onto the stages. The displayed severity is
-      // a pure render-time derivation of the covering risks (applyRiskSeverityFloor
+      // Adding or removing a risk must not persist a derived stage status. The
+      // displayed severity is a pure derivation of the covering risks
+      // (applyRiskSeverityFloor
       // on the live form, mapLeadProducts in the read model), so there is no
-      // separate persisted manual status that can drift. The earlier
-      // unify-risk-stage-status write-through (promote on add, clear on remove)
-      // corrupted completeness: an add-then-remove cycle left empty stages
+      // separate persisted manual status that can drift. Persisting promotions
+      // on risk add and clearing them on removal corrupts completeness: an
+      // add-then-remove cycle leaves empty stages
       // persisted as on-track, falsely satisfying "my input is complete".
       onRisksChange(ownNext);
     },
@@ -287,16 +282,13 @@ function Provider({
 
 function Pipeline() {
   const ctx = useBridgeContext("LeadFormSyncBridge.Pipeline");
-  // rethink-pipeline-state-vs-completeness: the "unbacked stage" warning is
-  // gone — status is derived from risks, so a chip cannot be at-risk/blocked
-  // without a backing risk.
-  // W11: re-derive coveredByOwnRisk from the live risks (ctx.products is stable
-  // across an in-session risk add, so its mapper-baked flag is stale). The
+  // Status is derived from risks, so a chip cannot be at-risk or blocked without
+  // a backing risk. Re-derive own-risk coverage from live risks because
+  // ctx.products stays stable across an in-session risk add. The
   // counter reads this off rawProducts; the chip reads it off the floored array.
   const rawWithCoverage = annotateOwnRiskCoverage(ctx.products, ctx.risks);
-  // simplify-stage-status-interaction (D3): render-time severity floor — the
-  // same rule as mapLeadProducts, so the live chips can never show
-  // on-track/empty while covering risks exist, and an orphan explicit severity
+  // Apply the same render-time severity floor as mapLeadProducts so live chips
+  // cannot show on-track or empty while covering risks exist, and an orphan severity
   // collapses to on-track exactly as the read model does.
   const flooredProducts = applyRiskSeverityFloor(rawWithCoverage, ctx.risks);
   return (

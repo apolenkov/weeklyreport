@@ -12,8 +12,8 @@ interface UseLeadFormRedirectsInput {
 }
 
 /**
- * The lead form's route redirects, split from `useLeadFormData` only to keep
- * the data hook inside the complexity standard. Both effects move verbatim.
+ * Keeps the lead form on its canonical report route and sends head-like roles
+ * to their read-only surface.
  */
 export function useLeadFormRedirects({
   pinnedReportId,
@@ -24,8 +24,8 @@ export function useLeadFormRedirects({
 }: UseLeadFormRedirectsInput): void {
   const router = useRouter();
 
-  // 35-07: bare route → replace URL with the canonical addressed form once
-  // the active reportId is known. Skipped when:
+  // Replace a bare route with the canonical addressed form once the active
+  // reportId is known. Skip when:
   //   • the page already renders under `[reportId]` (pinnedReportId set)
   //   • there is no active period (server returned null) — the form will
   //     show the existing empty / skeleton state.

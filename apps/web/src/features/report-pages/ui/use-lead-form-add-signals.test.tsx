@@ -12,13 +12,17 @@ describe("useLeadFormAddSignals", () => {
 
     act(() => {
       result.current.addCurrentWeekItem();
+      result.current.addNextWeekItem();
       result.current.addRisk();
       result.current.addRisk();
+      result.current.addDecision();
+      result.current.addDecision();
+      result.current.addDecision();
     });
 
     expect(result.current.currentWeekAddSignal).toBe(1);
-    expect(result.current.nextWeekAddSignal).toBe(0);
+    expect(result.current.nextWeekAddSignal).toBe(1);
     expect(result.current.risksAddSignal).toBe(2);
-    expect(result.current.decisionsAddSignal).toBe(0);
+    expect(result.current.decisionsAddSignal).toBe(3);
   });
 });
