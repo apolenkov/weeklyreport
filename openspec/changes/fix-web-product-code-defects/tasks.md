@@ -56,6 +56,14 @@
       recent `groupExpanded` change is still honored until the next group
       command (no regression on the existing override-persists-until-next-
       command behavior).
+- [ ] 3.4 `accordion-section.tsx:16` (orphan minor, same file as the major):
+      the props-interface comment still claims the section "mirrors
+      `groupExpanded` into its local state on every change", which no longer
+      matches the implementation (there is no mirror). Rewrite the comment to
+      describe the actual override-tracking behavior established by 3.1, then
+      re-grade the file with its major fixed — this change owns the file's
+      only two findings, so the file must land at **good**/**exemplary** with
+      no residual review finding.
 
 ## 4. Delete the dead `chrome` prop on `LeadSlidesClient`
 
