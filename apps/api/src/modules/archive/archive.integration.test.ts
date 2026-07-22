@@ -70,6 +70,20 @@ describe("ArchivePrismaRepository (integration)", () => {
     expect(expectDefined(list[0]).portfolioStatus).toBe("green");
   });
 
+  it("rejects an archived draft when a caller filter requests drafts", async () => {
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { archived: true, periodState: "archived" },
+    });
+    const filter = { status: "draft" } as const;
+
+    const list = await repo.listArchiveReports(undefined, filter);
+    const detail = await repo.getArchiveReport(testData.report.id, filter);
+
+    expect(list.items).toEqual([]);
+    expect(detail).toBeNull();
+  });
+
   it("A22: published-but-NOT-archived reports do NOT appear in archive list", async () => {
     // Publish the report WITHOUT setting archived=true
     await prisma.report.update({

@@ -67,7 +67,7 @@ export class ArchivePrismaRepository implements ArchiveRepository {
     session?: ArchiveScopeSession,
   ): Promise<PaginatedResult<ArchiveReportSummary>> {
     const sectionScope = sectionScopeWhere(session);
-    const where = { ...PUBLISHED_FLOOR, ...filter };
+    const where = { ...filter, ...PUBLISHED_FLOOR };
 
     // Fetch section ids only — enough to scope the snapshot filter — plus one
     // probe row beyond the page so we can tell whether a further page exists
@@ -170,7 +170,7 @@ export class ArchivePrismaRepository implements ArchiveRepository {
     // fields. The id-equality on the unique PK still produces ≤1 row.
     const sectionScope = sectionScopeWhere(session);
     const report = await this.prisma.report.findFirst({
-      where: { id: reportId, ...PUBLISHED_FLOOR, ...filter },
+      where: { id: reportId, ...filter, ...PUBLISHED_FLOOR },
       include: {
         publishedBy: true,
         sections: {
