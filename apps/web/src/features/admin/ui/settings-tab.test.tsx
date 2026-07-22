@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339); wave-6c-ii */
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts are required for value, checked, and options access under the app tsconfig. */
 /**
  * SettingsTab Identity sub-tab test.
  *
@@ -147,8 +147,8 @@ describe("SettingsTab — Identity sub-tab", () => {
   });
 
   it("exposes the inert Holidays tab's coming-soon state via its accessible name", () => {
-    // deferred-feature-pattern: the Holidays TabsTrigger holds an inert <span>
-    // (no aria-label) whose visible "Holidays" text is hidden below xl. Its
+    // The Holidays trigger holds an inert span whose visible label is hidden
+    // below xl. Its
     // coming-soon state reaches the tab's accessible name through the descendant
     // ComingSoonBadge text. Removing the redundant native title="Coming Soon"
     // must not strip that name — this locks it so the source scan has a runtime
@@ -250,12 +250,8 @@ describe("SettingsTab — Identity sub-tab", () => {
     await waitFor(() => expect(saveButton.disabled).toBe(false));
   });
 
-  // D4 (design): pin the non-vacuous invalidation fix — after Save success
-  // invalidateAdmin must call invalidateQueries with the specific
-  // admin.getOrganization queryKey (not the vacuous { tag } filter that
-  // matched everything). We spy on qc.invalidateQueries so the assertion is
-  // stable regardless of whether the active query refetches and clears the
-  // isInvalidated flag before we can read it.
+  // Spy on the exact query key because an active query may refetch and clear
+  // its invalidated state before the assertion observes it.
   it("Save success invalidates admin.getOrganization by its specific queryKey", async () => {
     const { proxy, captured } = buildProxy();
     // Resolve the mutation so onSuccess fires.
@@ -347,9 +343,8 @@ describe("SettingsTab — Periods sub-tab (new fields)", () => {
   });
 
   it("leaves autoPublishAfterDeadline enabled regardless of autoCreatePeriods", async () => {
-    // admin-settings-surface-cleanup: the auto-publisher scheduler reads
-    // autoPublishAfterDeadline independently, so the UI no longer imposes a
-    // false «requires Auto-create periods» dependency.
+    // The scheduler reads this setting independently, so coupling it to
+    // automatic period creation would impose a false dependency.
     const { proxy } = buildProxy();
     renderSettings(proxy);
 
@@ -560,12 +555,8 @@ describe("SettingsTab — Notifications sub-tab", () => {
 // ─── Integrations sub-tab ────────────────────
 
 describe("SettingsTab — Integrations sub-tab", () => {
-  // integrations-card-element-label: the messaging card names the roadmapped
-  // channel "Element" with a Coming-Soon badge. It renders NO live messaging
-  // status — the configured/bindings rows were removed because they read live
-  // Telegram state and would be a false claim under an "Element" heading.
-  // admin-settings-surface-cleanup removed the Slack and CI cards; the AI card
-  // is a general "AI" integration (still Coming Soon).
+  // Element has no live status because the available configured and binding
+  // values describe Telegram and would be false under an Element heading.
   it("names the messaging card Element with a Coming Soon badge", async () => {
     const { proxy } = buildProxy({
       telegram: { configured: false, bindings: 0 },
@@ -642,15 +633,7 @@ describe("SettingsTab — Integrations sub-tab", () => {
   });
 });
 
-// ─── VA-0a/VA-0b: verify-a11y-recommended-flip regression tests ──────────
-//
-// Covers catalog rows for settings-tab.tsx:
-//   unit-rtl/high: rows 398–399 (HolidaysComingSoonControl span attributes),
-//                  rows 401–402 (aria-hidden on Calendar + CheckIcon SVGs),
-//                  rows 403–406 (CheckIcon aria-hidden in each subtab success msg)
-//   snapshot/medium: row 407 (CheckIcon SVG attributes), row 409 (success msg DOM)
-
-describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () => {
+describe("SettingsTab — accessibility regression", () => {
   // Stub fetch so /api/revalidate-org called in onSuccess doesn't hang or
   // reject while we await the success message.
   const originalFetch = globalThis.fetch;
@@ -665,7 +648,6 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
     globalThis.fetch = originalFetch;
   });
 
-  // Row 398: HolidaysComingSoonControl span — no aria-label
   it("holidays-coming-soon span has no aria-label attribute", () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
@@ -674,12 +656,8 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
     expect(span.hasAttribute("aria-label")).toBe(false);
   });
 
-  // coming-soon-style-consistency: the deferred state stays ANNOUNCED even
-  // though the inert span carries no aria-label — the ComingSoonBadge text is a
-  // descendant of the holidays TabsTrigger, so the tab's computed accessible
-  // name contains "Coming Soon". This pins the 2026-06-10 decision (aria-label
-  // removed as redundant) against silent regression. getByRole computes the
-  // accessible name via dom-accessibility-api.
+  // The badge text is a descendant of the tab trigger, so it must remain part
+  // of the computed accessible name without a redundant aria-label.
   it("holidays tab is announced as coming soon via its computed accessible name", () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
@@ -691,7 +669,6 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
     expect(announced[0]?.contains(holidaysSpan)).toBe(true);
   });
 
-  // Row 399: HolidaysComingSoonControl span — aria-disabled="true" preserved
   it("holidays-coming-soon span retains aria-disabled=true", () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
@@ -700,8 +677,6 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
     expect(span.getAttribute("aria-disabled")).toBe("true");
   });
 
-  // admin-settings-surface-cleanup: the Calendar icon was removed so the
-  // Holidays trigger matches the icon-less sibling tabs. Lock the absence.
   it("holidays tab trigger has no icon (matches sibling tabs)", () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
@@ -710,7 +685,6 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
     expect(span.querySelector("svg")).toBeNull();
   });
 
-  // Row 402: CheckIcon SVG — aria-hidden="true" static attribute
   it("CheckIcon SVG has aria-hidden=true in Identity success message", async () => {
     const { proxy, captured } = buildProxy();
     expectDefined(
@@ -738,7 +712,6 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
     expect(svg?.getAttribute("aria-hidden")).toBe("true");
   });
 
-  // Row 403: CheckIcon SVG aria-hidden in Identity success message (interaction)
   it("CheckIcon SVG aria-hidden=true persists in Identity saved message", async () => {
     const { proxy, captured } = buildProxy();
     expectDefined(
@@ -769,7 +742,6 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
     expect(svg?.getAttribute("aria-hidden")).toBe("true");
   });
 
-  // Row 404: CheckIcon SVG aria-hidden in Periods success message
   it("CheckIcon SVG aria-hidden=true in Period policy saved message", async () => {
     const { proxy, captured } = buildProxy();
     expectDefined(
@@ -795,7 +767,6 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
     expect(svg?.getAttribute("aria-hidden")).toBe("true");
   });
 
-  // Row 405: CheckIcon SVG aria-hidden in Reminders success message
   it("CheckIcon SVG aria-hidden=true in Reminder defaults saved message", async () => {
     const { proxy, captured } = buildProxy();
     expectDefined(
@@ -822,7 +793,6 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
     expect(svg?.getAttribute("aria-hidden")).toBe("true");
   });
 
-  // Row 406: CheckIcon SVG aria-hidden in Notifications success message
   it("CheckIcon SVG aria-hidden=true in Notification settings saved message", async () => {
     const { proxy, captured } = buildProxy();
     expectDefined(
@@ -849,7 +819,6 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
     expect(svg?.getAttribute("aria-hidden")).toBe("true");
   });
 
-  // Row 407: CheckIcon SVG attributes snapshot
   it("CheckIcon SVG attributes snapshot — viewBox, stroke, fill, strokeWidth, strokeLinecap, strokeLinejoin", async () => {
     const { proxy, captured } = buildProxy();
     expectDefined(
@@ -877,7 +846,6 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
     );
   });
 
-  // Row 409: Success message DOM structure snapshot (CheckIcon SVG + text coexist)
   it("success message DOM structure snapshot — CheckIcon SVG and text node coexist in span", async () => {
     const { proxy, captured } = buildProxy();
     expectDefined(

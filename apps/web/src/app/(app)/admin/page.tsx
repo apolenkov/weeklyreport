@@ -60,7 +60,7 @@ export default async function AdminPage({ searchParams }: Props) {
                   {t === "reopen" ? (
                     <ReopenTabLabel active={activeTab === t} />
                   ) : t === "jobs" ? (
-                    <JobsTabLabel active={activeTab === t} />
+                    <JobsTabLabel />
                   ) : (
                     t
                   )}

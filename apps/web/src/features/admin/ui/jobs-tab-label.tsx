@@ -5,15 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useTRPC } from "../../../lib/trpc-context";
 import { TabCountPill } from "../../../shared/ui/tab-count-pill";
 
-interface Props {
-  readonly active?: boolean;
-}
-
 /**
  * Tab label for failed jobs. The count lives as an absolute corner badge on
  * the Jobs tab instead of a separate page-header badge.
  */
-export function JobsTabLabel(_props: Props) {
+export function JobsTabLabel() {
   const trpc = useTRPC();
   const countQuery = useQuery({
     ...trpc.admin.dlqCount.queryOptions(),
