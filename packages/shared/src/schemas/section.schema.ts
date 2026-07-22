@@ -34,7 +34,7 @@ export const activityStatusInputSchema = z.object({
   note: safeText({ max: 500 }).nullable().optional(),
 });
 
-// activity-first-class: one product an activity reports against (label-only).
+// One product an activity reports against (label-only).
 export const linkedProductSchema = z.object({
   productId: z.uuid(),
   productName: z.string().min(1),
@@ -49,10 +49,10 @@ export const sectionActivitySchema = z.object({
   activityName: z.string().min(1),
   status: trafficLightStatusSchema.nullable(),
   note: z.string().nullable().optional(),
-  // activity-first-class: products this activity reports against (M:N, label-
+  // Products this activity reports against (M:N, label-
   // only). `.default([])` keeps frozen snapshots + legacy fixtures parsing.
   linkedProducts: z.array(linkedProductSchema).default([]),
-  // Risk/blocker-derived status floor (design decision 5): the pill renders this
+  // The risk/blocker-derived status floor is what the pill renders
   // when set, else falls back to `status`. `.default(null)` for snapshot compat.
   derivedStatus: trafficLightStatusSchema.nullable().default(null),
   // The RECORD-ONLY floor (covering risks/blockers), excluding the lead's stored
@@ -98,12 +98,11 @@ export const itemInputSchema = z.object({
   stageIds: writeStageIdsField,
 });
 
-// enforce-item-decision-stage-schema (mirrors riskReadModelSchema): the READ
-// model stays tolerant of stage-less legacy item rows so they still load and
+// The read model stays tolerant of stage-less legacy item rows so they load and
 // can render the loud "No stage set" marker; only the write path rejects them.
 export const itemReadModelSchema = itemInputSchema.extend({
   stageIds: stageIdsField,
-  // review-acknowledgement: reviewer comments anchored to this item, surfaced
+  // Reviewer comments anchored to this item are surfaced
   // read-only on the section read path. Optional so the write path
   // (itemInputSchema) and legacy fixtures never carry it; the client never
   // round-trips it back (mergeSection drops it on parse).
@@ -126,14 +125,13 @@ export const riskInputSchema = z.object({
   stageIds: writeStageIdsField,
 });
 
-// require-risk-stage (D2): the READ model stays tolerant of stage-less
-// legacy rows — they must still load so the card can render the loud
+// The read model stays tolerant of stage-less legacy rows so the card can render
 // "No stage set" warning instead of crashing the page. Only the write
 // path (draft-save/submit via `riskInputSchema`) rejects them.
 const riskReadModelSchema = riskInputSchema.extend({
   stageIds: stageIdsField,
-  // review-acknowledgement: reviewer comments anchored to this risk (see
-  // itemReadModelSchema).
+  // Reviewer comments anchored to this risk follow the same read-only path as
+  // the item read model.
   comments: z.array(recordCommentViewSchema).optional(),
 });
 
@@ -155,17 +153,16 @@ export const decisionInputSchema = z.object({
   activityId: z.uuid().nullable().optional(),
 });
 
-// enforce-item-decision-stage-schema (mirrors riskReadModelSchema): the READ
-// model tolerates stage-less legacy decision rows so they still load and render
+// The read model tolerates stage-less legacy decision rows so they load and render
 // the loud "No stage set" marker; only the write path rejects them.
 export const decisionReadModelSchema = decisionInputSchema.extend({
   stageIds: stageIdsField,
-  // review-acknowledgement: reviewer comments anchored to this decision (see
-  // itemReadModelSchema).
+  // Reviewer comments anchored to this decision follow the same read-only path as
+  // the item read model.
   comments: z.array(recordCommentViewSchema).optional(),
 });
 
-// activity-first-class: exactly one parent (product XOR activity) plus the
+// Exactly one parent (product XOR activity) plus the
 // conditional stage rule, enforced per record on the write path. Kept off the
 // base input objects so the read models keep `.extend`ing them and the submit
 // schema keeps `.extend`ing draftSaveSchema (a superRefine yields a ZodEffects,
@@ -247,7 +244,7 @@ export const draftSaveSchema = z.object({
 
 export const submitSectionSchema = draftSaveSchema.extend({
   confirmed: z.literal(true),
-  // activity-first-class: relaxed from `.min(1)` — an activity-only section (0
+  // Relaxed from `.min(1)` because an activity-only section (0
   // products) submits. Present product statuses stay required non-null; the
   // "at least one product OR activity" and "every attached activity has a status"
   // checks are server-authoritative in validateSubmitInput (schema tightening
@@ -272,8 +269,8 @@ export const submitSectionSchema = draftSaveSchema.extend({
 // Per-project list of stages owned by the section author on this
 // project. Sourced from `StageAssignment` rows scoped by (projectId,
 // userId=author). Empty array == author has no stake on this project.
-// unassigned-stage-reporting-exclusion: the lead-form renders the grid from
-// `stageSet` (assignments across all leads); a stage the author does not own
+// The lead form renders the grid from assignments across all leads; a stage
+// the author does not own
 // shows foreign-owned, and a stage with no assignment is excluded entirely.
 export const ownedStageSchema = z.object({
   stageId: z.uuid(),
@@ -282,8 +279,7 @@ export const ownedStageSchema = z.object({
   status: trafficLightStatusSchema.nullable().optional(),
 });
 
-// unassigned-stage-reporting-exclusion: one entry per stage that has an
-// assignment to ANY lead on the product (the union across all leads). This is
+// One entry per stage that has an assignment to any lead on the product. This is
 // READ-ONLY display metadata: it sources the lead-form stage grid so a stage
 // with NO assignment is excluded entirely (not rendered as a vacant chip),
 // while a stage assigned to another lead renders foreign-owned. It NEVER feeds
@@ -308,7 +304,7 @@ export const projectReadModelSchema = z.object({
    */
   ownedStages: z.array(ownedStageSchema).optional(),
   /**
-   * unassigned-stage-reporting-exclusion: the product's assigned-stage set —
+   * The product's assigned-stage set —
    * every stage with an assignment to ANY lead on the product. READ-ONLY
    * display metadata that sources the lead-form grid (a stage absent from the
    * set is excluded; one present but not in `ownedStages` is foreign-owned).
@@ -328,7 +324,7 @@ export const projectReadModelSchema = z.object({
   ownerGroupId: z.uuid().nullable().optional(),
 });
 
-// fix-lead-surface-name-resolution: name-only entry for a project that a
+// Name-only entry for a project that a
 // section row (item / risk / decision) references but the section author
 // owns no stage on. Carried separately from `projects` on purpose:
 // widening `projects` would leak an editable product card
@@ -368,7 +364,7 @@ export const reportSectionReadModelSchema = z.object({
   // both mean "on time".
   late: z.boolean().optional(),
   projects: z.array(projectReadModelSchema),
-  // fix-lead-surface-name-resolution: name source for rows referencing a
+  // Name source for rows referencing a
   // project outside the author's stage-owned `projects`. Optional so
   // legacy fixtures and pre-existing snapshots still parse; missing means
   // "no extra names" and the mappers fall back exactly as before.
@@ -380,12 +376,12 @@ export const reportSectionReadModelSchema = z.object({
   // `.default([])` keeps older published snapshots (frozen before activities
   // existed) and legacy fixtures parsing.
   activities: z.array(sectionActivitySchema).default([]),
-  // review-acknowledgement: per-section verdicts, surfaced read-only. Each
+  // Per-section verdicts are surfaced read-only. Each
   // carries `isCurrent` (judgedVersion === version) so a re-submitted section
   // reads as awaiting review, not "needs changes". Optional so legacy fixtures
   // and the write path never carry it.
   reviews: z.array(sectionReviewViewSchema).optional(),
-  // review-acknowledgement: the section author's reporting group and whether the
+  // The section author's reporting group and whether the
   // CURRENT caller is a designated reviewer for it. Stamped ONLY on the live
   // head/viewer weekly-report read (never the write path nor the published
   // snapshot). The client gates the per-record comment composer and the
