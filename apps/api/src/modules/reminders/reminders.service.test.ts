@@ -135,27 +135,28 @@ describe("reminder rule domain mapping and deduplication", () => {
     kind: "follow_up",
   };
 
-  it("reads kind from DB field — deadline rule", async () => {
+  it("uses the deadline dispatch kind for a deadline rule", async () => {
     const service = new RemindersService(createRepository(activeRule));
     const execution = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
     );
 
-    // The dedupeKey embeds the rule id and fireAt, which come from
-    // the DB rule's kind-specific scheduling. The execution's ruleId
-    // correctly maps to the deadline rule.
-    expect(execution.ruleId).toBe(activeRule.id);
+    expect(execution.dedupeKey).toBe(
+      `${activeRule.id}:deadline:2026-04-10:lead1@customreport.local`,
+    );
   });
 
-  it("reads kind from DB field — weekly rule", async () => {
+  it("uses the manual deadline dispatch kind for a follow-up rule", async () => {
     const service = new RemindersService(createRepository(weeklyRule));
     const execution = await service.requestReminderExecution(
       weeklyRule.id,
       "lead1@customreport.local",
     );
 
-    expect(execution.ruleId).toBe(weeklyRule.id);
+    expect(execution.dedupeKey).toBe(
+      `${weeklyRule.id}:deadline:2026-04-10:lead1@customreport.local`,
+    );
   });
 
   it("generates different dedupeKeys for different recipient emails", async () => {
