@@ -31,7 +31,7 @@
       `"published"` (assert the effective Prisma `where` argument, e.g.
       via a mocked `PrismaService.report.findMany` call)
 - [ ] 3.2 Same suite, `getArchiveReport`: a filter of `{ status: "draft"
-  }` still produces a `where` whose `status` is `"published"`
+}` still produces a `where` whose `status` is `"published"`
 - [ ] 3.3 `archive.integration.test.ts`: a regression case exercising
       `listArchiveReports`/`getArchiveReport` with a manually constructed
       `filter = { status: "draft" }` (bypassing `buildArchiveReadFilter`)

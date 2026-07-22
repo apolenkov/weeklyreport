@@ -19,7 +19,7 @@
 - [ ] 2.1 In `fillFromSection`
       (`apps/api/src/modules/report-sections/infrastructure/lead-form.prisma-repository.ts:356-409`),
       add a raw `SELECT "periodStatus" FROM "Report" WHERE "id" = <targetReportId>
-  FOR UPDATE` query as the FIRST statement inside the `$transaction`
+FOR UPDATE` query as the FIRST statement inside the `$transaction`
       callback — the same lock `saveSection` takes
       (`report-sections.prisma-repository.ts:128-130`). This requires
       threading the target section's `reportId` into `fillFromSection` (or
@@ -43,6 +43,47 @@
       `fill-from.integration.test.ts` cases (open/reopened targets, XOR
       activity-parent carry rules, version-conflict CAS) to confirm the new
       lock does not change any currently-passing scenario.
+
+## Revoke path (same lock)
+
+The section un-submit transition shares this exact TOCTOU seam: its
+`periodStatus` gate is a service-layer read OUTSIDE the write, and
+`applyRevokeTransition`
+(`apps/api/src/modules/report-sections/application/revoke-transition.ts:31-43`)
+guards only `status: "submitted"` (+ optional `version`) — no `periodStatus`
+filter, no `Report` lock. A publish committing in the read→write window flips a
+submitted section to `draft`/revoked on a now-published report (verified in
+`~/work/customreport-archive/2026-07-22-mass-review/miss-1-verify.md`). Two
+callers are affected:
+
+- [ ] R.1 Head single revoke — `LeadFormPrismaRepository.revokeSectionSubmission`
+      (`apps/api/src/modules/report-sections/infrastructure/lead-form.prisma-repository.ts:268-278`,
+      called from `LeadFormService.revokeSubmission`
+      `application/lead-form.service.ts:89-91` whose `assertPeriodNotPublished`
+      is the outside-the-write precheck) calls
+      `applyRevokeTransition(this.prisma, ...)` — a **bare autocommit
+      `updateMany`, no transaction at all**. Fix: fold the sibling
+      `revokeAllSubmitted` filter (`lead-form.prisma-repository.ts:297`) into
+      the transition's `updateMany` WHERE —
+      `report: { periodStatus: { in: ["open", "reopened"] } }` — closing the
+      race atomically in one statement (Prisma supports relation filters in
+      `updateMany.where`; `revokeAllSubmitted` already does exactly this).
+      Adding it inside `applyRevokeTransition` fixes BOTH callers at the seam.
+- [ ] R.2 Reviewer `changes_requested` verdict —
+      `ReviewActionsPrismaRepository.postVerdict`
+      (`apps/api/src/modules/review/infrastructure/review-actions.prisma-repository.ts:208-218`)
+      calls `applyRevokeTransition(tx, ...)` inside its `$transaction`, but that
+      tx only version-CASes the **section** row — it never `FOR UPDATE`-locks
+      the `Report` nor re-checks `periodStatus` (the `isEditablePeriod` gate is
+      in `ReviewActionsService.verdict`, outside the tx). The R.1 relation-filter
+      fix closes the un-submit; ADDITIONALLY gate the whole `postVerdict` tx on a
+      `Report` `FOR UPDATE` periodStatus recheck (mirroring `saveSection`) so the
+      `SectionReview` verdict upsert itself cannot land on a period that
+      published mid-transaction.
+- [ ] R.3 Add a race characterization test for each caller mirroring Task 1
+      (paused-transaction / two-phase publish-in-the-window), asserting current
+      code drifts the section to `draft` on a published report and the fix fails
+      closed (section stays `submitted`, zero writes).
 
 ## 4. Spec delta
 
