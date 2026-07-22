@@ -1,7 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import type { CrossAuthorContentRow } from "../../report-sections";
 import { collectCells } from "./slide-grid-cells";
 import type { ForeignGridRow } from "./slide-grid-foreign";
 import type { GridAuthor } from "./slide-grid-rows";
@@ -186,7 +185,6 @@ describe("collectCells — grouping and folding", () => {
       productId: "unknown-product",
       column: "current",
     };
-    const foreign: readonly CrossAuthorContentRow[] = [];
     const { productLevel } = collectCells({
       section: section(),
       owner,
@@ -198,7 +196,6 @@ describe("collectCells — grouping and folding", () => {
       "foreign current",
     ]);
     expect(productLevel.has("shared")).toBe(false);
-    expect(foreign).toEqual([]);
   });
 
   it("does not mutate a previously-returned bucket when a later row lands on the same key", () => {

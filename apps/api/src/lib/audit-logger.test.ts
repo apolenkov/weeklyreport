@@ -182,6 +182,55 @@ describe("createAuditLogger", () => {
   });
 });
 
+describe("audit.mutation", () => {
+  const mutationInput = {
+    userId: "u1",
+    role: "lead" as const,
+    ip: "10.0.0.1",
+    procedure: "reportSection.save",
+    target: "section-1",
+    duration: 12,
+  };
+
+  it("logs a successful mutation at info without a reason key", () => {
+    const { logger, entries } = makeCapturingLogger();
+
+    createAuditLogger(logger).mutation({
+      ...mutationInput,
+      status: "success",
+    });
+
+    const entry = expectDefined(entries[0]);
+    expect(entry.level).toBe("info");
+    expect(entry.context).toEqual({
+      event: "mutation",
+      ...mutationInput,
+      status: "success",
+    });
+    expect(entry.context).not.toHaveProperty("reason");
+  });
+
+  it("logs a failed mutation at warn with its reason", () => {
+    const { logger, entries } = makeCapturingLogger();
+
+    createAuditLogger(logger).mutation({
+      ...mutationInput,
+      status: "fail",
+      reason: "conflict",
+    });
+
+    expect(expectDefined(entries[0])).toMatchObject({
+      level: "warn",
+      context: {
+        event: "mutation",
+        ...mutationInput,
+        status: "fail",
+        reason: "conflict",
+      },
+    });
+  });
+});
+
 describe("createNullAuditLogger", () => {
   it("all methods are no-ops and do not throw", () => {
     const audit = createNullAuditLogger();

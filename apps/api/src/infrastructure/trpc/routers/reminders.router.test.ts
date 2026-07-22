@@ -72,4 +72,16 @@ describe("reminders.dispatchPending current editable report gate", () => {
     });
     expect(dispatchPendingReminders).not.toHaveBeenCalled();
   });
+
+  it("rejects dispatch when no editable report exists", async () => {
+    const { caller, dispatchPendingReminders } = buildCaller(null);
+
+    await expect(
+      caller.dispatchPending({ reportId: CURRENT_REPORT_ID }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "report-not-active",
+    });
+    expect(dispatchPendingReminders).not.toHaveBeenCalled();
+  });
 });

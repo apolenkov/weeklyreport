@@ -85,6 +85,8 @@ describe("ReopenRequestAdminService.respondReopenRequest", () => {
     const before = await counterValue("approved");
     const service = new ReopenRequestAdminService(
       createRepository({ kind: "already-processed" }),
+      undefined,
+      new AdminPrometheusTelemetry(),
     );
 
     await expect(
@@ -102,6 +104,8 @@ describe("ReopenRequestAdminService.respondReopenRequest", () => {
     const before = await counterValue("approved");
     const service = new ReopenRequestAdminService(
       createRepository({ kind: "stale" }),
+      undefined,
+      new AdminPrometheusTelemetry(),
     );
 
     const result = await service.respondReopenRequest({

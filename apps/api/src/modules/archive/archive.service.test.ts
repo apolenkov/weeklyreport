@@ -57,8 +57,8 @@ function createRepository(): ArchiveRepository {
     async listArchiveReports() {
       return {
         items: [
-          structuredClone(latestDetail.summary),
           structuredClone(olderSummary),
+          structuredClone(latestDetail.summary),
         ],
         nextCursor: null,
       };
@@ -67,12 +67,14 @@ function createRepository(): ArchiveRepository {
 }
 
 describe("ArchiveService", () => {
-  it("returns archive reports sorted by latest published first", async () => {
+  it("preserves the repository's archive report order", async () => {
     const service = new ArchiveService(createRepository());
     const result = await service.listArchiveReports();
 
-    expect(result.items[0]?.reportId).toBe(reportId);
-    expect(result.items[1]?.reportId).toBe(olderSummary.reportId);
+    expect(result.items.map((item) => item.reportId)).toEqual([
+      olderSummary.reportId,
+      reportId,
+    ]);
     expect(result.nextCursor).toBeNull();
   });
 

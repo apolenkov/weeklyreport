@@ -30,7 +30,7 @@ const queue: Entry[] = [];
 // eslint-disable-next-line no-restricted-syntax -- enqueue schedules the batch flush and flush clears the handle; module-level timer state is intentional.
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
-function safeStringify(arg: unknown): string {
+export function safeStringify(arg: unknown): string {
   if (arg instanceof Error) return arg.message;
   if (typeof arg === "string") return arg;
   try {
@@ -40,8 +40,12 @@ function safeStringify(arg: unknown): string {
   }
 }
 
+export function canEnqueue(queueLength: number): boolean {
+  return queueLength < MAX_QUEUE;
+}
+
 function enqueue(entry: Entry) {
-  if (queue.length >= MAX_QUEUE) return;
+  if (!canEnqueue(queue.length)) return;
   queue.push(entry);
   if (queue.length >= FLUSH_AT_COUNT) {
     void flush();

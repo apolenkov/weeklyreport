@@ -95,7 +95,6 @@ export class ReopenRequestAdminService {
       decidedBy: input.decidedBy,
       session: input.session,
     });
-
     // Loser of a concurrent decision: changed nothing. A 409 CONFLICT is the
     // honest code (the request slipped out from under this call); no funnel
     // metric.

@@ -20,7 +20,9 @@ type VerdictBadge =
  * current `changes_requested` outranks a current `approved` (the blocking signal
  * wins), keeping the badge deterministic.
  */
-function resolveBadge(reviews: readonly SectionReviewView[]): VerdictBadge {
+export function resolveBadge(
+  reviews: readonly SectionReviewView[],
+): VerdictBadge {
   const current = reviews.filter((review) => review.isCurrent);
   if (current.some((review) => review.verdict === "changes_requested")) {
     return { kind: "changes", label: "Changes requested" };

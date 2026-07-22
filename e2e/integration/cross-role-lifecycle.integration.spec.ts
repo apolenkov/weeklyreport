@@ -44,7 +44,7 @@ test.describe("Cross-role lifecycle (integration)", () => {
     });
 
     // 2. Head sees submission count via DB truth.
-    await headPage.goto("/dashboard");
+    await headPage.goto("/head/dashboard");
     const submittedCount = await prisma.reportSection.count({
       where: { reportId: ACTIVE_REPORT_ID, status: "submitted" },
     });
@@ -55,6 +55,8 @@ test.describe("Cross-role lifecycle (integration)", () => {
       where: { id: ACTIVE_REPORT_ID },
       data: {
         status: "published",
+        periodState: "published",
+        periodStatus: "published",
         publishedAt: new Date(),
         publishedById: "a0000000-0000-4000-8000-000000000099",
       },
@@ -62,6 +64,12 @@ test.describe("Cross-role lifecycle (integration)", () => {
 
     // 4. Lead refreshes — UI must reflect locked state.
     await leadPage.goto("/lead/report");
+    await expect(
+      leadPage.getByRole("heading", { name: "My Report" }),
+    ).toBeVisible();
+    await expect(
+      leadPage.getByRole("button", { name: "Submit", exact: true }),
+    ).toHaveCount(0);
     const report = await prisma.report.findUnique({
       where: { id: ACTIVE_REPORT_ID },
     });
@@ -79,12 +87,17 @@ test.describe("Cross-role lifecycle (integration)", () => {
     await loginAs(leadCtx, { role: "lead", email: SEED_EMAILS.olga });
 
     await leadPage.goto("/lead/report");
+    await expect(
+      leadPage.getByRole("button", { name: "Submit", exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
 
     // Simulate head publishing while lead is on page.
     await prisma.report.update({
       where: { id: ACTIVE_REPORT_ID },
       data: {
         status: "published",
+        periodState: "published",
+        periodStatus: "published",
         publishedAt: new Date(),
         publishedById: "a0000000-0000-4000-8000-000000000099",
       },
@@ -92,6 +105,12 @@ test.describe("Cross-role lifecycle (integration)", () => {
 
     // Lead navigates — should see fresh state.
     await leadPage.reload();
+    await expect(
+      leadPage.getByRole("heading", { name: "My Report" }),
+    ).toBeVisible();
+    await expect(
+      leadPage.getByRole("button", { name: "Submit", exact: true }),
+    ).toHaveCount(0);
 
     const report = await prisma.report.findUnique({
       where: { id: ACTIVE_REPORT_ID },
@@ -107,6 +126,8 @@ test.describe("Cross-role lifecycle (integration)", () => {
       where: { id: ACTIVE_REPORT_ID },
       data: {
         status: "published",
+        periodState: "published",
+        periodStatus: "published",
         publishedAt: new Date(),
         publishedById: "a0000000-0000-4000-8000-000000000099",
       },
@@ -115,13 +136,26 @@ test.describe("Cross-role lifecycle (integration)", () => {
     // Revoke.
     await prisma.report.update({
       where: { id: ACTIVE_REPORT_ID },
-      data: { status: "draft", publishedAt: null },
+      data: {
+        status: "draft",
+        archived: false,
+        periodState: "open",
+        periodStatus: "open",
+        publishedAt: null,
+        publishedById: null,
+      },
     });
 
     const leadCtx = await browser.newContext();
     const leadPage = await leadCtx.newPage();
     await loginAs(leadCtx, { role: "lead", email: SEED_EMAILS.olga });
     await leadPage.goto("/lead/report");
+    const submitButton = leadPage.getByRole("button", {
+      name: "Submit",
+      exact: true,
+    });
+    await expect(submitButton).toBeVisible({ timeout: 15_000 });
+    await expect(submitButton).toBeEnabled();
 
     const report = await prisma.report.findUnique({
       where: { id: ACTIVE_REPORT_ID },
