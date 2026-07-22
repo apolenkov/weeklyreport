@@ -601,9 +601,9 @@ async function main() {
       },
     };
 
-  // Workflow status cycle. record-status-derived-from-risk: NO bare stored
+  // Workflow status cycle. NO bare stored
   // `blocked` — a blocked pill is DERIVED from a covering blocked-severity risk
-  // now, so the generic cycle stores only progress states. The one modelled
+  // so the generic cycle stores only progress states. The one modelled
   // blocked example is Olga's item 5156, paired with the covering riskId(6).
   const workflowCycle: ItemWorkflowStatus[] = [
     ItemWorkflowStatus.in_progress,
@@ -840,7 +840,6 @@ async function main() {
   }
 
   const primaryLeadSec = sectionId("1", 1);
-  const mariaSec = sectionId("1", 2);
   const igorSec = sectionId("1", 3);
   const dmitrySec = sectionId("1", 4);
 
@@ -906,8 +905,8 @@ async function main() {
       stageNames: ["Testing"],
       severity: "at-risk",
     },
-    // record-status-derived-from-risk: the covering blocker for Olga's DevOps
-    // item (5156). The item itself is stored `in_progress` now — its blocked
+    // The covering blocker for Olga's DevOps
+    // item (5156). The item itself is stored `in_progress` — its blocked
     // pill DERIVES from this blocked-severity risk (single source of truth).
     {
       id: riskId(6),
@@ -936,9 +935,6 @@ async function main() {
       create: r,
     });
   }
-
-  // Quiet unused-warning for mariaSec (may not be used by risks above)
-  void mariaSec;
 
   // LEAD_1 stageStatus on Olga's product 209 so cross-author locked
   // chips appear in Olga's view. Support=red (blocked), Planning=yellow (at-risk).
@@ -971,7 +967,7 @@ async function main() {
     });
   }
 
-  // Olga's DevOps item on Платёжный шлюз. record-status-derived-from-risk:
+  // Olga's DevOps item on Платёжный шлюз derives its status from risk:
   // the item is stored `in_progress` — its blocked pill DERIVES at render from the
   // covering blocked-severity risk riskId(6) on the same section/product/stage
   // (single source of truth). No bare stored `blocked` without a backing risk.
