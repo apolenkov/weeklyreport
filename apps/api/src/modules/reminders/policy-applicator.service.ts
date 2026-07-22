@@ -7,6 +7,7 @@ import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 
 /** Outcome of applying one policy to one period — see {@link PolicyApplicatorService.applyToPeriod}. */
 type PolicyApplyOutcome = "created" | "skipped" | "updated";
+type PolicyApplyTally = Record<PolicyApplyOutcome, number>;
 
 /**
  * The seam that turns ReminderPolicy templates into concrete ReminderRule
@@ -27,8 +28,8 @@ type PolicyApplyOutcome = "created" | "skipped" | "updated";
  *
  * Idempotency: applyToPeriod uses upsert against the
  * uq_rule_report_policy unique index. Calling twice is a no-op on the
- * second run; P2002 is caught and logged just in case the unique index
- * is missing in some pre-44-03 environment.
+ * second run; P2002 is caught and logged in case an older database is
+ * missing the unique index.
  */
 @Injectable()
 export class PolicyApplicatorService {
@@ -108,18 +109,12 @@ export class PolicyApplicatorService {
       where: { active: true },
     });
 
-    const outcomes = await this.collectPolicyOutcomes(
+    const tally = await this.collectPolicyTally(
       policies,
       period,
       now,
       excludePolicyIds,
-      [],
     );
-    const tally = {
-      created: outcomes.filter((outcome) => outcome === "created").length,
-      updated: outcomes.filter((outcome) => outcome === "updated").length,
-      skipped: outcomes.filter((outcome) => outcome === "skipped").length,
-    };
 
     this.logger.log(
       `applyToPeriod period=${period.id}: created=${tally.created} updated=${tally.updated} skipped=${tally.skipped}`,
@@ -133,27 +128,26 @@ export class PolicyApplicatorService {
    * a policy's own P2002 recovery (log + continue) cannot interleave with —
    * or be masked by — a concurrently-inflight sibling policy's write.
    */
-  private async collectPolicyOutcomes(
+  private async collectPolicyTally(
     remaining: readonly ReminderPolicy[],
     period: { id: string; deadline: Date },
     now: Date | undefined,
     excludePolicyIds: ReadonlySet<string> | undefined,
-    acc: readonly PolicyApplyOutcome[],
-  ): Promise<readonly PolicyApplyOutcome[]> {
-    // `await accPromise` before each policy's write keeps the fold strictly
+  ): Promise<PolicyApplyTally> {
+    // `await tallyPromise` before each policy's write keeps the fold strictly
     // sequential — a policy's own upsert fully resolves before the next starts.
-    return remaining.reduce<Promise<readonly PolicyApplyOutcome[]>>(
-      async (accPromise, policy) => {
-        const outcomes = await accPromise;
+    return remaining.reduce<Promise<PolicyApplyTally>>(
+      async (tallyPromise, policy) => {
+        const tally = await tallyPromise;
         const outcome = await this.applyPolicyToPeriod(
           policy,
           period,
           now,
           excludePolicyIds,
         );
-        return [...outcomes, outcome];
+        return { ...tally, [outcome]: tally[outcome] + 1 };
       },
-      Promise.resolve(acc),
+      Promise.resolve({ created: 0, skipped: 0, updated: 0 }),
     );
   }
 

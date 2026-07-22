@@ -7,7 +7,7 @@ either fixed or recorded as a stale re-grade in the wave notes.
 
 ## 0. Wave plan (calibrate on S, then scale)
 
-- [ ] 0.0 **Prerequisite — wave-1 MUST land first (hard gate, not a
+- [x] 0.0 **Prerequisite — wave-1 MUST land first (hard gate, not a
       preference).** The seven `fix-*` / `harden-*` changes (period reopen
       leak, Fill From TOCTOU, archive floor, portfolio snapshot, admin
       restore, web product-code defects, test-suite hardening) MUST be
@@ -16,7 +16,7 @@ either fixed or recorded as a stale re-grade in the wave notes.
       also touches, so starting first would fix a line the major fix then
       overwrites (or re-flag a finding the major already resolved). Do not
       begin §1 until `git log` shows all seven landed.
-- [ ] 0.1 **W1 — calibration (S-tier):** run the two smallest S slices
+- [x] 0.1 **W1 — calibration (S-tier):** run the two smallest S slices
       (`web-viewer-telemetry`, `web-slides`) solo through the `waveb`
       harness. Confirm verifiers reject counter-gaming (comment prefix
       swapped for another ref, split-to-shorten) before mass waves.
@@ -149,30 +149,33 @@ Suspense boundary removal); re-verify the remaining minor still applies.
 
 ## 11. prisma (S — 3 files, 8 minors)
 
-- [ ] 11.1 `prisma/seed-demo.ts` — 3 minors
-- [ ] 11.2 `prisma/seed-simple.ts` — 3 minors
-- [ ] 11.3 `prisma/seed.ts` — 2 minors
+- [x] 11.1 `prisma/seed-demo.ts` — 3 minors
+- [x] 11.2 `prisma/seed-simple.ts` — 3 minors
+- [x] 11.3 `prisma/seed.ts` — 2 minors
 
 ## 12. packages-misc (S — 5 files, 7 minors)
 
-- [ ] 12.1 `packages/shared/src/admin/reminder-policy.schema.test.ts` — 2 minors
-- [ ] 12.2 `packages/shared/src/schemas/auth.contract.test.ts` — 1 minor
-- [ ] 12.3 `packages/shared/src/schemas/auth.test.ts` — 2 minors
-- [ ] 12.4 `packages/shared/src/schemas/section.schema.ts` — 1 minor
-- [ ] 12.5 `packages/shared/src/schemas/web-vitals.test.ts` — 1 minor
+- [x] 12.1 `packages/shared/src/admin/reminder-policy.schema.test.ts` — 2 minors
+- [x] 12.2 `packages/shared/src/schemas/auth.contract.test.ts` — 1 minor
+- [x] 12.3 `packages/shared/src/schemas/auth.test.ts` — 2 minors
+- [x] 12.4 `packages/shared/src/schemas/section.schema.ts` — 1 minor
+- [x] 12.5 `packages/shared/src/schemas/web-vitals.test.ts` — 1 minor
 
 ## 13. web-admin (S — 4 files, 7 minors)
 
-- [ ] 13.1 `apps/web/src/features/admin/ui/group-products-editor.tsx` — 2 minors
-- [ ] 13.2 `apps/web/src/features/admin/ui/jobs-tab-label.tsx` — 1 minor
-- [ ] 13.3 `apps/web/src/features/admin/ui/settings-tab.test.tsx` — 3 minors
-- [ ] 13.4 `apps/web/src/features/admin/ui/users-tab.test.tsx` — 1 minor
+- [x] 13.1 `apps/web/src/features/admin/ui/group-products-editor.tsx` — 2 minors —
+      **stale re-grade:** the shared ownership invalidator no longer touches
+      `listGroupProducts`, so attach-wide and detach-scoped invalidations are
+      neither duplicated nor dead.
+- [x] 13.2 `apps/web/src/features/admin/ui/jobs-tab-label.tsx` — 1 minor
+- [x] 13.3 `apps/web/src/features/admin/ui/settings-tab.test.tsx` — 3 minors
+- [x] 13.4 `apps/web/src/features/admin/ui/users-tab.test.tsx` — 1 minor
 
 ## 14. api-comms (S — 3 files, 7 minors)
 
-- [ ] 14.1 `apps/api/src/modules/reminders/policy-applicator.perf.test.ts` — 2 minors
-- [ ] 14.2 `apps/api/src/modules/reminders/policy-applicator.service.ts` — 2 minors
-- [ ] 14.3 `apps/api/src/modules/reminders/reminders.service.test.ts` — 3 minors
+- [x] 14.1 `apps/api/src/modules/reminders/policy-applicator.perf.test.ts` — 2 minors
+- [x] 14.2 `apps/api/src/modules/reminders/policy-applicator.service.ts` — 2 minors
+- [x] 14.3 `apps/api/src/modules/reminders/reminders.service.test.ts` — 3 minors
 
 Note: `reminders.service.test.ts` overlaps `harden-test-suite-quality`;
 re-verify post-harden.
