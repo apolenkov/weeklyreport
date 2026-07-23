@@ -79,7 +79,10 @@
   line-height: 1.5;
   margin-top: 1.6rem;
   max-width: 32ch;
-  transition: opacity 250ms ease-in-out;
+  /* Duration comes from TaglineCycler's inline transition-duration
+     (FADE_MS) — the single source for the swap timing. */
+  transition-property: opacity;
+  transition-timing-function: ease-in-out;
 }
 
 /* ───── Background — gradient + dot grid ───── */

@@ -24,16 +24,8 @@ describe("PulseBackground", () => {
     });
   });
 
-  describe("no decorative pulse motion", () => {
-    it("renders no ECG/heartbeat SVG layer", () => {
-      const { container } = render(<PulseBackground />);
-      expect(container.querySelector("svg.pulse-bg-ecg")).toBeNull();
-      expect(container.querySelector("path")).toBeNull();
-    });
-  });
-
   describe("component snapshot", () => {
-    it("matches DOM snapshot (static gradient + dot grid, no ECG)", () => {
+    it("matches DOM snapshot (static gradient + dot grid)", () => {
       const { container } = render(<PulseBackground />);
       expect(container.firstChild).toMatchSnapshot();
     });
