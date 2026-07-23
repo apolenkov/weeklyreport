@@ -67,3 +67,38 @@ plus a re-run of only the failed gate steps.
   the lenses. Ladder verdict: NOT 4/4 clean → stays at ui-copy tier, no
   promotion; one more clean run required before `naming`. Paid-tier balance
   still empty; free tier worked.
+
+## Routing adjustments — 2026-07-23 (research-backed retro #2)
+
+Sources: 6-batch in-house telemetry (weighted first) + web sweep of dev/vendor
+reports; full verdict in the session task log.
+
+- **GROK widened.** In addition to its classes: single-file mechanical
+  refactors (extract-const, pure-function splits), doc/comment hygiene
+  sweeps, lint-ratchet fixes, and test SCAFFOLDS where the brief dictates the
+  exact assertions. Still hard-excluded: multi-file/cross-cutting edits,
+  period dual-state and role-coverage write paths, framework-version-sensitive
+  code (Tailwind 4 / Next 16 / Prisma 7 quirks — his weakest documented spot).
+  Every Grok brief adds "comments ≤1 line, no narration".
+- **CODEX review protocol** (kept whole-batch, FP tax managed instead):
+  (1) verify-before-report — "X is missing" claims require the exact command
+  - output, else auto-discarded; (2) the ADJUDICATED ledger rides in every
+    review prompt — settled findings are not re-raised without new evidence;
+    (3) the codex reviewer sees only diff + task spec + ledger — never
+    implementer self-assessments (framing collapses its recall).
+- **CODEX implementer echo-back guard**: every implement brief requires a
+  first-line restatement of what will and will NOT change; orchestrator diffs
+  the file list against it before review. Plus "prioritize clarity over
+  action; do not expand scope".
+- **Lens tiering**: slice.stakes (stamped by the generator) routes lenses —
+  Opus for invariant-adjacent api writes, test-vacuity classes, L-tier, or any
+  slice carrying adjudication context; Sonnet (coverage-first prompting) for
+  presentation/comment/naming slices. Both marquee catches were high-stakes
+  class, so nothing observed is lost.
+- **Gate runners**: DB credentials are pinned verbatim in every gate/implement
+  brief (two mis-default incidents).
+- **DEEPSEEK: PARKED — final for this campaign.** No further pilots, no
+  reviewer role. Its niche (cheap mechanical) is already occupied by Grok at
+  42/43 clean; the one pilot produced a 100% batch-defect rate whose cost
+  landed on orchestrator review time. Revisit only if a bulk lane saturates
+  Grok, and only via a paid first-party endpoint.
