@@ -3,7 +3,7 @@ import {
   type UserSession,
   userSessionSchema,
 } from "@customreport/shared";
-import { serialize } from "cookie";
+import { stringifySetCookie } from "cookie";
 import jwt from "jsonwebtoken";
 
 import { requireEnv } from "../../lib/env.js";
@@ -68,7 +68,9 @@ export function createSessionCookie({
   env: NodeJS.ProcessEnv;
   maxAgeSeconds?: number;
 }): string {
-  return serialize(resolveSessionCookieName(env), token, {
+  return stringifySetCookie({
+    name: resolveSessionCookieName(env),
+    value: token,
     httpOnly: true,
     secure: env.NODE_ENV === "production",
     sameSite: "lax",

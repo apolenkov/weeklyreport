@@ -17,7 +17,7 @@ services:
       sh -c "cd apps/api &&
       pnpm exec prisma generate --schema ../../prisma/schema.prisma &&
       exec node
-      --import @swc-node/register/esm-register
+      --import tsx
       --watch src/main.ts"
     volumes:
       - ./apps/api/src:/app/apps/api/src

@@ -618,7 +618,7 @@ their own `playwright install` — stay green and hide the break.
 
 - **WHEN** `Dockerfile.api` and `pnpm-lock.yaml` are inspected after the change
 - **THEN** the `FROM mcr.microsoft.com/playwright:v<x.y.z>-noble` base tag names
-  the same version (`1.61.0`) as the resolved `playwright` and `playwright-core`
+  the same version (`1.61.1`) as the resolved `playwright` and `playwright-core`
   lines in `pnpm-lock.yaml`
 - **AND** no `v1.59.1-noble` reference remains anywhere in `Dockerfile.api`,
   including the `# TODO: pin @sha256` note

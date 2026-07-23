@@ -1,11 +1,11 @@
 # Stage 1: Base with pnpm, turbo, and Playwright browsers.
 # Keep all API stages on the same glibc-based image so dev/prod PDF export
 # can launch Chromium and native node modules are built for the runner OS.
-FROM mcr.microsoft.com/playwright:v1.61.0-noble@sha256:57b65fdc9ceabe0ef613124c7bbe2babcf9362c4d85e382fe3b03604e84b428a AS base
+FROM mcr.microsoft.com/playwright:v1.61.1-noble@sha256:5b8f294aff9041b7191c34a4bab3ac270157a28774d4b0660e9743297b697e48 AS base
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
-RUN npm install -g turbo@2.9.18
+RUN corepack enable && corepack prepare pnpm@11.17.0 --activate
+RUN npm install -g turbo@2.10.6
 
 # Stage 2: Prune monorepo for api workspace
 FROM base AS pruner

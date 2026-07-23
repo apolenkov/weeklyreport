@@ -24,7 +24,7 @@ sweep's env so dev-only widgets and proxy noise stay out):
 # API (port 3101)
 cd apps/api && PORT=3101 AUTH_DEV_MODE=true NODE_ENV=test \
   FRONTEND_URL=http://127.0.0.1:3100 LOG_DIR=.logs/driver \
-  node --env-file=../../.env --import @swc-node/register/esm-register src/main.ts &
+  node --env-file=../../.env --import tsx src/main.ts &
 
 # Web (port 3100) — NEXT_PUBLIC_DISABLE_DEVTOOLS keeps the Agentation widget out
 # NEXT_PUBLIC_SENTRY_DSN wires web error boundaries to Bugsink so browser-side

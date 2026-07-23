@@ -2,6 +2,19 @@ packages:
   - apps/*
   - packages/*
 
+# pnpm 11+ build script allowlist (native / postinstall tooling).
+allowBuilds:
+  "@nestjs/core": true
+  "@prisma/engines": true
+  "@sentry/cli": true
+  esbuild: true
+  msgpackr-extract: true
+  msw: true
+  playwright: true
+  prisma: true
+  sharp: true
+  unrs-resolver: true
+
 onlyBuiltDependencies:
   - prisma
   - "@prisma/client"
@@ -11,6 +24,12 @@ onlyBuiltDependencies:
   - esbuild
   - msgpackr-extract
   - sharp
+  - "@sentry/cli"
+  - msw
+  - unrs-resolver
+
+# Track latest deliberately during MVP; re-enable (e.g. 1440) once prod is live.
+minimumReleaseAge: 0
 
 overrides:
   "@xmldom/xmldom": ">=0.8.13"
