@@ -29,7 +29,6 @@ const adminSession = session({ role: "admin" });
 const headA = session({ role: "head", reportingGroupId: GROUP_A });
 const headB = session({ role: "head", reportingGroupId: GROUP_B });
 const reviewerA = session({ role: "viewer", viewerGroupAccess: [GROUP_A] });
-const plainViewerA = session({ role: "viewer", viewerGroupAccess: [GROUP_A] });
 const leadSession = session({ role: "lead", reportingGroupId: GROUP_A });
 
 interface RepoOverrides {
@@ -147,7 +146,7 @@ describe("ReviewActionsService — reviewer designation (comment)", () => {
     const { repo } = buildRepo({ canReview: false });
     const service = new ReviewActionsService(repo);
     await expect(
-      service.comment(plainViewerA, commentInput),
+      service.comment(reviewerA, commentInput),
     ).rejects.toMatchObject({ name: "ReviewAccessError" });
   });
 
@@ -237,7 +236,7 @@ describe("ReviewActionsService — verdict", () => {
     const { repo, postVerdict } = buildRepo({ canReview: false });
     const service = new ReviewActionsService(repo);
     await expect(
-      service.verdict(plainViewerA, {
+      service.verdict(reviewerA, {
         reportSectionId: SECTION,
         verdict: "approved",
         version: 3,

@@ -76,15 +76,6 @@ describe("ReviewActionsPrismaRepository.insertComment", () => {
   it("converts a pg-adapter P2003 insert failure to ReviewNotFoundError", async () => {
     const p2003 = {
       code: PRISMA_FOREIGN_KEY_CONSTRAINT_ERROR_CODE,
-      message: "Foreign key constraint violated",
-      meta: {
-        driverAdapterError: {
-          cause: {
-            originalMessage:
-              'insert or update violates foreign key constraint "RecordComment_itemId_fkey"',
-          },
-        },
-      },
     };
     const { repo } = buildRepository({ createError: p2003 });
 

@@ -1,4 +1,4 @@
-import type { UserSession } from "@customreport/shared";
+import type { PeriodStatus, UserSession } from "@customreport/shared";
 
 import { computeAllowedGroupIds } from "../../../lib/group-scope.js";
 
@@ -11,10 +11,9 @@ export type ReviewSession = Pick<
 
 /**
  * Acknowledgement authorization: the caller's group scope must COVER the target
- * group. Derived from the SAME source as `groupScopeFilter`
- * (`computeAllowedGroupIds`; admin = every group) so the boolean can never drift
- * from the row-level Prisma filter. Requires only access — never the reviewer
- * designation.
+ * group. Non-admin scope comes from `computeAllowedGroupIds`; admin coverage is
+ * this function's short-circuit, matching `groupScopeFilter`'s unfiltered admin
+ * branch. Requires only access — never the reviewer designation.
  */
 export function scopeCoversGroup(
   session: ReviewSession,
@@ -46,7 +45,7 @@ export function isDesignatedReviewer(
 // `reopened`, and not archived. A published or archived period is reached only
 // through a period-level reopen first.
 export function isEditablePeriod(period: {
-  periodStatus: string;
+  periodStatus: PeriodStatus;
   archived: boolean;
 }): boolean {
   if (period.archived) return false;
