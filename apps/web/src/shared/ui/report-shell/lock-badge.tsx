@@ -13,10 +13,15 @@ interface LockBadgeProps {
   readonly variant?: LockBadgeVariant;
 }
 
+function formatLockDescription(authorName: string | null | undefined): string {
+  return `Read-only — authored by ${authorName ?? "another lead"}`;
+}
+
 export function LockBadge({ authorName, variant = "default" }: LockBadgeProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const tooltip = useSdlcTooltip();
-  const tooltipContent = `Read-only · Author: ${authorName ?? "another lead"} · You can't edit this card`;
+  const lockDescription = formatLockDescription(authorName);
+  const tooltipContent = `${lockDescription} · You can't edit this card`;
 
   function handleEnter() {
     const el = ref.current;
@@ -36,9 +41,9 @@ export function LockBadge({ authorName, variant = "default" }: LockBadgeProps) {
   return (
     <div
       ref={ref}
-      className={`flex ${sizing} cursor-default items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white text-[var(--color-muted-foreground)]`}
+      className={`flex ${sizing} cursor-default items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)]`}
       role="img"
-      aria-label={`Read-only — authored by ${authorName ?? "another lead"}`}
+      aria-label={lockDescription}
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >

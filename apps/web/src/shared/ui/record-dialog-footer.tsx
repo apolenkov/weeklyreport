@@ -21,7 +21,7 @@ export function RecordDialogFooter({
     <div
       className={
         sticky
-          ? "sticky bottom-0 mt-5 flex flex-wrap justify-end gap-3 border-t bg-white pt-3"
+          ? "sticky bottom-0 mt-5 flex flex-wrap justify-end gap-3 border-t bg-[var(--color-popover)] pt-3"
           : "mt-5 flex flex-wrap justify-end gap-3"
       }
     >

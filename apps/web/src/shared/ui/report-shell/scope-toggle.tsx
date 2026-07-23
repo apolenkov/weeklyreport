@@ -6,19 +6,18 @@ import { segmentClassName, SegmentedToggle } from "./segmented-toggle";
 
 export type ScopeValue = "own" | "product" | "lead";
 
-interface ScopeToggleProps {
-  value: ScopeValue;
-  onChange: (next: ScopeValue) => void;
-  allowedScopes?: readonly ScopeValue[];
+// Generic over the allowed subset so a surface that only offers
+// product/lead (the report-shell URL state) can pass its narrowed setter
+// type-soundly. allowedScopes is REQUIRED: the caller's list is what makes
+// the inference sound (a defaulted full list could feed "own" into a
+// narrowed onChange).
+interface ScopeToggleProps<T extends ScopeValue> {
+  value: T;
+  onChange: (next: T) => void;
+  allowedScopes: readonly T[];
   /** "sm" = toolbar (default); "lg" = slide-hero row height. */
   size?: "sm" | "lg";
 }
-
-const DEFAULT_SCOPES: readonly ScopeValue[] = [
-  "own",
-  "product",
-  "lead",
-] as const;
 
 // slides-record-visibility (Decision 2): the slide layout scope "own" is
 // labeled "Summary" (section-summary vs per-product grid) so it does not read
@@ -35,12 +34,12 @@ const LABELS: Record<ScopeValue, string> = {
 // ViewModeToggle and RecordVisibilityToggle). The segment count is variable
 // (2 or 3, driven by allowedScopes); the track owns the pill shape so no
 // index-aware edge rounding is needed.
-export function ScopeToggle({
+export function ScopeToggle<T extends ScopeValue>({
   value,
   onChange,
-  allowedScopes = DEFAULT_SCOPES,
+  allowedScopes,
   size = "sm",
-}: ScopeToggleProps) {
+}: ScopeToggleProps<T>) {
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // WAI-ARIA radiogroup keyboard model: arrow keys move focus to the adjacent

@@ -99,9 +99,15 @@ describe("ScopeToggle", () => {
     );
   });
 
-  it("renders all three scopes by default when allowedScopes is omitted", () => {
+  it("renders all three scopes when the full list is allowed", () => {
     const onChange = vi.fn();
-    render(<ScopeToggle value={"own"} onChange={onChange} />);
+    render(
+      <ScopeToggle
+        value={"own"}
+        onChange={onChange}
+        allowedScopes={["own", "product", "lead"]}
+      />,
+    );
     expect(screen.getByRole("radio", { name: "Summary" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Product" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Leads" })).toBeInTheDocument();
@@ -138,7 +144,11 @@ describe("ScopeToggle", () => {
 
   it("container has role='radiogroup' and aria-label='Slide scope'", () => {
     const { container } = render(
-      <ScopeToggle value="own" onChange={vi.fn()} />,
+      <ScopeToggle
+        value="own"
+        onChange={vi.fn()}
+        allowedScopes={["own", "product", "lead"]}
+      />,
     );
     const group = container.firstChild as HTMLElement;
     expect(group).toHaveAttribute("role", "radiogroup");

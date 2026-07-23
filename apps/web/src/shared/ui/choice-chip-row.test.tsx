@@ -64,6 +64,10 @@ describe("ChoiceChipRow", () => {
     );
     const selectedBtn = screen.getByRole("button", { name: "! At Risk" });
     expect(selectedBtn.style.background).toBe("var(--color-status-at-risk-bg)");
+    expect(selectedBtn.style.color).toBe("var(--color-status-at-risk-fg)");
+    expect(selectedBtn.style.border).toBe(
+      "1.5px solid var(--color-status-dot-at-risk)",
+    );
     const idleBtn = screen.getByRole("button", { name: "✕ Blocked" });
     expect(idleBtn.style.background).toBe("transparent");
     expect(idleBtn.style.border).toBe("1.5px solid rgba(0, 0, 0, 0.15)");

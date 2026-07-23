@@ -36,12 +36,12 @@ interface ReportToolbarProps {
    * review). Document actions do NOT live here — they render on the page header
    * line via {@link DocumentActionGroup} (report-toolbar-layout).
    */
-  contextControls?: ReactNode;
+  readonly contextControls?: ReactNode;
   /**
    * Opt-in: pin the bar to the top of the viewport on scroll (lead context bar
    * only). Default false so every other usage keeps its non-sticky flow.
    */
-  sticky?: boolean;
+  readonly sticky?: boolean;
 }
 
 /**

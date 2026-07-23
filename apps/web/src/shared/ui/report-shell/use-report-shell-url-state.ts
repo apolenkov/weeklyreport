@@ -3,7 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 
-import type { ScopeValue } from "./scope-toggle";
+export type ReportShellScopeValue = "product" | "lead";
 
 interface ReportShellUrlState {
   /**
@@ -14,8 +14,8 @@ interface ReportShellUrlState {
   readonly buildQuery: (overrides: Record<string, string | null>) => string;
   readonly includeArchive: boolean;
   readonly setIncludeArchive: (value: boolean) => void;
-  readonly scope: ScopeValue;
-  readonly setScope: (value: ScopeValue) => void;
+  readonly scope: ReportShellScopeValue;
+  readonly setScope: (value: ReportShellScopeValue) => void;
 }
 
 /**
@@ -65,10 +65,10 @@ export function useReportShellUrlState({
     [router, pathname, buildQuery],
   );
 
-  const scope: ScopeValue =
+  const scope: ReportShellScopeValue =
     searchParams.get("scope") === "lead" ? "lead" : "product";
   const setScope = useCallback(
-    (value: ScopeValue) => {
+    (value: ReportShellScopeValue) => {
       router.replace(
         `${pathname}${buildQuery({ scope: value === "lead" ? "lead" : null })}`,
         { scroll: false },
