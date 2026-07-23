@@ -72,7 +72,6 @@ describe("buildAccordionModel — draftCount includes activity-only drafts", () 
       fullLeadGroups: [],
     });
 
-    expect(accordion.draftCount).toBeGreaterThanOrEqual(1);
     expect(accordion.draftCount).toBe(1);
   });
 

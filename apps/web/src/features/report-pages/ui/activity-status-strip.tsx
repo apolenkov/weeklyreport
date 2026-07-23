@@ -140,7 +140,7 @@ function RecordList({
 function ActivityBodyCard({ card }: { readonly card: ActivityCardModel }) {
   const linkedNames = card.linkedProducts.join(", ");
   return (
-    <li className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/70 p-3">
+    <li className="rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-card)]/70 p-3">
       <div className="flex flex-wrap items-center gap-2">
         <span
           aria-hidden="true"

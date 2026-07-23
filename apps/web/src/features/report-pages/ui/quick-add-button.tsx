@@ -85,7 +85,7 @@ export function QuickAddButton({
         <div
           role="group"
           aria-label="Quick-add record type"
-          className={`absolute right-0 z-50 w-48 rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-1 shadow-lg ${
+          className={`absolute right-0 z-50 w-48 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-1 shadow-lg ${
             placement === "above" ? "bottom-full mb-1" : "top-full mt-1"
           }`}
         >

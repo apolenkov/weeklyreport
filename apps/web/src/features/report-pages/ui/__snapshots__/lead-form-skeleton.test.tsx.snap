@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`LeadFormSkeleton — root a11y attributes > PlaceholderAccordion skeleton rows render in stable order across re-renders 1`] = `
+exports[`LeadFormSkeleton — root a11y attributes > PlaceholderAccordion skeleton rows render in the expected order 1`] = `
 [
   "skeleton",
   "skeleton",

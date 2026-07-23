@@ -13,7 +13,7 @@
 
 import type { TrafficLightStatus } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
@@ -169,15 +169,6 @@ function makeWeeklyReportData(
 // tRPC test double
 // ---------------------------------------------------------------------------
 
-/**
- * Typed alias for the options object stored in `lastOptions` for mutation
- * procedures that carry onSuccess/onError callbacks.
- */
-interface MutationOpts<TResult = void> {
-  onSuccess?: (result: TResult) => void;
-  onError?: (err: Error) => void;
-}
-
 function renderPage(
   data: ReturnType<typeof makeWeeklyReportData>,
   authorId?: string,
@@ -280,8 +271,8 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     );
 
     // Confirm in the dialog.
-    const dialog = await screen.findByRole("dialog", {
-      name: /confirm publish/i,
+    const dialog = await screen.findByRole("alertdialog", {
+      name: /publish & lock report/i,
     });
     const buttons = dialog.querySelectorAll("button");
     await userEvent.click(expectDefined(buttons[buttons.length - 1]));
@@ -495,38 +486,46 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
 
   it("on publish success: all dependent caches invalidate and a success toast appears", async () => {
     const { captured } = renderPage(makeWeeklyReportData("open"));
+    expectDefined(captured["period.publish"]).mutationFn.mockResolvedValue(
+      undefined,
+    );
 
-    await screen.findByRole("button", { name: /publish & lock/i });
-
-    // Trigger the onSuccess hook directly via the captured options. This decouples
-    // the test from internal react-query timing while still exercising the user code.
-    const publishOpts = expectDefined(captured["period.publish"])
-      .lastOptions as MutationOpts;
-    expect(publishOpts.onSuccess).toBeTypeOf("function");
-    act(() => {
-      expectDefined(publishOpts.onSuccess)();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /publish & lock/i }),
+    );
+    const dialog = await screen.findByRole("alertdialog", {
+      name: /publish & lock report/i,
     });
+    const buttons = dialog.querySelectorAll("button");
+    await userEvent.click(expectDefined(buttons[buttons.length - 1]));
 
-    expect(invalidateDashboard).toHaveBeenCalled();
-    expect(invalidateLeadForm).toHaveBeenCalled();
-    expect(invalidateLeadHistory).toHaveBeenCalled();
-    expect(toastSuccess).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(invalidateDashboard).toHaveBeenCalled();
+      expect(invalidateLeadForm).toHaveBeenCalled();
+      expect(invalidateLeadHistory).toHaveBeenCalled();
+      expect(toastSuccess).toHaveBeenCalled();
+    });
   });
 
   it("on publish error: a toast.error is shown", async () => {
     const { captured } = renderPage(makeWeeklyReportData("open"));
+    expectDefined(captured["period.publish"]).mutationFn.mockRejectedValue(
+      new Error("Forbidden"),
+    );
 
-    await screen.findByRole("button", { name: /publish & lock/i });
-
-    const publishOpts = expectDefined(captured["period.publish"])
-      .lastOptions as MutationOpts;
-    expect(publishOpts.onError).toBeTypeOf("function");
-    act(() => {
-      expectDefined(publishOpts.onError)(new Error("Forbidden"));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /publish & lock/i }),
+    );
+    const dialog = await screen.findByRole("alertdialog", {
+      name: /publish & lock report/i,
     });
+    const buttons = dialog.querySelectorAll("button");
+    await userEvent.click(expectDefined(buttons[buttons.length - 1]));
 
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalledWith("Forbidden");
+    });
     expect(invalidateLeadForm).not.toHaveBeenCalled();
-    expect(toastError).toHaveBeenCalled();
   });
 
   it("clicking Reopen Period (via confirm dialog) fires period.reopen with reportId when periodStatus is published", async () => {
@@ -556,20 +555,23 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
 
   it("on reopen success: invalidateDashboard + invalidateLeadForm + invalidateLeadHistory fire", async () => {
     const { captured } = renderPage(makeWeeklyReportData("published"));
+    expectDefined(captured["period.reopen"]).mutationFn.mockResolvedValue(
+      undefined,
+    );
 
-    await screen.findByRole("button", { name: /reopen period/i });
+    await userEvent.click(
+      await screen.findByRole("button", { name: /reopen period/i }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^reopen$/i }),
+    );
 
-    const reopenOpts = expectDefined(captured["period.reopen"])
-      .lastOptions as MutationOpts;
-    expect(reopenOpts.onSuccess).toBeTypeOf("function");
-    act(() => {
-      expectDefined(reopenOpts.onSuccess)();
+    await waitFor(() => {
+      expect(invalidateDashboard).toHaveBeenCalled();
+      expect(invalidateLeadForm).toHaveBeenCalled();
+      expect(invalidateLeadHistory).toHaveBeenCalled();
+      expect(toastSuccess).toHaveBeenCalled();
     });
-
-    expect(invalidateDashboard).toHaveBeenCalled();
-    expect(invalidateLeadForm).toHaveBeenCalled();
-    expect(invalidateLeadHistory).toHaveBeenCalled();
-    expect(toastSuccess).toHaveBeenCalled();
   });
 
   it("highlights only one authored section when authorId maps to multiple products", async () => {

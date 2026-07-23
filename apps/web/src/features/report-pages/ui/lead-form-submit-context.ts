@@ -49,8 +49,9 @@ export type SubmitOutcome =
 
 /**
  * Projects the submit-readiness stage rows from the draft payload's stage
- * statuses, resolving each stage's display name from the products. Duplicated
- * stage ids per project keep positional labels (the pre-module inline mapping).
+ * statuses, resolving each stage's display name from the product's owned
+ * stages. Locked stages are display-only and never appear in the draft payload,
+ * so they must not shift the positional label lookup.
  */
 export function buildSubmitStages(
   draftPayload: DraftSaveContent | null,
@@ -63,10 +64,13 @@ export function buildSubmitStages(
     const stageIndex = statuses
       .slice(0, index)
       .filter((candidate) => candidate.projectId === status.projectId).length;
+    const ownedStages = product?.stages.filter(
+      (stage) => stage.ownership === "mine",
+    );
     return {
       projectId: status.projectId,
       stageId: status.stageId,
-      name: product?.stages[stageIndex]?.stageName ?? status.stageId,
+      name: ownedStages?.[stageIndex]?.stageName ?? status.stageId,
     };
   });
 }

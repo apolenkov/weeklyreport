@@ -42,8 +42,6 @@ interface LeadFormProps {
   readonly redirectToCanonical?: boolean;
 }
 
-export { sectionToDraftPayload } from "../../report-sections";
-
 const EMPTY_LOADED_CONTEXT: LeadFormLoadedContext = {
   products: [],
   currentWeekItems: [],

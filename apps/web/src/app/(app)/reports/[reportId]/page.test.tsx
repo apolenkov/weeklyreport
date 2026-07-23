@@ -27,7 +27,7 @@ vi.mock("../../../../features/viewer/ui/viewer-report-shell", () => ({
   ),
 }));
 
-vi.mock("../../../../features/report-pages/ui/weekly-report-skeleton", () => ({
+vi.mock("../../../../features/report-pages", () => ({
   WeeklyReportSkeleton: () => <div data-testid="weekly-report-skeleton" />,
 }));
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { autosaveStatusCopy } from "./autosave-state-copy";
 import {
   type LeadCompletionActionContract,
   LeadCompletionActions,
@@ -12,14 +13,7 @@ interface LeadStickyCompletionActionsProps {
 export function LeadStickyCompletionActions({
   actions,
 }: LeadStickyCompletionActionsProps) {
-  const saveState =
-    actions.autosave.state === "error"
-      ? "Draft save failed"
-      : actions.autosave.state === "pending"
-        ? "Draft changes pending"
-        : actions.autosave.state === "saving"
-          ? "Saving draft"
-          : "Draft saved";
+  const saveState = autosaveStatusCopy(actions.autosave.state);
   return (
     <aside
       aria-label="Report completion"

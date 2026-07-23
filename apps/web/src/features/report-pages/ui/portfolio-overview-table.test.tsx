@@ -46,19 +46,6 @@ describe("PortfolioOverviewTable — a11y regression", () => {
     expect(gridIcon).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("GridIcon SVG is not accessible to screen readers (excluded from a11y tree)", () => {
-    render(<PortfolioOverviewTable products={ONE_PRODUCT} />);
-    // aria-hidden="true" means the SVG should not appear in role queries.
-    // An SVG with role "img" (or any presentational role) and aria-hidden
-    // must not be returned by getByRole.
-    const svgImages = screen.queryAllByRole("img");
-    // None of the SVGs should be exposed as an accessible image.
-    expect(svgImages).toHaveLength(0);
-    // The SVG must not be reachable by any accessible text query either.
-    const graphicElements = screen.queryAllByRole("graphics-symbol");
-    expect(graphicElements).toHaveLength(0);
-  });
-
   it("'Portfolio Overview' text is readable by screen reader without SVG announcement", () => {
     render(<PortfolioOverviewTable products={ONE_PRODUCT} />);
     // The heading text is reachable directly — no aria-hidden ancestor blocks it.
@@ -73,16 +60,27 @@ describe("PortfolioOverviewTable — a11y regression", () => {
     }
   });
 
-  it("GridIcon visual rendering: svg has 4 rect children with correct viewBox (snapshot)", () => {
+  it("GridIcon renders the intended four-cell grid", () => {
     const { container } = render(
       <PortfolioOverviewTable products={ONE_PRODUCT} />,
     );
     const gridIconSvg = container.querySelector("svg");
     expect(gridIconSvg).not.toBeNull();
     expect(gridIconSvg?.getAttribute("viewBox")).toBe("0 0 24 24");
-    const rects = gridIconSvg?.querySelectorAll("rect");
-    expect(rects).toHaveLength(4);
-    expect(gridIconSvg).toMatchSnapshot();
+    const rects = Array.from(gridIconSvg?.querySelectorAll("rect") ?? []).map(
+      (rect) => ({
+        x: rect.getAttribute("x"),
+        y: rect.getAttribute("y"),
+        width: rect.getAttribute("width"),
+        height: rect.getAttribute("height"),
+      }),
+    );
+    expect(rects).toEqual([
+      { x: "3", y: "3", width: "7", height: "7" },
+      { x: "14", y: "3", width: "7", height: "7" },
+      { x: "3", y: "14", width: "7", height: "7" },
+      { x: "14", y: "14", width: "7", height: "7" },
+    ]);
   });
 });
 
