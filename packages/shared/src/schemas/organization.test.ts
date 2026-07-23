@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  MAX_FULL_NAME_LENGTH,
+  MAX_SHORT_NAME_LENGTH,
   organizationPublicSchema,
+  organizationSchema,
   organizationUpdateSchema,
 } from "./organization";
 
@@ -30,17 +33,26 @@ describe("organizationUpdateSchema — HTML-delimiter charset guard", () => {
     expect(parsed.fullName).toBe("Acme Platforms Inc. & Co.");
   });
 
-  it("still enforces the existing length bounds (shortName ≤ 16, fullName ≤ 200)", () => {
+  it("uses the exported length bounds for stored and update schemas", () => {
     expect(
       organizationUpdateSchema.safeParse({
-        shortName: "A".repeat(17),
+        shortName: "A".repeat(MAX_SHORT_NAME_LENGTH + 1),
         fullName: "ok",
       }).success,
     ).toBe(false);
     expect(
       organizationUpdateSchema.safeParse({
         shortName: "ok",
-        fullName: "A".repeat(201),
+        fullName: "A".repeat(MAX_FULL_NAME_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+    expect(
+      organizationSchema.safeParse({
+        id: "singleton",
+        shortName: "ok",
+        fullName: "A".repeat(MAX_FULL_NAME_LENGTH + 1),
+        createdAt: new Date(),
+        updatedAt: new Date(),
       }).success,
     ).toBe(false);
   });

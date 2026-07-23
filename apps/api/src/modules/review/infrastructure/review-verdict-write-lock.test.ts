@@ -24,7 +24,6 @@ describe("ReviewActionsPrismaRepository.postVerdict write lock", () => {
         sectionId: "44444444-4444-4444-8444-444444444444",
         reviewerId: "55555555-5555-4555-8555-555555555555",
         verdict: "changes_requested",
-        judgedVersion: 1,
         expectedVersion: 1,
         currentStatus: "submitted",
       }),

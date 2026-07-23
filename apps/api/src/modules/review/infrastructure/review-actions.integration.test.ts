@@ -187,7 +187,6 @@ describe("review-actions (integration)", () => {
         sectionId: testData.section.id,
         reviewerId: testData.head.id,
         verdict: "changes_requested",
-        judgedVersion: 1,
         expectedVersion: 1,
         currentStatus: "submitted",
       });
@@ -209,7 +208,6 @@ describe("review-actions (integration)", () => {
         sectionId: testData.section.id,
         reviewerId: testData.head.id,
         verdict: "approved",
-        judgedVersion: 1,
         expectedVersion: 1,
         currentStatus: "submitted",
       });
@@ -227,7 +225,6 @@ describe("review-actions (integration)", () => {
         sectionId: testData.section.id,
         reviewerId: testData.head.id,
         verdict: "changes_requested",
-        judgedVersion: 1,
         expectedVersion: 1,
         currentStatus: "draft",
       });
@@ -263,7 +260,6 @@ describe("review-actions (integration)", () => {
           sectionId: testData.section.id,
           reviewerId: testData.head.id,
           verdict: "approved",
-          judgedVersion: 1,
           expectedVersion: 1,
           currentStatus: "submitted",
         }),
@@ -281,7 +277,6 @@ describe("review-actions (integration)", () => {
           sectionId: testData.section.id,
           reviewerId: testData.head.id,
           verdict: "changes_requested",
-          judgedVersion: 1,
           expectedVersion: 1,
           currentStatus: "submitted",
         }),
@@ -303,7 +298,6 @@ describe("review-actions (integration)", () => {
         sectionId: testData.section.id,
         reviewerId: testData.head.id,
         verdict: "approved",
-        judgedVersion: 1,
         expectedVersion: 1,
         currentStatus: "submitted",
       });
@@ -325,7 +319,6 @@ describe("review-actions (integration)", () => {
         sectionId: testData.section.id,
         reviewerId: testData.head.id,
         verdict: "changes_requested",
-        judgedVersion: 1,
         expectedVersion: 1,
         currentStatus: "submitted",
       });
@@ -354,7 +347,6 @@ describe("review-actions (integration)", () => {
           sectionId: testData.section.id,
           reviewerId,
           verdict: "changes_requested",
-          judgedVersion: 1,
           expectedVersion: 1,
           currentStatus: "submitted",
         });
@@ -381,7 +373,6 @@ describe("review-actions (integration)", () => {
           sectionId: testData.section.id,
           reviewerId: testData.head.id,
           verdict: "changes_requested",
-          judgedVersion: 1,
           expectedVersion: 1,
           currentStatus: "submitted",
         }),

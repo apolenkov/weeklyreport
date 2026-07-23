@@ -31,11 +31,9 @@ export interface RecordAnchor {
   decisionId?: string;
 }
 
-// review-acknowledgement: the section facts a verdict reads — its version (what
-// the verdict judges), its editable status, its owning group, and the period
-// lifecycle it belongs to.
+// review-acknowledgement: the section facts a verdict reads — its editable
+// status, owning group, and period lifecycle.
 export interface VerdictContext {
-  version: number;
   status: ReportSectionStatus;
   groupId: string | null;
   periodStatus: PeriodStatus;
@@ -46,10 +44,8 @@ export interface PostVerdictParams {
   sectionId: string;
   reviewerId: string;
   verdict: ReviewVerdict;
-  // The section version this verdict judges (its `version` at verdict time).
-  judgedVersion: number;
-  // The reviewer-judged version; the verdict write's optimistic lock rejects a
-  // stale value for either verdict value.
+  // The client-loaded version drives both the optimistic lock and the version
+  // stamped on the verdict, so a stale judgement can never be persisted.
   expectedVersion: number;
   currentStatus: ReportSectionStatus;
 }
@@ -181,9 +177,6 @@ export class ReviewActionsService {
       sectionId: input.reportSectionId,
       reviewerId: session.userId,
       verdict: input.verdict,
-      // Record the version the reviewer judged; the repository's version lock
-      // rejects a stale judgement, so this never stamps a version they never saw.
-      judgedVersion: input.version,
       expectedVersion: input.version,
       currentStatus: context.status,
     });

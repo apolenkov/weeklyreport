@@ -147,7 +147,6 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
     const section = await this.prisma.reportSection.findUnique({
       where: { id: sectionId },
       select: {
-        version: true,
         status: true,
         author: { select: { reportingGroupId: true } },
         report: { select: { periodStatus: true, archived: true } },
@@ -155,7 +154,6 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
     });
     if (!section) return null;
     return {
-      version: section.version,
       status: section.status,
       groupId: section.author.reportingGroupId,
       periodStatus: section.report.periodStatus,
@@ -184,7 +182,7 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
         );
       }
 
-      // Version lock for BOTH verdict values, taken as a guarded WRITE rather
+      // Version lock for the verdict, taken as a guarded WRITE rather
       // than a plain read: the no-op update row-locks the section for the rest
       // of this transaction, so a concurrent lead re-submit either committed
       // first (this predicate then matches zero rows) or blocks until this tx
@@ -213,11 +211,11 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
           reportSectionId: params.sectionId,
           reviewerId: params.reviewerId,
           verdict: params.verdict,
-          judgedVersion: params.judgedVersion,
+          judgedVersion: params.expectedVersion,
         },
         update: {
           verdict: params.verdict,
-          judgedVersion: params.judgedVersion,
+          judgedVersion: params.expectedVersion,
         },
       });
 
