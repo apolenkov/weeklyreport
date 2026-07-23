@@ -713,7 +713,7 @@
       "line": 28,
       "issue": "Docstring claims rows are \"keyset-paginated on `id`\" but the repository actually orders by `createdAt` and only uses id as the cursor key — the described ordering does not match the real query.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -722,7 +722,7 @@
       "line": 225,
       "issue": "upsertPeriod passes the plain PrismaService into writePeriodRow (typed Prisma.TransactionClient), so its findUnique-then-create is not wrapped in a transaction and two concurrent creates race to an uncaught P2002 on the id PK.",
       "class": "error-handling-robustness",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -731,7 +731,7 @@
       "line": 11,
       "issue": "Header comment contains a dangling fragment \"`ReminderAudience`.\" before the explanatory sentence, reading like leftover editing rather than intentional prose.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -740,7 +740,7 @@
       "line": 32,
       "issue": "The take: 100 list cap is an unnamed magic literal; the repo convention asks such non-obvious limits to be named or documented.",
       "class": "magic-values-drift",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -749,7 +749,7 @@
       "line": 58,
       "issue": "expect(completeRepository).toBe(incompleteRepository) is runtime filler — it always passes since they are the same object; the load-bearing check is the @ts-expect-error above it.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -758,7 +758,7 @@
       "line": 96,
       "issue": "Comment says NotFound fires when the scoped re-load finds no matching 'pending' request, but the re-load (findFirst) is not status-filtered — an already-decided request is found and yields already-processed, not NOT_FOUND, so the 'pending' qualifier is misleading.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -776,7 +776,7 @@
       "line": 84,
       "issue": "No test asserts isActive survives a getSnapshot->saveSnapshot round-trip, so the write path's silent drop of the deactivation flag is unguarded despite exhaustive lifecycle-field restore tests around it.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -794,7 +794,7 @@
       "line": 1201,
       "issue": "The 'limit is clamped to 200' assertion seeds only 1 row, so `b.length <= 200` holds trivially whether the clamp is 200, 1000, or absent — the upper clamp is not actually exercised (the lower clamp at limit:0 does have teeth via the fake's slice).",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -803,7 +803,7 @@
       "line": 121,
       "issue": "No test covers a job carrying an executionId when reminderExecutionExists is undefined (the branch that must skip the existence check and still retry), leaving that guard combination unexercised.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -812,7 +812,7 @@
       "line": 136,
       "issue": "`deadlineTime.split(\":\").at(0) ?? \"18\"` — String.split always returns a non-empty array so .at(0) is never undefined, making the `?? \"18\"` fallback unreachable dead code; a malformed/empty deadlineTime silently yields hour 0, not the intended 18.",
       "class": "env-config-silent-fallback",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -821,7 +821,7 @@
       "line": 165,
       "issue": "listStages, listStageAssignmentCounts (174), and listProductGroupOwnership (157) add no validation or logging over the repository call, so they are pure pass-throughs that fail the deletion test versus calling the repository directly.",
       "class": "dead-unreachable-code",
-      "disposition": "pending",
+      "disposition": "refuted",
       "lane": "grok"
     },
     {
@@ -839,7 +839,7 @@
       "line": 64,
       "issue": "policyExists loads every reminder policy just to run .some() on the id, so a create/update decision fetches the entire list twice (again in the following savePolicy call).",
       "class": "query-efficiency-perf",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -848,8 +848,8 @@
       "line": 65,
       "issue": "This 'round-trips an archived period' case lives under the full-fidelity describe block but omits periodState and actually exercises the legacy archived→'archived' backfill, so its placement mislabels which code path it verifies.",
       "class": "code-structure-placement",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "refuted",
+      "lane": "codex"
     },
     {
       "id": "g-087",
@@ -857,7 +857,7 @@
       "line": 196,
       "issue": "expect(created.stageName).toBe('Development') asserts a value the mock hardcodes rather than anything the service produces, so it cannot fail on a service regression.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -866,8 +866,8 @@
       "line": 217,
       "issue": "Comment says 'product/stage pair' where the code and intent are about the project/stage pair — stray wording.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
-      "lane": "grok"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-089",
@@ -4007,8 +4007,8 @@
       "line": 119,
       "issue": "invalidateAdmin asserts only arrayContaining with no toHaveBeenCalledTimes, so an accidental extra invalidation added later would go undetected.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-438",
@@ -4025,7 +4025,7 @@
       "line": 3,
       "issue": "Header claims \"All dates use 'ru-RU' locale\" but only formatDateTime uses ru-RU; the period and relative-past formatters render English month labels and the activity fallback uses en-US, so the blanket claim is misleading.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -4034,7 +4034,7 @@
       "line": 49,
       "issue": "Expected value is computed with the same toLocaleDateString expression the implementation uses, so this case pins the fallback branch selection but not the actual format (that is pinned only by the separate 4/12/2026 test).",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -4061,7 +4061,7 @@
       "line": 44,
       "issue": "The 'every predicate returns false for null' test is fully subsumed by the parametrized loop (null is already in ROLE_STATES and never in any trueFor), so it cannot fail independently of the loop it duplicates.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -4070,8 +4070,8 @@
       "line": 77,
       "issue": "The authenticated user toEqual omits lastName/firstName/middleName and the mock data lacks them, so (since toEqual ignores undefined properties) the provider's mapping of those three SessionUser fields is never actually asserted.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-445",
@@ -4079,8 +4079,8 @@
       "line": 59,
       "issue": "The provider's writeLastRole side effect (localStorage persistence fired from useEffect on authentication) is neither mocked nor asserted, so a regression in that persistence path would not be caught here.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-446",
@@ -4106,8 +4106,8 @@
       "line": 26,
       "issue": "The 'Four callers' enumeration hardcodes the current caller list in prose, which will silently drift out of date the moment a fifth caller is added or one is removed.",
       "class": "duplication",
-      "disposition": "pending",
-      "lane": "codex"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-449",
@@ -4115,7 +4115,7 @@
       "line": 48,
       "issue": "The docstring says redirect skips 'when the HTTP status is not 401' but the code also redirects on code === 'UNAUTHORIZED' regardless of httpStatus (line 62-63), so the documented contract is incomplete.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -4124,8 +4124,8 @@
       "line": 168,
       "issue": "The two negative 'no fetch' assertions depend on a fixed 20ms setTimeout window rather than a deterministic signal, a mild flakiness risk under load.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-451",
@@ -4133,7 +4133,7 @@
       "line": 8,
       "issue": "The dynamic import(\"web-vitals\").then(...) chain has no .catch(), so a chunk-load failure of the web-vitals module surfaces as an unhandled promise rejection (only the inner fetch is guarded).",
       "class": "error-handling-robustness",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -4142,8 +4142,8 @@
       "line": 34,
       "issue": "The `\"json\" in data` heuristic would mis-unwrap an un-transformed payload that legitimately contains a field named `json`, though this is unlikely for the current procedures.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-453",
@@ -4151,7 +4151,7 @@
       "line": 41,
       "issue": "`revalidate: 60` contradicts the JSDoc claim that org identity is \"stable across a deploy\" and invalidated only via the org-public tag, so the comment overstates the caching contract.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -4160,8 +4160,8 @@
       "line": 8,
       "issue": "The block JSDoc describing getOrgPublic is positioned above the decodeOrgPublicResponse helper rather than above the function it documents.",
       "class": "code-structure-placement",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-455",
@@ -4169,7 +4169,7 @@
       "line": 40,
       "issue": "`payload as UserSession` is an unchecked cast — a `userSessionSchema` exists in packages/shared/src/schemas/auth.ts, so a malformed API response is returned as a typed UserSession rather than rejected via safeParse.",
       "class": "type-safety-weakening",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -4187,8 +4187,8 @@
       "line": 36,
       "issue": "`const COOKIE_NAME = AUTH_COOKIE_NAME` re-aliases the import with no added meaning, an indirection that fails the deletion test.",
       "class": "dead-unreachable-code",
-      "disposition": "pending",
-      "lane": "grok"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-458",
