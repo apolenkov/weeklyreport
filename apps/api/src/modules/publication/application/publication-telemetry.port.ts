@@ -1,4 +1,9 @@
-export type PublicationSourceState = "open" | "reopened";
+/**
+ * Transition `from` values the auto-publish path records. Auto-publish only
+ * ever fires on open periods; reopened-period publishes flow through
+ * PeriodTelemetry, not this port.
+ */
+export type PublicationSourceState = "open";
 
 export interface PublicationTelemetry {
   recordPublishedReport(): void;

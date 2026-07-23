@@ -18,13 +18,9 @@ export class ArchiveDomainError extends Error {
 }
 
 /**
- * The role-aware filter expressed as a plain object
- * the repository merges into its Prisma `where`. This shape stays Prisma-free
- * at the service layer so the domain code does not import `@prisma/client`.
- *
- * Mirrors the ReportStatus enum (Prisma) — narrow to the two members the
- * archive surface ever cares about: 'published' (default for viewer scope)
- * and 'draft' (in-progress).
+ * Role-aware filter expressed as a plain object the repository merges into
+ * its Prisma `where`, so domain code stays free of `@prisma/client`.
+ * `status` is optional: omit it for no status predicate.
  */
 export interface ArchiveReadFilter {
   status?: ReportStatus;
