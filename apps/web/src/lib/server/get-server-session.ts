@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { UserSession } from "@customreport/shared";
+import { type UserSession, userSessionSchema } from "@customreport/shared";
 import { cookies } from "next/headers";
 
 import { AUTH_COOKIE_NAME } from "../../server/auth/session";
@@ -33,16 +33,15 @@ import {
  * fresh, otherwise role downgrades would be invisible until the Next.js
  * data cache invalidates.
  */
-const COOKIE_NAME = AUTH_COOKIE_NAME;
-
 function decodeAuthMeResponse(body: unknown): UserSession | null {
   const payload = decodeTrpcBatchPayload(body);
-  return payload === null ? null : (payload as UserSession);
+  const result = userSessionSchema.safeParse(payload);
+  return result.success ? result.data : null;
 }
 
 export async function getServerSession(): Promise<UserSession | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
   if (!token && !shouldUseDevAuthFallback()) return null;
 
   const apiUrl = requireApiUrl();
@@ -55,7 +54,7 @@ export async function getServerSession(): Promise<UserSession | null> {
   try {
     const response = await fetch(url, {
       method: "GET",
-      headers: token ? { cookie: `${COOKIE_NAME}=${token}` } : undefined,
+      headers: token ? { cookie: `${AUTH_COOKIE_NAME}=${token}` } : undefined,
       cache: "no-store",
     });
     if (!response.ok) return null;

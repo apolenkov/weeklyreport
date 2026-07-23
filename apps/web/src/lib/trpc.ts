@@ -45,7 +45,7 @@ export function isProgressiveDashboardProcedure(path: string): boolean {
  * Skips when:
  *   - running on the server (no `window`),
  *   - the error is not a TRPCClientError,
- *   - the error's HTTP status is not 401,
+ *   - neither `httpStatus === 401` nor `code === 'UNAUTHORIZED'`,
  *   - the current path matches AUTH_REDIRECT_EXEMPT.
  *
  * Redirect target: '/' (the login page in this app — there is no /login

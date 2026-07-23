@@ -128,6 +128,7 @@ describe("cache-keys helpers", () => {
         "weeklyReport.get",
       ]),
     );
+    expect(spy).toHaveBeenCalledTimes(6);
   });
 
   it("invalidateReview covers weeklyReport.get + leadForm.byPeriod + reports.getActive", () => {

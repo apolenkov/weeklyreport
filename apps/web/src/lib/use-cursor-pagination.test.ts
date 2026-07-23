@@ -164,8 +164,7 @@ describe("useCursorPagination", () => {
       { wrapper: Wrapper },
     );
 
-    // Wait a microtask + a couple rAFs to be sure no fetch happens.
-    await new Promise((r) => setTimeout(r, 20));
+    await act(() => Promise.resolve());
     expect(queryFn).not.toHaveBeenCalled();
   });
 
@@ -185,8 +184,7 @@ describe("useCursorPagination", () => {
       wrapper: Wrapper,
     });
 
-    // Wait a microtask + a couple rAFs to be sure no fetch happens.
-    await new Promise((r) => setTimeout(r, 20));
+    await act(() => Promise.resolve());
     expect(queryFn).not.toHaveBeenCalled();
   });
 

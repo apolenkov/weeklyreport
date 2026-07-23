@@ -20,22 +20,10 @@ import {
  * which resets a stage to on-track when its last covering risk is removed —
  * so a freshly-reloaded read model agrees with the live form.
  *
- * Severity precedence: blocked > at-risk > on-track > empty.
- *
- * Four callers:
- * - `applyRiskSeverityFloor` (lead live form) and `floorSlideStageStatus`
- *   (slide/preview) pass `items: []` — risks are the only live source there.
- * - `buildStageGrid` (lead-form.ts, the read model) passes a real `explicit`
- *   traffic status plus real `risks` (and `items: []`). It calls this only for
- *   a TOUCHED stage (explicit !== empty), to floor up / collapse down; an
- *   untouched empty stage skips the call and stays empty so own-input
- *   completeness is not inflated by a covering risk.
- * - `buildCrossAuthorStageMap` (lead-cross-author.ts, the read-only "Other
- *   contributors" chip) passes a real `explicit` traffic status plus real
- *   `risks`/`items`. The collapse-down above intentionally applies there too:
- *   a foreign author's persisted red/amber status with NO covering risk now
- *   collapses to on-track, consistent with the one-source model. Only stale
- *   traffic-only data (no backing risk) is affected.
+ * Severity precedence: blocked > at-risk > on-track > empty — the worst
+ * covering severity wins; with no backing risk/item an orphaned
+ * at-risk/blocked `explicit` collapses to on-track, while on-track/empty
+ * pass through (callers wanting an untouched empty stage skip the call).
  */
 export function deriveEffectiveStageStatus(
   explicit: CanonicalStatus,

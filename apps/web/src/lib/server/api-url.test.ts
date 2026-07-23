@@ -42,9 +42,15 @@ describe("decodeTrpcBatchPayload", () => {
     expect(decodeTrpcBatchPayload(body)).toEqual({ id: "u1" });
   });
 
-  it("returns the payload as-is for the un-transformed shape", () => {
+  it("passes an untransformed payload through unchanged (config-drift fallback)", () => {
     const body = [{ result: { data: { id: "u1" } } }];
     expect(decodeTrpcBatchPayload(body)).toEqual({ id: "u1" });
+  });
+
+  it("preserves a domain payload with its own json field", () => {
+    const payload = { json: "domain value", id: "u1" };
+    const body = [{ result: { data: { json: payload } } }];
+    expect(decodeTrpcBatchPayload(body)).toEqual(payload);
   });
 
   it("preserves falsy-but-valid wrapped payloads (0, false, empty string)", () => {

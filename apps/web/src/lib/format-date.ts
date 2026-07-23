@@ -1,7 +1,8 @@
 /**
  * Shared date formatting utilities.
- * All dates use 'ru-RU' locale. Period dates (periodStart, periodEnd)
- * include timeZone: 'UTC' to prevent off-by-one day shifts in UTC+N timezones.
+ * Locale is per-formatter: `formatDateTime` uses `ru-RU`; relative/period
+ * helpers use English month labels and phrasing. Period ranges use UTC
+ * accessors so periodStart/periodEnd do not shift by a day in UTC+N.
  */
 
 import {

@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------------------
 
 const useQueryMock = vi.fn();
+const writeLastRoleMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@tanstack/react-query", async () => {
   const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
@@ -29,11 +30,16 @@ vi.mock("./trpc-context", () => ({
   }),
 }));
 
+vi.mock("./last-role", () => ({
+  writeLastRole: writeLastRoleMock,
+}));
+
 // Imports after mocks
 import { SessionProvider, useSession } from "./session-provider";
 
 beforeEach(() => {
   useQueryMock.mockReset();
+  writeLastRoleMock.mockReset();
 });
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -56,12 +62,15 @@ describe("SessionProvider + useSession", () => {
     });
   });
 
-  it("returns authenticated state when auth.me resolves with a session", () => {
+  it("returns authenticated state and persists the role when auth.me resolves", async () => {
     useQueryMock.mockReturnValue({
       data: {
         userId: "a0000000-0000-4000-8000-000000000099",
         email: "head@customreport.local",
         name: "Department Head",
+        lastName: "Head",
+        firstName: "Department",
+        middleName: "Operations",
         role: "head",
         activeReportId: "a0000000-0000-4000-8000-000000000001",
         activeReportSectionId: null,
@@ -77,10 +86,21 @@ describe("SessionProvider + useSession", () => {
     expect(result.current.user).toEqual({
       id: "a0000000-0000-4000-8000-000000000099",
       name: "Department Head",
+      lastName: "Head",
+      firstName: "Department",
+      middleName: "Operations",
       email: "head@customreport.local",
       role: "head",
       reportingGroupName: "Software Development",
     });
+    await waitFor(() =>
+      expect(writeLastRoleMock).toHaveBeenCalledWith({
+        role: "head",
+        email: "head@customreport.local",
+        name: "Department Head",
+      }),
+    );
+    expect(writeLastRoleMock).toHaveBeenCalledTimes(1);
   });
 
   it("hydrates organization onto SessionState when auth.me carries it", () => {

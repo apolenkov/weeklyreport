@@ -29,7 +29,7 @@ describe("decodeAuthMeResponse", () => {
     expect(decodeAuthMeResponse(body)).toEqual(SESSION);
   });
 
-  it("extracts the un-transformed payload (fallback)", () => {
+  it("accepts a schema-valid session in the untransformed shape (config-drift fallback)", () => {
     const body = [{ result: { data: SESSION } }];
     expect(decodeAuthMeResponse(body)).toEqual(SESSION);
   });
@@ -51,6 +51,22 @@ describe("decodeAuthMeResponse", () => {
     expect(decodeAuthMeResponse(undefined)).toBeNull();
     expect(decodeAuthMeResponse({})).toBeNull();
     expect(decodeAuthMeResponse([])).toBeNull();
+  });
+
+  it("returns null for a malformed session payload", () => {
+    const body = [
+      {
+        result: {
+          data: {
+            json: {
+              ...SESSION,
+              role: "super-admin",
+            },
+          },
+        },
+      },
+    ];
+    expect(decodeAuthMeResponse(body)).toBeNull();
   });
 });
 

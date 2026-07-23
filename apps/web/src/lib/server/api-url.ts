@@ -22,19 +22,33 @@ interface TrpcBatchEntry {
   readonly error?: { readonly message?: string };
 }
 
-// Unwraps a tRPC v11 batched GET response body to the first entry's payload;
-// tolerates both the superjson `{ json }` wrapper and the un-transformed
-// shape (resilience against transformer config drift).
+interface SuperJsonEnvelope {
+  readonly json: unknown;
+  readonly meta?: unknown;
+}
+
+function isSuperJsonEnvelope(value: unknown): value is SuperJsonEnvelope {
+  if (value === null || typeof value !== "object") return false;
+  const keys = Object.keys(value);
+  return (
+    Object.hasOwn(value, "json") &&
+    keys.every((key) => key === "json" || key === "meta")
+  );
+}
+
+// The API's initTRPC transformer is superjson, whose serialized contract is
+// exactly `{ json, meta? }`; domain payload fields remain nested under `json`.
+// A payload that does not match that precise shape is passed through as-is —
+// the config-drift fallback callers pin (an untransformed response must still
+// decode), which also keeps a domain object carrying its own `json` field
+// from being mis-unwrapped.
 export function decodeTrpcBatchPayload(body: unknown): unknown {
   if (!Array.isArray(body) || body.length === 0) return null;
   const entry = body[0] as TrpcBatchEntry | undefined;
   if (!entry || entry.error) return null;
   const data = entry.result?.data;
   if (data === null || data === undefined) return null;
-  if (typeof data === "object" && "json" in (data as Record<string, unknown>)) {
-    return (data as { json: unknown }).json ?? null;
-  }
-  return data;
+  return isSuperJsonEnvelope(data) ? (data.json ?? null) : data;
 }
 
 export function shouldUseDevAuthFallback(): boolean {
