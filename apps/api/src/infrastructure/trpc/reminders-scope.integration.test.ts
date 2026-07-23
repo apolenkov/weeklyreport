@@ -301,6 +301,24 @@ describe("reminders namespace — per-group scope (integration)", () => {
       expect(result.reason).toBe("no-matching-section");
       expect(result.dispatched).toBe(0);
     });
+
+    // Distinct from the no-section case above: the lead HAS a section on the
+    // report, but it is not draft (submitted), so the draft-section filter
+    // still yields zero matches and the soft no-matching-section exit fires.
+    it("returns no-matching-section when the lead's section is submitted", async () => {
+      await prisma.reportSection.updateMany({
+        where: { reportId: TEST_IDS.report, authorId: TEST_IDS.lead },
+        data: { status: "submitted" },
+      });
+
+      const caller = buildCaller("head", TEST_IDS.report);
+      const result = await caller.reminders.dispatchPending({
+        reportId: TEST_IDS.report,
+        leadId: TEST_IDS.lead,
+      });
+      expect(result.reason).toBe("no-matching-section");
+      expect(result.dispatched).toBe(0);
+    });
   });
 
   describe("admin god-mode reaches every procedure unfiltered", () => {

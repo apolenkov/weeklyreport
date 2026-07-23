@@ -142,7 +142,7 @@ describe("PeriodService — integration (publish lifecycle)", () => {
     expect(record?.publishedAt).toBeInstanceOf(Date);
   });
 
-  it("publish fails with PeriodAccessError if already published", async () => {
+  it("publish of an already-published period is an idempotent success", async () => {
     const reports = new Map<string, SpyReport>([
       [
         reportId,
@@ -160,9 +160,9 @@ describe("PeriodService — integration (publish lifecycle)", () => {
       noGatingReopenPolicy,
     );
 
-    await expect(
-      service.publishPeriod(reportId, headSession),
-    ).rejects.toBeInstanceOf(PeriodAccessError);
+    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
+      { success: true, reportId },
+    );
   });
 
   it("reopen resets periodStatus from published to reopened", async () => {

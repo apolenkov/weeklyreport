@@ -206,7 +206,10 @@ describe("PeriodService — publishPeriod (unit)", () => {
     ).rejects.not.toBeInstanceOf(PeriodAccessError);
   });
 
-  it("does not call repository when period is already published", async () => {
+  it("returns idempotent success without a write when period is already published", async () => {
+    // A retry landing after the winner committed (double-click, second tab)
+    // already has the desired state — publish-compare-and-set semantics: no
+    // error, no second write, no counters.
     const reports = new Map<string, SpyReport>([
       [
         reportId,
@@ -225,9 +228,9 @@ describe("PeriodService — publishPeriod (unit)", () => {
       noGatingReopenPolicy,
     );
 
-    await expect(
-      service.publishPeriod(reportId, headSession),
-    ).rejects.toThrow();
+    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
+      { success: true, reportId },
+    );
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.publishPeriod).not.toHaveBeenCalled();
   });
@@ -292,7 +295,7 @@ describe("PeriodService — publishPeriod (unit)", () => {
     expect(invalidate).toHaveBeenCalledOnce();
   });
 
-  it("does NOT invalidate analytics cache when publish fails", async () => {
+  it("does NOT invalidate analytics cache on idempotent already-published success", async () => {
     const reports = new Map<string, SpyReport>([
       [
         reportId,
@@ -301,6 +304,34 @@ describe("PeriodService — publishPeriod (unit)", () => {
           status: "published",
           periodStatus: "published",
           publishedAt: new Date(),
+        },
+      ],
+    ]);
+    // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the AnalyticsCacheInvalidator typed slot (must return Promise<void>)
+    const invalidate = vi.fn(async () => undefined);
+    const service = new PeriodService(
+      createSpyRepository(reports),
+      invalidate,
+      noGatingReopenPolicy,
+    );
+
+    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
+      { success: true, reportId },
+    );
+
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  it("does NOT invalidate analytics cache when publish fails (archived)", async () => {
+    const reports = new Map<string, SpyReport>([
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+          archived: true,
         },
       ],
     ]);
@@ -354,10 +385,10 @@ describe("PeriodService — publishPeriod (unit)", () => {
       },
     );
 
-    // Second is already published — should fail
+    // Second is already published — idempotent success, no error.
     await expect(
       service.publishPeriod(otherReportId, headSession),
-    ).rejects.toBeInstanceOf(PeriodAccessError);
+    ).resolves.toEqual({ success: true, reportId: otherReportId });
   });
 });
 

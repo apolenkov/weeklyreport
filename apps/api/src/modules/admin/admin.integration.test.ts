@@ -173,6 +173,27 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(restoredUser.isActive).toBe(false);
   });
 
+  // Inverse of the update-branch deactivation pin above: a live inactive row
+  // must become active when the snapshot carries isActive: true.
+  it("restores a reactivated user through the update branch", async () => {
+    await prisma.user.update({
+      where: { id: testData.lead.id },
+      data: { isActive: false },
+    });
+
+    const snapshot = await repo.getSnapshot();
+    const reactivatedUsers = snapshot.users.map((u) =>
+      u.id === testData.lead.id ? { ...u, isActive: true } : u,
+    );
+
+    await repo.saveSnapshot({ ...snapshot, users: reactivatedUsers });
+
+    const restoredUser = expectDefined(
+      await prisma.user.findUnique({ where: { id: testData.lead.id } }),
+    );
+    expect(restoredUser.isActive).toBe(true);
+  });
+
   // add-structured-user-name (review finding P2): the denormalized `User.name`
   // is recomputed from the structured parts SERVER-SIDE on every snapshot write,
   // so a client/import that supplies a name disagreeing with the parts cannot

@@ -176,7 +176,7 @@ describe("PeriodService — contract tests", () => {
       expect(result).toEqual({ success: true, reportId });
     });
 
-    it("throws PeriodAccessError for already-published period", async () => {
+    it("treats a publish of an already-published period as idempotent success", async () => {
       const report = makeReport({
         periodStatus: "published",
         publishedAt: new Date("2026-04-10T16:00:00.000Z"),
@@ -189,11 +189,7 @@ describe("PeriodService — contract tests", () => {
 
       await expect(
         service.publishPeriod(reportId, headSession),
-      ).rejects.toBeInstanceOf(PeriodAccessError);
-
-      await expect(
-        service.publishPeriod(reportId, headSession),
-      ).rejects.toThrow("Period is already published.");
+      ).resolves.toEqual({ success: true, reportId });
     });
 
     it("throws when report not found", async () => {

@@ -11,7 +11,10 @@ import {
   disconnectTestPrisma,
   seedTestData,
 } from "../../../test-utils/prisma-test-helper.js";
-import { LeadFormConstraintError } from "../domain/lead-form-shared.js";
+import {
+  LeadFormConstraintError,
+  LeadFormDomainError,
+} from "../domain/lead-form-shared.js";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository.js";
 import {
   publishTarget,
@@ -53,6 +56,42 @@ describe("lead-form published-period write locks (integration)", () => {
 
     await expect(fill).rejects.toBeInstanceOf(LeadFormConstraintError);
     await expect(targetRows(prisma, testData)).resolves.toEqual(before);
+  });
+
+  it("rejects fill of an archived report even while periodStatus stays open", async () => {
+    // The archive transition does not touch periodStatus, so the in-tx gate
+    // must check `archived` itself — an admin archive committing in the
+    // precheck→tx window would otherwise pass.
+    const testData = await seedTestData(prisma);
+    const sourceSectionId = await seedFillRows(prisma, testData);
+    const before = await targetRows(prisma, testData);
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { archived: true },
+    });
+
+    await expect(
+      repo.fillFromSection(
+        testData.section.id,
+        sourceSectionId,
+        testData.section.version,
+      ),
+    ).rejects.toBeInstanceOf(LeadFormConstraintError);
+    await expect(targetRows(prisma, testData)).resolves.toEqual(before);
+  });
+
+  it("reports NOT_FOUND, not a period constraint, for a section deleted mid-flight", async () => {
+    const testData = await seedTestData(prisma);
+    const sourceSectionId = await seedFillRows(prisma, testData);
+    await prisma.reportSection.delete({ where: { id: testData.section.id } });
+
+    await expect(
+      repo.fillFromSection(
+        testData.section.id,
+        sourceSectionId,
+        testData.section.version,
+      ),
+    ).rejects.toBeInstanceOf(LeadFormDomainError);
   });
 
   it("rejects direct fill of an already-published target without writes", async () => {
