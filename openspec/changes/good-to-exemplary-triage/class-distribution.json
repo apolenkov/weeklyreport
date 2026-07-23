@@ -2387,7 +2387,7 @@
       "line": 238,
       "issue": "The reduce/findIndex/slice insertion sort reimplements a native stable sort — since compareLeadPriority is a total order, `[...].map(...).sort(compareLeadPriority)` is equivalent and simpler.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2396,7 +2396,7 @@
       "line": 164,
       "issue": "The onSuccess mutation handler with its five distinct toast branches (no-active-rule, none-pending, all-already-sent, partial-extras, success) is never exercised — only onError is tested.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2405,8 +2405,8 @@
       "line": 99,
       "issue": "The disabled-button tooltip 'Active reminder policy required — ask your admin' is shown to the admin themselves, who simultaneously sees the adjacent 'Configure reminders' link — telling an admin to ask their admin.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-260",
@@ -2414,7 +2414,7 @@
       "line": 96,
       "issue": "The queryByText(\"Activity\")/(\"Review context\") absence assertions can never fail because no rendered component (real or mocked) ever emits those strings, so they add no live regression coverage.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2423,7 +2423,7 @@
       "line": 93,
       "issue": "This is the only test covering RemindLeadButton, yet it never asserts the result-branching (no-matching-section vs dispatched vs alreadySent vs error → confirm label/state), leaving that core logic untested.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2432,7 +2432,7 @@
       "line": 18,
       "issue": "The second test is snapshot-only, so it can only catch unintended DOM drift, not verify any specific loading contract.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2441,8 +2441,8 @@
       "line": 16,
       "issue": "The KPI row uses an inline [0,1,2].map while queue/blocked rows use module-level Array.from constants — inconsistent construction of the same pattern.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-264",
@@ -2450,7 +2450,7 @@
       "line": 54,
       "issue": "DashboardActivityIssue duplicates the isError?formatClientErrorMessage:\"taking longer than expected\" description construction from DashboardSourceSlot (lines 33-35) with only string differences; a shared description helper would remove the copy.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2459,7 +2459,7 @@
       "line": 146,
       "issue": "LeadSecondaryActions computes secondaryActionState(lead), then SecondaryActionSet recomputes it from scratch instead of receiving the already-computed value as a prop.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2468,8 +2468,8 @@
       "line": 147,
       "issue": "hasAction relies on the clever `!== false && !== null` shape mixing booleans and objects; a small typed helper would be less fragile than trusting Object.values ordering/shape.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-267",
@@ -2477,7 +2477,7 @@
       "line": 140,
       "issue": "expect(row).not.toHaveClass(\"opacity-60\") can never fail since no code path ever adds opacity-60 to the row, so it is a documentation-only guard rather than a real regression check.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2486,7 +2486,7 @@
       "line": 10,
       "issue": "The LeadPrimaryAction mock re-implements the real review>open>remind precedence ladder, so it can silently drift from the source if that ordering changes.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2495,7 +2495,7 @@
       "line": 199,
       "issue": "\"{leads.length} leads\" renders \"1 leads\" for a single lead with no singular/plural handling.",
       "class": "ui-copy-grammar",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -2504,7 +2504,7 @@
       "line": 108,
       "issue": "The onSuccess branch logic (staleAutoClosed toast.info vs approved/rejected toast, and the respondingId/note reset) is never exercised, and the reject path's mutate payload is untested.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2513,7 +2513,7 @@
       "line": 25,
       "issue": "The component/interface are named RevokeSectionButton/RevokeSectionButtonProps while the filename and data-testid use 'revoke-lead-button', an inconsistency that makes the symbol harder to locate.",
       "class": "naming",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -2522,7 +2522,7 @@
       "line": 25,
       "issue": "The recovery-input object (name/hasData/isError/status/fetchStatus/refetch) is duplicated verbatim in all three query hooks and could be a shared mapper or handled by passing the query object directly.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3323,7 +3323,7 @@
       "line": 40,
       "issue": "MOCK_PRODUCTS is a test-only fixture consumed solely by *.test.tsx files yet exported through the production public barrel, leaking mock data into the module's public surface.",
       "class": "error-handling-robustness",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3350,7 +3350,7 @@
       "line": 30,
       "issue": "This test asserts the same input {sectionStatus:'draft',contentCount:0}->'pending' already covered at lines 24-28, adding no new coverage.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3359,7 +3359,7 @@
       "line": 10,
       "issue": "MOCK_PRODUCTS is re-exported through the production feature barrel (index.ts) yet has no production caller — every consumer is a *.test.tsx — so test-only fixtures leak into the feature's public API surface.",
       "class": "error-handling-robustness",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3368,7 +3368,7 @@
       "line": 24,
       "issue": "The entire buildItemColumns describe block exercises a non-production export, so its coverage protects dead code rather than a shipped path.",
       "class": "dead-unreachable-code",
-      "disposition": "pending",
+      "disposition": "refuted",
       "lane": "grok"
     },
     {
@@ -3377,7 +3377,7 @@
       "line": 4,
       "issue": "STAGE_SPLIT_RE and the split/trim/filter/dedup pipeline in splitStageNames reimplement the same CSV/semicolon parsing done inline inside shared riskCoversStage, which exports no reusable splitter to share.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3404,7 +3404,7 @@
       "line": 120,
       "issue": "priorityRank is already narrowed non-null by the filter on line 118, so the `?? 0` (sort) and `?? 1` (line 129) fallbacks are unreachable defensive noise.",
       "class": "env-config-silent-fallback",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3458,8 +3458,8 @@
       "line": 196,
       "issue": "The Edit button (and the Delete button at 204) render unconditionally on callback presence — unlike the move buttons they are not gated on onEdit/onDelete being defined, so an inert no-op button can render if a caller omits the handler.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-377",
@@ -3476,8 +3476,8 @@
       "line": 25,
       "issue": "For an activity item stageTagsLabel is set to 'Activity — no SDLC stage' but the row returns null for activity items, so this label is never rendered — a dead field.",
       "class": "dead-unreachable-code",
-      "disposition": "pending",
-      "lane": "grok"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-379",
@@ -3485,7 +3485,7 @@
       "line": 46,
       "issue": "stageTags is not deduped after canonicalStageName (unlike the splitStageNames path), so legacy stageIds like ['Dev','Development'] collapse to two 'Development' entries and produce duplicate React keys in visibleStageTags.map.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3494,7 +3494,7 @@
       "line": 20,
       "issue": "The 'Status' label span markup is duplicated verbatim between ItemStatusChips and CoveredStatusLock; a shared label wrapper would avoid drift.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3512,8 +3512,8 @@
       "line": 62,
       "issue": "StatusSlotView wraps the single ItemStatusChips child in an extra flex-col div that adds no layout over the chips path.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-383",
@@ -3521,8 +3521,8 @@
       "line": 86,
       "issue": "The 'Products' optgroup always renders even when products is empty, yielding an empty group if only activities are supplied.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-384",
@@ -3530,8 +3530,8 @@
       "line": 1,
       "issue": "File is named product-picker.tsx but exports ParentPicker/RecordParent — the filename lags the widened contract.",
       "class": "naming",
-      "disposition": "pending",
-      "lane": "grok"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-385",
@@ -3539,7 +3539,7 @@
       "line": 105,
       "issue": "Asserting button.style.height === STAGE_CHIP_BOX_HEIGHT (the same imported constant the component uses) mostly proves wiring, not a specific value — it cannot catch a wrong constant.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3557,8 +3557,8 @@
       "line": 6,
       "issue": "value is typed string[] (mutable) while sibling props are readonly — inconsistent immutability at the boundary the rest of the file respects.",
       "class": "mutation-immutability",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-388",
