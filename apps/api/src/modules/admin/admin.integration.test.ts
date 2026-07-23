@@ -95,6 +95,7 @@ describe("AdminPrismaRepository (integration)", () => {
             lastName: "Updated",
             firstName: "Lead",
             middleName: "Name",
+            isActive: false,
           }
         : u,
     );
@@ -122,6 +123,7 @@ describe("AdminPrismaRepository (integration)", () => {
     // Verify the lead name was updated
     const savedLead = saved.users.find((u) => u.id === testData.lead.id);
     expect(expectDefined(savedLead).name).toBe("Updated Lead Name");
+    expect(expectDefined(savedLead).isActive).toBe(false);
 
     // Verify the new project was created
     const savedProject = saved.projects.find(

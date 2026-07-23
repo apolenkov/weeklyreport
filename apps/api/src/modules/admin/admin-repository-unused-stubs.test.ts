@@ -1,5 +1,5 @@
 import type { ReminderPolicy } from "@customreport/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
 import type { AdminRepository } from "./admin-shared.js";
@@ -53,8 +53,11 @@ describe("AdminRepository compile contract", () => {
       AdminRepository,
       "listReminderPolicies"
     >;
+    // The test IS the compile step: if AdminRepository ever stops requiring
+    // listReminderPolicies, the assignment below becomes legal and the
+    // now-unfulfilled @ts-expect-error fails the typecheck.
     // @ts-expect-error A production repository without a required method is invalid.
     const completeRepository: AdminRepository = incompleteRepository;
-    expect(completeRepository).toBe(incompleteRepository);
+    expectTypeOf(completeRepository).toBeObject();
   });
 });

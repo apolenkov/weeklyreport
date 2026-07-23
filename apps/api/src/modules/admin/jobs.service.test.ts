@@ -174,6 +174,23 @@ describe("JobsService — DLQ admin surface", () => {
     expect(result).toEqual({ retried: true, jobId: "job-live" });
   });
 
+  it("retryFailed: retries an execution job when no existence check is configured", async () => {
+    const job = makeJob({
+      id: "job-without-existence-check",
+      data: { executionId: "unchecked-execution" },
+    });
+    const service = new JobsService(makeQueue({ failed: [job] }));
+
+    const result = await service.retryFailed({
+      queue: "email-reminder",
+      jobId: job.id,
+    });
+
+    expect(job.remove).not.toHaveBeenCalled();
+    expect(job.retry).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ retried: true, jobId: job.id });
+  });
+
   it("retryFailed: returns retried=false when the job no longer exists (pruned / parallel retry)", async () => {
     const service = new JobsService(
       makeQueue({ failed: [], getJob: () => undefined }),

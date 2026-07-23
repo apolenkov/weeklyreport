@@ -16,6 +16,9 @@ import {
  * ADR 0008): group-scoped list/count, and the race-safe decide transaction.
  */
 
+// Soft cap: list is newest-first; UI shows a page, not the full history.
+const REOPEN_REQUEST_LIST_CAP = 100;
+
 /**
  * Group-scoped reopen-request list. A head sees only its own group's
  * requests; admin scope is `{}` (global). The scope fragment is a
@@ -31,7 +34,7 @@ export async function listReopenRequests(
   const rows = await prisma.reopenRequest.findMany({
     where: { ...statusFilter, reportSection: scope },
     orderBy: { createdAt: "desc" },
-    take: 100,
+    take: REOPEN_REQUEST_LIST_CAP,
     include: {
       requestedBy: { select: { id: true, name: true, email: true } },
       reviewedBy: { select: { id: true, name: true, email: true } },

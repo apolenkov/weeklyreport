@@ -8,9 +8,9 @@ import type {
  * Wire format ↔ Prisma enum mappers shared by the per-domain query
  * modules (settings / reminder-policy / snapshot) as one boundary.
  *
- * `ReminderAudience`. The Prisma model uses
- * screaming-snake (`LEAD_WITH_DRAFT | HEAD_OF_LATE`); the wire/zod contract
- * uses lowercase-hyphen (`lead-with-draft | head-of-late`).
+ * `ReminderAudience`: Prisma uses screaming-snake
+ * (`LEAD_WITH_DRAFT | HEAD_OF_LATE`); the wire/zod contract uses
+ * lowercase-hyphen (`lead-with-draft | head-of-late`).
  */
 export const audienceFromPrisma: Record<
   PrismaReminderAudience,

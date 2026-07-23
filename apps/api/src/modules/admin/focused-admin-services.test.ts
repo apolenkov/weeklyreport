@@ -126,7 +126,9 @@ const defaultSettings: AppSettings = {
 function createRepository(
   snapshot: AdminSnapshot,
   settings: AppSettings = defaultSettings,
-): AdminRepository {
+): AdminRepository & {
+  reminderPolicyExists(policyId: string): Promise<boolean>;
+} {
   let currentSnapshot = structuredClone(snapshot);
   let currentSettings = structuredClone(settings);
   const assignments = new Map<string, StageAssignment>();
@@ -276,10 +278,38 @@ function createRepository(
           )
         : [...currentSnapshot.periods, structuredClone(period)];
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
+    async reminderPolicyExists(policyId) {
+      return currentSnapshot.policies.some((policy) => policy.id === policyId);
+    },
   };
 }
 
 describe("focused admin services", () => {
+  it("checks reminder-policy existence without listing policies", async () => {
+    const policyId = "77777777-7777-4777-8777-777777777777";
+    const repository = createRepository({
+      ...initialSnapshot,
+      policies: [
+        {
+          id: policyId,
+          kind: "deadline",
+          offsetMinutes: -1440,
+          timezone: "Europe/Moscow",
+          audience: "lead-with-draft",
+          active: true,
+          validFrom: new Date("2026-01-01T00:00:00.000Z"),
+          validUntil: null,
+        },
+      ],
+    });
+    const service = new ReminderAdminService(repository);
+
+    await expect(service.policyExists(policyId)).resolves.toBe(true);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts the mock was bypassed, not invoked unbound
+    expect(repository.listReminderPolicies).not.toHaveBeenCalled();
+  });
+
   it("adds and removes users", async () => {
     const service = new SnapshotAdminService(createRepository(initialSnapshot));
 
@@ -1192,17 +1222,20 @@ describe("PeriodAdminService — listPeriodsByState", () => {
   });
 
   it("limit is clamped between 1 and 200", async () => {
-    const fresh = periodFixture(PERIOD_ID_PUBLISHED_FRESH, "published");
-    const service = new PeriodAdminService(makePeriodAwareRepository([fresh]));
+    const rows = Array.from({ length: 201 }, (_, index) =>
+      periodFixture(crypto.randomUUID(), "published", {
+        periodStart: new Date(Date.UTC(2026, 0, index + 1)),
+      }),
+    );
+    const service = new PeriodAdminService(makePeriodAwareRepository(rows));
     // Negative gets clamped to 1, then filtered (and the one row matches).
     const a = await service.listPeriodsByState({ bucket: "active", limit: 0 });
-    expect(a.length).toBeGreaterThan(0);
-    // 1000 gets clamped to 200, but no error.
+    expect(a).toHaveLength(1);
     const b = await service.listPeriodsByState({
       bucket: "active",
       limit: 1000,
     });
-    expect(b.length).toBeLessThanOrEqual(200);
+    expect(b).toHaveLength(200);
   });
 });
 
@@ -1884,29 +1917,25 @@ describe("PeriodAdminService — updatePeriodManual", () => {
 
 describe("focused services — users, integrations, and stages", () => {
   it("deactivateUser delegates to the repository and reports success", async () => {
-    const repo = createRepository(initialSnapshot) as AdminRepository & {
-      deactivateUser: ReturnType<typeof vi.fn>;
-    };
+    const repo = createRepository(initialSnapshot);
     const service = new SnapshotAdminService(repo);
 
     await expect(service.deactivateUser("user-1")).resolves.toEqual({
       success: true,
     });
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
-    expect(repo.deactivateUser).toHaveBeenCalledWith("user-1");
+    expect(vi.mocked(repo.deactivateUser)).toHaveBeenCalledWith("user-1");
   });
 
   it("activateUser delegates to the repository and reports success", async () => {
-    const repo = createRepository(initialSnapshot) as AdminRepository & {
-      activateUser: ReturnType<typeof vi.fn>;
-    };
+    const repo = createRepository(initialSnapshot);
     const service = new SnapshotAdminService(repo);
 
     await expect(service.activateUser("user-1")).resolves.toEqual({
       success: true,
     });
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
-    expect(repo.activateUser).toHaveBeenCalledWith("user-1");
+    expect(vi.mocked(repo.activateUser)).toHaveBeenCalledWith("user-1");
   });
 
   it("integrationsStatus combines the caller-resolved `configured` flag with the repository binding count", async () => {
