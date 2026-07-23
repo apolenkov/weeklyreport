@@ -66,6 +66,8 @@ describe("organizationSchema", () => {
 });
 
 describe("organizationUpdateSchema", () => {
+  const breakoutMessage = "must not contain '<' or '>'";
+
   it("omits id from the input shape (singleton invariant lives on the server)", () => {
     const result = organizationUpdateSchema.parse({
       shortName: "Demo",
@@ -81,6 +83,41 @@ describe("organizationUpdateSchema", () => {
         fullName: "OK",
       }),
     ).toThrow();
+  });
+
+  it.each([
+    { field: "shortName", value: "A<B" },
+    { field: "shortName", value: "A>B" },
+    { field: "fullName", value: "A<B" },
+    { field: "fullName", value: "A>B" },
+  ] as const)(
+    "rejects $field containing a breakout character",
+    ({ field, value }) => {
+      const result = organizationUpdateSchema.safeParse({
+        shortName: "OK",
+        fullName: "OK",
+        [field]: value,
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues).toContainEqual(
+          expect.objectContaining({ message: breakoutMessage, path: [field] }),
+        );
+      }
+    },
+  );
+
+  it("accepts boundary-length values without breakout characters", () => {
+    expect(
+      organizationUpdateSchema.parse({
+        shortName: "A".repeat(16),
+        fullName: "B".repeat(200),
+      }),
+    ).toEqual({
+      shortName: "A".repeat(16),
+      fullName: "B".repeat(200),
+    });
   });
 });
 
