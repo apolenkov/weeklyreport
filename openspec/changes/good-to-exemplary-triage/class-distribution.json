@@ -1298,8 +1298,8 @@
       "line": 24,
       "issue": "addJob's `execution` parameter is used only to derive the default jobId, so passing the full execution where a jobId string would do is slightly wider than needed.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-137",
@@ -1307,7 +1307,7 @@
       "line": 44,
       "issue": "The role-gating branch in resolveActiveHead (a head whose role is neither 'head' nor 'admin' must go to unresolved) has no test; only isActive=false and null-head rejection are exercised.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1316,7 +1316,7 @@
       "line": 98,
       "issue": "The `?? \"Untitled section\"` fallback is unreachable at runtime (a resolved head guarantees a non-null reportingGroup) and only satisfies the type-narrowing, per its own comment.",
       "class": "env-config-silent-fallback",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1325,7 +1325,7 @@
       "line": 35,
       "issue": "The negative UUID-regex assertion is near-vacuous: the input literal contains '→' so it can never match a UUID, so this assertion cannot meaningfully fail.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1334,7 +1334,7 @@
       "line": 8,
       "issue": "requireRulePeriodLabel is exported from the same source module but has no test here (nor an obvious one elsewhere), leaving its throw-on-missing-label contract unpinned.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1343,7 +1343,7 @@
       "line": 19,
       "issue": "The port method getRulePeriodLabel is typed optional (and called via ?.) solely to accommodate legacy test doubles, inverting a production-required dependency to appease tests rather than fixing the doubles.",
       "class": "type-safety-weakening",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1352,7 +1352,7 @@
       "line": 23,
       "issue": "Typing the status maps as Record<string, string> plus '?? \"pending\"' / '?? \"queued\"' fallbacks defeats exhaustiveness: a newly added domain status would silently coerce to pending/queued instead of failing at compile time; keying on AdminReminderExecution[\"status\"] would catch it.",
       "class": "env-config-silent-fallback",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1361,7 +1361,7 @@
       "line": 90,
       "issue": "Doc says 'The newest active reminder rule' but `orderBy: { fireAt: \"asc\" }` selects the earliest-firing rule, not the newest — misleading given a report can carry multiple active rules across policies.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -1370,7 +1370,7 @@
       "line": 215,
       "issue": "classifySectionDispatch compares app-process `beforeMs = Date.now()` against DB-written `createdAt`; clock skew or DB timestamp truncation can misclassify a genuinely-new insert as 'alreadySent' (counter attribution only — dispatch itself stays idempotent).",
       "class": "error-handling-robustness",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1379,7 +1379,7 @@
       "line": 39,
       "issue": "Doc 'The newest active rule for reportId' contradicts the backing query's `orderBy: { fireAt: \"asc\" }`, which returns the earliest-firing rule.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -1388,7 +1388,7 @@
       "line": 34,
       "issue": "Telemetry test covers only the active-cls path; the undefined/inactive-cls branch (empty context) of RemindersInfrastructureTelemetry is never asserted.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1406,7 +1406,7 @@
       "line": 101,
       "issue": "The test named as a DST-boundary lock uses fixed-offset Europe/Moscow (no DST since 2014, as its own comment admits), so it cannot exercise any DST transition and the name overstates what it verifies.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -1415,7 +1415,7 @@
       "line": 124,
       "issue": "The no-queue return path returns the raw repository `execution` unparsed, while both sibling returns (117, 130 via helper) round-trip through `adminReminderExecutionSchema.parse`, an inconsistency in the value contract callers get back.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1424,8 +1424,8 @@
       "line": 30,
       "issue": "The cluster of `?`-optional CAS methods (insertExecutionOnConflict, transitionExecutionToSending, requeueFailedExecution, etc.) that production ALWAYS provides forces the service into `?.`/throw guards for a case that cannot occur in prod, a documented-but-real contract weakening driven by the in-memory test doubles.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-151",
@@ -4196,8 +4196,8 @@
       "line": 61,
       "issue": "The test named 'styles the selected chip with its own bg/color/border' asserts only the selected chip's background, never its color or border, so a regression in those two selected-chip style props would not fail this test.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-459",
@@ -4223,7 +4223,7 @@
       "line": 24,
       "issue": "Sticky footer background uses literal bg-white while sibling styles use --color-* tokens, an inconsistency that would break under a dark surface.",
       "class": "magic-values-drift",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -4232,7 +4232,7 @@
       "line": 99,
       "issue": "The fill prop — documented with elaborate flex-1 layout rationale — has no test asserting the wrapper/textarea flex-1 classes toggle, so its non-obvious behavior is unpinned.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -4250,8 +4250,8 @@
       "line": 71,
       "issue": "Test is named 'does not call trpc.search.query.queryOptions while q is below the floor' but queryOptions is invoked on every render regardless of floor and the assertion only checks the useQuery `enabled` flag is false, so the name misdescribes the verified behavior.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-465",
@@ -4268,7 +4268,7 @@
       "line": 53,
       "issue": "This is the canonical CheckIcon, but apps/web/src/features/report-sections/ui/item-card-actions.tsx line 37 reimplements an identical CheckIcon instead of importing this one — a duplication that should collapse onto this export.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "refuted",
       "lane": "codex"
     },
     {
@@ -4277,7 +4277,7 @@
       "line": 98,
       "issue": "TabSearch and TabFilter hardcode `bg-white` instead of a design-token var (e.g. --color-card) while everything else in the file uses CSS vars, so they will not follow theme/background tokens.",
       "class": "magic-values-drift",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -4295,7 +4295,7 @@
       "line": 111,
       "issue": "isPublishedReportPath's `pathname === \"/reports/history\"` branch is unreachable: that route is a server-side 307 redirect to /reports, so usePathname() never yields '/reports/history' at render time.",
       "class": "dead-unreachable-code",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -4313,7 +4313,7 @@
       "line": 83,
       "issue": "The \"onFocus tooltip handler is not triggered by keyboard Tab\" test asserts show is never called after Tab, but the component has no onFocus handler and the div has no tabindex, so focus can never land on it — the test cannot fail and its name implies a handler that does not exist.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -4322,8 +4322,8 @@
       "line": 19,
       "issue": "The tooltip content (\"Read-only · Author: X · You can't edit this card\") and the aria-label (\"Read-only — authored by X\") are two independently-authored strings for the same fact, which can drift; a shared formatter would keep sighted and AT users in sync.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-473",
@@ -4331,8 +4331,8 @@
       "line": 39,
       "issue": "bg-white and border-[rgba(0,0,0,0.1)] are hardcoded while the foreground uses a theme token (--color-muted-foreground), so the badge does not follow the theme-aware surface tokens used elsewhere.",
       "class": "magic-values-drift",
-      "disposition": "pending",
-      "lane": "grok"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-474",
@@ -4349,8 +4349,8 @@
       "line": 96,
       "issue": "ReportToolbarCenterLabelProps marks its fields readonly while ReportToolbarProps does not — an inconsistency in the same file.",
       "class": "mutation-immutability",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-476",
@@ -4358,7 +4358,7 @@
       "line": 262,
       "issue": "Test title says 'pending render' but the snapshot passes state 'saving'/isInFlight — the label misdescribes the state under test.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -4376,7 +4376,7 @@
       "line": 68,
       "issue": "The scope getter can only return \"lead\"/\"product\" and setScope silently coerces any non-\"lead\" value (including the valid ScopeValue \"own\") to the product default, so the ScopeValue-typed contract over-promises versus its two-way behavior.",
       "class": "env-config-silent-fallback",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -4394,7 +4394,7 @@
       "line": 31,
       "issue": "Comment claims accessible name comes from \"aria-label + tooltip\", but the name is actually supplied by an sr-only span (no aria-label present) — doc drift from the code.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
