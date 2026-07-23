@@ -35,7 +35,6 @@ import {
 import {
   queryActiveRuleForDispatch,
   queryDraftSectionsForDispatch,
-  queryExecutionCreatedAt,
   queryInScopeDraftSectionId,
   queryInScopeLeadId,
   queryInScopeSectionAuthorEmails,
@@ -116,10 +115,6 @@ export class RemindersPrismaRepository implements RemindersRepository {
       reportId,
       leadId,
     );
-  }
-
-  findExecutionCreatedAt(dedupeKey: string): Promise<Date | null> {
-    return queryExecutionCreatedAt(this.prisma, dedupeKey);
   }
 
   getRule(ruleId: string): Promise<AdminReminderRule | null> {

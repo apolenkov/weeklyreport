@@ -1,7 +1,6 @@
 import type { AdminReminderExecution, UserSession } from "@customreport/shared";
 
 import { ReminderScopeError } from "./reminders.errors.js";
-import { resolveReminderDedupeKey } from "./reminders-dedupe-key.js";
 import type {
   DispatchPendingResult,
   RemindersScopeRepository,
@@ -32,9 +31,8 @@ function noDispatchResult(reason: string): DispatchPendingResult {
  * Scope-authorization + dispatch logic for the reminders namespace, split out
  * of `RemindersService` (which holds one as a private field) to keep that
  * file under the line budget. `requestReminderExecution` is threaded in as a
- * callback rather than an inherited method — the dispatch race-safe
- * read-back calls back into `RemindersService.requestReminderExecution`
- * through it.
+ * callback rather than an inherited method; it returns the atomic dispatch
+ * outcome the insert itself proved, which is what counters classify on.
  */
 export class RemindersScopeService {
   constructor(
@@ -42,7 +40,10 @@ export class RemindersScopeService {
     private readonly requestReminderExecution: (
       ruleId: string,
       recipientEmail: string,
-    ) => Promise<AdminReminderExecution>,
+    ) => Promise<{
+      execution: AdminReminderExecution;
+      outcome: "created" | "revived" | "deduplicated";
+    }>,
   ) {}
 
   /**
@@ -190,39 +191,27 @@ export class RemindersScopeService {
   }
 
   /**
-   * Race-safe attribution: call `requestReminderExecution` first — it
-   * atomically inserts via the dedupeKey unique index, so two concurrent
-   * dispatches never produce two emails. Then read the execution back and
-   * compare `createdAt` to the call window. If it lies inside the window it
-   * is genuinely new, otherwise the service deduplicated against a prior
-   * dispatch. A pre-read + call would reintroduce a TOCTOU race where both
-   * concurrent callers see "no existing row" and both increment
-   * `dispatched`, mis-reporting the counter even though only one email
-   * actually went out.
+   * Race-safe attribution straight from the atomic insert: the dedupeKey
+   * unique index means exactly one caller ever gets "created" (and a revived
+   * failed row also produces a real send), so counters classify on the
+   * outcome the write itself proved — no clocks involved.
    */
   private async classifySectionDispatch(
     rule: { id: string; fireAt: Date },
     section: { email: string; notificationOptOut: boolean },
   ): Promise<SectionDispatchOutcome> {
     if (section.notificationOptOut) return "skipped";
-    // Mirrors the no-payload key `requestReminderExecution` builds for this
-    // same rule/recipient below, so the read-back always finds the row
-    // this call (or a colliding earlier manual/automated one) produced.
-    const dedupeKey = resolveReminderDedupeKey(rule, section.email);
-    const beforeMs = Date.now();
-    await this.requestReminderExecution(rule.id, section.email);
-    const createdAt = await this.repository.findExecutionCreatedAt(dedupeKey);
-    return createdAt && createdAt.getTime() >= beforeMs
-      ? "dispatched"
-      : "alreadySent";
+    const { outcome } = await this.requestReminderExecution(
+      rule.id,
+      section.email,
+    );
+    return outcome === "deduplicated" ? "alreadySent" : "dispatched";
   }
 
   /**
-   * Sequential accumulation, one section at a time: each section's
-   * insert-then-read-back must fully resolve before the next one starts, or
-   * a fanned-out `Promise.all` could interleave inserts and read-backs across
-   * sections and reintroduce the same TOCTOU risk `classifySectionDispatch`
-   * exists to avoid.
+   * Sequential accumulation, one section at a time, so dispatch side effects
+   * (enqueue, revive) and their outcomes resolve in a deterministic order
+   * instead of interleaving across sections under a fanned-out Promise.all.
    */
   private async collectDispatchOutcomes(
     rule: { id: string; fireAt: Date },

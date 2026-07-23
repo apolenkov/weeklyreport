@@ -42,4 +42,10 @@ describe("reminders infrastructure adapters", () => {
       correlationId: "correlation",
     });
   });
+
+  it("returns empty context outside an active CLS scope", () => {
+    const telemetry = new RemindersInfrastructureTelemetry(undefined);
+
+    expect(telemetry.captureJobContext()).toEqual({});
+  });
 });

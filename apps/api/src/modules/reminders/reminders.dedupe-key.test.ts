@@ -13,7 +13,7 @@ import {
   toReminderCycleDate,
 } from "./reminders-dedupe-key.js";
 import { extractRecipientEmail } from "./reminders-row-mappers";
-import { unusedRemindersScopeStubs } from "./reminders-scope.repository-stub.js";
+import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
 
 /**
  * Dedupe-key recipient extraction regression.
@@ -140,10 +140,9 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
 
   function buildDispatchRepository(): RemindersRepository {
     const executions = new Map<string, AdminReminderExecution>();
-    const createdAtByDedupeKey = new Map<string, Date>();
 
     return {
-      ...unusedRemindersScopeStubs(),
+      ...unusedRemindersRepositoryStubs(),
       // eslint-disable-next-line @typescript-eslint/require-await -- stub implements the async RemindersRepository contract (no awaitable work here)
       async getRule(ruleId: string) {
         return ruleId === rule.id ? structuredClone(rule) : null;
@@ -165,7 +164,6 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
           }
         }
         executions.set(candidate.id, structuredClone(candidate));
-        createdAtByDedupeKey.set(candidate.dedupeKey, new Date());
         return { execution: structuredClone(candidate), inserted: true };
       },
       // eslint-disable-next-line @typescript-eslint/require-await -- stub implements the async RemindersRepository contract (no awaitable work here)
@@ -192,10 +190,6 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
       async findDraftSectionsForDispatch() {
         return [{ email: recipientEmail, notificationOptOut: false }];
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub implements the async RemindersRepository contract (no awaitable work here)
-      async findExecutionCreatedAt(dedupeKey: string) {
-        return createdAtByDedupeKey.get(dedupeKey) ?? null;
-      },
     };
   }
 
@@ -217,11 +211,6 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
       },
     });
 
-    // Guarantees the automated insert's `createdAt` clock reading is strictly
-    // before the manual dispatch's read-back window (`beforeMs`) — both calls
-    // otherwise resolve within the same millisecond in this in-memory test.
-    await new Promise((resolve) => setTimeout(resolve, 5));
-
     // Head clicks manual "Remind" for the same rule/lead within the same cycle.
     const result = await service.scope.dispatchPendingReminders(
       adminSession,
@@ -230,6 +219,19 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
 
     expect(result.dispatched).toBe(0);
     expect(result.alreadySent).toBe(1);
+    expect(result.skipped).toBe(0);
+  });
+
+  it("classifies a fresh insert as dispatched regardless of DB timestamps", async () => {
+    const service = new RemindersService(buildDispatchRepository());
+
+    const result = await service.scope.dispatchPendingReminders(
+      adminSession,
+      REPORT_ID,
+    );
+
+    expect(result.dispatched).toBe(1);
+    expect(result.alreadySent).toBe(0);
     expect(result.skipped).toBe(0);
   });
 });

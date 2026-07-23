@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { ReminderDomainError, RemindersService } from "./reminders.service";
 import type { RemindersRepository } from "./reminders.types";
-import { unusedRemindersScopeStubs } from "./reminders-scope.repository-stub.js";
+import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -43,7 +43,7 @@ function createRepository(...rules: AdminReminderRule[]): RemindersRepository {
   const executions = new Map<string, AdminReminderExecution>();
 
   return {
-    ...unusedRemindersScopeStubs(),
+    ...unusedRemindersRepositoryStubs(),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async getRule(ruleId: string) {
       const found = rules.find((r) => r.id === ruleId);
@@ -58,6 +58,16 @@ function createRepository(...rules: AdminReminderRule[]): RemindersRepository {
         }
       }
       return null;
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
+    async insertExecutionOnConflict(execution: AdminReminderExecution) {
+      for (const existing of executions.values()) {
+        if (existing.dedupeKey === execution.dedupeKey) {
+          return { execution: structuredClone(existing), inserted: false };
+        }
+      }
+      executions.set(execution.id, structuredClone(execution));
+      return { execution: structuredClone(execution), inserted: true };
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async saveExecution(execution: AdminReminderExecution) {

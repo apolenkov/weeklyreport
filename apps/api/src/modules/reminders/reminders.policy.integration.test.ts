@@ -98,10 +98,10 @@ describe("PolicyApplicatorService (integration)", () => {
     );
   });
 
-  it("locks the math across the historical EU DST boundary (March 30, Moscow)", async () => {
-    // Moscow no longer observes DST since Oct 2014 — the test exists
-    // to lock the math against a regression that re-introduces a TZ
-    // table from a stale tzdata snapshot.
+  it("locks fixed-offset Europe/Moscow math around the historical EU DST date (March 30)", async () => {
+    // Europe/Moscow is fixed UTC+3 year-round since Oct 2014 (no DST).
+    // This locks offset arithmetic on a date that would shift under a
+    // stale tzdata snapshot still applying EU DST to Moscow.
     await prisma.reminderPolicy.create({
       data: {
         id: policyDeadlineId,

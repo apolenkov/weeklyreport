@@ -49,7 +49,7 @@ export class RemindersService {
     this.logger = logger ?? createNullLogger();
     this.emailQueue = emailQueue ?? null;
     this.scope = new RemindersScopeService(repository, (ruleId, email) =>
-      this.requestReminderExecution(ruleId, email),
+      this.requestReminderExecutionWithOutcome(ruleId, email),
     );
   }
 
@@ -66,6 +66,30 @@ export class RemindersService {
     recipientEmail: string,
     payload?: ReminderExecutionPayload,
   ): Promise<AdminReminderExecution> {
+    const { execution } = await this.requestReminderExecutionWithOutcome(
+      ruleId,
+      recipientEmail,
+      payload,
+    );
+    return execution;
+  }
+
+  /**
+   * Same as `requestReminderExecution`, plus the atomic dispatch outcome the
+   * insert itself proved: "created" (this call inserted and enqueued),
+   * "revived" (an earlier failed row was re-queued — a send WILL happen), or
+   * "deduplicated" (an earlier execution already owns this dedupe key). The
+   * outcome is the ground truth counters need — no timestamp comparison can
+   * substitute for it.
+   */
+  async requestReminderExecutionWithOutcome(
+    ruleId: string,
+    recipientEmail: string,
+    payload?: ReminderExecutionPayload,
+  ): Promise<{
+    execution: AdminReminderExecution;
+    outcome: "created" | "revived" | "deduplicated";
+  }> {
     const rule = await this.repository.getRule(ruleId);
 
     if (!rule) {
@@ -105,29 +129,40 @@ export class RemindersService {
     if (!inserted) {
       const revived = await reviveFailedExecution(
         this.emailQueue ? this.enqueueContext(this.emailQueue) : null,
-        this.repository.requeueFailedExecution?.bind(this.repository),
+        this.repository.requeueFailedExecution.bind(this.repository),
         execution,
         recipientEmail,
         queuePayload,
       );
-      if (revived) return revived;
+      if (revived) return { execution: revived, outcome: "revived" };
       // dedupeKey embeds recipientEmail for uniqueness; logging it would
       // leak that address, so ruleId is the identifier we surface here.
       this.logger.debug("deduplicated reminder execution", { ruleId });
-      return adminReminderExecutionSchema.parse(execution);
+      return {
+        execution: adminReminderExecutionSchema.parse(execution),
+        outcome: "deduplicated",
+      };
     }
 
     this.logger.info("creating reminder execution", { ruleId });
 
     // Enqueue only after the insert has committed AND only for the caller that
     // inserted the row, so a redundant concurrent tick enqueues nothing.
-    if (!this.emailQueue) return execution;
-    return enqueueOrMarkFailed(
-      this.enqueueContext(this.emailQueue),
-      execution,
-      recipientEmail,
-      await queuePayload(),
-    );
+    if (!this.emailQueue) {
+      return {
+        execution: adminReminderExecutionSchema.parse(execution),
+        outcome: "created",
+      };
+    }
+    return {
+      execution: await enqueueOrMarkFailed(
+        this.enqueueContext(this.emailQueue),
+        execution,
+        recipientEmail,
+        await queuePayload(),
+      ),
+      outcome: "created",
+    };
   }
 
   private enqueueContext(queue: RemindersEnqueuer): EnqueueContext {
@@ -135,7 +170,7 @@ export class RemindersService {
       queue,
       telemetry: this.telemetry,
       logger: this.logger,
-      markExecutionFailed: this.repository.markExecutionFailed?.bind(
+      markExecutionFailed: this.repository.markExecutionFailed.bind(
         this.repository,
       ),
     };
@@ -148,11 +183,6 @@ export class RemindersService {
    * (or completed) the execution and the worker must send nothing.
    */
   async claimExecutionForSending(executionId: string): Promise<boolean> {
-    if (!this.repository.transitionExecutionToSending) {
-      throw new ReminderDomainError(
-        "Repository does not support the compare-and-set send claim.",
-      );
-    }
     return this.repository.transitionExecutionToSending(executionId);
   }
 
@@ -161,7 +191,7 @@ export class RemindersService {
     executionId: string,
     errorMessage: string,
   ): Promise<void> {
-    await this.repository.markExecutionFailed?.(executionId, errorMessage);
+    await this.repository.markExecutionFailed(executionId, errorMessage);
   }
 
   /**
@@ -170,7 +200,7 @@ export class RemindersService {
    * actually resend the row instead of finding it permanently stuck.
    */
   async releaseExecutionClaim(executionId: string): Promise<void> {
-    await this.repository.releaseExecutionClaim?.(executionId);
+    await this.repository.releaseExecutionClaim(executionId);
   }
 
   /**

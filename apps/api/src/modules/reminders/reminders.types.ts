@@ -22,12 +22,8 @@ export interface RemindersRepository extends RemindersScopeRepository {
    * that loses the race gets the existing row with `inserted: false`. The
    * service uses that flag to enqueue the email exactly once, even when two
    * scheduler ticks fire concurrently.
-   *
-   * Optional on the port because the in-memory test doubles predate it; the
-   * production `RemindersPrismaRepository` always provides it, so the dispatch
-   * path is atomic in production.
    */
-  insertExecutionOnConflict?(
+  insertExecutionOnConflict(
     execution: AdminReminderExecution,
   ): Promise<{ execution: AdminReminderExecution; inserted: boolean }>;
   /**
@@ -36,37 +32,26 @@ export interface RemindersRepository extends RemindersScopeRepository {
    * `sending`/`sent`/`failed` gets false and must send nothing. Enforced in the
    * write itself (a guarded `updateMany`), so a retry or a duplicate worker
    * cannot both claim the same execution.
-   *
-   * Optional on the port because the in-memory test doubles predate it; the
-   * production `RemindersPrismaRepository` always provides it.
    */
-  transitionExecutionToSending?(executionId: string): Promise<boolean>;
+  transitionExecutionToSending(executionId: string): Promise<boolean>;
   /**
    * Terminal `failed` write with an error message, guarded to the non-terminal
    * states so it can never overwrite a row that already reached `sent`.
-   * Optional for the same reason as the sibling atomic methods.
    */
-  markExecutionFailed?(
-    executionId: string,
-    errorMessage: string,
-  ): Promise<void>;
-  getRulePeriodLabel?(ruleId: string): Promise<string | null>;
+  markExecutionFailed(executionId: string, errorMessage: string): Promise<void>;
+  getRulePeriodLabel(ruleId: string): Promise<string | null>;
   /**
    * Reverses the `queued → sending` claim so a retryable send failure can be
    * re-claimed by the next BullMQ attempt instead of being stranded. Guarded
    * to `sending` in the write itself, so it is a no-op against a row that has
    * already reached `sent`/`failed`.
-   *
-   * Optional on the port because the in-memory test doubles predate it; the
-   * production `RemindersPrismaRepository` always provides it.
    */
-  releaseExecutionClaim?(executionId: string): Promise<void>;
+  releaseExecutionClaim(executionId: string): Promise<void>;
   /**
    * Atomic `failed → queued` revival; true only when THIS call won the
-   * transition (see `reviveFailedExecution` for why it exists). Optional on
-   * the port like its sibling CAS methods; production always provides it.
+   * transition (see `reviveFailedExecution` for why it exists).
    */
-  requeueFailedExecution?(executionId: string): Promise<boolean>;
+  requeueFailedExecution(executionId: string): Promise<boolean>;
   getExecution(executionId: string): Promise<AdminReminderExecution | null>;
   /** One DB-level keyset page (newest first) starting strictly after `cursor`. */
   listExecutions(
