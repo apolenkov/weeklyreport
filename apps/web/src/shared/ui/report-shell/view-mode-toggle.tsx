@@ -28,7 +28,7 @@ export function ViewModeToggle({
   // Compact icon-only segments in the neutral family. The two segments stay
   // `<Link>` URL navigation (slides is a separate route; `scroll={false}`), so
   // middle-click / open-in-new-tab still work. Each keeps an accessible name via
-  // aria-label + tooltip now that the label is an icon.
+  // an sr-only span; `title` supplies the hover tooltip.
   const reportLabel = readOnly ? "Report" : "Edit";
   return (
     <SegmentedToggle ariaLabel="View mode">

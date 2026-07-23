@@ -259,7 +259,7 @@ describe("SaveNowButton", () => {
     expect(forceSave).not.toHaveBeenCalled();
   });
 
-  it("pending render: spinner + aria-busy=true + accent fill + disabled", () => {
+  it("saving/in-flight render: spinner + aria-busy=true + accent fill + disabled", () => {
     render(
       <SaveNowButton
         autosave={makeSnapshot({ state: "saving", isInFlight: true })}

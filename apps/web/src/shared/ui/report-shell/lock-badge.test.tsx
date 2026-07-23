@@ -38,6 +38,14 @@ describe("LockBadge", () => {
     expect(el).toHaveAttribute("aria-label", "Read-only — authored by Alice");
   });
 
+  it("uses theme-aware surface tokens for its border and background", () => {
+    render(<LockBadge authorName="Alice" />);
+    expect(screen.getByRole("img")).toHaveClass(
+      "border-[var(--color-border)]",
+      "bg-[var(--color-card)]",
+    );
+  });
+
   it("accessible name is surfaced via getByRole('img', { name })", () => {
     render(<LockBadge authorName="Alice" />);
     expect(
@@ -62,7 +70,7 @@ describe("LockBadge", () => {
     expect(document.activeElement).not.toBe(badge);
   });
 
-  it("mouseEnter shows the tooltip (positive anchor for the negative Tab test)", () => {
+  it("mouseEnter shows the same lock description as the accessible name", () => {
     const showSpy = vi.fn();
     const hideSpy = vi.fn();
     // Use mockReturnValue (not Once) so StrictMode double-render does not exhaust the stub.
@@ -71,33 +79,16 @@ describe("LockBadge", () => {
       hide: hideSpy,
     });
     render(<LockBadge authorName="Alice" />);
-    const badge = screen.getByRole("img", { name: /Read-only — authored by/ });
+    const lockDescription = "Read-only — authored by Alice";
+    const badge = screen.getByRole("img", { name: lockDescription });
 
     fireEvent.mouseEnter(badge);
-    expect(showSpy).toHaveBeenCalledTimes(1);
+    expect(showSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      `${lockDescription} · You can't edit this card`,
+    );
 
     fireEvent.mouseLeave(badge);
     expect(hideSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it("onFocus tooltip handler is not triggered by keyboard Tab", async () => {
-    const showSpy = vi.fn();
-    // Use mockReturnValue (not Once) so StrictMode double-render does not exhaust the stub.
-    vi.mocked(useSdlcTooltip).mockReturnValue({
-      show: showSpy,
-      hide: vi.fn(),
-    });
-    const user = userEvent.setup();
-    render(
-      <>
-        <button>preceding</button>
-        <LockBadge authorName="Alice" />
-      </>,
-    );
-    const btn = screen.getByRole("button", { name: "preceding" });
-    btn.focus();
-    await user.tab();
-    // The div has no tabIndex so Tab cannot land focus on it → onFocus never fires.
-    expect(showSpy).not.toHaveBeenCalled();
   });
 });

@@ -107,10 +107,6 @@ function isReportDetailPath(pathname: string): boolean {
   );
 }
 
-function isPublishedReportPath(pathname: string): boolean {
-  return pathname === "/reports/history" || isReportDetailPath(pathname);
-}
-
 function isActiveLink(
   pathname: string,
   href: string,
@@ -136,9 +132,9 @@ function isActiveLink(
   if (href === "/reports") {
     // History active state is pathname-based only — independent of the archive
     // toggle and of any stray `?tab` param.
-    // Exact match (not startsWith) so report subpaths fall through to
-    // isPublishedReportPath below rather than this History branch.
-    return pathname === "/reports" || isPublishedReportPath(pathname);
+    // Exact match (not startsWith) so report subpaths are matched by the
+    // detail-path check, not this History branch.
+    return pathname === "/reports" || isReportDetailPath(pathname);
   }
   return pathname.startsWith(href);
 }

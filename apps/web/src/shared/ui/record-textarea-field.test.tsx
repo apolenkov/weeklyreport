@@ -110,4 +110,38 @@ describe("RecordTextareaField", () => {
       minHeight: "50px",
     });
   });
+
+  it("applies flex fill classes to the wrapper and textarea when fill is enabled", () => {
+    render(
+      <RecordTextareaField
+        id="filled-field"
+        label="Filled field"
+        value=""
+        onChange={vi.fn()}
+        fill
+      />,
+    );
+    const textarea = screen.getByLabelText("Filled field");
+    expect(textarea.parentElement).toHaveClass("flex", "flex-1", "flex-col");
+    expect(textarea).toHaveClass("flex-1");
+  });
+
+  it("omits flex fill classes from the wrapper and textarea when fill is disabled", () => {
+    render(
+      <RecordTextareaField
+        id="plain-field"
+        label="Plain field"
+        value=""
+        onChange={vi.fn()}
+        fill={false}
+      />,
+    );
+    const textarea = screen.getByLabelText("Plain field");
+    expect(textarea.parentElement).not.toHaveClass(
+      "flex",
+      "flex-1",
+      "flex-col",
+    );
+    expect(textarea).not.toHaveClass("flex-1");
+  });
 });

@@ -68,7 +68,7 @@ describe("SearchInput", () => {
     ).toBeInTheDocument();
   });
 
-  it("does not call trpc.search.query.queryOptions while q is below the 2-char floor", () => {
+  it("passes enabled:false to useQuery while q is below the 2-char floor", () => {
     render(<SearchInput scope="mine" />);
     const input = screen.getByRole("combobox");
 
