@@ -87,6 +87,9 @@ export async function runInJobTraceContext(
   await runSpan();
 }
 
+/** A W3C traceparent header has exactly 4 hyphen-separated segments: version-traceId-spanId-flags. */
+const TRACEPARENT_SEGMENT_COUNT = 4;
+
 /**
  * Pull the W3C trace id out of a job's captured `traceparent`
  * (`00-<traceId>-<spanId>-<flags>`). The failure handler runs after
@@ -94,10 +97,8 @@ export async function runInJobTraceContext(
  * context no longer carries the trace id — reading it back from the job's
  * own carrier is the only link from a failure log to the enqueue trace.
  * Returns undefined when no traceparent was captured or it is malformed.
+ * Deliberately loose (segment count + non-empty only): all-zero/etc. still pass — failure-log linkage only.
  */
-/** A W3C traceparent header has exactly 4 hyphen-separated segments: version-traceId-spanId-flags. */
-const TRACEPARENT_SEGMENT_COUNT = 4;
-
 export function extractTraceId(ctx: JobTraceContext): string | undefined {
   const segments = ctx.traceparent?.split("-");
   if (segments?.length !== TRACEPARENT_SEGMENT_COUNT) return undefined;

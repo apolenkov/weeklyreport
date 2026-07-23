@@ -10,6 +10,22 @@ import type { Queue } from "bullmq";
  */
 const JOB_COUNTS_TIMEOUT_MS = 2000;
 
+function createProbeTimeout(): {
+  promise: Promise<{ kind: "timeout" }>;
+  cancel: () => void;
+} {
+  const promiseWithTimer = Promise.withResolvers<{ kind: "timeout" }>();
+  const timer = setTimeout(
+    () => promiseWithTimer.resolve({ kind: "timeout" }),
+    JOB_COUNTS_TIMEOUT_MS,
+  );
+  timer.unref();
+  return {
+    promise: promiseWithTimer.promise,
+    cancel: () => clearTimeout(timer),
+  };
+}
+
 @Injectable()
 export class BullMQHealthIndicator {
   constructor(
@@ -19,23 +35,30 @@ export class BullMQHealthIndicator {
   ) {}
 
   async isHealthy(key: string): Promise<HealthIndicatorResult> {
+    const probe = Promise.all([
+      this.pdfQueue.getJobCounts(),
+      this.emailQueue.getJobCounts(),
+    ]).then(
+      (counts) => ({ kind: "counts" as const, counts }),
+      (error: unknown) => ({ kind: "error" as const, error }),
+    );
+    const timeout = createProbeTimeout();
     try {
-      const timeout = new Promise<null>((resolve) => {
-        const timer = setTimeout(() => resolve(null), JOB_COUNTS_TIMEOUT_MS);
-        timer.unref();
-      });
-      const counts = await Promise.race([
-        Promise.all([
-          this.pdfQueue.getJobCounts(),
-          this.emailQueue.getJobCounts(),
-        ]),
-        timeout,
-      ]);
-      if (counts === null) {
+      const outcome = await Promise.race([probe, timeout.promise]);
+      if (outcome.kind === "timeout") {
         return this.healthIndicator.check(key).down({
           message: `BullMQ job-count probe timed out after ${JOB_COUNTS_TIMEOUT_MS}ms`,
         });
       }
+      if (outcome.kind === "error") {
+        return this.healthIndicator.check(key).down({
+          message:
+            outcome.error instanceof Error
+              ? outcome.error.message
+              : String(outcome.error),
+        });
+      }
+      const { counts } = outcome;
       const [pdfCounts, emailCounts] = counts;
 
       return this.healthIndicator.check(key).up({
@@ -45,10 +68,8 @@ export class BullMQHealthIndicator {
           active: emailCounts.active,
         },
       });
-    } catch (error) {
-      return this.healthIndicator
-        .check(key)
-        .down({ message: (error as Error).message });
+    } finally {
+      timeout.cancel();
     }
   }
 }

@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
-import { writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
@@ -10,16 +11,18 @@ const FIXTURE_PATH = resolve(
   REPOSITORY_ROOT,
   "apps/api/src/infrastructure/module-public-api-boundary.fixture.ts",
 );
-const PUBLIC_IMPORT =
-  'import type { SnapshotAdminService } from "../modules/admin/index.js";\n\nexport type PublicBoundaryFixture = SnapshotAdminService;\n';
+const PUBLIC_ENTRYPOINT = "../modules/admin/index.js";
+const INTERNAL_MODULE_PATH = "../modules/admin/snapshot-admin.service.js";
 
-function runEslint(): Promise<string> {
+function runEslint(source?: string): Promise<string> {
   return new Promise((resolveOutput, reject) => {
-    execFile(
+    const child = execFile(
       process.execPath,
       [
         resolve(REPOSITORY_ROOT, "node_modules/eslint/bin/eslint.js"),
-        FIXTURE_PATH,
+        ...(source === undefined
+          ? [FIXTURE_PATH]
+          : ["--stdin", "--stdin-filename", FIXTURE_PATH]),
         "--format",
         "json",
       ],
@@ -32,33 +35,50 @@ function runEslint(): Promise<string> {
         reject(error ?? new Error("ESLint produced no output"));
       },
     );
+    if (source !== undefined) {
+      child.stdin?.end(source);
+    }
   });
 }
 
-async function lintInfrastructureImport(source: string) {
-  await writeFile(FIXTURE_PATH, source, "utf8");
+function parseMessages(output: string) {
+  const [result] = JSON.parse(output) as {
+    readonly messages: readonly { readonly message: string }[];
+  }[];
+  if (!result) throw new Error("ESLint returned no file results");
+  return result.messages;
+}
+
+async function lintTemporaryInternalImport() {
+  const temporaryDirectory = await mkdtemp(
+    join(tmpdir(), "customreport-boundary-"),
+  );
+  const temporaryFixture = join(temporaryDirectory, basename(FIXTURE_PATH));
   try {
-    const [result] = JSON.parse(await runEslint()) as {
-      readonly messages: readonly { readonly message: string }[];
-    }[];
-    if (!result) throw new Error("ESLint returned no file results");
-    return result.messages;
+    await copyFile(FIXTURE_PATH, temporaryFixture);
+    const publicSource = await readFile(temporaryFixture, "utf8");
+    await writeFile(
+      temporaryFixture,
+      publicSource.replace(PUBLIC_ENTRYPOINT, INTERNAL_MODULE_PATH),
+      "utf8",
+    );
+    return parseMessages(
+      await runEslint(await readFile(temporaryFixture, "utf8")),
+    );
   } finally {
-    await writeFile(FIXTURE_PATH, PUBLIC_IMPORT, "utf8");
+    await rm(temporaryDirectory, { recursive: true, force: true });
   }
 }
 
 describe("API module public boundary", () => {
   it("allows infrastructure to import a module public barrel", async () => {
-    const messages = await lintInfrastructureImport(PUBLIC_IMPORT);
+    const messages = parseMessages(await runEslint());
 
     expect(messages).toEqual([]);
   }, 20_000);
 
   it("rejects infrastructure imports of module internals", async () => {
-    const messages = await lintInfrastructureImport(
-      'import type { SnapshotAdminService } from "../modules/admin/snapshot-admin.service.js";\n\nexport type PublicBoundaryFixture = SnapshotAdminService;\n',
-    );
+    const messages = await lintTemporaryInternalImport();
 
     expect(messages).toEqual([
       expect.objectContaining({

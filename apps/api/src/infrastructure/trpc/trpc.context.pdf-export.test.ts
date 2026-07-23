@@ -1,13 +1,24 @@
 import type { DbRole } from "@customreport/shared";
+import { userSessionSchema } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
+import { TRPCError } from "@trpc/server";
 import type { Request } from "express";
 import jwt from "jsonwebtoken";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
+import { createAuditLogger } from "../../lib/audit-logger";
 import { createNullLogger } from "../../lib/logger";
 import { SessionRevocationService } from "../../modules/admin/index.js";
 import { PrismaService } from "../prisma/prisma.service";
+import type { TrpcContext } from "./trpc.context";
 import { createContextFactory } from "./trpc.context";
+import { buildPdfExportSession } from "./trpc.context";
+import {
+  anyRoleProcedure,
+  headProcedure,
+  router as testTrpcRouter,
+} from "./trpc.middleware";
 
 /**
  * PDF JWT verifier path on the receiving end.
@@ -415,10 +426,6 @@ describe("createContextFactory — PDF JWT be-the-requester scope (empty-PDF fix
 // Legacy (no-requestedBy) session vs. userSessionSchema
 // ---------------------------------------------------------------------------
 
-import { userSessionSchema } from "@customreport/shared";
-
-import { buildPdfExportSession } from "./trpc.context";
-
 describe("buildPdfExportSession — legacy fallback satisfies userSessionSchema", () => {
   it("the no-requestedBy legacy session parses as a valid UserSession", async () => {
     const session = await buildPdfExportSession(
@@ -435,17 +442,6 @@ describe("buildPdfExportSession — legacy fallback satisfies userSessionSchema"
 // ---------------------------------------------------------------------------
 // Middleware-level allowlist guard (pdfExportGuard)
 // ---------------------------------------------------------------------------
-
-import { TRPCError } from "@trpc/server";
-import { z } from "zod";
-
-import { createAuditLogger } from "../../lib/audit-logger";
-import type { TrpcContext } from "./trpc.context";
-import {
-  anyRoleProcedure,
-  headProcedure,
-  router as testTrpcRouter,
-} from "./trpc.middleware";
 
 describe("pdfExportGuard — PDF synthetic session restrictions", () => {
   // We rebuild a tiny router exposing the same procedure helpers so we can

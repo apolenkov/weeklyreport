@@ -85,6 +85,7 @@ describe("correlate-errors-to-traces: stampActiveTrace", () => {
     expect(out.contexts?.trace?.trace_id).toBe(
       "ffffffffffffffffffffffffffffffff",
     );
+    expect(out.contexts?.trace?.span_id).toBe("ffffffffffffffff");
   });
 
   it("leaves the event unchanged when the span context is invalid (all-zero id)", () => {

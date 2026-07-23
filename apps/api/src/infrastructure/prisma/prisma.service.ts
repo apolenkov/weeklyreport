@@ -1,8 +1,4 @@
-import type {
-  BeforeApplicationShutdown,
-  OnModuleDestroy,
-  OnModuleInit,
-} from "@nestjs/common";
+import type { OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
@@ -49,7 +45,7 @@ interface PrismaLogEventEmitter {
 @Injectable()
 export class PrismaService
   extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy, BeforeApplicationShutdown
+  implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(PrismaService.name);
   private readonly pool: pg.Pool;
@@ -142,11 +138,8 @@ export class PrismaService
     );
   }
 
-  beforeApplicationShutdown(): void {
-    this.logger.log("Shutting down Prisma...");
-  }
-
   async onModuleDestroy(): Promise<void> {
+    this.logger.log("Shutting down Prisma...");
     await this.$disconnect();
     await this.pool.end();
     this.logger.log("Database connection closed");

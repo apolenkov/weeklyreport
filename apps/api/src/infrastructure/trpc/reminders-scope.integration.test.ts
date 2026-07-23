@@ -341,7 +341,7 @@ describe("reminders namespace — per-group scope (integration)", () => {
         reportId: REPORT_B,
         leadId: LEAD_B,
       });
-      expect(result.dispatched).toEqual(expect.any(Number));
+      expect(result.dispatched).toBe(1);
     });
   });
 

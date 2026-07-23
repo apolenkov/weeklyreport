@@ -5,7 +5,7 @@ import type {
 } from "@nestjs/terminus";
 import { HealthIndicatorService } from "@nestjs/terminus";
 import type { Queue } from "bullmq";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { EnvConfig } from "../config/env.schema.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
@@ -54,7 +54,7 @@ describe("HealthController", () => {
       bullmqHealth as unknown as BullMQHealthIndicator,
       env,
     );
-    return { controller, memory };
+    return { controller, memory, prismaHealth, redisHealth, bullmqHealth };
   }
 
   it("liveness response carries no memory_heap result", async () => {
@@ -67,10 +67,14 @@ describe("HealthController", () => {
   });
 
   it("readiness calls checkHeap with the threshold from EnvConfig", async () => {
-    const { controller, memory } = makeController();
+    const { controller, memory, prismaHealth, redisHealth, bullmqHealth } =
+      makeController();
 
     const result = await controller.readiness();
 
+    expect(prismaHealth.isHealthy).toHaveBeenCalledExactlyOnceWith("database");
+    expect(redisHealth.isHealthy).toHaveBeenCalledExactlyOnceWith("redis");
+    expect(bullmqHealth.isHealthy).toHaveBeenCalledExactlyOnceWith("bullmq");
     expect(memory.checkHeap).toHaveBeenCalledWith("memory_heap", threshold);
     expect(result).toMatchObject({ memory_heap: { status: "up" } });
   });
@@ -122,7 +126,7 @@ describe("RedisHealthIndicator", () => {
     // Override the internal redis client with a stub that never opens a socket
     const redisMock = {
       ping: vi.fn().mockResolvedValue("PONG"),
-      quit: vi.fn(),
+      disconnect: vi.fn(),
     };
     Object.assign(indicator, { redis: redisMock });
 
@@ -138,13 +142,29 @@ describe("RedisHealthIndicator", () => {
     );
     const redisMock = {
       ping: vi.fn().mockRejectedValue(new Error("ECONNREFUSED")),
-      quit: vi.fn(),
+      disconnect: vi.fn(),
     };
     Object.assign(indicator, { redis: redisMock });
 
     const result = await indicator.isHealthy("redis");
 
     expect(result).toMatchObject({ redis: { status: "down" } });
+  });
+
+  it("disconnects without issuing a Redis command on module destroy", () => {
+    const indicator = new RedisHealthIndicator(
+      new HealthIndicatorService(),
+      STUB_ENV,
+    );
+    const redisMock = {
+      ping: vi.fn(),
+      disconnect: vi.fn(),
+    };
+    Object.assign(indicator, { redis: redisMock });
+
+    indicator.onModuleDestroy();
+
+    expect(redisMock.disconnect).toHaveBeenCalledOnce();
   });
 });
 
@@ -153,6 +173,10 @@ describe("RedisHealthIndicator", () => {
 // ---------------------------------------------------------------------------
 
 describe("BullMQHealthIndicator", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   function makeQueue(counts: { waiting: number; active: number }) {
     return {
       getJobCounts: vi.fn().mockResolvedValue(counts),
@@ -211,5 +235,31 @@ describe("BullMQHealthIndicator", () => {
         message: "Queue unavailable",
       },
     });
+  });
+
+  it("returns down on timeout and safely absorbs a later queue rejection", async () => {
+    vi.useFakeTimers();
+    const pending = Promise.withResolvers<{
+      waiting: number;
+      active: number;
+    }>();
+    const queue = {
+      getJobCounts: vi.fn(() => pending.promise),
+    } as unknown as Queue;
+    const indicator = new BullMQHealthIndicator(
+      queue,
+      queue,
+      new HealthIndicatorService(),
+    );
+
+    const resultPromise = indicator.isHealthy("bullmq");
+    await vi.runAllTimersAsync();
+
+    const result = await resultPromise;
+    expect(result.bullmq).toMatchObject({ status: "down" });
+    expect(result.bullmq?.message).toContain("timed out");
+
+    pending.reject(new Error("late queue failure"));
+    await Promise.resolve();
   });
 });

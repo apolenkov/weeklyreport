@@ -45,7 +45,7 @@ export class RedisHealthIndicator implements OnModuleDestroy {
     }
   }
 
-  async onModuleDestroy(): Promise<void> {
-    await this.redis.quit();
+  onModuleDestroy(): void {
+    this.redis.disconnect();
   }
 }

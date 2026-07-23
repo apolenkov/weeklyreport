@@ -85,7 +85,7 @@ export function createRedisReadThroughCache(
 
     async invalidateByPrefix(prefix: string): Promise<void> {
       try {
-        await scanAndDelete(redis, `${prefix}*`, "0");
+        await scanAndDelete(redis, `${keyPrefix}${prefix}*`, "0");
       } catch {
         // Best-effort invalidation; stale entries still expire on their TTL.
       }

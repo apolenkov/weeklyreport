@@ -10,29 +10,35 @@ const SECTION_ID = "a0000000-0000-4000-8000-000000000301";
 const GROUP_ID = "a0000000-0000-4000-8000-000000000401";
 const VIEWER_GROUP_ID = "a0000000-0000-4000-8000-000000000501";
 
-interface OrgStub {
-  findUnique?: ReturnType<typeof vi.fn>;
-  upsert?: ReturnType<typeof vi.fn>;
+interface PrismaStubs {
+  organizationFindUnique?: ReturnType<typeof vi.fn>;
+  organizationUpsert?: ReturnType<typeof vi.fn>;
+  reportingGroupFindUnique?: ReturnType<typeof vi.fn>;
+  viewerGroupAccessFindMany?: ReturnType<typeof vi.fn>;
 }
 
-function makePrisma(org: OrgStub = {}): PrismaService {
+function makePrisma(stubs: PrismaStubs = {}): PrismaService {
   const stub = {
     reportSection: {
       findFirst: () => Promise.resolve({ id: SECTION_ID }),
     },
     viewerGroupAccess: {
-      findMany: () => Promise.resolve([{ groupId: VIEWER_GROUP_ID }]),
+      findMany:
+        stubs.viewerGroupAccessFindMany ??
+        vi.fn().mockResolvedValue([{ groupId: VIEWER_GROUP_ID }]),
     },
     reportingGroup: {
-      findUnique: () => Promise.resolve({ name: "Core Development" }),
+      findUnique:
+        stubs.reportingGroupFindUnique ??
+        vi.fn().mockResolvedValue({ name: "Core Development" }),
     },
     organization: {
       findUnique:
-        org.findUnique ??
+        stubs.organizationFindUnique ??
         vi
           .fn()
           .mockResolvedValue({ shortName: "PEO", fullName: "Product Team" }),
-      upsert: org.upsert ?? vi.fn(),
+      upsert: stubs.organizationUpsert ?? vi.fn(),
     },
   };
   return stub as unknown as PrismaService;
@@ -80,7 +86,10 @@ describe("hydrateSession", () => {
 
     const result = await hydrateSession(
       viewerSession(),
-      makePrisma({ findUnique, upsert }),
+      makePrisma({
+        organizationFindUnique: findUnique,
+        organizationUpsert: upsert,
+      }),
     );
 
     expect(findUnique).toHaveBeenCalledOnce();
@@ -99,7 +108,10 @@ describe("hydrateSession", () => {
 
     const result = await hydrateSession(
       viewerSession(),
-      makePrisma({ findUnique, upsert }),
+      makePrisma({
+        organizationFindUnique: findUnique,
+        organizationUpsert: upsert,
+      }),
     );
 
     expect(findUnique).toHaveBeenCalledOnce();
@@ -108,5 +120,50 @@ describe("hydrateSession", () => {
       shortName: "Org",
       fullName: "Organization",
     });
+  });
+
+  it("reuses the organization value within the cache TTL", async () => {
+    const findUnique = vi
+      .fn()
+      .mockResolvedValue({ shortName: "PEO", fullName: "Product Team" });
+    const prisma = makePrisma({ organizationFindUnique: findUnique });
+
+    await hydrateSession(viewerSession(), prisma);
+    await hydrateSession(viewerSession(), prisma);
+
+    expect(findUnique).toHaveBeenCalledOnce();
+  });
+
+  it("skips viewer access hydration for non-viewer sessions", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const session = {
+      ...viewerSession(),
+      role: "head" as const,
+      activeReportSectionId: SECTION_ID,
+    };
+
+    const result = await hydrateSession(
+      session,
+      makePrisma({ viewerGroupAccessFindMany: findMany }),
+    );
+
+    expect(findMany).not.toHaveBeenCalled();
+    expect(result.viewerGroupAccess).toBeUndefined();
+  });
+
+  it("keeps a populated reporting group name without querying it again", async () => {
+    const findUnique = vi.fn();
+    const session = {
+      ...viewerSession(),
+      reportingGroupName: "Existing Group",
+    };
+
+    const result = await hydrateSession(
+      session,
+      makePrisma({ reportingGroupFindUnique: findUnique }),
+    );
+
+    expect(findUnique).not.toHaveBeenCalled();
+    expect(result.reportingGroupName).toBe("Existing Group");
   });
 });

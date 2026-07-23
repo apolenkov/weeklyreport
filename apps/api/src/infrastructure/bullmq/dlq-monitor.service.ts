@@ -22,7 +22,8 @@ const POLL_INTERVAL_MS = 60_000;
 // operator time to act before Redis hits its own cap (and, above that, the
 // container OOM-kill).
 const REDIS_MEMORY_WARN_RATIO = 0.8;
-const REDIS_MEMORY_WARN_PERCENT = 80;
+const PERCENT_SCALE = 100;
+const REDIS_MEMORY_WARN_PERCENT = REDIS_MEMORY_WARN_RATIO * PERCENT_SCALE;
 // Any registry queue's shared connection can serve the INFO probe; the queues
 // all point at the same Redis instance.
 const MEMORY_PROBE_QUEUE = QUEUE_NAMES[0];

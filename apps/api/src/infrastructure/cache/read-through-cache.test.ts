@@ -10,7 +10,11 @@ import type { EnvConfig } from "../config/env.schema";
 import { createRedisReadThroughCache } from "./read-through-cache.js";
 
 const { instances } = vi.hoisted(() => ({
-  instances: [] as { store: Map<string, string> }[],
+  instances: [] as {
+    store: Map<string, string>;
+    get(key: string): Promise<string | null>;
+    setex(key: string, ttl: number, value: string): Promise<string>;
+  }[],
 }));
 
 vi.mock("ioredis", () => {
@@ -58,6 +62,12 @@ function storeOf(): Map<string, string> {
   const [instance] = instances;
   if (!instance) throw new Error("FakeRedis was never instantiated");
   return instance.store;
+}
+
+function redisOf() {
+  const [instance] = instances;
+  if (!instance) throw new Error("FakeRedis was never instantiated");
+  return instance;
 }
 
 describe("createRedisReadThroughCache", () => {
@@ -110,6 +120,41 @@ describe("createRedisReadThroughCache", () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
+  it("falls through to compute when Redis get rejects", async () => {
+    const cache = createRedisReadThroughCache({
+      connection: CONNECTION,
+      loggerName: "Test",
+      ttlSeconds: 60,
+      keyPrefix: "p:",
+    });
+    vi.spyOn(redisOf(), "get").mockRejectedValueOnce(
+      new Error("Redis unavailable"),
+    );
+    const compute = vi.fn().mockResolvedValue({ fresh: true });
+
+    await expect(cache.getOrCompute("k", compute)).resolves.toEqual({
+      fresh: true,
+    });
+    expect(compute).toHaveBeenCalledOnce();
+  });
+
+  it("returns the computed value when Redis setex rejects", async () => {
+    const cache = createRedisReadThroughCache({
+      connection: CONNECTION,
+      loggerName: "Test",
+      ttlSeconds: 60,
+      keyPrefix: "p:",
+    });
+    vi.spyOn(redisOf(), "setex").mockRejectedValueOnce(
+      new Error("Redis unavailable"),
+    );
+
+    await expect(
+      cache.getOrCompute("k", () => Promise.resolve(42)),
+    ).resolves.toBe(42);
+    expect(storeOf().has("p:k")).toBe(false);
+  });
+
   it("invalidateByPrefix deletes only keys under the prefix", async () => {
     const cache = createRedisReadThroughCache({
       connection: CONNECTION,
@@ -131,5 +176,21 @@ describe("createRedisReadThroughCache", () => {
     expect(store.has("customreport:analytics:a")).toBe(false);
     expect(store.has("customreport:analytics:b")).toBe(false);
     expect(store.has("other:keep")).toBe(true);
+  });
+
+  it("prepends keyPrefix when invalidating a caller prefix", async () => {
+    const cache = createRedisReadThroughCache({
+      connection: CONNECTION,
+      loggerName: "Test",
+      ttlSeconds: 3600,
+      keyPrefix: "cache:",
+    });
+    await cache.getOrCompute("analytics:a", () => Promise.resolve(1));
+    await cache.getOrCompute("telemetry:keep", () => Promise.resolve(2));
+
+    await cache.invalidateByPrefix("analytics:");
+
+    expect(storeOf().has("cache:analytics:a")).toBe(false);
+    expect(storeOf().has("cache:telemetry:keep")).toBe(true);
   });
 });

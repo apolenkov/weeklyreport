@@ -10,7 +10,11 @@ import { z } from "zod";
 
 import type { AppLogger } from "../../lib/logger";
 import { createRateLimits } from "../throttler/rate-limit.middleware";
-import { TRPC_MAX_BODY_BYTES } from "./ingress-limits";
+import {
+  CLIENT_LOGS_JSON_LIMIT,
+  mountClientLogsIngress,
+  TRPC_MAX_BODY_BYTES,
+} from "./ingress-limits";
 
 // The composed mounts below never log unless a 429 fires, and these servers key
 // per loopback IP, so a no-op warn sink is all the limiter needs.
@@ -98,10 +102,13 @@ function buildClientLogsApp(): express.Express {
     logger: silentLogger,
     isTest: false,
   });
-  app.use(
+  // Same shared mount as main.ts — limiter -> parser -> handler order and
+  // the byte limit cannot drift here without failing in production too.
+  mountClientLogsIngress(
+    app,
     "/api/client-logs",
     clientLogsLimiter,
-    express.json({ limit: "128kb" }),
+    express.json({ limit: CLIENT_LOGS_JSON_LIMIT }),
     (_req, res) => {
       res.sendStatus(204);
     },
@@ -155,6 +162,13 @@ function buildTrpcApp(): express.Express {
 }
 
 describe("public ingress limits — tRPC body cap", () => {
+  it("pins the tRPC byte budget itself, not just its enforcement", () => {
+    // repeat(TRPC_MAX_BODY_BYTES) always exceeds whatever the constant is,
+    // so this literal pin is what catches a budget regression (10 bytes or
+    // 10 GiB would both pass the oversize test below without it).
+    expect(TRPC_MAX_BODY_BYTES).toBe(1024 * 1024);
+  });
+
   it("rejects a mutation body over the configured limit with 413", async () => {
     const server = await listen(buildTrpcApp());
     const { port } = server.address() as AddressInfo;

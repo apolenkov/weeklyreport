@@ -8,7 +8,6 @@ import { type Job } from "bullmq";
 import type { ClsService } from "nestjs-cls";
 import { chromium, type Page } from "playwright";
 
-import { requireEnv } from "../../lib/env.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { PdfExportService } from "../../modules/pdf-export/index.js";
 import type { EnvConfig } from "../config/env.schema";
@@ -103,7 +102,7 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
 
   protected async processJob(job: Job<PdfExportJobData>): Promise<void> {
     const { reportId, jobId, authToken } = job.data;
-    const baseUrl = requireEnv(process.env, "PDF_BASE_URL");
+    const baseUrl = this.env.PDF_BASE_URL;
     const reportUrl = `${baseUrl}/print/${reportId}`;
 
     const browser = await chromium.launch({ headless: true });

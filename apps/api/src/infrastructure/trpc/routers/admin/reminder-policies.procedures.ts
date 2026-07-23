@@ -89,14 +89,14 @@ export function createAdminReminderPoliciesProcedures(
       }),
     deleteReminderRule: adminProcedure
       .input(z.object({ ruleId: z.uuid() }))
-      .mutation(async ({ input }) => {
-        try {
-          return await deps.reminderAdminService.removeReminderRule(
-            input.ruleId,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
+      .mutation(() => {
+        // Rules may disappear only as part of permanent policy removal, which
+        // deletes the policy and its derived rows as one domain operation.
+        throw new TRPCError({
+          code: "METHOD_NOT_SUPPORTED",
+          message:
+            "Per-period reminder rules are read-only; remove their reminder policy instead.",
+        });
       }),
   };
 }

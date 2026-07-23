@@ -178,11 +178,11 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
     // every requested product, so the "products attached" editor no longer
     // fans out one listProductGroups call per active product.
     listProductGroupOwnership: adminProcedure
-      .input(z.object({ productId: z.array(z.uuid()) }))
+      .input(z.object({ productIds: z.array(z.uuid()) }))
       .query(async ({ input }) => {
         try {
           return await deps.projectAdminService.listProductGroupOwnership(
-            input.productId,
+            input.productIds,
           );
         } catch (error) {
           throw mapDomainError(error);

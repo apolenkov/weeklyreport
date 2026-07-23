@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+
 import { propagation, trace } from "@opentelemetry/api";
 import { W3CTraceContextPropagator } from "@opentelemetry/core";
 import {
@@ -10,6 +12,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   captureJobTraceContext,
   extractTraceId,
+  resolveCorrelationId,
   runInJobTraceContext,
 } from "./worker-observability.js";
 
@@ -62,6 +65,47 @@ describe("extractTraceId", () => {
   });
 });
 
+class AsyncLocalCls {
+  private readonly storage = new AsyncLocalStorage<Map<string, unknown>>();
+
+  run<T>(fn: () => T): T {
+    return this.storage.run(new Map(), fn);
+  }
+
+  set(key: string, value: unknown): void {
+    this.storage.getStore()?.set(key, value);
+  }
+
+  get(key: string): unknown {
+    return this.storage.getStore()?.get(key);
+  }
+
+  isActive(): boolean {
+    return this.storage.getStore() !== undefined;
+  }
+}
+
+describe("resolveCorrelationId", () => {
+  it("returns the active scope's correlation id", () => {
+    const cls = new AsyncLocalCls();
+
+    const resolved = cls.run(() => {
+      cls.set("correlationId", "corr-active");
+      return resolveCorrelationId(cls as never);
+    });
+
+    expect(resolved).toBe("corr-active");
+  });
+
+  it("returns undefined outside a scope or when the key is unset", () => {
+    const cls = new AsyncLocalCls();
+
+    expect(resolveCorrelationId(cls as never)).toBeUndefined();
+    expect(cls.run(() => resolveCorrelationId(cls as never))).toBeUndefined();
+    expect(resolveCorrelationId()).toBeUndefined();
+  });
+});
+
 describe("runInJobTraceContext", () => {
   it("links the worker span to the enqueue trace", async () => {
     await runInJobTraceContext(
@@ -90,26 +134,49 @@ describe("runInJobTraceContext", () => {
     expect(span?.links).toHaveLength(0);
   });
 
-  it("seeds a CLS scope with the enqueue correlationId for the job body", async () => {
-    const store = new Map<string, unknown>();
-    const cls = {
-      run: (fn: () => Promise<void>) => fn(),
-      set: (key: string, value: unknown) => store.set(key, value),
-      get: (key: string) => store.get(key),
-      isActive: () => true,
-    };
-    const seen = vi.fn();
+  it("isolates concurrent CLS scopes seeded from each job", async () => {
+    const cls = new AsyncLocalCls();
+    const secondStarted = Promise.withResolvers<void>();
+    const firstSeen = vi.fn();
+    const secondSeen = vi.fn();
+
+    await Promise.all([
+      runInJobTraceContext(
+        { correlationId: "corr-first" },
+        "worker.process",
+        cls as never,
+        async () => {
+          await secondStarted.promise;
+          firstSeen(cls.get("correlationId"));
+        },
+      ),
+      runInJobTraceContext(
+        { correlationId: "corr-second" },
+        "worker.process",
+        cls as never,
+        async () => {
+          secondStarted.resolve();
+          await Promise.resolve();
+          secondSeen(cls.get("correlationId"));
+        },
+      ),
+    ]);
+
+    expect(firstSeen).toHaveBeenCalledExactlyOnceWith("corr-first");
+    expect(secondSeen).toHaveBeenCalledExactlyOnceWith("corr-second");
+    expect(cls.isActive()).toBe(false);
+  });
+
+  it("does not create a CLS scope without a correlation id", async () => {
+    const run = vi.fn();
 
     await runInJobTraceContext(
-      { correlationId: "corr-42" },
+      {},
       "worker.process",
-      cls as never,
-      async () => {
-        seen(cls.get("correlationId"));
-        return Promise.resolve();
-      },
+      { run } as never,
+      async () => Promise.resolve(),
     );
 
-    expect(seen).toHaveBeenCalledWith("corr-42");
+    expect(run).not.toHaveBeenCalled();
   });
 });

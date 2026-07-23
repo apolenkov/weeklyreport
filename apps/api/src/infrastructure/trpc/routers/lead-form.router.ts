@@ -2,7 +2,10 @@ import { z } from "zod";
 
 import { groupScopeFilter } from "../../../lib/group-scope.js";
 import type { SnapshotAdminService } from "../../../modules/admin/index.js";
-import type { LeadFormService } from "../../../modules/report-sections/index.js";
+import {
+  LeadFormDomainError,
+  type LeadFormService,
+} from "../../../modules/report-sections/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import {
   headProcedure,
@@ -64,7 +67,7 @@ export function createLeadFormRouter(deps: LeadFormRouterDeps) {
               ? { name: error.name, message: error.message }
               : { name: typeof error, message: String(error) };
           const logFailure =
-            errorInfo.name === "LeadFormDomainError"
+            error instanceof LeadFormDomainError
               ? ctx.logger.warn.bind(ctx.logger)
               : ctx.logger.error.bind(ctx.logger);
           logFailure("lead form load failed", {

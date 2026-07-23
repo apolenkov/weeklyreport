@@ -148,14 +148,6 @@ describe("rate-limit middleware — vitals limiter budget", () => {
 });
 
 describe("rate-limit middleware — client-logs limiter budget", () => {
-  it("exposes a clientLogsLimiter handler from the factory", () => {
-    const { clientLogsLimiter } = createRateLimits({
-      logger: silentLogger,
-      isTest: true,
-    });
-    expect(typeof clientLogsLimiter).toBe("function");
-  });
-
   it("returns 429 over budget and increments the client-logs bucket", async () => {
     // Production budget (isTest=false) is 60/min; fire one past it from a single
     // loopback client so the whole burst shares one keyGenerator bucket.

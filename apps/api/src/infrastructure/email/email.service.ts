@@ -95,17 +95,12 @@ export class EmailService implements EmailPort {
       text,
     });
 
-    if (this.isDev) {
-      process.stdout.write(
-        `${JSON.stringify({
-          timestamp: new Date().toISOString(),
-          level: "info",
-          message: "email sent (dev/jsonTransport)",
-          envelope: { from: fromAddr, to },
-          subject,
-        })}\n`,
-      );
-    }
+    this.logDevDelivery(
+      "email sent (dev/jsonTransport)",
+      fromAddr,
+      to,
+      subject,
+    );
   }
 
   /**
@@ -133,16 +128,29 @@ export class EmailService implements EmailPort {
       text,
     });
 
-    if (this.isDev) {
-      process.stdout.write(
-        `${JSON.stringify({
-          timestamp: new Date().toISOString(),
-          level: "info",
-          message: "email sent (dev/jsonTransport, multipart)",
-          envelope: { from: fromAddr, to },
-          subject,
-        })}\n`,
-      );
-    }
+    this.logDevDelivery(
+      "email sent (dev/jsonTransport, multipart)",
+      fromAddr,
+      to,
+      subject,
+    );
+  }
+
+  private logDevDelivery(
+    message: string,
+    from: string,
+    to: string,
+    subject: string,
+  ): void {
+    if (!this.isDev) return;
+    process.stdout.write(
+      `${JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: "info",
+        message,
+        envelope: { from, to },
+        subject,
+      })}\n`,
+    );
   }
 }

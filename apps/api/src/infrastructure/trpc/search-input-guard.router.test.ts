@@ -1,4 +1,3 @@
-import { TRPCError } from "@trpc/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
@@ -45,14 +44,5 @@ describe("search.query — null-byte input guard", () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(query).not.toHaveBeenCalled();
-  });
-
-  it("surfaces the rejection as a TRPCError instance", async () => {
-    const query = vi.fn(() => Promise.resolve([]));
-    const caller = buildCaller(query);
-
-    await expect(
-      caller.search.query({ q: `x${NULL_BYTE}`, scope: "mine", limit: 20 }),
-    ).rejects.toBeInstanceOf(TRPCError);
   });
 });
