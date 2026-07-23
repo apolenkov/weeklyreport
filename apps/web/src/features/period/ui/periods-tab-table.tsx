@@ -124,7 +124,7 @@ function PeriodRow({
         />
       </td>
       <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
-        {formatDate(row.deadline)}
+        {row.deadline === null ? "No deadline" : formatDate(row.deadline)}
       </td>
       <td className="px-4 py-3 text-right">
         <ActionIconRow

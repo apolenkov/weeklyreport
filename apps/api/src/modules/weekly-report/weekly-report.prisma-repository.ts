@@ -162,14 +162,20 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       // semantics are: "∃ at least one active ReminderPolicy whose validity
       // window covers this Report.deadline". The policy-driven scheduler
       // materialises ReminderRule rows lazily, so gating on per-period rule
-      // existence would mis-match it.
-      this.prisma.reminderPolicy.count({
-        where: {
-          active: true,
-          validFrom: { lte: report.deadline },
-          OR: [{ validUntil: null }, { validUntil: { gte: report.deadline } }],
-        },
-      }),
+      // existence would mis-match it. A deadline-less period (ruling F16) has
+      // no reference point for any validity window — zero, no query.
+      report.deadline === null
+        ? Promise.resolve(0)
+        : this.prisma.reminderPolicy.count({
+            where: {
+              active: true,
+              validFrom: { lte: report.deadline },
+              OR: [
+                { validUntil: null },
+                { validUntil: { gte: report.deadline } },
+              ],
+            },
+          }),
     ]);
 
     return { leadUsers, projects, activePolicyCount };

@@ -59,7 +59,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
    */
   async getReportMeta(
     reportId: string,
-  ): Promise<{ status: ReportStatus; deadline: Date } | null> {
+  ): Promise<{ status: ReportStatus; deadline: Date | null } | null> {
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
       select: { status: true, deadline: true },

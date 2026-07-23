@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   AdminDeadlineTimeFormatError,
   computePeriodPatch,
@@ -30,7 +31,7 @@ describe("computePeriodPatch", () => {
   });
 
   it("drops an equal-value write (same instant, different Date object)", () => {
-    const sameInstant = new Date(existing.deadline.toISOString());
+    const sameInstant = new Date(expectDefined(existing.deadline));
     expect(computePeriodPatch(existing, { deadline: sameInstant })).toEqual({
       data: {},
       diff: {},
@@ -44,6 +45,37 @@ describe("computePeriodPatch", () => {
     expect(diff).toEqual({
       weekLabel: { from: "Sprint 11", to: null },
     });
+  });
+
+  it("treats a deadline null-clear as a change carrying `to: null` (ruling F16)", () => {
+    const { data, diff } = computePeriodPatch(existing, { deadline: null });
+    expect(data).toEqual({ deadline: null });
+    expect(diff).toEqual({
+      deadline: { from: existing.deadline, to: null },
+    });
+  });
+
+  it("setting a deadline on a deadline-less period carries `from: null`", () => {
+    const cleared = { ...existing, deadline: null };
+    const to = new Date("2026-05-09T15:00:00.000Z");
+    const { data, diff } = computePeriodPatch(cleared, { deadline: to });
+    expect(data).toEqual({ deadline: to });
+    expect(diff).toEqual({ deadline: { from: null, to } });
+  });
+
+  it("drops a null-clear of an already deadline-less period as a no-op", () => {
+    const cleared = { ...existing, deadline: null };
+    expect(computePeriodPatch(cleared, { deadline: null })).toEqual({
+      data: {},
+      diff: {},
+    });
+  });
+
+  it("distinguishes an omitted deadline from an explicit clear", () => {
+    expect(computePeriodPatch(existing, {})).toEqual({ data: {}, diff: {} });
+    expect(
+      computePeriodPatch(existing, { deadline: null }).data,
+    ).toHaveProperty("deadline", null);
   });
 
   it("distinguishes an omitted weekLabel from an unchanged one", () => {

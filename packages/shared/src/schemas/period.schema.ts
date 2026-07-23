@@ -23,7 +23,7 @@ export const reportPeriodSchema = z.object({
   id: z.uuid(),
   periodStart: reportDate(),
   periodEnd: reportDate(),
-  deadline: reportDate(),
+  deadline: reportDate().nullable(),
   status: reportStatusSchema,
   /**
    * Explicit lifecycle state. Optional so pre-existing fixtures and
@@ -85,7 +85,7 @@ export const periodListItemSchema = z.object({
   id: z.uuid(),
   periodStart: reportDate(),
   periodEnd: reportDate(),
-  deadline: reportDate(),
+  deadline: reportDate().nullable(),
   publishedAt: z.coerce.date().nullable(),
   weekLabel: z.string().nullable().optional(),
   periodState: periodStateSchema,
@@ -173,7 +173,10 @@ export const adminUpdatePeriodManualSchema = z.object({
   reportId: z.uuid(),
   periodStart: z.coerce.date().optional(),
   periodEnd: z.coerce.date().optional(),
-  deadline: z.coerce.date().optional(),
+  // Same three-state contract as `weekLabel`: omit = untouched, `null` =
+  // explicit clear (ruling F16 — the period then has NO deadline and
+  // deadline-driven automation skips it), value = set.
+  deadline: z.coerce.date().nullable().optional(),
   weekLabel: z.string().max(MAX_WEEK_LABEL_LENGTH).nullable().optional(),
 });
 
@@ -192,7 +195,7 @@ export const adminUpdatePeriodManualResultSchema = z.object({
   periodId: z.uuid(),
   periodStart: reportDate(),
   periodEnd: reportDate(),
-  deadline: reportDate(),
+  deadline: reportDate().nullable(),
   periodState: periodStateSchema,
   weekLabel: z.string().nullable(),
 });
@@ -326,7 +329,7 @@ export const periodReadModelSchema = z.object({
   id: z.uuid(),
   periodStart: reportDate(),
   periodEnd: reportDate(),
-  deadline: reportDate(),
+  deadline: reportDate().nullable(),
   status: reportStatusSchema,
   periodStatus: periodStatusSchema,
   weekLabel: z.string().nullable(),

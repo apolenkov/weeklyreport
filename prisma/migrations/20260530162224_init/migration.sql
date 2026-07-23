@@ -137,7 +137,7 @@ CREATE TABLE "Report" (
     "id" TEXT NOT NULL,
     "periodStart" TIMESTAMP(3) NOT NULL,
     "periodEnd" TIMESTAMP(3) NOT NULL,
-    "deadline" TIMESTAMP(3) NOT NULL,
+    "deadline" TIMESTAMP(3),
     "status" "ReportStatus" NOT NULL DEFAULT 'draft',
     "publishedAt" TIMESTAMP(3),
     "publishedById" TEXT,

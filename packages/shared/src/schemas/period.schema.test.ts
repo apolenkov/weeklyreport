@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { reportPeriodSchema } from "./period.schema";
+import {
+  adminUpdatePeriodManualSchema,
+  reportPeriodSchema,
+} from "./period.schema";
 
 const REPORT_ID = "123e4567-e89b-42d3-a456-426614174000";
 const PUBLISHER_ID = "123e4567-e89b-42d3-a456-426614174001";
@@ -45,5 +48,46 @@ describe("reportPeriodSchema — publishedById", () => {
     const parsed = reportPeriodSchema.parse(validPeriod);
 
     expect(parsed.publishedById).toBeUndefined();
+  });
+});
+
+describe("adminUpdatePeriodManualSchema — three-state deadline (ruling F16)", () => {
+  const base = { reportId: REPORT_ID };
+
+  it("omitting deadline leaves it undefined (untouched)", () => {
+    const parsed = adminUpdatePeriodManualSchema.parse(base);
+    expect(parsed.deadline).toBeUndefined();
+    expect("deadline" in parsed).toBe(false);
+  });
+
+  it("explicit null survives parsing (clear)", () => {
+    const parsed = adminUpdatePeriodManualSchema.parse({
+      ...base,
+      deadline: null,
+    });
+    expect(parsed.deadline).toBeNull();
+  });
+
+  it("a value coerces to a Date (set)", () => {
+    const parsed = adminUpdatePeriodManualSchema.parse({
+      ...base,
+      deadline: "2026-07-13T12:00:00.000Z",
+    });
+    expect(parsed.deadline).toBeInstanceOf(Date);
+  });
+});
+
+describe("reportPeriodSchema — nullable deadline (ruling F16)", () => {
+  it("accepts a null deadline on the read model", () => {
+    const parsed = reportPeriodSchema.parse({
+      ...validPeriod,
+      deadline: null,
+    });
+    expect(parsed.deadline).toBeNull();
+  });
+
+  it("still rejects an ABSENT deadline (null must be explicit)", () => {
+    const { deadline: _dropped, ...withoutDeadline } = validPeriod;
+    expect(() => reportPeriodSchema.parse(withoutDeadline)).toThrow();
   });
 });

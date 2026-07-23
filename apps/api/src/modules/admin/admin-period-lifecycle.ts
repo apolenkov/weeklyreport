@@ -87,6 +87,12 @@ export async function createPeriodManual(
       },
     }),
   );
+  // The insert above always writes a deadline (creation is never
+  // deadline-less); a null read-back would mean schema drift — fail loud
+  // rather than widen the create contract.
+  if (created.deadline === null) {
+    throw new Error("Created period unexpectedly has no deadline.");
+  }
   return {
     id: created.id,
     periodStart: created.periodStart,
@@ -114,7 +120,7 @@ export async function updatePeriodManual(
     data: {
       periodStart?: Date;
       periodEnd?: Date;
-      deadline?: Date;
+      deadline?: Date | null;
       weekLabel?: string | null;
     };
   },
@@ -122,7 +128,7 @@ export async function updatePeriodManual(
   id: string;
   periodStart: Date;
   periodEnd: Date;
-  deadline: Date;
+  deadline: Date | null;
   weekLabel: string | null;
   periodState: PeriodState;
 }> {

@@ -14,11 +14,13 @@ import {
 
 export interface CreatePeriodValues {
   periodStart: Date;
-  // nullable in edit-mode so the dialog can clear an existing weekLabel via
-  // explicit `null`. Create-mode submitters never pass `null` here (empty
-  // input → undefined / omit).
+  // weekLabel AND deadline are nullable in edit-mode so the dialog can clear
+  // an existing value via explicit `null` (deadline: ruling F16 — the period
+  // then has no deadline and deadline-driven automation skips it).
+  // Create-mode submitters never pass `null` here (empty input → undefined /
+  // omit).
   periodEnd?: Date;
-  deadline?: Date;
+  deadline?: Date | null;
   weekLabel?: string | null;
 }
 
@@ -51,7 +53,9 @@ export function CreatePeriodDialog({
     isEdit ? dateInputValue(initialValues.periodEnd) : "",
   );
   const [deadline, setDeadline] = useState(() =>
-    isEdit ? dateTimeInputValue(initialValues.deadline) : "",
+    isEdit && initialValues.deadline !== null
+      ? dateTimeInputValue(initialValues.deadline)
+      : "",
   );
   const [weekLabel, setWeekLabel] = useState(
     isEdit ? (initialValues.weekLabel ?? "") : "",
@@ -73,11 +77,15 @@ export function CreatePeriodDialog({
     const endDate = periodEnd
       ? new Date(`${periodEnd}T23:59:59.999Z`)
       : undefined;
-    const deadlineDate = deadline ? new Date(`${deadline}:00.000Z`) : undefined;
-
-    // weekLabel clear semantics differ by mode.
-    // - create: empty → `undefined` (omit from payload).
-    // - edit:   empty → `null` (explicit clear of an existing label).
+    // deadline + weekLabel clear semantics differ by mode.
+    // - create: empty → `undefined` (omit from payload; server derives the
+    //   deadline default).
+    // - edit:   empty → `null` (explicit clear — ruling F16 for deadline).
+    const deadlineDate = deadline
+      ? new Date(`${deadline}:00.000Z`)
+      : isEdit
+        ? null
+        : undefined;
     const trimmed = weekLabel.trim();
     const weekLabelValue =
       trimmed === "" ? (isEdit ? null : undefined) : trimmed;
@@ -90,14 +98,17 @@ export function CreatePeriodDialog({
     });
   }
 
-  const deadlineError =
+  // An empty deadline in edit-mode is a legal explicit clear (ruling F16) —
+  // the consequence hint below replaces the old hard "required" error.
+  const deadlineError = computeDeadlineError({
+    deadline,
+    periodStart,
+    periodEnd,
+  });
+  const deadlineClearHint =
     isEdit && deadline === ""
-      ? "Deadline is required when editing a period."
-      : computeDeadlineError({
-          deadline,
-          periodStart,
-          periodEnd,
-        });
+      ? "No deadline: reminders and auto-publish will not run for this period."
+      : null;
 
   const canSubmit = periodStart !== "" && !isPending && !deadlineError;
   const title = isEdit ? "Edit period" : "New period";
@@ -143,7 +154,7 @@ export function CreatePeriodDialog({
           deadline={deadline}
           onDeadlineChange={setDeadline}
           deadlineError={deadlineError}
-          deadlineRequired={isEdit}
+          deadlineClearHint={deadlineClearHint}
           weekLabel={weekLabel}
           onWeekLabelChange={setWeekLabel}
         />

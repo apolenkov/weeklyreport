@@ -218,7 +218,7 @@ export class AdminPrismaRepository implements AdminRepository {
     id: string;
     periodStart: Date;
     periodEnd: Date;
-    deadline: Date;
+    deadline: Date | null;
     weekLabel: string | null;
     periodState: PeriodState;
   } | null> {
@@ -230,14 +230,14 @@ export class AdminPrismaRepository implements AdminRepository {
     data: {
       periodStart?: Date;
       periodEnd?: Date;
-      deadline?: Date;
+      deadline?: Date | null;
       weekLabel?: string | null;
     };
   }): Promise<{
     id: string;
     periodStart: Date;
     periodEnd: Date;
-    deadline: Date;
+    deadline: Date | null;
     weekLabel: string | null;
     periodState: PeriodState;
   }> {

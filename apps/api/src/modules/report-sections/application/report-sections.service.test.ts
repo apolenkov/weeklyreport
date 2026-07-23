@@ -952,6 +952,26 @@ describe("ReportSectionsService — deadline gate", () => {
     ).rejects.toBeInstanceOf(ReportSectionAccessError);
   });
 
+  it("a period with an explicitly cleared deadline stamps late=false past any date (ruling F16)", async () => {
+    // deadline: null is a real domain state (admin cleared it) — no reference
+    // point, so nothing is ever late and the gate never throws.
+    const repo = {
+      ...createGracedRepository({
+        deadline: new Date(Date.now() - 48 * ONE_HOUR),
+      }),
+      getReportMeta: () =>
+        Promise.resolve({ status: "draft" as const, deadline: null }),
+    };
+    const service = new ReportSectionsService(repo, () =>
+      Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: false }),
+    );
+
+    const saved = await service.submitSection(validSubmitPayload());
+
+    expect(saved.status).toBe("submitted");
+    expect(saved.late).toBe(false);
+  });
+
   it("skips the gate only on an explicit null report meta — late stays false", async () => {
     // The old "no provider wired → gate silently off" path is gone by design
     // (both collaborators are required). The one remaining skip is a

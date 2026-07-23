@@ -88,10 +88,20 @@ async function main(): Promise<void> {
     const policies = await prisma.reminderPolicy.findMany({
       where: { active: true },
     });
-    const periods = await prisma.report.findMany({
-      where: { periodStatus: { not: "published" } },
+    // deadline: { not: null } — a period whose deadline an admin explicitly
+    // cleared (ruling F16) has no reference point for deadline-relative
+    // rules; the backfill mints nothing for it, same as the live applicator.
+    const periodRows = await prisma.report.findMany({
+      where: { periodStatus: { not: "published" }, deadline: { not: null } },
       select: { id: true, deadline: true },
     });
+    // The SQL filter guarantees non-null; the flatMap narrows the type so a
+    // future query edit cannot silently reintroduce nullable rows here.
+    const periods = periodRows.flatMap((period) =>
+      period.deadline === null
+        ? []
+        : [{ id: period.id, deadline: period.deadline }],
+    );
 
     console.log(
       `[backfill] active policies=${policies.length} open periods=${periods.length}`,

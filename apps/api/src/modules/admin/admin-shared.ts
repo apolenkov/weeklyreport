@@ -217,7 +217,7 @@ export interface AdminRepository {
     id: string;
     periodStart: Date;
     periodEnd: Date;
-    deadline: Date;
+    deadline: Date | null;
     weekLabel: string | null;
     periodState: PeriodState;
   } | null>;
@@ -229,14 +229,14 @@ export interface AdminRepository {
     data: {
       periodStart?: Date;
       periodEnd?: Date;
-      deadline?: Date;
+      deadline?: Date | null;
       weekLabel?: string | null;
     };
   }): Promise<{
     id: string;
     periodStart: Date;
     periodEnd: Date;
-    deadline: Date;
+    deadline: Date | null;
     weekLabel: string | null;
     periodState: PeriodState;
   }>;
@@ -365,7 +365,7 @@ export interface PeriodRowFromRepo {
   id: string;
   periodStart: Date;
   periodEnd: Date;
-  deadline: Date;
+  deadline: Date | null;
   publishedAt: Date | null;
   periodState: PeriodState;
   periodStatus: PeriodStatus;

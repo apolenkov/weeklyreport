@@ -582,22 +582,36 @@ describe("PeriodsTab — «Edit period» dialog", () => {
     expect(payload.weekLabel).toBe("Q2 close");
   });
 
-  it("rejects clearing the required deadline in edit mode", async () => {
+  it("clearing the deadline in edit mode is an explicit clear: hint shown, payload carries null", async () => {
+    // Ruling F16 (allow-deadline-explicit-clear): an emptied deadline field
+    // is a legal deletion, not a validation error.
     const user = userEvent.setup();
     const { captured } = renderTab();
 
-    await user.click(
-      await screen.findByTestId(`action-edit-${publishedFresh.id}`),
-    );
+    await user.click(await screen.findByTestId(`action-edit-${openRow.id}`));
     await user.clear(screen.getByTestId("periods-create-deadline"));
 
-    expect(screen.getByTestId("periods-deadline-error")).toHaveTextContent(
-      "Deadline is required when editing a period.",
+    expect(screen.getByTestId("periods-deadline-hint")).toHaveTextContent(
+      "No deadline: reminders and auto-publish will not run for this period.",
     );
-    expect(screen.getByTestId("periods-create-submit")).toBeDisabled();
-    expect(
-      expectDefined(captured["admin.updatePeriodManual"]).mutationFn,
-    ).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("periods-deadline-error")).toBeNull();
+    const submit = screen.getByTestId("periods-create-submit");
+    expect(submit).toBeEnabled();
+
+    await user.click(submit);
+
+    const updatePeriodManualEntry = expectDefined(
+      captured["admin.updatePeriodManual"],
+    );
+    await waitFor(() => {
+      expect(updatePeriodManualEntry.mutationFn).toHaveBeenCalledTimes(1);
+    });
+    const payload = updatePeriodManualEntry.mutationFn.mock.calls[0]?.[0] as {
+      reportId: string;
+      deadline?: Date | null;
+    };
+    expect(payload.reportId).toBe(openRow.id);
+    expect(payload.deadline).toBeNull();
   });
 
   it("edit dialog submit button reads «Save» (not «Create») in edit-mode", async () => {

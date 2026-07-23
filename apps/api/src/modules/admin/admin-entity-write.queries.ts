@@ -240,7 +240,9 @@ export async function upsertPeriod(
   // A newly-created period materializes one ReminderRule per active policy.
   // Runs AFTER the write commits (an applicator failure must not roll the
   // period back) — mirrors the whole-snapshot restore's post-commit step.
-  if (created && policyApplicator) {
+  // A deadline-less period (ruling F16) gets no rules: every offset is
+  // deadline-relative, so there is nothing to schedule.
+  if (created && policyApplicator && period.deadline !== null) {
     await policyApplicator.applyToPeriod({
       id: period.id,
       deadline: period.deadline,

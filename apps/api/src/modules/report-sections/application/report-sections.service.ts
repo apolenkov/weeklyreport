@@ -83,7 +83,7 @@ export interface ReportSectionsRepository {
    */
   getReportMeta(
     reportId: string,
-  ): Promise<{ status: ReportStatus; deadline: Date } | null>;
+  ): Promise<{ status: ReportStatus; deadline: Date | null } | null>;
   /**
    * Resolve which of the section's CURRENT item/decision lineages (stableIds)
    * have appeared in a published report — the delete-lock reference set
@@ -212,12 +212,20 @@ export class ReportSectionsService {
    * configured grace window AND late submissions are forbidden.
    *
    * Both collaborators are required, so the gate is always armed; the only
-   * skip is an explicit `null` from `getReportMeta` (report absent).
+   * skips are an explicit `null` from `getReportMeta` (report absent) and a
+   * period whose deadline was explicitly cleared (ruling F16) — logged, so
+   * "no late stamping" is always traceable to a visible cause.
    */
   private async evaluateDeadlineGate(reportId: string) {
     const meta = await this.repository.getReportMeta(reportId);
     if (!meta) {
       return { late: false, reportMeta: null };
+    }
+    if (meta.deadline === null) {
+      this.logger.info("deadline gate skipped: period has no deadline", {
+        reportId,
+      });
+      return { late: false, reportMeta: meta };
     }
     const settings = await this.getGraceSettings();
     const now = Date.now();
@@ -353,8 +361,9 @@ export class ReportSectionsService {
     try {
       this.telemetry.recordSectionSubmitted(late);
       const meta = deadlineGate.reportMeta;
-      if (meta) {
-        // Signed seconds: positive = late, negative = submitted early.
+      if (meta?.deadline) {
+        // Signed seconds: positive = late, negative = submitted early. A
+        // cleared deadline has no reference point — no histogram sample.
         const deltaSeconds =
           (Date.now() - meta.deadline.getTime()) / MS_PER_SECOND;
         this.telemetry.observeSubmissionLatency(deltaSeconds);

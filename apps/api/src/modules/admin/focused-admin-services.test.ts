@@ -1686,7 +1686,7 @@ interface EditableRow {
   id: string;
   periodStart: Date;
   periodEnd: Date;
-  deadline: Date;
+  deadline: Date | null;
   weekLabel: string | null;
   periodState: "scheduled" | "open" | "published" | "archived";
 }
@@ -1701,7 +1701,7 @@ function makeUpdatePeriodRepository(opts: {
     data: {
       periodStart?: Date;
       periodEnd?: Date;
-      deadline?: Date;
+      deadline?: Date | null;
       weekLabel?: string | null;
     };
   } | null;
@@ -1802,11 +1802,15 @@ describe("PeriodAdminService — updatePeriodManual", () => {
     });
 
     expect(result.periodId).toBe(SEED_ROW_ID);
-    expect(result.deadline.toISOString()).toBe("2026-05-10T15:00:00.000Z");
+    expect(expectDefined(result.deadline).toISOString()).toBe(
+      "2026-05-10T15:00:00.000Z",
+    );
     expect(result.weekLabel).toBe("Sprint 11 (extended)");
     // Diff carries only the two changed fields.
     expect(Object.keys(diff).sort()).toEqual(["deadline", "weekLabel"]);
-    expect(diff.deadline?.from.toISOString()).toBe("2026-05-09T15:00:00.000Z");
+    expect(expectDefined(diff.deadline?.from).toISOString()).toBe(
+      "2026-05-09T15:00:00.000Z",
+    );
     expect(diff.weekLabel?.from).toBe("Sprint 11");
     // Repository write only carries the changed keys.
     const last = repo.readLastUpdated();
@@ -1879,7 +1883,9 @@ describe("PeriodAdminService — updatePeriodManual", () => {
       periodEnd: new Date("2026-05-10T23:59:59.999Z"), // same as seed
       deadline: new Date("2026-05-10T15:00:00.000Z"),
     });
-    expect(result.deadline.toISOString()).toBe("2026-05-10T15:00:00.000Z");
+    expect(expectDefined(result.deadline).toISOString()).toBe(
+      "2026-05-10T15:00:00.000Z",
+    );
   });
 
   it("no-op (zero changed fields) short-circuits without audit / write", async () => {
