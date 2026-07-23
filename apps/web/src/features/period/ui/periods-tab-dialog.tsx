@@ -90,11 +90,14 @@ export function CreatePeriodDialog({
     });
   }
 
-  const deadlineError = computeDeadlineError({
-    deadline,
-    periodStart,
-    periodEnd,
-  });
+  const deadlineError =
+    isEdit && deadline === ""
+      ? "Deadline is required when editing a period."
+      : computeDeadlineError({
+          deadline,
+          periodStart,
+          periodEnd,
+        });
 
   const canSubmit = periodStart !== "" && !isPending && !deadlineError;
   const title = isEdit ? "Edit period" : "New period";
@@ -140,6 +143,7 @@ export function CreatePeriodDialog({
           deadline={deadline}
           onDeadlineChange={setDeadline}
           deadlineError={deadlineError}
+          deadlineRequired={isEdit}
           weekLabel={weekLabel}
           onWeekLabelChange={setWeekLabel}
         />

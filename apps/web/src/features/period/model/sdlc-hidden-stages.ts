@@ -6,13 +6,10 @@ import {
 import type { CrossAuthorEntry } from "../ui/sdlc-pipeline";
 
 // pipeline-tooltip-and-indicator / unassigned-stage-reporting-exclusion: the
-// "+N more" reveal must be honest about who holds each hidden stage. In Mine
-// mode a non-own stage in the product's stageSet arrives as foreign-owned
-// (locked) with a null assignee — the real owner lives in `crossAuthors` (the
-// same source that floors product health). We consult it so a stage taken by a
-// co-owner reads as their initials, falling back to "another lead" when the
-// owner is not yet resolved (the lead reported DevOps showing empty while
-// another author actually held it).
+// "+N more" reveal must name who holds each hidden stage. Prefer
+// `crossAuthors` (same source as product health). Mine mode ships locked
+// stages with a null assignee; the assignee branch below is only a fallback
+// when initials already sit on the stage (Everyone override shapes / fixtures).
 
 interface ForeignOwner {
   owner: string;

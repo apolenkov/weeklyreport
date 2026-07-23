@@ -117,7 +117,7 @@ export function computeCompleteness(product: Product): CompletenessState {
 export function getProductCardStyle(status: StageStatus): CSSProperties {
   return {
     background: "var(--color-card)",
-    border: "1px solid rgba(0,0,0,0.08)",
+    border: "1px solid var(--color-border-subtle)",
     borderLeft: `4px solid ${STRIPE_BY_STATUS[status]}`,
     paddingLeft: "calc(1rem - 3px)",
   };

@@ -3,6 +3,7 @@
 import type { Dispatch, SetStateAction } from "react";
 
 import type { MockSettings } from "../../admin";
+import * as fieldLimits from "./settings-periods-fields-base-helpers";
 
 /**
  * Period base fields for the Settings → Periods sub-tab. The owning
@@ -31,13 +32,16 @@ export function PeriodBaseFields({
           name="period-length-days"
           type="number"
           inputMode="numeric"
-          min={1}
-          max={31}
+          min={fieldLimits.PERIOD_LENGTH_DAYS.min}
+          max={fieldLimits.PERIOD_LENGTH_DAYS.max}
           value={draft.periodLengthDays}
           onChange={(e) =>
             setDraft({
               ...draft,
-              periodLengthDays: Number.parseInt(e.target.value, 10) || 1,
+              periodLengthDays: fieldLimits.boundedInteger(
+                e.target.value,
+                fieldLimits.PERIOD_LENGTH_DAYS,
+              ),
             })
           }
           className="w-40 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
@@ -111,13 +115,16 @@ export function PeriodBaseFields({
           name="deadline-days"
           type="number"
           inputMode="numeric"
-          min={1}
-          max={30}
+          min={fieldLimits.DEFAULT_DEADLINE_DAYS.min}
+          max={fieldLimits.DEFAULT_DEADLINE_DAYS.max}
           value={draft.defaultDeadlineDays}
           onChange={(e) =>
             setDraft({
               ...draft,
-              defaultDeadlineDays: Number.parseInt(e.target.value, 10) || 1,
+              defaultDeadlineDays: fieldLimits.boundedInteger(
+                e.target.value,
+                fieldLimits.DEFAULT_DEADLINE_DAYS,
+              ),
             })
           }
           className="w-40 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
@@ -140,15 +147,15 @@ export function PeriodBaseFields({
           name="grace-period-hours"
           type="number"
           inputMode="numeric"
-          min={0}
-          max={168}
+          min={fieldLimits.GRACE_PERIOD_HOURS.min}
+          max={fieldLimits.GRACE_PERIOD_HOURS.max}
           value={draft.gracePeriodHours}
           onChange={(e) =>
             setDraft({
               ...draft,
-              gracePeriodHours: Math.max(
-                0,
-                Number.parseInt(e.target.value, 10) || 0,
+              gracePeriodHours: fieldLimits.boundedInteger(
+                e.target.value,
+                fieldLimits.GRACE_PERIOD_HOURS,
               ),
             })
           }
@@ -217,15 +224,15 @@ export function PeriodBaseFields({
           name="auto-archive-weeks"
           type="number"
           inputMode="numeric"
-          min={0}
-          max={52}
+          min={fieldLimits.AUTO_ARCHIVE_WEEKS.min}
+          max={fieldLimits.AUTO_ARCHIVE_WEEKS.max}
           value={draft.autoArchiveWeeksAfterPublish}
           onChange={(e) =>
             setDraft({
               ...draft,
-              autoArchiveWeeksAfterPublish: Math.max(
-                0,
-                Number.parseInt(e.target.value, 10) || 0,
+              autoArchiveWeeksAfterPublish: fieldLimits.boundedInteger(
+                e.target.value,
+                fieldLimits.AUTO_ARCHIVE_WEEKS,
               ),
             })
           }

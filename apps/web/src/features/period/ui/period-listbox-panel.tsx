@@ -9,21 +9,25 @@ import { createPortal } from "react-dom";
 const PERIOD_PANEL_MAX_HEIGHT_PX = 280;
 
 interface PeriodOption {
-  id: string;
-  dateRange: string;
-  isCurrent: boolean;
-  archived: boolean;
+  readonly id: string;
+  readonly dateRange: string;
+  readonly isCurrent: boolean;
+  readonly archived: boolean;
   // W3: per-lead submitted marker. Only ever true for the lead surface and
   // only on the currently-selected period (the navigator has a submittedAt
   // value for the displayed period alone, never the whole history).
-  submitted?: boolean;
+  readonly submitted?: boolean;
 }
 
 interface PeriodListboxPanelProps {
-  readonly options: PeriodOption[];
+  readonly options: readonly PeriodOption[];
   readonly selectedId: string | undefined;
   readonly activeIdx: number;
-  readonly pos: { top: number; left: number; width: number };
+  readonly pos: {
+    readonly top: number;
+    readonly left: number;
+    readonly width: number;
+  };
   readonly panelRef: React.RefObject<HTMLDivElement | null>;
   // W4: per-instance scoped ids (useId) so two navigators on one page never
   // collide on the listbox / option DOM ids that aria-controls and

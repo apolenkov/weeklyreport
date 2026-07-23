@@ -101,6 +101,9 @@ export function buildActivityDecisionSave(args: {
   };
 }
 
+/** Legacy parentless product label — matches mapLeadDecisions / DecisionsSection. */
+const LEGACY_GROUP_PRODUCT_NAME = "Group";
+
 /** Builds the product-parented save payload. */
 export function buildProductDecisionSave(args: {
   readonly base: DecisionSaveBase;
@@ -113,7 +116,9 @@ export function buildProductDecisionSave(args: {
     ...args.base,
     productId: args.parentId || "",
     productName:
-      args.selectedProduct?.name ?? args.decision?.productName ?? "Group",
+      args.selectedProduct?.name ??
+      args.decision?.productName ??
+      LEGACY_GROUP_PRODUCT_NAME,
     activityId: null,
     stageIds:
       args.effectiveStageIds.length > 0

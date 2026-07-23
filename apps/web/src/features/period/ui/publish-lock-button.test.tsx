@@ -71,7 +71,7 @@ describe("PublishLockButton", () => {
     // Dialog opens — only the dialog confirm button calls onPublish
     expect(onPublish).not.toHaveBeenCalled();
     expect(
-      screen.getByRole("dialog", { name: /confirm publish/i }),
+      screen.getByRole("alertdialog", { name: /publish & lock report/i }),
     ).toBeInTheDocument();
 
     // Cancel does NOT call onPublish
@@ -96,7 +96,9 @@ describe("PublishLockButton", () => {
     );
     // Pick the dialog's confirm action — the only button labeled exactly "Publish & Lock"
     // inside the dialog (when pendingCount === 0).
-    const dialog = screen.getByRole("dialog", { name: /confirm publish/i });
+    const dialog = screen.getByRole("alertdialog", {
+      name: /publish & lock report/i,
+    });
     const confirmBtn = dialog.querySelectorAll("button");
     // Last button in dialog footer is the confirm one (label varies on pendingCount)
     await userEvent.click(expectDefined(confirmBtn[confirmBtn.length - 1]));
@@ -191,7 +193,7 @@ describe("PublishLockButton", () => {
     expect(button).toBeDisabled();
     await userEvent.click(button);
     expect(
-      screen.queryByRole("dialog", { name: /confirm publish/i }),
+      screen.queryByRole("alertdialog", { name: /publish & lock report/i }),
     ).not.toBeInTheDocument();
     expect(onPublish).not.toHaveBeenCalled();
   });
@@ -285,20 +287,19 @@ describe("PublishLockButton", () => {
       await userEvent.click(
         screen.getByRole("button", { name: /publish & lock/i }),
       );
-      const dialog = screen.getByRole("dialog", { name: /confirm publish/i });
+      const dialog = screen.getByRole("alertdialog", {
+        name: /publish & lock report/i,
+      });
       expect(dialog).toBeInTheDocument();
 
-      // Escape is handled via onKeyDown on the dialog div itself — fire on
-      // the element, not document (catalog prose says "press Escape"; source
-      // uses a div-local onKeyDown, not document.addEventListener).
       fireEvent.keyDown(dialog, { key: "Escape" });
 
       expect(
-        screen.queryByRole("dialog", { name: /confirm publish/i }),
+        screen.queryByRole("alertdialog", { name: /publish & lock report/i }),
       ).not.toBeInTheDocument();
     });
 
-    it("publish dialog container is programmatically focusable via tabIndex=-1 (structural proxy for autoFocus)", async () => {
+    it("focuses the non-destructive Cancel action when the publish dialog opens", async () => {
       render(
         <PublishLockButton
           pendingCount={0}
@@ -312,19 +313,35 @@ describe("PublishLockButton", () => {
       await userEvent.click(
         screen.getByRole("button", { name: /publish & lock/i }),
       );
-      const dialog = screen.getByRole("dialog", { name: /confirm publish/i });
+      expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    });
 
-      // The dialog div carries tabIndex={-1} and autoFocus. React calls
-      // .focus() on mount (does not set the HTML `autofocus` attribute).
-      // jsdom does not honour autoFocus for conditionally-rendered elements
-      // whose parent button just received userEvent.click focus — asserted as
-      // structural proxy per task step 6 (jsdom environment limitation).
-      expect(dialog).toHaveAttribute("tabindex", "-1");
+    it("clicking the publish backdrop dismisses without publishing", async () => {
+      const onPublish = vi.fn();
+      render(
+        <PublishLockButton
+          pendingCount={0}
+          totalLeads={6}
+          periodStatus="open"
+          onPublish={onPublish}
+          onReopen={vi.fn()}
+        />,
+      );
 
-      // Verify the element can be programmatically focused (the capability
-      // autoFocus relies on): call .focus() and check activeElement.
-      dialog.focus();
-      expect(document.activeElement).toBe(dialog);
+      await userEvent.click(
+        screen.getByRole("button", { name: /publish & lock/i }),
+      );
+      const dialog = screen.getByRole("alertdialog", {
+        name: /publish & lock report/i,
+      });
+      const backdrop = dialog.parentElement;
+      if (!backdrop) throw new Error("publish backdrop not found");
+      await userEvent.click(backdrop);
+
+      expect(
+        screen.queryByRole("alertdialog", { name: /publish & lock report/i }),
+      ).not.toBeInTheDocument();
+      expect(onPublish).not.toHaveBeenCalled();
     });
   });
 });

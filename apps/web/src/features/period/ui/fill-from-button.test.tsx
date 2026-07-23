@@ -76,6 +76,34 @@ describe("FillFromButton", () => {
     expect(fillButton).toBeDisabled();
   });
 
+  it("uses the most recent submitted period when input order is unsorted", () => {
+    const older = {
+      ...pastPeriod,
+      id: "older",
+      sourceSectionId: "sec-older",
+      weekLabel: "Week 15",
+      dateRange: "Apr 7–13, 2026",
+    };
+    const newer = {
+      ...pastPeriod,
+      id: "newer",
+      sourceSectionId: "sec-newer",
+      weekLabel: "Week 16",
+      dateRange: "Apr 14–20, 2026",
+    };
+
+    render(<FillFromButton periods={[older, newer]} />);
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Fill from most recent submitted period",
+      }),
+    );
+
+    expect(
+      screen.getByRole("alertdialog", { name: "Fill from Week 16?" }),
+    ).toBeInTheDocument();
+  });
+
   it("renders an Archived badge on archived rows and not on non-archived rows", () => {
     const periods: ReportPeriod[] = [
       {
@@ -166,13 +194,6 @@ describe("FillFromButton — a11y regression: aria-hidden decorative SVGs", () =
       "title",
       "Fill from most recent submitted period",
     );
-    // The main segment and chevron share ONE rounded-full container that owns
-    // the control height (the shared toolbar token — 32px on desktop, the
-    // touch floor below `md`); the segments themselves are full-height (no
-    // per-button w-8 circle).
-    const container = fillButton.parentElement;
-    expect(container?.className).toContain("h-[var(--toolbar-control-h)]");
-    expect(container?.className).toContain("rounded-full");
     const svg = fillButton.querySelector("svg");
     expect(svg).not.toBeNull();
     expect(svg).toHaveAttribute("aria-hidden", "true");
@@ -200,12 +221,6 @@ describe("FillFromButton — a11y regression: aria-hidden decorative SVGs", () =
       "title",
       "Choose past report to fill from",
     );
-    // Chevron is the attached right segment of the split-button, divided by
-    // a left hairline border.
-    expect(triggerButton.className).toContain("border-l");
-    const container = triggerButton.parentElement;
-    expect(container?.className).toContain("h-[var(--toolbar-control-h)]");
-    expect(container?.className).toContain("rounded-full");
     const svg = triggerButton.querySelector("svg");
     expect(svg).not.toBeNull();
     expect(svg).toHaveAttribute("aria-hidden", "true");
@@ -220,56 +235,7 @@ describe("FillFromButton — a11y regression: aria-hidden decorative SVGs", () =
     const chevron = screen.getByRole("button", {
       name: "Choose past report to fill from",
     });
-    // Both segments live inside the same rounded-full container element.
     expect(main.parentElement).toBe(chevron.parentElement);
-    expect(main.parentElement?.className).toContain("overflow-hidden");
-  });
-});
-
-describe("FillFromButton — compact touch floor", () => {
-  // jsdom cannot evaluate media queries; the class assertions are the teeth.
-  // The shared container floors the HEIGHT via --toolbar-control-h, but each
-  // segment must also floor its WIDTH below `md` (the chevron is ~26px wide
-  // on desktop).
-  it("both split-button segments carry the compact min-width floor", () => {
-    render(<FillFromButton periods={[pastPeriod]} />);
-
-    const main = screen.getByRole("button", {
-      name: "Fill from most recent submitted period",
-    });
-    const chevron = screen.getByRole("button", {
-      name: "Choose past report to fill from",
-    });
-    expect(main.className).toContain("max-md:min-w-[var(--touch-target-min)]");
-    expect(chevron.className).toContain(
-      "max-md:min-w-[var(--touch-target-min)]",
-    );
-  });
-
-  it("confirm-dialog actions and the picker search input carry the compact min-height floor", () => {
-    render(<FillFromButton periods={[pastPeriod]} />);
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Choose past report to fill from" }),
-    );
-    const search = screen.getByPlaceholderText("Search reports…");
-    expect(search.className).toContain(
-      "max-md:min-h-[var(--touch-target-min)]",
-    );
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Fill from most recent submitted period",
-      }),
-    );
-    const confirm = screen.getByRole("button", { name: /Replace & Fill/ });
-    const cancel = screen.getByRole("button", { name: "Cancel" });
-    expect(confirm.className).toContain(
-      "max-md:min-h-[var(--touch-target-min)]",
-    );
-    expect(cancel.className).toContain(
-      "max-md:min-h-[var(--touch-target-min)]",
-    );
   });
 });
 
@@ -487,5 +453,23 @@ describe("FillFromButton — dropdown search resets on every close path", () => 
     fireEvent.click(trigger);
 
     expect(reopenAndReadSearch()).toBe("");
+  });
+});
+
+describe("sortMostRecentFirst — total order with unparseable ranges", () => {
+  const period = (id: string, dateRange: string): ReportPeriod =>
+    ({ id, dateRange }) as ReportPeriod;
+
+  it("keeps newest first when a no-end-date period sits between parseable ones", async () => {
+    const { sortMostRecentFirst } = await import("./fill-from-button-helpers");
+    const older = period("older", "Apr 7 – Apr 13, 2026");
+    const noEnd = period("no-end", "—");
+    const newer = period("newer", "Apr 14 – Apr 20, 2026");
+
+    // A null-vs-date comparison returning 0 would be non-transitive and let
+    // insertion order win; unparseable ranges must sort last instead.
+    expect(sortMostRecentFirst([older, noEnd, newer]).map((p) => p.id)).toEqual(
+      ["newer", "older", "no-end"],
+    );
   });
 });

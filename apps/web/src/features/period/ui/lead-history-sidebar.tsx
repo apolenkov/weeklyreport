@@ -86,7 +86,7 @@ export function LeadHistorySidebar({
               accent="primary"
             />
             <Stat
-              label="On-time rate"
+              label="Completion rate"
               value={`${onTimeRate}%`}
               accent="primary"
             />
@@ -136,8 +136,7 @@ export function LeadHistorySidebar({
           <SidebarCard title="Submission Status">
             {streak >= 2 ? (
               <p className="text-[13px] text-[var(--color-foreground)]">
-                Submitted <strong>{streak}</strong>{" "}
-                {streak === 1 ? "week" : "weeks"} in a row.
+                Submitted <strong>{streak}</strong> weeks in a row.
               </p>
             ) : streak === 1 ? (
               <p className="text-[13px] text-[var(--color-foreground)]">
@@ -211,7 +210,7 @@ function Stat({
           ? "var(--color-muted-foreground)"
           : "var(--color-foreground)";
   return (
-    <div className="rounded-md bg-[#faf6ee] px-3 py-2">
+    <div className="rounded-md bg-[var(--color-priority-row-bg)] px-3 py-2">
       <div
         className="font-[family-name:var(--font-sans)] text-lg font-semibold leading-none tabular-nums"
         style={{ color: valueColor }}

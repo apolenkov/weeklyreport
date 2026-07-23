@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
 import type { ReportPeriod } from "../../report-sections";
+import { sortMostRecentFirst } from "./fill-from-button-helpers";
 import { FillFromDropdownPanel } from "./fill-from-dropdown-panel";
 
 // The fill-from control is a single split-button — a wider main segment
@@ -79,7 +80,12 @@ export function FillFromButton({
     right: number;
   } | null>(null);
 
-  const pastPeriods = periods.filter((p) => !p.isCurrent && p.isSubmitted);
+  // `dateRange` is produced by `formatPeriodRangeWithYear`; sorting its start
+  // defensively keeps the primary action correct if a caller loses the
+  // mapper's newest-first ordering. Unknown display formats retain input order.
+  const pastPeriods = sortMostRecentFirst(
+    periods.filter((p) => !p.isCurrent && p.isSubmitted),
+  );
   const previousPeriod = pastPeriods.at(0);
 
   const filteredPeriods = pastPeriods.filter(

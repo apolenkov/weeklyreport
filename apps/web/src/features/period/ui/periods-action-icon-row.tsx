@@ -44,6 +44,14 @@ export function ActionIconRow({
 }: {
   readonly row: PeriodListItem;
 } & Omit<PeriodTableProps, "rows" | "testIdPrefix">) {
+  // Mirrors the delete service: only a published report (live or archived)
+  // and a reopened one are protected — an archived DRAFT stays deletable
+  // without a detour through unarchive.
+  const deleteDisabled =
+    row.periodState === "published" ||
+    (row.periodState === "archived" && row.periodStatus === "published") ||
+    row.periodStatus === "reopened";
+
   return (
     <div
       className="inline-flex items-center gap-1"
@@ -90,13 +98,12 @@ export function ActionIconRow({
           icon={<UnarchiveIcon />}
         />
       )}
-      {/* Delete button. Show when not published, disabled when published. */}
-      {row.periodStatus === "published" ? (
+      {deleteDisabled ? (
         <IconButton
           testId={`action-delete-${row.id}`}
-          label="Cannot delete a published period"
+          label="Cannot delete a published or reopened period"
           onClick={() => {
-            /* intentionally empty: button is disabled for published periods, clicks are suppressed */
+            /* disabled buttons suppress clicks */
           }}
           icon={<DeleteIcon />}
           tone="danger"

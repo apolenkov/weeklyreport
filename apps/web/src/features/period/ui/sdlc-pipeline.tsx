@@ -20,7 +20,7 @@ export interface CrossAuthorEntry {
 }
 
 interface SdlcPipelineProps {
-  readonly products: Product[];
+  readonly products: readonly Product[];
   /**
    * The RAW, pre-floor products used to compute own-input completeness.
    * `products` carries the risk-derived render-time floor for the
