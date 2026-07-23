@@ -1,7 +1,7 @@
 {
   "source": "~/work/customreport-archive/2026-07-22-mass-review/review-data.json",
   "reviewDate": "2026-07-22",
-  "scope": "good-verdict files, minor findings only \u2014 full disposition ledger",
+  "scope": "good-verdict files, minor findings only — full disposition ledger",
   "goodFiles": 1029,
   "goodFilesWithMinorFindings": 422,
   "totalMinorFindings": 513,
@@ -169,7 +169,7 @@
       "id": "g-012",
       "file": "apps/api/src/infrastructure/cache/read-through-cache.test.ts",
       "line": 68,
-      "issue": "The documented core guarantee that a Redis outage never breaks the read path (get/setex throwing \u2192 fall through to compute) is never exercised, since the fake never rejects.",
+      "issue": "The documented core guarantee that a Redis outage never breaks the read path (get/setex throwing → fall through to compute) is never exercised, since the fake never rejects.",
       "class": "error-handling-robustness",
       "disposition": "pending"
     },
@@ -241,7 +241,7 @@
       "id": "g-021",
       "file": "apps/api/src/infrastructure/http/ingress-limits.integration.test.ts",
       "line": 161,
-      "issue": "The oversized payload is sized as x.repeat(TRPC_MAX_BODY_BYTES), so it always exceeds the same constant used to configure maxBodySize regardless of that constant's value \u2014 the test verifies enforcement but cannot catch a regression to a wrong byte budget (e.g. 10 bytes or 10 GiB).",
+      "issue": "The oversized payload is sized as x.repeat(TRPC_MAX_BODY_BYTES), so it always exceeds the same constant used to configure maxBodySize regardless of that constant's value — the test verifies enforcement but cannot catch a regression to a wrong byte budget (e.g. 10 bytes or 10 GiB).",
       "class": "duplication",
       "disposition": "pending"
     },
@@ -249,7 +249,7 @@
       "id": "g-022",
       "file": "apps/api/src/infrastructure/http/ingress-limits.integration.test.ts",
       "line": 104,
-      "issue": "The 128kb client-logs parser limit and limiter\u2192parser\u2192handler mount order are hardcoded copies of main.ts rather than imported, so drift in the real mount (e.g. changed json limit) would not be caught here.",
+      "issue": "The 128kb client-logs parser limit and limiter→parser→handler mount order are hardcoded copies of main.ts rather than imported, so drift in the real mount (e.g. changed json limit) would not be caught here.",
       "class": "duplication",
       "disposition": "pending"
     },
@@ -259,7 +259,7 @@
       "line": 11,
       "issue": "Describe block name embeds change/ticket number \"37-02\", the kind of archaeology the repo bans; git history already carries that provenance.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-024",
@@ -305,9 +305,9 @@
       "id": "g-029",
       "file": "apps/api/src/infrastructure/otel/otel.bootstrap.ts",
       "line": 2,
-      "issue": "Header opens with phase ref \"37-01\" \u2014 the repo bans change-log/phase/ticket prefixes in comments (keep the WHY, drop the ref).",
+      "issue": "Header opens with phase ref \"37-01\" — the repo bans change-log/phase/ticket prefixes in comments (keep the WHY, drop the ref).",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-030",
@@ -323,7 +323,7 @@
       "line": 6,
       "issue": "\"37-01\" phase-ref prefix in the describe/header comment is the banned change-log archaeology.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-032",
@@ -331,7 +331,7 @@
       "line": 7,
       "issue": "\"task 2.3 / AT4 unit half\" is ticket/acceptance-test archaeology the repo bans in comments.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-033",
@@ -347,7 +347,7 @@
       "line": 30,
       "issue": "\"AT1 crux\" acceptance-test ref in the test name is ticket archaeology the repo discourages.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-035",
@@ -387,7 +387,7 @@
       "line": 128,
       "issue": "The \"T2 boundary:\" comment prefix is threat-model/ticket archaeology of the kind the repo bans; keep the load-bearing WHY, drop the ref.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-040",
@@ -395,7 +395,7 @@
       "line": 9,
       "issue": "Header comment leads with a change/task reference ('fix-report-surface-integrity W2 (task 3.3)'), the ticket/phase archaeology the repo comment-hygiene rule bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-041",
@@ -403,7 +403,7 @@
       "line": 91,
       "issue": "Inline comment prefixed with a bare change tag ('D4:') is the phase/ticket archaeology the repo comment-hygiene rule prohibits; keep the rationale, drop the prefix.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-042",
@@ -417,9 +417,9 @@
       "id": "g-043",
       "file": "apps/api/src/infrastructure/trpc/reports-compiled-history-viewer.test.ts",
       "line": 11,
-      "issue": "Header comment 'task 3.1 / Decision 5' embeds a task-tracking number that git/OpenSpec already holds \u2014 the banned task-ref archaeology (the spec name alone would suffice).",
+      "issue": "Header comment 'task 3.1 / Decision 5' embeds a task-tracking number that git/OpenSpec already holds — the banned task-ref archaeology (the spec name alone would suffice).",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-044",
@@ -435,7 +435,7 @@
       "line": 10,
       "issue": "Header comment 'item 2' is a task-tracking reference the repo bans; the OpenSpec change name alone carries the load-bearing pointer.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-046",
@@ -459,7 +459,7 @@
       "line": 90,
       "issue": "Comments carry OpenSpec change-slug prefixes the repo bans (\"map-domain-errors:\" at 90/123/126, \"reopen-request-lifecycle:\" at 87); strip the prefix and keep the rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-049",
@@ -467,13 +467,13 @@
       "line": 349,
       "issue": "The header block (349-360) and the inline block (531-538) restate the same \"codes are hand-typed independently\" rationale nearly verbatim; one is enough.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-050",
       "file": "apps/api/src/infrastructure/trpc/trpc.middleware.test.ts",
       "line": 187,
-      "issue": "FORBIDDEN role-denial paths run buildRoleMiddleware's catch branch but use nullAuditLogger, so the security-forensics roleDenied() emit is never asserted to fire in any test in this file (nor elsewhere \u2014 only stubbed in mutation-audit.test.ts).",
+      "issue": "FORBIDDEN role-denial paths run buildRoleMiddleware's catch branch but use nullAuditLogger, so the security-forensics roleDenied() emit is never asserted to fire in any test in this file (nor elsewhere — only stubbed in mutation-audit.test.ts).",
       "class": "missing-test-coverage",
       "disposition": "pending"
     },
@@ -481,9 +481,9 @@
       "id": "g-051",
       "file": "apps/api/src/infrastructure/trpc/trpc.middleware.test.ts",
       "line": 21,
-      "issue": "Comment archaeology the repo bans: change-slug \"refactor-trpc-infra-duplication\" (line 21) and phase tag \"P0 Regression \u2014 AUTH\" (line 217).",
+      "issue": "Comment archaeology the repo bans: change-slug \"refactor-trpc-infra-duplication\" (line 21) and phase tag \"P0 Regression — AUTH\" (line 217).",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-052",
@@ -491,7 +491,7 @@
       "line": 464,
       "issue": "\"T2 mitigation:\" is a threat-model ticket reference of the kind the comment-hygiene rule asks to strip; keep the WHY, drop the label.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-053",
@@ -499,13 +499,13 @@
       "line": 61,
       "issue": "Doc comments prefix change slugs the repo bans (\"review-acknowledgement:\" line 61, \"lead-report-surface-polish:\" line 89) and version tags (\"v4.0\" lines 204/207); strip and keep the substance.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-054",
       "file": "apps/api/src/infrastructure/trpc/trpc.session-hydration.test.ts",
       "line": 75,
-      "issue": "The 5s TTL cache-hit path (a second hydrateSession within TTL must skip the query), the non-viewer viewerGroupAccess skip, and the already-populated reportingGroupName short-circuit are all unexercised \u2014 every test uses a fresh viewer session.",
+      "issue": "The 5s TTL cache-hit path (a second hydrateSession within TTL must skip the query), the non-viewer viewerGroupAccess skip, and the already-populated reportingGroupName short-circuit are all unexercised — every test uses a fresh viewer session.",
       "class": "missing-test-coverage",
       "disposition": "pending"
     },
@@ -523,15 +523,15 @@
       "line": 15,
       "issue": "The standalone comment (lines 15-18) restates the feed-panel purpose and headProcedure rationale already given in the field JSDoc (lines 6-11), duplicating the same description twice.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-057",
       "file": "apps/api/src/infrastructure/trpc/routers/auth.router.ts",
       "line": 16,
-      "issue": "Comment leads with the change-id prefix 'fix-report-surface-integrity:' \u2014 the exact ticket/change archaeology the repo bans; the load-bearing rationale below it should stand without the prefix.",
+      "issue": "Comment leads with the change-id prefix 'fix-report-surface-integrity:' — the exact ticket/change archaeology the repo bans; the load-bearing rationale below it should stand without the prefix.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-058",
@@ -545,9 +545,9 @@
       "id": "g-059",
       "file": "apps/api/src/infrastructure/trpc/routers/lead-form.router.ts",
       "line": 113,
-      "issue": "Comment prefixes 'scope-leadform-revoke-authz:' (also line 131) and 'scope-lead-report-to-own-contribution' (line 175) carry openspec change-id prefixes \u2014 ticket-style archaeology the repo's comment-hygiene rule says to strip while keeping the rationale.",
+      "issue": "Comment prefixes 'scope-leadform-revoke-authz:' (also line 131) and 'scope-lead-report-to-own-contribution' (line 175) carry openspec change-id prefixes — ticket-style archaeology the repo's comment-hygiene rule says to strip while keeping the rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-060",
@@ -555,13 +555,13 @@
       "line": 13,
       "issue": "Comment leads with the change/ticket ref 'fix-report-surface-integrity:', the kind of archaeology prefix the repo bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-061",
       "file": "apps/api/src/infrastructure/trpc/routers/project-activity.router.ts",
       "line": 16,
-      "issue": "Comment says 'Distinct from activityService above' / 'the live-status feed above', but no such code is above in this file \u2014 a stale cross-file reference that misleads.",
+      "issue": "Comment says 'Distinct from activityService above' / 'the live-status feed above', but no such code is above in this file — a stale cross-file reference that misleads.",
       "class": "misleading-stale-comment",
       "disposition": "pending"
     },
@@ -571,7 +571,7 @@
       "line": 59,
       "issue": "Comment prefix 'viewer-live-status (task 1.1)' is a task/change-number reference the repo bans; keep the load-bearing rationale but drop the ticket tag.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-063",
@@ -579,7 +579,7 @@
       "line": 22,
       "issue": "Repeated 'review-acknowledgement:' comment prefixes (also lines 42, 97) are openspec change-name archaeology; the rationale they carry should be rewritten without the change-name tag.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-064",
@@ -595,7 +595,7 @@
       "line": 38,
       "issue": "Comment `drain-admin-router: resolve the action-log service...` carries a change/task-slug prefix that the repo's comment-hygiene rule requires deleting.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-066",
@@ -617,7 +617,7 @@
       "id": "g-068",
       "file": "apps/api/src/lib/audit-logger-types.ts",
       "line": 79,
-      "issue": "Comment hardcodes 'the 26 mutations' \u2014 a brittle count that will silently rot as procedures are added/removed; state the shape rule without the tally.",
+      "issue": "Comment hardcodes 'the 26 mutations' — a brittle count that will silently rot as procedures are added/removed; state the shape rule without the tally.",
       "class": "magic-values-drift",
       "disposition": "pending"
     },
@@ -625,7 +625,7 @@
       "id": "g-069",
       "file": "apps/api/src/lib/audit-logger.ts",
       "line": 94,
-      "issue": "mutation() spreads `target: input.target` unconditionally (emits a `target: undefined` key when absent) but spreads `reason` conditionally \u2014 inconsistent handling of optional fields on the same envelope.",
+      "issue": "mutation() spreads `target: input.target` unconditionally (emits a `target: undefined` key when absent) but spreads `reason` conditionally — inconsistent handling of optional fields on the same envelope.",
       "class": "other",
       "disposition": "pending"
     },
@@ -633,7 +633,7 @@
       "id": "g-070",
       "file": "apps/api/src/lib/business-date.ts",
       "line": 205,
-      "issue": "periodLengthDays is unvalidated \u2014 length=0 yields periodEnd = Monday minus one day (end before start); a Number.isInteger/positive guard mirroring computeDeadline's deadlineHour check would fail loud.",
+      "issue": "periodLengthDays is unvalidated — length=0 yields periodEnd = Monday minus one day (end before start); a Number.isInteger/positive guard mirroring computeDeadline's deadlineHour check would fail loud.",
       "class": "env-config-silent-fallback",
       "disposition": "pending"
     },
@@ -641,7 +641,7 @@
       "id": "g-071",
       "file": "apps/api/src/modules/admin/action-log.service.ts",
       "line": 28,
-      "issue": "Docstring claims rows are \"keyset-paginated on `id`\" but the repository actually orders by `createdAt` and only uses id as the cursor key \u2014 the described ordering does not match the real query.",
+      "issue": "Docstring claims rows are \"keyset-paginated on `id`\" but the repository actually orders by `createdAt` and only uses id as the cursor key — the described ordering does not match the real query.",
       "class": "misleading-stale-comment",
       "disposition": "pending"
     },
@@ -673,7 +673,7 @@
       "id": "g-075",
       "file": "apps/api/src/modules/admin/admin-repository-unused-stubs.test.ts",
       "line": 58,
-      "issue": "expect(completeRepository).toBe(incompleteRepository) is runtime filler \u2014 it always passes since they are the same object; the load-bearing check is the @ts-expect-error above it.",
+      "issue": "expect(completeRepository).toBe(incompleteRepository) is runtime filler — it always passes since they are the same object; the load-bearing check is the @ts-expect-error above it.",
       "class": "redundant-brittle-test",
       "disposition": "pending"
     },
@@ -681,7 +681,7 @@
       "id": "g-076",
       "file": "apps/api/src/modules/admin/admin-shared.ts",
       "line": 96,
-      "issue": "Comment says NotFound fires when the scoped re-load finds no matching 'pending' request, but the re-load (findFirst) is not status-filtered \u2014 an already-decided request is found and yields already-processed, not NOT_FOUND, so the 'pending' qualifier is misleading.",
+      "issue": "Comment says NotFound fires when the scoped re-load finds no matching 'pending' request, but the re-load (findFirst) is not status-filtered — an already-decided request is found and yields already-processed, not NOT_FOUND, so the 'pending' qualifier is misleading.",
       "class": "misleading-stale-comment",
       "disposition": "pending"
     },
@@ -691,7 +691,7 @@
       "line": 118,
       "issue": "reminderExecutions always maps reportId to null and scheduledFor to createdAt, flattening execution provenance without an explaining comment (schema permits null, so no contract lie).",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-078",
@@ -707,13 +707,13 @@
       "line": 290,
       "issue": "The 'drain-admin-router: ... that used to live at the router level ... relocates here' comment narrates a past refactor (change-log archaeology the repo bans); keep only the load-bearing scoping rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-080",
       "file": "apps/api/src/modules/admin/focused-admin-services.test.ts",
       "line": 1201,
-      "issue": "The 'limit is clamped to 200' assertion seeds only 1 row, so `b.length <= 200` holds trivially whether the clamp is 200, 1000, or absent \u2014 the upper clamp is not actually exercised (the lower clamp at limit:0 does have teeth via the fake's slice).",
+      "issue": "The 'limit is clamped to 200' assertion seeds only 1 row, so `b.length <= 200` holds trivially whether the clamp is 200, 1000, or absent — the upper clamp is not actually exercised (the lower clamp at limit:0 does have teeth via the fake's slice).",
       "class": "redundant-brittle-test",
       "disposition": "pending"
     },
@@ -729,7 +729,7 @@
       "id": "g-082",
       "file": "apps/api/src/modules/admin/period-admin.envelope.ts",
       "line": 136,
-      "issue": "`deadlineTime.split(\":\").at(0) ?? \"18\"` \u2014 String.split always returns a non-empty array so .at(0) is never undefined, making the `?? \"18\"` fallback unreachable dead code; a malformed/empty deadlineTime silently yields hour 0, not the intended 18.",
+      "issue": "`deadlineTime.split(\":\").at(0) ?? \"18\"` — String.split always returns a non-empty array so .at(0) is never undefined, making the `?? \"18\"` fallback unreachable dead code; a malformed/empty deadlineTime silently yields hour 0, not the intended 18.",
       "class": "env-config-silent-fallback",
       "disposition": "pending"
     },
@@ -747,7 +747,7 @@
       "line": 85,
       "issue": "Comment \"there is no soft-delete fallback (D9)\" carries a change-ticket reference (D9) that CLAUDE.md's comment-hygiene rule bans as archaeology.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-085",
@@ -761,7 +761,7 @@
       "id": "g-086",
       "file": "apps/api/src/modules/admin/snapshot-lifecycle.test.ts",
       "line": 65,
-      "issue": "This 'round-trips an archived period' case lives under the full-fidelity describe block but omits periodState and actually exercises the legacy archived\u2192'archived' backfill, so its placement mislabels which code path it verifies.",
+      "issue": "This 'round-trips an archived period' case lives under the full-fidelity describe block but omits periodState and actually exercises the legacy archived→'archived' backfill, so its placement mislabels which code path it verifies.",
       "class": "code-structure-placement",
       "disposition": "pending"
     },
@@ -777,7 +777,7 @@
       "id": "g-088",
       "file": "apps/api/src/modules/admin/stage-assignment.integration.test.ts",
       "line": 217,
-      "issue": "Comment says 'product/stage pair' where the code and intent are about the project/stage pair \u2014 stray wording.",
+      "issue": "Comment says 'product/stage pair' where the code and intent are about the project/stage pair — stray wording.",
       "class": "misleading-stale-comment",
       "disposition": "pending"
     },
@@ -809,7 +809,7 @@
       "id": "g-092",
       "file": "apps/api/src/modules/auth/dev-login.routes.test.ts",
       "line": 50,
-      "issue": "The \"honours an explicit ?email=\" test never asserts findFirst was called with where.email=maria \u2014 identity.email echoes the input param and name/samlId come from a fixed stub row, so the test would still pass if the code ignored ?email= and queried the role default.",
+      "issue": "The \"honours an explicit ?email=\" test never asserts findFirst was called with where.email=maria — identity.email echoes the input param and name/samlId come from a fixed stub row, so the test would still pass if the code ignored ?email= and queried the role default.",
       "class": "missing-test-coverage",
       "disposition": "pending"
     },
@@ -825,7 +825,7 @@
       "id": "g-094",
       "file": "apps/api/src/modules/auth/saml.strategy.ts",
       "line": 42,
-      "issue": "devMode uses `??` fallbacks for SAML config (localhost callback/entryPoint/issuer and idpCert=\"DEV_MODE_CERT\") \u2014 the same silent-default pattern the project bans for product config; dev-only, but it hides whether these vars are mandatory locally.",
+      "issue": "devMode uses `??` fallbacks for SAML config (localhost callback/entryPoint/issuer and idpCert=\"DEV_MODE_CERT\") — the same silent-default pattern the project bans for product config; dev-only, but it hides whether these vars are mandatory locally.",
       "class": "env-config-silent-fallback",
       "disposition": "pending"
     },
@@ -833,7 +833,7 @@
       "id": "g-095",
       "file": "apps/api/src/modules/carry-over/carry-over-row-writes.ts",
       "line": 62,
-      "issue": "Decisions get an explicit id-based findMany dedup while items rely solely on skipDuplicates over the stableId unique index \u2014 an intentional but undocumented asymmetry; a carried item with a null stableId would not be deduped on replay the way decisions are.",
+      "issue": "Decisions get an explicit id-based findMany dedup while items rely solely on skipDuplicates over the stableId unique index — an intentional but undocumented asymmetry; a carried item with a null stableId would not be deduped on replay the way decisions are.",
       "class": "duplication",
       "disposition": "pending"
     },
@@ -849,9 +849,9 @@
       "id": "g-097",
       "file": "apps/api/src/modules/carry-over/carry-over.integration.test.ts",
       "line": 232,
-      "issue": "Comment leads with an OpenSpec change/task ref ('introduce-durable-record-identity (task 5.2)') \u2014 the change-log/ticket archaeology the repo's comment-hygiene rule bans; keep the WHY, drop the prefix.",
+      "issue": "Comment leads with an OpenSpec change/task ref ('introduce-durable-record-identity (task 5.2)') — the change-log/ticket archaeology the repo's comment-hygiene rule bans; keep the WHY, drop the prefix.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-098",
@@ -865,7 +865,7 @@
       "id": "g-099",
       "file": "apps/api/src/modules/carry-over/carry-over.prisma-repository.ts",
       "line": 141,
-      "issue": "On the P2002 dedupe race, resolveDedupeRace returns the winner's records but the loser's freshly-merged `targetSection` (loser's clone ids), so returned records' targetItemId/targetDecisionId won't match the returned section's item/decision ids \u2014 cosmetic but internally inconsistent on that rare path.",
+      "issue": "On the P2002 dedupe race, resolveDedupeRace returns the winner's records but the loser's freshly-merged `targetSection` (loser's clone ids), so returned records' targetItemId/targetDecisionId won't match the returned section's item/decision ids — cosmetic but internally inconsistent on that rare path.",
       "class": "error-handling-robustness",
       "disposition": "pending"
     },
@@ -873,7 +873,7 @@
       "id": "g-100",
       "file": "apps/api/src/modules/carry-over/carry-over.service.ts",
       "line": 219,
-      "issue": "nextTargetSections merges via carriedByAuthor.find (first match) while counts/records use flatMap over all entries, so two source sections sharing one authorId would count/emit records for rows that never merge into the returned section \u2014 harmless under the one-section-per-author invariant but an unguarded assumption.",
+      "issue": "nextTargetSections merges via carriedByAuthor.find (first match) while counts/records use flatMap over all entries, so two source sections sharing one authorId would count/emit records for rows that never merge into the returned section — harmless under the one-section-per-author invariant but an unguarded assumption.",
       "class": "other",
       "disposition": "pending"
     },
@@ -907,13 +907,13 @@
       "line": 62,
       "issue": "Comment narrates subject-line shortName/fullName behavior that lives in a different file, adding scope noise here.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-105",
       "file": "apps/api/src/modules/email/templates/escalation.template.tsx",
       "line": 62,
-      "issue": "Singular case produces \"the following lead have not submitted their section\" \u2014 noun is singularized but verb \"have\" is not, causing subject-verb disagreement in user-facing copy.",
+      "issue": "Singular case produces \"the following lead have not submitted their section\" — noun is singularized but verb \"have\" is not, causing subject-verb disagreement in user-facing copy.",
       "class": "ui-copy-grammar",
       "disposition": "pending"
     },
@@ -937,7 +937,7 @@
       "id": "g-108",
       "file": "apps/api/src/modules/email/templates/escalation.template.test.tsx",
       "line": 64,
-      "issue": "Export-shape test only asserts typeof function and presence of a `type` property \u2014 a weak smoke check that barely constrains behavior.",
+      "issue": "Export-shape test only asserts typeof function and presence of a `type` property — a weak smoke check that barely constrains behavior.",
       "class": "redundant-brittle-test",
       "disposition": "pending"
     },
@@ -945,9 +945,9 @@
       "id": "g-109",
       "file": "apps/api/src/modules/report-escalations.ts",
       "line": 27,
-      "issue": "Comment blocks prefix rationale with OpenSpec change/task identifiers ('fix-published-empty-stage-risk-floor:', 'fix-flagged-red-escalation-dedup:', 'record-status-derived-from-risk:') \u2014 the repo's hygiene rule says keep the rationale but drop the change-log prefix.",
+      "issue": "Comment blocks prefix rationale with OpenSpec change/task identifiers ('fix-published-empty-stage-risk-floor:', 'fix-flagged-red-escalation-dedup:', 'record-status-derived-from-risk:') — the repo's hygiene rule says keep the rationale but drop the change-log prefix.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-110",
@@ -955,7 +955,7 @@
       "line": 301,
       "issue": "describe/comment blocks carry task-number archaeology ('(task 3.5)', '(task 3.4)' at lines 535/603) that the repo's comment-hygiene rule bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-111",
@@ -1017,9 +1017,9 @@
       "id": "g-118",
       "file": "apps/api/src/modules/pdf-export/pdf-export.service.ts",
       "line": 116,
-      "issue": "The templateVersion literal \"phase-2-pdf-v1\" is hardcoded here and again in the prisma repository's toExportJob (line 157) \u2014 a duplicated magic string that should be a single shared const, and its \"phase-2\" naming leaks phase archaeology into a persisted value.",
+      "issue": "The templateVersion literal \"phase-2-pdf-v1\" is hardcoded here and again in the prisma repository's toExportJob (line 157) — a duplicated magic string that should be a single shared const, and its \"phase-2\" naming leaks phase archaeology into a persisted value.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-119",
@@ -1035,21 +1035,21 @@
       "line": 582,
       "issue": "Comment \"Defense against M-01: ...\" carries a security-finding ticket ID, which the repo's no-archaeology rule bans; keep the rationale (Playwright rejects IP-valued domain fields) without the M-01 prefix.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-121",
       "file": "apps/api/src/modules/pdf-export/pdf-export.service.test.ts",
       "line": 152,
-      "issue": "Tests \"threads requestedBy...\" (153) and \"always attributes the job...\" (165) assert the same session-threading path with only a different userId, and the \"// requestedBy session threading\" label narrates the test name \u2014 one of the two adds no distinct coverage.",
+      "issue": "Tests \"threads requestedBy...\" (153) and \"always attributes the job...\" (165) assert the same session-threading path with only a different userId, and the \"// requestedBy session threading\" label narrates the test name — one of the two adds no distinct coverage.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-122",
       "file": "apps/api/src/modules/period/application/period-factory.ts",
       "line": 184,
-      "issue": "The inline 'pass now so the applicator drops elapsed instants' comment (184-192) substantially restates the same rationale already given in the function doc comment (119-130) \u2014 redundant narration.",
+      "issue": "The inline 'pass now so the applicator drops elapsed instants' comment (184-192) substantially restates the same rationale already given in the function doc comment (119-130) — redundant narration.",
       "class": "dead-unreachable-code",
       "disposition": "pending"
     },
@@ -1083,7 +1083,7 @@
       "line": 6,
       "issue": "Lead comment opens with the OpenSpec change-name prefix 'refactor-period-transition-writer:', the kind of change-log/ticket archaeology the repo's comment-hygiene rule bans; the surrounding rationale is worth keeping but the prefix should go.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-127",
@@ -1099,7 +1099,7 @@
       "line": 82,
       "issue": "The \"The AI ingestion module was removed ... until the AI rebuild\" comment narrates history (change-log style) rather than only stating the current WHY for passing undefined; the removal note is git-history material the repo's comment-hygiene rule discourages.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-129",
@@ -1107,7 +1107,7 @@
       "line": 171,
       "issue": "Comment carries the ticket-style prefix 'Wave-3 blocker' which CLAUDE.md bans as change-log archaeology; keep the rationale, drop the prefix.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-130",
@@ -1115,7 +1115,7 @@
       "line": 35,
       "issue": "Commented-out `leadSession` declaration with a \"reserved for future\" note is exactly the dead/archaeology comment the repo's comment-hygiene rule bans; delete it (git holds it).",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-131",
@@ -1145,7 +1145,7 @@
       "id": "g-134",
       "file": "apps/api/src/modules/publication/application/publication-telemetry.port.ts",
       "line": 1,
-      "issue": "PublicationSourceState's \"reopened\" arm is unreachable via this port \u2014 the only consumer (publishAuto -> emitPublishSideEffects) always passes priorStatus=\"open\", so the wider union is currently a dead value the adapter's recordPeriodPublished(from) can never receive as \"reopened\".",
+      "issue": "PublicationSourceState's \"reopened\" arm is unreachable via this port — the only consumer (publishAuto -> emitPublishSideEffects) always passes priorStatus=\"open\", so the wider union is currently a dead value the adapter's recordPeriodPublished(from) can never receive as \"reopened\".",
       "class": "dead-unreachable-code",
       "disposition": "pending"
     },
@@ -1153,9 +1153,9 @@
       "id": "g-135",
       "file": "apps/api/src/modules/publication/application/publication.service.ts",
       "line": 221,
-      "issue": "Comment \"preserved from the pre-consolidation enqueueIngestion guard\" (and the \"has always used\"/\"has never invalidated\" phrasings at lines 205-214) are change-history archaeology the repo bans \u2014 the load-bearing WHY (skip ingestion on empty, from=open, no cache invalidation) survives without the historical framing.",
+      "issue": "Comment \"preserved from the pre-consolidation enqueueIngestion guard\" (and the \"has always used\"/\"has never invalidated\" phrasings at lines 205-214) are change-history archaeology the repo bans — the load-bearing WHY (skip ingestion on empty, from=open, no cache invalidation) survives without the historical framing.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-136",
@@ -1185,7 +1185,7 @@
       "id": "g-139",
       "file": "apps/api/src/modules/reminders/reminders-queue-payload.test.ts",
       "line": 35,
-      "issue": "The negative UUID-regex assertion is near-vacuous: the input literal contains '\u2192' so it can never match a UUID, so this assertion cannot meaningfully fail.",
+      "issue": "The negative UUID-regex assertion is near-vacuous: the input literal contains '→' so it can never match a UUID, so this assertion cannot meaningfully fail.",
       "class": "redundant-brittle-test",
       "disposition": "pending"
     },
@@ -1217,7 +1217,7 @@
       "id": "g-143",
       "file": "apps/api/src/modules/reminders/reminders-scope.prisma-query.ts",
       "line": 90,
-      "issue": "Doc says 'The newest active reminder rule' but `orderBy: { fireAt: \"asc\" }` selects the earliest-firing rule, not the newest \u2014 misleading given a report can carry multiple active rules across policies.",
+      "issue": "Doc says 'The newest active reminder rule' but `orderBy: { fireAt: \"asc\" }` selects the earliest-firing rule, not the newest — misleading given a report can carry multiple active rules across policies.",
       "class": "misleading-stale-comment",
       "disposition": "pending"
     },
@@ -1225,7 +1225,7 @@
       "id": "g-144",
       "file": "apps/api/src/modules/reminders/reminders-scope.service.ts",
       "line": 215,
-      "issue": "classifySectionDispatch compares app-process `beforeMs = Date.now()` against DB-written `createdAt`; clock skew or DB timestamp truncation can misclassify a genuinely-new insert as 'alreadySent' (counter attribution only \u2014 dispatch itself stays idempotent).",
+      "issue": "classifySectionDispatch compares app-process `beforeMs = Date.now()` against DB-written `createdAt`; clock skew or DB timestamp truncation can misclassify a genuinely-new insert as 'alreadySent' (counter attribution only — dispatch itself stays idempotent).",
       "class": "error-handling-robustness",
       "disposition": "pending"
     },
@@ -1249,9 +1249,9 @@
       "id": "g-147",
       "file": "apps/api/src/modules/reminders/reminders.contract.test.ts",
       "line": 91,
-      "issue": "The `// 1.` \u2026 `// 14.` numbered comments (lines 91, 107, 121, 134, 159, 177, 203, 216, 227, 301, 323, 339, 353, 361) restate the adjacent it() titles verbatim and the numbering skips the un-numbered regression block, which is narration/change-log-style noise the repo's comment-hygiene rule discourages.",
+      "issue": "The `// 1.` … `// 14.` numbered comments (lines 91, 107, 121, 134, 159, 177, 203, 216, 227, 301, 323, 339, 353, 361) restate the adjacent it() titles verbatim and the numbering skips the un-numbered regression block, which is narration/change-log-style noise the repo's comment-hygiene rule discourages.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-148",
@@ -1283,7 +1283,7 @@
       "line": 134,
       "issue": "Comment tag 'review P1' is ticket-provenance archaeology the repo bans; the OpenSpec change-name pointer alone is the load-bearing part.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-152",
@@ -1297,9 +1297,9 @@
       "id": "g-153",
       "file": "apps/api/src/modules/report-sections/application/lead-form.contract.test.ts",
       "line": 289,
-      "issue": "Comments narrate ticket/task provenance ('task 4.2', 'tasks 7b.1 / 7b.3' at 352, 'task 7d.9' at 485) \u2014 the change-log/task-number archaeology the repo bans; keep the spec-name pointer, drop the task numbers.",
+      "issue": "Comments narrate ticket/task provenance ('task 4.2', 'tasks 7b.1 / 7b.3' at 352, 'task 7d.9' at 485) — the change-log/task-number archaeology the repo bans; keep the spec-name pointer, drop the task numbers.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-154",
@@ -1323,7 +1323,7 @@
       "line": 147,
       "issue": "The 'activity-first-class:' change/spec-name comment prefix is the kind of archaeology ref the repo's comment-hygiene rule discourages; keep the rationale, drop the prefix.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-157",
@@ -1331,7 +1331,7 @@
       "line": 23,
       "issue": "Decision-index refs like '(D4)' and 'D6b' scattered through the doc comments are archaeology-style pointers the comment-hygiene rule bans; the surrounding rationale is fine but the numeric refs should go.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-158",
@@ -1339,13 +1339,13 @@
       "line": 8,
       "issue": "The '(ADR 0015)' decision-record reference in the doc comment is archaeology per the repo comment-hygiene rule; keep the resolve-not-delete rationale without the numbered ref.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-159",
       "file": "apps/api/src/modules/report-sections/domain/report-section-merge.test.ts",
       "line": 59,
-      "issue": "The test named \"aggregates a Dev risk-derived red status\" pre-computes riskDerivedStatus via riskCoversStage and injects it as a stageStatus \u2014 mergeSection performs no risk-to-stage derivation, so the framing (and risks: [risk]) implies merge behavior the unit does not have.",
+      "issue": "The test named \"aggregates a Dev risk-derived red status\" pre-computes riskDerivedStatus via riskCoversStage and injects it as a stageStatus — mergeSection performs no risk-to-stage derivation, so the framing (and risks: [risk]) implies merge behavior the unit does not have.",
       "class": "other",
       "disposition": "pending"
     },
@@ -1353,7 +1353,7 @@
       "id": "g-160",
       "file": "apps/api/src/modules/report-sections/report-sections.module.ts",
       "line": 8,
-      "issue": "Relative import specifiers are inconsistent \u2014 lines 8, 13, 18, 19 omit the .js extension while lines 3, 17, 20 include it, within the same file.",
+      "issue": "Relative import specifiers are inconsistent — lines 8, 13, 18, 19 omit the .js extension while lines 3, 17, 20 include it, within the same file.",
       "class": "code-structure-placement",
       "disposition": "pending"
     },
@@ -1393,15 +1393,15 @@
       "id": "g-165",
       "file": "apps/api/src/modules/report-sections/infrastructure/lead-form-cross-author.derive.ts",
       "line": 66,
-      "issue": "\"Reproduces the nested set-loop exactly\" narrates a refactor origin rather than the current code's WHY \u2014 mild archaeology the repo's comment-hygiene rule discourages.",
+      "issue": "\"Reproduces the nested set-loop exactly\" narrates a refactor origin rather than the current code's WHY — mild archaeology the repo's comment-hygiene rule discourages.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-166",
       "file": "apps/api/src/modules/report-sections/infrastructure/lead-form.prisma-repository.integration.test.ts",
       "line": 196,
-      "issue": "The option/field `persistedDevStatus` and its comment (\"on Dev\") are misnamed \u2014 it seeds a stageStatus on STAGE_TESTING_ID (the co-lead owns Testing, not Dev), which will mislead a future test author into seeding the wrong stage.",
+      "issue": "The option/field `persistedDevStatus` and its comment (\"on Dev\") are misnamed — it seeds a stageStatus on STAGE_TESTING_ID (the co-lead owns Testing, not Dev), which will mislead a future test author into seeding the wrong stage.",
       "class": "misleading-stale-comment",
       "disposition": "pending"
     },
@@ -1411,7 +1411,7 @@
       "line": 274,
       "issue": "Describe/comment blocks carry OpenSpec ticket refs (\"task 4.1 / 4.2 / 4.5\", \"task 7d.9/7d.10\") that the repo's comment-hygiene rule bans as change-log archaeology.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-168",
@@ -1419,7 +1419,7 @@
       "line": 56,
       "issue": "Parenthetical design-decision codes (\"(D4/D5)\", \"(D4/G6)\" line 161, \"(D6b)\" line 591) are ticket/decision-log references the repo's comment-hygiene rule says to strip while keeping the rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-169",
@@ -1427,7 +1427,7 @@
       "line": 8,
       "issue": "Comment carries a banned phase-ref prefix (\"35-03/04:\") plus change-name prefixes throughout; repo hygiene rule requires stripping such prefixes while keeping the rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-170",
@@ -1435,7 +1435,7 @@
       "line": 125,
       "issue": "Multiple comments use banned change-log/phase prefixes (\"35-03:\", \"fix-published-empty-stage-risk-floor\", \"design Decision 3\", \"D4\"); rationale is load-bearing but the prefixes should be removed per repo comment-hygiene rule.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-171",
@@ -1443,7 +1443,7 @@
       "line": 460,
       "issue": "Test comments carry banned ticket/task/phase prefixes (\"task 3.2\", \"35-04\", \"R4-C\", \"D4\") that the repo hygiene rule says to strip while keeping the intent text.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-172",
@@ -1459,7 +1459,7 @@
       "line": 91,
       "issue": "The docstring's final sentence narrates prior behavior (\"The old productId-only filter silently dropped every activity-parented decision\"), which is change-log archaeology the repo bans; keep only the current-code WHY.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-174",
@@ -1481,7 +1481,7 @@
       "id": "g-176",
       "file": "apps/api/src/modules/review/domain/review-authz.ts",
       "line": 16,
-      "issue": "The doc's \"admin = every group\" attributed to computeAllowedGroupIds is misleading \u2014 that helper returns [] for admin; the admin=all behavior lives in this function's own short-circuit and in groupScopeFilter.",
+      "issue": "The doc's \"admin = every group\" attributed to computeAllowedGroupIds is misleading — that helper returns [] for admin; the admin=all behavior lives in this function's own short-circuit and in groupScopeFilter.",
       "class": "other",
       "disposition": "pending"
     },
@@ -1491,13 +1491,13 @@
       "line": 5,
       "issue": "The `review-acknowledgement:` feature-slug comment prefixes (lines 5, 45) are borderline archaeology/tagging noise in a file already wholly scoped to review authz.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-178",
       "file": "apps/api/src/modules/review/infrastructure/review.prisma-repository.ts",
       "line": 22,
-      "issue": "`session as Parameters<typeof groupScopeFilter>[0]` widens the narrow DashboardScopeSession to full UserSession by assertion; if groupScopeFilter later reads a field outside the Pick, the cast would silently pass an incomplete object at runtime rather than fail typecheck \u2014 groupScopeFilter accepting the narrow slice (as computeAllowedGroupIds already does) would remove the cast.",
+      "issue": "`session as Parameters<typeof groupScopeFilter>[0]` widens the narrow DashboardScopeSession to full UserSession by assertion; if groupScopeFilter later reads a field outside the Pick, the cast would silently pass an incomplete object at runtime rather than fail typecheck — groupScopeFilter accepting the narrow slice (as computeAllowedGroupIds already does) would remove the cast.",
       "class": "type-safety-weakening",
       "disposition": "pending"
     },
@@ -1513,9 +1513,9 @@
       "id": "g-180",
       "file": "apps/api/src/modules/search/search.prisma-repository.scope-filter.integration.test.ts",
       "line": 12,
-      "issue": "The header comment carries an OpenSpec task-number reference (\"task 1.7\") \u2014 the kind of ticket archaeology CLAUDE.md asks to strip while keeping the surrounding load-bearing rationale.",
+      "issue": "The header comment carries an OpenSpec task-number reference (\"task 1.7\") — the kind of ticket archaeology CLAUDE.md asks to strip while keeping the surrounding load-bearing rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-181",
@@ -1545,7 +1545,7 @@
       "id": "g-184",
       "file": "apps/api/src/modules/weekly-report/weekly-report.prisma-repository.test.ts",
       "line": 40,
-      "issue": "The test titled \"excludes scheduled-future periods so the current open period wins\" uses a mock that returns the same id regardless of the where-clause, so it only pins that a periodStart.lte key exists (a where-shape sentinel) and cannot actually verify future-period exclusion \u2014 real exclusion is DB behavior covered elsewhere.",
+      "issue": "The test titled \"excludes scheduled-future periods so the current open period wins\" uses a mock that returns the same id regardless of the where-clause, so it only pins that a periodStart.lte key exists (a where-shape sentinel) and cannot actually verify future-period exclusion — real exclusion is DB behavior covered elsewhere.",
       "class": "redundant-brittle-test",
       "disposition": "pending"
     },
@@ -1561,15 +1561,15 @@
       "id": "g-186",
       "file": "apps/api/src/test-utils/prisma-test-helper.integration.test.ts",
       "line": 33,
-      "issue": "Test title and header comment narrate the \"old deleteMany chain\" that no longer exists \u2014 mild archaeology, though it doubles as the regression rationale for wiping these specific tables.",
+      "issue": "Test title and header comment narrate the \"old deleteMany chain\" that no longer exists — mild archaeology, though it doubles as the regression rationale for wiping these specific tables.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-187",
       "file": "apps/api/src/test-utils/prisma-test-helper.ts",
       "line": 6,
-      "issue": "DATABASE_URL falls back to a hardcoded localhost customreport_test default rather than failing loud when unset \u2014 safe because the default ends in _test and passes the guard, but it hides a missing-env condition.",
+      "issue": "DATABASE_URL falls back to a hardcoded localhost customreport_test default rather than failing loud when unset — safe because the default ends in _test and passes the guard, but it hides a missing-env condition.",
       "class": "magic-values-drift",
       "disposition": "pending"
     },
@@ -1577,7 +1577,7 @@
       "id": "g-188",
       "file": "apps/web/src/app/(app)/admin/layout.tsx",
       "line": 10,
-      "issue": "Comment calls AdminLayout an \"async server component\" but the function is synchronous \u2014 the async ForbiddenPage rendering actually happens inside RoleGate, not this component.",
+      "issue": "Comment calls AdminLayout an \"async server component\" but the function is synchronous — the async ForbiddenPage rendering actually happens inside RoleGate, not this component.",
       "class": "other",
       "disposition": "pending"
     },
@@ -1627,7 +1627,7 @@
       "line": 18,
       "issue": "\"fixing the previously inert viewer `/present` deep link\" is change-log narration the repo's comment-hygiene rule bans; the surrounding WHY should stay but this before/after phrasing should go.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-195",
@@ -1643,7 +1643,7 @@
       "line": 4,
       "issue": "\"viewer-report-surface-parity (review P3)\" is a ticket/change reference the repo bans as comment archaeology; git history holds that.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-197",
@@ -1659,7 +1659,7 @@
       "line": 21,
       "issue": "\"Race recovery (Decision 1)\" carries a decision-index reference that the repo's comment-hygiene rule bans as archaeology; the surrounding rationale is load-bearing but the \"(Decision 1)\" tag should be dropped.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-199",
@@ -1673,9 +1673,9 @@
       "id": "g-200",
       "file": "apps/web/src/app/(app)/reports/page.test.tsx",
       "line": 221,
-      "issue": "Comment carries banned ticket/change archaeology (\"viewer-report-surface-parity (task 4.1 / review P3)\") and the test title narrates history (\"was no search before parity\"); the \u00a74.1/\u00a74.2 spec refs are borderline but the task/review refs should go.",
+      "issue": "Comment carries banned ticket/change archaeology (\"viewer-report-surface-parity (task 4.1 / review P3)\") and the test title narrates history (\"was no search before parity\"); the §4.1/§4.2 spec refs are borderline but the task/review refs should go.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-201",
@@ -1697,7 +1697,7 @@
       "id": "g-203",
       "file": "apps/web/src/app/api/client-logs/route.test.ts",
       "line": 27,
-      "issue": "Every mocked upstream returns status 204, so the `return NextResponse(..., { status: res.status })` contract is never verified with a non-204 status \u2014 a regression hardcoding 204 would pass the whole suite.",
+      "issue": "Every mocked upstream returns status 204, so the `return NextResponse(..., { status: res.status })` contract is never verified with a non-204 status — a regression hardcoding 204 would pass the whole suite.",
       "class": "missing-test-coverage",
       "disposition": "pending"
     },
@@ -1707,7 +1707,7 @@
       "line": 21,
       "issue": "Describe title embeds a ticket/catalog reference ('UFB a11y catalog') that the repo's comment-hygiene rule bans as archaeology.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-205",
@@ -1723,7 +1723,7 @@
       "line": 31,
       "issue": "Describe title and inline comments carry catalog/ticket refs ('VA-0a/VA-0b a11y catalog', 'unit-rtl high') that the repo bans as change-log archaeology.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-207",
@@ -1769,7 +1769,7 @@
       "id": "g-212",
       "file": "apps/web/src/app/print/[reportId]/page.test.tsx",
       "line": 133,
-      "issue": "File is named page.test.tsx but imports and tests PrintReportTemplate (print-report-template.tsx), not the page.tsx gate \u2014 the template has no dedicated test file and the gate is untested here (only claimed covered elsewhere), a navigability trap.",
+      "issue": "File is named page.test.tsx but imports and tests PrintReportTemplate (print-report-template.tsx), not the page.tsx gate — the template has no dedicated test file and the gate is untested here (only claimed covered elsewhere), a navigability trap.",
       "class": "missing-test-coverage",
       "disposition": "pending"
     },
@@ -1793,17 +1793,17 @@
       "id": "g-215",
       "file": "apps/web/src/app/print/[reportId]/print-lead-records.tsx",
       "line": 45,
-      "issue": "Per-status badge background/text color ternaries hardcode hex values inline (repeated in RiskRecords/DecisionRecords), duplicating the status\u2192color concept instead of centralizing it in print-report-theme.",
-      "class": "comment-archaeology-narration",
+      "issue": "Per-status badge background/text color ternaries hardcode hex values inline (repeated in RiskRecords/DecisionRecords), duplicating the status→color concept instead of centralizing it in print-report-theme.",
+      "class": "magic-values-drift",
       "disposition": "pending"
     },
     {
       "id": "g-216",
       "file": "apps/web/src/app/print/[reportId]/print-lead-section.test.tsx",
       "line": 1,
-      "issue": "Header comment is migration/ticket archaeology (\"sweep-doc-truth-and-canon-dupes task 1.2\", describing state \"before PrintLeadSection is rerouted\") for a rerouting that is already complete in the source \u2014 the repo's comment-hygiene rule bans this.",
+      "issue": "Header comment is migration/ticket archaeology (\"sweep-doc-truth-and-canon-dupes task 1.2\", describing state \"before PrintLeadSection is rerouted\") for a rerouting that is already complete in the source — the repo's comment-hygiene rule bans this.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-217",
@@ -1833,9 +1833,9 @@
       "id": "g-220",
       "file": "apps/web/src/features/admin/model/admin-types.ts",
       "line": 109,
-      "issue": "Comment narrates a past removal (\"legacy departmentName field was removed\") \u2014 change-log archaeology the repo bans; git history holds this.",
+      "issue": "Comment narrates a past removal (\"legacy departmentName field was removed\") — change-log archaeology the repo bans; git history holds this.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-221",
@@ -1849,7 +1849,7 @@
       "id": "g-222",
       "file": "apps/web/src/features/admin/model/admin.test.ts",
       "line": 165,
-      "issue": "No test ever populates snapshot.policies (all fixtures rely on the [] default), so mapReminderPolicy \u2014 exported in __testing and wired into mapAdminSnapshot \u2014 has zero effective coverage.",
+      "issue": "No test ever populates snapshot.policies (all fixtures rely on the [] default), so mapReminderPolicy — exported in __testing and wired into mapAdminSnapshot — has zero effective coverage.",
       "class": "missing-test-coverage",
       "disposition": "pending"
     },
@@ -1857,7 +1857,7 @@
       "id": "g-223",
       "file": "apps/web/src/features/admin/model/admin.ts",
       "line": 205,
-      "issue": "The __testing bundle exports mapReminderPolicy, mapPeriod, mapProject, mapUser, and mapGroup, but the only test consumer imports mapReminder \u2014 the other five are unreferenced test-only surface.",
+      "issue": "The __testing bundle exports mapReminderPolicy, mapPeriod, mapProject, mapUser, and mapGroup, but the only test consumer imports mapReminder — the other five are unreferenced test-only surface.",
       "class": "other",
       "disposition": "pending"
     },
@@ -1865,9 +1865,9 @@
       "id": "g-224",
       "file": "apps/web/src/features/admin/model/admin.ts",
       "line": 178,
-      "issue": "Comment repeatedly narrates the historical dropping of departmentName \"on both sides\" \u2014 change-log archaeology rather than current-code WHY.",
+      "issue": "Comment repeatedly narrates the historical dropping of departmentName \"on both sides\" — change-log archaeology rather than current-code WHY.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-225",
@@ -1875,7 +1875,7 @@
       "line": 25,
       "issue": "Parenthetical decision code `(D2/D3)` is external-doc archaeology the CLAUDE.md comment-hygiene rule bans; keep the WHY, drop the code.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-226",
@@ -1883,7 +1883,7 @@
       "line": 43,
       "issue": "`(D7)` decision-ref suffix on the emptyPolicyForm comment adds nothing without the design doc and should be trimmed.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-227",
@@ -1891,7 +1891,7 @@
       "line": 28,
       "issue": "`(D3)` decision-record reference is the kind of ticket/decision archaeology the repo bans in comments.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-228",
@@ -1899,7 +1899,7 @@
       "line": 157,
       "issue": "`(D4)` decision-ref suffix on the nextSendDate doc comment should be trimmed to just the load-bearing rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-229",
@@ -1907,7 +1907,7 @@
       "line": 17,
       "issue": "Comment narrates the prior implementation (\"Equivalent to the prior `const ok = await copyToClipboard...`\"), which is the change-log archaeology the repo bans; the load-bearing \"void slot\" WHY should stand alone.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-230",
@@ -1929,7 +1929,7 @@
       "id": "g-232",
       "file": "apps/web/src/features/admin/ui/admin-panel.test.tsx",
       "line": 77,
-      "issue": "The toast test only asserts the negative (disabled parent \u2192 no toast); there is no positive-path assertion that a toast DOES fire when a dependency is enabled and errors, so a regression that silences all toasts would go undetected.",
+      "issue": "The toast test only asserts the negative (disabled parent → no toast); there is no positive-path assertion that a toast DOES fire when a dependency is enabled and errors, so a regression that silences all toasts would go undetected.",
       "class": "missing-test-coverage",
       "disposition": "pending"
     },
@@ -1939,13 +1939,13 @@
       "line": 22,
       "issue": "Inline per-tab comments (\"Period lifecycle list\", \"BullMQ DLQ admin UI\") narrate what tabs are rather than a non-obvious WHY; borderline against the repo's comment-hygiene rule.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-234",
       "file": "apps/web/src/features/admin/ui/group-edit-dialog.tsx",
       "line": 42,
-      "issue": "Backdrop-click (onClose) and Escape-to-close remain active while isSaving is true, even though the Cancel button is disabled during save \u2014 the two close paths are inconsistent mid-save.",
+      "issue": "Backdrop-click (onClose) and Escape-to-close remain active while isSaving is true, even though the Cancel button is disabled during save — the two close paths are inconsistent mid-save.",
       "class": "other",
       "disposition": "pending"
     },
@@ -1969,9 +1969,9 @@
       "id": "g-237",
       "file": "apps/web/src/features/admin/ui/groups-tab.test.tsx",
       "line": 187,
-      "issue": "OpenSpec change names leak into test surface as archaeology the repo bans \u2014 the '// admin-dialog-focus-management (autofocus-admin-dialogs)' comment and the '(verify-a11y-recommended-flip)'/'(autofocus-admin-dialogs)' suffixes in describe titles narrate ticket refs rather than behavior.",
+      "issue": "OpenSpec change names leak into test surface as archaeology the repo bans — the '// admin-dialog-focus-management (autofocus-admin-dialogs)' comment and the '(verify-a11y-recommended-flip)'/'(autofocus-admin-dialogs)' suffixes in describe titles narrate ticket refs rather than behavior.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-238",
@@ -1987,7 +1987,7 @@
       "line": 117,
       "issue": "describe title embeds a ticket/change ref `(VA-0a)`, the kind of archaeology the repo bans in comments/strings.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-240",
@@ -2003,7 +2003,7 @@
       "line": 89,
       "issue": "Comment prefix `D3:` is a change/phase ref the repo bans; keep the rationale, drop the tag.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-242",
@@ -2025,9 +2025,9 @@
       "id": "g-244",
       "file": "apps/web/src/features/admin/ui/products-tab.tsx",
       "line": 166,
-      "issue": "Comment prefix `add-slide-capacity-signals:` is an OpenSpec change-name reference \u2014 the kind of ticket/phase archaeology the repo bans; the explanatory remainder is load-bearing and should be kept without the prefix.",
+      "issue": "Comment prefix `add-slide-capacity-signals:` is an OpenSpec change-name reference — the kind of ticket/phase archaeology the repo bans; the explanatory remainder is load-bearing and should be kept without the prefix.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-245",
@@ -2043,7 +2043,7 @@
       "line": 38,
       "issue": "Comment `Products list (table-like structure)` narrates what the JSX already says rather than a non-obvious WHY.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-247",
@@ -2051,7 +2051,7 @@
       "line": 1,
       "issue": "eslint-disable justification ends with the ticket code `wave-6c-ii`; the rationale is valid but the trailing change ref is banned archaeology.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-248",
@@ -2059,15 +2059,15 @@
       "line": 145,
       "issue": "describe title carries the ticket code `(VA-0a)`; strip the tracker suffix (repo bans phase/ticket refs), keeping the behavioral description.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-249",
       "file": "apps/web/src/features/admin/ui/reminders-tab.test.tsx",
       "line": 380,
-      "issue": "Comment references ticket `(D7)` \u2014 change-log archaeology git history already holds.",
+      "issue": "Comment references ticket `(D7)` — change-log archaeology git history already holds.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-250",
@@ -2081,7 +2081,7 @@
       "id": "g-251",
       "file": "apps/web/src/features/admin/ui/settings-tab.tsx",
       "line": 28,
-      "issue": "Doc comment enumerates only tabs 1\u20134 and says \"five sub-tabs\" while the component actually renders six triggers (identity/periods/reminders/notifications/integrations/holidays), so the header is stale.",
+      "issue": "Doc comment enumerates only tabs 1–4 and says \"five sub-tabs\" while the component actually renders six triggers (identity/periods/reminders/notifications/integrations/holidays), so the header is stale.",
       "class": "misleading-stale-comment",
       "disposition": "pending"
     },
@@ -2089,7 +2089,7 @@
       "id": "g-252",
       "file": "apps/web/src/features/admin/ui/user-row-actions.tsx",
       "line": 27,
-      "issue": "UserActivationButton takes the full UserRowActionsProps but uses only a subset (never onEdit/onDelete), so its signature is wider than its implementation \u2014 UserOverflowMenu's Pick pattern would be the consistent, honest shape.",
+      "issue": "UserActivationButton takes the full UserRowActionsProps but uses only a subset (never onEdit/onDelete), so its signature is wider than its implementation — UserOverflowMenu's Pick pattern would be the consistent, honest shape.",
       "class": "other",
       "disposition": "pending"
     },
@@ -2123,13 +2123,13 @@
       "line": 26,
       "issue": "The 'status mapping: green=3, yellow=2, red=1' prose on lines 15 and 24-26 narrates what the self-evident STATUS_TO_VALUE constant already states.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-257",
       "file": "apps/web/src/features/dashboard/model/dashboard-leads.ts",
       "line": 238,
-      "issue": "The reduce/findIndex/slice insertion sort reimplements a native stable sort \u2014 since compareLeadPriority is a total order, `[...].map(...).sort(compareLeadPriority)` is equivalent and simpler.",
+      "issue": "The reduce/findIndex/slice insertion sort reimplements a native stable sort — since compareLeadPriority is a total order, `[...].map(...).sort(compareLeadPriority)` is equivalent and simpler.",
       "class": "duplication",
       "disposition": "pending"
     },
@@ -2137,7 +2137,7 @@
       "id": "g-258",
       "file": "apps/web/src/features/dashboard/ui/alert-bar.test.tsx",
       "line": 164,
-      "issue": "The onSuccess mutation handler with its five distinct toast branches (no-active-rule, none-pending, all-already-sent, partial-extras, success) is never exercised \u2014 only onError is tested.",
+      "issue": "The onSuccess mutation handler with its five distinct toast branches (no-active-rule, none-pending, all-already-sent, partial-extras, success) is never exercised — only onError is tested.",
       "class": "missing-test-coverage",
       "disposition": "pending"
     },
@@ -2145,7 +2145,7 @@
       "id": "g-259",
       "file": "apps/web/src/features/dashboard/ui/alert-bar.tsx",
       "line": 99,
-      "issue": "The disabled-button tooltip 'Active reminder policy required \u2014 ask your admin' is shown to the admin themselves, who simultaneously sees the adjacent 'Configure reminders' link \u2014 telling an admin to ask their admin.",
+      "issue": "The disabled-button tooltip 'Active reminder policy required — ask your admin' is shown to the admin themselves, who simultaneously sees the adjacent 'Configure reminders' link — telling an admin to ask their admin.",
       "class": "other",
       "disposition": "pending"
     },
@@ -2161,7 +2161,7 @@
       "id": "g-261",
       "file": "apps/web/src/features/dashboard/ui/dashboard-queue-mutations.test.tsx",
       "line": 93,
-      "issue": "This is the only test covering RemindLeadButton, yet it never asserts the result-branching (no-matching-section vs dispatched vs alreadySent vs error \u2192 confirm label/state), leaving that core logic untested.",
+      "issue": "This is the only test covering RemindLeadButton, yet it never asserts the result-branching (no-matching-section vs dispatched vs alreadySent vs error → confirm label/state), leaving that core logic untested.",
       "class": "missing-test-coverage",
       "disposition": "pending"
     },
@@ -2177,7 +2177,7 @@
       "id": "g-263",
       "file": "apps/web/src/features/dashboard/ui/dashboard-skeleton.tsx",
       "line": 16,
-      "issue": "The KPI row uses an inline [0,1,2].map while queue/blocked rows use module-level Array.from constants \u2014 inconsistent construction of the same pattern.",
+      "issue": "The KPI row uses an inline [0,1,2].map while queue/blocked rows use module-level Array.from constants — inconsistent construction of the same pattern.",
       "class": "other",
       "disposition": "pending"
     },
@@ -2259,7 +2259,7 @@
       "line": 4,
       "issue": "The header comment narrates a removed ECG/heartbeat SVG layer rather than the current code's intent, edging into the banned change-log/archaeology style.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-274",
@@ -2283,7 +2283,7 @@
       "line": 33,
       "issue": "Inline comments \"Fade out\" / \"Swap phrase\" / \"Fade in\" / \"Schedule next cycle\" (lines 33, 36, 39, 40) narrate what setVisible/setIndex already say plainly, which the repo's comment-hygiene rule discourages.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-277",
@@ -2331,7 +2331,7 @@
       "line": 39,
       "issue": "The inline comment restates the blocked->at-risk->empty->on-track precedence already fully described in the function-level comment (lines 28-33) and self-evident in the code below it.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-283",
@@ -2347,7 +2347,7 @@
       "line": 64,
       "issue": "Internal phase codes 'D1'/'D13' in the comment are exactly the change-log/ticket archaeology the repo bans; keep the WHY, drop the codes.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-285",
@@ -2355,7 +2355,7 @@
       "line": 137,
       "issue": "'the prop became required de-facto in May 2026 but existing callers may still omit it' is dated history narration; the defensive `products ?? []` fallback should be justified by current behavior, not a change-log date.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-286",
@@ -2387,7 +2387,7 @@
       "line": 231,
       "issue": "Describe/comment blocks carry ticket/phase archaeology (VA-0a, A13, D12, W11 3.10, R4-B, source design.md path) that the repo's comment-hygiene rule discourages; spec traceability could live in the openspec link, not scattered codes.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-290",
@@ -2395,7 +2395,7 @@
       "line": 4,
       "issue": "Header references 'fix-section-add-signal-reset, task 1.2' and 'D1'/'D16' change-log tags that CLAUDE.md's comment-hygiene rule bans; the scenario prose itself is fine.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-291",
@@ -2411,7 +2411,7 @@
       "line": 324,
       "issue": "Describe blocks embed ticket tags ('head-toolbar-parity D5', 'period-dialogs-polish', 'responsive-compact-layout', 'VA-0a') that the repo's comment-hygiene rule bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-293",
@@ -2427,13 +2427,13 @@
       "line": 10,
       "issue": "Comments carry 'polish-lead-toolbar-and-risk-dialog 1.3' and 'bug 2026-06-10' (line 173) change-log references that git history should hold, per CLAUDE.md comment-hygiene.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-295",
       "file": "apps/web/src/features/period/ui/lead-history-sidebar.tsx",
       "line": 140,
-      "issue": "Inside the `streak >= 2` branch the ternary `{streak === 1 ? \"week\" : \"weeks\"}` can never evaluate to \"week\" \u2014 dead singular branch.",
+      "issue": "Inside the `streak >= 2` branch the ternary `{streak === 1 ? \"week\" : \"weeks\"}` can never evaluate to \"week\" — dead singular branch.",
       "class": "dead-unreachable-code",
       "disposition": "pending"
     },
@@ -2449,7 +2449,7 @@
       "id": "g-297",
       "file": "apps/web/src/features/period/ui/lead-history-sidebar.tsx",
       "line": 89,
-      "issue": "Stat labeled \"On-time rate\" actually computes submitted/total (a completion rate), nothing about timeliness \u2014 the copy overstates what the number means.",
+      "issue": "Stat labeled \"On-time rate\" actually computes submitted/total (a completion rate), nothing about timeliness — the copy overstates what the number means.",
       "class": "misleading-stale-comment",
       "disposition": "pending"
     },
@@ -2465,7 +2465,7 @@
       "id": "g-299",
       "file": "apps/web/src/features/period/ui/periods-action-icon-row.tsx",
       "line": 94,
-      "issue": "Delete gate keys off `row.periodStatus === 'published'` while every sibling action keys off `row.periodState`; this correctly keeps archived-published rows non-deletable but leaves a reopened row (periodState 'open', periodStatus 'reopened') deletable despite prior publication \u2014 the mixed source field is undocumented and easy to misread.",
+      "issue": "Delete gate keys off `row.periodStatus === 'published'` while every sibling action keys off `row.periodState`; this correctly keeps archived-published rows non-deletable but leaves a reopened row (periodState 'open', periodStatus 'reopened') deletable despite prior publication — the mixed source field is undocumented and easy to misread.",
       "class": "other",
       "disposition": "pending"
     },
@@ -2473,7 +2473,7 @@
       "id": "g-300",
       "file": "apps/web/src/features/period/ui/periods-archive-section.tsx",
       "line": 23,
-      "issue": "Enumerates and re-threads all six onX handlers by hand and re-passes them individually to PeriodTable, whereas the sibling periods-active-section uses a single `...rowActions` spread \u2014 the two siblings drift on the same pattern for no reason.",
+      "issue": "Enumerates and re-threads all six onX handlers by hand and re-passes them individually to PeriodTable, whereas the sibling periods-active-section uses a single `...rowActions` spread — the two siblings drift on the same pattern for no reason.",
       "class": "other",
       "disposition": "pending"
     },
@@ -2489,7 +2489,7 @@
       "id": "g-302",
       "file": "apps/web/src/features/period/ui/periods-tab-table.tsx",
       "line": 232,
-      "issue": "formatDate renders the deadline via toLocaleDateString with no timeZone:'UTC', inconsistent with the deliberate UTC wall-clock treatment in the dialog helpers \u2014 a near-midnight-UTC deadline can display an off-by-one calendar day for non-UTC admins.",
+      "issue": "formatDate renders the deadline via toLocaleDateString with no timeZone:'UTC', inconsistent with the deliberate UTC wall-clock treatment in the dialog helpers — a near-midnight-UTC deadline can display an off-by-one calendar day for non-UTC admins.",
       "class": "error-handling-robustness",
       "disposition": "pending"
     },
@@ -2507,7 +2507,7 @@
       "line": 1,
       "issue": "The eslint-disable justification ends with a bare phase tag `wave-6c-ii`, a ticket/phase reference the repo's comment-hygiene rule bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-305",
@@ -2515,7 +2515,7 @@
       "line": 586,
       "issue": "Ticket/phase archaeology in describe headers and comments (`VA-0a`, `verify-a11y-recommended-flip`, `autofocus-admin-dialogs`, `admin-dialog-focus-management`) narrates change history git already holds.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-306",
@@ -2529,15 +2529,15 @@
       "id": "g-307",
       "file": "apps/web/src/features/period/ui/publish-lock-button.test.tsx",
       "line": 199,
-      "issue": "`VA-0a \u2014 verify-a11y-recommended-flip` ticket reference in describe/comment headers is change-log archaeology the repo bans.",
+      "issue": "`VA-0a — verify-a11y-recommended-flip` ticket reference in describe/comment headers is change-log archaeology the repo bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-308",
       "file": "apps/web/src/features/period/ui/publish-lock-button.tsx",
       "line": 120,
-      "issue": "The publish path hand-rolls an inline (non-portal) dialog whose backdrop has no onClick, while the reopen path uses the portal-based ConfirmDeleteDialog that closes on backdrop click \u2014 inconsistent dialog UX/implementation within one component.",
+      "issue": "The publish path hand-rolls an inline (non-portal) dialog whose backdrop has no onClick, while the reopen path uses the portal-based ConfirmDeleteDialog that closes on backdrop click — inconsistent dialog UX/implementation within one component.",
       "class": "other",
       "disposition": "pending"
     },
@@ -2563,7 +2563,7 @@
       "line": 12,
       "issue": "Comment leads with the change slug 'lead-pipeline-mine-reveal-and-own-stage-label (affordance 2)'; repo bans ticket/change-ref prefixes and asks to keep only the rewritten rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-312",
@@ -2571,7 +2571,7 @@
       "line": 75,
       "issue": "Comment prefixed with change slug 'pipeline-tooltip-and-indicator:' is the banned archaeology-prefix form; the WHY after it is fine, the prefix is not.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-313",
@@ -2587,7 +2587,7 @@
       "line": 9,
       "issue": "Comment prefixed with change slug 'lead-mine-hide-unowned-stages:' is the banned archaeology-prefix form (recurs at line 13); keep the rationale, drop the slug.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-315",
@@ -2603,7 +2603,7 @@
       "line": 62,
       "issue": "\"ADR 0011\" reference in the comment is a doc-pointer prefix the repo's comment-hygiene rule asks to drop in favor of the load-bearing WHY alone.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-317",
@@ -2611,13 +2611,13 @@
       "line": 22,
       "issue": "The PATCH-semantics comment narrates the full downstream consumer list (schedulers, late-submission/reopen gates) which is defensive narration that can drift from reality; the load-bearing part is only why departmentName is excluded.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-318",
       "file": "apps/web/src/features/report-pages/index.ts",
       "line": 1,
-      "issue": "Barrel exports only WeeklyReportPage yet head/report/page.tsx imports that same symbol via a deep ./ui/weekly-report-page path, and sibling components (LeadForm, HeadReportShell, skeletons) are never barreled \u2014 the module surface is arbitrary rather than the feature's public API.",
+      "issue": "Barrel exports only WeeklyReportPage yet head/report/page.tsx imports that same symbol via a deep ./ui/weekly-report-page path, and sibling components (LeadForm, HeadReportShell, skeletons) are never barreled — the module surface is arbitrary rather than the feature's public API.",
       "class": "code-structure-placement",
       "disposition": "pending"
     },
@@ -2633,9 +2633,9 @@
       "id": "g-320",
       "file": "apps/web/src/features/report-pages/ui/head-report-periods.ts",
       "line": 57,
-      "issue": "Docstring is laden with ticket/finding archaeology ('item 3', 'finding 4:') that CLAUDE.md's comment-hygiene rule bans \u2014 keep the load-bearing WHY, drop the change-log refs.",
+      "issue": "Docstring is laden with ticket/finding archaeology ('item 3', 'finding 4:') that CLAUDE.md's comment-hygiene rule bans — keep the load-bearing WHY, drop the change-log refs.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-321",
@@ -2657,7 +2657,7 @@
       "id": "g-323",
       "file": "apps/web/src/features/report-pages/ui/lead-form-draft-merge-helpers.ts",
       "line": 168,
-      "issue": "mergeRiskDraft falls back to createId() for a missing id while mergeDecisionDraft (line 119) and mergeItemsDraft (line 219) use decision.id/item.id raw with no fallback \u2014 an inconsistency, though id is a required string on all three entry types so it is not a live bug.",
+      "issue": "mergeRiskDraft falls back to createId() for a missing id while mergeDecisionDraft (line 119) and mergeItemsDraft (line 219) use decision.id/item.id raw with no fallback — an inconsistency, though id is a required string on all three entry types so it is not a live bug.",
       "class": "env-config-silent-fallback",
       "disposition": "pending"
     },
@@ -2667,7 +2667,7 @@
       "line": 21,
       "issue": "The DraftPatch docblock narrates refactor history ('as the pre-module per-handler setDraftSection((prev) => merge(prev, next)) calls did', 'LeadFormSyncBridge feeds stay byte-identical') which is archaeology the repo's comment-hygiene rule discourages; the load-bearing 'composes as a functional updater' point could stand without the migration story.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-325",
@@ -2675,15 +2675,15 @@
       "line": 90,
       "issue": "Comment prefix \"35-04:\" is a change/ticket ref the repo's comment-hygiene rule says to delete (keep the WHY, drop the id).",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-326",
       "file": "apps/web/src/features/report-pages/ui/lead-form-edit-sections.tsx",
       "line": 86,
-      "issue": "Spec-section prefixes like \"review-acknowledgement (\u00a78)\" (also line 112) are change-log archaeology per CLAUDE.md; rewrite the rationale without the tag.",
+      "issue": "Spec-section prefixes like \"review-acknowledgement (§8)\" (also line 112) are change-log archaeology per CLAUDE.md; rewrite the rationale without the tag.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-327",
@@ -2699,7 +2699,7 @@
       "line": 134,
       "issue": "Comment prefix \"reopen-request-lifecycle (D4)\" carries a change/section id the repo bans; keep the server-authoritative rationale, drop \"(D4)\".",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-329",
@@ -2715,7 +2715,7 @@
       "line": 10,
       "issue": "Doc comments carry OpenSpec change-name/ticket prefixes (unify-risk-stage-status, simplify-stage-status-interaction D3 council find C) that read as archaeology the repo bans; the load-bearing why survives without them.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-331",
@@ -2731,7 +2731,7 @@
       "line": 50,
       "issue": "Snapshotting single known-constant attributes (role/aria-busy/aria-label) merely restates the explicit getByRole assertions in the block above, weaker than a literal expectation.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-333",
@@ -2747,15 +2747,15 @@
       "line": 4,
       "issue": "Heavy opaque ticket/wave codes in comments (W11, W6, D16, D3, D1/D2, 2c/2d) narrate provenance the repo's comment-hygiene rule asks to drop; the behavioral why in the same comments is what matters.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-335",
       "file": "apps/web/src/features/report-pages/ui/lead-form-toolbar-controls.tsx",
       "line": 42,
-      "issue": "'Pure relocation from LeadForm; markup unchanged' narrates refactor history \u2014 delete it; the component's purpose stands without the change-log note.",
+      "issue": "'Pure relocation from LeadForm; markup unchanged' narrates refactor history — delete it; the component's purpose stands without the change-log note.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-336",
@@ -2763,7 +2763,7 @@
       "line": 87,
       "issue": "Change-name refs sprinkled through the JSX comments ('report-toolbar-layout', 'head-toolbar-semantics', 'slides-record-visibility', 'report-toolbar-parity', 'lead-report-controls-integrity') are the banned archaeology prefixes.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-337",
@@ -2785,9 +2785,9 @@
       "id": "g-339",
       "file": "apps/web/src/features/report-pages/ui/lead-section-preview-auth.test.tsx",
       "line": 1,
-      "issue": "Docblock leads with a campaign ref (\"fix-sweep-ui-findings\") \u2014 ticket archaeology the repo bans; the load-bearing WHY (SSR/client skeleton must match) would stand without the prefix.",
+      "issue": "Docblock leads with a campaign ref (\"fix-sweep-ui-findings\") — ticket archaeology the repo bans; the load-bearing WHY (SSR/client skeleton must match) would stand without the prefix.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-340",
@@ -2795,13 +2795,13 @@
       "line": 16,
       "issue": "Comment carries a ticket prefix (\"driver-findings-2026-06-11 finding 2\") the repo's comment-hygiene rule bans; the group-scoping rationale itself is worth keeping without the prefix.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-341",
       "file": "apps/web/src/features/report-pages/ui/lead-sticky-completion-actions.tsx",
       "line": 15,
-      "issue": "The autosave.state -> human-copy ternary duplicates the same state->copy mapping concept as `autosaveCopy` in lead-submit-readiness-summary.tsx (different strings, same ladder) \u2014 a candidate for a shared helper.",
+      "issue": "The autosave.state -> human-copy ternary duplicates the same state->copy mapping concept as `autosaveCopy` in lead-submit-readiness-summary.tsx (different strings, same ladder) — a candidate for a shared helper.",
       "class": "duplication",
       "disposition": "pending"
     },
@@ -2835,7 +2835,7 @@
       "line": 1,
       "issue": "Header comment \"VA-0a / VA-0b regression catalog\" is ticket archaeology the repo bans in comments.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-346",
@@ -2851,7 +2851,7 @@
       "line": 98,
       "issue": "Comments carry banned change-log/ticket sub-references ('memo T6 opt 2' L98, 'user sign-off 2026-06-23' L122, 'F2' L311/L432) that the repo comment-hygiene rule says to strip while keeping the rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-348",
@@ -2867,15 +2867,15 @@
       "line": 12,
       "issue": "Comments carry banned ticket/phase sub-references ('7c.1' L12, 'D4b' L15, 'Decision 6' L28) that should be stripped while retaining the load-bearing rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-350",
       "file": "apps/web/src/features/report-pages/ui/use-lead-form-chrome.ts",
       "line": 23,
-      "issue": "Comment narrates the refactor ('Split from LeadForm only to keep the composition root inside the size standard; bodies and dependency arrays move verbatim') \u2014 change-log-style archaeology the repo bans, rather than load-bearing WHY of the current code.",
+      "issue": "Comment narrates the refactor ('Split from LeadForm only to keep the composition root inside the size standard; bodies and dependency arrays move verbatim') — change-log-style archaeology the repo bans, rather than load-bearing WHY of the current code.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-351",
@@ -2883,7 +2883,7 @@
       "line": 28,
       "issue": "Comment prefixes `35-07:` (line 28) and `slides-record-visibility (Decision 6)` (line 42) carry phase/decision refs the repo bans; keep the WHY, drop the numeric archaeology.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-352",
@@ -2891,7 +2891,7 @@
       "line": 98,
       "issue": "Numeric ticket/phase prefixes (`35-07`, `F1:`, `7c`, `D4c`, `7c.3`) scattered through comments (lines 26,30,64,98,107,110,125) are the change-log archaeology CLAUDE.md forbids; openspec change-names are fine but the sub-ref codes should go.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-353",
@@ -2899,13 +2899,13 @@
       "line": 33,
       "issue": "`7c.6:` prefixes (lines 33, 48) are banned phase archaeology; the surrounding security rationale is worth keeping but should be rewritten without the ticket code.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-354",
       "file": "apps/web/src/features/report-pages/ui/weekly-report-page-helpers.test.ts",
       "line": 75,
-      "issue": "toBeGreaterThanOrEqual(1) immediately followed by toBe(1) is a redundant assertion \u2014 the exact-equality check subsumes it.",
+      "issue": "toBeGreaterThanOrEqual(1) immediately followed by toBe(1) is a redundant assertion — the exact-equality check subsumes it.",
       "class": "redundant-brittle-test",
       "disposition": "pending"
     },
@@ -2939,7 +2939,7 @@
       "line": 203,
       "issue": "Comment narrates the refactoring motive ('A helper so this page function stays under the complexity budget') rather than a load-bearing WHY of the current code.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-359",
@@ -2953,7 +2953,7 @@
       "id": "g-360",
       "file": "apps/web/src/features/report-pages/ui/weekly-report-skeleton.tsx",
       "line": 124,
-      "issue": "Inline section comments are numbered 1, 2, 4, 5 (skipping 3), inconsistent with the renumbered 1-4 docblock \u2014 leftover numbering from when the removed AI Insights slot was section 3.",
+      "issue": "Inline section comments are numbered 1, 2, 4, 5 (skipping 3), inconsistent with the renumbered 1-4 docblock — leftover numbering from when the removed AI Insights slot was section 3.",
       "class": "other",
       "disposition": "pending"
     },
@@ -2971,7 +2971,7 @@
       "line": 57,
       "issue": "The \"(B1)\" marker in the height-comment is change-log/ticket archaeology the repo bans; drop the code and keep the rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-363",
@@ -2979,7 +2979,7 @@
       "line": 60,
       "issue": "Comments carry banned numeric phase/work-item archaeology refs (e.g. '35-04' here and line 246, 'W11' at 459/465, '(D1)' at 418) that the repo's comment-hygiene rule bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-364",
@@ -2993,7 +2993,7 @@
       "id": "g-365",
       "file": "apps/web/src/features/report-sections/model/mock-data.ts",
       "line": 10,
-      "issue": "MOCK_PRODUCTS is re-exported through the production feature barrel (index.ts) yet has no production caller \u2014 every consumer is a *.test.tsx \u2014 so test-only fixtures leak into the feature's public API surface.",
+      "issue": "MOCK_PRODUCTS is re-exported through the production feature barrel (index.ts) yet has no production caller — every consumer is a *.test.tsx — so test-only fixtures leak into the feature's public API surface.",
       "class": "error-handling-robustness",
       "disposition": "pending"
     },
@@ -3017,9 +3017,9 @@
       "id": "g-368",
       "file": "apps/web/src/features/report-sections/model/types.ts",
       "line": 4,
-      "issue": "Header comment 'Real data will come from tRPC endpoints in a later phase' is stale \u2014 these types already back tRPC-fed mappers (e.g. lead-form.ts), so the note misleads about the current data source.",
+      "issue": "Header comment 'Real data will come from tRPC endpoints in a later phase' is stale — these types already back tRPC-fed mappers (e.g. lead-form.ts), so the note misleads about the current data source.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-369",
@@ -3027,7 +3027,7 @@
       "line": 78,
       "issue": "Comments tag rationale with OpenSpec change-name prefixes (\"activity-first-class:\") that read as ticket archaeology the repo's comment-hygiene standard says to strip.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-370",
@@ -3041,9 +3041,9 @@
       "id": "g-371",
       "file": "apps/web/src/features/report-sections/model/weekly-report-groupers.ts",
       "line": 92,
-      "issue": "Comment narrates the prior hardcoded \"Dev \u00b7\" bug (\"mislabelled every item\") \u2014 change-log narration of a fixed past state that git history holds, repeated at line 185.",
+      "issue": "Comment narrates the prior hardcoded \"Dev ·\" bug (\"mislabelled every item\") — change-log narration of a fixed past state that git history holds, repeated at line 185.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-372",
@@ -3051,23 +3051,23 @@
       "line": 138,
       "issue": "Change-name prefixes used as comment tags (\"record-status-derived-from-risk:\", \"fix-product-name-resolution:\" at line 205) are the ticket-archaeology the standard bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-373",
       "file": "apps/web/src/features/report-sections/model/weekly-report-types.ts",
       "line": 39,
-      "issue": "JSDoc tags several fields with OpenSpec change-name prefixes (\"review-acknowledgement:\", \"report-overview-scope-parity:\" at line 99) \u2014 ticket-slug archaeology the comment-hygiene rule says to remove while keeping the rationale.",
+      "issue": "JSDoc tags several fields with OpenSpec change-name prefixes (\"review-acknowledgement:\", \"report-overview-scope-parity:\" at line 99) — ticket-slug archaeology the comment-hygiene rule says to remove while keeping the rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-374",
       "file": "apps/web/src/features/report-sections/model/weekly-report.test.ts",
       "line": 432,
-      "issue": "Test comment references the pre-fix hardcoded \"Dev\" state and the \"apply-status-palette\" change name \u2014 past-state/ticket archaeology git history already holds.",
+      "issue": "Test comment references the pre-fix hardcoded \"Dev\" state and the \"apply-status-palette\" change name — past-state/ticket archaeology git history already holds.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-375",
@@ -3075,13 +3075,13 @@
       "line": 105,
       "issue": "Doc comments lead with OpenSpec change-name prefixes (\"report-card-clarity:\", \"report-overview-scope-parity:\" at line 199) used as ticket tags the standard says to strip while keeping the WHY.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-376",
       "file": "apps/web/src/features/report-sections/ui/item-card-actions.tsx",
       "line": 196,
-      "issue": "The Edit button (and the Delete button at 204) render unconditionally on callback presence \u2014 unlike the move buttons they are not gated on onEdit/onDelete being defined, so an inert no-op button can render if a caller omits the handler.",
+      "issue": "The Edit button (and the Delete button at 204) render unconditionally on callback presence — unlike the move buttons they are not gated on onEdit/onDelete being defined, so an inert no-op button can render if a caller omits the handler.",
       "class": "other",
       "disposition": "pending"
     },
@@ -3091,13 +3091,13 @@
       "line": 118,
       "issue": "OpenSpec change-slug prefixes in comments (\"require-paused-item-reason:\" at 118, \"activity-first-class\" reference) are droppable archaeology prefixes; the rationale reads fine without them per the repo's comment-hygiene rule.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-378",
       "file": "apps/web/src/features/report-sections/ui/item-card-stage-tags.tsx",
       "line": 25,
-      "issue": "For an activity item stageTagsLabel is set to 'Activity \u2014 no SDLC stage' but the row returns null for activity items, so this label is never rendered \u2014 a dead field.",
+      "issue": "For an activity item stageTagsLabel is set to 'Activity — no SDLC stage' but the row returns null for activity items, so this label is never rendered — a dead field.",
       "class": "dead-unreachable-code",
       "disposition": "pending"
     },
@@ -3121,9 +3121,9 @@
       "id": "g-381",
       "file": "apps/web/src/features/report-sections/ui/item-status-slot.tsx",
       "line": 46,
-      "issue": "Comment narrates what was removed ('The former ... gesture is gone') \u2014 change-log archaeology the repo asks to keep in git history, not in code.",
+      "issue": "Comment narrates what was removed ('The former ... gesture is gone') — change-log archaeology the repo asks to keep in git history, not in code.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-382",
@@ -3145,7 +3145,7 @@
       "id": "g-384",
       "file": "apps/web/src/features/report-sections/ui/product-picker.tsx",
       "line": 1,
-      "issue": "File is named product-picker.tsx but exports ParentPicker/RecordParent \u2014 the filename lags the widened contract.",
+      "issue": "File is named product-picker.tsx but exports ParentPicker/RecordParent — the filename lags the widened contract.",
       "class": "naming",
       "disposition": "pending"
     },
@@ -3153,7 +3153,7 @@
       "id": "g-385",
       "file": "apps/web/src/features/report-sections/ui/stage-chip.test.tsx",
       "line": 105,
-      "issue": "Asserting button.style.height === STAGE_CHIP_BOX_HEIGHT (the same imported constant the component uses) mostly proves wiring, not a specific value \u2014 it cannot catch a wrong constant.",
+      "issue": "Asserting button.style.height === STAGE_CHIP_BOX_HEIGHT (the same imported constant the component uses) mostly proves wiring, not a specific value — it cannot catch a wrong constant.",
       "class": "redundant-brittle-test",
       "disposition": "pending"
     },
@@ -3163,13 +3163,13 @@
       "line": 149,
       "issue": "'User feedback 2026-06-10:' is a dated change-log comment the repo bans; keep the load-bearing WHY, drop the date/provenance.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-387",
       "file": "apps/web/src/features/report-sections/ui/stage-multi-select.tsx",
       "line": 6,
-      "issue": "value is typed string[] (mutable) while sibling props are readonly \u2014 inconsistent immutability at the boundary the rest of the file respects.",
+      "issue": "value is typed string[] (mutable) while sibling props are readonly — inconsistent immutability at the boundary the rest of the file respects.",
       "class": "mutation-immutability",
       "disposition": "pending"
     },
@@ -3179,13 +3179,13 @@
       "line": 2,
       "issue": "Header narrates a refactor as still-pending ('BEFORE the hook is split into ...') though the split files already exist, making the comment stale change-log archaeology the repo's comment-hygiene rule bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-389",
       "file": "apps/web/src/features/review/ui/record-comments.test.tsx",
       "line": 57,
-      "issue": "The mutation success side effects (onMutated fired, draft textarea cleared on add) are never exercised \u2014 onMutated is a bare vi.fn() with no assertion and no submit/delete is clicked, so that wiring could regress silently.",
+      "issue": "The mutation success side effects (onMutated fired, draft textarea cleared on add) are never exercised — onMutated is a bare vi.fn() with no assertion and no submit/delete is clicked, so that wiring could regress silently.",
       "class": "missing-test-coverage",
       "disposition": "pending"
     },
@@ -3193,7 +3193,7 @@
       "id": "g-390",
       "file": "apps/web/src/features/review/ui/reopen-request-card-parts.tsx",
       "line": 30,
-      "issue": "formatTimestamp (ru-RU) is copy-pasted verbatim from dashboard/ui/reopen-request-row.tsx and the requester/period meta + respond-form markup largely parallels that dashboard surface \u2014 a candidate for a shared lib/format-date helper rather than two divergent copies.",
+      "issue": "formatTimestamp (ru-RU) is copy-pasted verbatim from dashboard/ui/reopen-request-row.tsx and the requester/period meta + respond-form markup largely parallels that dashboard surface — a candidate for a shared lib/format-date helper rather than two divergent copies.",
       "class": "duplication",
       "disposition": "pending"
     },
@@ -3209,7 +3209,7 @@
       "id": "g-392",
       "file": "apps/web/src/features/review/ui/risk-card-parts.tsx",
       "line": 39,
-      "issue": "The identical ~200-char touch-target/hover className string is copy-pasted across the toggle/edit/delete buttons (lines 39, 52, 60 differ only in destructive hover colors) \u2014 an extracted base class would remove the drift risk.",
+      "issue": "The identical ~200-char touch-target/hover className string is copy-pasted across the toggle/edit/delete buttons (lines 39, 52, 60 differ only in destructive hover colors) — an extracted base class would remove the drift risk.",
       "class": "duplication",
       "disposition": "pending"
     },
@@ -3217,7 +3217,7 @@
       "id": "g-393",
       "file": "apps/web/src/features/review/ui/risk-edit-dialog-helpers.ts",
       "line": 32,
-      "issue": "deriveFromPreChecked's `if (flagged.some(at-risk)) return \"at-risk\"` is redundant \u2014 it returns the same value as the fallback on line 33, so the branch never changes behavior and reads as dead intent.",
+      "issue": "deriveFromPreChecked's `if (flagged.some(at-risk)) return \"at-risk\"` is redundant — it returns the same value as the fallback on line 33, so the branch never changes behavior and reads as dead intent.",
       "class": "redundant-brittle-test",
       "disposition": "pending"
     },
@@ -3235,7 +3235,7 @@
       "line": 73,
       "issue": "Comments carry bare change-log codes (\"task 2.2\", \"D1\", \"D16\") that the repo's comment-hygiene rule bans; keep the rationale, drop the ticket prefixes.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-396",
@@ -3243,7 +3243,7 @@
       "line": 93,
       "issue": "Comments use bare fix codes (\"T2 fix\", \"L4 fix\", \"D5\") that the comment-hygiene rule bans; git history holds that, so strip the prefixes while keeping the rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-397",
@@ -3257,7 +3257,7 @@
       "id": "g-398",
       "file": "apps/web/src/features/review/ui/use-risk-edit-parent-stage.ts",
       "line": 110,
-      "issue": "preCheckedStages (context strip) derives from the fixed seedProduct, not parent.id, so after the user switches the parent product the strip still shows the original product's flagged stages while availableStages already tracks the new parent \u2014 a possibly-intended raise-origin display but a visible inconsistency.",
+      "issue": "preCheckedStages (context strip) derives from the fixed seedProduct, not parent.id, so after the user switches the parent product the strip still shows the original product's flagged stages while availableStages already tracks the new parent — a possibly-intended raise-origin display but a visible inconsistency.",
       "class": "other",
       "disposition": "pending"
     },
@@ -3265,7 +3265,7 @@
       "id": "g-399",
       "file": "apps/web/src/features/slides/model/activity-slide-model.ts",
       "line": 120,
-      "issue": "tone is hardcoded to 'warning' whenever any content exists, so a fully-green activity section can never present as 'ready' \u2014 a mild UX inaccuracy versus the canonical statusTone ladder.",
+      "issue": "tone is hardcoded to 'warning' whenever any content exists, so a fully-green activity section can never present as 'ready' — a mild UX inaccuracy versus the canonical statusTone ladder.",
       "class": "magic-values-drift",
       "disposition": "pending"
     },
@@ -3281,7 +3281,7 @@
       "id": "g-401",
       "file": "apps/web/src/features/slides/model/lead-slide-periods.ts",
       "line": 77,
-      "issue": "The bare \"\" fallback is an undocumented sentinel for 'no report' \u2014 non-obvious per the repo's magic-literal rule; a named constant or comment would make the contract with the enabled:targetReportId!=='' guards explicit.",
+      "issue": "The bare \"\" fallback is an undocumented sentinel for 'no report' — non-obvious per the repo's magic-literal rule; a named constant or comment would make the contract with the enabled:targetReportId!=='' guards explicit.",
       "class": "magic-values-drift",
       "disposition": "pending"
     },
@@ -3297,7 +3297,7 @@
       "id": "g-403",
       "file": "apps/web/src/features/slides/model/section-slide-contracts.ts",
       "line": 50,
-      "issue": "ownerRole is typed as open string though only 'lead'/'product' (and section roles) are ever assigned \u2014 a narrower union would prevent typos and document the domain.",
+      "issue": "ownerRole is typed as open string though only 'lead'/'product' (and section roles) are ever assigned — a narrower union would prevent typos and document the domain.",
       "class": "type-safety-weakening",
       "disposition": "pending"
     },
@@ -3330,7 +3330,7 @@
       "file": "apps/web/src/features/slides/model/section-slide-product-projection.ts",
       "line": 124,
       "issue": "buildSectionRecordSummary and recordSlices restate the same filter/trim/nonEmpty patterns across five record kinds; a small per-kind extractor would remove the near-duplicate blocks without conflating their scopes.",
-      "class": "comment-archaeology-narration",
+      "class": "duplication",
       "disposition": "pending"
     },
     {
@@ -3339,7 +3339,7 @@
       "line": 280,
       "issue": "Test titles and comments carry ticket/date/section archaeology the repo bans (e.g. 'lead-live-walk-2026-06-14 3.1', 'unify-risk-stage-status D1', 'rethink-pipeline-state-vs-completeness 1.4', 'redesign-head-slide-density'); the descriptive prose is useful but the codes/dates are noise git history already holds.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-409",
@@ -3363,7 +3363,7 @@
       "line": 51,
       "issue": "Comment 'mirrors the pre-refactor bucketFor(productId, activityId) routing' is archaeology narrating a removed prior implementation, which the repo's comment-hygiene rule bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-412",
@@ -3379,7 +3379,7 @@
       "line": 20,
       "issue": "Comment ends with a dangling \"(D6)\" design-decision code that a reader cannot resolve from the code.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-414",
@@ -3387,7 +3387,7 @@
       "line": 29,
       "issue": "GRID_TEMPLATE comment narrates process (\"council-grilled\") rather than stating the load-bearing WHY cleanly.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-415",
@@ -3395,7 +3395,7 @@
       "line": 79,
       "issue": "Comment ends with a dangling \"(D6)\" design-decision code unresolvable from the code.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-416",
@@ -3403,7 +3403,7 @@
       "line": 12,
       "issue": "The trailing \"(D6)\" is a phase/ticket-style reference the repo's comment-hygiene rule bans; drop the shorthand and keep only the load-bearing rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-417",
@@ -3411,7 +3411,7 @@
       "line": 21,
       "issue": "Doc comment appends the OpenSpec change name '(add-slide-fullscreen-exit-affordance)', the kind of ticket/change archaeology the repo comment-hygiene rule bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-418",
@@ -3433,7 +3433,7 @@
       "id": "g-420",
       "file": "apps/web/src/features/slides/ui/status-slide-deck.tsx",
       "line": 85,
-      "issue": "handleKeyDown unconditionally preventDefaults ArrowLeft/ArrowRight on bubbled keydown, so a focused text input inside the arbitrary heroControls ReactNode would have cursor movement hijacked into slide navigation \u2014 unlike useFullscreen's onKey which skips INPUT/TEXTAREA/SELECT.",
+      "issue": "handleKeyDown unconditionally preventDefaults ArrowLeft/ArrowRight on bubbled keydown, so a focused text input inside the arbitrary heroControls ReactNode would have cursor movement hijacked into slide navigation — unlike useFullscreen's onKey which skips INPUT/TEXTAREA/SELECT.",
       "class": "other",
       "disposition": "pending"
     },
@@ -3459,7 +3459,7 @@
       "line": 8,
       "issue": "The pervasive D1/D4/D13/D16 defect-number prefixes in the doc/comments read as the ticket/phase archaeology CLAUDE.md bans; the load-bearing rationale should stay but the bare D-prefixes should be dropped (or rewritten as explicit spec-decision citations).",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-424",
@@ -3489,7 +3489,7 @@
       "id": "g-427",
       "file": "apps/web/src/hooks/use-lead-form-autosave.ts",
       "line": 205,
-      "issue": "When a save fails while a follow-up edit is queued, onError clears the queue but the debounce effect's deps (payloadKey/dirty unchanged) do not re-fire, so that queued edit is stranded and only re-saved on the next keystroke or forceSave \u2014 untested and arguably a lost-edit window.",
+      "issue": "When a save fails while a follow-up edit is queued, onError clears the queue but the debounce effect's deps (payloadKey/dirty unchanged) do not re-fire, so that queued edit is stranded and only re-saved on the next keystroke or forceSave — untested and arguably a lost-edit window.",
       "class": "missing-test-coverage",
       "disposition": "pending"
     },
@@ -3499,7 +3499,7 @@
       "line": 308,
       "issue": "The 'D7 (defer-versions-coming-soon)' prefix is the same defect-number archaeology CLAUDE.md discourages; keep the rationale, drop the D7 tag.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-429",
@@ -3515,7 +3515,7 @@
       "line": 7,
       "issue": "Comments carry requirement-ID archaeology (\"D4 / D4c\" repeated at lines 7, 59, 68) which CLAUDE.md's comment-hygiene rule says to rewrite without the prefix while keeping the rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-431",
@@ -3545,9 +3545,9 @@
       "id": "g-434",
       "file": "apps/web/src/hooks/use-status-risk-sync.test.tsx",
       "line": 11,
-      "issue": "Header comment narrates removed behavior with a ticket ref (\"unify-risk-stage-status (D4)... handleRiskFilled + requestStatusUpdateConfirmation is gone\") \u2014 change-log archaeology the repo bans.",
+      "issue": "Header comment narrates removed behavior with a ticket ref (\"unify-risk-stage-status (D4)... handleRiskFilled + requestStatusUpdateConfirmation is gone\") — change-log archaeology the repo bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-435",
@@ -3563,7 +3563,7 @@
       "line": 6,
       "issue": "Comment cites the OpenSpec change name 'rework-item-status-model', which the repo's comment-hygiene rule bans as change-log archaeology; the surrounding rationale reads fine without it.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-437",
@@ -3579,7 +3579,7 @@
       "line": 102,
       "issue": "The 'Driver finding 1:' comment prefix is run/ticket archaeology the repo bans; the scenario explanation is fine but the prefix is noise.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-439",
@@ -3603,7 +3603,7 @@
       "line": 4,
       "issue": "\"Lifted from features/admin/model/reminders-tab-format.ts\" narrates code history the repo asks to keep in git rather than comments; the dedup rationale reads fine without the provenance clause.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-442",
@@ -3611,7 +3611,7 @@
       "line": 19,
       "issue": "Comment repeats the 'Driver finding 1 ... observed 207/400/400/400' discovery-history narration banned by the repo's comment-hygiene rule.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-443",
@@ -3643,7 +3643,7 @@
       "line": 35,
       "issue": "Comment uses the OpenSpec change slug 'rethink-pipeline-state-vs-completeness:' as a prefix, the kind of change-ref archaeology CLAUDE.md's comment-hygiene rule asks to drop in favor of prefix-free rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-447",
@@ -3651,7 +3651,7 @@
       "line": 11,
       "issue": "Docstring leads with the change-slug prefix 'rethink-pipeline-state-vs-completeness (supersedes ...)', the ticket/phase-ref style the repo's comment-hygiene rule bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-448",
@@ -3713,7 +3713,7 @@
       "id": "g-455",
       "file": "apps/web/src/lib/server/get-server-session.ts",
       "line": 40,
-      "issue": "`payload as UserSession` is an unchecked cast \u2014 a `userSessionSchema` exists in packages/shared/src/schemas/auth.ts, so a malformed API response is returned as a typed UserSession rather than rejected via safeParse.",
+      "issue": "`payload as UserSession` is an unchecked cast — a `userSessionSchema` exists in packages/shared/src/schemas/auth.ts, so a malformed API response is returned as a typed UserSession rather than rejected via safeParse.",
       "class": "type-safety-weakening",
       "disposition": "pending"
     },
@@ -3723,7 +3723,7 @@
       "line": 30,
       "issue": "Comment pins the limitation to \"v6.0\", a drift-prone version reference the repo's no-archaeology rule discourages; state the limitation without the version tag.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-457",
@@ -3747,7 +3747,7 @@
       "line": 4,
       "issue": "Header comment leads with the change slug 'fix-coming-soon-tooltip-clipping:', a change-log/ticket reference the repo's comment-hygiene rule bans (git history holds that).",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-460",
@@ -3755,7 +3755,7 @@
       "line": 35,
       "issue": "The describe title embeds the ticket code 'VA-0a', a change-tracker reference the repo's comment-hygiene rule bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-461",
@@ -3769,7 +3769,7 @@
       "id": "g-462",
       "file": "apps/web/src/shared/ui/record-textarea-field.test.tsx",
       "line": 99,
-      "issue": "The fill prop \u2014 documented with elaborate flex-1 layout rationale \u2014 has no test asserting the wrapper/textarea flex-1 classes toggle, so its non-obvious behavior is unpinned.",
+      "issue": "The fill prop — documented with elaborate flex-1 layout rationale — has no test asserting the wrapper/textarea flex-1 classes toggle, so its non-obvious behavior is unpinned.",
       "class": "missing-test-coverage",
       "disposition": "pending"
     },
@@ -3779,7 +3779,7 @@
       "line": 10,
       "issue": "\"Born responsive (C5 R6)\" embeds a phase/change-log tag that CLAUDE.md's comment-hygiene rule bans (git history holds that).",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-464",
@@ -3795,13 +3795,13 @@
       "line": 25,
       "issue": "Doc comment says item/risk/decision hits land on '/lead/report/<reportId>' 'with hash anchor', but the code and search-input-utils deliberately strip the #section-<id> fragment (driver finding 6), so the comment states a falsehood.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-466",
       "file": "apps/web/src/shared/ui/settings-tab-shared.tsx",
       "line": 53,
-      "issue": "This is the canonical CheckIcon, but apps/web/src/features/report-sections/ui/item-card-actions.tsx line 37 reimplements an identical CheckIcon instead of importing this one \u2014 a duplication that should collapse onto this export.",
+      "issue": "This is the canonical CheckIcon, but apps/web/src/features/report-sections/ui/item-card-actions.tsx line 37 reimplements an identical CheckIcon instead of importing this one — a duplication that should collapse onto this export.",
       "class": "duplication",
       "disposition": "pending"
     },
@@ -3817,9 +3817,9 @@
       "id": "g-468",
       "file": "apps/web/src/shared/ui/navigation/nav-bar.test.tsx",
       "line": 191,
-      "issue": "Ticket/phase archaeology in test titles/comments ('T-F4-3', 'task 4.1' L125, '\u00a74.3' L396/L409, '#2 navbar fix' L230/L252, 'review finding P3' L289) \u2014 the repo bans change-log/ticket refs; keep the WHY, drop the tags.",
+      "issue": "Ticket/phase archaeology in test titles/comments ('T-F4-3', 'task 4.1' L125, '§4.3' L396/L409, '#2 navbar fix' L230/L252, 'review finding P3' L289) — the repo bans change-log/ticket refs; keep the WHY, drop the tags.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-469",
@@ -3835,13 +3835,13 @@
       "line": 10,
       "issue": "Comment 'head-toolbar-parity D4: compact icon button, but the switch semantics ... carry over from the old text pill unchanged' is change-migration archaeology the repo bans; git history holds this.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-471",
       "file": "apps/web/src/shared/ui/report-shell/lock-badge.test.tsx",
       "line": 83,
-      "issue": "The \"onFocus tooltip handler is not triggered by keyboard Tab\" test asserts show is never called after Tab, but the component has no onFocus handler and the div has no tabindex, so focus can never land on it \u2014 the test cannot fail and its name implies a handler that does not exist.",
+      "issue": "The \"onFocus tooltip handler is not triggered by keyboard Tab\" test asserts show is never called after Tab, but the component has no onFocus handler and the div has no tabindex, so focus can never land on it — the test cannot fail and its name implies a handler that does not exist.",
       "class": "redundant-brittle-test",
       "disposition": "pending"
     },
@@ -3849,7 +3849,7 @@
       "id": "g-472",
       "file": "apps/web/src/shared/ui/report-shell/lock-badge.tsx",
       "line": 19,
-      "issue": "The tooltip content (\"Read-only \u00b7 Author: X \u00b7 You can't edit this card\") and the aria-label (\"Read-only \u2014 authored by X\") are two independently-authored strings for the same fact, which can drift; a shared formatter would keep sighted and AT users in sync.",
+      "issue": "The tooltip content (\"Read-only · Author: X · You can't edit this card\") and the aria-label (\"Read-only — authored by X\") are two independently-authored strings for the same fact, which can drift; a shared formatter would keep sighted and AT users in sync.",
       "class": "other",
       "disposition": "pending"
     },
@@ -3865,15 +3865,15 @@
       "id": "g-474",
       "file": "apps/web/src/shared/ui/report-shell/meta-row.tsx",
       "line": 3,
-      "issue": "The header comment carries phase/change labels \"require-risk-stage (D2)\" and \"F4 needsStage hint\" \u2014 the \"(D2)\"/\"F4\" tags are exactly the change-log/phase archaeology CLAUDE.md bans; keep the load-bearing rationale, drop the prefixes.",
+      "issue": "The header comment carries phase/change labels \"require-risk-stage (D2)\" and \"F4 needsStage hint\" — the \"(D2)\"/\"F4\" tags are exactly the change-log/phase archaeology CLAUDE.md bans; keep the load-bearing rationale, drop the prefixes.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-475",
       "file": "apps/web/src/shared/ui/report-shell/report-toolbar.tsx",
       "line": 96,
-      "issue": "ReportToolbarCenterLabelProps marks its fields readonly while ReportToolbarProps does not \u2014 an inconsistency in the same file.",
+      "issue": "ReportToolbarCenterLabelProps marks its fields readonly while ReportToolbarProps does not — an inconsistency in the same file.",
       "class": "mutation-immutability",
       "disposition": "pending"
     },
@@ -3881,7 +3881,7 @@
       "id": "g-476",
       "file": "apps/web/src/shared/ui/report-shell/save-now-button.test.tsx",
       "line": 262,
-      "issue": "Test title says 'pending render' but the snapshot passes state 'saving'/isInFlight \u2014 the label misdescribes the state under test.",
+      "issue": "Test title says 'pending render' but the snapshot passes state 'saving'/isInFlight — the label misdescribes the state under test.",
       "class": "misleading-stale-comment",
       "disposition": "pending"
     },
@@ -3891,7 +3891,7 @@
       "line": 8,
       "issue": "Describe label carries ticket/task archaeology (\"head-toolbar-parity D3\") the repo bans in comments.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-478",
@@ -3905,15 +3905,15 @@
       "id": "g-479",
       "file": "apps/web/src/shared/ui/report-shell/view-mode-toggle.tsx",
       "line": 17,
-      "issue": "Comment cites a review round (\"viewer-report-surface-parity review P3.\") \u2014 ticket/change archaeology the repo bans.",
+      "issue": "Comment cites a review round (\"viewer-report-surface-parity review P3.\") — ticket/change archaeology the repo bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-480",
       "file": "apps/web/src/shared/ui/report-shell/view-mode-toggle.tsx",
       "line": 31,
-      "issue": "Comment claims accessible name comes from \"aria-label + tooltip\", but the name is actually supplied by an sr-only span (no aria-label present) \u2014 doc drift from the code.",
+      "issue": "Comment claims accessible name comes from \"aria-label + tooltip\", but the name is actually supplied by an sr-only span (no aria-label present) — doc drift from the code.",
       "class": "misleading-stale-comment",
       "disposition": "pending"
     },
@@ -3923,7 +3923,7 @@
       "line": 6,
       "issue": "\"Replaces the deleted demo-section.ts\" is change-log archaeology that the repo's comment-hygiene rule bans; git history holds that.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-482",
@@ -3937,7 +3937,7 @@
       "id": "g-483",
       "file": "apps/web/src/test-utils/mock-trpc.ts",
       "line": 41,
-      "issue": "queryByInput is documented as \"Incompatible with query\" but nothing guards against both being set at runtime \u2014 query silently wins since it is checked first (line 117).",
+      "issue": "queryByInput is documented as \"Incompatible with query\" but nothing guards against both being set at runtime — query silently wins since it is checked first (line 117).",
       "class": "other",
       "disposition": "pending"
     },
@@ -3953,17 +3953,17 @@
       "id": "g-485",
       "file": "e2e/sweep/catalog-sweep.spec.ts",
       "line": 76,
-      "issue": "Change-log narration the repo bans: the comment explains that former Agentation/ERR_CONNECTION_REFUSED entries 'were removed once the root cause was fixed' \u2014 history that belongs in git, not the current-code WHY.",
+      "issue": "Change-log narration the repo bans: the comment explains that former Agentation/ERR_CONNECTION_REFUSED entries 'were removed once the root cause was fixed' — history that belongs in git, not the current-code WHY.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-486",
       "file": "e2e/sweep/catalog-sweep.spec.ts",
       "line": 14,
-      "issue": "Task-reference archaeology ('the AI Driver's run-time job (task 3.1)') \u2014 the '(task 3.1)' ticket pointer is the kind of ref the comment-hygiene rule says to drop.",
+      "issue": "Task-reference archaeology ('the AI Driver's run-time job (task 3.1)') — the '(task 3.1)' ticket pointer is the kind of ref the comment-hygiene rule says to drop.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-487",
@@ -4011,21 +4011,21 @@
       "line": 49,
       "issue": "The inline comment \"// Telegram Bot API message-length cap\" restates the JSDoc block above (lines 46-47) which already gives the identical rationale.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-493",
       "file": "packages/shared/src/schemas/period.schema.ts",
       "line": 36,
-      "issue": "Comment opens with the change-name prefix `fix-snapshot-lifecycle-restore:` \u2014 banned archaeology; the rationale should stay but the ticket/change prefix removed.",
+      "issue": "Comment opens with the change-name prefix `fix-snapshot-lifecycle-restore:` — banned archaeology; the rationale should stay but the ticket/change prefix removed.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-494",
       "file": "packages/shared/src/schemas/project-activity.test.ts",
       "line": 31,
-      "issue": "The 'full activity' fixture passes `projectId: null` \u2014 a field removed from projectActivitySchema (replaced by linkedProducts) and silently stripped by Zod \u2014 and the test never asserts linkedProducts defaults to [].",
+      "issue": "The 'full activity' fixture passes `projectId: null` — a field removed from projectActivitySchema (replaced by linkedProducts) and silently stripped by Zod — and the test never asserts linkedProducts defaults to [].",
       "class": "missing-test-coverage",
       "disposition": "pending"
     },
@@ -4033,17 +4033,17 @@
       "id": "g-495",
       "file": "packages/shared/src/schemas/report-primitives.schema.ts",
       "line": 158,
-      "issue": "Comment carries the `(D1)` phase tag on 'require-risk-stage (D1)' \u2014 the kind of phase/ticket suffix the repo bans; keep the spec-name pointer, drop the tag.",
+      "issue": "Comment carries the `(D1)` phase tag on 'require-risk-stage (D1)' — the kind of phase/ticket suffix the repo bans; keep the spec-name pointer, drop the tag.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-496",
       "file": "packages/shared/src/schemas/report.schema.ts",
       "line": 341,
-      "issue": "Section header `v4.0: Weekly report read model (D-58)` (and the parallel `v4.0: Type exports` at line 394) embed version + ticket tags \u2014 banned archaeology that git history already holds.",
+      "issue": "Section header `v4.0: Weekly report read model (D-58)` (and the parallel `v4.0: Type exports` at line 394) embed version + ticket tags — banned archaeology that git history already holds.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-497",
@@ -4051,7 +4051,7 @@
       "line": 796,
       "issue": "Comments throughout prefix load-bearing rationale with openspec change-names (e.g. \"cleanup-dead-enum-states:\", \"enforce-item-decision-stage-schema:\" at 66/89, \"fix-snapshot-lifecycle-restore:\" at 1337, \"verify-a11y-recommended-flip\" at 2256) which the repo's comment-hygiene rule says to strip to the bare WHY.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-498",
@@ -4067,7 +4067,7 @@
       "line": 5,
       "issue": "Comment leads with the openspec change-name prefix \"review-acknowledgement:\" which the repo's comment-hygiene rule says to drop, keeping the rationale prefix-free.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-500",
@@ -4083,7 +4083,7 @@
       "line": 17,
       "issue": "Comments prefix rationale with openspec change-names (\"lead-form-stage-access-integrity:\" here, \"activity-first-class, Decision 7\" at 97, \"Resolve-not-delete:\" at 22, \"fix-lead-surface-name-resolution\" at 267) which the repo's comment-hygiene rule says to rewrite without the prefix.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-502",
@@ -4115,7 +4115,7 @@
       "line": 93,
       "issue": "Inherited shadcn narration comments (e.g. 'Helper to toggle the sidebar', 'Adds a keyboard shortcut', 'We add a state so that...') narrate the obvious, which the repo comment-hygiene rule bans.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-506",
@@ -4123,7 +4123,7 @@
       "line": 65,
       "issue": "Comment opens with the change/ticket-style prefix 'fix-coming-soon-tooltip-clipping:' which the repo's comment-hygiene rule bans; the rationale should be kept but the prefix dropped.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-507",
@@ -4153,17 +4153,17 @@
       "id": "g-510",
       "file": "prisma/wipe-manual-uat.ts",
       "line": 236,
-      "issue": "ReportingGroup.description stores 'Secondary demo group (UFB-069 preset)' \u2014 a ticket id persisted as user-facing DB data (surfaced in the Groups UI); use a clean description without the ticket reference.",
+      "issue": "ReportingGroup.description stores 'Secondary demo group (UFB-069 preset)' — a ticket id persisted as user-facing DB data (surfaced in the Groups UI); use a clean description without the ticket reference.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-511",
       "file": "scripts/find-archaeology.mjs",
       "line": 66,
-      "issue": "commentPart() treats the first `//` on any line as a comment even inside a string literal, so a code line like `const u = \"https://host/AB-12/x\"` gets its URL scanned and can trip the ticket-slug rule and block a commit \u2014 the exact false-positive vector the sibling find-status script deliberately guards against.",
+      "issue": "commentPart() treats the first `//` on any line as a comment even inside a string literal, so a code line like `const u = \"https://host/AB-12/x\"` gets its URL scanned and can trip the ticket-slug rule and block a commit — the exact false-positive vector the sibling find-status script deliberately guards against.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-512",
@@ -4171,7 +4171,7 @@
       "line": 41,
       "issue": "ticketSlug() matches only the FIRST slug via .match(); a comment whose leading slug is a standard (e.g. \"per RFC-5322, dropped for UFB-036\") returns false and hides the real ticket ref, a detection miss.",
       "class": "comment-archaeology-narration",
-      "disposition": "pending"
+      "disposition": "fixed"
     },
     {
       "id": "g-513",
