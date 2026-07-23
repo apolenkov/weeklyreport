@@ -929,7 +929,7 @@
       "line": 62,
       "issue": "Decisions get an explicit id-based findMany dedup while items rely solely on skipDuplicates over the stableId unique index — an intentional but undocumented asymmetry; a carried item with a null stableId would not be deduped on replay the way decisions are.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -938,7 +938,7 @@
       "line": 45,
       "issue": "The happy-path test never asserts the success info log fired nor that ensureSection is invoked before executeCarryOver, so a regression that reorders materialization after execution or drops the success log would not be caught.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -956,8 +956,8 @@
       "line": 12,
       "issue": "The factory constructs `new CarryOverService(repo)` with no logger, so `this.logger.info('executing carry-over', ...)` in the service is a no-op on every production path (manual tRPC and auto), leaving that observability hook effectively dead.",
       "class": "observability-logging-gap",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-099",
@@ -965,7 +965,7 @@
       "line": 141,
       "issue": "On the P2002 dedupe race, resolveDedupeRace returns the winner's records but the loser's freshly-merged `targetSection` (loser's clone ids), so returned records' targetItemId/targetDecisionId won't match the returned section's item/decision ids — cosmetic but internally inconsistent on that rare path.",
       "class": "error-handling-robustness",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -974,8 +974,8 @@
       "line": 219,
       "issue": "nextTargetSections merges via carriedByAuthor.find (first match) while counts/records use flatMap over all entries, so two source sections sharing one authorId would count/emit records for rows that never merge into the returned section — harmless under the one-section-per-author invariant but an unguarded assumption.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-101",
@@ -1109,7 +1109,7 @@
       "line": 30,
       "issue": "The telemetry port's recordRequest method is never exercised, and captureJobContext is only checked for correlationId (never the traceparent branch).",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1118,8 +1118,8 @@
       "line": 45,
       "issue": "The admin god-mode branch (returns true for any existing report) and the missing-report path (both role branches return false when the report id doesn't exist) are never covered by this integration suite.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-117",
@@ -1127,7 +1127,7 @@
       "line": 145,
       "issue": "The mid-stream read-error branch (headersSent destroy vs 500) has no test exercising it, so that error-handling path is unverified.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1145,7 +1145,7 @@
       "line": 153,
       "issue": "dbStatusToDomain[row.status] ?? \"queued\" silently coerces any unexpected DB status value to \"queued\", masking data corruption rather than failing loud; the map is already exhaustive over the enum so the fallback is unreachable and better expressed as an assertion.",
       "class": "env-config-silent-fallback",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1172,7 +1172,7 @@
       "line": 184,
       "issue": "The inline 'pass now so the applicator drops elapsed instants' comment (184-192) substantially restates the same rationale already given in the function doc comment (119-130) — redundant narration.",
       "class": "dead-unreachable-code",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -1181,7 +1181,7 @@
       "line": 211,
       "issue": "Test named 'records publishedAt and publishedById via repository' only asserts periodStatus and publishedAt; the mock never stores publishedById, so the publishedById half of the claim cannot fail.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1190,8 +1190,8 @@
       "line": 295,
       "issue": "The reopen-window gate short-circuits when publishedAt is null (`reopenWindowHours > 0 && report.publishedAt`), so a published row with a null publishedAt would fail-open past the window rather than fail-closed; only reachable via a hand-edited row, but the safer default is to reject.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-125",
@@ -1199,7 +1199,7 @@
       "line": 4,
       "issue": "Docstring labels the ingestion seam \"fire-and-forget\" but the hook is awaited on line 87, so it blocks the publish response (only its errors are decoupled, not its latency).",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -1217,8 +1217,8 @@
       "line": 1,
       "issue": "period is the only one of 21 modules that splits its Module class into a separate module.ts barrel instead of exporting it from index.ts, and the reason for the split (avoiding pulling the full scheduler/module graph into index.ts consumers) is not documented anywhere.",
       "class": "code-structure-placement",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-128",
@@ -1253,7 +1253,7 @@
       "line": 132,
       "issue": "The walk-back rejection asserts only PeriodScopeError, which is thrown by both assertHeadTargetMatches and assertNoConcurrentReopen, so the error type alone doesn't prove the single-active guard fired (mitigated by the surrounding setup and the B-stays-published assertion).",
       "class": "error-handling-robustness",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1640,8 +1640,8 @@
       "line": 32,
       "issue": "plainViewerA is defined identically to reviewerA (same role and viewerGroupAccess); the distinguishing behavior comes only from the repo canReview override, so the separate named constant implies a session-level difference that doesn't exist.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-175",
@@ -1649,7 +1649,7 @@
       "line": 49,
       "issue": "periodStatus is typed as bare `string` though a canonical `PeriodStatus` union exists and is used at the service layer, so the domain check loses exhaustiveness/typo protection if a new status is added.",
       "class": "type-safety-weakening",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1658,8 +1658,8 @@
       "line": 16,
       "issue": "The doc's \"admin = every group\" attributed to computeAllowedGroupIds is misleading — that helper returns [] for admin; the admin=all behavior lives in this function's own short-circuit and in groupScopeFilter.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-177",
@@ -1676,7 +1676,7 @@
       "line": 22,
       "issue": "`session as Parameters<typeof groupScopeFilter>[0]` widens the narrow DashboardScopeSession to full UserSession by assertion; if groupScopeFilter later reads a field outside the Pick, the cast would silently pass an incomplete object at runtime rather than fail typecheck — groupScopeFilter accepting the narrow slice (as computeAllowedGroupIds already does) would remove the cast.",
       "class": "type-safety-weakening",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1685,7 +1685,7 @@
       "line": 80,
       "issue": "The p2003 mock builds a nested meta.driverAdapterError.cause.originalMessage that isForeignKeyViolation never inspects (it keys only on `code`), so that structure is dead relative to the real contract and could mislead a reader into thinking message parsing is exercised.",
       "class": "dead-unreachable-code",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
