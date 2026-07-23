@@ -93,12 +93,22 @@ describe("PrismaService pool error listener", () => {
 });
 
 describe("PrismaService pool configuration", () => {
-  it("applies the named defaults when no DB_POOL_* env vars are set", () => {
-    const pool = poolOf(makeService());
+  it("applies the named defaults when no DB_POOL_* env vars are set", async () => {
+    // Assert via the boot log, which only carries the SERVICE's resolved
+    // config — pg.Pool backfills max/idleTimeoutMillis with identical
+    // values on its own, so pool.options assertions could never fail.
+    const service = makeService();
+    vi.spyOn(service, "$connect").mockResolvedValue(undefined);
+    const logSpy = vi
+      .spyOn(loggerOf(service), "log")
+      .mockImplementation(() => undefined);
 
-    expect(pool.options.max).toBe(10);
-    expect(pool.options.idleTimeoutMillis).toBe(10_000);
-    expect(pool.options.connectionTimeoutMillis).toBe(0);
+    await service.onModuleInit();
+
+    const logged = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+    expect(logged).toContain('"max":10');
+    expect(logged).toContain('"idleTimeoutMillis":10000');
+    expect(logged).toContain('"connectionTimeoutMillis":0');
   });
 
   it("hands the resolved config to pg.Pool and logs the same values at boot", async () => {
