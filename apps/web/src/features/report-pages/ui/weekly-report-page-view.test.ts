@@ -102,7 +102,6 @@ describe("buildWeeklyReportPageView — authorId scroll target", () => {
     });
 
     expect(view.focusedProductId).toBe(PRODUCT_WITH_CONTENT);
-    expect(view.scrollTargetProductId).toBe(view.focusedProductId);
     expect(view.scrollTargetProductId).toBe(PRODUCT_WITH_CONTENT);
     expect(view.scrollTargetProductId).not.toBe(PRODUCT_EMPTY);
   });

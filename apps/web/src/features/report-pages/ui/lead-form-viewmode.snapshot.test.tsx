@@ -147,8 +147,8 @@ describe("LeadForm view-mode toggle — pre-extract snapshot", () => {
       `/lead/report/${encodeURIComponent(REPORT_ID)}?mode=slides`,
     );
 
-    // Snapshot the pill pair container for structural regression guard.
-    const pillPair = slidesLink?.closest('[class*="rounded-r"]')?.parentElement;
-    expect(pillPair ?? slidesLink).toMatchSnapshot();
+    // Snapshot the explicit segmented-control boundary so a missing wrapper
+    // fails clearly instead of silently changing the snapshot subject.
+    expect(screen.getByRole("group", { name: "View mode" })).toMatchSnapshot();
   });
 });

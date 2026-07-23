@@ -121,11 +121,11 @@ export function WeeklyReportSkeleton() {
         </div>
       </div>
 
-      {/* 4. Portfolio Overview — single gradient card containing a 2-col
+      {/* 3. Portfolio Overview — single gradient card containing a 2-col
           card grid (6 placeholders to match the seeded product count). */}
       <PortfolioSkeleton />
 
-      {/* 5. Per-product accordion placeholders — 6 to match portfolio. */}
+      {/* 4. Per-product accordion placeholders — 6 to match portfolio. */}
       <div className="space-y-3">
         {Array.from({ length: SEEDED_PRODUCT_COUNT }, (_, i) => (
           <AccordionSkeleton key={i} />

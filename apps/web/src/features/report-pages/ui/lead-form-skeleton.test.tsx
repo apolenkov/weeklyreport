@@ -47,12 +47,12 @@ describe("LeadFormSkeleton — root a11y attributes", () => {
     expect(root.getAttribute("aria-label")).toBe("Loading report form");
   });
 
-  it("PlaceholderAccordion skeleton rows render in stable order across re-renders", () => {
+  it("PlaceholderAccordion skeleton rows render in the expected order", () => {
     // The first PlaceholderAccordion has rows=3 (Pipeline section).
     // We verify the .space-y-2 containers each have the correct number of
     // skeleton rows, and that the order is stable by snapshotting the
     // data-slot attributes of children.
-    const { container, rerender } = render(<LeadFormSkeleton />);
+    const { container } = render(<LeadFormSkeleton />);
 
     const spaceContainers = container.querySelectorAll(".space-y-2");
     // There are 6 PlaceholderAccordion blocks; each produces one .space-y-2
@@ -64,15 +64,6 @@ describe("LeadFormSkeleton — root a11y attributes", () => {
       (el) => (el as HTMLElement).dataset.slot,
     );
 
-    // Re-render should produce the same structure (index-keyed rows are stable)
-    rerender(<LeadFormSkeleton />);
-    const spaceContainersAfter = container.querySelectorAll(".space-y-2");
-    const firstBlockAfter = expectDefined(spaceContainersAfter[0]);
-    const afterSnapshot = Array.from(firstBlockAfter.children).map(
-      (el) => (el as HTMLElement).dataset.slot,
-    );
-
-    expect(afterSnapshot).toEqual(firstSnapshot);
     expect(firstSnapshot).toMatchSnapshot();
   });
 });

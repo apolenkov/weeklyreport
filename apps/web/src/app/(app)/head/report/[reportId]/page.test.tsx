@@ -14,7 +14,7 @@ import { describe, expect, it, vi } from "vitest";
 
 // Stub the shell so the test observes only which `mode` the route resolves and
 // passes down (the shell's own behavior is tested separately).
-vi.mock("../../../../../features/report-pages/ui/head-report-shell", () => ({
+vi.mock("../../../../../features/report-pages", () => ({
   HeadReportShell: ({
     mode,
     reportId,
@@ -31,6 +31,7 @@ vi.mock("../../../../../features/report-pages/ui/head-report-shell", () => ({
       data-author={authorId ?? ""}
     />
   ),
+  WeeklyReportSkeleton: () => <div data-testid="weekly-report-skeleton" />,
 }));
 
 import HeadReportByIdPage from "./page";

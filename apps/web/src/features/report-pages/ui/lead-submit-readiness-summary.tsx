@@ -1,19 +1,12 @@
 "use client";
 
 import type { LeadSubmitReadiness } from "../../report-sections";
+import { autosaveReadinessCopy } from "./autosave-state-copy";
 
 interface LeadSubmitReadinessSummaryProps {
   readonly readiness: LeadSubmitReadiness;
   readonly onSubmit: () => void;
 }
-
-const autosaveCopy: Record<LeadSubmitReadiness["autosaveState"], string> = {
-  idle: "Draft is saved.",
-  pending: "Draft changes are waiting to save.",
-  saving: "Draft changes are saving.",
-  saved: "Draft is saved.",
-  error: "Draft save failed. Use Save to retry.",
-};
 
 function ReadinessHeader({
   readiness,
@@ -33,7 +26,7 @@ function ReadinessHeader({
           {ready ? "Ready" : "Needs attention"}
         </p>
         <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-          {autosaveCopy[readiness.autosaveState]}
+          {autosaveReadinessCopy(readiness.autosaveState)}
         </p>
       </div>
       <button

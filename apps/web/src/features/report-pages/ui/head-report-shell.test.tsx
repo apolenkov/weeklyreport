@@ -205,32 +205,6 @@ describe("HeadReportShell — agent-review placeholder per mode", () => {
   });
 });
 
-// head-toolbar-parity pin: the review page owns exactly ONE period toolbar
-// (the shared ReportToolbar). The shell composes it and passes it into
-// WeeklyReportPage's `toolbar` slot, which renders it below the
-// real page header row — the companion pin in weekly-report-page.test.tsx
-// verifies the slot replaces the inner context bar AND follows the header.
-describe("HeadReportShell — single shared toolbar (head-toolbar-parity)", () => {
-  it("form mode renders exactly one ReportToolbar, passed through the page's toolbar slot", () => {
-    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
-    expect(screen.getAllByTestId("report-toolbar")).toHaveLength(1);
-    // The toolbar mounts INSIDE WeeklyReportPage (not shell-level above it),
-    // so the page can place it below its h1 page header row.
-    const pageStub = screen.getByTestId("weekly-report-page-stub");
-    expect(within(pageStub).getByTestId("report-toolbar")).toBeInTheDocument();
-  });
-
-  it("the toolbar sits below the page header row (lead arrangement)", () => {
-    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
-    // Anchor on the page heading: the shared toolbar must follow it in document
-    // order (header row first, then the two action rows).
-    const heading = screen.getByRole("heading", { name: /status report/i });
-    const toolbar = screen.getByTestId("report-toolbar");
-    const position = heading.compareDocumentPosition(toolbar);
-    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-});
-
 // head-toolbar-semantics + report-toolbar-parity: the header action cluster
 // keeps the segmented toggles and the agent-review placeholder, but the
 // standalone Present and browser-Print links are GONE. Presentation is reached

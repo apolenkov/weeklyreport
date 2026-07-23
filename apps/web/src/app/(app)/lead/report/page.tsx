@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 
-import { LeadForm } from "../../../../features/report-pages/ui/lead-form";
-import { LeadFormSkeleton } from "../../../../features/report-pages/ui/lead-form-skeleton";
+import { LeadForm, LeadFormSkeleton } from "../../../../features/report-pages";
 
 interface Props {
   searchParams: Promise<{ mode?: string }>;

@@ -132,7 +132,6 @@ export function mergeDecisionDraft(
 export function mergeRiskDraft(
   section: DraftSection,
   next: readonly RiskEntry[],
-  createId: () => string = () => `tmp-${crypto.randomUUID()}`,
 ): DraftSection {
   const editableRisks = next.filter((risk) => !risk.foreign);
   const existingById = new Map(
@@ -165,7 +164,7 @@ export function mergeRiskDraft(
       };
     }
     return {
-      id: risk.id || createId(),
+      id: risk.id,
       ...parentFields,
       risk: risk.text,
       impact: risk.impact,

@@ -146,7 +146,7 @@ describe("lead form draft merge helpers", () => {
       },
     ];
 
-    const riskResult = mergeRiskDraft(section, risks, () => "unused");
+    const riskResult = mergeRiskDraft(section, risks);
     const decisionResult = mergeDecisionDraft(section, decisions);
 
     expect(riskResult.risks).toHaveLength(1);

@@ -34,12 +34,6 @@ const STATUS_ICON: Record<WeeklyProductStatus, string> = {
   blocked: "✕",
 };
 
-const STATUS_ICON_TEXT: Record<WeeklyProductStatus, string> = {
-  "on-track": CSS_PRIMARY,
-  "at-risk": "var(--color-status-at-risk-fg)",
-  blocked: "var(--color-destructive)",
-};
-
 const STATUS_LABEL: Record<WeeklyProductStatus, string> = {
   "on-track": "On Track",
   "at-risk": "At Risk",
@@ -107,7 +101,7 @@ function LeadOverviewCard({ lead }: { readonly lead: LeadOverviewRow }) {
         className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-bold"
         style={{
           background: STATUS_BG[lead.worstStatus],
-          color: STATUS_ICON_TEXT[lead.worstStatus],
+          color: STATUS_TEXT[lead.worstStatus],
           border: `1.5px solid ${STATUS_TEXT[lead.worstStatus]}`,
         }}
       >
@@ -176,7 +170,7 @@ function ProductOverviewCard({
           background: isEmpty
             ? "rgba(255,255,255,0.35)"
             : STATUS_BG[product.status],
-          color: isEmpty ? EMPTY_CARD_TEXT : STATUS_ICON_TEXT[product.status],
+          color: isEmpty ? EMPTY_CARD_TEXT : STATUS_TEXT[product.status],
           border: `1.5px solid ${isEmpty ? "rgba(0,0,0,0.18)" : STATUS_TEXT[product.status]}`,
         }}
       >

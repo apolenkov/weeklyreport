@@ -5,6 +5,7 @@ import type { ComponentProps } from "react";
 import { AccordionSection } from "../../../shared/ui/report-shell/accordion-section";
 import { CurrentWeekSection } from "../../period";
 import type { KanbanItem } from "../../report-sections";
+import { LeadFormAddButton } from "./lead-form-add-button";
 import { CalendarIcon, NextWeekIcon } from "./lead-form-icons";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { NextWeekSection } from "./next-week-section";
@@ -104,9 +105,7 @@ export function LeadFormItemSections({
         subtitle="Work completed or still in progress this week, grouped by product and SDLC stage."
         actions={
           !isReadOnly ? (
-            <button
-              type="button"
-              className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            <LeadFormAddButton
               onClick={actions.addCurrentWeekItem}
               disabled={products.length === 0}
               title={
@@ -116,7 +115,7 @@ export function LeadFormItemSections({
               }
             >
               + Add Item
-            </button>
+            </LeadFormAddButton>
           ) : null
         }
       >
@@ -148,9 +147,7 @@ export function LeadFormItemSections({
         subtitle="Planned work for the next reporting week, scoped to product and SDLC stage."
         actions={
           !isReadOnly ? (
-            <button
-              type="button"
-              className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            <LeadFormAddButton
               onClick={actions.addNextWeekItem}
               disabled={products.length === 0}
               title={
@@ -160,7 +157,7 @@ export function LeadFormItemSections({
               }
             >
               + Add Item
-            </button>
+            </LeadFormAddButton>
           ) : null
         }
       >

@@ -1,4 +1,4 @@
-import { WeeklyReportPage } from "../../../../features/report-pages/ui/weekly-report-page";
+import { WeeklyReportPage } from "../../../../features/report-pages";
 
 interface Props {
   searchParams: Promise<{ authorId?: string }>;

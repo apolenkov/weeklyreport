@@ -23,7 +23,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
-import { LeadForm, sectionToDraftPayload } from "./lead-form";
+import { sectionToDraftPayload } from "../../report-sections";
+import { LeadForm } from "./lead-form";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },

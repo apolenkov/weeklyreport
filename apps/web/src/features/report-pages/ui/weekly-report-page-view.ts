@@ -87,13 +87,12 @@ export function buildWeeklyReportPageView(
   // to the lead's OWN contribution — mapWeeklyReportLeadGroups builds per-lead
   // cards from each single section, drops empty leads, and is computed only in
   // "lead" scope (the default product path stays cheap).
-  const rawLeadGroups =
-    scope === "lead" ? mapWeeklyReportLeadGroups(reportData) : [];
-  const fullLeadGroups: LeadGroup[] = rawLeadGroups;
   // report-overview-scope-parity: per-lead overview rows derived from the SAME
   // FULL groups (truth) — the overview band always shows every section, even
   // while the §7 filter narrows the accordion body below.
-  const leadOverviewRows = mapWeeklyReportLeadOverview(rawLeadGroups);
+  const fullLeadGroups: LeadGroup[] =
+    scope === "lead" ? mapWeeklyReportLeadGroups(reportData) : [];
+  const leadOverviewRows = mapWeeklyReportLeadOverview(fullLeadGroups);
 
   // review-acknowledgement (§7): the toggle is effective only when review is
   // enabled (head/admin/viewer on a live period). `buildAccordionModel` narrows
@@ -135,11 +134,6 @@ export function buildWeeklyReportPageView(
     canMutatePeriod &&
     !canPublishReport &&
     view.period.periodStatus !== "published";
-  // report-routing: the scroll target and the highlighted accordion panel
-  // must always agree — both apply the SAME content filter (reportHasContent),
-  // so a deep-link to an author whose first authored product is empty still
-  // scrolls to the content-bearing one that actually highlights.
-  const scrollTargetProductId = focusedProductId;
   // The standalone fallback navigator (when no shell-composed `toolbar` slot
   // arrives — e.g. the viewer /reports/[reportId] route) surfaces the active
   // period only; a single inert option. The shell-composed head toolbar
@@ -186,7 +180,8 @@ export function buildWeeklyReportPageView(
     submittedOnly,
     activitySections: reportData.leadSections,
     focusedProductId,
-    scrollTargetProductId,
+    // report-routing: same content filter as focusedProductId (reportHasContent).
+    scrollTargetProductId: focusedProductId,
     hasAnyContent,
     canPublishReport,
     showPublishHint,

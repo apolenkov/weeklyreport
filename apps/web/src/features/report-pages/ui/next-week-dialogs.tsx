@@ -23,6 +23,9 @@ interface NextWeekDialogsProps {
   readonly onCancelDelete: () => void;
 }
 
+const NEXT_WEEK_DIALOG_WEEK = "next" as const;
+const DELETE_NEXT_WEEK_ITEM_TITLE = "Delete next-week item?";
+
 /**
  * Bundles the two modals the Next Week board can show — item edit/create and
  * delete confirmation — as a single instance shared across all columns, so the
@@ -54,7 +57,7 @@ export function NextWeekDialogs({
         item={editItem}
         products={products}
         activities={activities}
-        week="next"
+        week={NEXT_WEEK_DIALOG_WEEK}
         currentUserName={currentUserName}
         defaultProductId={createSeedProductId}
         defaultActivityId={createSeedActivityId}
@@ -67,7 +70,7 @@ export function NextWeekDialogs({
 
       <ConfirmDeleteDialog
         open={pendingDelete !== null}
-        title="Delete next-week item?"
+        title={DELETE_NEXT_WEEK_ITEM_TITLE}
         preview={pendingDelete?.text ?? ""}
         subtitle={
           pendingDelete ? `From ${pendingDelete.productName}` : undefined
