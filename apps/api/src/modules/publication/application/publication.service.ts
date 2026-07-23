@@ -135,6 +135,7 @@ export class PublicationService {
     private readonly repository: PublicationRepository,
     logger: AppLogger | undefined,
     private readonly ingestionQueue: PublicationIngestionQueue,
+    private readonly invalidateAnalyticsCache: () => Promise<void>,
     private readonly telemetry: PublicationTelemetry = NOOP_PUBLICATION_TELEMETRY,
   ) {
     this.logger = logger ?? createNullLogger();
@@ -168,8 +169,8 @@ export class PublicationService {
    * selection and this write matches zero rows and is SKIPPED. The skip is
    * signalled as `{ published: false }` (it cannot be inferred from a re-read —
    * `AssembledReport` exposes neither `archived` nor `periodState`), and the
-   * publish success side-effects below — KPI metrics and ingestion enqueue —
-   * fire only on the published branch. The scheduler suppresses its own
+   * publish success side-effects below — KPI metrics, cache invalidation, and
+   * ingestion enqueue — fire only on the published branch. The scheduler suppresses its own
    * side-effects (audit, missing-section count, periodIds) on the same signal.
    *
    * Idempotent: an already-published report short-circuits to a published
@@ -198,8 +199,8 @@ export class PublicationService {
 
     if (!result.published) {
       // Compare-and-set matched zero rows: the period was archived (or already
-      // published) after candidate selection. Expected no-op — emit no metrics
-      // and enqueue no ingestion so a skip is never reported as a publish.
+      // published) after candidate selection. Expected no-op — emit no metrics,
+      // invalidate no cache, and enqueue no ingestion.
       this.logger.info("auto-publish skipped: archived after selection", {
         activeReportId,
       });
@@ -214,7 +215,7 @@ export class PublicationService {
       {
         telemetry: this.telemetry,
         ingestionHook: (sectionIds) => this.ingestionQueue.enqueue(sectionIds),
-        // No analytics-cache invalidation here (only `period.publish` does).
+        invalidateAnalyticsCache: this.invalidateAnalyticsCache,
         onIngestionError: (error) => {
           this.logger.warn("ingestion hook failed", {
             error: error instanceof Error ? error.message : String(error),

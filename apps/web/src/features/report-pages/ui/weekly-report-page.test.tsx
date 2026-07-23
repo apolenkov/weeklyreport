@@ -493,7 +493,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("on publish success: invalidateDashboard + invalidateLeadHistory fire and a success toast appears", async () => {
+  it("on publish success: all dependent caches invalidate and a success toast appears", async () => {
     const { captured } = renderPage(makeWeeklyReportData("open"));
 
     await screen.findByRole("button", { name: /publish & lock/i });
@@ -508,6 +508,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     });
 
     expect(invalidateDashboard).toHaveBeenCalled();
+    expect(invalidateLeadForm).toHaveBeenCalled();
     expect(invalidateLeadHistory).toHaveBeenCalled();
     expect(toastSuccess).toHaveBeenCalled();
   });
@@ -524,6 +525,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
       expectDefined(publishOpts.onError)(new Error("Forbidden"));
     });
 
+    expect(invalidateLeadForm).not.toHaveBeenCalled();
     expect(toastError).toHaveBeenCalled();
   });
 

@@ -22,6 +22,7 @@ import {
 
 const reportId = "22222222-2222-4222-8222-222222222222";
 const noopIngestionQueue = new NoopIngestionQueue();
+const noopInvalidateAnalyticsCache = () => Promise.resolve();
 
 /* ------------------------------------------------------------------ */
 /*  Section / report factories                                         */
@@ -192,6 +193,7 @@ describe("PublicationService", () => {
         createRepository(assembledReport),
         undefined,
         noopIngestionQueue,
+        noopInvalidateAnalyticsCache,
       );
 
       const result = await service.getAssembledReport(reportId);
@@ -209,6 +211,7 @@ describe("PublicationService", () => {
         createRepository(null),
         undefined,
         noopIngestionQueue,
+        noopInvalidateAnalyticsCache,
       );
 
       await expect(
@@ -255,6 +258,7 @@ describe("PublicationService", () => {
         createRepository(report),
         undefined,
         noopIngestionQueue,
+        noopInvalidateAnalyticsCache,
       );
       const result = await service.getAssembledReport(reportId);
 
@@ -298,6 +302,7 @@ describe("PublicationService", () => {
         createRepository(report),
         undefined,
         noopIngestionQueue,
+        noopInvalidateAnalyticsCache,
       );
       const result = await service.getAssembledReport(reportId);
 
@@ -316,6 +321,7 @@ describe("PublicationService", () => {
         createRepository(report),
         undefined,
         noopIngestionQueue,
+        noopInvalidateAnalyticsCache,
       );
       const result = await service.getAssembledReport(reportId);
 
@@ -372,6 +378,7 @@ describe("PublicationService", () => {
         createRepository(report),
         undefined,
         noopIngestionQueue,
+        noopInvalidateAnalyticsCache,
       );
       const result = await service.getAssembledReport(reportId);
 
@@ -430,6 +437,7 @@ describe("PublicationService", () => {
         createRepository(report),
         undefined,
         noopIngestionQueue,
+        noopInvalidateAnalyticsCache,
       );
       const result = await service.getAssembledReport(reportId);
 
@@ -450,6 +458,7 @@ describe("PublicationService", () => {
         createRepository(assembledReport),
         undefined,
         noopIngestionQueue,
+        noopInvalidateAnalyticsCache,
       );
 
       const published = expectPublished(await service.publishAuto(reportId));
@@ -465,6 +474,7 @@ describe("PublicationService", () => {
         createRepository(assembledReport),
         undefined,
         noopIngestionQueue,
+        noopInvalidateAnalyticsCache,
       );
 
       const first = expectPublished(await service.publishAuto(reportId));
@@ -497,6 +507,7 @@ describe("PublicationService", () => {
         repository,
         undefined,
         noopIngestionQueue,
+        noopInvalidateAnalyticsCache,
       );
 
       const result = await service.publishAuto(reportId);
@@ -520,6 +531,7 @@ describe("PublicationService", () => {
         repository,
         undefined,
         noopIngestionQueue,
+        noopInvalidateAnalyticsCache,
       );
 
       const result = await service.publishAuto(reportId);
@@ -533,11 +545,31 @@ describe("PublicationService", () => {
       expect(saveSpy).toHaveBeenCalledTimes(1);
     });
 
+    it("publishAuto invalidates analytics after a successful publish", async () => {
+      const repository = createRepository(assembledReport);
+      const saveSpy = vi.spyOn(repository, "saveAutoPublishedReport");
+      const invalidateAnalyticsCache = vi.fn(() => Promise.resolve());
+      const service = new PublicationService(
+        repository,
+        undefined,
+        noopIngestionQueue,
+        invalidateAnalyticsCache,
+      );
+
+      await service.publishAuto(reportId);
+
+      expect(invalidateAnalyticsCache).toHaveBeenCalledTimes(1);
+      expect(saveSpy.mock.invocationCallOrder[0]).toBeLessThan(
+        invalidateAnalyticsCache.mock.invocationCallOrder[0] ?? 0,
+      );
+    });
+
     it("publishAuto increments product KPI counters once on success", async () => {
       const service = new PublicationService(
         createRepository(assembledReport),
         undefined,
         noopIngestionQueue,
+        noopInvalidateAnalyticsCache,
         new PublicationPrometheusTelemetry(),
       );
       const submittedBefore = await getCounterValue(
@@ -577,9 +609,14 @@ describe("PublicationService", () => {
           return { published: false as const };
         },
       };
-      const service = new PublicationService(repository, undefined, {
-        enqueue: ingestion,
-      });
+      const service = new PublicationService(
+        repository,
+        undefined,
+        {
+          enqueue: ingestion,
+        },
+        noopInvalidateAnalyticsCache,
+      );
       const submittedBefore = await getCounterValue(
         customreportReportsSubmittedTotal,
         { state: "published" },
@@ -614,6 +651,7 @@ describe("PublicationService", () => {
         createRepository(assembledReport),
         undefined,
         { enqueue: ingestion },
+        noopInvalidateAnalyticsCache,
       );
 
       const published = expectPublished(await service.publishAuto(reportId));
@@ -633,6 +671,7 @@ describe("PublicationService", () => {
         createRepository(report),
         undefined,
         { enqueue: ingestion },
+        noopInvalidateAnalyticsCache,
       );
 
       await service.publishAuto(reportId);
@@ -656,6 +695,7 @@ describe("PublicationService", () => {
         createRepository(assembledReport),
         logger,
         { enqueue: ingestion },
+        noopInvalidateAnalyticsCache,
       );
 
       const result = await service.publishAuto(reportId);

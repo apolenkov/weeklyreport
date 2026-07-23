@@ -155,9 +155,6 @@ export class PeriodCreatorScheduler {
       }
   > {
     const settings = await this.snapshotAdminService.getSettings();
-    if (!settings.autoCreatePeriods) {
-      return { created: false, reason: "disabled" };
-    }
 
     // Before creating, flip any 'scheduled' rows whose periodStart has been
     // reached to 'open' (the SCHEDULED→OPEN transition for periods minted
@@ -165,6 +162,10 @@ export class PeriodCreatorScheduler {
     // this UPDATE, so the flip runs per-boundary with P2002 recovery instead
     // of a single bulk updateMany.
     await flipDueScheduledToOpen(this.prisma.report, now, this.logger);
+
+    if (!settings.autoCreatePeriods) {
+      return { created: false, reason: "disabled" };
+    }
 
     await this.reconcileCarryOver();
 

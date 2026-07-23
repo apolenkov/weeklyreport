@@ -5,15 +5,23 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { invalidateLeadForm } from "../../../lib/cache-keys";
 import { makeQueryClient } from "../../../lib/query-client";
 import { SessionContext } from "../../../lib/session-provider";
 import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { HeadPublishLockAction } from "./head-publish-lock-action";
+
+vi.mock("../../../lib/cache-keys", () => ({
+  invalidateDashboard: vi.fn(),
+  invalidateLeadForm: vi.fn(),
+  invalidateLeadHistory: vi.fn(),
+}));
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -38,8 +46,8 @@ vi.mock("./publish-lock-button", () => ({
 
 const pending = new Promise<never>(() => undefined);
 
-function makeProviders() {
-  const { proxy } = createMockTRPC([
+function makeHarness() {
+  const { proxy, captured } = createMockTRPC([
     {
       path: ["weeklyReport", "get"],
       queryByInput: (input) =>
@@ -52,7 +60,7 @@ function makeProviders() {
   ]);
   const client = makeQueryClient();
 
-  return function Providers({ children }: { readonly children: ReactNode }) {
+  function Providers({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={client}>
         <SessionContext.Provider
@@ -74,13 +82,20 @@ function makeProviders() {
         </SessionContext.Provider>
       </QueryClientProvider>
     );
-  };
+  }
+
+  return { Providers, captured };
 }
 
 describe("HeadPublishLockAction report-key transitions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("removes the report A publish trigger while report B is pending", async () => {
+    const { Providers } = makeHarness();
     const rendered = render(<HeadPublishLockAction reportId="report-a" />, {
-      wrapper: makeProviders(),
+      wrapper: Providers,
     });
     expect(
       await screen.findByRole("button", { name: /publish & lock/i }),
@@ -93,5 +108,37 @@ describe("HeadPublishLockAction report-key transitions", () => {
         screen.queryByRole("button", { name: /publish|reopen/i }),
       ).not.toBeInTheDocument();
     });
+  });
+
+  it("invalidates the lead-form cache after publish success", async () => {
+    const { Providers, captured } = makeHarness();
+    render(<HeadPublishLockAction reportId="report-a" />, {
+      wrapper: Providers,
+    });
+    await screen.findByRole("button", { name: /publish & lock/i });
+    const onSuccess = expectDefined(captured["period.publish"]).lastOptions
+      .onSuccess as (() => void) | undefined;
+
+    act(() => {
+      expectDefined(onSuccess)();
+    });
+
+    expect(invalidateLeadForm).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not invalidate the lead-form cache after publish failure", async () => {
+    const { Providers, captured } = makeHarness();
+    render(<HeadPublishLockAction reportId="report-a" />, {
+      wrapper: Providers,
+    });
+    await screen.findByRole("button", { name: /publish & lock/i });
+    const onError = expectDefined(captured["period.publish"]).lastOptions
+      .onError as ((error: Error) => void) | undefined;
+
+    act(() => {
+      expectDefined(onError)(new Error("publish failed"));
+    });
+
+    expect(invalidateLeadForm).not.toHaveBeenCalled();
   });
 });

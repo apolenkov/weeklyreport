@@ -44,6 +44,7 @@ export function HeadPublishLockAction({
     trpc.period.publish.mutationOptions({
       onSuccess: () => {
         invalidateDashboard(qc, trpc);
+        invalidateLeadForm(qc, trpc);
         invalidateLeadHistory(qc, trpc);
         toast.success("Period published & locked");
       },
