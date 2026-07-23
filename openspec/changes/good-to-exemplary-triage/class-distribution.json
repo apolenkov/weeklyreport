@@ -1073,8 +1073,8 @@
       "line": 47,
       "issue": "logger.log fires at info level on every accepted beacon of a public, high-frequency endpoint (5 vitals per page load), producing noisy production logs; debug level would fit better.",
       "class": "observability-logging-gap",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-112",
@@ -1721,7 +1721,7 @@
       "line": 82,
       "issue": "The trailing `?? null` on `sparkline[sparkline.length - 1]` is dead: the `length === 0` guard above already excludes the only case where the index access could be undefined, so the fallback can never fire.",
       "class": "env-config-silent-fallback",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1730,7 +1730,7 @@
       "line": 40,
       "issue": "The test titled \"excludes scheduled-future periods so the current open period wins\" uses a mock that returns the same id regardless of the where-clause, so it only pins that a periodStart.lte key exists (a where-shape sentinel) and cannot actually verify future-period exclusion — real exclusion is DB behavior covered elsewhere.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1739,7 +1739,7 @@
       "line": 141,
       "issue": "The tie-determinism test re-runs the same query on the same data and asserts second===first, which cannot expose DB row-order nondeterminism; only the first===TIE_HIGH assertion is load-bearing for the id-desc tiebreak.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2063,7 +2063,7 @@
       "line": 210,
       "issue": "Reminder name/description synthesis is only asserted as length>0 and distinct-across-kinds, never pinning the actual synthesized strings, so a regression in the format text cannot fail this test.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2072,7 +2072,7 @@
       "line": 165,
       "issue": "No test ever populates snapshot.policies (all fixtures rely on the [] default), so mapReminderPolicy — exported in __testing and wired into mapAdminSnapshot — has zero effective coverage.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2081,8 +2081,8 @@
       "line": 205,
       "issue": "The __testing bundle exports mapReminderPolicy, mapPeriod, mapProject, mapUser, and mapGroup, but the only test consumer imports mapReminder — the other five are unreferenced test-only surface.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-224",
@@ -2144,7 +2144,7 @@
       "line": 56,
       "issue": "Status pill uses raw Tailwind `bg-red-50`/`text-[var(--color-destructive)]` mixing hardcoded palette with CSS-var tokens, breaking the token convention every other class here follows (also duplicated in action-log-tab.tsx line 87).",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2153,7 +2153,7 @@
       "line": 42,
       "issue": "Search filters only client-loaded pages, so a match on an unfetched page is invisible and the \"N loaded+\" count silently understates results; acceptable for this admin view but the search box gives no signal it only spans loaded rows.",
       "class": "type-safety-weakening",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2162,7 +2162,7 @@
       "line": 77,
       "issue": "The toast test only asserts the negative (disabled parent → no toast); there is no positive-path assertion that a toast DOES fire when a dependency is enabled and errors, so a regression that silences all toasts would go undetected.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2180,8 +2180,8 @@
       "line": 42,
       "issue": "Backdrop-click (onClose) and Escape-to-close remain active while isSaving is true, even though the Cancel button is disabled during save — the two close paths are inconsistent mid-save.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-235",
@@ -2189,8 +2189,8 @@
       "line": 50,
       "issue": "Surface and inputs hardcode bg-white instead of a theme token, so the dialog does not respect the app's dark-theme surfaces used elsewhere.",
       "class": "magic-values-drift",
-      "disposition": "pending",
-      "lane": "grok"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-236",
@@ -2198,7 +2198,7 @@
       "line": 60,
       "issue": "The trpc mutationOptions mock ignores the onSuccess/onError callbacks the component passes, so the cache-invalidation side effects (invalidateGroupProductOwnership + pathFilter refresh) are never verified by any test.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2216,8 +2216,8 @@
       "line": 67,
       "issue": "Tests vary the `active`/`active={false}` prop across cases, but JobsTabLabel (and ReopenTabLabel) ignore it (`_props`), so the varied prop exercises no behavior and gives a false impression of active-state coverage.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "refuted",
+      "lane": "codex"
     },
     {
       "id": "g-239",
@@ -2234,7 +2234,7 @@
       "line": 4,
       "issue": "INPUT_CLASS/LABEL_CLASS are byte-identical copies of the same constants in policy-form.tsx; hoist to a shared module since this file was extracted from that parent.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2252,7 +2252,7 @@
       "line": 30,
       "issue": "INPUT_CLASS/LABEL_CLASS duplicated verbatim in policy-form-advanced-fields.tsx; share one source of truth.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2261,8 +2261,8 @@
       "line": 13,
       "issue": "Reset uses a plain <a href> rather than the app's client-side navigation, forcing a full page reload to clear the deep-link filter.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-244",
@@ -2279,8 +2279,8 @@
       "line": 12,
       "issue": "`leads: MockUser[]` is the one non-`readonly` prop while every sibling prop is `readonly`, an avoidable inconsistency in an otherwise immutable interface.",
       "class": "mutation-immutability",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-246",
@@ -2324,7 +2324,7 @@
       "line": 189,
       "issue": "With zero policies the add PolicyForm (editor='add' at mount) and the RemindersEmptyState 'Create first reminder' CTA render simultaneously; clicking the CTA just resets the already-open form, a redundant surface (deliberately pinned by the test at line 292, so intended but worth revisiting).",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2333,7 +2333,7 @@
       "line": 28,
       "issue": "Doc comment enumerates only tabs 1–4 and says \"five sub-tabs\" while the component actually renders six triggers (identity/periods/reminders/notifications/integrations/holidays), so the header is stale.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -2342,8 +2342,8 @@
       "line": 27,
       "issue": "UserActivationButton takes the full UserRowActionsProps but uses only a subset (never onEdit/onDelete), so its signature is wider than its implementation — UserOverflowMenu's Pick pattern would be the consistent, honest shape.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-253",
@@ -2351,7 +2351,7 @@
       "line": 103,
       "issue": "RoleBadge mixes CSS-variable colors (lead/viewer) with hard-coded hex for head/admin, so those two badges won't adapt to dark mode like their siblings.",
       "class": "magic-values-drift",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -2360,7 +2360,7 @@
       "line": 21,
       "issue": "The two 'renders ... without crash' cases assert only not.toThrow(), so they can effectively only fail on import/render errors and verify no data-shape behavior.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2369,8 +2369,8 @@
       "line": 11,
       "issue": "Comments on lines 11 and 15 call the null placeholder an em-dash, but the character used (and asserted in the test) is U+2013 en-dash.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-256",
@@ -2576,7 +2576,7 @@
       "line": 87,
       "issue": "No test covers periodStatus 'open' (button disabled, aria-describedby sr-only reason rendered), leaving the isExportable gating branch of the component unverified.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2585,8 +2585,8 @@
       "line": 158,
       "issue": "deliverArtifact's tab branch sets location.href and toasts 'PDF ready' without checking tab.closed, so if the user closed the blank popup the success toast fires while nothing is shown.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-280",
@@ -4412,7 +4412,7 @@
       "line": 163,
       "issue": "The pending test only asserts isPending is true, which is the initial state of every query, so waitFor passes on the first tick and never proves the query STAYS pending (a query that resolved could also satisfy it).",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -4421,8 +4421,8 @@
       "line": 41,
       "issue": "queryByInput is documented as \"Incompatible with query\" but nothing guards against both being set at runtime — query silently wins since it is checked first (line 117).",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-484",
@@ -4430,7 +4430,7 @@
       "line": 299,
       "issue": "SC-166 asserts only status===400 plus 'section stays submitted', which any BAD_REQUEST cause (auth, not-found, or a malformed tRPC wire shape failing input validation before revokeSubmission runs) satisfies identically, so the test can pass without ever exercising the periodStatus service gate it names.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -4691,7 +4691,7 @@
       "line": 1,
       "issue": "This complex regex-heavy gate has no test file (its sibling find-status-literal-unions.mjs is thoroughly tested), so the STANDARDS carve-outs, test-title patterns, and block-comment handling are unverified.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     }
   ]
