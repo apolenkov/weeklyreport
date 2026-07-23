@@ -101,6 +101,7 @@ const GATE_SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: [
+    "scopeCheck",
     "typecheck",
     "lint",
     "unitTests",
@@ -109,6 +110,7 @@ const GATE_SCHEMA = {
     "summary",
   ],
   properties: {
+    scopeCheck: { type: "string", enum: ["pass", "fail"] },
     typecheck: { type: "string", enum: ["pass", "fail", "skip"] },
     lint: { type: "string", enum: ["pass", "fail", "skip"] },
     unitTests: { type: "string", enum: ["pass", "fail", "skip"] },
@@ -220,6 +222,7 @@ const gateSteps =
 const gate = await agent(
   [
     `Run the ${GATE_TIER.toUpperCase()}-tier local quality gate for the uncommitted batch at ${REPO}. Each step a SEPARATE command (600s foreground cap). Do NOT edit code. Do NOT touch git. Report only.`,
+    `0. cd ${REPO} && node .claude/scripts/check-lane-scope.mjs --scopes .claude/workflows/current-batch-scopes.json   # echo-back guard: report as "scopeCheck" (pass|fail); on fail, list the stray files in summary and STILL run the remaining steps`,
     ...gateSteps,
     `For each step report pass|fail|skip; redFiles = failing files; summary = digest with precise error excerpts on any failure.`,
   ].join("\n"),
@@ -234,6 +237,7 @@ const gate = await agent(
 
 const gateGreen =
   gate &&
+  gate.scopeCheck === "pass" &&
   gate.typecheck === "pass" &&
   gate.lint === "pass" &&
   gate.unitTests === "pass" &&
