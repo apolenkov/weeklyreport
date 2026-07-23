@@ -950,6 +950,9 @@ export default defineConfig([
       "sonarjs/no-undefined-argument": "off",
       "sonarjs/no-identical-functions": "off",
       "sonarjs/no-alphabetical-sort": "off",
+      // Named per-case tests are the readability tool for domain scenarios;
+      // forced it.each collapses distinct narratives into opaque tables.
+      "sonarjs/parameterized-tests": "off",
       // Repeated fixture strings are the test's vocabulary — lifting them to
       // consts obscures what each assertion literally checks.
       "sonarjs/no-duplicate-string": "off",

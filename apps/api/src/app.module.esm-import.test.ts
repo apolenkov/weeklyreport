@@ -9,12 +9,7 @@ describe("AppModule ESM import", () => {
   it("loads through the production TypeScript loader without a module cycle", () => {
     const result = spawnSync(
       process.execPath,
-      [
-        "--import",
-        "@swc-node/register/esm-register",
-        "--eval",
-        'import("./src/app.module.ts")',
-      ],
+      ["--import", "tsx", "--eval", 'import("./src/app.module.ts")'],
       {
         cwd: apiDirectory,
         encoding: "utf8",
