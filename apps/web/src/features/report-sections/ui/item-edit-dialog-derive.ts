@@ -14,7 +14,7 @@ import {
   resolveStatusSlot,
   type StatusSlot,
 } from "./item-edit-dialog-helpers";
-import type { ParentActivityOption, RecordParent } from "./product-picker";
+import type { ParentActivityOption, RecordParent } from "./parent-picker";
 
 interface DeriveItemEditFieldsArgs {
   readonly isCreate: boolean;

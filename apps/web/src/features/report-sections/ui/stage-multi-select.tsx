@@ -4,7 +4,7 @@ import { canonicalStageName } from "../model/stage-tags";
 
 interface StageMultiSelectProps {
   readonly id: string;
-  readonly value: string[];
+  readonly value: readonly string[];
   readonly stages: readonly string[];
   readonly error?: string;
   readonly onChange: (next: string[]) => void;

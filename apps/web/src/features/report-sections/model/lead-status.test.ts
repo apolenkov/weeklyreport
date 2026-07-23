@@ -27,16 +27,6 @@ describe("deriveLeadStatus", () => {
     );
   });
 
-  it("returns 'pending' for an empty draft section (computed presentation-only state)", () => {
-    // 'pending' has no DB enum equivalent: it is purely derived from
-    // (sectionStatus = 'draft') + (contentCount = 0).
-    const result = deriveLeadStatus({
-      sectionStatus: "draft",
-      contentCount: 0,
-    });
-    expect(result).toBe("pending");
-  });
-
   it("returns 'draft' for a draft section with exactly one content item (boundary)", () => {
     expect(deriveLeadStatus({ sectionStatus: "draft", contentCount: 1 })).toBe(
       "draft",

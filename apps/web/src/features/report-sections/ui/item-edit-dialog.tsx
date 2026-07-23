@@ -6,7 +6,7 @@ import { RecordDialogFooter } from "../../../shared/ui/record-dialog-footer";
 import type { KanbanItem, Product, RiskEntry } from "../model/types";
 import { ItemEditDialogFields } from "./item-edit-dialog-fields";
 import { CURRENT_WEEK_CHOICES, NEXT_WEEK_CHOICES } from "./item-status-choices";
-import type { ParentActivityOption } from "./product-picker";
+import type { ParentActivityOption } from "./parent-picker";
 import { useItemEditDialog } from "./use-item-edit-dialog";
 
 interface ItemEditDialogProps {

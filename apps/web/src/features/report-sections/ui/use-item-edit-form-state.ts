@@ -7,7 +7,7 @@ import {
   coerceInitialStatus,
   resolveInitialItem,
 } from "./item-edit-dialog-helpers";
-import type { ParentActivityOption, RecordParent } from "./product-picker";
+import type { ParentActivityOption, RecordParent } from "./parent-picker";
 
 export interface ItemEditErrors {
   text?: string;

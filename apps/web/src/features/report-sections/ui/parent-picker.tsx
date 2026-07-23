@@ -10,7 +10,7 @@ export interface RecordParent {
   readonly kind: RecordParentKind;
 }
 
-/** activity-first-class: one attached-activity option offered as a parent. */
+/** One attached-activity option offered as a parent. */
 export interface ParentActivityOption {
   readonly id: string;
   readonly name: string;
@@ -24,7 +24,7 @@ interface ParentPickerProps {
   /** Products the lead can scope the record to. */
   readonly products: readonly Product[];
   /**
-   * activity-first-class: the section author's attached activities. When
+   * The section author's attached activities. When
    * non-empty the picker offers them in a second group; the chosen parent's
    * `kind` tells the host dialog whether a stage is required (product) or
    * forbidden (activity). Omit for a product-only picker (e.g. decisions).
@@ -50,7 +50,7 @@ function decodeParent(raw: string): RecordParent {
 }
 
 /**
- * unify-record-dialogs / activity-first-class: the one parent picker shared by
+ * The one parent picker shared by
  * the Item and Risk dialogs. It offers the lead's products and — when passed —
  * the author's attached activities in a second group, returning the chosen
  * parent's id AND kind so the dialog can require a stage for a product and hide
@@ -83,16 +83,18 @@ export function ParentPicker({
         onChange={(e) => onChange(decodeParent(e.target.value))}
         disabled={totalOptions <= 1}
       >
-        <optgroup label="Products">
-          {products.map((p) => (
-            <option
-              key={p.id}
-              value={encodeParent({ kind: "product", id: p.id })}
-            >
-              {p.name}
-            </option>
-          ))}
-        </optgroup>
+        {products.length > 0 && (
+          <optgroup label="Products">
+            {products.map((p) => (
+              <option
+                key={p.id}
+                value={encodeParent({ kind: "product", id: p.id })}
+              >
+                {p.name}
+              </option>
+            ))}
+          </optgroup>
+        )}
         {hasActivities && (
           <optgroup label="Activities">
             {activities.map((a) => (

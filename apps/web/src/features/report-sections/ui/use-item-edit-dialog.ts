@@ -1,6 +1,6 @@
 import type { KanbanItem, Product, RiskEntry } from "../model/types";
 import { deriveItemEditFields } from "./item-edit-dialog-derive";
-import type { ParentActivityOption } from "./product-picker";
+import type { ParentActivityOption } from "./parent-picker";
 import { useItemEditFormState } from "./use-item-edit-form-state";
 import { useItemEditSave } from "./use-item-edit-save";
 

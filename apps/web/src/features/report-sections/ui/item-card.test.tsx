@@ -65,11 +65,22 @@ describe("ItemCard — stage tags container accessibility", () => {
     );
     expect(screen.getByText("No stage set")).toBeInTheDocument();
   });
+
+  it("deduplicates legacy stage aliases after canonicalization", () => {
+    render(
+      <ItemCard item={{ ...BASE_ITEM, stageIds: ["Dev", "Development"] }} />,
+    );
+
+    const container = screen.getByRole("img", {
+      name: "Item stages: Development",
+    });
+    expect(within(container).getAllByText("Development")).toHaveLength(1);
+  });
 });
 
 describe("ItemCard — SVG icon aria-hidden (snapshot)", () => {
   it("EditIcon svg has aria-hidden='true'", () => {
-    render(<ItemCard item={BASE_ITEM} />);
+    render(<ItemCard item={BASE_ITEM} onEdit={vi.fn()} />);
     const editButton = screen.getByRole("button", { name: "Edit" });
     const svg = editButton.querySelector("svg");
     expect(svg).toBeInTheDocument();
@@ -78,12 +89,38 @@ describe("ItemCard — SVG icon aria-hidden (snapshot)", () => {
   });
 
   it("DeleteIcon svg has aria-hidden='true'", () => {
-    render(<ItemCard item={BASE_ITEM} />);
+    render(<ItemCard item={BASE_ITEM} onDelete={vi.fn()} />);
     const deleteButton = screen.getByRole("button", { name: "Delete" });
     const svg = deleteButton.querySelector("svg");
     expect(svg).toBeInTheDocument();
     expect(svg).toHaveAttribute("aria-hidden", "true");
     expect(svg).toMatchSnapshot();
+  });
+});
+
+describe("ItemCard — optional actions", () => {
+  it("omits Edit and Delete when their callbacks are absent", () => {
+    render(<ItemCard item={BASE_ITEM} />);
+
+    expect(
+      screen.queryByRole("button", { name: "Edit" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Delete" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders working Edit and Delete actions when callbacks are present", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    render(<ItemCard item={BASE_ITEM} onEdit={onEdit} onDelete={onDelete} />);
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(onEdit).toHaveBeenCalledWith(BASE_ITEM.id);
+    expect(onDelete).toHaveBeenCalledWith(BASE_ITEM.id);
   });
 });
 
@@ -95,7 +132,7 @@ describe("ItemCard — compact touch floor", () => {
   it.each(["Edit", "Delete"])(
     "%s icon button sizes from the toolbar control token",
     (name) => {
-      render(<ItemCard item={BASE_ITEM} />);
+      render(<ItemCard item={BASE_ITEM} onEdit={vi.fn()} onDelete={vi.fn()} />);
       const button = screen.getByRole("button", { name });
       expect(button.className).toContain("h-[var(--toolbar-control-h)]");
       expect(button.className).toContain("w-[var(--toolbar-control-h)]");
@@ -106,7 +143,11 @@ describe("ItemCard — compact touch floor", () => {
 describe("ItemCard — card DOM structure (snapshot)", () => {
   it("renders card with aria-hidden icons and accessible button labels", () => {
     const { container } = render(
-      <ItemCard item={{ ...BASE_ITEM, priorityRank: 1, stageIds: ["Dev"] }} />,
+      <ItemCard
+        item={{ ...BASE_ITEM, priorityRank: 1, stageIds: ["Dev"] }}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
     );
     const card = container.querySelector('[data-testid="item-card"]');
     expect(card).toMatchSnapshot();

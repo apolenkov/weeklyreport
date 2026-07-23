@@ -1,14 +1,18 @@
 import { canonicalStageName, splitStageNames } from "../model/stage-tags";
 import type { KanbanItem } from "../model/types";
 
-export interface ItemCardStageTags {
-  stageTags: string[];
-  stageTagsLabel: string;
-  visibleStageTags: string[];
-  hiddenStageCount: number;
-  /** Activity-parented rows are legitimately stage-less — no tags, no warning. */
-  isActivityItem: boolean;
-}
+export type ItemCardStageTags =
+  | {
+      /** Activity-parented rows are legitimately stage-less — no tags, no warning. */
+      isActivityItem: true;
+    }
+  | {
+      stageTags: string[];
+      stageTagsLabel: string;
+      visibleStageTags: string[];
+      hiddenStageCount: number;
+      isActivityItem: false;
+    };
 
 /**
  * Derive the item card's stage-tag footer state from the raw item. Pure —
@@ -21,24 +25,19 @@ export function deriveItemCardStageTags(
   // the expected shape — never the "No stage set" anomaly warning.
   if (item.activityId != null) {
     return {
-      stageTags: [],
-      stageTagsLabel: "Activity — no SDLC stage",
-      visibleStageTags: [],
-      hiddenStageCount: 0,
       isActivityItem: true,
     };
   }
-  const stageTags = (
+  const rawStageTags =
     item.stageIds && item.stageIds.length > 0
       ? item.stageIds
       : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-        splitStageNames(item.stageName)
-  )
-    // stage-label-canonicalization: heal a legacy short "Dev" at render so the
-    // card reads the canonical "Development" alongside seeded rows; the pipeline
-    // chip keeps its own short label.
-    .map(canonicalStageName);
-  // enforce-item-decision-stage-schema: a stage-less item is a legacy anomaly,
+        splitStageNames(item.stageName);
+  // Heal a legacy short "Dev" at render so the
+  // card reads the canonical "Development" alongside seeded rows; the pipeline
+  // chip keeps its own short label.
+  const stageTags = [...new Set(rawStageTags.map(canonicalStageName))];
+  // A stage-less item is a legacy anomaly,
   // never an implicit "all stages" scope — render the loud "No stage set"
   // warning, mirroring the risk row.
   const stageTagsLabel =
@@ -61,14 +60,10 @@ export function deriveItemCardStageTags(
  * Footer stage-tag badges: the "No stage set" warning chip, up to two visible
  * stage-name pills, and a "+N" overflow pill. Presentational only.
  */
-export function ItemCardStageTagsRow({
-  stageTags,
-  stageTagsLabel,
-  visibleStageTags,
-  hiddenStageCount,
-  isActivityItem,
-}: ItemCardStageTags) {
-  if (isActivityItem) return null;
+export function ItemCardStageTagsRow(props: ItemCardStageTags) {
+  if (props.isActivityItem) return null;
+  const { stageTags, stageTagsLabel, visibleStageTags, hiddenStageCount } =
+    props;
   return (
     <span
       role="img"

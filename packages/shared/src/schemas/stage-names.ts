@@ -50,6 +50,22 @@ export function stageNamesMatch(a: string, b: string): boolean {
 
 const STAGE_NAME_SEPARATOR = /[,;]+/;
 
+export function splitStageNames(
+  stageName: string | null | undefined,
+): string[] {
+  const trimmedStageName = stageName?.trim();
+  if (!trimmedStageName || trimmedStageName === "—") return [];
+
+  return [
+    ...new Set(
+      trimmedStageName
+        .split(STAGE_NAME_SEPARATOR)
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0),
+    ),
+  ];
+}
+
 // Whether a risk applies to a stage: prefers the structured stage-id list
 // (empty means "covers everything"), falling back to the legacy CSV
 // stageName field (absent/blank/"—" also means "covers everything") when
@@ -65,12 +81,13 @@ export function riskCoversStage(
     );
   }
 
-  const legacyStageNames = risk.stageName?.trim();
-  if (!legacyStageNames || legacyStageNames === "—") return true;
+  // Wildcard is ONLY absent/blank/"—". A non-wildcard string that yields no
+  // tokens (e.g. ";;") covers NOTHING — an empty token list must not widen
+  // into covers-everything.
+  const trimmed = risk.stageName?.trim();
+  if (!trimmed || trimmed === "—") return true;
 
-  return legacyStageNames
-    .split(STAGE_NAME_SEPARATOR)
-    .map((name) => name.trim())
-    .filter((name) => name.length > 0)
-    .some((name) => stageNamesMatch(name, stageName));
+  return splitStageNames(trimmed).some((name) =>
+    stageNamesMatch(name, stageName),
+  );
 }

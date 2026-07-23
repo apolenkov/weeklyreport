@@ -7,7 +7,7 @@ import type {
   RiskEntry,
 } from "../model/types";
 import { IN_PROGRESS_STATUS } from "./item-status-choices";
-import type { ParentActivityOption } from "./product-picker";
+import type { ParentActivityOption } from "./parent-picker";
 
 /**
  * Per-field validation for the item save. A stage is required only for a

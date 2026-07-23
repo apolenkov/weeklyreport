@@ -37,7 +37,6 @@ export {
   buildLeadSubmitPayload,
   deriveLeadSubmitReadiness,
 } from "./model/lead-submit-readiness";
-export { MOCK_PRODUCTS } from "./model/mock-data";
 export {
   isBoardEmpty,
   type ItemColumn,
@@ -93,7 +92,7 @@ export { BoardEmptyState } from "./ui/board-empty-state";
 export { ItemCard } from "./ui/item-card";
 export { PublishedRecordMarker } from "./ui/item-card-actions";
 export { ItemEditDialog } from "./ui/item-edit-dialog";
-export type { ParentActivityOption, RecordParent } from "./ui/product-picker";
-export { ParentPicker } from "./ui/product-picker";
+export type { ParentActivityOption, RecordParent } from "./ui/parent-picker";
+export { ParentPicker } from "./ui/parent-picker";
 export { StageChip } from "./ui/stage-chip";
 export { StageStep } from "./ui/stage-step";

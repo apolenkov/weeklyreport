@@ -1,4 +1,4 @@
-import type { ParentActivityOption, RecordParent } from "../ui/product-picker";
+import type { ParentActivityOption, RecordParent } from "../ui/parent-picker";
 
 /** Create-mode parent preset — at most one side set (XOR, like the row). */
 export interface RecordParentSeed {
