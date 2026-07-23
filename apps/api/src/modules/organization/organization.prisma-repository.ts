@@ -17,8 +17,8 @@ import type { OrganizationRepository } from "./organization.service.js";
  * finds a row. The defensive `upsert` here is a safety net for edge cases:
  *   - dev DBs reset without `migrate reset` (rare but possible)
  *   - integration tests that truncate `Organization` between cases
- * Defaults come from `DEFAULT_ORGANIZATION_IDENTITY` ('Org' /
- * 'Organization') so the fallback is tenant-agnostic. Real brand strings
+ * Defaults come from `DEFAULT_ORGANIZATION_IDENTITY` so the fallback is
+ * tenant-agnostic. Real brand strings
  * ('PEO' etc.) live in the seed file and the admin-edited Organization
  * row only.
  */
