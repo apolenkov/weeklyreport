@@ -686,7 +686,7 @@
       "line": 79,
       "issue": "Comment hardcodes 'the 26 mutations' — a brittle count that will silently rot as procedures are added/removed; state the shape rule without the tally.",
       "class": "magic-values-drift",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -695,7 +695,7 @@
       "line": 94,
       "issue": "mutation() spreads `target: input.target` unconditionally (emits a `target: undefined` key when absent) but spreads `reason` conditionally — inconsistent handling of optional fields on the same envelope.",
       "class": "other",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "fable-triage-first"
     },
     {
@@ -704,7 +704,7 @@
       "line": 205,
       "issue": "periodLengthDays is unvalidated — length=0 yields periodEnd = Monday minus one day (end before start); a Number.isInteger/positive guard mirroring computeDeadline's deadlineHour check would fail loud.",
       "class": "env-config-silent-fallback",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -893,7 +893,7 @@
       "line": 26,
       "issue": "Comment claims ArchiveReadFilter 'narrow[s] to the two members' of ReportStatus, but the type is the full ReportStatus enum with no narrowing, so the comment overstates the actual contract.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -983,7 +983,7 @@
       "line": 44,
       "issue": "No test asserts the documented org shortName brand prefix (e.g. \"[PEO]\") in either subject, though it is a load-bearing behavior for recipient inbox folder rules.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -992,7 +992,7 @@
       "line": 33,
       "issue": "deadlineIso is rendered into both html and text by the template but never asserted, so a regression dropping the deadline value would pass unnoticed.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1001,7 +1001,7 @@
       "line": 51,
       "issue": "deadlineIso is rendered raw to end users (e.g. \"due by 2026-04-20T15:00:00.000Z\") with no human formatting.",
       "class": "ui-copy-grammar",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -1019,7 +1019,7 @@
       "line": 62,
       "issue": "Singular case produces \"the following lead have not submitted their section\" — noun is singularized but verb \"have\" is not, causing subject-verb disagreement in user-facing copy.",
       "class": "ui-copy-grammar",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -1028,7 +1028,7 @@
       "line": 95,
       "issue": "Same singular subject-verb disagreement (\"lead have\") in the plaintext fallback.",
       "class": "env-config-silent-fallback",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1037,7 +1037,7 @@
       "line": 174,
       "issue": "Singular test faithfully pins the grammatically-off \"lead have not submitted\" output, enshrining the template's subject-verb disagreement rather than flagging it.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1046,7 +1046,7 @@
       "line": 64,
       "issue": "Export-shape test only asserts typeof function and presence of a `type` property — a weak smoke check that barely constrains behavior.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1082,7 +1082,7 @@
       "line": 17,
       "issue": "useFactory builds OrganizationService with no logger argument, so it always runs on the null logger and the service's 'updated organization' info log never emits in production.",
       "class": "observability-logging-gap",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "fable-triage-first"
     },
     {
@@ -1091,7 +1091,7 @@
       "line": 20,
       "issue": "Comment claims the default shortName is 'Org' but DEFAULT_ORGANIZATION_IDENTITY.shortName is actually 'ORG'.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -1100,7 +1100,7 @@
       "line": 77,
       "issue": "organizationUpdateSchema tests cover length bounds but never exercise the '<'/'>' breakout-character rejection, leaving that security refine branch uncovered.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1280,7 +1280,7 @@
       "line": 1,
       "issue": "PublicationSourceState's \"reopened\" arm is unreachable via this port — the only consumer (publishAuto -> emitPublishSideEffects) always passes priorStatus=\"open\", so the wider union is currently a dead value the adapter's recordPeriodPublished(from) can never receive as \"reopened\".",
       "class": "dead-unreachable-code",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {

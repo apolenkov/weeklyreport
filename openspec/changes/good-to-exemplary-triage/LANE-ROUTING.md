@@ -56,3 +56,14 @@ Red-slice policy (P4): a blocker or lens-death never re-runs the batch — green
 siblings commit immediately (targeted per-seam `git add`); the red slice is
 remediated, then re-reviewed via `waveb-review-only` scoped to its file list
 plus a re-run of only the failed gate steps.
+
+## Pilot log
+
+- 2026-07-23, batch 1 (P12): deepseek-v4-flash-free on g-103/g-105/g-106
+  (2 template files). Outcome: all three findings landed and the deadline
+  helper matched the spec exactly, but the lane overran its mandate (touched
+  the plural noun against instructions) and introduced a JSX whitespace bug
+  ("theirsection") — both caught by the orchestrator guardrail diff before
+  the lenses. Ladder verdict: NOT 4/4 clean → stays at ui-copy tier, no
+  promotion; one more clean run required before `naming`. Paid-tier balance
+  still empty; free tier worked.
