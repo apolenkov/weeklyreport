@@ -35,6 +35,21 @@ const dbStatusToDomain: Record<string, PdfExportJob["status"]> = {
   failed: "failed",
 };
 
+export class UnsupportedPdfExportStatusError extends Error {
+  constructor(status: string) {
+    super(`Unsupported PDF export database status: ${status}`);
+    this.name = "UnsupportedPdfExportStatusError";
+  }
+}
+
+function toDomainStatus(status: string): PdfExportJob["status"] {
+  const domainStatus = dbStatusToDomain[status];
+  if (domainStatus === undefined) {
+    throw new UnsupportedPdfExportStatusError(status);
+  }
+  return domainStatus;
+}
+
 const reportFullInclude = {
   sections: { include: reportSectionFullInclude },
   publishedBy: true,
@@ -139,7 +154,7 @@ function toExportJob(row: {
     ...pdfExportJobSchema.parse({
       jobId: row.id,
       reportId: row.reportId,
-      status: dbStatusToDomain[row.status] ?? "queued",
+      status: toDomainStatus(row.status),
       requestedAt: row.createdAt,
       completedAt: row.status === "completed" ? row.updatedAt : null,
       checksum: row.checksum,

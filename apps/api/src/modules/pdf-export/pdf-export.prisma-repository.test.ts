@@ -10,6 +10,7 @@ import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {
   PdfExportPrismaRepository,
   toAssembledReport,
+  UnsupportedPdfExportStatusError,
 } from "./pdf-export.prisma-repository";
 
 const REPORT_ID = "659b2767-0f86-41e2-b025-49730ca010e4";
@@ -132,6 +133,31 @@ describe("PdfExportPrismaRepository published floor", () => {
           status: "published",
           periodStatus: "published",
         },
+      }),
+    );
+  });
+
+  it("fails loud when the database returns an unknown export status", async () => {
+    const findUnique = vi.fn().mockResolvedValue({
+      id: "759b2767-0f86-41e2-b025-49730ca010e4",
+      reportId: REPORT_ID,
+      status: "paused",
+      filePath: null,
+      checksum: null,
+      error: null,
+      requestedBy: AUTHOR_ID,
+      createdAt: new Date("2026-06-09T00:00:00Z"),
+      updatedAt: new Date("2026-06-09T00:00:00Z"),
+    });
+    const prisma = {
+      pdfExportJob: { findUnique },
+    } as unknown as PrismaService;
+    const repo = new PdfExportPrismaRepository(prisma);
+
+    await expect(repo.getExportJob("job-1")).rejects.toEqual(
+      expect.objectContaining({
+        name: UnsupportedPdfExportStatusError.name,
+        message: "Unsupported PDF export database status: paused",
       }),
     );
   });
