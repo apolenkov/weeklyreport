@@ -22,6 +22,14 @@ const baseOptions = {
 
 const devOptions: SamlStrategyOptions = { ...baseOptions, devMode: true };
 const prodOptions: SamlStrategyOptions = { ...baseOptions, devMode: false };
+const devEnv = {
+  NODE_ENV: "development",
+  AUTH_DEV_MODE: "true",
+  KEYCLOAK_SAML_CALLBACK_URL: "http://localhost:3001/auth/saml/callback",
+  KEYCLOAK_SAML_ENTRY_POINT: "http://localhost:8080/realms/dev/protocol/saml",
+  KEYCLOAK_SAML_ISSUER: "customreport-dev",
+  KEYCLOAK_SAML_CERT: "DEV_CERT",
+} as unknown as NodeJS.ProcessEnv;
 
 describe("verifySamlProfile", () => {
   describe("devMode=true (legacy fallback preserved)", () => {
@@ -149,6 +157,36 @@ describe("createSamlStrategyOptions — production posture (38-03)", () => {
     // Build env without the key via destructuring rest, avoiding the
     // dynamic `delete` (no-dynamic-delete) operator.
     const { [key]: _omitted, ...env } = prodEnv as Record<string, unknown>;
+    expect(() => createSamlStrategyOptions(env as NodeJS.ProcessEnv)).toThrow(
+      `Missing required environment variable: ${key}`,
+    );
+  });
+});
+
+describe("createSamlStrategyOptions — development posture", () => {
+  it("uses explicit development SAML configuration without weakening signatures", () => {
+    const opts = createSamlStrategyOptions(devEnv);
+
+    expect(opts).toMatchObject({
+      devMode: true,
+      callbackUrl: devEnv.KEYCLOAK_SAML_CALLBACK_URL,
+      entryPoint: devEnv.KEYCLOAK_SAML_ENTRY_POINT,
+      issuer: devEnv.KEYCLOAK_SAML_ISSUER,
+      idpCert: devEnv.KEYCLOAK_SAML_CERT,
+      validateInResponseTo: "never",
+      wantAssertionsSigned: true,
+      wantAuthnResponseSigned: true,
+    });
+  });
+
+  it.each([
+    "KEYCLOAK_SAML_CALLBACK_URL",
+    "KEYCLOAK_SAML_ENTRY_POINT",
+    "KEYCLOAK_SAML_ISSUER",
+    "KEYCLOAK_SAML_CERT",
+  ])("throws when %s is missing in development", (key) => {
+    const { [key]: _omitted, ...env } = devEnv as Record<string, unknown>;
+
     expect(() => createSamlStrategyOptions(env as NodeJS.ProcessEnv)).toThrow(
       `Missing required environment variable: ${key}`,
     );
