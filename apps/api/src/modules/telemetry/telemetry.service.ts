@@ -76,10 +76,7 @@ export class TelemetryService {
       // entry). This is a DIFFERENT window from the Prometheus
       // `onTimeRatioLastNPeriods` gauge, which pools across the last N periods;
       // the two are intentionally not collapsed.
-      const latestPeriodOnTimeRatio =
-        sparkline.length === 0
-          ? null
-          : (sparkline[sparkline.length - 1] ?? null);
+      const latestPeriodOnTimeRatio = sparkline.at(-1) ?? null;
 
       const [
         reportsThisPeriod,

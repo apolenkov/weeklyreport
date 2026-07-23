@@ -8,7 +8,7 @@ import type {
 /**
  * Period-vs-period delta table.
  *
- * Null cells render as '–' (em-dash); zero risk-counts render as '0'. The
+ * Null cells render as '–' (en-dash); zero risk-counts render as '0'. The
  * visual distinction between the two is intentional.
  */
 

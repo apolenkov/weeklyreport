@@ -18,11 +18,12 @@ import { createMockTRPC } from "../../../test-utils/mock-trpc";
 
 const toastSuccess = vi.fn<(...args: unknown[]) => void>();
 const toastError = vi.fn<(...args: unknown[]) => void>();
+const toastInfo = vi.fn<(...args: unknown[]) => void>();
 vi.mock("sonner", () => ({
   toast: {
     success: (...args: unknown[]) => toastSuccess(...args),
     error: (...args: unknown[]) => toastError(...args),
-    info: vi.fn(),
+    info: (...args: unknown[]) => toastInfo(...args),
   },
 }));
 
@@ -88,7 +89,22 @@ describe("ExportPdfButton", () => {
   beforeEach(() => {
     toastSuccess.mockClear();
     toastError.mockClear();
+    toastInfo.mockClear();
     vi.unstubAllGlobals();
+  });
+
+  it("stays disabled while the report is open", () => {
+    renderButton({ statusQuery: COMPLETED_STATUS, periodStatus: "open" });
+
+    const button = screen.getByRole("button", { name: "Export PDF" });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute(
+      "aria-describedby",
+      `${REPORT_ID}-export-pdf-disabled-reason`,
+    );
+    expect(
+      screen.getByText("Publish or re-publish the report to export PDF."),
+    ).toHaveClass("sr-only");
   });
 
   it("stays disabled while the report is reopened", () => {
@@ -149,7 +165,7 @@ describe("ExportPdfButton", () => {
     expect(toastSuccess).toHaveBeenCalledWith("PDF ready");
   });
 
-  it("renders a download link and toasts success when window.open is blocked", async () => {
+  it("renders a download link and announces fallback delivery when window.open is blocked", async () => {
     vi.stubGlobal(
       "open",
       vi.fn(() => null),
@@ -165,8 +181,38 @@ describe("ExportPdfButton", () => {
     const link = await screen.findByRole("link", { name: "Download PDF" });
     expect(link).toHaveAttribute("href", ARTIFACT_URL);
     expect(link).toHaveAttribute("download");
-    expect(toastSuccess).toHaveBeenCalledTimes(1);
-    expect(toastSuccess).toHaveBeenCalledWith("PDF ready");
+    expect(toastSuccess).not.toHaveBeenCalled();
+    expect(toastInfo).toHaveBeenCalledOnce();
+    expect(toastInfo).toHaveBeenCalledWith(
+      "PDF ready — use the download link.",
+    );
+  });
+
+  it("renders a download link when the held tab was closed before completion", async () => {
+    const fakeTab = {
+      location: { href: "" },
+      closed: true,
+      close: vi.fn(),
+    };
+    vi.stubGlobal(
+      "open",
+      vi.fn(() => fakeTab),
+    );
+
+    const { captured } = renderButton({ statusQuery: COMPLETED_STATUS });
+    expectDefined(captured["pdfExport.request"]).mutationFn.mockResolvedValue({
+      jobId: JOB_ID,
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
+
+    const link = await screen.findByRole("link", { name: "Download PDF" });
+    expect(link).toHaveAttribute("href", ARTIFACT_URL);
+    expect(fakeTab.location.href).toBe("");
+    expect(toastSuccess).not.toHaveBeenCalled();
+    expect(toastInfo).toHaveBeenCalledWith(
+      "PDF ready — use the download link.",
+    );
   });
 
   it("on status poll error: error toast fires and the button returns to idle", async () => {

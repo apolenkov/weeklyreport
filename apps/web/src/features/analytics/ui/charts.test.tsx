@@ -18,21 +18,34 @@ describe("TrafficLightHistoryChart", () => {
     expect(screen.getByText(/no published periods/i)).toBeInTheDocument();
   });
 
-  it("renders without crash with sample data containing nulls", () => {
-    expect(() =>
-      render(
-        <TrafficLightHistoryChart
-          periods={["2026-04-21", "2026-04-28"]}
-          rows={[
-            {
-              projectId: "11111111-1111-4111-8111-111111111111",
-              projectName: "Alpha",
-              statuses: ["green", null],
-            },
-          ]}
-        />,
-      ),
-    ).not.toThrow();
+  it("renders the chart (not the empty state) for populated data", () => {
+    render(
+      <TrafficLightHistoryChart
+        periods={["Apr 7", "Apr 14"]}
+        rows={[
+          {
+            projectId: "11111111-1111-4111-8111-111111111111",
+            projectName: "Alpha",
+            statuses: ["green", null],
+          },
+        ]}
+      />,
+    );
+    expect(screen.queryByText(/no published periods/i)).not.toBeInTheDocument();
+  });
+
+  it("keeps a null status cell null in the series point", () => {
+    const { data } = buildTrafficLightHistoryChartData(
+      ["Apr 7", "Apr 14"],
+      [
+        {
+          projectId: "11111111-1111-4111-8111-111111111111",
+          projectName: "Alpha",
+          statuses: ["green", null],
+        },
+      ],
+    );
+    expect(data[1]?.["11111111-1111-4111-8111-111111111111"]).toBeNull();
   });
 });
 
@@ -42,25 +55,24 @@ describe("LeadVelocityChart", () => {
     expect(screen.getByText(/no velocity data/i)).toBeInTheDocument();
   });
 
-  it("renders sample lead-velocity data without crash", () => {
-    expect(() =>
-      render(
-        <LeadVelocityChart
-          rows={[
-            {
-              periodLabel: "2026-04-21",
-              leads: [
-                {
-                  leadId: "00000000-0000-4000-8000-000000000001",
-                  leadName: "L1",
-                  submittedSections: 1,
-                },
-              ],
-            },
-          ]}
-        />,
-      ),
-    ).not.toThrow();
+  it("renders the chart (not the empty state) for populated rows", () => {
+    render(
+      <LeadVelocityChart
+        rows={[
+          {
+            periodLabel: "Apr 7",
+            leads: [
+              {
+                leadId: "22222222-2222-4222-8222-222222222222",
+                leadName: "Alex",
+                submittedSections: 3,
+              },
+            ],
+          },
+        ]}
+      />,
+    );
+    expect(screen.queryByText(/no velocity data/i)).not.toBeInTheDocument();
   });
 });
 
@@ -124,7 +136,7 @@ describe("PeriodComparisonChart", () => {
     expect(screen.getByText(/no comparison data/i)).toBeInTheDocument();
   });
 
-  it("renders null cells as em-dash and zero cells as 0", () => {
+  it("renders null cells as en-dash and zero cells as 0", () => {
     render(
       <PeriodComparisonChart
         rows={[
@@ -140,7 +152,7 @@ describe("PeriodComparisonChart", () => {
         ]}
       />,
     );
-    // null status renders as em-dash
+    // null status renders as en-dash
     expect(screen.getByText("–")).toBeInTheDocument();
     // zero risk count renders as the literal '0'
     const zeros = screen.getAllByText("0");

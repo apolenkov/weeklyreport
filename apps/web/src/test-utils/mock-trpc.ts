@@ -108,6 +108,12 @@ export function createMockTRPC(descriptors: ProcedureDescriptor[]): {
     const dotted = toDotted(path);
     const qk = toQueryKey(path);
 
+    if (query !== undefined && queryByInput !== undefined) {
+      throw new Error(
+        `Procedure "${dotted}" cannot define both query and queryByInput.`,
+      );
+    }
+
     const leaf = ensureLeaf(root, path);
 
     // pathFilter and bare queryKey() always derive from the same path.

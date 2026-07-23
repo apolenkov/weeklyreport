@@ -44,6 +44,6 @@ export class WebVitalsController {
     const { name, value, navigationType } = parsed.data;
     const bucket = resolveNavigationType(navigationType);
     HISTOGRAM_BY_NAME[name].observe({ navigation_type: bucket }, value);
-    this.logger.log(`web vital ${name}=${value.toFixed(2)} nav=${bucket}`);
+    this.logger.debug(`web vital ${name}=${value.toFixed(2)} nav=${bucket}`);
   }
 }

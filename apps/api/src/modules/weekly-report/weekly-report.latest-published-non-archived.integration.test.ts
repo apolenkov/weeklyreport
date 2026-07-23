@@ -138,10 +138,18 @@ describe("WeeklyReportPrismaRepository.getLatestPublishedNonArchivedId (integrat
     await createReport(TIE_LOW, "published", "2026-05-18T00:00:00.000Z");
     await createReport(TIE_HIGH, "published", "2026-05-18T00:00:00.000Z");
 
-    const first = await repository.getLatestPublishedNonArchivedId();
-    const second = await repository.getLatestPublishedNonArchivedId();
+    const tiedIds = await prisma.report.findMany({
+      where: { id: { in: [TIE_LOW, TIE_HIGH] } },
+      orderBy: { id: "asc" },
+      select: { id: true, periodStart: true },
+    });
+    expect(tiedIds).toEqual([
+      { id: TIE_LOW, periodStart: new Date("2026-05-18T00:00:00.000Z") },
+      { id: TIE_HIGH, periodStart: new Date("2026-05-18T00:00:00.000Z") },
+    ]);
 
-    expect(first).toBe(TIE_HIGH);
-    expect(second).toBe(first);
+    await expect(repository.getLatestPublishedNonArchivedId()).resolves.toBe(
+      TIE_HIGH,
+    );
   });
 });

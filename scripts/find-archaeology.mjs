@@ -37,11 +37,20 @@ const STANDARDS = new Set([
   "UTC",
   "GMT",
   "BASE",
+  // Time-offset notation ("the T-24h tick", "T-0"), not a ticket slug.
+  "T",
+  // Relative-period notation in seeds/tests ("week N-1", "history N-2").
+  "N",
+  // Durable spec-decision anchors ("per D-6") — load-bearing rationale, not
+  // change-log archaeology.
+  "D",
 ]);
 const ticketSlug = (comment) => {
   // Walk every slug on the line — a leading standard token (RFC-5322, ISO-8601)
   // must not hide a later real ticket slug on the same comment.
-  for (const m of comment.matchAll(/\b([A-Z]{2,5})-\d{1,4}\b/g)) {
+  // {1,5}: single-letter prefixes count too — this repo's ledgers mint
+  // one-letter row ids that leak into comments and test titles.
+  for (const m of comment.matchAll(/\b([A-Z]{1,5})-\d{1,4}\b/g)) {
     if (!STANDARDS.has(m[1].toUpperCase())) return true;
   }
   return false;
@@ -127,8 +136,10 @@ const testTitlePart = (line) => {
   return null;
 };
 
+// .claude/ holds orchestration scripts whose "Phase N" labels are live
+// structure, not change-log narration.
 const IGNORE =
-  /(^|\/)(node_modules|dist|\.next[^/]*|coverage|openspec\/changes\/archive)\//;
+  /(^|\/)(node_modules|dist|\.next[^/]*|coverage|openspec\/changes\/archive|\.claude)\//;
 const isTestSource = (f) => /\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f);
 const isScannable = (f) =>
   /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f) &&
