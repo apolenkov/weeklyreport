@@ -13,7 +13,7 @@
 - [ ] 2.1 `prisma/schema.prisma`: `Report.deadline DateTime?`; reset+seed
       dev/test DBs (`PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`).
 - [ ] 2.2 `packages/shared` period-edit schema: `deadline:
-    z....nullable().optional()`; `periodEnd` unchanged. Schema-surface
+z....nullable().optional()`; `periodEnd` unchanged. Schema-surface
       test pins the three states.
 - [ ] 2.3 Update service diff: `null` → real clear; audit envelope
       `changes.deadline = { from, to: null }`; no-op edit still emits
@@ -44,4 +44,4 @@
       teeth (assert behavior, not absence).
 - [ ] 5.2 `pnpm typecheck`, `pnpm lint` (or deferred-lint list while the
       toolchain is down), `openspec validate allow-deadline-explicit-clear
-    --strict`.
+--strict`.
