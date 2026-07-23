@@ -193,19 +193,21 @@ export function ItemCardActions({
           <ArrowRightIcon />
         </button>
       )}
-      <button
-        type="button"
-        className={NEUTRAL_ACTION_CLASS}
-        onClick={() => onEdit?.(item.id)}
-        aria-label="Edit"
-      >
-        <EditIcon />
-      </button>
-      {!publishedLocked && (
+      {onEdit && (
+        <button
+          type="button"
+          className={NEUTRAL_ACTION_CLASS}
+          onClick={() => onEdit(item.id)}
+          aria-label="Edit"
+        >
+          <EditIcon />
+        </button>
+      )}
+      {onDelete && !publishedLocked && (
         <button
           type="button"
           className="flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:border-[color-mix(in_srgb,var(--color-destructive)_20%,transparent)] hover:bg-[var(--color-status-blocked-bg)] hover:text-[var(--color-destructive)]"
-          onClick={() => onDelete?.(item.id)}
+          onClick={() => onDelete(item.id)}
           aria-label="Delete"
         >
           <DeleteIcon />

@@ -10,7 +10,7 @@ import {
   type ParentActivityOption,
   ParentPicker,
   type RecordParent,
-} from "./product-picker";
+} from "./parent-picker";
 import { StageStep } from "./stage-step";
 
 interface ItemEditDialogFieldsProps {

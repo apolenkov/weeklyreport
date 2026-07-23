@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { riskCoversStage } from "./stage-names";
+import { riskCoversStage, splitStageNames } from "./stage-names";
+
+describe("splitStageNames", () => {
+  it("splits separators, trims whitespace, removes empties, and deduplicates", () => {
+    expect(
+      splitStageNames(" Dev ; Testing, , Dev ;; Support ; Testing "),
+    ).toEqual(["Dev", "Testing", "Support"]);
+  });
+});
 
 describe("riskCoversStage", () => {
   it("matches Dev and Development through populated stageIds", () => {
@@ -34,5 +42,12 @@ describe("riskCoversStage", () => {
     expect(riskCoversStage({}, "Development")).toBe(true);
     expect(riskCoversStage({ stageName: "" }, "Development")).toBe(true);
     expect(riskCoversStage({ stageName: " — " }, "Development")).toBe(true);
+  });
+
+  it("a delimiter-only legacy stage name covers NOTHING, not everything", () => {
+    // The wildcard is strictly absent/blank/"—": ";;" parses to zero tokens
+    // and an empty token list must not widen into covers-every-stage.
+    expect(riskCoversStage({ stageName: ";;" }, "Development")).toBe(false);
+    expect(riskCoversStage({ stageName: ", ,;" }, "Testing")).toBe(false);
   });
 });

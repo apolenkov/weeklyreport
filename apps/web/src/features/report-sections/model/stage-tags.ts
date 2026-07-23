@@ -1,7 +1,5 @@
 import { STAGE } from "@customreport/shared";
-export { riskCoversStage } from "@customreport/shared";
-
-const STAGE_SPLIT_RE = /[,;]+/;
+export { riskCoversStage, splitStageNames } from "@customreport/shared";
 
 /** Normalize a stage name to its canonical DB form (resolves UI chip aliases). */
 export function canonicalStageName(name: string): string {
@@ -30,21 +28,4 @@ const STAGE_SHORT_LABEL: Record<string, string> = {
 /** The short pipeline-chip label for a (canonical) stage name; full name if none. */
 export function stageShortLabel(name: string): string {
   return STAGE_SHORT_LABEL[canonicalStageName(name)] ?? name;
-}
-
-export function splitStageNames(
-  stageName: string | null | undefined,
-): string[] {
-  if (!stageName || stageName.trim() === "" || stageName.trim() === "—") {
-    return [];
-  }
-
-  return [
-    ...new Set(
-      stageName
-        .split(STAGE_SPLIT_RE)
-        .map((raw) => raw.trim())
-        .filter((value) => value.length > 0),
-    ),
-  ];
 }

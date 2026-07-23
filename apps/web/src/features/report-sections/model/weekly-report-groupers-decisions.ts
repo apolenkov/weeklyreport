@@ -112,12 +112,17 @@ export function groupPrioritiesByProject(
   const entries = sections.flatMap((section) =>
     section.items
       .filter(
-        (i): i is SectionItem & { projectId: string } =>
+        (
+          i,
+        ): i is SectionItem & {
+          projectId: string;
+          priorityRank: number;
+        } =>
           // A product priority is product-parented; skip activity items
           // (projectId null).
           i.priorityRank != null && i.projectId != null,
       )
-      .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0)),
+      .toSorted((a, b) => a.priorityRank - b.priorityRank),
   );
 
   return new Map(
@@ -125,7 +130,7 @@ export function groupPrioritiesByProject(
       ([projectId, items]) => [
         projectId,
         items.map((item) => ({
-          rank: item.priorityRank ?? 1,
+          rank: item.priorityRank,
           text: item.text,
         })),
       ],

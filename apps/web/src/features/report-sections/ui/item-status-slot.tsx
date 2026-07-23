@@ -1,9 +1,22 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import type { ChipChoice } from "../../../shared/ui/choice-chip-row";
 import { ChoiceChipRow } from "../../../shared/ui/choice-chip-row";
 import type { ItemStatus } from "../model/types";
 import type { StatusSlot } from "./item-edit-dialog-helpers";
+
+function StatusField({ children }: { readonly children: ReactNode }) {
+  return (
+    <div>
+      <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
+        Status
+      </span>
+      {children}
+    </div>
+  );
+}
 
 /** The item status-chip row (Completed / In Progress / Blocked / Planned). */
 function ItemStatusChips({
@@ -16,12 +29,9 @@ function ItemStatusChips({
   readonly onSelect: (value: ItemStatus) => void;
 }) {
   return (
-    <div>
-      <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
-        Status
-      </span>
+    <StatusField>
       <ChoiceChipRow choices={choices} value={status} onSelect={onSelect} />
-    </div>
+    </StatusField>
   );
 }
 
@@ -31,15 +41,12 @@ function ItemStatusChips({
  */
 function CoveredStatusLock() {
   return (
-    <div>
-      <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
-        Status
-      </span>
+    <StatusField>
       <p className="rounded-xl border border-[rgba(200,32,20,0.15)] bg-[var(--color-status-blocked-bg)] px-3 py-2 text-xs text-[var(--color-foreground)]">
         Status is set by the covering risk/blocker — resolve it in Risks &amp;
         Blockers to change.
       </p>
-    </div>
+    </StatusField>
   );
 }
 
@@ -58,8 +65,6 @@ export function StatusSlotView({
 }) {
   if (slot === "locked") return <CoveredStatusLock />;
   return (
-    <div className="flex flex-col">
-      <ItemStatusChips choices={choices} status={status} onSelect={onSelect} />
-    </div>
+    <ItemStatusChips choices={choices} status={status} onSelect={onSelect} />
   );
 }

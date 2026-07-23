@@ -99,13 +99,11 @@ describe("StageChip — locked stage color (F2)", () => {
 // Verifies the chip button carries STAGE_CHIP_BOX_HEIGHT as inline height,
 // matching the arrow wrapper in sdlc-pipeline.tsx so both midlines align.
 
-import { STAGE_CHIP_BOX_HEIGHT } from "../model/stage-chip-config";
-
-describe("StageChip — chip box height token (align-pipeline-arrows D1)", () => {
-  it("chip button inline height equals STAGE_CHIP_BOX_HEIGHT", () => {
+describe("StageChip — chip box height token", () => {
+  it("chip button inline height is 36px", () => {
     render(<StageChip stage={{ ...BASE_LOCKED, status: "on-track" }} />);
     const button = screen.getByRole("button");
-    expect(button.style.height).toBe(STAGE_CHIP_BOX_HEIGHT);
+    expect(button.style.height).toBe("36px");
   });
 
   it("chip button floors at the touch target below md (responsive-compact-layout)", () => {

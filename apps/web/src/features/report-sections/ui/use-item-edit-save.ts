@@ -8,7 +8,7 @@ import {
   firstInvalidControl,
   resolveSaveProduct,
 } from "./item-edit-dialog-helpers";
-import type { ParentActivityOption, RecordParent } from "./product-picker";
+import type { ParentActivityOption, RecordParent } from "./parent-picker";
 import type { ItemEditErrors } from "./use-item-edit-form-state";
 
 interface UseItemEditSaveArgs {
