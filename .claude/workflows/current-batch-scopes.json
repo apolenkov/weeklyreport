@@ -1,0 +1,20 @@
+{
+  "grok-b6": [
+    "apps/api/src/modules/reminders/reminders-scope.prisma-query.ts",
+    "apps/api/src/modules/reminders/reminders-scope.types.ts",
+    "apps/api/src/modules/reminders/reminders.policy.integration.test.ts",
+    "apps/web/src/shared/ui/record-dialog-footer.tsx",
+    "apps/web/src/shared/ui/tab-header.tsx",
+    "apps/web/src/shared/ui/search-input.test.tsx",
+    "apps/web/src/shared/ui/navigation/nav-bar.tsx",
+    "apps/web/src/shared/ui/report-shell/report-toolbar.tsx",
+    "apps/web/src/shared/ui/report-shell/save-now-button.test.tsx",
+    "apps/web/src/shared/ui/report-shell/view-mode-toggle.tsx"
+  ],
+  "codex-b6-reminders": ["apps/api/src/modules/reminders"],
+  "codex-b6-shared": [
+    "apps/web/src/shared/ui",
+    "apps/web/src/features/report-sections/ui/item-card-actions.tsx",
+    "apps/web/src/features/viewer/ui/viewer-context-controls.tsx"
+  ]
+}

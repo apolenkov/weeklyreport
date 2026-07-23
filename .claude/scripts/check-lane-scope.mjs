@@ -16,7 +16,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const ALWAYS_ALLOWED = [".claude/", "openspec/", "docs/"];
+// docs/ is deliberately NOT here: the pre-commit docs guard owns that surface
+// and a lane must declare any docs edit explicitly.
+const ALWAYS_ALLOWED = [".claude/", "openspec/"];
 
 const args = process.argv.slice(2);
 const scopesIdx = args.indexOf("--scopes");
@@ -25,6 +27,11 @@ if (scopesIdx < 0 || !args[scopesIdx + 1]) {
 }
 const scopes = JSON.parse(readFileSync(args[scopesIdx + 1], "utf8"));
 const allowed = Object.values(scopes).flat();
+if (allowed.length === 0) {
+  throw new Error(
+    "scopes.json declares no lane paths — refusing (fail-closed)",
+  );
+}
 
 const porcelain = execFileSync("/usr/bin/git", ["status", "--porcelain"], {
   cwd: ROOT,
@@ -33,7 +40,9 @@ const porcelain = execFileSync("/usr/bin/git", ["status", "--porcelain"], {
 const dirty = porcelain
   .split("\n")
   .filter(Boolean)
+  // A rename line reads "R  old -> new"; the NEW path is what must be in scope.
   .map((line) => line.slice(3).trim())
+  .map((path) => (path.includes(" -> ") ? path.split(" -> ").at(-1) : path))
   .filter((path) => path.length > 0);
 
 const inScope = (path) =>

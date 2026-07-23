@@ -212,12 +212,23 @@ if (flag("dry")) {
 }
 
 writeFileSync(targetPath, next);
+// The scope manifest the gate's step-0 checker reads (check-lane-scope.mjs):
+// every dirty product file must belong to one of these slices.
+const scopesPath = join(ROOT, ".claude/workflows/current-batch-scopes.json");
+writeFileSync(
+  scopesPath,
+  `${JSON.stringify(
+    Object.fromEntries(selected.map((s) => [s.name, s.files])),
+    null,
+    2,
+  )}\n`,
+);
 execFileSync(
   join(ROOT, "node_modules", ".bin", "prettier"),
-  ["--write", target],
+  ["--write", target, ".claude/workflows/current-batch-scopes.json"],
   {
     cwd: ROOT,
     stdio: "inherit",
   },
 );
-console.log(`wrote ${target} and ran prettier`);
+console.log(`wrote ${target} + current-batch-scopes.json and ran prettier`);
