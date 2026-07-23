@@ -30,20 +30,22 @@ describe("TaglineCycler", () => {
     expect(LANDING_TAGLINES).toContain(el.textContent);
   });
 
-  // p element has implicit paragraph role — no role="text" override present
-  it("p element has no explicit role attribute (implicit paragraph role only)", () => {
+  it("renders a plain <p> with its implicit paragraph role, no role override", () => {
     render(<TaglineCycler />);
     const el = screen.getByRole("paragraph");
+    expect(el.tagName.toLowerCase()).toBe("p");
     expect(el).not.toHaveAttribute("role");
   });
 
-  // getByRole('paragraph') resolves since there is no role="text" override
-  it("getByRole('paragraph') locates the element without a role override", () => {
-    render(<TaglineCycler />);
-    // If role="text" were still present, 'paragraph' query would fail
-    expect(() => screen.getByRole("paragraph")).not.toThrow();
-    const el = screen.getByRole("paragraph");
-    expect(el.tagName.toLowerCase()).toBe("p");
+  it("omits the tagline element entirely when the curated array is empty", async () => {
+    // Spec landing-page-hero, "Tagline array is empty (defensive)".
+    vi.resetModules();
+    vi.doMock("./landing-page.constants", () => ({ LANDING_TAGLINES: [] }));
+    const { TaglineCycler: EmptyCycler } = await import("./tagline-cycler");
+    const { container } = render(<EmptyCycler />);
+    expect(container).toBeEmptyDOMElement();
+    vi.doUnmock("./landing-page.constants");
+    vi.resetModules();
   });
 
   it("cycles to a different phrase after the visible+fade interval", () => {

@@ -262,6 +262,9 @@ describe("mapLeadProducts", () => {
     });
 
     const product = mapLeadProducts(section).at(0);
+    // Length guard first: `[].every(...)` is vacuously true, so without it a
+    // regression that empties the grid would pass this test silently.
+    expect(product?.stages).toHaveLength(7);
     expect(product?.stages.every((s) => s.ownership === "mine")).toBe(true);
   });
 
@@ -1388,6 +1391,9 @@ describe("ownedStagesForProject", () => {
       products[0]?.stages
         .filter((s) => s.ownership === "mine")
         .map((s) => s.stageName) ?? [];
-    expect([...ownedNames].sort()).toEqual([...mineInGrid].sort());
+    // Pin the exact expected set on both sides: a bare agreement check would
+    // still pass if both paths regressed to empty.
+    expect([...ownedNames].sort()).toEqual(["Development", "Testing"]);
+    expect([...mineInGrid].sort()).toEqual(["Development", "Testing"]);
   });
 });

@@ -1,14 +1,3 @@
-/**
- * Dynamic tagline cycler on the landing hero.
- *
- * Driven by React state + setTimeout chain (deterministic cleanup,
- * no setInterval anti-pattern).
- *
- * Rotation schedule: 3 s visible → 250 ms fade-out → swap → 250 ms fade-in.
- * On mount, picks a random start index so repeat visits feel fresh.
- *
- * TODO(i18n-future): move phrases to locale dictionary when i18n lands.
- */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -23,7 +12,9 @@ function randomIndex(): number {
   return Math.floor(Math.random() * LANDING_TAGLINES.length);
 }
 
-export function TaglineCycler() {
+// setTimeout chain instead of setInterval: each tick re-arms itself, so at
+// any instant exactly one timer is live and cleanup is a single clearTimeout.
+function CyclingTagline() {
   const [index, setIndex] = useState<number>(randomIndex);
   const [visible, setVisible] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -57,4 +48,11 @@ export function TaglineCycler() {
       {LANDING_TAGLINES[index]}
     </p>
   );
+}
+
+// Spec landing-page-hero, "Tagline array is empty": a misconfigured empty
+// array must omit the tagline element entirely, not render an empty <p>.
+export function TaglineCycler() {
+  if (LANDING_TAGLINES.length === 0) return null;
+  return <CyclingTagline />;
 }
