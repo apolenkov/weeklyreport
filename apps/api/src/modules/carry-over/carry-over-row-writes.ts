@@ -37,11 +37,9 @@ export async function persistCarriedRowsForSection(
     await tx.item.createMany({
       data: carriedItems.map((i) => ({
         id: i.id ?? undefined,
-        // Carry the source record's durable lineage key onto the clone
-        // (it rides the `...item` spread in cloneCarriedItem) so the
-        // carried позиция shares one identity with its origin. A fresh
-        // PK `id` still comes from the clone above.
-        stableId: i.stableId,
+        // Item replay defense relies on the non-null stableId unique index;
+        // decisions also have explicit id-based dedupe below.
+        stableId: requireStableItemId(i.stableId),
         reportSectionId: targetSection.reportSectionId,
         // XOR parent preserved onto the clone (product FK null for an
         // activity-parented carried item).
@@ -101,4 +99,13 @@ export async function persistCarriedRowsForSection(
       skipDuplicates: true,
     });
   }
+}
+
+function requireStableItemId(stableId: string | undefined): string {
+  if (stableId === undefined) {
+    throw new Error(
+      "Cannot persist a carried item without its stable lineage id.",
+    );
+  }
+  return stableId;
 }

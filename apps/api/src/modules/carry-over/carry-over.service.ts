@@ -84,6 +84,24 @@ function isActivityCarryable(
   return activityId == null || targetActivityIds.has(activityId);
 }
 
+function assertUniqueCarriedAuthors(
+  entries: readonly { authorId: string }[],
+): void {
+  const authorIds = entries.map((entry) => entry.authorId);
+  const counts = authorIds.reduce(
+    (map, authorId) => map.set(authorId, (map.get(authorId) ?? 0) + 1),
+    new Map<string, number>(),
+  );
+  const duplicateAuthorId = authorIds.find(
+    (authorId) => (counts.get(authorId) ?? 0) > 1,
+  );
+  if (duplicateAuthorId !== undefined) {
+    throw new CarryOverDomainError(
+      `Carry-over requires one source section per author; duplicate author ${duplicateAuthorId}.`,
+    );
+  }
+}
+
 export class CarryOverService {
   private readonly logger: AppLogger;
 
@@ -208,6 +226,7 @@ export class CarryOverService {
         );
       return [{ authorId: targetSection.authorId, items, decisions }];
     });
+    assertUniqueCarriedAuthors(carriedByAuthor);
 
     const allCarriedItems = carriedByAuthor.flatMap((entry) => entry.items);
     const allCarriedDecisions = carriedByAuthor.flatMap(
