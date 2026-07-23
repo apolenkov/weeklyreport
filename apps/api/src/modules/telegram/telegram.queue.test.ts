@@ -142,8 +142,6 @@ describe("telegram.queue constants", () => {
   it("default job opts request 3 attempts with exponential backoff", () => {
     expect(TELEGRAM_OUTBOUND_JOB_OPTS.attempts).toBe(3);
     expect(TELEGRAM_OUTBOUND_JOB_OPTS.backoff.type).toBe("exponential");
-    expect(TELEGRAM_OUTBOUND_JOB_OPTS.backoff.delay).toBeGreaterThanOrEqual(
-      1000,
-    );
+    expect(TELEGRAM_OUTBOUND_JOB_OPTS.backoff.delay).toBe(5000);
   });
 });
