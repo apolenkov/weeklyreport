@@ -26,7 +26,7 @@ describe("client-logs proxy route", () => {
 
   it("passes the edge proxy's X-Forwarded-For chain through to the API", async () => {
     const fetchMock = vi.fn(() =>
-      Promise.resolve(new Response(null, { status: 204 })),
+      Promise.resolve(new Response(null, { status: 202 })),
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -38,7 +38,7 @@ describe("client-logs proxy route", () => {
       }) as never,
     );
 
-    expect(res.status).toBe(204);
+    expect(res.status).toBe(202);
     const [, init] = fetchMock.mock.calls[0] as unknown as [
       string,
       RequestInit,

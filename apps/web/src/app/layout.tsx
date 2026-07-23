@@ -35,9 +35,7 @@ const sourceSans = Source_Sans_3({
 // server-side via the Metadata API so the document title is correct on
 // first paint and shareable links resolve a real title.
 export async function generateMetadata(): Promise<Metadata> {
-  const org = await getOrgPublic();
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- getOrgPublic can resolve to no org (unseeded/early boot); the fallback brands metadata resiliently
-  const name = org?.fullName ?? "CustomReport";
+  const { fullName: name } = await getOrgPublic();
   return {
     title: { default: name, template: `%s · ${name}` },
     description: "Weekly status reporting for the CoreDev department.",

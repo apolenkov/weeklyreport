@@ -9,8 +9,9 @@ const DASHBOARD_BFCACHE_RECOVERY_SCRIPT = `
     const isHistoryRestore =
       event.persisted || navigation?.type === "back_forward";
     if (!isHistoryRestore) return;
-    if (window.location.pathname !== "/head/dashboard") return;
     if (!document.querySelector("[data-dashboard-loading='true']")) return;
+    // A bfcache-restored dashboard can remain frozen in its loading state;
+    // force a fresh request only while that route's unique marker is present.
     window.location.reload();
   });
 })();

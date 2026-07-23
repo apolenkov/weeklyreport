@@ -1,3 +1,6 @@
+// Order is deliberate: products → periods → reminders mirrors the data flow
+// (a period scoped to products drives reminders), and 'jobs' sits after
+// 'reopen' so failure triage lives beside the other reactive admin work.
 export const ADMIN_TABS = [
   "users",
   "groups",

@@ -30,10 +30,9 @@ export default async function LeadReportByIdPage({
   const resolvedMode = mode === "slides" || mode === "edit" ? mode : "edit";
 
   if (mode && resolvedMode !== mode) {
-    const normalizedMode = "edit";
     redirect(
       `/lead/report/${encodeURIComponent(reportId)}?mode=${encodeURIComponent(
-        normalizedMode,
+        "edit",
       )}`,
     );
   }

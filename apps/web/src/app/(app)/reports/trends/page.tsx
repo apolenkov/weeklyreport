@@ -1,10 +1,5 @@
 "use client";
 
-import type {
-  LeadVelocityOutput,
-  PeriodComparisonOutput,
-  TrafficLightHistoryOutput,
-} from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 
@@ -50,31 +45,6 @@ function ChartSkeleton() {
   return <div className="h-64 w-full animate-pulse rounded-md bg-muted/50" />;
 }
 
-function isTrafficLightHistoryOutput(
-  value: unknown,
-): value is TrafficLightHistoryOutput {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    Array.isArray((value as { periods?: unknown }).periods) &&
-    Array.isArray((value as { rows?: unknown }).rows)
-  );
-}
-
-function isLeadVelocityOutput(value: unknown): value is LeadVelocityOutput {
-  return Array.isArray(value);
-}
-
-function isPeriodComparisonOutput(
-  value: unknown,
-): value is PeriodComparisonOutput {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    Array.isArray((value as { rows?: unknown }).rows)
-  );
-}
-
 export default function TrendsPage() {
   const trpc = useTRPC();
   // Anchor the window on the current date instead of pinning absolute calendar
@@ -98,9 +68,7 @@ export default function TrendsPage() {
   // generates period-end dates relative to the run date, so any pinned pair
   // goes stale and the chart renders empty. `periods` arrives ascending, so
   // the last two entries are the latest pair.
-  const historyData = isTrafficLightHistoryOutput(history.data)
-    ? history.data
-    : undefined;
+  const historyData = history.data;
   const periodPair = latestPeriodPair(historyData?.periods ?? []);
   const comparison = useQuery({
     ...trpc.analytics.periodComparison.queryOptions({
@@ -123,7 +91,7 @@ export default function TrendsPage() {
         </h2>
         {history.isLoading ? (
           <ChartSkeleton />
-        ) : historyData ? (
+        ) : historyData !== undefined ? (
           <TrafficLightHistoryChart {...historyData} />
         ) : null}
       </section>
@@ -134,7 +102,7 @@ export default function TrendsPage() {
         </h2>
         {velocity.isLoading ? (
           <ChartSkeleton />
-        ) : isLeadVelocityOutput(velocity.data) ? (
+        ) : velocity.data !== undefined ? (
           <LeadVelocityChart rows={velocity.data} />
         ) : null}
       </section>
@@ -145,7 +113,7 @@ export default function TrendsPage() {
         </h2>
         {comparison.isLoading ? (
           <ChartSkeleton />
-        ) : isPeriodComparisonOutput(comparison.data) ? (
+        ) : comparison.data !== undefined ? (
           <PeriodComparisonChart {...comparison.data} />
         ) : null}
       </section>

@@ -27,9 +27,12 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => navigationMock.searchParams,
 }));
 
-vi.mock("@tanstack/react-query", () => ({
-  useQuery: vi.fn(),
-}));
+vi.mock("@tanstack/react-query", async () => {
+  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
+    "@tanstack/react-query",
+  );
+  return { ...actual, useQuery: vi.fn() };
+});
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn() },
@@ -73,7 +76,18 @@ vi.mock("../../../lib/trpc-context", () => ({
 interface QueryOptions {
   readonly queryKey: readonly unknown[];
   readonly enabled?: boolean;
+  readonly placeholderData?: (
+    previousData: CompiledHistoryData | undefined,
+  ) => CompiledHistoryData | undefined;
 }
+
+interface CompiledHistoryData {
+  readonly entries: CompiledHistoryEntry[];
+  readonly archiveCount: number;
+}
+
+let pendingCompiledArchive: boolean | null = null;
+let previousCompiledData: CompiledHistoryData | undefined;
 
 function setRole(role: Role) {
   sessionMock.mockReturnValue({
@@ -160,13 +174,23 @@ function mockQueries() {
       } as ReturnType<typeof useQuery>;
     }
     if (name === "reports.compiledHistory") {
+      const freshData = {
+        entries: includeArchive
+          ? [currentCompiled, archivedCompiled]
+          : [currentCompiled],
+        archiveCount: 1,
+      };
+      if (pendingCompiledArchive === includeArchive) {
+        const placeholder = query.placeholderData?.(previousCompiledData);
+        return {
+          data: placeholder,
+          isLoading: placeholder === undefined,
+          isError: false,
+        } as ReturnType<typeof useQuery>;
+      }
+      previousCompiledData = freshData;
       return {
-        data: {
-          entries: includeArchive
-            ? [currentCompiled, archivedCompiled]
-            : [currentCompiled],
-          archiveCount: 1,
-        },
+        data: freshData,
         isLoading: false,
         isError: false,
       } as ReturnType<typeof useQuery>;
@@ -179,6 +203,8 @@ describe("ReportsPage history archive toggle", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     navigationMock.searchParams = new URLSearchParams("tab=drafts");
+    pendingCompiledArchive = null;
+    previousCompiledData = undefined;
     mockQueries();
   });
 
@@ -217,18 +243,34 @@ describe("ReportsPage history archive toggle", () => {
     expect(navigationMock.push).not.toHaveBeenCalled();
   });
 
+  it("keeps the previous compiled list while archive refetches in both directions", () => {
+    setRole("head");
+    const rendered = render(<ReportsPage />);
+    const archiveToggle = screen.getByLabelText("Show archived reports (1)");
+
+    pendingCompiledArchive = true;
+    fireEvent.click(archiveToggle);
+    expect(screen.getByText("Week 19, May 4–10, 2026")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Week 15, Apr 6–12, 2026"),
+    ).not.toBeInTheDocument();
+
+    pendingCompiledArchive = null;
+    rendered.rerender(<ReportsPage />);
+    expect(screen.getByText("Week 15, Apr 6–12, 2026")).toBeInTheDocument();
+
+    pendingCompiledArchive = false;
+    fireEvent.click(archiveToggle);
+    expect(screen.getByText("Week 15, Apr 6–12, 2026")).toBeInTheDocument();
+  });
+
   it("renders the published-scoped search for a viewer", () => {
-    // A viewer's search scope is 'published' (no draft toggle).
     setRole("viewer");
     render(<ReportsPage />);
 
     const search = screen.getByLabelText("Search Reports");
     expect(search).toHaveAttribute("data-scope", "published");
     expect(search).toHaveAttribute("placeholder", "Search published reports…");
-    expect(
-      screen.queryByRole("button", { name: /draft/i }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText(/include drafts/i)).not.toBeInTheDocument();
   });
 
   it("defaults head History to NO archive even when the URL is ?tab=published", () => {

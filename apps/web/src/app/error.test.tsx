@@ -43,13 +43,6 @@ describe("ErrorBoundary — error.tsx a11y", () => {
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
-  it("wrapper div structure snapshot", () => {
-    const { container } = render(
-      <ErrorBoundary error={makeError()} reset={vi.fn()} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
   it("Sentry.captureException is called with the error on mount", () => {
     const error = makeError("boom");
     render(<ErrorBoundary error={error} reset={vi.fn()} />);

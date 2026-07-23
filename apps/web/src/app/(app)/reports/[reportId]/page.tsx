@@ -5,7 +5,10 @@ import { ViewerReportShell } from "../../../../features/viewer/ui/viewer-report-
 
 interface Props {
   params: Promise<{ reportId: string }>;
-  searchParams: Promise<{ authorId?: string; mode?: string }>;
+  searchParams: Promise<{
+    authorId?: string | string[];
+    mode?: string | string[];
+  }>;
 }
 
 /**
@@ -26,6 +29,7 @@ export default async function PublishedReportPage({
   const { reportId } = await params;
   const { authorId, mode: modeParam } = await searchParams;
   const mode = modeParam === "slides" ? "slides" : "form";
+  const resolvedAuthorId = typeof authorId === "string" ? authorId : undefined;
 
   return (
     <main
@@ -37,7 +41,7 @@ export default async function PublishedReportPage({
           <ViewerReportShell
             reportId={reportId}
             mode={mode}
-            authorId={authorId}
+            authorId={resolvedAuthorId}
           />
         </Suspense>
       </div>
