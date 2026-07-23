@@ -1,6 +1,7 @@
 import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { telegramMessageSentTotal } from "../../infrastructure/metrics/metrics.registry";
 import { MockTelegramAdapter } from "./mock-telegram.adapter";
 
 describe("MockTelegramAdapter", () => {
@@ -11,7 +12,7 @@ describe("MockTelegramAdapter", () => {
   });
 
   afterEach(() => {
-    writeSpy.mockRestore();
+    vi.restoreAllMocks();
   });
 
   it("returns { ok: true } for any non-empty input", async () => {
@@ -25,6 +26,20 @@ describe("MockTelegramAdapter", () => {
     await adapter.send("12345", "first");
     await adapter.send("67890", "second");
     expect(adapter.lastPayload).toEqual({ chatId: "67890", text: "second" });
+  });
+
+  it("records a successful delivery metric for every send", async () => {
+    const inc = vi
+      .spyOn(telegramMessageSentTotal, "inc")
+      .mockImplementation(() => undefined);
+    const adapter = new MockTelegramAdapter();
+
+    await adapter.send("12345", "first");
+    await adapter.send("67890", "second");
+
+    expect(inc).toHaveBeenCalledTimes(2);
+    expect(inc).toHaveBeenNthCalledWith(1, { status: "ok" });
+    expect(inc).toHaveBeenNthCalledWith(2, { status: "ok" });
   });
 
   it("emits a structured JSON log line per send", async () => {
