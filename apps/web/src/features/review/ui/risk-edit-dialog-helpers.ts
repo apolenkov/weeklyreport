@@ -51,7 +51,10 @@ export function computePreCheckedStages(
   ownedStages: readonly string[],
 ): { name: string; severity: RiskSeverity }[] {
   return (seedProduct?.stages ?? [])
-    .filter((s) => s.status === "at-risk" || s.status === "blocked")
+    .filter(
+      (s): s is Product["stages"][number] & { status: RiskSeverity } =>
+        s.status === "at-risk" || s.status === "blocked",
+    )
     .filter((s) =>
       ownedStages.some(
         (n) => canonicalStageName(n) === canonicalStageName(s.stageName),
@@ -59,7 +62,7 @@ export function computePreCheckedStages(
     )
     .map((s) => ({
       name: canonicalStageName(s.stageName),
-      severity: s.status as RiskSeverity,
+      severity: s.status,
     }));
 }
 
@@ -102,6 +105,9 @@ export function resolveRiskParentName(args: {
  * Resolve the product a product-parented save writes to. A cross-stage row may
  * reference a project outside the lead's stage-owned `products`, so keep the
  * original assignment instead of silently reassigning to the first product.
+ * The trailing `products.at(0)` is only reachable when the picker was never
+ * touched AND the risk carries no product — with an empty list it yields
+ * `undefined`, which the caller surfaces as the "No product available" error.
  */
 export function resolveRiskSaveProduct(
   products: readonly Product[],
