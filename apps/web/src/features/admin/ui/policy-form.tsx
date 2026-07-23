@@ -86,7 +86,7 @@ export function PolicyForm({
             Reminder type
           </label>
           {form.preset === "custom" ? (
-            // D3: a legacy pairing outside the two presets is shown read-only
+            // A legacy pairing outside the two presets is shown read-only
             // and its stored kind/audience are written back unchanged.
             <div
               id="policy-type"

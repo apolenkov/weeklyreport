@@ -103,12 +103,12 @@ export function mapWeeklyReport(
 }
 
 /**
- * report-card-clarity: build the head report's "by lead" groups so each product
- * card under a lead shows ONLY that lead's own contribution (their items, risks,
- * decisions, stages) — not the cross-lead aggregate. Each `api.leadSections`
- * entry is already sliced per lead, so we run the per-product groupers over that
- * single section. The previous page-side bucketing reused the aggregate cards,
- * so a product authored by two leads repeated the whole merged card under each.
+ * Build the head report's "by lead" groups so each product card under a lead
+ * shows ONLY that lead's own contribution (their items, risks, decisions,
+ * stages) — not the cross-lead aggregate. Each `api.leadSections` entry is
+ * already sliced per lead, so we run the per-product groupers over that single
+ * section. Reusing aggregate cards would repeat a dual-authored product's
+ * merged content under each lead.
  *
  * "By product" scope keeps using {@link mapWeeklyReport}'s aggregate `products`.
  */
@@ -197,11 +197,11 @@ function compareProductStatus(
 }
 
 /**
- * report-overview-scope-parity: derive the `by lead` Report overview rows from
- * the already-computed lead groups (the output of `mapWeeklyReportLeadGroups`).
- * One row per lead WITH content — membership inherits the body's content filter
- * (the groups are already pruned of empty leads), so a decisions-only or
- * Needs-Attention-only lead still gets a row. Pure mapping: no new server data.
+ * Derive the `by lead` Report overview rows from the already-computed lead
+ * groups (the output of `mapWeeklyReportLeadGroups`). One row per lead WITH
+ * content — membership inherits the body's content filter (the groups are
+ * already pruned of empty leads), so a decisions-only or Needs-Attention-only
+ * lead still gets a row. Pure mapping: no new server data.
  *
  * `worstStatus` is the worst traffic light across the lead's sliced products
  * (their own contribution); counts are summed over those products. Rows sort

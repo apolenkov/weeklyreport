@@ -14,12 +14,12 @@ interface Props {
  * Resolves the current lead's userId from auth.me and renders
  * WeeklyReportPage.
  *
- * Scope (driver-findings-2026-06-11 finding 2): the preview shows the lead's
- * GROUP's products — those the lead's reporting group owns via GroupProduct —
- * not the whole portfolio and not only the products the lead personally
- * authors. That scoping is enforced server-side by weeklyReport.get; the
- * `authorId` passed below only drives open / highlight / scroll of the lead's
- * own section, it does not filter the product list.
+ * The preview shows the lead's GROUP's products — those the lead's reporting
+ * group owns via GroupProduct — not the whole portfolio and not only the
+ * products the lead personally authors. That scoping is enforced server-side
+ * by weeklyReport.get; the `authorId` passed below only drives open /
+ * highlight / scroll of the lead's own section, it does not filter the
+ * product list.
  */
 export function LeadSectionPreviewAuth({ reportId }: Props) {
   const trpc = useTRPC();

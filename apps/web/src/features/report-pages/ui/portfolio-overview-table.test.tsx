@@ -1,9 +1,9 @@
 /**
- * VA-0a / VA-0b regression catalog — PortfolioOverviewTable
+ * A11y regressions for PortfolioOverviewTable.
  *
- * Source change: aria-hidden="true" added to GridIcon SVG so the decorative
- * grid icon is hidden from screen readers and the "Portfolio Overview" heading
- * text is the sole accessible label for that region.
+ * The GridIcon SVG is aria-hidden so the decorative grid icon is hidden from
+ * screen readers and the "Portfolio Overview" heading text is the sole
+ * accessible label for that region.
  */
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -33,7 +33,7 @@ function makeProduct(
 
 const ONE_PRODUCT = [makeProduct()];
 
-describe("PortfolioOverviewTable — VA-0a/VA-0b a11y regression", () => {
+describe("PortfolioOverviewTable — a11y regression", () => {
   it("GridIcon SVG has aria-hidden='true'", () => {
     const { container } = render(
       <PortfolioOverviewTable products={ONE_PRODUCT} />,
@@ -86,7 +86,7 @@ describe("PortfolioOverviewTable — VA-0a/VA-0b a11y regression", () => {
   });
 });
 
-// report-overview-scope-parity: the overview band follows the report scope.
+// The overview band follows the report scope (by-product vs by-lead).
 function makeLeadRow(overrides?: Partial<LeadOverviewRow>): LeadOverviewRow {
   return {
     id: "L1",

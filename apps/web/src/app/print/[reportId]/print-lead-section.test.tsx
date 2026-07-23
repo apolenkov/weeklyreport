@@ -1,9 +1,7 @@
 /**
- * Characterization pin (sweep-doc-truth-and-canon-dupes task 1.2): the
- * rendered status label + color for each `WeeklyProductStatus` value, taken
- * before `PrintLeadSection` is rerouted from the local `printStatusLabel` to
- * the canonical `statusLabel(status, "print")`. A label mismatch after
- * rerouting fails this test instead of shipping silently.
+ * Characterization pin: the rendered status label + color for each
+ * `WeeklyProductStatus` value via the canonical `statusLabel(status, "print")`.
+ * A label/color mismatch fails this test instead of shipping silently.
  */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";

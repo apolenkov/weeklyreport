@@ -43,9 +43,8 @@ function CoveredStatusLock() {
   );
 }
 
-/** The status slot: the locked message, or the progress chips. The former
- * in-dialog "mark as blocked" gesture is gone — blockers live in Risks &
- * Blockers (rework-item-status-model). */
+/** The status slot: the locked message, or the progress chips. Blockers live
+ * in Risks & Blockers, not as a free status chip here. */
 export function StatusSlotView({
   slot,
   choices,

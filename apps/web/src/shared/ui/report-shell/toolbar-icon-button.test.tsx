@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ToolbarIconButton } from "./toolbar-icon-button";
 
-describe("ToolbarIconButton (head-toolbar-parity D3)", () => {
+describe("ToolbarIconButton", () => {
   it("renders the required aria-label and defaults title to it", () => {
     render(
       <ToolbarIconButton aria-label="Do the thing">
@@ -27,9 +27,8 @@ describe("ToolbarIconButton (head-toolbar-parity D3)", () => {
   });
 
   it("derives the shared circle size from the toolbar height token and sets type=button", () => {
-    // responsive-compact-layout: the token is 32px on desktop and rises to the
-    // touch-target floor below `md`, so the size must come from the token, not
-    // a hard-coded h-8/w-8.
+    // The token is 32px on desktop and rises to the touch-target floor below
+    // `md`, so the size must come from the token, not a hard-coded h-8/w-8.
     render(<ToolbarIconButton aria-label="Sized" />);
     const btn = screen.getByRole("button", { name: "Sized" });
     expect(btn).toHaveAttribute("type", "button");

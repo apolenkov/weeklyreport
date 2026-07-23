@@ -36,9 +36,9 @@ export interface WeeklyReportItem {
   status: ItemStatus;
   /** Priority rank (1 = top) when the item is a flagged priority; null otherwise. */
   priorityRank?: number | null;
-  /** review-acknowledgement: reviewer comments anchored to this item's DB id. */
+  /** Reviewer comments anchored to this item's DB id. */
   comments?: RecordCommentView[];
-  /** review-acknowledgement: true when the current caller may review this row's group. */
+  /** True when the current caller may review this row's group. */
   canReview?: boolean;
 }
 
@@ -56,9 +56,9 @@ export interface WeeklyReportRisk {
   problem: string;
   impact: string;
   mitigation: string;
-  /** review-acknowledgement: reviewer comments anchored to this risk's DB id. */
+  /** Reviewer comments anchored to this risk's DB id. */
   comments?: RecordCommentView[];
-  /** review-acknowledgement: true when the current caller may review this row's group. */
+  /** True when the current caller may review this row's group. */
   canReview?: boolean;
 }
 
@@ -68,9 +68,9 @@ export interface WeeklyReportDecision {
   /** Contributing lead's initials for the gutter. */
   owner: string;
   text: string;
-  /** review-acknowledgement: reviewer comments anchored to this decision's DB id. */
+  /** Reviewer comments anchored to this decision's DB id. */
   comments?: RecordCommentView[];
-  /** review-acknowledgement: true when the current caller may review this row's group. */
+  /** True when the current caller may review this row's group. */
   canReview?: boolean;
 }
 
@@ -96,10 +96,10 @@ export interface WeeklyProductReport {
   priorities: WeeklyReportPriority[];
 }
 
-// report-overview-scope-parity: one row of the Report overview in `by lead`
-// scope — derived from the already-computed per-lead groups. `worstStatus` is
-// the worst traffic light across the lead's sliced products; the counts are
-// summed over those products. Mirrors the product overview card's three counts.
+// One row of the Report overview in `by lead` scope — derived from the
+// already-computed per-lead groups. `worstStatus` is the worst traffic light
+// across the lead's sliced products; the counts are summed over those
+// products. Mirrors the product overview card's three counts.
 export interface LeadOverviewRow {
   id: string;
   name: string;

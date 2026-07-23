@@ -82,7 +82,7 @@ export class ReminderAdminService {
   /**
    * Permanently delete a reminder policy and its derived rules. The
    * repository hard-deletes the rules (executions cascade) then the policy;
-   * there is no soft-delete fallback (D9).
+   * there is no soft-delete fallback.
    */
   async removePolicy(policyId: string): Promise<{ success: true }> {
     this.logger.info("deleted reminder policy", { policyId });

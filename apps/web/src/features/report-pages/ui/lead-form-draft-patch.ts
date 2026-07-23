@@ -20,10 +20,10 @@ import {
 
 /**
  * Every draft mutation the lead form performs, as data. The draft module's
- * `apply(patch)` runs these through `setDraftSection` as a functional updater,
- * so a patch composes with the pending draft exactly as the pre-module
- * per-handler `setDraftSection((prev) => merge(prev, next))` calls did — the
- * `LeadFormSyncBridge` feeds stay byte-identical.
+ * `apply(patch)` runs these through `setDraftSection` as a functional updater
+ * so each patch composes with whatever draft is already pending — concurrent
+ * handler fires never clobber each other, and bridge consumers always read
+ * the merged section.
  */
 export type DraftPatch =
   | { readonly kind: "products"; readonly products: readonly Product[] }

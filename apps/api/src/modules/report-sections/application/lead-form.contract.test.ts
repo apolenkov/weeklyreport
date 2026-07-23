@@ -130,8 +130,8 @@ describe("LeadFormService — revokeSubmission", () => {
     });
     const service = new LeadFormService(repo);
 
-    // map-domain-errors: a state conflict on an existing section → typed
-    // LeadFormConstraintError (→ BAD_REQUEST), not a bare Error (→ 500).
+    // A state conflict on an existing section → typed LeadFormConstraintError
+    // (→ BAD_REQUEST), not a bare Error (→ 500).
     await expect(
       service.revokeSubmission(SECTION_ID, OTHER_USER_ID, {}),
     ).rejects.toBeInstanceOf(LeadFormConstraintError);
@@ -191,7 +191,7 @@ describe("LeadFormService — revokeSubmission", () => {
 });
 
 // ---------------------------------------------------------------------------
-// fillFrom — ownership guards (map-domain-errors)
+// fillFrom — ownership guards
 // ---------------------------------------------------------------------------
 
 describe("LeadFormService — fillFrom authorization", () => {
@@ -234,7 +234,7 @@ describe("LeadFormService — fillFrom authorization", () => {
 });
 
 // ---------------------------------------------------------------------------
-// fillFrom — published-lineage lock (resolve-not-delete, ADR 0015)
+// fillFrom — published-lineage lock (resolve-not-delete)
 // ---------------------------------------------------------------------------
 
 describe("LeadFormService — fillFrom published-lineage lock", () => {
@@ -285,8 +285,7 @@ describe("LeadFormService — fillFrom published-lineage lock", () => {
 });
 
 // ---------------------------------------------------------------------------
-// getCrossAuthors — authorization guard
-// (scope-lead-report-to-own-contribution, task 4.2 — D6 privacy bound)
+// getCrossAuthors — authorization guard (privacy-bound cross-author list)
 // ---------------------------------------------------------------------------
 
 describe("LeadFormService — getCrossAuthors authorization", () => {
@@ -349,7 +348,6 @@ describe("LeadFormService — getCrossAuthors authorization", () => {
 
 // ---------------------------------------------------------------------------
 // getCrossAuthorContent — full-content authorization (two-tier) + metric
-// (scope-lead-report-to-own-contribution, tasks 7b.1 / 7b.3 — D6 / D6b)
 // ---------------------------------------------------------------------------
 
 describe("LeadFormService — getCrossAuthorContent authorization", () => {
@@ -465,7 +463,7 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
   it("has NO head/admin bypass — a head who co-owns nothing is denied like any non-co-owner", async () => {
     // The service signature carries no role: getCrossAuthorContent(reportId,
     // userId). A head reaches the same gate as a lead — own section AND
-    // co-ownership — with no role exception (D6).
+    // co-ownership — with no role exception.
     const repo = createMockRepository({
       // Head owns no section in this report → report-access gate denies.
       getSectionForPeriod: vi.fn().mockResolvedValue(null),
@@ -482,9 +480,9 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
     expect(repo.getCrossAuthorContent).not.toHaveBeenCalled();
   });
 
-  // task 7d.9 — positive authz matrix (service layer). The service gate is
-  // (a) report access AND (b) co-ownership, with NO role bypass. The five 7d.9
-  // rows collapse onto these two gates at this layer:
+  // Positive authz matrix (service layer). The service gate is (a) report
+  // access AND (b) co-ownership, with NO role bypass. The five rows collapse
+  // onto these two gates at this layer:
   //   - own author (allowed)            ─┐ both pass both gates → result=allowed,
   //   - same-product co-owner (allowed) ─┘ proven by the "allows" test above.
   //   - report member NOT co-owning     → coOwnsShared:false → denied (above).
@@ -600,11 +598,10 @@ describe("LeadFormService — fillFrom", () => {
     ).rejects.toThrow("Can only fill your own section.");
   });
 
-  // viewer-report-surface-parity (review P1): fillFrom must refuse a published
-  // period — the only post-publish path that mutates live Item/Risk/Decision
-  // rows. Published search reads live rows while the viewer read serves the
-  // frozen snapshot; allowing the rewrite would leak content absent from the
-  // report the viewer can open.
+  // fillFrom must refuse a published period — the only post-publish path that
+  // mutates live Item/Risk/Decision rows. Published search reads live rows
+  // while the viewer read serves the frozen snapshot; allowing the rewrite
+  // would leak content absent from the report the viewer can open.
   it("fails for a section in a published report", async () => {
     const repo = createMockRepository({
       getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
@@ -665,8 +662,7 @@ describe("LeadFormService — fillFrom", () => {
 // getByPeriod
 // ---------------------------------------------------------------------------
 
-// reopen-request-lifecycle helpers: build the repo return shapes that now
-// carry the period-lifecycle facts.
+// Helpers: build the repo return shapes that carry the period-lifecycle facts.
 function forPeriod(
   section: ReportSectionReadModel,
   readOnly: boolean,
@@ -1421,7 +1417,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
 });
 
 // ---------------------------------------------------------------------------
-// computeReopenEligibility — the single source of truth (D4)
+// computeReopenEligibility — the single source of truth
 // ---------------------------------------------------------------------------
 
 describe("computeReopenEligibility", () => {

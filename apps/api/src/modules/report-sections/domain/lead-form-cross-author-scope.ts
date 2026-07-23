@@ -144,9 +144,9 @@ export function filterSectionToSharedProducts(
   section: ReportSectionReadModel,
   sharedProductIds: ReadonlySet<string>,
 ): ReportSectionReadModel {
-  // activity-first-class: this lens is product-scoped — an activity-parented
-  // item/risk (null product FK) is on no shared product and is dropped, the
-  // same way a non-shared-product decision is.
+  // This lens is product-scoped — an activity-parented item/risk (null product
+  // FK) is on no shared product and is dropped, the same way a non-shared-
+  // product decision is.
   const items = section.items
     .filter((i) => i.projectId != null && sharedProductIds.has(i.projectId))
     .map(stripItemAuthorPrivateFields);

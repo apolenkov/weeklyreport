@@ -6,9 +6,9 @@ import {
 } from "../../report-sections";
 
 /**
- * Own non-empty risks of `productId` that cover `stageName`
- * (unify-risk-stage-status: coverage uses the canonical `riskCoversStage`
- * predicate — same as `computeUnbackedStages`). Exported for unit testing.
+ * Own non-empty risks of `productId` that cover `stageName`. Coverage uses
+ * the canonical `riskCoversStage` predicate — same as `computeUnbackedStages`.
+ * Exported for unit testing.
  */
 export function coveringRisksForStage(
   risks: readonly RiskEntry[],
@@ -28,13 +28,12 @@ export function coveringRisksForStage(
  * routed through `deriveEffectiveStageStatus` — the same rule `mapLeadProducts`
  * applies in the read model, so the live form, head review, and export agree.
  *
- * simplify-stage-status-interaction (D3, council find C): the derivation runs
- * UNCONDITIONALLY, not only for stages with a covering risk. A covering risk
- * floors the chip UP to its severity; a stage whose raw status is at-risk/blocked
- * but has NO covering risk collapses DOWN to on-track — matching the read model,
- * which already collapses it. This is also the migration for legacy explicit
- * at-risk/blocked stage rows: they render On Track on next load, no backfill.
- * Exported for unit testing.
+ * The derivation runs UNCONDITIONALLY, not only for stages with a covering
+ * risk. A covering risk floors the chip UP to its severity; a stage whose
+ * raw status is at-risk/blocked but has NO covering risk collapses DOWN to
+ * on-track — matching the read model, which already collapses it. Legacy
+ * explicit at-risk/blocked stage rows therefore render On Track on next
+ * load without a backfill. Exported for unit testing.
  */
 export function applyRiskSeverityFloor(
   products: readonly Product[],

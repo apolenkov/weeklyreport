@@ -6,10 +6,9 @@ import { ReportSectionDomainError } from "../../modules/report-sections/index.js
 import { createAppRouter } from "./trpc.router.js";
 
 /**
- * lead-history-and-submit-label (item 2): `reports.myHistory` delegates to
- * `ReportSectionsService.myHistory`, threading the caller's userId through.
- * The `report.periodStart desc` ordering guarantee this test used to pin at
- * the router level now lives where the query is issued — see
+ * `reports.myHistory` delegates to `ReportSectionsService.myHistory`,
+ * threading the caller's userId through. The `report.periodStart desc`
+ * ordering guarantee lives where the query is issued — see
  * `ReportSectionsPrismaRepository.getMyHistoryRows`'s coverage in
  * `report-sections.prisma-repository.test.ts`.
  */

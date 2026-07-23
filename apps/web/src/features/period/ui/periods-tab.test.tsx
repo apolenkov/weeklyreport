@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339); wave-6c-ii */
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339) */
 import type { PeriodListItem } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -583,16 +583,13 @@ describe("PeriodsTab — «Edit period» dialog", () => {
   });
 });
 
-// ---------------------------------------------------------------------
-// VA-0a: a11y behavioral regression tests (verify-a11y-recommended-flip)
-// Covers the high-priority unit-rtl rows for periods-tab.tsx:
+// A11y dialog behavioral regressions for periods-tab.tsx:
 //   - delete dialog: Escape key, backdrop click, Cancel button, inner-click
 //     stop-propagation
 //   - create/edit dialog: Escape key, backdrop click, inner-click
 //     stop-propagation
-// ---------------------------------------------------------------------
 
-describe("PeriodsTab — a11y dialog behavioral regressions (VA-0a)", () => {
+describe("PeriodsTab — a11y dialog behavioral regressions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -739,8 +736,7 @@ describe("PeriodsTab — a11y dialog behavioral regressions (VA-0a)", () => {
   });
 });
 
-// admin-dialog-focus-management (autofocus-admin-dialogs)
-describe("PeriodsTab — focus management (autofocus-admin-dialogs)", () => {
+describe("PeriodsTab — focus management", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

@@ -19,8 +19,7 @@ interface UseLeadFormChromeInput {
 /**
  * The lead form's page chrome: the document-title effect and the archived
  * show-state with its auto-expand, plus the selected-period derivation both
- * key on. Split from `LeadForm` only to keep the composition root inside the
- * size standard; bodies and dependency arrays move verbatim.
+ * key on.
  */
 export function useLeadFormChrome({
   pinnedReportId,

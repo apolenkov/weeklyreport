@@ -14,8 +14,7 @@ export function CorrelationCell({ value }: { readonly value: string }) {
       type="button"
       onClick={() => {
         // Fire-and-forget copy: the click handler is a void slot, so chain
-        // off the promise instead of returning it. Equivalent to the prior
-        // `const ok = await copyToClipboard(value); if (ok) …`.
+        // off the promise instead of returning it.
         void copyToClipboard(value).then((ok) => {
           if (ok) {
             setCopied(true);

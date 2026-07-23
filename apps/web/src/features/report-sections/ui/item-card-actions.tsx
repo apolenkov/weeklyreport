@@ -116,8 +116,8 @@ interface ItemCardActionsProps {
   /** Move action: flips `type` back to current IN PLACE (same durable identity). */
   readonly onMoveToCurrentWeek?: (id: string) => void;
   /**
-   * require-paused-item-reason: open the pause-reason prompt for this item.
-   * Passed only where pausing applies (current-week, in-progress rows).
+   * Open the pause-reason prompt for this item. Passed only where pausing
+   * applies (current-week, in-progress rows).
    */
   readonly onPause?: (id: string) => void;
 }

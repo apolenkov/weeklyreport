@@ -6,8 +6,7 @@ import { ToolbarIconButton } from "./toolbar-icon-button";
 
 const ARCHIVE_TOGGLE_LABEL = "Show closed (archived) report periods";
 
-// head-toolbar-parity D4: compact icon button, but the switch semantics and
-// the checked visual state carry over from the old text pill unchanged.
+// Compact icon button with switch semantics and a distinct checked visual.
 const CHECKED_CLASS =
   "cursor-pointer border-[var(--color-starbucks-accent)] bg-[var(--color-success)] text-[var(--color-starbucks-accent)]";
 const UNCHECKED_CLASS =

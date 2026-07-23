@@ -2,8 +2,8 @@ import { z } from "zod";
 
 import { safeText } from "./report-primitives.schema";
 
-// review-acknowledgement: the per-section verdict. `approved` leaves the
-// section submitted; `changes_requested` auto-un-submits a submitted section.
+// The per-section verdict. `approved` leaves the section submitted;
+// `changes_requested` auto-un-submits a submitted section.
 export const reviewVerdictSchema = z.enum(["approved", "changes_requested"]);
 
 // ---------------------------------------------------------------------------

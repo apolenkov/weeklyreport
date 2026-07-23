@@ -17,7 +17,7 @@ import type { RecordCommentAnchor } from "../../review";
 import { RecordComments } from "../../review";
 
 /**
- * review-acknowledgement: the in-app reviewer context threaded from the page.
+ * The in-app reviewer context threaded from the page.
  * Present ONLY on the live head/viewer surface — the print/PDF path renders the
  * accordion WITHOUT it, so no reviewer notes or composer leak into an export.
  */
@@ -95,9 +95,9 @@ const CSS = {
   mutedForeground: "var(--color-muted-foreground)",
 } as const;
 
-// apply-status-palette (memo T6 opt 2): red is the only alarm hue (blocked);
-// at-risk goes neutral here — the amber signal lives on the row's left
-// stripe, not on a flooded amber fill. No hardcoded status hex.
+// Red is the only alarm hue (blocked); at-risk goes neutral here — the amber
+// signal lives on the row's left stripe, not on a flooded amber fill. No
+// hardcoded status hex.
 const STATUS_CONFIG = {
   "on-track": {
     bg: CSS.success,
@@ -119,18 +119,18 @@ const STATUS_CONFIG = {
   },
 } as const satisfies Record<string, StatusConfig>;
 
-// head-report-accordion-redesign (user sign-off 2026-06-23): every content row
-// — item, risk, decision — shares ONE column grid so all stage labels share one
-// left edge and all content shares one left edge (the text no longer jumps).
-// Columns: priority | status rail | gutter (stage+owner) | content | status badge.
-// Below `md` the fixed gutter/badge rails narrow (gutter 84px, badge auto,
-// tighter gaps) so the content column keeps a usable width on a phone; every
-// column — and every status signal — remains present.
+// Every content row — item, risk, decision — shares ONE column grid so all
+// stage labels share one left edge and all content shares one left edge (the
+// text no longer jumps). Columns: priority | status rail | gutter
+// (stage+owner) | content | status badge. Below `md` the fixed gutter/badge
+// rails narrow (gutter 84px, badge auto, tighter gaps) so the content column
+// keeps a usable width on a phone; every column — and every status signal —
+// remains present.
 const ROW_GRID =
   "grid grid-cols-[20px_3px_minmax(0,84px)_minmax(0,1fr)_auto] items-start gap-x-2 md:grid-cols-[20px_3px_minmax(0,124px)_minmax(0,1fr)_104px] md:gap-x-3.5";
 
-// report-card-clarity: the product-status dot in the header reads its hue from a
-// named token (red=blocked alarm, amber=at-risk, green=on-track).
+// The product-status dot in the header reads its hue from a named token
+// (red=blocked alarm, amber=at-risk, green=on-track).
 const HEADER_STATUS_TONE = {
   "on-track": "var(--color-chip-on-track-border)",
   "at-risk": CSS.statusAtRiskBorder,
@@ -207,8 +207,8 @@ function Rail({ tone }: { readonly tone: string }) {
   );
 }
 
-// The fixed-width meta gutter: SDLC stage over the contributing lead's initials.
-// report-card-clarity: an identity surface — it never encodes workflow status.
+// The fixed-width meta gutter: SDLC stage over the contributing lead's
+// initials. An identity surface — it never encodes workflow status.
 function Gutter({
   stage,
   owner,
@@ -308,11 +308,10 @@ function RiskRow({ risk }: { readonly risk: WeeklyReportRisk }) {
   );
 }
 
-// head-surface-uat-polish (F2): a lead-raised escalation ("needs attention")
-// is folded into Risks & Blockers as a leading row instead of a separate banner
-// the head did not recognize. It carries only a description + severity (no
-// stage/impact/mitigation), so it renders as a compact risk-style row with a
-// "Flagged" gutter and a Blocked / At Risk badge.
+// A lead-raised escalation ("needs attention") is folded into Risks &
+// Blockers as a leading row instead of a separate banner. It carries only a
+// description + severity (no stage/impact/mitigation), so it renders as a
+// compact risk-style row with a "Flagged" gutter and a Blocked / At Risk badge.
 function EscalationRow({
   description,
   severity,
@@ -429,13 +428,12 @@ export function ProductAccordion({
     : ((HEADER_STATUS_TONE as Record<string, string>)[report.status] ??
       HEADER_STATUS_TONE["on-track"]);
 
-  // report-card-clarity / head-surface-uat-polish (F2): suppress the escalation
-  // when its text is verbatim a row already rendered in this card. The
-  // escalation is DERIVED from a blocked item or risk, so it would otherwise
-  // repeat that row — and since F2 folds it INTO Risks & Blockers, a matching
-  // risk would sit immediately above its duplicate. A genuinely distinct
-  // head-facing summary (no exact item/risk match) still surfaces as a leading
-  // Flagged row.
+  // Suppress the escalation when its text is verbatim a row already rendered
+  // in this card. The escalation is DERIVED from a blocked item or risk, so
+  // it would otherwise repeat that row — and since it folds INTO Risks &
+  // Blockers, a matching risk would sit immediately above its duplicate. A
+  // genuinely distinct head-facing summary (no exact item/risk match) still
+  // surfaces as a leading Flagged row.
   const renderedTexts = new Set([
     ...report.currentWeek.map((item) => item.text),
     ...report.nextWeek.map((item) => item.text),

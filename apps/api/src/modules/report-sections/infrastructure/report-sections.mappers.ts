@@ -40,8 +40,8 @@ function groupAuthorAssignmentsByProject(
   );
 }
 
-// review-acknowledgement: project the joined RecordComment rows onto the
-// read-model comment view (flat; reviewer display name rides along).
+// Project the joined RecordComment rows onto the read-model comment view
+// (flat; reviewer display name rides along).
 function toCommentViews(comments: readonly RecordCommentRow[]) {
   return comments.map((comment) => ({
     id: comment.id,
@@ -52,9 +52,9 @@ function toCommentViews(comments: readonly RecordCommentRow[]) {
   }));
 }
 
-// review-acknowledgement: project section verdicts onto the read-model view.
-// A verdict is CURRENT only while it judged the section's current version — a
-// re-submission bumps `version` and auto-stales any prior verdict, no clearing.
+// Project section verdicts onto the read-model view. A verdict is CURRENT only
+// while it judged the section's current version — a re-submission bumps
+// `version` and auto-stales any prior verdict, no clearing.
 function toReviewViews(
   reviews: readonly SectionReviewRow[],
   sectionVersion: number,
@@ -90,14 +90,13 @@ export function mapPrismaToReportSection(
     row.author.stageAssignments,
   );
 
-  // fix-lead-surface-name-resolution: name-only entries for projects that
-  // items/risks/decisions reference but the author owns no stage on, so
-  // the lead-surface mappers can resolve the real product name instead of
-  // "Unknown"/"Group". Names ride the row's `project` relation (no extra
-  // query). Stage-owned projects are excluded — they already carry their
-  // name in `projects` and win on conflict (design Decision 3). Archived
-  // referenced projects resolve too (design Open Question 2): the name is
-  // not secret and a placeholder would misread as data loss.
+  // Name-only entries for projects that items/risks/decisions reference but
+  // the author owns no stage on, so the lead-surface mappers can resolve the
+  // real product name instead of "Unknown"/"Group". Names ride the row's
+  // `project` relation (no extra query). Stage-owned projects are excluded —
+  // they already carry their name in `projects` and win on conflict. Archived
+  // referenced projects resolve too: the name is not secret and a placeholder
+  // would misread as data loss.
   const referencedRows = [
     ...row.items.map((i) => ({ projectId: i.projectId, project: i.project })),
     ...row.risks.map((r) => ({ projectId: r.projectId, project: r.project })),
@@ -122,9 +121,9 @@ export function mapPrismaToReportSection(
     reportId: row.reportId,
     authorId: row.authorId,
     authorName: row.author.name,
-    // 35-03: surface the section author's system role end-to-end so the
-    // /lead/report chrome can switch between Request Reopen (lead) and
-    // Revoke (head/admin viewing this lead's section).
+    // Surface the section author's system role end-to-end so the /lead/report
+    // chrome can switch between Request Reopen (lead) and Revoke (head/admin
+    // viewing this lead's section).
     authorRole: row.author.role,
     // Optimistic-concurrency row revision the client echoes back on its next
     // save; every section read carries the current value.
@@ -146,11 +145,11 @@ export function mapPrismaToReportSection(
           }))
           .sort((a, b) => a.sortOrder - b.sortOrder);
 
-        // unassigned-stage-reporting-exclusion: the product's assigned-stage
-        // set — every stage with an assignment to ANY lead on the product,
-        // deduped by stageId and ordered by pipeline sortOrder. READ-ONLY
-        // display metadata; the lead-form grid renders only stages in this set
-        // (a vacant stage is excluded). The writable `ownedStages` is untouched.
+        // The product's assigned-stage set — every stage with an assignment to
+        // ANY lead on the product, deduped by stageId and ordered by pipeline
+        // sortOrder. READ-ONLY display metadata; the lead-form grid renders only
+        // stages in this set (a vacant stage is excluded). The writable
+        // `ownedStages` is untouched.
         const stageSet = [
           ...new Map(
             project.stageAssignments.map(
@@ -175,11 +174,11 @@ export function mapPrismaToReportSection(
         return {
           projectId: project.id,
           projectName: project.name,
-          // fix-published-empty-stage-risk-floor: floor the product status by
-          // the author's own covering risks (scoped to this product) so an
-          // owned stage with no submitted status covered by a blocked/at-risk
-          // risk reads red/yellow. Raw `ownedStages[].status` is left untouched
-          // (D4); only this derived product-level status is floored.
+          // Floor the product status by the author's own covering risks
+          // (scoped to this product) so an owned stage with no submitted status
+          // covered by a blocked/at-risk risk reads red/yellow. Raw
+          // `ownedStages[].status` is left untouched; only this derived
+          // product-level status is floored.
           trafficLight: deriveEffectiveProductStatus({
             projectId: project.id,
             trafficLight: asTraffic(rawTrafficLight),
@@ -252,8 +251,8 @@ export function mapPrismaToReportSection(
     // Every seeded activity status, name joined, name-sorted. Seeding already
     // excludes archived activities; a row seeded before a mid-period archive
     // stays listed so the delete-recreate save never silently drops it.
-    // activity-first-class: each row carries its label-only `linkedProducts` and
-    // the risk/blocker-derived status floor (design decision 5).
+    // Each row carries its label-only `linkedProducts` and the risk/blocker-
+    // derived status floor.
     activities: row.activityStatuses
       .map((status) => ({
         activityId: status.activityId,

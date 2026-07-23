@@ -194,7 +194,7 @@ describe("ReportsPage history archive toggle", () => {
     fireEvent.click(screen.getByLabelText("Show archived reports (1)"));
 
     expect(screen.getByText("Week 15, Apr 6–12, 2026")).toBeInTheDocument();
-    // §4.2: toggling archive is local state only — it must not push the URL.
+    // Toggling archive is local state only — it must not push the URL.
     expect(navigationMock.push).not.toHaveBeenCalled();
   });
 
@@ -213,13 +213,12 @@ describe("ReportsPage history archive toggle", () => {
     fireEvent.click(screen.getByLabelText("Show archived reports (1)"));
 
     expect(screen.getByText("Week 15, Apr 6–12, 2026")).toBeInTheDocument();
-    // §4.2: head toggle is also URL-stable.
+    // Head archive toggle is URL-stable (no push).
     expect(navigationMock.push).not.toHaveBeenCalled();
   });
 
-  it("renders the published-scoped search for a viewer (was no search before parity)", () => {
-    // viewer-report-surface-parity (task 4.1 / review P3): a viewer's search
-    // scope is 'published'; previously it was null and no search rendered.
+  it("renders the published-scoped search for a viewer", () => {
+    // A viewer's search scope is 'published' (no draft toggle).
     setRole("viewer");
     render(<ReportsPage />);
 
@@ -233,9 +232,9 @@ describe("ReportsPage history archive toggle", () => {
   });
 
   it("defaults head History to NO archive even when the URL is ?tab=published", () => {
-    // §4.1: the nav link for head/viewer is literally ?tab=published, yet
-    // History must still land on the current (non-archived) view. The URL no
-    // longer forces archive on.
+    // The nav link for head/viewer is literally ?tab=published, yet History
+    // must still land on the current (non-archived) view. The URL does not
+    // force archive on.
     setRole("head");
     navigationMock.searchParams = new URLSearchParams("tab=published");
     render(<ReportsPage />);

@@ -19,11 +19,9 @@ const TABS: readonly { value: AdminTab; label: string }[] = [
   { value: "users", label: "Users" },
   { value: "groups", label: "Groups" },
   { value: "products", label: "Products" },
-  // Period lifecycle list (Active/Archive split).
   { value: "periods", label: "Periods" },
   { value: "reminders", label: "Reminders" },
   { value: "reopen", label: "Reopen" },
-  // BullMQ DLQ admin UI — failed-job list + retry.
   { value: "jobs", label: "Jobs" },
   { value: "actions", label: "Actions" },
   { value: "settings", label: "Settings" },

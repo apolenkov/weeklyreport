@@ -13,15 +13,15 @@ export type DraftSaveValidationErrorCode =
   // A child-row create tripped a unique constraint (P2002) — a malformed
   // payload (e.g. duplicate projectId). Surfaced as BAD_REQUEST, not a 500.
   | "DUPLICATE_CHILD_ROW"
-  // lead-form-stage-access-integrity: a new or changed item/risk/decision row
-  // carries a stage the section author does not own on that row's product.
+  // A new or changed item/risk/decision row carries a stage the section
+  // author does not own on that row's product.
   | "STAGE_NOT_OWNED"
   // The activity-status slice carries an activityId that is not attached/seeded
   // for the section author — the client payload is never trusted for ids.
   | "ACTIVITY_NOT_ATTACHED"
-  // Resolve-not-delete: the payload drops (or rewrites the stableId of) an
-  // item/decision whose lineage appeared in a published report. A published
-  // позиция can be resolved (done) or carried forward, never deleted.
+  // The payload drops (or rewrites the stableId of) an item/decision whose
+  // lineage appeared in a published report. A published позиция can be
+  // resolved (done) or carried forward, never deleted.
   | "PUBLISHED_RECORD_LOCKED";
 
 export interface DraftSaveValidationError {
@@ -71,10 +71,10 @@ export function validateSubmitInput(
     ];
   });
 
-  // activity-first-class: an activity has no SDLC stage and no current-item
-  // requirement, but every attached activity must carry a traffic-light status at
-  // submit. Server-authoritative — schema tightening alone cannot catch an
-  // OMITTED attached activity (a payload that simply drops the status entry).
+  // An activity has no SDLC stage and no current-item requirement, but every
+  // attached activity must carry a traffic-light status at submit.
+  // Server-authoritative — schema tightening alone cannot catch an OMITTED
+  // attached activity (a payload that simply drops the status entry).
   const activityErrors = section.activities.flatMap((activity) => {
     const matchingStatus = (input.activityStatuses ?? []).find(
       (status) => status.activityId === activity.activityId,
@@ -94,13 +94,13 @@ export function validateSubmitInput(
 }
 
 /**
- * The record-parent activity write guard (activity-first-class, Decision 7),
- * shared by BOTH `saveDraft` and `submitSection`. Every item/risk/decision row
- * whose parent is an activity must reference an `activityId` already seeded on
- * the section for its author (`section.activities` is the reference) — the
- * delete-recreate never trusts a client-supplied id. Product-parented rows
- * (null `activityId`) are ignored here; their product is checked by the stage
- * guard. Mirrors `validateActivityStatuses` for record parents.
+ * The record-parent activity write guard, shared by BOTH `saveDraft` and
+ * `submitSection`. Every item/risk/decision row whose parent is an activity
+ * must reference an `activityId` already seeded on the section for its author
+ * (`section.activities` is the reference) — the delete-recreate never trusts a
+ * client-supplied id. Product-parented rows (null `activityId`) are ignored
+ * here; their product is checked by the stage guard. Mirrors
+ * `validateActivityStatuses` for record parents.
  * @param section - the server-loaded section read model (seeded activities)
  * @param input - the parsed draft-save / submit payload being validated
  * @returns one error per offending row; the caller hard-rejects on the first
@@ -161,9 +161,9 @@ export function validateActivityStatuses(
   );
 }
 
-// lead-form-stage-access-integrity: a normalized view of one stage-bearing
-// child row (item / risk / decision) used by the ownership guard. `projectId`
-// is a decision's `productId` (undefined when department-scoped).
+// A normalized view of one stage-bearing child row (item / risk / decision)
+// used by the ownership guard. `projectId` is a decision's `productId`
+// (undefined when department-scoped).
 interface StageOwnershipRow {
   readonly stableId?: string;
   readonly projectId: string | undefined;
@@ -260,14 +260,14 @@ function validateStageRows(
   });
 }
 
-// lead-form-stage-access-integrity: the server-side stage-ownership guard,
-// shared by BOTH `saveDraft` and `submitSection`. For every new/changed item /
-// risk / decision row it confirms each stage name is one the SECTION AUTHOR owns
-// on that row's product (canonical compare against the server-loaded
-// `ownedStages`). Unchanged legacy/cross rows (identical stableId, product, and
-// stage set) are grandfathered so `fix-lead-surface-name-resolution` rows
-// survive. Returns one error per offending row; the caller hard-rejects on the
-// first — never clamps.
+// The server-side stage-ownership guard, shared by BOTH `saveDraft` and
+// `submitSection`. For every new/changed item / risk / decision row it confirms
+// each stage name is one the SECTION AUTHOR owns on that row's product
+// (canonical compare against the server-loaded `ownedStages`). Unchanged
+// legacy/cross rows (identical stableId, product, and stage set) are
+// grandfathered so pre-existing rows with resolved surface names still save.
+// Returns one error per offending row; the caller hard-rejects on the first —
+// never clamps.
 export function validateStageOwnership(
   section: ReportSectionReadModel,
   input: DraftSaveInput | SubmitSectionInput,

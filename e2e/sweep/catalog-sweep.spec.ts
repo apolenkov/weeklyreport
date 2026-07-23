@@ -11,7 +11,7 @@
  *
  * This is the Layer-1 entry-point sweep ("does every role-reachable route load
  * cleanly?"). Within-route exhaustive exploration is the AI Driver's run-time
- * job (task 3.1), not this spec's.
+ * job, not this spec's.
  *
  * See openspec/changes/behavioral-ui-regression-gate + docs/adr/0001 +
  * e2e/catalog/README.md.
@@ -71,12 +71,11 @@ type RouteResult = {
 const CATALOG_DIR = path.resolve(__dirname, "..", "catalog");
 const REPORT_DIR = path.resolve(__dirname, ".reports");
 
-// Known-benign console noise that must NOT be reported as an anomaly. The
-// favicon 404 is the canonical example pinned by final-gates-resweep. The
-// former Agentation/ERR_CONNECTION_REFUSED entries were removed once the root
-// cause was fixed: the sweep now disables the dev-tools widget at the source
-// (NEXT_PUBLIC_DISABLE_DEVTOOLS in playwright.config.ts), so nothing blindly
-// masks a real refused connection here.
+// Known-benign console noise that must NOT be reported as an anomaly.
+// Favicon 404s are expected under the sweep shell and are not product defects.
+// Dev-tools connection noise is disabled at the source via
+// NEXT_PUBLIC_DISABLE_DEVTOOLS in playwright.config.ts — this list must not
+// mask real refused connections for widgets the sweep already turns off.
 const IGNORED_CONSOLE: RegExp[] = [/favicon\.ico/i];
 
 // Failed-request URLs that are known sweep-environment noise. Kept defensively:

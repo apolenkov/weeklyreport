@@ -18,9 +18,9 @@ interface SlideFullscreenButtonProps {
 /**
  * Presentational fullscreen toggle. The state — plus the `f` shortcut and the
  * native `fullscreenchange` subscription — is owned by a single deck-level
- * `useFullscreen` hook (add-slide-fullscreen-exit-affordance), so adding a
- * second visible exit control never double-toggles. The `floating` variant
- * self-gates: it renders nothing unless `isFullscreen`.
+ * `useFullscreen` hook, so adding a second visible exit control never
+ * double-toggles. The `floating` variant self-gates: it renders nothing unless
+ * `isFullscreen`.
  */
 export function SlideFullscreenButton({
   isFullscreen,

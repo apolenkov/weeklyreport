@@ -27,7 +27,7 @@ import {
  *  - T3: stale session — the JWT carries the role at sign-time; if the user
  *    was downgraded in Keycloak after the cookie was issued, this helper
  *    returns the (still-valid) session until the cookie expires (1 h).
- *    Documented limitation, no real-time revocation in v6.0.
+ *    Documented limitation: no real-time role revocation.
  *
  * `cache: 'no-store'` is mandatory — every request must consult the API
  * fresh, otherwise role downgrades would be invisible until the Next.js

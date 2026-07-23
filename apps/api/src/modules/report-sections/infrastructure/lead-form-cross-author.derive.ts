@@ -64,7 +64,7 @@ interface ForeignStatusSection {
 /**
  * Indexes foreign sections into the two lookups the status-row builder needs:
  * a persisted-traffic map keyed "authorId::projectId::stageId" (non-null only)
- * and the per-author covering risks. Reproduces the nested set-loop exactly.
+ * and the per-author covering risks.
  */
 export function indexForeignSections(
   sections: readonly ForeignStatusSection[],
@@ -135,7 +135,7 @@ export function buildCrossAuthorStatusRows(
         projectId: head.row.projectId,
         projectName: head.row.project.name,
         authorId: head.row.user.id,
-        // Derive display forms server-side (ADR 0006): the two-letter mark for
+        // Derive display forms server-side: the two-letter mark for
         // avatars/micro-chips, and the SHORT form ("Каштанова М.А.") for the
         // cross-author stage label. Only these leave the method — never the
         // full ФИО.

@@ -8,7 +8,7 @@ import {
   rateLimitHitsTotal,
 } from "./metrics.registry.js";
 
-describe("37-02 metrics registry", () => {
+describe("metrics registry", () => {
   beforeEach(() => {
     // prom-client counters are global. Reset per-test so assertions don't
     // bleed across them. resetMetrics() zeros sample state without

@@ -56,10 +56,10 @@ export function statusLabelFor(
 }
 
 /**
- * Report-wide projectId→productName map (fix-product-name-resolution):
- * every section's projects, with the portfolio overview (server-aggregated,
- * names every product) winning on conflict. Badge resolution goes through
- * this so cross-author/secondary references never render "Unknown".
+ * Report-wide projectId→productName map: every section's projects, with the
+ * portfolio overview (server-aggregated, names every product) winning on
+ * conflict. Badge resolution goes through this so cross-author/secondary
+ * references never render "Unknown".
  */
 export function buildProjectNameMap(
   sections: readonly ReportSectionReadModel[],
@@ -89,8 +89,7 @@ function deriveWeeklyReportItem(
   alarmRisks: readonly AlarmRisk[],
   index: number,
 ): WeeklyReportItem {
-  // The badge shows the item's REAL stage tags (stageIds carries stage
-  // names); the previous hardcoded "Dev ·" label mislabelled every item.
+  // The badge shows the item's REAL stage tags (stageIds carries stage names).
   const stagePart = (item.stageIds ?? []).join("+");
   const stageLead = stagePart ? `${stagePart} · ${initials}` : initials;
   return {
@@ -113,9 +112,9 @@ function deriveWeeklyReportItem(
       alarmRisks,
     ),
     priorityRank: item.priorityRank ?? null,
-    // review-acknowledgement: carry the reviewer comments + this caller's
-    // review capability for the section so the accordion row can surface
-    // them (comments anchor to the DB `id`, threaded above).
+    // Carry the reviewer comments + this caller's review capability for the
+    // section so the accordion row can surface them (comments anchor to the
+    // DB `id`, threaded above).
     comments: item.comments ?? [],
     canReview: section.canReview ?? false,
   };
@@ -128,13 +127,13 @@ function deriveWeeklyReportItem(
 export function groupItemsByProject(
   sections: readonly ReportSectionReadModel[],
 ): Map<string, { current: WeeklyReportItem[]; next: WeeklyReportItem[] }> {
-  // activity-first-class: activity-parented items (projectId null) render under
-  // their activity, not a product column — filtered out so the item's
-  // `projectId` narrows to `string` for the group key.
+  // Activity-parented items (projectId null) render under their activity, not
+  // a product column — filtered out so the item's `projectId` narrows to
+  // `string` for the group key.
   const entries = sections.flatMap((section) => {
     const initials = initialsFromName(section.authorName);
-    // record-status-derived-from-risk: the covering risks the head badge overlay
-    // reads (blocked-only) — same shape the lead card derives from.
+    // Covering risks the head badge overlay reads (blocked-only) — same shape
+    // the lead card derives from.
     const alarmRisks: AlarmRisk[] = section.risks.map((risk) => ({
       productId: risk.projectId ?? "",
       stageIds: risk.stageIds ?? undefined,
@@ -181,7 +180,7 @@ function deriveWeeklyReportRisk(
 ): WeeklyReportRisk {
   const productName = projectNames.get(risk.projectId) ?? "Unknown";
   const text = `${risk.risk} — Impact: ${risk.impact} — Mitigation: ${risk.mitigation}`;
-  // Same hardcoded-"Dev" fix as items: show the risk's real stage tags.
+  // Show the risk's real stage tags on the badge.
   const riskStages = (risk.stageIds ?? []).join("+");
   return {
     id: risk.id ?? `risk-${section.reportSectionId}-${index}`,
@@ -202,17 +201,17 @@ function deriveWeeklyReportRisk(
 /**
  * Group risks across all sections by `projectId`.
  *
- * `projectNames` is the REPORT-WIDE id→name map (fix-product-name-resolution):
- * resolving only against the owning section's projects rendered "Unknown" for
- * cross-author/secondary project references.
+ * `projectNames` is the REPORT-WIDE id→name map: resolving only against the
+ * owning section's projects would render "Unknown" for cross-author/secondary
+ * project references.
  */
 export function groupRisksByProject(
   sections: readonly ReportSectionReadModel[],
   projectNames: ReadonlyMap<string, string>,
 ): Map<string, WeeklyReportRisk[]> {
-  // activity-first-class: activity-parented risks (projectId null) render under
-  // their activity, not a product column — filtered out so the risk's
-  // `projectId` narrows to `string` for the group key.
+  // Activity-parented risks (projectId null) render under their activity, not
+  // a product column — filtered out so the risk's `projectId` narrows to
+  // `string` for the group key.
   const entries = sections.flatMap((section) =>
     section.risks
       .filter(

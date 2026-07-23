@@ -18,11 +18,11 @@ import { RisksSection } from "./risks-section";
 
 const products = MOCK_PRODUCTS.slice(0, 1);
 
-describe("RisksSection — addSignal snapshot regression (D1)", () => {
+describe("RisksSection — addSignal snapshot regression", () => {
   it("does not reopen the dialog when readOnly toggles false→true→false with stale addSignal", () => {
     // Step 1: counter starts idle at 0 (parent's initial state); the "+ Add"
-    // click advances it 0→1 → effect fires, dialog opens. (Mounting straight at
-    // a non-zero signal models a remount, which must NOT auto-open — D16.)
+    // click advances it 0→1 → effect fires, dialog opens. Mounting straight at
+    // a non-zero signal models a remount, which must NOT auto-open.
     const { rerender } = render(
       <RisksSection
         risks={[]}
@@ -70,11 +70,11 @@ describe("RisksSection — addSignal snapshot regression (D1)", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  // refactor-lead-dialog-lifecycle (task 2.2): the chip-raise interception
-  // (addPrefill) is a SEPARATE create-open source from addSignal, with its
-  // own monotonic signal that the form owner does NOT reset on view
-  // transitions. The hook's readOnly-ref guard must keep it from reopening
-  // the dialog when readOnly toggles false→true→false with a stale prefill.
+  // The chip-raise interception (addPrefill) is a SEPARATE create-open source
+  // from addSignal, with its own monotonic signal that the form owner does NOT
+  // reset on view transitions. The hook's readOnly-ref guard must keep it from
+  // reopening the dialog when readOnly toggles false→true→false with a stale
+  // prefill.
   it("does not reopen the dialog when readOnly toggles false→true→false with a stale addPrefill", () => {
     const firstProductId = products[0]?.id ?? "";
     const prefill = {

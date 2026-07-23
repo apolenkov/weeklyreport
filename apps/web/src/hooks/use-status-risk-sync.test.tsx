@@ -8,10 +8,8 @@ import type {
 import { expectDefined } from "../test-utils/expect-defined.js";
 import { useStatusRiskSync } from "./use-status-risk";
 
-// unify-risk-stage-status (D4): the suggestion flow ("you wrote a risk —
-// bump the chip?", handleRiskFilled + requestStatusUpdateConfirmation) is
-// gone; a saved risk now forces an automatic severity floor instead. The
-// hook is a stage-status applier; interception of conflicting transitions
+// A saved risk forces an automatic severity floor on the covering stage.
+// The hook is a stage-status applier; interception of conflicting transitions
 // lives in lead-form-sync-bridge (see lead-form-sync-bridge.test.tsx).
 
 function buildProduct(overrides?: Partial<Product>): Product {

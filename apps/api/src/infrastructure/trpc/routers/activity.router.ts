@@ -12,10 +12,6 @@ export interface ActivityRouterDeps {
   activityService: ActivityService;
 }
 
-// Live activity feed for the head/admin dashboard "Активность за
-// текущий период" panel. headProcedure — only heads (and admins,
-// aliased) consume the per-lead status snapshot.
-
 export function createActivityRouter(deps: ActivityRouterDeps) {
   return router({
     live: headProcedure.query(async ({ ctx }) => {

@@ -206,24 +206,21 @@ export class PublicationService {
       return { published: false };
     }
 
-    // `state='published'`, same `from='open'` label auto-publish has always
-    // used — a scheduler candidate is always `status='draft'` with
-    // `periodStatus='open'`, never a reopened period. Emit only after the
-    // write succeeds so a failed save never inflates the counter.
+    // `state='published'`, `from='open'` — a scheduler candidate is always
+    // `status='draft'` with `periodStatus='open'`, never a reopened period.
+    // Emit only after the write succeeds so a failed save never inflates the
+    // counter.
     await emitPublishSideEffects(
       {
         telemetry: this.telemetry,
         ingestionHook: (sectionIds) => this.ingestionQueue.enqueue(sectionIds),
-        // publishAuto has never invalidated the analytics cache (no
-        // `invalidateAnalyticsCache` collaborator is wired here) — that stays
-        // as-is; only `period.publish` does.
+        // No analytics-cache invalidation here (only `period.publish` does).
         onIngestionError: (error) => {
           this.logger.warn("ingestion hook failed", {
             error: error instanceof Error ? error.message : String(error),
           });
         },
-        // A report with zero sections was never enqueued — preserved from
-        // the pre-consolidation enqueueIngestion guard.
+        // Skip ingestion when the report has zero sections.
         skipIngestionWhenEmpty: true,
       },
       {

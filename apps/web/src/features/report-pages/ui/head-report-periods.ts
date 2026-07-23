@@ -52,11 +52,11 @@ function candidateToPeriod(candidate: PrependCandidate): ReportPeriod {
 /**
  * The head navigator's period list: compiledHistory (published + archived
  * weeks) with the CURRENT and DISPLAYED weeks prepended when history omits
- * them. The active week leads (so the chevron can always return to it — item
- * 3); the displayed week follows (finding 4: so the trigger resolves on
- * `/head/report/<id>`). Each prepended entry's id MUST be its reportId so the
- * navigator's `p.id === pathReportId` match works — the displayed week is keyed
- * by the route `reportId`, so it dedups against an active week with the same id.
+ * them. The active week leads so the chevron can always return to it; the
+ * displayed week follows so the trigger resolves on `/head/report/<id>`.
+ * Each prepended entry's id MUST be its reportId so the navigator's
+ * `p.id === pathReportId` match works — the displayed week is keyed by the
+ * route `reportId`, so it dedups against an active week with the same id.
  * Pure: no mutation, so the head shell can memoize it directly.
  */
 export function deriveHeadPeriods(

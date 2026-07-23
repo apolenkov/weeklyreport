@@ -90,10 +90,9 @@ describe("RisksSection LockBadge", () => {
     }
   });
 
-  it("falls back to sectionAuthorName when risk.authorName is absent (T2 fix)", () => {
-    // risk.authorName is absent — LockBadge must show sectionAuthorName, not the
-    // current user's name. Before the fix, lead-form.tsx passed currentUser.name
-    // as sectionAuthorName, causing the badge to show the wrong person.
+  it("falls back to sectionAuthorName when risk.authorName is absent", () => {
+    // risk.authorName is absent — LockBadge must show sectionAuthorName, not
+    // the current user's name.
     const riskWithoutAuthor: RiskEntry = {
       ...foreignRisk,
       authorName: undefined,
@@ -243,7 +242,7 @@ describe("RisksSection stage scope", () => {
     );
 
     expect(screen.queryByText("All stages")).not.toBeInTheDocument();
-    // "Dev" is canonicalized to "Development" before rendering (L4 fix).
+    // "Dev" is canonicalized to "Development" before rendering.
     expect(screen.getByText("Development")).toBeInTheDocument();
     expect(screen.getByText("Testing")).toBeInTheDocument();
   });
@@ -282,17 +281,17 @@ describe("RisksSection stage scope", () => {
     expect(screen.getByText("Planning")).toBeInTheDocument();
     expect(screen.getByText("Analysis")).toBeInTheDocument();
     expect(screen.getByText("Design")).toBeInTheDocument();
-    // "Dev" is canonicalized to "Development" before rendering (L4 fix).
+    // "Dev" is canonicalized to "Development" before rendering.
     expect(screen.getByText("Development")).toBeInTheDocument();
     expect(screen.queryByText("+1")).not.toBeInTheDocument();
   });
 });
 
 // ---------------------------------------------------------------------------
-// simplify-stage-status-interaction (D5): one-click blocked <-> at-risk toggle
+// One-click blocked <-> at-risk toggle
 // ---------------------------------------------------------------------------
 
-describe("RisksSection — severity toggle (D5)", () => {
+describe("RisksSection — severity toggle", () => {
   it("flips a blocked risk to at-risk in one click and calls onChange", () => {
     const onChange = vi.fn<(next: RiskEntry[]) => void>();
     render(

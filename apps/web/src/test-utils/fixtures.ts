@@ -2,7 +2,7 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 
 /**
  * Creates a demo section matching reportSectionReadModelSchema
- * for use in component tests. Replaces the deleted demo-section.ts.
+ * for use in component tests.
  */
 export function createDemoSection(): ReportSectionReadModel {
   return {

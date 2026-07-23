@@ -1,11 +1,8 @@
 /**
- * Characterization tests for `useItemEditDialog`, pinning today's behavior
- * BEFORE the hook is split into `use-item-edit-form-state` /
- * `item-edit-dialog-derive` / `use-item-edit-save` (riskiest slice of the
- * dialog-trio refactor). The existing `item-edit-dialog.test.tsx` e2e suite
- * exercises the hook only indirectly through rendered DOM; these tests assert
- * the hook's return shape directly so a behavior change during the split is
- * caught here first.
+ * Characterization tests for `useItemEditDialog`, pinning the hook's return
+ * shape directly. The existing `item-edit-dialog.test.tsx` suite exercises the
+ * hook only indirectly through rendered DOM; these tests catch return-shape
+ * regressions without mounting the full dialog.
  */
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";

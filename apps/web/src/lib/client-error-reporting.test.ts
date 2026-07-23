@@ -99,9 +99,9 @@ describe("client-error-reporting", () => {
     ).toBe("Failed to load status report. Reference: req-500.");
   });
 
-  // Driver finding 1: a malformed reportId fails the UUID check and tRPC
-  // serializes the Zod issues array (with the `pattern` regex) into
-  // error.message. That MUST NOT reach the user toast.
+  // A malformed reportId fails the UUID check and tRPC serializes the Zod
+  // issues array (with the `pattern` regex) into error.message. That MUST
+  // NOT reach the user toast.
   const ZOD_ISSUES_MESSAGE = JSON.stringify(
     [
       {

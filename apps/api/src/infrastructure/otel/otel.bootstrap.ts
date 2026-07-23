@@ -1,5 +1,5 @@
 /**
- * 37-01 — OpenTelemetry bootstrap.
+ * OpenTelemetry bootstrap.
  *
  * Wires the Node SDK with OTLP/HTTP export + HTTP/Express/Prisma
  * instrumentations. MUST be the first runtime import in main.ts so the

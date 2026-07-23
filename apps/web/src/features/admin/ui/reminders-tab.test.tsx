@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339); wave-6c-ii */
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339) */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -142,7 +142,7 @@ function renderTab(args?: {
   return { ...result, captured };
 }
 
-describe("RemindersTab — empty-state bell SVG a11y (VA-0a)", () => {
+describe("RemindersTab — empty-state bell SVG a11y", () => {
   it("bell SVG in empty state has aria-hidden='true'", () => {
     renderTab({ policies: [], derivedRulesByPolicyId: {} });
     const emptyState = screen.getByTestId("reminders-empty-state");
@@ -377,8 +377,8 @@ describe("RemindersTab — add / edit form", () => {
 
   it("never persists the invalid deadline→head-of-late pair from a fresh form", async () => {
     const user = userEvent.setup();
-    // Org default audience is irrelevant now — it no longer reaches the
-    // pairing (D7). A fresh reminder always starts from a valid preset.
+    // Org default audience no longer reaches the pairing. A fresh reminder
+    // always starts from a valid preset.
     const { captured } = renderTab({
       policies: [],
       derivedRulesByPolicyId: {},

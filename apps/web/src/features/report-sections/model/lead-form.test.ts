@@ -56,12 +56,11 @@ function baseSection(
 
 describe("mapLeadProducts", () => {
   it("marks a stage `mine` and excludes vacant stages when no stageSet is provided", () => {
-    // 35-04: the lead owns the Dev stage on this project (real
-    // StageAssignment data), so the chip surfaces as `mine` with the
-    // project's traffic-light status. unassigned-stage-reporting-exclusion:
-    // with no `stageSet`, the grid is the owned stages only — every other
-    // canonical stage is vacant on this product and is EXCLUDED (no chip),
-    // not rendered as a grey "unassigned" placeholder.
+    // The lead owns the Dev stage on this project (real StageAssignment
+    // data), so the chip surfaces as `mine` with the project's traffic-light
+    // status. With no `stageSet`, the grid is the owned stages only — every
+    // other canonical stage is vacant on this product and is EXCLUDED (no
+    // chip), not rendered as a grey "unassigned" placeholder.
     const section = baseSection({
       projects: [
         {
@@ -240,10 +239,9 @@ describe("mapLeadProducts", () => {
   });
 
   it("renders all 7 stages as `mine` when the lead owns every stage on the project", () => {
-    // The user-reported bug: assigning the lead to all 7 SDLC stages on
-    // the Products admin tab should surface every stage as `mine` on
-    // /lead/report. Pre-35-04 the synthesized grid only ever marked
-    // "Dev" as mine, dropping the other six.
+    // Assigning the lead to all 7 SDLC stages on the Products admin tab
+    // must surface every stage as `mine` on /lead/report — not just a
+    // single hardcoded stage.
     const section = baseSection({
       projects: [
         {
@@ -368,10 +366,10 @@ describe("mapLeadProducts", () => {
     expect(devStage?.status).toBe("blocked");
   });
 
-  it("a stage-less (empty stageIds) risk floors every owned chip (unify-risk-stage-status review-fix)", () => {
+  it("a stage-less (empty stageIds) risk floors every owned chip", () => {
     // Empty/undefined stageIds means "covers all stages" — the same rule the
-    // live form applies. Before the fix the read model used `stageIds?.some`
-    // and floored nothing on `[]`, diverging silently from the form.
+    // live form applies. The read model must not floor nothing on `[]` and
+    // diverge silently from the form.
     const section = baseSection({
       projects: [
         {
@@ -415,14 +413,14 @@ describe("mapLeadProducts", () => {
     );
   });
 
-  it("an UNTOUCHED owned stage covered by a risk stays empty (rethink-pipeline completeness fix)", () => {
-    // rethink-pipeline-state-vs-completeness (D1): the read model feeds the live
-    // form's own-input completeness counter via the raw, pre-floor status. A
-    // covering risk (the Add-Risk dialog defaults to all stages checked) must
-    // NOT floor a stage the lead never set — otherwise an empty stage would
-    // count as "filled" and inflate the counter to "your input is complete".
-    // The DISPLAY floor is re-applied at render by applyRiskSeverityFloor; this
-    // mapper output is the completeness source, so the empty stays empty.
+  it("an UNTOUCHED owned stage covered by a risk stays empty (completeness source)", () => {
+    // The read model feeds the live form's own-input completeness counter via
+    // the raw, pre-floor status. A covering risk (the Add-Risk dialog defaults
+    // to all stages checked) must NOT floor a stage the lead never set —
+    // otherwise an empty stage would count as "filled" and inflate the
+    // counter. The DISPLAY floor is re-applied at render by
+    // applyRiskSeverityFloor; this mapper output is the completeness source,
+    // so the empty stays empty.
     const section = baseSection({
       projects: [
         {
@@ -456,17 +454,17 @@ describe("mapLeadProducts", () => {
       (s) => s.stageName === "Development",
     );
     expect(devStage?.status).toBe("empty");
-    // W11: a covers-all (stageIds: []) legacy risk does NOT explicitly name the
+    // A covers-all (stageIds: []) legacy risk does NOT explicitly name the
     // stage, so it must NOT mark it covered-by-own-risk (else the counter would
-    // inflate for every empty stage — the original "6/7" defect's root cause).
+    // inflate for every empty stage).
     expect(devStage?.coveredByOwnRisk ?? false).toBe(false);
   });
 
-  it("W11: an empty owned stage covered by an OWN risk that names it stays empty but is coveredByOwnRisk", () => {
-    // fix-report-surface-integrity W11 reload-stability: the mapper derives the
-    // flag from PERSISTED risks + raw status (no transient display state), so a
-    // reload reproduces it. Raw status stays "empty" (chip distinction relies on
-    // it); coveredByOwnRisk=true makes the stage count toward completeness.
+  it("an empty owned stage covered by an OWN risk that names it stays empty but is coveredByOwnRisk", () => {
+    // The mapper derives the flag from PERSISTED risks + raw status (no
+    // transient display state), so a reload reproduces it. Raw status stays
+    // "empty" (chip distinction relies on it); coveredByOwnRisk=true makes
+    // the stage count toward completeness.
     const section = baseSection({
       projects: [
         {

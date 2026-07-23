@@ -28,14 +28,12 @@ function renderToDocument(
   return new DOMParser().parseFromString(html, "text/html");
 }
 
-describe("GlobalError — global-error.tsx (VA-0a/VA-0b a11y catalog)", () => {
-  // VA-0b snapshot: html element lang attribute (high)
+describe("GlobalError — global-error.tsx a11y", () => {
   it("html element has lang='en'", () => {
     const doc = renderToDocument(makeError(), vi.fn());
     expect(doc.documentElement.getAttribute("lang")).toBe("en");
   });
 
-  // VA-0a unit-rtl high: button type attribute
   it("button element has type='button'", () => {
     const doc = renderToDocument(makeError(), vi.fn());
     const btn = doc.querySelector("button");
@@ -43,7 +41,6 @@ describe("GlobalError — global-error.tsx (VA-0a/VA-0b a11y catalog)", () => {
     expect(btn?.getAttribute("type")).toBe("button");
   });
 
-  // VA-0a unit-rtl high: button onClick handler wiring
   it("clicking the button invokes the reset callback", () => {
     const reset = vi.fn();
     render(<GlobalError error={makeError()} reset={reset} />);
@@ -51,7 +48,6 @@ describe("GlobalError — global-error.tsx (VA-0a/VA-0b a11y catalog)", () => {
     expect(reset).toHaveBeenCalledOnce();
   });
 
-  // VA-0b snapshot: body element presence (medium)
   it("body element is rendered", () => {
     const doc = renderToDocument(makeError(), vi.fn());
     expect(doc.body).not.toBeNull();

@@ -9,8 +9,8 @@ import {
 import { SearchPrismaRepository } from "./search.prisma-repository";
 
 /**
- * viewer-report-surface-parity (task 1.7): the load-bearing guard that
- * search content visibility == weekly-report read visibility for a viewer.
+ * Load-bearing guard that search content visibility equals weekly-report read
+ * visibility for a viewer.
  *
  * The viewer's `published` search scope must surface EXACTLY the item/risk/
  * decision content the viewer can already open in `/reports/[reportId]`. The

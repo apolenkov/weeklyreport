@@ -51,7 +51,7 @@ export function CurrentWeekSection({
   const scrollRef = useRef<HTMLDivElement>(null);
   const canScrollDown = useScrollFade(scrollRef);
 
-  // require-paused-item-reason: the reason prompt lifecycle lives in a hook so
+  // The pause-reason prompt lifecycle lives in a hook so
   // a card's Pause button only needs to name the item.
   const pause = usePauseReason<KanbanItem>(onPauseItem);
 
@@ -61,9 +61,9 @@ export function CurrentWeekSection({
   const hasMultipleProducts = products != null && products.length > 1;
   const defaultProduct = products?.[0];
 
-  // Shared dialog lifecycle (DialogState union, D1 readOnly-ref add-signal
-  // effect, D13 openSeq remount key, pending-delete). requireSeed: this
-  // section can only open create mode when a product column exists.
+  // Shared dialog lifecycle (DialogState union, readOnly-ref add-signal
+  // effect, openSeq remount key, pending-delete). requireSeed: this section
+  // can only open create mode when a product column exists.
   const {
     dialogState,
     dialogKey,
@@ -132,10 +132,10 @@ export function CurrentWeekSection({
 
   // Render one column per assigned product (not per non-empty group), so
   // that products with zero items still surface a `+ Add` CTA in their
-  // column. Falls back to non-empty groups when `products` isn't passed
-  // (defensive — the prop became required de-facto in May 2026 but
-  // existing callers may still omit it). Activity lanes render in their own
-  // lighter block BELOW the grid — never as peer product columns.
+  // column. Falls back to non-empty groups when `products` is omitted so
+  // the board still paints for callers that only pass items. Activity lanes
+  // render in their own lighter block BELOW the grid — never as peer
+  // product columns.
   const board = splitItemBoard(products, items, activities);
   const dlg = deriveDialogProps(dialogState);
 

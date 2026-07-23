@@ -19,7 +19,7 @@ import {
 } from "../trpc.middleware.js";
 
 /**
- * review-acknowledgement: resolve the review-actions service or fail loudly.
+ * Resolve the review-actions service or fail loudly.
  * Optional on `AppRouterDeps` only so role-coverage fixtures build with `{}` deps;
  * a real boot always wires it, so `undefined` here is a config bug, not a
  * user-reachable state.
@@ -39,7 +39,7 @@ export interface ReviewRouterDeps {
   reviewService: ReviewService;
   publicationService: PublicationService;
   /**
-   * review-acknowledgement: the review capability's write surface —
+   * The review capability's write surface —
    * `review.acknowledge` / `review.comment` / `review.deleteComment` /
    * `review.verdict` / `review.acknowledgements`. All ride `leadershipProcedure`
    * (head + admin + viewer; lead excluded); the per-group scope + reviewer
@@ -94,9 +94,9 @@ export function createReviewRouter(deps: ReviewRouterDeps) {
       }
     }),
 
-    // review-acknowledgement: all on `leadershipProcedure` (head + admin +
-    // viewer; lead excluded) so `role-coverage-gate` stays green; the
-    // per-group scope + reviewer designation are enforced in the service.
+    // All on `leadershipProcedure` (head + admin + viewer; lead excluded) so
+    // `role-coverage-gate` stays green; the per-group scope + reviewer
+    // designation are enforced in the service.
 
     // Group-level "seen" receipt — any access-holder (scope check only).
     acknowledge: leadershipProcedure

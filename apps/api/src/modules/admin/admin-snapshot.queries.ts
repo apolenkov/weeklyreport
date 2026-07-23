@@ -111,6 +111,9 @@ export async function getSnapshot(
         version: rule.version,
       }),
     ),
+    // Executions don't store reportId or a separate schedule instant; the
+    // admin snapshot flattens to null reportId and uses createdAt as
+    // scheduledFor so the wire shape stays stable for the UI.
     reminderExecutions: reminderExecutions.map((exec) =>
       adminReminderExecutionSchema.parse({
         id: exec.id,

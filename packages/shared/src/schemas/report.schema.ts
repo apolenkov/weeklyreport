@@ -338,7 +338,7 @@ export type FailedJobList = z.infer<typeof failedJobListSchema>;
 export type QueueName = z.infer<typeof queueNameSchema>;
 
 // ---------------------------------------------------------------------------
-// v4.0: Weekly report read model (D-58)
+// Weekly report read model
 // ---------------------------------------------------------------------------
 
 export const portfolioProductOverviewSchema = z.object({
@@ -391,7 +391,7 @@ export const weeklyReportGetResponseSchema = z.discriminatedUnion("status", [
 ]);
 
 // ---------------------------------------------------------------------------
-// v4.0: Type exports
+// Type exports
 // ---------------------------------------------------------------------------
 
 export type PeriodStatus = z.infer<typeof periodStatusSchema>;

@@ -17,7 +17,7 @@ function toPillStatus(status: SlideActivityPill["status"]): PillStatus {
   return status ?? "empty";
 }
 
-/** Traffic-light pill key → canonical status for map lookups (D6). */
+/** Traffic-light pill key → canonical status for map lookups. */
 function pillToStatus(pill: PillStatus): CanonicalStatus {
   if (pill === "red") return "blocked";
   if (pill === "yellow") return "at-risk";

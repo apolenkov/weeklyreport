@@ -84,11 +84,11 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   [ArchiveDomainError, "NOT_FOUND"],
   [WeeklyReportDomainError, "NOT_FOUND"],
   [LeadFormDomainError, "NOT_FOUND"],
-  // reopen-request-lifecycle: a lifecycle/one-pending block is a state
-  // conflict on an existing resource → BAD_REQUEST, not NOT_FOUND.
+  // A lifecycle/one-pending block is a state conflict on an existing resource
+  // → BAD_REQUEST, not NOT_FOUND.
   [ReopenRequestError, "BAD_REQUEST"],
-  // map-domain-errors: lead-form state-constraint (fill submitted/published
-  // section, revoke non-submitted) — exists, so BAD_REQUEST not NOT_FOUND.
+  // Lead-form state-constraint (fill submitted/published section, revoke
+  // non-submitted) — exists, so BAD_REQUEST not NOT_FOUND.
   [LeadFormConstraintError, "BAD_REQUEST"],
   // The carry-over dedupe race is a concurrency conflict, distinct from the
   // CarryOverDomainError validation failures below (which stay BAD_REQUEST).
@@ -120,10 +120,10 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   // state/policy 500s are a separate, deferred concern.
   [PeriodScopeError, "FORBIDDEN"],
   [PeriodNotFoundError, "NOT_FOUND"],
-  // map-domain-errors: getAssembledReport on a missing report → NOT_FOUND.
+  // getAssembledReport on a missing report → NOT_FOUND.
   [PublicationNotFoundError, "NOT_FOUND"],
-  // map-domain-errors: product owned by another group, terminal until the admin
-  // detaches it → CONFLICT.
+  // Product owned by another group, terminal until the admin detaches it →
+  // CONFLICT.
   [AdminGroupProductConflictError, "CONFLICT"],
   // An email or SAML identity collision is an existing-resource conflict.
   [AdminUserConflictError, "CONFLICT"],

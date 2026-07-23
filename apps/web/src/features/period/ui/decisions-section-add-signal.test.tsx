@@ -1,12 +1,10 @@
 /**
- * D1 regression: snapshot view transitions must not reopen the Add Decision dialog.
+ * Snapshot view transitions must not reopen the Add Decision dialog.
  *
- * Covers the decisions-section copy of the addSignal snapshot bug
- * (fix-section-add-signal-reset, task 1.2): when readOnly flips
- * false → true → false the addSignal effect must NOT re-fire because
- * readOnly is no longer in the dep array.
+ * When readOnly flips false → true → false the addSignal effect must NOT
+ * re-fire because readOnly is no longer in the dep array.
  *
- * Scenario (mirrors current-week-section-add-signal.test.tsx):
+ * Scenario:
  *   1. addSignal=1, readOnly=false  → dialog opens
  *   2. User cancels dialog           → dialog closes; addSignal stays at 1
  *   3. readOnly=true  (snapshot)     → no dialog re-open (guard fires in body)
@@ -18,11 +16,11 @@ import { describe, expect, it } from "vitest";
 
 import { DecisionsSection } from "./decisions-section";
 
-describe("DecisionsSection — addSignal snapshot regression (D1)", () => {
+describe("DecisionsSection — addSignal snapshot regression", () => {
   it("does not reopen the dialog when readOnly toggles false→true→false with stale addSignal", () => {
     // Step 1: counter starts idle at 0 (parent's initial state); the "+ Add"
-    // click advances it 0→1 → effect fires, dialog opens. (Mounting straight at
-    // a non-zero signal models a remount, which must NOT auto-open — D16.)
+    // click advances it 0→1 → effect fires, dialog opens. Mounting straight at
+    // a non-zero signal models a remount, which must NOT auto-open.
     const { rerender } = render(
       <DecisionsSection decisions={[]} addSignal={0} readOnly={false} />,
     );

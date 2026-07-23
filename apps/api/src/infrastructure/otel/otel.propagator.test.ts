@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { createTraceContextPropagator } from "./otel.bootstrap.js";
 
 /**
- * correlate-errors-to-traces — propagator precedence (task 2.3 / AT4 unit half).
+ * Propagator precedence for browser→api error/trace correlation.
  *
  * Exercises the REAL CompositePropagator.extract (not array-order inspection)
  * to lock the precedence the browser→api correlation relies on:

@@ -39,8 +39,12 @@ const STANDARDS = new Set([
   "BASE",
 ]);
 const ticketSlug = (comment) => {
-  const m = comment.match(/\b([A-Z]{2,5})-\d{1,4}\b/);
-  return m ? !STANDARDS.has(m[1].toUpperCase()) : false;
+  // Walk every slug on the line — a leading standard token (RFC-5322, ISO-8601)
+  // must not hide a later real ticket slug on the same comment.
+  for (const m of comment.matchAll(/\b([A-Z]{2,5})-\d{1,4}\b/g)) {
+    if (!STANDARDS.has(m[1].toUpperCase())) return true;
+  }
+  return false;
 };
 
 // Each rule is a high-precision pattern that essentially never appears in a
@@ -63,9 +67,42 @@ const RULES = [
 ];
 
 // Judge only comment text. Return the comment slice of a line, or null.
+// Skip `//` that sits inside a string literal so a URL like
+// `const u = "https://host/a//x"` is never scanned as a comment.
+const QUOTE_TOGGLES = [
+  ["'", (s) => !s.inDouble && !s.inTemplate, "inSingle"],
+  ['"', (s) => !s.inSingle && !s.inTemplate, "inDouble"],
+  ["`", (s) => !s.inSingle && !s.inDouble, "inTemplate"],
+];
+
+const outsideStrings = (s) => !s.inSingle && !s.inDouble && !s.inTemplate;
+
+const stepQuoteState = (state, c) => {
+  if (state.escaped) return { ...state, escaped: false };
+  if (!outsideStrings(state) && c === "\\") return { ...state, escaped: true };
+  const toggle = QUOTE_TOGGLES.find(
+    ([quote, canToggle]) => c === quote && canToggle(state),
+  );
+  if (!toggle) return state;
+  return { ...state, [toggle[2]]: !state[toggle[2]] };
+};
+
 const commentPart = (line) => {
-  const s = line.indexOf("//");
-  if (s >= 0) return line.slice(s);
+  let state = {
+    inSingle: false,
+    inDouble: false,
+    inTemplate: false,
+    escaped: false,
+  };
+  for (let i = 0; i < line.length - 1; i++) {
+    const opensComment =
+      outsideStrings(state) &&
+      !state.escaped &&
+      line[i] === "/" &&
+      line[i + 1] === "/";
+    if (opensComment) return line.slice(i);
+    state = stepQuoteState(state, line[i]);
+  }
   if (/^\s*\*/.test(line) || /\/\*/.test(line)) return line;
   return null;
 };

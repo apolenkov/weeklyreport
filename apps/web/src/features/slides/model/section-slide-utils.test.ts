@@ -178,10 +178,10 @@ describe("section slide utilities", () => {
         nextItems: ["Prepare rollout notes"],
         priorities: ["Closed release blockers"],
         stages: [
-          // rethink-pipeline-state-vs-completeness: Discovery is persisted
-          // yellow but has NO covering risk, so the shared derivation collapses
-          // it to green — the slide now agrees with the card (which collapses an
-          // unbacked severity to on-track). Build stays green.
+          // Discovery is persisted yellow but has NO covering risk, so the
+          // shared derivation collapses it to green — the slide agrees with
+          // the card (which collapses an unbacked severity to on-track).
+          // Build stays green.
           expect.objectContaining({ name: "Discovery", status: "green" }),
           expect.objectContaining({ name: "Build", status: "green" }),
         ],
@@ -189,10 +189,10 @@ describe("section slide utilities", () => {
     ]);
   });
 
-  it("floors stage statuses by covering risk severity (unify-risk-stage-status D1)", () => {
+  it("floors stage statuses by covering risk severity", () => {
     // A stale persisted green/yellow stage covered by a risk must render at
     // the risk's severity on the slides surface too — same floor as the
-    // lead form and head review (spec: status-risk-unification).
+    // lead form and head review.
     const slide = buildSectionSlideModel(
       makeSection({
         risks: [
@@ -226,8 +226,8 @@ describe("section slide utilities", () => {
     ]);
   });
 
-  it("collapses a persisted red stage with no covering risk to green, and a red stage with an at-risk-only risk to yellow (rethink-pipeline-state-vs-completeness 1.4)", () => {
-    // The slide now derives status from risks via the shared
+  it("collapses a persisted red stage with no covering risk to green, and a red stage with an at-risk-only risk to yellow", () => {
+    // The slide derives status from risks via the shared
     // deriveEffectiveStageStatus, exactly like the card — so it collapses an
     // unbacked persisted severity DOWN instead of only flooring up. Build is
     // persisted green here so the at-risk risk floors it to yellow; Discovery is
@@ -277,11 +277,11 @@ describe("section slide utilities", () => {
     ]);
   });
 
-  it("derives the product status from the floored stages, not the persisted trafficLight (lead-live-walk-2026-06-14 3.1)", () => {
-    // rethink-pipeline scope: the slide product badge must match the live
-    // pipeline card, whose health = worst risk-derived stage. The old code read
-    // `project.trafficLight` (the persisted, pre-floor column) so a stale
-    // persisted status drifted the badge from the stages rendered below it.
+  it("derives the product status from the floored stages, not the persisted trafficLight", () => {
+    // The slide product badge must match the live pipeline card, whose health
+    // = worst risk-derived stage. Reading the persisted pre-floor
+    // `project.trafficLight` would let a stale status drift the badge from
+    // the stages rendered below it.
     //
     // Case A — persisted red stages with NO covering risk collapse, so the
     // product status collapses to green (on-track), not red.
@@ -350,7 +350,7 @@ describe("section slide utilities", () => {
     expect(floored.productSlides[0]?.status).toBe("red");
   });
 
-  it("a stage-less (empty stageIds) legacy risk floors every owned stage (unify-risk-stage-status review-fix)", () => {
+  it("a stage-less (empty stageIds) legacy risk floors every owned stage", () => {
     // Empty/undefined stageIds means "covers all stages" in the live form;
     // the slide export must agree so a legacy stage-less risk does not floor
     // every chip in the form yet nothing on the deck. Routing through
@@ -484,8 +484,7 @@ describe("section slide utilities", () => {
 
   it("routes items and risks referencing an unowned project into the cross-product entry", () => {
     // referencedProjects case: rows point at a project the author owns no
-    // stage on, so it is absent from section.projects. They must still render
-    // (regression guard for redesign-head-slide-density review finding).
+    // stage on, so it is absent from section.projects. They must still render.
     const OUTSIDE_PROJECT_ID = "12121212-1212-4121-8121-121212121212";
     const slide = buildSectionSlideModel(
       makeSection({

@@ -27,7 +27,7 @@ describe("correlate-errors-to-traces: stampActiveTrace", () => {
     getActiveSpan.mockReset();
   });
 
-  it("OVERRIDES a pre-filled random trace id with the active span's ids (AT1 crux)", () => {
+  it("OVERRIDES a pre-filled random trace id with the active span's ids", () => {
     getActiveSpan.mockReturnValue(
       spanWith({
         traceId: VALID_TRACE_ID,

@@ -63,7 +63,7 @@ const validItem = () => ({
   text: "Ship feature X",
   tag: "feature",
   workflowStatus: "in_progress" as const,
-  // enforce-item-decision-stage-schema: stageIds is required (min 1) on write.
+  // stageIds is required (min 1) on the write contract.
   stageIds: ["Development"],
 });
 
@@ -79,14 +79,13 @@ const validRisk = () => ({
 });
 
 const validDecision = () => ({
-  // activity-first-class XOR parent: a decision is product- or activity-parented.
-  // The DB has always required a parent (productId was NOT NULL); the fixture now
-  // sets one so the write-path XOR superRefine accepts it.
+  // XOR parent: a decision is product- or activity-parented. The fixture sets
+  // a product so the write-path XOR superRefine accepts it.
   productId: uuid(),
   text: "Upgrade to PostgreSQL 16",
   owner: "Alice",
   impact: "Better performance",
-  // enforce-item-decision-stage-schema: stageIds is required (min 1) on write.
+  // stageIds is required (min 1) on the write contract.
   stageIds: ["Development"],
 });
 
@@ -429,13 +428,12 @@ describe("riskInputSchema — safeText", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 3b: require-risk-stage + enforce-item-decision-stage-schema \u2014 risks,
-// items, AND decisions must each carry \u22651 concrete SDLC stage on the write
-// path; the read model stays tolerant of stage-less legacy rows (rendered as a
-// loud "No stage set" warning).
+// Group 3b: risks, items, AND decisions must each carry ≥1 concrete SDLC stage
+// on the write path; the read model stays tolerant of stage-less legacy rows
+// (rendered as a loud "No stage set" warning).
 // ---------------------------------------------------------------------------
 
-describe("riskInputSchema \u2014 required stageIds (require-risk-stage)", () => {
+describe("riskInputSchema — required stageIds", () => {
   it("rejects a risk with missing stageIds", () => {
     const { stageIds: _stageIds, ...riskWithoutStages } = validRisk();
     const result = riskWriteSchema.safeParse(riskWithoutStages);
@@ -464,8 +462,8 @@ describe("riskInputSchema \u2014 required stageIds (require-risk-stage)", () => 
     expect(result.success).toBe(false);
   });
 
-  // enforce-item-decision-stage-schema: items + decisions now match risks —
-  // a stage-less write is rejected; only the read model stays tolerant.
+  // Items + decisions match risks: a stage-less write is rejected; only the
+  // read model stays tolerant.
   it("rejects an item with missing stageIds", () => {
     const { stageIds: _stageIds, ...itemWithoutStages } = validItem();
     const result = itemWriteSchema.safeParse(itemWithoutStages);
@@ -667,10 +665,10 @@ describe("submitSectionSchema", () => {
   });
 
   it("accepts an activity-only submit with 0 projectStatuses (relaxation)", () => {
-    // activity-first-class: submit no longer requires >=1 product status at the
-    // schema level — an activity-only section (0 products) submits. The
-    // per-product / per-activity status requirement is server-authoritative
-    // (validateSubmitInput), not a schema `.min`.
+    // Submit no longer requires >=1 product status at the schema level — an
+    // activity-only section (0 products) submits. The per-product / per-activity
+    // status requirement is server-authoritative (validateSubmitInput), not a
+    // schema `.min`.
     const submit = { ...validSubmit(), projectStatuses: [] };
     const result = submitSectionSchema.safeParse(submit);
     expect(result.success).toBe(true);
@@ -793,9 +791,9 @@ describe("carryOverStatusSchema", () => {
     expect(carryOverStatusSchema.safeParse("completed").success).toBe(true);
   });
 
-  // cleanup-dead-enum-states: `pending`/`failed` removed — carry-over is
-  // synchronous, the service writes only `completed` (or throws, persisting
-  // nothing). The enum collapses to the single live value.
+  // Carry-over is synchronous: the service writes only `completed` (or throws,
+  // persisting nothing). The enum collapses to that single live value —
+  // `pending`/`failed` are not accepted.
   it('rejects "pending" (removed dead state)', () => {
     expect(carryOverStatusSchema.safeParse("pending").success).toBe(false);
   });
@@ -1069,8 +1067,8 @@ describe("validateSubmitInput", () => {
     expect(errors).toHaveLength(0);
   });
 
-  // activity-first-class: every attached activity must carry a traffic light at
-  // submit — server-authoritative (a schema `.min` can't catch an OMITTED entry).
+  // Every attached activity must carry a traffic light at submit —
+  // server-authoritative (a schema `.min` can't catch an OMITTED entry).
   it("requires a status for every attached activity", () => {
     const activityId = uuid();
     const section = makeSection({
@@ -1125,8 +1123,8 @@ describe("validateSubmitInput", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 13b: activity-first-class — XOR parent + conditional stage + activityId
-// write guard (validateRecordActivityIds)
+// Group 13b: XOR parent + conditional stage + activityId write guard
+// (validateRecordActivityIds)
 // ---------------------------------------------------------------------------
 
 describe("record write schema — XOR parent + conditional stage", () => {
@@ -1248,7 +1246,7 @@ describe("validateRecordActivityIds", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 14: periodStatusSchema (v4.0)
+// Group 14: periodStatusSchema
 // ---------------------------------------------------------------------------
 
 describe("periodStatusSchema", () => {
@@ -1334,8 +1332,8 @@ describe("periodStateSchema", () => {
   });
 
   it("reportPeriodSchema: the full governed lifecycle set is optional (back-compat)", () => {
-    // fix-snapshot-lifecycle-restore: a legacy snapshot (only the date
-    // envelope + status) must still parse so old admin exports restore.
+    // A legacy snapshot (only the date envelope + status) must still parse so
+    // old admin exports restore.
     const parsed = reportPeriodSchema.safeParse({
       id: randomUUID(),
       periodStart: "2026-05-11",
@@ -1347,8 +1345,8 @@ describe("periodStateSchema", () => {
   });
 
   it("reportPeriodSchema: the full governed lifecycle set carries through", () => {
-    // fix-snapshot-lifecycle-restore: a reopened period keeps three distinct
-    // values; the schema must round-trip them verbatim.
+    // A reopened period keeps three distinct values; the schema must
+    // round-trip them verbatim.
     const parsed = reportPeriodSchema.parse({
       id: randomUUID(),
       periodStart: "2026-05-11",
@@ -1449,7 +1447,7 @@ describe("periodListItemSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 15: stageSchema (v4.0 D-63)
+// Group 15: stageSchema
 // ---------------------------------------------------------------------------
 
 describe("stageSchema", () => {
@@ -1500,7 +1498,7 @@ describe("stageSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 16: stageAssignmentSchema (v4.0 D-63)
+// Group 16: stageAssignmentSchema
 // ---------------------------------------------------------------------------
 
 describe("stageAssignmentSchema", () => {
@@ -1559,7 +1557,7 @@ describe("stageAssignmentSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 18: appSettingsSchema (v4.0 D-68)
+// Group 18: appSettingsSchema
 // ---------------------------------------------------------------------------
 
 describe("appSettingsSchema", () => {
@@ -1899,7 +1897,7 @@ describe("appSettingsUpdateSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 20: weeklyReportReadModelSchema (v4.0 D-58)
+// Group 20: weeklyReportReadModelSchema
 // ---------------------------------------------------------------------------
 
 describe("weeklyReportReadModelSchema", () => {
@@ -2252,11 +2250,11 @@ describe("compiledHistoryResultSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 21: safeText — noInvisibleOnly validator (verify-a11y-recommended-flip)
+// Group 21: safeText — noInvisibleOnly validator
 //
-// Targets the regex refactor in report-primitives.schema.ts that changed
-// /[\s​‌‍﻿]/g to the alternation /\s|​|‌|‍|﻿/gu. Tests guard against
-// single-character escapes slipping through a broken alternation pattern.
+// Guards the alternation form of the invisible-only check in
+// report-primitives.schema.ts so single-character escapes cannot slip through
+// a broken pattern.
 // ---------------------------------------------------------------------------
 
 describe("safeText — noInvisibleOnly", () => {
@@ -2351,7 +2349,6 @@ describe("safeText — noInvisibleOnly", () => {
 
 // ---------------------------------------------------------------------------
 // Group 22: schema-level invisible-only rejection gap-fills
-// (rows from verify-a11y-recommended-flip that were not yet covered)
 //
 // Note: catalog names fields "description"/"title"/"rationale" but the actual
 // schema fields are riskInputSchema.risk/impact/mitigation and

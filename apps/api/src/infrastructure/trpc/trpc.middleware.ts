@@ -460,8 +460,8 @@ function buildRoleMiddleware(allowed: Role | Role[]) {
       return await next({ ctx: { session } });
     } catch (error) {
       if (error instanceof TRPCError && error.code === "FORBIDDEN") {
-        // T2 mitigation: even when role/userId are missing, emit so the
-        // audit trail captures the attempt rather than swallowing it.
+        // Even when role/userId are missing, emit so the audit trail captures
+        // the attempt rather than swallowing it.
         ctx.auditLogger.roleDenied({
           userId: ctx.session?.userId ?? "anonymous",
           role: ctx.session?.role ?? null,

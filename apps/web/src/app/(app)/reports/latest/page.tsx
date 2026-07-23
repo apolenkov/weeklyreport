@@ -18,13 +18,13 @@ import { useTRPC } from "../../../../lib/trpc-context";
  * every visit (never caches a permanent target) and, being `replace` not
  * `push`, the resolved report's Back returns past `/reports/latest`.
  *
- * Race recovery (Decision 1): the read gate is published-or-current and
- * fail-closed, so an `open → published` flip mid-view yields a `NOT_FOUND` the
- * query client never retries. The report route recovers ONCE by redirecting
- * back here with `?recovery=1`. This page reads that incoming flag and
- * PROPAGATES it onto the resolved URL (`?source=status&recovery=<value>`) — it
- * does not hard-code `0` — so the report route can tell a Status navigation
- * from a History/direct one AND whether it has already retried (loop guard).
+ * Race recovery: the read gate is published-or-current and fail-closed, so an
+ * `open → published` flip mid-view yields a `NOT_FOUND` the query client never
+ * retries. The report route recovers ONCE by redirecting back here with
+ * `?recovery=1`. This page reads that incoming flag and PROPAGATES it onto the
+ * resolved URL (`?source=status&recovery=<value>`) — it does not hard-code `0`
+ * — so the report route can tell a Status navigation from a History/direct one
+ * AND whether it has already retried (loop guard).
  */
 export default function ReportsLatestPage() {
   const trpc = useTRPC();

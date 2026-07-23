@@ -9,11 +9,10 @@ import {
 } from "../../../shared/ui/report-shell/segmented-toggle";
 
 /**
- * scope-lead-report-to-own-contribution (7c.1): the lead form's Record
- * visibility toggle. A two-state segmented control — "Mine only" (default) /
- * "Everyone". Lead-form only; view-only (it changes what the lead sees, never
- * what is submitted or published — D4b). English label per the repo UI-string
- * rule.
+ * The lead form's Record visibility toggle. A two-state segmented control —
+ * "Mine only" (default) / "Everyone". Lead-form only; view-only (it changes
+ * what the lead sees, never what is submitted or published). English label
+ * per the repo UI-string rule.
  */
 export function RecordVisibilityToggle({
   value,
@@ -23,9 +22,9 @@ export function RecordVisibilityToggle({
   readonly value: RecordVisibility;
   readonly onChange: (next: RecordVisibility) => void;
   /**
-   * slides-record-visibility (Decision 6): on a FOREIGN-author slide deck
-   * Everyone is not offered — the toggle is forced to Mine and made inert so the
-   * current user's co-owner rows can never be merged onto another author's deck.
+   * On a FOREIGN-author slide deck Everyone is not offered — the toggle is
+   * forced to Mine and made inert so the current user's co-owner rows can
+   * never be merged onto another author's deck.
    */
   readonly disabled?: boolean;
 }) {

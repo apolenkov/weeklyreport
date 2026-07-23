@@ -1,9 +1,8 @@
 /**
- * Regression for fix-sweep-ui-findings: /lead/report/[reportId]/preview threw a
- * hydration mismatch because the server streamed the page's Suspense fallback
- * (WeeklyReportSkeleton) while the client's first render showed a bespoke inline
- * skeleton from this component's loading branch. The loading branch must now
- * render the same WeeklyReportSkeleton so SSR and client agree.
+ * /lead/report/[reportId]/preview must not hydrate-mismatch: the server
+ * streams the page's Suspense fallback (WeeklyReportSkeleton), so the
+ * client's loading branch must render the same skeleton — a bespoke inline
+ * skeleton here would diverge from SSR.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";

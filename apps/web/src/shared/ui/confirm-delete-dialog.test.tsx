@@ -32,7 +32,7 @@ function renderDialog(
   return render(<ConfirmDeleteDialog {...defaultProps} {...props} />);
 }
 
-describe("ConfirmDeleteDialog — a11y regression (VA-0a)", () => {
+describe("ConfirmDeleteDialog — a11y regression", () => {
   it("calls onCancel when Escape is pressed (document-level keydown handler)", () => {
     const onCancel = vi.fn();
     renderDialog({ onCancel });

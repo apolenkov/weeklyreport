@@ -529,13 +529,9 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
   });
 
   it("covers every domain error class the mapper imports", () => {
-    // Derived from the production table (imported, not iterated for its
-    // codes — the codes above stay hand-typed independently so this block
-    // doesn't just assert the table against itself): every DomainErrorCtor
-    // DOMAIN_ERROR_CODES maps must have exactly one row above, and every row
-    // above must construct a class the table actually maps — so a class
-    // added to (or dropped from) the production table without a matching row
-    // change here fails this test.
+    // Class-membership check only (codes stay hand-typed above): every
+    // DomainErrorCtor in DOMAIN_ERROR_CODES must have exactly one row above,
+    // and every row above must construct a class the table actually maps.
     const mappedCtors = DOMAIN_ERROR_CODES.map(([Ctor]) => Ctor);
     const testedCtors = cases.map((c) => c.make().constructor);
 

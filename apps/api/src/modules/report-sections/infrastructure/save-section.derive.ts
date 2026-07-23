@@ -85,10 +85,8 @@ export function toRiskRows(section: ReportSectionReadModel, sectionId: string) {
 }
 
 /**
- * activity-first-class (Decision 6): a decision is persisted only when parented
- * by EITHER a product OR an activity (the write schema's XOR guarantees exactly
- * one). The old productId-only filter silently dropped every activity-parented
- * decision.
+ * A decision is persisted only when parented by EITHER a product OR an activity
+ * (the write schema's XOR guarantees exactly one).
  */
 export function isPersistableDecision(
   decision: ReportSectionReadModel["decisions"][number],

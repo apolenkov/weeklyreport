@@ -229,9 +229,9 @@ describe("CarryOverPrismaRepository (integration)", () => {
     });
   });
 
-  // introduce-durable-record-identity (task 5.2): saveCarryOver must persist the
-  // source record's stableId onto the clone so a carried позиция shares one
-  // lineage key with its origin, while the clone still gets its own PK id.
+  // saveCarryOver must persist the source record's stableId onto the clone so
+  // a carried позиция shares one lineage key with its origin, while the clone
+  // still gets its own PK id.
   it("saveCarryOver persists the carried clone's stableId, distinct from its fresh PK", async () => {
     const targetReport = await prisma.report.create({
       data: {

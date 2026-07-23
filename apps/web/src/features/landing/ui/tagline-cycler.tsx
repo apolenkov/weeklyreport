@@ -30,14 +30,10 @@ export function TaglineCycler() {
 
   useEffect(() => {
     function cycle() {
-      // Fade out
       setVisible(false);
       timerRef.current = setTimeout(() => {
-        // Swap phrase
         setIndex((i) => (i + 1) % LANDING_TAGLINES.length);
-        // Fade in
         setVisible(true);
-        // Schedule next cycle
         timerRef.current = setTimeout(cycle, VISIBLE_MS);
       }, FADE_MS);
     }

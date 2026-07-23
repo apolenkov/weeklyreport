@@ -289,8 +289,7 @@ describe("buildEscalationsFromReadSections — flagged-red dedupe", () => {
       makeSection({
         authorName: "Alice Lead",
         projects: [redProject],
-        // record-status-derived-from-risk: the blocker is a blocked-severity
-        // risk now, not a blocked item.
+        // The blocker is a blocked-severity risk, not a blocked item.
         risks: [
           {
             id: "11111111-1111-4111-8111-111111111111",
@@ -615,10 +614,9 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
   });
 });
 
-// fix-published-empty-stage-risk-floor (task 3.5): once the floor turns the
-// bug case red, `buildEscalationsFromReadSections` fires a NEW `at_risk`
-// "flagged red" escalation off the effective status, alongside the existing
-// per-risk `unresolved_risk`. Pin both so the behaviour change is deliberate.
+// Once the risk floor turns an empty stage red, `buildEscalationsFromReadSections`
+// fires an `at_risk` "flagged red" escalation off the effective status, alongside
+// the existing per-risk `unresolved_risk`. Pin both so the pair stays deliberate.
 describe("buildEscalationsFromReadSections — own-risk floor side effect", () => {
   it("emits at_risk + blocked for a covers-all blocked own risk on an empty stage", () => {
     const escalations = buildEscalationsFromReadSections([
@@ -683,13 +681,12 @@ describe("buildEscalationsFromReadSections — own-risk floor side effect", () =
   });
 });
 
-// fix-published-empty-stage-risk-floor (task 3.4): the published top-line
-// portfolio totals (Shape B) are now computed from the floored `trafficLight`
-// of the mapped sections, NOT raw `projectStatuses`. An owned stage with no
-// submitted status covered by a covers-all own risk floors the portfolio status
-// AND the per-product count, so the top-line totals agree with the per-product
-// cards inside the same snapshot. The PDF top-line re-route lives in a separate
-// `toAssembledReport` and is pinned by its own test in
+// Published top-line portfolio totals (Shape B) are computed from the floored
+// `trafficLight` of the mapped sections, NOT raw `projectStatuses`. An owned
+// stage with no submitted status covered by a covers-all own risk floors the
+// portfolio status AND the per-product count, so the top-line totals agree with
+// the per-product cards inside the same snapshot. The PDF top-line re-route
+// lives in a separate `toAssembledReport` and is pinned by its own test in
 // pdf-export.prisma-repository.test.ts.
 describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)", () => {
   const STAGE_NAME = "Development";

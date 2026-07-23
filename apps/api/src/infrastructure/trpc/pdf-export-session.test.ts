@@ -88,7 +88,7 @@ describe("buildPdfExportSession", () => {
   });
 
   it("returns null for a hard-deleted requester (null row, absent from the revoked set)", async () => {
-    // D4: a `requestedBy` whose User.findUnique returns null is barred — a
+    // A `requestedBy` whose User.findUnique returns null is barred — a
     // hard-deleted account must not keep exporting on a stale 5-min token even
     // though the revoked-set fast path never fired for it.
     const result = await buildPdfExportSession(

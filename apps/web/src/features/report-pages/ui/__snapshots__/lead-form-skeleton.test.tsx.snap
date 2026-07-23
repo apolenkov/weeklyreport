@@ -1,15 +1,9 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`LeadFormSkeleton — snapshot (VA-0b) > PlaceholderAccordion skeleton rows render in stable order across re-renders 1`] = `
+exports[`LeadFormSkeleton — root a11y attributes > PlaceholderAccordion skeleton rows render in stable order across re-renders 1`] = `
 [
   "skeleton",
   "skeleton",
   "skeleton",
 ]
 `;
-
-exports[`LeadFormSkeleton — snapshot (VA-0b) > root container role + aria attributes snapshot 1`] = `"status"`;
-
-exports[`LeadFormSkeleton — snapshot (VA-0b) > root container role + aria attributes snapshot 2`] = `"true"`;
-
-exports[`LeadFormSkeleton — snapshot (VA-0b) > root container role + aria attributes snapshot 3`] = `"Loading report form"`;

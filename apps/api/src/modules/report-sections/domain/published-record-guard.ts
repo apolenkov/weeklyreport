@@ -5,13 +5,13 @@ import type {
 } from "@customreport/shared";
 
 /**
- * Pure resolve-not-delete comparison (ADR 0015). `published` is the section's
- * published lineage set — the item/decision `stableId`s that appeared in a
- * published report AND are still present on the section's current rows. The
- * incoming payload must retain every one of them: an omitted lineage is a
- * delete, a rewritten `stableId` also surfaces as an omission (the original
- * lineage is gone from the payload), so one check covers both evasions.
- * Risks are excluded by design — a risk is re-raised, not carried.
+ * Pure resolve-not-delete comparison. `published` is the section's published
+ * lineage set — the item/decision `stableId`s that appeared in a published
+ * report AND are still present on the section's current rows. The incoming
+ * payload must retain every one of them: an omitted lineage is a delete, a
+ * rewritten `stableId` also surfaces as an omission (the original lineage is
+ * gone from the payload), so one check covers both evasions. Risks are
+ * excluded by design — a risk is re-raised, not carried.
  */
 export function findPublishedRecordViolation(
   published: {
