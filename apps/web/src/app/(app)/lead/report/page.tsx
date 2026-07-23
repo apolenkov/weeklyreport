@@ -6,6 +6,9 @@ interface Props {
   searchParams: Promise<{ mode?: string }>;
 }
 
+// Clears the fixed lead-form action bar so content is not covered on scroll.
+const LEAD_FORM_ACTION_BAR_CLEARANCE = "88px";
+
 /**
  * Bare `/lead/report` route. The addressed form `/lead/report/[reportId]`
  * is canonical. This page is preserved for back-compat:
@@ -29,7 +32,7 @@ export default async function LeadReportPage({ searchParams }: Props) {
     >
       <div
         className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8"
-        style={{ paddingBottom: "88px" }}
+        style={{ paddingBottom: LEAD_FORM_ACTION_BAR_CLEARANCE }}
       >
         <Suspense fallback={<LeadFormSkeleton />}>
           <LeadForm redirectToCanonical mode={resolvedMode} />

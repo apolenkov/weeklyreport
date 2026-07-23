@@ -1,7 +1,11 @@
 import type { MapWeeklyReportResult } from "../../../features/report-sections/model/weekly-report";
 import { PrintLeadSection } from "./print-lead-section";
 import { PrintPortfolioTable } from "./print-portfolio-table";
-import { BORDER_LIGHT, TEXT_SECONDARY } from "./print-report-theme";
+import {
+  BORDER_LIGHT,
+  printStatusColor,
+  TEXT_SECONDARY,
+} from "./print-report-theme";
 
 export function PrintReportHeader({
   periodLabel,
@@ -16,7 +20,7 @@ export function PrintReportHeader({
         textAlign: "center",
         marginBottom: "20px",
         paddingBottom: "12px",
-        borderBottom: "3px solid #006241",
+        borderBottom: `3px solid ${printStatusColor("on-track")}`,
       }}
     >
       <h1
@@ -24,7 +28,7 @@ export function PrintReportHeader({
           margin: "0 0 4px",
           fontSize: "20px",
           fontWeight: 600,
-          color: "#006241",
+          color: printStatusColor("on-track"),
           letterSpacing: "-0.16px",
         }}
       >
@@ -51,7 +55,7 @@ export function PrintProductReports({
             margin: "0 0 12px",
             fontSize: "15px",
             fontWeight: 600,
-            color: "#006241",
+            color: printStatusColor("on-track"),
           }}
         >
           Product Reports
@@ -76,7 +80,7 @@ export function PrintPortfolioOverview({
           margin: "0 0 8px",
           fontSize: "15px",
           fontWeight: 600,
-          color: "#006241",
+          color: printStatusColor("on-track"),
         }}
       >
         Portfolio Overview

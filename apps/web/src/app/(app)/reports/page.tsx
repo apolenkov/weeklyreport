@@ -1,7 +1,7 @@
 "use client";
 
 import type { MyHistoryEntry } from "@customreport/shared";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Archive } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -66,6 +66,7 @@ export default function ReportsPage() {
   const compiledHistoryQ = useQuery({
     ...trpc.reports.compiledHistory.queryOptions({ includeArchive }),
     enabled: usesCompiledHistory,
+    placeholderData: keepPreviousData,
   });
 
   useEffect(() => {

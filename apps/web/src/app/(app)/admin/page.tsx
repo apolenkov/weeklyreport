@@ -15,14 +15,7 @@ interface Props {
   searchParams: Promise<{ tab?: string; filter?: string }>;
 }
 
-// 'jobs' tab — BullMQ DLQ admin UI. Order: after 'reopen',
-// before 'settings' so the failure-triage workflow lives next to other
-// reactive admin work (reopen requests / failed-job retries).
-//
-// 'periods' tab — admin period lifecycle list.
-// Position: between 'products' and 'reminders' — products → periods →
-// reminders mirrors the actual data-flow ordering (a period scoped to
-// products, with reminders fired against it).
+// Tab order lives with ADMIN_TABS (admin-tab-dependencies.ts).
 export default async function AdminPage({ searchParams }: Props) {
   const { tab = "users", filter = null } = await searchParams;
   const activeTab = isAdminTab(tab) ? tab : "users";

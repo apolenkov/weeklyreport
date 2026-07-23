@@ -38,7 +38,7 @@ vi.mock("../lib/trpc-provider", () => ({
 vi.mock("../styles/app.css", () => ({}));
 
 import { getOrgPublic } from "../lib/server/get-org-public";
-import RootLayout from "./layout";
+import RootLayout, { generateMetadata } from "./layout";
 
 const STUB_ORG: OrganizationPublic = {
   shortName: "TST",
@@ -56,6 +56,18 @@ function renderLayout(org: OrganizationPublic): Document {
 }
 
 describe("RootLayout — inline org-data XSS sink removed", () => {
+  it("uses the required organization name for metadata", async () => {
+    vi.mocked(getOrgPublic).mockResolvedValue(STUB_ORG);
+
+    await expect(generateMetadata()).resolves.toEqual({
+      title: {
+        default: STUB_ORG.fullName,
+        template: `%s · ${STUB_ORG.fullName}`,
+      },
+      description: "Weekly status reporting for a software department.",
+    });
+  });
+
   it("emits no inline __org_data script element", () => {
     const doc = renderLayout(STUB_ORG);
     expect(doc.getElementById("__org_data")).toBeNull();

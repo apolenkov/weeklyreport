@@ -67,8 +67,8 @@ vi.mock("../../../lib/trpc-context", () => ({
         ],
       },
       listProductGroupOwnership: {
-        queryOptions: (input: { productId: readonly string[] }) => ({
-          queryKey: ["admin", "listProductGroupOwnership", input.productId],
+        queryOptions: (input: { productIds: readonly string[] }) => ({
+          queryKey: ["admin", "listProductGroupOwnership", input.productIds],
         }),
         pathFilter: () => ({
           queryKey: ["admin", "listProductGroupOwnership"],

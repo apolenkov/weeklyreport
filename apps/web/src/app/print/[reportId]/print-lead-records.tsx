@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 
 import type { WeeklyProductReport } from "../../../features/report-sections/model/weekly-report-types";
 import {
+  printStatusColor,
   TEXT_PRIMARY,
   TEXT_SECONDARY,
   workflowBadge,
@@ -25,6 +26,62 @@ const RECORD_LIST_STYLE: CSSProperties = {
   lineHeight: "1.6",
 };
 
+// Soft badge fills (text colors reuse printStatusColor where they match).
+const BADGE_BG = {
+  completed: "#d4e9e2",
+  blocked: "#fde8e8",
+  default: "#f0f0f0",
+  atRisk: "#fef9e7",
+  decision: "#e0e7ff",
+} as const;
+const BADGE_TEXT_AT_RISK = "#b45309";
+const BADGE_TEXT_DECISION = "#3730a3";
+
+const BADGE_BASE: CSSProperties = {
+  fontSize: "9px",
+  padding: "1px 4px",
+  borderRadius: "4px",
+};
+
+function workflowStatusBadgeStyle(status: string): CSSProperties {
+  if (status === "completed") {
+    return {
+      ...BADGE_BASE,
+      backgroundColor: BADGE_BG.completed,
+      color: printStatusColor("on-track"),
+    };
+  }
+  if (status === "blocked") {
+    return {
+      ...BADGE_BASE,
+      backgroundColor: BADGE_BG.blocked,
+      color: printStatusColor("blocked"),
+    };
+  }
+  return {
+    ...BADGE_BASE,
+    backgroundColor: BADGE_BG.default,
+    color: TEXT_SECONDARY,
+  };
+}
+
+function severityBadgeStyle(severity: string): CSSProperties {
+  const blocked = severity === "blocked";
+  return {
+    ...BADGE_BASE,
+    backgroundColor: blocked ? BADGE_BG.blocked : BADGE_BG.atRisk,
+    color: blocked ? printStatusColor("blocked") : BADGE_TEXT_AT_RISK,
+    fontWeight: 600,
+  };
+}
+
+const DECISION_BADGE_STYLE: CSSProperties = {
+  ...BADGE_BASE,
+  backgroundColor: BADGE_BG.decision,
+  color: BADGE_TEXT_DECISION,
+  fontWeight: 600,
+};
+
 export function CurrentWeekRecords({ report }: RecordListProps) {
   if (report.currentWeek.length === 0) return null;
   return (
@@ -37,25 +94,7 @@ export function CurrentWeekRecords({ report }: RecordListProps) {
               [{item.stageLead}]
             </span>{" "}
             {item.text}{" "}
-            <span
-              style={{
-                fontSize: "9px",
-                padding: "1px 4px",
-                borderRadius: "4px",
-                backgroundColor:
-                  item.status === "completed"
-                    ? "#d4e9e2"
-                    : item.status === "blocked"
-                      ? "#fde8e8"
-                      : "#f0f0f0",
-                color:
-                  item.status === "completed"
-                    ? "#006241"
-                    : item.status === "blocked"
-                      ? "#c82014"
-                      : TEXT_SECONDARY,
-              }}
-            >
+            <span style={workflowStatusBadgeStyle(item.status)}>
               {workflowBadge(item.status)}
             </span>
           </li>
@@ -83,25 +122,13 @@ export function RiskRecords({ report }: RecordListProps) {
   if (report.risks.length === 0) return null;
   return (
     <div style={RECORD_GROUP_STYLE}>
-      <h4 style={{ ...RECORD_TITLE_STYLE, color: "#c82014" }}>
+      <h4 style={{ ...RECORD_TITLE_STYLE, color: printStatusColor("blocked") }}>
         Risks & Blockers
       </h4>
       <ul style={RECORD_LIST_STYLE}>
         {report.risks.map((risk) => (
           <li key={risk.id}>
-            <span
-              style={{
-                fontSize: "9px",
-                padding: "1px 4px",
-                borderRadius: "4px",
-                backgroundColor:
-                  risk.severity === "blocked" ? "#fde8e8" : "#fef9e7",
-                color: risk.severity === "blocked" ? "#c82014" : "#b45309",
-                fontWeight: 600,
-              }}
-            >
-              {risk.badge}
-            </span>{" "}
+            <span style={severityBadgeStyle(risk.severity)}>{risk.badge}</span>{" "}
             {risk.text}
           </li>
         ))}
@@ -118,18 +145,7 @@ export function DecisionRecords({ report }: RecordListProps) {
       <ul style={RECORD_LIST_STYLE}>
         {report.decisions.map((decision) => (
           <li key={decision.id}>
-            <span
-              style={{
-                fontSize: "9px",
-                padding: "1px 4px",
-                borderRadius: "4px",
-                backgroundColor: "#e0e7ff",
-                color: "#3730a3",
-                fontWeight: 600,
-              }}
-            >
-              {decision.badge}
-            </span>{" "}
+            <span style={DECISION_BADGE_STYLE}>{decision.badge}</span>{" "}
             {decision.text}
           </li>
         ))}

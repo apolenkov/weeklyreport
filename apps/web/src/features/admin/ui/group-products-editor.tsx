@@ -94,7 +94,7 @@ export function GroupProductsEditor({
   // products (the empty-list branch renders instead).
   const ownershipQuery = useQuery({
     ...trpc.admin.listProductGroupOwnership.queryOptions({
-      productId: activeProductIds,
+      productIds: activeProductIds,
     }),
     enabled: activeProductIds.length > 0,
   });

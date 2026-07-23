@@ -1,6 +1,10 @@
 import type { CSSProperties, ReactNode } from "react";
 
-import { BORDER_LIGHT, TEXT_SECONDARY } from "./print-report-theme";
+import {
+  BORDER_LIGHT,
+  printStatusColor,
+  TEXT_SECONDARY,
+} from "./print-report-theme";
 
 interface PrintExecutiveSummaryProps {
   readonly submitted: number;
@@ -17,6 +21,9 @@ const CARD_STYLE: CSSProperties = {
   borderRadius: "8px",
   textAlign: "center",
 };
+const SUBMITTED_COLOR = printStatusColor("on-track");
+const BLOCKED_COLOR = printStatusColor("blocked");
+const AT_RISK_COLOR = printStatusColor("at-risk");
 
 function SummaryCard({
   color,
@@ -49,19 +56,19 @@ export function PrintExecutiveSummary({
           margin: "0 0 8px",
           fontSize: "15px",
           fontWeight: 600,
-          color: "#006241",
+          color: SUBMITTED_COLOR,
         }}
       >
         Executive Summary
       </h2>
       <div style={{ display: "flex", gap: "12px", fontSize: "11px" }}>
-        <SummaryCard color="#006241" label="Submitted">
+        <SummaryCard color={SUBMITTED_COLOR} label="Submitted">
           {submitted}/{total}
         </SummaryCard>
-        <SummaryCard color="#c82014" label="Blocked">
+        <SummaryCard color={BLOCKED_COLOR} label="Blocked">
           {blockedCount}
         </SummaryCard>
-        <SummaryCard color="#daa520" label="At Risk">
+        <SummaryCard color={AT_RISK_COLOR} label="At Risk">
           {atRiskCount}
         </SummaryCard>
         <SummaryCard color="#3730a3" label="Decisions">

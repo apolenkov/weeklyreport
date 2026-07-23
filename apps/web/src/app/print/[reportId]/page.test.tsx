@@ -1,259 +1,111 @@
 /**
  * @vitest-environment jsdom
- *
- * Regression tests for the static <style dangerouslySetInnerHTML> block in
- * the print template — verify-a11y-recommended-flip catalog rows for
- * apps/web/src/app/print/[reportId]/print-report-template.tsx
- * (3 high unit-rtl + 1 snapshot).
- *
- * fix-report-surface-integrity W2 (task 3.3): page.tsx is now a thin async
- * server gate (worker-vs-human discriminator), so the CSS-safety assertions
- * target the extracted client `PrintReportTemplate` directly. The gate's
- * redirect/render branches are covered in
- * shared/ui/report-shell/report-surface-controls.test.tsx.
- *
- * All assertions target the hardcoded print CSS string; no row in scope
- * involves keyboard, dialog, or focus behavior.
  */
 
-import { useQuery } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
+
+import type { Role } from "@customreport/shared";
+import { render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-/* ---- Module mocks (must be hoisted above imports) ---- */
+import type { PrintRouteContext } from "../../../lib/server/get-print-route-context";
 
-vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
-    "@tanstack/react-query",
-  );
+const redirectMock = vi.hoisted(() =>
+  vi.fn((url: string) => {
+    throw new Error(`NEXT_REDIRECT:${url}`);
+  }),
+);
+const getPrintRouteContextMock = vi.hoisted(() =>
+  vi.fn<() => Promise<PrintRouteContext>>(),
+);
+
+vi.mock("next/navigation", () => ({
+  redirect: redirectMock,
+}));
+vi.mock("../../../lib/server/get-print-route-context", () => ({
+  getPrintRouteContext: getPrintRouteContextMock,
+}));
+vi.mock("./print-report-template", () => ({
+  PrintReportTemplate: ({ reportId }: { readonly reportId: string }) => (
+    <div data-testid="print-report-template">{reportId}</div>
+  ),
+}));
+
+import PrintReportPage from "./page";
+
+const REPORT_ID = "report-123";
+
+function session(role: Role): NonNullable<PrintRouteContext["session"]> {
   return {
-    ...actual,
-    useQuery: vi.fn((options: { queryKey?: unknown[] }) => {
-      const reportId = options.queryKey?.[1];
-      if (reportId === "report-b") {
-        return {
-          data: undefined,
-          isLoading: true,
-          isError: false,
-          error: null,
-        };
-      }
-      if (reportId === "report-error") {
-        return {
-          data: undefined,
-          isLoading: false,
-          isError: true,
-          error: new Error("network unavailable"),
-        };
-      }
-      return {
-        data: { status: "open" },
-        isLoading: false,
-        isError: false,
-        error: null,
-      };
-    }),
+    userId: "user-123",
+    email: `${role}@example.test`,
+    name: `${role} user`,
+    role,
+    activeReportId: null,
+    activeReportSectionId: null,
   };
-});
-
-vi.mock("sonner", () => ({
-  toast: { error: vi.fn() },
-}));
-
-vi.mock("../../../lib/trpc-context", () => ({
-  useTRPC: () => ({
-    weeklyReport: {
-      get: {
-        queryOptions: ({ reportId }: { reportId: string }) => ({
-          queryKey: ["weeklyReport.get", reportId],
-        }),
-      },
-    },
-  }),
-}));
-
-vi.mock("../../../features/report-sections/model/weekly-report", () => ({
-  mapWeeklyReport: () => ({
-    portfolio: [
-      {
-        id: "product-1",
-        initials: "CO",
-        name: "Core",
-        status: "at-risk",
-        statusLabel: "At Risk · Alex Lead",
-        leads: "Alex Lead",
-        currentWeekCount: 1,
-        nextWeekCount: 1,
-        riskCount: 1,
-      },
-    ],
-    products: [
-      {
-        id: "product-1",
-        authorIds: ["author-1"],
-        initials: "CO",
-        name: "Core",
-        status: "at-risk",
-        statusLabel: "At Risk",
-        leads: "Alex Lead",
-        currentWeek: [
-          {
-            id: "item-1",
-            stageLead: "Build · AL",
-            stage: "Build",
-            owner: "AL",
-            text: "Ship release",
-            status: "in-progress",
-          },
-        ],
-        nextWeek: [],
-        risks: [],
-        decisions: [{ id: "decision-1", badge: "Core", text: "Approve" }],
-        priorities: [],
-      },
-    ],
-    submissionCount: 1,
-    totalLeads: 2,
-    period: {
-      id: "p1",
-      reportId: "r1",
-      periodStatus: "open" as const,
-      weekLabel: "W1",
-      dateRange: "Jun 1 – Jun 7",
-      isCurrent: true,
-    },
-  }),
-}));
-
-// joinPeriodLabel is a pure formatting helper — use the real implementation.
-// No mock needed.
-
-/* ---- Import under test (after mocks are registered) ---- */
-
-import { PrintReportTemplate } from "./print-report-template";
-
-/* ---- Helper ---- */
-
-function renderPage(reportId: string) {
-  return render(<PrintReportTemplate reportId={reportId} />);
 }
 
-/* ---- Tests ---- */
+function renderPage(): Promise<ReactElement> {
+  return PrintReportPage({
+    params: Promise.resolve({ reportId: REPORT_ID }),
+  }) as Promise<ReactElement>;
+}
 
-describe("PrintReportTemplate — <style dangerouslySetInnerHTML> static CSS safety", () => {
-  it("style textContent contains only static CSS keywords — no user-supplied interpolations", () => {
-    const { container } = renderPage("report-123");
-    const styleEl = container.querySelector("style");
-    expect(styleEl).not.toBeNull();
-    const css = styleEl?.textContent ?? "";
-
-    expect(css).toContain("@media print");
-    expect(css).toContain("@page");
-    expect(css).toContain("body nav");
-    expect(css).toContain(".no-print");
-    expect(css).toContain("page-break");
-  });
-
-  it("style innerHTML does not contain script-injectable patterns — no XSS vector", () => {
-    const { container } = renderPage("report-456");
-    const styleEl = container.querySelector("style");
-    expect(styleEl).not.toBeNull();
-    const css = styleEl?.innerHTML ?? "";
-
-    expect(css).not.toContain("<");
-    expect(css).not.toContain(">");
-    expect(css).not.toMatch(/javascript:/i);
-    expect(css).not.toMatch(/expression\(/i);
-  });
-
-  it("__html value is identical regardless of reportId — confirms no prop-derived interpolation", () => {
-    const { container: c1 } = renderPage("id-aaa");
-    const { container: c2 } = renderPage("id-bbb");
-
-    const css1 = c1.querySelector("style")?.innerHTML ?? "";
-    const css2 = c2.querySelector("style")?.innerHTML ?? "";
-
-    expect(css1).toBe(css2);
-    // Sanity: the style must be non-empty (the invariant is only meaningful
-    // if the block actually rendered).
-    expect(css1.length).toBeGreaterThan(0);
-  });
-
-  it("style element innerHTML snapshot — any future user-data interpolation breaks this", () => {
-    const { container } = renderPage("snapshot-test");
-    const styleEl = container.querySelector("style");
-    expect(styleEl).not.toBeNull();
-    expect(styleEl?.innerHTML).toMatchInlineSnapshot(`
-      "
-                  @media print {
-                    body { margin: 0; padding: 0; }
-                    body nav, body .no-print { display: none; }
-                    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .page-break-before { page-break-before: always; }
-                    section { page-break-inside: avoid; }
-                    table { page-break-inside: avoid; }
-                  }
-                  @page {
-                    size: A4;
-                    margin: 15mm;
-                  }
-                "
-    `);
-  });
-});
-
-describe("PrintReportTemplate report-key transitions", () => {
-  it("replaces report A output with the pending shell for report B", async () => {
-    const rendered = renderPage("report-a");
-    expect(screen.getByText(/W1, Jun 1 – Jun 7/)).toBeInTheDocument();
-
-    rendered.rerender(<PrintReportTemplate reportId="report-b" />);
-
-    await waitFor(() => {
-      expect(screen.queryByText(/W1, Jun 1 – Jun 7/)).not.toBeInTheDocument();
+describe("PrintReportPage server gate", () => {
+  it("renders only for a PDF worker bound to the requested report", async () => {
+    getPrintRouteContextMock.mockResolvedValue({
+      session: session("head"),
+      isPdfExport: true,
+      pdfReportId: REPORT_ID,
     });
-    expect(screen.getByText("Loading report report-b …")).toBeInTheDocument();
-    expect(vi.mocked(useQuery).mock.lastCall?.[0]).toMatchObject({
-      queryKey: ["weeklyReport.get", "report-b"],
+
+    render(await renderPage());
+
+    expect(screen.getByTestId("print-report-template")).toHaveTextContent(
+      REPORT_ID,
+    );
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it("redirects a worker token bound to another report", async () => {
+    getPrintRouteContextMock.mockResolvedValue({
+      session: session("head"),
+      isPdfExport: true,
+      pdfReportId: "other-report",
     });
-  });
-});
 
-describe("PrintReportTemplate render outcomes", () => {
-  it("renders the loading marker without ready content", () => {
-    const { container } = renderPage("report-b");
-
-    expect(
-      container.querySelector('[data-print-state="loading"]'),
-    ).not.toBeNull();
-    expect(container.querySelector('[data-print-state="ready"]')).toBeNull();
-  });
-
-  it("renders the terminal error marker", () => {
-    const { container } = renderPage("report-error");
-
-    expect(
-      container.querySelector('[data-print-state="error"]'),
-    ).not.toBeNull();
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Report could not be rendered",
+    await expect(renderPage()).rejects.toThrow(
+      `NEXT_REDIRECT:/head/report/${REPORT_ID}`,
     );
   });
 
-  it("renders ready summary, portfolio, and product records", () => {
-    const { container } = renderPage("report-ready");
+  it.each([
+    ["head", `/head/report/${REPORT_ID}`],
+    ["admin", `/head/report/${REPORT_ID}`],
+    ["viewer", `/reports/${REPORT_ID}`],
+    ["lead", "/lead/report"],
+  ] as const)("redirects an authenticated %s to %s", async (role, target) => {
+    getPrintRouteContextMock.mockResolvedValue({
+      session: session(role),
+      isPdfExport: false,
+      pdfReportId: null,
+    });
 
-    expect(
-      container.querySelector('[data-print-state="ready"]'),
-    ).not.toBeNull();
-    expect(screen.getByText("Executive Summary")).toBeInTheDocument();
-    expect(screen.getByText("Portfolio Overview")).toBeInTheDocument();
-    expect(screen.getByText("Product Reports")).toBeInTheDocument();
-    expect(screen.getByRole("cell", { name: "Core" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Core" })).toBeInTheDocument();
-    expect(screen.getByText("Ship release")).toBeInTheDocument();
-    expect(container.querySelector("header")).toHaveTextContent(
-      "1/2 leads submitted",
+    await expect(renderPage()).rejects.toThrow(`NEXT_REDIRECT:${target}`);
+  });
+
+  it("redirects an unauthenticated request to login with its return path", async () => {
+    getPrintRouteContextMock.mockResolvedValue({
+      session: null,
+      isPdfExport: false,
+      pdfReportId: null,
+    });
+
+    const returnPath = encodeURIComponent(`/print/${REPORT_ID}`);
+    await expect(renderPage()).rejects.toThrow(
+      `NEXT_REDIRECT:/?next=${returnPath}`,
     );
   });
 });

@@ -59,7 +59,7 @@ function PrintPortfolioRow({
         <span
           style={
             product.riskCount > 0
-              ? { color: "#c82014", fontWeight: 600 }
+              ? { color: printStatusColor("blocked"), fontWeight: 600 }
               : { color: "rgba(0,0,0,0.38)" }
           }
         >

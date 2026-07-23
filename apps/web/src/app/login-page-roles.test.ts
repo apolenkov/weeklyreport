@@ -1,7 +1,43 @@
-import { sessionRoleSchema } from "@customreport/shared";
+import { ROLE_HOME_PATH, sessionRoleSchema } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { getSessionRole, isRole } from "./login-page-roles";
+import {
+  defaultRedirectFor,
+  devLoginHref,
+  FALLBACK_REDIRECT,
+  getSessionRole,
+  isRole,
+} from "./login-page-roles";
+
+describe("login navigation helpers", () => {
+  it("builds an encoded dev-login URL with the role home redirect", () => {
+    const href = devLoginHref("head", "head+qa@example.test");
+    const url = new URL(href, "http://web.test");
+
+    expect(url.pathname).toBe("/auth/dev-login");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      role: "head",
+      email: "head+qa@example.test",
+      redirect: ROLE_HOME_PATH.head,
+    });
+  });
+
+  it("returns each known role's canonical home path", () => {
+    for (const role of sessionRoleSchema.options) {
+      expect(defaultRedirectFor(role)).toBe(ROLE_HOME_PATH[role]);
+    }
+  });
+
+  it("falls back for absent and retired persisted roles", () => {
+    expect(defaultRedirectFor(null)).toBe(FALLBACK_REDIRECT);
+    expect(defaultRedirectFor(undefined)).toBe(FALLBACK_REDIRECT);
+    expect(
+      defaultRedirectFor(
+        "retired" as (typeof sessionRoleSchema.options)[number],
+      ),
+    ).toBe(FALLBACK_REDIRECT);
+  });
+});
 
 /**
  * Guard-parity pins for the role-type spec: `isRole` derives its accepted
