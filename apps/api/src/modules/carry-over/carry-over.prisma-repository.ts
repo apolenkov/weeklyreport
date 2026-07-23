@@ -123,7 +123,7 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
       // in-transaction editability re-check throws CarryOverConflictError, a
       // distinct type, so it propagates past this branch unchanged.
       if (isUniqueViolation(error)) {
-        return this.resolveDedupeRace(execution, targetSections);
+        return this.resolveDedupeRace(execution);
       }
       throw error;
     }
@@ -131,14 +131,16 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
 
   private async resolveDedupeRace(
     execution: CarryOverExecution,
-    targetSections: ReportSectionReadModel[],
   ): Promise<CarryOverResult> {
     const recorded = await this.readExecutionByDedupeKey(execution.dedupeKey);
     if (recorded) {
+      const winnerSections = await this.readSectionsByReport(
+        recorded.execution.targetReportId,
+      );
       return {
         execution: recorded.execution,
         records: recorded.records,
-        targetSection: requirePrimaryTargetSection(targetSections),
+        targetSection: requirePrimaryTargetSection(winnerSections),
       };
     }
     throw new CarryOverConflictError(

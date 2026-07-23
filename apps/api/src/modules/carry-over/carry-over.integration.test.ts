@@ -108,6 +108,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       items: [
         {
           id: TEST_IDS.carryTargetItem,
+          stableId: sourceItem.stableId,
           projectId: testData.project.id,
           type: "current" as const,
           text: "Carry this over",
@@ -199,6 +200,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       items: [
         {
           id: TEST_IDS.carryTargetItem,
+          stableId: crypto.randomUUID(),
           projectId: testData.project.id,
           type: "current" as const,
           text: "Item with no source id",
@@ -453,6 +455,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       items: [
         {
           id: itemId,
+          stableId: crypto.randomUUID(),
           projectId: testData.project.id,
           type: "current" as const,
           text: "Ranked, staged carried item",
@@ -539,6 +542,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       items: [
         {
           id: itemLeadId,
+          stableId: crypto.randomUUID(),
           projectId: testData.project.id,
           type: "current" as const,
           text: "Lead carried item",
@@ -559,6 +563,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       items: [
         {
           id: itemHeadId,
+          stableId: crypto.randomUUID(),
           projectId: testData.project.id,
           type: "current" as const,
           text: "Head carried item",
@@ -656,8 +661,11 @@ describe("CarryOverPrismaRepository (integration)", () => {
     );
 
     // Idempotent: the conflict resolves to the already-recorded execution, and
-    // no duplicate row is created.
+    // no duplicate row is created. Every returned entity belongs to the
+    // winner's target report, never the loser's merged target section.
     expect(result.execution.id).toBe(winnerId);
+    expect(result.targetSection.reportId).toBe(testData.report.id);
+    expect(result.targetSection.reportId).toBe(result.execution.targetReportId);
     const all = await prisma.carryOverExecution.findMany({
       where: { dedupeKey },
     });

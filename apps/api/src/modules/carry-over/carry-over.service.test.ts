@@ -801,4 +801,26 @@ describe("CarryOverService — carry filter set (pin)", () => {
     expect(byAuthor(AUTHOR).items.map((i) => i.text)).toEqual(["A item"]);
     expect(byAuthor(authorB).items.map((i) => i.text)).toEqual(["B item"]);
   });
+
+  it("rejects duplicate source sections for one carried author", async () => {
+    const duplicate = {
+      ...sourceSection,
+      reportSectionId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    };
+    const repo = createRepository(sourceSection);
+    repo.getSourceSections = () =>
+      Promise.resolve([
+        structuredClone(sourceSection),
+        structuredClone(duplicate),
+      ]);
+
+    await expect(
+      new CarryOverService(repo).executeCarryOver(
+        sourceReportId,
+        targetReportId,
+      ),
+    ).rejects.toThrow(
+      `Carry-over requires one source section per author; duplicate author ${AUTHOR}.`,
+    );
+  });
 });

@@ -54,6 +54,17 @@ describe("carryOverIntoOpenedPeriod", () => {
       "source-1",
       "target-1",
     );
+    expect(spies.info).toHaveBeenCalledExactlyOnceWith(
+      "auto carry-over completed",
+      {
+        sourceReportId: "source-1",
+        targetReportId: "target-1",
+        authors: 2,
+      },
+    );
+    expect(spies.ensureSection.mock.invocationCallOrder.at(-1)).toBeLessThan(
+      spies.executeCarryOver.mock.invocationCallOrder[0] ?? 0,
+    );
   });
 
   it("is a no-op when there is no prior period", async () => {
