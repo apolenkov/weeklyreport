@@ -1,13 +1,8 @@
-/**
- * Integration test for prisma-test-helper — verifies that:
- *   1. Tables previously missed by the deleteMany chain (UserActionLog,
- *      AppSettings, ViewerGroupAccess) are wiped by cleanDatabase.
- *   2. seedTestData works correctly on the post-TRUNCATE empty DB (FK
- *      integrity is preserved).
- *
- * Picked up by the src/**\/*.integration.test.ts glob in
- * apps/api/vitest.integration.config.ts, which loads ../../.env.test.
- */
+// UserActionLog, AppSettings and ViewerGroupAccess are the wipe sentinels:
+// they sit outside seedTestData's fixture graph, so cleanDatabase's dynamic
+// table discovery is the only thing that reaches them — a regression there
+// fails these tests first. Picked up by the src/**/*.integration.test.ts glob
+// in apps/api/vitest.integration.config.ts, which loads ../../.env.test.
 
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -106,10 +101,19 @@ describe("prisma-test-helper (integration)", () => {
       where: { id: project.id },
     });
 
+    // Roles are re-read from the DB — asserting on seedTestData's return
+    // values would only echo the literals passed to prisma.user.create.
+    const dbHead = await prisma.user.findUniqueOrThrow({
+      where: { id: head.id },
+    });
+    const dbLead = await prisma.user.findUniqueOrThrow({
+      where: { id: lead.id },
+    });
+
     expect(dbReport.id).toBe(report.id);
     expect(dbSection?.authorId).toBe(lead.id);
     expect(dbProject.leadId).toBe(lead.id);
-    expect(head.role).toBe("head");
-    expect(lead.role).toBe("lead");
+    expect(dbHead.role).toBe("head");
+    expect(dbLead.role).toBe("lead");
   });
 });

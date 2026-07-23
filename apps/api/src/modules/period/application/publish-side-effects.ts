@@ -13,28 +13,30 @@ export type IngestionPublishHook = (
 ) => Promise<void>;
 
 /**
- * The counter pair both publish paths bump on a real transition. Structurally
- * matches both `PeriodTelemetry` and `PublicationTelemetry` (their
- * `recordPeriodPublished` label unions differ in width, but method-shorthand
- * members are checked bivariantly, so either port satisfies this shape).
+ * The counter pair both publish paths bump on a real transition. `S` is the
+ * label-union width the concrete telemetry port can honor — `PeriodTelemetry`
+ * accepts any `PeriodStatus`, `PublicationTelemetry` only `"open"` — so the
+ * compiler, not a call-site literal, keeps `priorStatus` inside that width.
  */
-interface PublishSideEffectsTelemetry {
+interface PublishSideEffectsTelemetry<S extends PeriodStatus> {
   recordPublishedReport(): void;
-  recordPeriodPublished(from: PeriodStatus): void;
+  recordPeriodPublished(from: S): void;
 }
 
 /** Collaborators required after every successful publish transition. */
-export interface PublishSideEffectsDeps {
-  telemetry: PublishSideEffectsTelemetry;
+export interface PublishSideEffectsDeps<S extends PeriodStatus = PeriodStatus> {
+  telemetry: PublishSideEffectsTelemetry<S>;
   ingestionHook: IngestionPublishHook;
   invalidateAnalyticsCache: () => Promise<void>;
   onIngestionError?: (error: unknown) => void;
   skipIngestionWhenEmpty?: boolean;
 }
 
-export interface PublishSideEffectsParams {
+export interface PublishSideEffectsParams<
+  S extends PeriodStatus = PeriodStatus,
+> {
   /** The report's periodStatus immediately before the write that just transitioned it. */
-  priorStatus: PeriodStatus;
+  priorStatus: S;
   /**
    * Resolves the section ids to hand to the ingestion hook. `publishPeriod`
    * re-reads them from the repository AFTER the transaction (picking up
@@ -49,9 +51,11 @@ export interface PublishSideEffectsParams {
  * write never inflates the on-time-ratio numerator: telemetry pair first,
  * then cache invalidation, then the awaited-but-swallowed ingestion enqueue.
  */
-export async function emitPublishSideEffects(
-  deps: PublishSideEffectsDeps,
-  params: PublishSideEffectsParams,
+// `NoInfer` pins `S` to what the telemetry port declares: `priorStatus` must
+// fit the port's width, and can never widen the inference instead.
+export async function emitPublishSideEffects<S extends PeriodStatus>(
+  deps: PublishSideEffectsDeps<S>,
+  params: PublishSideEffectsParams<NoInfer<S>>,
 ): Promise<void> {
   deps.telemetry.recordPublishedReport();
   deps.telemetry.recordPeriodPublished(params.priorStatus);

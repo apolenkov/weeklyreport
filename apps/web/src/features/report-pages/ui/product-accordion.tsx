@@ -9,6 +9,7 @@ import { RotatingChevron } from "../../../shared/ui/report-shell/rotating-chevro
 import {
   reportHasContent,
   type WeeklyProductReport,
+  type WeeklyProductStatus,
   type WeeklyReportDecision,
   type WeeklyReportItem,
   type WeeklyReportRisk,
@@ -117,7 +118,7 @@ const STATUS_CONFIG = {
     avatarBg: CSS.statusBlockedBg,
     avatarText: CSS.destructive,
   },
-} as const satisfies Record<string, StatusConfig>;
+} as const satisfies Record<WeeklyProductStatus, StatusConfig>;
 
 // Every content row — item, risk, decision — shares ONE column grid so all
 // stage labels share one left edge and all content shares one left edge (the
@@ -135,7 +136,7 @@ const HEADER_STATUS_TONE = {
   "on-track": "var(--color-chip-on-track-border)",
   "at-risk": CSS.statusAtRiskBorder,
   blocked: CSS.destructive,
-} as const satisfies Record<string, string>;
+} as const satisfies Record<WeeklyProductStatus, string>;
 
 // status-color-semantics: each workflow status resolves its badge through named
 // tokens — never hardcoded hex. blocked=red alarm, in-progress=steel-blue (the
@@ -420,13 +421,11 @@ export function ProductAccordion({
         avatarBg: CSS.muted,
         avatarText: CSS.mutedForeground,
       }
-    : ((STATUS_CONFIG as Record<string, StatusConfig>)[report.status] ??
-      STATUS_CONFIG["on-track"]);
+    : STATUS_CONFIG[report.status];
   const statusLabel = isEmpty ? "No updates" : report.statusLabel;
   const statusTone = isEmpty
     ? CSS.mutedForeground
-    : ((HEADER_STATUS_TONE as Record<string, string>)[report.status] ??
-      HEADER_STATUS_TONE["on-track"]);
+    : HEADER_STATUS_TONE[report.status];
 
   // Suppress the escalation when its text is verbatim a row already rendered
   // in this card. The escalation is DERIVED from a blocked item or risk, so
