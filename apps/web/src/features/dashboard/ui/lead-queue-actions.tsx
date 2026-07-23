@@ -1,9 +1,18 @@
 import type { LeadInfo } from "../model/dashboard";
+import { primaryAction } from "../model/dashboard-leads";
 import { RemindLeadButton } from "./remind-lead-button";
 import { RequestChangesButton } from "./request-changes-button";
-import { RevokeSectionButton } from "./revoke-lead-button";
+import { RevokeLeadButton } from "./revoke-lead-button";
 
-type PrimaryAction = "open" | "remind" | "review" | "none";
+interface SecondaryActionState {
+  readonly showOpen: boolean;
+  readonly showRemind: boolean;
+  readonly requestChanges: {
+    readonly reportSectionId: string;
+    readonly version: number;
+  } | null;
+  readonly revokeSectionId: string | null;
+}
 
 interface LeadQueueActionsProps {
   readonly lead: LeadInfo;
@@ -13,13 +22,6 @@ interface LeadQueueActionsProps {
 
 function reportHref(reportId: string, leadId: string): string {
   return `/head/report/${encodeURIComponent(reportId)}?authorId=${encodeURIComponent(leadId)}`;
-}
-
-function primaryAction(lead: LeadInfo): PrimaryAction {
-  if (lead.actions.canReview) return "review";
-  if (lead.actions.canOpen) return "open";
-  if (lead.actions.canRemind) return "remind";
-  return "none";
 }
 
 function QueueLink({
@@ -74,7 +76,7 @@ export function LeadPrimaryAction({
   );
 }
 
-function secondaryActionState(lead: LeadInfo) {
+function secondaryActionState(lead: LeadInfo): SecondaryActionState {
   const primary = primaryAction(lead);
   const requestChanges =
     lead.actions.canRequestChanges &&
@@ -93,12 +95,23 @@ function secondaryActionState(lead: LeadInfo) {
   };
 }
 
+function hasSecondaryAction(actions: SecondaryActionState): boolean {
+  return (
+    actions.showOpen ||
+    actions.showRemind ||
+    actions.requestChanges !== null ||
+    actions.revokeSectionId !== null
+  );
+}
+
 function SecondaryActionSet({
+  actions,
   lead,
   reportId,
   onMutated,
-}: LeadQueueActionsProps) {
-  const actions = secondaryActionState(lead);
+}: LeadQueueActionsProps & {
+  readonly actions: SecondaryActionState;
+}) {
   return (
     <div
       className="flex flex-wrap items-center gap-2"
@@ -128,7 +141,7 @@ function SecondaryActionSet({
         />
       ) : null}
       {actions.revokeSectionId ? (
-        <RevokeSectionButton
+        <RevokeLeadButton
           reportSectionId={actions.revokeSectionId}
           leadName={lead.name}
           onMutated={onMutated}
@@ -144,11 +157,8 @@ export function LeadSecondaryActions({
   onMutated,
 }: LeadQueueActionsProps) {
   const actions = secondaryActionState(lead);
-  const hasAction = Object.values(actions).some(
-    (value) => value !== false && value !== null,
-  );
 
-  if (!hasAction) {
+  if (!hasSecondaryAction(actions)) {
     return (
       <span className="text-xs text-[var(--color-muted-foreground)]">
         No additional actions for this state.
@@ -157,6 +167,11 @@ export function LeadSecondaryActions({
   }
 
   return (
-    <SecondaryActionSet lead={lead} reportId={reportId} onMutated={onMutated} />
+    <SecondaryActionSet
+      actions={actions}
+      lead={lead}
+      reportId={reportId}
+      onMutated={onMutated}
+    />
   );
 }

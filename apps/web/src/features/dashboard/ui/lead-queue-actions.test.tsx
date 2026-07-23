@@ -13,7 +13,7 @@ vi.mock("./request-changes-button", () => ({
   RequestChangesButton: () => <button type="button">Request Changes</button>,
 }));
 vi.mock("./revoke-lead-button", () => ({
-  RevokeSectionButton: () => <button type="button">Revoke</button>,
+  RevokeLeadButton: () => <button type="button">Revoke</button>,
 }));
 
 const REPORT_ID = "10000000-0000-4000-8000-000000000001";

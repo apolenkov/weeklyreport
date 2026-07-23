@@ -63,13 +63,21 @@ vi.mock("../../../shared/ui/confirmation-dialog", () => ({
 
 import { RemindLeadButton } from "./remind-lead-button";
 import { RequestChangesButton } from "./request-changes-button";
-import { RevokeSectionButton } from "./revoke-lead-button";
+import { RevokeLeadButton } from "./revoke-lead-button";
 
 interface MockMutationOptions {
   readonly kind: "remind" | "review" | "revoke";
   readonly options: {
     readonly onSuccess: (result: unknown) => void;
+    readonly onError: (error: Error) => void;
   };
+}
+
+interface RemindResult {
+  readonly reason: "no-matching-section" | null;
+  readonly dispatched: number;
+  readonly alreadySent: number;
+  readonly skipped: number;
 }
 
 beforeEach(() => {
@@ -109,6 +117,96 @@ describe("dashboard queue mutation transitions", () => {
     expect(onMutated).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    {
+      name: "shows no matched sections",
+      result: {
+        reason: "no-matching-section",
+        dispatched: 0,
+        alreadySent: 0,
+        skipped: 0,
+      },
+      label: "No sections matched",
+    },
+    {
+      name: "shows a dispatched reminder",
+      result: {
+        reason: null,
+        dispatched: 1,
+        alreadySent: 0,
+        skipped: 0,
+      },
+      label: "Sent",
+    },
+    {
+      name: "shows an already-sent reminder",
+      result: {
+        reason: null,
+        dispatched: 0,
+        alreadySent: 1,
+        skipped: 0,
+      },
+      label: "Already sent",
+    },
+  ] satisfies readonly {
+    readonly name: string;
+    readonly result: RemindResult;
+    readonly label: string;
+  }[])("$name and disables repeat dispatch", ({ result, label }) => {
+    const onMutated = vi.fn();
+    useMutationMock.mockImplementation(
+      (configuration: MockMutationOptions) => ({
+        isPending: false,
+        mutate: () => configuration.options.onSuccess(result),
+      }),
+    );
+    render(
+      <RemindLeadButton
+        reportId="10000000-0000-4000-8000-000000000001"
+        leadId="20000000-0000-4000-8000-000000000001"
+        leadName="Alice Lead"
+        onMutated={onMutated}
+      />,
+    );
+
+    const button = screen.getByRole("button", {
+      name: "Send reminder to Alice Lead",
+    });
+    fireEvent.click(button);
+
+    expect(button).toHaveTextContent(label);
+    expect(button).toBeDisabled();
+    expect(onMutated).toHaveBeenCalledOnce();
+  });
+
+  it("shows a retry state after a reminder error", () => {
+    const onMutated = vi.fn();
+    useMutationMock.mockImplementation(
+      (configuration: MockMutationOptions) => ({
+        isPending: false,
+        mutate: () =>
+          configuration.options.onError(new Error("Dispatch failed")),
+      }),
+    );
+    render(
+      <RemindLeadButton
+        reportId="10000000-0000-4000-8000-000000000001"
+        leadId="20000000-0000-4000-8000-000000000001"
+        leadName="Alice Lead"
+        onMutated={onMutated}
+      />,
+    );
+
+    const button = screen.getByRole("button", {
+      name: "Send reminder to Alice Lead",
+    });
+    fireEvent.click(button);
+
+    expect(button).toHaveTextContent("Retry");
+    expect(button).toBeEnabled();
+    expect(onMutated).not.toHaveBeenCalled();
+  });
+
   it("posts the existing changes-requested verdict and refreshes the queue", () => {
     const onMutated = vi.fn();
     render(
@@ -133,7 +231,7 @@ describe("dashboard queue mutation transitions", () => {
   it("keeps per-lead revoke confirmed and refreshes the queue on success", () => {
     const onMutated = vi.fn();
     render(
-      <RevokeSectionButton
+      <RevokeLeadButton
         reportSectionId="30000000-0000-4000-8000-000000000001"
         leadName="Alice Lead"
         onMutated={onMutated}

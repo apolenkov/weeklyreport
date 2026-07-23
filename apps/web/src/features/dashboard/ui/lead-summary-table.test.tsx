@@ -6,20 +6,21 @@ import { describe, expect, it, vi } from "vitest";
 import type { LeadInfo } from "../model/dashboard";
 import { LeadSummaryTable } from "./lead-summary-table";
 
-vi.mock("./lead-queue-actions", () => ({
-  LeadPrimaryAction: ({ lead }: { lead: LeadInfo }) => (
-    <button type="button">
-      {lead.actions.canReview
-        ? "Review"
-        : lead.actions.canOpen
-          ? "Open"
-          : lead.actions.canRemind
-            ? "Remind"
-            : "Read only"}
-    </button>
-  ),
-  LeadSecondaryActions: () => <button type="button">Secondary action</button>,
-}));
+vi.mock("./lead-queue-actions", async () => {
+  const { primaryAction } = await import("../model/dashboard-leads");
+  const actionLabels = {
+    review: "Review",
+    open: "Open",
+    remind: "Remind",
+    none: "Read only",
+  } as const;
+  return {
+    LeadPrimaryAction: ({ lead }: { lead: LeadInfo }) => (
+      <button type="button">{actionLabels[primaryAction(lead)]}</button>
+    ),
+    LeadSecondaryActions: () => <button type="button">Secondary action</button>,
+  };
+});
 
 function makeLead(overrides: Partial<LeadInfo> = {}): LeadInfo {
   return {
@@ -135,9 +136,9 @@ describe("LeadSummaryTable action queue", () => {
 
     const row = leadRow("Stella Stale");
     expect(row).toHaveClass("min-w-0", "overflow-hidden");
+    expect(row).toHaveClass("border-[var(--color-warning)]");
     expect(row).toHaveAttribute("data-priority", "stale");
     expect(row).toHaveTextContent("No recent edit · Needs attention");
-    expect(row).not.toHaveClass("opacity-60");
   });
 
   it("renders an empty queue without a second roster", () => {

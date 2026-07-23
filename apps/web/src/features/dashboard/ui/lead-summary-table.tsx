@@ -196,7 +196,7 @@ export function LeadSummaryTable({
             Period Summary
           </h2>
           <span className="rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[13px] font-semibold tabular-nums text-[var(--color-muted-foreground)]">
-            {leads.length} leads
+            {leads.length} lead{leads.length === 1 ? "" : "s"}
           </span>
         </div>
         <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">

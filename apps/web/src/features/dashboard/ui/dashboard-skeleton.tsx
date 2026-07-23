@@ -1,7 +1,9 @@
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
+const KPI_CARD_COUNT = 3;
 const QUEUE_ROW_COUNT = 5;
 const BLOCKED_AT_RISK_ROW_COUNT = 5;
+const kpiCards = Array.from({ length: KPI_CARD_COUNT }, (_, index) => index);
 const queueRows = Array.from({ length: QUEUE_ROW_COUNT }, (_, index) => index);
 const blockedRows = Array.from(
   { length: BLOCKED_AT_RISK_ROW_COUNT },
@@ -13,7 +15,7 @@ export function DashboardSkeleton() {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        {[0, 1, 2].map((index) => (
+        {kpiCards.map((index) => (
           <div
             key={index}
             className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5"
