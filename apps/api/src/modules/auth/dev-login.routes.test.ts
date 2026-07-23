@@ -59,6 +59,14 @@ describe("resolveDevLoginIdentity", () => {
       displayName: "Maria",
       samlId: "lead-maria",
     });
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion on the mock method reference
+    const findFirst = prisma.user.findFirst as unknown as ReturnType<
+      typeof vi.fn
+    >;
+    expect(findFirst).toHaveBeenCalledWith({
+      where: { email: "maria@customreport.local" },
+      select: { name: true, samlId: true },
+    });
   });
 
   it("returns null for an unknown email — no phantom identity is fabricated", async () => {

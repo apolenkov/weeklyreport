@@ -38,14 +38,10 @@ export function createSamlStrategyOptions(
   if (devMode) {
     return {
       devMode,
-      callbackUrl:
-        env.KEYCLOAK_SAML_CALLBACK_URL ??
-        "http://localhost:3001/auth/saml/callback",
-      entryPoint:
-        env.KEYCLOAK_SAML_ENTRY_POINT ??
-        "http://localhost:8080/realms/dev/protocol/saml",
-      issuer: env.KEYCLOAK_SAML_ISSUER ?? "customreport-dev",
-      idpCert: env.KEYCLOAK_SAML_CERT ?? "DEV_MODE_CERT",
+      callbackUrl: requireEnv(env, "KEYCLOAK_SAML_CALLBACK_URL"),
+      entryPoint: requireEnv(env, "KEYCLOAK_SAML_ENTRY_POINT"),
+      issuer: requireEnv(env, "KEYCLOAK_SAML_ISSUER"),
+      idpCert: requireEnv(env, "KEYCLOAK_SAML_CERT"),
       validateInResponseTo: validateNever,
       disableRequestedAuthnContext: true,
       signatureAlgorithm: "sha256",
