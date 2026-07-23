@@ -19,6 +19,13 @@ function crossProductSlices(
           nonEmpty(item.text),
       )
       .map((item) => item.text.trim());
+  const rankedItems = section.items.filter(
+    (item) =>
+      item.priorityRank != null &&
+      item.activityId == null &&
+      isCrossProduct(item.projectId) &&
+      nonEmpty(item.text),
+  );
   return {
     currentItems: itemTexts("current"),
     nextItems: itemTexts("next"),
@@ -38,15 +45,14 @@ function crossProductSlices(
           nonEmpty(decision.text),
       )
       .map((decision) => decision.text.trim()),
-    priorities: section.items
-      .filter(
-        (item) =>
-          item.priorityRank != null &&
-          item.activityId == null &&
-          isCrossProduct(item.projectId) &&
-          nonEmpty(item.text),
-      )
-      .map((item) => item.text.trim()),
+    priorities: rankedItems.map((item) => item.text.trim()),
+    itemRanks: Object.fromEntries(
+      rankedItems.flatMap<readonly [string, number]>((item) =>
+        item.priorityRank == null
+          ? []
+          : [[item.text.trim(), item.priorityRank]],
+      ),
+    ),
   };
 }
 

@@ -27,6 +27,16 @@ function selectedSlide(
   return index >= 0 && index < slides.length ? slides[index] : undefined;
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  if (target.matches("input, textarea, select")) return true;
+  const editableAncestor = target.closest("[contenteditable]");
+  return (
+    editableAncestor !== null &&
+    editableAncestor.getAttribute("contenteditable") !== "false"
+  );
+}
+
 /** The head deck owns its fullscreen affordance (the lead deck's lives in
  * LeadSlidesClient). `frameRef`/`isFullscreen`/`onToggle` are hoisted to
  * `StatusSlideDeck`'s persistent root and passed in as props: this wrapper
@@ -83,6 +93,7 @@ export function StatusSlideDeck({
   const fullscreen = useFullscreen(frameRef, frameRef, !isLead);
 
   function handleKeyDown(e: React.KeyboardEvent) {
+    if (isEditableTarget(e.target)) return;
     if (e.key === "ArrowRight") {
       e.preventDefault();
       onSelect(Math.min(selectedIndex + 1, slides.length - 1));

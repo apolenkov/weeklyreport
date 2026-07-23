@@ -66,4 +66,29 @@ describe("buildSectionProductProjection — cross-product slide", () => {
     );
     expect(crossSlide?.currentItems).toEqual(["orphan item"]);
   });
+
+  it("keeps ranks for cross-product priorities", () => {
+    const projection = buildSectionProductProjection(
+      section({
+        items: [
+          {
+            type: "current",
+            text: " ranked orphan ",
+            tag: "",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            projectId: "unowned-product",
+            stageIds: [],
+            priorityRank: 2,
+          },
+        ],
+      }),
+    );
+    const crossSlide = projection.productSlides.find(
+      (slide) => slide.id === CROSS_PRODUCT_ID,
+    );
+
+    expect(crossSlide?.priorities).toEqual(["ranked orphan"]);
+    expect(crossSlide?.itemRanks).toEqual({ "ranked orphan": 2 });
+  });
 });

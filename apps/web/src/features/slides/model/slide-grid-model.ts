@@ -207,6 +207,7 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
 
   const priorityStrip = buildPriorityStrip({
     section,
+    knownProductIds,
     productNameById,
     activityHomeById,
     sharedCardId: SHARED_CARD_ID,

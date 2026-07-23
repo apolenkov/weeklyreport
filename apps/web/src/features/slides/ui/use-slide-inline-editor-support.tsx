@@ -6,10 +6,7 @@ import { toast } from "sonner";
 import { invalidateLeadForm } from "../../../lib/cache-keys";
 import { isConflictError } from "../../../lib/trpc";
 import { useTRPC } from "../../../lib/trpc-context";
-import {
-  type mapLeadFormData,
-  sectionToDraftPayload,
-} from "../../report-sections";
+import { sectionToDraftPayload } from "../../report-sections";
 import type { GridRowEditableRef } from "../model/slide-grid-rows";
 import {
   ownedStagesForProduct,
@@ -19,8 +16,9 @@ import {
   toDialogProducts,
   toDialogRisks,
 } from "../model/slide-inline-edit";
+import type { LeadSlideFormData } from "./lead-slide-form-data";
 
-export type LeadSlideFormData = NonNullable<ReturnType<typeof mapLeadFormData>>;
+export type { LeadSlideFormData } from "./lead-slide-form-data";
 export type SaveOperation = "saved" | "deleted";
 
 /** The `reports.saveDraft` mutation plus its toast/conflict handling — the one

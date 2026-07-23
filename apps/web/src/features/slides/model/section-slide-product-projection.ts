@@ -16,6 +16,9 @@ import { buildCrossProductSlide } from "./section-slide-cross-product";
 import { nonEmpty, unique } from "./section-slide-model-helpers";
 
 type SectionProject = ReportSectionReadModel["projects"][number];
+type SectionItem = ReportSectionReadModel["items"][number];
+type SectionRisk = ReportSectionReadModel["risks"][number];
+type SectionDecision = ReportSectionReadModel["decisions"][number];
 
 interface SectionRecordSummary {
   readonly currentItems: string[];
@@ -28,6 +31,33 @@ interface SectionRecordSummary {
 export interface SectionProductProjection extends SectionRecordSummary {
   readonly products: string[];
   readonly productSlides: SlideProduct[];
+}
+
+function itemTexts(
+  section: ReportSectionReadModel,
+  predicate: (item: SectionItem) => boolean,
+): string[] {
+  return section.items
+    .filter((item) => predicate(item) && nonEmpty(item.text))
+    .map((item) => item.text.trim());
+}
+
+function riskTexts(
+  section: ReportSectionReadModel,
+  predicate: (risk: SectionRisk) => boolean,
+): string[] {
+  return section.risks
+    .filter((risk) => predicate(risk) && nonEmpty(risk.risk))
+    .map((risk) => risk.risk.trim());
+}
+
+function decisionTexts(
+  section: ReportSectionReadModel,
+  predicate: (decision: SectionDecision) => boolean,
+): string[] {
+  return section.decisions
+    .filter((decision) => predicate(decision) && nonEmpty(decision.text))
+    .map((decision) => decision.text.trim());
 }
 
 function floorSlideStageStatus(
@@ -61,35 +91,24 @@ function recordSlices(
   section: ReportSectionReadModel,
   projectId: string,
 ): Omit<SlideProduct, "id" | "name" | "status" | "stages"> {
-  const itemTexts = (type: "current" | "next") =>
-    section.items
-      .filter(
-        (item) =>
-          item.projectId === projectId &&
-          item.type === type &&
-          nonEmpty(item.text),
-      )
-      .map((item) => item.text.trim());
   return {
-    currentItems: itemTexts("current"),
-    nextItems: itemTexts("next"),
-    risks: section.risks
-      .filter((risk) => risk.projectId === projectId && nonEmpty(risk.risk))
-      .map((risk) => risk.risk.trim()),
-    decisions: section.decisions
-      .filter(
-        (decision) =>
-          decision.productId === projectId && nonEmpty(decision.text),
-      )
-      .map((decision) => decision.text.trim()),
-    priorities: section.items
-      .filter(
-        (item) =>
-          item.projectId === projectId &&
-          item.priorityRank != null &&
-          nonEmpty(item.text),
-      )
-      .map((item) => item.text.trim()),
+    currentItems: itemTexts(
+      section,
+      (item) => item.projectId === projectId && item.type === "current",
+    ),
+    nextItems: itemTexts(
+      section,
+      (item) => item.projectId === projectId && item.type === "next",
+    ),
+    risks: riskTexts(section, (risk) => risk.projectId === projectId),
+    decisions: decisionTexts(
+      section,
+      (decision) => decision.productId === projectId,
+    ),
+    priorities: itemTexts(
+      section,
+      (item) => item.projectId === projectId && item.priorityRank != null,
+    ),
     itemRanks: priorityRanks(section, projectId),
   };
 }
@@ -125,36 +144,23 @@ function buildSectionRecordSummary(
   section: ReportSectionReadModel,
 ): SectionRecordSummary {
   return {
-    currentItems: section.items
-      .filter(
-        (item) =>
-          item.type === "current" &&
-          item.projectId != null &&
-          nonEmpty(item.text),
-      )
-      .map((item) => item.text.trim()),
-    nextItems: section.items
-      .filter(
-        (item) =>
-          item.type === "next" && item.projectId != null && nonEmpty(item.text),
-      )
-      .map((item) => item.text.trim()),
-    risks: section.risks
-      .filter((risk) => risk.projectId != null && nonEmpty(risk.risk))
-      .map((risk) => risk.risk.trim()),
-    decisions: section.decisions
-      .filter(
-        (decision) => decision.activityId == null && nonEmpty(decision.text),
-      )
-      .map((decision) => decision.text.trim()),
-    priorities: section.items
-      .filter(
-        (item) =>
-          item.priorityRank != null &&
-          item.projectId != null &&
-          nonEmpty(item.text),
-      )
-      .map((item) => item.text.trim()),
+    currentItems: itemTexts(
+      section,
+      (item) => item.type === "current" && item.projectId != null,
+    ),
+    nextItems: itemTexts(
+      section,
+      (item) => item.type === "next" && item.projectId != null,
+    ),
+    risks: riskTexts(section, (risk) => risk.projectId != null),
+    decisions: decisionTexts(
+      section,
+      (decision) => decision.activityId == null,
+    ),
+    priorities: itemTexts(
+      section,
+      (item) => item.priorityRank != null && item.projectId != null,
+    ),
   };
 }
 

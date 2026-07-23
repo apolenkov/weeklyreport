@@ -104,18 +104,33 @@ function rowsIn(
   );
 }
 
+interface PageRecords {
+  readonly current: readonly GridRow[];
+  readonly next: readonly GridRow[];
+  readonly risks: readonly GridRow[];
+  readonly decisions: readonly GridRow[];
+  readonly priorities: readonly GridPriorityCard[];
+}
+
+function pageRecords(records: readonly LocatedRecord[]): PageRecords {
+  return {
+    current: rowsIn(records, "current"),
+    next: rowsIn(records, "next"),
+    risks: rowsIn(records, "risks"),
+    decisions: rowsIn(records, "decisions"),
+    priorities: records.flatMap((record) =>
+      record.kind === "priority" ? [record.card] : [],
+    ),
+  };
+}
+
 function pageProductSlide(
   source: SlideProduct | undefined,
-  records: readonly LocatedRecord[],
+  page: PageRecords,
 ): SlideProduct[] {
   if (source === undefined) return [];
-  const current = rowsIn(records, "current");
-  const next = rowsIn(records, "next");
-  const priorities = records.flatMap((record) =>
-    record.kind === "priority" ? [record.card.text] : [],
-  );
   const visibleItemTexts = new Set(
-    [...current, ...next].map((row) => row.text),
+    [...page.current, ...page.next].map((row) => row.text),
   );
   const itemRanks =
     source.itemRanks === undefined
@@ -128,11 +143,11 @@ function pageProductSlide(
   return [
     {
       ...source,
-      currentItems: current.map((row) => row.text),
-      nextItems: next.map((row) => row.text),
-      risks: rowsIn(records, "risks").map((row) => row.text),
-      decisions: rowsIn(records, "decisions").map((row) => row.text),
-      priorities,
+      currentItems: page.current.map((row) => row.text),
+      nextItems: page.next.map((row) => row.text),
+      risks: page.risks.map((row) => row.text),
+      decisions: page.decisions.map((row) => row.text),
+      priorities: page.priorities.map((card) => card.text),
       ...(itemRanks === undefined ? {} : { itemRanks }),
     },
   ];
@@ -142,24 +157,22 @@ function pageGrid(
   source: SlideGridModel,
   product: GridProductCard,
   records: readonly LocatedRecord[],
+  page: PageRecords,
 ): SlideGridModel {
-  const priorities = records.flatMap((record) =>
-    record.kind === "priority" ? [record.card] : [],
-  );
   const scored = !product.noData && product.status !== null;
   return {
     ...source,
     worstStatus: product.status,
     counters: {
-      current: rowsIn(records, "current").length,
-      risks: rowsIn(records, "risks").length,
-      priorities: priorities.length,
+      current: page.current.length,
+      risks: page.risks.length,
+      priorities: page.priorities.length,
     },
     onTrack: {
       on: scored && product.status === "green" ? 1 : 0,
       total: scored ? 1 : 0,
     },
-    priorityStrip: priorities,
+    priorityStrip: page.priorities,
     products: [pageProduct(product, records)],
   };
 }
@@ -175,35 +188,29 @@ function buildPage(
   const sourceProduct = model.productSlides.find(
     (candidate) => candidate.id === product.id,
   );
-  const current = rowsIn(records, "current");
-  const next = rowsIn(records, "next");
-  const risks = rowsIn(records, "risks");
-  const decisions = rowsIn(records, "decisions");
-  const priorities = records.flatMap((record) =>
-    record.kind === "priority" ? [record.card.text] : [],
-  );
+  const page = pageRecords(records);
   return {
     ...model,
     products: [product.name],
-    productSlides: pageProductSlide(sourceProduct, records),
+    productSlides: pageProductSlide(sourceProduct, page),
     productCount: 1,
-    currentCount: current.length,
-    nextCount: next.length,
-    riskCount: risks.length,
-    decisionCount: decisions.length,
-    priorityCount: priorities.length,
-    currentItems: current.map((row) => row.text),
-    nextItems: next.map((row) => row.text),
-    risks: risks.map((row) => row.text),
-    decisions: decisions.map((row) => row.text),
-    priorities,
+    currentCount: page.current.length,
+    nextCount: page.next.length,
+    riskCount: page.risks.length,
+    decisionCount: page.decisions.length,
+    priorityCount: page.priorities.length,
+    currentItems: page.current.map((row) => row.text),
+    nextItems: page.next.map((row) => row.text),
+    risks: page.risks.map((row) => row.text),
+    decisions: page.decisions.map((row) => row.text),
+    priorities: page.priorities.map((card) => card.text),
     pageLabel:
       productPageTotal === 1
         ? product.name
         : productPageIndex === 0
           ? `${product.name} — 1 of ${String(productPageTotal)}`
           : `${product.name} — continuation ${String(productPageIndex + 1)} of ${String(productPageTotal)}`,
-    grid: pageGrid(grid, product, records),
+    grid: pageGrid(grid, product, records, page),
   };
 }
 

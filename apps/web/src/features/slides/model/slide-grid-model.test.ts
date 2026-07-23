@@ -265,6 +265,32 @@ describe("buildSlideGridModel — priority strip", () => {
     ]);
     expect(model.counters.priorities).toBe(2);
   });
+
+  it("homes priorities for unknown products on the shared card", () => {
+    const model = buildSlideGridModel({
+      section: section({
+        items: [
+          item({
+            text: "orphan priority",
+            projectId: "unknown-product",
+            priorityRank: 1,
+          }),
+        ],
+      }),
+    });
+
+    expect(model.priorityStrip).toEqual([
+      expect.objectContaining({
+        productId: SHARED_CARD_ID,
+        productName: SHARED_CARD_NAME,
+      }),
+    ]);
+    expect(
+      productLevelOf(cardOf(model, SHARED_CARD_ID)).columns.current.map(
+        (row) => row.text,
+      ),
+    ).toEqual(["orphan priority"]);
+  });
 });
 
 describe("buildSlideGridModel — activity subsections", () => {

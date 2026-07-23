@@ -23,13 +23,6 @@ export interface SlideForeignContent {
   readonly decisions: readonly ForeignTextRow[];
 }
 
-export const EMPTY_SLIDE_FOREIGN_CONTENT: SlideForeignContent = {
-  currentItems: [],
-  nextItems: [],
-  risks: [],
-  decisions: [],
-};
-
 export function applyForeignProductHealth(
   productSlides: readonly SlideProduct[],
   crossAuthors: readonly {

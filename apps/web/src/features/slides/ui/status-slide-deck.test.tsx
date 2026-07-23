@@ -274,6 +274,67 @@ describe("StatusSlideDeck — by-product grid article", () => {
     expect(onSelect).toHaveBeenCalledWith(1);
   });
 
+  it("preserves arrow-key editing in hero controls", () => {
+    const slide = buildSectionSlideModel(makeSection({ items: [item()] }));
+    const onSelect = vi.fn();
+    render(
+      <StatusSlideDeck
+        slides={[slide]}
+        selectedIndex={0}
+        onSelect={onSelect}
+        mode="lead"
+        heroControls={
+          <>
+            <input aria-label="Inline title" />
+            <textarea aria-label="Inline notes" />
+            <select aria-label="Inline scope">
+              <option>own</option>
+              <option>product</option>
+            </select>
+            <div contentEditable aria-label="Inline rich text" />
+          </>
+        }
+      />,
+    );
+
+    for (const control of [
+      screen.getByRole("textbox", { name: "Inline title" }),
+      screen.getByRole("textbox", { name: "Inline notes" }),
+      screen.getByRole("combobox", { name: "Inline scope" }),
+      screen.getByLabelText("Inline rich text"),
+    ]) {
+      const event = new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      });
+      fireEvent(control, event);
+      expect(event.defaultPrevented).toBe(false);
+    }
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("prevents the browser default when an arrow key navigates the deck", () => {
+    const slide = buildSectionSlideModel(makeSection({ items: [item()] }));
+    render(
+      <StatusSlideDeck
+        slides={[slide]}
+        selectedIndex={0}
+        onSelect={vi.fn()}
+        mode="lead"
+      />,
+    );
+    const event = new KeyboardEvent("keydown", {
+      key: "ArrowLeft",
+      bubbles: true,
+      cancelable: true,
+    });
+
+    fireEvent(screen.getByTestId("lead-slides-deck"), event);
+
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it("shows the empty state when there are no slides", () => {
     render(
       <StatusSlideDeck

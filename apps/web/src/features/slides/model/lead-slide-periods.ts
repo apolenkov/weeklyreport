@@ -48,6 +48,9 @@ export function buildLeadSlidePeriodOptions(
     });
 }
 
+/** Empty id when history has no report — query hooks disable on this sentinel. */
+const NO_LEAD_SLIDE_REPORT_ID = "";
+
 export function resolveLeadSlideReportId({
   options,
   requestedReportId,
@@ -74,6 +77,6 @@ export function resolveLeadSlideReportId({
   return (
     options.find((option) => !option.archived)?.reportId ??
     options.at(0)?.reportId ??
-    ""
+    NO_LEAD_SLIDE_REPORT_ID
   );
 }

@@ -9,6 +9,7 @@ import {
   describeCount,
   NEEDS_WORK_STATUS,
   readinessScore,
+  statusTone,
 } from "./section-slide-model-helpers";
 
 function activityBaseReadiness(
@@ -99,6 +100,14 @@ export function buildActivitySlideModel(
     ...activityBaseReadiness(row, hasSection, hasContent),
     ...activityRecordReadiness(row),
   ];
+  const counts = {
+    currentCount: row.itemCount,
+    nextCount: 0,
+    riskCount: row.riskCount,
+    priorityCount: row.priorityCount,
+    blockedCount: 0,
+    atRiskCount: row.riskCount,
+  };
   return {
     id: row.reportSectionId ?? row.leadId,
     ownerId: row.leadId,
@@ -109,15 +118,10 @@ export function buildActivitySlideModel(
     products: [],
     productSlides: [],
     productCount: 0,
-    currentCount: row.itemCount,
-    nextCount: 0,
-    riskCount: row.riskCount,
+    ...counts,
     decisionCount: row.decisionCount,
-    priorityCount: row.priorityCount,
-    blockedCount: 0,
-    atRiskCount: row.riskCount > 0 ? 1 : 0,
     score: readinessScore(readiness),
-    tone: hasContent ? "warning" : "empty",
+    tone: statusTone(counts),
     readiness,
     currentItems: [],
     nextItems: [],

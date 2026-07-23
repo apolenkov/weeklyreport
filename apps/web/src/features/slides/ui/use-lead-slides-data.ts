@@ -16,8 +16,7 @@ import {
 } from "../model/lead-slide-periods";
 import { buildLeadDeckModel } from "../model/lead-slides-deck-model";
 import { type SectionSlideModel } from "../model/section-slide-contracts";
-
-type LeadSlideFormData = NonNullable<ReturnType<typeof mapLeadFormData>>;
+import type { LeadSlideFormData } from "./lead-slide-form-data";
 
 interface UseLeadSlidesDataArgs {
   readonly initialReportId: string | null;
