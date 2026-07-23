@@ -43,7 +43,7 @@ export interface ProjectActivityRepository {
   attachLead(edge: ProjectActivityLeadEdge): Promise<void>;
   detachLead(edge: ProjectActivityLeadEdge): Promise<void>;
   groupExists(groupId: string): Promise<boolean>;
-  productExists(productId: string): Promise<boolean>;
+  findExistingProductIds(productIds: readonly string[]): Promise<string[]>;
   getLeadContext(
     leadId: string,
   ): Promise<{ role: DbRole; reportingGroupId: string | null } | null>;
@@ -159,12 +159,12 @@ export class ProjectActivityService {
     }
     // Every linked product must exist — a stale id in the multi-select must
     // fail loud, never silently drop the link on reconcile.
-    const existence = await Promise.all(
-      linkedProductIds.map((productId) =>
-        this.repository.productExists(productId),
-      ),
+    const existingProductIds = new Set(
+      await this.repository.findExistingProductIds(linkedProductIds),
     );
-    const missingId = linkedProductIds.find((_, index) => !existence[index]);
+    const missingId = linkedProductIds.find(
+      (productId) => !existingProductIds.has(productId),
+    );
     if (missingId !== undefined) {
       throw new ProjectActivityNotFoundError(
         `Product ${missingId} was not found.`,

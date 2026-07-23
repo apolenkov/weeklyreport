@@ -78,11 +78,9 @@ export class ProjectActivityPrismaRepository implements ProjectActivityRepositor
     jiraAccounts: string[];
   }): Promise<ProjectActivity> {
     const { linkedProductIds, ...data } = input;
-    // Defense-in-depth for any caller that bypasses the shared schema's
-    // uniqueness refine: dedupe case-insensitively (Postgres's `uuid` type is
-    // case-insensitive) before seeding the join rows so an in-payload repeat —
-    // byte-identical or case-variant — never collides with the
-    // (activityId, productId) unique constraint.
+    // The column is case-sensitive text, so ids are compared in the wire
+    // schema's canonical lowercase form; dedup keeps an in-payload repeat off
+    // the (activityId, productId) unique constraint.
     const uniqueProductIds = [
       ...new Set(linkedProductIds.map((id) => id.toLowerCase())),
     ];
@@ -117,9 +115,9 @@ export class ProjectActivityPrismaRepository implements ProjectActivityRepositor
         select: { productId: true },
       });
       const existingIds = new Set(existing.map((link) => link.productId));
-      // Lowercase the submitted ids before reconciling against the DB's
-      // (already-lowercase) ids so a case-variant of a linked id is treated as
-      // the same link, not a remove-then-add churn or a P2002.
+      // `productId` is String (text, case-sensitive). Lowercase to match wire-
+      // schema normalize + `uuid()` lowercase emit so a case-variant is the
+      // same link, not remove-then-add churn or a P2002.
       const normalizedIds = linkedProductIds.map((id) => id.toLowerCase());
       const nextIds = new Set(normalizedIds);
       const toRemove = [...existingIds].filter((p) => !nextIds.has(p));
@@ -196,12 +194,14 @@ export class ProjectActivityPrismaRepository implements ProjectActivityRepositor
     return group !== null;
   }
 
-  async productExists(productId: string): Promise<boolean> {
-    const product = await this.prisma.project.findUnique({
-      where: { id: productId },
+  async findExistingProductIds(
+    productIds: readonly string[],
+  ): Promise<string[]> {
+    const products = await this.prisma.project.findMany({
+      where: { id: { in: [...productIds] } },
       select: { id: true },
     });
-    return product !== null;
+    return products.map(({ id }) => id);
   }
 
   async getLeadContext(
