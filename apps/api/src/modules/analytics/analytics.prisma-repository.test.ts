@@ -113,7 +113,9 @@ describe("AnalyticsPrismaRepository group scoping", () => {
       status: "submitted",
       author: { reportingGroupId: { in: [GROUP] } },
     });
-    expect(arg.where.sections).toEqual({ some: SCOPE });
+    expect(arg.where.sections).toEqual({
+      some: { status: "submitted", ...SCOPE },
+    });
   });
 
   it("leadVelocity keeps only the submitted filter for admin", async () => {
@@ -122,7 +124,7 @@ describe("AnalyticsPrismaRepository group scoping", () => {
 
     const arg = findMany.mock.calls[0]?.[0] as ReportQueryArg;
     expect(arg.include.sections.where).toEqual({ status: "submitted" });
-    expect(arg.where.sections).toBeUndefined();
+    expect(arg.where.sections).toEqual({ some: { status: "submitted" } });
   });
 
   it("periodComparison scopes the included sections for a non-admin", async () => {
@@ -181,7 +183,7 @@ interface FakeReport {
       status: TrafficLightCell;
       project: { name: string };
     }[];
-    risks: { projectId: string }[];
+    risks: { projectId: string | null }[];
   }[];
 }
 

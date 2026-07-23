@@ -109,7 +109,7 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
   ): Promise<LeadVelocityOutput> {
     guardGroupScope(session);
     const scope = groupScopeFilter(session, "reportSection");
-    const scoped = Object.keys(scope).length > 0;
+    const sectionWhere = { status: "submitted" as const, ...scope };
 
     const reports = await this.prisma.report.findMany({
       where: {
@@ -118,13 +118,11 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
         // Half-open upper bound (parity with trafficLightHistory): include a
         // periodEnd later in the periodTo day.
         periodEnd: { lt: nextUtcDay(input.periodTo) },
-        // Drop periods with no in-scope section (admin → omitted).
-        ...(scoped ? { sections: { some: scope } } : {}),
+        sections: { some: sectionWhere },
       },
       include: {
         sections: {
-          // Preserve the submitted filter; add the group scope for non-admin.
-          where: { status: "submitted", ...scope },
+          where: sectionWhere,
           include: { author: true },
         },
       },
