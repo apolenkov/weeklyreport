@@ -1,5 +1,5 @@
 import type { DbRole, ProjectActivity } from "@customreport/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   ProjectActivityDomainError,
@@ -11,6 +11,7 @@ import {
 const GROUP_A = "11111111-1111-4111-8111-111111111111";
 const GROUP_B = "22222222-2222-4222-8222-222222222222";
 const PRODUCT_ID = "33333333-3333-4333-8333-333333333333";
+const MISSING_PRODUCT_ID = "77777777-7777-4777-8777-777777777777";
 const LEAD_IN_A = "44444444-4444-4444-8444-444444444444";
 const LEAD_IN_B = "55555555-5555-4555-8555-555555555555";
 const HEAD_IN_A = "66666666-6666-4666-8666-666666666666";
@@ -99,8 +100,10 @@ function createRepository(fixture: Fixture = {}) {
       return (fixture.groups ?? [GROUP_A, GROUP_B]).includes(groupId);
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- implements the async repository contract; no awaitable work in the stub
-    async productExists(productId) {
-      return (fixture.products ?? [PRODUCT_ID]).includes(productId);
+    async findExistingProductIds(productIds) {
+      return productIds.filter((productId) =>
+        (fixture.products ?? [PRODUCT_ID]).includes(productId),
+      );
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- implements the async repository contract; no awaitable work in the stub
     async getLeadContext(leadId) {
@@ -150,17 +153,30 @@ describe("ProjectActivityService — create/update/archive", () => {
   });
 
   it("rejects a create referencing a missing product", async () => {
-    const { repository } = createRepository({ products: [] });
+    const { repository } = createRepository({ products: [PRODUCT_ID] });
+    const findExistingProductIds = vi.spyOn(
+      repository,
+      "findExistingProductIds",
+    );
     const service = new ProjectActivityService(repository);
 
-    await expect(
-      service.create({
-        name: "X",
-        groupId: GROUP_A,
-        linkedProductIds: [PRODUCT_ID],
-        jiraAccounts: [],
-      }),
-    ).rejects.toBeInstanceOf(ProjectActivityNotFoundError);
+    const creation = service.create({
+      name: "X",
+      groupId: GROUP_A,
+      linkedProductIds: [PRODUCT_ID, MISSING_PRODUCT_ID],
+      jiraAccounts: [],
+    });
+
+    await expect(creation).rejects.toMatchObject({
+      name: "ProjectActivityNotFoundError",
+      message: `Product ${MISSING_PRODUCT_ID} was not found.`,
+    });
+    await expect(creation).rejects.toBeInstanceOf(ProjectActivityNotFoundError);
+    expect(findExistingProductIds).toHaveBeenCalledOnce();
+    expect(findExistingProductIds).toHaveBeenCalledWith([
+      PRODUCT_ID,
+      MISSING_PRODUCT_ID,
+    ]);
   });
 
   it("rejects an update of a missing activity", async () => {
