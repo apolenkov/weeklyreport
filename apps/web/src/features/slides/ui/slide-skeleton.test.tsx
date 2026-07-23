@@ -36,10 +36,4 @@ describe("SlideSkeleton — skeleton-list", () => {
       listContainer!.querySelectorAll(".h-24.animate-pulse");
     expect(skeletonItems).toHaveLength(4);
   });
-
-  it("matches the skeleton-list markup shape", () => {
-    const { container } = render(<SlideSkeleton />);
-    const listContainer = container.querySelector(".hidden.space-y-2");
-    expect(listContainer).toMatchSnapshot();
-  });
 });

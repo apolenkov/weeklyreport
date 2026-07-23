@@ -1,4 +1,5 @@
 import type {
+  DbRole,
   ReportSectionReadModel,
   TrafficLightStatus,
 } from "@customreport/shared";
@@ -6,6 +7,11 @@ import type {
 import type { SlideGridModel } from "./slide-grid-model";
 
 export type SlideTone = "ready" | "warning" | "blocked" | "empty";
+
+// The deck's owner line: a section author's DB role, the synthetic
+// "product" owner of product-scoped slides, or null when the read model
+// carries no author role.
+type SlideOwnerRole = DbRole | "product" | null;
 
 export interface SlideReadinessItem {
   readonly id: string;
@@ -47,7 +53,7 @@ export interface SectionSlideModel {
   readonly id: string;
   readonly ownerId: string;
   readonly ownerName: string;
-  readonly ownerRole: string;
+  readonly ownerRole: SlideOwnerRole;
   readonly status: ReportSectionReadModel["status"];
   readonly submittedAt: Date | null;
   readonly products: string[];

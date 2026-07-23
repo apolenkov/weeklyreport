@@ -9,10 +9,17 @@ import type { SlideProduct } from "./section-slide-contracts";
 import {
   applyForeignProductHealth,
   crossAuthorContentToSlideForeign,
-  EMPTY_SLIDE_FOREIGN_CONTENT,
   mergeForeignSlideContent,
   type SlideForeignContent,
 } from "./section-slide-foreign";
+
+// Test-local empty-content fixture for merge/apply cases.
+const EMPTY_SLIDE_FOREIGN_CONTENT: SlideForeignContent = {
+  currentItems: [],
+  nextItems: [],
+  risks: [],
+  decisions: [],
+};
 import { buildSectionSlideModel } from "./section-slide-model";
 import { sortSlidesForReview } from "./section-slide-pagination";
 import {

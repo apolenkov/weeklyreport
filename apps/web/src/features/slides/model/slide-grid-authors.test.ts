@@ -26,15 +26,45 @@ const section = (
 const foreignRow = (
   authorId: string,
   authorName: string,
+  authorRole?: CrossAuthorContentRow["authorRole"],
 ): CrossAuthorContentRow => ({
   authorId,
   authorName,
+  ...(authorRole === undefined ? {} : { authorRole }),
   items: [],
   risks: [],
   decisions: [],
 });
 
 describe("buildAuthorRoster — color assignment", () => {
+  it("derives initials, preserves identity fields, and sorts foreign authors by name", () => {
+    const roster = buildAuthorRoster(section(), [
+      foreignRow("co-z", "Zoe Zebra"),
+      foreignRow("co-a", "Alice Adams", "lead"),
+    ]);
+
+    expect(roster.owner).toMatchObject({
+      id: "lead-1",
+      name: "Иванов В.П.",
+      role: "lead",
+      initials: "ИВ",
+      isOwner: true,
+    });
+    expect(roster.authors.slice(1)).toEqual([
+      expect.objectContaining({
+        id: "co-a",
+        name: "Alice Adams",
+        role: "lead",
+        initials: "AA",
+      }),
+      expect.objectContaining({
+        id: "co-z",
+        name: "Zoe Zebra",
+        initials: "ZZ",
+      }),
+    ]);
+  });
+
   it("cycles foreign authors through slots 1..5, owner keeps slot 0", () => {
     const roster = buildAuthorRoster(
       section(),

@@ -15,19 +15,22 @@ export interface GridPriorityCard {
  * ties keep input order — the section author is the only rank source today. */
 export function buildPriorityStrip(input: {
   readonly section: ReportSectionReadModel;
+  readonly knownProductIds: ReadonlySet<string>;
   readonly productNameById: ReadonlyMap<string, string>;
   readonly activityHomeById: ReadonlyMap<string, string>;
   readonly sharedCardId: string;
   readonly sharedCardName: string;
 }): readonly GridPriorityCard[] {
-  const { section, productNameById, activityHomeById } = input;
+  const { section, knownProductIds, productNameById, activityHomeById } = input;
   const cards = section.items.flatMap((item, index) => {
     const rank = item.priorityRank;
     if (rank == null || !hasText(item.text)) return [];
     const homeProductId =
       item.activityId != null
         ? (activityHomeById.get(item.activityId) ?? input.sharedCardId)
-        : (item.projectId ?? input.sharedCardId);
+        : item.projectId != null && knownProductIds.has(item.projectId)
+          ? item.projectId
+          : input.sharedCardId;
     return [
       {
         id: item.id ?? item.stableId ?? `priority-${String(index)}`,
