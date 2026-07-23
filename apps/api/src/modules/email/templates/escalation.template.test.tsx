@@ -54,18 +54,20 @@ const baseProps: EscalationEmailProps = {
 };
 
 // ---------------------------------------------------------------------------
-// unit-rtl / high: module-export shape
+// unit-rtl / high: rendered template contract
 // ---------------------------------------------------------------------------
 
-describe("EscalationEmail — module exports", () => {
-  it("exports EscalationEmail as a callable function that returns a React element", () => {
-    // Catalog row: "module exports EscalationEmail function and
-    // EscalationEmailProps interface as React.ReactElement"
-    expect(typeof EscalationEmail).toBe("function");
-    const element = EscalationEmail(baseProps);
-    // React.ReactElement shape: has a non-null `type` property
-    expect(element).not.toBeNull();
-    expect(element).toHaveProperty("type");
+describe("EscalationEmail — rendered template contract", () => {
+  it("renders the recipient, report period, late leads, and organization brand", async () => {
+    const html = await render(React.createElement(EscalationEmail, baseProps));
+
+    expect(html).toContain("Carol");
+    expect(html).toContain("2026-04-13 → 2026-04-19");
+    expect(html).toContain("Alice");
+    expect(html).toContain("Backend");
+    expect(html).toContain("Bob");
+    expect(html).toContain("Frontend");
+    expect(html).toContain("Example Software Department");
   });
 });
 
@@ -151,7 +153,7 @@ describe("EscalationEmail — deterministic render snapshot", () => {
 // ---------------------------------------------------------------------------
 
 describe("escalationEmailPlaintext — literal output", () => {
-  it("produces the exact literal plaintext body for baseProps", () => {
+  it("uses plural 'leads have' phrasing for multiple late leads", () => {
     expect(escalationEmailPlaintext(baseProps)).toBe(
       [
         "Hello Carol,",
@@ -171,12 +173,26 @@ describe("escalationEmailPlaintext — literal output", () => {
       [
         "Hello Carol,",
         "",
-        "The following lead have not submitted their section of the 2026-04-13 → 2026-04-19 weekly report (2026-04-19):",
+        "The following lead has not submitted their section of the 2026-04-13 → 2026-04-19 weekly report (2026-04-19):",
         "",
         "  - Alice — Backend (deadline 2026-04-20T15:00:00.000Z)",
         "",
         "— Demo (Weekly status reporting for Example Software Department)",
       ].join("\n"),
     );
+  });
+
+  it("renders the singular 'lead has' phrasing in the HTML branch too", async () => {
+    const html = await render(
+      React.createElement(EscalationEmail, {
+        ...baseProps,
+        lateLeads: [leadA],
+      }),
+    );
+    const text = html.replaceAll("<!-- -->", "");
+    expect(text).toContain(
+      "the following lead has not submitted their section of the",
+    );
+    expect(text).not.toContain("lead have");
   });
 });

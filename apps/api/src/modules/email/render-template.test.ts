@@ -18,6 +18,8 @@ const baseProps = {
   organization,
 };
 
+const formattedDeadline = "April 20, 2026 at 3:00 PM UTC";
+
 describe('renderEmail — kind="deadline"', () => {
   it("renders non-empty html containing the lead name and section link", async () => {
     const out = await renderEmail({ kind: "deadline", props: baseProps });
@@ -25,6 +27,7 @@ describe('renderEmail — kind="deadline"', () => {
     expect(out.html).toBeTruthy();
     expect(out.html).toContain("Lead Alpha");
     expect(out.html).toContain("lead/report?reportId=abc-123");
+    expect(out.html).toContain(formattedDeadline);
   });
 
   it("renders non-empty plaintext mirroring the html body", async () => {
@@ -36,11 +39,13 @@ describe('renderEmail — kind="deadline"', () => {
       "http://localhost:3000/lead/report?reportId=abc-123",
     );
     expect(out.text).toContain("2026-04-13 → 2026-04-19");
+    expect(out.text).toContain(formattedDeadline);
   });
 
   it("produces a subject containing the report period and 24h cue", async () => {
     const out = await renderEmail({ kind: "deadline", props: baseProps });
 
+    expect(out.subject).toMatch(/^\[Demo\]/);
     expect(out.subject).toContain("2026-04-13");
     expect(out.subject).toMatch(/24h/i);
   });
@@ -114,6 +119,7 @@ describe('renderEmail — kind="escalation"', () => {
       props: escalationProps,
     });
 
+    expect(out.subject).toMatch(/^\[Demo\]/);
     expect(out.subject).toContain("3 late report sections");
     expect(out.subject).toContain("2026-04-19");
   });
