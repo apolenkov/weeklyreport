@@ -10,45 +10,45 @@ describe("PolicyApplicatorService.policyAppliesTo — validity gate", () => {
   const validFrom = new Date("2026-05-01T00:00:00.000Z");
   const validUntil = new Date("2026-08-01T00:00:00.000Z");
 
-  it("returns true when active and deadline is inside [validFrom, validUntil]", () => {
-    const result = PolicyApplicatorService.policyAppliesTo(
-      { active: true, validFrom, validUntil },
-      { deadline: new Date("2026-06-15T18:00:00.000Z") },
-    );
-    expect(result).toBe(true);
-  });
-
-  it("returns false when policy.active is false", () => {
-    const result = PolicyApplicatorService.policyAppliesTo(
-      { active: false, validFrom, validUntil },
-      { deadline: new Date("2026-06-15T18:00:00.000Z") },
-    );
-    expect(result).toBe(false);
-  });
-
-  it("returns false when deadline is before validFrom", () => {
-    const result = PolicyApplicatorService.policyAppliesTo(
-      { active: true, validFrom, validUntil },
-      { deadline: new Date("2026-04-15T18:00:00.000Z") },
-    );
-    expect(result).toBe(false);
-  });
-
-  it("returns false when deadline is after validUntil", () => {
-    const result = PolicyApplicatorService.policyAppliesTo(
-      { active: true, validFrom, validUntil },
-      { deadline: new Date("2026-09-15T18:00:00.000Z") },
-    );
-    expect(result).toBe(false);
-  });
-
-  it("returns true when validUntil is null (forever-policy)", () => {
-    const result = PolicyApplicatorService.policyAppliesTo(
-      { active: true, validFrom, validUntil: null },
-      { deadline: new Date("2030-01-01T00:00:00.000Z") },
-    );
-    expect(result).toBe(true);
-  });
+  it.each([
+    {
+      label: "active and deadline inside [validFrom, validUntil]",
+      policy: { active: true, validFrom, validUntil },
+      deadline: new Date("2026-06-15T18:00:00.000Z"),
+      expected: true,
+    },
+    {
+      label: "policy.active is false",
+      policy: { active: false, validFrom, validUntil },
+      deadline: new Date("2026-06-15T18:00:00.000Z"),
+      expected: false,
+    },
+    {
+      label: "deadline is before validFrom",
+      policy: { active: true, validFrom, validUntil },
+      deadline: new Date("2026-04-15T18:00:00.000Z"),
+      expected: false,
+    },
+    {
+      label: "deadline is after validUntil",
+      policy: { active: true, validFrom, validUntil },
+      deadline: new Date("2026-09-15T18:00:00.000Z"),
+      expected: false,
+    },
+    {
+      label: "validUntil is null (forever-policy)",
+      policy: { active: true, validFrom, validUntil: null },
+      deadline: new Date("2030-01-01T00:00:00.000Z"),
+      expected: true,
+    },
+  ] as const)(
+    "returns $expected when $label",
+    ({ policy, deadline, expected }) => {
+      expect(
+        PolicyApplicatorService.policyAppliesTo(policy, { deadline }),
+      ).toBe(expected);
+    },
+  );
 
   it("boundary: deadline === validFrom is INSIDE the window", () => {
     const result = PolicyApplicatorService.policyAppliesTo(

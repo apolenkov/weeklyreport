@@ -850,53 +850,41 @@ describe("ReportSectionsService — deadline gate", () => {
     expect(repo.getReportMeta).toHaveBeenCalledTimes(1);
   });
 
-  it("past deadline within grace + allowLate=true: submits with late=true", async () => {
-    const repo = createGracedRepository({
-      deadline: new Date(Date.now() - 1 * ONE_HOUR),
-    });
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements GetGraceSettings contract ((): Promise<...>); no awaitable work in stub
-    const service = new ReportSectionsService(repo, async () => ({
-      gracePeriodHours: 24,
+  it.each([
+    {
+      label: "past deadline within grace + allowLate=true",
+      hoursPast: 1,
       allowLateSubmissions: true,
-    }));
-
-    const saved = await service.submitSection(validSubmitPayload());
-
-    expect(saved.status).toBe("submitted");
-    expect(saved.late).toBe(true);
-  });
-
-  it("past deadline within grace + allowLate=false: submits with late=true (grace still permissive)", async () => {
-    const repo = createGracedRepository({
-      deadline: new Date(Date.now() - 1 * ONE_HOUR),
-    });
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements GetGraceSettings contract ((): Promise<...>); no awaitable work in stub
-    const service = new ReportSectionsService(repo, async () => ({
-      gracePeriodHours: 24,
+    },
+    {
+      label:
+        "past deadline within grace + allowLate=false (grace still permissive)",
+      hoursPast: 1,
       allowLateSubmissions: false,
-    }));
-
-    const saved = await service.submitSection(validSubmitPayload());
-
-    expect(saved.status).toBe("submitted");
-    expect(saved.late).toBe(true);
-  });
-
-  it("past grace window + allowLate=true: submits with late=true", async () => {
-    const repo = createGracedRepository({
-      deadline: new Date(Date.now() - 48 * ONE_HOUR),
-    });
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements GetGraceSettings contract ((): Promise<...>); no awaitable work in stub
-    const service = new ReportSectionsService(repo, async () => ({
-      gracePeriodHours: 24,
+    },
+    {
+      label: "past grace window + allowLate=true",
+      hoursPast: 48,
       allowLateSubmissions: true,
-    }));
+    },
+  ] as const)(
+    "$label: submits with late=true",
+    async ({ hoursPast, allowLateSubmissions }) => {
+      const repo = createGracedRepository({
+        deadline: new Date(Date.now() - hoursPast * ONE_HOUR),
+      });
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements GetGraceSettings contract ((): Promise<...>); no awaitable work in stub
+      const service = new ReportSectionsService(repo, async () => ({
+        gracePeriodHours: 24,
+        allowLateSubmissions,
+      }));
 
-    const saved = await service.submitSection(validSubmitPayload());
+      const saved = await service.submitSection(validSubmitPayload());
 
-    expect(saved.status).toBe("submitted");
-    expect(saved.late).toBe(true);
-  });
+      expect(saved.status).toBe("submitted");
+      expect(saved.late).toBe(true);
+    },
+  );
 
   it("past grace window + allowLate=false: 403 ReportSectionAccessError", async () => {
     const repo = createGracedRepository({

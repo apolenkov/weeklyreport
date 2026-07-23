@@ -1188,54 +1188,16 @@ describe("LeadForm icon SVGs — aria-hidden", () => {
     return container;
   }
 
-  it("GridIcon svg has aria-hidden=true", async () => {
+  it.each([
+    ["GridIcon", "lead-section-product-status"],
+    ["CalendarIcon", "lead-section-current-week"],
+    ["NextWeekIcon", "lead-section-next-week"],
+    ["AlertIcon", "lead-section-risks"],
+    ["ChatIcon", "lead-section-decisions"],
+  ] as const)("%s svg has aria-hidden=true", async (_icon, testId) => {
     const container = await renderAndSettle();
     const section = container.querySelector(
-      '[data-testid="lead-section-product-status"]',
-    );
-    expect(section).not.toBeNull();
-    const svg = section?.querySelector("svg[aria-hidden='true']");
-    expect(svg).not.toBeNull();
-    expect(svg).toHaveAttribute("aria-hidden", "true");
-  });
-
-  it("CalendarIcon svg has aria-hidden=true", async () => {
-    const container = await renderAndSettle();
-    const section = container.querySelector(
-      '[data-testid="lead-section-current-week"]',
-    );
-    expect(section).not.toBeNull();
-    const svg = section?.querySelector("svg[aria-hidden='true']");
-    expect(svg).not.toBeNull();
-    expect(svg).toHaveAttribute("aria-hidden", "true");
-  });
-
-  it("NextWeekIcon svg has aria-hidden=true", async () => {
-    const container = await renderAndSettle();
-    const section = container.querySelector(
-      '[data-testid="lead-section-next-week"]',
-    );
-    expect(section).not.toBeNull();
-    const svg = section?.querySelector("svg[aria-hidden='true']");
-    expect(svg).not.toBeNull();
-    expect(svg).toHaveAttribute("aria-hidden", "true");
-  });
-
-  it("AlertIcon svg has aria-hidden=true", async () => {
-    const container = await renderAndSettle();
-    const section = container.querySelector(
-      '[data-testid="lead-section-risks"]',
-    );
-    expect(section).not.toBeNull();
-    const svg = section?.querySelector("svg[aria-hidden='true']");
-    expect(svg).not.toBeNull();
-    expect(svg).toHaveAttribute("aria-hidden", "true");
-  });
-
-  it("ChatIcon svg has aria-hidden=true", async () => {
-    const container = await renderAndSettle();
-    const section = container.querySelector(
-      '[data-testid="lead-section-decisions"]',
+      `[data-testid="${CSS.escape(testId)}"]`,
     );
     expect(section).not.toBeNull();
     const svg = section?.querySelector("svg[aria-hidden='true']");
