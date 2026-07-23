@@ -152,7 +152,7 @@ describe("useLeadFormAutosave", () => {
       await vi.advanceTimersByTimeAsync(3000);
     });
 
-    expect(calls.length).toBeGreaterThanOrEqual(1);
+    expect(calls).toHaveLength(1);
     expect(result.current.state).toBe("saved");
   });
 
@@ -662,6 +662,63 @@ describe("useLeadFormAutosave", () => {
     expect(result.current.dirty).toBe(false);
   });
 
+  it("retries a queued edit after the in-flight save fails", async () => {
+    let rejectFirst!: () => void;
+    let callCount = 0;
+    const { wrapper, calls } = buildHarness({
+      mutationFn: () => {
+        callCount += 1;
+        if (callCount === 1) {
+          return new Promise<unknown>((_resolve, reject) => {
+            rejectFirst = () => reject(new Error("save A failed"));
+          });
+        }
+        return Promise.resolve({ version: 2 });
+      },
+    });
+    const { result, rerender } = renderHook(
+      ({ payload }: { payload: DraftSavePayload }) =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload,
+          enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
+          debounceMs: 3000,
+        }),
+      { wrapper, initialProps: { payload: makePayload("edit A") } },
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(calls).toHaveLength(1);
+
+    rerender({ payload: makePayload("edit B") });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(calls).toHaveLength(1);
+
+    await act(async () => {
+      rejectFirst();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.dirty).toBe(true);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2999);
+    });
+    expect(calls).toHaveLength(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(calls).toHaveLength(2);
+    expect((calls[1] as DraftSavePayload).items[0]?.text).toBe("edit B");
+    expect(result.current.dirty).toBe(false);
+  });
+
   it("a failing queued save surfaces exactly one error and leaks no unhandled rejection", async () => {
     const unhandled = vi.fn();
     process.on("unhandledRejection", unhandled);
@@ -967,6 +1024,62 @@ describe("useLeadFormAutosave", () => {
     // The caller owns the conflict surface (refetch + tailored message), so the
     // hook must NOT also fire its generic autosave-failed toast.
     expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("a CONFLICT with a queued edit hands off to onConflict without re-arming a retry", async () => {
+    const onConflict = vi.fn();
+    let rejectFirst!: () => void;
+    const conflictError = new TRPCClientError<never>("stale");
+    Object.defineProperty(conflictError, "data", {
+      value: { httpStatus: 409, code: "CONFLICT" },
+      configurable: true,
+    });
+    const { calls, wrapper } = buildHarness({
+      mutationFn: () =>
+        new Promise<unknown>((_resolve, reject) => {
+          rejectFirst = () => reject(conflictError);
+        }),
+    });
+    const { rerender } = renderHook(
+      ({ payload }: { payload: DraftSavePayload }) =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload,
+          enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
+          onConflict,
+          debounceMs: 3000,
+        }),
+      { wrapper, initialProps: { payload: makePayload("edit A") } },
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(calls).toHaveLength(1);
+
+    // Queue edit B behind the in-flight save, then fail the save with a 409.
+    rerender({ payload: makePayload("edit B") });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(calls).toHaveLength(1);
+
+    await act(async () => {
+      rejectFirst();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(onConflict).toHaveBeenCalledTimes(1);
+    expect(toast.error).not.toHaveBeenCalled();
+
+    // The conflict flow owns recovery (refetch + rebuild): replaying the
+    // queued edit against the stale version would just 409 again, so no
+    // retry save may fire on its own.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(calls).toHaveLength(1);
   });
 
   it("renders idle and clean when initialSavedKey already matches the first payload key", () => {

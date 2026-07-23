@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { committedRisks } from "../features/report-sections/model/lead-submit-readiness";
 import type {
   Product,
   RiskEntry,
@@ -98,10 +99,7 @@ describe("computeCoupling", () => {
       makeRisk("r1", "p1", ["planning"]), // filled + staged
       { ...makeRisk("r2", "p1"), text: "", mitigation: "" }, // empty, not committed
     ];
-    const committedRisks = allRisks.filter(
-      (r) => r.text.trim().length > 0 && r.mitigation.trim().length > 0,
-    );
-    const result = computeCoupling(products, committedRisks);
+    const result = computeCoupling(products, committedRisks(allRisks));
     // Only r1 remains after filter; r1 has stageIds → no coupling violation
     expect(expectDefined(result[0]).riskRowsWithoutStages).toEqual([]);
     expect(validateCoupling(result).missing).toEqual([]);

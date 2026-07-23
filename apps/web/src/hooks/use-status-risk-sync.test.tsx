@@ -61,7 +61,7 @@ function setup(initialProducts: Product[]) {
 }
 
 describe("useStatusRiskSync", () => {
-  it("Test 1: user sets stage to at-risk -> updates products (pure applier, no side-effects)", () => {
+  it("applies an at-risk status to the selected stage only", () => {
     const product = buildProduct();
     const { state, hookResult } = setup([product]);
 
@@ -86,7 +86,7 @@ describe("useStatusRiskSync", () => {
     expect(testing?.status).toBe<StageStatus>("on-track");
   });
 
-  it("Test 2: status change for an unknown product id leaves products unchanged in shape", () => {
+  it("leaves stage statuses unchanged for an unknown product", () => {
     const product = buildProduct();
     const { state, hookResult } = setup([product]);
 
@@ -105,7 +105,7 @@ describe("useStatusRiskSync", () => {
     expect(dev?.status).toBe<StageStatus>("on-track");
   });
 
-  it("Test 4: revert to on-track applies at hook level (interception is the bridge's job)", () => {
+  it("applies an on-track status when reverting a stage", () => {
     const product = buildProduct({
       stages: [
         {

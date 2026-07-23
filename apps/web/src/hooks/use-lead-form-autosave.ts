@@ -127,6 +127,7 @@ export function useLeadFormAutosave(
 
   const [state, setState] = useState<AutosaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [queuedRetryRevision, setQueuedRetryRevision] = useState(0);
 
   const lastSavedRef = useRef<string>("");
   const inFlightRef = useRef<string>("");
@@ -202,14 +203,25 @@ export function useLeadFormAutosave(
         }
       },
       onError: (err: unknown) => {
+        const queuedSectionId =
+          queuedPayloadRef.current?.reportSectionId ?? null;
         queuedKeyRef.current = null;
         queuedPayloadRef.current = null;
         setState("error");
         // A stale-version 409 means another writer advanced the section; hand
         // off to the caller (refetch + surface) instead of a generic toast.
+        // No retry re-arm: replaying against the stale version would 409
+        // again — the conflict flow rebuilds state from the refetch.
         if (onConflict && isConflictError(err)) {
           onConflict();
           return;
+        }
+        // Re-arm the debounce only when the queued edit still belongs to the
+        // section the form shows — after navigation the current payload no
+        // longer carries the queued content, so a silent replay would save
+        // the wrong section's state.
+        if (queuedSectionId !== null && queuedSectionId === reportSectionId) {
+          setQueuedRetryRevision((revision) => revision + 1);
         }
         const msg =
           err instanceof Error && err.message ? err.message : "Autosave failed";
@@ -292,7 +304,14 @@ export function useLeadFormAutosave(
         debounceTimerRef.current = null;
       }
     };
-  }, [payloadKey, enabled, dirty, reportSectionId, debounceMs]);
+  }, [
+    payloadKey,
+    enabled,
+    dirty,
+    reportSectionId,
+    debounceMs,
+    queuedRetryRevision,
+  ]);
 
   // beforeunload guard while dirty.
   useEffect(() => {

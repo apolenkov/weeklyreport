@@ -120,6 +120,43 @@ describe("useFullscreen — behaviour", () => {
     input.remove();
   });
 
+  it("ignores `f` typed into a content-editable field", () => {
+    setFullscreenElement(null);
+    const { ref, requestFullscreen } = stubTarget();
+    renderHook(() => useFullscreen(ref));
+
+    const editor = document.createElement("div");
+    Object.defineProperty(editor, "isContentEditable", { value: true });
+    document.body.append(editor);
+    act(() => {
+      editor.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "f", bubbles: true }),
+      );
+    });
+
+    expect(requestFullscreen).not.toHaveBeenCalled();
+    editor.remove();
+  });
+
+  it("toggle exits when the document is already fullscreen", () => {
+    const fullscreenElement = document.createElement("div");
+    setFullscreenElement(fullscreenElement);
+    const exitFullscreen = vi.fn(() => Promise.resolve());
+    Object.defineProperty(document, "exitFullscreen", {
+      configurable: true,
+      value: exitFullscreen,
+    });
+    const { ref, requestFullscreen } = stubTarget();
+    const { result } = renderHook(() => useFullscreen(ref));
+
+    act(() => {
+      result.current.toggle();
+    });
+
+    expect(exitFullscreen).toHaveBeenCalledTimes(1);
+    expect(requestFullscreen).not.toHaveBeenCalled();
+  });
+
   it("returns focus to the stable control ONLY on the transition out of fullscreen", () => {
     const button = document.createElement("button");
     document.body.append(button);
