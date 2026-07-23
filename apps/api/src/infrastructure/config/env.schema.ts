@@ -27,7 +27,9 @@ export const envSchema = z
     // example.com from the same API instance. Wildcards (*) are rejected
     // in superRefine when NODE_ENV=production.
     FRONTEND_URLS: z.string().optional(),
-    AUTH_DEV_MODE: z.string().transform((v) => v === "true"),
+    AUTH_DEV_MODE: z
+      .enum(["true", "false"])
+      .transform((value) => value === "true"),
     // Non-prod test-context toggle, read raw beside NODE_ENV/AUTH_DEV_MODE in
     // the trpc.context dev-mode gate. Optional: only honoured when
     // NODE_ENV !== 'production'; absent → the test-context path stays off.
@@ -154,10 +156,10 @@ export const envSchema = z
         const origins = data.FRONTEND_URLS.split(",")
           .map((s) => s.trim())
           .filter(Boolean);
-        if (origins.includes("*")) {
+        if (origins.some((origin) => origin.includes("*"))) {
           ctx.addIssue({
             code: "custom",
-            message: 'FRONTEND_URLS must not include "*" in production',
+            message: 'FRONTEND_URLS origins must not include "*" in production',
             path: ["FRONTEND_URLS"],
           });
         }

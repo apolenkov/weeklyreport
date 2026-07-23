@@ -39,6 +39,7 @@ describe("envSchema — no defaults, every product var required", () => {
   // Each required key, omitted in turn, must fail the parse — proving the
   // schema carries no silent default that would let a missing var slip through.
   it.each([
+    "DATABASE_URL",
     "PORT",
     "NODE_ENV",
     "FRONTEND_URL",
@@ -161,13 +162,25 @@ describe("envSchema — production fences", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects a wildcard in FRONTEND_URLS in production", () => {
-    const result = envSchema.safeParse({
-      ...COMPLETE,
-      FRONTEND_URLS: "https://a.example.com,*",
-    });
-    expect(result.success).toBe(false);
-  });
+  it.each(["TRUE", "ture", "1", ""] as const)(
+    "rejects invalid AUTH_DEV_MODE value %j",
+    (AUTH_DEV_MODE) => {
+      expect(envSchema.safeParse({ ...COMPLETE, AUTH_DEV_MODE }).success).toBe(
+        false,
+      );
+    },
+  );
+
+  it.each(["https://a.example.com,*", "https://*.example.com"] as const)(
+    "rejects wildcard FRONTEND_URLS shape %s in production",
+    (FRONTEND_URLS) => {
+      const result = envSchema.safeParse({
+        ...COMPLETE,
+        FRONTEND_URLS,
+      });
+      expect(result.success).toBe(false);
+    },
+  );
 
   it("requires SMTP_HOST in production", () => {
     const { SMTP_HOST: _omit, ...without } = COMPLETE;

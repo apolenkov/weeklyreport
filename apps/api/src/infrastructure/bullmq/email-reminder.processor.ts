@@ -18,7 +18,7 @@ import {
 // Legacy (kind absent) jobs pre-date the template renderer and send plaintext
 // with a hardcoded brand; deadline/escalation jobs render react-email templates
 // and carry the enqueue-time organization snapshot.
-type EmailReminderJobData = JobTraceContext &
+export type EmailReminderJobData = JobTraceContext &
   (
     | {
         executionId: string;

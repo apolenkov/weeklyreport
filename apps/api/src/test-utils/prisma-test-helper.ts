@@ -2,9 +2,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
-const TEST_DATABASE_URL =
-  process.env.DATABASE_URL ??
-  "postgresql://postgres:postgres@localhost:5432/customreport_test";
+import { requireEnv } from "../lib/env.js";
 
 let pool: pg.Pool | null = null;
 let prismaInstance: PrismaClient | null = null;
@@ -114,7 +112,10 @@ async function discoverTables(prisma: PrismaClient): Promise<string> {
  */
 export function createTestPrisma(): PrismaClient {
   if (!prismaInstance) {
-    pool = new pg.Pool({ connectionString: TEST_DATABASE_URL });
+    // No silent localhost fallback — missing DATABASE_URL must fail loud.
+    pool = new pg.Pool({
+      connectionString: requireEnv(process.env, "DATABASE_URL"),
+    });
     const adapter = new PrismaPg(pool);
     prismaInstance = new PrismaClient({ adapter });
   }
@@ -136,7 +137,7 @@ export function createTestPrisma(): PrismaClient {
  * in beforeEach — diagnose via `pg_stat_activity`.
  */
 export async function cleanDatabase(prisma: PrismaClient): Promise<void> {
-  assertTestDatabaseUrl(TEST_DATABASE_URL);
+  assertTestDatabaseUrl(requireEnv(process.env, "DATABASE_URL"));
 
   const list = await discoverTables(prisma);
   await prisma.$executeRawUnsafe(

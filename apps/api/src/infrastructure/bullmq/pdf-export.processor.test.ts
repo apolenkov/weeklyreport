@@ -99,6 +99,7 @@ import { PdfExportProcessor } from "./pdf-export.processor.js";
 const STUB_ENV = {
   REDIS_HOST: "localhost",
   REDIS_PORT: 6379,
+  PDF_BASE_URL: "http://localhost:3000",
   PDF_OUTPUT_DIR: "./storage/pdfs-test",
 } as EnvConfig;
 

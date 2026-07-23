@@ -15,6 +15,12 @@ import {
 export type TrpcMiddlewareResult<T = unknown> =
   ({ ok: true; data: unknown } & T) | ({ ok: false; error: TRPCError } & T);
 
+interface TrpcMiddlewareArgs<R extends TrpcMiddlewareResult> {
+  path: string;
+  type: "query" | "mutation" | "subscription";
+  next: () => Promise<R>;
+}
+
 /**
  * tRPC Prometheus middleware.
  *
@@ -40,12 +46,6 @@ export type TrpcMiddlewareResult<T = unknown> =
  * High-cardinality labels (correlationId, userId, IP) would explode the
  * Prometheus time-series store and are deliberately NOT included.
  */
-interface TrpcMiddlewareArgs<R extends TrpcMiddlewareResult> {
-  path: string;
-  type: "query" | "mutation" | "subscription";
-  next: () => Promise<R>;
-}
-
 export async function trpcMetricsMiddleware<R extends TrpcMiddlewareResult>(
   opts: TrpcMiddlewareArgs<R>,
 ): Promise<R> {

@@ -87,7 +87,7 @@ describe("CorrelationIdMiddleware", () => {
     expect(set).toHaveBeenCalledWith("correlationId", adopted);
   });
 
-  it("isolates correlationId per request (no cross-request bleed)", () => {
+  it("writes each request's own correlationId to cls.set on successive calls", () => {
     const { cls, set } = buildClsMock();
     const middleware = new CorrelationIdMiddleware(cls);
 

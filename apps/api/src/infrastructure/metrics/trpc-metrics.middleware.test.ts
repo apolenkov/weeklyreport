@@ -120,10 +120,9 @@ describe("trpcMetricsMiddleware", () => {
     );
   });
 
-  it("starts a histogram timer that observes a positive duration", async () => {
-    // smoke-check: ensure the histogram has at least one observation in the
-    // 5ms-10s range (we can't assert an exact value, but `_sum` > 0 proves
-    // the timer fired and the bucket bounds are sane).
+  it("starts a histogram timer that records a duration observation", async () => {
+    // Presence of the labelled sum series proves the timer fired; observed
+    // duration is always >= 0 so a numeric floor assert would be vacuous.
     await invoke("analytics.leadVelocity", "query", {
       ok: true,
       data: { rows: [] },
@@ -142,8 +141,6 @@ describe("trpcMetricsMiddleware", () => {
           l.includes('procedure="analytics.leadVelocity"'),
       );
     expect(sumLine).toBeDefined();
-    const sumValue = Number(sumLine?.split(" ").at(-1));
-    expect(sumValue).toBeGreaterThanOrEqual(0);
     // sanity: the counter handle is the singleton we exported, not a stray
     // double-register.
     expect(metricsRegistry.getSingleMetric("trpc_request_total")).toBe(

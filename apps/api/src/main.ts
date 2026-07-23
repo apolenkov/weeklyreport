@@ -50,7 +50,11 @@ import { QueueRegistry } from "./infrastructure/bullmq/queue-registry.js";
 import { validateEnv } from "./infrastructure/config/env.schema";
 import { SentryExceptionFilter } from "./infrastructure/filters/sentry-exception.filter";
 import { httpRequestDurationSeconds } from "./infrastructure/metrics/metrics.registry";
-import { TRPC_MAX_BODY_BYTES } from "./infrastructure/http/ingress-limits";
+import {
+  CLIENT_LOGS_JSON_LIMIT,
+  mountClientLogsIngress,
+  TRPC_MAX_BODY_BYTES,
+} from "./infrastructure/http/ingress-limits";
 import { CorrelationIdMiddleware } from "./infrastructure/middleware/correlation-id.middleware";
 import { PrismaService } from "./infrastructure/prisma/prisma.service";
 import { createRateLimits } from "./infrastructure/throttler/rate-limit.middleware";
@@ -292,13 +296,13 @@ async function bootstrap() {
   // Dev-only by default; turn on in prod with CLIENT_LOG_FORWARDING=true.
   const clientLogsEnabled =
     env.NODE_ENV === "development" || env.CLIENT_LOG_FORWARDING === "true";
-  app.use(
+  // `trust proxy: 1` makes req.ip the real client, so the limiter keys per
+  // client, not per proxy hop; the order itself lives in the shared mount.
+  mountClientLogsIngress(
+    app,
     CLIENT_LOGS_ROUTE,
-    // Rate-limit before the JSON parse and the terminating handler so an
-    // unauthenticated caller cannot flood the shared app.log. `trust proxy: 1`
-    // makes req.ip the real client, so this keys per client, not per proxy hop.
     clientLogsLimiter,
-    express.json({ limit: "128kb" }),
+    express.json({ limit: CLIENT_LOGS_JSON_LIMIT }),
     (req: express.Request, res: express.Response) => {
       if (!clientLogsEnabled) {
         res.sendStatus(HTTP.noContent);

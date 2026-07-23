@@ -12,16 +12,15 @@ import { adminProcedure, router } from "../trpc.middleware.js";
 export interface ProjectActivityRouterDeps {
   /**
    * Admin provisioning of Project Activities (stage-less reporting units
-   * beside products) — the `projectActivity.*` namespace. Distinct from
-   * `activityService` above, which serves the live-status feed under the
-   * pre-existing `activity.*` namespace.
+   * beside products) — the `projectActivity.*` namespace. Distinct from the
+   * live-status feed under the pre-existing `activity.*` namespace.
    */
   projectActivityService: ProjectActivityService;
 }
 
 // Admin provisioning of Project Activities — stage-less, group-scoped
 // reporting units beside products, with M:M lead attachment. Deliberately
-// NOT under `activity.*` (that namespace is the live-status feed above).
+// NOT under `activity.*` (that namespace is the live-status feed).
 // All procedures ride the canonical adminProcedure chain; attachment-group
 // and reference validation live in ProjectActivityService.
 

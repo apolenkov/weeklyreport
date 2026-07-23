@@ -87,6 +87,33 @@ describe("DLQMonitorService.recordTerminalFailure", () => {
 
     expect(inc).not.toHaveBeenCalled();
   });
+
+  it("ignores a failure whose job no longer exists", async () => {
+    const inc = vi.spyOn(dlqFailedTotal, "inc");
+    const queue: Pick<Queue, "getJob"> = {
+      getJob: vi.fn().mockResolvedValue(null),
+    };
+
+    await seam().recordTerminalFailure("pdf-export", queue, "gone", "boom");
+
+    expect(inc).not.toHaveBeenCalled();
+  });
+
+  it("treats an undefined attempts option as one attempt", async () => {
+    const inc = vi.spyOn(dlqFailedTotal, "inc");
+    const queue: Pick<Queue, "getJob"> = {
+      getJob: vi.fn().mockResolvedValue({ opts: {}, attemptsMade: 1 }),
+    };
+
+    await seam().recordTerminalFailure(
+      "email-reminder",
+      queue,
+      "job-default-attempts",
+      "boom",
+    );
+
+    expect(inc).toHaveBeenCalledExactlyOnceWith({ queue: "email-reminder" });
+  });
 });
 
 interface PollSeam {
@@ -206,6 +233,16 @@ describe("DLQMonitorService.checkRedisMemory", () => {
     await memSeam(registryReporting(used)).checkRedisMemory();
 
     expect(set).toHaveBeenCalledExactlyOnceWith(used);
+    expect(warn).toHaveBeenCalledOnce();
+    expect(warn.mock.calls[0]?.[0]).toContain("[redis-mem]");
+  });
+
+  it("warns at exactly 80% of the cap", async () => {
+    const warn = vi.spyOn(Logger.prototype, "warn");
+    const used = REDIS_CAP_BYTES * 0.8;
+
+    await memSeam(registryReporting(used)).checkRedisMemory();
+
     expect(warn).toHaveBeenCalledOnce();
     expect(warn.mock.calls[0]?.[0]).toContain("[redis-mem]");
   });

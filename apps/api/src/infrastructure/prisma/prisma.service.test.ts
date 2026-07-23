@@ -5,6 +5,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EnvConfig } from "../config/env.schema.js";
 import { PrismaService } from "./prisma.service.js";
 
+interface QueryLogEvent {
+  readonly query: string;
+  readonly params: string;
+  readonly duration: number;
+  readonly target?: string;
+}
+
+type PrismaLogListener = (
+  event: QueryLogEvent | { readonly message: string },
+) => void;
+
 // PrismaService creates a real (lazy, unconnected) pg.Pool in its constructor;
 // these tests never issue a query, so no live database is touched. The pool is
 // closed in afterEach to avoid a leaked handle.
@@ -26,6 +37,25 @@ function poolOf(service: PrismaService): pg.Pool {
 
 function loggerOf(service: PrismaService): Logger {
   return (service as unknown as { logger: Logger }).logger;
+}
+
+async function captureQueryListener(
+  service: PrismaService,
+): Promise<(event: QueryLogEvent) => void> {
+  const listeners = new Map<string, PrismaLogListener>();
+  const eventSource = service as unknown as {
+    $on: (event: string, listener: PrismaLogListener) => void;
+  };
+  vi.spyOn(eventSource, "$on").mockImplementation((event, listener) => {
+    listeners.set(event, listener);
+  });
+  vi.spyOn(service, "$connect").mockResolvedValue(undefined);
+
+  await service.onModuleInit();
+
+  const listener = listeners.get("query");
+  if (!listener) throw new Error("query listener was not registered");
+  return listener;
 }
 
 afterEach(async () => {
@@ -95,5 +125,70 @@ describe("PrismaService pool configuration", () => {
     expect(logged).toContain('"max":25');
     expect(logged).toContain('"idleTimeoutMillis":5000');
     expect(logged).toContain('"connectionTimeoutMillis":2000');
+  });
+});
+
+describe("PrismaService query logging", () => {
+  it("warns for a query exactly at the slow-query threshold", async () => {
+    const service = makeService({ LOG_LEVEL: "info" });
+    const warnSpy = vi
+      .spyOn(loggerOf(service), "warn")
+      .mockImplementation(() => undefined);
+    const debugSpy = vi
+      .spyOn(loggerOf(service), "debug")
+      .mockImplementation(() => undefined);
+    const queryListener = await captureQueryListener(service);
+
+    queryListener({
+      query: "SELECT slow",
+      params: "[]",
+      duration: 100,
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      'slow query {"phase":"db.query","durationMs":100,"query":"SELECT slow"}',
+    );
+    expect(debugSpy).not.toHaveBeenCalled();
+  });
+
+  it("logs fast queries only when debug logging is enabled", async () => {
+    const infoService = makeService({ LOG_LEVEL: "info" });
+    const debugService = makeService({ LOG_LEVEL: "debug" });
+    const infoDebugSpy = vi
+      .spyOn(loggerOf(infoService), "debug")
+      .mockImplementation(() => undefined);
+    const debugSpy = vi
+      .spyOn(loggerOf(debugService), "debug")
+      .mockImplementation(() => undefined);
+    const infoQueryListener = await captureQueryListener(infoService);
+    const debugQueryListener = await captureQueryListener(debugService);
+    const fastQuery = {
+      query: "SELECT fast",
+      params: "[]",
+      duration: 99,
+    };
+
+    infoQueryListener(fastQuery);
+    debugQueryListener(fastQuery);
+
+    expect(infoDebugSpy).not.toHaveBeenCalled();
+    expect(debugSpy).toHaveBeenCalledWith("query (99ms): SELECT fast");
+  });
+});
+
+describe("PrismaService shutdown logging", () => {
+  it("logs shutdown before closing the database connection", async () => {
+    const service = makeService();
+    vi.spyOn(service, "$disconnect").mockResolvedValue(undefined);
+    vi.spyOn(poolOf(service), "end").mockResolvedValue(undefined);
+    const logSpy = vi
+      .spyOn(loggerOf(service), "log")
+      .mockImplementation(() => undefined);
+
+    await service.onModuleDestroy();
+
+    expect(logSpy).toHaveBeenNthCalledWith(1, "Shutting down Prisma...");
+    expect(logSpy).toHaveBeenNthCalledWith(2, "Database connection closed");
+    expect(logSpy).toHaveBeenCalledTimes(2);
   });
 });

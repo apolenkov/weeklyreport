@@ -45,11 +45,12 @@ vi.mock("../../modules/email/index.js", () => ({
   renderEmail: vi.fn(),
 }));
 
-import type { OrganizationBrand } from "@customreport/shared";
-
 import { renderEmail } from "../../modules/email/index.js";
 import type { EnvConfig } from "../config/env.schema";
-import { EmailReminderProcessor } from "./email-reminder.processor.js";
+import {
+  type EmailReminderJobData,
+  EmailReminderProcessor,
+} from "./email-reminder.processor.js";
 
 // The processor reads env only in onModuleInit (not exercised here); a minimal
 // stub satisfies the constructor for the processJob-focused tests.
@@ -89,39 +90,6 @@ function createMockSnapshotAdminService(
   };
 }
 
-// Mirrors the processor's own EmailReminderJobData union so the mock job
-// factory can construct all three payload shapes it dispatches on.
-type EmailReminderJobData =
-  | {
-      executionId: string;
-      recipientEmail: string;
-      reportPeriod: string;
-    }
-  | {
-      executionId: string;
-      recipientEmail: string;
-      kind: "deadline";
-      leadName: string;
-      reportPeriod: string;
-      deadlineIso: string;
-      sectionUrl: string;
-      organization: OrganizationBrand;
-    }
-  | {
-      executionId: string;
-      recipientEmail: string;
-      kind: "escalation";
-      headName: string;
-      cycleDate: string;
-      reportPeriod: string;
-      lateLeads: readonly {
-        leadName: string;
-        sectionTitle: string;
-        deadlineIso: string;
-      }[];
-      organization: OrganizationBrand;
-    };
-
 function createMockJob(
   data: EmailReminderJobData,
   attemptsMade = 0,
@@ -146,7 +114,7 @@ const defaultJobData: EmailReminderJobData = {
   reportPeriod: "2026-04-07 – 2026-04-13",
 };
 
-const organizationBrand: OrganizationBrand = {
+const organizationBrand = {
   shortName: "Acme",
   fullName: "Acme Corp",
 };

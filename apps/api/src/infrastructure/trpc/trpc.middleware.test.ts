@@ -190,6 +190,35 @@ describe("tRPC auth middleware", () => {
     );
   });
 
+  it("audits a role denial with the attempted role and caller identity", async () => {
+    const roleDenied = vi.fn();
+    const caller = testRouter.createCaller({
+      session: {
+        userId: "u1",
+        email: "lead@test.com",
+        name: "Lead User",
+        role: "lead",
+        activeReportId: "r1",
+        activeReportSectionId: "s1",
+      },
+      logger: nullLogger,
+      auditLogger: { ...nullAuditLogger, roleDenied },
+      ip: TEST_IP,
+      isPdfExport: false,
+      pdfReportId: null,
+    });
+
+    await expect(caller.headRoute()).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    expect(roleDenied).toHaveBeenCalledWith({
+      userId: "u1",
+      role: "lead",
+      attemptedRole: ["head", "admin"],
+      ip: TEST_IP,
+    });
+  });
+
   it("headProcedure allows head session", async () => {
     const result = await headCaller.headRoute();
     expect(result).toBe("head-ok");

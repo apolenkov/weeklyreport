@@ -113,4 +113,35 @@ describe("createRequireHeadGuard", () => {
     expect(status).toHaveBeenCalledWith(401);
     expect(next).not.toHaveBeenCalled();
   });
+
+  it.each([
+    {
+      failure: "invalid token",
+      verifySessionToken: () => {
+        throw new Error("invalid token");
+      },
+      prisma: makePrisma(true),
+    },
+    {
+      failure: "Prisma read",
+      verifySessionToken: () => headSession,
+      prisma: {
+        user: {
+          findUnique: () => Promise.reject(new Error("database unavailable")),
+        },
+      } as unknown as PrismaService,
+    },
+  ])("maps a thrown $failure to 401", async (deps) => {
+    const next = vi.fn();
+    const { res, status } = makeRes();
+
+    await createRequireHeadGuard({
+      verifySessionToken: deps.verifySessionToken,
+      prisma: deps.prisma,
+      sessionRevocation: { isRevoked: () => Promise.resolve(false) },
+    })(makeReq("token"), res, next);
+
+    expect(status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
 });

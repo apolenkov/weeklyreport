@@ -3,6 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
+import {
+  SessionRevocationService,
+  SnapshotAdminService,
+} from "../../modules/admin/index.js";
+import { createAdminUsersProcedures } from "./routers/admin/users.procedures.js";
+import { router } from "./trpc.middleware.js";
 import { createAppRouter } from "./trpc.router.js";
 
 /**
@@ -31,19 +37,35 @@ function makeSession(role: Role) {
 }
 
 function buildCaller(role: Role) {
-  const snapshotAdminService = {
-    deactivateUser: vi.fn().mockResolvedValue({ success: true }),
-    activateUser: vi.fn().mockResolvedValue({ success: true }),
-  };
-  const sessionRevocationService = {
-    revokeSession: vi.fn().mockResolvedValue(undefined),
-    restoreSession: vi.fn().mockResolvedValue(undefined),
-  };
-  const deps = {
-    snapshotAdminService,
-    sessionRevocationService,
-  } as unknown as Parameters<typeof createAppRouter>[0];
-  const caller = createAppRouter(deps).createCaller({
+  const deactivateUser = vi.fn().mockResolvedValue({ success: true });
+  const activateUser = vi.fn().mockResolvedValue({ success: true });
+  const snapshotAdminService = Object.assign(
+    Object.create(SnapshotAdminService.prototype) as SnapshotAdminService,
+    {
+      deactivateUser,
+      activateUser,
+    } satisfies Pick<SnapshotAdminService, "activateUser" | "deactivateUser">,
+  );
+  const revokeSession = vi.fn().mockResolvedValue(undefined);
+  const restoreSession = vi.fn().mockResolvedValue(undefined);
+  const sessionRevocationService = Object.assign(
+    Object.create(
+      SessionRevocationService.prototype,
+    ) as SessionRevocationService,
+    {
+      revokeSession,
+      restoreSession,
+    } satisfies Pick<
+      SessionRevocationService,
+      "restoreSession" | "revokeSession"
+    >,
+  );
+  const caller = router(
+    createAdminUsersProcedures({
+      snapshotAdminService,
+      sessionRevocationService,
+    }),
+  ).createCaller({
     session: makeSession(role),
     logger: createNullLogger(),
     auditLogger: createNullAuditLogger(),
@@ -51,48 +73,73 @@ function buildCaller(role: Role) {
     isPdfExport: false,
     pdfReportId: null,
   });
-  return { caller, snapshotAdminService, sessionRevocationService };
+  return {
+    caller,
+    deactivateUser,
+    activateUser,
+    revokeSession,
+    restoreSession,
+  };
 }
 
 describe("admin.deactivateUser — session revocation wiring", () => {
   it("revokes the session after the DB write, for the same user", async () => {
-    const { caller, snapshotAdminService, sessionRevocationService } =
-      buildCaller("admin");
+    const { caller, deactivateUser, revokeSession } = buildCaller("admin");
 
-    await expect(
-      caller.admin.deactivateUser({ userId: TARGET_ID }),
-    ).resolves.toEqual({ success: true });
-
-    expect(snapshotAdminService.deactivateUser).toHaveBeenCalledWith(TARGET_ID);
-    expect(sessionRevocationService.revokeSession).toHaveBeenCalledWith(
-      TARGET_ID,
+    await expect(caller.deactivateUser({ userId: TARGET_ID })).resolves.toEqual(
+      { success: true },
     );
-    const dbOrder =
-      snapshotAdminService.deactivateUser.mock.invocationCallOrder[0] ??
-      Infinity;
-    const revokeOrder =
-      sessionRevocationService.revokeSession.mock.invocationCallOrder[0] ?? 0;
+
+    expect(deactivateUser).toHaveBeenCalledWith(TARGET_ID);
+    expect(revokeSession).toHaveBeenCalledWith(TARGET_ID);
+    const dbOrder = deactivateUser.mock.invocationCallOrder[0] ?? Infinity;
+    const revokeOrder = revokeSession.mock.invocationCallOrder[0] ?? 0;
     expect(dbOrder).toBeLessThan(revokeOrder);
   });
 });
 
 describe("admin.activateUser — session restoration wiring", () => {
   it("restores the session after the DB write, for the same user", async () => {
-    const { caller, snapshotAdminService, sessionRevocationService } =
-      buildCaller("admin");
+    const { caller, activateUser, restoreSession } = buildCaller("admin");
+
+    await expect(caller.activateUser({ userId: TARGET_ID })).resolves.toEqual({
+      success: true,
+    });
+
+    expect(activateUser).toHaveBeenCalledWith(TARGET_ID);
+    expect(restoreSession).toHaveBeenCalledWith(TARGET_ID);
+    const dbOrder = activateUser.mock.invocationCallOrder[0] ?? Infinity;
+    const restoreOrder = restoreSession.mock.invocationCallOrder[0] ?? 0;
+    expect(dbOrder).toBeLessThan(restoreOrder);
+  });
+});
+
+describe("admin user activation — app-router composition", () => {
+  // The unit suites above construct the procedures directly; this smoke pins
+  // that createAppRouter actually FORWARDS both services into them, so the
+  // composition seam cannot silently drop the revocation dependency. Partial
+  // deps via the sibling suites' accepted cast idiom.
+  it("createAppRouter wires snapshot + revocation services into deactivateUser", async () => {
+    const deactivateUser = vi.fn().mockResolvedValue({ success: true });
+    const revokeSession = vi.fn().mockResolvedValue(undefined);
+    const deps = {
+      snapshotAdminService: { deactivateUser },
+      sessionRevocationService: { revokeSession },
+    } as unknown as Parameters<typeof createAppRouter>[0];
+
+    const caller = createAppRouter(deps).createCaller({
+      session: makeSession("admin"),
+      logger: createNullLogger(),
+      auditLogger: createNullAuditLogger(),
+      ip: "test-ip",
+      isPdfExport: false,
+      pdfReportId: null,
+    });
 
     await expect(
-      caller.admin.activateUser({ userId: TARGET_ID }),
+      caller.admin.deactivateUser({ userId: TARGET_ID }),
     ).resolves.toEqual({ success: true });
-
-    expect(snapshotAdminService.activateUser).toHaveBeenCalledWith(TARGET_ID);
-    expect(sessionRevocationService.restoreSession).toHaveBeenCalledWith(
-      TARGET_ID,
-    );
-    const dbOrder =
-      snapshotAdminService.activateUser.mock.invocationCallOrder[0] ?? Infinity;
-    const restoreOrder =
-      sessionRevocationService.restoreSession.mock.invocationCallOrder[0] ?? 0;
-    expect(dbOrder).toBeLessThan(restoreOrder);
+    expect(deactivateUser).toHaveBeenCalledWith(TARGET_ID);
+    expect(revokeSession).toHaveBeenCalledWith(TARGET_ID);
   });
 });

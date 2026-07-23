@@ -99,6 +99,22 @@ let sdk: NodeSDK | null = null;
 // eslint-disable-next-line no-restricted-syntax -- OTel logger provider handle is assigned during bootstrap and read during shutdown; module-level lifecycle state is intentional.
 let loggerProvider: LoggerProvider | null = null;
 
+function shutdownOtel(): void {
+  void Promise.all([sdk?.shutdown(), loggerProvider?.shutdown()]).catch(
+    (error: unknown) => {
+      process.stderr.write(
+        `[otel] shutdown error: ${error instanceof Error ? error.message : String(error)}\n`,
+      );
+    },
+  );
+}
+
+function registerShutdownHandler(signal: NodeJS.Signals): void {
+  if (!process.listeners(signal).includes(shutdownOtel)) {
+    process.once(signal, shutdownOtel);
+  }
+}
+
 // eslint-disable-next-line sonarjs/no-invariant-returns -- returns the bootstrap decision object from every path by design (disabled vs started); one semantic return value, not an accidental invariant
 export function startOtel(
   env: NodeJS.ProcessEnv = process.env,
@@ -164,17 +180,8 @@ export function startOtel(
   logs.setGlobalLoggerProvider(loggerProvider);
 
   // Best-effort shutdown on SIGTERM — flush pending spans + logs within ~5s.
-  const shutdown = () => {
-    void Promise.all([sdk?.shutdown(), loggerProvider?.shutdown()]).catch(
-      (error: unknown) => {
-        process.stderr.write(
-          `[otel] shutdown error: ${error instanceof Error ? error.message : String(error)}\n`,
-        );
-      },
-    );
-  };
-  process.once("SIGTERM", shutdown);
-  process.once("SIGINT", shutdown);
+  registerShutdownHandler("SIGTERM");
+  registerShutdownHandler("SIGINT");
 
   return decision;
 }

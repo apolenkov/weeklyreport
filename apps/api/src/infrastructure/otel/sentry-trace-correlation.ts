@@ -22,13 +22,16 @@ export function stampActiveTrace(event: ErrorEvent): ErrorEvent {
   if (!spanContext || !isSpanContextValid(spanContext)) {
     return event;
   }
-  event.contexts = {
-    ...event.contexts,
-    trace: {
-      ...event.contexts?.trace,
-      trace_id: spanContext.traceId,
-      span_id: spanContext.spanId,
+  // Return a copy — Sentry beforeSend accepts either; avoid mutating the caller.
+  return {
+    ...event,
+    contexts: {
+      ...event.contexts,
+      trace: {
+        ...event.contexts?.trace,
+        trace_id: spanContext.traceId,
+        span_id: spanContext.spanId,
+      },
     },
   };
-  return event;
 }

@@ -88,8 +88,8 @@ export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
  * shutdown). Protected by JWT auth — only an active (non-revoked) head can
  * access.
  */
-export function mountBullBoard(_app: INestApplication): void {
-  const registry = _app.get(QueueRegistry);
+export function mountBullBoard(app: INestApplication): void {
+  const registry = app.get(QueueRegistry);
   const pdfQueue = registry.get("pdf-export");
   const emailQueue = registry.get("email-reminder");
 
@@ -109,11 +109,11 @@ export function mountBullBoard(_app: INestApplication): void {
   // a `new` instance would leak an unmanaged ioredis client.
   const requireHead = createRequireHeadGuard({
     verifySessionToken: (token) => authController.verifySessionToken(token),
-    prisma: _app.get(PrismaService),
-    sessionRevocation: _app.get(SessionRevocationService),
+    prisma: app.get(PrismaService),
+    sessionRevocation: app.get(SessionRevocationService),
   });
 
-  const expressApp = _app.getHttpAdapter().getInstance() as Express;
+  const expressApp = app.getHttpAdapter().getInstance() as Express;
   // @bull-board/express types getRouter() loosely (any); it is an Express router
   // at runtime, so narrow it to RequestHandler for the typed `use` overload.
   const queuesRouter = serverAdapter.getRouter() as RequestHandler;
