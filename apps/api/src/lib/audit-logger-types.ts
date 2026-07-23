@@ -13,10 +13,10 @@ import type {
  * is no new transport, no new file rotation, no new env var.
  *
  * Threat-model notes:
- *  - T1: payload is whitelisted at type level — no SAML assertion / cookie /
- *    token can leak in (Omit<...> on the input types blocks extra keys at
- *    callsites; the implementation only spreads the typed input, never the
- *    raw request).
+ *  - T1: the emitters hand-enumerate every field they copy from the typed
+ *    input and never spread a raw request, so a SAML assertion / cookie /
+ *    token has no path into the envelope. (Types alone would not block a
+ *    spread with extra keys — the enumeration is the actual guarantee.)
  *  - T2: silent role escalation is prevented by always emitting role-denied
  *    even when role/userId are missing — anonymous events use
  *    `userId: 'anonymous'` and `role: null`, never a non-enum literal like

@@ -33,10 +33,6 @@ function parseAuthMeRole(payload: unknown): SessionRoleResult {
     return null;
   }
 
-  if (typeof entry === "object" && entry.error === "rate_limit_exceeded") {
-    return "rate_limited";
-  }
-
   if (entry.error) {
     return null;
   }
@@ -94,6 +90,22 @@ function emailFromRole(
   return `${role}-probe-${Date.now()}-${attempt}@customreport.local`;
 }
 
+
+async function navigateAfterLogin(
+  page: Page,
+  redirect: string | undefined,
+): Promise<void> {
+  if (redirect) {
+    await page
+      .goto(redirect, { waitUntil: "domcontentloaded" })
+      .catch((error: unknown) => {
+        if (!String(error).includes("net::ERR_ABORTED")) throw error;
+      });
+    return;
+  }
+  await page.goto("/", { waitUntil: "domcontentloaded" }).catch(() => null);
+}
+
 export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
   await page.context().clearCookies();
 
@@ -144,19 +156,7 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
     }
 
     if (!expectedRole || actualRole === expectedRole) {
-      if (identity.redirect) {
-        await page
-          .goto(identity.redirect, {
-            waitUntil: "domcontentloaded",
-          })
-          .catch((error: unknown) => {
-            if (!String(error).includes("net::ERR_ABORTED")) throw error;
-          });
-      } else {
-        await page
-          .goto("/", { waitUntil: "domcontentloaded" })
-          .catch(() => null);
-      }
+      await navigateAfterLogin(page, identity.redirect);
       return;
     }
 
@@ -173,17 +173,7 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
   }
 
   if (assumeRoleFromAuthMe) {
-    if (identity.redirect) {
-      await page
-        .goto(identity.redirect, {
-          waitUntil: "domcontentloaded",
-        })
-        .catch((error: unknown) => {
-          if (!String(error).includes("net::ERR_ABORTED")) throw error;
-        });
-    } else {
-      await page.goto("/", { waitUntil: "domcontentloaded" }).catch(() => null);
-    }
+    await navigateAfterLogin(page, identity.redirect);
     return;
   }
 }
