@@ -119,6 +119,7 @@ function makeSnapshot(overrides: Partial<AdminSnapshot> = {}): AdminSnapshot {
       },
     ],
     reminderExecutions: overrides.reminderExecutions ?? [],
+    policies: overrides.policies ?? [],
   });
 }
 
@@ -209,14 +210,57 @@ describe("mapAdminSnapshot", () => {
 
   it("synthesizes reminder name and description (API has no name/description)", () => {
     const mapped = mapAdminSnapshot(makeSnapshot());
-    expect(mapped.reminders).toHaveLength(2);
-    for (const reminder of mapped.reminders) {
-      expect(reminder.name.length).toBeGreaterThan(0);
-      expect(reminder.description.length).toBeGreaterThan(0);
-    }
-    // Different kinds yield different names.
-    const names = new Set(mapped.reminders.map((r) => r.name));
-    expect(names.size).toBe(2);
+    expect(
+      mapped.reminders.map(({ name, description }) => ({
+        name,
+        description,
+      })),
+    ).toStrictEqual([
+      {
+        name: "Deadline reminder",
+        description:
+          "Send a reminder when the deadline is reached (fires at 2026-04-25 15:00 UTC).",
+      },
+      {
+        name: "Follow-up reminder",
+        description:
+          "Send a follow-up reminder to leads who have not submitted (fires at 2026-04-26 15:00 UTC).",
+      },
+    ]);
+  });
+
+  it("maps reminder policies through the admin snapshot", () => {
+    const validFrom = new Date("2026-04-20T00:00:00.000Z");
+    const validUntil = new Date("2026-05-20T00:00:00.000Z");
+    const mapped = mapAdminSnapshot(
+      makeSnapshot({
+        policies: [
+          {
+            id: UUID_D,
+            kind: "escalation",
+            offsetMinutes: 120,
+            timezone: "Europe/Moscow",
+            audience: "head-of-late",
+            active: false,
+            validFrom,
+            validUntil,
+          },
+        ],
+      }),
+    );
+
+    expect(mapped.policies).toStrictEqual([
+      {
+        id: UUID_D,
+        kind: "escalation",
+        offsetMinutes: 120,
+        timezone: "Europe/Moscow",
+        audience: "head-of-late",
+        active: false,
+        validFrom,
+        validUntil,
+      },
+    ]);
   });
 
   it("preserves user IDs and emails exactly (no transformation)", () => {

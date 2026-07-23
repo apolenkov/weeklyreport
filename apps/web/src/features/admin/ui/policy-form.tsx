@@ -14,6 +14,10 @@ import {
   type ReminderPreset,
 } from "../model/reminders-tab-format";
 import { PolicyFormAdvancedFields } from "./policy-form-advanced-fields";
+import {
+  POLICY_FORM_INPUT_CLASS,
+  POLICY_FORM_LABEL_CLASS,
+} from "./policy-form-styles";
 
 interface PolicyFormProps {
   readonly form: PolicyFormState;
@@ -26,11 +30,6 @@ interface PolicyFormProps {
   readonly onCancel: () => void;
   readonly onSave: () => void;
 }
-
-const INPUT_CLASS =
-  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm";
-const LABEL_CLASS =
-  "mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]";
 
 export function PolicyForm({
   form,
@@ -82,7 +81,7 @@ export function PolicyForm({
     >
       <div className="grid gap-4 md:grid-cols-2">
         <div className="md:col-span-2">
-          <label htmlFor="policy-type" className={LABEL_CLASS}>
+          <label htmlFor="policy-type" className={POLICY_FORM_LABEL_CLASS}>
             Reminder type
           </label>
           {form.preset === "custom" ? (
@@ -91,7 +90,7 @@ export function PolicyForm({
             <div
               id="policy-type"
               data-testid="policy-type-custom"
-              className={`${INPUT_CLASS} text-[var(--color-muted-foreground)]`}
+              className={`${POLICY_FORM_INPUT_CLASS} text-[var(--color-muted-foreground)]`}
             >
               {CUSTOM_PRESET_LABEL}
             </div>
@@ -100,7 +99,7 @@ export function PolicyForm({
               id="policy-type"
               value={form.preset}
               onChange={(e) => selectPreset(e.target.value as ReminderPreset)}
-              className={INPUT_CLASS}
+              className={POLICY_FORM_INPUT_CLASS}
             >
               {REMINDER_PRESETS.map((preset) => (
                 <option key={preset.value} value={preset.value}>
@@ -112,7 +111,10 @@ export function PolicyForm({
         </div>
 
         <div className="min-w-0 md:col-span-2">
-          <label htmlFor="policy-offset-minutes" className={LABEL_CLASS}>
+          <label
+            htmlFor="policy-offset-minutes"
+            className={POLICY_FORM_LABEL_CLASS}
+          >
             Send
           </label>
           <div className="grid gap-2 sm:grid-cols-[88px_minmax(120px,1fr)_minmax(168px,1.2fr)]">
@@ -127,7 +129,7 @@ export function PolicyForm({
                 applyOffset(magnitude, offsetUnit, offsetIsBeforeDeadline);
               }}
               aria-label="reminder offset amount"
-              className={INPUT_CLASS}
+              className={POLICY_FORM_INPUT_CLASS}
             />
             <select
               aria-label="reminder offset unit"
@@ -139,7 +141,7 @@ export function PolicyForm({
                   offsetIsBeforeDeadline,
                 )
               }
-              className={INPUT_CLASS}
+              className={POLICY_FORM_INPUT_CLASS}
             >
               <option value="minutes">minutes</option>
               <option value="hours">hours</option>
@@ -155,7 +157,7 @@ export function PolicyForm({
                   e.target.value === "before",
                 )
               }
-              className={INPUT_CLASS}
+              className={POLICY_FORM_INPUT_CLASS}
             >
               <option value="before">before deadline</option>
               <option value="after">after deadline</option>

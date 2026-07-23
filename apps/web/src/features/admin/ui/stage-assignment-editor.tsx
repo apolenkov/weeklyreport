@@ -21,7 +21,7 @@ const STAGE_COLORS: Record<StageName, string> = {
 interface StageAssignmentEditorProps {
   readonly projectId: string;
   readonly projectName: string;
-  readonly leads: MockUser[];
+  readonly leads: readonly MockUser[];
 }
 
 /**

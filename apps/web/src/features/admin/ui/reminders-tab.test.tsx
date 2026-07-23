@@ -1,6 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339) */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -145,6 +151,7 @@ function renderTab(args?: {
 describe("RemindersTab — empty-state bell SVG a11y", () => {
   it("bell SVG in empty state has aria-hidden='true'", () => {
     renderTab({ policies: [], derivedRulesByPolicyId: {} });
+    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
     const emptyState = screen.getByTestId("reminders-empty-state");
     const svg = emptyState.querySelector("svg");
     expect(svg).not.toBeNull();
@@ -153,6 +160,7 @@ describe("RemindersTab — empty-state bell SVG a11y", () => {
 
   it("bell SVG in empty state is not exposed to assistive technology", () => {
     renderTab({ policies: [], derivedRulesByPolicyId: {} });
+    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
     const emptyState = screen.getByTestId("reminders-empty-state");
     const svgsInEmptyState = emptyState.querySelectorAll("svg");
     svgsInEmptyState.forEach((svg) => {
@@ -289,15 +297,25 @@ describe("RemindersTab — add / edit form", () => {
     vi.clearAllMocks();
   });
 
-  it("shows empty-state copy and an open form when there are no reminders", () => {
+  it("shows only the open form when there are no reminders", async () => {
+    const user = userEvent.setup();
     renderTab({ policies: [], derivedRulesByPolicyId: {} });
+
+    expect(screen.getByTestId("policy-form")).toBeInTheDocument();
+    expect(screen.queryByTestId("reminders-empty-state")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /create first reminder/i }),
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    expect(screen.queryByTestId("policy-form")).toBeNull();
     expect(screen.getByTestId("reminders-empty-state")).toHaveTextContent(
       /No reminders yet/i,
     );
     expect(
       screen.getByRole("button", { name: /create first reminder/i }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("policy-form")).toBeInTheDocument();
   });
 
   it("opens the form on 'New Reminder' and submits the deadline→leads preset", async () => {
@@ -520,6 +538,7 @@ describe("RemindersTab — copy says 'Reminder', never 'policy'", () => {
 
   it("uses 'reminder' copy in the empty state, never 'policy'", () => {
     renderTab({ policies: [], derivedRulesByPolicyId: {} });
+    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
     const empty = screen.getByTestId("reminders-empty-state");
     expect(empty.textContent.toLowerCase()).not.toContain("polic");
   });

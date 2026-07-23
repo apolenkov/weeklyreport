@@ -12,6 +12,20 @@ const attachMutate = vi.fn();
 const detachMutate = vi.fn();
 const invalidate = vi.fn();
 
+interface MutationCallbacks {
+  readonly onSuccess?: () => Promise<void> | void;
+  readonly onError?: (error: Error) => void;
+}
+
+const attachMutationOptions = vi.fn((options: MutationCallbacks) => ({
+  mutationKey: ["attachProductToGroup"],
+  ...options,
+}));
+const detachMutationOptions = vi.fn((options: MutationCallbacks) => ({
+  mutationKey: ["detachProductFromGroup"],
+  ...options,
+}));
+
 vi.mock("@tanstack/react-query", () => ({
   useQuery: (opts: { queryKey?: readonly string[] }): unknown =>
     (opts.queryKey ?? []).includes("listProductGroupOwnership")
@@ -43,6 +57,9 @@ vi.mock("../../../lib/trpc-context", () => ({
         queryOptions: (input: { groupId: string }) => ({
           queryKey: ["admin", "listGroupProducts", input.groupId],
         }),
+        pathFilter: () => ({
+          queryKey: ["admin", "listGroupProducts"],
+        }),
         queryKey: (input: { groupId: string }) => [
           "admin",
           "listGroupProducts",
@@ -58,10 +75,15 @@ vi.mock("../../../lib/trpc-context", () => ({
         }),
       },
       attachProductToGroup: {
-        mutationOptions: () => ({ mutationKey: ["attachProductToGroup"] }),
+        mutationOptions: attachMutationOptions,
       },
       detachProductFromGroup: {
-        mutationOptions: () => ({ mutationKey: ["detachProductFromGroup"] }),
+        mutationOptions: detachMutationOptions,
+      },
+      listProductGroups: {
+        pathFilter: () => ({
+          queryKey: ["admin", "listProductGroups"],
+        }),
       },
     },
   }),
@@ -99,6 +121,8 @@ describe("GroupProductsEditor", () => {
   beforeEach(() => {
     attachMutate.mockReset();
     detachMutate.mockReset();
+    attachMutationOptions.mockClear();
+    detachMutationOptions.mockClear();
     invalidate.mockReset();
     attachedQueryMock.mockReset();
     ownershipQueryMock.mockReset();
@@ -156,7 +180,7 @@ describe("GroupProductsEditor", () => {
     expect(b).not.toBeChecked();
   });
 
-  it("toggling an unchecked product calls attachProductToGroup with the (groupId, productId) tuple", () => {
+  it("attaching a product refreshes group lists and ownership caches", async () => {
     attachedQueryMock.mockReturnValue({ isLoading: false, data: [] });
     render(<GroupProductsEditor groupId={GROUP_ID} products={[PRODUCT_A]} />);
     const a = screen.getByLabelText(/Toggle Платформа интеграций/);
@@ -166,6 +190,19 @@ describe("GroupProductsEditor", () => {
       productId: PRODUCT_A.id,
     });
     expect(detachMutate).not.toHaveBeenCalled();
+
+    const callbacks = attachMutationOptions.mock.calls[0]?.[0];
+    await callbacks?.onSuccess?.();
+
+    expect(invalidate).toHaveBeenNthCalledWith(1, {
+      queryKey: ["admin", "listGroupProducts"],
+    });
+    expect(invalidate).toHaveBeenNthCalledWith(2, {
+      queryKey: ["admin", "listProductGroupOwnership"],
+    });
+    expect(invalidate).toHaveBeenNthCalledWith(3, {
+      queryKey: ["admin", "listProductGroups"],
+    });
   });
 
   it("locks products already attached to another group and shows the owning group", () => {
@@ -200,7 +237,7 @@ describe("GroupProductsEditor", () => {
     expect(detachMutate).not.toHaveBeenCalled();
   });
 
-  it("toggling an already-checked product calls detachProductFromGroup", () => {
+  it("detaching a product refreshes its group list and ownership caches", async () => {
     attachedQueryMock.mockReturnValue({
       isLoading: false,
       data: [
@@ -221,6 +258,19 @@ describe("GroupProductsEditor", () => {
       productId: PRODUCT_A.id,
     });
     expect(attachMutate).not.toHaveBeenCalled();
+
+    const callbacks = detachMutationOptions.mock.calls[0]?.[0];
+    await callbacks?.onSuccess?.();
+
+    expect(invalidate).toHaveBeenNthCalledWith(1, {
+      queryKey: ["admin", "listGroupProducts", GROUP_ID],
+    });
+    expect(invalidate).toHaveBeenNthCalledWith(2, {
+      queryKey: ["admin", "listProductGroupOwnership"],
+    });
+    expect(invalidate).toHaveBeenNthCalledWith(3, {
+      queryKey: ["admin", "listProductGroups"],
+    });
   });
 
   it("renders an empty-state message when there are no active products", () => {

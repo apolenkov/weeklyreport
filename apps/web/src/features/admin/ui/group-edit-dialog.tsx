@@ -31,23 +31,30 @@ export function GroupEditDialog({
   onClose,
 }: GroupEditDialogProps) {
   const surfaceRef = useRef<HTMLDivElement>(null);
+  const closeIfIdle = () => {
+    if (!isSaving) onClose();
+  };
 
   // Focus trap + Escape-to-close + restore-to-trigger via the shared primitive.
   // The dialog mounts on open, so the hook self-captures the opener at first
   // render and restores focus to it on close.
-  useDialogFocus({ open: true, onClose, containerRef: surfaceRef });
+  useDialogFocus({
+    open: true,
+    onClose: closeIfIdle,
+    containerRef: surfaceRef,
+  });
 
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
-      onClick={onClose}
+      onClick={closeIfIdle}
       role="presentation"
       data-testid="crud-sheet"
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop close-propagation; no keyboard equivalent needed (dialog closes via Escape + Cancel button) */}
       <div
         ref={surfaceRef}
-        className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
+        className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
         aria-label={editingGroup ? "Edit group" : "Add group"}
@@ -71,7 +78,7 @@ export function GroupEditDialog({
               onChange={(e) => onFormChange({ ...form, name: e.target.value })}
               // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
               autoFocus
-              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
             />
           </div>
           <div>
@@ -88,7 +95,7 @@ export function GroupEditDialog({
                 onFormChange({ ...form, description: e.target.value })
               }
               rows={3}
-              className="w-full resize-none rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+              className="w-full resize-none rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
             />
           </div>
           <div>
@@ -104,7 +111,7 @@ export function GroupEditDialog({
               onChange={(e) =>
                 onFormChange({ ...form, headUserId: e.target.value })
               }
-              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
             >
               <option value="">— No leader —</option>
               {headCandidates.map((u) => (
@@ -153,7 +160,7 @@ export function GroupEditDialog({
         <div className="mt-6 flex justify-end gap-3">
           <button
             type="button"
-            onClick={onClose}
+            onClick={closeIfIdle}
             disabled={isSaving}
             className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
