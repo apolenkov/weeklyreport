@@ -1442,7 +1442,7 @@
       "line": 307,
       "issue": "getByPeriod's promised `publishedLineage` return field is never asserted in any getByPeriod test, so the 'computed over the filtered section' claim (service.ts:307) is unpinned.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1460,7 +1460,7 @@
       "line": 362,
       "issue": "submitSection fetches getReportMeta a second time in the telemetry block after evaluateDeadlineGate already fetched it for the same reportId, doubling the repository round-trip on every submit.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1469,7 +1469,7 @@
       "line": 209,
       "issue": "The 'two authors keep independent statuses' test wires two fully independent in-memory repositories, so cross-section isolation is trivially guaranteed by construction and the test cannot catch a real per-section-row leak.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1505,8 +1505,8 @@
       "line": 59,
       "issue": "The test named \"aggregates a Dev risk-derived red status\" pre-computes riskDerivedStatus via riskCoversStage and injects it as a stageStatus — mergeSection performs no risk-to-stage derivation, so the framing (and risks: [risk]) implies merge behavior the unit does not have.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-160",
@@ -1514,8 +1514,8 @@
       "line": 8,
       "issue": "Relative import specifiers are inconsistent — lines 8, 13, 18, 19 omit the .js extension while lines 3, 17, 20 include it, within the same file.",
       "class": "code-structure-placement",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-161",
@@ -1523,7 +1523,7 @@
       "line": 106,
       "issue": "`deadline: d.deadline ?? null` and `resolvedAt: r.resolvedAt ?? null` are no-op redundancies since the SourceDecision fields are already typed `Date | null` (never undefined).",
       "class": "env-config-silent-fallback",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1532,7 +1532,7 @@
       "line": 139,
       "issue": "The 'filter non-null stageStatus into a Map' pattern is reimplemented inline here (keyed projectId::stageId, per-section) while lead-form-cross-author.derive.ts indexForeignSections builds the same shape (keyed authorId::projectId::stageId); a shared helper would remove the near-duplicate.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1541,7 +1541,7 @@
       "line": 19,
       "issue": "`DATABASE_URL ?? \"postgresql://...localhost.../customreport_test\"` hard-codes a connection fallback; the repo bans silent config defaults, and a missing env should fail loud even in test infra.",
       "class": "env-config-silent-fallback",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1550,8 +1550,8 @@
       "line": 123,
       "issue": "Labeled '(integration)' but it is a service unit test against a fully in-memory mock repository (no real DB or tRPC boundary), so the name overstates the coverage it provides.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
-      "lane": "grok"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-165",
@@ -1568,7 +1568,7 @@
       "line": 196,
       "issue": "The option/field `persistedDevStatus` and its comment (\"on Dev\") are misnamed — it seeds a stageStatus on STAGE_TESTING_ID (the co-lead owns Testing, not Dev), which will mislead a future test author into seeding the wrong stage.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -1622,7 +1622,7 @@
       "line": 87,
       "issue": "Fixtures built via `as unknown as Partial<ReportSectionReadModel>` fully bypass type-checking, so a rename or shape change in the read-model item/decision types would leave these tests compiling green against a stale contract.",
       "class": "type-safety-weakening",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3890,7 +3890,7 @@
       "line": 11,
       "issue": "The JSDoc block with @param docs for useFullscreen is orphaned onto the FullscreenHandle interface (which has its own doc at line 27), leaving the exported function at line 33 undocumented and hover-help showing the wrong target.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -3899,8 +3899,8 @@
       "line": 67,
       "issue": "The `f`-key guard skips INPUT/TEXTAREA/SELECT but not contentEditable elements, so typing 'f' in a rich-text/contentEditable field would still toggle fullscreen.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-426",
@@ -3908,7 +3908,7 @@
       "line": 94,
       "issue": "The toggle test only exercises the enter branch (requestFullscreen); no test drives document.exitFullscreen when already fullscreen, so the exit half of toggle() is unverified.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3917,7 +3917,7 @@
       "line": 205,
       "issue": "When a save fails while a follow-up edit is queued, onError clears the queue but the debounce effect's deps (payloadKey/dirty unchanged) do not re-fire, so that queued edit is stranded and only re-saved on the next keystroke or forceSave — untested and arguably a lost-edit window.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3935,7 +3935,7 @@
       "line": 155,
       "issue": "toBeGreaterThanOrEqual(1) on the call count is looser than the invariant (exactly one mutation should fire); an exact assertion would catch an accidental double-save.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3953,7 +3953,7 @@
       "line": 9,
       "issue": "Suite has one case covering only the mutation path; the scroll-event recompute and an initially-scrollable (returns true on mount) case are uncovered.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3962,7 +3962,7 @@
       "line": 101,
       "issue": "Reimplements the canonical committedRisks predicate (r.text.trim().length > 0 && r.mitigation.trim().length > 0) inline instead of importing it from lead-submit-readiness.ts, so the test won't catch drift in the real filter.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3971,7 +3971,7 @@
       "line": 111,
       "issue": "The stagesWithoutRiskCoverage (F10) test block pins output that no production code consumes, locking in dead behavior.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "refuted",
       "lane": "codex"
     },
     {
@@ -3989,7 +3989,7 @@
       "line": 66,
       "issue": "Test names \"Test 1/Test 2/Test 4\" carry a stale numbering with a gap (no Test 3), leftover noise from deleted cases.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -4457,7 +4457,7 @@
       "line": 44,
       "issue": "The empty-array check is unreachable: when payload is [], entry=payload[0] is undefined and the function already returns null at line 32-34 before reaching this branch.",
       "class": "dead-unreachable-code",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -4466,7 +4466,7 @@
       "line": 56,
       "issue": "`session.role as Role` can return undefined when the session object lacks a role, which is not a member of the declared SessionRoleResult union (`rate_limited | Role | null`), a mild type contract lie.",
       "class": "type-safety-weakening",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -4475,7 +4475,7 @@
       "line": 76,
       "issue": "`roleFromEmail` computes and returns an email string from a role, so the name reads backwards (should be `emailFromRole`/`probeEmail`).",
       "class": "naming",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -4592,8 +4592,8 @@
       "line": 18,
       "issue": "The toolbar/nav ICON_SHAPE entries carry text and gap classes (text-[12px], gap-1.5) that never apply because ComingSoonIconButton renders an icon-only child with no text sibling.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-503",
@@ -4601,7 +4601,7 @@
       "line": 12,
       "issue": "The destructive variant repeats `[&>svg]:text-current` which the base string on line 6 already applies, so it is dead duplication.",
       "class": "dead-unreachable-code",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -4610,8 +4610,8 @@
       "line": 7,
       "issue": "Uses the React.ComponentProps namespace without any React import, unlike every sibling file here which does `import type * as React from \"react\"`; it only compiles via the ambient global namespace.",
       "class": "code-structure-placement",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-505",
@@ -4637,8 +4637,8 @@
       "line": 15,
       "issue": "No case exercises the ALLOW_PROD_DESTRUCTIVE=yes override or the malformed-URL refusal branch, both of which are guard behaviors with distinct outcomes.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-508",
@@ -4646,7 +4646,7 @@
       "line": 199,
       "issue": "LEAD_1_ID..LEAD_SERGEY_ID re-declare the same UUID literals already hardcoded in SEED_USERS entries, so a change to one is not enforced against the other (unlike head/viewer/admin which reuse the const).",
       "class": "magic-values-drift",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -4655,7 +4655,7 @@
       "line": 439,
       "issue": "SEED_HISTORY_REPORTS lacks the 'as const' the sibling SEED_REPORTS/SEED_PRODUCTS/SEED_STAGES all carry, an inconsistency in literal-narrowing across the seed tables.",
       "class": "magic-values-drift",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
