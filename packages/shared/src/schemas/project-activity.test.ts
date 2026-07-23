@@ -27,9 +27,9 @@ describe("projectActivitySchema", () => {
       id: ACTIVITY_ID,
       name: "Jira triage duty",
       groupId: GROUP_ID,
-      projectId: null,
       archived: false,
     });
+    expect(parsed.linkedProducts).toEqual([]);
     expect(parsed.jiraAccounts).toEqual([]);
     expect(parsed.leadIds).toEqual([]);
   });

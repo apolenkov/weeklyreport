@@ -6,6 +6,12 @@ const NULL_BYTE = String.fromCharCode(0);
 const ZERO_WIDTH = String.fromCharCode(0x20_0b);
 
 describe("searchQueryInputSchema — safeText guard on `q`", () => {
+  it("defaults scope to mine and limit to 20", () => {
+    const parsed = searchQueryInputSchema.parse({ q: "PR" });
+    expect(parsed.scope).toBe("mine");
+    expect(parsed.limit).toBe(20);
+  });
+
   it("accepts a normal two-character query (min-2 floor)", () => {
     const ok = searchQueryInputSchema.safeParse({ q: "PR" });
     expect(ok.success).toBe(true);
@@ -26,5 +32,23 @@ describe("searchQueryInputSchema — safeText guard on `q`", () => {
       q: `${ZERO_WIDTH}${ZERO_WIDTH}`,
     });
     expect(bad.success).toBe(false);
+  });
+
+  it.each([1, 50])("accepts limit boundary %i", (limit) => {
+    expect(searchQueryInputSchema.safeParse({ q: "PR", limit }).success).toBe(
+      true,
+    );
+  });
+
+  it.each([0, 51])("rejects out-of-range limit %i", (limit) => {
+    expect(searchQueryInputSchema.safeParse({ q: "PR", limit }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects an unknown scope", () => {
+    expect(
+      searchQueryInputSchema.safeParse({ q: "PR", scope: "team" }).success,
+    ).toBe(false);
   });
 });

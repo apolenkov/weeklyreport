@@ -35,10 +35,9 @@ export const projectActivityCreateSchema = z.object({
   groupId: z.uuid(),
   // 0..N label-only product links. Reject an in-payload duplicate at the wire
   // boundary so it never reaches the ProjectActivityProduct
-  // @@unique([activityId, productId]) constraint as a 500. Postgres's `uuid`
-  // type is case-insensitive, so the uniqueness check compares lowercased ids
-  // and the parsed output is normalized to lowercase — the canonical form every
-  // downstream comparison operates on.
+  // @@unique([activityId, productId]) constraint as a 500. The column is
+  // case-sensitive text, so ids are lowercased here into the canonical form
+  // every downstream comparison operates on.
   linkedProductIds: z
     .array(z.uuid())
     .max(MAX_LINKED_PRODUCTS)

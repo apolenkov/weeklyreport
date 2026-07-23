@@ -591,9 +591,10 @@ describe("decisionInputSchema — safeText", () => {
     const d = { ...validDecision(), deadline: "2026-04-15" };
     const result = decisionInputSchema.safeParse(d);
     expect(result.success).toBe(true);
-    if (result.success && result.data.deadline) {
-      expect(result.data.deadline).toBeInstanceOf(Date);
+    if (!result.success) {
+      throw result.error;
     }
+    expect(result.data.deadline).toBeInstanceOf(Date);
   });
 });
 

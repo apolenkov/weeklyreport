@@ -13,15 +13,6 @@ describe("SamlProfileSchema (structured-user-name: role-free)", () => {
     expect(result.displayName).toBe("Head User");
   });
 
-  it("accepts a profile without role (role is no longer carried by the assertion)", () => {
-    const result = SamlProfileSchema.safeParse({
-      nameID: "u-1",
-      email: "someone@example.com",
-      displayName: "Someone",
-    });
-    expect(result.success).toBe(true);
-  });
-
   it("parses without displayName (optional)", () => {
     const result = SamlProfileSchema.safeParse({
       nameID: "u-2",
