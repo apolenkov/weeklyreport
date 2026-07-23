@@ -1,4 +1,5 @@
 import {
+  formatDateTime,
   formatPeriodRangeWithYear,
   joinPeriodLabel,
 } from "../../../lib/format-date";
@@ -25,16 +26,6 @@ function formatPeriod(
     label,
     formatPeriodRangeWithYear(periodStart, periodEnd),
   );
-}
-
-function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 /** Requester name/email, status chip, and the period + submitted-at meta line. */
@@ -68,7 +59,7 @@ export function ReopenRequestMeta({
           r.report.weekLabel,
         )}
         {" · submitted "}
-        {formatTimestamp(r.createdAt)}
+        {formatDateTime(r.createdAt)}
       </div>
     </div>
   );
@@ -99,7 +90,7 @@ export function ReopenRequestNotes({
           <div className="mt-1 whitespace-pre-wrap">{r.reviewNote}</div>
           {r.reviewedBy && r.reviewedAt && (
             <div className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
-              {r.reviewedBy.name} · {formatTimestamp(r.reviewedAt)}
+              {r.reviewedBy.name} · {formatDateTime(r.reviewedAt)}
             </div>
           )}
         </div>

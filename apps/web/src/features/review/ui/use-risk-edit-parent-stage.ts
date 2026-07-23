@@ -106,14 +106,20 @@ export function useRiskEditParentStage({
     setStageIds([]);
   }
 
-  // Context strip: pipeline stages already flagged that are owned by this lead.
+  // The context strip tracks the currently selected parent, exactly like the
+  // editable stage list below — a mount-time snapshot would attribute the
+  // seed product's flagged stages to a newly selected product, because the
+  // banner's product name follows `parent`.
+  const parentProduct = isActivityParent
+    ? undefined
+    : products.find((p) => p.id === parent.id);
   const preCheckedStages = useMemo(
     () =>
       computePreCheckedStages(
-        seedProduct,
-        stagesForProduct?.(seedProduct?.id ?? "") ?? [],
+        parentProduct,
+        stagesForProduct?.(parentProduct?.id ?? "") ?? [],
       ),
-    [seedProduct, stagesForProduct],
+    [parentProduct, stagesForProduct],
   );
 
   // The stage step is product-only. An activity owns no SDLC stage

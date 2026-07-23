@@ -58,7 +58,7 @@ export default async function AdminPage({ searchParams }: Props) {
                   aria-current={activeTab === t ? "page" : undefined}
                 >
                   {t === "reopen" ? (
-                    <ReopenTabLabel active={activeTab === t} />
+                    <ReopenTabLabel />
                   ) : t === "jobs" ? (
                     <JobsTabLabel />
                   ) : (

@@ -32,7 +32,7 @@ describe("admin tab alert labels", () => {
   it("renders no visible badge while reopen count is loading", () => {
     useQueryMock.mockReturnValue({ data: undefined });
 
-    render(<ReopenTabLabel active={false} />);
+    render(<ReopenTabLabel />);
 
     expect(screen.getByText("reopen")).toBeInTheDocument();
     expect(screen.queryByTestId("reopen-tab-count")).not.toBeInTheDocument();
@@ -41,7 +41,7 @@ describe("admin tab alert labels", () => {
   it("renders no visible badge when reopen count is zero", () => {
     useQueryMock.mockReturnValue({ data: { count: 0 } });
 
-    render(<ReopenTabLabel active />);
+    render(<ReopenTabLabel />);
 
     expect(screen.getByText("reopen")).toBeInTheDocument();
     expect(screen.queryByTestId("reopen-tab-count")).not.toBeInTheDocument();
@@ -50,7 +50,7 @@ describe("admin tab alert labels", () => {
   it("renders pending reopen count as an overlay badge", () => {
     useQueryMock.mockReturnValue({ data: { count: 3 } });
 
-    render(<ReopenTabLabel active={false} />);
+    render(<ReopenTabLabel />);
 
     const count = screen.getByTestId("reopen-tab-count");
     expect(count).toHaveTextContent("3");

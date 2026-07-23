@@ -29,7 +29,6 @@ export function deriveFromPreChecked(
     ),
   );
   if (flagged.some((s) => s.status === "blocked")) return "blocked";
-  if (flagged.some((s) => s.status === "at-risk")) return "at-risk";
   return "at-risk";
 }
 
@@ -166,5 +165,38 @@ export function buildProductRiskEntry(args: {
     text: args.text,
     impact: args.impact,
     mitigation: args.mitigation,
+  };
+}
+
+/**
+ * Maps the shared dialog-lifecycle state (+ the caller-side chip-raise
+ * prefill) onto RiskEditDialog's seed props, so the section component wires
+ * the dialog with one spread instead of seven mode ternaries.
+ */
+export function deriveRiskDialogSeedProps(
+  dialogState:
+    | { open: false }
+    | {
+        open: true;
+        mode: "create";
+        seedProductId?: string;
+        seedActivityId?: string;
+      }
+    | { open: true; mode: "edit"; entity: RiskSaveEntry },
+  createPrefill: {
+    stageIds?: string[];
+    severity?: RiskSeverity;
+  } | null,
+) {
+  const creating = dialogState.open && dialogState.mode === "create";
+  const editing = dialogState.open && dialogState.mode === "edit";
+  return {
+    risk: editing ? dialogState.entity : null,
+    defaultProductId: creating ? dialogState.seedProductId : undefined,
+    defaultActivityId: creating ? dialogState.seedActivityId : undefined,
+    initialStageIds: creating ? createPrefill?.stageIds : undefined,
+    initialSeverity: creating ? createPrefill?.severity : undefined,
+    initialImpact: editing ? dialogState.entity.impact : "",
+    initialMitigation: editing ? dialogState.entity.mitigation : "",
   };
 }

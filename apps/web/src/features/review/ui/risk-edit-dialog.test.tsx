@@ -47,6 +47,12 @@ describe("RiskEditDialog — compact touch floor (responsive-compact-layout)", (
       expect(button.className).toContain("min-h-[var(--touch-target-min)]");
       expect(button.className).toContain("md:min-h-[40px]");
     }
+
+    for (const name of [/At Risk$/, /Blocked$/]) {
+      const chip = screen.getByRole("button", { name });
+      expect(chip.className).toContain("min-h-[var(--touch-target-min)]");
+      expect(chip.className).toContain("md:min-h-[34px]");
+    }
   });
 });
 
