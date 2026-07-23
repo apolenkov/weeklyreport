@@ -97,22 +97,28 @@ describe("business-date: addBusinessDays — mon-fri", () => {
     expectWallClock(got, "2026-05-08T09:00:00", TZ_MSK); // Fri
   });
 
-  it("Monday + 5 business days = next Monday (skipping Sat/Sun)", () => {
-    const start = inZone("2026-05-04T09:00:00", TZ_MSK);
-    const got = addBusinessDays(start, 5, "mon-fri", TZ_MSK);
-    expectWallClock(got, "2026-05-11T09:00:00", TZ_MSK);
-  });
-
-  it("Friday + 1 business day = next Monday", () => {
-    const start = inZone("2026-05-08T09:00:00", TZ_MSK); // Fri
-    const got = addBusinessDays(start, 1, "mon-fri", TZ_MSK);
-    expectWallClock(got, "2026-05-11T09:00:00", TZ_MSK);
-  });
-
-  it("Saturday + 1 business day = Monday (skips the trailing Sunday)", () => {
-    const start = inZone("2026-05-09T09:00:00", TZ_MSK); // Sat
-    const got = addBusinessDays(start, 1, "mon-fri", TZ_MSK);
-    expectWallClock(got, "2026-05-11T09:00:00", TZ_MSK);
+  it.each([
+    {
+      label: "Monday + 5 business days = next Monday (skipping Sat/Sun)",
+      start: "2026-05-04T09:00:00",
+      days: 5,
+      expected: "2026-05-11T09:00:00",
+    },
+    {
+      label: "Friday + 1 business day = next Monday",
+      start: "2026-05-08T09:00:00",
+      days: 1,
+      expected: "2026-05-11T09:00:00",
+    },
+    {
+      label: "Saturday + 1 business day = Monday (skips the trailing Sunday)",
+      start: "2026-05-09T09:00:00",
+      days: 1,
+      expected: "2026-05-11T09:00:00",
+    },
+  ] as const)("$label", ({ start, days, expected }) => {
+    const got = addBusinessDays(inZone(start, TZ_MSK), days, "mon-fri", TZ_MSK);
+    expectWallClock(got, expected, TZ_MSK);
   });
 });
 

@@ -97,23 +97,19 @@ describe("NavBar — role-aware visibility", () => {
     setRoute("/lead/report");
   });
 
-  it("viewer does NOT see /admin link in the DOM", () => {
+  it.each([
+    { label: "/admin", hrefs: ["/admin"] as const },
+    {
+      label: "/head/* (Dashboard, Status)",
+      hrefs: ["/head/dashboard", "/head/report"] as const,
+    },
+    { label: "/lead/report", hrefs: ["/lead/report"] as const },
+  ] as const)("viewer does NOT see $label", ({ hrefs }) => {
     setRole("viewer");
     const { container } = render(<NavBar />);
-    expectLinkMissing(container, "/admin");
-  });
-
-  it("viewer does NOT see /head/* links (Dashboard, Status)", () => {
-    setRole("viewer");
-    const { container } = render(<NavBar />);
-    expectLinkMissing(container, "/head/dashboard");
-    expectLinkMissing(container, "/head/report");
-  });
-
-  it("viewer does NOT see /lead/report", () => {
-    setRole("viewer");
-    const { container } = render(<NavBar />);
-    expectLinkMissing(container, "/lead/report");
+    for (const href of hrefs) {
+      expectLinkMissing(container, href);
+    }
   });
 
   it("viewer sees read-only History", () => {
@@ -377,45 +373,44 @@ describe("NavBar — role-aware visibility", () => {
     expectLinkMissing(container, "/lead/report");
   });
 
-  it("activates History on a stray /reports?tab=drafts URL (back-compat)", () => {
-    setRole("lead");
-    setRoute("/reports", "tab=drafts");
+  // Archive toggle does not write the URL, so /reports may lack a tab param;
+  // History stays highlighted regardless — active state is decoupled from
+  // the tab/archive query. Stray ?tab=* values are back-compat only.
+  it.each([
+    {
+      label: "lead on /reports?tab=drafts (back-compat)",
+      role: "lead" as const,
+      query: "tab=drafts",
+      inactive: null,
+    },
+    {
+      label: "head on /reports?tab=published",
+      role: "head" as const,
+      query: "tab=published",
+      inactive: "/head/dashboard" as const,
+    },
+    {
+      label: "lead on /reports?tab=published",
+      role: "lead" as const,
+      query: "tab=published",
+      inactive: null,
+    },
+    {
+      label: "head on /reports with NO tab param",
+      role: "head" as const,
+      query: "",
+      inactive: "/head/dashboard" as const,
+    },
+  ])("keeps History active — $label", ({ role, query, inactive }) => {
+    setRole(role);
+    setRoute("/reports", query);
 
     const { container } = render(<NavBar />);
 
     expectActiveLink(container, "/reports");
-  });
-
-  it("activates head History on a stray /reports?tab=published URL", () => {
-    setRole("head");
-    setRoute("/reports", "tab=published");
-
-    const { container } = render(<NavBar />);
-
-    expectActiveLink(container, "/reports");
-    expectInactiveLink(container, "/head/dashboard");
-  });
-
-  it("keeps the lead History link active on a stray tab URL", () => {
-    setRole("lead");
-    setRoute("/reports", "tab=published");
-
-    const { container } = render(<NavBar />);
-
-    expectActiveLink(container, "/reports");
-  });
-
-  it("keeps head History active on /reports with NO tab param", () => {
-    // The archive toggle does not write the URL, so /reports can be visited
-    // with no tab param at all. History must stay highlighted regardless —
-    // the active state is decoupled from the tab/archive query.
-    setRole("head");
-    setRoute("/reports", "");
-
-    const { container } = render(<NavBar />);
-
-    expectActiveLink(container, "/reports");
-    expectInactiveLink(container, "/head/dashboard");
+    if (inactive !== null) {
+      expectInactiveLink(container, inactive);
+    }
   });
 
   it("keeps lead History active on /reports with NO tab param", () => {

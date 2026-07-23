@@ -785,35 +785,18 @@ describe("ReportSectionsService — edge cases", () => {
 // ---------------------------------------------------------------------------
 
 describe("ReportSectionsService — traffic light all valid statuses", () => {
-  it("sets traffic light to green", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
-    const saved = await service.saveDraft(
-      validDraft({
-        projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" }],
-      }),
-    );
-    expect(saved.projects[0]?.trafficLight).toBe("green");
-  });
-
-  it("sets traffic light to yellow", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
-    const saved = await service.saveDraft(
-      validDraft({
-        projectStatuses: [{ projectId: PROJECT_ID_1, status: "yellow" }],
-      }),
-    );
-    expect(saved.projects[0]?.trafficLight).toBe("yellow");
-  });
-
-  it("sets traffic light to red", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
-    const saved = await service.saveDraft(
-      validDraft({
-        projectStatuses: [{ projectId: PROJECT_ID_1, status: "red" }],
-      }),
-    );
-    expect(saved.projects[0]?.trafficLight).toBe("red");
-  });
+  it.each(["green", "yellow", "red"] as const)(
+    "sets traffic light to %s",
+    async (status) => {
+      const service = new ReportSectionsService(createRepository(baseSection));
+      const saved = await service.saveDraft(
+        validDraft({
+          projectStatuses: [{ projectId: PROJECT_ID_1, status }],
+        }),
+      );
+      expect(saved.projects[0]?.trafficLight).toBe(status);
+    },
+  );
 
   it("sets traffic light to null when status is omitted", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));

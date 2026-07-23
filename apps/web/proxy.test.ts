@@ -104,31 +104,24 @@ describe("apps/web/proxy.ts — auth guard", () => {
     expect(location).toContain("/?next=");
   });
 
-  it("redirects when session cookie value is non-JWT-shaped (no dots)", () => {
+  it.each([
+    {
+      label: "non-JWT-shaped (no dots)",
+      cookie: "invalid",
+    },
+    {
+      // Two-segment value (only one dot) — must be rejected.
+      label: "wrong segment count (one dot / two parts)",
+      cookie: "header.payloadbutnosignature",
+    },
+    {
+      // 3 segments separated by dots, but length 14 (≤ 20).
+      label: "JWT-shaped but too short (≤20 chars)",
+      cookie: "jwt.token.here",
+    },
+  ] as const)("redirects when session cookie is $label", ({ cookie }) => {
     const req = makeRequest("/lead/report", "", {
-      customreport_session: "invalid",
-    });
-    const response = proxy(req);
-
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location") ?? "").toContain("/?next=");
-  });
-
-  it("redirects when session cookie has wrong segment count (2 dots → 2 parts of empties OK, but 4 segments not)", () => {
-    // Two-segment value (only one dot) — must be rejected.
-    const req = makeRequest("/lead/report", "", {
-      customreport_session: "header.payloadbutnosignature",
-    });
-    const response = proxy(req);
-
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location") ?? "").toContain("/?next=");
-  });
-
-  it("redirects when session cookie is JWT-shaped but too short (≤20 chars)", () => {
-    // 3 segments separated by dots, but length 14 (≤ 20).
-    const req = makeRequest("/lead/report", "", {
-      customreport_session: "jwt.token.here",
+      customreport_session: cookie,
     });
     const response = proxy(req);
 

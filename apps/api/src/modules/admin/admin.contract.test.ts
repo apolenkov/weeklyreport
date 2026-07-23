@@ -71,19 +71,12 @@ describe("admin reminder-policy contract", () => {
     _def: { procedures: Record<string, unknown> };
   };
 
-  it("exposes admin.listPolicies as an adminProcedure", () => {
-    const proc = getProcedure(router, "admin.listPolicies");
-    expect(isAdminProcedure(proc)).toBe(true);
-  });
-
-  it("exposes admin.savePolicy as an adminProcedure", () => {
-    const proc = getProcedure(router, "admin.savePolicy");
-    expect(isAdminProcedure(proc)).toBe(true);
-  });
-
-  it("exposes admin.removePolicy as an adminProcedure", () => {
-    const proc = getProcedure(router, "admin.removePolicy");
-    expect(isAdminProcedure(proc)).toBe(true);
+  it.each([
+    "admin.listPolicies",
+    "admin.savePolicy",
+    "admin.removePolicy",
+  ] as const)("exposes %s as an adminProcedure", (procedurePath) => {
+    expect(isAdminProcedure(getProcedure(router, procedurePath))).toBe(true);
   });
 
   it("admin.saveReminderRule write path throws METHOD_NOT_SUPPORTED", async () => {
@@ -154,29 +147,14 @@ describe("admin group-product contract", () => {
     _def: { procedures: Record<string, unknown> };
   };
 
-  it("exposes admin.attachProductToGroup as an adminProcedure", () => {
-    const proc = getProcedure(router, "admin.attachProductToGroup");
-    expect(isAdminProcedure(proc)).toBe(true);
-  });
-
-  it("exposes admin.detachProductFromGroup as an adminProcedure", () => {
-    const proc = getProcedure(router, "admin.detachProductFromGroup");
-    expect(isAdminProcedure(proc)).toBe(true);
-  });
-
-  it("exposes admin.listGroupProducts as an adminProcedure", () => {
-    const proc = getProcedure(router, "admin.listGroupProducts");
-    expect(isAdminProcedure(proc)).toBe(true);
-  });
-
-  it("exposes admin.listProductGroups as an adminProcedure", () => {
-    const proc = getProcedure(router, "admin.listProductGroups");
-    expect(isAdminProcedure(proc)).toBe(true);
-  });
-
-  it("exposes admin.listProductGroupOwnership as an adminProcedure", () => {
-    const proc = getProcedure(router, "admin.listProductGroupOwnership");
-    expect(isAdminProcedure(proc)).toBe(true);
+  it.each([
+    "admin.attachProductToGroup",
+    "admin.detachProductFromGroup",
+    "admin.listGroupProducts",
+    "admin.listProductGroups",
+    "admin.listProductGroupOwnership",
+  ] as const)("exposes %s as an adminProcedure", (procedurePath) => {
+    expect(isAdminProcedure(getProcedure(router, procedurePath))).toBe(true);
   });
 });
 

@@ -51,25 +51,13 @@ describe("LeadHistoryList", () => {
   });
 
   describe("TrafficDot ARIA — role=img on span wrapper", () => {
-    it("green traffic dot has role=img", () => {
+    it.each([
+      "Green statuses: 2",
+      "Yellow statuses: 0",
+      "Red statuses: 1",
+    ] as const)("traffic dot %s has role=img", (name) => {
       render(<LeadHistoryList entries={[entry]} />);
-      expect(
-        screen.getByRole("img", { name: "Green statuses: 2" }),
-      ).toBeInTheDocument();
-    });
-
-    it("yellow traffic dot has role=img", () => {
-      render(<LeadHistoryList entries={[entry]} />);
-      expect(
-        screen.getByRole("img", { name: "Yellow statuses: 0" }),
-      ).toBeInTheDocument();
-    });
-
-    it("red traffic dot has role=img", () => {
-      render(<LeadHistoryList entries={[entry]} />);
-      expect(
-        screen.getByRole("img", { name: "Red statuses: 1" }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("img", { name })).toBeInTheDocument();
     });
 
     it("all three traffic dots are exposed in a11y tree as images with correct labels", () => {

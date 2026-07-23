@@ -288,28 +288,30 @@ describe("itemWriteSchema — per-type progress vocabulary", () => {
 // ---------------------------------------------------------------------------
 
 describe("itemInputSchema — safeText", () => {
-  it("accepts item text with exactly 1 visible character", () => {
-    const item = { ...validItem(), text: "A" };
-    const result = itemInputSchema.safeParse(item);
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects item text with 0 characters (empty string)", () => {
-    const item = { ...validItem(), text: "" };
-    const result = itemInputSchema.safeParse(item);
-    expect(result.success).toBe(false);
-  });
-
-  it("accepts item text at max length (500 chars)", () => {
-    const item = { ...validItem(), text: "A".repeat(500) };
-    const result = itemInputSchema.safeParse(item);
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects item text exceeding max length (501 chars)", () => {
-    const item = { ...validItem(), text: "A".repeat(501) };
-    const result = itemInputSchema.safeParse(item);
-    expect(result.success).toBe(false);
+  it.each([
+    {
+      label: "exactly 1 visible character",
+      text: "A",
+      success: true,
+    },
+    {
+      label: "0 characters (empty string)",
+      text: "",
+      success: false,
+    },
+    {
+      label: "at max length (500 chars)",
+      text: "A".repeat(500),
+      success: true,
+    },
+    {
+      label: "exceeding max length (501 chars)",
+      text: "A".repeat(501),
+      success: false,
+    },
+  ] as const)("$success for item text $label", ({ text, success }) => {
+    const result = itemInputSchema.safeParse({ ...validItem(), text });
+    expect(result.success).toBe(success);
   });
 
   it(String.raw`rejects item text containing null byte \u0000`, () => {
@@ -830,45 +832,38 @@ describe("reportDate via assembledReportSchema", () => {
     sections: [],
   });
 
-  it("accepts dates in year 2026", () => {
-    const result = assembledReportSchema.safeParse(validAssembled());
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts date at boundary year 2000", () => {
-    const input = {
-      ...validAssembled(),
+  it.each([
+    {
+      label: "year 2026",
+      periodStart: "2026-04-01",
+      success: true,
+    },
+    {
+      label: "boundary year 2000",
       periodStart: "2000-01-01",
-    };
-    const result = assembledReportSchema.safeParse(input);
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects date in year 1999 (before 2000)", () => {
-    const input = {
-      ...validAssembled(),
+      success: true,
+    },
+    {
+      label: "year 1999 (before 2000)",
       periodStart: "1999-12-31",
-    };
-    const result = assembledReportSchema.safeParse(input);
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects date in year 1969 (pre-epoch)", () => {
-    const input = {
-      ...validAssembled(),
+      success: false,
+    },
+    {
+      label: "year 1969 (pre-epoch)",
       periodStart: "1969-07-20",
-    };
-    const result = assembledReportSchema.safeParse(input);
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects epoch 0 date (1970-01-01, before 2000)", () => {
-    const input = {
-      ...validAssembled(),
+      success: false,
+    },
+    {
+      label: "epoch 0 (1970-01-01, before 2000)",
       periodStart: "1970-01-01",
-    };
-    const result = assembledReportSchema.safeParse(input);
-    expect(result.success).toBe(false);
+      success: false,
+    },
+  ] as const)("$success for periodStart $label", ({ periodStart, success }) => {
+    const result = assembledReportSchema.safeParse({
+      ...validAssembled(),
+      periodStart,
+    });
+    expect(result.success).toBe(success);
   });
 });
 
