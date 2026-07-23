@@ -1,7 +1,7 @@
 import type { PeriodListItem } from "@customreport/shared";
 
 import { Chevron } from "./periods-tab-icons";
-import { PeriodTable } from "./periods-tab-table";
+import { PeriodTable, type PeriodTableProps } from "./periods-tab-table";
 
 /**
  * Archive section: collapsed-by-default disclosure over
@@ -14,24 +14,13 @@ export function PeriodsArchiveSection({
   onToggle,
   isLoading,
   rows,
-  onPublish,
-  onReopen,
-  onArchive,
-  onUnarchive,
-  onDelete,
-  onEdit,
+  ...rowActions
 }: {
   readonly expanded: boolean;
   readonly onToggle: () => void;
   readonly isLoading: boolean;
   readonly rows: readonly PeriodListItem[];
-  readonly onPublish: (row: PeriodListItem) => void;
-  readonly onReopen: (row: PeriodListItem) => void;
-  readonly onArchive: (row: PeriodListItem) => void;
-  readonly onUnarchive: (row: PeriodListItem) => void;
-  readonly onDelete: (row: PeriodListItem) => void;
-  readonly onEdit: (row: PeriodListItem) => void;
-}) {
+} & Omit<PeriodTableProps, "rows" | "testIdPrefix">) {
   return (
     <section aria-labelledby="periods-archive-heading" className="space-y-3">
       <header className="flex items-center justify-between">
@@ -68,16 +57,7 @@ export function PeriodsArchiveSection({
               No archived periods.
             </div>
           ) : (
-            <PeriodTable
-              testIdPrefix="archive"
-              rows={rows}
-              onPublish={onPublish}
-              onReopen={onReopen}
-              onArchive={onArchive}
-              onUnarchive={onUnarchive}
-              onDelete={onDelete}
-              onEdit={onEdit}
-            />
+            <PeriodTable testIdPrefix="archive" rows={rows} {...rowActions} />
           )}
         </div>
       )}

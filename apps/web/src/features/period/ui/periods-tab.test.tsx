@@ -318,6 +318,22 @@ describe("PeriodsTab", () => {
     expect(
       screen.queryByTestId(`action-reopen-${archivedRow.id}`),
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId(`action-delete-${archivedRow.id}`),
+    ).toBeDisabled();
+  });
+
+  it("reopened rows keep delete disabled despite periodState=open", async () => {
+    const reopenedRow = makeRow({
+      id: "11111111-1111-4111-8111-111111111177",
+      periodState: "open",
+      periodStatus: "reopened",
+    });
+    renderTab({ active: [reopenedRow] });
+
+    expect(
+      await screen.findByTestId(`action-delete-${reopenedRow.id}`),
+    ).toBeDisabled();
   });
 
   it("clicking Archive icon fires the archive mutation with the periodId", async () => {
@@ -564,6 +580,24 @@ describe("PeriodsTab — «Edit period» dialog", () => {
     };
     expect(payload.reportId).toBe(publishedFresh.id);
     expect(payload.weekLabel).toBe("Q2 close");
+  });
+
+  it("rejects clearing the required deadline in edit mode", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+
+    await user.click(
+      await screen.findByTestId(`action-edit-${publishedFresh.id}`),
+    );
+    await user.clear(screen.getByTestId("periods-create-deadline"));
+
+    expect(screen.getByTestId("periods-deadline-error")).toHaveTextContent(
+      "Deadline is required when editing a period.",
+    );
+    expect(screen.getByTestId("periods-create-submit")).toBeDisabled();
+    expect(
+      expectDefined(captured["admin.updatePeriodManual"]).mutationFn,
+    ).not.toHaveBeenCalled();
   });
 
   it("edit dialog submit button reads «Save» (not «Create») in edit-mode", async () => {
@@ -823,6 +857,18 @@ describe("PeriodsTab — deadline UTC round-trip under a non-UTC timezone", () =
     expect(new Date("2026-05-09T18:00").toISOString()).toBe(
       "2026-05-09T15:00:00.000Z",
     );
+  });
+
+  it("renders a near-midnight UTC deadline on its UTC calendar day", async () => {
+    const nearMidnight = makeRow({
+      id: "11111111-1111-4111-8111-111111111166",
+      deadline: new Date("2026-05-09T23:30:00.000Z"),
+    });
+    renderTab({ active: [nearMidnight] });
+
+    expect(
+      await screen.findByTestId(`periods-active-row-${nearMidnight.id}`),
+    ).toHaveTextContent("May 9, 2026");
   });
 
   // publishedFresh.deadline is 2026-05-09T18:00:00Z — a non-midnight UTC

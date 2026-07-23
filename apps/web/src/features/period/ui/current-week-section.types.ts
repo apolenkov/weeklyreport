@@ -1,4 +1,9 @@
-import type { KanbanItem, Product, RiskEntry } from "../../report-sections";
+import type {
+  KanbanItem,
+  ParentActivityOption,
+  Product,
+  RiskEntry,
+} from "../../report-sections";
 
 export interface CurrentWeekSectionProps {
   readonly items: KanbanItem[];
@@ -31,7 +36,7 @@ export interface CurrentWeekSectionProps {
    * activity-first-class: the author's attached activities forwarded to
    * ItemEditDialog so the parent picker can offer them alongside products.
    */
-  readonly activities?: readonly { id: string; name: string }[];
+  readonly activities?: readonly ParentActivityOption[];
   /**
    * stages-the-lead-owns selector forwarded to ItemEditDialog so the SDLC
    * stage dropdown is scoped to the active project.

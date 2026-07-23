@@ -8,6 +8,7 @@ interface CreatePeriodFieldsProps {
   readonly deadline: string;
   readonly onDeadlineChange: (value: string) => void;
   readonly deadlineError: string | null;
+  readonly deadlineRequired: boolean;
   readonly weekLabel: string;
   readonly onWeekLabelChange: (value: string) => void;
 }
@@ -25,6 +26,7 @@ export function CreatePeriodFields({
   deadline,
   onDeadlineChange,
   deadlineError,
+  deadlineRequired,
   weekLabel,
   onWeekLabelChange,
 }: CreatePeriodFieldsProps) {
@@ -74,20 +76,28 @@ export function CreatePeriodFields({
           className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
         >
           Deadline{" "}
-          <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
-            (optional)
-          </span>
+          {deadlineRequired ? (
+            <span className="text-[#991b1b]">*</span>
+          ) : (
+            <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+              (optional)
+            </span>
+          )}
         </label>
         <input
           id="period-deadline"
           type="datetime-local"
           value={deadline}
           onChange={(e) => onDeadlineChange(e.target.value)}
+          required={deadlineRequired}
+          aria-invalid={deadlineError !== null}
+          aria-describedby={deadlineError ? "period-deadline-error" : undefined}
           data-testid="periods-create-deadline"
           className={`w-full rounded-[var(--radius-sm)] border px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] ${deadlineError ? "border-red-400 focus:border-red-400 bg-red-50" : "border-[var(--color-border)] focus:border-[var(--color-starbucks-accent)] bg-white"}`}
         />
         {deadlineError && (
           <p
+            id="period-deadline-error"
             data-testid="periods-deadline-error"
             className="mt-1 text-xs text-red-600"
           >

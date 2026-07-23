@@ -41,6 +41,12 @@ interface ConfirmDeleteDialogProps {
    * / soft-delete flows where the row is recoverable.
    */
   readonly reversible?: boolean;
+  /**
+   * Confirm-button treatment. "destructive" (default) keeps the red
+   * delete styling; "primary" renders the brand accent for positive
+   * confirmations (publish, approve) that reuse this dialog's shell.
+   */
+  readonly tone?: "destructive" | "primary";
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
   readonly triggerRef?: RefObject<HTMLElement | null>;
@@ -70,6 +76,7 @@ export function ConfirmDeleteDialog({
   consequence,
   confirmLabel = "Delete",
   reversible = false,
+  tone = "destructive",
   onConfirm,
   onCancel,
   triggerRef,
@@ -164,7 +171,11 @@ export function ConfirmDeleteDialog({
           <button
             ref={confirmRef}
             type="button"
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-destructive)] bg-[var(--color-destructive)] px-4 text-sm font-semibold text-[var(--color-destructive-foreground)] transition-[filter] hover:brightness-90"
+            className={`btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] border px-4 text-sm font-semibold transition-[filter] hover:brightness-90 ${
+              tone === "primary"
+                ? "border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-white"
+                : "border-[var(--color-destructive)] bg-[var(--color-destructive)] text-[var(--color-destructive-foreground)]"
+            }`}
             onClick={onConfirm}
           >
             {confirmLabel}
