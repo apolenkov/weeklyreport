@@ -25,23 +25,11 @@ interface PublishSideEffectsTelemetry {
   recordPeriodPublished(from: PeriodStatus): void;
 }
 
-/**
- * Collaborators for one emission. Kept as plain optional fields — rather than
- * unifying the two callers' behavior — because `PeriodService.publishPeriod`
- * and `PublicationService.publishAuto` genuinely differ here today:
- *
- * - Only `publishPeriod` invalidates the analytics cache; `publishAuto` never
- *   has (omit `invalidateAnalyticsCache` to reproduce that).
- * - `publishPeriod` swallows an ingestion-hook error silently; `publishAuto`
- *   logs it (pass `onIngestionError` to reproduce the latter).
- * - `publishAuto` skips the ingestion call entirely when the report has no
- *   sections; `publishPeriod` has no such guard (pass `skipIngestionWhenEmpty`
- *   to reproduce the former).
- */
+/** Collaborators required after every successful publish transition. */
 export interface PublishSideEffectsDeps {
   telemetry: PublishSideEffectsTelemetry;
   ingestionHook: IngestionPublishHook;
-  invalidateAnalyticsCache?: () => Promise<void>;
+  invalidateAnalyticsCache: () => Promise<void>;
   onIngestionError?: (error: unknown) => void;
   skipIngestionWhenEmpty?: boolean;
 }
@@ -61,9 +49,7 @@ export interface PublishSideEffectsParams {
 /**
  * Emitted only after a real publish transition, so a redundant or failed
  * write never inflates the on-time-ratio numerator: telemetry pair first,
- * then cache invalidation (if wired), then the awaited-but-swallowed
- * ingestion enqueue — the exact sequence `publishPeriod` runs today;
- * `publishAuto` reproduces it minus the cache step it never had.
+ * then cache invalidation, then the awaited-but-swallowed ingestion enqueue.
  */
 export async function emitPublishSideEffects(
   deps: PublishSideEffectsDeps,
@@ -72,9 +58,7 @@ export async function emitPublishSideEffects(
   deps.telemetry.recordPublishedReport();
   deps.telemetry.recordPeriodPublished(params.priorStatus);
 
-  if (deps.invalidateAnalyticsCache) {
-    await deps.invalidateAnalyticsCache();
-  }
+  await deps.invalidateAnalyticsCache();
 
   // The section-id read shares the ingestion swallow: it runs after the
   // publish transaction has already committed, so a transient read failure

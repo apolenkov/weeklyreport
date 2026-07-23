@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { AnalyticsCache, AnalyticsModule } from "../analytics/index.js";
 import {
   NoopIngestionQueue,
   PUBLICATION_REPOSITORY,
@@ -14,6 +15,7 @@ import { PublicationPrismaRepository } from "./infrastructure/publication.prisma
 import { PublicationPrometheusTelemetry } from "./infrastructure/publication-prometheus-telemetry.adapter.js";
 
 @Module({
+  imports: [AnalyticsModule],
   providers: [
     { provide: PUBLICATION_REPOSITORY, useClass: PublicationPrismaRepository },
     PublicationPrometheusTelemetry,
@@ -27,11 +29,20 @@ import { PublicationPrometheusTelemetry } from "./infrastructure/publication-pro
       useFactory: (
         repo: PublicationRepository,
         ingestionQueue: NoopIngestionQueue,
+        analyticsCache: AnalyticsCache,
         telemetry: PublicationTelemetry,
-      ) => new PublicationService(repo, undefined, ingestionQueue, telemetry),
+      ) =>
+        new PublicationService(
+          repo,
+          undefined,
+          ingestionQueue,
+          () => analyticsCache.invalidateAll(),
+          telemetry,
+        ),
       inject: [
         PUBLICATION_REPOSITORY,
         NoopIngestionQueue,
+        AnalyticsCache,
         PUBLICATION_TELEMETRY,
       ],
     },

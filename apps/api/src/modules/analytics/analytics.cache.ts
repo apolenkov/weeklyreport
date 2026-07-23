@@ -17,8 +17,8 @@ const PREFIX = "customreport:analytics:";
 /**
  * Read-through Redis cache for the analytics namespace — a thin domain wrapper
  * over the shared cache. Keys arrive already namespaced from AnalyticsService.
- * invalidateAll (SCAN + DEL over the prefix) is called from PeriodService on
- * publish/reopen via a constructor-injected port.
+ * invalidateAll (SCAN + DEL over the prefix) is called from every publish path
+ * and from reopen via constructor-injected ports.
  */
 @Injectable()
 export class AnalyticsCache implements AnalyticsCachePort, OnModuleDestroy {

@@ -129,6 +129,36 @@ describe("PeriodCreatorScheduler", () => {
     expect(prisma.report.create).not.toHaveBeenCalled();
   });
 
+  it("opens a due scheduled period when auto-create is disabled without creating a period", async () => {
+    const prisma = makePrismaStub({ mostRecent: null });
+    const due = {
+      id: "period-due",
+      periodStart: new Date("2026-05-12T00:00:00.000Z"),
+      periodEnd: new Date("2026-05-18T23:59:59.999Z"),
+    };
+    prisma.report.findMany.mockResolvedValue([due]);
+    const admin = {
+      getSettings: vi
+        .fn()
+        .mockResolvedValue(makeSettings({ autoCreatePeriods: false })),
+    };
+    const scheduler = new PeriodCreatorScheduler(
+      asAny(prisma),
+      asAny(admin),
+      createNullAuditLogger(),
+    );
+
+    const result = await scheduler.runOnce(new Date("2026-05-12T00:05:00Z"));
+
+    expect(result).toEqual({ created: false, reason: "disabled" });
+    expect(prisma.report.updateMany).toHaveBeenCalledWith({
+      where: { id: due.id, periodState: "scheduled" },
+      data: { periodState: "open", status: "draft", archived: false },
+    });
+    expect(prisma.report.findFirst).not.toHaveBeenCalled();
+    expect(prisma.report.create).not.toHaveBeenCalled();
+  });
+
   it("fire-when-eligible: prev period ended in the past → creates new Period + emits audit", async () => {
     // Previous period ended last Sunday; today is Monday → create next period.
     const prisma = makePrismaStub({
