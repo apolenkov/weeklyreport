@@ -43,6 +43,17 @@ describe("canReadReport (integration)", () => {
     };
   }
 
+  function adminSession(): UserSession {
+    return {
+      userId: "a0000000-0000-4000-8000-0000000000a9",
+      email: "admin9@test.local",
+      name: "Admin Nine",
+      role: "admin",
+      activeReportId: null,
+      activeReportSectionId: null,
+    };
+  }
+
   it("authorizes a viewer whose group access includes the report's section group", async () => {
     const allowed = await canReadReport(
       viewerWithGroups([TEST_IDS.group]),
@@ -83,5 +94,26 @@ describe("canReadReport (integration)", () => {
     expect(await canReadReport(head, testData.report.id, prisma as never)).toBe(
       true,
     );
+  });
+
+  it("authorizes an admin for any existing report", async () => {
+    expect(
+      await canReadReport(adminSession(), testData.report.id, prisma as never),
+    ).toBe(true);
+  });
+
+  it("denies both scoped and admin callers when the report is missing", async () => {
+    const missingReportId = "a0000000-0000-4000-8000-0000000000ff";
+
+    expect(
+      await canReadReport(
+        viewerWithGroups([TEST_IDS.group]),
+        missingReportId,
+        prisma as never,
+      ),
+    ).toBe(false);
+    expect(
+      await canReadReport(adminSession(), missingReportId, prisma as never),
+    ).toBe(false);
   });
 });

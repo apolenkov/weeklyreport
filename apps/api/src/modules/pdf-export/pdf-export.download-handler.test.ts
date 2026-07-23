@@ -1,7 +1,7 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { createReadStream, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Writable } from "node:stream";
+import { Readable, Writable } from "node:stream";
 
 import type { UserSession } from "@customreport/shared";
 import type { Request, Response } from "express";
@@ -15,6 +15,14 @@ import {
   handlePdfDownload,
   type PdfDownloadDeps,
 } from "./pdf-export.download-handler";
+
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return {
+    ...actual,
+    createReadStream: vi.fn(actual.createReadStream),
+  };
+});
 
 const JOB_ID = "11111111-1111-4111-8111-111111111111";
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";
@@ -44,6 +52,7 @@ const viewerSession: UserSession = {
 /** Express Response stand-in: a Writable that records status, headers, body. */
 class MockResponse extends Writable {
   statusCode = 200;
+  headersSent = false;
   readonly headers: Record<string, string> = {};
   private readonly chunks: Buffer[] = [];
 
@@ -364,6 +373,61 @@ describe("handlePdfDownload", () => {
     );
 
     expect(res.statusCode).toBe(401);
+  });
+
+  it("returns 500 when the PDF read fails before headers are sent", async () => {
+    writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
+    vi.mocked(createReadStream).mockReturnValueOnce(
+      new Readable({
+        read() {
+          this.destroy(new Error("read failed"));
+        },
+      }) as never,
+    );
+    const res = new MockResponse();
+    const finished = new Promise<void>((resolve) => {
+      res.on("finish", resolve);
+    });
+
+    await handlePdfDownload(
+      makeReq({ cookie: "valid" }),
+      asResponse(res),
+      makeDeps({
+        prisma: makePrisma({ job: completedJob(), reportAuthorized: true }),
+      }),
+    );
+    await finished;
+
+    expect(res.statusCode).toBe(500);
+    expect(res.writableEnded).toBe(true);
+  });
+
+  it("destroys the response when the PDF read fails after headers were sent", async () => {
+    writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
+    vi.mocked(createReadStream).mockReturnValueOnce(
+      new Readable({
+        read() {
+          this.destroy(new Error("read failed"));
+        },
+      }) as never,
+    );
+    const res = new MockResponse();
+    res.headersSent = true;
+    const closed = new Promise<void>((resolve) => {
+      res.on("close", resolve);
+    });
+
+    await handlePdfDownload(
+      makeReq({ cookie: "valid" }),
+      asResponse(res),
+      makeDeps({
+        prisma: makePrisma({ job: completedJob(), reportAuthorized: true }),
+      }),
+    );
+    await closed;
+
+    expect(res.statusCode).toBe(200);
+    expect(res.destroyed).toBe(true);
   });
 });
 
