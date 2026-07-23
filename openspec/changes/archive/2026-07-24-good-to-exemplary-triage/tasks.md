@@ -50,7 +50,7 @@ and orchestrator second opinion are in `proposal.md`'s class table.
 
 ## 2. Seam-based implementation changes (handoff, not implemented here)
 
-- [ ] 2.1 Create the seam-based implementation changes for all **approved**
+- [x] 2.1 Create the seam-based implementation changes for all **approved**
       findings — sliced by **code seam / file ownership**, NOT one change per
       class. A file appearing under multiple approved classes is fixed **once
       in its owning seam's change**, resolving every one of its approved-class
@@ -59,35 +59,32 @@ and orchestrator second opinion are in `proposal.md`'s class table.
       (findings dated 2026-07-22; some files were also touched by today's
       `fix-*` changes and by `needs-attention-to-good`), then runs the
       `waveb` harness, adversarial verify, and the full gate before commit.
-- [ ] 2.2 As each seam change lands (or refutes a finding), stamp the
+- [x] 2.2 As each seam change lands (or refutes a finding), stamp the
       matching ledger rows' `disposition` (`fixed` / `refuted`) — see §4.
 
 ## 3. Ratify-as-norm reject-list (one entry per class ruled [R])
 
-- [ ] 3.1 For each **[R]** class, add a reject-list entry to the mass-review
-      rubric (the review harness's finding filter) encoding the **narrow
-      accepted predicate** — not a blanket class-label suppression — so the
-      house-norm pattern is not re-flagged on the next whole-repo review.
-- [ ] 3.2 If a ratified pattern contradicts a rule currently in `CLAUDE.md`
-      or `docs/exemplary-code-standard.md`, reconcile it there in the same
-      change (either carve the documented exception or drop the rule) — the
-      standard and the review must not disagree.
-- [ ] 3.3 Stamp every ratified class's ledger rows `disposition: ratified`.
+- [x] 3.1 No-op: zero classes ruled [R] under the blanket-F ruling (§1.18).
+- [x] 3.2 No-op: no ratified pattern exists to reconcile.
+- [x] 3.3 No-op: no rows to stamp `ratified` (final tallies: 507 fixed,
+      6 refuted).
 
 ## 4. Full-ledger disposition (primary closure control)
 
-- [ ] 4.1 **Every one of the 513 ledger rows reaches a terminal
+- [x] 4.1 **Every one of the 513 ledger rows reaches a terminal
       `disposition`** — `ratified`, `fixed`, or `refuted`. No row may remain
       `pending`. This finding-level ledger — not a file sample — is what
       proves the tail is closed.
-- [ ] 4.2 **Re-grade sample (additional control only):** after the approved
-      waves land, re-review a stratified random sample (≥ 40 files spanning
-      the touched classes) with the same Opus-batch + adversarial-verify
-      harness as the 2026-07-22 mass review, confirming ratified patterns no
-      longer count against a file, fixed findings are gone, and no
-      counter-gaming regressions were introduced. The sample sits on top of
-      §4.1, never in place of it.
-- [ ] 4.3 `openspec validate good-to-exemplary-triage --strict`.
-- [ ] 4.4 Record the outcome (classes fixed, classes ratified, disposition
-      tallies, files that reached exemplary) in
-      `~/work/customreport-archive/` and update its `INDEX.md`.
+- [x] 4.2 **Re-grade sample (additional control only):** DONE 2026-07-24 —
+      48-file stratified sample in 3 tranches (8 api / 8 web / 32 mixed),
+      per-file sonnet graders + opus distribution audit per tranche. Result:
+      41 good / 6 exemplary / 1 needs-attention (product-accordion.tsx —
+      self-inflicted silent status fallback, fixed same day). Audits flagged
+      9 graded-too-kindly residuals across tranches; all 9 fixed and
+      committed (58872c31, bb4c2357, 0cb7fd98). No counter-gaming
+      regressions found.
+- [x] 4.3 `openspec validate good-to-exemplary-triage --strict` — valid
+      (2026-07-23).
+- [x] 4.4 Outcome recorded in
+      `~/work/customreport-archive/2026-07-24-stage-d-result/RESULT.md`;
+      `INDEX.md` updated.
