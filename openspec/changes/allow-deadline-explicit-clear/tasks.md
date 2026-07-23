@@ -2,11 +2,13 @@
 
 ## 1. Audit (gate for everything below)
 
-- [ ] 1.1 Enumerate EVERY consumer of `Report.deadline` (api: reminders,
+- [x] 1.1 Enumerate EVERY consumer of `Report.deadline` (api: reminders,
       deadline gate, auto-publish, analytics, pdf/email templates; web:
       badges, countdowns, admin form; e2e fixtures). For each: define the
       explicit null-deadline behavior. No consumer may keep an implicit
-      "deadline is always set" assumption.
+      "deadline is always set" assumption. → **`audit.md` in this change
+      (2026-07-24): per-consumer table, decision-deadline column excluded,
+      sentinel-date alternative rejected.**
 
 ## 2. Schema + contracts
 
