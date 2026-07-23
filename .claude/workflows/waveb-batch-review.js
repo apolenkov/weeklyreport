@@ -6,7 +6,20 @@ export const meta = {
 };
 
 const REPO = "/home/user/work/weeklyreport";
-const CAMPAIGN = "needs-attention-to-good";
+const CAMPAIGN = "good-to-exemplary-triage";
+
+// Orchestrator policy (see openspec/changes/good-to-exemplary-triage/LANE-ROUTING.md):
+// - P4 red-slice rule: a blocker or lens-death NEVER re-runs this batch. Green
+//   sibling slices commit immediately (targeted per-seam git add); the red slice
+//   is remediated, then re-reviewed via waveb-review-only scoped to its file
+//   list + a standalone re-run of only the failed gate step(s).
+// - P2 gate tiers: GATE_TIER below is set by the generator ("fast" default;
+//   "full" forced for L seams / non-test apps/api / prisma / packages/shared;
+//   full also runs every 2-3 batches and before any push cluster).
+// - P10: refuted dispositions need a second-vendor counter-check before the
+//   ledger is stamped.
+// - The per-run block below is written by .claude/scripts/generate-slices.mjs
+//   from the ledger's lane column — do not hand-edit slice lists.
 
 // ---- per-run config: the batch of slices under review ----
 const SLICES = [
@@ -77,6 +90,7 @@ const SLICES = [
       "19 minors, 6 done + 3 declared blockers (4.2/4.5/4.7 need out-of-slice files — verify annotated, untouched). Verify: confirm/confirmation dialogs tokenized (no visual regression risk: tokens must resolve to equivalent colors); forbidden-page vacuous+snapshot checks replaced with landmark/behavior assertions (DELETION CHECK); scope-toggle dialog guard replaced with KEYBOARD behavior (teeth); sdlc-tooltip provider usage corrected (verify actual provider semantics). Four obsolete out-of-slice snapshot entries reported — list their paths.",
   },
 ];
+const GATE_TIER = "full";
 // ----------------------------------------------------------
 
 const VERIFY_SCHEMA = {
@@ -134,7 +148,7 @@ const lensPrompt = (slice) =>
     `WHAT THE IMPLEMENTER CLAIMS: ${slice.brief}`,
     ``,
     `Check, skeptically (default to finding a hole):`,
-    `1. COMPLETENESS: every minor for these files in openspec/changes/${CAMPAIGN}/files-seed.json is either genuinely fixed or correctly recorded stale (verify stale claims against live code + git log).`,
+    `1. COMPLETENESS: every ledger finding enumerated in the brief above (ids g-### from openspec/changes/${CAMPAIGN}/class-distribution.json) is either genuinely fixed or honestly refutable-as-stale (verify stale claims against live code + git log).`,
     `2. REGRESSION + TEST TEETH: no assertion weakened or deleted without full replacement; rewritten tests still fail if the behavior they pin regresses; no behavior change beyond the claimed scope.`,
     `3. ANTI-GAMING: no re-labeled archaeology (issue IDs, dates, 'per spec X' substitutes); no metric-ducking splits; comment rewrites keep the load-bearing WHY.`,
     `4. STANDARDS on touched lines: const/no-mutation, English-only UI strings, comment hygiene.`,
@@ -161,7 +175,7 @@ const allFiles = SLICES.flatMap((s) => s.files);
 const codex = await agent(
   [
     `Run an adversarial review of the UNCOMMITTED batch of campaign-slice edits at ${REPO} (campaign ${CAMPAIGN}).`,
-    `Scope: git --no-pager diff HEAD -- ${allFiles.map((f) => `'${f}'`).join(" ")} (plus openspec/changes/${CAMPAIGN}/tasks.md ticks).`,
+    `Scope: git --no-pager diff HEAD -- ${allFiles.map((f) => `'${f}'`).join(" ")} (ledger: openspec/changes/${CAMPAIGN}/class-distribution.json).`,
     `Act as a principal architect: demand rewrite mandates where the fix is superficial; hunt weakened tests, re-labeled archaeology, and behavior drift in prisma seeds. Ignore dirty files outside the scope list.`,
     `Return verdict clean|issues and findings [{summary,file,scenario,severity(blocker|major|minor)}]. Findings outside the scoped files are minor follow-ups by definition.`,
   ].join("\n"),
@@ -176,18 +190,46 @@ const codex = await agent(
 );
 
 phase("Gate");
+const touchedWorkspaces = [
+  ...new Set(
+    allFiles.flatMap((f) =>
+      f.startsWith("apps/api/")
+        ? ["@customreport/api"]
+        : f.startsWith("apps/web/")
+          ? ["@customreport/web"]
+          : f.startsWith("packages/")
+            ? ["@customreport/api", "@customreport/web"]
+            : [],
+    ),
+  ),
+];
+const gateSteps =
+  GATE_TIER === "full"
+    ? [
+        `1. cd ${REPO} && pnpm --filter @customreport/api db:generate`,
+        `2. cd ${REPO} && pnpm typecheck`,
+        `3. cd ${REPO} && pnpm lint   # full chain; verify real output via rtk proxy if in doubt`,
+        `4. cd ${REPO} && pnpm test   # full unit suite`,
+        `5. cd ${REPO}/apps/api && DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_test pnpm test:integration   # full api real-DB suite, single-worker; do NOT wrap vitest in rtk`,
+      ]
+    : [
+        `1. cd ${REPO} && pnpm --filter @customreport/api db:generate`,
+        `2. cd ${REPO} && pnpm typecheck`,
+        `3. cd ${REPO} && pnpm exec eslint --max-warnings 0 ${allFiles.map((f) => `'${f}'`).join(" ")}   # scoped lint; report as "lint"`,
+        ...touchedWorkspaces.map(
+          (ws, i) =>
+            `${4 + i}. cd ${REPO} && pnpm --filter ${ws} test   # unit suite of touched workspace; fold into "unitTests"`,
+        ),
+        `${4 + touchedWorkspaces.length}. integration suite NOT run in fast tier — report integrationTests as "skip".`,
+      ];
 const gate = await agent(
   [
-    `Run the FULL local quality gate for the uncommitted batch at ${REPO}. Each step a SEPARATE command (600s foreground cap). Do NOT edit code. Do NOT touch git. Report only.`,
-    `1. cd ${REPO} && pnpm --filter @customreport/api db:generate`,
-    `2. cd ${REPO} && pnpm typecheck`,
-    `3. cd ${REPO} && pnpm lint   # full chain; verify real output via rtk proxy if in doubt`,
-    `4. cd ${REPO} && pnpm test   # full unit suite`,
-    `5. cd ${REPO}/apps/api && DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_test pnpm test:integration   # full api real-DB suite, single-worker; do NOT wrap vitest in rtk`,
+    `Run the ${GATE_TIER.toUpperCase()}-tier local quality gate for the uncommitted batch at ${REPO}. Each step a SEPARATE command (600s foreground cap). Do NOT edit code. Do NOT touch git. Report only.`,
+    ...gateSteps,
     `For each step report pass|fail|skip; redFiles = failing files; summary = digest with precise error excerpts on any failure.`,
   ].join("\n"),
   {
-    label: `gate:batch-l`,
+    label: `gate:${GATE_TIER}`,
     phase: "Gate",
     model: "sonnet",
     effort: "medium",
@@ -200,7 +242,9 @@ const gateGreen =
   gate.typecheck === "pass" &&
   gate.lint === "pass" &&
   gate.unitTests === "pass" &&
-  gate.integrationTests === "pass";
+  (GATE_TIER === "full"
+    ? gate.integrationTests === "pass"
+    : gate.integrationTests !== "fail");
 
 const isBlocking = (f) => f.severity === "blocker" || f.severity === "major";
 const slices = lensResults.filter(Boolean).map((r) => ({
