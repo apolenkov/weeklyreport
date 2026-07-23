@@ -4,9 +4,14 @@ import { useEffect, useState } from "react";
 
 import { useEditableListDialog } from "../../../hooks/use-editable-list-dialog";
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import type { Product, RiskEntry } from "../../report-sections";
+import type {
+  ParentActivityOption,
+  Product,
+  RiskEntry,
+} from "../../report-sections";
 import { canonicalRiskStageTags, RiskCard } from "./risk-card";
 import { RiskEditDialog } from "./risk-edit-dialog";
+import { deriveRiskDialogSeedProps } from "./risk-edit-dialog-helpers";
 
 interface RisksSectionProps {
   readonly risks: RiskEntry[];
@@ -32,7 +37,7 @@ interface RisksSectionProps {
    */
   readonly products?: readonly Product[];
   /** Attached activities forwarded to the parent picker. */
-  readonly activities?: readonly { id: string; name: string }[];
+  readonly activities?: readonly ParentActivityOption[];
   /**
    * Callback returning the SDLC stages the lead owns on a given project.
    * Forwarded to the dialog so the stage selector is scoped per-project.
@@ -186,46 +191,12 @@ export function RisksSection({
       <RiskEditDialog
         key={dialogKey}
         open={dialogState.open}
-        risk={
-          dialogState.open && dialogState.mode === "edit"
-            ? dialogState.entity
-            : null
-        }
         products={products ?? []}
         activities={activities}
-        defaultProductId={
-          dialogState.open && dialogState.mode === "create"
-            ? dialogState.seedProductId
-            : undefined
-        }
-        defaultActivityId={
-          dialogState.open && dialogState.mode === "create"
-            ? dialogState.seedActivityId
-            : undefined
-        }
-        initialStageIds={
-          dialogState.open && dialogState.mode === "create"
-            ? createPrefill?.stageIds
-            : undefined
-        }
-        initialSeverity={
-          dialogState.open && dialogState.mode === "create"
-            ? createPrefill?.severity
-            : undefined
-        }
-        initialImpact={
-          dialogState.open && dialogState.mode === "edit"
-            ? dialogState.entity.impact
-            : ""
-        }
-        initialMitigation={
-          dialogState.open && dialogState.mode === "edit"
-            ? dialogState.entity.mitigation
-            : ""
-        }
         stagesForProduct={stagesForProduct}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
+        {...deriveRiskDialogSeedProps(dialogState, createPrefill)}
       />
 
       <ConfirmDeleteDialog

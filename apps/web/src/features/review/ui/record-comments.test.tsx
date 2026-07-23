@@ -5,11 +5,15 @@ import "@testing-library/jest-dom/vitest";
 
 import type { RecordCommentView } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { RecordComments } from "./record-comments";
+
+vi.mock("../../../lib/cache-keys", () => ({
+  invalidateReview: vi.fn(),
+}));
 
 vi.mock("../../../lib/trpc-context", () => ({
   useTRPC: () => ({
@@ -58,6 +62,53 @@ function renderComments() {
     />,
   );
 }
+
+describe("RecordComments — mutation success", () => {
+  it("clears the draft and reports a successful add", async () => {
+    const onMutated = vi.fn();
+    renderWithClient(
+      <RecordComments
+        anchor={{ itemId: "11111111-1111-4111-8111-111111111111" }}
+        comments={[OWN_COMMENT]}
+        canReview
+        currentUserId={REVIEWER_ID}
+        isAdmin={false}
+        onMutated={onMutated}
+      />,
+    );
+
+    const draft = screen.getByRole("textbox", {
+      name: "Add a review comment",
+    });
+    fireEvent.change(draft, { target: { value: "Ready to publish." } });
+    fireEvent.click(screen.getByRole("button", { name: "Comment" }));
+
+    await waitFor(() => {
+      expect(onMutated).toHaveBeenCalledTimes(1);
+      expect(draft).toHaveValue("");
+    });
+  });
+
+  it("reports a successful delete", async () => {
+    const onMutated = vi.fn();
+    renderWithClient(
+      <RecordComments
+        anchor={{ itemId: "11111111-1111-4111-8111-111111111111" }}
+        comments={[OWN_COMMENT]}
+        canReview
+        currentUserId={REVIEWER_ID}
+        isAdmin={false}
+        onMutated={onMutated}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete comment" }));
+
+    await waitFor(() => {
+      expect(onMutated).toHaveBeenCalledTimes(1);
+    });
+  });
+});
 
 describe("RecordComments — compact touch floor (responsive-compact-layout)", () => {
   // jsdom cannot evaluate media queries; the class assertions are the teeth.
