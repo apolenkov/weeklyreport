@@ -40,10 +40,13 @@ export interface LeadSubmitReadiness {
   readonly canOpenConfirmation: boolean;
 }
 
-const committedRisks = (risks: readonly RiskEntry[]) =>
-  risks.filter(
+export function committedRisks(
+  risks: readonly RiskEntry[],
+): readonly RiskEntry[] {
+  return risks.filter(
     (risk) => risk.text.trim().length > 0 && risk.mitigation.trim().length > 0,
   );
+}
 
 function couplingIssues(
   products: readonly Product[],
