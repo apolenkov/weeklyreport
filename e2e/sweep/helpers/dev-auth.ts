@@ -41,10 +41,6 @@ function parseAuthMeRole(payload: unknown): SessionRoleResult {
     return null;
   }
 
-  if (Array.isArray(payload) && payload.length === 0) {
-    return null;
-  }
-
   const resultData = entry.result?.data as { json?: unknown } | undefined;
   const rawSession = resultData?.json ?? resultData;
   const session = rawSession as { role?: string } | null;
@@ -53,7 +49,16 @@ function parseAuthMeRole(payload: unknown): SessionRoleResult {
     return null;
   }
 
-  return session.role as Role;
+  const role = session.role;
+  if (
+    role === "lead" ||
+    role === "head" ||
+    role === "admin" ||
+    role === "viewer"
+  ) {
+    return role;
+  }
+  return null;
 }
 
 async function getSessionRole(page: Page): Promise<SessionRoleResult> {
@@ -73,7 +78,7 @@ async function getSessionRole(page: Page): Promise<SessionRoleResult> {
   return parseAuthMeRole(payload);
 }
 
-function roleFromEmail(
+function emailFromRole(
   role: Role,
   email: string | undefined,
   attempt: number,
@@ -97,7 +102,7 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
   let assumeRoleFromAuthMe = false;
 
   for (let attempt = 1; attempt <= attempts; attempt++) {
-    const email = roleFromEmail(identity.role, identity.email, attempt);
+    const email = emailFromRole(identity.role, identity.email, attempt);
     const params = new URLSearchParams({ role: identity.role });
     if (email) params.set("email", email);
     if (identity.redirect) params.set("redirect", identity.redirect);

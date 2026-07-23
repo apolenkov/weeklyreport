@@ -75,6 +75,14 @@ export const SEED_REPORTING_GROUPS: readonly SeedReportingGroup[] = [
  * Lead UUIDs use range ...0011 through ...0016 to avoid collision with
  * report UUIDs (...0001, ...0002).
  */
+// Convenience lead ID lookups (named for clarity in seed.ts)
+export const LEAD_1_ID = "a0000000-0000-4000-8000-000000000011";
+export const LEAD_MARIA_ID = "a0000000-0000-4000-8000-000000000012";
+export const LEAD_IGOR_ID = "a0000000-0000-4000-8000-000000000013";
+export const LEAD_DMITRY_ID = "a0000000-0000-4000-8000-000000000014";
+export const LEAD_OLGA_ID = "a0000000-0000-4000-8000-000000000015";
+export const LEAD_SERGEY_ID = "a0000000-0000-4000-8000-000000000016";
+
 // structured-user-name: names are surname-first ФИО with real parts. `name`
 // is the composed display value
 // (`{lastName} {firstName} {middleName}`); the surname initials match the
@@ -118,7 +126,7 @@ export const SEED_USERS: readonly SeedUser[] = [
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
   },
   {
-    id: "a0000000-0000-4000-8000-000000000011",
+    id: LEAD_1_ID,
     email: LEAD_1_EMAIL,
     name: "Иванов Василий Петрович",
     lastName: "Иванов",
@@ -130,7 +138,7 @@ export const SEED_USERS: readonly SeedUser[] = [
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
   },
   {
-    id: "a0000000-0000-4000-8000-000000000012",
+    id: LEAD_MARIA_ID,
     email: "maria@customreport.local",
     name: "Каштанова Мария Андреевна",
     lastName: "Каштанова",
@@ -142,7 +150,7 @@ export const SEED_USERS: readonly SeedUser[] = [
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
   },
   {
-    id: "a0000000-0000-4000-8000-000000000013",
+    id: LEAD_IGOR_ID,
     email: "igor@customreport.local",
     name: "Ветров Игорь Олегович",
     lastName: "Ветров",
@@ -154,7 +162,7 @@ export const SEED_USERS: readonly SeedUser[] = [
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
   },
   {
-    id: "a0000000-0000-4000-8000-000000000014",
+    id: LEAD_DMITRY_ID,
     email: "dmitry@customreport.local",
     name: "Соснов Дмитрий Максимович",
     lastName: "Соснов",
@@ -166,7 +174,7 @@ export const SEED_USERS: readonly SeedUser[] = [
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
   },
   {
-    id: "a0000000-0000-4000-8000-000000000015",
+    id: LEAD_OLGA_ID,
     email: "olga@customreport.local",
     name: "Незабудкина Ольга Сергеевна",
     lastName: "Незабудкина",
@@ -178,7 +186,7 @@ export const SEED_USERS: readonly SeedUser[] = [
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
   },
   {
-    id: "a0000000-0000-4000-8000-000000000016",
+    id: LEAD_SERGEY_ID,
     email: "sergey@customreport.local",
     name: "Тополев Сергей Дмитриевич",
     lastName: "Тополев",
@@ -194,14 +202,6 @@ export const SEED_USERS: readonly SeedUser[] = [
 export const LEAD_IDS = SEED_USERS.filter((u) => u.role === "lead").map(
   (u) => u.id,
 );
-
-// Convenience lead ID lookups (named for clarity in seed.ts)
-export const LEAD_1_ID = "a0000000-0000-4000-8000-000000000011";
-export const LEAD_MARIA_ID = "a0000000-0000-4000-8000-000000000012";
-export const LEAD_IGOR_ID = "a0000000-0000-4000-8000-000000000013";
-export const LEAD_DMITRY_ID = "a0000000-0000-4000-8000-000000000014";
-export const LEAD_OLGA_ID = "a0000000-0000-4000-8000-000000000015";
-export const LEAD_SERGEY_ID = "a0000000-0000-4000-8000-000000000016";
 
 export type SeedProduct = {
   id: string;
@@ -482,4 +482,4 @@ export const SEED_HISTORY_REPORTS: readonly SeedHistoryReport[] = [
     weekLabel: `Week ${isoWeekNumber(PREV4_MONDAY)}`,
     archived: true,
   },
-];
+] as const;
