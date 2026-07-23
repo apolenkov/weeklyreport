@@ -875,7 +875,7 @@
       "line": 184,
       "issue": "FakeReport types risks as { projectId: string }[] whereas the production ComparisonSection uses projectId: string | null, a minor fixture drift that would hide null-FK handling if these fakes were extended to cover risk aggregation.",
       "class": "type-safety-weakening",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -884,8 +884,8 @@
       "line": 118,
       "issue": "leadVelocity qualifies a report by where.sections.some (scope only, no status filter) while the include filters to submitted sections, so a published report with in-scope but zero submitted sections yields a periodLabel row with an empty leads array; for admin the where.sections.some is omitted entirely, so any published report with no submitted sections also produces an empty-leads row.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-091",
@@ -1262,7 +1262,7 @@
       "line": 162,
       "issue": "assertReferencesExist fires one productExists query per linked id (up to MAX_LINKED_PRODUCTS=50 round-trips) where a single findMany with id IN (...) plus a set-difference would validate the whole batch in one query.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1271,8 +1271,8 @@
       "line": 84,
       "issue": "Comments (lines 84-85 and 120-123) justify the lowercasing dedup by claiming \"Postgres's `uuid` type is case-insensitive,\" but the schema column is `String @default(uuid())` (Postgres `text`, case-SENSITIVE); the code is only correct because the wire schema already normalizes ids to lowercase and uuid() emits lowercase, so the stated rationale is a type lie even though behavior is benign.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-134",
@@ -1703,7 +1703,7 @@
       "line": 30,
       "issue": "No test asserts the telegramMessageSentTotal.inc({status:\"ok\"}) increment the adapter performs on every send, so that observability side effect is unpinned.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -1712,8 +1712,8 @@
       "line": 145,
       "issue": "Asserts backoff.delay >= 1000 while the constant and its comment document a 5s floor, so a silent regression from 5000 to e.g. 2000 would not be caught.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-183",
@@ -2540,7 +2540,7 @@
       "line": 29,
       "issue": "The 'no ECG SVG' and 'no path' assertions only guard against re-adding a feature the component never renders, and overlap with the snapshot test's coverage.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2549,7 +2549,7 @@
       "line": 46,
       "issue": "The composite-image test re-asserts the pulse-word/pulse-strong aria-hidden attributes already covered by the dedicated cases at lines 32 and 39.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2567,7 +2567,7 @@
       "line": 19,
       "issue": "FADE_MS (250) silently duplicates the .pulse-tagline transition duration in pulse.css; changing one without the other desyncs the swap, and nothing links them beyond a prose comment.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3575,7 +3575,7 @@
       "line": 57,
       "issue": "The mutation success side effects (onMutated fired, draft textarea cleared on add) are never exercised — onMutated is a bare vi.fn() with no assertion and no submit/delete is clicked, so that wiring could regress silently.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3584,7 +3584,7 @@
       "line": 30,
       "issue": "formatTimestamp (ru-RU) is copy-pasted verbatim from dashboard/ui/reopen-request-row.tsx and the requester/period meta + respond-form markup largely parallels that dashboard surface — a candidate for a shared lib/format-date helper rather than two divergent copies.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3593,8 +3593,8 @@
       "line": 20,
       "issue": "The `Props.active` field is the interface's only member yet is never read (destructured as `_props`), so the type advertises a knob the component ignores.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-392",
@@ -3602,7 +3602,7 @@
       "line": 39,
       "issue": "The identical ~200-char touch-target/hover className string is copy-pasted across the toggle/edit/delete buttons (lines 39, 52, 60 differ only in destructive hover colors) — an extracted base class would remove the drift risk.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3611,7 +3611,7 @@
       "line": 32,
       "issue": "deriveFromPreChecked's `if (flagged.some(at-risk)) return \"at-risk\"` is redundant — it returns the same value as the fallback on line 33, so the branch never changes behavior and reads as dead intent.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3620,7 +3620,7 @@
       "line": 30,
       "issue": "Test titled \"...and severity chips floor at the touch target\" only asserts min-h classes on Cancel/Save Risk buttons and never inspects any severity chip, so the 'severity chips' half of its claim is unverified.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3647,7 +3647,7 @@
       "line": 35,
       "issue": "activities prop re-declares the {id,name} shape inline instead of importing the canonical ParentActivityOption it forwards to RiskEditDialog, a small drift risk if that type gains fields.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3656,8 +3656,8 @@
       "line": 110,
       "issue": "preCheckedStages (context strip) derives from the fixed seedProduct, not parent.id, so after the user switches the parent product the strip still shows the original product's flagged stages while availableStages already tracks the new parent — a possibly-intended raise-origin display but a visible inconsistency.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-399",
@@ -4484,8 +4484,8 @@
       "line": 15,
       "issue": "Comment states kind mirrors Prisma \"verbatim (deadline | follow_up | escalation)\" but the z.enum lists deadline, escalation, follow_up in a different order, so the parenthetical order is misleading.",
       "class": "duplication",
-      "disposition": "pending",
-      "lane": "codex"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-491",
@@ -4493,7 +4493,7 @@
       "line": 16,
       "issue": "The \"accepts a profile without role\" case largely duplicates the valid-parse case at line 6 (both exercise a role-free valid profile), differing only in parse vs safeParse.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -4520,7 +4520,7 @@
       "line": 31,
       "issue": "The 'full activity' fixture passes `projectId: null` — a field removed from projectActivitySchema (replaced by linkedProducts) and silently stripped by Zod — and the test never asserts linkedProducts defaults to [].",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -4556,8 +4556,8 @@
       "line": 596,
       "issue": "Several Date-coercion assertions sit behind an `if (result.success && result.data.deadline)` guard, so a regression that coerced the field to null/undefined would silently skip the instanceof-Date check rather than fail.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-499",
@@ -4574,7 +4574,7 @@
       "line": 8,
       "issue": "No test pins the scope='mine' or limit=20 defaults, nor the limit min/max(50) bounds and scope enum rejection, so schema surface beyond `q` is unguarded here.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
