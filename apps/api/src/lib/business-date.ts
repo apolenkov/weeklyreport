@@ -209,6 +209,11 @@ export function getCurrentWeekBounds(
   periodStart: Date;
   periodEnd: Date;
 } {
+  if (!Number.isInteger(periodLengthDays) || periodLengthDays <= 0) {
+    throw new Error(
+      `business-date: periodLengthDays must be a positive integer (got ${periodLengthDays})`,
+    );
+  }
   const utcDay = date.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
   // Monday is the start-of-week. Sunday (0) maps to "6 days back".
   const diffToMonday = utcDay === 0 ? 1 - DAYS_PER_WEEK : 1 - utcDay;

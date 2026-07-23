@@ -346,6 +346,20 @@ describe("getCurrentWeekBounds — UTC-stable week boundaries", () => {
 });
 
 describe("getCurrentWeekBounds — periodLengthDays override", () => {
+  it.each([0, -1, 1.5])(
+    "rejects non-positive and non-integer length %s",
+    (periodLengthDays) => {
+      expect(() =>
+        getCurrentWeekBounds(
+          new Date("2026-04-30T09:00:00.000Z"),
+          periodLengthDays,
+        ),
+      ).toThrow(
+        `business-date: periodLengthDays must be a positive integer (got ${periodLengthDays})`,
+      );
+    },
+  );
+
   it("computes periodEnd = periodStart + (length - 1) days at 23:59:59.999 UTC for length=14", () => {
     // Thursday 2026-04-30 — Monday anchor is 2026-04-27, +13 days = 2026-05-10.
     const thu = new Date("2026-04-30T09:00:00.000Z");
