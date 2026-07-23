@@ -18,14 +18,14 @@ export interface EnqueueContext {
   queue: RemindersEnqueuer;
   telemetry: RemindersTelemetry;
   logger: AppLogger;
-  markExecutionFailed?: (id: string, message: string) => Promise<void>;
+  markExecutionFailed: (id: string, message: string) => Promise<void>;
 }
 
 async function addJob(
   ctx: EnqueueContext,
-  execution: AdminReminderExecution,
+  executionId: string,
   data: Record<string, unknown>,
-  jobId: string = execution.id,
+  jobId: string = executionId,
 ): Promise<void> {
   await ctx.queue.enqueue(jobId, data, ctx.telemetry.captureJobContext());
 }
@@ -47,7 +47,7 @@ export async function enqueueOrMarkFailed(
   try {
     await addJob(
       ctx,
-      execution,
+      execution.id,
       buildQueuePayload(execution, recipientEmail, payload),
       jobId,
     );
@@ -61,7 +61,7 @@ export async function enqueueOrMarkFailed(
       executionId: execution.id,
       error: message,
     });
-    await ctx.markExecutionFailed?.(execution.id, message);
+    await ctx.markExecutionFailed(execution.id, message);
     return adminReminderExecutionSchema.parse({
       ...execution,
       status: "failed",
@@ -72,38 +72,17 @@ export async function enqueueOrMarkFailed(
 
 /** The persistence slice `recordExecutionOnConflict` needs. */
 interface ExecutionRecorder {
-  insertExecutionOnConflict?(
+  insertExecutionOnConflict(
     execution: AdminReminderExecution,
   ): Promise<{ execution: AdminReminderExecution; inserted: boolean }>;
-  findExecutionByDedupeKey(
-    dedupeKey: string,
-  ): Promise<AdminReminderExecution | null>;
-  saveExecution(
-    execution: AdminReminderExecution,
-  ): Promise<AdminReminderExecution>;
 }
 
-/**
- * Record the execution row, preferring the repository's atomic
- * insert-on-conflict. Repositories without it (in-memory test doubles) fall
- * back to check-then-insert — safe there because nothing races them;
- * production takes the atomic path.
- */
+/** Record an execution atomically against the dedupe-key unique index. */
 export async function recordExecutionOnConflict(
   repository: ExecutionRecorder,
   candidate: AdminReminderExecution,
 ): Promise<{ execution: AdminReminderExecution; inserted: boolean }> {
-  if (repository.insertExecutionOnConflict) {
-    return repository.insertExecutionOnConflict(candidate);
-  }
-  const existing = await repository.findExecutionByDedupeKey(
-    candidate.dedupeKey,
-  );
-  if (existing) {
-    return { execution: existing, inserted: false };
-  }
-  const saved = await repository.saveExecution(candidate);
-  return { execution: saved, inserted: true };
+  return repository.insertExecutionOnConflict(candidate);
 }
 
 /**
@@ -117,13 +96,13 @@ export async function recordExecutionOnConflict(
  */
 export async function reviveFailedExecution(
   ctx: EnqueueContext | null,
-  requeue: ((executionId: string) => Promise<boolean>) | undefined,
+  requeue: (executionId: string) => Promise<boolean>,
   execution: AdminReminderExecution,
   recipientEmail: string,
   payload: () => Promise<ReminderQueuePayload>,
 ): Promise<AdminReminderExecution | null> {
   if (execution.status !== "failed") return null;
-  if (!requeue || !(await requeue(execution.id))) return null;
+  if (!(await requeue(execution.id))) return null;
   const requeued = adminReminderExecutionSchema.parse({
     ...execution,
     status: "queued",
@@ -157,7 +136,7 @@ export async function reEnqueueStuck(
 ): Promise<void> {
   await addJob(
     ctx,
-    execution,
+    execution.id,
     buildQueuePayload(execution, execution.recipientEmail, { reportPeriod }),
   );
   ctx.logger.info("reaper re-enqueued stuck execution", {

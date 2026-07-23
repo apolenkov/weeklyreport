@@ -36,7 +36,7 @@ export interface RemindersScopeRepository {
     session: UserSession,
     leadId: string,
   ): Promise<string | null>;
-  /** The newest active rule for `reportId`, optionally narrowed to `ruleId`. */
+  /** The earliest-firing active rule for `reportId` (`fireAt` asc), optionally narrowed to `ruleId`. */
   findActiveRuleForDispatch(
     reportId: string,
     ruleId?: string,
@@ -47,6 +47,4 @@ export interface RemindersScopeRepository {
     reportId: string,
     leadId?: string,
   ): Promise<{ email: string; notificationOptOut: boolean }[]>;
-  /** `createdAt` of the execution matching `dedupeKey` — the dispatch race-safe read-back. */
-  findExecutionCreatedAt(dedupeKey: string): Promise<Date | null>;
 }

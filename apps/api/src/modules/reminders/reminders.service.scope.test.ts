@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { RemindersService } from "./reminders.service.js";
 import type { RemindersRepository } from "./reminders.types.js";
+import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
 
 /**
  * Recipient-level scope on `listExecutions` MUST run over the full slice
@@ -53,6 +54,7 @@ function buildService(
   // Emulates the port's keyset contract: the page starts strictly after
   // `cursor` and carries at most `take` rows.
   const repository = {
+    ...unusedRemindersRepositoryStubs(),
     listExecutions: vi.fn(
       (_ruleId: string, page: { cursor: string | null; take: number }) => {
         const start = page.cursor
@@ -61,7 +63,7 @@ function buildService(
         return Promise.resolve(rows.slice(start, start + page.take));
       },
     ),
-  } as unknown as RemindersRepository;
+  } satisfies RemindersRepository;
   return new RemindersService(repository);
 }
 

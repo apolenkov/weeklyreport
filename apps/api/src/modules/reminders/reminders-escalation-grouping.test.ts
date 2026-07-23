@@ -84,6 +84,17 @@ describe("buildEscalationGroups", () => {
     expect(unresolved).toEqual(["Lead Inactive"]);
   });
 
+  it("places a lead whose active head has a non-head role into unresolved", () => {
+    const report = baseReport([
+      section("Lead Member", "Group Member", activeHead({ role: "lead" })),
+    ]);
+
+    const { groups, unresolved } = buildEscalationGroups(report);
+
+    expect(groups).toEqual([]);
+    expect(unresolved).toEqual(["Lead Member"]);
+  });
+
   it("places a lead with no reporting group head at all into unresolved", () => {
     const report = baseReport([section("Lead No Head", "Group Gamma", null)]);
 

@@ -11,15 +11,14 @@ export type ReminderQueuePayload =
 
 /**
  * Resolve the formatted period label a legacy/reaper payload requires. The
- * port method is optional (older test doubles predate it), but every enqueue
- * that reaches here needs the label — a missing one is a domain error, never
- * a silently empty email subject.
+ * label is required by every enqueue that reaches here; a missing one is a
+ * domain error, never a silently empty email subject.
  */
 export async function requireRulePeriodLabel(
   repository: Pick<RemindersRepository, "getRulePeriodLabel">,
   ruleId: string,
 ): Promise<string> {
-  const reportPeriod = await repository.getRulePeriodLabel?.(ruleId);
+  const reportPeriod = await repository.getRulePeriodLabel(ruleId);
   if (!reportPeriod) {
     throw new ReminderDomainError(
       `Reminder rule ${ruleId} has no report period.`,

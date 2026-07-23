@@ -20,21 +20,29 @@ const ISO_DATE_LENGTH = 10;
 // Domain `queued` persists as the Prisma `pending` enum value; every other
 // status (including the in-flight `sending` claim) shares its name across the
 // two vocabularies.
-const execStatusToDb: Record<string, string> = {
+type PrismaExecStatus = NonNullable<
+  Prisma.ReminderExecutionUncheckedCreateInput["status"]
+>;
+
+const execStatusToDb: Record<
+  AdminReminderExecution["status"],
+  PrismaExecStatus
+> = {
   queued: "pending",
   sending: "sending",
   sent: "sent",
   failed: "failed",
 };
 
-const dbExecStatusToDomain: Record<string, AdminReminderExecution["status"]> = {
+const dbExecStatusToDomain: Record<
+  PrismaExecStatus,
+  AdminReminderExecution["status"]
+> = {
   pending: "queued",
   sending: "sending",
   sent: "sent",
   failed: "failed",
 };
-
-type PrismaExecStatus = "pending" | "sending" | "sent" | "failed";
 
 /** Map a domain execution to the Prisma row written on create/insert. */
 export function toExecutionCreateData(
@@ -44,7 +52,7 @@ export function toExecutionCreateData(
     id: execution.id,
     ruleId: execution.ruleId,
     dedupeKey: execution.dedupeKey,
-    status: (execStatusToDb[execution.status] ?? "pending") as PrismaExecStatus,
+    status: execStatusToDb[execution.status],
     sentAt: execution.sentAt,
     error: execution.errorMessage,
   };
@@ -57,7 +65,7 @@ export function toExecutionUpdateData(execution: AdminReminderExecution): {
   error: string | null;
 } {
   return {
-    status: (execStatusToDb[execution.status] ?? "pending") as PrismaExecStatus,
+    status: execStatusToDb[execution.status],
     sentAt: execution.sentAt,
     error: execution.errorMessage,
   };
@@ -133,7 +141,7 @@ export function toExecutionDomain(execution: {
   id: string;
   ruleId: string;
   dedupeKey: string;
-  status: string;
+  status: PrismaExecStatus;
   sentAt: Date | null;
   error: string | null;
   createdAt: Date;
@@ -145,7 +153,7 @@ export function toExecutionDomain(execution: {
     ruleId: execution.ruleId,
     reportId: execution.rule.reportId,
     dedupeKey: execution.dedupeKey,
-    status: dbExecStatusToDomain[execution.status] ?? "queued",
+    status: dbExecStatusToDomain[execution.status],
     scheduledFor: execution.createdAt,
     sentAt: execution.sentAt,
     recipientEmail: extractRecipientEmail(execution.dedupeKey),

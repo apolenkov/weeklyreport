@@ -55,6 +55,15 @@ function resolveActiveHead(
   return { userId: head.id, email: head.email, name: head.name };
 }
 
+function requireReportingGroupName(
+  group: EscalationReport["sections"][number]["author"]["reportingGroup"],
+): string {
+  if (!group) {
+    throw new Error("Resolved escalation head has no reporting group.");
+  }
+  return group.name;
+}
+
 /** One section resolved against its author's active group head, or none. */
 interface ResolvedSection {
   head: { userId: string; email: string; name: string };
@@ -92,10 +101,9 @@ export function buildEscalationGroups(report: EscalationReport): {
             head,
             lateLead: {
               leadName: section.author.name,
-              // A resolved head guarantees the reporting group is present, so
-              // the fallback only guards the type.
-              sectionTitle:
-                section.author.reportingGroup?.name ?? "Untitled section",
+              sectionTitle: requireReportingGroupName(
+                section.author.reportingGroup,
+              ),
               deadlineIso,
             },
           },

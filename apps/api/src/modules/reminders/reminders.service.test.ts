@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { ReminderDomainError, RemindersService } from "./reminders.service";
 import type { RemindersRepository } from "./reminders.types";
-import { unusedRemindersScopeStubs } from "./reminders-scope.repository-stub.js";
+import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
 
 const activeRule: AdminReminderRule = {
   id: "66666666-6666-4666-8666-666666666666",
@@ -30,7 +30,7 @@ function createRepository(initialRule: AdminReminderRule): RemindersRepository {
   const executions = new Map<string, AdminReminderExecution>();
 
   return {
-    ...unusedRemindersScopeStubs(),
+    ...unusedRemindersRepositoryStubs(),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async findExecutionByDedupeKey(dedupeKey: string) {
       for (const execution of executions.values()) {
@@ -336,7 +336,7 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
       errorMessage: null,
     };
     const repository = {
-      ...unusedRemindersScopeStubs(),
+      ...unusedRemindersRepositoryStubs(),
       // eslint-disable-next-line @typescript-eslint/require-await -- stub
       async getRule(ruleId: string) {
         return ruleId === activeRule.id ? structuredClone(activeRule) : null;
@@ -400,6 +400,25 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
 
     expect(addCalls).toHaveLength(0);
   });
+
+  it("parses a newly inserted execution before returning without a queue", async () => {
+    const repository = {
+      ...buildRepo(true),
+      insertExecutionOnConflict: (candidate: AdminReminderExecution) =>
+        Promise.resolve({
+          execution: {
+            ...candidate,
+            status: "invalid-repository-status",
+          } as unknown as AdminReminderExecution,
+          inserted: true,
+        }),
+    } satisfies RemindersRepository;
+    const service = new RemindersService(repository);
+
+    await expect(
+      service.requestReminderExecution(activeRule.id, "lead@test.local"),
+    ).rejects.toMatchObject({ name: "ZodError" });
+  });
 });
 
 // -----------------------------------------------------------------------
@@ -427,7 +446,7 @@ describe("requestReminderExecution — failed execution revival", () => {
       errorMessage: opts.status === "failed" ? "SMTP down" : null,
     };
     return {
-      ...unusedRemindersScopeStubs(),
+      ...unusedRemindersRepositoryStubs(),
       // eslint-disable-next-line @typescript-eslint/require-await -- stub
       async getRule(ruleId: string) {
         return ruleId === activeRule.id ? structuredClone(activeRule) : null;
@@ -542,7 +561,7 @@ describe("requestReminderExecution — failed execution revival", () => {
 describe("requestReminderExecution — enqueue failure is recorded, not swallowed", () => {
   function buildRepoCapturingFailures(failures: [string, string][]) {
     return {
-      ...unusedRemindersScopeStubs(),
+      ...unusedRemindersRepositoryStubs(),
       // eslint-disable-next-line @typescript-eslint/require-await -- stub
       async getRule(ruleId: string) {
         return ruleId === activeRule.id ? structuredClone(activeRule) : null;

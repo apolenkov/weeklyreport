@@ -87,8 +87,9 @@ export async function queryInScopeLeadId(
 }
 
 /**
- * The newest active reminder rule for `reportId`, optionally narrowed to
- * `ruleId`. Only the fields `dispatchPendingReminders` reads are selected.
+ * The earliest-firing active reminder rule for `reportId` (`orderBy fireAt
+ * asc`), optionally narrowed to `ruleId`. Only the fields
+ * `dispatchPendingReminders` reads are selected.
  */
 export function queryActiveRuleForDispatch(
   prisma: PrismaService,
@@ -128,19 +129,4 @@ export async function queryDraftSectionsForDispatch(
     },
   });
   return sections.map((s) => s.author);
-}
-
-/**
- * `createdAt` of the `ReminderExecution` matching `dedupeKey`, or null.
- * Backs the race-safe dispatch read-back: the caller compares this against
- * the call window to distinguish "this call inserted the row" from "a
- * concurrent tick deduplicated against a prior dispatch".
- */
-export function queryExecutionCreatedAt(
-  prisma: PrismaService,
-  dedupeKey: string,
-): Promise<Date | null> {
-  return prisma.reminderExecution
-    .findUnique({ where: { dedupeKey }, select: { createdAt: true } })
-    .then((execution) => execution?.createdAt ?? null);
 }

@@ -5,7 +5,10 @@ import type {
   DeadlineReminderPayload,
   EscalationReminderPayload,
 } from "./reminders.types.js";
-import { buildQueuePayload } from "./reminders-queue-payload.js";
+import {
+  buildQueuePayload,
+  requireRulePeriodLabel,
+} from "./reminders-queue-payload.js";
 
 const RECIPIENT_EMAIL = "lead@test.local";
 const execution: AdminReminderExecution = {
@@ -31,9 +34,23 @@ describe("buildQueuePayload", () => {
       reportPeriod: "2026-04-07 → 2026-04-13",
     });
 
-    expect(payload.reportPeriod).toBe("2026-04-07 → 2026-04-13");
-    expect(payload.reportPeriod).not.toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    expect(payload).toEqual({
+      executionId: execution.id,
+      recipientEmail: RECIPIENT_EMAIL,
+      reportPeriod: "2026-04-07 → 2026-04-13",
+    });
+    expect(payload.reportPeriod).not.toBe(execution.reportId);
+  });
+
+  it("rejects a legacy payload when its rule has no period label", async () => {
+    const repository = {
+      getRulePeriodLabel: () => Promise.resolve(null),
+    };
+
+    await expect(
+      requireRulePeriodLabel(repository, execution.ruleId),
+    ).rejects.toThrow(
+      `Reminder rule ${execution.ruleId} has no report period.`,
     );
   });
 
