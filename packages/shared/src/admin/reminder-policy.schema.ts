@@ -11,8 +11,7 @@ import { z } from "zod";
  * translates between the two via `audienceFromPrisma` / `audienceToPrisma`
  * mappers; this module is the single source of truth for the wire shape.
  *
- * `kind` mirrors the Prisma `ReminderRuleKind` enum verbatim
- * (`deadline | follow_up | escalation`) — those values already use
+ * `kind` uses the same values as Prisma `ReminderRuleKind` — already
  * snake_case in the database, so no mapping is needed for that field.
  */
 export const reminderAudienceSchema = z.enum([
