@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const MAX_SHORT_NAME_LENGTH = 16;
-const MAX_FULL_NAME_LENGTH = 200;
+export const MAX_FULL_NAME_LENGTH = 200;
 
 /**
  * Organization identity singleton schema.

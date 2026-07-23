@@ -43,7 +43,6 @@ describe("review verdict published-period write lock (integration)", () => {
       sectionId: testData.section.id,
       reviewerId: testData.head.id,
       verdict: "changes_requested",
-      judgedVersion: testData.section.version,
       expectedVersion: testData.section.version,
       currentStatus: "submitted",
     });

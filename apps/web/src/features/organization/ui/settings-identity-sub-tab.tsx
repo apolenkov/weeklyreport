@@ -1,6 +1,9 @@
 "use client";
 
-import { MAX_SHORT_NAME_LENGTH } from "@customreport/shared";
+import {
+  MAX_FULL_NAME_LENGTH,
+  MAX_SHORT_NAME_LENGTH,
+} from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -11,8 +14,6 @@ import {
   CheckIcon,
   revalidateOrgLandingPage,
 } from "../../../shared/ui/settings-tab-shared";
-
-const MAX_FULL_NAME_LENGTH = 200;
 
 export function IdentitySubTab() {
   const trpc = useTRPC();

@@ -91,7 +91,6 @@ function buildRepo(overrides: RepoOverrides = {}) {
     getVerdictContext: vi.fn(() =>
       Promise.resolve<VerdictContext>(
         overrides.verdictContext ?? {
-          version: 3,
           status: "submitted",
           groupId: GROUP_A,
           periodStatus: "open",
@@ -195,9 +194,13 @@ describe("ReviewActionsService — verdict", () => {
       version: 3,
     });
     expect(result).toMatchObject({ judgedVersion: 3, unsubmitted: true });
-    expect(postVerdict).toHaveBeenCalledWith(
-      expect.objectContaining({ judgedVersion: 3, expectedVersion: 3 }),
-    );
+    expect(postVerdict).toHaveBeenCalledWith({
+      sectionId: SECTION,
+      reviewerId: headA.userId,
+      verdict: "changes_requested",
+      expectedVersion: 3,
+      currentStatus: "submitted",
+    });
   });
 
   it("approved records the verdict without un-submitting", async () => {
@@ -214,7 +217,6 @@ describe("ReviewActionsService — verdict", () => {
   it("rejects a verdict on a non-editable (published) period", async () => {
     const { repo } = buildRepo({
       verdictContext: {
-        version: 3,
         status: "submitted",
         groupId: GROUP_A,
         periodStatus: "published",

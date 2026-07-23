@@ -8,6 +8,7 @@
  * the form values and the success toast fires.
  */
 
+import { MAX_FULL_NAME_LENGTH } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   fireEvent,
@@ -173,6 +174,13 @@ describe("SettingsTab — Identity sub-tab", () => {
       /full name/i,
     ) as HTMLInputElement;
     expect(fullNameInput.value).toBe("Product Engineering & Operations");
+    expect(fullNameInput.maxLength).toBe(MAX_FULL_NAME_LENGTH);
+    expect(
+      screen.getByText(`${ORG_DATA.fullName.length}/${MAX_FULL_NAME_LENGTH}`),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(new RegExp(`max ${MAX_FULL_NAME_LENGTH} chars`, "i")),
+    ).toBeTruthy();
 
     // Save button is enabled with valid data — proves the form is wired
     // (the click→mutate path is exercised in admin.integration.test.ts).
