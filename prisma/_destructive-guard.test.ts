@@ -13,6 +13,22 @@ afterEach(() => {
 });
 
 describe("assertNonProdDestructive credential-less URLs", () => {
+  it("allows an explicit production-destructive override", () => {
+    vi.stubEnv("ALLOW_PROD_DESTRUCTIVE", "yes");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DATABASE_URL", "not a URL");
+
+    expect(() => assertNonProdDestructive("test-script")).not.toThrow();
+  });
+
+  it("refuses a malformed database URL", () => {
+    setDatabaseUrl("not a URL");
+
+    expect(() => assertNonProdDestructive("test-script")).toThrow(
+      "DATABASE_URL is not a parseable URL.",
+    );
+  });
+
   it("recognizes localhost without requiring a non-production suffix", () => {
     setDatabaseUrl("postgresql://localhost/customreport");
 
