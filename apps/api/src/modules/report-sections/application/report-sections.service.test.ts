@@ -13,6 +13,9 @@ import {
   ReportSectionsService,
 } from "./report-sections.service";
 
+const testGraceSettings = () =>
+  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
+
 const baseSection: ReportSectionReadModel = {
   reportSectionId: "11111111-1111-4111-8111-111111111111",
   reportId: "22222222-2222-4222-8222-222222222222",
@@ -82,6 +85,10 @@ function createRepository(
     async getReportPeriodStatusForSection() {
       return "open";
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
+    async getReportMeta() {
+      return null;
+    },
     // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
     async getPublishedLineage() {
       return { itemStableIds: [], decisionStableIds: [] };
@@ -101,7 +108,10 @@ function createRepository(
 
 describe("ReportSectionsService", () => {
   it("loads a lead section as one typed payload", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.getActiveSection(baseSection.reportSectionId),
@@ -114,7 +124,10 @@ describe("ReportSectionsService", () => {
   });
 
   it("saves draft without changing submitted state", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const saved = await service.saveDraft({
       reportSectionId: baseSection.reportSectionId,
       version: 1,
@@ -136,7 +149,10 @@ describe("ReportSectionsService", () => {
   });
 
   it("rejects saveDraft for another user section when actor is supplied", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.saveDraft(
@@ -160,7 +176,10 @@ describe("ReportSectionsService", () => {
   });
 
   it("rejects submit when traffic light is missing", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.submitSection({
@@ -184,7 +203,10 @@ describe("ReportSectionsService", () => {
   });
 
   it("rejects submit for another user section before validation", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.submitSection(
@@ -209,7 +231,10 @@ describe("ReportSectionsService", () => {
   });
 
   it("submits by read-model scope and does not require owner-only projects", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     const saved = await service.submitSection({
       reportSectionId: baseSection.reportSectionId,
@@ -240,7 +265,7 @@ describe("ReportSectionsService", () => {
       // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository.getReportPeriodStatusForSection contract (Promise<string | null>); no awaitable work in stub
       repo.getReportPeriodStatusForSection = async () => "published";
 
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(repo, testGraceSettings);
 
       await expect(
         service.saveDraft({
@@ -266,7 +291,7 @@ describe("ReportSectionsService", () => {
     it("allows editing when the period is open", async () => {
       const repo = createRepository(baseSection);
       // getReportPeriodStatusForSection already returns 'open' by default.
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(repo, testGraceSettings);
 
       const saved = await service.saveDraft({
         reportSectionId: baseSection.reportSectionId,
@@ -295,7 +320,7 @@ describe("ReportSectionsService", () => {
       // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository.getReportPeriodStatusForSection contract (Promise<string | null>); no awaitable work in stub
       repo.getReportPeriodStatusForSection = async () => "reopened";
 
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(repo, testGraceSettings);
 
       const saved = await service.saveDraft({
         reportSectionId: baseSection.reportSectionId,
@@ -325,7 +350,7 @@ describe("ReportSectionsService", () => {
         return original(sectionId);
       };
 
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(repo, testGraceSettings);
 
       await service.saveDraft({
         reportSectionId: baseSection.reportSectionId,
@@ -358,6 +383,7 @@ describe("ReportSectionsService", () => {
             },
           ],
         }),
+        testGraceSettings,
       );
 
       await expect(
@@ -413,7 +439,7 @@ describe("ReportSectionsService", () => {
       // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository.getReportPeriodStatusForSection contract (Promise<string | null>); no awaitable work in stub
       repo.getReportPeriodStatusForSection = async () => "published";
 
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(repo, testGraceSettings);
 
       await expect(service.submitSection(submitPayload)).rejects.toMatchObject({
         code: "SECTION_ALREADY_SUBMITTED",
@@ -422,7 +448,10 @@ describe("ReportSectionsService", () => {
     });
 
     it("succeeds submitting a draft section on an open period", async () => {
-      const service = new ReportSectionsService(createRepository(greenSection));
+      const service = new ReportSectionsService(
+        createRepository(greenSection),
+        testGraceSettings,
+      );
 
       const saved = await service.submitSection(submitPayload);
 
@@ -434,7 +463,7 @@ describe("ReportSectionsService", () => {
       // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository.getReportPeriodStatusForSection contract (Promise<string | null>); no awaitable work in stub
       repo.getReportPeriodStatusForSection = async () => "reopened";
 
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(repo, testGraceSettings);
 
       const saved = await service.submitSection(submitPayload);
 
@@ -452,6 +481,7 @@ describe("ReportSectionsService", () => {
           { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
         ],
       }),
+      testGraceSettings,
     );
 
     await expect(
@@ -520,7 +550,10 @@ describe("ReportSectionsService — stage-ownership guard", () => {
   };
 
   it("rejects saveDraft when a new risk carries a stage the author does not own", async () => {
-    const service = new ReportSectionsService(createRepository(testingOwner));
+    const service = new ReportSectionsService(
+      createRepository(testingOwner),
+      testGraceSettings,
+    );
 
     await expect(
       service.saveDraft({
@@ -536,7 +569,10 @@ describe("ReportSectionsService — stage-ownership guard", () => {
   });
 
   it("rejects submitSection when a new risk carries a stage the author does not own", async () => {
-    const service = new ReportSectionsService(createRepository(testingOwner));
+    const service = new ReportSectionsService(
+      createRepository(testingOwner),
+      testGraceSettings,
+    );
 
     await expect(
       service.submitSection({
@@ -553,7 +589,10 @@ describe("ReportSectionsService — stage-ownership guard", () => {
   });
 
   it("allows a write whose stages the author owns", async () => {
-    const service = new ReportSectionsService(createRepository(testingOwner));
+    const service = new ReportSectionsService(
+      createRepository(testingOwner),
+      testGraceSettings,
+    );
 
     const saved = await service.saveDraft({
       reportSectionId: baseSection.reportSectionId,
@@ -575,7 +614,10 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     // self-check path and still reaches the guard — so a head/admin on-behalf
     // edit (which bypasses the self-check) likewise cannot inject an unowned
     // stage: the DevOps stage is rejected because the AUTHOR does not own it.
-    const service = new ReportSectionsService(createRepository(testingOwner));
+    const service = new ReportSectionsService(
+      createRepository(testingOwner),
+      testGraceSettings,
+    );
 
     await expect(
       service.saveDraft(
@@ -597,7 +639,10 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     // Decisions run a distinct row-mapping path (productId, null-normalization,
     // union-across-projects for a department-scoped decision), so they get their
     // own reject case.
-    const service = new ReportSectionsService(createRepository(testingOwner));
+    const service = new ReportSectionsService(
+      createRepository(testingOwner),
+      testGraceSettings,
+    );
 
     await expect(
       service.saveDraft({
@@ -643,6 +688,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
   it("grandfathers an unchanged legacy/cross row (same stableId, product, stage set)", async () => {
     const service = new ReportSectionsService(
       createRepository(crossRowSection),
+      testGraceSettings,
     );
 
     const saved = await service.saveDraft({
@@ -672,6 +718,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
   it("rejects a smuggle that reuses a stableId but swaps in an unowned stage", async () => {
     const service = new ReportSectionsService(
       createRepository(crossRowSection),
+      testGraceSettings,
     );
 
     await expect(
@@ -720,6 +767,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     };
     const service = new ReportSectionsService(
       createRepository(ownedRowSection),
+      testGraceSettings,
     );
 
     await expect(
@@ -904,12 +952,17 @@ describe("ReportSectionsService — deadline gate", () => {
     ).rejects.toBeInstanceOf(ReportSectionAccessError);
   });
 
-  it("legacy: no grace-settings provider wired → gate skipped, late stays false even past deadline", async () => {
-    const repo = createGracedRepository({
-      deadline: new Date(Date.now() - 48 * ONE_HOUR),
-    });
-    // No second constructor arg — legacy code path.
-    const service = new ReportSectionsService(repo);
+  it("skips the gate only on an explicit null report meta — late stays false", async () => {
+    // The old "no provider wired → gate silently off" path is gone by design
+    // (both collaborators are required). The one remaining skip is a
+    // repository EXPLICITLY reporting the report row absent.
+    const repo = {
+      ...createGracedRepository({
+        deadline: new Date(Date.now() - 48 * ONE_HOUR),
+      }),
+      getReportMeta: () => Promise.resolve(null),
+    };
+    const service = new ReportSectionsService(repo, testGraceSettings);
 
     const saved = await service.submitSection(validSubmitPayload());
 

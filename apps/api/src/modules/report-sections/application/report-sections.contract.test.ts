@@ -11,6 +11,9 @@ import {
   ReportSectionsService,
 } from "./report-sections.service";
 
+const testGraceSettings = () =>
+  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
@@ -88,6 +91,10 @@ function createRepository(
     async getReportPeriodStatusForSection() {
       return periodStatus;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
+    async getReportMeta() {
+      return null;
+    },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReportSectionsRepository contract (no awaitable work in the stub)
     async getPublishedLineage() {
       return { itemStableIds: [], decisionStableIds: [] };
@@ -131,7 +138,10 @@ function validSubmit(overrides: Record<string, unknown> = {}) {
 
 describe("ReportSectionsService — getActiveSection", () => {
   it("returns section when found", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const section = await service.getActiveSection(SECTION_ID);
 
     expect(section.reportSectionId).toBe(SECTION_ID);
@@ -139,7 +149,10 @@ describe("ReportSectionsService — getActiveSection", () => {
   });
 
   it("throws when section ID does not exist", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.getActiveSection("99999999-9999-4999-8999-999999999999"),
@@ -155,7 +168,10 @@ describe("ReportSectionsService — getActiveSection", () => {
         { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
       ],
     };
-    const service = new ReportSectionsService(createRepository(submitted));
+    const service = new ReportSectionsService(
+      createRepository(submitted),
+      testGraceSettings,
+    );
     const result = await service.getActiveSection(SECTION_ID);
 
     expect(result.status).toBe("submitted");
@@ -163,7 +179,10 @@ describe("ReportSectionsService — getActiveSection", () => {
   });
 
   it("validates section through Zod schema (reportSectionReadModelSchema)", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const result = await service.getActiveSection(SECTION_ID);
 
     // All required fields present and typed correctly
@@ -180,7 +199,10 @@ describe("ReportSectionsService — getActiveSection", () => {
 
 describe("ReportSectionsService — saveDraft happy path", () => {
   it("updates traffic light status", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const saved = await service.saveDraft(
       validDraft({
         projectStatuses: [{ projectId: PROJECT_ID_1, status: "yellow" }],
@@ -191,7 +213,10 @@ describe("ReportSectionsService — saveDraft happy path", () => {
   });
 
   it("updates items list", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const newItems = [
       ...baseSection.items,
       {
@@ -210,7 +235,10 @@ describe("ReportSectionsService — saveDraft happy path", () => {
   });
 
   it("updates risks list", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const saved = await service.saveDraft(
       validDraft({
         risks: [
@@ -232,7 +260,10 @@ describe("ReportSectionsService — saveDraft happy path", () => {
   });
 
   it("updates decisions list", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const saved = await service.saveDraft(
       validDraft({
         decisions: [
@@ -254,7 +285,10 @@ describe("ReportSectionsService — saveDraft happy path", () => {
   });
 
   it("preserves draft status after save", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const saved = await service.saveDraft(validDraft());
 
     expect(saved.status).toBe("draft");
@@ -268,7 +302,10 @@ describe("ReportSectionsService — saveDraft happy path", () => {
         { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
       ],
     };
-    const service = new ReportSectionsService(createRepository(withLight));
+    const service = new ReportSectionsService(
+      createRepository(withLight),
+      testGraceSettings,
+    );
     const saved = await service.saveDraft(
       validDraft({
         projectStatuses: [{ projectId: PROJECT_ID_1 }],
@@ -293,7 +330,10 @@ describe("ReportSectionsService — saveDraft error paths", () => {
         { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
       ],
     };
-    const service = new ReportSectionsService(createRepository(submitted));
+    const service = new ReportSectionsService(
+      createRepository(submitted),
+      testGraceSettings,
+    );
 
     await expect(service.saveDraft(validDraft())).rejects.toMatchObject({
       code: "SECTION_ALREADY_SUBMITTED",
@@ -304,6 +344,7 @@ describe("ReportSectionsService — saveDraft error paths", () => {
   it("rejects when the period is published", async () => {
     const service = new ReportSectionsService(
       createRepository(baseSection, "published"),
+      testGraceSettings,
     );
 
     await expect(service.saveDraft(validDraft())).rejects.toMatchObject({
@@ -313,7 +354,10 @@ describe("ReportSectionsService — saveDraft error paths", () => {
   });
 
   it("rejects when section ID does not exist", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.saveDraft(
@@ -333,7 +377,10 @@ describe("ReportSectionsService — saveDraft error paths", () => {
         { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
       ],
     };
-    const service = new ReportSectionsService(createRepository(submitted));
+    const service = new ReportSectionsService(
+      createRepository(submitted),
+      testGraceSettings,
+    );
 
     try {
       await service.saveDraft(validDraft());
@@ -344,7 +391,10 @@ describe("ReportSectionsService — saveDraft error paths", () => {
   });
 
   it("rejects items exceeding max array length (Zod: max 100)", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const tooManyItems = Array.from({ length: 101 }, () => ({
       projectId: PROJECT_ID_1,
       type: "current" as const,
@@ -361,7 +411,10 @@ describe("ReportSectionsService — saveDraft error paths", () => {
   });
 
   it("rejects item with empty text (safeText min 1)", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.saveDraft(
@@ -383,7 +436,10 @@ describe("ReportSectionsService — saveDraft error paths", () => {
   });
 
   it("rejects item with null byte in text", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.saveDraft(
@@ -405,7 +461,10 @@ describe("ReportSectionsService — saveDraft error paths", () => {
   });
 
   it("rejects invalid UUID in reportSectionId", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.saveDraft(validDraft({ reportSectionId: "not-a-uuid" })),
@@ -419,7 +478,10 @@ describe("ReportSectionsService — saveDraft error paths", () => {
 
 describe("ReportSectionsService — submitSection happy path", () => {
   it("submits section with valid input", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const result = await service.submitSection(validSubmit());
 
     expect(result.status).toBe("submitted");
@@ -427,7 +489,10 @@ describe("ReportSectionsService — submitSection happy path", () => {
   });
 
   it("sets traffic light from input", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const result = await service.submitSection(
       validSubmit({
         projectStatuses: [{ projectId: PROJECT_ID_1, status: "red" }],
@@ -438,7 +503,10 @@ describe("ReportSectionsService — submitSection happy path", () => {
   });
 
   it("preserves items, risks, decisions from input", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const result = await service.submitSection(
       validSubmit({
         items: [
@@ -485,7 +553,10 @@ describe("ReportSectionsService — submitSection validation errors", () => {
         { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
       ],
     };
-    const service = new ReportSectionsService(createRepository(submitted));
+    const service = new ReportSectionsService(
+      createRepository(submitted),
+      testGraceSettings,
+    );
 
     await expect(service.submitSection(validSubmit())).rejects.toMatchObject({
       code: "SECTION_ALREADY_SUBMITTED",
@@ -493,7 +564,10 @@ describe("ReportSectionsService — submitSection validation errors", () => {
   });
 
   it("rejects when traffic light is missing for a project", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.submitSection(
@@ -510,7 +584,10 @@ describe("ReportSectionsService — submitSection validation errors", () => {
   });
 
   it("rejects when no current items for a project", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.submitSection(
@@ -532,7 +609,10 @@ describe("ReportSectionsService — submitSection validation errors", () => {
   });
 
   it("rejects confirmed: false", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.submitSection({
@@ -544,7 +624,10 @@ describe("ReportSectionsService — submitSection validation errors", () => {
   });
 
   it("rejects empty projectStatuses", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.submitSection(
@@ -622,6 +705,7 @@ describe("ReportSectionsService — multi-project", () => {
   it("saveDraft updates traffic lights for multiple projects", async () => {
     const service = new ReportSectionsService(
       createRepository(multiProjectSection),
+      testGraceSettings,
     );
     const saved = await service.saveDraft({
       reportSectionId: SECTION_ID,
@@ -643,6 +727,7 @@ describe("ReportSectionsService — multi-project", () => {
   it("submit requires traffic light for EVERY project", async () => {
     const service = new ReportSectionsService(
       createRepository(multiProjectSection),
+      testGraceSettings,
     );
 
     // Only provide traffic light for one project
@@ -663,6 +748,7 @@ describe("ReportSectionsService — multi-project", () => {
   it("submit requires current item for EVERY project", async () => {
     const service = new ReportSectionsService(
       createRepository(multiProjectSection),
+      testGraceSettings,
     );
 
     // Only provide current item for project 1
@@ -696,6 +782,7 @@ describe("ReportSectionsService — multi-project", () => {
   it("submit succeeds when all projects have traffic light and current item", async () => {
     const service = new ReportSectionsService(
       createRepository(multiProjectSection),
+      testGraceSettings,
     );
     const result = await service.submitSection({
       reportSectionId: SECTION_ID,
@@ -723,7 +810,10 @@ describe("ReportSectionsService — multi-project", () => {
 
 describe("ReportSectionsService — edge cases", () => {
   it("saveDraft with empty items/risks/decisions is allowed", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const saved = await service.saveDraft(
       validDraft({
         items: [],
@@ -738,7 +828,10 @@ describe("ReportSectionsService — edge cases", () => {
   });
 
   it("saveDraft is idempotent — same input twice produces same result", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const first = await service.saveDraft(validDraft());
     const second = await service.saveDraft(validDraft());
 
@@ -749,7 +842,10 @@ describe("ReportSectionsService — edge cases", () => {
   });
 
   it("section with max boundary items (100) can be saved", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const maxItems = Array.from({ length: 100 }, (_, i) => ({
       projectId: PROJECT_ID_1,
       type: "current" as const,
@@ -765,7 +861,10 @@ describe("ReportSectionsService — edge cases", () => {
   });
 
   it("draft save preserves project list from section (not from input)", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const saved = await service.saveDraft(
       validDraft({
         projectStatuses: [], // empty project statuses
@@ -788,7 +887,10 @@ describe("ReportSectionsService — traffic light all valid statuses", () => {
   it.each(["green", "yellow", "red"] as const)(
     "sets traffic light to %s",
     async (status) => {
-      const service = new ReportSectionsService(createRepository(baseSection));
+      const service = new ReportSectionsService(
+        createRepository(baseSection),
+        testGraceSettings,
+      );
       const saved = await service.saveDraft(
         validDraft({
           projectStatuses: [{ projectId: PROJECT_ID_1, status }],
@@ -799,7 +901,10 @@ describe("ReportSectionsService — traffic light all valid statuses", () => {
   );
 
   it("sets traffic light to null when status is omitted", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
     const saved = await service.saveDraft(
       validDraft({
         projectStatuses: [{ projectId: PROJECT_ID_1 }],
@@ -831,6 +936,7 @@ describe("ReportSectionsService — item tag and workflowStatus combinations", (
       it(`accepts item with tag="${tag}" workflowStatus="${ws}"`, async () => {
         const service = new ReportSectionsService(
           createRepository(baseSection),
+          testGraceSettings,
         );
         const saved = await service.saveDraft(
           validDraft({
@@ -861,7 +967,10 @@ describe("ReportSectionsService — item tag and workflowStatus combinations", (
 
 describe("ReportSectionsService — double submit rejected", () => {
   it("second submit on same section throws SECTION_ALREADY_SUBMITTED", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     // First submit succeeds
     const submitted = await service.submitSection(validSubmit());
@@ -874,7 +983,10 @@ describe("ReportSectionsService — double submit rejected", () => {
   });
 
   it("saveDraft after submit is rejected", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await service.submitSection(validSubmit());
 
@@ -890,7 +1002,10 @@ describe("ReportSectionsService — double submit rejected", () => {
 
 describe("ReportSectionsService — risk/decision Zod validation", () => {
   it("rejects risk with empty risk text", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.saveDraft(
@@ -913,7 +1028,10 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
   });
 
   it("rejects risk with empty impact text", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.saveDraft(
@@ -936,7 +1054,10 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
   });
 
   it("rejects risk without stageIds (require-risk-stage)", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.saveDraft(
@@ -956,7 +1077,10 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
   });
 
   it("rejects decision with empty text", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.saveDraft(
@@ -976,7 +1100,10 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
   });
 
   it("rejects decision with empty owner", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
 
     await expect(
       service.saveDraft(
