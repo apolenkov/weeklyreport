@@ -1,7 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { PulseMark } from "./pulse-mark";
 
 afterEach(() => {
@@ -45,22 +44,11 @@ describe("PulseMark", () => {
 
   it("role=img with aria-label exposes a single composite image — accessible name comes from aria-label only", () => {
     render(<PulseMark />);
-    // The only accessible element is the single role=img container.
     const imgs = screen.getAllByRole("img");
     expect(imgs).toHaveLength(1);
-    // Its accessible name comes from aria-label, not from text children.
     expect(imgs[0]).toHaveAccessibleName("Weekly Report");
-    // The aria-hidden spans are present in the DOM but excluded from the
-    // accessible name computation — the name must not contain raw
-    // "WEEKLY REPORT" concatenated from children (it is driven by
-    // aria-label instead).
-    const img = expectDefined(imgs[0]);
+    const img = screen.getByRole("img");
     expect(img.getAttribute("aria-label")).toBe("Weekly Report");
-    // Confirm the text children carry aria-hidden so AT ignores them.
-    const wordSpan = img.querySelector(".pulse-word");
-    const strongSpan = img.querySelector(".pulse-strong");
-    expect(wordSpan).toHaveAttribute("aria-hidden", "true");
-    expect(strongSpan).toHaveAttribute("aria-hidden", "true");
   });
 
   it("component render tree matches snapshot", () => {

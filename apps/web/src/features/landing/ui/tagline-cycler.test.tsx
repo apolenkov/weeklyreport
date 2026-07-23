@@ -61,7 +61,10 @@ describe("TaglineCycler", () => {
   it("opacity is 1 initially and 0 during fade-out", () => {
     render(<TaglineCycler />);
     const el = screen.getByRole("paragraph");
-    expect(el).toHaveStyle({ opacity: "1" });
+    expect(el).toHaveStyle({
+      opacity: "1",
+      transitionDuration: "250ms",
+    });
     // Advance into fade-out window (visible period elapsed but fade not done)
     act(() => {
       vi.advanceTimersByTime(3001);

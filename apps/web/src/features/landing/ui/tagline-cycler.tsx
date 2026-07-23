@@ -48,7 +48,10 @@ export function TaglineCycler() {
   return (
     <p
       className="pulse-tagline"
-      style={{ opacity: visible ? 1 : 0 }}
+      style={{
+        opacity: visible ? 1 : 0,
+        transitionDuration: `${FADE_MS}ms`,
+      }}
       suppressHydrationWarning
     >
       {LANDING_TAGLINES[index]}
