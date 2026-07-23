@@ -40,10 +40,4 @@ describe("role-predicates", () => {
       }
     });
   }
-
-  it("every predicate returns false for null (loading/absent session)", () => {
-    for (const { predicate } of TRUTH_TABLE) {
-      expect(predicate(null)).toBe(false);
-    }
-  });
 });

@@ -5,6 +5,15 @@ import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
 
 import { decodeTrpcBatchPayload, requireApiUrl } from "./api-url";
 
+function decodeOrgPublicResponse(body: unknown): OrganizationPublic | null {
+  const payload = decodeTrpcBatchPayload(body);
+  if (!payload || typeof payload !== "object") return null;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.shortName !== "string" || typeof p.fullName !== "string")
+    return null;
+  return { shortName: p.shortName, fullName: p.fullName };
+}
+
 /**
  * Server-only helper that pre-fetches the org identity for SSR injection into
  * layout.tsx, eliminating the "ORG · Organization" flash on the landing page.
@@ -16,19 +25,10 @@ import { decodeTrpcBatchPayload, requireApiUrl } from "./api-url";
  * On any failure (API down, network error, bad shape) returns
  * DEFAULT_ORGANIZATION_IDENTITY so the landing page still renders correctly.
  * `cache: 'force-cache'` is intentional — org identity is stable across a
- * deploy and the cache is revalidated via POST /api/revalidate-org when
- * admin updates shortName/fullName in settings. The `tags: ['org-public']`
- * on the fetch is what that route invalidates.
+ * deploy. The fetch uses both a 60s `revalidate` window and the
+ * `org-public` tag (invalidated via POST /api/revalidate-org when admin
+ * updates shortName/fullName in settings).
  */
-function decodeOrgPublicResponse(body: unknown): OrganizationPublic | null {
-  const payload = decodeTrpcBatchPayload(body);
-  if (!payload || typeof payload !== "object") return null;
-  const p = payload as Record<string, unknown>;
-  if (typeof p.shortName !== "string" || typeof p.fullName !== "string")
-    return null;
-  return { shortName: p.shortName, fullName: p.fullName };
-}
-
 export async function getOrgPublic(): Promise<OrganizationPublic> {
   const apiUrl = requireApiUrl();
   const inputParam = encodeURIComponent('{"0":{}}');

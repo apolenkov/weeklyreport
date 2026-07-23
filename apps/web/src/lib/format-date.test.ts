@@ -46,9 +46,7 @@ describe("formatRelativePast", () => {
     const date = ago(
       DAYS_PER_WEEK * HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE,
     );
-    expect(formatRelativePast(date, NOW, "activity")).toBe(
-      date.toLocaleDateString("en-US", { timeZone: "UTC" }),
-    );
+    expect(formatRelativePast(date, NOW, "activity")).toBe("4/13/2026");
   });
 
   it("uses UTC for the activity date fallback", () => {
