@@ -65,7 +65,7 @@ export const assembledReportSchema = z.object({
   reportId: z.uuid(),
   periodStart: reportDate(),
   periodEnd: reportDate(),
-  deadline: reportDate(),
+  deadline: reportDate().nullable(),
   status: reportStatusSchema,
   publishedAt: z.coerce.date().nullable().default(null),
   publishedById: z.uuid().nullable().default(null),
@@ -361,7 +361,7 @@ export const weeklyReportReadModelSchema = z.object({
   reportId: z.uuid(),
   periodStart: reportDate(),
   periodEnd: reportDate(),
-  deadline: reportDate(),
+  deadline: reportDate().nullable(),
   periodStatus: periodStatusSchema,
   weekLabel: z.string().nullable(),
   // `departmentName` is NOT on the weekly read model. Frontends pull the

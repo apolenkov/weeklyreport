@@ -53,10 +53,15 @@ export function buildKpiData(
   const isEditablePeriod =
     weeklyReport.periodStatus === "open" ||
     weeklyReport.periodStatus === "reopened";
-  const deadlineLabel = isEditablePeriod
-    ? formatRelativeDeadline(weeklyReport.deadline, now)
-    : "Closed";
-  const deadlineTime = isoDateLabel(weeklyReport.deadline);
+  // A cleared deadline (ruling F16) is an explicit state, not a countdown of
+  // zero — the card says so instead of inventing a reference point.
+  const deadlineLabel = !isEditablePeriod
+    ? "Closed"
+    : weeklyReport.deadline === null
+      ? "No deadline"
+      : formatRelativeDeadline(weeklyReport.deadline, now);
+  const deadlineTime =
+    weeklyReport.deadline === null ? "—" : isoDateLabel(weeklyReport.deadline);
 
   return {
     submitted,

@@ -29,6 +29,10 @@ export async function queryDueDeadlineRules(
       kind: "deadline",
       fireAt: { lte: now },
       reportId: { not: null },
+      // An admin can clear a period's deadline AFTER rules materialized
+      // (ruling F16); such rules must never dispatch — reminders are
+      // deadline-relative and the reference point is gone.
+      report: { deadline: { not: null } },
     },
     include: {
       report: {
@@ -100,6 +104,9 @@ export async function queryDueEscalationRules(
       kind: "escalation",
       fireAt: { lte: now },
       reportId: { not: null },
+      // Same F16 guard as the deadline query: a cleared deadline silences
+      // the period's rules at dispatch time.
+      report: { deadline: { not: null } },
     },
     include: {
       report: {
@@ -140,7 +147,13 @@ export async function queryDueEscalationRules(
   return rules.flatMap((rule) => {
     const report = rule.report;
     if (!report) return [];
-    const { groups, unresolved } = buildEscalationGroups(report);
+    // The where-clause already excludes cleared deadlines; this re-check
+    // narrows the type and covers a clear racing the query.
+    if (report.deadline === null) return [];
+    const { groups, unresolved } = buildEscalationGroups({
+      ...report,
+      deadline: report.deadline,
+    });
     if (unresolved.length > 0) {
       logger.warn(
         `escalation: no active group head for ${unresolved.length} late lead(s) on report ${report.id}; digest skipped`,

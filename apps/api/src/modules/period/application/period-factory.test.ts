@@ -1,6 +1,7 @@
 import type { ReportStatus } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   ensureCurrentPeriod,
   type PeriodFactorySettings,
@@ -115,7 +116,9 @@ describe("ensureCurrentPeriod", () => {
     });
     expect(result.periodStart.toISOString()).toBe(EXPECTED_PERIOD_START);
     expect(result.periodEnd.toISOString()).toBe(EXPECTED_PERIOD_END);
-    expect(result.deadline.toISOString()).toBe(EXPECTED_DEADLINE);
+    expect(expectDefined(result.deadline).toISOString()).toBe(
+      EXPECTED_DEADLINE,
+    );
 
     // The create data carries the full governed lifecycle field set from
     // buildTransition (periodState + the legacy draft/false tuple), not a

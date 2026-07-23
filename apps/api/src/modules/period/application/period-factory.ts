@@ -51,7 +51,9 @@ export interface EnsuredPeriod {
   reportId: string;
   periodStart: Date;
   periodEnd: Date;
-  deadline: Date;
+  // Null only on a found (not minted) row whose deadline an admin explicitly
+  // cleared (ruling F16); a freshly minted period always carries one.
+  deadline: Date | null;
   // A draft period can only be `scheduled` or `open` (the legacy `status:"draft"`
   // tuple maps to exactly those two states), so the public shape stays narrow.
   periodState: Extract<PeriodState, "scheduled" | "open">;
@@ -185,7 +187,7 @@ export async function ensureCurrentPeriod(
     // materialise the (secondary) reminder rules must NOT fail the caller — a
     // login must not 500 over reminders, and a cron tick should still record the
     // period. The rows are recoverable via `pnpm db:backfill:reminder-policies`.
-    if (policyApplicator) {
+    if (policyApplicator && created.deadline !== null) {
       try {
         await policyApplicator.applyToPeriod(
           { id: created.id, deadline: created.deadline },

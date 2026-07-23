@@ -12,38 +12,41 @@
 
 ## 2. Schema + contracts
 
-- [ ] 2.1 `prisma/schema.prisma`: `Report.deadline DateTime?`; reset+seed
+- [x] 2.1 `prisma/schema.prisma`: `Report.deadline DateTime?`; reset+seed
       dev/test DBs (`PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`).
-- [ ] 2.2 `packages/shared` period-edit schema: `deadline:
+- [x] 2.2 `packages/shared` period-edit schema: `deadline:
 z....nullable().optional()`; `periodEnd` unchanged. Schema-surface
       test pins the three states.
-- [ ] 2.3 Update service diff: `null` → real clear; audit envelope
+- [x] 2.3 Update service diff: `null` → real clear; audit envelope
       `changes.deadline = { from, to: null }`; no-op edit still emits
       nothing.
 
 ## 3. Consumers (per audit 1.1)
 
-- [ ] 3.1 Deadline gate: absent deadline → gate inactive, reason logged
+- [x] 3.1 Deadline gate: absent deadline → gate inactive, reason logged
       loudly (extends the F13 fail-loud direction, never silent-off).
-- [ ] 3.2 Deadline-relative reminder policies: no executions for a
+- [x] 3.2 Deadline-relative reminder policies: no executions for a
       no-deadline period; escalation/deadline templates never render an
       empty date.
-- [ ] 3.3 Web: period badge/countdown/admin form show an explicit
+- [x] 3.3 Web: period badge/countdown/admin form show an explicit
       "No deadline" state; clear affordance + consequence-stating confirm.
-- [ ] 3.4 Auto-publish/analytics/pdf-export: null-deadline branches explicit
+      **Deviation: the consequence is an always-visible inline hint under
+      the cleared field (stronger than a click-through confirm dialog);
+      pinned by test.**
+- [x] 3.4 Auto-publish/analytics/pdf-export: null-deadline branches explicit
       and covered by tests.
 
 ## 4. Specs
 
-- [ ] 4.1 Delta `web-polish-lows`: clause narrowed to deadline-only explicit
+- [x] 4.1 Delta `web-polish-lows`: clause narrowed to deadline-only explicit
       clear; periodEnd clear = validation error.
-- [ ] 4.2 Delta for the reminder/deadline-gate capability: null-deadline
+- [x] 4.2 Delta for the reminder/deadline-gate capability: null-deadline
       scenarios.
 
 ## 5. Gates
 
-- [ ] 5.1 Unit + integration suites green; new null-deadline tests have
+- [x] 5.1 Unit + integration suites green; new null-deadline tests have
       teeth (assert behavior, not absence).
-- [ ] 5.2 `pnpm typecheck`, `pnpm lint` (or deferred-lint list while the
+- [x] 5.2 `pnpm typecheck`, `pnpm lint` (or deferred-lint list while the
       toolchain is down), `openspec validate allow-deadline-explicit-clear
 --strict`.

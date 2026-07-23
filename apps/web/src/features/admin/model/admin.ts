@@ -126,7 +126,7 @@ function mapPeriod(api: ReportPeriod): MockPeriod {
     weekLabel: formatPeriodLabel(api.periodStart, api.periodEnd),
     startDate: toIsoDateString(api.periodStart),
     endDate: toIsoDateString(api.periodEnd),
-    deadline: toIsoDateString(api.deadline),
+    deadline: api.deadline === null ? null : toIsoDateString(api.deadline),
     status,
   };
 }

@@ -190,7 +190,10 @@ model Report {
   id                     String                  @id @default(uuid())
   periodStart            DateTime
   periodEnd              DateTime
-  deadline               DateTime
+  // Nullable by ruling F16 (allow-deadline-explicit-clear): an admin may
+  // clear a period's deadline; deadline-driven automation (gate, reminders,
+  // auto-publish) must then skip that period EXPLICITLY, never via fallback.
+  deadline               DateTime?
   status                 ReportStatus            @default(draft)
   publishedAt            DateTime?
   publishedById          String?

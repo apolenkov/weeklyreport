@@ -209,6 +209,11 @@ export class PeriodCreatorScheduler {
     this.logger.log(
       `auto-create period=${result.reportId} state=${result.periodState} (${result.periodStart.toISOString()} → ${result.periodEnd.toISOString()})`,
     );
+    // A freshly minted period always carries a deadline; null can only mean
+    // schema drift between the factory and this audit call — fail loud.
+    if (result.deadline === null) {
+      throw new Error("Auto-created period unexpectedly has no deadline.");
+    }
     this.auditLogger.periodAutoCreate({
       periodId: result.reportId,
       periodStart: result.periodStart.toISOString(),

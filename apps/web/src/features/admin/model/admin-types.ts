@@ -61,7 +61,8 @@ export interface MockPeriod {
   weekLabel: string;
   startDate: string;
   endDate: string;
-  deadline: string;
+  /** ISO date, or null for a period whose deadline was cleared (ruling F16). */
+  deadline: string | null;
   status: PeriodStatus;
 }
 

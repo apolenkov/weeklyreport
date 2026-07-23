@@ -115,12 +115,23 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
               from: range.from.toISOString(),
               to: range.to.toISOString(),
             });
+            // deadline is three-state (ruling F16): `to: null` records an
+            // explicit clear in the audit trail.
+            const toIsoOrNull = (value: Date | null) =>
+              value === null ? null : value.toISOString();
             const changes = {
               ...(diff.periodStart
                 ? { periodStart: toIso(diff.periodStart) }
                 : {}),
               ...(diff.periodEnd ? { periodEnd: toIso(diff.periodEnd) } : {}),
-              ...(diff.deadline ? { deadline: toIso(diff.deadline) } : {}),
+              ...(diff.deadline
+                ? {
+                    deadline: {
+                      from: toIsoOrNull(diff.deadline.from),
+                      to: toIsoOrNull(diff.deadline.to),
+                    },
+                  }
+                : {}),
               ...(diff.weekLabel ? { weekLabel: diff.weekLabel } : {}),
             };
             ctx.auditLogger.periodManualEdit({

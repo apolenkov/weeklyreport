@@ -8,7 +8,8 @@ interface CreatePeriodFieldsProps {
   readonly deadline: string;
   readonly onDeadlineChange: (value: string) => void;
   readonly deadlineError: string | null;
-  readonly deadlineRequired: boolean;
+  /** Consequence note shown when edit-mode clears the deadline (ruling F16). */
+  readonly deadlineClearHint: string | null;
   readonly weekLabel: string;
   readonly onWeekLabelChange: (value: string) => void;
 }
@@ -26,7 +27,7 @@ export function CreatePeriodFields({
   deadline,
   onDeadlineChange,
   deadlineError,
-  deadlineRequired,
+  deadlineClearHint,
   weekLabel,
   onWeekLabelChange,
 }: CreatePeriodFieldsProps) {
@@ -76,20 +77,15 @@ export function CreatePeriodFields({
           className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
         >
           Deadline{" "}
-          {deadlineRequired ? (
-            <span className="text-[#991b1b]">*</span>
-          ) : (
-            <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
-              (optional)
-            </span>
-          )}
+          <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+            (optional)
+          </span>
         </label>
         <input
           id="period-deadline"
           type="datetime-local"
           value={deadline}
           onChange={(e) => onDeadlineChange(e.target.value)}
-          required={deadlineRequired}
           aria-invalid={deadlineError !== null}
           aria-describedby={deadlineError ? "period-deadline-error" : undefined}
           data-testid="periods-create-deadline"
@@ -102,6 +98,15 @@ export function CreatePeriodFields({
             className="mt-1 text-xs text-red-600"
           >
             {deadlineError}
+          </p>
+        )}
+        {!deadlineError && deadlineClearHint && (
+          <p
+            id="period-deadline-hint"
+            data-testid="periods-deadline-hint"
+            className="mt-1 text-xs text-[var(--color-muted-foreground)]"
+          >
+            {deadlineClearHint}
           </p>
         )}
       </div>

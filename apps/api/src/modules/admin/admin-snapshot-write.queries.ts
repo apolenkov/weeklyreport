@@ -146,11 +146,12 @@ async function upsertPeriods(
 ): Promise<{ newlyCreatedPeriods: { id: string; deadline: Date }[] }> {
   // Track which periods are NEW so the applicator runs on them AFTER the
   // transaction commits. Updates do not re-trigger it — policies attach once
-  // at create.
+  // at create. Deadline-less periods (ruling F16) are excluded: reminder
+  // offsets are deadline-relative, so the applicator has nothing to schedule.
   const newlyCreatedPeriods: { id: string; deadline: Date }[] = [];
   for (const period of periods) {
     const { created } = await writePeriodRow(tx, period);
-    if (created) {
+    if (created && period.deadline !== null) {
       newlyCreatedPeriods.push({ id: period.id, deadline: period.deadline });
     }
   }

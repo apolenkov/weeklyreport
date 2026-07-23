@@ -2,6 +2,7 @@ import type { PeriodState } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { mapDomainError } from "../../infrastructure/trpc/trpc.error-mapper.js";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
 import { AdminAccessError, type AdminRepository } from "./admin-shared.js";
 import { PeriodAdminService } from "./period-admin.service.js";
@@ -140,7 +141,9 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
       deadline: new Date("2026-05-10T15:00:00.000Z"),
     });
 
-    expect(result.deadline.toISOString()).toBe("2026-05-10T15:00:00.000Z");
+    expect(expectDefined(result.deadline).toISOString()).toBe(
+      "2026-05-10T15:00:00.000Z",
+    );
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.updatePeriodManual).toHaveBeenCalledOnce();
   });

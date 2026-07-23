@@ -34,7 +34,7 @@ export class AdminDeadlineTimeFormatError extends Error {
 export interface PeriodEnvelope {
   periodStart: Date;
   periodEnd: Date;
-  deadline: Date;
+  deadline: Date | null;
   weekLabel: string | null;
 }
 
@@ -42,7 +42,7 @@ export interface PeriodEnvelope {
 export interface PeriodPatchInput {
   periodStart?: Date;
   periodEnd?: Date;
-  deadline?: Date;
+  deadline?: Date | null;
   weekLabel?: string | null;
 }
 
@@ -53,7 +53,7 @@ export type PeriodPatchData = PeriodPatchInput;
 export type PeriodPatchDiff = Partial<{
   periodStart: { from: Date; to: Date };
   periodEnd: { from: Date; to: Date };
-  deadline: { from: Date; to: Date };
+  deadline: { from: Date | null; to: Date | null };
   weekLabel: { from: string | null; to: string | null };
 }>;
 
@@ -62,6 +62,21 @@ const dateEntry = (
   to: Date | undefined,
 ): { from: Date; to: Date } | null =>
   to !== undefined && to.getTime() !== from.getTime() ? { from, to } : null;
+
+// deadline: explicit `null` is an allowed value (clear — ruling F16), so the
+// three-state contract mirrors `weekLabel`. Equal instants (or both null)
+// drop an unchanged PATCH.
+const nullableDateEntry = (
+  from: Date | null,
+  to: Date | null | undefined,
+): { from: Date | null; to: Date | null } | null => {
+  if (to === undefined) return null;
+  const unchanged =
+    to === null
+      ? from === null
+      : from !== null && to.getTime() === from.getTime();
+  return unchanged ? null : { from, to };
+};
 
 // weekLabel: explicit `null` is an allowed value (clear). Structural equality
 // (`null === null`, `'foo' === 'foo'`) drops an unchanged-label PATCH.
@@ -83,7 +98,7 @@ export function computePeriodPatch(
 ): { data: PeriodPatchData; diff: PeriodPatchDiff } {
   const start = dateEntry(existing.periodStart, input.periodStart);
   const end = dateEntry(existing.periodEnd, input.periodEnd);
-  const deadline = dateEntry(existing.deadline, input.deadline);
+  const deadline = nullableDateEntry(existing.deadline, input.deadline);
   const label = labelEntry(existing.weekLabel, input.weekLabel);
 
   const data: PeriodPatchData = {
@@ -109,7 +124,7 @@ export function computePeriodPatch(
  */
 export function assertEnvelopeEditable(
   periodState: PeriodState,
-  data: { periodStart?: Date; periodEnd?: Date; deadline?: Date },
+  data: { periodStart?: Date; periodEnd?: Date; deadline?: Date | null },
 ): void {
   const envelopeEdit =
     data.periodStart !== undefined ||
@@ -218,7 +233,7 @@ export function toUpdateManualResult(row: {
   id: string;
   periodStart: Date;
   periodEnd: Date;
-  deadline: Date;
+  deadline: Date | null;
   periodState: PeriodState;
   weekLabel: string | null;
 }): AdminUpdatePeriodManualResult {

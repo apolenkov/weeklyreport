@@ -1077,7 +1077,7 @@ describe("AdminPrismaRepository (integration)", () => {
     const period = expectDefined(
       await prisma.report.findUnique({ where: { id: testData.report.id } }),
     );
-    expect(period.deadline.toISOString()).toBe(
+    expect(expectDefined(period.deadline).toISOString()).toBe(
       new Date("2026-04-12").toISOString(),
     );
   });
