@@ -2594,7 +2594,7 @@
       "line": 59,
       "issue": "The `s.ownership === \"locked\" && s.assignee` branch contradicts the module comment that hidden foreign stages always arrive locked with a null assignee, so it may only ever fire from the synthetic test fixture (line 62-69), not production.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -2603,7 +2603,7 @@
       "line": 123,
       "issue": "`border: \"1px solid rgba(0,0,0,0.08)\"` hardcodes an opaque-black card border that ignores dark mode while every sibling color uses `var(--color-*)` tokens (STRIPE_BY_STATUS, background).",
       "class": "magic-values-drift",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -2621,7 +2621,7 @@
       "line": 211,
       "issue": "Clicking a disabled button via userEvent is a no-op that never dispatches, so the follow-up 'not.toHaveBeenCalled' assertions add little beyond the disabled-attribute check already made above.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2648,7 +2648,7 @@
       "line": 34,
       "issue": "`activities?: readonly { id: string; name: string }[]` reinvents the shared `ParentActivityOption` type used by the sibling dialog/fields files, so the two shapes can drift independently.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2657,7 +2657,7 @@
       "line": 116,
       "issue": "`?? \"Group\"` is a silent product-name default that the repo's no-magic-literal rule flags; it is an unreachable-in-practice fallback that should be named/documented or removed.",
       "class": "magic-values-drift",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -2666,7 +2666,7 @@
       "line": 43,
       "issue": "The 'compact touch floor' test pins exact Tailwind class substrings (min-h-[var(--touch-target-min)], md:min-h-[40px]) that originate in the shared RecordDialogFooter, so it fails on a purely-cosmetic refactor of another component rather than testing this dialog's behavior.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2693,7 +2693,7 @@
       "line": 234,
       "issue": "Several assertions pin Tailwind class strings (e.g. max-md:min-w-[var(--touch-target-min)], rounded-full) which will churn on any styling refactor even when behavior is unchanged; acceptable only because the comment explains jsdom cannot evaluate the media queries.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2711,8 +2711,8 @@
       "line": 84,
       "issue": "previousPeriod = pastPeriods.at(0) silently assumes the caller pre-sorts periods most-recent-first; nothing in the props contract states this, so an unsorted `periods` prop would badge and pre-fill the wrong period.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-294",
@@ -2729,7 +2729,7 @@
       "line": 140,
       "issue": "Inside the `streak >= 2` branch the ternary `{streak === 1 ? \"week\" : \"weeks\"}` can never evaluate to \"week\" — dead singular branch.",
       "class": "dead-unreachable-code",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -2738,7 +2738,7 @@
       "line": 214,
       "issue": "Hardcoded `bg-[#faf6ee]` hex breaks the token convention used everywhere else in this file (var(--color-*)) and will not respond to theming.",
       "class": "magic-values-drift",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -2747,7 +2747,7 @@
       "line": 89,
       "issue": "Stat labeled \"On-time rate\" actually computes submitted/total (a completion rate), nothing about timeliness — the copy overstates what the number means.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -2756,8 +2756,8 @@
       "line": 11,
       "issue": "`options: PeriodOption[]` and PeriodOption's fields are mutable while every other prop on the interface is `readonly`, an inconsistency against the repo's immutability convention.",
       "class": "mutation-immutability",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-299",
@@ -2765,8 +2765,8 @@
       "line": 94,
       "issue": "Delete gate keys off `row.periodStatus === 'published'` while every sibling action keys off `row.periodState`; this correctly keeps archived-published rows non-deletable but leaves a reopened row (periodState 'open', periodStatus 'reopened') deletable despite prior publication — the mixed source field is undocumented and easy to misread.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-300",
@@ -2774,8 +2774,8 @@
       "line": 23,
       "issue": "Enumerates and re-threads all six onX handlers by hand and re-passes them individually to PeriodTable, whereas the sibling periods-active-section uses a single `...rowActions` spread — the two siblings drift on the same pattern for no reason.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-301",
@@ -2783,8 +2783,8 @@
       "line": 76,
       "issue": "In edit mode a required (NOT NULL) deadline can be cleared to empty, sending deadline: undefined, which only works if the edit mutation treats undefined as leave-unchanged rather than clear.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-302",
@@ -2792,7 +2792,7 @@
       "line": 232,
       "issue": "formatDate renders the deadline via toLocaleDateString with no timeZone:'UTC', inconsistent with the deliberate UTC wall-clock treatment in the dialog helpers — a near-midnight-UTC deadline can display an off-by-one calendar day for non-UTC admins.",
       "class": "error-handling-robustness",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2801,8 +2801,8 @@
       "line": 230,
       "issue": "formatDate's Date | string union has an unreachable string branch since row.deadline is always a Date (reportDate).",
       "class": "dead-unreachable-code",
-      "disposition": "pending",
-      "lane": "grok"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-304",
@@ -2828,7 +2828,7 @@
       "line": 302,
       "issue": "The `dialog.focus(); expect(activeElement).toBe(dialog)` step tests jsdom's own focus() rather than the component, so that half of the assertion cannot fail as a regression guard (only the tabindex pin is meaningful).",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2846,8 +2846,8 @@
       "line": 120,
       "issue": "The publish path hand-rolls an inline (non-portal) dialog whose backdrop has no onClick, while the reopen path uses the portal-based ConfirmDeleteDialog that closes on backdrop click — inconsistent dialog UX/implementation within one component.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-309",
@@ -2855,8 +2855,8 @@
       "line": 128,
       "issue": "The publish dialog div carries both `autoFocus` and is driven by `useDialogFocus`, two overlapping focus-management mechanisms on the same element.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-310",
@@ -2864,7 +2864,7 @@
       "line": 44,
       "issue": "Asserting raw Tailwind class substrings (`min-h-[var(--touch-target-min)]`, `md:min-h-[40px]`) is brittle to styling refactors, though acknowledged as the only jsdom-available proxy for media queries.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2891,8 +2891,8 @@
       "line": 23,
       "issue": "products is typed Product[] while rawProducts/crossAuthors are readonly; the mutable array prop is an inconsistency with the file's own immutable-prop convention.",
       "class": "mutation-immutability",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-314",
@@ -2909,7 +2909,7 @@
       "line": 40,
       "issue": "periodLengthDays (and likewise defaultDeadlineDays, gracePeriodHours, autoArchiveWeeks) apply '|| 1'/'|| 0' as a lower floor but never clamp to the input's max, so typed values above max=31/30/168/52 pass straight into draft state.",
       "class": "error-handling-robustness",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2936,8 +2936,8 @@
       "line": 1,
       "issue": "Barrel exports only WeeklyReportPage yet head/report/page.tsx imports that same symbol via a deep ./ui/weekly-report-page path, and sibling components (LeadForm, HeadReportShell, skeletons) are never barreled — the module surface is arbitrary rather than the feature's public API.",
       "class": "code-structure-placement",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-319",
@@ -2945,7 +2945,7 @@
       "line": 143,
       "issue": "Card chrome hardcodes bg-white/70 and rgba(0,0,0,...) borders instead of theme tokens used elsewhere in the file, so these cards won't adapt if the report surface ever renders in dark mode.",
       "class": "magic-values-drift",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -2963,7 +2963,7 @@
       "line": 216,
       "issue": "The 'exactly one ReportToolbar passed through the toolbar slot' assertion is satisfied unconditionally by the WeeklyReportPage stub (which always renders one report-toolbar div), so it verifies the shell mounts the page once, not that contextControls are threaded into the slot.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2972,7 +2972,7 @@
       "line": 229,
       "issue": "The header-before-toolbar document-order assertion tests the mock's hardcoded arrangement (header then toolbar in the stub), not any shell behavior, so it cannot fail on a shell regression.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -2981,7 +2981,7 @@
       "line": 168,
       "issue": "mergeRiskDraft falls back to createId() for a missing id while mergeDecisionDraft (line 119) and mergeItemsDraft (line 219) use decision.id/item.id raw with no fallback — an inconsistency, though id is a required string on all three entry types so it is not a live bug.",
       "class": "env-config-silent-fallback",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3017,7 +3017,7 @@
       "line": 198,
       "issue": "The long +Add button className is duplicated verbatim here and for +Add Decision (231) and again in lead-form-item-sections; a shared button would remove the copy.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3035,7 +3035,7 @@
       "line": 109,
       "issue": "Identical +Add button className is repeated verbatim at line 153 (and mirrored in lead-form-edit-sections); extract a shared button to avoid drift.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3053,7 +3053,7 @@
       "line": 73,
       "issue": "Re-rendering a pure, deterministic, index-keyed stateless component and asserting afterSnapshot equals firstSnapshot is a tautology that cannot fail; only the toMatchSnapshot half carries any guard.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3071,7 +3071,7 @@
       "line": 63,
       "issue": "Positional name resolution indexes draft stageStatuses order into the full product.stages array (mine+locked); safe only while draft order tracks product order, which the comment acknowledges but no assertion guards.",
       "class": "missing-test-coverage",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3107,7 +3107,7 @@
       "line": 151,
       "issue": "'pillPair ?? slidesLink' silently changes the snapshot subject if the '.rounded-r' container ever disappears, muddying the diff for a structural regression the pin is meant to catch cleanly.",
       "class": "env-config-silent-fallback",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3116,8 +3116,8 @@
       "line": 45,
       "issue": "`export { sectionToDraftPayload }` is consumed only by lead-form.test.tsx; every production caller imports it from `../../report-sections`, so this re-export exists solely to feed the test.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-339",
@@ -3143,7 +3143,7 @@
       "line": 15,
       "issue": "The autosave.state -> human-copy ternary duplicates the same state->copy mapping concept as `autosaveCopy` in lead-submit-readiness-summary.tsx (different strings, same ladder) — a candidate for a shared helper.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3152,7 +3152,7 @@
       "line": 31,
       "issue": "Shallow pass-through: nearly all 17 props are forwarded unchanged, so the abstraction encapsulates little beyond the hardcoded week/title strings.",
       "class": "magic-values-drift",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -3161,7 +3161,7 @@
       "line": 54,
       "issue": "queryAllByRole('img')/('graphics-symbol') would return empty even without aria-hidden (the SVG has no role), so this test does not actually prove the aria-hidden exclusion it names.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3170,7 +3170,7 @@
       "line": 85,
       "issue": "toMatchSnapshot on a static 4-rect inline SVG is a brittle low-value pin that auto-regenerates rather than asserting intent.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3188,7 +3188,7 @@
       "line": 37,
       "issue": "STATUS_ICON_TEXT is value-for-value identical to STATUS_TEXT (lines 25-29); the two maps could collapse to one.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3206,7 +3206,7 @@
       "line": 88,
       "issue": "The popup uses hardcoded 'bg-white' while every other surface reads a '--color-*' token, so the dropdown ignores the theme and can render wrong in dark mode.",
       "class": "magic-values-drift",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -3260,7 +3260,7 @@
       "line": 75,
       "issue": "toBeGreaterThanOrEqual(1) immediately followed by toBe(1) is a redundant assertion — the exact-equality check subsumes it.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3269,7 +3269,7 @@
       "line": 105,
       "issue": "expect(view.scrollTargetProductId).toBe(view.focusedProductId) is tautological given scrollTargetProductId is assigned = focusedProductId in source; only the concrete PRODUCT_WITH_CONTENT assertions carry test value.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3278,7 +3278,7 @@
       "line": 142,
       "issue": "scrollTargetProductId is hardcoded to equal focusedProductId, so the interface exposes two always-identical fields that are then threaded as separate props (highlighted vs scrollIntoViewOnHighlight) through ReportContent and ReportAccordionBody.",
       "class": "magic-values-drift",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -3287,8 +3287,8 @@
       "line": 92,
       "issue": "fullLeadGroups is a needless alias of rawLeadGroups (same value, both used); one name would do.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-358",
@@ -3305,8 +3305,8 @@
       "line": 502,
       "issue": "The publish/reopen success and error tests invoke the captured onSuccess/onError options directly, so they verify the callback bodies but not that those callbacks are actually wired into the live mutation options.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-360",
@@ -3314,8 +3314,8 @@
       "line": 124,
       "issue": "Inline section comments are numbered 1, 2, 4, 5 (skipping 3), inconsistent with the renumbered 1-4 docblock — leftover numbering from when the removed AI Insights slot was section 3.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-361",
@@ -3665,8 +3665,8 @@
       "line": 120,
       "issue": "tone is hardcoded to 'warning' whenever any content exists, so a fully-green activity section can never present as 'ready' — a mild UX inaccuracy versus the canonical statusTone ladder.",
       "class": "magic-values-drift",
-      "disposition": "pending",
-      "lane": "grok"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-400",
@@ -3674,8 +3674,8 @@
       "line": 118,
       "issue": "atRiskCount is set to a 0/1 flag here whereas elsewhere the field is a true count, a small semantic inconsistency in the shared SectionSlideModel contract.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-401",
@@ -3683,7 +3683,7 @@
       "line": 77,
       "issue": "The bare \"\" fallback is an undocumented sentinel for 'no report' — non-obvious per the repo's magic-literal rule; a named constant or comment would make the contract with the enabled:targetReportId!=='' guards explicit.",
       "class": "magic-values-drift",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -3692,8 +3692,8 @@
       "line": 1,
       "issue": "File uses a .tsx extension but contains no JSX; a .ts extension would match its content (convention, not lint-caught).",
       "class": "code-structure-placement",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "grok"
     },
     {
       "id": "g-403",
@@ -3701,7 +3701,7 @@
       "line": 50,
       "issue": "ownerRole is typed as open string though only 'lead'/'product' (and section roles) are ever assigned — a narrower union would prevent typos and document the domain.",
       "class": "type-safety-weakening",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3710,8 +3710,8 @@
       "line": 62,
       "issue": "The cross-product slide surfaces priorities but omits itemRanks (unlike per-product recordSlices), so any priority-ordering UI renders cross-product priorities unranked.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-405",
@@ -3719,7 +3719,7 @@
       "line": 26,
       "issue": "EMPTY_SLIDE_FOREIGN_CONTENT has no production consumer (only the test suite imports it), so it is a test-only export living in production code.",
       "class": "dead-unreachable-code",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -3728,7 +3728,7 @@
       "line": 58,
       "issue": "ownerRole silently defaults a missing (optional) authorRole to \"lead\", which can mislabel a head/admin author in the slide legend rather than surfacing the absent role.",
       "class": "misleading-stale-comment",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -3737,7 +3737,7 @@
       "line": 124,
       "issue": "buildSectionRecordSummary and recordSlices restate the same filter/trim/nonEmpty patterns across five record kinds; a small per-kind extractor would remove the near-duplicate blocks without conflating their scopes.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3755,7 +3755,7 @@
       "line": 167,
       "issue": "buildPage and pageProductSlide independently recompute rowsIn(records,'current'/'next') and the priority-card texts from the same records; buildPage could pass the already-computed arrays into the product-slide builder rather than deriving them twice.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3764,8 +3764,8 @@
       "line": 37,
       "issue": "Only colorIndex is asserted; initialsOf output, owner/role passthrough, and the localeCompare name-ordering of foreign authors have no direct test, so a regression in initials or sort order would pass silently.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-411",
@@ -3782,8 +3782,8 @@
       "line": 27,
       "issue": "For a non-activity item whose projectId is not a known product, homeProductId keeps the raw unknown id (name falls back to sharedCardName) whereas collectCells folds that record onto SHARED_CARD_ID, so the priority card's productId may point at no rendered card.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-413",
@@ -3836,7 +3836,7 @@
       "line": 5,
       "issue": "File named slide-product-status.test.tsx imports and tests SlideProductCard from slide-article-grid (never the SLIDE_PRODUCT_STATUS_PRESENTATION const it names), so a reader hunting card tests won't find them under the expected path.",
       "class": "naming",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "grok"
     },
     {
@@ -3845,7 +3845,7 @@
       "line": 40,
       "issue": "The markup-shape snapshot test auto-regenerates on any change, so it pins nothing the explicit 4-item count assertion above does not already cover.",
       "class": "redundant-brittle-test",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3854,8 +3854,8 @@
       "line": 85,
       "issue": "handleKeyDown unconditionally preventDefaults ArrowLeft/ArrowRight on bubbled keydown, so a focused text input inside the arbitrary heroControls ReactNode would have cursor movement hijacked into slide navigation — unlike useFullscreen's onKey which skips INPUT/TEXTAREA/SELECT.",
       "class": "other",
-      "disposition": "pending",
-      "lane": "fable-triage-first"
+      "disposition": "fixed",
+      "lane": "codex"
     },
     {
       "id": "g-421",
@@ -3863,7 +3863,7 @@
       "line": 20,
       "issue": "LeadSlideFormData is re-derived as NonNullable<ReturnType<typeof mapLeadFormData>> here and identically in use-slide-inline-editor-support.tsx, inviting drift; hoist to one shared type.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
@@ -3872,7 +3872,7 @@
       "line": 23,
       "issue": "LeadSlideFormData duplicates the same NonNullable<ReturnType<typeof mapLeadFormData>> derivation found in use-lead-slides-data.ts; consolidate into one exported type.",
       "class": "duplication",
-      "disposition": "pending",
+      "disposition": "fixed",
       "lane": "codex"
     },
     {
