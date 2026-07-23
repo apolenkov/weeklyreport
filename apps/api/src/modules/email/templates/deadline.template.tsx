@@ -29,6 +29,9 @@ export interface DeadlineEmailProps {
   organization: OrganizationBrand;
 }
 
+const formatDeadline = (iso: string): string =>
+  `${new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeStyle: "short", timeZone: "UTC" }).format(new Date(iso))} UTC`;
+
 export function DeadlineEmail({
   leadName,
   reportPeriod,
@@ -48,7 +51,7 @@ export function DeadlineEmail({
             </Heading>
             <Text className="text-gray-700">
               This is a reminder that your section of the {reportPeriod} weekly
-              status report is due by {deadlineIso}.
+              status report is due by {formatDeadline(deadlineIso)}.
             </Text>
             <Section className="my-6">
               <Button
@@ -75,7 +78,7 @@ export function deadlineEmailPlaintext(props: DeadlineEmailProps): string {
   return [
     `Hi ${props.leadName},`,
     "",
-    `This is a reminder that your section of the ${props.reportPeriod} weekly status report is due by ${props.deadlineIso}.`,
+    `This is a reminder that your section of the ${props.reportPeriod} weekly status report is due by ${formatDeadline(props.deadlineIso)}.`,
     "",
     `Open your section: ${props.sectionUrl}`,
     "",

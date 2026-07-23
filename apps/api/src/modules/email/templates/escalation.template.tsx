@@ -59,7 +59,8 @@ export function EscalationEmail({
             </Heading>
             <Text className="text-gray-700">
               Hello {headName}, the following lead
-              {lateLeads.length === 1 ? "" : "s"} have not submitted their
+              {lateLeads.length === 1 ? "" : "s"}{" "}
+              {lateLeads.length === 1 ? "has" : "have"} not submitted their
               section of the {reportPeriod} weekly report:
             </Text>
             <Section className="my-4">
@@ -92,7 +93,7 @@ export function escalationEmailPlaintext(props: EscalationEmailProps): string {
   return [
     `Hello ${props.headName},`,
     "",
-    `The following lead${props.lateLeads.length === 1 ? "" : "s"} have not submitted their section of the ${props.reportPeriod} weekly report (${props.cycleDate}):`,
+    `The following lead${props.lateLeads.length === 1 ? "" : "s"} ${props.lateLeads.length === 1 ? "has" : "have"} not submitted their section of the ${props.reportPeriod} weekly report (${props.cycleDate}):`,
     "",
     ...props.lateLeads.map(
       (lead) =>
