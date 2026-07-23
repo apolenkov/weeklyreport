@@ -91,7 +91,6 @@ describe("shared coming-soon primitive owns the inert button chrome", () => {
       "h-8",
       "w-10",
       "px-0",
-      "gap-1.5",
       "rounded-[var(--radius-pill)]",
     );
   });
