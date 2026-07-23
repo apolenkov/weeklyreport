@@ -161,8 +161,8 @@ describe("section slide utilities", () => {
     // The activity record rides the pills lane only — never the product quadrants.
     expect(slide.currentItems).toEqual(["Product current item"]);
     expect(slide.currentCount).toBe(1);
-    // blockedCount derives only from product trafficLight/risks, never items,
-    // so an activity-parented record can never inflate it.
+    // blockedCount derives only from derived product status/risks, never
+    // items, so an activity-parented record can never inflate it.
     expect(slide.blockedCount).toBe(0);
     expect(slide.activities?.map((a) => a.name)).toEqual(["Jira triage duty"]);
   });
@@ -684,15 +684,21 @@ describe("section slide utilities", () => {
     ).toBe(true);
   });
 
-  it("requires a risk story when section signals red or yellow", () => {
+  it("requires a risk story when a severity-flagged risk carries no text yet", () => {
+    // The red/yellow signal that demands an explanation must itself be
+    // risk-derived: a draft risk flagged blocked but not yet written up
+    // counts as a signal without a story.
     const slide = buildSectionSlideModel(
       makeSection({
-        projects: [
+        risks: [
           {
+            id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
             projectId: PRODUCT_ID,
-            projectName: "Core Product",
-            trafficLight: "red",
-            ownedStages: [],
+            risk: "",
+            impact: "",
+            mitigation: "",
+            severity: "blocked",
+            stageIds: [],
           },
         ],
       }),
@@ -707,6 +713,118 @@ describe("section slide utilities", () => {
       }),
     );
     expect(slide.score).toBeLessThan(100);
+  });
+
+  it("stale persisted red with zero risks derives green and demands no risk story", () => {
+    // The confirmed bug: a persisted red traffic light and red owned stage
+    // with NO backing risk must not drive readiness — the visible badge
+    // derives green (unbacked severity collapses), so the deck cannot demand
+    // "Explain the red or yellow signal" for a signal it does not show.
+    const slide = buildSectionSlideModel(
+      makeSection({
+        projects: [
+          {
+            projectId: PRODUCT_ID,
+            projectName: "Core Product",
+            trafficLight: "red",
+            ownedStages: [
+              {
+                stageId: "99999999-9999-4999-8999-999999999999",
+                stageName: "Build",
+                sortOrder: 1,
+                status: "red",
+              },
+            ],
+          },
+        ],
+        risks: [],
+      }),
+    );
+
+    const product = expectDefined(slide.productSlides[0]);
+    expect(product.status).toBe("green");
+    expect(slide.blockedCount).toBe(0);
+    expect(slide.atRiskCount).toBe(0);
+    expect(slide.tone).not.toBe("blocked");
+    expect(slide.readiness).toContainEqual(
+      expect.objectContaining({
+        id: "risks",
+        status: "optional",
+        required: false,
+        detail: "No active risk signal",
+      }),
+    );
+  });
+
+  it("risk-backed red counts the derived project and the blocked risk independently", () => {
+    const slide = buildSectionSlideModel(
+      makeSection({
+        projects: [
+          {
+            projectId: PRODUCT_ID,
+            projectName: "Core Product",
+            trafficLight: "green",
+            ownedStages: [
+              {
+                stageId: "99999999-9999-4999-8999-999999999999",
+                stageName: "Build",
+                sortOrder: 1,
+                status: "red",
+              },
+            ],
+          },
+        ],
+        risks: [
+          {
+            id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            projectId: PRODUCT_ID,
+            risk: "Vendor outage",
+            impact: "Build stopped",
+            mitigation: "Escalate",
+            severity: "blocked",
+            stageIds: ["Build"],
+          },
+        ],
+      }),
+    );
+
+    const product = expectDefined(slide.productSlides[0]);
+    expect(product.status).toBe("red");
+    // Derived-red project (1) + blocked project risk (1) stay independent.
+    expect(slide.blockedCount).toBe(2);
+    expect(slide.tone).toBe("blocked");
+    expect(slide.readiness).toContainEqual(
+      expect.objectContaining({ id: "risks", status: "ready", required: true }),
+    );
+  });
+
+  it("cross-product slide always carries a null status, so it never enters severity counts", () => {
+    // statusCounts relies on this invariant INSTEAD of filtering by real
+    // project id: if the synthetic slide ever gains a derived status, this
+    // pin fires and statusCounts must be revisited.
+    const slide = buildSectionSlideModel(
+      makeSection({
+        items: [
+          {
+            id: "55555555-5555-4555-8555-555555555555",
+            projectId: null,
+            type: "current",
+            text: "Org-wide incident follow-up",
+            tag: "delivery",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+          },
+        ],
+      }),
+    );
+
+    const cross = expectDefined(
+      slide.productSlides.find((p) => p.id === "cross-product"),
+    );
+    expect(cross.currentItems).toEqual(["Org-wide incident follow-up"]);
+    expect(cross.status).toBeNull();
+    expect(slide.blockedCount).toBe(0);
+    expect(slide.atRiskCount).toBe(0);
   });
 
   it("sorts head review slides by risk before score", () => {
@@ -739,12 +857,17 @@ describe("section slide utilities", () => {
     const blocked = buildSectionSlideModel(
       makeSection({
         authorName: "Blocked",
-        projects: [
+        // Blocked tone must be risk-backed: a bare persisted red without a
+        // risk derives green and no longer sorts first.
+        risks: [
           {
+            id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
             projectId: PRODUCT_ID,
-            projectName: "Core Product",
-            trafficLight: "red",
-            ownedStages: [],
+            risk: "Vendor outage",
+            impact: "Build stopped",
+            mitigation: "Escalate",
+            severity: "blocked",
+            stageIds: ["Build"],
           },
         ],
       }),
@@ -828,7 +951,19 @@ describe("section slide utilities", () => {
           carriedOver: false,
         },
       ],
-      risks: [],
+      // The blocked tone must come from a risk: Bob's persisted red alone
+      // derives green under status-risk-unification.
+      risks: [
+        {
+          id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0005",
+          projectId: PRODUCT_ID,
+          risk: "Core rollout blocked",
+          impact: "Release slips",
+          mitigation: "Escalate to head",
+          severity: "blocked",
+          stageIds: [],
+        },
+      ],
       decisions: [
         {
           id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0004",
@@ -851,8 +986,8 @@ describe("section slide utilities", () => {
       "Shared context",
     ]);
 
-    // Shared product aggregates both leads' items; worst traffic (green+red)
-    // drives the blocked tone; contributing leads replace the product subtitle.
+    // Shared product aggregates both leads' items; Bob's blocked risk drives
+    // the blocked tone; contributing leads replace the product subtitle.
     const core = expectDefined(byName["Core Product"]);
     expect(core.ownerRole).toBe("product");
     expect(core.products).toEqual(["Alice", "Bob"]);
@@ -1074,7 +1209,11 @@ describe("mergeForeignSlideContent", () => {
             impact: "x",
             mitigation: "y",
             severity: "blocked",
-            stageIds: ["Build"],
+            // A stage OUTSIDE the fixture's grid: empty stageIds is the
+            // covers-everything wildcard and a covering risk would floor a
+            // stage red, adding a derived-project count and breaking the
+            // 1:1 parity this test pins.
+            stageIds: ["Deploy"],
           },
         ],
       }),
