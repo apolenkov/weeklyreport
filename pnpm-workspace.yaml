@@ -31,6 +31,26 @@ onlyBuiltDependencies:
 # Track latest deliberately during MVP; re-enable (e.g. 1440) once prod is live.
 minimumReleaseAge: 0
 
+# Upstream peer ranges lag majors we already run under (lint + typecov green).
+# Drop these when eslint-plugin-react/jsx-a11y publish ESLint 10 peers and
+# type-coverage publishes a TS 6 peer range.
+packageExtensions:
+  eslint-plugin-react:
+    peerDependencies:
+      eslint: ">=3 <11"
+  eslint-plugin-jsx-a11y:
+    peerDependencies:
+      eslint: ">=3 <11"
+  type-coverage-core:
+    peerDependencies:
+      typescript: "2 || 3 || 4 || 5 || 6"
+
+peerDependencyRules:
+  allowedVersions:
+    "eslint-plugin-react>eslint": "10"
+    "eslint-plugin-jsx-a11y>eslint": "10"
+    "type-coverage-core>typescript": "6"
+
 overrides:
   "@xmldom/xmldom": ">=0.8.13"
   protobufjs: ">=8.0.2"
