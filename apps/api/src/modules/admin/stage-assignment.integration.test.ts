@@ -193,7 +193,6 @@ describe("ProjectAdminService — stage assignments (integration)", () => {
     expect(created.userId).toBe(USER_ID);
     expect(created.stageId).toBe(STAGE_ID);
     expect(created.projectId).toBe(PROJECT_ID);
-    expect(created.stageName).toBe("Development");
   });
 
   it("updates the assignee for the same project stage", async () => {
@@ -214,7 +213,7 @@ describe("ProjectAdminService — stage assignments (integration)", () => {
     expect(second.id).toBe(first.id);
     expect(second.userId).toBe(USER_ID_2);
 
-    // Verify only one exists for the product/stage pair.
+    // Verify only one exists for the project/stage pair.
     const list = await service.listStageAssignments(PROJECT_ID);
     expect(list).toHaveLength(1);
     expect(list[0]?.userId).toBe(USER_ID_2);

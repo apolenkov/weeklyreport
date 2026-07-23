@@ -222,7 +222,21 @@ export async function upsertPeriod(
   policyApplicator: PolicyApplicatorService | undefined,
   period: ReportPeriod,
 ): Promise<void> {
-  const { created } = await writePeriodRow(prisma, period);
+  const writeInTransaction = () =>
+    prisma.$transaction((tx) => writePeriodRow(tx, period));
+  const { created } = await writeInTransaction().catch(
+    async (error: unknown) => {
+      if (
+        !isUniqueViolation(error, {
+          index: "Report_pkey",
+          columns: ["id"],
+        })
+      ) {
+        throw error;
+      }
+      return writeInTransaction();
+    },
+  );
   // A newly-created period materializes one ReminderRule per active policy.
   // Runs AFTER the write commits (an applicator failure must not roll the
   // period back) — mirrors the whole-snapshot restore's post-commit step.

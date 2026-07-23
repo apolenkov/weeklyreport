@@ -93,10 +93,11 @@ export class AdminUserConflictError extends Error {
 }
 
 /**
- * Thrown by `respondReopenRequest` when the scoped re-load finds no matching
- * pending request — either the id is unknown or it belongs to a group outside
- * the deciding head's scope (admin scope is global, so this path is
- * head-only in practice). Maps to NOT_FOUND.
+ * Thrown by `respondReopenRequest` when the scoped re-load finds no row —
+ * unknown id, or a group outside the deciding head's scope (admin scope is
+ * global, so this path is head-only in practice). Status is not filtered
+ * here: an already-decided in-scope row continues into the CAS update and
+ * yields already-processed instead. Maps to NOT_FOUND.
  */
 export class AdminReopenRequestNotFoundError extends Error {
   constructor(message: string) {

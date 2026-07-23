@@ -19,6 +19,16 @@ import {
 
 /** Length of an ISO calendar date (`YYYY-MM-DD`) after `toISOString().slice(0, n)`. */
 const ISO_DATE_LENGTH = 10;
+const DEADLINE_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+
+export class AdminDeadlineTimeFormatError extends Error {
+  constructor(deadlineTime: string) {
+    super(
+      `Invalid deadlineTime ${JSON.stringify(deadlineTime)}; expected HH:mm.`,
+    );
+    this.name = "AdminDeadlineTimeFormatError";
+  }
+}
 
 /** The mutable columns of a Report's period envelope. */
 export interface PeriodEnvelope {
@@ -132,8 +142,12 @@ export const defaultPeriodEnd = (
  * minutes (the scheduler does the same — its hardcoded `18` matches "18:00").
  * Sub-hour granularity would need both this and the scheduler updated together.
  */
-export const deadlineHourFromSetting = (deadlineTime: string): number =>
-  Number(deadlineTime.split(":").at(0) ?? "18");
+export function deadlineHourFromSetting(deadlineTime: string): number {
+  if (!DEADLINE_TIME_PATTERN.test(deadlineTime)) {
+    throw new AdminDeadlineTimeFormatError(deadlineTime);
+  }
+  return Number(deadlineTime.slice(0, 2));
+}
 
 /**
  * Resolve the virtual buckets `'active' | 'archive'` to a concrete set of

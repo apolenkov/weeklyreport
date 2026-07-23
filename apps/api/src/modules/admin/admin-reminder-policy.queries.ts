@@ -32,6 +32,17 @@ export async function listReminderPolicies(
   );
 }
 
+export async function reminderPolicyExists(
+  prisma: PrismaService,
+  policyId: string,
+): Promise<boolean> {
+  const row = await prisma.reminderPolicy.findUnique({
+    where: { id: policyId },
+    select: { id: true },
+  });
+  return row !== null;
+}
+
 export async function saveReminderPolicy(
   prisma: PrismaService,
   policy: ReminderPolicy,

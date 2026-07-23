@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AdminDeadlineTimeFormatError,
   computePeriodPatch,
+  deadlineHourFromSetting,
   type PeriodEnvelope,
 } from "./period-admin.envelope.js";
 
@@ -51,4 +53,19 @@ describe("computePeriodPatch", () => {
       diff: {},
     });
   });
+});
+
+describe("deadlineHourFromSetting", () => {
+  it("parses the hour from a valid HH:mm setting", () => {
+    expect(deadlineHourFromSetting("18:30")).toBe(18);
+  });
+
+  it.each(["", "9:00", "24:00", "18:60", "invalid"])(
+    "rejects malformed deadlineTime %j",
+    (deadlineTime) => {
+      expect(() => deadlineHourFromSetting(deadlineTime)).toThrow(
+        new AdminDeadlineTimeFormatError(deadlineTime),
+      );
+    },
+  );
 });

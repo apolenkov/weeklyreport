@@ -10,6 +10,10 @@ import {
 import { type AppLogger, createNullLogger } from "../../lib/logger";
 import type { AdminRepository } from "./admin-shared";
 
+interface ReminderAdminRepository extends AdminRepository {
+  reminderPolicyExists(policyId: string): Promise<boolean>;
+}
+
 /**
  * Owns reminder rules (snapshot-level) and the ReminderPolicy CRUD
  * surface.
@@ -18,7 +22,7 @@ export class ReminderAdminService {
   private readonly logger: AppLogger;
 
   constructor(
-    private readonly repository: AdminRepository,
+    private readonly repository: ReminderAdminRepository,
     logger?: AppLogger,
   ) {
     this.logger = logger ?? createNullLogger();
@@ -61,8 +65,7 @@ export class ReminderAdminService {
    * and dashboards can split the two cases without diffing payloads.
    */
   async policyExists(policyId: string): Promise<boolean> {
-    const rows = await this.repository.listReminderPolicies();
-    return rows.some((row) => row.id === policyId);
+    return this.repository.reminderPolicyExists(policyId);
   }
 
   /**
