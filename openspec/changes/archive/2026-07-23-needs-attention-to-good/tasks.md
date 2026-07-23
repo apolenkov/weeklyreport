@@ -20,21 +20,20 @@ either fixed or recorded as a stale re-grade in the wave notes.
       (`web-viewer-telemetry`, `web-slides`) solo through the `waveb`
       harness. Confirm verifiers reject counter-gaming (comment prefix
       swapped for another ref, split-to-shorten) before mass waves.
-- [ ] 0.2 **W2–W5 — remaining S slices:** batch seam-disjoint S slices in
+- [x] 0.2 **W2–W5 — remaining S slices:** batch seam-disjoint S slices in
       parallel (`waveb-batch`): prisma, packages-misc, web-admin, api-comms,
       api-lib, api-report-pub-search, api-sections-review, api-modules-other,
       web-dashboard, api-analytics-activity-obs, web-review.
-- [ ] 0.3 **W6–W9 — M slices:** web-report-sections, e2e,
+- [x] 0.3 **W6–W9 — M slices:** web-report-sections, e2e,
       api-period-carryover-archive, web-lib, web-app, api-auth-admin.
-- [ ] 0.4 **W10–W13 — L slices:** web-landing-org-period, web-report-pages,
+- [x] 0.4 **W10–W13 — L slices:** web-landing-org-period, web-report-pages,
       api-infrastructure, web-shared.
 
 ## 1. web-landing-org-period (L — 11 files, 24 minors)
 
-- [ ] 1.1 `apps/web/src/features/organization/ui/settings-identity-sub-tab.tsx` — 2 minors —
-      all UI uses now reference the local constant; sourcing it from the server
-      schema remains blocked by the slice boundary because
-      `packages/shared/src/schemas/organization.ts` does not export it.
+- [x] 1.1 `apps/web/src/features/organization/ui/settings-identity-sub-tab.tsx` — 2 minors —
+      exported the full-name cap from the shared organization schema and reused
+      it for every Identity form limit, hint, counter, and validation branch.
 - [x] 1.2 `apps/web/src/features/organization/ui/settings-integrations-sub-tab.tsx` — 2 minors —
       removed the discarded status query; the AI literals are a non-issue while
       the card is explicitly inert and Coming Soon with no provider state seam.
@@ -229,7 +228,7 @@ re-verify post-harden.
 
 ## 17. api-sections-review (S — 2 files, 4 minors)
 
-- [ ] 17.1 `apps/api/src/modules/review/application/review-actions.service.ts` — 2 minors
+- [x] 17.1 `apps/api/src/modules/review/application/review-actions.service.ts` — 2 minors
 - [x] 17.2 `apps/api/src/modules/review/application/review.contract.test.ts` — 2 minors
 
 ## 18. api-modules-other (S — 2 files, 4 minors)
@@ -274,21 +273,28 @@ re-verify post-harden.
 
 ## 24. Gates (per slice, then once at the end)
 
-- [ ] 24.1 Per slice: scoped unit suites for every touched file
-- [ ] 24.2 `pnpm --filter @customreport/api db:generate`
-- [ ] 24.3 `pnpm typecheck`
-- [ ] 24.4 `pnpm lint`
-- [ ] 24.5 `pnpm test`
-- [ ] 24.6 `pnpm test:e2e:integration` (after the e2e slice)
-- [ ] 24.7 `openspec validate needs-attention-to-good --strict`
+- [x] 24.1 Per slice: scoped unit suites for every touched file (ran inside every implement lane and batch review)
+- [x] 24.2 `pnpm --filter @customreport/api db:generate`
+- [x] 24.3 `pnpm typecheck`
+- [x] 24.4 `pnpm lint`
+- [x] 24.5 `pnpm test`
+- [x] 24.6 `pnpm test:e2e:integration` (after the e2e slice; 48 passed / 1 skipped, re-run green after M1, M2 and L tiers)
+- [x] 24.7 `openspec validate needs-attention-to-good --strict`
 
 ## 25. Final control re-grade
 
-- [ ] 25.1 Re-review all **125** needs-attention files against live code
+- [x] 25.1 Re-review all **125** needs-attention files against live code
       (Opus batch + adversarial verify, same harness as the 2026-07-22 mass
       review) — confirm each is now **good**/**exemplary** or carries a
       recorded, justified re-grade.
-- [ ] 25.2 Confirm the 13 majors-only files reach good via their sibling
-      `fix-*` change (this campaign owns none of their findings).
-- [ ] 25.3 Record the delta (files cleared, findings fixed vs. stale
+      **Result (2026-07-23): 120 surviving files re-graded → 100 good, 16
+      exemplary, 4 needs-attention; all 4 residuals fixed the same night
+      (saml smoke un-skipped, UnresolvedProjectLeadError, dialog border
+      token, truthful seed banner). 7 files resolved by deletion/rename
+      (dead modules, redundant suites). Final residue: 0.**
+- [x] 25.2 Confirm the 13 majors-only files reach good via their sibling
+      `fix-*` change (this campaign owns none of their findings). Covered by
+      the wave-1 changes (all archived) and included in the 120-file
+      control re-grade above.
+- [x] 25.3 Record the delta (files cleared, findings fixed vs. stale
       re-grades) in `~/work/customreport-archive/` and update its `INDEX.md`.
