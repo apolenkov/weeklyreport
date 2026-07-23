@@ -114,7 +114,7 @@ function renderPendingTab() {
   render(<JobsTab />, { wrapper: Wrapper });
 }
 
-describe("JobsTab — JobsSkeleton a11y attributes (VA-0a)", () => {
+describe("JobsTab — JobsSkeleton a11y attributes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

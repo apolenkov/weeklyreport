@@ -6,13 +6,13 @@ import { createNullLogger } from "../../lib/logger.js";
 import { createAppRouter } from "./trpc.router.js";
 
 /**
- * fix-report-surface-integrity W2 (task 3.3): the `/print` web route gate
- * needs ONE bit the regular `auth.me` cannot give it — whether the inbound
- * cookie verified as a PDF-export-scoped JWT (`ctx.isPdfExport`) and, if so,
- * the bound `reportId` (`ctx.pdfReportId`). For a `requestedBy` PDF token the
- * synthetic session IS the requester's real session, so the session alone is
- * indistinguishable from that human's own session — only these two context
- * flags discriminate the PDF worker from a human.
+ * The `/print` web route gate needs ONE bit the regular `auth.me` cannot give
+ * it — whether the inbound cookie verified as a PDF-export-scoped JWT
+ * (`ctx.isPdfExport`) and, if so, the bound `reportId` (`ctx.pdfReportId`).
+ * For a `requestedBy` PDF token the synthetic session IS the requester's real
+ * session, so the session alone is indistinguishable from that human's own
+ * session — only these two context flags discriminate the PDF worker from a
+ * human.
  *
  * `auth.printGate` is a `publicProcedure` (NOT pdfExport-guarded, so the
  * worker token reaches it) that surfaces the two flags plus the session, so

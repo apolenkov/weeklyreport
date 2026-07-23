@@ -131,22 +131,22 @@ export class LeadFormService {
       throw new LeadFormConstraintError("Cannot fill a submitted section.");
     }
 
-    // viewer-report-surface-parity (review P1): refuse to mutate the live rows
-    // of a PUBLISHED period. The viewer's published search reads live Item/Risk/
-    // Decision rows, but the viewer content read serves the frozen publish
-    // snapshot — letting fillFrom rewrite a (draft) section inside a published
-    // report would make a viewer's search snippet reveal content absent from the
-    // report they can open. saveDraft/saveSection already block published edits;
-    // fillFrom was the one gap. Gate on periodStatus (the searchable column):
-    // a reopened period (periodStatus='reopened') is editable again and is
+    // Refuse to mutate the live rows of a PUBLISHED period. The viewer's
+    // published search reads live Item/Risk/Decision rows, but the viewer
+    // content read serves the frozen publish snapshot — letting fillFrom
+    // rewrite a (draft) section inside a published report would make a
+    // viewer's search snippet reveal content absent from the report they can
+    // open. saveDraft/saveSection already block published edits; fillFrom is
+    // gated the same way. Gate on periodStatus (the searchable column): a
+    // reopened period (periodStatus='reopened') is editable again and is
     // excluded from the viewer's published search, so it stays allowed.
     await this.assertPeriodNotPublished(targetSectionId, "fill a section of");
 
-    // Resolve-not-delete (ADR 0015) also binds Fill From: it delete-recreates
-    // the target's items/decisions with fresh identity, which would silently
-    // destroy any published-lineage record on a REOPENED period (the
-    // periodStatus gate above only blocks a still-published one). Fail closed —
-    // reject the whole fill if the target holds any published-lineage record;
+    // Resolve-not-delete also binds Fill From: it delete-recreates the target's
+    // items/decisions with fresh identity, which would silently destroy any
+    // published-lineage record on a REOPENED period (the periodStatus gate
+    // above only blocks a still-published one). Fail closed — reject the whole
+    // fill if the target holds any published-lineage record;
     // a never-published draft has none and is unaffected. The same lineage
     // query the save guard uses.
     const published = await this.repository.getPublishedLineage(target);
@@ -193,10 +193,10 @@ export class LeadFormService {
     userId: string,
     reason?: string,
   ): Promise<{ success: true }> {
-    // reopen-request-lifecycle (D4): one read carries ownership + the lifecycle
-    // facts, and `computeReopenEligibility` is the SAME function that drives the
-    // lead-form `canRequestReopen` flag — so the server guard and the button can
-    // never drift. Ownership → FORBIDDEN; a missing section → NOT_FOUND; a
+    // One read carries ownership + the lifecycle facts, and
+    // `computeReopenEligibility` is the SAME function that drives the lead-form
+    // `canRequestReopen` flag — so the server guard and the button can never
+    // drift. Ownership → FORBIDDEN; a missing section → NOT_FOUND; a
     // lifecycle/one-pending block → BAD_REQUEST.
     const context = await this.repository.getSectionReopenContext(sectionId);
 
@@ -236,9 +236,9 @@ export class LeadFormService {
     canRequestReopen: boolean;
     reopenBlockedReason: string | null;
     /**
-     * Resolve-not-delete (ADR 0015): the section's published item/decision
-     * lineages, so the form can mark locked records and hide Delete. Advisory
-     * for the UI only — the save-path guard enforces the lock.
+     * Resolve-not-delete: the section's published item/decision lineages, so
+     * the form can mark locked records and hide Delete. Advisory for the UI
+     * only — the save-path guard enforces the lock.
      */
     publishedLineage: {
       itemStableIds: readonly string[];
@@ -344,10 +344,10 @@ export class LeadFormService {
    * the request is issued, never whether it is authorized).
    *
    * The response payload is empty in BOTH the denied and the legitimately
-   * empty case (no leak). Only the observability counter distinguishes them
-   * (D6b): `denied` = no report access OR no co-ownership; `empty` = co-owns a
-   * shared product but the co-owner authored no records; `allowed` = foreign
-   * records returned.
+   * empty case (no leak). Only the observability counter distinguishes them:
+   * `denied` = no report access OR no co-ownership; `empty` = co-owns a shared
+   * product but the co-owner authored no records; `allowed` = foreign records
+   * returned.
    */
   async getCrossAuthorContent(
     reportId: string,

@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 /**
- * scope-lead-report-to-own-contribution (D4 / D4c): the lead form's Record
- * visibility toggle. Two states:
+ * The lead form's Record visibility toggle. Two states:
  *   - "mine" (default): own records only; the full-content read is not fetched.
  *   - "everyone": additionally render co-owners' full records read-only.
  */
@@ -54,7 +53,7 @@ interface UseRecordVisibilityResult {
    * True once the persisted value has been read from localStorage for the
    * current {userId, reportId}. The gated full-content fetch MUST wait for
    * this so it never fires on the pre-hydration default and then races the
-   * restored "everyone" (D4c).
+   * restored "everyone".
    */
   hydrated: boolean;
   setVisibility: (next: RecordVisibility) => void;
@@ -65,7 +64,7 @@ interface UseRecordVisibilityResult {
  * localStorage key. The first-ever load (no matching key) defaults to "mine".
  * On any {userId, reportId} change the lookup re-scopes to the new key and
  * re-defaults to "mine" when that key is absent — a stored "everyone" is never
- * read under a different identity or report (D4c).
+ * read under a different identity or report.
  */
 export function useRecordVisibility(
   userId: string | null,

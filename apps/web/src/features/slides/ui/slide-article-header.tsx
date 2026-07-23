@@ -9,7 +9,7 @@ import type {
 import { authorSlotBackground } from "./slide-article-rows";
 import { SlideStatusBadge } from "./slide-status-badge";
 
-/** Worst-status traffic light → canonical status for the header pill (D6). */
+/** Worst-status traffic light → canonical status for the header pill. */
 function worstToStatus(traffic: SlideTrafficStatus): CanonicalStatus {
   if (traffic === "red") return "blocked";
   if (traffic === "yellow") return "at-risk";

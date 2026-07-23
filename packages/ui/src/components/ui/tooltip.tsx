@@ -62,16 +62,16 @@ function TooltipContent({
 }
 
 /*
- * fix-coming-soon-tooltip-clipping: a self-contained Radix tooltip for the inert
- * "Coming Soon" deferred controls. It embeds its OWN `TooltipProvider`, so every
- * mount works without a shell-level provider (AgentReviewComingSoon renders on
- * many standalone surfaces); it portals the content out of any `overflow`
- * ancestor (the clipping bug it fixes); and it renders the canonical amber
- * `ComingSoonBadge` on a CHROMELESS content (no dark surface, no arrow) so the
+ * A self-contained Radix tooltip for the inert "Coming Soon" deferred
+ * controls. It embeds its OWN `TooltipProvider`, so every mount works without
+ * a shell-level provider (AgentReviewComingSoon renders on many standalone
+ * surfaces); it portals the content out of any `overflow` ancestor so the
+ * badge is never clipped; and it renders the canonical amber `ComingSoonBadge`
+ * on a CHROMELESS content (no dark surface, no arrow) so the
  * single-amber-variant rule holds. The trigger is the existing inert control
  * (`aria-disabled`, so it still receives pointer/focus events); Radix's content
  * carries the `tooltip` role. One shared side/align positions all six controls
- * identically (replacing the retired centred CSS anchor).
+ * identically.
  */
 function ComingSoonTooltip({
   children,

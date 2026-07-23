@@ -41,34 +41,34 @@ interface WeeklyReportPageProps {
    */
   readonly scope?: "product" | "lead";
   /**
-   * report-toolbar-layout: the page owns the single two-row ReportToolbar. An
-   * outer shell (HeadReportShell) supplies leading Document-action-row controls
-   * here — head passes its labeled Export-PDF — rendered before the page's own
+   * The page owns the single two-row ReportToolbar. An outer shell
+   * (HeadReportShell) supplies leading Document-action-row controls here —
+   * head passes its labeled Export-PDF — rendered before the page's own
    * Move-to-archive / Publish lifecycle actions. When omitted the page renders
    * the shared Export control itself (head/admin/viewer get the real export;
    * lead sees the inert ComingSoon).
    */
   readonly documentActionsLeading?: ReactNode;
   /**
-   * report-toolbar-layout: the FULL Context-control row (bottom row), composed
-   * by an outer shell that owns a richer period navigator (HeadReportShell
-   * prepends the active/displayed periods compiledHistory omits). When provided
-   * it replaces the page's default context row, including period navigation.
-   * Mutually exclusive with `contextControlsLeading`.
+   * The FULL Context-control row (bottom row), composed by an outer shell that
+   * owns a richer period navigator (HeadReportShell prepends the
+   * active/displayed periods compiledHistory omits). When provided it replaces
+   * the page's default context row, including period navigation. Mutually
+   * exclusive with `contextControlsLeading`.
    */
   readonly contextControls?: ReactNode;
   /**
-   * report-toolbar-layout: Context-control-row controls prepended before the
-   * page's default period navigator. Used by standalone consumers (the viewer)
-   * that reuse the page's own period nav but add the Agent-review placeholder
-   * (leading edge) and Back-to-Archive navigation to the bottom row.
+   * Context-control-row controls prepended before the page's default period
+   * navigator. Used by standalone consumers (the viewer) that reuse the page's
+   * own period nav but add the Agent-review placeholder (leading edge) and
+   * Back-to-Archive navigation to the bottom row.
    */
   readonly contextControlsLeading?: ReactNode;
   /**
-   * head-toolbar-parity: a context label (department name plus a short page
-   * descriptor) rendered on the header line beside the title. It is a label,
-   * not a control, so it stays out of the two action rows. Head form mode
-   * passes it; standalone consumers omit it.
+   * A context label (department name plus a short page descriptor) rendered on
+   * the header line beside the title. It is a label, not a control, so it
+   * stays out of the two action rows. Head form mode passes it; standalone
+   * consumers omit it.
    */
   readonly headerContextLabel?: ReactNode;
 }
@@ -113,20 +113,20 @@ export function WeeklyReportPage({
           <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
             Live &middot; {page.submitted}/{page.total} Submitted
           </span>
-          {/* head-toolbar-semantics: the publish precondition hint sits on the
-              report-status row (not the action row). */}
+          {/* The publish precondition hint sits on the report-status row
+              (not the action row). */}
           {page.showPublishHint && (
             <span className="text-xs text-[var(--color-muted-foreground)]">
               Publish requires at least one submitted section.
             </span>
           )}
-          {/* head-toolbar-parity: department context label — a label, not a
-              control, so it stays on the header line, out of the action rows. */}
+          {/* Department context label — a label, not a control, so it stays
+              on the header line, out of the action rows. */}
           {headerContextLabel}
         </div>
-        {/* report-toolbar-layout: document actions live on the header line's
-            right slot, not inside the bordered toolbar. The labeled Export-PDF
-            (or a shell-supplied leading action) leads, then the head lifecycle
+        {/* Document actions live on the header line's right slot, not inside
+            the bordered toolbar. The labeled Export-PDF (or a shell-supplied
+            leading action) leads, then the head lifecycle
             actions (Move-to-archive, Publish & Lock). Viewer and the lead
             preview have no mutating actions, so only the export control renders. */}
         <DocumentActionGroup>
@@ -179,10 +179,9 @@ export function WeeklyReportPage({
         </DocumentActionGroup>
       </header>
 
-      {/* report-toolbar-layout: the bordered toolbar holds only the
-          Context-control bar — either a shell-composed row (head) or the page's
-          default period navigator, optionally preceded by leading controls
-          (the viewer's Agent review). */}
+      {/* The bordered toolbar holds only the Context-control bar — either a
+          shell-composed row (head) or the page's default period navigator,
+          optionally preceded by leading controls (the viewer's Agent review). */}
       <ReportToolbar
         contextControls={
           contextControls ?? (
@@ -199,10 +198,9 @@ export function WeeklyReportPage({
         }
       />
 
-      {/* Report body: true empty-state OR the review surfaces + §7-filtered
-          accordion. A helper so this page function stays under the complexity
-          budget; the empty-state gate keys off FULL content (head-report-
-          visibility), never the submitted count or the filtered accordion. */}
+      {/* Report body: true empty-state OR the review surfaces + filtered
+          accordion. The empty-state gate keys off FULL content, never the
+          submitted count or the filtered accordion. */}
       <ReportContent
         hasAnyContent={page.hasAnyContent}
         periodStatus={page.periodStatus}

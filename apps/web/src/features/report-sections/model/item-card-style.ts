@@ -27,8 +27,8 @@ export const STATUS_BADGE = {
     text: "var(--color-destructive)",
     label: "Blocked",
   },
-  // record-status-derived-from-risk: a DERIVED-only amber alarm (there is no
-  // stored at-risk item status) — token-derived per status-color-semantics.
+  // A DERIVED-only amber alarm (there is no stored at-risk item status) —
+  // token-derived, not hardcoded hex.
   "at-risk": {
     bg: "var(--color-status-at-risk-bg)",
     text: "var(--color-status-at-risk-fg)",
@@ -54,7 +54,7 @@ export const STATUS_BADGE = {
 /**
  * Fixed card height for the static render, matching the section-level
  * empty-state placeholder ("No items yet" in current-week-section.tsx /
- * next-week-section.tsx) so every card in a column is uniform (B1). The height
+ * next-week-section.tsx) so every card in a column is uniform. The height
  * is sized to the CONTENT, not the empty placeholder: it fits the status-pill /
  * action row + three body lines (the `line-clamp-3` the body keeps) + the
  * author / stage-tag footer + padding. A short card fills the slack with

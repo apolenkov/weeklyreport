@@ -105,8 +105,7 @@ export interface MockReminderPolicy {
 // MockSettings surfaces the admin-tunable fields on the Periods / Reminders /
 // Notifications sub-tabs. Field order mirrors the tab layout for readability.
 // The mapper in `admin.ts` copies these through 1:1 from the wire schema
-// (`appSettingsSchema`). The legacy `departmentName` field was removed
-// alongside the AppSettings column.
+// (`appSettingsSchema`).
 export interface MockSettings {
   autoCreatePeriods: boolean;
   defaultDeadlineDays: number;

@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`PortfolioOverviewTable — VA-0a/VA-0b a11y regression > GridIcon visual rendering: svg has 4 rect children with correct viewBox (snapshot) 1`] = `
+exports[`PortfolioOverviewTable — a11y regression > GridIcon visual rendering: svg has 4 rect children with correct viewBox (snapshot) 1`] = `
 <svg
   aria-hidden="true"
   class="h-5 w-5 flex-shrink-0"

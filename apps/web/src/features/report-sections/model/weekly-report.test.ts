@@ -429,8 +429,7 @@ describe("mapWeeklyReport", () => {
     expect(expectDefined(crmReport?.currentWeek[0]).text).toBe(
       "OAuth integration",
     );
-    // stageLead carries the item's REAL stage tags (was hardcoded "Dev"
-    // for every item before apply-status-palette).
+    // stageLead carries the item's REAL stage tags.
     expect(expectDefined(crmReport?.currentWeek[0]).stageLead).toBe(
       "Dev+Testing \u00B7 Т1",
     );
@@ -763,13 +762,11 @@ describe("mapWeeklyReport", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// fix-product-name-resolution: badges resolve product names report-wide, not
-// only from the owning section's projects list (regression for the
-// "Unknown · <stage>" badges found during apply-status-palette acceptance).
-// ---------------------------------------------------------------------------
+// Badges resolve product names report-wide, not only from the owning section's
+// projects list (regression for "Unknown · <stage>" badges on cross-section
+// references).
 
-describe("product name resolution (fix-product-name-resolution)", () => {
+describe("product name resolution", () => {
   it("resolves risk and decision badges for projects outside the author's section", () => {
     const report = baseReport({
       submissionCount: 1,
@@ -835,11 +832,9 @@ describe("product name resolution (fix-product-name-resolution)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// report-card-clarity: "by lead" slices each product to the viewing lead's OWN
-// contribution. A product authored by two leads must NOT repeat the merged card
-// under each — each lead's card shows only their own items.
-// ---------------------------------------------------------------------------
+// "By lead" slices each product to the viewing lead's OWN contribution. A
+// product authored by two leads must NOT repeat the merged card under each —
+// each lead's card shows only their own items.
 
 describe("mapWeeklyReportLeadGroups (by-lead slice)", () => {
   it("a lead with two products gets two scoped cards", () => {
@@ -970,8 +965,7 @@ describe("mapWeeklyReportLeadGroups (by-lead slice)", () => {
   });
 });
 
-// report-overview-scope-parity: the per-lead overview rows derived from the
-// already-grouped lead data.
+// Per-lead overview rows derived from the already-grouped lead data.
 describe("mapWeeklyReportLeadOverview", () => {
   const item = (text: string): WeeklyReportItem =>
     ({ id: text, text, status: "in-progress" }) as WeeklyReportItem;

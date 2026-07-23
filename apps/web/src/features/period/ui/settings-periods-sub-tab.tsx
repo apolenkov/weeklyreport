@@ -23,10 +23,6 @@ export function PeriodsSubTab({
     // `departmentName` is not part of the payload; brand identity lives on the
     // Organization singleton (Identity tab) and is mutated via
     // `admin.updateOrganization`.
-    // The period-cycle knobs ride the same PATCH because they live on this
-    // Periods sub-tab. Each field below has a live consumer (the period-creator
-    // / auto-publisher / auto-archiver schedulers and the request-path
-    // late-submission and reopen gates).
     updateSettingsMut.mutate(
       {
         autoCreatePeriods: draft.autoCreatePeriods,
@@ -58,9 +54,9 @@ export function PeriodsSubTab({
           ───────────────────────────────────────────────────────────── */}
       <PeriodCycleFields draft={draft} setDraft={setDraft} />
 
-      {/* Unified by-state lead-form view — an org-wide presentation flag
-          (ADR 0011): the lead form folds Current/Next week into one section
-          grouped by derived state. Off = the classic two-section format. */}
+      {/* Unified by-state lead-form view — an org-wide presentation flag: the
+          lead form folds Current/Next week into one section grouped by derived
+          state. Off = the classic two-section format. */}
       <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)]">
         <input
           name="unified-activity-view"

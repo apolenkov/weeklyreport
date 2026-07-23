@@ -34,7 +34,7 @@ interface StageChipProps {
   readonly rawStatus?: StageStatus;
 }
 
-// Status/icon config lives in stage-chip-config.ts (apply-status-palette).
+// Status/icon config lives in stage-chip-config.ts.
 function StageIconGlyph({ stageName }: { readonly stageName: string }) {
   const StageIcon = STAGE_ICONS[stageName];
   if (!StageIcon) return null;
@@ -87,11 +87,11 @@ export function StageChip({
       ? `1.5px dashed ${config.border}`
       : `1.5px solid ${config.border}`;
 
-  // simplify-stage-status-interaction (D1): the chip is a plain On Track ⇄ unset
-  // toggle off the RAW status — no status menu. A chip whose displayed severity
-  // is at-risk/blocked is floored by a covering risk; clicking it still fires the
-  // toggle intent, but the sync bridge (the single owner of the risk list + the
-  // toast) ignores it and points the lead at the Risks section.
+  // The chip is a plain On Track ⇄ unset toggle off the RAW status — no status
+  // menu. A chip whose displayed severity is at-risk/blocked is floored by a
+  // covering risk; clicking it still fires the toggle intent, but the sync
+  // bridge (the single owner of the risk list + the toast) ignores it and
+  // points the lead at the Risks section.
   function handleChipClick() {
     if (!isEditable) return;
     const next: StageStatus =
@@ -99,12 +99,12 @@ export function StageChip({
     onStatusChange?.(stage.stageName, next);
   }
 
-  // simplify-stage-status-interaction (task 1.4): the coverage suffix keys off
-  // the DISPLAYED status, not the raw one, and only for the lead's OWN chips (a
-  // foreign-owned locked chip carries no authoring intent). at-risk/blocked come
-  // only from risks now, so a mine chip showing either always reads "by risk"
-  // (even one the lead set on-track that a covering risk then floored up). An
-  // explicit on-track reads "status set".
+  // The coverage suffix keys off the DISPLAYED status, not the raw one, and
+  // only for the lead's OWN chips (a foreign-owned locked chip carries no
+  // authoring intent). at-risk/blocked come only from risks now, so a mine
+  // chip showing either always reads "by risk" (even one the lead set
+  // on-track that a covering risk then floored up). An explicit on-track
+  // reads "status set".
   const coverageSuffix = !isMine
     ? ""
     : stage.status === "at-risk" || stage.status === "blocked"
@@ -146,10 +146,10 @@ export function StageChip({
             aria-disabled={!isEditable}
             tabIndex={isEditable || isLocked ? 0 : -1}
           >
-            {/* User feedback 2026-06-10: no status glyph on the chip face — the
-                stage icon + label carry the status through color alone (the
-                tooltip/aria-label still name the status textually). The lock
-                sits as a small corner badge instead of a third inline icon. */}
+            {/* No status glyph on the chip face — the stage icon + label carry
+                the status through color alone (the tooltip/aria-label still
+                name the status textually). The lock sits as a small corner
+                badge instead of a third inline icon. */}
             <StageIconGlyph stageName={stage.stageName} />
             {stageShortLabel(stage.stageName)}
             {isLocked && (

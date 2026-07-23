@@ -288,11 +288,10 @@ describe("AdminPrismaRepository entity writers — P2002 race handling", () => {
 });
 
 /**
- * drain-admin-router: the admin namespace's remaining inline `deps.prisma.*`
- * call sites — deactivate/activate, integrations status, stage catalogue,
- * and the reopen-request lifecycle. The group-scope where-clause pinning
- * that used to live at the router level (reopen-requests.router.test.ts)
- * relocates here, at the repository boundary that now issues the query.
+ * Admin namespace repository coverage for deactivate/activate, integrations
+ * status, stage catalogue, and the reopen-request lifecycle. Group-scope
+ * where-clause pinning lives at this repository boundary (the layer that
+ * issues the query).
  */
 describe("AdminPrismaRepository — deactivate/activate, integrations, stages", () => {
   it("deactivateUser sets isActive=false", async () => {
@@ -361,7 +360,7 @@ describe("AdminPrismaRepository — deactivate/activate, integrations, stages", 
   });
 });
 
-describe("AdminPrismaRepository — reopen-request lifecycle (reopen-request-lifecycle, ADR 0008)", () => {
+describe("AdminPrismaRepository — reopen-request lifecycle", () => {
   const headSession: UserSession = {
     userId: "head-1",
     email: "head@test.local",

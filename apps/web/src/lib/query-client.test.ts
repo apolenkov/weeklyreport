@@ -16,8 +16,8 @@ function makeTRPCError(
 }
 
 describe("shouldRetryQuery", () => {
-  // Driver finding 1: a deterministic 4xx (malformed reportId → BAD_REQUEST)
-  // must fail once, not 1 + 3 retries (observed 207/400/400/400).
+  // A deterministic 4xx (malformed reportId → BAD_REQUEST) must fail once,
+  // not 1 + 3 retries.
   it("does not retry a BAD_REQUEST (400)", () => {
     const error = makeTRPCError("Invalid UUID", {
       code: "BAD_REQUEST",

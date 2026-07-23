@@ -88,7 +88,6 @@ function createMockQueue() {
 
 describe("RemindersService — contract tests", () => {
   describe("requestReminderExecution", () => {
-    // 1. creates execution for active rule
     it("creates an execution for an active rule", async () => {
       const service = new RemindersService(createRepository(activeRule));
       const execution = await service.requestReminderExecution(
@@ -104,7 +103,6 @@ describe("RemindersService — contract tests", () => {
       );
     });
 
-    // 2. throws when rule not found
     it("throws ReminderDomainError when rule is not found", async () => {
       const service = new RemindersService(createRepository(activeRule));
       const unknownRuleId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -118,7 +116,6 @@ describe("RemindersService — contract tests", () => {
       ).rejects.toThrow(`Reminder rule ${unknownRuleId} was not found.`);
     });
 
-    // 3. throws when rule is paused (status !== 'active')
     it("throws ReminderDomainError when rule is paused", async () => {
       const service = new RemindersService(createRepository(pausedRule));
 
@@ -131,7 +128,6 @@ describe("RemindersService — contract tests", () => {
       ).rejects.toThrow("Reminder execution requires an active rule.");
     });
 
-    // 4. deduplicates by ruleId:kind:cycleDate:email key
     it("deduplicates by ruleId:kind:cycleDate:email composite key", async () => {
       const service = new RemindersService(createRepository(activeRule));
 
@@ -156,7 +152,6 @@ describe("RemindersService — contract tests", () => {
       expect(first.dedupeKey).toContain(recipientEmail);
     });
 
-    // 5. returns existing execution on duplicate
     it("returns the existing execution on duplicate request", async () => {
       const service = new RemindersService(createRepository(activeRule));
 
@@ -174,7 +169,6 @@ describe("RemindersService — contract tests", () => {
       expect(duplicate.recipientEmail).toBe(original.recipientEmail);
     });
 
-    // 6. enqueues BullMQ job when queue provided
     it("enqueues a BullMQ job when a queue is provided", async () => {
       const mockQueue = createMockQueue();
       const service = new RemindersService(
@@ -200,7 +194,6 @@ describe("RemindersService — contract tests", () => {
       );
     });
 
-    // 7. works without queue (null queue)
     it("works without a queue (null queue)", async () => {
       const service = new RemindersService(createRepository(activeRule));
 
@@ -213,7 +206,6 @@ describe("RemindersService — contract tests", () => {
       expect(execution.status).toBe("queued");
     });
 
-    // 8. sets status to 'queued'
     it('sets status to "queued"', async () => {
       const service = new RemindersService(createRepository(activeRule));
       const execution = await service.requestReminderExecution(
@@ -224,7 +216,6 @@ describe("RemindersService — contract tests", () => {
       expect(execution.status).toBe("queued");
     });
 
-    // 9. sets recipientEmail correctly
     it("sets recipientEmail correctly", async () => {
       const service = new RemindersService(createRepository(activeRule));
 
@@ -298,7 +289,6 @@ describe("RemindersService — contract tests", () => {
   });
 
   describe("markReminderSent", () => {
-    // 10. sets status to 'sent' and sentAt
     it('sets status to "sent" and populates sentAt', async () => {
       const service = new RemindersService(createRepository(activeRule));
       const queued = await service.requestReminderExecution(
@@ -320,7 +310,6 @@ describe("RemindersService — contract tests", () => {
       );
     });
 
-    // 11. throws when execution not found
     it("throws ReminderDomainError when execution is not found", async () => {
       const service = new RemindersService(createRepository(activeRule));
       const missingId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
@@ -336,7 +325,6 @@ describe("RemindersService — contract tests", () => {
   });
 
   describe("listExecutions", () => {
-    // 12. returns all executions for rule
     it("returns all executions for a rule", async () => {
       const service = new RemindersService(createRepository(activeRule));
 
@@ -350,7 +338,6 @@ describe("RemindersService — contract tests", () => {
       expect(emails).toEqual([recipientEmail, recipientEmail2].sort());
     });
 
-    // 13. returns empty array when no executions
     it("returns an empty array when no executions exist", async () => {
       const service = new RemindersService(createRepository(activeRule));
       const result = await service.listExecutions(activeRule.id);
@@ -358,7 +345,6 @@ describe("RemindersService — contract tests", () => {
       expect(result.items).toEqual([]);
     });
 
-    // 14. validates output through Zod schema
     it("validates output through Zod schema", async () => {
       const service = new RemindersService(createRepository(activeRule));
       await service.requestReminderExecution(activeRule.id, recipientEmail);

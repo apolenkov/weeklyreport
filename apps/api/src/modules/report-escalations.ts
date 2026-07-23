@@ -24,15 +24,15 @@ function resolveStageName(
 }
 
 /**
- * fix-published-empty-stage-risk-floor: fire the "flagged red" escalation off
- * the risk-aware effective status, not the stale stored trafficLight, so the
- * bug case (owned empty stage covered by a blocked own risk) emits the at_risk
- * escalation alongside the existing unresolved_risk one.
+ * Fire the "flagged red" escalation off the risk-aware effective status, not
+ * the stale stored trafficLight, so an owned empty stage covered by a blocked
+ * own risk emits the at_risk escalation alongside the existing unresolved_risk
+ * one.
  *
- * fix-flagged-red-escalation-dedup: a co-owned red product appears once per
- * co-owner section, so the push is gated on `seen` to emit one escalation per
- * `projectId` across the whole builder run. Returns null when the product is
- * not red or was already emitted; mutates `seen` on first emission.
+ * A co-owned red product appears once per co-owner section, so the push is
+ * gated on `seen` to emit one escalation per `projectId` across the whole
+ * builder run. Returns null when the product is not red or was already
+ * emitted; mutates `seen` on first emission.
  */
 function flaggedRedEscalation(
   section: ReportSectionReadModel,
@@ -51,13 +51,12 @@ function flaggedRedEscalation(
   };
 }
 
-// record-status-derived-from-risk: a blocker is a blocked-severity RISK, not a
-// free-blocked item, so the `blocked` escalation is sourced from blocked-severity
-// risks — REPLACING the former `item.workflowStatus === "blocked"` source. A
-// blocked-severity risk yields ONE `blocked` escalation (never also an
-// `unresolved_risk`, see below), so the roll-up count never inflates.
-// activity-first-class: the null-projectId (activity-parented) skip stays so
-// an activity's blockers never reach the product-level roll-up.
+// A blocker is a blocked-severity RISK, not a free-blocked item, so the
+// `blocked` escalation is sourced from blocked-severity risks. A blocked-
+// severity risk yields ONE `blocked` escalation (never also an
+// `unresolved_risk`, see below), so the roll-up count never inflates. The
+// null-projectId (activity-parented) skip keeps activity blockers out of the
+// product-level roll-up.
 function blockedRiskEscalations(
   section: ReportSectionReadModel,
   productNames: ReadonlyMap<string, string>,
@@ -101,13 +100,13 @@ export function buildEscalationsFromReadSections(
   sections: readonly ReportSectionReadModel[],
 ): Escalation[] {
   const escalations: Escalation[] = [];
-  // fix-flagged-red-escalation-dedup: a co-owned red product appears once in
-  // EACH co-owner's section, so without this the project-level flagged-red
-  // push fires N identical rows. Track seen projectIds across the WHOLE section
-  // loop and emit the flagged-red escalation once per product; the first
-  // contributing lead's name survives (deterministic by loop order). Only the
-  // `at_risk` flagged-red push is gated — `blocked` items and `unresolved_risk`
-  // risks are genuinely per-record and stay un-deduped.
+  // A co-owned red product appears once in EACH co-owner's section, so without
+  // this the project-level flagged-red push fires N identical rows. Track seen
+  // projectIds across the WHOLE section loop and emit the flagged-red
+  // escalation once per product; the first contributing lead's name survives
+  // (deterministic by loop order). Only the `at_risk` flagged-red push is
+  // gated — `blocked` items and `unresolved_risk` risks are genuinely
+  // per-record and stay un-deduped.
   const seenFlaggedRedProjectIds = new Set<string>();
 
   for (const section of sections) {

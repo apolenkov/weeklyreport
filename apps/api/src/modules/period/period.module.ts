@@ -79,8 +79,8 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
               reopenWindowHours: settings.reopenWindowHours,
             };
           },
-          // The AI ingestion module was removed; PeriodService's ingestion
-          // hook falls back to its no-op default until the AI rebuild.
+          // No AI ingestion collaborator is wired; PeriodService uses its
+          // no-op default for the ingestion hook.
           undefined,
           telemetry,
         ),

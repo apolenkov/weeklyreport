@@ -14,7 +14,7 @@ interface ViewModeToggleProps {
    * instead of "Edit"/pencil. The viewer report surface is strictly read-only
    * (no Publish/Lock, no section editing), so a pencil "Edit" affordance there
    * is misleading; the head surface keeps "Edit" since it carries lifecycle
-   * actions in that mode. (viewer-report-surface-parity review P3.)
+   * actions in that mode.
    */
   readonly readOnly?: boolean;
 }

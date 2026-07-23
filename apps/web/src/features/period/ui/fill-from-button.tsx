@@ -7,12 +7,11 @@ import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
 import type { ReportPeriod } from "../../report-sections";
 import { FillFromDropdownPanel } from "./fill-from-dropdown-panel";
 
-// polish-lead-toolbar-and-risk-dialog 1.3: the fill-from control is a single
-// split-button — a wider main segment (copy = fill from most recent submitted
-// period) joined to a narrow chevron segment (open the past-report picker).
-// Both segments keep distinct <button> elements + aria-labels so the
-// accessible split-button pattern holds; the chevron keeps dropdownTriggerRef
-// for portal positioning.
+// The fill-from control is a single split-button — a wider main segment
+// (copy = fill from most recent submitted period) joined to a narrow chevron
+// segment (open the past-report picker). Both segments keep distinct <button>
+// elements + aria-labels so the accessible split-button pattern holds; the
+// chevron keeps dropdownTriggerRef for portal positioning.
 const SPLIT_BUTTON_CONTAINER_CLASS =
   "inline-flex h-[var(--toolbar-control-h)] shrink-0 items-center overflow-hidden rounded-full border border-[var(--color-border)] bg-white/70 text-[var(--color-foreground)]";
 const SPLIT_BUTTON_SEGMENT_CLASS =
@@ -166,11 +165,10 @@ export function FillFromButton({
 
   return (
     <>
-      {/* polish-lead-toolbar-and-risk-dialog 1.3: one split-button — a wider
-          main segment (copy = fill from most recent submitted period) joined
-          to a slim chevron segment (open the past-report picker). The dropdown
-          still portals to document.body with position:fixed, which is what
-          frees it from the toolbar's overflow clip (bug 2026-06-10). */}
+      {/* One split-button — a wider main segment (copy = fill from most recent
+          submitted period) joined to a slim chevron segment (open the past-
+          report picker). The dropdown portals to document.body with
+          position:fixed so it escapes the toolbar's overflow clip. */}
       <div className="relative inline-flex items-center" ref={wrapRef}>
         <div className={SPLIT_BUTTON_CONTAINER_CLASS}>
           <button

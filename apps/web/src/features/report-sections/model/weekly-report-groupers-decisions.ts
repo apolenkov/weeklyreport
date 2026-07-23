@@ -72,9 +72,9 @@ export function groupDecisionsByProject(
   projectNames: ReadonlyMap<string, string>,
 ): Map<string, WeeklyReportDecision[]> {
   const entries = sections.flatMap((section) =>
-    // activity-first-class: activity-parented decisions render under their
-    // activity, not a product — skipped so they never fall back to firstProject.
-    // `idx` is the decision's ordinal within its section (seeds the fallback id).
+    // Activity-parented decisions render under their activity, not a product —
+    // skipped so they never fall back to firstProject. `idx` is the decision's
+    // ordinal within its section (seeds the fallback id).
     section.decisions.flatMap((decision, idx) => {
       if (decision.activityId != null) return [];
       const target = resolveDecisionProduct(section, projectNames, decision);
@@ -113,8 +113,8 @@ export function groupPrioritiesByProject(
     section.items
       .filter(
         (i): i is SectionItem & { projectId: string } =>
-          // activity-first-class: a product priority is product-parented; skip
-          // activity items (projectId null).
+          // A product priority is product-parented; skip activity items
+          // (projectId null).
           i.priorityRank != null && i.projectId != null,
       )
       .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0)),

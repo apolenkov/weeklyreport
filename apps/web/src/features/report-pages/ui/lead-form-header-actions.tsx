@@ -106,13 +106,13 @@ export function LeadFormHeaderActions({
             </span>
           ))}
       </div>
-      {/* report-toolbar-layout: document actions live on the header line's
-          right slot, not inside the bordered toolbar. A read-only past
-          period hides the real mutating actions (Save/Submit/Fill-From)
-          while the inert Coming-soon stubs remain (deferred-feature-pattern).
-          Submit is the single brand-green forward primary; reversal
-          actions (Request Reopen / Revoke) stay neutral/outline so green
-          keeps one "forward, safe-to-commit" meaning. */}
+      {/* Document actions live on the header line's right slot, not inside
+          the bordered toolbar. A read-only past period hides the real
+          mutating actions (Save/Submit/Fill-From) while the inert
+          Coming-soon stubs remain. Submit is the single brand-green
+          forward primary; reversal actions (Request Reopen / Revoke) stay
+          neutral/outline so green keeps one "forward, safe-to-commit"
+          meaning. */}
       <DocumentActionGroup>
         <VersionComingSoonControl />
         {/* TODO(lead-pdf-export): lead is excluded from pdfExport
@@ -131,10 +131,10 @@ export function LeadFormHeaderActions({
             onFillFrom={writeActions.handleFillFrom}
           />
         )}
-        {/* reopen-request-lifecycle (D4): the control is driven by the
-            server-computed `canRequestReopen` flag — hidden when the period
-            is published/archived or a request is already pending. The client
-            does NOT reconstruct the lifecycle policy. */}
+        {/* The control is driven by the server-computed `canRequestReopen`
+            flag — hidden when the period is published/archived or a request
+            is already pending. The client does NOT reconstruct the lifecycle
+            policy. */}
         {isSubmitted && isLead(currentUser.authorRole) && canRequestReopen && (
           <button
             type="button"

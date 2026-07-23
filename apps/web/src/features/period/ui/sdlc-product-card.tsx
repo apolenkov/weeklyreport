@@ -6,13 +6,13 @@ import { STAGE_CHIP_BOX_HEIGHT, StageChip } from "../../report-sections";
 import type { ProductPipelineView } from "../model/sdlc-pipeline-view";
 import { CollapsedStagesIndicator } from "./sdlc-collapsed-indicator";
 
-// lead-mine-hide-unowned-stages: empty-own-stages note copy, lifted to a const
-// so the string is not inlined in JSX.
+// Empty-own-stages note copy, lifted to a const so the string is not inlined
+// in JSX.
 const NO_OWN_STAGES_NOTE = "No stages assigned to you";
 
-// lead-pipeline-mine-reveal-and-own-stage-label (affordance 1): label the
-// completeness counter as the lead's OWN stages so "N/M" doesn't read as the
-// whole pipeline. Pure label — the count (computeCompleteness) is unchanged.
+// Label the completeness counter as the lead's OWN stages so "N/M" doesn't
+// read as the whole pipeline. Pure label — the count (computeCompleteness) is
+// unchanged.
 const OWN_STAGES_LABEL = "Your stages";
 
 // completeness ring geometry — named so no magic numbers leak into the style
@@ -104,9 +104,9 @@ export function SdlcProductCard({
         )}
       </div>
 
-      {/* Stages row. lead-mine-hide-unowned-stages: a product on which the
-      lead owns no stage still renders (with its honest health above)
-      and shows a brief note instead of an empty grid. */}
+      {/* Stages row: a product on which the lead owns no stage still renders
+      (with its honest health above) and shows a brief note instead of an
+      empty grid. */}
       {showNoOwnStagesNote ? (
         <p className="pb-1 text-[13px] italic text-[var(--color-muted-foreground)]">
           {NO_OWN_STAGES_NOTE}

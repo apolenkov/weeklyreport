@@ -9,12 +9,12 @@ import {
 import type { StageStatus } from "../../report-sections";
 import { STAGE_CHIP_BOX_HEIGHT, STATUS_CONFIG } from "../../report-sections";
 
-// lead-pipeline-mine-reveal-and-own-stage-label (affordance 2): in Mine mode the
-// filter hides foreign-owned and vacant chips. This small inert indicator near
-// the grid reports how many stages are collapsed. Its `aria-label` (non-visual)
-// reveals each hidden stage's name and status; a Radix tooltip — the same shared
-// `packages/ui` component the chips use — reveals the same lines on hover. It
-// never un-hides the chips, nor touches health or completeness.
+// In Mine mode the filter hides foreign-owned and vacant chips. This small
+// inert indicator near the grid reports how many stages are collapsed. Its
+// `aria-label` (non-visual) reveals each hidden stage's name and status; a
+// Radix tooltip — the same shared `packages/ui` component the chips use —
+// reveals the same lines on hover. It never un-hides the chips, nor touches
+// health or completeness.
 const HIDDEN_STAGES_ARIA_PREFIX = "Hidden stages —";
 
 function collapsedStagesIndicatorLabel(count: number): string {
@@ -72,10 +72,10 @@ export function CollapsedStagesIndicator({
         className="border bg-popover text-left text-popover-foreground shadow-md"
       >
         {reveal.map((line, idx) => {
-          // pipeline-tooltip-and-indicator: colour each row by its stage status
-          // (reuse STATUS_CONFIG tokens, no new token) with a leading status
-          // dot, so a blocked/at-risk hidden stage stands out. The status is
-          // already announced in the text/aria-label, so the dot is decorative.
+          // Colour each row by its stage status (reuse STATUS_CONFIG tokens,
+          // no new token) with a leading status dot, so a blocked/at-risk
+          // hidden stage stands out. The status is already announced in the
+          // text/aria-label, so the dot is decorative.
           const status = statuses[idx] ?? "empty";
           const color = STATUS_CONFIG[status].text;
           return (

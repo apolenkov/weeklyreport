@@ -12,7 +12,7 @@ import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
 import { type ChartData, type ChartSeries, COLORS } from "./chart-palette";
 
-// Status levels: red=1, yellow=2, green=3. Domain max leaves headroom above green.
+// Domain max leaves headroom above green so the top line isn't clipped.
 const STATUS_LEVEL_GREEN = 3;
 const STATUS_LEVEL_TICKS = [1, 2, STATUS_LEVEL_GREEN];
 const Y_AXIS_DOMAIN_MAX = 4;
@@ -21,8 +21,7 @@ const Y_AXIS_DOMAIN_MAX = 4;
  * Traffic-light history sparkline.
  *
  * `connectNulls={false}` so periods where a project did NOT report render
- * as visible gaps, distinct from a reported zero. status mapping: green=3,
- * yellow=2, red=1, null=null.
+ * as visible gaps, distinct from a reported zero.
  */
 
 const STATUS_TO_VALUE: Record<Exclude<TrafficLightCell, null>, number> = {

@@ -4,16 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Shared dialog lifecycle for editable lead report sections (current week,
- * next week, risks, decisions). Extracted so the D1 readOnly-ref add-signal
- * fix and the D13 openSeq remount key live in exactly one place instead of
- * being hand-copied per section — the duplication that once let the D1 fix
- * reach only a subset of sections.
+ * next week, risks, decisions). Extracted so the readOnly-ref add-signal
+ * guard and the openSeq remount key live in exactly one place instead of
+ * being hand-copied per section.
  *
  * Owns: the dialog open/create/edit/close state, the add-signal create
- * effect with D1 readOnly-ref semantics, openSeq keying (D13), and
- * pending-delete confirmation. Section-specific behavior
- * (`wasEmpty`/`onRiskFilled`, the risks chip-raise prefill, seed-product
- * resolution) stays caller-side per `lead-dialog-lifecycle` (D3).
+ * effect with readOnly-ref semantics, openSeq keying, and pending-delete
+ * confirmation. Section-specific behavior (`wasEmpty`/`onRiskFilled`, the
+ * risks chip-raise prefill, seed-product resolution) stays caller-side.
  */
 export type EditableListDialogState<TEntity> =
   | { open: false }
@@ -50,8 +48,8 @@ interface UseEditableListDialogOptions {
 interface UseEditableListDialogResult<TEntity> {
   readonly dialogState: EditableListDialogState<TEntity>;
   /**
-   * openSeq-derived remount key (D13) — port of `deriveDialogProps`. Repeated
-   * opens of the same entity always remount the dialog with fresh state.
+   * openSeq-derived remount key. Repeated opens of the same entity always
+   * remount the dialog with fresh state.
    */
   readonly dialogKey: string;
   /** Opens create mode, optionally preselecting a parent. No-op when readOnly. */
@@ -78,34 +76,35 @@ export function useEditableListDialog<TEntity extends { id: string }>({
   const [dialogState, setDialogState] = useState<
     EditableListDialogState<TEntity>
   >({ open: false });
-  // D-13: monotonic counter so repeated opens of the same entity get a fresh
-  // key even when entity.id is unchanged (prevents stale state in the dialog).
+  // Monotonic counter so repeated opens of the same entity get a fresh key
+  // even when entity.id is unchanged (prevents stale state in the dialog).
   const [openSeq, setOpenSeq] = useState(0);
   const [pendingDelete, setPendingDelete] = useState<TEntity | null>(null);
 
   // Keep a ref so the addSignal effect can read the latest readOnly value
   // without including readOnly in the dep array. If readOnly were in deps,
   // the effect would re-fire on snapshot enter/exit and re-open the dialog
-  // from a stale non-zero addSignal counter (D1 fix). Copied verbatim from
-  // the donor sections — do NOT "improve" the ref-write into an effect-sync.
+  // from a stale non-zero addSignal counter. Do NOT move the ref-write into
+  // an effect-sync — that reintroduces the stale-signal reopen.
   const readOnlyRef = useRef(readOnly);
   // eslint-disable-next-line react-hooks/refs -- deliberate render-time ref stamp (see comment above): an effect-sync would re-open the dialog from a stale addSignal
   readOnlyRef.current = readOnly;
 
-  // D4: close the stale-signal-vs-seed-change residual channel. The seed id
-  // stays in the effect deps (canonical), so a products-list change while a
-  // stale non-zero signal exists would otherwise re-open the dialog. Track
-  // the highest handled signal and only open when the counter advances.
+  // Close the stale-signal-vs-seed-change residual channel. The seed id stays
+  // in the effect deps, so a products-list change while a stale non-zero
+  // signal exists would otherwise re-open the dialog. Track the highest
+  // handled signal and only open when the counter advances.
   //
-  // D16 (slides-remount stale-signal): seed this ref from the CURRENT addSignal
-  // at mount, NOT from NO_SIGNAL_HANDLED. The slides<->edit toggle conditionally
-  // renders the form, so each return to edit REMOUNTS this section while the
-  // parent (LeadForm) persists across the route's searchParams change — carrying
-  // a stale non-zero addSignal. Seeding from 0 made the mount effect read that
-  // stale counter as "advanced" and spuriously re-open the create dialog (two
-  // stacked Add dialogs after Add Risk -> slides -> Add Decision -> slides).
-  // Capturing the mount-time value short-circuits the effect on remount, while a
-  // genuine later "+ Add" increment still advances past it and opens.
+  // Seed this ref from the CURRENT addSignal at mount, NOT from
+  // NO_SIGNAL_HANDLED. The slides<->edit toggle conditionally renders the
+  // form, so each return to edit REMOUNTS this section while the parent
+  // (LeadForm) persists across the route's searchParams change — carrying a
+  // stale non-zero addSignal. Seeding from 0 made the mount effect read that
+  // stale counter as "advanced" and spuriously re-open the create dialog
+  // (two stacked Add dialogs after Add Risk -> slides -> Add Decision ->
+  // slides). Capturing the mount-time value short-circuits the effect on
+  // remount, while a genuine later "+ Add" increment still advances past it
+  // and opens.
   const lastHandledSignal = useRef(addSignal);
 
   // Identity-stable across readOnly changes (guards through readOnlyRef, not

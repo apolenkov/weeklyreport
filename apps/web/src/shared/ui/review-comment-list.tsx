@@ -4,11 +4,10 @@ import type { RecordCommentView } from "@customreport/shared";
 import type { ReactNode } from "react";
 
 /**
- * review-acknowledgement: display-only inline render of a record's reviewer
- * comments (reviewer name + text + short date). It NEVER re-renders the anchor
- * record's own text. Shared by the head/viewer accordion rows (§6.2) and the
- * lead form cards (§8). Born responsive (C5 R6): comments stack under the anchor,
- * no side rail.
+ * Display-only inline render of a record's reviewer comments (reviewer name +
+ * text + short date). It NEVER re-renders the anchor record's own text. Shared
+ * by the head/viewer accordion rows and the lead form cards. Comments stack
+ * under the anchor (no side rail) so the layout stays usable on narrow viewports.
  *
  * `renderAction` lets a reviewer-facing wrapper inject a per-comment control
  * (e.g. Delete) without this component owning any mutation — the lead surface

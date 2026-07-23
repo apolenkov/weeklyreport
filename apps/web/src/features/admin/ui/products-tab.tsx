@@ -163,9 +163,9 @@ export function ProductsTab({
     (p) => p.status === "archived",
   );
 
-  // add-slide-capacity-signals: advisory count of active products owned by the
-  // lead picked in the dialog. Computed from the FULL `products` prop (active
-  // only) — NOT filteredProducts — so a name filter / search never undercounts.
+  // Advisory count of active products owned by the lead picked in the dialog.
+  // Computed from the FULL `products` prop (active only) — NOT filteredProducts
+  // — so a name filter / search never undercounts.
   const leadProductCount = useMemo(
     () =>
       products.filter(

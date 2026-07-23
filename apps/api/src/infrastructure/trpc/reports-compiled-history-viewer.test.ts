@@ -6,11 +6,10 @@ import { createNullLogger } from "../../lib/logger.js";
 import { createAppRouter } from "./trpc.router.js";
 
 /**
- * viewer-live-status (task 3.1 / Decision 5): `reports.compiledHistory`
- * delegates to `WeeklyReportService.compiledHistory`, resolving
- * `input?.includeArchive ?? false` and threading the caller's session
- * through. The viewer-only `periodStatus="published"` filter this test used
- * to pin at the router level now lives where the query is issued — see
+ * `reports.compiledHistory` delegates to `WeeklyReportService.compiledHistory`,
+ * resolving `input?.includeArchive ?? false` and threading the caller's
+ * session through. The viewer-only `periodStatus="published"` filter lives
+ * where the query is issued — see
  * `WeeklyReportPrismaRepository.getCompiledHistory`'s coverage in
  * `weekly-report.prisma-repository.test.ts`.
  */

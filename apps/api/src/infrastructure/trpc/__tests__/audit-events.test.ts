@@ -125,11 +125,11 @@ describe("role-denied integration signal", () => {
   });
 
   it("an unauthenticated call to a head-only procedure surfaces UNAUTHORIZED with NO role-denied emit", async () => {
-    // T2 boundary: UNAUTHORIZED (no session) is handled by assertRole's
-    // first branch, which throws BEFORE the role check. The factory only
-    // emits role-denied when the FORBIDDEN branch fires, so an unauthed
-    // call should not pollute the audit channel — the upstream
-    // login-fail emit (auth.routes) is the right surface for that.
+    // UNAUTHORIZED (no session) is handled by assertRole's first branch,
+    // which throws BEFORE the role check. The factory only emits role-denied
+    // when the FORBIDDEN branch fires, so an unauthed call should not pollute
+    // the audit channel — the upstream login-fail emit (auth.routes) is the
+    // right surface for that.
     const { logger, entries } = makeCapturingLogger();
     const auditLogger: AuditLogger = createAuditLogger(logger);
 

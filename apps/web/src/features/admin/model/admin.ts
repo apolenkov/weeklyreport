@@ -25,8 +25,7 @@
  * - `adminReminderRuleSchema` has no name/description. We synthesize from `kind`
  *   and `fireAt`.
  * - `appSettingsSchema` is a 1:1 match for `MockSettings` (autoCreatePeriods,
- *   defaultDeadlineDays + the added period/reminder knobs; the legacy
- *   `departmentName` field was dropped on both sides).
+ *   defaultDeadlineDays + the added period/reminder knobs).
  */
 
 import type {
@@ -175,8 +174,7 @@ export function mapAdminSnapshot(api: AdminSnapshot): MappedAdminSnapshot {
 /**
  * Translates `admin.getSettings` API output into the SettingsTab presentation
  * shape. Field-for-field copy — `appSettingsSchema` and `MockSettings` stay
- * structurally identical (the legacy `departmentName` field was dropped on
- * both sides at the same time).
+ * structurally identical.
  */
 export function mapAdminSettings(api: AppSettings): MockSettings {
   return {

@@ -32,8 +32,8 @@ describe("deriveEffectiveStageStatus", () => {
   });
 
   it("collapses an explicit blocked with no backing risk to on-track", () => {
-    // rethink-pipeline-state-vs-completeness: status is derived from risks;
-    // a manual blocked that no risk backs can no longer survive.
+    // Status is derived from risks; a manual blocked that no risk backs
+    // collapses rather than surviving as orphaned severity.
     expect(deriveEffectiveStageStatus("blocked", [], [])).toBe("on-track");
   });
 

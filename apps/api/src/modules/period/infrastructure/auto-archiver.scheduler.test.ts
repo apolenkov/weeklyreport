@@ -168,10 +168,10 @@ describe("AutoArchiverScheduler", () => {
 
     await scheduler.runOnce(new Date("2026-06-15T00:15:00Z"));
 
-    // Regression guard (Wave-3 blocker): a reopened period keeps
-    // status='published' + archived=false + an old publishedAt, so the legacy
-    // predicates alone would archive it. The periodState exclusion is the fix.
-    // cutoff = now (2026-06-15T00:15Z) − 4 weeks = 2026-05-18T00:15Z.
+    // A reopened period keeps status='published' + archived=false + an old
+    // publishedAt, so the legacy predicates alone would archive it. The
+    // periodState exclusion prevents that. cutoff = now (2026-06-15T00:15Z) −
+    // 4 weeks = 2026-05-18T00:15Z.
     expect(prisma.report.findMany).toHaveBeenCalledTimes(1);
     expect(prisma.report.findMany).toHaveBeenCalledWith({
       where: {

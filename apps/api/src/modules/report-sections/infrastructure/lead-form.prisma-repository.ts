@@ -52,8 +52,8 @@ type StageTrafficStatus = TrafficLightStatus | null;
 const sectionForPeriodInclude = {
   ...reportSectionFullInclude,
   report: { select: { periodStatus: true, archived: true } },
-  // reopen-request-lifecycle (D4/D5): does this section already hold a
-  // pending reopen request? Drives `canRequestReopen` (one-pending rule).
+  // Does this section already hold a pending reopen request? Drives
+  // `canRequestReopen` (one-pending rule).
   reopenRequests: {
     where: { status: "pending" },
     select: { id: true },
@@ -159,10 +159,8 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     const section = mapPrismaToReportSection(row);
     const { report, reopenRequests } = row;
 
-    // reopen-request-lifecycle (D4/G6): a 'reopened' period is editable again
-    // (the whole point of the state), so it is read-write alongside 'open'.
-    // 'published'/'archived' stay read-only — this closes the "callers may
-    // refine" gap that previously left an approved reopen non-editable.
+    // A 'reopened' period is editable again (the whole point of the state), so
+    // it is read-write alongside 'open'. 'published'/'archived' stay read-only.
     const readOnly =
       report.periodStatus !== "open" && report.periodStatus !== "reopened";
 
@@ -326,13 +324,13 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       );
     }
 
-    // activity-first-class: Fill From copies the lead's own past content forward,
-    // so it must honour the XOR parent and (like carry-over, decision 0.3) carry
-    // an activity-parented record ONLY when its activity is still attached to the
-    // TARGET section. A product-parented record always carries. Skipping this
-    // would orphan an activity row on a section that no longer reports it — or,
-    // by dropping activityId, collapse it to no-parent and trip the XOR CHECK,
-    // aborting the whole Fill From (including the valid product rows).
+    // Fill From copies the lead's own past content forward, so it must honour
+    // the XOR parent and carry an activity-parented record ONLY when its
+    // activity is still attached to the TARGET section. A product-parented
+    // record always carries. Skipping this would orphan an activity row on a
+    // section that no longer reports it — or, by dropping activityId, collapse
+    // it to no-parent and trip the XOR CHECK, aborting the whole Fill From
+    // (including the valid product rows).
     const targetActivityIds = new Set(
       (
         await this.prisma.activityStatus.findMany({
@@ -601,8 +599,8 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     // Per-author set of shared, non-archived projectIds + the author's stage
     // assignments on those products (the chips come from assignments, not the
     // section — a co-owner's stage exists even with no persisted status row).
-    // `coOwnsShared` is the co-ownership authorization signal (D6b): true iff
-    // the caller co-owns at least one shared, non-archived product. It is kept
+    // `coOwnsShared` is the co-ownership authorization signal: true iff the
+    // caller co-owns at least one shared, non-archived product. It is kept
     // separate from row-emptiness so the service can label a denied read
     // (co-owns nothing) distinctly from a legitimately empty one (co-owns a
     // product but the co-owner authored no records).

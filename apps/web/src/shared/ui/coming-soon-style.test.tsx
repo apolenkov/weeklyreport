@@ -1,11 +1,11 @@
 /**
  * @vitest-environment jsdom
  *
- * fix-coming-soon-tooltip-clipping: the deferred-feature ComingSoon controls now
- * render their tooltip through the shared Radix portal (escaping the
- * `overflow-x-auto` clipping that hid the agent-review + holidays tooltips).
- * These guards pin: the single canonical amber badge, the Radix wrapper on every
- * control, retirement of the CSS anchor, and the no-bespoke-pill invariant.
+ * Deferred-feature ComingSoon controls render their tooltip through the shared
+ * Radix portal (escaping `overflow-x-auto` clipping that would hide tooltips
+ * inside scroll containers). These guards pin: the single canonical amber
+ * badge, the Radix wrapper on every control, retirement of the CSS anchor, and
+ * the no-bespoke-pill invariant.
  */
 
 import "@testing-library/jest-dom/vitest";

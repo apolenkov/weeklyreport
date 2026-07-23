@@ -18,7 +18,7 @@ function makeError(message = "Test error"): Error & { digest?: string } {
   return Object.assign(new Error(message), { digest: "abc123" });
 }
 
-describe("ErrorBoundary — error.tsx (UFB a11y catalog)", () => {
+describe("ErrorBoundary — error.tsx a11y", () => {
   it("button has explicit type='button'", () => {
     render(<ErrorBoundary error={makeError()} reset={vi.fn()} />);
     const btn = screen.getByRole("button", { name: /try again/i });

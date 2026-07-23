@@ -1,16 +1,11 @@
 /**
  * @vitest-environment jsdom
  *
- * VA-0a / VA-0b regression: a11y assertions for LeadFormSkeleton.
- *
- * Covers the high-priority unit-rtl rows and snapshot rows from the
- * verify-a11y catalog
- * (openspec/changes/verify-a11y-recommended-flip/design.md):
+ * A11y assertions for LeadFormSkeleton:
  *  - root div has role="status"
  *  - root div has aria-busy="true"
  *  - root div has aria-label="Loading report form"
- *  - snapshot: root container combines all three ARIA attributes (VA-0b)
- *  - snapshot: PlaceholderAccordion skeleton rows render in stable order (VA-0b)
+ *  - PlaceholderAccordion skeleton rows render in stable order
  */
 
 import { render, screen } from "@testing-library/react";
@@ -19,7 +14,7 @@ import { describe, expect, it } from "vitest";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
 
-describe("LeadFormSkeleton — a11y regression (VA-0a)", () => {
+describe("LeadFormSkeleton — a11y regression", () => {
   it("root container has role='status'", () => {
     render(<LeadFormSkeleton />);
 
@@ -42,14 +37,14 @@ describe("LeadFormSkeleton — a11y regression (VA-0a)", () => {
   });
 });
 
-describe("LeadFormSkeleton — snapshot (VA-0b)", () => {
-  it("root container role + aria attributes snapshot", () => {
+describe("LeadFormSkeleton — root a11y attributes", () => {
+  it("root container has role, aria-busy, and aria-label", () => {
     const { container } = render(<LeadFormSkeleton />);
 
     const root = container.firstChild as HTMLElement;
-    expect(root.getAttribute("role")).toMatchSnapshot();
-    expect(root.getAttribute("aria-busy")).toMatchSnapshot();
-    expect(root.getAttribute("aria-label")).toMatchSnapshot();
+    expect(root.getAttribute("role")).toBe("status");
+    expect(root.getAttribute("aria-busy")).toBe("true");
+    expect(root.getAttribute("aria-label")).toBe("Loading report form");
   });
 
   it("PlaceholderAccordion skeleton rows render in stable order across re-renders", () => {

@@ -58,7 +58,7 @@ export interface AppRouterDeps {
   reportSectionsService: ReportSectionsService;
   reviewService: ReviewService;
   /**
-   * review-acknowledgement: the review capability's write surface —
+   * The review capability's write surface —
    * `review.acknowledge` / `review.comment` / `review.deleteComment` /
    * `review.verdict` / `review.acknowledgements`. All ride `leadershipProcedure`
    * (head + admin + viewer; lead excluded); the per-group scope + reviewer
@@ -76,11 +76,11 @@ export interface AppRouterDeps {
   organizationService: OrganizationService;
   remindersService: RemindersService;
   /**
-   * lead-report-surface-polish: best-effort auto carry-over, fired
-   * when a manually created period is minted open (a scheduled-born one is
-   * carried later, at its scheduled→open flip). Never rejects. Optional so
-   * role-coverage test fixtures that build the router with `{}` deps keep
-   * compiling — production wiring (main.ts) always provides it.
+   * Best-effort auto carry-over, fired when a manually created period is
+   * minted open (a scheduled-born one is carried later, at its
+   * scheduled→open flip). Never rejects. Optional so role-coverage test
+   * fixtures that build the router with `{}` deps keep compiling —
+   * production wiring (main.ts) always provides it.
    */
   autoCarryOver?: (targetReportId: string) => Promise<void>;
   archiveService: ArchiveService;
@@ -191,13 +191,13 @@ export function createAppRouter(deps: AppRouterDeps) {
     // === Reminders namespace ===
     reminders: createRemindersRouter(deps),
 
-    // === Period lifecycle namespace (v4.0) ===
+    // === Period lifecycle namespace ===
     period: createPeriodRouter(deps),
 
-    // === Weekly Report namespace (v4.0) ===
+    // === Weekly Report namespace ===
     weeklyReport: createWeeklyReportRouter(deps),
 
-    // === Lead Form namespace (v4.0) ===
+    // === Lead Form namespace ===
     leadForm: createLeadFormRouter(deps),
 
     // === Analytics namespace ===

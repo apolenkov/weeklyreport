@@ -2,8 +2,8 @@ import type { UserSession } from "@customreport/shared";
 
 import { computeAllowedGroupIds } from "../../../lib/group-scope.js";
 
-// review-acknowledgement: the session fields the review authz decisions read.
-// Narrowed so callers (and tests) can pass a partial session.
+// Session fields the review authz decisions read. Narrowed so callers (and
+// tests) can pass a partial session.
 export type ReviewSession = Pick<
   UserSession,
   "userId" | "role" | "reportingGroupId" | "viewerGroupAccess"
@@ -42,9 +42,9 @@ export function isDesignatedReviewer(
   return false;
 }
 
-// review-acknowledgement: a period accepts a verdict / un-submit only while it
-// is editable — `open` or `reopened`, and not archived. A published or archived
-// period is reached only through a period-level reopen first.
+// A period accepts a verdict / un-submit only while it is editable — `open` or
+// `reopened`, and not archived. A published or archived period is reached only
+// through a period-level reopen first.
 export function isEditablePeriod(period: {
   periodStatus: string;
   archived: boolean;

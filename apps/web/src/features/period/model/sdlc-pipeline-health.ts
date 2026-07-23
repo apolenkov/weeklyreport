@@ -35,8 +35,6 @@ export function collapsedIndicatorColors(statuses: readonly StageStatus[]): {
   border: string;
   text: string;
 } {
-  // Over the cross-author-resolved statuses: blocked → red; else at-risk →
-  // yellow; else any unfilled → grey; else all on-track → green.
   const set = new Set(statuses);
   const status: StageStatus = set.has("blocked")
     ? "blocked"

@@ -24,7 +24,7 @@ const MAX_HOUR_OFFSET_MINUTES =
  * pairings the engine supports. The admin picks a preset; on save it
  * expands back into the stored `kind` + `audience` fields. A stored row
  * whose pairing matches neither preset is surfaced read-only as "Custom"
- * rather than silently coerced (D3).
+ * rather than silently coerced.
  */
 export const REMINDER_PRESETS = [
   {
@@ -154,7 +154,7 @@ export function formatValidityWindow(policy: MockReminderPolicy): string {
  * The earliest future derived-rule fire time, formatted as a plain date, or
  * `null` when there is no upcoming send (every derived rule already fired or
  * is paused). Pure: callers pass `now` so the result is deterministic in
- * tests. The row maps `null` to "No upcoming sends" (D4).
+ * tests. The row maps `null` to "No upcoming sends".
  */
 export function nextSendDate(
   rules: readonly MockReminder[],

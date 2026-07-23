@@ -9,13 +9,12 @@ import {
  * Derives effective StageStatus from the risks/items that back the stage —
  * the single source of truth.
  *
- * rethink-pipeline-state-vs-completeness (supersedes the earlier "explicit chip
- * status must win" rule): severity is the max over covering risks (and blocked
- * items); an explicit at-risk/blocked with NO backing risk can no longer
- * survive, because under the one-source model status is derived from risks and
- * cannot drift from them. Such an orphaned manual severity collapses to
- * on-track (the stage was touched, so it is not "empty"). on-track / empty
- * pass through untouched — they are the completeness signal, not a severity.
+ * Severity is the max over covering risks (and blocked items); an explicit
+ * at-risk/blocked with NO backing risk cannot survive, because under the
+ * one-source model status is derived from risks and cannot drift from them.
+ * Such an orphaned manual severity collapses to on-track (the stage was
+ * touched, so it is not "empty"). on-track / empty pass through untouched —
+ * they are the completeness signal, not a severity.
  *
  * Why on-track, not empty: it matches `handleRisksChange` in the sync bridge,
  * which resets a stage to on-track when its last covering risk is removed —

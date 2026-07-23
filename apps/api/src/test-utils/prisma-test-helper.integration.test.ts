@@ -30,7 +30,7 @@ describe("prisma-test-helper (integration)", () => {
     await disconnectTestPrisma();
   });
 
-  it("wipes UserActionLog rows that the old deleteMany chain never touched", async () => {
+  it("wipes UserActionLog rows (no FK — easy to miss from cleanDatabase)", async () => {
     // UserActionLog.userId is a plain String (no FK), so no seed row needed.
     await prisma.userActionLog.create({
       data: {
@@ -48,7 +48,7 @@ describe("prisma-test-helper (integration)", () => {
     expect(count).toBe(0);
   });
 
-  it("wipes AppSettings rows that the old deleteMany chain never touched", async () => {
+  it("wipes AppSettings rows (singleton table must be included in cleanDatabase)", async () => {
     await prisma.appSettings.upsert({
       where: { id: "singleton" },
       create: { id: "singleton" },
@@ -61,7 +61,7 @@ describe("prisma-test-helper (integration)", () => {
     expect(count).toBe(0);
   });
 
-  it("wipes ViewerGroupAccess rows that the old deleteMany chain never touched", async () => {
+  it("wipes ViewerGroupAccess rows (join table must be included in cleanDatabase)", async () => {
     // ViewerGroupAccess requires a User and a ReportingGroup (both onDelete Cascade).
     const group = await prisma.reportingGroup.create({
       data: {

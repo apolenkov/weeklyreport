@@ -47,8 +47,7 @@ export interface CollectedCells {
 
 /** Where a single row lands: the product-level map keyed by product id (or the
  * shared card), or the per-activity map keyed by activity id. An activity
- * parent always wins over a product parent — mirrors the pre-refactor
- * `bucketFor(productId, activityId)` routing. */
+ * parent always wins over a product parent. */
 interface RowPlacement {
   readonly scope: "product" | "activity";
   readonly key: string;

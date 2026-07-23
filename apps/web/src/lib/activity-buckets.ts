@@ -2,9 +2,9 @@
  * Derived by-state buckets for the opt-in unified activity view (ADR 0011).
  *
  * A pure presentation projection over the persisted item fields — no new enum
- * is stored and physical `Item.type` (`current|next`) is untouched. Since
- * rework-item-status-model the stored `workflowStatus` is the single source
- * (no completed flag, no stored blocked), so the projection is a direct read:
+ * is stored and physical `Item.type` (`current|next`) is untouched. The stored
+ * `workflowStatus` is the single source (no completed flag, no stored blocked),
+ * so the projection is a direct read:
  *
  *   done         — finished work, whatever the week.
  *   paused       — current-week work on hold (owner intends to resume).

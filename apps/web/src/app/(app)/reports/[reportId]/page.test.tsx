@@ -1,10 +1,10 @@
 /**
  * @vitest-environment jsdom
  *
- * viewer-report-surface-parity (review P3): the published-report server page
- * maps `?mode=slides` to the viewer shell's slides mode and everything else to
- * form mode. This pins that mapping (and the reportId/authorId pass-through)
- * via a captured-prop assertion on a stubbed ViewerReportShell.
+ * The published-report server page maps `?mode=slides` to the viewer shell's
+ * slides mode and everything else to form mode. This pins that mapping (and
+ * the reportId/authorId pass-through) via a captured-prop assertion on a
+ * stubbed ViewerReportShell.
  */
 
 import "@testing-library/jest-dom/vitest";

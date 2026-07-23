@@ -20,10 +20,9 @@ export class LeadFormAccessError extends Error {
 }
 
 /**
- * reopen-request-lifecycle (D4): a reopen request rejected by the period
- * lifecycle or the one-pending rule. A state conflict, not a missing resource,
- * so the tRPC error-mapper renders it BAD_REQUEST (distinct from
- * `LeadFormDomainError` → NOT_FOUND).
+ * A reopen request rejected by the period lifecycle or the one-pending rule.
+ * A state conflict, not a missing resource, so the tRPC error-mapper renders
+ * it BAD_REQUEST (distinct from `LeadFormDomainError` → NOT_FOUND).
  */
 export class ReopenRequestError extends Error {
   constructor(message: string) {
@@ -49,12 +48,12 @@ export class LeadFormConstraintError extends Error {
 export interface LeadFormRepository {
   getSectionById(sectionId: string): Promise<ReportSectionReadModel | null>;
   /**
-   * scope-leadform-revoke-authz: scoped variant of {@link getSectionById} used
-   * by the revoke write path. `scope` is the `groupScopeFilter(session,
-   * "reportSection")` fragment (a relation filter on `author.reportingGroupId`,
-   * `{}` for admin); a section whose author is outside the caller's groups
-   * resolves to null and is rejected as not-found (no existence oracle). The
-   * shared `getSectionById` stays unscoped for its existing callers.
+   * Scoped variant of {@link getSectionById} used by the revoke write path.
+   * `scope` is the `groupScopeFilter(session, "reportSection")` fragment (a
+   * relation filter on `author.reportingGroupId`, `{}` for admin); a section
+   * whose author is outside the caller's groups resolves to null and is
+   * rejected as not-found (no existence oracle). The shared `getSectionById`
+   * stays unscoped for its existing callers.
    */
   getSectionByIdScoped(
     sectionId: string,
@@ -74,9 +73,9 @@ export interface LeadFormRepository {
     section: ReportSectionReadModel;
     readOnly: boolean;
     /**
-     * reopen-request-lifecycle (D4): the period-lifecycle facts the service
-     * needs to compute `canRequestReopen` without a second read. `archived`
-     * is the explicit `Report` flag, NOT a `periodStatus` value.
+     * Period-lifecycle facts the service needs to compute `canRequestReopen`
+     * without a second read. `archived` is the explicit `Report` flag, NOT a
+     * `periodStatus` value.
      */
     reopenFacts: ReopenEligibilityFacts;
   } | null>;
@@ -103,9 +102,9 @@ export interface LeadFormRepository {
     reopenFacts: ReopenEligibilityFacts;
   } | null>;
   /**
-   * reopen-request-lifecycle (D4): the lifecycle facts for a single section,
-   * keyed by sectionId, so `requestReopen` can enforce the same rule the lead
-   * form's `canRequestReopen` flag advertises. Null when the section is missing.
+   * Lifecycle facts for a single section, keyed by sectionId, so
+   * `requestReopen` can enforce the same rule the lead form's
+   * `canRequestReopen` flag advertises. Null when the section is missing.
    * `authorId` lets the service keep the ownership check.
    */
   getSectionReopenContext(
@@ -114,11 +113,11 @@ export interface LeadFormRepository {
   /**
    * The `periodStatus` of the report owning `sectionId`, or null when the
    * section is missing. Used by fillFrom to refuse mutating a published
-   * period's live rows (viewer-report-surface-parity: published search reads
-   * live rows, the viewer read serves the frozen snapshot — they must not
-   * diverge). `periodStatus`, not `status`: a reopened period (status stays
-   * 'published', periodStatus='reopened') is editable again and is excluded
-   * from the viewer's published search, so fillFrom stays allowed there.
+   * period's live rows (published search reads live rows, the viewer read
+   * serves the frozen snapshot — they must not diverge). `periodStatus`, not
+   * `status`: a reopened period (status stays 'published',
+   * periodStatus='reopened') is editable again and is excluded from the
+   * viewer's published search, so fillFrom stays allowed there.
    */
   getReportPeriodStatusForSection(sectionId: string): Promise<string | null>;
   /**
@@ -172,17 +171,17 @@ export interface LeadFormRepository {
    * co-owns no shared product on a non-archived project) from a legitimately
    * empty one (caller co-owns a shared product, but the co-owner authored no
    * records). The `rows` payload is identical (`[]`) in both cases — only the
-   * separate boolean lets the service label the observability metric. See D6b.
+   * separate boolean lets the service label the observability metric.
    */
   getCrossAuthorContent(
     reportId: string,
     userId: string,
   ): Promise<{ coOwnsShared: boolean; rows: CrossAuthorSectionRow[] }>;
   /**
-   * Revoke every submitted section in a report. scope-leadform-revoke-authz:
-   * `scope` is the caller's `reportSection` group-scope fragment spread into the
-   * `updateMany` where, so a head revokes only their own group's submissions
-   * (admin scope is `{}` → global).
+   * Revoke every submitted section in a report. `scope` is the caller's
+   * `reportSection` group-scope fragment spread into the `updateMany` where, so
+   * a head revokes only their own group's submissions (admin scope is `{}` →
+   * global).
    */
   revokeAllSubmitted(
     reportId: string,
@@ -210,11 +209,11 @@ export interface CrossAuthorStatusRow {
 }
 
 /**
- * Foreign section content scoped to products the caller co-owns. Revives the
- * pre-`scope-lead-report-to-own-contribution` shape and adds a risk-derived
- * per-stage `stages[]` projection so the "Everyone" lens can render foreign
- * stage chips with the canonical traffic-light status. Distinct from the
- * status-only cross-author row (initials + status, no text, no full name).
+ * Foreign section content scoped to products the caller co-owns. Carries full
+ * foreign text plus a risk-derived per-stage `stages[]` projection so the
+ * "Everyone" lens can render foreign stage chips with the canonical
+ * traffic-light status. Distinct from the status-only cross-author row
+ * (initials + status, no text, no full name).
  */
 export interface CrossAuthorSectionRow {
   authorId: string;
@@ -261,11 +260,10 @@ export interface CrossAuthorSectionRow {
 }
 
 /**
- * reopen-request-lifecycle (D4): the period-lifecycle facts a reopen-request
- * decision turns on. `sectionStatus` is the `ReportSectionStatus`, `periodStatus`
- * the `PeriodStatus` (open/published/reopened), `archived` the explicit `Report`
- * flag, and `hasPendingReopen` whether the section already holds a pending
- * request.
+ * Period-lifecycle facts a reopen-request decision turns on. `sectionStatus`
+ * is the `ReportSectionStatus`, `periodStatus` the `PeriodStatus`
+ * (open/published/reopened), `archived` the explicit `Report` flag, and
+ * `hasPendingReopen` whether the section already holds a pending request.
  */
 export interface ReopenEligibilityFacts {
   sectionStatus: string;
@@ -285,13 +283,12 @@ export type ReopenBlockedReason =
   | "pending_request_exists";
 
 /**
- * reopen-request-lifecycle (D4): the single source of truth for whether a lead
- * may file a reopen request. Both the lead-form read (`canRequestReopen`) and
- * the `requestReopen` write guard call this, so the button and the server can
- * never drift. A request is allowed only for a `submitted` section on an
- * `open`/`reopened`, non-`archived` period with no pending request already.
- * `archived` is checked before `periodStatus` so an archived report yields the
- * more specific reason.
+ * Single source of truth for whether a lead may file a reopen request. Both
+ * the lead-form read (`canRequestReopen`) and the `requestReopen` write guard
+ * call this, so the button and the server can never drift. A request is allowed
+ * only for a `submitted` section on an `open`/`reopened`, non-`archived` period
+ * with no pending request already. `archived` is checked before `periodStatus`
+ * so an archived report yields the more specific reason.
  */
 export function computeReopenEligibility(facts: ReopenEligibilityFacts): {
   canRequestReopen: boolean;

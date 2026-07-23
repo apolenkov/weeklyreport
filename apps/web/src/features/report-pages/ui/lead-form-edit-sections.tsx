@@ -68,9 +68,8 @@ interface LeadFormEditSectionsProps {
 /**
  * The lead form's edit-mode section stack: reviewer feedback, the sync-bridge
  * Provider with the Product Status / Activities / item / Risks accordions,
- * and the Decisions accordion. Pure relocation from `LeadForm` — the markup,
- * testids, and handler wiring are unchanged; `LeadFormItemSections` stays a
- * child INSIDE the Provider so `.Pipeline` / `.Risks` keep their context.
+ * and the Decisions accordion. `LeadFormItemSections` stays a child INSIDE
+ * the Provider so `.Pipeline` / `.Risks` keep their context.
  */
 export function LeadFormEditSections({
   viewModel,
@@ -83,12 +82,12 @@ export function LeadFormEditSections({
   visibilityHydrated,
   crossAuthorEntries,
 }: LeadFormEditSectionsProps) {
-  // review-acknowledgement (§8): reviewer comments on this lead's OWN records,
-  // read from the authoritative SERVER section (not the editable draft, whose
-  // in-place edits could drop the joined comments).
+  // Reviewer comments on this lead's OWN records, read from the authoritative
+  // SERVER section (not the editable draft, whose in-place edits could drop
+  // the joined comments).
   const reviewFeedback = mapLeadReviewFeedback(serverSection);
-  // 35-04: per-project stages-the-lead-owns selector, forwarded into the
-  // record dialogs so the SDLC stage dropdown is scoped per project.
+  // Per-project stages-the-lead-owns selector, forwarded into the record
+  // dialogs so the SDLC stage dropdown is scoped per project.
   const stagesForProduct: SyncBridgeProviderProps["stagesForProduct"] = (
     productId,
   ) => ownedStagesForProject(draftSection, productId);
@@ -109,10 +108,9 @@ export function LeadFormEditSections({
     // extra fetch. Below xl it stays single-column; ?mode=slides handles
     // the standalone deck.
     <div className="min-w-0 space-y-6">
-      {/* review-acknowledgement (§8): reviewer feedback on a returned
-          section surfaces read-only above the editable content, so the
-          lead sees what to fix before resubmitting. Self-suppresses when
-          there is none. */}
+      {/* Reviewer feedback on a returned section surfaces read-only above
+          the editable content, so the lead sees what to fix before
+          resubmitting. Self-suppresses when there is none. */}
       <LeadReviewFeedback records={reviewFeedback} />
       <LeadFormSyncBridge.Provider
         products={products}

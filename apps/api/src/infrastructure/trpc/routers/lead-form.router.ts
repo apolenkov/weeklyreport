@@ -110,9 +110,9 @@ export function createLeadFormRouter(deps: LeadFormRouterDeps) {
       .input(z.object({ reportSectionId: z.uuid() }))
       .mutation(async ({ input, ctx }) => {
         try {
-          // scope-leadform-revoke-authz: object-level authz — a head may only
-          // revoke a section authored in its own group (admin scope is {}).
-          // Mirrors the respondReopenRequest scoped re-load.
+          // Object-level authz — a head may only revoke a section authored in
+          // its own group (admin scope is {}). Mirrors the respondReopenRequest
+          // scoped re-load.
           return await deps.leadFormService.revokeSubmission(
             input.reportSectionId,
             ctx.session.userId,
@@ -127,8 +127,8 @@ export function createLeadFormRouter(deps: LeadFormRouterDeps) {
       .input(z.object({ reportId: z.uuid() }))
       .mutation(async ({ input, ctx }) => {
         try {
-          // scope-leadform-revoke-authz: bulk revoke is bounded to the head's
-          // own group inside a multi-group report (admin scope is {} → global).
+          // Bulk revoke is bounded to the head's own group inside a multi-group
+          // report (admin scope is {} → global).
           return await deps.leadFormService.revokeAllSubmitted(
             input.reportId,
             ctx.session.userId,
@@ -172,9 +172,8 @@ export function createLeadFormRouter(deps: LeadFormRouterDeps) {
         }
       }),
 
-    // scope-lead-report-to-own-contribution — the lead form's
-    // "Everyone" visibility lens. Full foreign content, gated by report
-    // access AND product co-ownership for ALL callers (no head/admin
+    // The lead form's "Everyone" visibility lens. Full foreign content, gated
+    // by report access AND product co-ownership for ALL callers (no head/admin
     // bypass); the role is intentionally NOT passed.
     crossAuthorContent: protectedProcedure
       .input(z.object({ reportId: z.uuid() }))

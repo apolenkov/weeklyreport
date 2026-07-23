@@ -305,8 +305,8 @@ describe("useLeadFormAutosave", () => {
   });
 
   it("after an error the form stays dirty and the next edit retries the save", async () => {
-    // D7 (defer-versions-coming-soon): failure keeps dirty=true so the user's
-    // work is not silently marked saved; the next edit fires saveDraft again.
+    // Failure keeps dirty=true so the user's work is not silently marked
+    // saved; the next edit fires saveDraft again.
     let failNext = true;
     const { wrapper, calls } = buildHarness({
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async mutationFn contract; throws synchronously but must satisfy Promise<unknown> return type

@@ -37,10 +37,9 @@ interface LeadFormToolbarControlsProps {
 }
 
 /**
- * The lead form's sticky toolbar: report-toolbar-layout keeps only the
- * Context-control bar here — Agent review · period nav · show-archived ·
- * Mine|Everyone · Edit|Slides · collapse/fullscreen. Pure relocation from
- * `LeadForm`; markup unchanged.
+ * The lead form's sticky toolbar: only the Context-control bar lives here —
+ * Agent review · period nav · show-archived · Mine|Everyone · Edit|Slides ·
+ * collapse/fullscreen.
  */
 export function LeadFormToolbarControls({
   viewModel,
@@ -96,7 +95,7 @@ export function LeadFormToolbarControls({
             leadSubmittedAt={leadSubmittedAt}
           />
           {/* Show-archived filter renders only when the lead has archived
-              periods (lead-report-controls-integrity). */}
+              periods. */}
           {hasArchivedPeriods && (
             <>
               <Separator
@@ -111,11 +110,10 @@ export function LeadFormToolbarControls({
           )}
           <div className="grow" aria-hidden="true" />
           {/* Inert Agent-review placeholder leads the right-aligned view
-              group (head-toolbar-semantics: compact, leading edge). */}
+              group (compact, leading edge). */}
           <AgentReviewComingSoon compact />
-          {/* slides-record-visibility: the Record-visibility toggle now
-              renders in BOTH edit and slides (report-toolbar-parity) so the
-              controls after it never shift between modes. In slides it
+          {/* The Record-visibility toggle renders in BOTH edit and slides so
+              the controls after it never shift between modes. In slides it
               drives the deck via the props threaded into LeadSlidesClient.
               Disabled until the persisted state hydrates so a click cannot
               race the restored value. */}

@@ -3,11 +3,10 @@ import { describe, expect, it } from "vitest";
 import { buildTransition } from "./period-transition.js";
 
 // ---------------------------------------------------------------------------
-// refactor-period-transition-writer: the pure builder is the single source of
-// truth for the Report lifecycle field set. Each test asserts the EXACT object
-// a transition produces (`toEqual`, not `toMatchObject`) so the suite fails if
-// a transition gains or drops a governed field — that is the whole point of
-// consolidating the writers.
+// The pure builder is the single source of truth for the Report lifecycle
+// field set. Each test asserts the EXACT object a transition produces
+// (`toEqual`, not `toMatchObject`) so the suite fails if a transition gains
+// or drops a governed field.
 //
 // Governed fields: periodState, the legacy (status, archived) tuple,
 // periodStatus (reopen flavour), the autoPublished/autoArchived audit flags,

@@ -32,9 +32,6 @@ const headSession: UserSession = {
   activeReportSectionId: null,
 };
 
-// Lead session reserved for future authorization-level tests
-// const leadSession: UserSession = { ... };
-
 /* ------------------------------------------------------------------ */
 /*  Mock repository                                                    */
 /* ------------------------------------------------------------------ */

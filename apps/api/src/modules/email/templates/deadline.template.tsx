@@ -58,9 +58,8 @@ export function DeadlineEmail({
                 Open my section
               </Button>
             </Section>
-            {/* Brand footer rendered from the `organization` payload
-                snapshotted at enqueue time. Subject uses `shortName`
-                (compact); footer uses `fullName` (long). */}
+            {/* Brand footer from the `organization` payload snapshotted at
+                enqueue time (shortName + fullName). */}
             <Text className="text-sm text-gray-500">
               {organization.shortName} — Weekly status reporting for{" "}
               {organization.fullName}.

@@ -1,8 +1,8 @@
-// fix-lead-surface-name-resolution: pins the name-only `referencedProjects`
-// emission of mapPrismaToReportSection — rows (items / risks / decisions)
-// referencing a project the section author owns no stage on contribute the
-// project's name so the lead-surface mappers never show "Unknown"/"Group"
-// for a product the system can name.
+// Pins the name-only `referencedProjects` emission of
+// mapPrismaToReportSection — rows (items / risks / decisions) referencing a
+// project the section author owns no stage on contribute the project's name so
+// the lead-surface mappers never show "Unknown"/"Group" for a product the
+// system can name.
 import type { TrafficLightStatus } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
@@ -457,12 +457,11 @@ describe("mapPrismaToReportSection — assigned-stage set", () => {
   });
 });
 
-// fix-published-empty-stage-risk-floor (task 3.2): the PDF export product
-// mapping inherits the floor because it maps via the SAME
-// mapPrismaToReportSection. These pin the mapper-level floor: an OWNED stage
-// with no submitted status (`StageStatus.status = null`, i.e. absent from
-// `stageStatuses`) covered by the author's OWN risk floors the product's
-// derived `trafficLight` — while the raw per-stage `status` stays null (D4).
+// The PDF export product mapping inherits the floor because it maps via the
+// SAME mapPrismaToReportSection. These pin the mapper-level floor: an OWNED
+// stage with no submitted status (`StageStatus.status = null`, i.e. absent
+// from `stageStatuses`) covered by the author's OWN risk floors the product's
+// derived `trafficLight` — while the raw per-stage `status` stays null.
 describe("mapPrismaToReportSection — own-risk product floor", () => {
   function coveringRisk(severity: "blocked" | "at-risk", stageNames: string[]) {
     return fullRisk({
@@ -488,7 +487,7 @@ describe("mapPrismaToReportSection — own-risk product floor", () => {
 
     const project = section.projects.find((p) => p.projectId === OWNED_PROJECT);
     expect(project?.trafficLight).toBe("red");
-    // D4: the raw per-stage status stays empty (null) — only the derived
+    // The raw per-stage status stays empty (null) — only the derived
     // product-level trafficLight is floored.
     expect(project?.ownedStages?.[0]?.status ?? null).toBeNull();
   });
@@ -523,11 +522,11 @@ describe("mapPrismaToReportSection — own-risk product floor", () => {
     ).toBe("red");
   });
 
-  // unassigned-stage-reporting-exclusion (task 4.1): a risk naming a stage the
-  // author does NOT own never floored the product (the floor folds risks through
-  // OWNED stages only), so excluding such a vacant stage changes no health
-  // number — and the risk stays listed in the risk section, so the severity is
-  // always explained by a visible object even with no stage chip.
+  // A risk naming a stage the author does NOT own never floors the product
+  // (the floor folds risks through OWNED stages only), so excluding such a
+  // vacant stage changes no health number — and the risk stays listed in the
+  // risk section, so the severity is always explained by a visible object even
+  // with no stage chip.
   it("a risk on a non-owned (vacant) stage does not floor health and stays listed", () => {
     const section = mapRow(
       baseRow({
@@ -654,10 +653,10 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
   });
 });
 
-// activity-first-class: the mapper keeps activity-parented records in the FLAT
-// top-level arrays (discriminated by activityId, product FK null), joins each
-// activity's label-only linkedProducts, and floors the pill by its OWN records
-// (design decision 5) without ever rewriting the stored ActivityStatus.status.
+// The mapper keeps activity-parented records in the FLAT top-level arrays
+// (discriminated by activityId, product FK null), joins each activity's
+// label-only linkedProducts, and floors the pill by its OWN records without
+// ever rewriting the stored ActivityStatus.status.
 describe("mapPrismaToReportSection — activity derived-status floor", () => {
   const ACTIVITY_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const LINKED_PRODUCT = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
@@ -746,11 +745,11 @@ describe("mapPrismaToReportSection — activity derived-status floor", () => {
 });
 
 /**
- * lead-history-and-submit-label (item 2): `getMyHistoryRows` MUST order
- * entries by reporting-period chronology (`report.periodStart desc`), NOT by
- * the section row's `createdAt` — `createdAt` is insertion time, unrelated to
- * the period a report covers. This keeps the lead history newest-period-first
- * and matches `compiledHistory`, so the summary-rail streak stays honest.
+ * `getMyHistoryRows` MUST order entries by reporting-period chronology
+ * (`report.periodStart desc`), NOT by the section row's `createdAt` —
+ * `createdAt` is insertion time, unrelated to the period a report covers. This
+ * keeps the lead history newest-period-first and matches `compiledHistory`, so
+ * the summary-rail streak stays honest.
  */
 describe("ReportSectionsPrismaRepository.getMyHistoryRows — ordering", () => {
   it("orders by report.periodStart desc, with createdAt as the stable tiebreak", async () => {

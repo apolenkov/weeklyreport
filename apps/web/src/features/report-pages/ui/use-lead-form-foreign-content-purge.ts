@@ -15,10 +15,9 @@ interface UseLeadFormForeignContentPurgeInput {
 }
 
 /**
- * The lead form's foreign-content purge guard, split from `useLeadFormData`
- * only to keep both files inside the max-lines standard. The two effects and
- * their dependency arrays are load-bearing security behavior (7c.6) and move
- * verbatim; `lead-form-visibility.test.tsx` (7d.7) pins them end-to-end.
+ * The lead form's foreign-content purge guard. The two effects and their
+ * dependency arrays are load-bearing security behavior;
+ * `lead-form-visibility.test.tsx` pins them end-to-end.
  */
 export function useLeadFormForeignContentPurge({
   isEveryone,
@@ -30,8 +29,8 @@ export function useLeadFormForeignContentPurge({
   const trpc = useTRPC();
   const qc = useQueryClient();
 
-  // 7c.6: purge the fetched foreign full content from the query cache whenever
-  // the toggle leaves Everyone OR is not yet hydrated for the current context.
+  // Purge the fetched foreign full content from the query cache whenever the
+  // toggle leaves Everyone OR is not yet hydrated for the current context.
   // `enabled:false` (in useLeadFormData) stops a refetch; removing the cached
   // query drops the data so the merged display arrays recompute to own-only. A
   // later return to Everyone re-fetches rather than serving stale. The purge
@@ -45,8 +44,8 @@ export function useLeadFormForeignContentPurge({
     });
   }, [isEveryone, visibilityHydrated, targetReportId, qc, trpc]);
 
-  // 7c.6 (identity guard): the `crossAuthorContent` cache key is scoped by
-  // reportId only, NOT by user — so two identities on the SAME browser + same
+  // Identity guard: the `crossAuthorContent` cache key is scoped by reportId
+  // only, NOT by user — so two identities on the SAME browser + same
   // QueryClient + same report could otherwise share a cache entry. On ANY
   // identity change (logout, role switch, authz downgrade) drop ALL cached
   // foreign content unconditionally, so user B can never read user A's foreign

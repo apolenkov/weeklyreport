@@ -105,7 +105,7 @@ function openAddDialog() {
 
 // ----- tests ---------------------------------------------------------
 
-describe("GroupsTab — a11y regression (verify-a11y-recommended-flip)", () => {
+describe("GroupsTab — a11y regression", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -184,8 +184,7 @@ describe("GroupsTab — a11y regression (verify-a11y-recommended-flip)", () => {
   });
 });
 
-// admin-dialog-focus-management (autofocus-admin-dialogs)
-describe("GroupsTab — focus management (autofocus-admin-dialogs)", () => {
+describe("GroupsTab — focus management", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

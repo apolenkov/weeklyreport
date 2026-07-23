@@ -22,7 +22,8 @@ const DEFAULT_OFFSET_MINUTES = -(DEFAULT_OFFSET_DAYS_BEFORE * MINUTES_PER_DAY);
 export type PolicyFormState = AdminReminderPolicyFormInput & {
   /**
    * The selected Reminder type. `kind`/`audience` are derived from it on
-   * save for a real preset, and preserved verbatim for a "custom" row (D2/D3).
+   * save for a real preset, and preserved verbatim for a "custom" row so a
+   * legacy pairing is never silently coerced into a preset.
    */
   preset: ReminderPresetChoice;
   /** ISO `YYYY-MM-DD` of "now" when this form was first opened. */
@@ -41,10 +42,10 @@ function todayIsoString(): string {
 }
 
 /**
- * A new reminder always starts from a valid preset (D7). The org default
- * audience is intentionally NOT blended into the pairing — that was the
- * footgun (`deadline → head-of-late`) this change removes. Only the timezone
- * default is sourced from AppSettings.
+ * A new reminder always starts from a valid preset. The org default audience
+ * is intentionally NOT blended into the pairing — blending it produced the
+ * invalid `deadline → head-of-late` pair. Only the timezone default is
+ * sourced from AppSettings.
  */
 export function emptyPolicyForm(timezone: string): PolicyFormState {
   const today = todayIsoString();

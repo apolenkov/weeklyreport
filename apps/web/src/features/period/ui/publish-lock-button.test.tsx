@@ -196,8 +196,7 @@ describe("PublishLockButton", () => {
     expect(onPublish).not.toHaveBeenCalled();
   });
 
-  // VA-0a — verify-a11y-recommended-flip regression tests
-  describe("a11y: Reopen Period button SVG (VA-0a)", () => {
+  describe("a11y: Reopen Period button SVG", () => {
     it("SVG inside Reopen Period button has aria-hidden='true'", () => {
       render(
         <PublishLockButton
@@ -271,7 +270,7 @@ describe("PublishLockButton", () => {
     });
   });
 
-  describe("a11y: publish confirmation dialog keyboard behavior (VA-0a)", () => {
+  describe("a11y: publish confirmation dialog keyboard behavior", () => {
     it("pressing Escape on the focused dialog container closes the publish dialog", async () => {
       render(
         <PublishLockButton

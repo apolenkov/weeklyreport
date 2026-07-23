@@ -166,7 +166,6 @@ describe("PdfExportService", () => {
     expect(completed.artifactUrl).toBe("/exports/report.pdf");
   });
 
-  // requestedBy session threading
   it("threads requestedBy from the session userId into createExportJob", async () => {
     const capture: { lastRequestedBy?: string } = {};
     const service = new PdfExportService(
@@ -596,9 +595,8 @@ describe("buildAuthCookies", () => {
   });
 
   it("produces a url-based cookie for an IP-based PDF_BASE_URL (no domain rejection)", () => {
-    // Defense against M-01: Playwright's addCookies() rejects entries
-    // whose `domain` field would resolve to an IP — using `url` sidesteps
-    // that branch entirely.
+    // Playwright's addCookies() rejects entries whose `domain` field would
+    // resolve to an IP — using `url` sidesteps that branch entirely.
     const originalEnv = process.env.PDF_BASE_URL;
     process.env.PDF_BASE_URL = "http://10.0.0.5:3000";
 

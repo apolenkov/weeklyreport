@@ -141,7 +141,7 @@ describe("FillFromButton", () => {
   });
 });
 
-describe("FillFromButton — a11y regression (VA-0a): aria-hidden decorative SVGs", () => {
+describe("FillFromButton — a11y regression: aria-hidden decorative SVGs", () => {
   // Both triggers are icon-only ToolbarIconButtons; their accessible names
   // come from aria-labels, not visible text.
   it("CopyIcon svg has aria-hidden='true'", () => {
@@ -200,8 +200,8 @@ describe("FillFromButton — a11y regression (VA-0a): aria-hidden decorative SVG
       "title",
       "Choose past report to fill from",
     );
-    // polish-lead-toolbar-and-risk-dialog 1.3: chevron is the attached right
-    // segment of the split-button, divided by a left hairline border.
+    // Chevron is the attached right segment of the split-button, divided by
+    // a left hairline border.
     expect(triggerButton.className).toContain("border-l");
     const container = triggerButton.parentElement;
     expect(container?.className).toContain("h-[var(--toolbar-control-h)]");
@@ -226,7 +226,7 @@ describe("FillFromButton — a11y regression (VA-0a): aria-hidden decorative SVG
   });
 });
 
-describe("FillFromButton — compact touch floor (responsive-compact-layout)", () => {
+describe("FillFromButton — compact touch floor", () => {
   // jsdom cannot evaluate media queries; the class assertions are the teeth.
   // The shared container floors the HEIGHT via --toolbar-control-h, but each
   // segment must also floor its WIDTH below `md` (the chevron is ~26px wide
@@ -321,7 +321,7 @@ describe("FillFromButton — locked on a reopened period", () => {
   });
 });
 
-describe("FillFromButton — icon triggers keep the fill flow (head-toolbar-parity D5)", () => {
+describe("FillFromButton — icon triggers keep the fill flow", () => {
   it("copy trigger opens the confirm dialog and confirming fires onFillFrom with the section id", () => {
     const onFillFrom = vi.fn();
     render(<FillFromButton periods={[pastPeriod]} onFillFrom={onFillFrom} />);
@@ -346,7 +346,7 @@ describe("FillFromButton — icon triggers keep the fill flow (head-toolbar-pari
   });
 });
 
-describe("FillFromButton — 'Previous' badge keyed by identity, not filtered index (period-dialogs-polish)", () => {
+describe("FillFromButton — 'Previous' badge keyed by identity, not filtered index", () => {
   const week16: ReportPeriod = {
     id: "2026-W16",
     sourceSectionId: "sec-W16",
@@ -408,7 +408,7 @@ describe("FillFromButton — 'Previous' badge keyed by identity, not filtered in
   });
 });
 
-describe("FillFromButton — dropdown search resets on every close path (period-dialogs-polish)", () => {
+describe("FillFromButton — dropdown search resets on every close path", () => {
   const week16: ReportPeriod = {
     id: "2026-W16",
     sourceSectionId: "sec-W16",

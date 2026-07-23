@@ -233,7 +233,7 @@ async function main() {
         data: {
           id: FINANCE_GROUP_ID,
           name: "Finance",
-          description: "Secondary demo group (UFB-069 preset)",
+          description: "Secondary demo group",
         },
       });
 

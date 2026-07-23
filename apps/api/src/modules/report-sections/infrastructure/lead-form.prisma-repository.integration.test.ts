@@ -173,7 +173,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
   });
 
   // -----------------------------------------------------------------------
-  // getCrossAuthors — task 4.1 / 4.2 / 4.5
+  // getCrossAuthors
   // -----------------------------------------------------------------------
 
   // Shared stage UUIDs used by the getCrossAuthors describe block.
@@ -271,7 +271,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
     return { coLead, coSection };
   }
 
-  describe("getCrossAuthors — task 4.1: status-only rows, initials only", () => {
+  describe("getCrossAuthors — status-only rows, initials only", () => {
     it("returns authorInitials but no authorName, no itemCount, no riskCount, no foreign text", async () => {
       const { coLead } = await seedCoLead(testData.report.id);
 
@@ -285,8 +285,8 @@ describe("LeadFormPrismaRepository (integration)", () => {
 
       // Initials derived server-side from "Anna Karenina" → "AK".
       expect(row.authorInitials).toBe("AK");
-      // ADR 0006: the SHORT form (surname + initials) now leaves the server for
-      // the cross-author stage label — "Anna Karenina" → "Anna K.".
+      // The SHORT form (surname + initials) leaves the server for the
+      // cross-author stage label — "Anna Karenina" → "Anna K.".
       expect(row.authorShortName).toBe("Anna K.");
       // The FULL ФИО must still NOT appear on the wire.
       expect(Object.keys(row)).not.toContain("authorName");
@@ -328,7 +328,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
   // "getCrossAuthors authorization" block in lead-form.contract.test.ts. These
   // repo-level cases pin the complementary guarantee: even reached directly, the
   // repository never leaks foreign CONTENT, and an unrelated/empty context is [].
-  describe("getCrossAuthors — task 4.2: no foreign content; empty context is []", () => {
+  describe("getCrossAuthors — no foreign content; empty context is []", () => {
     it("no section in the given reportId still returns rows scoped by shared stageAssignment, never foreign content", async () => {
       // Create a second report the caller (testData.lead) has NO section in.
       const unrelatedReport = await prisma.report.create({
@@ -379,7 +379,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
     });
   });
 
-  describe("getCrossAuthors — task 7d.10: least-privilege co-owned scoping", () => {
+  describe("getCrossAuthors — least-privilege co-owned scoping", () => {
     it("excludes a product the caller does NOT co-own", async () => {
       const { coLead } = await seedCoLead(testData.report.id);
       // A second product the co-lead is assigned to but the CALLER is not.
@@ -412,7 +412,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
     });
   });
 
-  describe("getCrossAuthors — task 4.5: foreign stage status is risk-derived", () => {
+  describe("getCrossAuthors — foreign stage status is risk-derived", () => {
     it("persisted red with no covering risk collapses to green (on-track base)", async () => {
       // Co-lead has a persisted red traffic on Testing but no covering risk.
       // deriveForeignStageStatus must return 'green' (touched, no risk → green),
@@ -523,13 +523,13 @@ describe("LeadFormPrismaRepository (integration)", () => {
   });
 
   // -----------------------------------------------------------------------
-  // getCrossAuthorContent — task 7d.9 / 7d.10: the FULL-content co-ownership
-  // filter (the most sensitive read: foreign item/risk/decision text + author
-  // full name). The service-layer gates (report access AND co-ownership) are
-  // pinned in lead-form.contract.test.ts against a MOCKED repository; those
-  // cannot catch a regression that drops a WHERE clause from the real query.
-  // These cases exercise the live query so that removing any one of the four
-  // load-bearing clauses turns a test red:
+  // getCrossAuthorContent — the FULL-content co-ownership filter (the most
+  // sensitive read: foreign item/risk/decision text + author full name). The
+  // service-layer gates (report access AND co-ownership) are pinned in
+  // lead-form.contract.test.ts against a MOCKED repository; those cannot catch
+  // a regression that drops a WHERE clause from the real query. These cases
+  // exercise the live query so that removing any one of the four load-bearing
+  // clauses turns a test red:
   //   - `userId: { not: userId }`        → self-exclusion (own content absent)
   //   - `projectId: { in: myProjectIds }`+ per-row `sharedIds.has(...)`
   //                                       → co-ownership scope (non-shared out)
@@ -537,7 +537,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
   //   - caller has no assignments        → coOwnsShared:false, []
   // DB-coupled, so excluded from the DB-free `pnpm test`; runs under
   // `pnpm --filter @customreport/api test:integration` when Postgres is up.
-  describe("getCrossAuthorContent — task 7d.9/7d.10: full-content co-ownership filter", () => {
+  describe("getCrossAuthorContent — full-content co-ownership filter", () => {
     /** Second, NON-shared project the caller is never assigned to. */
     const OTHER_PROJECT_ID = "a0000000-0000-4000-a000-000000000200";
 

@@ -122,8 +122,8 @@ describe("NavBar — role-aware visibility", () => {
     expectLinkExists(container, "/reports");
   });
 
-  // viewer-live-status (task 4.1): viewer-only "Status" entry point that resolves
-  // the Status target via /reports/latest.
+  // Viewer-only "Status" entry point that resolves the Status target via
+  // /reports/latest.
   it("viewer sees a Status link to /reports/latest", () => {
     setRole("viewer");
     const { container } = render(<NavBar />);
@@ -138,9 +138,8 @@ describe("NavBar — role-aware visibility", () => {
     }
   });
 
-  // viewer-live-status: the Status entry resolves to a /reports/[id] detail
-  // page, so for a viewer that path must light Status, not History (the
-  // reported bug: clicking Status highlighted History).
+  // The Status entry resolves to a /reports/[id] detail page, so for a viewer
+  // that path must light Status, not History.
   it("activates Status (not History) for a viewer on a /reports/[id] detail page", () => {
     setRole("viewer");
     setRoute("/reports/a0000000-0000-4000-8000-000000000001");
@@ -188,12 +187,12 @@ describe("NavBar — role-aware visibility", () => {
     expectLinkMissing(container, "/admin");
   });
 
-  it("head sees three tabs: Dashboard, Status, History (no Slides — T-F4-3)", () => {
+  it("head sees three tabs: Dashboard, Status, History (no Slides)", () => {
     setRole("head");
     const { container } = render(<NavBar />);
     expectLinkExists(container, "/head/dashboard");
     expectLinkExists(container, "/head/report");
-    // remove-dead-history-tab-param: head History points to bare /reports.
+    // Head History points to bare /reports.
     expectLinkExists(container, "/reports");
     expectLinkMissing(container, "/head/history");
     expectLinkMissing(container, "/head/slides");
@@ -225,9 +224,9 @@ describe("NavBar — role-aware visibility", () => {
     );
 
     expect(themeControl).not.toBeNull();
-    // Icon-only: visible text was removed in favour of the aria-label + amber
-    // ComingSoonBadge tooltip (#2 navbar fix). The native title="Coming Soon"
-    // was dropped so it no longer stacks a second tooltip over the badge.
+    // Icon-only: visible text is the aria-label + amber ComingSoonBadge
+    // tooltip. No native title="Coming Soon" so a second tooltip does not
+    // stack over the badge.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- queried node + textContent are nullable in the DOM assertion
     expect(themeControl?.textContent?.trim()).toBe("");
     expect(themeControl).toHaveAttribute(
@@ -247,9 +246,9 @@ describe("NavBar — role-aware visibility", () => {
     );
 
     expect(languageControl).not.toBeNull();
-    // Icon-only: visible text was removed in favour of the aria-label + amber
-    // ComingSoonBadge tooltip (#2 navbar fix). The native title="Coming Soon"
-    // was dropped so it no longer stacks a second tooltip over the badge.
+    // Icon-only: visible text is the aria-label + amber ComingSoonBadge
+    // tooltip. No native title="Coming Soon" so a second tooltip does not
+    // stack over the badge.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- queried node + textContent are nullable in the DOM assertion
     expect(languageControl?.textContent?.trim()).toBe("");
     expect(languageControl).toHaveAttribute(
@@ -286,9 +285,9 @@ describe("NavBar — role-aware visibility", () => {
     expect(brandLink?.textContent).toBe("TU");
   });
 
-  // add-structured-user-name (review finding P3): the avatar must derive initials
-  // from the structured ФИО parts (surname + given), NOT the name-string
-  // fallback. Pin it with a name whose fallback ("ZY") differs from the parts.
+  // The avatar must derive initials from the structured name parts (surname +
+  // given), NOT the name-string fallback. Pin it with a name whose fallback
+  // ("ZY") differs from the parts.
   it("derives initials from the structured name parts, not the name fallback", () => {
     useSessionMock.mockReturnValue({
       user: {
@@ -406,10 +405,10 @@ describe("NavBar — role-aware visibility", () => {
     expectActiveLink(container, "/reports");
   });
 
-  it("keeps head History active on /reports with NO tab param (§4.3)", () => {
-    // The archive toggle no longer writes the URL, so /reports can be visited
+  it("keeps head History active on /reports with NO tab param", () => {
+    // The archive toggle does not write the URL, so /reports can be visited
     // with no tab param at all. History must stay highlighted regardless —
-    // proving the active state is decoupled from the tab/archive query.
+    // the active state is decoupled from the tab/archive query.
     setRole("head");
     setRoute("/reports", "");
 
@@ -419,7 +418,7 @@ describe("NavBar — role-aware visibility", () => {
     expectInactiveLink(container, "/head/dashboard");
   });
 
-  it("keeps lead History active on /reports with NO tab param (§4.3)", () => {
+  it("keeps lead History active on /reports with NO tab param", () => {
     setRole("lead");
     setRoute("/reports", "");
 

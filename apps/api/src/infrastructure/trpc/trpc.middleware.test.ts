@@ -18,7 +18,7 @@ import {
 } from "./trpc.middleware.js";
 
 // ---------------------------------------------------------------------------
-// Chain-composition pin test (refactor-trpc-infra-duplication)
+// Chain-composition pin test
 //
 // Each of the 7 protected builders must carry exactly 5 middlewares.
 // Slots 0-1 must be reference-equal to publicProcedure's two middlewares.
@@ -214,7 +214,7 @@ describe("tRPC auth middleware", () => {
   });
 
   // -----------------------------------------------------------------------
-  // P0 Regression — AUTH tRPC middleware scenarios
+  // AUTH tRPC middleware scenarios
   // -----------------------------------------------------------------------
 
   it("protectedProcedure with null session throws UNAUTHORIZED", async () => {

@@ -25,9 +25,9 @@ import { SLIDE_PRODUCT_STATUS_PRESENTATION } from "./slide-product-status";
 /** The one shared 4-column template — identical in the header row and every
  * subsection so columns align vertically across the whole slide. Current/Next
  * carry the prose, Risks/Decisions are sparse by nature, so the content lanes
- * take the width (council-grilled: keep 4 columns — the fixed position of the
- * Risks lane is the head's severity scan-line; merging would trade it for a
- * weaker order-based rule). */
+ * take the width. Keep 4 columns: the fixed position of the Risks lane is the
+ * head's severity scan-line; merging would trade it for a weaker order-based
+ * rule. */
 const GRID_TEMPLATE = "grid grid-cols-[1.35fr_1.25fr_0.85fr_0.85fr] gap-x-4";
 
 const COLUMNS = [
@@ -76,7 +76,7 @@ export function SlideColumnHeaderRow() {
   );
 }
 
-/** Traffic light → canonical status for the dot map lookup (D6). */
+/** Traffic light → canonical status for the dot map lookup. */
 function trafficDotStatus(status: TrafficLightStatus): CanonicalStatus {
   if (status === "red") return "blocked";
   if (status === "yellow") return "at-risk";

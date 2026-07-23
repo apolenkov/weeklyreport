@@ -1,12 +1,10 @@
 /**
- * A13 regression: typed text must survive parent re-renders that pass a new
- * stagesForProduct function reference (autosave → React Query invalidate cycle).
+ * Typed text must survive parent re-renders that pass a new stagesForProduct
+ * function reference (autosave → React Query invalidate cycle). The stages
+ * prop is intentionally not in the form-state effect deps so a new ref does
+ * not wipe user input.
  *
- * Before fix: useEffect has the stages prop in deps → fires on new ref →
- *             setText('') wipes user input.
- * After fix:  the stages prop is never in deps → state preserved.
- *
- * VA-0a: a11y regression tests for biome-ignore suppression justifications
+ * Also covers a11y regression for biome-ignore justifications
  * (noStaticElementInteractions on backdrop, useKeyWithClickEvents on inner
  * dialog div, noAutofocus on textarea).
  */
@@ -21,7 +19,7 @@ const products: Product[] = [
   { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
 ];
 
-describe("DecisionEditDialog — compact touch floor (responsive-compact-layout)", () => {
+describe("DecisionEditDialog — compact touch floor", () => {
   it("footer actions and the deadline input floor at the touch target below md", () => {
     // jsdom cannot evaluate media queries; the class assertions are the teeth.
     // Desktop density is untouched (md:min-h restores the 40px value).
@@ -51,7 +49,7 @@ describe("DecisionEditDialog — compact touch floor (responsive-compact-layout)
   });
 });
 
-describe("DecisionEditDialog — A13 form-race regression", () => {
+describe("DecisionEditDialog — form-race regression", () => {
   it("preserves typed text when parent re-renders with a new stagesForProduct ref", () => {
     const stagesV1 = ["Planning", "Dev"] as const;
 
@@ -89,8 +87,7 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
       />,
     );
 
-    // A13 bug: before fix, text was wiped back to '' by useEffect firing on
-    // the new availableStages reference.
+    // A new availableStages reference must not wipe the field via useEffect.
     expect(textField).toHaveValue("user typed this — must survive");
   });
 
@@ -228,12 +225,6 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// VA-0a — a11y regression catalog (high-priority unit-rtl rows)
-// Source: openspec/changes/verify-a11y-recommended-flip/design.md
-// Section: apps/web/src/components/lead/decision-edit-dialog.tsx
-// ---------------------------------------------------------------------------
-
 const defaultProps = {
   open: true,
   decision: null,
@@ -244,7 +235,7 @@ const defaultProps = {
   onSave: vi.fn(),
 } as const;
 
-describe("DecisionEditDialog — VA-0a a11y (backdrop onKeyDown + click behavior)", () => {
+describe("DecisionEditDialog — a11y (backdrop onKeyDown + click behavior)", () => {
   it("Escape on the backdrop div calls onCancel (noStaticElementInteractions justification)", () => {
     const onCancel = vi.fn();
     render(<DecisionEditDialog {...defaultProps} onCancel={onCancel} />);
@@ -332,12 +323,11 @@ describe("DecisionEditDialog — VA-0a a11y (backdrop onKeyDown + click behavior
 });
 
 /**
- * D12 mount/unmount shell: the outer component returns null when closed and
+ * Mount/unmount shell: the outer component returns null when closed and
  * remounts fresh content on reopen, so typed-but-cancelled state never leaks
- * into the next open. This is the structural replacement for the deleted
- * useEffect form-reset.
+ * into the next open.
  */
-describe("DecisionEditDialog — D12 reopen renders fresh state", () => {
+describe("DecisionEditDialog — reopen renders fresh state", () => {
   it("does not leak typed text from a cancelled create into the next open", () => {
     const { rerender } = render(
       <DecisionEditDialog

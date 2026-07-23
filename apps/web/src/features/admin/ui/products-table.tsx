@@ -35,7 +35,6 @@ export function ProductsTable({
 }: ProductsTableProps) {
   return (
     <>
-      {/* Products list (table-like structure) */}
       <div className="space-y-3" data-testid="products-table">
         {activeProducts.map((product) => {
           const owner = getUserById(product.leadOwnerId);

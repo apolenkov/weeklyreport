@@ -9,8 +9,8 @@ import {
   type RiskPrefillRequest,
 } from "./lead-form-sync-bridge";
 
-// simplify-stage-status-interaction: clicking a risk-floored chip surfaces an
-// info toast — mock sonner so the assertion doesn't need a mounted <Toaster>.
+// Clicking a risk-floored chip surfaces an info toast — mock sonner so the
+// assertion doesn't need a mounted <Toaster>.
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), info: vi.fn() },
 }));
@@ -55,7 +55,7 @@ interface HarnessProps {
   initialProducts: Product[];
   initialRisks: RiskEntry[];
   readOnly?: boolean;
-  /** W5: merged own + foreign risks (visual render + D3 foreign-coverage check). */
+  /** Merged own + foreign risks (visual render + foreign-coverage check). */
   displayRisks?: RiskEntry[];
   onProductsChangeSpy?: (next: Product[]) => void;
   onRisksChangeSpy?: (next: RiskEntry[]) => void;
@@ -167,10 +167,10 @@ describe("LeadFormSyncBridge", () => {
     expect(screen.getByText("pre-existing")).toBeInTheDocument();
   });
 
-  it("Test 2c (quick-add Blocker): opens the risk dialog pre-set to severity blocked", async () => {
-    // record-status-ux-polish §2: the external prefill routes a "Blocker"
-    // through the create dialog pre-set to blocked, not the pipeline-derived
-    // at-risk default (no stage is pipeline-flagged here).
+  it("quick-add Blocker: opens the risk dialog pre-set to severity blocked", async () => {
+    // The external prefill routes a "Blocker" through the create dialog
+    // pre-set to blocked, not the pipeline-derived at-risk default (no
+    // stage is pipeline-flagged here).
     const user = userEvent.setup();
     const product = buildProduct();
 
@@ -191,11 +191,11 @@ describe("LeadFormSyncBridge", () => {
     );
   });
 
-  it("Test 2d (D16): a bridge remount does NOT reopen the dialog from a stale external prefill", async () => {
+  it("a bridge remount does NOT reopen the dialog from a stale external prefill", async () => {
     // The external prefill lives in the persistent parent; the bridge remounts
     // on the slides<->edit toggle. A stale (already-consumed) prefill must not
     // reopen the create dialog on remount — mirrors the useEditableListDialog
-    // D16 stale-signal guard.
+    // stale-signal guard.
     const user = userEvent.setup();
     const product = buildProduct();
 
@@ -272,8 +272,8 @@ describe("LeadFormSyncBridge", () => {
     );
 
     // Stage chip is non-interactive in readOnly mode (popover cannot open).
-    // unify-risk-stage-status (D1): the non-empty covering risk floors the
-    // rendered status to at-risk even on the read-only surface.
+    // The non-empty covering risk floors the rendered status to at-risk even
+    // on the read-only surface.
     const devChip = screen.getByRole("button", { name: /^Dev: at-risk/ });
     expect(devChip).toHaveAttribute("aria-disabled", "true");
 
@@ -293,11 +293,11 @@ describe("LeadFormSyncBridge", () => {
   });
 });
 
-// rethink-pipeline-state-vs-completeness: saving a risk reflects up to the
-// chip via the render-time floor (applyRiskSeverityFloor) — NOT by persisting a
-// derived status onto the products. The old write-through (promote on add)
-// corrupted completeness; these tests pin the display-only behavior plus the
-// no-persisted-status contract.
+// Saving a risk reflects up to the chip via the render-time floor
+// (applyRiskSeverityFloor) — NOT by persisting a derived status onto the
+// products. Write-through of derived status would corrupt completeness;
+// these tests pin the display-only behavior plus the no-persisted-status
+// contract.
 describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-through)", () => {
   it("saving a Blocked risk renders the covered chip blocked WITHOUT persisting a status", async () => {
     const user = userEvent.setup();
@@ -415,11 +415,10 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
   });
 
   it("BLOCKER regression: adding a product-wide risk does NOT inflate the completeness pill (wiring junction)", async () => {
-    // rethink-pipeline-state-vs-completeness: the live wiring is
-    // `products={flooredProducts}` + `rawProducts={ctx.products}`. The pill must
-    // read RAW status, so a product-wide risk (the Add Risk dialog defaults all
-    // stages checked) cannot flip empty owned stages to "filled". Pre-fix this
-    // exact action drove the pill to "3/3 complete" and persisted across reload.
+    // The live wiring is `products={flooredProducts}` +
+    // `rawProducts={ctx.products}`. The pill must read RAW status, so a
+    // product-wide risk (the Add Risk dialog defaults all stages checked)
+    // cannot flip empty owned stages to "filled".
     const user = userEvent.setup();
     const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
     const product = buildProduct({
@@ -474,15 +473,14 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     expect(onProductsChangeSpy).not.toHaveBeenCalled();
   });
 
-  it("W11/W6 reload regression: a raw-empty stage covered by an OWN risk renders floored, counts in X/7, and stays distinguishable from an explicit status", () => {
-    // fix-report-surface-integrity W11 + W6 combined reload-stability. The inputs
-    // here mirror the read model after a risk add WITHOUT a refetch: the raw Dev
-    // stage persists `empty` and the risk arrives via state (initialRisks), with
-    // no baked coveredByOwnRisk flag. The bridge re-derives coveredByOwnRisk and
-    // re-applies the severity floor at render. The mapper-bake half of reload
-    // (the flag arriving already set from the DB read) is proven in
-    // lead-form.test.ts; together they cover both reload entry points. Three
-    // guarantees in one place:
+  it("reload regression: a raw-empty stage covered by an OWN risk renders floored, counts in X/7, and stays distinguishable from an explicit status", () => {
+    // Inputs mirror the read model after a risk add WITHOUT a refetch: the raw
+    // Dev stage persists `empty` and the risk arrives via state (initialRisks),
+    // with no baked coveredByOwnRisk flag. The bridge re-derives
+    // coveredByOwnRisk and re-applies the severity floor at render. The
+    // mapper-bake half of reload (the flag arriving already set from the DB
+    // read) is proven in lead-form.test.ts; together they cover both reload
+    // entry points. Three guarantees in one place:
     //   1. render floored — the empty Dev chip shows the risk severity (blocked),
     //   2. counts in X/7 — coveredByOwnRisk ticks the pill 1/2 → 2/2,
     //   3. stays distinguishable — Dev reads "by risk" (covered), Testing reads
@@ -532,9 +530,9 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     ).toBeInTheDocument();
   });
 
-  it("W11: a covers-all (stageIds: []) risk does NOT tick the pill (root-cause guard)", () => {
-    // The legacy "covers all" default is exactly the original defect; an empty
-    // stageIds must never count an untouched stage. Dev stays uncounted → 1/2.
+  it("a covers-all (stageIds: []) risk does NOT tick the pill (root-cause guard)", () => {
+    // A covers-all risk (empty stageIds) must never count an untouched stage.
+    // Dev stays uncounted → 1/2.
     const product = buildProduct({
       stages: [
         {
@@ -570,10 +568,6 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
   });
 });
 
-// ---------------------------------------------------------------------------
-// simplify-stage-status-interaction: severity floor (D3) + chip toggle (D1/D2)
-// ---------------------------------------------------------------------------
-
 describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
   const coveringRisk = (overrides?: Partial<RiskEntry>): RiskEntry => ({
     id: "r-dev",
@@ -587,7 +581,7 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
     ...overrides,
   });
 
-  it("D3: a stale on-track chip renders at the covering risk's severity (floor)", () => {
+  it("a stale on-track chip renders at the covering risk's severity (floor)", () => {
     // Persisted explicit status says on-track; a non-empty covering blocked
     // risk forces the rendered chip to blocked without any state mutation.
     const product = buildProduct();
@@ -604,10 +598,10 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
     ).toBeInTheDocument();
   });
 
-  it("D3 (council find C): an orphan explicit blocked stage with no covering risk renders on-track on the live form", () => {
+  it("an orphan explicit blocked stage with no covering risk renders on-track on the live form", () => {
     // The read model already collapses an unbacked severity to on-track; the
     // live form must agree. A stage persisted blocked with NO covering risk
-    // renders on-track (the migration for legacy explicit-severity rows).
+    // renders on-track so legacy explicit-severity rows need no backfill.
     const product = buildProduct({
       stages: [
         {
@@ -629,7 +623,7 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("D1: clicking an uncovered empty chip toggles it to on-track", async () => {
+  it("clicking an uncovered empty chip toggles it to on-track", async () => {
     const user = userEvent.setup();
     const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
     const product = buildProduct({
@@ -663,7 +657,7 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
     ).toBeInTheDocument();
   });
 
-  it("D1/D2: clicking a risk-floored chip changes nothing and points at the Risks section", async () => {
+  it("clicking a risk-floored chip changes nothing and points at the Risks section", async () => {
     // Dev is persisted on-track but floored to blocked by a covering own risk.
     // The chip no longer authors or lowers severity — the click is a no-op with
     // an info hint; the lead must edit the risk to change the stage.
@@ -694,10 +688,10 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
     ).toBeInTheDocument();
   });
 
-  it("D1/D2 (own-only): a foreign risk does NOT floor the mine chip, so its toggle still applies", async () => {
+  it("a foreign risk does NOT floor the mine chip, so its toggle still applies", async () => {
     // Only own risks floor the live chip. A foreign risk covering a mine stage
-    // collapses the chip to on-track (find C) and lives in another lead's
-    // section, so the toggle is not blocked — the lead sets their own status.
+    // collapses the chip to on-track and lives in another lead's section, so
+    // the toggle is not blocked — the lead sets their own status.
     const user = userEvent.setup();
     const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
     const product = buildProduct({

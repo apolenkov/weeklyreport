@@ -56,15 +56,15 @@ export function createReportsRouter(deps: ReportsRouterDeps) {
         }
       }),
 
-    // viewer-live-status (task 1.1): resolve the **Status target** for the
-    // `/reports/latest` redirect. The target is the current editable period
-    // (Decision 0 — the exact id the read gate authorizes) when that period
-    // has a viewer-visible section, else the newest viewer-visible published
-    // report, else `null` (empty state). It must NOT search older editable
-    // periods: the gate authorizes only the current editable id, so routing to
-    // an older editable report would land on a target the gate rejects.
-    // `sections.some(sectionScope)` reuses the same group filter as
-    // `compiledHistory`; a lead resolves their own authored sections.
+    // Resolve the **Status target** for the `/reports/latest` redirect. The
+    // target is the current editable period (the exact id the read gate
+    // authorizes) when that period has a viewer-visible section, else the
+    // newest viewer-visible published report, else `null` (empty state). It
+    // must NOT search older editable periods: the gate authorizes only the
+    // current editable id, so routing to an older editable report would land
+    // on a target the gate rejects. `sections.some(sectionScope)` reuses the
+    // same group filter as `compiledHistory`; a lead resolves their own
+    // authored sections.
     latestForViewer: anyRoleProcedure.query(async ({ ctx }) => {
       try {
         return await deps.weeklyReportService.latestForViewer(ctx.session);
