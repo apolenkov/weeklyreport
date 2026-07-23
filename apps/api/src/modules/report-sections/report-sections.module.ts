@@ -5,18 +5,18 @@ import {
   LEAD_FORM_REPOSITORY,
   type LeadFormRepository,
   LeadFormService,
-} from "./application/lead-form.service";
+} from "./application/lead-form.service.js";
 import {
   REPORT_SECTIONS_REPOSITORY,
   type ReportSectionsRepository,
   ReportSectionsService,
-} from "./application/report-sections.service";
+} from "./application/report-sections.service.js";
 import {
   REPORT_SECTIONS_TELEMETRY,
   type ReportSectionsTelemetry,
 } from "./application/report-sections-telemetry.port.js";
-import { LeadFormPrismaRepository } from "./infrastructure/lead-form.prisma-repository";
-import { ReportSectionsPrismaRepository } from "./infrastructure/report-sections.prisma-repository";
+import { LeadFormPrismaRepository } from "./infrastructure/lead-form.prisma-repository.js";
+import { ReportSectionsPrismaRepository } from "./infrastructure/report-sections.prisma-repository.js";
 import { ReportSectionsPrometheusTelemetry } from "./infrastructure/report-sections-prometheus-telemetry.adapter.js";
 
 @Module({

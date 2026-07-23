@@ -193,8 +193,8 @@ describe("LeadFormPrismaRepository (integration)", () => {
         severity: string;
         stageNames: string[];
       }[];
-      /** Persisted stage-traffic status for the co-lead on Dev. */
-      persistedDevStatus?: TrafficLightStatus | null;
+      /** Persisted stage-traffic status for the co-lead on Testing. */
+      persistedTestingStatus?: TrafficLightStatus | null;
     } = {},
   ) {
     const coLead = await prisma.user.create({
@@ -241,15 +241,15 @@ describe("LeadFormPrismaRepository (integration)", () => {
     });
 
     if (
-      opts.persistedDevStatus !== undefined &&
-      opts.persistedDevStatus !== null
+      opts.persistedTestingStatus !== undefined &&
+      opts.persistedTestingStatus !== null
     ) {
       await prisma.stageStatus.create({
         data: {
           reportSectionId: coSection.id,
           projectId: testData.project.id,
           stageId: STAGE_TESTING_ID,
-          status: opts.persistedDevStatus,
+          status: opts.persistedTestingStatus,
         },
       });
     }
@@ -323,7 +323,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
     });
   });
 
-  // Task 4.2 NOTE: the caller-access GUARD (own-section-in-report OR head/admin)
+  // The caller-access GUARD (own-section-in-report OR head/admin)
   // lives in LeadFormService.getCrossAuthors, not the repository — see the
   // "getCrossAuthors authorization" block in lead-form.contract.test.ts. These
   // repo-level cases pin the complementary guarantee: even reached directly, the
@@ -417,7 +417,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
       // Co-lead has a persisted red traffic on Testing but no covering risk.
       // deriveForeignStageStatus must return 'green' (touched, no risk → green),
       // which buildCrossAuthorStageMap maps to 'on-track'.
-      await seedCoLead(testData.report.id, { persistedDevStatus: "red" });
+      await seedCoLead(testData.report.id, { persistedTestingStatus: "red" });
 
       const rows = await repo.getCrossAuthors(
         testData.report.id,

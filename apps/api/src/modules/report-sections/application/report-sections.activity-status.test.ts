@@ -50,17 +50,20 @@ const baseSection: ReportSectionReadModel = {
 };
 
 function createRepository(
-  section: ReportSectionReadModel,
+  sections: readonly ReportSectionReadModel[],
 ): ReportSectionsRepository {
-  let currentSection = structuredClone(section);
+  const store = new Map(
+    sections.map((section) => [
+      section.reportSectionId,
+      structuredClone(section),
+    ]),
+  );
 
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
     async getSectionById(reportSectionId) {
-      if (reportSectionId !== currentSection.reportSectionId) {
-        return null;
-      }
-      return structuredClone(currentSection);
+      const section = store.get(reportSectionId);
+      return section ? structuredClone(section) : null;
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
     async getReportPeriodStatusForSection() {
@@ -72,8 +75,9 @@ function createRepository(
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
     async saveSection(nextSection) {
-      currentSection = structuredClone(nextSection);
-      return structuredClone(currentSection);
+      const saved = structuredClone(nextSection);
+      store.set(saved.reportSectionId, saved);
+      return structuredClone(saved);
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
     async getMyHistoryRows() {
@@ -103,7 +107,7 @@ function draftPayload(
 
 describe("ReportSectionsService — activity statuses on saveDraft", () => {
   it("folds written statuses onto the seeded set, keeping omitted entries", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(createRepository([baseSection]));
 
     const saved = await service.saveDraft(
       draftPayload([
@@ -135,7 +139,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
   });
 
   it("keeps every seeded status when the payload omits the slice entirely", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(createRepository([baseSection]));
 
     const saved = await service.saveDraft(draftPayload());
 
@@ -143,7 +147,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
   });
 
   it("hard-rejects a status for an unattached activity", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(createRepository([baseSection]));
 
     await expect(
       service.saveDraft(
@@ -156,7 +160,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
   });
 
   it("the reject is a ReportSectionDomainError (maps to BAD_REQUEST)", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(createRepository([baseSection]));
 
     await expect(
       service.saveDraft(
@@ -175,7 +179,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
         (activity) => activity.activityId !== ACTIVITY_B,
       ),
     };
-    const service = new ReportSectionsService(createRepository(afterDetach));
+    const service = new ReportSectionsService(createRepository([afterDetach]));
 
     const saved = await service.saveDraft(
       draftPayload([{ activityId: ACTIVITY_A, status: "yellow" }]),
@@ -194,7 +198,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
         (activity) => activity.activityId !== ACTIVITY_B,
       ),
     };
-    const service = new ReportSectionsService(createRepository(afterDetach));
+    const service = new ReportSectionsService(createRepository([afterDetach]));
 
     await expect(
       service.saveDraft(
@@ -215,18 +219,17 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
       authorId: "88888888-8888-4888-8888-888888888888",
       authorName: "Lead 2",
     };
-    const repoA = createRepository(baseSection);
-    const repoB = createRepository(sectionB);
-    const serviceA = new ReportSectionsService(repoA);
-    const serviceB = new ReportSectionsService(repoB);
+    const repository = createRepository([baseSection, sectionB]);
+    const service = new ReportSectionsService(repository);
 
-    const savedA = await serviceA.saveDraft(
+    await service.saveDraft(
       draftPayload([{ activityId: ACTIVITY_A, status: "red" }]),
     );
-    const savedB = await serviceB.saveDraft({
+    const savedB = await service.saveDraft({
       ...draftPayload([{ activityId: ACTIVITY_A, status: "green" }]),
       reportSectionId: sectionB.reportSectionId,
     });
+    const savedA = await service.getActiveSection(baseSection.reportSectionId);
 
     expect(savedA.activities[0]?.status).toBe("red");
     expect(savedB.activities[0]?.status).toBe("green");

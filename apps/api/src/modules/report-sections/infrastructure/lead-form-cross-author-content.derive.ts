@@ -1,14 +1,11 @@
-import type {
-  DbRole,
-  RiskSeverity,
-  TrafficLightStatus,
-} from "@customreport/shared";
+import type { DbRole, RiskSeverity } from "@customreport/shared";
 
 import type { CrossAuthorSectionRow } from "../domain/lead-form-shared";
 import {
   deriveForeignStageStatus,
   type StageTrafficStatus,
 } from "./lead-form-cross-author.derive.js";
+import { indexNonNullStageStatuses } from "./non-null-stage-status-index.derive.js";
 
 /** A co-owner's stage assignment on a shared, non-archived product. */
 interface CrossAuthorStageAssignment {
@@ -136,15 +133,9 @@ export function buildCrossAuthorContentRows(
     // derivation as the status-only read. The author's stage assignments on
     // shared products (collected above) define which chips exist; the
     // section's persisted statuses provide the empty/non-empty base.
-    const persistedStatus = new Map<string, TrafficLightStatus>(
-      section.stageStatuses.flatMap((ss) =>
-        ss.status !== null
-          ? ([[`${ss.projectId}::${ss.stageId}`, ss.status]] as [
-              string,
-              TrafficLightStatus,
-            ][])
-          : [],
-      ),
+    const persistedStatus = indexNonNullStageStatuses(
+      section.stageStatuses,
+      (status) => `${status.projectId}::${status.stageId}`,
     );
     const stages = authorEntry.stageAssignments.map((sa) => ({
       projectId: sa.projectId,

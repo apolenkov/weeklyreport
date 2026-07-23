@@ -117,10 +117,10 @@ function createMockRepository(
 }
 
 /* ------------------------------------------------------------------ */
-/*  Fill-from integration tests                                        */
+/*  Fill-from service tests                                            */
 /* ------------------------------------------------------------------ */
 
-describe("LeadFormService — fillFrom (integration)", () => {
+describe("LeadFormService — fillFrom", () => {
   it("copies items from source section and returns count", async () => {
     const target = makeSection({ status: "draft" });
     const source = makeSection({
@@ -183,7 +183,7 @@ describe("LeadFormService — fillFrom (integration)", () => {
     ).rejects.toThrow(`Target section ${targetSectionId} not found`);
   });
 
-  // viewer-report-surface-parity (review P1): a draft section can sit inside a
+  // viewer-report-surface-parity: a draft section can sit inside a
   // PUBLISHED report (publish needs only >=1 submitted section). fillFrom is the
   // one path that would rewrite that section's live rows post-publish, diverging
   // the viewer's live-row published search from the frozen-snapshot report read.

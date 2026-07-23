@@ -84,7 +84,7 @@ describe("toItemRows", () => {
             comments: [],
           },
         ],
-      } as unknown as Partial<ReportSectionReadModel>),
+      }),
       SECTION_ID,
     );
 
@@ -121,7 +121,7 @@ describe("toItemRows", () => {
             comments: [],
           },
         ],
-      } as unknown as Partial<ReportSectionReadModel>),
+      }),
       SECTION_ID,
     );
 
@@ -131,21 +131,21 @@ describe("toItemRows", () => {
 });
 
 describe("isPersistableDecision + toDecisionRows", () => {
-  const decision = (over: Record<string, unknown>) =>
-    ({
-      id: "d",
-      stableId: "s",
-      text: "Decide",
-      owner: "Lead",
-      deadline: null,
-      impact: "Impact",
-      resolvedAt: null,
-      stageIds: undefined,
-      productId: undefined,
-      activityId: undefined,
-      comments: [],
-      ...over,
-    }) as unknown as ReportSectionReadModel["decisions"][number];
+  type Decision = ReportSectionReadModel["decisions"][number];
+  const decision = (over: Partial<Decision>): Decision => ({
+    id: "d",
+    stableId: "s",
+    text: "Decide",
+    owner: "Lead",
+    deadline: null,
+    impact: "Impact",
+    resolvedAt: null,
+    stageIds: undefined,
+    productId: undefined,
+    activityId: undefined,
+    comments: [],
+    ...over,
+  });
 
   it("drops a decision with both productId and activityId null/undefined", () => {
     expect(isPersistableDecision(decision({}))).toBe(false);
@@ -198,7 +198,7 @@ describe("toProjectStatusRows / toStageStatusRows", () => {
           ownerGroupId: null,
         },
       ],
-    } as unknown as Partial<ReportSectionReadModel>);
+    });
 
     expect(toProjectStatusRows(s, SECTION_ID)).toEqual([
       { reportSectionId: SECTION_ID, projectId: PROJECT, status: "green" },
