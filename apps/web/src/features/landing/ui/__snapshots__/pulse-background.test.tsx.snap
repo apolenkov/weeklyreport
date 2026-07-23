@@ -10,14 +10,3 @@ exports[`PulseBackground > component snapshot > matches DOM snapshot (static gra
   />
 </div>
 `;
-
-exports[`PulseBackground > component snapshot > matches DOM snapshot (static gradient + dot grid, no ECG) 1`] = `
-<div
-  aria-hidden="true"
-  class="pulse-bg"
->
-  <div
-    class="pulse-bg-dots"
-  />
-</div>
-`;

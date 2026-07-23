@@ -15,8 +15,8 @@ const INERT_CHROME =
 
 const ICON_SHAPE = {
   toolbar:
-    "h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] shrink-0 rounded-full text-[12px]",
-  nav: "h-8 w-10 gap-1.5 rounded-[var(--radius-pill)] px-0 text-[12px]",
+    "h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] shrink-0 rounded-full",
+  nav: "h-8 w-10 rounded-[var(--radius-pill)] px-0",
 } as const;
 
 // Icon-only inert control. `shape` picks the toolbar square or the nav pill.
