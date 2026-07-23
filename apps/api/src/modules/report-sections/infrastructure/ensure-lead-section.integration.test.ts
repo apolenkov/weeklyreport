@@ -10,15 +10,14 @@ import {
 } from "vitest";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import { requireEnv } from "../../../lib/env.js";
 import {
   cleanDatabase,
   TEST_IDS,
 } from "../../../test-utils/prisma-test-helper.js";
 import { ensureLeadSection } from "../application/ensure-lead-section.js";
 
-const TEST_DATABASE_URL =
-  process.env.DATABASE_URL ??
-  "postgresql://postgres:postgres@localhost:5432/customreport_test";
+const TEST_DATABASE_URL = requireEnv(process.env, "DATABASE_URL");
 
 describe("ensureLeadSection transaction (integration)", () => {
   type LeadSectionPrisma = Parameters<typeof ensureLeadSection>[0];

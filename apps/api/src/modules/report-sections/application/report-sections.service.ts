@@ -78,10 +78,9 @@ export interface ReportSectionsRepository {
   /**
    * Deadline-aware variant. Returns `null` when the
    * report does not exist (caller treats that as "no gate to enforce").
-   * Kept optional so legacy in-memory test repositories that predate the
-   * 50-B grace-period gate keep compiling — when unimplemented,
-   * `evaluateDeadlineGate` returns `false` directly and no late flag is
-   * computed.
+   * Kept optional so in-memory test repositories without deadline data
+   * keep compiling — when unimplemented, `evaluateDeadlineGate` skips the
+   * gate and no late flag is computed.
    */
   getReportMeta?(
     reportId: string,
@@ -136,7 +135,7 @@ export class ReportSectionsService {
     //     → ReportSectionAccessError ("Past deadline; submissions closed.")
     //   - now > deadline (irrespective of grace) → section.late = true
     // When undefined (test seam / legacy fixtures), the gate is skipped
-    // and late stays false — preserves pre-50-B behaviour.
+    // and late stays false.
     private readonly getGraceSettings?: GetGraceSettings,
     private readonly telemetry: ReportSectionsTelemetry = NOOP_REPORT_SECTIONS_TELEMETRY,
   ) {}
@@ -216,28 +215,28 @@ export class ReportSectionsService {
    *
    * Skips entirely when the grace-settings provider is not wired (test
    * seam) or when the repository cannot report the report's deadline
-   * (back-compat fall-through for in-memory repos that predate 50-B).
+   * (back-compat fall-through for deadline-less in-memory repos).
    */
-  private async evaluateDeadlineGate(reportId: string): Promise<boolean> {
+  private async evaluateDeadlineGate(reportId: string) {
     if (!this.getGraceSettings || !this.repository.getReportMeta) {
-      return false;
+      return { late: false };
     }
     const meta = await this.repository.getReportMeta(reportId);
     if (!meta) {
-      return false;
+      return { late: false, reportMeta: null };
     }
     const settings = await this.getGraceSettings();
     const now = Date.now();
     const deadlineMs = meta.deadline.getTime();
     if (now <= deadlineMs) {
-      return false;
+      return { late: false, reportMeta: meta };
     }
     const graceMs = settings.gracePeriodHours * MS_PER_HOUR;
     if (now > deadlineMs + graceMs && !settings.allowLateSubmissions) {
       throw new ReportSectionAccessError("Past deadline; submissions closed.");
     }
     // now > deadline (possibly within grace, or grace+late allowed) → stamp late.
-    return true;
+    return { late: true, reportMeta: meta };
   }
 
   async getActiveSection(
@@ -326,7 +325,8 @@ export class ReportSectionsService {
     // check first when within grace window — UX wants the most-specific
     // error, and "you forgot a traffic light" beats "you're late" when
     // both are true.
-    const late = await this.evaluateDeadlineGate(section.reportId);
+    const deadlineGate = await this.evaluateDeadlineGate(section.reportId);
+    const { late } = deadlineGate;
 
     // Integrity before completeness: a stage the author does not own is a hard
     // authz reject, checked before the traffic-light / current-item nags.
@@ -360,7 +360,12 @@ export class ReportSectionsService {
     try {
       this.telemetry.recordSectionSubmitted(late);
       if (this.repository.getReportMeta) {
-        const meta = await this.repository.getReportMeta(section.reportId);
+        // undefined = the gate never fetched meta (skipped) → fetch here;
+        // null = the gate looked and the report is gone → skip the histogram.
+        const meta =
+          deadlineGate.reportMeta === undefined
+            ? await this.repository.getReportMeta(section.reportId)
+            : deadlineGate.reportMeta;
         if (meta) {
           // Signed seconds: positive = late, negative = submitted early.
           const deltaSeconds =

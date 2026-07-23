@@ -1052,6 +1052,30 @@ function crossAuthorRepo(
 }
 
 describe("LeadFormService — getByPeriod cross-author scoping", () => {
+  it("returns lineage computed from the product-filtered foreign section", async () => {
+    const publishedLineage = {
+      itemStableIds: ["shared-item"],
+      decisionStableIds: ["shared-decision"],
+    };
+    const getPublishedLineage = vi.fn().mockResolvedValue(publishedLineage);
+    const service = new LeadFormService(
+      crossAuthorRepo({ getPublishedLineage }),
+    );
+
+    const result = await service.getByPeriod(
+      REPORT_ID,
+      AUTHOR_ID,
+      "lead",
+      OTHER_USER_ID,
+    );
+
+    expect(result.publishedLineage).toEqual(publishedLineage);
+    expect(getPublishedLineage).toHaveBeenCalledExactlyOnceWith(result.section);
+    expect(result.section.projects.map(({ projectId }) => projectId)).toEqual([
+      PROJECT_ID,
+    ]);
+  });
+
   it("excludes unshared-product items/risks/decisions and keeps shared ones", async () => {
     const service = new LeadFormService(crossAuthorRepo());
 

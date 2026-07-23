@@ -1,5 +1,5 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   customreportSectionsSubmittedTotal,
@@ -781,6 +781,10 @@ describe("ReportSectionsService — deadline gate", () => {
       })),
     };
     let currentSection = fixed;
+    const getReportMeta = vi.fn().mockResolvedValue({
+      status: "draft" as const,
+      deadline: opts.deadline,
+    });
     return {
       // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
       async getSectionById(id) {
@@ -791,10 +795,7 @@ describe("ReportSectionsService — deadline gate", () => {
       async getReportPeriodStatusForSection() {
         return "open";
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
-      async getReportMeta() {
-        return { status: "draft", deadline: opts.deadline };
-      },
+      getReportMeta,
       // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
       async getPublishedLineage() {
         return { itemStableIds: [], decisionStableIds: [] };
@@ -845,6 +846,8 @@ describe("ReportSectionsService — deadline gate", () => {
 
     expect(saved.status).toBe("submitted");
     expect(saved.late).toBe(false);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.getReportMeta).toHaveBeenCalledTimes(1);
   });
 
   it("past deadline within grace + allowLate=true: submits with late=true", async () => {

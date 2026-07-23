@@ -3,6 +3,7 @@ import { shortNameFromName, stageNamesMatch } from "@customreport/shared";
 
 import type { CrossAuthorStatusRow } from "../domain/lead-form-shared";
 import { initialsFromName } from "../domain/lead-form-shared";
+import { indexNonNullStageStatuses } from "./non-null-stage-status-index.derive.js";
 
 /** API traffic-light enum; null = no data / untouched stage. */
 export type StageTrafficStatus = TrafficLightStatus | null;
@@ -72,17 +73,14 @@ export function indexForeignSections(
   statusMap: Map<string, TrafficLightStatus>;
   risksByAuthor: Map<string, ForeignRisk[]>;
 } {
-  const statusMap = new Map<string, TrafficLightStatus>(
-    sections.flatMap((s) =>
-      s.stageStatuses.flatMap((ss) =>
-        ss.status !== null
-          ? ([[`${s.authorId}::${ss.projectId}::${ss.stageId}`, ss.status]] as [
-              string,
-              TrafficLightStatus,
-            ][])
-          : [],
-      ),
+  const statusMap = indexNonNullStageStatuses(
+    sections.flatMap((section) =>
+      section.stageStatuses.map((status) => ({
+        ...status,
+        authorId: section.authorId,
+      })),
     ),
+    (status) => `${status.authorId}::${status.projectId}::${status.stageId}`,
   );
   const risksByAuthor = new Map<string, ForeignRisk[]>(
     sections.map((s) => [s.authorId, s.risks] as const),
