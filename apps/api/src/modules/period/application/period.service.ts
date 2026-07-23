@@ -155,8 +155,12 @@ export class PeriodService {
       throw new PeriodScopeError("Archived periods cannot be published.");
     }
 
+    // Idempotent success, mirroring the CAS-loser branch below: a retry that
+    // lands after the winner committed (double-click, second tab) already has
+    // the desired state — publish-compare-and-set forbids surfacing it as an
+    // error, and no counters or side-effects may run for a redundant publish.
     if (report.periodStatus === "published") {
-      throw new PeriodAccessError("Period is already published.");
+      return { success: true, reportId };
     }
 
     // A head publishes either the current editable period (steady state) or the

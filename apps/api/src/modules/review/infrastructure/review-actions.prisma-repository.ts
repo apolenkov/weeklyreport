@@ -8,6 +8,7 @@ import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js"
 import { applyRevokeTransition } from "../../report-sections/index.js";
 import {
   ReviewConstraintError,
+  ReviewNotFoundError,
   ReviewVersionConflictError,
 } from "../application/review.service.js";
 import type {
@@ -166,16 +167,27 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
   ): Promise<{ unsubmitted: boolean }> {
     return this.prisma.$transaction(async (tx) => {
       const gate = await tx.$queryRaw<
-        { periodStatus: string }[]
-      >`SELECT report."periodStatus"
+        { periodStatus: string; archived: boolean }[]
+      >`SELECT report."periodStatus", report."archived"
         FROM "Report" AS report
         INNER JOIN "ReportSection" AS section
           ON section."reportId" = report."id"
         WHERE section."id" = ${params.sectionId}
         FOR UPDATE OF report`;
+      const gateRow = gate[0];
+      // A missing row means the section was deleted between the precheck and
+      // this transaction — NOT_FOUND, not a period-state constraint.
+      if (gateRow === undefined) {
+        throw new ReviewNotFoundError(
+          "The section no longer exists; a verdict cannot be recorded.",
+        );
+      }
+      // The archive transition leaves periodStatus untouched, so the in-tx
+      // gate must re-check `archived` too — same predicate as
+      // isEditablePeriod on the authz path.
       if (
-        gate[0]?.periodStatus !== "open" &&
-        gate[0]?.periodStatus !== "reopened"
+        gateRow.archived ||
+        (gateRow.periodStatus !== "open" && gateRow.periodStatus !== "reopened")
       ) {
         throw new ReviewConstraintError(
           "This period is not editable; a verdict cannot be recorded.",

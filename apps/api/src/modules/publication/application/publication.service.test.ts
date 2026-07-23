@@ -643,6 +643,30 @@ describe("PublicationService", () => {
       ).toBe(transitionsBefore);
     });
 
+    // published:false skip must not invalidate analytics — only the real
+    // publish branch calls invalidateAnalyticsCache (see publishAuto docs).
+    it("publishAuto skip: zero-row compare-and-set → no analytics cache invalidation", async () => {
+      const invalidateAnalyticsCache = vi.fn(() => Promise.resolve());
+      const repository: PublicationRepository = {
+        ...createRepository(assembledReport),
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
+        async saveAutoPublishedReport() {
+          return { published: false as const };
+        },
+      };
+      const service = new PublicationService(
+        repository,
+        undefined,
+        noopIngestionQueue,
+        invalidateAnalyticsCache,
+      );
+
+      const result = await service.publishAuto(reportId);
+
+      expect(result).toEqual({ published: false });
+      expect(invalidateAnalyticsCache).toHaveBeenCalledTimes(0);
+    });
+
     // Characterization pin: the shared side-effects module must call the
     // ingestion enqueue with the just-published report's ids.
     it("publishAuto enqueues ingestion with the published report's section ids", async () => {
