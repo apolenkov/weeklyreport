@@ -107,12 +107,23 @@ function decisionReadiness(decisionCount: number): SlideReadinessItem {
   };
 }
 
-function statusCounts(section: ReportSectionReadModel) {
-  const blockedProjectCount = section.projects.filter(
-    (project) => project.trafficLight === "red",
+// Project severity comes from the projection's derived, risk-floored product
+// status — the same model the visible badge uses — never from persisted
+// `project.trafficLight`: an unbacked persisted red collapses to On Track
+// (status-risk-unification), so counting the raw value would demand a risk
+// story for a signal the deck does not even show. The synthetic cross-product
+// slide can never contribute: it carries `status: null` by construction
+// (pinned by the "cross-product slide always carries a null status" test),
+// and only "red"/"yellow" are counted.
+function statusCounts(
+  section: ReportSectionReadModel,
+  projection: SectionProductProjection,
+) {
+  const blockedProjectCount = projection.productSlides.filter(
+    (slide) => slide.status === "red",
   ).length;
-  const atRiskProjectCount = section.projects.filter(
-    (project) => project.trafficLight === "yellow",
+  const atRiskProjectCount = projection.productSlides.filter(
+    (slide) => slide.status === "yellow",
   ).length;
   const blockedRiskCount = section.risks.filter(
     (risk) => risk.severity === "blocked" && risk.projectId != null,
@@ -130,7 +141,7 @@ export function buildSectionSlideHealth(
   section: ReportSectionReadModel,
   projection: SectionProductProjection,
 ): SectionSlideHealth {
-  const counts = statusCounts(section);
+  const counts = statusCounts(section, projection);
   const hasProjectStatuses =
     section.projects.length > 0 &&
     section.projects.every((project) => project.trafficLight !== null);
