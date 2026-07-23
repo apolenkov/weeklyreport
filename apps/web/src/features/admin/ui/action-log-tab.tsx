@@ -62,7 +62,7 @@ export function ActionLogTab() {
     <div className="space-y-4" data-testid="action-log-tab">
       <TabHeader
         title="Action Log"
-        description="Latest product actions with support reference ids. Internal proof calls are hidden from this view."
+        description="Latest product actions with support reference ids. Search covers loaded rows only; internal proof calls are hidden."
         count={
           pagination.isLoading
             ? "Loading…"
@@ -72,9 +72,9 @@ export function ActionLogTab() {
           <TabSearch
             value={search}
             onChange={setSearch}
-            placeholder="Search actions…"
+            placeholder="Search loaded actions…"
             testId="action-log-search"
-            ariaLabel="Search actions"
+            ariaLabel="Search loaded actions"
           />
         }
       />
@@ -84,7 +84,7 @@ export function ActionLogTab() {
       {pagination.isError && (
         <div
           role="alert"
-          className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800"
+          className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-[var(--color-destructive)] p-4 text-sm text-[var(--color-destructive-foreground)]"
         >
           Failed to load action log:{" "}
           {pagination.error instanceof Error
@@ -99,7 +99,7 @@ export function ActionLogTab() {
           <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
             {nonProofRows.length === 0
               ? "No actions recorded yet."
-              : "No actions match the search."}
+              : "No loaded actions match the search."}
           </div>
         )}
 

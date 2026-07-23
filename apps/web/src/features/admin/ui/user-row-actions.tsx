@@ -24,7 +24,16 @@ interface UserRowActionsProps {
 const ROUTINE_ACTION_CLASS =
   "btn-press inline-flex h-10 min-w-10 items-center justify-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
-function UserActivationButton(props: UserRowActionsProps) {
+function UserActivationButton(
+  props: Pick<
+    UserRowActionsProps,
+    | "user"
+    | "deactivatePending"
+    | "activatePending"
+    | "onDeactivate"
+    | "onActivate"
+  >,
+) {
   const activation = props.user.isActive
     ? {
         label: "Deactivate",
@@ -110,10 +119,8 @@ export function UserRowActions({
         user={user}
         deactivatePending={deactivatePending}
         activatePending={activatePending}
-        onEdit={onEdit}
         onDeactivate={onDeactivate}
         onActivate={onActivate}
-        onDelete={onDelete}
       />
       <UserOverflowMenu user={user} onDelete={onDelete} />
     </div>

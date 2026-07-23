@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function ProductFilterBanner({
   filterMatched,
 }: {
@@ -10,12 +12,12 @@ export function ProductFilterBanner({
           ? "Showing product from search"
           : "Product from search not found"}
       </span>
-      <a
+      <Link
         href="/admin?tab=products"
         className="text-sm font-semibold text-[var(--color-starbucks-accent)] hover:text-[var(--color-primary)]"
       >
         Reset
-      </a>
+      </Link>
     </div>
   );
 }

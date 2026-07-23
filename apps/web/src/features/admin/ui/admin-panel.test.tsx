@@ -86,4 +86,25 @@ describe("AdminPanel query gating", () => {
 
     await waitFor(() => expect(toast.error).not.toHaveBeenCalled());
   });
+
+  it("reports enabled parent query errors", async () => {
+    vi.mocked(useQuery).mockImplementation((options) => {
+      const key = (options as QueryOptions).queryKey[0];
+      return {
+        data: undefined,
+        error:
+          key === "admin.snapshot" ? new Error("snapshot unavailable") : null,
+        isError: key === "admin.snapshot",
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof useQuery>;
+    });
+
+    render(<AdminPanel activeTab={"users" satisfies AdminTab} />);
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "Failed to load admin data: snapshot unavailable",
+      ),
+    );
+  });
 });

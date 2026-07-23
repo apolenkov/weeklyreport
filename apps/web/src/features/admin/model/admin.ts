@@ -201,9 +201,4 @@ export function mapAdminSettings(api: AppSettings): MockSettings {
 // Internal exports for tests — keep narrow.
 export const __testing = {
   mapReminder,
-  mapReminderPolicy,
-  mapPeriod,
-  mapProject,
-  mapUser,
-  mapGroup,
 };

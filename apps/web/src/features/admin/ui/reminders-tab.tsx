@@ -199,12 +199,13 @@ export function RemindersTab({
       )}
 
       <div className="space-y-3">
-        {filteredPolicies.length === 0 && (
-          <RemindersEmptyState
-            hasNoPolicies={policies.length === 0}
-            onCreate={handleNewReminder}
-          />
-        )}
+        {filteredPolicies.length === 0 &&
+          (policies.length > 0 || editor.mode !== "add") && (
+            <RemindersEmptyState
+              hasNoPolicies={policies.length === 0}
+              onCreate={handleNewReminder}
+            />
+          )}
 
         {filteredPolicies.map((policy) =>
           editor.mode === "edit" && editor.id === policy.id ? (

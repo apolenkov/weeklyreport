@@ -9,7 +9,7 @@ interface ProductsTableProps {
   readonly archivedProducts: readonly MockProduct[];
   readonly getUserById: (id: string) => MockUser | undefined;
   readonly stageCountByProject: ReadonlyMap<string, number>;
-  readonly leads: MockUser[];
+  readonly leads: readonly MockUser[];
   readonly expandedId: string | null;
   readonly onToggleExpand: (id: string) => void;
   readonly onEdit: (product: MockProduct) => void;

@@ -53,7 +53,7 @@ export function ActionLogRow({ row }: { readonly row: ActionLogRowData }) {
           className={`inline-flex rounded-[var(--radius-pill)] px-2 py-0.5 text-xs font-semibold ${
             row.status === "success"
               ? "bg-[var(--color-success)] text-[var(--color-primary)]"
-              : "bg-red-50 text-[var(--color-destructive)]"
+              : "bg-[var(--color-destructive)] text-[var(--color-destructive-foreground)]"
           }`}
         >
           {statusLabel(row.status)}

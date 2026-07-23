@@ -24,18 +24,11 @@ interface SettingsTabProps {
 }
 
 /**
- * Settings tab laid out as a set of sub-tabs.
- *
- * Tab order is intentional:
- *   1. Identity     — Organization singleton (the only source of truth for
- *                     brand strings).
- *   2. Periods      — autoCreatePeriods, defaultDeadlineDays, plus the
- *                     period-cycle knobs.
- *   3. Reminders    — defaultTimezone, defaultReminderAudience.
- *   4. Notifications — notificationFromEmail.
- *
- * The five sub-tabs and the shared mutation/CheckIcon helpers live in sibling
- * modules (settings-*-sub-tab / settings-periods-fields-* / settings-tab-shared).
+ * Settings tab laid out as a set of sub-tabs, ordered identity-first (the
+ * Organization singleton is the source of truth for brand strings) and
+ * Coming-Soon placeholders last. Each sub-tab and the shared helpers live in
+ * sibling modules (settings-*-sub-tab / settings-tab-shared) — the tab list
+ * below is the single source for order and labels.
  */
 export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
   return (

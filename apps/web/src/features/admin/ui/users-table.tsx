@@ -100,8 +100,14 @@ export function UsersTable({
 function RoleBadge({ role }: { readonly role: DbRole }) {
   const styles: Record<DbRole, { bg: string; text: string }> = {
     lead: { bg: "var(--color-success)", text: "var(--color-primary)" },
-    head: { bg: "#e8e0f0", text: "#6b21a8" },
-    admin: { bg: "#fef3c7", text: "#92400e" },
+    head: {
+      bg: "var(--color-status-in-progress-bg)",
+      text: "var(--color-status-in-progress-fg)",
+    },
+    admin: {
+      bg: "var(--color-status-at-risk-bg)",
+      text: "var(--color-status-at-risk-fg)",
+    },
     viewer: { bg: "var(--color-muted)", text: "var(--color-muted-foreground)" },
   };
   const s = styles[role];

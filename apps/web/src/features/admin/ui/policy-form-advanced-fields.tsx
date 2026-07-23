@@ -1,15 +1,14 @@
 import type { PolicyFormState } from "../model/reminders-form-state";
 import { TIMEZONE_OPTIONS } from "../model/timezone-options";
-
-const INPUT_CLASS =
-  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm";
-const LABEL_CLASS =
-  "mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]";
+import {
+  POLICY_FORM_INPUT_CLASS,
+  POLICY_FORM_LABEL_CLASS,
+} from "./policy-form-styles";
 
 /**
- * The reminder form's collapsed-by-default "Advanced" fieldset (extracted
- * from policy-form.tsx): timezone override + validity window, including
- * the "forever" checkbox that clears `validUntilIso`.
+ * The reminder form's collapsed-by-default "Advanced" fieldset: timezone
+ * override + validity window, including the "forever" checkbox that clears
+ * `validUntilIso`.
  */
 export function PolicyFormAdvancedFields({
   form,
@@ -30,7 +29,7 @@ export function PolicyFormAdvancedFields({
       </summary>
       <div className="grid gap-4 border-t border-[var(--color-border)] p-3 md:grid-cols-2">
         <div className="md:col-span-2">
-          <label htmlFor="policy-timezone" className={LABEL_CLASS}>
+          <label htmlFor="policy-timezone" className={POLICY_FORM_LABEL_CLASS}>
             Timezone
           </label>
           <select
@@ -39,7 +38,7 @@ export function PolicyFormAdvancedFields({
             onChange={(e) =>
               onChange((prev) => ({ ...prev, timezone: e.target.value }))
             }
-            className={INPUT_CLASS}
+            className={POLICY_FORM_INPUT_CLASS}
           >
             {TIMEZONE_OPTIONS.map((group) => (
               <optgroup key={group.group} label={group.group}>
@@ -54,7 +53,10 @@ export function PolicyFormAdvancedFields({
         </div>
 
         <div>
-          <label htmlFor="policy-valid-from" className={LABEL_CLASS}>
+          <label
+            htmlFor="policy-valid-from"
+            className={POLICY_FORM_LABEL_CLASS}
+          >
             Valid from
           </label>
           <input
@@ -64,7 +66,7 @@ export function PolicyFormAdvancedFields({
             onChange={(e) =>
               onChange((prev) => ({ ...prev, validFromIso: e.target.value }))
             }
-            className={INPUT_CLASS}
+            className={POLICY_FORM_INPUT_CLASS}
           />
         </div>
 
@@ -103,7 +105,7 @@ export function PolicyFormAdvancedFields({
                 validUntilIso: e.target.value || null,
               }))
             }
-            className={`${INPUT_CLASS} disabled:cursor-not-allowed disabled:bg-[var(--color-muted)] disabled:opacity-50`}
+            className={`${POLICY_FORM_INPUT_CLASS} disabled:cursor-not-allowed disabled:bg-[var(--color-muted)] disabled:opacity-50`}
           />
         </div>
       </div>
