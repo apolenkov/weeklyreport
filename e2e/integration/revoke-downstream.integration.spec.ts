@@ -25,6 +25,8 @@
  *   MARIA in published report → a0000000-0000-4000-8000-000000004022
  */
 
+import type { APIResponse, Page } from "@playwright/test";
+
 import { test, expect } from "./fixtures";
 import { prisma, resetMutations } from "./helpers/db";
 import {
@@ -33,7 +35,6 @@ import {
   LEAD_MARIA_ID,
   SEED_USERS,
 } from "./helpers/seed-ids";
-import type { Page } from "@playwright/test";
 
 const MARIA_ACTIVE_SECTION_ID = "a0000000-0000-4000-8000-000000004012";
 const MARIA_PUBLISHED_SECTION_ID = "a0000000-0000-4000-8000-000000004022";
@@ -116,12 +117,11 @@ async function revokeLeadViaDashboard(
 async function revokeSectionDirect(
   headPage: Page,
   reportSectionId: string,
-): Promise<number> {
-  const res = await headPage.request.post("/trpc/leadForm.revoke?batch=1", {
+): Promise<APIResponse> {
+  return headPage.request.post("/trpc/leadForm.revoke?batch=1", {
     headers: { "content-type": "application/json" },
     data: { "0": { json: { reportSectionId } } },
   });
-  return res.status();
 }
 
 // ---------------------------------------------------------------------------
@@ -290,13 +290,24 @@ test.describe("Revoke downstream effects (integration)", () => {
     });
     expect(mariaPublishedSection?.status).toBe("submitted");
 
-    const status = await revokeSectionDirect(
+    const response = await revokeSectionDirect(
       headPage,
       MARIA_PUBLISHED_SECTION_ID,
     );
+    const payload: unknown = await response.json();
 
     // LeadFormConstraintError maps to BAD_REQUEST on the wire.
-    expect(status).toBe(400);
+    expect(response.status()).toBe(400);
+    expect(payload).toMatchObject([
+      {
+        error: {
+          json: {
+            message: "Cannot revoke a submission in a published report.",
+            data: { code: "BAD_REQUEST", httpStatus: 400 },
+          },
+        },
+      },
+    ]);
 
     // The section never leaves submitted — poll briefly to catch a delayed
     // write rather than sampling a single instant.

@@ -6,16 +6,11 @@
  *      { tag } shape.
  *  (b) invalidateQueries(pathFilter()) marks ONLY the matching query stale
  *      (negative assertion on an unrelated seeded query).
- *  (c) A "pending" descriptor keeps useQuery isPending.
+ *  (c) A "pending" descriptor's query promise remains unsettled.
  *  (d) Mutation capture records mutationFn input and caller-passed callbacks.
  */
 
-import {
-  QueryClient,
-  QueryClientProvider,
-  useQuery,
-} from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -128,40 +123,43 @@ describe("createMockTRPC — invalidation is non-vacuous", () => {
 });
 
 // ---------------------------------------------------------------------------
-// (c) "pending" descriptor keeps useQuery isPending
+// (c) "pending" descriptor remains unsettled
 // ---------------------------------------------------------------------------
 
 describe("createMockTRPC — pending descriptor", () => {
-  // Typed view of the dynamic proxy for this test's single path — avoids
-  // unsafe-any access on the chained call.
-  interface ListFailedProxy {
-    admin: {
-      jobs: {
-        listFailed: { queryOptions: () => Parameters<typeof useQuery>[0] };
-      };
-    };
-  }
-
-  it('a "pending" descriptor keeps useQuery in isPending state', async () => {
+  it('a "pending" descriptor does not settle after the initial query tick', async () => {
     const { proxy } = createMockTRPC([
       { path: ["admin", "jobs", "listFailed"], query: "pending" },
     ]);
-    const { Wrapper } = makeWrapper(proxy);
+    const queryOptions = leaf(proxy, "admin", "jobs", "listFailed")
+      .queryOptions as () => { queryFn: () => Promise<unknown> };
 
-    const { result } = renderHook(
-      () => {
-        const opts = (
-          proxy as unknown as ListFailedProxy
-        ).admin.jobs.listFailed.queryOptions();
-        return useQuery(opts);
-      },
-      { wrapper: Wrapper },
+    const outcome = await Promise.race([
+      queryOptions()
+        .queryFn()
+        .then(() => "resolved"),
+      new Promise<string>((resolve) => {
+        setTimeout(() => resolve("still-pending"), 20);
+      }),
+    ]);
+
+    expect(outcome).toBe("still-pending");
+  });
+});
+
+describe("createMockTRPC — descriptor validation", () => {
+  it("rejects descriptors that define both query forms", () => {
+    expect(() =>
+      createMockTRPC([
+        {
+          path: ["reports", "get"],
+          query: {},
+          queryByInput: () => ({}),
+        },
+      ]),
+    ).toThrow(
+      'Procedure "reports.get" cannot define both query and queryByInput.',
     );
-
-    await waitFor(() => {
-      // Never resolves — stays pending.
-      expect(result.current.isPending).toBe(true);
-    });
   });
 });
 

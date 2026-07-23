@@ -144,8 +144,9 @@ function closeHeldTab(ref: { current: Window | null }): void {
 }
 
 /**
- * Hands the artifact to the user via the held tab or a fallback URL state.
- * Success toast fires only when one of those paths actually runs.
+ * Hands the artifact to the user via the held tab (success toast) or, when
+ * the tab was closed, via the fallback download link with an info toast —
+ * never a success claim for a delivery the user cannot see.
  */
 function deliverArtifact(
   artifactUrl: string,
@@ -154,13 +155,14 @@ function deliverArtifact(
   setFallbackUrl: (url: string) => void,
 ): void {
   const mode = deliveryModeRef.current;
-  if (mode === "tab" && openedTabRef.current !== null) {
-    openedTabRef.current.location.href = artifactUrl;
+  const tab = openedTabRef.current;
+  if (mode === "tab" && tab !== null && !tab.closed) {
+    tab.location.href = artifactUrl;
     toast.success("PDF ready");
     return;
   }
-  if (mode === "fallback") {
+  if (mode === "tab" || mode === "fallback") {
     setFallbackUrl(artifactUrl);
-    toast.success("PDF ready");
+    toast.info("PDF ready — use the download link.");
   }
 }
