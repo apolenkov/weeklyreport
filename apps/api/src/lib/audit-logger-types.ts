@@ -75,9 +75,9 @@ type ScopeDeniedInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
  * already covered by loginSuccess/loginFail — and `ai.*` — privacy: AI
  * prompts/responses must never reach the audit stream).
  *
- * `target` is a best-effort extraction from the procedure input (id,
- * reportId, sectionId, periodId, projectId, leadId — the common shapes
- * across the 26 mutations). Absent on signature-less mutations like
+ * `target` is a best-effort extraction from the procedure input —
+ * whichever of id / reportId / sectionId / periodId / projectId / leadId
+ * the input carries. Absent on signature-less mutations like
  * `period.publish` where the period is implied by session.
  *
  * `status` distinguishes success from any thrown TRPCError (validation,

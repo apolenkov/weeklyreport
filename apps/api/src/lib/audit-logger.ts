@@ -1,9 +1,6 @@
 import type { AuditEvent, AuditLogger } from "./audit-logger-types.js";
 import type { AppLogger } from "./logger.js";
 
-// Audit envelope + event types live in ./audit-logger-types. Re-exported
-// here so importers (main.ts, trpc.context, auth.routes, the period
-// schedulers) pull both types and implementations from one module.
 export type * from "./audit-logger-types.js";
 
 /**
@@ -17,13 +14,7 @@ export const AUDIT_LOGGER = Symbol("AUDIT_LOGGER");
 
 const AUDIT_MESSAGE = "audit";
 
-/**
- * Build an AuditLogger that writes through the supplied AppLogger.
- *
- * Successes flow to `info`, denials and login failures flow to `warn` so the
- * default AppLogger configuration surfaces them at the operationally
- * appropriate level without any extra setup.
- */
+/** Build an AuditLogger that writes through the supplied AppLogger. */
 export function createAuditLogger(logger: AppLogger): AuditLogger {
   // Every audit line flows through here so the compiler checks each `event`
   // string against the AuditEvent union — an undeclared or misspelled event is
@@ -83,15 +74,13 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
       });
     },
     mutation(input) {
-      // Successes flow at info; failures flow at warn so the default logger
-      // surface escalates appropriately without extra config.
       emit(input.status === "success" ? "info" : "warn", {
         event: "mutation",
         userId: input.userId,
         role: input.role,
         ip: input.ip,
         procedure: input.procedure,
-        target: input.target,
+        ...(input.target !== undefined ? { target: input.target } : {}),
         status: input.status,
         duration: input.duration,
         ...(input.reason ? { reason: input.reason } : {}),

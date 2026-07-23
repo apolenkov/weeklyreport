@@ -222,6 +222,21 @@ describe("audit.mutation", () => {
     expect(entry.context).not.toHaveProperty("reason");
   });
 
+  it("omits target from the envelope when none is supplied", () => {
+    const { logger, entries } = makeCapturingLogger();
+
+    createAuditLogger(logger).mutation({
+      userId: mutationInput.userId,
+      role: mutationInput.role,
+      ip: mutationInput.ip,
+      procedure: mutationInput.procedure,
+      duration: mutationInput.duration,
+      status: "success",
+    });
+
+    expect(expectDefined(entries[0]).context).not.toHaveProperty("target");
+  });
+
   it("logs a failed mutation at warn with its reason", () => {
     const { logger, entries } = makeCapturingLogger();
 
