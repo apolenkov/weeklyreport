@@ -18,6 +18,9 @@ import { ReportSectionsService } from "../application/report-sections.service";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
+const testGraceSettings = () =>
+  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
+
 /**
  * Real-DB coverage for the unified-activity-entry lifecycle rules:
  *  - resolve-not-delete: a published-lineage item/decision cannot be dropped
@@ -123,7 +126,7 @@ describe("unified-activity lifecycle (integration)", () => {
 
   beforeAll(() => {
     repo = new ReportSectionsPrismaRepository(prisma as never);
-    service = new ReportSectionsService(repo);
+    service = new ReportSectionsService(repo, testGraceSettings);
   });
 
   beforeEach(async () => {

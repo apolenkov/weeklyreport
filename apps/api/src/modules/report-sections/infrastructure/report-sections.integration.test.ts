@@ -13,6 +13,9 @@ import {
 } from "../application/report-sections.service";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
+const testGraceSettings = () =>
+  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
+
 describe("ReportSectionsPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
   let repo: ReportSectionsPrismaRepository;
@@ -161,7 +164,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
       ],
     });
 
-    const service = new ReportSectionsService(repo);
+    const service = new ReportSectionsService(repo, testGraceSettings);
     const result = await service.submitSection({
       reportSectionId: testData.section.id,
       version: 1,
@@ -458,7 +461,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     });
 
     it("bumps the row version and returns it in the saved read model", async () => {
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(repo, testGraceSettings);
 
       // Seed rows are minted at version 1.
       const saved = await service.saveDraft(draftAtVersion(1));
@@ -467,7 +470,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     });
 
     it("rejects a second writer that carries a stale loaded version", async () => {
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(repo, testGraceSettings);
 
       // First writer loaded version 1, saves, and bumps the row to 2.
       await service.saveDraft(draftAtVersion(1));
@@ -480,7 +483,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     });
 
     it("lets the second writer succeed after reloading the fresh version", async () => {
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(repo, testGraceSettings);
 
       await service.saveDraft(draftAtVersion(1));
       // Reload surfaces version 2; round-tripping it clears the conflict.
@@ -636,7 +639,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
       // This is the make-or-break for the OPTIONAL read model: the FIRST save
       // carries a new item with NO stableId, so mergeSection (which parses the
       // raw input items against the read-model schema) must not reject it.
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(repo, testGraceSettings);
       const itemInput = (text: string, stableId?: string) => ({
         ...(stableId ? { stableId } : {}),
         projectId: testData.project.id,
@@ -688,7 +691,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
         data: { status: "published", periodStatus: "reopened" },
       });
 
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(repo, testGraceSettings);
       const saved = await service.saveDraft({
         reportSectionId: testData.section.id,
         version: 1,
@@ -748,7 +751,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
         data: { periodStatus: "published" },
       });
 
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(repo, testGraceSettings);
       await expect(
         service.submitSection({
           reportSectionId: testData.section.id,

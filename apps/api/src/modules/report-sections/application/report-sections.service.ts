@@ -78,11 +78,10 @@ export interface ReportSectionsRepository {
   /**
    * Deadline-aware variant. Returns `null` when the
    * report does not exist (caller treats that as "no gate to enforce").
-   * Kept optional so in-memory test repositories without deadline data
-   * keep compiling — when unimplemented, `evaluateDeadlineGate` skips the
-   * gate and no late flag is computed.
+   * Required: an unimplemented reader would silently disable the deadline
+   * gate — a repository without deadline data must return null EXPLICITLY.
    */
-  getReportMeta?(
+  getReportMeta(
     reportId: string,
   ): Promise<{ status: ReportStatus; deadline: Date } | null>;
   /**
@@ -129,14 +128,13 @@ export class ReportSectionsService {
 
   constructor(
     private readonly repository: ReportSectionsRepository,
-    // Optional grace-period settings provider. When wired, submitSection
+    // Grace-period settings provider. Required — an unwired provider would
+    // silently disable late stamping, a product behavior. submitSection
     // enforces:
     //   - now > deadline + gracePeriodHours AND !allowLateSubmissions
     //     → ReportSectionAccessError ("Past deadline; submissions closed.")
     //   - now > deadline (irrespective of grace) → section.late = true
-    // When undefined (test seam / legacy fixtures), the gate is skipped
-    // and late stays false.
-    private readonly getGraceSettings?: GetGraceSettings,
+    private readonly getGraceSettings: GetGraceSettings,
     private readonly telemetry: ReportSectionsTelemetry = NOOP_REPORT_SECTIONS_TELEMETRY,
   ) {}
 
@@ -213,14 +211,10 @@ export class ReportSectionsService {
    * (→ 403 in the tRPC layer) when the deadline has passed beyond the
    * configured grace window AND late submissions are forbidden.
    *
-   * Skips entirely when the grace-settings provider is not wired (test
-   * seam) or when the repository cannot report the report's deadline
-   * (back-compat fall-through for deadline-less in-memory repos).
+   * Both collaborators are required, so the gate is always armed; the only
+   * skip is an explicit `null` from `getReportMeta` (report absent).
    */
   private async evaluateDeadlineGate(reportId: string) {
-    if (!this.getGraceSettings || !this.repository.getReportMeta) {
-      return { late: false };
-    }
     const meta = await this.repository.getReportMeta(reportId);
     if (!meta) {
       return { late: false, reportMeta: null };
@@ -351,27 +345,19 @@ export class ReportSectionsService {
     );
 
     // Product telemetry. We always bump the submission counter, labelled by
-    // the same `late` flag persisted on
-    // the row, so dashboard math matches the badge in the UI. The
-    // latency histogram observes signed seconds (deadline − now) — but
-    // only when the repository can report the deadline (the in-memory
-    // back-compat repos predate `getReportMeta`). Wrapped in a defensive
-    // try/catch because telemetry MUST NOT break the write path.
+    // the same `late` flag persisted on the row, so dashboard math matches
+    // the badge in the UI. The latency histogram reuses the meta the gate
+    // already fetched (null = report row gone → no histogram point). Wrapped
+    // in a defensive try/catch because telemetry MUST NOT break the write
+    // path.
     try {
       this.telemetry.recordSectionSubmitted(late);
-      if (this.repository.getReportMeta) {
-        // undefined = the gate never fetched meta (skipped) → fetch here;
-        // null = the gate looked and the report is gone → skip the histogram.
-        const meta =
-          deadlineGate.reportMeta === undefined
-            ? await this.repository.getReportMeta(section.reportId)
-            : deadlineGate.reportMeta;
-        if (meta) {
-          // Signed seconds: positive = late, negative = submitted early.
-          const deltaSeconds =
-            (Date.now() - meta.deadline.getTime()) / MS_PER_SECOND;
-          this.telemetry.observeSubmissionLatency(deltaSeconds);
-        }
+      const meta = deadlineGate.reportMeta;
+      if (meta) {
+        // Signed seconds: positive = late, negative = submitted early.
+        const deltaSeconds =
+          (Date.now() - meta.deadline.getTime()) / MS_PER_SECOND;
+        this.telemetry.observeSubmissionLatency(deltaSeconds);
       }
     } catch {
       // Never let metric emission corrupt the submit response.
