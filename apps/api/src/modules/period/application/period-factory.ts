@@ -181,11 +181,6 @@ export async function ensureCurrentPeriod(
       select: SELECT_PERIOD,
     });
 
-    // Pass `now` so the applicator drops only already-elapsed reminder instants
-    // (a period created after some of its reminders' fireAt — a late first-login)
-    // while keeping still-future ones; the reminders scheduler has no
-    // elapsed-fireAt guard, so a stale active rule would fire on the next tick.
-    //
     // Best-effort: the period is the durable artifact, so a failure to
     // materialise the (secondary) reminder rules must NOT fail the caller — a
     // login must not 500 over reminders, and a cron tick should still record the

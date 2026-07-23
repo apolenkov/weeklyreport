@@ -278,21 +278,20 @@ export class PeriodService {
 
     await this.assertNoConcurrentReopen(session);
 
-    // Reopen-policy enforcement, always applied. Two gates:
-    //   1. `allowReopenAfterPublish` master switch — if false, no reopen
-    //      is ever allowed regardless of window.
-    //   2. `reopenWindowHours` — if set to N>0, the reopen must arrive
-    //      within `publishedAt + N * 1h`. `publishedAt` is always
-    //      populated for periodStatus='published' rows (the publishPeriod
-    //      writer sets it atomically), but we still guard against a NULL
-    //      defensively so a hand-corrected DB row cannot crash the gate.
     const policy = await this.readReopenPolicy();
     if (!policy.allowReopenAfterPublish) {
       throw new PeriodAccessError(
         "Reopening published periods is disabled in Settings (allowReopenAfterPublish=false).",
       );
     }
-    if (policy.reopenWindowHours > 0 && report.publishedAt) {
+    if (policy.reopenWindowHours > 0) {
+      // openspec/specs/admin-settings-ui/spec.md measures the window from publish;
+      // without publishedAt the service cannot establish eligibility.
+      if (!report.publishedAt) {
+        throw new PeriodAccessError(
+          "Published period is missing publishedAt; reopen window cannot be enforced.",
+        );
+      }
       const windowEnd =
         report.publishedAt.getTime() + policy.reopenWindowHours * MS_PER_HOUR;
       if (Date.now() > windowEnd) {

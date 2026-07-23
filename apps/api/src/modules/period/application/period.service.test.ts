@@ -532,6 +532,37 @@ describe("PeriodService — reopen policy gate", () => {
     expect(repo.reopenPeriod).not.toHaveBeenCalled();
   });
 
+  it("throws PeriodAccessError when a positive window has no publishedAt", async () => {
+    const reports = new Map<string, SpyReport>([
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "published",
+          periodStatus: "published",
+          publishedAt: null,
+        },
+      ],
+    ]);
+    const repo = createSpyRepository(reports);
+    const service = new PeriodService(repo, noopInvalidate, () =>
+      Promise.resolve({
+        allowReopenAfterPublish: true,
+        reopenWindowHours: 72,
+      }),
+    );
+
+    await expect(
+      service.reopenPeriod(reportId, headSession),
+    ).rejects.toMatchObject({
+      name: "PeriodAccessError",
+      message:
+        "Published period is missing publishedAt; reopen window cannot be enforced.",
+    });
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
+    expect(repo.reopenPeriod).not.toHaveBeenCalled();
+  });
+
   it("allows reopen within the window", async () => {
     const publishedAt = new Date(Date.now() - 2 * 3_600_000); // 2h ago
     const reports = new Map<string, SpyReport>([

@@ -129,9 +129,11 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
 
     // With A reopened, getLatestPublishedNonArchivedId resolves to B, so the
     // target-match passes — the single-active-reopen guard is what rejects it.
-    await expect(
-      service.reopenPeriod(PUBLISHED_B, headSession),
-    ).rejects.toBeInstanceOf(PeriodScopeError);
+    const reopenB = service.reopenPeriod(PUBLISHED_B, headSession);
+    await expect(reopenB).rejects.toBeInstanceOf(PeriodScopeError);
+    await expect(reopenB).rejects.toThrow(
+      "Another period is already reopened. Publish it before reopening another.",
+    );
 
     const b = await prisma.report.findUnique({ where: { id: PUBLISHED_B } });
     expect(b?.periodStatus).toBe("published");

@@ -42,6 +42,7 @@ interface MockReport {
   status: ReportStatus;
   periodStatus: PeriodStatus;
   publishedAt: Date | null;
+  publishedById: string | null;
   /** Defaults to false in `getReportById` when a fixture omits it. */
   archived?: boolean;
 }
@@ -52,6 +53,7 @@ function makeReport(overrides: Partial<MockReport> = {}): MockReport {
     status: "draft",
     periodStatus: "open",
     publishedAt: null,
+    publishedById: null,
     ...overrides,
   };
 }
@@ -103,7 +105,7 @@ function createRepository(report: MockReport | null): PeriodRepository & {
       ),
 
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
-    async publishPeriod(id: string, _userId: string) {
+    async publishPeriod(id: string, userId: string) {
       // Mirror the guarded compare-and-set: only a not-yet-published,
       // non-archived row transitions. A zero-row match splits into "raced" (now
       // published) vs "archived" (archived inside the window).
@@ -117,6 +119,7 @@ function createRepository(report: MockReport | null): PeriodRepository & {
           status: "published",
           periodStatus: "published",
           publishedAt: new Date(),
+          publishedById: userId,
         };
         return { transitioned: true as const };
       }
@@ -223,6 +226,7 @@ describe("PeriodService — contract tests", () => {
       expect(updated).not.toBeNull();
       expect(expectDefined(updated).periodStatus).toBe("published");
       expect(expectDefined(updated).publishedAt).toBeInstanceOf(Date);
+      expect(expectDefined(updated).publishedById).toBe(headSession.userId);
     });
   });
 

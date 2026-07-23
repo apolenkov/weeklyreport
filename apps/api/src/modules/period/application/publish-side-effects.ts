@@ -1,14 +1,12 @@
 import type { PeriodStatus } from "@customreport/shared";
 
 /**
- * Fire-and-forget post-publish ingestion seam, called after a successful
- * publish with the just-published section ids. Errors are swallowed by
- * {@link emitPublishSideEffects} so a downstream consumer blip cannot fail a
- * real-user publish action.
- *
- * The original AI/RAG consumer was removed; the seam is kept so a rebuilt
- * pipeline — or any other async consumer — can re-wire without touching
- * either publish path.
+ * Post-publish ingestion seam: awaited after a successful publish with the
+ * just-published section ids, so its latency is on the publish response path.
+ * Only errors are isolated — swallowed by {@link emitPublishSideEffects} so a
+ * downstream consumer blip cannot fail a real-user publish action. No
+ * consumer is currently wired; the seam exists so one can attach without
+ * touching either publish path.
  */
 export type IngestionPublishHook = (
   sectionIds: readonly string[],
