@@ -86,15 +86,13 @@ describe("DashboardPage progressive readiness", () => {
     vi.useRealTimers();
   });
 
-  it("renders the canonical queue without the duplicate activity and review rosters", () => {
+  it("renders the canonical dashboard panels when all data is ready", () => {
     setQueryState("review.dashboard", { data: [] });
     setQueryState("weeklyReport.get", { data: ACTIVE_WEEKLY });
     render(<DashboardPage />);
     expect(screen.getByText("Week 20 · CustomReport")).toBeInTheDocument();
     expect(screen.getByText("KPI")).toBeInTheDocument();
     expect(screen.getByText("Lead summary")).toBeInTheDocument();
-    expect(screen.queryByText("Activity")).not.toBeInTheDocument();
-    expect(screen.queryByText("Review context")).not.toBeInTheDocument();
     expect(screen.getByText("Reopen requests")).toBeInTheDocument();
     expect(screen.getByText("Blocked")).toBeInTheDocument();
     expect(

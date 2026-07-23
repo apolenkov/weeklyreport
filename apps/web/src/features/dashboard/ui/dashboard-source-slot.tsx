@@ -22,6 +22,16 @@ interface DashboardSourceSlotProps {
   readonly title: string;
 }
 
+function sourceIssueDescription(
+  source: DashboardSourceState,
+  requestTitle: string,
+  stalledTitle: string = requestTitle,
+): string {
+  return source.isError
+    ? formatClientErrorMessage(`${requestTitle} request failed`, source.error)
+    : `${stalledTitle} is taking longer than expected.`;
+}
+
 export function DashboardSourceSlot({
   children,
   kind,
@@ -30,14 +40,11 @@ export function DashboardSourceSlot({
   title,
 }: DashboardSourceSlotProps) {
   if (source.isError || source.stalled) {
-    const description = source.isError
-      ? formatClientErrorMessage(`${title} request failed`, source.error)
-      : `${title} is taking longer than expected.`;
     return (
       <DashboardPanelIssue
         kind={kind}
         title={`${title} unavailable`}
-        description={description}
+        description={sourceIssueDescription(source, title)}
         onRetry={source.retry}
       />
     );
@@ -51,15 +58,16 @@ export function DashboardActivityIssue({
   readonly source: DashboardSourceState;
 }) {
   if (!source.isError && !source.stalled) return null;
-  const description = source.isError
-    ? formatClientErrorMessage("Activity request failed", source.error)
-    : "Activity freshness is taking longer than expected.";
   return (
     <DashboardPanelIssue
       kind="leads"
       testId="dashboard-activity-error"
       title="Activity freshness unavailable"
-      description={description}
+      description={sourceIssueDescription(
+        source,
+        "Activity",
+        "Activity freshness",
+      )}
       onRetry={source.retry}
     />
   );

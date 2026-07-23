@@ -10,6 +10,28 @@ import { useDashboardQueryRecovery } from "./use-dashboard-query-recovery";
 
 const ACTIVITY_POLL_INTERVAL_MS = 15_000;
 
+interface DashboardRecoveryQuery {
+  readonly data: unknown;
+  readonly fetchStatus: string;
+  readonly isError: boolean;
+  readonly refetch: () => Promise<unknown>;
+  readonly status: string;
+}
+
+function recoveryInput(
+  name: "activity" | "review" | "weeklyReport",
+  query: DashboardRecoveryQuery,
+) {
+  return {
+    name,
+    hasData: query.data !== undefined,
+    isError: query.isError,
+    status: query.status,
+    fetchStatus: query.fetchStatus,
+    refetch: query.refetch,
+  };
+}
+
 function useReviewDashboardQuery() {
   const trpc = useTRPC();
   const query = useQuery({
@@ -22,14 +44,7 @@ function useReviewDashboardQuery() {
     procedure: "review.dashboard",
     toastPrefix: "Failed to load dashboard",
   });
-  const recovery = useDashboardQueryRecovery({
-    name: "review",
-    hasData: query.data !== undefined,
-    isError: query.isError,
-    status: query.status,
-    fetchStatus: query.fetchStatus,
-    refetch: query.refetch,
-  });
+  const recovery = useDashboardQueryRecovery(recoveryInput("review", query));
   return { query, recovery };
 }
 
@@ -46,14 +61,9 @@ function useWeeklyDashboardQuery() {
     context: { reportId: null },
     toastPrefix: "Failed to load status report",
   });
-  const recovery = useDashboardQueryRecovery({
-    name: "weeklyReport",
-    hasData: query.data !== undefined,
-    isError: query.isError,
-    status: query.status,
-    fetchStatus: query.fetchStatus,
-    refetch: query.refetch,
-  });
+  const recovery = useDashboardQueryRecovery(
+    recoveryInput("weeklyReport", query),
+  );
   return { query, recovery };
 }
 
@@ -70,14 +80,7 @@ function useActivityDashboardQuery() {
     procedure: "activity.live",
     toastPrefix: "Failed to load dashboard freshness",
   });
-  const recovery = useDashboardQueryRecovery({
-    name: "activity",
-    hasData: query.data !== undefined,
-    isError: query.isError,
-    status: query.status,
-    fetchStatus: query.fetchStatus,
-    refetch: query.refetch,
-  });
+  const recovery = useDashboardQueryRecovery(recoveryInput("activity", query));
   return { query, recovery };
 }
 

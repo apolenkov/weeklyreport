@@ -8,11 +8,18 @@
 import "@testing-library/jest-dom/vitest";
 
 import { fireEvent, render, screen } from "@testing-library/react";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const useQueryMock = vi.fn();
 const useMutationMock = vi.fn();
 const invalidateQueries = vi.fn();
+const mutate = vi.fn();
+
+interface RespondResult {
+  readonly staleAutoClosed: boolean;
+  readonly decision: "approved" | "rejected";
+}
 
 vi.mock("@tanstack/react-query", () => ({
   useQuery: (...args: unknown[]) => useQueryMock(...args) as unknown,
@@ -66,9 +73,7 @@ function makeRequest(overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  useQueryMock.mockReset();
-  useMutationMock.mockReset();
-  invalidateQueries.mockReset();
+  vi.clearAllMocks();
   useMutationMock.mockReturnValue({ mutate: vi.fn(), isPending: false });
 });
 
@@ -82,6 +87,24 @@ function mockList(
     isError: false,
     ...flags,
   });
+}
+
+function mockSuccessfulResponse(result: RespondResult): void {
+  useMutationMock.mockImplementation(
+    (options: { onSuccess: (value: RespondResult) => void }) => ({
+      mutate: (input: unknown) => {
+        mutate(input);
+        options.onSuccess(result);
+      },
+      isPending: false,
+    }),
+  );
+}
+
+function expectResponseFormReset(): void {
+  expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /respond/i }));
+  expect(screen.getByRole("textbox")).toHaveValue("");
 }
 
 describe("ReopenRequestsCard", () => {
@@ -105,20 +128,70 @@ describe("ReopenRequestsCard", () => {
     expect(screen.getByText(/Forgot the carry-over/)).toBeInTheDocument();
   });
 
-  it("approves a request inline with the right input", () => {
-    const mutate = vi.fn();
-    useMutationMock.mockReturnValue({ mutate, isPending: false });
+  it("shows the stale-auto-close toast and resets response state", () => {
+    mockSuccessfulResponse({
+      staleAutoClosed: true,
+      decision: "approved",
+    });
     mockList([makeRequest()]);
     render(<ReopenRequestsCard />);
 
     fireEvent.click(screen.getByRole("button", { name: /respond/i }));
     fireEvent.click(screen.getByRole("button", { name: /approve/i }));
 
+    expect(toast.info).toHaveBeenCalledWith(
+      "This section was already reopened; the request was closed.",
+    );
+    expect(toast.success).not.toHaveBeenCalled();
+    expectResponseFormReset();
+  });
+
+  it("shows the approved toast and resets response state", () => {
+    mockSuccessfulResponse({
+      staleAutoClosed: false,
+      decision: "approved",
+    });
+    mockList([makeRequest()]);
+    render(<ReopenRequestsCard />);
+
+    fireEvent.click(screen.getByRole("button", { name: /respond/i }));
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "Approved after review" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /approve/i }));
+
     expect(mutate).toHaveBeenCalledWith({
       id: "req-1",
       decision: "approved",
-      note: undefined,
+      note: "Approved after review",
     });
+    expect(toast.success).toHaveBeenCalledWith(
+      "Request approved; section reopened.",
+    );
+    expectResponseFormReset();
+  });
+
+  it("submits the trimmed reject payload, toasts, and resets response state", () => {
+    mockSuccessfulResponse({
+      staleAutoClosed: false,
+      decision: "rejected",
+    });
+    mockList([makeRequest()]);
+    render(<ReopenRequestsCard />);
+
+    fireEvent.click(screen.getByRole("button", { name: /respond/i }));
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "  Needs more detail  " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /reject/i }));
+
+    expect(mutate).toHaveBeenCalledWith({
+      id: "req-1",
+      decision: "rejected",
+      note: "Needs more detail",
+    });
+    expect(toast.success).toHaveBeenCalledWith("Request rejected.");
+    expectResponseFormReset();
   });
 
   it("invalidates the list and the pending count on settled", () => {

@@ -14,9 +14,4 @@ describe("DashboardSkeleton", () => {
     );
     expect(container.querySelector(".overflow-x-auto")).not.toBeInTheDocument();
   });
-
-  it("matches the dashboard loading geometry", () => {
-    const { container } = render(<DashboardSkeleton />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });

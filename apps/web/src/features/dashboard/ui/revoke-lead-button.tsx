@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useTRPC } from "../../../lib/trpc-context";
 import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
 
-interface RevokeSectionButtonProps {
+interface RevokeLeadButtonProps {
   readonly reportSectionId: string;
   readonly leadName: string;
   readonly onMutated: () => void;
@@ -22,11 +22,11 @@ interface RevokeSectionButtonProps {
  * Invalidates the `weeklyReport.get` query so the row reflects "Draft" state
  * without a manual refresh.
  */
-export function RevokeSectionButton({
+export function RevokeLeadButton({
   reportSectionId,
   leadName,
   onMutated,
-}: RevokeSectionButtonProps): React.JSX.Element {
+}: RevokeLeadButtonProps): React.JSX.Element {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);

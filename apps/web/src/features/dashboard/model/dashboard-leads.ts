@@ -229,18 +229,20 @@ export function buildLeadInfos({
     now,
     ...(currentUserId ? { currentUserId } : {}),
   };
-  return buildDashboardLeadRows({
+  const leads = buildDashboardLeadRows({
     review,
     weeklyReport,
     activity,
-  })
-    .map((row) => buildLeadInfo(row, context))
-    .reduce<LeadInfo[]>((sorted, lead) => {
-      const insertAt = sorted.findIndex(
-        (current) => compareLeadPriority(lead, current) < 0,
-      );
-      return insertAt === -1
-        ? [...sorted, lead]
-        : [...sorted.slice(0, insertAt), lead, ...sorted.slice(insertAt)];
-    }, []);
+  }).map((row) => buildLeadInfo(row, context));
+  return leads.toSorted(compareLeadPriority);
+}
+
+export type PrimaryAction = "open" | "remind" | "review" | "none";
+
+// The queue's action precedence ladder: review beats open beats remind.
+export function primaryAction(lead: LeadInfo): PrimaryAction {
+  if (lead.actions.canReview) return "review";
+  if (lead.actions.canOpen) return "open";
+  if (lead.actions.canRemind) return "remind";
+  return "none";
 }

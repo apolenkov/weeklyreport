@@ -93,11 +93,7 @@ export function AlertBar({
         onClick={() => dispatchMut.mutate({ reportId })}
         disabled={dispatchMut.isPending || !canSendReminder}
         className="btn-press ml-auto inline-flex min-h-[36px] items-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-3.5 py-1.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-        title={
-          canSendReminder
-            ? undefined
-            : "Active reminder policy required — ask your admin"
-        }
+        title={canSendReminder ? undefined : "Active reminder policy required."}
       >
         {dispatchMut.isPending ? "Sending…" : "Send Reminder"}
       </button>

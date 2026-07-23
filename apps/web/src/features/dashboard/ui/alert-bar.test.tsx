@@ -14,6 +14,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const useQueryMock = vi.fn();
 const useMutationMock = vi.fn();
 
+interface DispatchResult {
+  readonly dispatched: number;
+  readonly alreadySent: number;
+  readonly skipped: number;
+  readonly reason: "no-active-rule" | null;
+}
+
 vi.mock("@tanstack/react-query", () => ({
   useQuery: (...args: unknown[]) => useQueryMock(...args) as unknown,
   useMutation: (...args: unknown[]) => useMutationMock(...args) as unknown,
@@ -60,8 +67,7 @@ function mockRole(role: Role | null) {
 }
 
 beforeEach(() => {
-  useQueryMock.mockReset();
-  useMutationMock.mockReset();
+  vi.clearAllMocks();
   useMutationMock.mockReturnValue({
     mutate: vi.fn(),
     isPending: false,
@@ -73,6 +79,20 @@ const baseProps = {
   reportId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   canSendReminder: false,
 };
+
+function dispatchResult(result: DispatchResult): void {
+  useMutationMock.mockImplementation(
+    (options: { onSuccess: (value: DispatchResult) => void }) => ({
+      mutate: () => options.onSuccess(result),
+      isPending: false,
+    }),
+  );
+}
+
+function sendReminder(): void {
+  render(<AlertBar {...baseProps} canSendReminder />);
+  fireEvent.click(screen.getByRole("button", { name: /send reminder/i }));
+}
 
 describe("AlertBar SVG aria-hidden", () => {
   it("AlertIcon svg has aria-hidden='true'", () => {
@@ -155,13 +175,82 @@ describe("AlertBar — role gating", () => {
 
     const button = screen.getByRole("button", { name: /send reminder/i });
     expect(button).toBeDisabled();
-    expect(button).toHaveAttribute(
-      "title",
-      "Active reminder policy required — ask your admin",
-    );
+    expect(button).toHaveAttribute("title", "Active reminder policy required.");
   });
 
-  it("E-04: surfaces dispatch failures as an error toast", () => {
+  it.each([
+    {
+      name: "reports a missing active rule",
+      result: {
+        dispatched: 0,
+        alreadySent: 0,
+        skipped: 0,
+        reason: "no-active-rule",
+      },
+      toastKind: "info",
+      message:
+        "Reminder rule is not configured for this period. Configure it in Admin → Reminders.",
+    },
+    {
+      name: "reports an empty pending queue",
+      result: {
+        dispatched: 0,
+        alreadySent: 0,
+        skipped: 0,
+        reason: null,
+      },
+      toastKind: "info",
+      message: "No pending leads to remind.",
+    },
+    {
+      name: "reports that every reminder was already sent",
+      result: {
+        dispatched: 0,
+        alreadySent: 2,
+        skipped: 0,
+        reason: null,
+      },
+      toastKind: "info",
+      message: "All 2 pending leads already received this cycle's reminder.",
+    },
+    {
+      name: "includes partial dispatch extras",
+      result: {
+        dispatched: 1,
+        alreadySent: 2,
+        skipped: 3,
+        reason: null,
+      },
+      toastKind: "success",
+      message:
+        "Reminder sent to 1 lead (2 already sent this cycle, 3 opted out).",
+    },
+    {
+      name: "reports a successful dispatch",
+      result: {
+        dispatched: 2,
+        alreadySent: 0,
+        skipped: 0,
+        reason: null,
+      },
+      toastKind: "success",
+      message: "Reminder sent to 2 leads.",
+    },
+  ] satisfies readonly {
+    readonly name: string;
+    readonly result: DispatchResult;
+    readonly toastKind: "info" | "success";
+    readonly message: string;
+  }[])("$name", ({ result, toastKind, message }) => {
+    mockRole("head");
+    dispatchResult(result);
+
+    sendReminder();
+
+    expect(toast[toastKind]).toHaveBeenCalledWith(message);
+  });
+
+  it("surfaces dispatch failures as an error toast", () => {
     mockRole("head");
     const mutate = vi.fn();
     useMutationMock.mockImplementation(
@@ -206,7 +295,7 @@ describe("AlertBar — pending label accuracy", () => {
 });
 
 // ---------------------------------------------------------------------------
-// reopen-requests (D3 reversal): the alert bar carries lead-submission
+// The alert bar carries lead-submission
 // signals only — the Reopen Requests card is the single reopen surface.
 // ---------------------------------------------------------------------------
 
