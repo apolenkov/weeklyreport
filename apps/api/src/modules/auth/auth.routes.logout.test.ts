@@ -92,4 +92,20 @@ describe("createLogoutHandler origin gate", () => {
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(res.redirect).toHaveBeenCalledWith("/");
   });
+
+  it("clears the session cookie before redirecting on an accepted logout", () => {
+    const res = makeRes();
+    handler(makeReq("https://app.example.com"), res, vi.fn());
+
+    // The handler must emit the cleared cookie (empty value, Max-Age=0) —
+    // the redirect alone would leave the browser logged in.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
+    expect(res.setHeader).toHaveBeenCalledWith(
+      "Set-Cookie",
+      expect.stringMatching(/^customreport_session=;.*Max-Age=0/),
+    );
+    const setHeaderOrder = res.setHeader.mock.invocationCallOrder[0];
+    const redirectOrder = res.redirect.mock.invocationCallOrder[0];
+    expect(setHeaderOrder).toBeLessThan(redirectOrder ?? Infinity);
+  });
 });
