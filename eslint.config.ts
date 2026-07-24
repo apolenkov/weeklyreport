@@ -122,6 +122,7 @@ const apiCrossModuleZones = apiModules.map((moduleName) => ({
 
 const apiInfrastructureModuleZones = [
   "apps/api/src/infrastructure",
+  "apps/api/src/bootstrap",
   "apps/api/src/main.ts",
   "apps/api/src/app.module.ts",
 ].map((target) => ({
@@ -750,9 +751,13 @@ export default defineConfig([
       "apps/api/src/modules/report-sections/domain/**/*.ts",
       "apps/api/src/modules/review/domain/**/*.ts",
       "apps/api/src/modules/publication/domain/**/*.ts",
-      // admin is a flat (non-hexagon) module; its port file joins the ban so
-      // the fixed ReportStatus leak cannot regress (report-status-type).
+      // admin is a flat (non-hexagon) module; its port + shared-type files
+      // join the ban so the fixed ReportStatus leak cannot regress
+      // (report-status-type). admin-shared.ts is now a barrel over the two —
+      // all three stay listed so a re-inline cannot dodge the guard.
       "apps/api/src/modules/admin/admin-shared.ts",
+      "apps/api/src/modules/admin/admin-repository.port.ts",
+      "apps/api/src/modules/admin/admin-shared-types.ts",
     ],
     rules: {
       "@typescript-eslint/no-restricted-imports": [
@@ -789,6 +794,7 @@ export default defineConfig([
     files: [
       "apps/api/src/modules/activity/activity.service.ts",
       "apps/api/src/modules/admin/action-log.service.ts",
+      "apps/api/src/modules/admin/admin-repository.port.ts",
       "apps/api/src/modules/analytics/analytics.service.ts",
       "apps/api/src/modules/archive/archive.service.ts",
       "apps/api/src/modules/carry-over/carry-over.service.ts",
@@ -979,17 +985,9 @@ export default defineConfig([
       "packages/ui/src/components/ui/sidebar.tsx", // shadcn/ui generated primitive bundle
       "prisma/wipe-manual-uat.ts", // one-off operational script (cf. seeds, ignored)
       "packages/shared/src/schemas/report.schema.ts", // dense Zod schema catalogue, no logic
-      "apps/api/src/main.ts", // bootstrap; load-order documentation, not splittable
       // Long-tail (300-500): each is one cohesive concern where a split would
       // shed few lines at a clarity cost — exempt, not churn.
       "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // tRPC instance + all procedure builders share the private `t` binding
-      "apps/web/src/shared/ui/navigation/nav-bar.tsx", // one role-aware nav widget; MobileNav/coming-soon have no external consumers
-      "apps/web/src/features/report-pages/ui/product-accordion.tsx", // one accordion for one ProductReport
-      "apps/web/src/features/report-sections/model/lead-form.ts", // one LeadForm mapping pipeline; types-out alone stays >300, further split fragments it
-      // God-files (700+), permanent-exempt: a namespace split is mechanically
-      // possible but would not improve the file (per code-style: keep the larger
-      // unit and say why).
-      "apps/api/src/modules/report-sections/infrastructure/lead-form.prisma-repository.ts", // one DI provider for one LeadFormRepository interface; domain separation already lives at the service layer above it
     ],
     rules: { "max-lines": "off" },
   },
@@ -1039,8 +1037,6 @@ export default defineConfig([
       "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // status-card multi-branch messaging (streak/viewer/draft/risk)
       "apps/web/src/features/review/ui/risks-section.tsx", // 3 dialog states across handlers + JSX; prior split broke behavior
       "apps/web/src/features/report-sections/ui/stage-chip.tsx", // interactive chip; dropdown/status/clear/popover entangled via hooks
-      "apps/web/src/shared/ui/navigation/nav-bar.tsx", // role-based link filtering + session/hydration across layout slots
-      "apps/web/src/features/report-pages/ui/product-accordion.tsx", // 6 status-aware sections; uniform accordion pattern
     ],
     rules: { complexity: "off" },
   },
@@ -1054,7 +1050,6 @@ export default defineConfig([
       "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // see cyclomatic block
       "apps/web/src/features/review/ui/risks-section.tsx", // see cyclomatic block
       "apps/web/src/features/report-sections/ui/stage-chip.tsx", // see cyclomatic block
-      "apps/web/src/features/report-pages/ui/product-accordion.tsx", // see cyclomatic block
       "apps/web/uat-suite/inventory.mjs", // classify() must stay inline (runs inside page.evaluate) + multi-phase report IIFE
     ],
     rules: { "sonarjs/cognitive-complexity": "off" },
