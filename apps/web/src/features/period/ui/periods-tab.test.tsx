@@ -582,6 +582,24 @@ describe("PeriodsTab — «Edit period» dialog", () => {
     expect(payload.weekLabel).toBe("Q2 close");
   });
 
+  it("clearing the end date in edit mode is a loud error, never a silent keep-old", async () => {
+    // Unlike the deadline (ruling F16), a period must end: an emptied
+    // periodEnd blocks submit instead of silently omitting the field.
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+
+    await user.click(await screen.findByTestId(`action-edit-${openRow.id}`));
+    await user.clear(screen.getByTestId("periods-create-end"));
+
+    expect(screen.getByTestId("periods-end-error")).toHaveTextContent(
+      "End date is required when editing a period.",
+    );
+    expect(screen.getByTestId("periods-create-submit")).toBeDisabled();
+    expect(
+      expectDefined(captured["admin.updatePeriodManual"]).mutationFn,
+    ).not.toHaveBeenCalled();
+  });
+
   it("clearing the deadline in edit mode is an explicit clear: hint shown, payload carries null", async () => {
     // Ruling F16 (allow-deadline-explicit-clear): an emptied deadline field
     // is a legal deletion, not a validation error.

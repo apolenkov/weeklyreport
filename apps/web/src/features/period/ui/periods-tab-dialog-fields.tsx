@@ -5,6 +5,8 @@ interface CreatePeriodFieldsProps {
   readonly onPeriodStartChange: (value: string) => void;
   readonly periodEnd: string;
   readonly onPeriodEndChange: (value: string) => void;
+  /** Edit-mode only: an emptied end date is a loud error, never a silent keep. */
+  readonly periodEndError: string | null;
   readonly deadline: string;
   readonly onDeadlineChange: (value: string) => void;
   readonly deadlineError: string | null;
@@ -24,6 +26,7 @@ export function CreatePeriodFields({
   onPeriodStartChange,
   periodEnd,
   onPeriodEndChange,
+  periodEndError,
   deadline,
   onDeadlineChange,
   deadlineError,
@@ -67,9 +70,20 @@ export function CreatePeriodFields({
           type="date"
           value={periodEnd}
           onChange={(e) => onPeriodEndChange(e.target.value)}
+          aria-invalid={periodEndError !== null}
+          aria-describedby={periodEndError ? "period-end-error" : undefined}
           data-testid="periods-create-end"
-          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+          className={`w-full rounded-[var(--radius-sm)] border px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] ${periodEndError ? "border-red-400 bg-red-50 focus:border-red-400" : "border-[var(--color-border)] bg-white focus:border-[var(--color-starbucks-accent)]"}`}
         />
+        {periodEndError && (
+          <p
+            id="period-end-error"
+            data-testid="periods-end-error"
+            className="mt-1 text-xs text-red-600"
+          >
+            {periodEndError}
+          </p>
+        )}
       </div>
       <div>
         <label
