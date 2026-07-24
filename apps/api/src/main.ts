@@ -77,6 +77,7 @@ import {
   createAuthController,
   createSamlStrategy,
   createSamlStrategyOptions,
+  hasSamlEnv,
   mountAuthRoutes,
 } from "./modules/auth/index.js";
 import { mountBullBoard } from "./infrastructure/bullmq/bull-board.module";
@@ -236,8 +237,19 @@ async function bootstrap() {
   // app.listen so it runs ahead of the Nest controller handling the beacon.
   expressApp.use("/api/web-vitals", vitalsLimiter);
 
-  const samlOptions = createSamlStrategyOptions(process.env);
-  const samlStrategy = createSamlStrategy(samlOptions);
+  // No SAML env at all → dev-login-only posture (env.schema's production fence
+  // forbids that combination in prod; outside prod the throw inside
+  // mountAuthRoutes refuses to boot when dev-login is off too). ANY SAML var
+  // present → build the real strategy, where a partial set fails loud via
+  // requireEnv naming the missing variable.
+  const samlStrategy = hasSamlEnv(process.env)
+    ? createSamlStrategy(createSamlStrategyOptions(process.env))
+    : undefined;
+  if (samlStrategy === undefined) {
+    logger.warn(
+      "SAML env is absent — /auth/saml/* answers 503; dev-login is the only auth path",
+    );
+  }
   const authCtrl = createAuthController(process.env);
   const auditLogger = createAuditLogger(logger);
   // Gate all /auth/* behind the strict auth limiter, registered BEFORE
@@ -274,4 +286,12 @@ async function bootstrap() {
   logger.info(`API server listening on port ${env.PORT}`);
 }
 
-void bootstrap();
+// A boot-time throw must terminate the process. `void bootstrap()` would rely
+// on Node's default unhandled-rejection crash, which any 'unhandledRejection'
+// listener (e.g. Sentry's warn-mode integration, installed at module load when
+// SENTRY_DSN is set) silently disables — leaving a zombie that never listens
+// yet never exits, so a supervisor sees no crash-loop.
+bootstrap().catch((error: unknown) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -192,9 +192,67 @@ export function createLogoutHandler(
   };
 }
 
+/**
+ * Explicit trace for a deployment without an IdP (dev-login only): the SAML
+ * callback stays mounted but answers 503 instead of silently 404ing, so a
+ * misdirected assertion reports "not configured", not "no such route". Only
+ * POST /auth/saml/callback needs this — in the same posture GET
+ * /auth/saml/login is always claimed first by the dev-login shortcut.
+ */
+export function createSamlUnavailableHandler(): RequestHandler {
+  const HTTP_SERVICE_UNAVAILABLE = 503;
+  return (_req, res) => {
+    res
+      .status(HTTP_SERVICE_UNAVAILABLE)
+      .json({ error: "SAML is not configured on this deployment" });
+  };
+}
+
+function mountSamlRoutes(
+  expressApp: Express,
+  samlStrategy: SamlStrategy | undefined,
+  deps: AuthRouteDeps,
+): void {
+  if (!samlStrategy) {
+    // main.ts only omits the strategy in the dev-login-only posture; anything
+    // else reaching here is a wiring bug — refuse to boot rather than serve
+    // an auth surface with no way to log in.
+    if (deps.env.AUTH_DEV_MODE !== "true") {
+      throw new Error(
+        "mountAuthRoutes: a SAML strategy is required when AUTH_DEV_MODE is off",
+      );
+    }
+    expressApp.post("/auth/saml/callback", createSamlUnavailableHandler());
+    return;
+  }
+
+  // passport @types depend on express@4, project uses express@5 — cast required
+  passport.use("saml", samlStrategy as unknown as passport.Strategy);
+
+  // GET /auth/saml/login — Express picks the first registered route. In dev the
+  // dev-login module has already mounted a shortcut here INSTEAD of the
+  // passport handler; outside dev mode the real SAML entrypoint is registered.
+  if (deps.env.AUTH_DEV_MODE !== "true") {
+    expressApp.get(
+      "/auth/saml/login",
+      passport.initialize(),
+      // @types/passport types authenticate() as `any`; it is a RequestHandler.
+      passport.authenticate("saml", { session: false }) as RequestHandler,
+    );
+  }
+
+  expressApp.post(
+    "/auth/saml/callback",
+    express.urlencoded({ extended: false }),
+    passport.initialize(),
+    createSamlAuthenticationHandler(deps),
+    createSamlCallbackHandler(deps),
+  );
+}
+
 export function mountAuthRoutes(
   expressApp: Express,
-  samlStrategy: SamlStrategy,
+  samlStrategy: SamlStrategy | undefined,
   authController: ReturnType<typeof createAuthController>,
   prisma: PrismaClient,
   env: NodeJS.ProcessEnv,
@@ -214,30 +272,11 @@ export function mountAuthRoutes(
     env,
   };
 
-  // passport @types depend on express@4, project uses express@5 — cast required
-  passport.use("saml", samlStrategy as unknown as passport.Strategy);
-
-  // GET /auth/saml/login — Express picks the first registered route. In dev the
-  // dev-login module mounts a shortcut here INSTEAD of the passport handler;
-  // outside dev mode the real SAML entrypoint is registered.
   if (env.AUTH_DEV_MODE === "true") {
     mountDevLoginRoutes(expressApp, deps);
-  } else {
-    expressApp.get(
-      "/auth/saml/login",
-      passport.initialize(),
-      // @types/passport types authenticate() as `any`; it is a RequestHandler.
-      passport.authenticate("saml", { session: false }) as RequestHandler,
-    );
   }
 
-  expressApp.post(
-    "/auth/saml/callback",
-    express.urlencoded({ extended: false }),
-    passport.initialize(),
-    createSamlAuthenticationHandler(deps),
-    createSamlCallbackHandler(deps),
-  );
+  mountSamlRoutes(expressApp, samlStrategy, deps);
 
   expressApp.post(
     "/auth/logout",

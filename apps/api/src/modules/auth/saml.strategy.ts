@@ -20,6 +20,28 @@ export type VerifiedSamlProfile = {
   role: Role;
 };
 
+const SAML_ENV_KEYS = [
+  "KEYCLOAK_SAML_CALLBACK_URL",
+  "KEYCLOAK_SAML_ENTRY_POINT",
+  "KEYCLOAK_SAML_ISSUER",
+  "KEYCLOAK_SAML_CERT",
+] as const;
+
+/**
+ * True when ANY of the four SAML variables is present and non-blank. env.schema
+ * keeps them `.optional()` so dev-login can boot without an IdP (all four
+ * absent); its production fence requires them under NODE_ENV=production with
+ * AUTH_DEV_MODE=false. This is deliberately "any", not "all": a PARTIAL set is
+ * always a misconfiguration, so the caller proceeds into
+ * `createSamlStrategyOptions`, whose requireEnv fails loud naming the missing
+ * var instead of silently degrading to dev-login-only. Outside production the
+ * boot-time guard for the no-SAML + no-dev-login combination is the throw in
+ * `mountAuthRoutes`, not the schema fence.
+ */
+export function hasSamlEnv(env: NodeJS.ProcessEnv): boolean {
+  return SAML_ENV_KEYS.some((key) => (env[key]?.trim() ?? "") !== "");
+}
+
 const validateNever = "never" as NonNullable<
   PassportSamlConfig["validateInResponseTo"]
 >;
