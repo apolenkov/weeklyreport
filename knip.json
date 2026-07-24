@@ -9,6 +9,7 @@
         "prisma/*.ts",
         "scripts/*.mjs",
         "e2e/playwright.integration.config.ts",
+        "e2e/playwright.prodbuild.config.ts",
         "e2e/sweep/playwright.config.ts",
         "e2e/sweep/render-checklist.mjs",
         "e2e/**/*.spec.ts",
