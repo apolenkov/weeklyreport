@@ -130,6 +130,11 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
+    # No FRONTEND_URL/PDF_BASE_URL/PORT/NEXT_PUBLIC_API_URL here on purpose:
+    # playwright.integration.config.ts pins every URL/port for both webServers
+    # itself and only SEEDS NEXT_PUBLIC_API_URL when unset — a job-level value
+    # would leak into the test process and point the login fixtures at a port
+    # nothing listens on.
     env:
       DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_test
       REDIS_HOST: localhost
@@ -138,10 +143,6 @@ jobs:
       NODE_ENV: test
       AUTH_DEV_MODE: "true"
       AUTH_JWT_SECRET: ci-test-secret-at-least-32-characters-long!!
-      FRONTEND_URL: http://localhost:3100
-      PDF_BASE_URL: http://localhost:3100
-      PORT: 3101
-      NEXT_PUBLIC_API_URL: http://localhost:3101
       LOG_LEVEL: warn
       CI: true
 
@@ -174,29 +175,35 @@ jobs:
       - name: Integration Tests
         run: pnpm --filter=@customreport/api test:integration
 
+      # @playwright/test is a devDependency of apps/web only; with pnpm's
+      # isolated node-linker the root has no playwright bin, so the install
+      # must run in that workspace (same as the test script itself).
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter @customreport/web exec playwright install --with-deps chromium
 
       - name: Build shared packages
         run: pnpm turbo build --filter=@customreport/shared --filter=@customreport/ui
 
+      # The integration suite refuses to run against the dev/test DATABASE_URL:
+      # its global-setup migrate-resets + seeds E2E_DATABASE_URL itself, so it
+      # gets a dedicated database in the same service container.
+      - name: Create E2E database
+        run: PGPASSWORD=localdev psql -h localhost -U customreport -d postgres -c "CREATE DATABASE customreport_e2e"
+
       - name: Run E2E tests
-        run: pnpm exec playwright test --config=e2e/playwright.config.ts
+        env:
+          E2E_DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
+        run: pnpm test:e2e:integration
 
-      - name: Upload Playwright report
+      # In CI the integration config reports via the `github` reporter (no HTML
+      # report dir) and writes traces/screenshots/videos to its outputDir —
+      # upload that, not the default playwright-report/ path it never creates.
+      - name: Upload Playwright failure artifacts
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 14
-
-      - name: Upload test results
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: test-results
-          path: test-results/
+          name: playwright-artifacts
+          path: e2e/integration/.results/
           retention-days: 14
 
   # ------------------------------------------------------------------
@@ -255,118 +262,42 @@ jobs:
         run: pnpm exec prisma generate
 
   # ------------------------------------------------------------------
-  # Job 2c: Visual regression baselines (Phase 39-06)
-  # ------------------------------------------------------------------
-  # Runs Playwright's `--project=visual` against the same Postgres + Redis
-  # services as the main e2e job, but seeds with `seed-simple` for byte-
-  # stable fixtures. Compares rendered pages against committed baselines
-  # under apps/web/e2e/visual/*-snapshots/<name>-visual-linux.png.
-  #
-  # First run on a brand-new spec: PRs missing the linux baseline must
-  # locally regenerate via `visual:update`, OR a maintainer triggers a
-  # one-shot --update-snapshots commit. We don't auto-update in CI to keep
-  # the diff visible in PR review.
-  visual-baseline:
-    name: Visual Regression
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    needs: e2e
-
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_USER: customreport
-          POSTGRES_PASSWORD: localdev
-          POSTGRES_DB: customreport_visual
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U customreport"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=5
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=5
-
-    env:
-      DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_visual
-      REDIS_HOST: localhost
-      REDIS_PORT: 6379
-      REDIS_MAXMEMORY_BYTES: 209715200
-      NODE_ENV: test
-      AUTH_DEV_MODE: "true"
-      AUTH_JWT_SECRET: ci-test-secret-at-least-32-characters-long!!
-      FRONTEND_URL: http://localhost:3100
-      PDF_BASE_URL: http://localhost:3100
-      PORT: 3101
-      NEXT_PUBLIC_API_URL: http://localhost:3101
-      LOG_LEVEL: warn
-      CI: true
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup pnpm
-        run: |
-          corepack enable
-          corepack prepare "pnpm@${PNPM_VERSION}" --activate
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Generate Prisma Client
-        run: pnpm exec prisma generate
-
-      - name: Run database migrations
-        run: pnpm exec prisma migrate deploy
-
-      - name: Seed database (deterministic fixture)
-        run: pnpm db:seed:middle
-
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Build shared packages
-        run: pnpm turbo build --filter=@customreport/shared --filter=@customreport/ui
-
-      - name: Run visual regression tests
-        run: pnpm exec playwright test --project=visual --config=e2e/playwright.config.ts
-
-      - name: Upload visual diff artefacts
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: visual-diffs
-          path: apps/web/e2e/.results/
-          retention-days: 14
-
-  # ------------------------------------------------------------------
   # Job 3: Docker Build Verification
   # ------------------------------------------------------------------
+  # Builds the PRODUCTION compose file: the dev images share most layers
+  # with it, but only the prod runner stages exercise the standalone
+  # Next.js copy steps and the migrator target (a missing build artifact
+  # there ships a broken deploy while dev keeps working).
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     needs: quality
+
+    env:
+      # Build-time values only; interpolation of docker-compose.prod.yml
+      # requires every :?-guarded var to be present even for `build`.
+      DB_PASSWORD: ci-build-only
+      FRONTEND_URL: http://localhost
+      APP_BASE_URL: http://localhost
+      NEXT_PUBLIC_API_URL: http://localhost
+      AUTH_JWT_SECRET: ci-build-only-secret-32-characters-min!!
+      PDF_EXPORT_JWT_SECRET: ci-build-only-secret-32-characters-min!!
+      PDF_BASE_URL: http://localhost
+      HEAP_HEALTH_THRESHOLD_BYTES: "1610612736"
+      SMTP_HOST: mail.invalid
+      SMTP_PORT: "587"
+      SMTP_FROM: ci@mail.invalid
+      KEYCLOAK_SAML_CALLBACK_URL: http://localhost/auth/saml/callback
+      KEYCLOAK_SAML_ENTRY_POINT: http://localhost/idp/saml
+      KEYCLOAK_SAML_ISSUER: ci-build-only
+      KEYCLOAK_SAML_CERT: ci-build-only
+      CADDY_SITE_ADDRESS: http://localhost
+      CADDY_CSP_REPORT_URI: http://localhost/csp-report
 
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Verify Docker Compose builds
-        run: docker compose -f docker-compose.yml build --no-cache
+      - name: Verify production Docker Compose builds
+        run: docker compose -f docker-compose.prod.yml build
