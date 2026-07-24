@@ -29,7 +29,7 @@ describe("auth controller", () => {
     expect(issued.setCookieHeader).toContain("HttpOnly");
   });
 
-  describe("logout cookie clearing", () => {
+  describe("session cookie naming", () => {
     it("createSessionCookie uses AUTH_JWT_COOKIE_NAME from env", () => {
       const cookie = createSessionCookie({ token: "test-token", env });
 
@@ -73,6 +73,29 @@ describe("auth controller", () => {
 
       expect(issued.setCookieHeader).toContain("my_app_cookie=");
       expect(issued.setCookieHeader).toContain("HttpOnly");
+    });
+  });
+
+  describe("logout cookie clearing", () => {
+    it("clears the session with an empty value, Max-Age=0 and matching attributes", () => {
+      const setCookie = createSessionCookie({ token: "test-token", env });
+      const clearCookie = createSessionCookie({
+        token: "",
+        env,
+        maxAgeSeconds: 0,
+      });
+
+      // The cleared cookie only replaces the live one if name and scoping
+      // attributes match the set cookie exactly.
+      expect(clearCookie).toMatch(/^customreport_session=;/);
+      expect(clearCookie).toContain("Max-Age=0");
+      const attributesOf = (cookie: string): string[] =>
+        cookie
+          .split("; ")
+          .slice(1)
+          .filter((attr) => !attr.startsWith("Max-Age="))
+          .toSorted();
+      expect(attributesOf(clearCookie)).toEqual(attributesOf(setCookie));
     });
   });
 });

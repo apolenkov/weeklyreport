@@ -1,9 +1,9 @@
 import { defineConfig } from "vitest/config";
 
 /**
- * 34-02: explicit vitest config so CI can run with --coverage and enforce
- * thresholds. Default config used to live implicitly via the `test` script;
- * extracting it here lets us pin coverage floors without command-line bloat.
+ * Explicit vitest config so CI can run with --coverage and enforce
+ * thresholds — pinning coverage floors here avoids command-line bloat in
+ * the `test` script.
  *
  * Coverage thresholds calibrated to the existing suite (598 unit tests). If
  * a sweep fix drops coverage below the floor, CI fails and the dev fixes
