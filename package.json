@@ -30,6 +30,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test && vitest run --config vitest.prisma.config.ts",
     "test:e2e:integration": "pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.integration.config.ts",
+    "test:e2e:prodbuild": "API_URL=http://127.0.0.1:3102 NEXT_PUBLIC_API_URL=http://127.0.0.1:3102 NEXT_PUBLIC_AUTH_STUB=false NEXT_PUBLIC_DISABLE_DEVTOOLS=true turbo build && rm -rf apps/web/.next/standalone/apps/web/.next/static && cp -R apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static && pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.prodbuild.config.ts",
     "test:uat": "pnpm --filter @customreport/web exec playwright test --config ../../e2e/sweep/playwright.config.ts",
     "catalog:check": "node e2e/sweep/catalog-check.mjs",
     "db:fresh:simple": "pnpm db:reset:hard && tsx prisma/seed-simple.ts",
