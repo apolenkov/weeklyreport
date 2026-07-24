@@ -1,18 +1,23 @@
-import type { TrafficLightStatus } from "@customreport/shared";
-
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
-import type { CrossAuthorSectionRow } from "../application/lead-form.service";
+import type {
+  CrossAuthorSectionRow,
+  CrossAuthorStatusRow,
+} from "../domain/lead-form-shared";
 import {
   buildCrossAuthorStatusRows,
   indexForeignSections,
 } from "./lead-form-cross-author.derive.js";
 import {
+  fetchForeignContentAssignments,
+  fetchForeignContentSections,
+  fetchForeignStatusAssignments,
+  fetchForeignStatusSections,
+  fetchViewerProjectIds,
+} from "./lead-form-cross-author.fetch.js";
+import {
   buildCrossAuthorContentRows,
   groupCrossAuthorAuthors,
 } from "./lead-form-cross-author-content.derive.js";
-
-/** API traffic-light enum; null = no data / untouched stage. */
-type StageTrafficStatus = TrafficLightStatus | null;
 
 /**
  * The product ids the viewer and author BOTH hold a stage assignment on,
@@ -27,13 +32,7 @@ export async function getSharedNonArchivedProductIds(
   viewerId: string,
   authorId: string,
 ): Promise<string[]> {
-  const viewerAssignments = await prisma.stageAssignment.findMany({
-    where: { userId: viewerId },
-    select: { projectId: true },
-  });
-  const viewerProjectIds = [
-    ...new Set(viewerAssignments.map((r) => r.projectId)),
-  ];
+  const viewerProjectIds = await fetchViewerProjectIds(prisma, viewerId);
   if (viewerProjectIds.length === 0) {
     return [];
   }
@@ -53,57 +52,21 @@ export async function getCrossAuthors(
   prisma: PrismaService,
   reportId: string,
   userId: string,
-): Promise<
-  {
-    projectId: string;
-    projectName: string;
-    authorId: string;
-    authorInitials: string;
-    authorShortName: string;
-    stageNames: string[];
-    stages: {
-      stageName: string;
-      status: StageTrafficStatus;
-    }[];
-  }[]
-> {
-  const myAssignments = await prisma.stageAssignment.findMany({
-    where: { userId },
-    select: { projectId: true },
-  });
-  const myProjectIds = [...new Set(myAssignments.map((r) => r.projectId))];
+): Promise<CrossAuthorStatusRow[]> {
+  const myProjectIds = await fetchViewerProjectIds(prisma, userId);
   if (myProjectIds.length === 0) return [];
 
-  // Other users' stage assignments on shared projects
-  const others = await prisma.stageAssignment.findMany({
-    where: { projectId: { in: myProjectIds }, userId: { not: userId } },
-    select: {
-      projectId: true,
-      stageId: true,
-      project: { select: { id: true, name: true, archived: true } },
-      stage: { select: { name: true } },
-      user: { select: { id: true, name: true } },
-    },
-  });
-
-  // Persisted stage traffic + covering risks for each foreign author in this
-  // report. Only `severity` + `stageNames` of the risk are needed: the stage
-  // status is RISK-DERIVED (covering risks that name the stage), never the
-  // foreign item text. The persisted traffic is consulted only as the
-  // empty/non-empty base when no risk covers the stage.
+  const others = await fetchForeignStatusAssignments(
+    prisma,
+    myProjectIds,
+    userId,
+  );
   const otherUserIds = [...new Set(others.map((o) => o.user.id))];
-  const sections = await prisma.reportSection.findMany({
-    where: { reportId, authorId: { in: otherUserIds } },
-    select: {
-      authorId: true,
-      risks: {
-        select: { projectId: true, severity: true, stageNames: true },
-      },
-      stageStatuses: {
-        select: { projectId: true, stageId: true, status: true },
-      },
-    },
-  });
+  const sections = await fetchForeignStatusSections(
+    prisma,
+    reportId,
+    otherUserIds,
+  );
 
   const { statusMap, risksByAuthor } = indexForeignSections(sections);
   return buildCrossAuthorStatusRows(others, statusMap, risksByAuthor);
@@ -114,89 +77,28 @@ export async function getCrossAuthorContent(
   reportId: string,
   userId: string,
 ): Promise<{ coOwnsShared: boolean; rows: CrossAuthorSectionRow[] }> {
-  // Step 1: resolve the caller's assigned products (same join as
-  // getCrossAuthors), then co-owners on shared, NON-ARCHIVED products.
-  const myAssignments = await prisma.stageAssignment.findMany({
-    where: { userId },
-    select: { projectId: true },
-  });
-  const myProjectIds = [...new Set(myAssignments.map((r) => r.projectId))];
+  const myProjectIds = await fetchViewerProjectIds(prisma, userId);
   if (myProjectIds.length === 0) return { coOwnsShared: false, rows: [] };
 
-  const others = await prisma.stageAssignment.findMany({
-    where: {
-      projectId: { in: myProjectIds },
-      userId: { not: userId },
-      project: { archived: false },
-    },
-    select: {
-      projectId: true,
-      stageId: true,
-      stage: { select: { name: true } },
-      user: { select: { id: true, name: true, role: true } },
-    },
-  });
+  const others = await fetchForeignContentAssignments(
+    prisma,
+    myProjectIds,
+    userId,
+  );
 
-  // Per-author set of shared, non-archived projectIds + the author's stage
-  // assignments on those products (the chips come from assignments, not the
-  // section — a co-owner's stage exists even with no persisted status row).
-  // `coOwnsShared` is the co-ownership authorization signal: true iff the
-  // caller co-owns at least one shared, non-archived product. It is kept
-  // separate from row-emptiness so the service can label a denied read
-  // (co-owns nothing) distinctly from a legitimately empty one (co-owns a
-  // product but the co-owner authored no records).
+  // `coOwnsShared` is the authorization signal, kept separate from
+  // row-emptiness so the service can distinguish a denied read (co-owns
+  // nothing) from a legitimately empty one (co-owns a product, no records).
   const { authorEntries, coOwnsShared, otherUserIds } =
     groupCrossAuthorAuthors(others);
   if (!coOwnsShared) return { coOwnsShared: false, rows: [] };
 
-  // Step 2: fetch foreign sections + covering risks (for risk-derived chips).
-  const sections = await prisma.reportSection.findMany({
-    where: { reportId, authorId: { in: otherUserIds } },
-    select: {
-      authorId: true,
-      items: {
-        select: {
-          id: true,
-          projectId: true,
-          type: true,
-          text: true,
-          tag: true,
-          workflowStatus: true,
-          carriedOver: true,
-          priorityRank: true,
-          stageNames: true,
-        },
-      },
-      risks: {
-        select: {
-          id: true,
-          projectId: true,
-          risk: true,
-          impact: true,
-          mitigation: true,
-          severity: true,
-          stageNames: true,
-        },
-      },
-      decisions: {
-        select: {
-          id: true,
-          productId: true,
-          text: true,
-          owner: true,
-          deadline: true,
-          impact: true,
-          resolvedAt: true,
-          stageNames: true,
-        },
-      },
-      stageStatuses: {
-        select: { projectId: true, stageId: true, status: true },
-      },
-    },
-  });
+  const sections = await fetchForeignContentSections(
+    prisma,
+    reportId,
+    otherUserIds,
+  );
 
-  // Step 3: build per-author rows filtered to shared products only.
   return {
     coOwnsShared,
     rows: buildCrossAuthorContentRows(sections, authorEntries),
