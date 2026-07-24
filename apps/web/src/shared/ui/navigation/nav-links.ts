@@ -1,0 +1,62 @@
+import type { Role } from "@customreport/shared";
+
+export interface NavLink {
+  href: string;
+  label: string;
+  title?: string;
+  // Roles that should SEE this link in nav. Tighter than route-access
+  // (head/admin can technically open /lead/report but should not see it
+  // in their nav — lead-prefix routes are personal lead data, head has
+  // their own dashboard for the same intent).
+  roles: readonly Role[];
+}
+
+const HISTORY_LINK_TITLE = "Past weeks and closed reports";
+export const REPORTS_LATEST_ROUTE = "/reports/latest";
+export const HEAD_DASHBOARD_ROUTE = "/head/dashboard";
+export const HEAD_REPORT_ROUTE = "/head/report";
+
+export const NAV_LINKS: readonly NavLink[] = [
+  { href: "/lead/report", label: "Report", roles: ["lead"] },
+  // One History page for both active and archived report periods; archived
+  // visibility is a local toggle inside the page. The link targets bare
+  // `/reports` — the page does not read a `tab` query param.
+  {
+    href: "/reports",
+    label: "History",
+    title: HISTORY_LINK_TITLE,
+    roles: ["lead"],
+  },
+  // /head/history 307-redirects to /reports (same surface as viewer). The
+  // nav link points directly to the destination.
+  {
+    href: "/reports",
+    label: "History",
+    title: HISTORY_LINK_TITLE,
+    roles: ["head"],
+  },
+  // viewer-live-status: the viewer is a status observer of the
+  // current period. The entry resolves the Status target (the current editable
+  // period, else the latest visible published report) via the static
+  // `/reports/latest` route, which redirects to the resolved report.
+  {
+    href: REPORTS_LATEST_ROUTE,
+    label: "Status",
+    title: "Open the current status report",
+    roles: ["viewer"],
+  },
+  {
+    href: "/reports",
+    label: "History",
+    title: HISTORY_LINK_TITLE,
+    roles: ["viewer"],
+  },
+  { href: HEAD_DASHBOARD_ROUTE, label: "Dashboard", roles: ["head"] },
+  { href: HEAD_REPORT_ROUTE, label: "Status", roles: ["head"] },
+  // Slides is a mode toggle inside Status/History, not a separate nav
+  // destination. The legacy /head/slides URL still redirects to /reports
+  // (back-compat in head/slides/page.tsx).
+  // admin tab is admin-only. heads have a dashboard, not an admin panel.
+  // The /admin/layout.tsx role gate enforces the same on the route.
+  { href: "/admin", label: "Admin", roles: ["admin"] },
+];

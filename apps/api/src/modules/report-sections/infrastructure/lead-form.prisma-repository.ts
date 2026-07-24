@@ -1,9 +1,5 @@
-import type {
-  ReportSectionReadModel,
-  TrafficLightStatus,
-} from "@customreport/shared";
+import type { ReportSectionReadModel } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
@@ -11,59 +7,27 @@ import type {
   CrossAuthorSectionRow,
   LeadFormRepository,
 } from "../application/lead-form.service";
-import {
-  ReportSectionDomainError,
-  SectionVersionConflictError,
-} from "../application/report-sections.service";
 import { applyRevokeTransition } from "../application/revoke-transition";
 import type { ReopenEligibilityFacts } from "../domain/lead-form-shared";
 import {
-  LeadFormConstraintError,
-  LeadFormDomainError,
   reopenBlockedMessage,
   ReopenRequestError,
 } from "../domain/lead-form-shared";
+import { fillFromSectionTx } from "./fill-from.transaction.js";
 import {
-  isCarryable,
-  toFilledDecisionRows,
-  toFilledItemRows,
-  toFilledRiskRows,
-} from "./fill-from.derive.js";
+  getCrossAuthorContent,
+  getCrossAuthors,
+  getSharedNonArchivedProductIds,
+} from "./lead-form-cross-author.query.js";
 import {
-  buildCrossAuthorStatusRows,
-  indexForeignSections,
-} from "./lead-form-cross-author.derive.js";
-import {
-  buildCrossAuthorContentRows,
-  groupCrossAuthorAuthors,
-} from "./lead-form-cross-author-content.derive.js";
+  getSectionForPeriod,
+  getSectionForPeriodAsGroupPeer,
+  getSectionReopenContext,
+  type SectionForPeriodResult,
+} from "./lead-form-reopen-eligibility.query.js";
 import { queryPublishedLineage } from "./published-lineage.query.js";
 import { reportSectionFullInclude } from "./report-sections.include";
 import { mapPrismaToReportSection } from "./report-sections.mappers";
-
-/** API traffic-light enum; null = no data / untouched stage. */
-type StageTrafficStatus = TrafficLightStatus | null;
-
-/**
- * Shared Prisma include for `getSectionForPeriod` and its group-scoped twin
- * `getSectionForPeriodAsGroupPeer` — one contract, so a query change (e.g. a
- * new reopen-lifecycle field) lands in both reads together.
- */
-const sectionForPeriodInclude = {
-  ...reportSectionFullInclude,
-  report: { select: { periodStatus: true, archived: true } },
-  // Does this section already hold a pending reopen request? Drives
-  // `canRequestReopen` (one-pending rule).
-  reopenRequests: {
-    where: { status: "pending" },
-    select: { id: true },
-    take: 1,
-  },
-} as const satisfies Prisma.ReportSectionInclude;
-
-type SectionForPeriodRow = Prisma.ReportSectionGetPayload<{
-  include: typeof sectionForPeriodInclude;
-}>;
 
 @Injectable()
 export class LeadFormPrismaRepository implements LeadFormRepository {
@@ -146,122 +110,30 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     return row?.reportingGroupId ?? null;
   }
 
-  /**
-   * Shared mapping for `getSectionForPeriod` and `getSectionForPeriodAsGroupPeer`
-   * — both queries share the same `sectionForPeriodInclude`, so the row shape
-   * and the derived `readOnly`/`reopenFacts` are computed exactly once.
-   */
-  private mapSectionForPeriodRow(row: SectionForPeriodRow): {
-    section: ReportSectionReadModel;
-    readOnly: boolean;
-    reopenFacts: ReopenEligibilityFacts;
-  } {
-    const section = mapPrismaToReportSection(row);
-    const { report, reopenRequests } = row;
-
-    // A 'reopened' period is editable again (the whole point of the state), so
-    // it is read-write alongside 'open'. 'published'/'archived' stay read-only.
-    const readOnly =
-      report.periodStatus !== "open" && report.periodStatus !== "reopened";
-
-    const reopenFacts: ReopenEligibilityFacts = {
-      sectionStatus: section.status,
-      periodStatus: report.periodStatus,
-      archived: report.archived,
-      hasPendingReopen: reopenRequests.length > 0,
-    };
-
-    return { section, readOnly, reopenFacts };
-  }
-
-  async getSectionForPeriod(
+  getSectionForPeriod(
     reportId: string,
     userId: string,
-  ): Promise<{
-    section: ReportSectionReadModel;
-    readOnly: boolean;
-    reopenFacts: ReopenEligibilityFacts;
-  } | null> {
-    const row = await this.prisma.reportSection.findUnique({
-      where: { reportId_authorId: { reportId, authorId: userId } },
-      include: sectionForPeriodInclude,
-    });
-
-    if (!row) {
-      return null;
-    }
-
-    return this.mapSectionForPeriodRow(row);
+  ): Promise<SectionForPeriodResult | null> {
+    return getSectionForPeriod(this.prisma, reportId, userId);
   }
 
-  /**
-   * Atomic head cross-author read: returns the section only if, in the SAME
-   * query snapshot, the author's reporting group currently contains
-   * `peerUserId`. `assertHeadTargetInGroup` (two separate group lookups) stays
-   * the fast pre-check for a clear 403 message, but it reads the group
-   * membership in a separate statement — a concurrent reassignment between
-   * that check and an unscoped section read could slip a cross-group section
-   * through. Folding the group predicate into this one `findFirst` closes that
-   * window: the membership and the section come from one atomic read, so
-   * there is no gap for the group to change in. A peer with no reporting group
-   * (`reportingGroupId: null`) fails the relation filter and yields null —
-   * fail closed with no separate null-check needed.
-   */
-  async getSectionForPeriodAsGroupPeer(
+  getSectionForPeriodAsGroupPeer(
     reportId: string,
     authorId: string,
     peerUserId: string,
-  ): Promise<{
-    section: ReportSectionReadModel;
-    readOnly: boolean;
-    reopenFacts: ReopenEligibilityFacts;
-  } | null> {
-    const row = await this.prisma.reportSection.findFirst({
-      where: {
-        reportId,
-        authorId,
-        author: { reportingGroup: { users: { some: { id: peerUserId } } } },
-      },
-      include: sectionForPeriodInclude,
-    });
-
-    if (!row) {
-      return null;
-    }
-
-    return this.mapSectionForPeriodRow(row);
+  ): Promise<SectionForPeriodResult | null> {
+    return getSectionForPeriodAsGroupPeer(
+      this.prisma,
+      reportId,
+      authorId,
+      peerUserId,
+    );
   }
 
-  async getSectionReopenContext(
+  getSectionReopenContext(
     sectionId: string,
   ): Promise<{ authorId: string; facts: ReopenEligibilityFacts } | null> {
-    const row = await this.prisma.reportSection.findUnique({
-      where: { id: sectionId },
-      select: {
-        authorId: true,
-        status: true,
-        report: { select: { periodStatus: true, archived: true } },
-        reopenRequests: {
-          where: { status: "pending" },
-          select: { id: true },
-          take: 1,
-        },
-      },
-    });
-
-    if (!row) {
-      return null;
-    }
-
-    return {
-      authorId: row.authorId,
-      facts: {
-        sectionStatus: row.status,
-        periodStatus: row.report.periodStatus,
-        archived: row.report.archived,
-        hasPendingReopen: row.reopenRequests.length > 0,
-      },
-    };
+    return getSectionReopenContext(this.prisma, sectionId);
   }
 
   async revokeSectionSubmission(
@@ -306,153 +178,17 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     return result.count;
   }
 
-  async fillFromSection(
+  fillFromSection(
     targetSectionId: string,
     sourceSectionId: string,
     expectedVersion: number,
   ): Promise<number> {
-    const source = await this.prisma.reportSection.findUnique({
-      where: { id: sourceSectionId },
-      include: reportSectionFullInclude,
-    });
-
-    if (!source) {
-      // TOCTOU: the service prechecks the source, but it can be deleted before
-      // this copy re-read. Keep NOT_FOUND (not a false 500) on that race.
-      throw new LeadFormDomainError(
-        `Source section ${sourceSectionId} not found.`,
-      );
-    }
-
-    // Fill From copies the lead's own past content forward, so it must honour
-    // the XOR parent and carry an activity-parented record ONLY when its
-    // activity is still attached to the TARGET section. A product-parented
-    // record always carries. Skipping this would orphan an activity row on a
-    // section that no longer reports it — or, by dropping activityId, collapse
-    // it to no-parent and trip the XOR CHECK, aborting the whole Fill From
-    // (including the valid product rows).
-    const targetActivityIds = new Set(
-      (
-        await this.prisma.activityStatus.findMany({
-          where: { reportSectionId: targetSectionId },
-          select: { activityId: true },
-        })
-      ).map((row) => row.activityId),
+    return fillFromSectionTx(
+      this.prisma,
+      targetSectionId,
+      sourceSectionId,
+      expectedVersion,
     );
-    const itemsToCopy = source.items.filter((row) =>
-      isCarryable(row, targetActivityIds),
-    );
-    const risksToCopy = source.risks.filter((row) =>
-      isCarryable(row, targetActivityIds),
-    );
-    const decisionsToCopy = source.decisions.filter((row) =>
-      isCarryable(row, targetActivityIds),
-    );
-    const copiedItems =
-      itemsToCopy.length + risksToCopy.length + decisionsToCopy.length;
-
-    try {
-      await this.prisma.$transaction(
-        async (tx) => {
-          const gate = await tx.$queryRaw<
-            { periodStatus: string; archived: boolean }[]
-          >`SELECT report."periodStatus", report."archived"
-            FROM "Report" AS report
-            INNER JOIN "ReportSection" AS section
-              ON section."reportId" = report."id"
-            WHERE section."id" = ${targetSectionId}
-            FOR UPDATE OF report`;
-          const gateRow = gate[0];
-          // A missing row means the section was deleted between the precheck
-          // and this transaction — that is a NOT_FOUND, not a period-state
-          // constraint.
-          if (gateRow === undefined) {
-            throw new LeadFormDomainError(
-              "The target section no longer exists.",
-            );
-          }
-          // The archive transition leaves periodStatus untouched, so the
-          // in-tx gate must re-check `archived` too — same predicate as
-          // isEditablePeriod on the authz path.
-          if (
-            gateRow.archived ||
-            (gateRow.periodStatus !== "open" &&
-              gateRow.periodStatus !== "reopened")
-          ) {
-            throw new LeadFormConstraintError(
-              "Cannot fill a section of a published report.",
-            );
-          }
-
-          // Optimistic-concurrency compare-and-set on the TARGET, first so a
-          // conflict aborts before any deleteMany — Fill From's delete-then-
-          // recreate must not clobber a target a second writer just advanced.
-          const updated = await tx.reportSection.updateMany({
-            where: { id: targetSectionId, version: expectedVersion },
-            data: { version: { increment: 1 } },
-          });
-          if (updated.count === 0) {
-            throw new SectionVersionConflictError(
-              "This section was changed by another save. Reload and try again.",
-            );
-          }
-
-          // Replace only the sections that Fill From owns. Priorities stay fresh
-          // for the current week and must not be copied or cleared here.
-          await tx.item.deleteMany({
-            where: { reportSectionId: targetSectionId },
-          });
-          await tx.risk.deleteMany({
-            where: { reportSectionId: targetSectionId },
-          });
-          await tx.decision.deleteMany({
-            where: { reportSectionId: targetSectionId },
-          });
-
-          // Copy items from source. Next Week source items become Current Week
-          // suggestions in the target period. Activity-parented items ride the
-          // XOR parent — carry activityId (product FK null) only when re-attached.
-          if (itemsToCopy.length > 0) {
-            await tx.item.createMany({
-              data: toFilledItemRows(itemsToCopy, targetSectionId),
-            });
-          }
-
-          // Copy risks from source (same XOR-parent carry rule as items).
-          if (risksToCopy.length > 0) {
-            await tx.risk.createMany({
-              data: toFilledRiskRows(risksToCopy, targetSectionId),
-            });
-          }
-
-          // Copy decisions from source. A decision is product- OR activity-
-          // parented (XOR); carry the activity case only when re-attached, the
-          // product case always. isCarryable(null activityId) == true handles both.
-          if (decisionsToCopy.length > 0) {
-            await tx.decision.createMany({
-              data: toFilledDecisionRows(decisionsToCopy, targetSectionId),
-            });
-          }
-        },
-        { timeout: 15_000 },
-      );
-    } catch (error) {
-      if (error instanceof SectionVersionConflictError) {
-        throw error;
-      }
-      // Any P2002 in the fill copy means a duplicate child row — surface it as a
-      // clean domain error, never a raw 500. Unscoped: duck-typed `.code` via
-      // the shared guard, so no `instanceof` narrowing is needed.
-      if (isUniqueViolation(error)) {
-        throw new ReportSectionDomainError(
-          "DUPLICATE_CHILD_ROW",
-          "Could not fill the section: a duplicate row was rejected.",
-        );
-      }
-      throw error;
-    }
-
-    return copiedItems;
   }
 
   async createReopenRequest(
@@ -489,189 +225,24 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     }
   }
 
-  /**
-   * The product ids the viewer and author BOTH hold a stage assignment on,
-   * restricted to non-archived products. Mirrors step 1 of
-   * {@link getCrossAuthorContent}: the viewer's assigned products intersected
-   * with the author's assignments on those products, filtered by
-   * `project.archived=false`. Report-independent (assignments are report-wide);
-   * report access is proven separately by the caller's own-section read.
-   */
-  async getSharedNonArchivedProductIds(
+  getSharedNonArchivedProductIds(
     viewerId: string,
     authorId: string,
   ): Promise<string[]> {
-    const viewerAssignments = await this.prisma.stageAssignment.findMany({
-      where: { userId: viewerId },
-      select: { projectId: true },
-    });
-    const viewerProjectIds = [
-      ...new Set(viewerAssignments.map((r) => r.projectId)),
-    ];
-    if (viewerProjectIds.length === 0) {
-      return [];
-    }
-
-    const shared = await this.prisma.stageAssignment.findMany({
-      where: {
-        projectId: { in: viewerProjectIds },
-        userId: authorId,
-        project: { archived: false },
-      },
-      select: { projectId: true },
-    });
-    return [...new Set(shared.map((r) => r.projectId))];
+    return getSharedNonArchivedProductIds(this.prisma, viewerId, authorId);
   }
 
-  async getCrossAuthors(
+  getCrossAuthors(
     reportId: string,
     userId: string,
-  ): Promise<
-    {
-      projectId: string;
-      projectName: string;
-      authorId: string;
-      authorInitials: string;
-      authorShortName: string;
-      stageNames: string[];
-      stages: {
-        stageName: string;
-        status: StageTrafficStatus;
-      }[];
-    }[]
-  > {
-    const myAssignments = await this.prisma.stageAssignment.findMany({
-      where: { userId },
-      select: { projectId: true },
-    });
-    const myProjectIds = [...new Set(myAssignments.map((r) => r.projectId))];
-    if (myProjectIds.length === 0) return [];
-
-    // Other users' stage assignments on shared projects
-    const others = await this.prisma.stageAssignment.findMany({
-      where: { projectId: { in: myProjectIds }, userId: { not: userId } },
-      select: {
-        projectId: true,
-        stageId: true,
-        project: { select: { id: true, name: true, archived: true } },
-        stage: { select: { name: true } },
-        user: { select: { id: true, name: true } },
-      },
-    });
-
-    // Persisted stage traffic + covering risks for each foreign author in this
-    // report. Only `severity` + `stageNames` of the risk are needed: the stage
-    // status is RISK-DERIVED (covering risks that name the stage), never the
-    // foreign item text. The persisted traffic is consulted only as the
-    // empty/non-empty base when no risk covers the stage.
-    const otherUserIds = [...new Set(others.map((o) => o.user.id))];
-    const sections = await this.prisma.reportSection.findMany({
-      where: { reportId, authorId: { in: otherUserIds } },
-      select: {
-        authorId: true,
-        risks: {
-          select: { projectId: true, severity: true, stageNames: true },
-        },
-        stageStatuses: {
-          select: { projectId: true, stageId: true, status: true },
-        },
-      },
-    });
-
-    const { statusMap, risksByAuthor } = indexForeignSections(sections);
-    return buildCrossAuthorStatusRows(others, statusMap, risksByAuthor);
+  ): ReturnType<typeof getCrossAuthors> {
+    return getCrossAuthors(this.prisma, reportId, userId);
   }
 
-  async getCrossAuthorContent(
+  getCrossAuthorContent(
     reportId: string,
     userId: string,
   ): Promise<{ coOwnsShared: boolean; rows: CrossAuthorSectionRow[] }> {
-    // Step 1: resolve the caller's assigned products (same join as
-    // getCrossAuthors), then co-owners on shared, NON-ARCHIVED products.
-    const myAssignments = await this.prisma.stageAssignment.findMany({
-      where: { userId },
-      select: { projectId: true },
-    });
-    const myProjectIds = [...new Set(myAssignments.map((r) => r.projectId))];
-    if (myProjectIds.length === 0) return { coOwnsShared: false, rows: [] };
-
-    const others = await this.prisma.stageAssignment.findMany({
-      where: {
-        projectId: { in: myProjectIds },
-        userId: { not: userId },
-        project: { archived: false },
-      },
-      select: {
-        projectId: true,
-        stageId: true,
-        stage: { select: { name: true } },
-        user: { select: { id: true, name: true, role: true } },
-      },
-    });
-
-    // Per-author set of shared, non-archived projectIds + the author's stage
-    // assignments on those products (the chips come from assignments, not the
-    // section — a co-owner's stage exists even with no persisted status row).
-    // `coOwnsShared` is the co-ownership authorization signal: true iff the
-    // caller co-owns at least one shared, non-archived product. It is kept
-    // separate from row-emptiness so the service can label a denied read
-    // (co-owns nothing) distinctly from a legitimately empty one (co-owns a
-    // product but the co-owner authored no records).
-    const { authorEntries, coOwnsShared, otherUserIds } =
-      groupCrossAuthorAuthors(others);
-    if (!coOwnsShared) return { coOwnsShared: false, rows: [] };
-
-    // Step 2: fetch foreign sections + covering risks (for risk-derived chips).
-    const sections = await this.prisma.reportSection.findMany({
-      where: { reportId, authorId: { in: otherUserIds } },
-      select: {
-        authorId: true,
-        items: {
-          select: {
-            id: true,
-            projectId: true,
-            type: true,
-            text: true,
-            tag: true,
-            workflowStatus: true,
-            carriedOver: true,
-            priorityRank: true,
-            stageNames: true,
-          },
-        },
-        risks: {
-          select: {
-            id: true,
-            projectId: true,
-            risk: true,
-            impact: true,
-            mitigation: true,
-            severity: true,
-            stageNames: true,
-          },
-        },
-        decisions: {
-          select: {
-            id: true,
-            productId: true,
-            text: true,
-            owner: true,
-            deadline: true,
-            impact: true,
-            resolvedAt: true,
-            stageNames: true,
-          },
-        },
-        stageStatuses: {
-          select: { projectId: true, stageId: true, status: true },
-        },
-      },
-    });
-
-    // Step 3: build per-author rows filtered to shared products only.
-    return {
-      coOwnsShared,
-      rows: buildCrossAuthorContentRows(sections, authorEntries),
-    };
+    return getCrossAuthorContent(this.prisma, reportId, userId);
   }
 }

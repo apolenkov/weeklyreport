@@ -1,96 +1,31 @@
 "use client";
 
-import type {
-  DraftSavePayload,
-  ReportSectionReadModel,
-} from "@customreport/shared";
+import type { DraftSavePayload } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateLeadForm } from "../lib/cache-keys";
-import { isConflictError } from "../lib/trpc";
 import { useTRPC } from "../lib/trpc-context";
+import { buildSaveDraftHandlers } from "./autosave-mutation-handlers";
+import { runDebouncedSaveTick, runForceSave } from "./autosave-save-runner";
+import { stableStringify } from "./autosave-stable-stringify";
+import type {
+  AutosaveSnapshot,
+  AutosaveState,
+  DraftSaveContent,
+  UseLeadFormAutosaveArgs,
+} from "./autosave-types";
 
-/**
- * The autosave payload WITHOUT the optimistic-lock version. The version is lock
- * metadata, not user content: keeping it out of the payload the hook hashes
- * means a version bump never marks the form dirty, never re-seeds, and never
- * appears in the dirty/queue key. The hook injects the live version at mutate
- * time instead (so a queued drain rebases onto the freshly-bumped value).
- */
-export type DraftSaveContent = Omit<DraftSavePayload, "version">;
-
-export type AutosaveState = "idle" | "pending" | "saving" | "saved" | "error";
-
-export interface AutosaveSnapshot {
-  readonly state: AutosaveState;
-  readonly lastSavedAt: Date | null;
-  readonly dirty: boolean;
-  readonly isInFlight: boolean;
-  /** Cancels the debounce timer and triggers an immediate save. */
-  readonly forceSave: () => Promise<void>;
-}
-
-export interface UseLeadFormAutosaveArgs {
-  readonly reportSectionId: string | null;
-  readonly payload: DraftSaveContent | null;
-  readonly enabled: boolean;
-  readonly debounceMs?: number;
-  /**
-   * Optional baseline-payload key. When provided, the hook treats this exact
-   * key as the last-saved snapshot — so a fresh load from the server is not
-   * considered dirty until the user actually edits a field. The caller is
-   * responsible for stable serialization (e.g. via the same stringify the
-   * hook would produce). When omitted, dirty starts true on first non-null
-   * payload (legacy behavior).
-   */
-  readonly initialSavedKey?: string | null;
-  /**
-   * Row revision the next save must compare-and-set against (optimistic lock).
-   * The hook seeds its live version from this and re-syncs whenever it changes
-   * (e.g. a post-fillFrom or post-conflict refetch).
-   */
-  readonly version: number;
-  /**
-   * Called with the server-confirmed NEW version after every successful save.
-   * The owning component is the single source of truth for the version; this
-   * pushes each bump back so submit/fillFrom carry the current value.
-   */
-  readonly onVersionChange: (version: number) => void;
-  /** Reports the server-confirmed section together with the payload it persisted. */
-  readonly onSaved?: (
-    section: ReportSectionReadModel,
-    payload: DraftSaveContent,
-  ) => void;
-  /**
-   * Called when a save is rejected as a stale-version CONFLICT (409). The
-   * caller refetches this section and surfaces it; when provided, the hook
-   * suppresses its own generic error toast for that case.
-   */
-  readonly onConflict?: () => void;
-}
+export { stableStringify } from "./autosave-stable-stringify";
+export type {
+  AutosaveSnapshot,
+  AutosaveState,
+  DraftSaveContent,
+  UseLeadFormAutosaveArgs,
+} from "./autosave-types";
 
 const DEFAULT_DEBOUNCE_MS = 5000;
-
-/**
- * Stable JSON serialization with sorted keys so payload diffs are deterministic
- * regardless of object construction order. Exported so callers can compute
- * the same baseline key when priming `initialSavedKey`.
- */
-export function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (value instanceof Date) return JSON.stringify(value.toISOString());
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(",")}]`;
-  }
-  const obj = value as Record<string, unknown>;
-  // eslint-disable-next-line sonarjs/no-alphabetical-sort -- stable serialization for dirty-state comparison; localeCompare would break payload hashing
-  const keys = Object.keys(obj).sort();
-  return `{${keys
-    .map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`)
-    .join(",")}}`;
-}
 
 /**
  * Debounced autosave hook for the Lead Form.
@@ -157,77 +92,29 @@ export function useLeadFormAutosave(
   }, [initialSavedKey]);
 
   const saveDraftMut = useMutation(
-    // eslint-disable-next-line react-hooks/refs -- refs are touched inside mutation callbacks (event time); the options factory just runs during render
-    trpc.reports.saveDraft.mutationOptions({
-      onSuccess: (saved) => {
-        // Advance the live version from the server-confirmed value FIRST, so the
-        // drain below rebases the queued save onto the bumped version (otherwise
-        // it would replay the stale version and self-409). Then push it to the
-        // owning component (single source) for submit/fillFrom.
-        versionRef.current = saved.version;
-        onVersionChange(saved.version);
-
-        // Stamp the confirmed baseline ONLY if the lead is still on the section
-        // this save targeted. If they navigated away while it was in flight,
-        // stamping would clobber the new section's freshly-primed baseline and
-        // make it falsely read dirty (scheduling a spurious save there).
-        if (inFlightSectionRef.current === reportSectionIdRef.current) {
-          lastSavedRef.current = inFlightRef.current;
-        }
-        if (inFlightPayloadRef.current !== null) {
-          onSaved?.(saved, inFlightPayloadRef.current);
-        }
-        setState("saved");
-        setLastSavedAt(new Date());
-        invalidateLeadForm(qc, trpc);
-
-        // Drain a queued save (if any) to the section it was BUILT for — never
-        // the latest section. The hook is not remounted on navigation, so the
-        // queued payload's own reportSectionId is the only safe target.
-        if (queuedKeyRef.current !== null) {
-          const queued = queuedPayloadRef.current;
-          const queuedKey = queuedKeyRef.current;
-          queuedKeyRef.current = null;
-          queuedPayloadRef.current = null;
-          if (queued !== null && queuedKey !== lastSavedRef.current) {
-            setState("saving");
-            inFlightRef.current = queuedKey;
-            inFlightPayloadRef.current = queued;
-            inFlightSectionRef.current = queued.reportSectionId;
-            // Fire-and-forget: the mutation's own onSuccess/onError drive the
-            // result and the next drain. `mutate` (not `mutateAsync`) so no
-            // unhandled rejection leaks from a discarded promise. Inject the
-            // just-bumped version so the drain compare-and-sets against it.
-            mutateRef.current({ ...queued, version: versionRef.current });
-          }
-        }
-      },
-      onError: (err: unknown) => {
-        const queuedSectionId =
-          queuedPayloadRef.current?.reportSectionId ?? null;
-        queuedKeyRef.current = null;
-        queuedPayloadRef.current = null;
-        setState("error");
-        // A stale-version 409 means another writer advanced the section; hand
-        // off to the caller (refetch + surface) instead of a generic toast.
-        // No retry re-arm: replaying against the stale version would 409
-        // again — the conflict flow rebuilds state from the refetch.
-        if (onConflict && isConflictError(err)) {
-          onConflict();
-          return;
-        }
-        // Re-arm the debounce only when the queued edit still belongs to the
-        // section the form shows — after navigation the current payload no
-        // longer carries the queued content, so a silent replay would save
-        // the wrong section's state.
-        if (queuedSectionId !== null && queuedSectionId === reportSectionId) {
-          setQueuedRetryRevision((revision) => revision + 1);
-        }
-        const msg =
-          err instanceof Error && err.message ? err.message : "Autosave failed";
-        toast.error(msg);
-      },
-    }),
+    trpc.reports.saveDraft.mutationOptions(
+      // eslint-disable-next-line react-hooks/refs -- refs are read inside the handler closures (event time); building the deps object just runs during render
+      buildSaveDraftHandlers({
+        versionRef,
+        lastSavedRef,
+        inFlightRef,
+        inFlightPayloadRef,
+        inFlightSectionRef,
+        queuedKeyRef,
+        queuedPayloadRef,
+        getMutate: () => mutateRef.current,
+        getCurrentSectionId: () => reportSectionIdRef.current,
+        setState,
+        setLastSavedAt,
+        setQueuedRetryRevision,
+        onVersionChange,
+        onSaved,
+        onConflict,
+        reportSectionId,
+        invalidate: () => invalidateLeadForm(qc, trpc),
+        reportError: (message) => toast.error(message),
+      }),
+    ),
   );
 
   const payloadKey = payload === null ? "" : stableStringify(payload);
@@ -242,7 +129,12 @@ export function useLeadFormAutosave(
   // depend only on `payloadKey` (deep-content hash) without restarting on
   // unrelated re-renders (which would reset the debounce timer).
   const payloadRef = useRef(payload);
-  const mutateRef = useRef(saveDraftMut.mutate);
+  // Seeded with a noop and populated by the sync effect below before any
+  // mutation resolves — an explicit type here breaks the saveDraftMut↔mutateRef
+  // inference cycle (getMutate feeds the handlers that type saveDraftMut).
+  const mutateRef = useRef<(payload: DraftSavePayload) => void>(
+    () => undefined,
+  );
   const mutateAsyncRef = useRef(saveDraftMut.mutateAsync);
   const reportSectionIdRef = useRef(reportSectionId);
   // Live `isPending` for the debounce timer: the timer closure captures the
@@ -276,24 +168,19 @@ export function useLeadFormAutosave(
 
     setState("pending");
     const timer = setTimeout(() => {
-      const current = payloadRef.current;
-      if (current === null) return;
-      if (isPendingRef.current) {
-        // A save is already in flight — stash this payload for the onSuccess
-        // drain instead of starting a second parallel mutation on the single
-        // in-flight slot (mirrors forceSave's guard). Latest payload wins.
-        queuedKeyRef.current = payloadKey;
-        queuedPayloadRef.current = current;
-        return;
-      }
-      setState("saving");
-      inFlightRef.current = payloadKey;
-      inFlightPayloadRef.current = current;
-      inFlightSectionRef.current = reportSectionId;
-      mutateRef.current({
-        ...current,
+      runDebouncedSaveTick({
+        payloadRef,
+        isPendingRef,
+        queuedKeyRef,
+        queuedPayloadRef,
+        inFlightRef,
+        inFlightPayloadRef,
+        inFlightSectionRef,
+        versionRef,
+        getMutate: () => mutateRef.current,
+        setState,
+        payloadKey,
         reportSectionId,
-        version: versionRef.current,
       });
     }, debounceMs);
 
@@ -328,49 +215,25 @@ export function useLeadFormAutosave(
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
 
-  /**
-   * Cancels the pending debounce timer and triggers an immediate save.
-   * If a mutation is already in flight the current payload is queued and
-   * fired automatically on success.
-   */
   const forceSave = useRef<() => Promise<void>>(() => Promise.resolve());
   // eslint-disable-next-line react-hooks/refs -- latest-ref stable-callback pattern: render stamps the newest closure; consumers call it at event time
-  forceSave.current = async () => {
-    const current = payloadRef.current;
-    const currentKey = current === null ? "" : stableStringify(current);
-    const sectionId = reportSectionIdRef.current;
-
-    if (!enabled || current === null || currentKey === "" || !sectionId) {
-      return;
-    }
-    if (currentKey === lastSavedRef.current) {
-      // Already up-to-date — nothing to save.
-      return;
-    }
-
-    // Cancel outstanding debounce timer.
-    if (debounceTimerRef.current !== null) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
-
-    if (saveDraftMut.isPending) {
-      // A mutation is already in flight. Queue for after success.
-      queuedKeyRef.current = currentKey;
-      queuedPayloadRef.current = current;
-      return;
-    }
-
-    setState("saving");
-    inFlightRef.current = currentKey;
-    inFlightPayloadRef.current = current;
-    inFlightSectionRef.current = sectionId;
-    await mutateAsyncRef.current({
-      ...current,
-      reportSectionId: sectionId,
-      version: versionRef.current,
+  forceSave.current = () =>
+    runForceSave({
+      payloadRef,
+      reportSectionIdRef,
+      lastSavedRef,
+      debounceTimerRef,
+      queuedKeyRef,
+      queuedPayloadRef,
+      inFlightRef,
+      inFlightPayloadRef,
+      inFlightSectionRef,
+      versionRef,
+      getMutateAsync: () => mutateAsyncRef.current,
+      setState,
+      enabled,
+      isPending: saveDraftMut.isPending,
     });
-  };
 
   const isInFlight = saveDraftMut.isPending;
 

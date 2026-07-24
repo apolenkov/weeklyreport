@@ -1,11 +1,5 @@
-import type { ReportSectionReadModel, Role } from "@customreport/shared";
+import type { Role } from "@customreport/shared";
 
-import {
-  assertHeadTargetInGroup,
-  filterSectionToSharedProducts,
-  readSectionForByPeriod,
-  resolveCrossAuthorScope,
-} from "../domain/lead-form-cross-author-scope";
 import {
   computeReopenEligibility,
   type CrossAuthorSectionRow,
@@ -17,7 +11,12 @@ import {
   reopenBlockedMessage,
   ReopenRequestError,
 } from "../domain/lead-form-shared";
-import { ReportSectionDomainError } from "./report-sections.service.js";
+import {
+  assertFillableSource,
+  assertFillableTarget,
+  assertNoPublishedLineage,
+} from "./fill-from-guards.js";
+import { type GetByPeriodResult, readByPeriod } from "./lead-form-by-period.js";
 import {
   NOOP_REPORT_SECTIONS_TELEMETRY,
   type ReportSectionsTelemetry,
@@ -115,21 +114,11 @@ export class LeadFormService {
     // lock). A concurrent edit of the target rejects with CONFLICT.
     expectedVersion: number,
   ): Promise<{ success: true; copiedItems: number }> {
-    const target = await this.repository.getSectionById(targetSectionId);
-
-    if (!target) {
-      throw new LeadFormDomainError(
-        `Target section ${targetSectionId} not found.`,
-      );
-    }
-
-    if (target.authorId !== userId) {
-      throw new LeadFormAccessError("Can only fill your own section.");
-    }
-
-    if (target.status === "submitted") {
-      throw new LeadFormConstraintError("Cannot fill a submitted section.");
-    }
+    const target = await assertFillableTarget(
+      this.repository,
+      targetSectionId,
+      userId,
+    );
 
     // Refuse to mutate the live rows of a PUBLISHED period. The viewer's
     // published search reads live Item/Risk/Decision rows, but the viewer
@@ -141,40 +130,8 @@ export class LeadFormService {
     // reopened period (periodStatus='reopened') is editable again and is
     // excluded from the viewer's published search, so it stays allowed.
     await this.assertPeriodNotPublished(targetSectionId, "fill a section of");
-
-    // Resolve-not-delete also binds Fill From: it delete-recreates the target's
-    // items/decisions with fresh identity, which would silently destroy any
-    // published-lineage record on a REOPENED period (the periodStatus gate
-    // above only blocks a still-published one). Fail closed — reject the whole
-    // fill if the target holds any published-lineage record;
-    // a never-published draft has none and is unaffected. The same lineage
-    // query the save guard uses.
-    const published = await this.repository.getPublishedLineage(target);
-    if (
-      published.itemStableIds.length > 0 ||
-      published.decisionStableIds.length > 0
-    ) {
-      throw new ReportSectionDomainError(
-        "PUBLISHED_RECORD_LOCKED",
-        "Fill from previous cannot replace records that are part of the published report.",
-      );
-    }
-
-    // Authorize the SOURCE section too. The fill-from picker only ever offers
-    // the lead's OWN past sections (`LeadReportPeriod.sourceSectionId` is sourced
-    // from `MyHistoryEntry.sectionId`), so any sourceSectionId authored by
-    // someone else is a forged request — without this guard a lead could copy
-    // another group's Item/Risk/Decision content into their own draft on an open
-    // report. fillFrom copies your own history; it is never cross-author.
-    const source = await this.repository.getSectionById(sourceSectionId);
-    if (!source) {
-      throw new LeadFormDomainError(
-        `Source section ${sourceSectionId} not found.`,
-      );
-    }
-    if (source.authorId !== userId) {
-      throw new LeadFormAccessError("Can only fill from your own section.");
-    }
+    await assertNoPublishedLineage(this.repository, target);
+    await assertFillableSource(this.repository, sourceSectionId, userId);
 
     // TODO(versions-v2): a pre-overwrite safety snapshot was taken here
     // until version snapshots were removed (defer-versions-coming-soon).
@@ -230,89 +187,14 @@ export class LeadFormService {
     userId: string,
     role?: Role,
     requestedAuthorId?: string,
-  ): Promise<{
-    section: ReportSectionReadModel;
-    readOnly: boolean;
-    canRequestReopen: boolean;
-    reopenBlockedReason: string | null;
-    /**
-     * Resolve-not-delete: the section's published item/decision lineages, so
-     * the form can mark locked records and hide Delete. Advisory for the UI
-     * only — the save-path guard enforces the lock.
-     */
-    publishedLineage: {
-      itemStableIds: readonly string[];
-      decisionStableIds: readonly string[];
-    };
-  }> {
-    const isHeadLike = role === "head" || role === "admin";
-    // One shared non-archived set gates AND scopes the lead cross-author read
-    // (null = not a granted cross-author read, including archived-only sharing
-    // or no report access). The head branch is group-scoped just below; admin
-    // is global by design.
-    const sharedScope = await resolveCrossAuthorScope(
+  ): Promise<GetByPeriodResult> {
+    return readByPeriod(
       this.repository,
       reportId,
       userId,
       role,
       requestedAuthorId,
     );
-    // A head is a single-group role: it may read another author's section only
-    // inside its own reporting group. `requestedAuthorId` reaches here from a
-    // client URL param, so bound it before the target section is loaded. admin
-    // is exempt (global). A head's own read and a lead's genuine cross-author
-    // shared read never enter this branch.
-    const isHeadCrossRead =
-      role === "head" &&
-      requestedAuthorId !== undefined &&
-      requestedAuthorId !== userId;
-    if (isHeadCrossRead) {
-      await assertHeadTargetInGroup(this.repository, userId, requestedAuthorId);
-    }
-    const sectionAuthorId =
-      requestedAuthorId !== undefined && (isHeadLike || sharedScope !== null)
-        ? requestedAuthorId
-        : userId;
-    // `assertHeadTargetInGroup` above is only the fast pre-check (defense in
-    // depth); `readSectionForByPeriod` is the actual enforcement — its
-    // head-cross branch re-evaluates group membership in the SAME query as
-    // the section load, closing the race the pre-check alone leaves open.
-    const result = await readSectionForByPeriod(
-      this.repository,
-      reportId,
-      sectionAuthorId,
-      userId,
-      isHeadCrossRead,
-    );
-
-    // A lead cross-author read returns only the records on products the two
-    // leads share; the own-section and head/admin reads return the full section.
-    const section =
-      sharedScope !== null
-        ? filterSectionToSharedProducts(result.section, sharedScope)
-        : result.section;
-
-    // The lead-only Request-Reopen affordance uses the SAME
-    // `computeReopenEligibility` as the write guard, so the button shows exactly
-    // when `requestReopen` would succeed. A head/admin or cross-author viewer
-    // never files a reopen request — it is false when the section is not the
-    // caller's own. `reopenFacts` never leaves the API.
-    const isOwnSection = sectionAuthorId === userId;
-    const { canRequestReopen, reason } = computeReopenEligibility(
-      result.reopenFacts,
-    );
-
-    // Computed over the (possibly product-filtered) section actually returned,
-    // so a cross-author read never leaks lineage of records it does not show.
-    const publishedLineage = await this.repository.getPublishedLineage(section);
-
-    return {
-      section,
-      readOnly: result.readOnly || !isOwnSection,
-      canRequestReopen: isOwnSection && canRequestReopen,
-      reopenBlockedReason: isOwnSection ? reason : null,
-      publishedLineage,
-    };
   }
 
   async getCrossAuthors(
