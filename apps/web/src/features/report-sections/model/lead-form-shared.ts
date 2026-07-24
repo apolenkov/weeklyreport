@@ -19,11 +19,10 @@ export function buildProjectIndex(section: ReportSectionReadModel): Map<
       trafficLight: ReportSectionReadModel["projects"][number]["trafficLight"];
     }
   >();
-  // fix-lead-surface-name-resolution: name-only entries for projects that
-  // section rows reference but the author owns no stage on. Seeded first so
-  // the stage-owned loop below wins on conflict; they
-  // feed product-name lookup only — `mapLeadProducts` does not read this
-  // index, so no stray product card or stage grid appears.
+  // Name-only entries for projects that section rows reference but the
+  // author owns no stage on. Seeded first so the stage-owned loop below
+  // wins on conflict; they feed product-name lookup only — `mapLeadProducts`
+  // does not read this index, so no stray product card or stage grid appears.
   for (const referenced of section.referencedProjects ?? []) {
     map.set(referenced.projectId, {
       name: referenced.projectName,

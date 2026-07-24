@@ -14,9 +14,8 @@ type SectionDecision = ReportSectionReadModel["decisions"][number];
 const ISO_DATE_LENGTH = 10;
 
 function clampRank(rank: number): number {
-  // Keep ranks ≥ 1 (schema requires positive int) but no upper clamp — the
-  // UI is now variable-length. Earlier this funnel mapped everything onto
-  // 1|2|3 to match the fixed-slot layout that has been removed.
+  // Keep ranks ≥ 1 (schema requires a positive int) but no upper clamp —
+  // the priority list is variable-length, so any rank is renderable.
   if (rank < 1 || !Number.isInteger(rank)) return 1;
   return rank;
 }

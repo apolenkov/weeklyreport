@@ -210,7 +210,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     expect(ownerOnlyStatus).toBeNull();
   });
 
-  it("getSectionById surfaces authorRole + projects[i].ownedStages from StageAssignment (35-03/04)", async () => {
+  it("getSectionById surfaces authorRole + projects[i].ownedStages from StageAssignment", async () => {
     await assignLeadToProject();
     await prisma.stageStatus.create({
       data: {
@@ -223,9 +223,9 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
 
     const result = await repo.getSectionById(testData.section.id);
     expect(result).not.toBeNull();
-    // 35-03: authorRole flows through from User.role.
+    // authorRole flows through from User.role.
     expect(expectDefined(result).authorRole).toBe("lead");
-    // 35-04: owned stages on the project mirror the StageAssignment row.
+    // Owned stages on the project mirror the StageAssignment row.
     const project = expectDefined(expectDefined(result).projects[0]);
     expect(project.ownedStages).toEqual([
       expect.objectContaining({
@@ -237,7 +237,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     expect(project.trafficLight).toBe("yellow");
   });
 
-  it("saveSection persists stageName on Item / Risk / Decision / Priority (35-04)", async () => {
+  it("saveSection persists stageName on Item / Risk / Decision / Priority", async () => {
     await assignLeadToProject();
     await prisma.projectStatus.create({
       data: {
@@ -291,12 +291,11 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     expect(expectDefined(saved.decisions[0]).stageIds).toEqual(["Design"]);
   });
 
-  // fix-published-empty-stage-risk-floor (task 4.1): the derived effective
-  // product status reflects the author's OWN covering risk on an owned stage
-  // with no submitted status (raw StageStatus.status = null). The author owns
-  // "Development"; a covers-all blocked own risk (empty stageIds) and a stale
-  // green ProjectStatus must read red through the read-layer floor, while the
-  // raw persisted stage status stays null (D4).
+  // The derived effective product status reflects the author's OWN covering
+  // risk on an owned stage with no submitted status (raw StageStatus.status
+  // = null). The author owns "Development"; a covers-all blocked own risk
+  // (empty stageIds) and a stale green ProjectStatus must read red through
+  // the read-layer floor, while the raw persisted stage status stays null.
   it("getSectionById floors trafficLight by an own covering risk on an owned empty stage", async () => {
     await assignLeadToProject();
     await prisma.projectStatus.create({
@@ -403,7 +402,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     expect(expectDefined(saved.decisions[0]).text).toBe("Saved decision");
   });
 
-  it("saveSection persists Decision.productId and getSectionById returns it (R4-C)", async () => {
+  it("saveSection persists Decision.productId and getSectionById returns it", async () => {
     await assignLeadToProject();
     await prisma.projectStatus.create({
       data: {

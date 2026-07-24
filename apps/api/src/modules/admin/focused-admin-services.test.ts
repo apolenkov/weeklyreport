@@ -101,8 +101,6 @@ const initialSnapshot: AdminSnapshot = {
   policies: [],
 };
 
-// AppSettings carries 9 knobs beyond the legacy fields.
-// The legacy `departmentName` field was removed.
 // Period-cycle knobs (deadlineTime, allowReopenAfterPublish,
 // reopenWindowHours) mirror the SQL defaults.
 const defaultSettings: AppSettings = {
