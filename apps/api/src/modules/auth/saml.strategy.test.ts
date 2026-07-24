@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createSamlStrategyOptions,
+  hasSamlEnv,
   type SamlStrategyOptions,
   verifySamlProfile,
 } from "./saml.strategy.js";
@@ -190,5 +191,46 @@ describe("createSamlStrategyOptions — development posture", () => {
     expect(() => createSamlStrategyOptions(env as NodeJS.ProcessEnv)).toThrow(
       `Missing required environment variable: ${key}`,
     );
+  });
+});
+
+describe("hasSamlEnv", () => {
+  it("is true when all four SAML variables are present", () => {
+    expect(hasSamlEnv(devEnv)).toBe(true);
+  });
+
+  it.each([
+    "KEYCLOAK_SAML_CALLBACK_URL",
+    "KEYCLOAK_SAML_ENTRY_POINT",
+    "KEYCLOAK_SAML_ISSUER",
+    "KEYCLOAK_SAML_CERT",
+  ])(
+    "stays true when only %s is absent — a partial set must reach requireEnv and fail loud, not degrade to dev-login",
+    (key) => {
+      const { [key]: _omitted, ...env } = devEnv as Record<string, unknown>;
+
+      expect(hasSamlEnv(env as NodeJS.ProcessEnv)).toBe(true);
+    },
+  );
+
+  it("is false when no SAML variable is present", () => {
+    const {
+      KEYCLOAK_SAML_CALLBACK_URL: _cb,
+      KEYCLOAK_SAML_ENTRY_POINT: _ep,
+      KEYCLOAK_SAML_ISSUER: _iss,
+      KEYCLOAK_SAML_CERT: _cert,
+      ...env
+    } = devEnv as Record<string, unknown>;
+
+    expect(hasSamlEnv(env as NodeJS.ProcessEnv)).toBe(false);
+  });
+
+  it("treats whitespace-only values as absent", () => {
+    expect(
+      hasSamlEnv({
+        KEYCLOAK_SAML_CALLBACK_URL: " ".repeat(3),
+        KEYCLOAK_SAML_ENTRY_POINT: "",
+      }),
+    ).toBe(false);
   });
 });

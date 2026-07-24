@@ -3,6 +3,7 @@ export { mountAuthRoutes } from "./auth.routes.js";
 export {
   createSamlStrategy,
   createSamlStrategyOptions,
+  hasSamlEnv,
   type SamlStrategyOptions,
   verifySamlProfile,
 } from "./saml.strategy.js";
