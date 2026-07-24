@@ -109,8 +109,15 @@ export function CreatePeriodDialog({
     isEdit && deadline === ""
       ? "No deadline: reminders and auto-publish will not run for this period."
       : null;
+  // Unlike the deadline, an end date cannot be deleted — a period must end.
+  // Emptying it in edit-mode is a loud error, never a silent keep-old.
+  const periodEndError =
+    isEdit && periodEnd === ""
+      ? "End date is required when editing a period."
+      : null;
 
-  const canSubmit = periodStart !== "" && !isPending && !deadlineError;
+  const canSubmit =
+    periodStart !== "" && !isPending && !deadlineError && !periodEndError;
   const title = isEdit ? "Edit period" : "New period";
   const description = isEdit
     ? "Adjust the date envelope or label for this reporting period."
@@ -151,6 +158,7 @@ export function CreatePeriodDialog({
           onPeriodStartChange={setPeriodStart}
           periodEnd={periodEnd}
           onPeriodEndChange={setPeriodEnd}
+          periodEndError={periodEndError}
           deadline={deadline}
           onDeadlineChange={setDeadline}
           deadlineError={deadlineError}

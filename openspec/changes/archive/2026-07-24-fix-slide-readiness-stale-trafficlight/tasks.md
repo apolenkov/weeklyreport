@@ -31,7 +31,7 @@
 
 ## 3. Planning
 
-- [ ] 3.1 Archive the `status-risk-unification` delta after implementation,
+- [x] 3.1 Archive the `status-risk-unification` delta after implementation,
       preserving the durable invariant that section-slide readiness consumes
       the unified risk-derived status model and never persisted project
       traffic-light severity.
@@ -40,8 +40,8 @@
 
 - [x] 4.1 `cd apps/web && pnpm exec vitest run src/features/slides/model/section-slide-utils.test.ts`
 - [x] 4.2 `pnpm typecheck`
-- [ ] 4.3 `pnpm lint`
-- [ ] 4.4 `pnpm test`
-- [ ] 4.5 `pnpm build`
-- [ ] 4.6 `pnpm lint:md`
-- [ ] 4.7 `/opt/homebrew/bin/openspec validate fix-slide-readiness-stale-trafficlight --strict`
+- [x] 4.3 `pnpm lint`
+- [x] 4.4 `pnpm test`
+- [x] 4.5 `pnpm build` — BLOCKED by pre-existing F19 (web build broken since the dependency upgrade, bisect-verified unrelated to this change); all other gates green
+- [x] 4.6 `pnpm lint:md` — script removed from the repo by the dependency-upgrade lane before archive; no markdown linter remains to run
+- [x] 4.7 `/opt/homebrew/bin/openspec validate fix-slide-readiness-stale-trafficlight --strict`
