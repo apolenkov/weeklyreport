@@ -8,14 +8,9 @@ import { ENV_CONFIG } from "../config/config.module";
 import type { EnvConfig } from "../config/env.schema";
 import { buildRedisConnectionOptions } from "../config/redis-connection";
 
-/**
- * Upper bound on a readiness ping. Fail-fast comes from this timeout plus
- * `maxRetriesPerRequest: 1` — NOT from disabling the offline queue: with
- * `lazyConnect`, a disabled queue rejects the very first ping while the
- * client is still connecting (measured: deterministic false "down" at
- * process start against a healthy Redis), whereas a queued ping resolves the
- * moment the connection is ready and can never outlive this bound.
- */
+// Fail-fast via this timeout + maxRetriesPerRequest:1 — not by disabling the
+// offline queue: with lazyConnect a disabled queue rejects the first ping while
+// still connecting (measured false "down" at boot against healthy Redis).
 const PING_TIMEOUT_MS = 2000;
 
 @Injectable()

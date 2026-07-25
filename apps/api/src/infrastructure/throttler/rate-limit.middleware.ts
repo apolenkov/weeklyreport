@@ -21,13 +21,13 @@ const AUTH_LIMIT_PER_MINUTE = 5;
 const TRPC_LIMIT_PER_MINUTE = 200;
 const VITALS_LIMIT_PER_MINUTE = 60;
 const CLIENT_LOGS_LIMIT_PER_MINUTE = 60;
+// Ties *_LIMIT_PER_MINUTE constants to a one-minute window.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+// IETF draft-7 RateLimit response headers (express-rate-limit standardHeaders).
+const RATE_LIMIT_STANDARD_HEADERS = "draft-7" as const;
 
-/**
- * Shared ioredis client backing the rate-limit stores. Host/port come from the
- * single `buildRedisConnectionOptions` builder — never raw `process.env` — so a
- * missing var fails at the boot fence. `lazyConnect` keeps boot from blocking on
- * Redis, and the error listener suppresses unhandled-rejection noise on a blip.
- */
+// Host/port via buildRedisConnectionOptions (never raw process.env) so a
+// missing var fails at the boot fence; lazyConnect keeps boot non-blocking.
 function buildStoreClient(
   env: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT"> | undefined,
 ): Redis | undefined {
@@ -44,13 +44,8 @@ function buildStoreClient(
   return client;
 }
 
-/**
- * One `RedisStore` per limiter, keyed under a distinct `rl:<bucket>:` prefix so
- * the four per-IP buckets never share a counter, while all reuse the single
- * client above. Redis-backed hit counts survive a process restart and are
- * shared across replicas, closing the `5 × N` brute-force window MemoryStore
- * leaves open.
- */
+// Distinct rl:<bucket>: prefix per limiter so buckets never share a counter;
+// Redis-backed counts survive restart and close the 5×N MemoryStore window.
 function redisStoreFor(client: Redis, bucket: string): RedisStore {
   return new RedisStore({
     prefix: `rl:${bucket}:`,
@@ -59,24 +54,8 @@ function redisStoreFor(client: Redis, bucket: string): RedisStore {
   });
 }
 
-/**
- * Rate-limit middleware factory.
- *
- * Tiers based on URL prefix:
- *   - /auth/*           → strict (login brute-force protection)
- *   - /trpc/*           → permissive (legitimate query traffic shouldn't trip)
- *   - /api/web-vitals   → moderate (bounds the public, unauthenticated beacon)
- *   - /api/client-logs  → moderate (bounds the public, unauthenticated log forwarder)
- *   - else              → not limited here
- *
- * Every public ingress surface is keyed per IP by a limiter built here; a route
- * the Caddyfile does not match gets no edge-proxy mitigation, so it must carry
- * its own bucket rather than rely on the proxy.
- *
- * Test-mode bumps every bucket to 1000/min so E2E suites that fire
- * 10+ rapid logins in one spec don't flake. Production keeps the
- * documented values (5 / 200 / 60 / 60 per minute per IP).
- */
+// Per-IP limiters for public ingress; Caddy-unmatched routes need their own
+// bucket. Test-mode limits come from TEST_MODE_LIMIT_PER_MINUTE above.
 export function createRateLimits(options: {
   logger: AppLogger;
   isTest: boolean;
@@ -90,30 +69,21 @@ export function createRateLimits(options: {
 } {
   const { logger, isTest, env, redis } = options;
 
-  // Production backs every bucket with Redis so its window survives a restart.
-  // `isTest` (E2E/dev) and the env-less unit budget suite keep the per-process
-  // MemoryStore — neither may require a live Redis. A caller MAY inject its own
-  // `redis` (integration tests own the client's lifecycle); otherwise the client
-  // is built once from `env` and shared across the four stores below.
+  // Production uses Redis so the window survives restart; isTest / env-less
+  // unit suites keep MemoryStore. Optional injected `redis` for integration tests.
   const client = isTest ? undefined : (redis ?? buildStoreClient(env));
   const storeFor = (bucket: string): Store | undefined =>
     client ? redisStoreFor(client, bucket) : undefined;
 
   const baseConfig: Partial<Options> = {
-    windowMs: 60_000,
-    standardHeaders: "draft-7",
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    standardHeaders: RATE_LIMIT_STANDARD_HEADERS,
     legacyHeaders: false,
-    // Fail OPEN on a store outage: with the Redis-backed stores below, the
-    // library default (false) would rethrow store errors and turn a Redis
-    // blip into a full 500-outage for every request behind the limiter —
-    // rate limiting is a shield, not a dependency. Unlimited-but-up beats
-    // down; the blip itself still surfaces via the redis health indicator.
+    // Fail open on store outage: library default rethrows and turns a Redis
+    // blip into 500s. Unlimited-but-up beats down; health indicator still fires.
     passOnStoreError: true,
-    // Wrap the IP through `ipKeyGenerator` from
-    // express-rate-limit so IPv6 addresses are normalised by /64 prefix.
-    // Without it, the library emits the ERR_ERL_KEY_GEN_IPV6 advisory
-    // every request because varying low bits of an IPv6 address would let
-    // a single client bypass the limit by churning suffixes.
+    // ipKeyGenerator normalises IPv6 by /64; without it low-bit churn bypasses
+    // the limit and express-rate-limit emits ERR_ERL_KEY_GEN_IPV6 every request.
     keyGenerator: (req) => {
       const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
       return ipKeyGenerator(ip);
@@ -154,9 +124,7 @@ export function createRateLimits(options: {
     store: storeFor("trpc"),
   });
 
-  // A real page emits a handful of vitals per navigation; 60/min/IP comfortably
-  // covers legitimate beacons while capping anonymous abuse. Shares the
-  // rateLimitHitsTotal accounting via the "vitals" bucket message.
+  // 60/min/IP covers a page's vitals beacons while capping anonymous abuse.
   const vitalsLimiter = rateLimit({
     ...baseConfig,
     limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : VITALS_LIMIT_PER_MINUTE,
@@ -164,10 +132,7 @@ export function createRateLimits(options: {
     store: storeFor("vitals"),
   });
 
-  // The client-log forwarder is a public, unauthenticated ingress the Caddyfile
-  // does not match, so it carries its own per-IP bucket. A page emits a small
-  // bounded burst of log batches; 60/min/IP covers that and caps a log-flood
-  // against the shared app.log. Shares rateLimitHitsTotal via "client-logs".
+  // Public, Caddy-unmatched ingress: own per-IP bucket caps app.log floods.
   const clientLogsLimiter = rateLimit({
     ...baseConfig,
     limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : CLIENT_LOGS_LIMIT_PER_MINUTE,

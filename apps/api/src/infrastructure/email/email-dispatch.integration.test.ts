@@ -1,33 +1,9 @@
-/**
- * Email dispatch integration test.
- *
- * Verifies that EmailReminderProcessor.processJob() sends a real SMTP
- * message through the local Mailpit catcher and that the message
- * arrives with the expected recipient and subject.
- *
- * Guard: if Mailpit is unreachable the tests self-skip inside each `it`
- * body with a clear console warning. `it.skipIf` cannot be used here
- * because the condition (`mailpitUp`) is resolved asynchronously in
- * `beforeAll` — by the time vitest registers test definitions the async
- * probe has not yet run, so the flag is always `false`. The self-skip
- * pattern below is the safe alternative.
- *
- * Transport: EmailService constructs the nodemailer transporter from the
- * injected EnvConfig at instantiation time. A test EnvConfig carrying the
- * real SMTP coordinates is passed to the constructor so it picks the real
- * SMTP path (the non-Nest equivalent of overriding the ENV_CONFIG provider).
- *
- * Worker bypass: EmailReminderProcessor.onModuleInit() opens a BullMQ
- * Worker which requires Redis. We skip onModuleInit and call the private
- * `processJob` directly via the same cast used in the unit tests.
- */
+// it.skipIf cannot gate on mailpitUp — the async probe runs in beforeAll after
+// vitest registers tests, so each `it` self-skips when Mailpit is unreachable.
 
 import type { Job } from "bullmq";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-// ---------------------------------------------------------------------------
-// Decorator stubs — keep NestJS decorators inert in vitest (no DI container).
-// ---------------------------------------------------------------------------
 vi.mock("@nestjs/common", () => ({
   Injectable: () => (target: unknown) => target,
   // ConfigModule (imported transitively via email.service.ts → config.module.ts)
@@ -56,17 +32,12 @@ import {
   isMailpitUp,
   pollForMessage,
 } from "../../test-utils/mailpit.js";
-// ---------------------------------------------------------------------------
-// Subject-under-test (imported after mocks are in place)
-// ---------------------------------------------------------------------------
 import { EmailReminderProcessor } from "../bullmq/email-reminder.processor.js";
 import type { EnvConfig } from "../config/env.schema.js";
 import { EmailService } from "./email.service.js";
 
-// Injected EnvConfig carrying the real SMTP coordinates so EmailService picks
-// the Mailpit-backed transport rather than jsonTransport, plus Redis
-// coordinates so the EmailReminderProcessor constructor is satisfied (its
-// onModuleInit is never called here — processJob is invoked directly).
+// Real SMTP coords so EmailService picks Mailpit; Redis coords satisfy the
+// processor constructor (onModuleInit is skipped — processJob is called directly).
 const SMTP_ENV = {
   SMTP_HOST: "localhost",
   SMTP_PORT: 1025,
@@ -75,9 +46,6 @@ const SMTP_ENV = {
   REDIS_PORT: 6379,
 } as unknown as EnvConfig;
 
-// ---------------------------------------------------------------------------
-// Availability probe — resolved once before any test body runs.
-// ---------------------------------------------------------------------------
 let mailpitUp = false;
 
 beforeAll(async () => {
@@ -89,20 +57,16 @@ beforeAll(async () => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// Stable fixture values
-// ---------------------------------------------------------------------------
 const PERIOD = "2026-06-02 → 2026-06-08";
 const ORG = { shortName: "TEST", fullName: "Test Organisation" };
 
-// Stub RemindersService — the transport test represents the worker that wins
-// the atomic send claim and then records successful delivery.
+// Transport test: worker that wins the atomic send claim, then records delivery.
 const remindersStub = {
   claimExecutionForSending: vi.fn().mockResolvedValue(true),
   markReminderSent: vi.fn().mockResolvedValue(undefined),
 };
 
-// Settings-service stub — null from-override; EmailService uses SMTP_FROM.
+// Null from-override; EmailService uses SMTP_FROM.
 const adminStub = {
   getSettings: vi.fn().mockResolvedValue({ notificationFromEmail: null }),
 };
@@ -111,10 +75,6 @@ const adminStub = {
 interface ProcessorSeam {
   processJob(job: Job<unknown>): Promise<void>;
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 // Local OrbStack port-forwarding holds a server-speaks-first protocol's opening
 // byte (the SMTP 220 banner) for ~8-10s regardless of port; each SMTP dispatch
@@ -131,10 +91,8 @@ describe("email-dispatch integration", () => {
         return;
       }
 
-      // Use a unique recipient per run to avoid cross-talk with other messages.
       const recipient = `deadline-dispatch-${Date.now()}@test.local`;
 
-      // Purge inbox before dispatching so we can assert on a clean slate.
       await clearMessages();
 
       const emailService = new EmailService(SMTP_ENV);
@@ -158,27 +116,22 @@ describe("email-dispatch integration", () => {
         organization: ORG,
       };
 
-      // Call processJob directly — bypasses BullMQ/Redis entirely.
       await (processor as unknown as ProcessorSeam).processJob({
         data: jobData,
       } as Job<unknown>);
 
-      // Poll Mailpit until the message appears (up to 3 s).
       const message = await pollForMessage(recipient);
 
       expect(message).not.toBeNull();
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- non-null asserted right after an explicit not-null check
       const msg = message!;
 
-      // Recipient
       expect(msg.To.some((a) => a.Address === recipient)).toBe(true);
 
-      // Subject: "[TEST] Reminder: <period> report section due in 24h"
       expect(msg.Subject).toContain("[TEST]");
       expect(msg.Subject).toContain("Reminder:");
       expect(msg.Subject.toLowerCase()).toContain("report section due");
 
-      // Processor must have marked the execution as sent.
       expect(remindersStub.markReminderSent).toHaveBeenCalledWith(executionId);
     },
   );
@@ -233,7 +186,6 @@ describe("email-dispatch integration", () => {
       const msg = message!;
 
       expect(msg.To.some((a) => a.Address === headRecipient)).toBe(true);
-      // Subject: "[TEST] Action required: 1 late report section (2026-06-08)"
       expect(msg.Subject).toContain("[TEST]");
       expect(msg.Subject).toContain("Action required:");
       expect(msg.Subject).toContain("late report section");

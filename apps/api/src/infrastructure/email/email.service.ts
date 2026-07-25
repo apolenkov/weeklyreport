@@ -13,12 +13,7 @@ const DEFAULT_SMTP_PORT = 587;
 // SMTP port reserved for connections that establish TLS immediately.
 const IMPLICIT_TLS_SMTP_PORT = 465;
 
-/**
- * The email-sending seam its consumers (the email-reminder worker) depend on.
- * `EmailService` is the sole SMTP adapter; a test double implements the same
- * two methods without touching nodemailer. `EMAIL_PORT` binds the port to the
- * adapter at the DI boundary so consumers inject the interface, not the class.
- */
+// EMAIL_PORT binds consumers to the interface so tests inject a double without nodemailer.
 export interface EmailPort {
   sendMail(
     to: string,
@@ -37,15 +32,7 @@ export interface EmailPort {
 
 export const EMAIL_PORT = Symbol("EMAIL_PORT");
 
-/**
- * SMTP email service wrapping nodemailer.
- *
- * When SMTP_HOST is configured, sends real emails via the corporate SMTP server.
- * When SMTP_HOST is absent (local dev), uses jsonTransport and logs the message
- * payload to stdout instead of sending. All SMTP coordinates come from the
- * injected validated config — a production boot without SMTP fails closed in
- * env.schema, so jsonTransport can never be selected in production.
- */
+// Absent SMTP_HOST uses jsonTransport (dev only); production fails closed in env.schema.
 @Injectable()
 export class EmailService implements EmailPort {
   private readonly transporter: Transporter;
@@ -75,12 +62,8 @@ export class EmailService implements EmailPort {
     }
   }
 
-  /**
-   * Optional per-call `from` override lets the
-   * reminder processor pass `AppSettings.notificationFromEmail` without
-   * mutating shared service state. Null/undefined falls back to the
-   * env-configured `SMTP_FROM` value resolved in the constructor.
-   */
+  // Per-call `from` lets the reminder processor pass AppSettings.notificationFromEmail
+  // without mutating service state.
   async sendMail(
     to: string,
     subject: string,
@@ -103,15 +86,8 @@ export class EmailService implements EmailPort {
     );
   }
 
-  /**
-   * Multipart HTML + plaintext send. nodemailer accepts
-   * both `html` and `text` simultaneously — corporate spam filters score
-   * multipart higher, and clients that don't render HTML still receive the
-   * plaintext body. Use this overload for deadline reminders and
-   * any future template-rendered email.
-   *
-   * Optional `from` override identical to `sendMail`.
-   */
+  // Multipart (html+text) scores higher with corporate spam filters;
+  // text-only clients still get the body.
   async sendMailMultipart(
     to: string,
     subject: string,

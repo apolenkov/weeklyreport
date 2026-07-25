@@ -11,17 +11,13 @@ const BYTES_PER_KIB = 1024;
 // rejecting anything that could only be an attempt to exhaust the parser.
 export const TRPC_MAX_BODY_BYTES = BYTES_PER_KIB * BYTES_PER_KIB;
 
-// Client-log beacons are tiny batched JSON arrays; 128 KiB gives generous
-// headroom for a burst flush while keeping the public endpoint cheap to
-// parse. Shared with the ingress integration test so a drifted mount limit
-// fails there, not in production.
+// 128 KiB bounds a public beacon while covering a burst flush; shared with
+// the ingress integration test so a drifted limit fails there, not in prod.
 export const CLIENT_LOGS_JSON_LIMIT = "128kb";
 
-// The client-logs mount order is load-bearing: rate-limit BEFORE the JSON
-// parse and the terminating handler, so an unauthenticated caller cannot
-// flood the parser or the shared app.log. main.ts and the ingress
-// integration test both mount through this helper — the order cannot drift
-// in one without failing in the other.
+// Load-bearing order: limiter before JSON parse/handler so unauthenticated
+// flood cannot hit the parser or app.log. main.ts and the integration test
+// both mount through this helper — order cannot drift in one place alone.
 export function mountClientLogsIngress(
   app: {
     use: (

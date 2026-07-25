@@ -11,28 +11,12 @@ import { createAppLogger } from "../../lib/logger.js";
 import type { EnvConfig } from "./env.schema";
 import { validateEnv } from "./env.schema";
 
-/**
- * Injection token for the validated `EnvConfig`. ONE shared Symbol so every
- * consumer resolves the same provider — a duplicate token would be a silent
- * boot-time DI failure the typechecker cannot catch.
- */
+// One shared Symbol — a duplicate token would silently fail DI at boot.
 export const ENV_CONFIG = Symbol("ENV_CONFIG");
 
-/**
- * Exposes the validated `EnvConfig` under `ENV_CONFIG` so any importing module
- * can inject it. `validateEnv()` is a pure `safeParse` of `process.env`
- * (idempotent), so running it again in the factory is harmless even though
- * `main.ts` also calls it. The token is exported (not an app.module-only
- * provider) because Nest exports flow up to the importer: an app.module-only
- * provider would be unresolvable from a module that imports this one.
- *
- * `APP_LOGGER` builds the single post-CLS AppLogger from the same options
- * `main.ts` used to build inline (service/minLevel/logDir/clsService) — one
- * shared file sink, resolved by `main.ts` and by `AUDIT_LOGGER` alike, so the
- * audit path adds no second writer. `AUDIT_LOGGER` wraps it via
- * `createAuditLogger`, giving the period schedulers a real audit sink instead
- * of a null-object fallback.
- */
+// Nested modules inject ENV_CONFIG via this export (app.module-only providers
+// are unresolvable from importers). APP_LOGGER is the single shared sink so
+// AUDIT_LOGGER does not open a second writer.
 @Module({
   providers: [
     { provide: ENV_CONFIG, useFactory: validateEnv },

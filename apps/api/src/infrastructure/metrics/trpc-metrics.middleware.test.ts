@@ -28,10 +28,6 @@ function installSpanSpy(): {
   return { span, startActiveSpan };
 }
 
-/**
- * Verifies the tRPC Prometheus middleware emits the right labels and
- * increments both the histogram (`_count`) and the dedicated counter.
- */
 describe("trpcMetricsMiddleware", () => {
   beforeEach(() => {
     // prom-client samples are global per registry; reset between tests so

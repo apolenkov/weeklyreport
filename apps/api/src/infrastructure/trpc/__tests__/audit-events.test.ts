@@ -9,17 +9,8 @@ import type { AppLogger } from "../../../lib/logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { headProcedure, publicProcedure, router } from "../trpc.middleware.js";
 
-// ---------------------------------------------------------------------------
-// Audit-events end-to-end signal test.
-//
-// Boots a viewer session against a head-only procedure, captures every
-// AppLogger emit, and asserts EXACTLY ONE role-denied envelope appears.
-// This locks the invariant that defense-in-depth means the audit signal
-// fires from inside the role-middleware factory, NOT only at controller
-// seams — so any future deny path (a SAML cut-over, viewer-only filters)
-// inherits the audit emit automatically.
-// ---------------------------------------------------------------------------
-
+// Locks the invariant that role-denied audit fires inside the role-middleware
+// factory, not only at controller seams — future deny paths inherit it.
 interface Captured {
   level: "info" | "warn" | "error" | "debug";
   message: string;
@@ -125,11 +116,8 @@ describe("role-denied integration signal", () => {
   });
 
   it("an unauthenticated call to a head-only procedure surfaces UNAUTHORIZED with NO role-denied emit", async () => {
-    // UNAUTHORIZED (no session) is handled by assertRole's first branch,
-    // which throws BEFORE the role check. The factory only emits role-denied
-    // when the FORBIDDEN branch fires, so an unauthed call should not pollute
-    // the audit channel — the upstream login-fail emit (auth.routes) is the
-    // right surface for that.
+    // assertRole throws UNAUTHORIZED before the role check; role-denied only
+    // fires on FORBIDDEN. Unauthed noise belongs on the login-fail path.
     const { logger, entries } = makeCapturingLogger();
     const auditLogger: AuditLogger = createAuditLogger(logger);
 
