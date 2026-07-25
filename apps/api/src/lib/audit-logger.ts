@@ -3,24 +3,16 @@ import type { AppLogger } from "./logger.js";
 
 export type * from "./audit-logger-types.js";
 
-/**
- * Composition-root DI tokens. `APP_LOGGER` resolves the single post-CLS
- * AppLogger (one shared file sink); `AUDIT_LOGGER` resolves the AuditLogger
- * built on it, so scheduled period transitions emit real audit lines instead
- * of a null-object no-op. Registered in config.module.ts.
- */
+// Composition-root DI tokens (config.module.ts). AUDIT_LOGGER shares the
+// post-CLS AppLogger so cron period transitions emit real audit lines.
 export const APP_LOGGER = Symbol("APP_LOGGER");
 export const AUDIT_LOGGER = Symbol("AUDIT_LOGGER");
 
 const AUDIT_MESSAGE = "audit";
 
-/** Build an AuditLogger that writes through the supplied AppLogger. */
 export function createAuditLogger(logger: AppLogger): AuditLogger {
-  // Every audit line flows through here so the compiler checks each `event`
-  // string against the AuditEvent union — an undeclared or misspelled event is
-  // a typecheck error at the call site. A bare `satisfies AuditEnvelope` cannot
-  // do this: it rejects the per-event fields (periodId, changes, …) as excess
-  // properties. The index signature carries those fields untyped instead.
+  // Funnel forces event against AuditEvent; satisfies-envelope would reject
+  // per-event fields as excess properties.
   const emit = (
     level: "info" | "warn",
     payload: { event: AuditEvent } & Record<string, unknown>,
@@ -194,7 +186,6 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
   };
 }
 
-/** No-op AuditLogger for tests / harnesses that don't care about audit signal. */
 export function createNullAuditLogger(): AuditLogger {
   return {
     loginSuccess() {

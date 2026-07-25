@@ -11,14 +11,8 @@ import {
   resolveHumanSession,
 } from "./trpc.context";
 
-/**
- * Contract tests for the four dev-mode flag combinations.
- *
- * These tests exercise `createContextFactory` directly with a mocked INestApp
- * and a fake express Request — no real Postgres, no real Prisma. The goal is
- * to assert ONLY the dev-mode branch logic; downstream integration tests
- * verify the cookie path against a live database.
- */
+// Dev-mode flag matrix against a mocked Nest app — no real DB.
+// Cookie-path coverage lives in integration tests.
 
 interface MockNestApp {
   get: () => unknown;
@@ -144,8 +138,7 @@ describe("createContextFactory — dev-mode flag matrix", () => {
     // createAuthController(env) reads AUTH_JWT_SECRET at factory creation.
     // Stub a stable test secret so the factory can construct without throwing.
     vi.stubEnv("AUTH_JWT_SECRET", "integration-test-secret-32-chars-or-more");
-    // D5: reset the module-level orgCache (5s TTL) so assertions in each
-    // case are not order-dependent on cache state from a prior case.
+    // Reset the module-level orgCache so cases are order-independent.
     clearOrgCache();
   });
 
@@ -238,10 +231,6 @@ describe("createContextFactory — dev-mode flag matrix", () => {
     expect(ctx.session).not.toBeNull();
     expect(ctx.session?.role).toBe("head");
   });
-
-  // -------------------------------------------------------------------------
-  // 2.2 Hydration pins (refactor-trpc-infra-duplication)
-  // -------------------------------------------------------------------------
 
   it("AUTH_DEV_MODE=true: dev session is hydrated with organization stub", async () => {
     vi.stubEnv("AUTH_DEV_MODE", "true");

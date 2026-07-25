@@ -52,10 +52,6 @@ import { WeeklyReportDomainError } from "../../modules/weekly-report/index.js";
 import { DOMAIN_ERROR_CODES, mapDomainError } from "./trpc.error-mapper.js";
 
 describe("mapDomainError", () => {
-  // -----------------------------------------------------------------------
-  // Pass-through: TRPCError instances should be returned as-is
-  // -----------------------------------------------------------------------
-
   it("returns TRPCError instances unchanged", () => {
     const original = new TRPCError({ code: "NOT_FOUND", message: "Gone" });
     const mapped = mapDomainError(original);
@@ -63,10 +59,6 @@ describe("mapDomainError", () => {
     expect(mapped).toBe(original);
     expect(mapped.code).toBe("NOT_FOUND");
   });
-
-  // -----------------------------------------------------------------------
-  // ReportSectionDomainError -> BAD_REQUEST
-  // -----------------------------------------------------------------------
 
   describe("ReportSectionDomainError -> BAD_REQUEST", () => {
     it("maps SECTION_ALREADY_SUBMITTED to BAD_REQUEST", () => {
@@ -113,10 +105,6 @@ describe("mapDomainError", () => {
     });
   });
 
-  // -----------------------------------------------------------------------
-  // SectionVersionConflictError -> CONFLICT (optimistic-lock 409)
-  // -----------------------------------------------------------------------
-
   describe("SectionVersionConflictError -> CONFLICT", () => {
     it("maps a stale-version section write to CONFLICT, distinct from BAD_REQUEST", () => {
       const error = new SectionVersionConflictError(
@@ -141,10 +129,6 @@ describe("mapDomainError", () => {
     });
   });
 
-  // -----------------------------------------------------------------------
-  // ReviewAccessError -> FORBIDDEN
-  // -----------------------------------------------------------------------
-
   it("maps ReviewAccessError to FORBIDDEN", () => {
     const error = new ReviewAccessError("Head role required.");
     const mapped = mapDomainError(error);
@@ -152,10 +136,6 @@ describe("mapDomainError", () => {
     expect(mapped.code).toBe("FORBIDDEN");
     expect(mapped.message).toBe("Head role required.");
   });
-
-  // -----------------------------------------------------------------------
-  // AdminAccessError -> FORBIDDEN
-  // -----------------------------------------------------------------------
 
   it("maps AdminAccessError to FORBIDDEN", () => {
     const error = new AdminAccessError(
@@ -166,10 +146,6 @@ describe("mapDomainError", () => {
     expect(mapped.code).toBe("FORBIDDEN");
     expect(mapped.message).toContain("head users");
   });
-
-  // -----------------------------------------------------------------------
-  // PdfExportDomainError -> NOT_FOUND
-  // -----------------------------------------------------------------------
 
   describe("PdfExportDomainError -> NOT_FOUND", () => {
     it('maps "requires published report" to NOT_FOUND', () => {
@@ -190,10 +166,6 @@ describe("mapDomainError", () => {
       expect(mapped.code).toBe("NOT_FOUND");
     });
   });
-
-  // -----------------------------------------------------------------------
-  // ArchiveDomainError -> NOT_FOUND
-  // -----------------------------------------------------------------------
 
   it("maps ArchiveDomainError to NOT_FOUND", () => {
     const error = new ArchiveDomainError("Archive report xyz was not found.");
@@ -234,11 +206,7 @@ describe("mapDomainError", () => {
     expect(mapped.cause).toBe(error);
   });
 
-  // -----------------------------------------------------------------------
-  // ReminderDomainError -> BAD_REQUEST
-  // -----------------------------------------------------------------------
-
-  // AdminPeriodOverlapError -> BAD_REQUEST so the «period already exists»
+  // AdminPeriodOverlapError → BAD_REQUEST so the «period already exists»
   // message pipes verbatim to the admin toast.
   describe("AdminPeriodOverlapError -> BAD_REQUEST", () => {
     it("maps overlap error to BAD_REQUEST with the original message", () => {
@@ -273,10 +241,6 @@ describe("mapDomainError", () => {
     });
   });
 
-  // -----------------------------------------------------------------------
-  // CarryOverDomainError -> BAD_REQUEST
-  // -----------------------------------------------------------------------
-
   describe("CarryOverDomainError -> BAD_REQUEST", () => {
     it('maps "same source and target" to BAD_REQUEST', () => {
       const error = new CarryOverDomainError(
@@ -296,10 +260,6 @@ describe("mapDomainError", () => {
       expect(mapped.code).toBe("BAD_REQUEST");
     });
   });
-
-  // -----------------------------------------------------------------------
-  // Unknown errors -> INTERNAL_SERVER_ERROR
-  // -----------------------------------------------------------------------
 
   describe("unknown errors -> INTERNAL_SERVER_ERROR", () => {
     it("maps generic Error to INTERNAL_SERVER_ERROR", () => {
@@ -346,18 +306,9 @@ describe("mapDomainError", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Exhaustive domain-error → tRPC-code coverage.
-//
-// mapDomainError maps via a declarative table (the complexity ceiling forbids
-// one instanceof branch per class), which can silently mis-code ANY class, so
-// every domain error is asserted here. The [class, code] pairs below are
-// hand-typed INDEPENDENTLY of the production DOMAIN_ERROR_CODES table's codes
-// — asserting a code against itself would prove nothing. The coverage check
-// at the bottom of this block DOES import DOMAIN_ERROR_CODES, but only to
-// compare class membership (not codes) against this list, so a class added to
-// or dropped from the production table without a matching row here fails.
-// ---------------------------------------------------------------------------
+// Exhaustive coverage: codes hand-typed independently of DOMAIN_ERROR_CODES
+// (self-assert would prove nothing). Membership check against the production
+// table fails if a class is added/dropped without a matching row here.
 
 describe("mapDomainError — exhaustive domain-error → code coverage", () => {
   const cases = [
@@ -543,12 +494,7 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-//  period-lifecycle-authz: out-of-scope/archived → FORBIDDEN, missing →
-//  NOT_FOUND, and neither leaks as INTERNAL_SERVER_ERROR. PeriodAccessError
-//  stays UNMAPPED by design (its state/policy 500s are a separate concern), so
-//  it must still fall through to INTERNAL_SERVER_ERROR.
-// ---------------------------------------------------------------------------
+// PeriodAccessError stays unmapped (state/policy 500s are a separate concern).
 
 describe("mapDomainError — period lifecycle authz", () => {
   it("maps PeriodScopeError to FORBIDDEN, not INTERNAL_SERVER_ERROR", () => {

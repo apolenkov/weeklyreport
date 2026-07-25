@@ -13,13 +13,8 @@ import type { TrpcContext } from "./trpc.context.js";
 
 const TRPC_REQUEST_LOG_PHASE = "trpc.request";
 
-/**
- * Describe a tRPC response shape for debug logs without exposing values.
- * Returns a compact descriptor (top-level keys for objects, length+inner
- * keys for arrays, primitive type otherwise). Earlier `outputPreview`
- * dumped the full JSON — that leaked email/role/userId on every auth.me /
- * admin.* call.
- */
+// Compact response-shape descriptor for debug logs — keys/lengths only,
+// never values (full JSON previously leaked PII on auth.me / admin.*).
 function describeShape(value: unknown): string {
   if (value === null) return "null";
   if (Array.isArray(value)) {
@@ -71,18 +66,8 @@ const TRPC_ERROR_HTTP_STATUS: Record<string, string> = {
   INTERNAL_SERVER_ERROR: "500",
 };
 
-/**
- * Normalize a `TRPCError.cause` into a log-safe descriptor. Drilling into the
- * cause is what surfaces the real failure (Prisma error, ZodError, raw Error)
- * instead of the generic 'Unexpected error' wrapper from trpc.error-mapper.ts —
- * a TRPCError with code=INTERNAL_SERVER_ERROR is otherwise opaque. tRPC
- * normalizes thrown values via getCauseFromUnknown, so the meaningful detail is
- * always an Error; a non-Error/undefined cause carries nothing to log.
- *
- * Stack frames leak file paths + library internals to the log aggregator, so
- * only `code`/`meta` are surfaced — Prisma's pair already identifies the failed
- * query.
- */
+// Surface real failure (Prisma/Zod) under the generic INTERNAL_SERVER_ERROR
+// wrapper. Stack frames leak paths — only code/meta are logged.
 export function deriveCauseInfo(cause: unknown) {
   if (!(cause instanceof Error)) return undefined;
   return {
@@ -113,29 +98,13 @@ function observeTrpcDuration(
   );
 }
 
-/**
- * Prometheus middleware — records per-procedure latency
- * (`trpc_request_duration_seconds`) and request volume
- * (`trpc_request_total`) with labels `procedure`/`type`/`status`. Wired
- * BEFORE `loggingMiddleware` on every procedure helper so timings
- * exclude logger / audit / Prisma-userActionLog overhead. The actual
- * histogram emit lives in `infrastructure/metrics/trpc-metrics.middleware.ts`
- * — this thin t.middleware wrapper just delegates to it so the metrics
- * code stays framework-agnostic and unit-testable without `initTRPC`.
- */
+// Before loggingMiddleware so timings exclude logger/audit overhead.
+// Histogram emit lives in metrics/trpc-metrics.middleware.ts (framework-agnostic).
 export const metricsMiddleware = t.middleware(({ path, type, next }) =>
   recordTrpcMetrics({ path, type, next }),
 );
 
-/**
- * Logging middleware — emits one entry log on procedure start and one exit log
- * on completion (success or error). Both lines carry the same correlationId via
- * the CLS store, because the underlying
- * AppLogger reads correlationId from CLS at emit time.
- *
- * Applied BEFORE auth middleware on every procedure helper so that failed-auth
- * attempts are still recorded (security forensics > anonymous-noise risk).
- */
+// Before auth so failed-auth attempts are still recorded (forensics).
 export const loggingMiddleware = t.middleware(
   async ({ ctx, next, path, type, getRawInput }) => {
     const start = performance.now();
@@ -195,10 +164,7 @@ export const loggingMiddleware = t.middleware(
         duration,
         status: "success",
       });
-      // Debug-level shape breadcrumb. Logs only the response *shape* (top-level
-      // keys + array length), never values — earlier `outputPreview` dumped the
-      // full serialised response which leaked email/role/userId into the log
-      // stream on every auth.me / admin.* / weeklyReport.get call.
+      // Shape only (keys/lengths) — never values (PII leak risk).
       try {
         ctx.logger.debug("trpc request output", {
           phase: TRPC_REQUEST_LOG_PHASE,
@@ -240,25 +206,9 @@ export const loggingMiddleware = t.middleware(
   },
 );
 
-/**
- * Mutation-audit middleware.
- *
- * Captures every authenticated tRPC mutation through the existing
- * AuditLogger (so audit signal flows through the same AppLogger envelope as
- * login-success / login-fail / role-denied). The middleware is a no-op for
- * queries and for `auth.*` (covered by login events).
- *
- * `target` extraction is best-effort: we read whichever common id key is
- * present in the input (sectionId / reportId / periodId / projectId /
- * leadId / id / userId / productId / groupId), without inspecting deeper
- * structures. Established keys retain precedence; productId precedes groupId
- * because the product is the entity being attached or detached. Mutations
- * like `period.publish` that take no id leave `target` undefined.
- *
- * Outcome is success | fail; on failure, `reason` carries the error
- * message. No before/after diff is captured — Prisma-side introspection is
- * deferred to a future phase if SIEM/forensics needs it.
- */
+// Best-effort target from common id keys; productId precedes groupId
+// (product is the attached/detached entity). No-op for queries and auth.*.
+// No before/after diff — outcome is success|fail with error reason only.
 const TARGET_ID_KEYS = [
   "sectionId",
   "reportId",
@@ -367,23 +317,9 @@ const isAuthed = t.middleware(({ ctx, next }) => {
   return next({ ctx: { session: ctx.session } });
 });
 
-/**
- * PDF-export-scoped session guard.
- *
- * When the inbound cookie verified as a PDF-export JWT (ctx.isPdfExport),
- * the synthetic viewer session must be restricted to a tiny read-only
- * allowlist scoped to the JWT's `reportId` claim. Any other procedure
- * throws FORBIDDEN. The allowlisted procedure must also reference
- * `ctx.pdfReportId` in its input — otherwise a leaked PDF cookie for
- * report X could be used to read report Y.
- *
- * The allowlist intentionally hard-codes paths instead of a per-procedure
- * opt-in: the print page calls only `weeklyReport.get` and
- * `archive.detail`. New PDF-print pages must add their procedure here.
- *
- * Applied via `protectedProcedure` so every authenticated path inherits
- * the check; the middleware is a no-op for non-PDF sessions.
- */
+// PDF sessions: hard-coded read-only allowlist + reportId match so a
+// cookie for report X cannot read report Y. New print paths must be added
+// here. No-op for non-PDF sessions.
 const PDF_EXPORT_ALLOWED_PATHS: ReadonlySet<string> = new Set([
   "weeklyReport.get",
   "archive.detail",
@@ -424,16 +360,9 @@ const pdfExportGuard = t.middleware(
   },
 );
 
-/**
- * Factory that defines the canonical 5-middleware chain once:
- * metrics → logging → authMiddleware → pdfExportGuard → mutationAudit.
- *
- * Built from `t.procedure` directly (NOT derived from publicProcedure) so
- * any future public-only middleware does not silently propagate into every
- * protected chain. Security-ordering contract: logging runs BEFORE auth
- * (failed-auth forensics) and metrics before logging (timing excludes logger
- * overhead). Any reordering is a behavior change, not a cleanup.
- */
+// Canonical chain from t.procedure (not publicProcedure) so public-only
+// middleware cannot leak in. Order is security-load-bearing: metrics →
+// logging → auth → pdfExportGuard → mutationAudit.
 function buildProtectedProcedure(authMiddleware: typeof isAuthed) {
   return t.procedure
     .use(metricsMiddleware)
@@ -445,14 +374,8 @@ function buildProtectedProcedure(authMiddleware: typeof isAuthed) {
 
 export const protectedProcedure = buildProtectedProcedure(isAuthed);
 
-// Role-bound procedures whose
-// deny branch emits a structured `role-denied` audit event before throwing
-// FORBIDDEN. The role check itself is delegated to the pure `assertRole`
-// helper from @customreport/shared/trpc — the contract is identical, but
-// the middleware lives locally so it can read `ctx.auditLogger` / `ctx.ip`
-// from the api's TrpcContext. Per defense-in-depth: the emit lives
-// inside the factory so every consumer site inherits the audit signal
-// automatically, including future SAML-driven deny conditions.
+// Local wrapper around assertRole so deny can emit role-denied via ctx
+// auditLogger/ip — every consumer inherits the audit signal automatically.
 function buildRoleMiddleware(allowed: Role | Role[]) {
   return t.middleware<{ session: UserSession }>(async ({ ctx, next }) => {
     try {
@@ -474,21 +397,13 @@ function buildRoleMiddleware(allowed: Role | Role[]) {
   });
 }
 
-// headProcedure still allows
-// head + admin (admin is god-mode that inherits head capabilities), but
-// adminProcedure is now its own gate that ONLY admins pass. Heads can no
-// longer access /admin/* tRPC endpoints — they have a dashboard, not an
-// admin panel. Admin still passes head procedures (admin SAML user gets
-// through head procedures) because admin stays in the head allowlist.
+// headProcedure allows head+admin; adminProcedure is admin-only (heads
+// have a dashboard, not /admin/*). Admin still passes head procedures.
 const headRoleMiddleware = buildRoleMiddleware(["head", "admin"]);
 const adminRoleMiddleware = buildRoleMiddleware("admin");
 const leadRoleMiddleware = buildRoleMiddleware("lead");
 const viewerRoleMiddleware = buildRoleMiddleware("viewer");
-// A "any authenticated role" procedure for read paths
-// where the service layer is the actual gate (Prisma `where` filtered by
-// session.role). Necessary for archive.* and weeklyReport.get because heads,
-// leads, admins, and viewers all read the same surface but with different
-// row visibility. Service-level unit tests verify the role-aware filter.
+// Service-layer gate for multi-role reads (archive.*, weeklyReport.get).
 const anyRoleMiddleware = buildRoleMiddleware([
   "lead",
   "head",

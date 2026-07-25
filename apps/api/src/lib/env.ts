@@ -1,12 +1,6 @@
 import type { EnvConfig } from "../infrastructure/config/env.schema";
 
-/**
- * This is the single generic "require an env var to be
- * present" helper. Replaces the per-module copies that had drifted across the
- * auth module. It is intentionally a bare presence check — callers that need a
- * stronger contract (e.g. `requireJwtSecret`'s minimum-length floor) layer that
- * on top of this rather than folding it in, so this stays reusable.
- */
+// Bare presence check only — stronger contracts (e.g. JWT min length) layer on.
 export function requireEnv(env: NodeJS.ProcessEnv, key: string): string {
   const value = env[key];
 
@@ -17,11 +11,7 @@ export function requireEnv(env: NodeJS.ProcessEnv, key: string): string {
   return value;
 }
 
-/**
- * Whether a real Telegram bot token is configured (non-blank TG_BOT_TOKEN).
- * The single source for this check — the adapter selector and the router's
- * integrationsStatus query both call it instead of re-rolling the trim test.
- */
+// Single source for "is Telegram configured" (adapter selector + integrationsStatus).
 export function isTelegramConfigured(env: EnvConfig): boolean {
   return (env.TG_BOT_TOKEN?.trim() ?? "") !== "";
 }

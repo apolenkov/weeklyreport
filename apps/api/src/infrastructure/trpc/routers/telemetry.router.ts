@@ -3,22 +3,13 @@ import { mapDomainError } from "../trpc.error-mapper.js";
 import { leadershipProcedure, router } from "../trpc.middleware.js";
 
 export interface TelemetryRouterDeps {
-  /**
-   * Product-telemetry surface — `telemetry.summary`
-   * returns the leadership-readable KPI bundle (reports submitted, on-time
-   * ratio, active leads, late sections, pending reopens, PDF export
-   * volume, 4-week sparkline). Optional so role-coverage test fixtures
-   * that build the router with `{}` deps stay green; when undefined the
-   * procedure is hidden from the surface, not 500-ed.
-   */
+  // Optional for role-coverage fixtures with `{}` deps; when undefined the
+  // procedure is hidden from the surface, not 500-ed.
   telemetryService?: TelemetryService;
 }
 
-// Product-KPI surface for the in-app dashboard card. Authorised by
-// `leadershipProcedure` (head + admin + viewer); lead role is denied
-// because lead is the data subject of these KPIs, not a consumer.
-// Cached for 60s in Redis (see TelemetryCache); a Redis outage
-// degrades to direct queries.
+// Lead is the KPI data subject, not a consumer — leadershipProcedure only.
+// Redis cache (TelemetryCache) degrades to direct queries on outage.
 
 export function createTelemetryRouter(deps: TelemetryRouterDeps) {
   return router({

@@ -4,12 +4,8 @@ import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
 import { createAppRouter } from "./trpc.router.js";
 
-/**
- * input-and-error-hardening (section 1): the `search.query` input schema now
- * guards `q` with `safeText`. A null-byte query must be rejected as a
- * `BAD_REQUEST` at the tRPC router boundary — the Zod failure translation —
- * before the search service (and thus the repository) is ever invoked.
- */
+// Null-byte q must be rejected as BAD_REQUEST at the router boundary
+// (safeText) before the search service is invoked.
 
 const NULL_BYTE = String.fromCharCode(0);
 
