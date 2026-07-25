@@ -1,14 +1,18 @@
 import {
   type CarryOverExecution,
-  carryOverExecutionSchema,
   type CarryOverRecord,
   type PeriodStatus,
   type ReportSectionReadModel,
-  reportSectionReadModelSchema,
 } from "@customreport/shared";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger";
-import { cloneCarriedItem, cloneUnresolvedDecision } from "./carry-over-clones";
+import {
+  buildCarryOverExecution,
+  carriedCounts,
+  collectCarryOverRecords,
+  mergeCarriedIntoTargets,
+  planCarriedEntries,
+} from "./carry-over-plan";
 
 export class CarryOverDomainError extends Error {
   constructor(message: string) {
@@ -54,12 +58,18 @@ export interface CarryOverRepository {
   ): Promise<CarryOverResult>;
 }
 
-// Activity-parented only if re-attached on the target; product-parented always qualifies.
-function isActivityCarryable(
-  activityId: string | null | undefined,
-  targetActivityIds: ReadonlySet<string>,
-): boolean {
-  return activityId == null || targetActivityIds.has(activityId);
+function assertNoSubmittedTarget(
+  sourceSections: readonly ReportSectionReadModel[],
+  targetSections: readonly ReportSectionReadModel[],
+): void {
+  const matchedTargetSections = targetSections.filter((target) =>
+    sourceSections.some((source) => source.authorId === target.authorId),
+  );
+  if (matchedTargetSections.some((target) => target.status === "submitted")) {
+    throw new CarryOverDomainError(
+      "Carry-over cannot overwrite a submitted target section.",
+    );
+  }
 }
 
 function assertUniqueCarriedAuthors(
@@ -90,17 +100,18 @@ export class CarryOverService {
     this.logger = logger ?? createNullLogger();
   }
 
-  async executeCarryOver(
+  // Fetch order is load-bearing: the dedupe lookup and both section reads run
+  // before the period gate, so a replay of a completed carry-over still sees
+  // its stored execution.
+  private async loadCarryOverInputs(
     sourceReportId: string,
     targetReportId: string,
-  ): Promise<CarryOverResult> {
-    if (sourceReportId === targetReportId) {
-      throw new CarryOverDomainError(
-        "Carry-over requires different source and target reports.",
-      );
-    }
-
-    const dedupeKey = `${sourceReportId}:${targetReportId}`;
+    dedupeKey: string,
+  ): Promise<{
+    existingExecution: CarryOverExecution | null;
+    sourceSections: ReportSectionReadModel[];
+    targetSections: ReportSectionReadModel[];
+  }> {
     const existingExecution =
       await this.repository.findExecutionByDedupeKey(dedupeKey);
     const sourceSections =
@@ -122,127 +133,58 @@ export class CarryOverService {
         "Carry-over requires an editable target period (open or reopened, not archived).",
       );
     }
-    const matchedTargetSections = targetSections.filter((target) =>
-      sourceSections.some((source) => source.authorId === target.authorId),
-    );
-    if (matchedTargetSections.some((target) => target.status === "submitted")) {
+
+    return { existingExecution, sourceSections, targetSections };
+  }
+
+  async executeCarryOver(
+    sourceReportId: string,
+    targetReportId: string,
+  ): Promise<CarryOverResult> {
+    if (sourceReportId === targetReportId) {
       throw new CarryOverDomainError(
-        "Carry-over cannot overwrite a submitted target section.",
+        "Carry-over requires different source and target reports.",
       );
     }
 
-    // Only authors with a target section; activity-parented needs re-attachment.
-    const targetByAuthor = new Map(
-      targetSections.map((target) => [target.authorId, target] as const),
+    const dedupeKey = `${sourceReportId}:${targetReportId}`;
+    const { existingExecution, sourceSections, targetSections } =
+      await this.loadCarryOverInputs(sourceReportId, targetReportId, dedupeKey);
+    assertNoSubmittedTarget(sourceSections, targetSections);
+
+    const carriedByAuthor = planCarriedEntries(
+      sourceSections,
+      targetSections,
+      sourceReportId,
+      targetReportId,
     );
-    const carriedByAuthor = sourceSections.flatMap((sourceSection) => {
-      const targetSection = targetByAuthor.get(sourceSection.authorId);
-      if (!targetSection) {
-        return [];
-      }
-      // Activities re-attached to this author's target section — an
-      // activity-parented source record carries only when its parent is here.
-      const targetActivityIds = new Set(
-        targetSection.activities.map((activity) => activity.activityId),
-      );
-      // Skip lineages the target already holds — keeps counts accurate and
-      // avoids silent skipDuplicates / P2002 misread as dedupe race.
-      const targetItemLineage = new Set(
-        targetSection.items
-          .map((i) => i.stableId)
-          .filter((s): s is string => Boolean(s)),
-      );
-      const targetDecisionLineage = new Set(
-        targetSection.decisions
-          .map((d) => d.stableId)
-          .filter((s): s is string => Boolean(s)),
-      );
-      const items = sourceSection.items
-        .filter(
-          (item) =>
-            item.type === "next" &&
-            !item.carriedOver &&
-            // Finished work is closed; postponed work was explicitly pushed
-            // beyond this period — the lead re-plans it by hand, never auto.
-            item.workflowStatus !== "done" &&
-            item.workflowStatus !== "postponed" &&
-            isActivityCarryable(item.activityId, targetActivityIds) &&
-            !(
-              item.stableId !== undefined &&
-              targetItemLineage.has(item.stableId)
-            ),
-        )
-        .map((item) => cloneCarriedItem(sourceReportId, targetReportId, item));
-      const decisions = sourceSection.decisions
-        .filter(
-          (decision) =>
-            !decision.resolvedAt &&
-            isActivityCarryable(decision.activityId, targetActivityIds) &&
-            !(
-              decision.stableId !== undefined &&
-              targetDecisionLineage.has(decision.stableId)
-            ),
-        )
-        .map((decision) =>
-          cloneUnresolvedDecision(sourceReportId, targetReportId, decision),
-        );
-      return [{ authorId: targetSection.authorId, items, decisions }];
-    });
     assertUniqueCarriedAuthors(carriedByAuthor);
+    const counts = carriedCounts(carriedByAuthor);
 
-    const allCarriedItems = carriedByAuthor.flatMap((entry) => entry.items);
-    const allCarriedDecisions = carriedByAuthor.flatMap(
-      (entry) => entry.decisions,
-    );
-
-    // Merge carried rows into every matched target section (not just the
-    // first), so the repository persists each lead's carried items/decisions.
-    const nextTargetSections = targetSections.map((targetSection) => {
-      const carried = carriedByAuthor.find(
-        (entry) => entry.authorId === targetSection.authorId,
-      );
-      if (!carried || existingExecution) {
-        return targetSection;
-      }
-      return reportSectionReadModelSchema.parse({
-        ...targetSection,
-        items: [
-          ...targetSection.items,
-          ...carried.items.map((entry) => entry.item),
-        ],
-        decisions: [
-          ...targetSection.decisions,
-          ...carried.decisions.map((entry) => entry.decision),
-        ],
-      });
-    });
-
+    // Replaying a completed carry-over must stay a no-op write: reuse the
+    // stored execution and leave every target section as it stands.
+    const nextTargetSections = existingExecution
+      ? [...targetSections]
+      : mergeCarriedIntoTargets(targetSections, carriedByAuthor);
     const execution =
       existingExecution ??
-      carryOverExecutionSchema.parse({
-        id: crypto.randomUUID(),
+      buildCarryOverExecution({
         sourceReportId,
         targetReportId,
         dedupeKey,
-        status: "completed",
-        startedAt: new Date(),
-        completedAt: new Date(),
-        carriedItemCount: allCarriedItems.length,
-        carriedDecisionCount: allCarriedDecisions.length,
+        carriedItemCount: counts.items,
+        carriedDecisionCount: counts.decisions,
       });
     const records = existingExecution
       ? []
-      : [
-          ...allCarriedItems.map((entry) => entry.record),
-          ...allCarriedDecisions.map((entry) => entry.record),
-        ];
+      : collectCarryOverRecords(carriedByAuthor);
 
     this.logger.info("executing carry-over", {
       sourceReportId,
       targetReportId,
       sourceSections: sourceSections.length,
-      carriedItems: allCarriedItems.length,
-      carriedDecisions: allCarriedDecisions.length,
+      carriedItems: counts.items,
+      carriedDecisions: counts.decisions,
     });
     return this.repository.saveCarryOver(
       execution,

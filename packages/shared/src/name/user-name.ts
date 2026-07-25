@@ -2,6 +2,8 @@
  * Structured ФИО helpers (surname-first); denormalized `name` recomputed on write.
  * See `structured-user-name` / `user-name-display`.
  */
+/* eslint-disable jsdoc/require-param, jsdoc/require-returns --
+   public contract blocks only; param/return shapes are carried by TypeScript. */
 
 /** Surname-first ФИО parts: lastName, firstName, optional middleName (patronymic). */
 export interface UserNameParts {
@@ -18,7 +20,6 @@ function firstLetter(part?: string | null): string {
 /**
  * Canonical display name: surname-first, single-spaced; omit absent patronymic.
  * e.g. "Петров Алексей Иванович" / "Петров Алексей".
- * @param parts
  */
 export function composeName(parts: UserNameParts): string {
   return [parts.lastName, parts.firstName, parts.middleName]
@@ -30,7 +31,6 @@ export function composeName(parts: UserNameParts): string {
 /**
  * Short form: surname + given/patronymic initials, e.g. "Берёзов А.В."
  * or "Берёзов А." when there is no patronymic.
- * @param parts
  */
 export function shortName(parts: UserNameParts): string {
   const surname = parts.lastName.trim();
@@ -45,7 +45,6 @@ export function shortName(parts: UserNameParts): string {
 /**
  * Avatar initials from a plain name: first + second token (surname-first),
  * not first+last. Single token → first two letters. Fallback for SAML stubs.
- * @param name
  */
 export function initialsFromName(name: string): string {
   const [first, second] = name.trim().split(/\s+/).filter(Boolean);
@@ -57,7 +56,6 @@ export function initialsFromName(name: string): string {
 /**
  * Short "Surname I.O." from a plain surname-first name string.
  * Surface usage: see `user-name-display`.
- * @param name
  */
 export function shortNameFromName(name: string): string {
   const [surname, ...rest] = name.trim().split(/\s+/).filter(Boolean);
@@ -72,10 +70,6 @@ export function shortNameFromName(name: string): string {
 /**
  * Avatar initials preferring structured parts; fall back to name-string
  * heuristic when parts are absent (SAML-stub case).
- * @param input
- * @param input.lastName
- * @param input.firstName
- * @param input.name
  */
 export function initials(input: {
   lastName?: string | null;

@@ -5,12 +5,6 @@ import type {
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
-import { applyRevokeTransition } from "../../report-sections/index.js";
-import {
-  ReviewConstraintError,
-  ReviewNotFoundError,
-  ReviewVersionConflictError,
-} from "../application/review.service.js";
 import type {
   PostVerdictParams,
   RecordAnchor,
@@ -18,6 +12,7 @@ import type {
   VerdictContext,
 } from "../application/review-actions.service.js";
 import { insertCoordinatedComment } from "./review-actions.comment-write.js";
+import { writeVerdict } from "./review-actions.verdict-write.js";
 
 // review-acknowledgement: the group that owns a record is its section author's
 // reporting group (the same relation path `groupScopeFilter(_, 'reportSection')`
@@ -165,89 +160,6 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
   async postVerdict(
     params: PostVerdictParams,
   ): Promise<{ unsubmitted: boolean }> {
-    return this.prisma.$transaction(async (tx) => {
-      const gate = await tx.$queryRaw<
-        { periodStatus: string; archived: boolean }[]
-      >`SELECT report."periodStatus", report."archived"
-        FROM "Report" AS report
-        INNER JOIN "ReportSection" AS section
-          ON section."reportId" = report."id"
-        WHERE section."id" = ${params.sectionId}
-        FOR UPDATE OF report`;
-      const gateRow = gate[0];
-      // A missing row means the section was deleted between the precheck and
-      // this transaction — NOT_FOUND, not a period-state constraint.
-      if (gateRow === undefined) {
-        throw new ReviewNotFoundError(
-          "The section no longer exists; a verdict cannot be recorded.",
-        );
-      }
-      // The archive transition leaves periodStatus untouched, so the in-tx
-      // gate must re-check `archived` too — same predicate as
-      // isEditablePeriod on the authz path.
-      if (
-        gateRow.archived ||
-        (gateRow.periodStatus !== "open" && gateRow.periodStatus !== "reopened")
-      ) {
-        throw new ReviewConstraintError(
-          "This period is not editable; a verdict cannot be recorded.",
-        );
-      }
-
-      // Version lock for the verdict, taken as a guarded WRITE rather
-      // than a plain read: the no-op update row-locks the section for the rest
-      // of this transaction, so a concurrent lead re-submit either committed
-      // first (this predicate then matches zero rows) or blocks until this tx
-      // commits — a plain findUnique under READ COMMITTED would leave a window
-      // where a re-submit lands between the check and the upsert below. A
-      // zero-row match rejects the verdict, so no stale-version SectionReview
-      // row is ever written (the tx rolls back).
-      const { count } = await tx.reportSection.updateMany({
-        where: { id: params.sectionId, version: params.expectedVersion },
-        data: { version: params.expectedVersion },
-      });
-      if (count === 0) {
-        throw new ReviewVersionConflictError(
-          "The section changed since you opened it; reload and re-decide.",
-        );
-      }
-
-      await tx.sectionReview.upsert({
-        where: {
-          reportSectionId_reviewerId: {
-            reportSectionId: params.sectionId,
-            reviewerId: params.reviewerId,
-          },
-        },
-        create: {
-          reportSectionId: params.sectionId,
-          reviewerId: params.reviewerId,
-          verdict: params.verdict,
-          judgedVersion: params.expectedVersion,
-        },
-        update: {
-          verdict: params.verdict,
-          judgedVersion: params.expectedVersion,
-        },
-      });
-
-      // changes_requested un-submits a still-submitted section by REUSING the
-      // head's revoke transition (same field-set + status guard). The version
-      // guard adds the optimistic lock; the transition is atomic with the
-      // upsert above, so a concurrent verdict / head-revoke transitions once.
-      if (
-        params.verdict === "changes_requested" &&
-        params.currentStatus === "submitted"
-      ) {
-        const count = await applyRevokeTransition(
-          tx,
-          params.sectionId,
-          params.reviewerId,
-          params.expectedVersion,
-        );
-        return { unsubmitted: count > 0 };
-      }
-      return { unsubmitted: false };
-    });
+    return writeVerdict(this.prisma, params);
   }
 }
