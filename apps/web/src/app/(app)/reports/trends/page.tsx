@@ -7,18 +7,7 @@ import { latestPeriodPair } from "../../../../lib/analytics-periods";
 import { deriveTrendsWindow } from "../../../../lib/trends-window";
 import { useTRPC } from "../../../../lib/trpc-context";
 
-/**
- * /reports/trends page.
- *
- * Client component because the existing tRPC seam in this app uses
- * `useTRPC()` from a React context provider (apps/web/src/lib/trpc-context.ts).
- * The layout gate at apps/web/src/app/(app)/reports/layout.tsx already
- * permits all four authenticated roles — this page inherits that.
- *
- * Recharts-based chart components are loaded via next/dynamic with
- * ssr:false so SSR does not crash on ResizeObserver.
- */
-
+// Charts load with ssr:false — Recharts needs ResizeObserver (browser-only).
 const TrafficLightHistoryChart = dynamic(
   () =>
     import("../../../../features/analytics/ui/traffic-light-history.chart").then(
@@ -47,10 +36,7 @@ function ChartSkeleton() {
 
 export default function TrendsPage() {
   const trpc = useTRPC();
-  // Anchor the window on the current date instead of pinning absolute calendar
-  // bounds: the seed generates period-end dates relative to the run date and
-  // real reports keep advancing, so a fixed window eventually excludes every
-  // row and empties the charts.
+  // Window relative to now — seed period-ends and real reports keep advancing.
   const { periodFrom, periodTo } = deriveTrendsWindow(new Date());
   const history = useQuery(
     trpc.analytics.trafficLightHistory.queryOptions({
@@ -64,10 +50,7 @@ export default function TrendsPage() {
       periodTo,
     }),
   );
-  // Compare the two most recent periods rather than fixed dates: the seed
-  // generates period-end dates relative to the run date, so any pinned pair
-  // goes stale and the chart renders empty. `periods` arrives ascending, so
-  // the last two entries are the latest pair.
+  // Latest two periods (ascending list); fixed dates go stale against the seed.
   const historyData = history.data;
   const periodPair = latestPeriodPair(historyData?.periods ?? []);
   const comparison = useQuery({

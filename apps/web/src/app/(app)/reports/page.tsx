@@ -44,8 +44,7 @@ export default function ReportsPage() {
   const role = user?.role ?? null;
   const isLead = isLeadRole(role);
   const usesCompiledHistory = isHeadLike(role) || isViewer(role);
-  // viewer-report-surface-parity: the viewer searches published,
-  // group-scoped content.
+  // Viewer searches published, group-scoped content.
   const searchScope = isLead
     ? "mine"
     : isHeadLike(role)

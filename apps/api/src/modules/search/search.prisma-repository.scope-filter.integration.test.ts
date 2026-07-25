@@ -182,22 +182,20 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
       data: { id: PROJECT_ID, name: "Parity Platform", leadId: LEAD_A_ID },
     });
 
-    // A published report (status + periodStatus both 'published').
     await createReport(
       REPORT_PUB_ID,
       "published",
       "published",
       "2026-05-04T00:00:00.000Z",
     );
-    // An open (never-published) report.
     await createReport(
       REPORT_OPEN_ID,
       "draft",
       "open",
       "2026-05-11T00:00:00.000Z",
     );
-    // A REOPENED report: status stays 'published' (the list column) but
-    // periodStatus='reopened' makes content unreadable — the leak the gate fixes.
+    // Reopened: status stays 'published' (list column) but periodStatus makes
+    // content unreadable — the leak the gate fixes.
     await createReport(
       REPORT_REOPENED_ID,
       "published",
@@ -205,8 +203,6 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
       "2026-05-18T00:00:00.000Z",
     );
 
-    // Sections: group-A author in each report; one group-B author in the
-    // published report (the out-of-group case).
     await createSection(SECTION_PUB_A_ID, REPORT_PUB_ID, LEAD_A_ID);
     await createSection(SECTION_PUB_B_ID, REPORT_PUB_ID, LEAD_B_ID);
     await createSection(SECTION_OPEN_A_ID, REPORT_OPEN_ID, LEAD_A_ID);
@@ -217,8 +213,6 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
     await createItem(ITEM_REOPENED_IN_GROUP, SECTION_REOPENED_A_ID);
     await createItem(ITEM_PUB_OUT_GROUP, SECTION_PUB_B_ID);
 
-    // Risk + Decision: one published in-group (must surface) and one each in a
-    // non-qualifying section (unpublished / out-of-group; must be excluded).
     await createRisk(RISK_PUB_IN_GROUP, SECTION_PUB_A_ID);
     await createRisk(RISK_OPEN_IN_GROUP, SECTION_OPEN_A_ID);
     await createDecision(DECISION_PUB_IN_GROUP, SECTION_PUB_A_ID);

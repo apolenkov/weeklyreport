@@ -17,7 +17,6 @@ function makeError(message = "Test error"): Error & { digest?: string } {
   return Object.assign(new Error(message), { digest: "abc123" });
 }
 
-/** Parse static markup into a Document for structural assertions. */
 function renderToDocument(
   error: Error & { digest?: string },
   reset: () => void,

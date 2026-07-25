@@ -45,17 +45,15 @@ const STUB_ORG: OrganizationPublic = {
   fullName: "Test Organization",
 };
 
-/** Render the layout RSC and parse the resulting HTML into a document. */
 function renderLayout(org: OrganizationPublic): Document {
-  // layout.tsx imports getOrgPublic at module scope (for generateMetadata), so
-  // the mock must resolve for the import; RootLayout itself no longer reads it.
+  // layout.tsx imports getOrgPublic at module scope (generateMetadata).
   vi.mocked(getOrgPublic).mockResolvedValue(org);
 
   const html = renderToStaticMarkup(RootLayout({ children: null }));
   return new DOMParser().parseFromString(html, "text/html");
 }
 
-describe("RootLayout — inline org-data XSS sink removed", () => {
+describe("RootLayout — no inline org-data script", () => {
   it("uses the required organization name for metadata", async () => {
     vi.mocked(getOrgPublic).mockResolvedValue(STUB_ORG);
 
@@ -78,7 +76,6 @@ describe("RootLayout — inline org-data XSS sink removed", () => {
       shortName: "x",
       fullName: "</script><img src=x onerror=alert(1)>",
     });
-    // The dead sink is gone: no org markup breaks out into the document.
     expect(doc.querySelector("img")).toBeNull();
     for (const script of doc.querySelectorAll("script")) {
       expect(script.textContent).not.toContain("onerror");

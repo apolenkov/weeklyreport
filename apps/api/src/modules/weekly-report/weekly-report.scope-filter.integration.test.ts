@@ -9,21 +9,7 @@ import {
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
 import type { WeeklyReportScopeSession } from "./weekly-report.service";
 
-/**
- * Verifies that the weekly-report portfolio derives product ownership from
- * the explicit `GroupProduct` edge rather than the implicit
- * `Project.lead.reportingGroupId` path.
- *
- * Schema constraint B1 (`@@unique([productId])`) means each product
- * belongs to exactly one group. The suite therefore tests:
- *   - head in the product's group sees it (GroupProduct edge present);
- *   - head in a DIFFERENT group does NOT see it (correct scope isolation);
- *   - a project with NO GroupProduct row is invisible to scoped sessions;
- *   - admin session is unscoped and sees every project.
- *
- * Cross-group sharing (one product in two groups) is not possible: the
- * B1 unique constraint means each product belongs to exactly one group.
- */
+// Portfolio ownership comes from GroupProduct (B1: one product per group), not lead.reportingGroupId.
 describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integration)", () => {
   const prisma = createTestPrisma();
   let repo: WeeklyReportPrismaRepository;
@@ -145,10 +131,6 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
   });
 
   it("head in a different group does NOT see a product assigned to another group", async () => {
-    // Pre-migration the legacy `Project.lead.reportingGroupId` path would
-    // have also filtered this out (lead is in group A, not B), so the
-    // result is the same — but now the derivation goes through the
-    // explicit GroupProduct edge, not through the lead's group membership.
     const result = expectDefined(
       await repo.getWeeklyReport(REPORT_ID, session("head", GROUP_B_ID)),
     );
@@ -159,15 +141,8 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
     expect(productIds).not.toContain(PROJECT_ID);
   });
 
-  // The lead "Section Preview" must show only the lead's group's products,
-  // never another group's. The preview route
-  // (/lead/report/[id]/preview) renders the same weeklyReport.get payload, so
-  // the lead session is group-scoped here exactly like a head session. (The
-  // driver's "shows the whole portfolio" was a stale false-confirm: the server
-  // already scopes the product list by GroupProduct; see the live walk where
-  // lead1's preview showed 7 group products while admin saw all 9.)
-  it("a lead sees only their own group's product, not another group's (finding 2)", async () => {
-    // A second product owned by group B (lead A lives in group A).
+  // Lead preview uses the same weeklyReport.get payload as head — group-scoped.
+  it("a lead sees only their own group's product, not another group's", async () => {
     const GROUP_B_PRODUCT_ID = "a0000000-0000-4000-a000-0000000000d5";
     await prisma.project.create({
       data: {
@@ -187,9 +162,7 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
     const productIds = result.readModel.portfolioOverview.map(
       (p) => p.productId,
     );
-    // Lead A's group owns exactly the group-A product…
     expect(productIds).toContain(PROJECT_ID);
-    // …and never the group-B product (the finding-2 leak case).
     expect(productIds).not.toContain(GROUP_B_PRODUCT_ID);
   });
 
@@ -243,17 +216,12 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
     expect(ids).toContain(ORPHAN_ID);
   });
 
-  /* ------------------------------------------------------------------ */
-  /*  add-scope-accessed-audit (task 4): cross-group audit signal        */
-  /* ------------------------------------------------------------------ */
-
   describe("cross-group audit signal (scopeAccessed)", () => {
     const LEAD_B_ID = "a0000000-0000-4000-a000-0000000000c2";
     const CROSS_PROJECT_ID = "a0000000-0000-4000-a000-0000000000d4";
     const SECTION_A_ID = "a0000000-0000-4000-a000-0000000000f1";
 
-    /** Lead in group B owning a product joined to group A — the only way a
-     *  cross-group product can surface to head A via the GroupProduct edge. */
+    // Lead B owns a product joined to group A — only way it surfaces to head A.
     async function createCrossGroupProduct() {
       await prisma.user.create({
         data: {
@@ -279,10 +247,7 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
       });
     }
 
-    /** Flip the report to published with a snapshot containing one section
-     *  authored by lead A that reports on the given products. Each product
-     *  carries the `ownerGroupId` frozen into the snapshot at publish time —
-     *  the only source the published read uses to decide cross-group access. */
+    // Publish with snapshot; frozen ownerGroupId is the only cross-group source.
     async function publishWithSnapshot(
       surfacedProducts: {
         projectId: string;
@@ -376,10 +341,8 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
       expect(result.crossGroup).toBeNull();
     });
 
-    it("published period: NO signal when the snapshot does not surface the cross-group product (review blocker regression)", async () => {
-      // A GroupProduct cross-edge exists in the live tables, but the
-      // published snapshot the caller actually receives only shows the
-      // own-group product — no cross-group data is in the response, so
+    it("published period: NO signal when the snapshot does not surface the cross-group product", async () => {
+      // Live cross-edge exists, but snapshot only shows own-group product —
       // emitting scopeAccessed would be a false audit-trail entry.
       await createCrossGroupProduct();
       await publishWithSnapshot([

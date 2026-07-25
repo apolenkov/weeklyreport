@@ -3,12 +3,11 @@ import {
   type TrafficLightStatus,
 } from "@customreport/shared";
 
-/**
- * Raw shape `WeeklyReportRepository.getCompiledHistory` returns per report —
- * the exact columns/relations the `compiledHistory` read touches, kept local
- * so the port stays Prisma-free (Zone-4b: `weekly-report.service.ts` must not
- * import `@prisma/client`).
- */
+// Display sentinel when publisher is missing from the read model.
+const UNKNOWN_PUBLISHER_NAME = "Unknown";
+
+// Raw report shape for getCompiledHistory; kept Prisma-free so Zone-4b
+// weekly-report.service never imports @prisma/client.
 export interface CompiledHistoryReportRow {
   readonly id: string;
   readonly periodStart: Date;
@@ -49,8 +48,7 @@ function foldReportEntry(
     { green: 0, yellow: 0, red: 0 },
   );
 
-  // activity-first-class: activity-parented rows carry a null product FK
-  // and contribute no product id here.
+  // Activity-parented rows carry a null product FK and contribute no product id.
   const productIds = new Set([
     ...projectStatuses.map((row) => row.projectId),
     ...stageStatuses.map((row) => row.projectId),
@@ -65,7 +63,7 @@ function foldReportEntry(
     periodEnd: report.periodEnd,
     publishedAt: report.publishedAt,
     archived: report.archived,
-    publishedByName: report.publishedBy?.name ?? "Unknown",
+    publishedByName: report.publishedBy?.name ?? UNKNOWN_PUBLISHER_NAME,
     trafficLights,
     itemCount: items.length,
     riskCount: risks.length,
@@ -76,12 +74,6 @@ function foldReportEntry(
   };
 }
 
-/**
- * Pure post-processing of `getCompiledHistory` report rows into
- * `CompiledHistoryEntry`s: drops reports with no visible section, then folds
- * each report's traffic lights, counts, and distinct product ids across its
- * sections.
- */
 export function buildCompiledHistoryEntries(
   reports: readonly CompiledHistoryReportRow[],
 ): CompiledHistoryEntry[] {

@@ -6,12 +6,6 @@ import { groupScopeFilter, guardGroupScope } from "../../lib/group-scope.js";
 import { queryActiveLeadsLastPublishedPeriod } from "./telemetry.queries.js";
 import type { TelemetryRepository } from "./telemetry.service.js";
 
-/**
- * Prisma-backed implementation of the
- * `TelemetryRepository` port consumed by TelemetryService. All queries
- * are scoped to the small N (last 1 or 4 periods, last 7 days) so the
- * read path stays sub-100ms even at 10K+ historical reports.
- */
 @Injectable()
 export class TelemetryPrismaRepository implements TelemetryRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -20,10 +14,8 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
     guardGroupScope(session);
     const scope = groupScopeFilter(session, "reportSection");
     const scoped = Object.keys(scope).length > 0;
-    // "This period" = the latest period by start date (any status),
-    // because the headline "reports this period" number should not flip
-    // to zero at the deadline boundary when a period transitions from
-    // draft to published.
+    // Latest period by start (any status) so the headline does not flip to
+    // zero at the draft→published deadline boundary.
     const latest = await this.prisma.report.findFirst({
       where: { ...(scoped ? { sections: { some: scope } } : {}) },
       orderBy: { periodStart: "desc" },
@@ -80,10 +72,7 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
     const scope = groupScopeFilter(session, "reportSection");
     const scoped = Object.keys(scope).length > 0;
     const sevenDaysAgo = new Date(Date.now() - MS_PER_WEEK);
-    // The Prisma `PdfExportJob` row uses `createdAt` (auto-stamp) rather
-    // than the in-domain `requestedAt` — the domain `requestedAt` lives
-    // only on the assembled job shape returned to callers, not on the
-    // DB row.
+    // DB row has createdAt only; domain requestedAt is assembled for callers.
     return this.prisma.pdfExportJob.count({
       where: {
         createdAt: { gte: sevenDaysAgo },
@@ -99,8 +88,6 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
     guardGroupScope(session);
     const scope = groupScopeFilter(session, "reportSection");
     const scoped = Object.keys(scope).length > 0;
-    // Walk the last `n` published periods oldest → newest (we fetch DESC
-    // and reverse before reducing the results in display order).
     const reports = await this.prisma.report.findMany({
       where: {
         status: "published",

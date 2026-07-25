@@ -462,7 +462,6 @@ describe("review-actions (integration)", () => {
 
   describe("carry-over does not copy comments", () => {
     it("a carried record's comment stays with the source period", async () => {
-      // Source 'next' item with a comment.
       const sourceItem = await prisma.item.create({
         data: {
           reportSectionId: testData.section.id,
@@ -481,7 +480,6 @@ describe("review-actions (integration)", () => {
         "source comment",
       );
 
-      // Editable target period + matched target section (same author).
       const targetReport = await prisma.report.create({
         data: {
           periodStart: new Date("2026-04-14"),
@@ -498,7 +496,6 @@ describe("review-actions (integration)", () => {
       );
       await carryService.executeCarryOver(testData.report.id, targetReport.id);
 
-      // The item carried into the target section, but the comment did NOT.
       const carried = await prisma.item.findMany({
         where: { reportSectionId: targetSection.id },
       });
@@ -508,7 +505,6 @@ describe("review-actions (integration)", () => {
       });
       expect(targetComments).toBe(0);
 
-      // The source comment is untouched.
       const sourceComments = await prisma.recordComment.count({
         where: { item: { reportSectionId: testData.section.id } },
       });

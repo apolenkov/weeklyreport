@@ -5,11 +5,6 @@ import {
   POLICY_FORM_LABEL_CLASS,
 } from "./policy-form-styles";
 
-/**
- * The reminder form's collapsed-by-default "Advanced" fieldset: timezone
- * override + validity window, including the "forever" checkbox that clears
- * `validUntilIso`.
- */
 export function PolicyFormAdvancedFields({
   form,
   onChange,

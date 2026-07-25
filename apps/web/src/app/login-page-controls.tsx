@@ -10,14 +10,9 @@ import {
   ROLE_LABEL,
 } from "./login-page-roles";
 
-// All three AUTH_STUB card states (skeleton / last-session hint /
-// role picker) share one min-height — just above the natural height
-// of the tallest state, the role picker (112.5px measured: label +
-// two button rows + padding + border). Equal heights keep the
-// divider and footer below from shifting when hydration swaps one
-// state for another.
+// Shared min-height (~role-picker height) so AUTH_STUB card swaps do not CLS.
 const STUB_CARD_CLASSNAME =
-  "min-h-[113px] rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left";
+  "min-h-[113px] rounded-md border border-[#ece8e2] bg-[var(--color-surface-empty)] px-3 py-2.5 text-left";
 
 function RoleOptionsList() {
   return (
@@ -46,9 +41,6 @@ interface PrimaryCtaProps {
   readonly ssoHref: string;
 }
 
-// When a last-role hint exists, the primary CTA points at that
-// role's dev-login (one-click resume). Falls back to admin in stub
-// mode / SSO in real mode.
 export function PrimaryCta({ authStub, lastRole, ssoHref }: PrimaryCtaProps) {
   return (
     <a
@@ -98,11 +90,7 @@ interface LastRoleCardProps {
   readonly lastRole: LastRoleRecord | null;
 }
 
-// The container always renders at the same height in AUTH_STUB mode (see
-// STUB_CARD_CLASSNAME): a collapse when no hint is stored would read as a
-// layout jump (skeleton appears, then vanishes), and without a hint the
-// login page would offer NO way to pick a role. Skeleton while loading,
-// last-session hint when stored, or a direct role picker otherwise.
+// Fixed height via STUB_CARD_CLASSNAME: no collapse CLS; always a role path.
 export function LastRoleCard({ lastRoleLoaded, lastRole }: LastRoleCardProps) {
   return !lastRoleLoaded ? (
     <div

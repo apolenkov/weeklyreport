@@ -10,8 +10,6 @@ import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type { MockGroup, MockUser } from "../model/admin-types";
 import { GroupsTab } from "./groups-tab";
 
-// ----- mocks ---------------------------------------------------------
-
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
@@ -19,8 +17,6 @@ vi.mock("sonner", () => ({
     info: vi.fn(),
   },
 }));
-
-// ----- fixtures ------------------------------------------------------
 
 const USERS: MockUser[] = [
   {
@@ -54,8 +50,6 @@ const GROUPS: MockGroup[] = [
     headUserId: null,
   },
 ];
-
-// ----- tRPC test double ----------------------------------------------
 
 function renderTab(opts?: { groups?: MockGroup[]; users?: MockUser[] }) {
   const { proxy, captured } = createMockTRPC([
@@ -97,13 +91,10 @@ function renderTab(opts?: { groups?: MockGroup[]; users?: MockUser[] }) {
   return { ...result, captured };
 }
 
-/** Opens the Add Group dialog by clicking the header button. */
 function openAddDialog() {
   const addBtn = screen.getByRole("button", { name: "Add group" });
   fireEvent.click(addBtn);
 }
-
-// ----- tests ---------------------------------------------------------
 
 describe("GroupsTab — a11y regression", () => {
   beforeEach(() => {

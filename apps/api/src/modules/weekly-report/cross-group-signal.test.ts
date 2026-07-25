@@ -6,14 +6,6 @@ import {
 } from "./cross-group-signal";
 import type { WeeklyReportScopeSession } from "./weekly-report.service";
 
-/**
- * Falsifiable unit tests for the owner-group comparison that decides
- * whether a surfaced product is
- * cross-group. The router emit guard is covered separately in
- * `scope-accessed-emit.test.ts`; the snapshot intersection is covered by
- * `weekly-report.scope-filter.integration.test.ts`.
- */
-
 const GROUP_A = "a0000000-0000-4000-a000-00000000000a";
 const GROUP_B = "a0000000-0000-4000-a000-00000000000b";
 const PRODUCT_1 = "a0000000-0000-4000-a000-0000000000d1";
@@ -117,12 +109,7 @@ describe("computeCrossGroupSignal", () => {
   });
 });
 
-/**
- * The snapshot-sourced sibling used on the published-read path: it reads
- * `ownerGroupId` frozen into the snapshot instead of a live `lead` relation,
- * so a product surfaced by the snapshot stays eligible for the signal even
- * after its live row is archived or its GroupProduct edge is removed.
- */
+// Snapshot path: frozen ownerGroupId keeps signal eligibility after live archive.
 describe("computeCrossGroupSignalFromSnapshotProjects", () => {
   function snapshotProject(projectId: string, ownerGroupId?: string | null) {
     return { projectId, ownerGroupId };

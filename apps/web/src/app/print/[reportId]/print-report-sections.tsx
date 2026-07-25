@@ -7,6 +7,9 @@ import {
   TEXT_SECONDARY,
 } from "./print-report-theme";
 
+// Tertiary text for footer (muted vs TEXT_SECONDARY).
+const TEXT_TERTIARY = "rgba(0,0,0,0.38)";
+
 export function PrintReportHeader({
   periodLabel,
   submissionSummary,
@@ -105,7 +108,7 @@ export function PrintReportFooter({
         borderTop: BORDER_LIGHT,
         textAlign: "center",
         fontSize: "10px",
-        color: "rgba(0,0,0,0.38)",
+        color: TEXT_TERTIARY,
       }}
     >
       Generated {generatedAt} — Report ID: {reportId}

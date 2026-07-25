@@ -7,11 +7,8 @@ import * as Sentry from "@sentry/nextjs";
 
 import { webEnv } from "./src/lib/web-env";
 
-// correlate-errors-to-traces: the browser must emit a `sentry-trace` header on
-// same-origin api calls so the api adopts the browser's trace id (one id end to
-// end). browserTracing needs a non-zero sample rate to start a trace and attach
-// that header. 1.0 in dev; no production point exists yet, so production
-// sampling is deferred — see openspec/changes/correlate-errors-to-traces.
+// Non-zero sample rate so browserTracing emits sentry-trace on same-origin
+// api calls (one id end-to-end). Prod sampling: openspec/specs/prod-trace-sampling.
 const BROWSER_TRACES_SAMPLE_RATE = 1;
 
 Sentry.init({

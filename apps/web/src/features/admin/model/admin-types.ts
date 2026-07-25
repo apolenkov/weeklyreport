@@ -1,9 +1,3 @@
-/**
- * Canonical presentation types for the admin tabs. The mapper logic that
- * produces them lives in `admin.ts`; the form-state-to-API helpers live in
- * `admin-form-inputs.ts`.
- */
-
 import type {
   DbRole,
   PeriodStatus,
@@ -61,7 +55,7 @@ export interface MockPeriod {
   weekLabel: string;
   startDate: string;
   endDate: string;
-  /** ISO date, or null for a period whose deadline was cleared (ruling F16). */
+  // ISO date, or null when the period's deadline was cleared.
   deadline: string | null;
   status: PeriodStatus;
 }
@@ -85,12 +79,7 @@ export interface MockReminder {
   policyId: string | null;
 }
 
-/**
- * Presentation shape of {@link reminderPolicySchema} for the Reminders Tab
- * policy editor. Mirrors the wire schema 1:1 except the wire-only `id` is
- * preserved verbatim — there is no name/description synthesis here because
- * the editor surfaces every column directly.
- */
+// Wire shape 1:1; no name/description synthesis — editor shows every column.
 export interface MockReminderPolicy {
   id: string;
   kind: ReminderPolicyKind;

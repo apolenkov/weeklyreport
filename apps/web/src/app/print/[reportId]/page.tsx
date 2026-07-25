@@ -4,44 +4,15 @@ import { redirect } from "next/navigation";
 import { getPrintRouteContext } from "../../../lib/server/get-print-route-context";
 import { PrintReportTemplate } from "./print-report-template";
 
-/* ------------------------------------------------------------------ */
-/*  Print route — thin async SERVER gate                              */
-/*                                                                    */
-/*  `/print/[reportId]` is the PDF worker's render template ONLY. The */
-/*  route is NOT under the proxy.ts auth matcher, so this gate handles */
-/*  the no-session case itself.                                       */
-/*                                                                    */
-/*  Discriminator order matters: verify the PDF-worker export-auth     */
-/*  FIRST (a `requestedBy` worker token resolves to the requester's    */
-/*  real session, so it is indistinguishable from a human by session   */
-/*  alone — only `isPdfExport` + the bound `pdfReportId` tell them      */
-/*  apart). THEN branch on the human session.                          */
-/*                                                                    */
-/*    worker (isPdfExport && pdfReportId === reportId) → render        */
-/*    authenticated human                              → 307 redirect  */
-/*    no session                                       → 307 login     */
-/*                                                                    */
-/*  The redirect is a UX gate, not the data boundary — the API's       */
-/*  pdfExportGuard scopes the actual reads regardless of who reaches   */
-/*  the route.                                                         */
-/* ------------------------------------------------------------------ */
+// Worker check first (isPdfExport + pdfReportId): worker token looks like a
+// human session otherwise. Outside proxy matcher — gate no-session here.
+// Redirect is UX only; pdfExportGuard is the data boundary.
 
 interface Props {
   params: Promise<{ reportId: string }>;
 }
 
-/**
- * Role-specific destination for an authenticated human who hit `/print`
- * without the worker export-auth context. head/admin → the consolidated
- * report; viewer → the published report; lead → their own active report.
- *
- * Per design ("lead → own/FORBIDDEN"), the lead takes the "own" path: they are
- * sent to their own report home (`/lead/report`). The alternative "FORBIDDEN for
- * a non-owned reportId" is deliberately NOT built: a lead human never renders
- * the print template (only the worker token does), so there is no data exposure
- * to forbid — the API pdfExportGuard is the real read boundary. Resolving
- * per-report ownership here would add an API round-trip with no security gain.
- */
+// Human bounce targets; lead → own report home (no per-report ownership check).
 function humanRedirectPath(role: Role, reportId: string): string {
   switch (role) {
     case "head":

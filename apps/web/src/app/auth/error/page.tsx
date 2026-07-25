@@ -34,7 +34,7 @@ export default async function AuthErrorPage({ searchParams }: Props) {
         <a
           href="/"
           className="btn-press inline-flex items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-3 font-[family-name:var(--font-sans)] text-sm font-medium text-white shadow-sm transition-shadow hover:shadow-md"
-          style={{ minHeight: "44px" }}
+          style={{ minHeight: "var(--touch-target-min)" }}
           aria-label="Return to login page"
         >
           Return to Login

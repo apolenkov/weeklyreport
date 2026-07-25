@@ -24,6 +24,8 @@ const CARD_STYLE: CSSProperties = {
 const SUBMITTED_COLOR = printStatusColor("on-track");
 const BLOCKED_COLOR = printStatusColor("blocked");
 const AT_RISK_COLOR = printStatusColor("at-risk");
+// Decisions accent — indigo, distinct from the status palette.
+const DECISIONS_COLOR = "#3730a3";
 
 function SummaryCard({
   color,
@@ -71,7 +73,7 @@ export function PrintExecutiveSummary({
         <SummaryCard color={AT_RISK_COLOR} label="At Risk">
           {atRiskCount}
         </SummaryCard>
-        <SummaryCard color="#3730a3" label="Decisions">
+        <SummaryCard color={DECISIONS_COLOR} label="Decisions">
           {decisionCount}
         </SummaryCard>
       </div>

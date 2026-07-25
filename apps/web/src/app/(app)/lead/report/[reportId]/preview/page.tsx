@@ -8,21 +8,7 @@ interface Props {
   params: Promise<{ reportId: string }>;
 }
 
-/**
- * Lead self-preview surface.
- *
- * Renders the lead's section exactly as the head sees it in the assembled
- * weekly report. Uses WeeklyReportPage with the current user's authorId to
- * open / highlight / scroll their own section. The product list is scoped to
- * the lead's reporting group server-side (weeklyReport.get via the GroupProduct
- * join), not to the products the lead personally authors. Read-only, no form.
- *
- * Server shell. The preview is a lead-only self-review surface: the parent
- * `/lead/*` layout admits lead/head/admin, so this page adds a per-page guard
- * that walls non-lead roles (head/admin) — the preview is scoped to the
- * viewer's own authorId and is meaningless for them. Denial uses the same
- * in-page `ForbiddenPage` wall as every other role gate.
- */
+// Lead-only: parent layout admits head/admin too; preview is own-authorId only.
 export default async function LeadReportPreviewPage({ params }: Props) {
   const { reportId } = await params;
 

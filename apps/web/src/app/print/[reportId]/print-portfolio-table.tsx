@@ -10,11 +10,16 @@ interface PrintPortfolioTableProps {
   readonly products: readonly WeeklyPortfolioProduct[];
 }
 
+// Brand dark for table header bar.
+const PORTFOLIO_HEADER_BG = "#1E3932";
+// Tertiary text for zero-count cells (muted vs TEXT_SECONDARY).
+const TEXT_TERTIARY = "rgba(0,0,0,0.38)";
+
 function PrintPortfolioHead() {
   const centered = { padding: "6px 8px", textAlign: "center" } as const;
   return (
     <thead>
-      <tr style={{ backgroundColor: "#1E3932", color: "#ffffff" }}>
+      <tr style={{ backgroundColor: PORTFOLIO_HEADER_BG, color: "#ffffff" }}>
         <th style={{ padding: "6px 8px", textAlign: "left" }}>Product</th>
         <th style={{ ...centered, width: "80px" }}>Status</th>
         <th style={{ padding: "6px 8px", textAlign: "left" }}>Leads</th>
@@ -60,7 +65,7 @@ function PrintPortfolioRow({
           style={
             product.riskCount > 0
               ? { color: printStatusColor("blocked"), fontWeight: 600 }
-              : { color: "rgba(0,0,0,0.38)" }
+              : { color: TEXT_TERTIARY }
           }
         >
           {product.riskCount}

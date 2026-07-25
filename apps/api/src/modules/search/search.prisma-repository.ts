@@ -30,15 +30,11 @@ interface SearchSqlContext {
 
 type SearchParams = Parameters<SearchRepository["search"]>[0];
 
-/**
- * Builds the shared bound SQL fragments used by each result-type chunk.
- *
- * Safety: `q` flows through `Prisma.sql` parameter binding only — never
- * spliced into the SQL text. `plainto_tsquery('russian', $param)` auto-
- * sanitises operator chars (`&`, `|`, `!`, `:`), so a malicious
- * `q='foo & bar'` is treated as the two tokens "foo" and "bar", not an
- * injected operator.
- */
+// Cap for hit titles in SQL (substring ... for N); keep UI snippets short.
+const TITLE_TRUNCATE_LENGTH = 120;
+
+// `q` is Prisma.sql-bound only; plainto_tsquery sanitises operators so
+// `q='foo & bar'` becomes two tokens, not injected SQL operators.
 function buildSqlContext(params: SearchParams): SearchSqlContext {
   const { q, scope, userId, groupIds, limit } = params;
   const sectionMineFilter =
@@ -74,13 +70,12 @@ function buildSqlContext(params: SearchParams): SearchSqlContext {
   };
 }
 
-/** Builds the complete parenthesized Item result chunk. */
 function buildItemChunk(context: SearchSqlContext): Prisma.Sql {
   const { q, headlineOpts, perType } = context;
   return Prisma.sql`(
     SELECT
       'item'::text AS "type", i."id"::text AS "id",
-      substring(regexp_replace(i."text", '\\s+', ' ', 'g') from 1 for 120) AS "title",
+      substring(regexp_replace(i."text", '\\s+', ' ', 'g') from 1 for ${TITLE_TRUNCATE_LENGTH}) AS "title",
       ts_headline('russian', i."text", plainto_tsquery('russian', ${q}), ${headlineOpts}) AS "snippet",
       ts_rank(i."searchTsv", plainto_tsquery('russian', ${q}))::float8 AS "rank",
       i."projectId"::text AS "projectId", rs."reportId"::text AS "reportId",
@@ -95,13 +90,12 @@ function buildItemChunk(context: SearchSqlContext): Prisma.Sql {
   )`;
 }
 
-/** Builds the complete parenthesized Risk result chunk. */
 function buildRiskChunk(context: SearchSqlContext): Prisma.Sql {
   const { q, headlineOpts, perType } = context;
   return Prisma.sql`(
     SELECT
       'risk'::text AS "type", r."id"::text AS "id",
-      substring(regexp_replace(r."risk", '\\s+', ' ', 'g') from 1 for 120) AS "title",
+      substring(regexp_replace(r."risk", '\\s+', ' ', 'g') from 1 for ${TITLE_TRUNCATE_LENGTH}) AS "title",
       ts_headline(
         'russian',
         coalesce(r."risk", '') || ' — ' || coalesce(r."impact", '') || ' — ' || coalesce(r."mitigation", ''),
@@ -120,13 +114,12 @@ function buildRiskChunk(context: SearchSqlContext): Prisma.Sql {
   )`;
 }
 
-/** Builds the complete parenthesized Decision result chunk. */
 function buildDecisionChunk(context: SearchSqlContext): Prisma.Sql {
   const { q, headlineOpts, perType } = context;
   return Prisma.sql`(
     SELECT
       'decision'::text AS "type", d."id"::text AS "id",
-      substring(regexp_replace(d."text", '\\s+', ' ', 'g') from 1 for 120) AS "title",
+      substring(regexp_replace(d."text", '\\s+', ' ', 'g') from 1 for ${TITLE_TRUNCATE_LENGTH}) AS "title",
       ts_headline('russian', d."text", plainto_tsquery('russian', ${q}), ${headlineOpts}) AS "snippet",
       ts_rank(d."searchTsv", plainto_tsquery('russian', ${q}))::float8 AS "rank",
       NULL::text AS "projectId", rs."reportId"::text AS "reportId",
@@ -141,7 +134,6 @@ function buildDecisionChunk(context: SearchSqlContext): Prisma.Sql {
   )`;
 }
 
-/** Builds the complete parenthesized Project result chunk. */
 function buildProjectChunk(context: SearchSqlContext): Prisma.Sql {
   const { q, headlineOpts, perType } = context;
   return Prisma.sql`(
@@ -159,7 +151,6 @@ function buildProjectChunk(context: SearchSqlContext): Prisma.Sql {
   )`;
 }
 
-/** Uniformly omits every excluded type before the UNION is assembled. */
 function buildIncludedChunks(
   context: SearchSqlContext,
   excludeTypes: readonly SearchHit["type"][],
@@ -175,7 +166,6 @@ function buildIncludedChunks(
     .map(({ sql }) => sql);
 }
 
-/** Joins present chunks without leaving a leading or trailing UNION ALL. */
 function buildSearchQuery(chunks: readonly Prisma.Sql[], limit: number) {
   return Prisma.sql`
     SELECT * FROM (${Prisma.join(chunks, " UNION ALL ")}) hits
@@ -184,7 +174,6 @@ function buildSearchQuery(chunks: readonly Prisma.Sql[], limit: number) {
   `;
 }
 
-/** Converts a raw SQL row to the shared search-hit contract. */
 function toSearchHit(row: RawHit): SearchHit {
   return {
     type: row.type,
@@ -199,7 +188,6 @@ function toSearchHit(row: RawHit): SearchHit {
   };
 }
 
-/** Prisma-backed full-text search across all uniformly excludable hit types. */
 @Injectable()
 export class SearchPrismaRepository implements SearchRepository {
   constructor(private readonly prisma: PrismaService) {}

@@ -1,9 +1,3 @@
-/**
- * Policy-editor form-state type + factories for the Reminders tab. Pure data
- * construction — no JSX. Shared by the tab (initial + reset state) and the
- * PolicyForm editor.
- */
-
 import { MINUTES_PER_DAY } from "@customreport/shared";
 
 import type { AdminReminderPolicyFormInput } from "./admin";
@@ -41,12 +35,8 @@ function todayIsoString(): string {
   return new Date().toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
-/**
- * A new reminder always starts from a valid preset. The org default audience
- * is intentionally NOT blended into the pairing — blending it produced the
- * invalid `deadline → head-of-late` pair. Only the timezone default is
- * sourced from AppSettings.
- */
+// Start from a valid preset; never blend org audience (produced invalid pairs).
+// Only timezone comes from AppSettings.
 export function emptyPolicyForm(timezone: string): PolicyFormState {
   const today = todayIsoString();
   const { kind, audience } = presetPairing(DEFAULT_PRESET);
@@ -54,7 +44,7 @@ export function emptyPolicyForm(timezone: string): PolicyFormState {
     preset: DEFAULT_PRESET,
     kind,
     audience,
-    offsetMinutes: DEFAULT_OFFSET_MINUTES, // T-24h
+    offsetMinutes: DEFAULT_OFFSET_MINUTES,
     timezone,
     active: true,
     validFromIso: today,

@@ -1,12 +1,4 @@
-/**
- * JobsTab wiring test.
- *
- * Strategy mirrors weekly-report-page.test.tsx: stub the tRPC proxy and
- * intercept `admin.jobs.listFailed.queryOptions` / `admin.jobs.retryFailed
- * .mutationOptions`. We don't drive a real network — we drive
- * captured.retryMutationFn directly and assert it received the right input.
- */
-
+// Stub tRPC proxy; drive captured mutationFn, not a real network.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -40,8 +32,6 @@ interface FailedJob {
   data: unknown;
 }
 
-// Base descriptors shared by both the data and pending factory calls.
-// The only difference is admin.jobs.listFailed: data vs "pending".
 const BASE_DESCRIPTORS = [
   { path: ["admin", "jobs", "retryFailed"], mutation: true as const },
   { path: ["admin", "dlqCount"] },
@@ -287,11 +277,9 @@ describe("JobsTab — BullMQ DLQ admin UI", () => {
     ).mutationFn;
     retryMutationFn.mockResolvedValue({ retried: true, jobId: "job-1" });
 
-    // Wait for both rows to render.
     await screen.findByText("job-1");
     expect(screen.getByText("job-2")).toBeInTheDocument();
 
-    // Two retry buttons exist; click the one for job-1.
     const retryJob1 = screen.getByRole("button", { name: /Retry job job-1/i });
     await userEvent.click(retryJob1);
 

@@ -308,10 +308,6 @@ describe("mapAdminSettings", () => {
       unifiedActivityView: true,
     });
     const mapped = mapAdminSettings(api);
-    // The wire schema applies defaults for the 9 new fields; the mapper
-    // passes them through 1:1. Asserting the full shape catches future
-    // drift between MockSettings and AppSettings. `departmentName` is not
-    // part of the shape on either side of the mapper.
     expect(mapped).toStrictEqual({
       autoCreatePeriods: false,
       defaultDeadlineDays: 3,
@@ -321,7 +317,6 @@ describe("mapAdminSettings", () => {
       allowLateSubmissions: true,
       autoPublishAfterDeadline: false,
       autoArchiveWeeksAfterPublish: 0,
-      // Period-cycle knobs default-fall-through.
       deadlineTime: "18:00",
       allowReopenAfterPublish: true,
       reopenWindowHours: 72,
@@ -332,7 +327,6 @@ describe("mapAdminSettings", () => {
     });
   });
 
-  // Explicit round-trip of the 9 new fields.
   it("round-trips the 9 new AppSettings fields", () => {
     const api: AppSettings = appSettingsSchema.parse({
       autoCreatePeriods: true,
@@ -359,7 +353,6 @@ describe("mapAdminSettings", () => {
     expect(mapped.autoArchiveWeeksAfterPublish).toBe(8);
   });
 
-  // Round-trip the period-cycle knobs through the wire → MockSettings mapper.
   it("round-trips the period-cycle fields", () => {
     const api: AppSettings = appSettingsSchema.parse({
       autoCreatePeriods: false,

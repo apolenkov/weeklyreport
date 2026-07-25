@@ -1,14 +1,6 @@
 import { defineConfig } from "vitest/config";
 
-/**
- * Explicit vitest config so CI can run with --coverage and enforce
- * thresholds — pinning coverage floors here avoids command-line bloat in
- * the `test` script.
- *
- * Coverage thresholds calibrated to the existing suite (598 unit tests). If
- * a sweep fix drops coverage below the floor, CI fails and the dev fixes
- * the gap rather than silently regressing.
- */
+// Thresholds live here so CI needs no command-line bloat on the test script.
 export default defineConfig({
   test: {
     // Provide the product-critical env vars the app reads via requireEnv (the

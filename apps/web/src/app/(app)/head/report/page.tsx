@@ -4,15 +4,7 @@ interface Props {
   searchParams: Promise<{ authorId?: string }>;
 }
 
-/**
- * Bare `/head/report` route. The addressed view `/head/report/[reportId]`
- * is canonical. This page is preserved for back-compat:
- * legacy bookmarks / email links still land here, and the page redirects
- * (client-side `router.replace`) to the canonical URL once the active
- * reportId is known. The legacy `?period=<week>` query is no longer a
- * special case — viewing a past week goes through the addressed URL plus
- * the history dropdown — so it is ignored and the redirect still fires.
- */
+// Back-compat bare route: client-replaces to /head/report/[reportId] once known.
 export default async function HeadReportPage({ searchParams }: Props) {
   const { authorId } = await searchParams;
 

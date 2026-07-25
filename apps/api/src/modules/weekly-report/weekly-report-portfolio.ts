@@ -10,18 +10,6 @@ import {
 import { computeWorstStatus } from "../published-report-snapshot.js";
 import type { WeeklyReportScopeSession } from "./weekly-report.service.js";
 
-/**
- * Portfolio-overview builder + scope-where helper for
- * `WeeklyReportPrismaRepository` — the
- * live (non-published) read path's project-aggregation logic: one entry
- * per non-archived project, worst-status folded across every lead section
- * that touched it.
- */
-
-// ---------------------------------------------------------------------------
-//  Portfolio overview: one entry per (non-archived) project
-// ---------------------------------------------------------------------------
-
 export function buildPortfolioOverview(
   projects: {
     id: string;
@@ -69,11 +57,7 @@ export function buildPortfolioOverview(
   });
 }
 
-/**
- * Build a Prisma where fragment for the given scope
- * target from the caller's session, or `undefined` when no filter applies
- * (admin or no-session paths).
- */
+// undefined when no filter applies (admin or no-session).
 export function scopeWhere(
   session: WeeklyReportScopeSession | undefined,
   target: "user" | "reportSection" | "project",
@@ -85,12 +69,7 @@ export function scopeWhere(
   return scope;
 }
 
-/**
- * Section-visibility scope shared by `compiledHistory` and `latestForViewer`:
- * a lead sees only their own authored sections (`authorId`), every other role
- * gets the group-scope fragment. Distinct from `scopeWhere`, which has no
- * lead/authorId special case.
- */
+// Lead: own authorId only. Other roles: group-scope (unlike scopeWhere).
 export function historySectionScope(
   session: WeeklyReportScopeSession,
 ): Record<string, unknown> {

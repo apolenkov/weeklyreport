@@ -1,4 +1,11 @@
-import { TEXT_PRIMARY, TEXT_SECONDARY } from "./print-report-theme";
+import {
+  printStatusColor,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
+} from "./print-report-theme";
+
+// Error heading uses the blocked/danger red from the print status palette.
+const ERROR_HEADING_COLOR = printStatusColor("blocked");
 
 export const PRINT_STATE = {
   loading: "loading",
@@ -35,7 +42,13 @@ export function LoadingShell({ reportId }: PrintReportShellProps) {
 export function ErrorShell({ reportId }: PrintReportShellProps) {
   return (
     <main data-print-state={PRINT_STATE.error} style={SHELL_STYLE} role="alert">
-      <h1 style={{ margin: "0 0 8px", fontSize: "16px", color: "#c82014" }}>
+      <h1
+        style={{
+          margin: "0 0 8px",
+          fontSize: "16px",
+          color: ERROR_HEADING_COLOR,
+        }}
+      >
         Report could not be rendered
       </h1>
       <p style={{ color: TEXT_SECONDARY }}>

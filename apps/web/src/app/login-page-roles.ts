@@ -1,27 +1,12 @@
-/**
- * Role-aware landing-redirect config for the login page: the per-role default
- * routes, the seeded dev-login email/label tables, and the pure helpers that
- * derive a redirect target or dev-login URL from them.
- */
 import type { DbRole, Role } from "@customreport/shared";
 import { ROLE_HOME_PATH, sessionRoleSchema } from "@customreport/shared";
 
-// The per-role display label, landing route, and dev-login email are homed
-// once in `@customreport/shared` (web-shared-idioms) so the login page, dev
-// role-switcher, api dev-login, and role gates cannot drift. Re-exported
-// here for the login-page consumers that already import from this module.
+// Homed in shared so login, role-switcher, and api dev-login cannot drift.
 export { ROLE_LABEL } from "@customreport/shared";
 
-// The role grid on the landing card uses this as the fallback email when no
-// persisted hint exists for that role. Keyed by `DbRole`: the picked role is
-// a DB-user lookup, not a session value — the session exists only after
-// dev-login.
+// Fallback email when no last-role hint; keyed by DbRole (pre-session lookup).
 export { DEV_LOGIN_EMAIL_BY_ROLE as DEV_EMAIL_FOR_ROLE } from "@customreport/shared";
 
-/**
- * Build the `/auth/dev-login` URL for a given role + email, with the
- * post-login redirect honouring the role's default landing route.
- */
 export function devLoginHref(role: DbRole, email: string): string {
   const params = new URLSearchParams({
     role,

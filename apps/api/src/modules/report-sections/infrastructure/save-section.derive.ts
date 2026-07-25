@@ -1,8 +1,5 @@
-// Pure row-builders + the child-row clear helper behind
-// ReportSectionsPrismaRepository.saveSection. The builders produce the
-// delete-recreate createMany payloads EXACTLY; the load-bearing orchestration
-// (FOR UPDATE gate, version compare-and-set, comment capture/reinsert, in-tx
-// re-read, conflict/P2002 handling) stays in the method.
+// Row-builders for saveSection's delete-recreate; load-bearing orchestration
+// (FOR UPDATE, version CAS, comment reinsert, conflict/P2002) stays in the caller.
 import type { ReportSectionReadModel } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
@@ -84,10 +81,6 @@ export function toRiskRows(section: ReportSectionReadModel, sectionId: string) {
   }));
 }
 
-/**
- * A decision is persisted only when parented by EITHER a product OR an activity
- * (the write schema's XOR guarantees exactly one).
- */
 export function isPersistableDecision(
   decision: ReportSectionReadModel["decisions"][number],
 ): boolean {
@@ -114,11 +107,7 @@ export function toDecisionRows(
   }));
 }
 
-/**
- * Deletes the six child-row collections the delete-recreate save owns, in the
- * original order. Runs inside the caller's still-open transaction so the clear
- * and the subsequent createMany fan-out commit atomically.
- */
+// Runs inside the caller's open transaction so clear + createMany commit atomically.
 export async function clearSectionChildRows(
   tx: Prisma.TransactionClient,
   sectionId: string,

@@ -23,16 +23,15 @@ import {
   ReviewNotFoundError,
 } from "./review.service.js";
 
-// review-acknowledgement: a comment's single record anchor (exactly one set;
-// the shared Zod input enforces that before this layer).
+// A comment's single record anchor (exactly one set; the shared Zod input
+// enforces that before this layer).
 export interface RecordAnchor {
   itemId?: string;
   riskId?: string;
   decisionId?: string;
 }
 
-// review-acknowledgement: the section facts a verdict reads — its editable
-// status, owning group, and period lifecycle.
+// Section facts a verdict reads — editable status, owning group, period lifecycle.
 export interface VerdictContext {
   status: ReportSectionStatus;
   groupId: string | null;
@@ -89,12 +88,8 @@ function toAnchor(input: ReviewCommentInput): RecordAnchor {
   };
 }
 
-/**
- * review-acknowledgement: the review capability's write surface — group
- * acknowledgement, per-record comments, and per-section verdicts (with the
- * verdict-driven auto-un-submit). Authorization rides the leadership chain at
- * the router; this service enforces the per-group scope + reviewer designation.
- */
+// Router owns leadership-chain authz; this service enforces per-group scope
+// and reviewer designation on the write surface.
 export class ReviewActionsService {
   constructor(private readonly repository: ReviewActionsRepository) {}
 

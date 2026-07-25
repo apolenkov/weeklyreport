@@ -125,10 +125,7 @@ function storeLastRole(record: object) {
   storage.setItem(LAST_ROLE_STORAGE_KEY, JSON.stringify(record));
 }
 
-// The last-role hint section uses lastRoleLoaded state to show a skeleton
-// before localStorage is read (in AUTH_STUB mode). This prevents CLS by
-// keeping the container at a stable min-height. Production (AUTH_STUB=false)
-// never shows the section, so CLS cannot occur there.
+// AUTH_STUB last-role section holds min-height via skeleton to prevent CLS.
 describe("Landing page — CLS skeleton", () => {
   it("renders an aria-hidden last-role skeleton before hydration", async () => {
     const LoginPageClient = await loadLoginPageClient();
@@ -240,7 +237,7 @@ describe("Landing page — last-role hint", () => {
     const href = viewerOption.getAttribute("href") ?? "";
     expect(href).toContain("role=viewer");
     expect(href).toContain("email=viewer%40customreport.local");
-    // viewer-live-status: the viewer lands on the Status entry, not History.
+    // Viewer lands on the Status entry, not History.
     expect(href).toContain("redirect=%2Freports%2Flatest");
   });
 });

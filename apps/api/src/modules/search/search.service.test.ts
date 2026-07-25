@@ -321,7 +321,6 @@ describe("SearchService", () => {
     ).rejects.toThrow();
   });
 
-  // group-scope filtering tests
   it("head session passes own reportingGroupId as groupIds", async () => {
     const repo = createRepository((params) => {
       expect(params.groupIds).toEqual([groupA]);
@@ -374,7 +373,7 @@ describe("SearchService", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  // viewer-report-surface-parity: the `published` viewer search surface.
+  // The `published` viewer search surface.
   it('allows scope="published" for viewer and forwards it to the repository', async () => {
     const repo = createRepository((params) => {
       expect(params.scope).toBe("published");

@@ -13,8 +13,8 @@ export class ReviewAccessError extends Error {
   }
 }
 
-// review-acknowledgement: a targeted record / section / comment does not exist
-// (or is out of the caller's reach — no existence oracle) → NOT_FOUND.
+// Targeted record / section / comment does not exist (or is out of reach —
+// no existence oracle) → NOT_FOUND.
 export class ReviewNotFoundError extends Error {
   constructor(message: string) {
     super(message);
@@ -22,8 +22,7 @@ export class ReviewNotFoundError extends Error {
   }
 }
 
-// review-acknowledgement: a state constraint (e.g. a verdict on a non-editable
-// period) → BAD_REQUEST.
+// State constraint (e.g. a verdict on a non-editable period) → BAD_REQUEST.
 export class ReviewConstraintError extends Error {
   constructor(message: string) {
     super(message);
@@ -31,10 +30,8 @@ export class ReviewConstraintError extends Error {
   }
 }
 
-// A verdict's optimistic version lock lost to a concurrent lead re-submit: the
-// version the reviewer judged no longer matches the section's current version,
-// so the verdict is rejected without writing a row → CONFLICT, letting the
-// client reload the current version and re-decide.
+// Optimistic version lock lost to a concurrent lead re-submit: the judged
+// version no longer matches → CONFLICT without writing; client reloads and re-decides.
 export class ReviewVersionConflictError extends Error {
   constructor(message: string) {
     super(message);
@@ -42,13 +39,8 @@ export class ReviewVersionConflictError extends Error {
   }
 }
 
-/**
- * Dashboard reads honour group-scope visibility.
- * The repository receives the requester's session so it can spread
- * `groupScopeFilter(session, 'reportSection')` into the Prisma where
- * fragment. Tests can pass a `Pick<UserSession, ...>` instead of a full
- * session shape.
- */
+// Dashboard reads honour group-scope; repository spreads groupScopeFilter
+// from this session into the Prisma where fragment.
 export type DashboardScopeSession = Pick<
   UserSession,
   "role" | "reportingGroupId" | "viewerGroupAccess"

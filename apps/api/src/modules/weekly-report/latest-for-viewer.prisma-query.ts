@@ -2,11 +2,6 @@ import type { PrismaService } from "../../infrastructure/prisma/prisma.service.j
 import type { WeeklyReportScopeSession } from "./weekly-report.service.js";
 import { historySectionScope } from "./weekly-report-portfolio.js";
 
-/**
- * `getVisibleReportId` / `getLatestPublishedVisibleId` queries, split out of
- * `WeeklyReportPrismaRepository` to keep that file under the line budget.
- */
-
 // Resolve the exact-id visibility check for the current editable period —
 // MUST NOT search older editable periods, the gate authorizes only the
 // current editable id.

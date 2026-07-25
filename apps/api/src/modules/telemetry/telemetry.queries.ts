@@ -1,11 +1,6 @@
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 
-/**
- * Distinct lead authors who submitted a section in the single most-recently
- * published period; 0 when no period is published yet. Backs the active-leads
- * KPI — shared by both the `/dashboard` summary repository and the Prometheus
- * gauge so the two can never drift apart.
- */
+// Shared by dashboard summary and Prometheus gauge so the two never drift.
 export async function queryActiveLeadsLastPublishedPeriod(
   prisma: PrismaService,
   sectionScope: Record<string, unknown>,

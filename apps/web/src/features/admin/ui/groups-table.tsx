@@ -10,6 +10,12 @@ interface GroupsTableProps {
   readonly onArchive: (group: MockGroup) => void;
 }
 
+// Compact table-row actions (denser than --touch-target-min header controls).
+const ROW_ACTION_CLASS =
+  "btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold transition-colors";
+const ROW_ACTION_EDIT_CLASS = `${ROW_ACTION_CLASS} text-[var(--color-starbucks-accent)] hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)]`;
+const ROW_ACTION_ARCHIVE_CLASS = `${ROW_ACTION_CLASS} text-[var(--color-destructive)] hover:border-[rgba(200,32,20,0.3)] hover:bg-red-50`;
+
 export function GroupsTable({
   groups,
   headById,
@@ -72,7 +78,7 @@ export function GroupsTable({
                   <button
                     type="button"
                     onClick={() => onEdit(group)}
-                    className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)]"
+                    className={ROW_ACTION_EDIT_CLASS}
                     aria-label={`Edit ${group.name}`}
                   >
                     Edit
@@ -81,7 +87,7 @@ export function GroupsTable({
                     <button
                       type="button"
                       onClick={() => onArchive(group)}
-                      className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[rgba(200,32,20,0.3)] hover:bg-red-50"
+                      className={ROW_ACTION_ARCHIVE_CLASS}
                       aria-label={`Archive ${group.name}`}
                     >
                       Archive

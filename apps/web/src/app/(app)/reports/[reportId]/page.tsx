@@ -11,17 +11,7 @@ interface Props {
   }>;
 }
 
-/**
- * Published Report Viewer.
- *
- * The page renders the read-only `ViewerReportShell` (the analogue of
- * `HeadReportShell`) instead of mounting `WeeklyReportPage` directly. The
- * shell adds toolbar parity — ScopeToggle, ViewModeToggle, period navigation,
- * Export-PDF — and resolves `?mode=slides` into real slides (so a `/present`
- * deep link lands in slides mode). All mutation affordances stay off the
- * viewer (no HeadPublishLockAction; the page gates Publish/Reopen/
- * Move-to-archive on head/admin only).
- */
+// Read-only ViewerReportShell; mutation affordances stay off the viewer.
 export default async function PublishedReportPage({
   params,
   searchParams,

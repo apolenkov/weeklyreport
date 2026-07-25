@@ -13,19 +13,11 @@ import {
   WeeklyReportService,
 } from "./weekly-report.service";
 
-/* ------------------------------------------------------------------ */
-/*  Fixed test UUIDs                                                   */
-/* ------------------------------------------------------------------ */
-
 const reportId = "11111111-1111-4111-8111-111111111111";
 const activeReportId = "22222222-2222-4222-8222-222222222222";
 const sectionId = "33333333-3333-4333-8333-333333333333";
 const authorId = "44444444-4444-4444-8444-444444444444";
 const projectId = "55555555-5555-4555-8555-555555555555";
-
-/* ------------------------------------------------------------------ */
-/*  Fixtures                                                           */
-/* ------------------------------------------------------------------ */
 
 function makeWeeklyReport(
   overrides: Partial<WeeklyReportReadModel> = {},
@@ -92,10 +84,6 @@ function makeWeeklyReport(
   });
 }
 
-/* ------------------------------------------------------------------ */
-/*  In-memory mock repository                                          */
-/* ------------------------------------------------------------------ */
-
 function createRepository(
   reports: Map<string, WeeklyReportReadModel>,
   activeId: string | null = null,
@@ -137,10 +125,6 @@ function createRepository(
   };
 }
 
-/* ------------------------------------------------------------------ */
-/*  Tests                                                              */
-/* ------------------------------------------------------------------ */
-
 describe("WeeklyReportService — contract tests", () => {
   it("returns compiled weekly report data for a given reportId", async () => {
     const report = makeWeeklyReport();
@@ -149,7 +133,6 @@ describe("WeeklyReportService — contract tests", () => {
 
     const result = await service.getWeeklyReport(reportId);
 
-    // R3a: service now returns discriminated union; active path carries status:'active'
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
 
@@ -196,17 +179,13 @@ describe("WeeklyReportService — contract tests", () => {
 
     const result = await service.getWeeklyReport();
 
-    // R3a: discriminated union — narrow to active before accessing fields
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
     expect(result.reportId).toBe(activeReportId);
   });
 
   it("returns no-period sentinel when no active report exists and no ID given", async () => {
-    // R3a: replaces the old "throws WeeklyReportDomainError" contract.
-    // The service now returns { status: 'no-period', report: null } instead
-    // of throwing, so the tRPC router returns HTTP 200 and React Query does
-    // not retry 3×.
+    // no-period → HTTP 200; React Query does not retry 3× as it would on throw.
     const service = new WeeklyReportService(createRepository(new Map(), null));
 
     const result = await service.getWeeklyReport();

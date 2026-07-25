@@ -2,10 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { createAppRouter } from "../../infrastructure/trpc/trpc.router.js";
 
-// Build the AppRouter with stub deps for surface-shape assertions. We never
-// invoke a resolver in this file; the resolver bodies are covered by the
-// shared schema + adapter unit tests. This file pins the router contract so
-// the procedures exist at the expected path.
+// Stub deps only — never invoke resolvers here; pins procedure path contract
+// while schema/adapter unit tests cover resolver bodies.
 function buildStubRouter() {
   const stubDeps = {} as Parameters<typeof createAppRouter>[0];
   return createAppRouter(stubDeps);

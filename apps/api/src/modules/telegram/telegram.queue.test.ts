@@ -13,18 +13,12 @@ import {
   TelegramProcessor,
 } from "./telegram.queue";
 
-// Verifies the processor's pure dispatch logic without instantiating a real
-// BullMQ Worker — we invoke the private `processJob` through a thin shim so
-// the redis-less unit test stays hermetic. Worker startup itself is covered
-// by the integration suite (when one lands for telegram in a follow-on phase).
-// The processor reads env only in onModuleInit (not exercised here); a minimal
-// stub satisfies the inherited constructor.
+// Invoke private processJob via shim so the redis-less unit test stays hermetic.
+// Env is only read in onModuleInit (not exercised here).
 const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
 
 class TestProcessor extends TelegramProcessor {
   public async invoke(data: TelegramOutboundJobData): Promise<void> {
-    // Cast through unknown so we can call the private method from the test
-    // without exposing it on the public API.
     await (
       this as unknown as {
         processJob(job: { data: TelegramOutboundJobData }): Promise<void>;
