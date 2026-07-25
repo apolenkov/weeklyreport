@@ -1,4 +1,7 @@
-<img src="assets/readme/hero.svg" alt="CustomReport — еженедельный статус-отчёт отдела Development: лиды заполняют секции, глава сводит их в один документ недели" width="100%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/readme/hero-dark.svg">
+  <img src="assets/readme/hero.svg" alt="CustomReport — еженедельный статус-отчёт отдела Development: лиды заполняют секции, глава сводит их в один документ недели" width="100%">
+</picture>
 
 Лиды (`lead`) заполняют свои секции отчёта независимо друг от друга. Глава отдела
 (`head`) просматривает, публикует и экспортирует единый сводный отчёт. Есть ещё
@@ -8,7 +11,10 @@
 > одноразовые: их сброс и пересборка с нуля ожидаемы и безопасны. Подробности —
 > в [`CLAUDE.md`](./CLAUDE.md), раздел «MVP Phase: Database Is Disposable».
 
-<img src="assets/readme/lifecycle.svg" alt="Жизненный цикл отчёта: лид заполняет секцию (draft → submitted), глава проверяет и сводит секции (approved / changes), публикует период и экспортирует его в PDF (published → pdf)" width="100%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/readme/lifecycle-dark.svg">
+  <img src="assets/readme/lifecycle.svg" alt="Жизненный цикл отчёта: лид заполняет секцию (draft → submitted), глава проверяет и сводит секции (approved / changes), публикует период и экспортирует его в PDF (published → pdf)" width="100%">
+</picture>
 
 ## Стек
 
