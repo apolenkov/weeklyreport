@@ -1,9 +1,3 @@
-/**
- * Pure display helpers + the Reminder-type preset model for the Reminders
- * tab. No JSX, no React state — safe to import from both the tab and its
- * sub-components.
- */
-
 import {
   HOURS_PER_DAY,
   MINUTES_PER_DAY,
@@ -19,13 +13,7 @@ const MAX_HOUR_OFFSET_DAYS = 2;
 const MAX_HOUR_OFFSET_MINUTES =
   MAX_HOUR_OFFSET_DAYS * HOURS_PER_DAY * MINUTES_PER_HOUR;
 
-/**
- * A Reminder type preset is one of the two meaningful (kind, audience)
- * pairings the engine supports. The admin picks a preset; on save it
- * expands back into the stored `kind` + `audience` fields. A stored row
- * whose pairing matches neither preset is surfaced read-only as "Custom"
- * rather than silently coerced.
- */
+// Meaningful (kind, audience) pairings; unmatched rows surface as "Custom".
 export const REMINDER_PRESETS = [
   {
     value: "deadline-leads",
@@ -47,15 +35,10 @@ export const REMINDER_PRESETS = [
 }[];
 
 export type ReminderPreset = (typeof REMINDER_PRESETS)[number]["value"];
-/** The form's preset field: a real preset, or "custom" for a legacy pairing. */
 export type ReminderPresetChoice = ReminderPreset | "custom";
 
 export const CUSTOM_PRESET_LABEL = "Custom";
 
-/**
- * Resolve a stored (kind, audience) pairing to its preset, or "custom" when
- * it matches neither preset.
- */
 export function presetForPolicy(
   kind: MockReminderPolicy["kind"],
   audience: MockReminderPolicy["audience"],
@@ -66,7 +49,6 @@ export function presetForPolicy(
   return match ? match.value : "custom";
 }
 
-/** Expand a preset back into the (kind, audience) the engine stores. */
 export function presetPairing(preset: ReminderPreset): {
   kind: MockReminderPolicy["kind"];
   audience: MockReminderPolicy["audience"];
@@ -78,7 +60,6 @@ export function presetPairing(preset: ReminderPreset): {
   return { kind: found.kind, audience: found.audience };
 }
 
-/** Plain one-line description of who a reminder notifies (the card line). */
 export function describeRecipient(
   audience: MockReminderPolicy["audience"],
 ): string {
@@ -120,7 +101,6 @@ export function getOffsetAmount(minutes: number, unit: OffsetUnit): number {
   return Math.abs(minutes) / offsetUnitFactor(unit);
 }
 
-/** Plain timing phrase, e.g. "24 hours before deadline" / "At deadline". */
 export function formatPolicyTiming(policy: MockReminderPolicy): string {
   const minutes = policy.offsetMinutes;
   if (minutes === 0) return "At deadline";
@@ -150,12 +130,7 @@ export function formatValidityWindow(policy: MockReminderPolicy): string {
   return `${from} → ${until}`;
 }
 
-/**
- * The earliest future derived-rule fire time, formatted as a plain date, or
- * `null` when there is no upcoming send (every derived rule already fired or
- * is paused). Pure: callers pass `now` so the result is deterministic in
- * tests. The row maps `null` to "No upcoming sends".
- */
+// Earliest future active fire; pure (caller passes `now`). null → no upcoming.
 export function nextSendDate(
   rules: readonly MockReminder[],
   now: Date,

@@ -1,11 +1,5 @@
 /**
  * @vitest-environment jsdom
- *
- * Regression tests for the print template's static CSS, query transitions,
- * and render outcomes.
- *
- * All assertions target the hardcoded print CSS string; no row in scope
- * involves keyboard, dialog, or focus behavior.
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -14,8 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { MapWeeklyReportResult } from "../../../features/report-sections/model/weekly-report";
 
-/* ---- Module mocks (must be hoisted above imports) ---- */
-
+// Module mocks must be hoisted above the import-under-test.
 vi.mock("@tanstack/react-query", async () => {
   const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
     "@tanstack/react-query",
@@ -129,20 +122,11 @@ vi.mock("../../../features/report-sections/model/weekly-report", () => ({
     }) satisfies MapWeeklyReportResult,
 }));
 
-// joinPeriodLabel is a pure formatting helper — use the real implementation.
-// No mock needed.
-
-/* ---- Import under test (after mocks are registered) ---- */
-
 import { PrintReportTemplate } from "./print-report-template";
-
-/* ---- Helper ---- */
 
 function renderPage(reportId: string) {
   return render(<PrintReportTemplate reportId={reportId} />);
 }
-
-/* ---- Tests ---- */
 
 describe("PrintReportTemplate — <style dangerouslySetInnerHTML> static CSS safety", () => {
   it("style textContent contains only static CSS keywords — no user-supplied interpolations", () => {

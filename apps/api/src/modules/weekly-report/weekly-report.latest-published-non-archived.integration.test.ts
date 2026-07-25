@@ -9,16 +9,7 @@ import {
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
 import { WeeklyReportService } from "./weekly-report.service";
 
-/**
- * Real-Prisma coverage for `getLatestPublishedNonArchivedId()` — the head's
- * `period.reopen` authz target and published-fallback default. The stub
- * where-shape lives in the unit tests; this one runs the filter against
- * Postgres and proves the behaviour:
- *   - the newest non-archived `published` period wins;
- *   - an archived `published` row is EXCLUDED even when it is the newest;
- *   - a same-`periodStart` tie breaks deterministically by `id desc`;
- *   - no non-archived published period returns null.
- */
+// Real-Prisma coverage for getLatestPublishedNonArchivedId (head reopen target).
 describe("WeeklyReportPrismaRepository.getLatestPublishedNonArchivedId (integration)", () => {
   const prisma = createTestPrisma();
   const repository = new WeeklyReportPrismaRepository(

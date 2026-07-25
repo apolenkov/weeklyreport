@@ -1,10 +1,3 @@
-/**
- * Form-state → API-input helpers for the admin tabs. Each helper translates
- * the mock-shaped form state stored in an admin tab into the Zod-validated
- * input expected by the corresponding mutation. They live together so any
- * contract drift (e.g. schema field renames) collects in one place.
- */
-
 import type { DbRole } from "@customreport/shared";
 import {
   composeName,
@@ -12,11 +5,7 @@ import {
   type ReminderPolicyKind,
 } from "@customreport/shared";
 
-/**
- * Generates a v4 UUID. The browser's `crypto.randomUUID` is required by every
- * env that runs this code (Next.js 16 + Node 20+). The fallback throws because
- * Zod will reject a non-UUID id at the API boundary.
- */
+// crypto.randomUUID required; throw rather than invent a non-UUID the API rejects.
 function newId(): string {
   if (
     typeof crypto !== "undefined" &&
@@ -42,13 +31,7 @@ export interface AdminUserFormInput {
   groupId: string;
 }
 
-/**
- * Maps the Users tab form state to the `adminUserSchema` payload. When editing
- * an existing user, pass `existingId`; when adding a new user, omit it and a
- * fresh UUID is generated client-side (the server will accept the inserted id
- * as-is per the schema's `id: uuid()`). `name` is recomputed from the parts in
- * surname-first ФИО order.
- */
+// existingId omitted → client mints UUID; name recomputed from ФИО parts.
 export function toAdminUserInput(
   form: AdminUserFormInput,
   existingId?: string,
@@ -120,11 +103,7 @@ export class UnresolvedProjectLeadError extends Error {
   }
 }
 
-/**
- * Maps the Products tab form state to the `adminProjectSchema` payload.
- * `leadName` is required by the schema; if the form does not carry it, callers
- * resolve it from the users list before invoking this helper.
- */
+// leadName required by schema; callers resolve from users list when missing.
 export function toAdminProjectInput(
   form: AdminProjectFormInput,
   existingId?: string,
@@ -149,17 +128,7 @@ export function toAdminProjectInput(
   };
 }
 
-/**
- * Reminders Tab policy editor form-state.
- *
- * The form binds:
- *   - `kind`, `offsetMinutes`, `timezone`, `audience`, `active`: 1:1 with
- *     `reminderPolicySchema`.
- *   - `validFromIso`: `YYYY-MM-DD` from a `<input type="date">`. Always
- *     present; defaults to today on the "Add" form.
- *   - `validUntilIso`: `YYYY-MM-DD` or `null`. `null` means the user has
- *     ticked the "forever" checkbox so the upper bound is open.
- */
+// validUntilIso null = "forever" checkbox; dates are YYYY-MM-DD from type=date.
 export interface AdminReminderPolicyFormInput {
   kind: ReminderPolicyKind;
   offsetMinutes: number;
@@ -170,16 +139,7 @@ export interface AdminReminderPolicyFormInput {
   validUntilIso: string | null;
 }
 
-/**
- * Maps the policy form state to the `reminderPolicySchema` payload.
- *
- * The "forever" checkbox flips `validUntilIso` to `null` which becomes
- * `validUntil: null` on the wire. Otherwise the YYYY-MM-DD string is
- * coerced into a JS Date at midnight UTC (matching how the prisma column
- * stores `DateTime`); the schema's `z.coerce.date()` accepts either form
- * but emitting a Date here means the network payload after JSON.stringify
- * is a clean ISO timestamp.
- */
+// YYYY-MM-DD → Date at midnight UTC (matches Prisma DateTime); null = forever.
 export function toReminderPolicyInput(
   form: AdminReminderPolicyFormInput,
   existingId?: string,

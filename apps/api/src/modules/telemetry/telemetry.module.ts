@@ -13,14 +13,6 @@ import {
 import { TelemetryPrismaRepository } from "./telemetry.prisma-repository.js";
 import { TelemetryService } from "./telemetry.service.js";
 
-/**
- * Product-telemetry wiring.
- *
- *  - `TelemetryGauges` installs Prom `collect` callbacks on boot.
- *  - `TelemetryService` backs the `telemetry.summary` tRPC procedure
- *    consumed by the in-app KPI card. Cached for 60s via Redis to keep
- *    the dashboard refresh cheap.
- */
 @Module({
   imports: [ConfigModule],
   providers: [

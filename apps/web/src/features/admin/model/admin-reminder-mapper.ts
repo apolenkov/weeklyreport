@@ -39,13 +39,6 @@ function reminderDescription(rule: AdminReminderRule): string {
   }
 }
 
-/**
- * Translates `admin.snapshot` reminder rules → presentation.
- *
- * The Reminder status → active mapping:
- *   apiStatus === 'active' => mock.active === true
- *   apiStatus === 'paused' => mock.active === false
- */
 export function mapReminder(api: AdminReminderRule): MockReminder {
   return {
     id: api.id,

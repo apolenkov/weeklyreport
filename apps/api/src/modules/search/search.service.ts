@@ -9,13 +9,8 @@ import {
 
 import { createServiceLogger } from "../../lib/logger-service.js";
 
-/**
- * SearchRepository contract — Prisma-free at the service
- * boundary so unit tests can supply an in-memory fake. The Prisma
- * implementation lives in search.prisma-repository.ts and uses $queryRaw
- * with `plainto_tsquery('russian', ...)` against the GIN-indexed
- * `searchTsv` columns added in migration 20260506090026.
- */
+// Prisma-free port so unit tests supply an in-memory fake; Prisma impl uses
+// $queryRaw + plainto_tsquery against GIN-indexed searchTsv columns.
 export interface SearchRepository {
   search(params: {
     q: string;
@@ -75,8 +70,7 @@ function resolveSearchGroupIds(session: UserSession): string[] | null {
  * lead + viewer exclude `project`: the only Project destination is /admin
  * (products), unreachable for both roles, so a project hit dead-ends the search
  * ("Page unavailable for your role"). Their own item/risk/decision hits still
- * surface and deep-link correctly. (lead: behavioral-ui-regression-gate 3.1;
- * viewer: viewer-report-surface-parity Decision 3.)
+ * surface and deep-link correctly. (lead: behavioral-ui-regression-gate 3.1.)
  */
 function resolveSearchExcludeTypes(session: UserSession): SearchHit["type"][] {
   return session.role === "lead" || session.role === "viewer"

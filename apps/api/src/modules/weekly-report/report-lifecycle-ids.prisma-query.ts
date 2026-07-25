@@ -1,10 +1,5 @@
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 
-/**
- * Report-lifecycle id lookups, split out of `WeeklyReportPrismaRepository`
- * to keep that file under the line budget.
- */
-
 export async function queryActiveReportId(
   prisma: PrismaService,
 ): Promise<string | null> {
@@ -35,29 +30,9 @@ export async function queryActiveReportId(
   return publishedReport?.id ?? null;
 }
 
-/**
- * The single source of truth for the **current editable period** — the
- * newest non-archived `open`/`reopened` report that has actually started
- * (`periodStart <= now`). Deliberately:
- *   - NO published fallback (unlike `queryActiveReportId`): the viewer gate
- *     already admits any `published` report via its first clause, so a
- *     fallback here would let the gate's id-equality match a published id and
- *     defeat the `open → published` race rejection.
- *   - `archived: false`: the admin archive path does not force `periodStatus`,
- *     so an archived row can still read `open`; a `Current period` is
- *     non-archived (CONTEXT.md), and excluding archived rows keeps an
- *     archived-open period from being mistaken for the current one.
- *
- * Determinism: the period-creation lock is a separate change, so two
- * concurrent editable periods can share the same `periodStart`. A
- * `periodStart desc` sort alone leaves that tie to the DB's arbitrary row
- * order — and because the gate and the `latestForViewer` resolver call this
- * helper SEPARATELY, a nondeterministic tie could let them pick DIFFERENT
- * periods (the resolver targets one, the gate authorizes the other → the
- * viewer's own Status entry 404s). The secondary `id desc` key is a total,
- * stable order over the unique primary key, so every call resolves the same
- * id for the same data.
- */
+// Newest non-archived open/reopened that has started. No published fallback
+// (would defeat open→published race rejection). Secondary id desc: gate and
+// latestForViewer call this separately and must pick the same id on ties.
 export async function queryCurrentEditableId(
   prisma: PrismaService,
 ): Promise<string | null> {
@@ -74,14 +49,8 @@ export async function queryCurrentEditableId(
   return editableReport?.id ?? null;
 }
 
-/**
- * The newest non-archived `published` report id — the head's
- * `period.reopen` authz target and published-fallback default: a head can
- * reopen the newest non-archived published period even when a newer published
- * row has since been archived (the archived-rejection guard would otherwise
- * block it). The `id desc` tiebreak keeps the pick deterministic on a shared
- * `periodStart`.
- */
+// Head reopen / published-fallback target: newest non-archived published;
+// id desc tiebreak keeps the pick deterministic on a shared periodStart.
 export async function queryLatestPublishedNonArchivedId(
   prisma: PrismaService,
 ): Promise<string | null> {

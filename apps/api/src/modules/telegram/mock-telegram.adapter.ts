@@ -1,11 +1,5 @@
-// MockTelegramAdapter — deterministic stub used until
-// the org activates a real Telegram bot. Logs the payload to stderr as a
-// structured JSON line (so it shows up in the API log stream just like a
-// real BullMQ worker event) and always returns `{ ok: true }`.
-//
-// Determinism is the point: no network, no `bigint` parsing, no rate-limit
-// state. Tests inject this adapter through the DI token and assert against
-// the recorded `lastPayload` rather than parsing stderr.
+// Deterministic stub until a real bot is activated: no network/rate-limit.
+// Tests assert against lastPayload rather than parsing stderr.
 
 import { Injectable } from "@nestjs/common";
 
@@ -17,21 +11,10 @@ import type {
 
 @Injectable()
 export class MockTelegramAdapter implements TelegramAdapter {
-  /**
-   * Test hook — most-recent send payload. Tests use this to assert the
-   * queue worker dispatched the right message without parsing structured
-   * log lines. Production callers ignore this field; it is intentionally
-   * mutable so the mock stays cheap (no event-emitter, no promise queue).
-   */
+  // Test hook for last send; production callers ignore it.
   public lastPayload: { chatId: string; text: string } | null = null;
 
-  /**
-   * Returns `{ ok: true }` unconditionally. Logs a single JSON line to
-   * stderr so a developer running the API container can see that the
-   * payload reached the worker. The format matches
-   * `email-reminder.processor.ts` so existing log dashboards stay
-   * uniform.
-   */
+  // Log format matches email-reminder.processor.ts so dashboards stay uniform.
   send(chatId: string, text: string): Promise<TelegramSendResult> {
     this.lastPayload = { chatId, text };
     process.stderr.write(

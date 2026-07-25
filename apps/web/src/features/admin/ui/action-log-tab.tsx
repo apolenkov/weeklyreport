@@ -9,6 +9,9 @@ import { ActionLogRow, type ActionLogRowData } from "./action-log-row";
 import { ActionLogSkeleton } from "./action-log-skeleton";
 
 const PAGE_SIZE = 20;
+// Proof-seed correlation prefix: exclude so empty/search-miss treat a
+// page of only proof rows as an empty log.
+const MANUAL_ACTION_LOG_PROOF_PREFIX = "manual-action-log-proof";
 
 export function ActionLogTab() {
   const trpc = useTRPC();
@@ -28,14 +31,10 @@ export function ActionLogTab() {
   );
 
   const rows = pagination.items;
-  // Proof rows are internal noise this view never shows, so every message and
-  // count derives from the user's data: nonProofRows decides true-empty vs
-  // search-miss (a page of only proof rows IS an empty log to the user), and
-  // the search then narrows nonProofRows into what the table renders.
   const nonProofRows = useMemo(
     () =>
       rows.filter(
-        (row) => !row.correlationId.startsWith("manual-action-log-proof"),
+        (row) => !row.correlationId.startsWith(MANUAL_ACTION_LOG_PROOF_PREFIX),
       ),
     [rows],
   );

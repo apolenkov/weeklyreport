@@ -19,7 +19,6 @@ import {
 import { GroupEditDialog } from "./group-edit-dialog";
 import { GroupsTable } from "./groups-table";
 
-// archive quick-filter — default "active" hides archived groups on load
 const ARCHIVE_OPTIONS = [
   { value: "active", label: "Active" },
   { value: "archived", label: "Archived" },
@@ -55,7 +54,6 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
   const [showDialog, setShowDialog] = useState(false);
   const [form, setForm] = useState<GroupFormData>(EMPTY_GROUP_FORM);
   const [search, setSearch] = useState("");
-  // archive quick-filter (default "active" — hides archived groups on load)
   const [archiveFilter, setArchiveFilter] =
     useState<ArchiveFilterValue>("active");
 

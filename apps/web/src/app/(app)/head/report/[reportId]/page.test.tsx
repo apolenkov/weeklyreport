@@ -1,10 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * head-toolbar-semantics: the view mode is a ROUTE concern — the page parses
- * `?mode=slides` from the URL into the `mode` prop the shell reflects. This is
- * the URL→mode "restore" half of the spec's "refresh preserves the view state"
- * scenario (the component-side reflection is covered in head-report-shell.test).
+ * head-toolbar-semantics: URL→mode restore half (?mode=slides).
  */
 
 import "@testing-library/jest-dom/vitest";

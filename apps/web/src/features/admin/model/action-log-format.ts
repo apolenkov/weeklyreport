@@ -15,10 +15,7 @@ export function truncate(value: string, max: number): string {
   return `${value.slice(0, max - 1).trimEnd()}…`;
 }
 
-/**
- * Turn machine procedure names into a friendlier "Namespace: Action" label so
- * admins reading the log don't have to translate camelCase mentally.
- */
+// Friendlier "Namespace: Action" label so admins need not parse camelCase.
 export function humanizeProcedure(procedure: string): string {
   const [ns, action] = procedure.split(".");
   if (!ns || !action) return procedure;

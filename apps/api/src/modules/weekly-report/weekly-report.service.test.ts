@@ -11,19 +11,11 @@ import {
   WeeklyReportService,
 } from "./weekly-report.service";
 
-/* ------------------------------------------------------------------ */
-/*  Fixed test UUIDs                                                   */
-/* ------------------------------------------------------------------ */
-
 const reportId = "11111111-1111-4111-8111-111111111111";
 const activeReportId = "22222222-2222-4222-8222-222222222222";
 const sectionId = "33333333-3333-4333-8333-333333333333";
 const authorId = "44444444-4444-4444-8444-444444444444";
 const projectId = "55555555-5555-4555-8555-555555555555";
-
-/* ------------------------------------------------------------------ */
-/*  Fixture helpers                                                    */
-/* ------------------------------------------------------------------ */
 
 function makeWeeklyReport(
   overrides: Partial<WeeklyReportReadModel> = {},
@@ -93,10 +85,6 @@ function makeRepoResult(
   return { readModel, crossGroup };
 }
 
-/* ------------------------------------------------------------------ */
-/*  Spy repository                                                     */
-/* ------------------------------------------------------------------ */
-
 function createSpyRepository(
   reports: Map<string, WeeklyReportReadModel>,
   activeId: string | null = null,
@@ -128,10 +116,6 @@ function createSpyRepository(
     getLatestPublishedVisibleId: vi.fn(() => Promise.resolve(null)),
   };
 }
-
-/* ------------------------------------------------------------------ */
-/*  Service-level unit tests                                           */
-/* ------------------------------------------------------------------ */
 
 describe("WeeklyReportService — unit tests", () => {
   it("calls getWeeklyReport with the provided reportId", async () => {
@@ -219,12 +203,7 @@ describe("WeeklyReportService — unit tests", () => {
   });
 });
 
-/* ------------------------------------------------------------------ */
-/*  viewer scoping                                                     */
-/* ------------------------------------------------------------------ */
-
-describe("WeeklyReportService — viewer-live-status published-or-current gate", () => {
-  // viewer + current open draft → visible
+describe("WeeklyReportService — viewer published-or-current gate", () => {
   it("viewer reads the CURRENT open period (drafts included)", async () => {
     const open = makeWeeklyReport({ periodStatus: "open" });
     const reports = new Map([[reportId, open]]);
@@ -241,7 +220,6 @@ describe("WeeklyReportService — viewer-live-status published-or-current gate",
     expect(result.reportId).toBe(reportId);
   });
 
-  // viewer + submitted section in the current open period → visible
   it("viewer reads a submitted section in the current open period", async () => {
     const open = makeWeeklyReport({ periodStatus: "open" });
     // makeWeeklyReport's lead section defaults to status "submitted"
@@ -256,7 +234,7 @@ describe("WeeklyReportService — viewer-live-status published-or-current gate",
     expect(result.status).toBe("active");
   });
 
-  // viewer + current reopened → live content (Decision 4: no snapshot-sticky)
+  // Current reopened → live content (no snapshot-sticky).
   it("viewer reads the CURRENT reopened period live", async () => {
     const reopened = makeWeeklyReport({ periodStatus: "reopened" });
     const reports = new Map([[reportId, reopened]]);
@@ -478,14 +456,9 @@ describe("WeeklyReportService — viewer-live-status published-or-current gate",
   });
 });
 
-/* ------------------------------------------------------------------ */
-/*  Task 4 — cross-group audit signal threading                        */
-/* ------------------------------------------------------------------ */
-
 const crossProductId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const crossGroupId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
-/** Repository that lets each test control the crossGroup signal. */
 function createCrossGroupRepository(
   readModel: WeeklyReportReadModel,
   crossGroup: WeeklyReportRepositoryResult["crossGroup"],
@@ -522,8 +495,7 @@ function createCrossGroupRepository(
   };
 }
 
-describe("WeeklyReportService — cross-group audit signal (task 4)", () => {
-  // 4.1 — non-admin read surfaces cross-group products: crossGroup is forwarded
+describe("WeeklyReportService — cross-group audit signal", () => {
   it("forwards crossGroup signal when non-admin read surfaces a cross-group product", async () => {
     const report = makeWeeklyReport();
     const signal = {
@@ -560,7 +532,6 @@ describe("WeeklyReportService — cross-group audit signal (task 4)", () => {
     expect(result.crossGroup).toEqual(twoProducts);
   });
 
-  // 4.2 — negative tests: no cross-group signal in own-group or admin reads
   it("passes crossGroup null when repository signals no cross-group products", async () => {
     const report = makeWeeklyReport();
     const service = new WeeklyReportService(
@@ -593,7 +564,6 @@ describe("WeeklyReportService — cross-group audit signal (task 4)", () => {
     expect(result.crossGroup).toEqual(signal);
   });
 
-  // 4.3 — invariance: read model fields are identical regardless of crossGroup value
   it("read model fields are identical whether crossGroup is present or null", async () => {
     const report = makeWeeklyReport();
     const signal = { productIds: [crossProductId], groupIds: [crossGroupId] };
@@ -619,10 +589,6 @@ describe("WeeklyReportService — cross-group audit signal (task 4)", () => {
     expect(modelWith).toEqual(modelNull);
   });
 });
-
-/* ------------------------------------------------------------------ */
-/*  Head default convergence onto the lifecycle resolvers (task 4.5)   */
-/* ------------------------------------------------------------------ */
 
 describe("WeeklyReportService — head default resolution", () => {
   const olderPublishedId = "66666666-6666-4666-8666-666666666666";

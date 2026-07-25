@@ -1,18 +1,5 @@
-// Telegram outbound BullMQ worker — seeds-only.
-//
-// The worker consumes jobs of shape `{ chatId: string; text: string }` from
-// the `telegram-outbound` queue (registered in BullMQModule) and dispatches
-// them through the resolved TelegramAdapter. The only producer
-// is `admin.testTelegramSend`, which is admin-only and proves the wiring
-// without needing a real bot.
-//
-// Lifecycle (raw `new Worker(...)`, trace/CLS wrapping, shutdown, and the
-// structured-JSON `failed`-event log) is inherited from `RawBullMqProcessor`,
-// the shared base its two siblings (`EmailReminderProcessor`,
-// `PdfExportProcessor`) also extend; this file supplies only the queue name,
-// span name, dispatch handler, failure hook, and concurrency override.
-// Retries are configured at job-enqueue time (`attempts: 3`) so the queue
-// itself stays generic.
+// Outbound worker: only admin.testTelegramSend enqueues; lifecycle from
+// RawBullMqProcessor. Retries are set at enqueue (attempts: 3).
 
 import { Injectable } from "@nestjs/common";
 import { type Job, type WorkerOptions } from "bullmq";
@@ -27,11 +14,6 @@ import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import type { AppLogger } from "../../lib/logger.js";
 import type { TelegramAdapter } from "./telegram.adapter.js";
 
-/**
- * Job-data shape for `telegram-outbound`. Kept intentionally minimal — the
- * adapter is the only consumer, and the queue does not carry rendering
- * concerns (a future producer that wants templating renders before enqueue).
- */
 export interface TelegramOutboundJobData extends JobTraceContext {
   chatId: string;
   text: string;

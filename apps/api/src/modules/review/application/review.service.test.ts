@@ -166,12 +166,7 @@ describe("ReviewService", () => {
   });
 });
 
-/**
- * Drive the live `review.dashboard` procedure (headProcedure) so the gating is
- * asserted against the wired path, not a parallel router copy. The procedure
- * resolves its target period from `getCurrentEditableId`, then delegates to the
- * `ReviewService`.
- */
+// Drive the live review.dashboard procedure so gating hits the wired path.
 function buildReviewCaller(service: ReviewService, session: UserSession) {
   const deps = {
     weeklyReportService: {

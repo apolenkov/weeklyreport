@@ -4,17 +4,7 @@ import { useRouter } from "next/navigation";
 
 import type { AdminTab } from "../model/admin-tab-dependencies";
 
-/**
- * Native <select> for admin-tab navigation at narrow
- * widths. The desktop anchor-tab list (apps/web/src/app/(app)/admin/page.tsx)
- * stays untouched; this component renders only at sm- viewports via the
- * `sm:hidden` Tailwind class.
- *
- * Native select is the right primitive on touch: it triggers the OS picker
- * (iOS wheel, Android bottom sheet), which is far more accessible than a
- * 5-button row at 375px.
- */
-
+// Native select triggers the OS picker — better at 375px than a 5-button row.
 const TABS: readonly { value: AdminTab; label: string }[] = [
   { value: "users", label: "Users" },
   { value: "groups", label: "Groups" },

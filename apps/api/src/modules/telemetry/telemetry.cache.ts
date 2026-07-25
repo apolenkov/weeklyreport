@@ -13,11 +13,6 @@ import type { TelemetryCachePort } from "./telemetry.service.js";
 const TTL_SECONDS = 60;
 const PREFIX = "customreport:telemetry:";
 
-/**
- * Read-through Redis cache for the `telemetry.summary` read path — a thin
- * domain wrapper over the shared cache. Callers pass bare keys; the shared
- * cache namespaces them under PREFIX.
- */
 @Injectable()
 export class TelemetryCache implements TelemetryCachePort, OnModuleDestroy {
   private readonly cache: RedisReadThroughCache;

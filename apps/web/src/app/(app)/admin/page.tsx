@@ -30,12 +30,8 @@ export default async function AdminPage({ searchParams }: Props) {
             </h1>
           </div>
 
-          {/* native select on mobile, client-side link tab list on sm+ */}
           <AdminTabsMobileSelect activeTab={activeTab} />
 
-          {/* pill row matching mockup s7. Active = filled
-              tealA pill (`btn-pr`); inactive = transparent ghost. Outer
-              container uses bg-white + shadow per mockup spec. */}
           <nav aria-label="Admin tabs" className="hidden sm:block">
             <div className="flex gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] p-1 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
               {ADMIN_TABS.map((t) => (
@@ -47,7 +43,7 @@ export default async function AdminPage({ searchParams }: Props) {
                       ? "bg-[var(--color-starbucks-accent)] text-white shadow-[0_1px_3px_rgba(0,98,65,0.25)]"
                       : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
                   }`}
-                  style={{ minHeight: "44px" }}
+                  style={{ minHeight: "var(--touch-target-min)" }}
                   aria-current={activeTab === t ? "page" : undefined}
                 >
                   {t === "reopen" ? (
@@ -62,7 +58,6 @@ export default async function AdminPage({ searchParams }: Props) {
             </div>
           </nav>
 
-          {/* Tab content */}
           <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm">
             <AdminPanel activeTab={activeTab} productFilter={filter} />
           </div>

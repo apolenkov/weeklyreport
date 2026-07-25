@@ -8,23 +8,7 @@ import { useTRPC } from "../../../lib/trpc-context";
 import type { MockProduct } from "../model/admin-types";
 import { invalidateGroupProductOwnership } from "../model/group-products-invalidation";
 
-/**
- * «Products attached» section inside the Groups tab edit dialog.
- *
- * Reads `admin.listGroupProducts({ groupId })` for the current group
- * and renders a checkbox toggle per non-archived product. Products already
- * owned by another group are shown as locked, because a product has exactly
- * one owning group. Toggling an attached product runs
- * `admin.detachProductFromGroup`; toggling a free product runs
- * `admin.attachProductToGroup`. Both mutations are idempotent on the server
- * so double-clicks are safe.
- *
- * The component is intentionally self-contained — it owns its own
- * query/cache key and does not coordinate with the parent `GroupsTab`
- * outside the simple `(groupId, products[])` contract. This keeps the
- * blast radius tiny and lets the broader admin-snapshot cache
- * (queried by the rest of the admin tabs) stay untouched.
- */
+// A product has exactly one owning group — other-group products show locked.
 export function GroupProductsEditor({
   groupId,
   products,
@@ -48,10 +32,7 @@ export function GroupProductsEditor({
   const attachMut = useMutation(
     trpc.admin.attachProductToGroup.mutationOptions({
       onSuccess: async () => {
-        // Attach may be a reassign: a product has one owning group, so it
-        // moves from old group to new group. Invalidate ALL listGroupProducts
-        // queries so the old group's list also refreshes, not just the
-        // current group.
+        // Reassign invalidates every listGroupProducts query (old group too).
         await Promise.all([
           qc.invalidateQueries(trpc.admin.listGroupProducts.pathFilter()),
           invalidateGroupProductOwnership(qc, trpc),

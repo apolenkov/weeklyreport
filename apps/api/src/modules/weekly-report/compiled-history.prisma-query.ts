@@ -5,10 +5,9 @@ import type { CompiledHistoryReportRow } from "./compiled-history.js";
 import type { WeeklyReportScopeSession } from "./weekly-report.service.js";
 import { historySectionScope } from "./weekly-report-portfolio.js";
 
-/**
- * `getCompiledHistory` query, split out of `WeeklyReportPrismaRepository` to
- * keep that file under the line budget.
- */
+// Cap history list size; archive count is separate so the UI can still offer expand.
+const COMPILED_HISTORY_PAGE_SIZE = 100;
+
 export async function queryCompiledHistory(
   prisma: PrismaService,
   session: WeeklyReportScopeSession,
@@ -21,15 +20,8 @@ export async function queryCompiledHistory(
   const visibleSectionWhere: Prisma.ReportWhereInput = {
     sections: { some: sectionScope },
   };
-  // The viewer read gate is published-or-current, so a reopened period
-  // (legacy `status="published"`, `periodStatus="reopened"`) would otherwise
-  // be listed in the viewer's History as a gate-rejected broken link.
-  // Narrow the VIEWER History to
-  // `periodStatus="published"` only. This MUST be viewer-only —
-  // `compiledHistory` is a shared `anyRoleProcedure`, and an unconditional
-  // filter would silently drop reopened periods from head/lead History (a
-  // non-goal). Applied to BOTH `listWhere` and `archiveCountWhere` so the
-  // list and the archive count agree for the viewer.
+  // Viewer-only: reopened periods (status published, periodStatus reopened)
+  // would appear as broken History links; head/lead must still see them.
   const viewerPeriodFilter: Prisma.ReportWhereInput =
     session.role === "viewer" ? { periodStatus: "published" as const } : {};
   const listWhere: Prisma.ReportWhereInput = {
@@ -49,7 +41,7 @@ export async function queryCompiledHistory(
     prisma.report.findMany({
       where: listWhere,
       orderBy: { periodStart: "desc" },
-      take: 100,
+      take: COMPILED_HISTORY_PAGE_SIZE,
       include: {
         publishedBy: { select: { name: true } },
         sections: {

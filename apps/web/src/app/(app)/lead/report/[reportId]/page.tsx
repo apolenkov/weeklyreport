@@ -11,16 +11,12 @@ interface Props {
   searchParams: Promise<{ mode?: string }>;
 }
 
-/**
- * Addressed lead form. The `[reportId]` segment pins the form to a specific
- * report so every period the lead has access to has a shareable /
- * bookmarkable URL. The bare `/lead/report` route redirects to the canonical
- * addressed URL once the active reportId is known.
- *
- * The form itself enforces read-only behaviour for non-active reports
- * (the server returns `readOnly: true` from `leadForm.byPeriod` when the
- * pinned report doesn't match the lead's active section).
- */
+// Clears the fixed lead-form action bar so content is not covered on scroll.
+const LEAD_FORM_ACTION_BAR_CLEARANCE = "88px";
+// Soft brand wash under the form chrome; fades into page background by 160px.
+const LEAD_FORM_PAGE_BG =
+  "bg-[linear-gradient(180deg,rgba(0,98,65,0.04)_0%,var(--color-background)_160px)]";
+
 export default async function LeadReportByIdPage({
   params,
   searchParams,
@@ -38,13 +34,10 @@ export default async function LeadReportByIdPage({
   }
 
   return (
-    <main
-      id="main-content"
-      className="min-h-screen bg-[linear-gradient(180deg,rgba(0,98,65,0.04)_0%,var(--color-background)_160px)]"
-    >
+    <main id="main-content" className={`min-h-screen ${LEAD_FORM_PAGE_BG}`}>
       <div
         className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8"
-        style={{ paddingBottom: "88px" }}
+        style={{ paddingBottom: LEAD_FORM_ACTION_BAR_CLEARANCE }}
       >
         <Suspense fallback={<LeadFormSkeleton />}>
           <LeadForm reportId={reportId} mode={resolvedMode} />

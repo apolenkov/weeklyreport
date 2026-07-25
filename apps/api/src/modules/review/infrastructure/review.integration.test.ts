@@ -48,7 +48,7 @@ describe("ReviewPrismaRepository (integration)", () => {
     expect(rows).toHaveLength(0);
   });
 
-  it("GROUP-T3 / head sees only own-group sections", async () => {
+  it("head sees only own-group sections", async () => {
     // Create a second group and a lead in it; the head belongs to the first group.
     const groupB = await prisma.reportingGroup.create({
       data: {
@@ -90,7 +90,7 @@ describe("ReviewPrismaRepository (integration)", () => {
     expect(rows[0]?.leadId).toBe(testData.lead.id);
   });
 
-  it("GROUP-T3 / admin sees all sections across groups", async () => {
+  it("admin sees all sections across groups", async () => {
     const groupB = await prisma.reportingGroup.create({
       data: {
         id: "b0000000-0000-4000-b000-00000000000a",

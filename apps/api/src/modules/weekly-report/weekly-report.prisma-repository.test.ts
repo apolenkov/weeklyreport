@@ -112,10 +112,7 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId", () => {
   });
 });
 
-// Live-path parity: the live escalations are built by mapping the Prisma row
-// via mapPrismaToReportSection and then running the SAME shared builder the
-// published-snapshot path uses. This test drives that exact pipeline so a
-// regression in either half (mapper or builder) surfaces here.
+// Live path uses the same mapper+builder as published-snapshot; pipeline regression here.
 describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () => {
   const REPORT_ID = "f9665336-7c74-4abc-8f4f-2fb8346d28bb";
   const SECTION_ID = "5b5df58b-b064-4a14-84b2-4ddf8ccef2cd";
@@ -186,8 +183,7 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
         },
       ],
       risks: [
-        // record-status-derived-from-risk: the blocked escalation is sourced from
-        // a blocked-severity risk (multi-stage), not the item's workflowStatus.
+        // Blocked escalation is sourced from a blocked-severity risk, not workflowStatus.
         {
           id: "c1a1b2c3-d4e5-4f60-9a71-0b1c2d3e4f50",
           projectId: OWNED_PRODUCT,
@@ -235,14 +231,8 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
   });
 });
 
-// The LIVE (not-yet-published) head/weekly portfolioOverview must floor each
-// product card by the section author's own covering risks, the SAME way
-// leadSections/escalations are floored — a card path that instead read raw
-// `projectStatuses` could ship a green card alongside a red leadSection, a
-// self-contradicting payload (owned stage status:null + own covers-all
-// blocked risk). This drives the actual repository wiring (getWeeklyReport),
-// so a wrong-builder regression surfaces here, not just in a pure-function
-// builder test.
+// Live portfolioOverview must floor by the author's covering risks like
+// leadSections — raw projectStatuses can ship green cards with red sections.
 describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", () => {
   const REPORT_ID = "a1111111-1111-4111-8111-111111111111";
   const SECTION_ID = "a2222222-2222-4222-8222-222222222222";
@@ -289,10 +279,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
               },
             ],
           },
-          // Owned stage carries NO submitted stage status, but a STALE green
-          // ProjectStatus persists (the raw trafficLight the old card read).
-          // This is the finding's exact case: the old builder emitted that
-          // stale green while leadSections were floored red.
+          // Stale green ProjectStatus with no stage status — floor must override.
           projectStatuses: [
             {
               projectId: OWNED_PRODUCT,
@@ -483,15 +470,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
   });
 });
 
-/**
- * `compiledHistory` is shared across roles, so the viewer-only
- * `periodStatus = "published"` History filter MUST be role-conditional. It
- * applies to BOTH the list query and the archive-count query (else the list
- * and the count disagree for the viewer), so a reopened period (legacy
- * `status="published"`, `periodStatus="reopened"`) is never shown to the
- * viewer as a gate-rejected broken link — while head and lead History stay
- * unchanged (a reopened period still listed + counted).
- */
+// Viewer periodStatus=published filter is role-conditional on list and archive-count.
 describe("WeeklyReportPrismaRepository.getCompiledHistory", () => {
   interface QueryArg {
     where: Record<string, unknown>;
@@ -568,16 +547,7 @@ describe("WeeklyReportPrismaRepository.getCompiledHistory", () => {
   });
 });
 
-/**
- * `latestForViewer` resolves the **Status target** for the `/reports/latest`
- * redirect. The resolver MUST:
- *   - target the current editable id when that exact report has a
- *     viewer-visible section;
- *   - NOT search older editable periods — fall to the published path instead;
- *   - otherwise resolve the newest viewer-visible `published` report
- *     (`sections.some(sectionScope)`, `periodStart desc`);
- *   - return `null` when nothing qualifies.
- */
+// Status-target resolution for /reports/latest — exact editable id or newest published.
 describe("WeeklyReportPrismaRepository.getVisibleReportId / getLatestPublishedVisibleId", () => {
   const GROUP_A = "a1111111-1111-4111-8111-111111111111";
   const CURRENT_ID = "b2222222-2222-4222-8222-222222222222";

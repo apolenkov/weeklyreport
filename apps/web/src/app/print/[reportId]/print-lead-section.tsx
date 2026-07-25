@@ -15,13 +15,20 @@ interface PrintLeadSectionProps {
   readonly report: WeeklyProductReport;
 }
 
+// Brand green for lead chrome (same as printStatusColor("on-track")).
+const LEAD_BRAND_GREEN = printStatusColor("on-track");
+// Brand dark for avatar chip fill.
+const LEAD_INITIALS_BG = "#1E3932";
+// Soft at-risk wash for needs-attention callout.
+const NEEDS_ATTENTION_BG = "#fef9e7";
+
 const LEAD_HEADER_STYLE: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: "8px",
   marginBottom: "8px",
   paddingBottom: "4px",
-  borderBottom: "2px solid #006241",
+  borderBottom: `2px solid ${LEAD_BRAND_GREEN}`,
 };
 const LEAD_INITIALS_STYLE: CSSProperties = {
   display: "inline-flex",
@@ -30,7 +37,7 @@ const LEAD_INITIALS_STYLE: CSSProperties = {
   width: "28px",
   height: "28px",
   borderRadius: "50%",
-  backgroundColor: "#1E3932",
+  backgroundColor: LEAD_INITIALS_BG,
   color: "#ffffff",
   fontSize: "11px",
   fontWeight: 600,
@@ -45,7 +52,7 @@ function PrintLeadHeader({ report }: PrintLeadSectionProps) {
           margin: 0,
           fontSize: "14px",
           fontWeight: 600,
-          color: "#006241",
+          color: LEAD_BRAND_GREEN,
         }}
       >
         {report.name}
@@ -80,7 +87,7 @@ function PrintNeedsAttention({ report }: PrintLeadSectionProps) {
         padding: "6px 10px",
         marginBottom: "8px",
         borderLeft: `3px solid ${printStatusColor(report.needsAttentionSeverity ?? "at-risk")}`,
-        backgroundColor: "#fef9e7",
+        backgroundColor: NEEDS_ATTENTION_BG,
         fontSize: "11px",
       }}
     >

@@ -12,36 +12,17 @@ import {
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { queryActiveLeadsLastPublishedPeriod } from "./telemetry.queries.js";
 
-/** Rolling window for the on-time-ratio gauge: last N published periods. */
+// Rolling window for the on-time-ratio gauge: last N published periods.
 const ON_TIME_RATIO_WINDOW_PERIODS = 4;
 
-/**
- * Port shape used by the gauges service. Declared as an interface so unit
- * tests can inject an in-memory stub without standing up the Prisma client —
- * the production wiring (TelemetryModule) constructs the service with the
- * Prisma-backed implementation below.
- */
+// Port so unit tests inject an in-memory stub without Prisma.
 export interface TelemetryGaugesPort {
-  /**
-   * Return the fraction of `submitted` sections that were on-time
-   * (`late=false`) across the last `n` published periods. Returns `null`
-   * when there is no eligible data (no published periods or no submitted
-   * sections) — caller decides how to surface the missing value to
-   * Prometheus (the gauge reports NaN).
-   */
+  // null → no eligible data; gauge surfaces NaN.
   onTimeRatioLastNPeriods(n: number): Promise<number | null>;
-  /**
-   * Distinct lead author count for the single most-recently-published
-   * period. Returns 0 when there is no published period yet.
-   */
   activeLeadsLastPublishedPeriod(): Promise<number>;
 }
 
-/**
- * Prisma-backed implementation. Both queries are constrained to the last
- * 4 / 1 published periods respectively so the cost stays bounded
- * regardless of history depth.
- */
+// Queries bounded to last 4 / 1 published periods so cost stays flat.
 @Injectable()
 export class TelemetryGaugesPrismaRepository implements TelemetryGaugesPort {
   constructor(private readonly prisma: PrismaService) {}
@@ -81,16 +62,8 @@ export class TelemetryGaugesPrismaRepository implements TelemetryGaugesPort {
   }
 }
 
-/**
- * Wires the two query-backed gauges to the prom-client
- * registry via Gauge.collect async callbacks. The callbacks run at Prom
- * scrape time (every ~15s in production), so the queries above are
- * effectively rate-limited to scrape cadence — no scheduler needed.
- *
- * `onModuleInit` installs the callbacks; `onModuleDestroy` removes them
- * so unit tests that rebuild the module graph don't accumulate stale
- * closures pinning a teardown prisma instance.
- */
+// Collect callbacks run at Prom scrape (~15s); no scheduler. Destroy clears
+// them so module-graph rebuilds don't pin a torn-down prisma instance.
 @Injectable()
 export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TelemetryGauges.name);
@@ -98,12 +71,8 @@ export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly repo: TelemetryGaugesPort) {}
 
   onModuleInit(): void {
-    // prom-client@15 supports `.collect` as a runtime-assignable callback
-    // (invoked on registry scrape — see prom-client/lib/gauge.js:109).
-    // The TypeScript surface declares `collect` only as a constructor
-    // option, hence the typed-assignment cast. Capturing `this.repo`
-    // gives the closure a stable prisma reference even if the module is
-    // rebound under hot reload.
+    // prom-client@15: collect is runtime-assignable but TS only types it as a
+    // constructor option — cast required. Capture this.repo for stable prisma.
     const onTimeRatio = customreportReportsOnTimeRatio as unknown as {
       collect: () => Promise<void>;
     };

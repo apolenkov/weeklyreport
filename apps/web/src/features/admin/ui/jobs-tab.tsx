@@ -9,18 +9,6 @@ import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
 import { JobsSkeleton } from "./jobs-skeleton";
 import { JobsTableRow } from "./jobs-table-row";
 
-/**
- * BullMQ DLQ admin tab.
- *
- * Surfaces the email-reminder queue's failed-jobs set with a per-row Retry
- * button, styled to match the rest of the admin tabs (row spacing / pill
- * button / tealA accent).
- *
- * Data source: tRPC `admin.jobs.listFailed` (headProcedure). Retry uses
- * `admin.jobs.retryFailed` and invalidates the list query on success so the
- * row falls off without a page refresh.
- */
-
 const QUEUE_NAME = "email-reminder" as const;
 
 export function JobsTab() {

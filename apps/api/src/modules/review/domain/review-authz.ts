@@ -9,12 +9,8 @@ export type ReviewSession = Pick<
   "userId" | "role" | "reportingGroupId" | "viewerGroupAccess"
 >;
 
-/**
- * Acknowledgement authorization: the caller's group scope must COVER the target
- * group. Non-admin scope comes from `computeAllowedGroupIds`; admin coverage is
- * this function's short-circuit, matching `groupScopeFilter`'s unfiltered admin
- * branch. Requires only access — never the reviewer designation.
- */
+// Scope must COVER the target group. Admin short-circuits (matches groupScopeFilter);
+// non-admin uses computeAllowedGroupIds. Access only — never reviewer designation.
 export function scopeCoversGroup(
   session: ReviewSession,
   groupId: string,
@@ -23,13 +19,8 @@ export function scopeCoversGroup(
   return computeAllowedGroupIds(session).includes(groupId);
 }
 
-/**
- * Reviewer-designation decision for the SECTION'S group. Head of that group and
- * admin are reviewers implicitly; a viewer must carry `canReview = true` on the
- * `ViewerGroupAccess` row for THAT group (`canReviewFlag`, resolved by the
- * repository). Keyed strictly on the target group — never "any group the caller
- * can review" — so designation never crosses groups.
- */
+// Designation for the SECTION's group only — never "any group the caller can
+// review". Head/admin implicit; viewer needs canReview on that group's access row.
 export function isDesignatedReviewer(
   session: ReviewSession,
   groupId: string,

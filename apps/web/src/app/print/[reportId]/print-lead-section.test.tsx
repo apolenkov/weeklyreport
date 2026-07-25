@@ -1,8 +1,4 @@
-/**
- * Characterization pin: the rendered status label + color for each
- * `WeeklyProductStatus` value via the canonical `statusLabel(status, "print")`.
- * A label/color mismatch fails this test instead of shipping silently.
- */
+// Pins statusLabel(status, "print") label+color for each WeeklyProductStatus.
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 

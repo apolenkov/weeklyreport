@@ -90,7 +90,6 @@ describe("prisma-test-helper (integration)", () => {
   it("seedTestData succeeds on the post-TRUNCATE empty DB and FK integrity is preserved", async () => {
     const { head, lead, project, report } = await seedTestData(prisma);
 
-    // Verify all seeded entities exist and FKs are intact.
     const dbReport = await prisma.report.findUniqueOrThrow({
       where: { id: report.id },
     });

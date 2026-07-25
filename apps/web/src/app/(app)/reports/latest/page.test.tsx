@@ -1,12 +1,5 @@
 /**
  * @vitest-environment jsdom
- *
- * `/reports/latest` resolves the Status target (`reports.latestForViewer`)
- * and redirects with the recovery marker.
- * This suite pins each runtime branch: a resolved reportId triggers
- * `router.replace(/reports/<id>?source=status&recovery=<value>)` and keeps the
- * resolving copy; the recovery flag is PROPAGATED (not hard-coded 0); a null
- * result shows the empty-state copy; an errored query shows the error copy.
  */
 
 import "@testing-library/jest-dom/vitest";

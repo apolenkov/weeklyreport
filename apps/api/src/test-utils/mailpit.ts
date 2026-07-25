@@ -1,14 +1,6 @@
-/**
- * Minimal Mailpit HTTP API helper for integration tests.
- *
- * Mailpit exposes a REST API at http://localhost:8025/api/v1/messages.
- * `listMessages` is intentionally thin — no retry loop; call-sites that
- * need to wait for a message import `pollForMessage` instead.
- */
-
+// listMessages is thin (no retry); call-sites that wait use pollForMessage.
 const MAILPIT_BASE = "http://localhost:8025";
 
-/** Returns true if Mailpit is reachable (non-throwing GET within 2s). */
 export async function isMailpitUp(): Promise<boolean> {
   try {
     const res = await fetch(`${MAILPIT_BASE}/api/v1/messages`, {
@@ -41,7 +33,6 @@ interface MailpitMessagesResponse {
   messages: MailpitMessage[];
 }
 
-/** Lists all messages currently stored in Mailpit. */
 async function listMessages(): Promise<MailpitMessage[]> {
   const res = await fetch(`${MAILPIT_BASE}/api/v1/messages`);
   if (!res.ok) throw new Error(`Mailpit GET failed: ${res.status}`);
@@ -50,7 +41,6 @@ async function listMessages(): Promise<MailpitMessage[]> {
   return body.messages ?? [];
 }
 
-/** Deletes all messages from Mailpit (purge the inbox). */
 export async function clearMessages(): Promise<void> {
   const res = await fetch(`${MAILPIT_BASE}/api/v1/messages`, {
     method: "DELETE",
@@ -58,10 +48,6 @@ export async function clearMessages(): Promise<void> {
   if (!res.ok) throw new Error(`Mailpit DELETE failed: ${res.status}`);
 }
 
-/**
- * Polls Mailpit until a message addressed to `recipientEmail` appears or
- * `timeoutMs` elapses. Returns the first matching message or null.
- */
 export async function pollForMessage(
   recipientEmail: string,
   timeoutMs = 3000,
