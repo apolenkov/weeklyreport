@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" width="1200" height="280" role="img" aria-labelledby="lt ld">
+  <title id="lt">Жизненный цикл отчёта CustomReport</title>
+  <desc id="ld">Три шага: лид заполняет секцию (draft переходит в submitted), глава отдела проверяет и сводит секции (approved или changes), затем публикует период и экспортирует его в PDF (published, pdf).</desc>
+
+  <style>
+    .s { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    .m { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+  </style>
+
+  <rect x="0.75" y="0.75" width="1198.5" height="278.5" rx="20" fill="#eef1ec" stroke="#ccd4c8" stroke-width="1.5"/>
+  <text class="s" x="44" y="52" font-size="24" font-weight="600" fill="#1e3932">Жизненный цикл отчёта</text>
+
+  <!-- step 1 -->
+  <rect x="42" y="86" width="340" height="150" rx="14" fill="#fffefb" stroke="#ccd4c8" stroke-width="1.5"/>
+  <rect x="42" y="86" width="6" height="150" rx="3" fill="#006241" opacity="0.4"/>
+  <text class="m" x="66" y="126" font-size="20" letter-spacing="1.2" fill="#00754a">LEAD</text>
+  <text class="s" x="66" y="172" font-size="30" font-weight="600" fill="#1a1a1a">Заполняет секцию</text>
+  <text class="m" x="66" y="210" font-size="22" fill="#5c665e">draft → submitted</text>
+
+  <line x1="392" y1="161" x2="412" y2="161" stroke="#4a9470" stroke-width="2.5"/>
+  <polygon points="412,153 426,161 412,169" fill="#4a9470"/>
+
+  <!-- step 2 -->
+  <rect x="430" y="86" width="340" height="150" rx="14" fill="#fffefb" stroke="#ccd4c8" stroke-width="1.5"/>
+  <rect x="430" y="86" width="6" height="150" rx="3" fill="#006241" opacity="0.7"/>
+  <text class="m" x="454" y="126" font-size="20" letter-spacing="1.2" fill="#00754a">HEAD</text>
+  <text class="s" x="454" y="172" font-size="30" font-weight="600" fill="#1a1a1a">Проверяет и сводит</text>
+  <text class="m" x="454" y="210" font-size="22" fill="#5c665e">approved / changes</text>
+
+  <line x1="780" y1="161" x2="800" y2="161" stroke="#4a9470" stroke-width="2.5"/>
+  <polygon points="800,153 814,161 800,169" fill="#4a9470"/>
+
+  <!-- step 3 -->
+  <rect x="818" y="86" width="340" height="150" rx="14" fill="#fffefb" stroke="#ccd4c8" stroke-width="1.5"/>
+  <rect x="818" y="86" width="6" height="150" rx="3" fill="#006241"/>
+  <text class="m" x="842" y="126" font-size="20" letter-spacing="1.2" fill="#00754a">HEAD</text>
+  <text class="s" x="842" y="172" font-size="30" font-weight="600" fill="#1a1a1a">Публикует период</text>
+  <text class="m" x="842" y="210" font-size="22" fill="#5c665e">published → pdf</text>
+</svg>

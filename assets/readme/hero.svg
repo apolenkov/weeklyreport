@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 470" width="1200" height="470" role="img" aria-labelledby="t d">
+  <title id="t">CustomReport — еженедельный статус-отчёт отдела CoreDev</title>
+  <desc id="d">Слева название проекта и краткое описание. Справа карточка отчёта за неделю: секции лидов со светофорами и статусами «отправлена» или «черновик», внизу — публикация главой отдела.</desc>
+
+  <style>
+    .s { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    .m { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+  </style>
+
+  <rect x="0.75" y="0.75" width="1198.5" height="468.5" rx="20" fill="#eef1ec" stroke="#ccd4c8" stroke-width="1.5"/>
+
+  <!-- Left: identity -->
+  <rect x="56" y="96" width="44" height="5" rx="2.5" fill="#006241"/>
+  <text class="m" x="56" y="136" font-size="19" letter-spacing="1.6" fill="#00754a">ВНУТРЕННИЙ ИНСТРУМЕНТ ОТДЕЛА</text>
+  <text class="s" x="54" y="212" font-size="66" font-weight="700" letter-spacing="-1.2" fill="#1a1a1a">CustomReport</text>
+
+  <text class="s" x="56" y="268" font-size="25" fill="rgba(0,0,0,0.72)">Лиды заполняют свои секции</text>
+  <text class="s" x="56" y="303" font-size="25" fill="rgba(0,0,0,0.72)">отчёта, глава отдела сводит</text>
+  <text class="s" x="56" y="338" font-size="25" fill="rgba(0,0,0,0.72)">их в один документ недели.</text>
+
+  <text class="m" x="56" y="404" font-size="18" fill="#5c665e">Next.js 16 · NestJS · tRPC · Prisma</text>
+  <text class="m" x="56" y="432" font-size="18" fill="#006241">pnpm dev → localhost:3000</text>
+
+  <!-- Right: the artifact — one week's report -->
+  <rect x="585" y="64" width="559" height="346" rx="16" fill="#fffefb" stroke="#ccd4c8" stroke-width="1.5"/>
+
+  <text class="s" x="617" y="110" font-size="23" font-weight="600" fill="#1e3932">Неделя 30 · 2026</text>
+  <rect x="1010" y="88" width="102" height="30" rx="15" fill="#d8ece4" stroke="#4a9470"/>
+  <text class="m" x="1061" y="108" font-size="17" fill="#1e4a36" text-anchor="middle">открыт</text>
+  <line x1="617" y1="136" x2="1112" y2="136" stroke="#ccd4c8" stroke-width="1.5"/>
+
+  <text class="m" x="617" y="164" font-size="16" letter-spacing="1.4" fill="#5c665e">СЕКЦИИ ЛИДОВ</text>
+
+  <!-- section rows: traffic light + submit state -->
+  <circle cx="630" cy="196" r="7" fill="#006241"/>
+  <text class="s" x="652" y="203" font-size="21" fill="#1a1a1a">Тимлид</text>
+  <rect x="994" y="181" width="118" height="30" rx="15" fill="#d8ece4" stroke="#4a9470"/>
+  <text class="m" x="1053" y="201" font-size="17" fill="#1e4a36" text-anchor="middle">отправлена</text>
+
+  <circle cx="630" cy="240" r="7" fill="#cba258"/>
+  <text class="s" x="652" y="247" font-size="21" fill="#1a1a1a">Ведущий разработчик</text>
+  <rect x="994" y="225" width="118" height="30" rx="15" fill="#d8ece4" stroke="#4a9470"/>
+  <text class="m" x="1053" y="245" font-size="17" fill="#1e4a36" text-anchor="middle">отправлена</text>
+
+  <circle cx="630" cy="284" r="7" fill="#c82014"/>
+  <text class="s" x="652" y="291" font-size="21" fill="#1a1a1a">Тимлид</text>
+  <rect x="1012" y="269" width="100" height="30" rx="15" fill="#eef1ec" stroke="#ccd4c8"/>
+  <text class="m" x="1062" y="289" font-size="17" fill="#5c665e" text-anchor="middle">черновик</text>
+
+  <circle cx="630" cy="328" r="7" fill="#006241"/>
+  <text class="s" x="652" y="335" font-size="21" fill="#1a1a1a">Ведущий аналитик</text>
+  <rect x="1012" y="313" width="100" height="30" rx="15" fill="#eef1ec" stroke="#ccd4c8"/>
+  <text class="m" x="1062" y="333" font-size="17" fill="#5c665e" text-anchor="middle">черновик</text>
+
+  <line x1="617" y1="358" x2="1112" y2="358" stroke="#ccd4c8" stroke-width="1.5"/>
+  <text class="m" x="617" y="386" font-size="18" fill="#5c665e">2 из 4 отправлено</text>
+  <text class="s" x="1112" y="386" font-size="19" font-weight="600" fill="#006241" text-anchor="end">head публикует →</text>
+</svg>
