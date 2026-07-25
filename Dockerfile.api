@@ -1,11 +1,11 @@
-# Stage 1: Base with pnpm, turbo, and Playwright browsers.
-# Keep all API stages on the same glibc-based image so dev/prod PDF export
-# can launch Chromium and native node modules are built for the runner OS.
-FROM mcr.microsoft.com/playwright:v1.61.1-noble@sha256:5b8f294aff9041b7191c34a4bab3ac270157a28774d4b0660e9743297b697e48 AS base
+# Stage 1: Base with pnpm and turbo.
+# glibc (Debian) rather than alpine: Chromium needs it for PDF export, and the
+# native node modules must be built for the same libc the runner uses.
+# node:26 no longer ships corepack, so pnpm is installed with npm — the pin is
+# held against package.json's packageManager by scripts/check-runtime-node-sync.mjs.
+FROM node:26-bookworm@sha256:219fc9da91e7f29a9f32290ff598cdf8886fd68f421ff515c8f93434da39a271 AS base
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-RUN corepack enable && corepack prepare pnpm@11.17.0 --activate
-RUN npm install -g turbo@2.10.6
+RUN npm install -g pnpm@11.17.0 turbo@2.10.6
 
 # Stage 2: Prune monorepo for api workspace
 FROM base AS pruner
@@ -42,30 +42,34 @@ RUN pnpm turbo build --filter=@customreport/api
 RUN pnpm prune --prod --config.ignore-scripts=true --config.confirmModulesPurge=false
 
 # Stage 6: Production runner
-# Use Playwright base image for PDF generation (Chromium pre-installed).
-# NOTE: This image is ~1.4GB due to the Chromium dependency required for PDF export.
-# The 200MB size target applies to the web image (alpine-based, ~150MB).
-# The API image cannot meet 200MB due to Playwright/Chromium — this is an architectural constraint.
+# ~1.5GB because PDF export needs a real Chromium. The 200MB target applies to
+# the web image (alpine, ~150MB); this one cannot meet it by construction.
 FROM base AS runner
 WORKDIR /app
 
 # Copy pruned monorepo structure with production deps only
-COPY --from=builder --chown=pwuser:pwuser /app/package.json ./package.json
-COPY --from=builder --chown=pwuser:pwuser /app/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=builder --chown=pwuser:pwuser /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY --from=builder --chown=pwuser:pwuser /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder --chown=pwuser:pwuser /app/node_modules ./node_modules
-COPY --from=builder --chown=pwuser:pwuser /app/apps/api/dist ./apps/api/dist
-COPY --from=builder --chown=pwuser:pwuser /app/apps/api/package.json ./apps/api/package.json
-COPY --from=builder --chown=pwuser:pwuser /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=builder --chown=pwuser:pwuser /app/packages ./packages
+COPY --from=builder --chown=node:node /app/package.json ./package.json
+COPY --from=builder --chown=node:node /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=builder --chown=node:node /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=builder --chown=node:node /app/prisma.config.ts ./prisma.config.ts
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/apps/api/dist ./apps/api/dist
+COPY --from=builder --chown=node:node /app/apps/api/package.json ./apps/api/package.json
+COPY --from=builder --chown=node:node /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder --chown=node:node /app/packages ./packages
 
 # Prisma client and schema needed at runtime
-COPY --from=builder --chown=pwuser:pwuser /app/prisma ./prisma
+COPY --from=builder --chown=node:node /app/prisma ./prisma
+
+# Chromium is installed by the very `playwright` package this image runs, so the
+# browser revision cannot drift from the dependency — the failure mode a separate
+# base-image pin used to have, where PDF export died at chromium.launch() while
+# every suite stayed green.
+RUN pnpm exec playwright install --with-deps chromium
 
 # Create PDF storage directory
-RUN mkdir -p /app/data/pdfs && chown pwuser:pwuser /app/data/pdfs
-USER pwuser
+RUN mkdir -p /app/data/pdfs && chown node:node /app/data/pdfs
+USER node
 WORKDIR /app/apps/api
 ENV NODE_ENV=production
 # EXPOSE/HEALTHCHECK must match the runtime bind port (PORT=3001); a plain

@@ -135,7 +135,7 @@ importers:
         specifier: ^4.23.1
         version: 4.23.1
       turbo:
-        specifier: ^2.10.6
+        specifier: 2.10.6
         version: 2.10.6
       type-coverage:
         specifier: ^2.29.7
