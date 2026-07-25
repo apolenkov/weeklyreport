@@ -72,20 +72,12 @@ export function createRemindersRouter(deps: RemindersRouterDeps) {
         }
       }),
 
-    // Manual "Send Reminder" trigger from the head dashboard alert bar.
-    // Resolves the active reminder rule + draft-section authors server-side
-    // (the client never sees lead emails) and dispatches one execution per
-    // pending lead via the existing dedupe-keyed pipeline.
+    // Client never sees lead emails; optional leadId scopes to one author.
     dispatchPending: headProcedure
       .input(
         z.object({
           reportId: z.uuid(),
           ruleId: z.uuid().optional(),
-          // Scope dispatch to a single lead so the
-          // Head Dashboard Remind button can ping one author without
-          // exposing emails to the client. When undefined, falls back to
-          // the original "every draft author" behaviour used by the
-          // bulk AlertBar action.
           leadId: z.uuid().optional(),
         }),
       )

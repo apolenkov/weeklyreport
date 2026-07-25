@@ -11,26 +11,9 @@ export interface HumanSessionDeps {
   prisma: PrismaService;
 }
 
-/**
- * The single human-session chokepoint: the three steps that turn a session
- * cookie into a real, currently-valid user session — token verify, the Redis
- * revocation fast path, and the Prisma `isActive` check — followed by the
- * per-request hydration the rest of the app relies on (notably
- * `viewerGroupAccess`, which group-scope authz reads and which is NOT in the
- * JWT). Returns null for any invalid / revoked / deactivated token; errors from
- * access checks or hydration propagate.
- *
- * Deliberately does NOT accept the PDF-export worker token or the dev-mode
- * synthetic session that the full `createContext` chain falls back to: a caller
- * that needs a real human (the authenticated `/pdfs` download) resolves through
- * this and rejects everything else. `createContext` layers those fallbacks on
- * top of this, never the reverse.
- *
- * The revoked/deactivated decision is delegated to `isUserAccessBarred`: a
- * Redis revocation fast path that fails OPEN, then an authoritative Prisma
- * `isActive` read that fails CLOSED — including a missing user row (a
- * hard-deleted account no longer keeps a live session).
- */
+// Human-only chokepoint (no PDF worker / dev synthetic). Redis revoke fails
+// open, Prisma isActive fails closed. Hydration supplies viewerGroupAccess
+// (not in JWT). createContext layers PDF/dev fallbacks on top of this.
 export async function resolveHumanSession(
   token: string,
   deps: HumanSessionDeps,

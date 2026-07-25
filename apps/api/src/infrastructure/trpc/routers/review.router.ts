@@ -18,12 +18,8 @@ import {
   router,
 } from "../trpc.middleware.js";
 
-/**
- * Resolve the review-actions service or fail loudly.
- * Optional on `AppRouterDeps` only so role-coverage fixtures build with `{}` deps;
- * a real boot always wires it, so `undefined` here is a config bug, not a
- * user-reachable state.
- */
+// Optional only for role-coverage fixtures with `{}` deps; undefined at
+// runtime is a config bug, not a user-reachable state.
 function requireReviewActions(deps: ReviewRouterDeps): ReviewActionsService {
   if (!deps.reviewActionsService) {
     throw new TRPCError({
@@ -38,14 +34,8 @@ export interface ReviewRouterDeps {
   weeklyReportService: WeeklyReportService;
   reviewService: ReviewService;
   publicationService: PublicationService;
-  /**
-   * The review capability's write surface —
-   * `review.acknowledge` / `review.comment` / `review.deleteComment` /
-   * `review.verdict` / `review.acknowledgements`. All ride `leadershipProcedure`
-   * (head + admin + viewer; lead excluded); the per-group scope + reviewer
-   * designation are enforced inside the service. Optional so role-coverage test
-   * fixtures that build the router with `{}` deps keep compiling.
-   */
+  // Optional so role-coverage fixtures with `{}` deps compile; per-group
+  // scope + reviewer designation are enforced inside the service.
   reviewActionsService?: ReviewActionsService;
 }
 

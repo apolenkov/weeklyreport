@@ -2,25 +2,10 @@ import type { WorkingDays } from "@customreport/shared";
 import { DAYS_PER_WEEK } from "@customreport/shared";
 import { DateTime } from "luxon";
 
-/**
- * Luxon-based business-day arithmetic.
- *
- * Promotes `workingDays` from cosmetic metadata to actual logic that drives
- * deadline math in Period/cron flows. All functions accept an IANA timezone
- * string and a {@link WorkingDays} policy ("mon-fri" | "mon-sat" | "mon-sun")
- * so the same utility serves Russia (default Mon-Fri), Mon-Sat cultures, and
- * 24/7 operations.
- *
- * DST handling: every computation routes through Luxon's `setZone`, so a
- * `+1 day` step is always a wall-clock day, not a 24h step. Spring-forward
- * and fall-back are handled correctly even when invoked from a UTC `Date`.
- *
- * Future hook: holiday calendars will plug in via an optional
- * `holidays?: ReadonlySet<string>` parameter (ISO date strings in `tz`).
- * The API is kept narrow until then.
- */
+// Luxon wall-clock days via setZone — not 24h steps — so DST is correct
+// from a UTC Date. WorkingDays policy is mon-fri | mon-sat | mon-sun.
 
-/** Iteration budget for business-day walks: ~10 years of daily steps. */
+// Iteration budget for business-day walks: ~10 years of daily steps.
 const MAX_ITER_YEARS = 10;
 const MAX_DAYS_PER_YEAR = 366;
 const MAX_ITER = MAX_DAYS_PER_YEAR * MAX_ITER_YEARS;
@@ -34,7 +19,7 @@ const FRIDAY = 5;
 const SATURDAY = 6;
 const SUNDAY = 7;
 
-/** Wall-clock default matching the legacy hardcoded "+ 18:00" deadline stamp. */
+// Default wall-clock deadline hour (legacy product convention).
 const DEFAULT_DEADLINE_HOUR = 18;
 const MAX_HOUR_OF_DAY = 23;
 
@@ -43,12 +28,7 @@ const LAST_MINUTE = 59;
 const LAST_SECOND = 59;
 const LAST_MILLISECOND = 999;
 
-/**
- * Returns the Luxon weekday numbers (1=Mon … 7=Sun) that count as business
- * days under the given {@link WorkingDays} policy.
- *
- * @internal — exported for tests only.
- */
+// Exported for tests only.
 export function workingDaySet(wd: WorkingDays): ReadonlySet<number> {
   switch (wd) {
     case "mon-fri":
@@ -68,11 +48,7 @@ export function workingDaySet(wd: WorkingDays): ReadonlySet<number> {
   }
 }
 
-/**
- * Returns true iff `date`, interpreted in `tz`, falls on a business day per
- * `wd`. The wall-clock day in `tz` is what matters — a UTC `Date` that maps
- * to Sunday 23:30 in Europe/Moscow is a Sunday for mon-fri purposes.
- */
+// Wall-clock day in tz matters — not the UTC calendar day of the Date.
 export function isBusinessDay(
   date: Date,
   wd: WorkingDays,
@@ -85,33 +61,12 @@ export function isBusinessDay(
   return workingDaySet(wd).has(dt.weekday);
 }
 
-/**
- * Returns the next business day strictly after `date` (never the same day,
- * even if `date` itself is a business day). Equivalent to
- * `addBusinessDays(date, 1, wd, tz)`.
- */
 export function nextBusinessDay(date: Date, wd: WorkingDays, tz: string): Date {
   return addBusinessDays(date, 1, wd, tz);
 }
 
-/**
- * Advances `date` by `n` business days in `tz` under policy `wd`.
- *
- * Semantics:
- *   - n > 0: "skip forward N business days"; result is always strictly later.
- *   - n = 0: returned as-is (no normalization to the next business day).
- *     Callers that want "snap to next business day" must use
- *     {@link nextBusinessDay} explicitly.
- *   - n < 0: walks backward by |n| business days (symmetric semantics).
- *
- * Edge cases:
- *   - "mon-sun" (all days are business) → equivalent to `+n` calendar days.
- *   - Throws on invalid timezone strings (Luxon `isValid` check).
- *
- * @throws Error if `tz` is not a recognized IANA zone, or if internal
- *   iteration exceeds {@link MAX_ITER} (safety net; should never fire for
- *   any sane `n`).
- */
+// n=0 is as-is (no snap); use nextBusinessDay to land on a business day.
+// n≠0 walks strictly forward/back by |n| business days.
 export function addBusinessDays(
   date: Date,
   n: number,
@@ -144,22 +99,7 @@ export function addBusinessDays(
   return dt.toJSDate();
 }
 
-/**
- * Computes a Period deadline as a UTC `Date` representing
- * `deadlineHour:00:00.000` wall-clock time in `tz` on the
- * `deadlineDays`-th business day after `periodStart`.
- *
- * The hour/minute/second of `periodStart` are intentionally discarded — the
- * deadline always lands on a clean `HH:00:00.000` boundary in `tz`, matching
- * how reminder rules and the legacy hardcoded "+ 18:00" stamp behaved.
- *
- * Example:
- *   periodStart = Monday 2026-05-04 09:00 Europe/Moscow
- *   deadlineDays = 4, wd = "mon-fri", tz = "Europe/Moscow", hour = 18
- *   → Friday 2026-05-08 18:00 Europe/Moscow → 15:00 UTC
- *
- * @param deadlineHour - 24-hour wall-clock hour in `tz`. Defaults to 18.
- */
+// Discards periodStart clock time — deadline always lands on HH:00:00 in tz.
 export function computeDeadline(
   periodStart: Date,
   deadlineDays: number,
@@ -186,22 +126,8 @@ export function computeDeadline(
     .toJSDate();
 }
 
-/**
- * Monday 00:00:00.000 UTC and Sunday 23:59:59.999 UTC for the week containing
- * `date`. UTC-only arithmetic — independent of host TZ and DST, so the same
- * call at 23:00 Moscow Sunday and 22:00 UTC Sunday produces identical bounds.
- * Fixes naive `setDate`/`setHours` drift across DST transitions and
- * TZ-mismatched containers.
- *
- * When `periodLengthDays` is provided, `periodEnd` is
- * anchored to Monday + (length - 1) days at 23:59:59.999 UTC instead of the
- * hardcoded 7-day Mon-Sun span. Callers that don't pass the argument keep the
- * original Mon-Sun (length=7) behaviour.
- *
- * Kept as hand-rolled `Date.UTC` arithmetic rather than rewritten in Luxon —
- * it is correct and tested, and a rewrite would be unrequested scope that
- * risks a regression in a function the scheduler depends on.
- */
+// UTC-only Date.UTC arithmetic — host TZ/DST independent (scheduler-critical).
+// Optional periodLengthDays ends at Monday+(length-1); default is Mon–Sun.
 export function getCurrentWeekBounds(
   date: Date = new Date(),
   periodLengthDays = DAYS_PER_WEEK,

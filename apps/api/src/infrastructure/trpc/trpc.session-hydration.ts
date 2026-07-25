@@ -5,14 +5,7 @@ import {
 
 import { PrismaService } from "../prisma/prisma.service.js";
 
-/**
- * 5-second TTL cache for the Organization singleton.
- *
- * The org row is read on every authenticated tRPC call to hydrate
- * `session.organization`. A short TTL keeps admin renames visible within
- * ~5s without hammering Postgres on every request. Cache miss path is
- * a single primary-key lookup, so cold reads are cheap.
- */
+// Short TTL: admin renames visible within ~5s without a DB hit per request.
 const ORG_CACHE_TTL_MS = 5000;
 // eslint-disable-next-line no-restricted-syntax -- Module-level TTL singleton cache must be assignable for refresh and explicit clearOrgCache invalidation.
 let orgCache: {
@@ -20,19 +13,13 @@ let orgCache: {
   expiresAt: number;
 } | null = null;
 
-/** Invalidates the org cache immediately; call after updateOrganization. */
+// Immediate invalidation after updateOrganization.
 export function clearOrgCache(): void {
   orgCache = null;
 }
 
-/**
- * Viewer sessions need an up-to-date list of granted
- * `ReportingGroup.id`s for groupScopeFilter. We hydrate per-request rather
- * than baking into the JWT because admin can grant/revoke at any time and
- * stale JWTs would leak (or block) access.
- *
- * No-op for non-viewer roles to keep the hot path cheap.
- */
+// Per-request hydrate: admin grant/revoke mid-JWT-lifetime would leak or
+// block if baked into the JWT. No-op for non-viewers.
 async function hydrateViewerGroupAccess(
   session: UserSession,
   prisma: PrismaService,
@@ -57,31 +44,16 @@ async function hydrateReportingGroupName(
   return row ? { ...session, reportingGroupName: row.name } : session;
 }
 
-/**
- * Hydrate the singleton organization identity onto
- * the session so authenticated routes can render the brand without a
- * second round-trip. We DO NOT bake this into the JWT for two reasons:
- *   1. JWTs are 1h-lived; admin renames would not propagate until refresh.
- *   2. Adding required fields to the JWT shape would invalidate every
- *      in-flight cookie on deploy.
- *
- * A 5-second module-level TTL cache (defined above) absorbs the read load —
- * the org row changes on the order of months, not seconds, so a stale
- * 5s window is acceptable. The cache is process-local; in a multi-replica
- * deploy each replica eventually picks up the new value within TTL.
- */
+// Not in JWT: renames would lag 1h, and new JWT fields invalidate cookies.
+// Process-local TTL cache; multi-replica eventually consistent within TTL.
 async function hydrateOrganization(
   session: UserSession,
   prisma: PrismaService,
 ): Promise<UserSession> {
   const now = Date.now();
   if (!orgCache || orgCache.expiresAt < now) {
-    // Read-only on the happy path: the singleton row is seeded at migration,
-    // so every cache-miss refresh is a primary-key lookup, never a write. The
-    // fallback (row unexpectedly absent) is an upsert — not a create — so two
-    // concurrent cold reads collapse to a no-op update instead of racing into
-    // a P2002. Seed defaults are generic; concrete tenant brand stays in the
-    // seed file / admin-edited Organization row, never in code.
+    // Upsert (not create) on missing row so concurrent cold reads collapse
+    // instead of racing into P2002. Seed/admin hold the real brand, not code.
     const existing = await prisma.organization.findUnique({
       where: { id: "singleton" },
       select: { shortName: true, fullName: true },

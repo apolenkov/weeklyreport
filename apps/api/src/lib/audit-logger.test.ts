@@ -93,7 +93,6 @@ describe("createAuditLogger", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
-    // Anonymous events emit role: null (was 'unknown').
     audit.loginFail({
       userId: "anonymous",
       role: null,
@@ -113,9 +112,7 @@ describe("createAuditLogger", () => {
     });
   });
 
-  // Anonymous events emit role: null (was 'unknown').
-  // Lock the contract for SIEM rules tuned to "no session" vs "real
-  // role" rather than a literal 'unknown' string.
+  // SIEM rules distinguish "no session" (null) from a real role string.
   it('anonymous logout emits role: null (not the legacy "unknown" literal)', () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
@@ -134,7 +131,6 @@ describe("createAuditLogger", () => {
       role: null,
       ip: "10.0.0.5",
     });
-    // Strict guard against regression — must not be the legacy literal.
     expect(expectDefined(entries[0]).context?.role).not.toBe("unknown");
   });
 
@@ -511,8 +507,6 @@ describe("createAuditLogger — period.auto-*", () => {
       periodStart: "2026-05-04T00:00:00.000Z",
       periodEnd: "2026-05-10T23:59:59.999Z",
       deadline: "2026-05-08T15:00:00.000Z",
-      // State-transition payload. Fresh create has no prior state —
-      // `from = null`.
       from: null,
       to: "open",
     });
@@ -542,7 +536,6 @@ describe("createAuditLogger — period.auto-*", () => {
     audit.periodAutoPublish({
       periodId: "00000000-0000-4000-8000-000000000051",
       missingSectionsCount: 2,
-      // State-transition payload.
       from: "open",
       to: "published",
     });
@@ -568,7 +561,6 @@ describe("createAuditLogger — period.auto-*", () => {
 
     audit.periodAutoArchive({
       periodId: "00000000-0000-4000-8000-000000000052",
-      // State-transition payload.
       from: "published",
       to: "archived",
     });
@@ -595,7 +587,6 @@ describe("createAuditLogger — period.auto-*", () => {
         periodStart: "s",
         periodEnd: "e",
         deadline: "d",
-        // State-transition payload.
         from: null,
         to: "open",
       }),
@@ -615,7 +606,6 @@ describe("createAuditLogger — period.auto-*", () => {
         to: "archived",
       }),
     ).not.toThrow();
-    // Noop branch for the manual-create event.
     expect(() =>
       audit.periodManualCreate({
         userId: "admin-1",
@@ -629,7 +619,6 @@ describe("createAuditLogger — period.auto-*", () => {
         to: "open",
       }),
     ).not.toThrow();
-    // Noop branch for the manual-edit event.
     expect(() =>
       audit.periodManualEdit({
         userId: "admin-1",
@@ -639,7 +628,6 @@ describe("createAuditLogger — period.auto-*", () => {
         changes: { deadline: { from: "a", to: "b" } },
       }),
     ).not.toThrow();
-    // scope-accessed: noop branch.
     expect(() =>
       audit.scopeAccessed({
         userId: "head-1",

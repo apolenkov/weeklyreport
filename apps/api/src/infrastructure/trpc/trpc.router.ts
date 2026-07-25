@@ -87,132 +87,45 @@ export interface AppRouterDeps {
   periodService: PeriodService;
   weeklyReportService: WeeklyReportService;
   leadFormService: LeadFormService;
-  /**
-   * Analytics surface — traffic light history,
-   * lead velocity, period comparison. Cached via Redis with prefix-wide
-   * invalidation on PeriodService.publishPeriod / reopenPeriod.
-   */
+  // Redis prefix invalidation on period publish/reopen.
   analyticsService: AnalyticsService;
-  /**
-   * Full-text search across Item / Risk / Decision
-   * / Project. tsvector + GIN, Russian text-search config. Role-gated
-   * scope via SearchAuthorizationError → FORBIDDEN.
-   */
   searchService: SearchService;
-  /**
-   * Live activity feed for the head/admin dashboard
-   * "Активность за текущий период" panel. One row per lead's section in
-   * the open period, with section-level counts + last-edit timestamp.
-   * Polled every 15s by the dashboard.
-   */
   activityService: ActivityService;
-  /**
-   * Admin provisioning of Project Activities (stage-less reporting units
-   * beside products) — the `projectActivity.*` namespace. Distinct from
-   * `activityService` above, which serves the live-status feed under the
-   * pre-existing `activity.*` namespace.
-   */
+  // Distinct from activityService (live-status feed under activity.*).
   projectActivityService: ProjectActivityService;
-  /**
-   * Read-only BullMQ Queue handle used by
-   * `admin.dlqCount` to surface failed-job count. Optional so existing test
-   * fixtures can call createAppRouter(stubDeps) without instantiating Redis.
-   */
+  // Optional so test fixtures avoid instantiating Redis.
   emailReminderQueue?: Queue;
-  /**
-   * BullMQ Queue handle for `telegram-outbound`.
-   * Drives the admin smoke-test (`admin.testTelegramSend`) so the wiring
-   * (queue → worker → MockTelegramAdapter) is provable without an active
-   * bot. Optional so role-coverage fixtures that build the router with
-   * `{}` deps stay compiling; when undefined the procedure throws
-   * `INTERNAL_SERVER_ERROR` rather than 500-ing on a null deref.
-   */
+  // Optional for role-coverage `{}` deps; undefined → INTERNAL_SERVER_ERROR.
   telegramOutboundQueue?: Queue;
-  /**
-   * BullMQ DLQ admin surface — `admin.jobs.listFailed` /
-   * `admin.jobs.retryFailed`. Optional so test fixtures and the role-coverage
-   * harness can build the router with `{}` deps; in that mode the service
-   * is constructed locally from an undefined Queue and every call returns
-   * an empty/no-op result.
-   */
+  // Optional for role-coverage `{}` deps; undefined Queue → empty/no-op.
   jobsService?: JobsService;
-  /**
-   * Product-telemetry surface — `telemetry.summary`
-   * returns the leadership-readable KPI bundle (reports submitted, on-time
-   * ratio, active leads, late sections, pending reopens, PDF export
-   * volume, 4-week sparkline). Optional so role-coverage test fixtures
-   * that build the router with `{}` deps stay green; when undefined the
-   * procedure is hidden from the surface, not 500-ed.
-   */
+  // Optional for role-coverage `{}` deps; undefined → procedure hidden.
   telemetryService?: TelemetryService;
-  /**
-   * Redis-backed session revocation for
-   * deactivate/activate user. Optional so existing role-coverage test
-   * fixtures that build the router with `{}` deps keep compiling —
-   * when undefined the mutations still flip isActive in Prisma but skip
-   * the Redis fast-path (sessions expire naturally via JWT TTL).
-   */
+  // Optional for role-coverage; undefined → skip Redis, JWT TTL only.
   sessionRevocationService?: SessionRevocationService;
-  /**
-   * Queryable in-app mutation-audit history — `admin.actionLog.list`.
-   * Optional so role-coverage test fixtures that build the router with `{}`
-   * deps stay compiling; a real boot always wires it (see
-   * `requireActionLogService` below).
-   */
+  // Optional for role-coverage; real boot always wires it (ops.procedures).
   actionLogService?: ActionLogService;
 }
 
 export function createAppRouter(deps: AppRouterDeps) {
   return router({
-    // === Auth namespace ===
     auth: createAuthRouter(),
-
-    // === Organization namespace ===
     org: createOrganizationRouter(deps),
-
-    // === Dev namespace (only mounted when AUTH_DEV_MODE=true) ===
+    // Only mounted when AUTH_DEV_MODE=true.
     dev: createDevRouter(deps),
-
-    // === Reports namespace ===
     reports: createReportsRouter(deps),
-
-    // === Review namespace ===
     review: createReviewRouter(deps),
-
-    // === PDF Export namespace ===
     pdfExport: createPdfExportRouter(deps),
-
-    // === Admin namespace ===
     admin: createAdminRouter(deps),
-
-    // === Archive namespace ===
     archive: createArchiveRouter(deps),
-
-    // === Reminders namespace ===
     reminders: createRemindersRouter(deps),
-
-    // === Period lifecycle namespace ===
     period: createPeriodRouter(deps),
-
-    // === Weekly Report namespace ===
     weeklyReport: createWeeklyReportRouter(deps),
-
-    // === Lead Form namespace ===
     leadForm: createLeadFormRouter(deps),
-
-    // === Analytics namespace ===
     analytics: createAnalyticsRouter(deps),
-
-    // === Search namespace ===
     search: createSearchRouter(deps),
-
-    // === Activity namespace ===
     activity: createActivityRouter(deps),
-
-    // === Project Activity namespace ===
     projectActivity: createProjectActivityRouter(deps),
-
-    // === Telemetry namespace ===
     telemetry: createTelemetryRouter(deps),
   });
 }

@@ -133,10 +133,7 @@ describe("createContextFactory — PDF JWT verifier path", () => {
   });
 
   it("LEGACY PDF JWT (no requestedBy) → narrow viewer-synthetic session, isPdfExport=true, pdfReportId=X", async () => {
-    // Back-compat: tokens minted before the empty-PDF fix carry no
-    // `requestedBy` claim. They keep the old narrow viewer-synthetic session
-    // (no DB lookup). New tokens carry requestedBy — see the be-the-requester
-    // suite below.
+    // Tokens without requestedBy keep the narrow viewer-synthetic session.
     const token = jwt.sign(
       { reportId: TEST_REPORT_ID, kind: "pdf-export" },
       PDF_SECRET,
@@ -246,7 +243,6 @@ describe("createContextFactory — PDF JWT verifier path", () => {
     expect(ctx.session?.role).toBe("head");
     expect(ctx.isPdfExport).toBe(false);
     expect(ctx.pdfReportId).toBeNull();
-    // 2.2 pin: regular session path must hydrate organization
     expect(ctx.session?.organization).toEqual({
       shortName: "Demo",
       fullName: "Example Software Department",
@@ -273,12 +269,8 @@ describe("createContextFactory — PDF JWT verifier path", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// empty-PDF fix: a PDF token with `requestedBy` rebuilds the requester's real
-// session so the worker renders /print/<id> scoped to their in-app view. The
-// old viewer-synthetic session had no group access → filterSnapshotSections
-// scoped to zero sections → an EMPTY PDF for every role.
-// ---------------------------------------------------------------------------
+// PDF token with requestedBy rebuilds the requester's real session so the
+// worker renders scoped to their in-app view (not an empty viewer slice).
 
 const HEAD_REQUESTER_ID = "a1111111-2222-4333-8444-555555555555";
 const VIEWER_REQUESTER_ID = "a2222222-3333-4444-8555-666666666666";
@@ -326,7 +318,7 @@ function makeRequesterPrisma(user: RequesterUser | null) {
   };
 }
 
-describe("createContextFactory — PDF JWT be-the-requester scope (empty-PDF fix)", () => {
+describe("createContextFactory — PDF JWT be-the-requester scope", () => {
   beforeEach(() => {
     vi.stubEnv("AUTH_JWT_SECRET", SESSION_SECRET);
     vi.stubEnv("PDF_EXPORT_JWT_SECRET", PDF_SECRET);
@@ -371,8 +363,7 @@ describe("createContextFactory — PDF JWT be-the-requester scope (empty-PDF fix
   });
 
   it("viewer requester → session rebuilt AS viewer WITH hydrated group access (scoped, NOT empty)", async () => {
-    // The discriminating clause: the viewer's export is scoped to their granted
-    // groups (non-empty), proving be-the-requester (option B), not all-access.
+    // Viewer export is scoped to granted groups (non-empty), not all-access.
     const token = jwt.sign(
       {
         reportId: TEST_REPORT_ID,
@@ -422,10 +413,6 @@ describe("createContextFactory — PDF JWT be-the-requester scope (empty-PDF fix
   });
 });
 
-// ---------------------------------------------------------------------------
-// Legacy (no-requestedBy) session vs. userSessionSchema
-// ---------------------------------------------------------------------------
-
 describe("buildPdfExportSession — legacy fallback satisfies userSessionSchema", () => {
   it("the no-requestedBy legacy session parses as a valid UserSession", async () => {
     const session = await buildPdfExportSession(
@@ -438,10 +425,6 @@ describe("buildPdfExportSession — legacy fallback satisfies userSessionSchema"
     expect(userSessionSchema.safeParse(session).success).toBe(true);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Middleware-level allowlist guard (pdfExportGuard)
-// ---------------------------------------------------------------------------
 
 describe("pdfExportGuard — PDF synthetic session restrictions", () => {
   // We rebuild a tiny router exposing the same procedure helpers so we can

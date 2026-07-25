@@ -45,10 +45,6 @@ interface LogEntry {
 const PII_CONTEXT_KEYS: ReadonlySet<string> = new Set(["recipientEmail"]);
 const REDACTION_MARKER = "[redacted]";
 
-/**
- * Returns a shallow copy of `context` with every PII-shaped key's value
- * replaced by the redaction marker. Pure: the input object is not mutated.
- */
 function redactPiiContext(
   context: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -80,20 +76,13 @@ const DEFAULT_MAX_BYTES = DEFAULT_MAX_BYTES_MB * KB_PER_MB * BYTES_PER_KB;
 const DEFAULT_MAX_AGE_DAYS = 30;
 
 export interface LoggerOptions {
-  /** Minimum log level to emit. Default: 'info'. */
   minLevel?: LogLevel;
-  /** Directory for the active log file and gzip archives. If omitted, file logging is disabled. */
+  // Omit to disable file logging.
   logDir?: string;
-  /** Service name included in every log entry. */
   service?: string;
-  /**
-   * When provided, every log entry's correlationId is read from this CLS store
-   * (key 'correlationId'). Falls back to 'no-context' outside an active scope.
-   */
+  // Reads correlationId from CLS; 'no-context' outside an active scope.
   clsService?: ClsService;
-  /** Rotate threshold in bytes for the active log file. Default 50 MB. */
   maxBytes?: number;
-  /** Archive retention in days (gzip files older than this are unlinked). Default 30. */
   maxAgeDays?: number;
 }
 
@@ -235,7 +224,6 @@ class AppLoggerImpl implements AppLogger {
   }
 }
 
-/** No-op logger for testing or when logging is disabled. */
 class NullLogger implements AppLogger {
   debug(): void {
     /* noop */

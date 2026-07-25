@@ -116,15 +116,6 @@ describe("groupScopeFilter", () => {
     });
   });
 
-  // -------------------------------------------------------------------
-  // useExplicitGroupProducts opt-in flag
-  //
-  // Default OFF keeps the bit-for-bit legacy behaviour (the four cases
-  // above already cover that path). The ON path swaps the Project
-  // fragment to the GroupProduct join. All other targets ignore the
-  // flag — only `project` is affected by the M:M edge.
-  // -------------------------------------------------------------------
-
   describe("useExplicitGroupProducts", () => {
     it("legacy path: omitting options returns lead.reportingGroupId.in", () => {
       const s = session("head");

@@ -5,16 +5,7 @@ import { createGzip } from "node:zlib";
 
 import { MS_PER_DAY, MS_PER_HOUR } from "@customreport/shared";
 
-/**
- * File sink for the app logger: size-based rotation
- * into gzip archives, age-based archive pruning, and a per-sink serialized
- * write queue so concurrent emit() calls never interleave appendFile with a
- * rotation. Fire-and-forget at the call site is preserved by chaining onto the
- * shared queue promise.
- */
-
-// Prune stale archives at most once per interval instead of on every log line —
-// a readdir+stat per emit dominated the file sink on a busy process.
+// Prune at most once per interval — readdir+stat per emit dominated the sink.
 const PRUNE_INTERVAL_MS = MS_PER_HOUR;
 const ACTIVE_LOG_FILENAME = "app.log";
 const ARCHIVE_PREFIX = "app.log.";
@@ -34,7 +25,6 @@ export interface FileSink {
   lastPruneAt: number;
 }
 
-/** A fresh sink whose queue is an already-resolved promise (no async work). */
 export function createFileSink(
   logDir: string,
   opts: ResolvedFileOpts,
@@ -42,7 +32,6 @@ export function createFileSink(
   return { logDir, opts, queue: Promise.resolve(), lastPruneAt: 0 };
 }
 
-/** Prune stale archives at most once per {@link PRUNE_INTERVAL_MS}. */
 async function maybePruneArchives(sink: FileSink): Promise<void> {
   const now = Date.now();
   if (now - sink.lastPruneAt < PRUNE_INTERVAL_MS) return;

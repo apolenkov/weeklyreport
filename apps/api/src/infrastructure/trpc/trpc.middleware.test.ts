@@ -17,16 +17,6 @@ import {
   viewerProcedure,
 } from "./trpc.middleware.js";
 
-// ---------------------------------------------------------------------------
-// Chain-composition pin test
-//
-// Each of the 7 protected builders must carry exactly 5 middlewares.
-// Slots 0-1 must be reference-equal to publicProcedure's two middlewares.
-// Slots 3-4 (pdfExportGuard, mutationAuditMiddleware) must be
-// reference-equal across all 7 builders (compared to headProcedure as
-// the reference, since the unexported middlewares have no direct export).
-// ---------------------------------------------------------------------------
-
 describe("protected procedure chain-composition pins", () => {
   function getChain(proc: {
     query: (fn: () => undefined) => unknown;

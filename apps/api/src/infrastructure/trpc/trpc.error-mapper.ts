@@ -51,15 +51,9 @@ import { WeeklyReportDomainError } from "../../modules/weekly-report/index.js";
 /** A domain error class, matched against the thrown error via `instanceof`. */
 type DomainErrorCtor = abstract new (...args: never[]) => Error;
 
-/**
- * Each domain error class → the tRPC status code it surfaces as. A table, not
- * an if-chain, because the `complexity` lint ceiling cannot accommodate one
- * `instanceof` branch per ~20 classes. Order is preserved from the prior
- * if-chain for readability, but correctness does NOT depend on it: every class
- * `extends Error` DIRECTLY (none extends another domain error), so no thrown
- * error can match two rows. The non-obvious codes — those that aren't the
- * "default" for their error shape — carry an inline WHY.
- */
+// Table (not if-chain) for the complexity lint ceiling. Order is irrelevant:
+// every class extends Error directly, so no thrown error can match two rows.
+// Non-obvious codes carry an inline WHY.
 export const DOMAIN_ERROR_CODES: readonly (readonly [
   DomainErrorCtor,
   TRPCError["code"],
@@ -114,13 +108,11 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   // The race-safe decide transaction's loser (zero rows matched the
   // compare-and-set) — a state conflict on an existing resource → CONFLICT.
   [AdminReopenRequestAlreadyProcessedError, "CONFLICT"],
-  // An out-of-scope or archived period-lifecycle target is an authorization
-  // denial → FORBIDDEN; a missing report → NOT_FOUND. Two classes because they
-  // map to different codes. PeriodAccessError stays unmapped on purpose — its
-  // state/policy 500s are a separate, deferred concern.
+  // Scope/archived denial → FORBIDDEN; missing report → NOT_FOUND. Two
+  // classes because they map to different codes. PeriodAccessError stays
+  // unmapped on purpose (state/policy 500s are a separate concern).
   [PeriodScopeError, "FORBIDDEN"],
   [PeriodNotFoundError, "NOT_FOUND"],
-  // getAssembledReport on a missing report → NOT_FOUND.
   [PublicationNotFoundError, "NOT_FOUND"],
   // Product owned by another group, terminal until the admin detaches it →
   // CONFLICT.

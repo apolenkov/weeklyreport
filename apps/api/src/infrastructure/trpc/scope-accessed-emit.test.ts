@@ -7,16 +7,9 @@ import { createNullLogger } from "../../lib/logger.js";
 import type { WeeklyReportServiceResult } from "../../modules/weekly-report/index.js";
 import { createAppRouter } from "./trpc.router.js";
 
-/**
- * Task 4.1/4.2 (add-scope-accessed-audit): the router-level emit decision.
- * Drives the real `weeklyReport.get` procedure (anyRoleProcedure chain)
- * with a stub service so the if-block guarding
- * `ctx.auditLogger.scopeAccessed` is executable-tested:
- *   - non-admin + non-empty signal → exactly ONE event, whitelisted payload;
- *   - two cross-group products → still one event (per-request dedupe, D3);
- *   - null signal → no event; admin → no event even with a signal;
- *   - `crossGroup` is stripped from the public response in all cases.
- */
+// Pins router-level scopeAccessed emit: one event per non-admin signal
+// (deduped across products), none for null signal or admin; crossGroup
+// is stripped from the public response.
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const CROSS_PRODUCT_1 = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -78,7 +71,7 @@ function activeResult(
   return { status: "active", ...makeReadModel(), crossGroup };
 }
 
-describe("weeklyReport.get — scopeAccessed emit (task 4)", () => {
+describe("weeklyReport.get — scopeAccessed emit", () => {
   it("emits exactly one scopeAccessed when a non-admin read carries the signal", async () => {
     const { caller, scopeAccessed } = buildCaller(
       activeResult({

@@ -4,16 +4,9 @@ import { createNullAuditLogger } from "../../../lib/audit-logger.js";
 import { createNullLogger } from "../../../lib/logger.js";
 import { createAppRouter } from "../trpc.router.js";
 
-/**
- * Router-wiring pin for `period.publish` / `period.reopen`: the client
- * supplies `reportId` explicitly (unlike the now-deleted `review.publish`,
- * which resolved it server-side from `weeklyReportService`); the router's
- * only job is to forward `{ reportId, session }` to `PeriodService` and map
- * domain errors. `PeriodService.publishPeriod` itself re-validates `reportId`
- * against the server-derived active period — see
- * `application/period.service.test.ts`'s "Lifecycle target scope
- * authorization" suite for that pin.
- */
+// Router-wiring pin: client supplies reportId; router only forwards
+// { reportId, session } to PeriodService and maps domain errors.
+// Service-side reportId re-validation is pinned in period.service.test.ts.
 
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";
 const HEAD_USER_ID = "33333333-3333-4333-8333-333333333333";

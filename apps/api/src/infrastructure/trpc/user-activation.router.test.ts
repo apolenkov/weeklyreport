@@ -11,15 +11,8 @@ import { createAdminUsersProcedures } from "./routers/admin/users.procedures.js"
 import { router } from "./trpc.middleware.js";
 import { createAppRouter } from "./trpc.router.js";
 
-/**
- * admin.deactivateUser / admin.activateUser promise, in their docstrings, to
- * update the Redis revoked-set fast path alongside the Prisma `isActive`
- * write. This suite pins the router-side half of that promise: when a
- * `sessionRevocationService` is wired into RouterDeps, deactivation revokes
- * and re-activation restores, each AFTER the authoritative DB write. (The
- * production wiring itself lives in `main.ts`, which must pass the
- * DI-provided instance — the fast path is dead code without it.)
- */
+// Pins router-side Redis revoke/restore after the Prisma isActive write
+// when sessionRevocationService is wired. Production wiring is in main.ts.
 
 const USER_ID = "33333333-3333-4333-8333-333333333333";
 const TARGET_ID = "44444444-4444-4444-8444-444444444444";
@@ -115,10 +108,8 @@ describe("admin.activateUser — session restoration wiring", () => {
 });
 
 describe("admin user activation — app-router composition", () => {
-  // The unit suites above construct the procedures directly; this smoke pins
-  // that createAppRouter actually FORWARDS both services into them, so the
-  // composition seam cannot silently drop the revocation dependency. Partial
-  // deps via the sibling suites' accepted cast idiom.
+  // Pins createAppRouter forwards both services (composition cannot drop
+  // the revocation dependency).
   it("createAppRouter wires snapshot + revocation services into deactivateUser", async () => {
     const deactivateUser = vi.fn().mockResolvedValue({ success: true });
     const revokeSession = vi.fn().mockResolvedValue(undefined);
