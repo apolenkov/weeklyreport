@@ -65,7 +65,11 @@ function validateProjectSubmission(
   ];
 }
 
-/** Validate a section submit payload against draft completeness rules. */
+/**
+ * Validate a section submit payload against draft completeness rules.
+ * @param section - The section argument.
+ * @param input - The input argument.
+ */
 export function validateSubmitInput(
   section: ReportSectionReadModel,
   input: SubmitSectionInput | SubmitSectionPayload,
@@ -105,6 +109,8 @@ export function validateSubmitInput(
 /**
  * Reject activity-parented draft rows whose activityId is not seeded on the section.
  * Product-parented rows (null activityId) are out of scope here.
+  * @param section - The section argument.
+ * @param input - The input argument.
  */
 export function validateRecordActivityIds(
   section: ReportSectionReadModel,
@@ -134,6 +140,8 @@ export function validateRecordActivityIds(
 
 /**
  * Reject activityStatuses entries whose activityId is not seeded on the section.
+  * @param section - The section argument.
+ * @param input - The input argument.
  */
 export function validateActivityStatuses(
   section: ReportSectionReadModel,
@@ -253,6 +261,8 @@ function validateStageRows(
 /**
  * Stage ownership for saveDraft/submit: changed rows need author-owned stages;
  * unchanged stableId+product+stages rows are grandfathered (never clamps).
+  * @param section - The section argument.
+ * @param input - The input argument.
  */
 export function validateStageOwnership(
   section: ReportSectionReadModel,
