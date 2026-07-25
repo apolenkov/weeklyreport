@@ -14,11 +14,18 @@
 - [x] Install pnpm and turbo with `npm install -g`; `corepack prepare` cannot be
       used because `node:26` no longer ships corepack
 - [x] Install Chromium in the runner stage via `pnpm exec playwright install
-  --with-deps chromium`, using the production `playwright` dependency
+--with-deps chromium`, using the production `playwright` dependency
 - [x] Replace the Playwright image's `pwuser` with the `node` user the base
       provides (same uid 1000)
-- [ ] Build the image and prove PDF export: `chromium.launch()` succeeds and
-      `page.pdf()` returns a non-empty buffer from inside the built image
+- [x] Build the image and prove PDF export: `chromium.launch()` succeeds and
+      `page.pdf()` returns a non-empty buffer from inside the built image —
+      6152 bytes as uid 1000 (`node`) on Node 26.5.0, against production-only
+      dependencies
+- [x] Replace `pnpm prune --prod` with a dedicated `prod-deps` install stage.
+      Run at the workspace root, prune keeps the pnpm virtual store but empties
+      every workspace's `node_modules`, so the built app could resolve nothing
+      at runtime. The defect was invisible until now: the image had never built
+      at all, because the same prune step aborted without a TTY
 
 ## 3. Guard what was never guarded
 
@@ -35,5 +42,6 @@
 
 - [x] Restate the runtime-major requirement so the images define the runtime
 - [x] Record the removed Playwright-image requirement with its reason
-- [ ] `pnpm lint` and the full unit suite green on Node 26
+- [x] `pnpm lint` and the full unit suite green on Node 26 — whole chain exit 0,
+      417 test files passing
 - [ ] CI green on all jobs after push
