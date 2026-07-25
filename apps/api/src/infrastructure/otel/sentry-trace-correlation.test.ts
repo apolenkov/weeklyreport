@@ -22,7 +22,7 @@ function spanWith(spanContext: SpanContext): Span {
   return { spanContext: () => spanContext } as Span;
 }
 
-describe("correlate-errors-to-traces: stampActiveTrace", () => {
+describe("stampActiveTrace", () => {
   beforeEach(() => {
     getActiveSpan.mockReset();
   });

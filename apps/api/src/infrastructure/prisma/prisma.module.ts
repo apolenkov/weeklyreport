@@ -7,10 +7,8 @@ import { PrismaService } from "./prisma.service.js";
 @Global()
 @Module({
   imports: [ConfigModule],
-  // PrismaService is factory-provided (not a constructor @Inject parameter)
-  // because the web tsconfig type-checks PrismaService through the tRPC
-  // AppRouter type graph under ES decorators, which reject parameter decorators
-  // (TS1206). The factory injects the validated EnvConfig without one.
+  // Factory-provided: ES decorators reject parameter decorators (TS1206) when
+  // the web tsconfig type-checks PrismaService through the tRPC AppRouter graph.
   providers: [
     {
       provide: PrismaService,

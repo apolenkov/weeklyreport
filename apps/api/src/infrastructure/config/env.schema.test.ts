@@ -69,7 +69,7 @@ describe("envSchema — no defaults, every product var required", () => {
   });
 
   it("rejects a PDF_EXPORT_JWT_SECRET shorter than 32 chars", () => {
-    // 17 chars: clears the old 16-char floor, fails the raised 32-char one.
+    // Below the 32-char minimum.
     expect(
       envSchema.safeParse({
         ...COMPLETE,

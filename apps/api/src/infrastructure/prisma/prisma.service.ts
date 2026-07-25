@@ -22,11 +22,8 @@ interface ResolvedPoolConfig {
   readonly connectionTimeoutMillis: number;
 }
 
-// Prisma 7's PrismaClient type narrows `$on` differently depending on the
-// constructor's `log` shape, and TypeScript cannot always reconcile the two
-// (the source of the former `this as any`). Cast through this minimal
-// structural type instead, so the event callbacks stay fully typed and the
-// no-unsafe-* family has a real type to check against.
+// Prisma 7 narrows `$on` by the constructor's `log` shape; cast through this
+// structural type so event callbacks stay typed without `as any`.
 interface PrismaLogEventEmitter {
   $on?: {
     (
@@ -80,12 +77,7 @@ export class PrismaService
     this.pool = pool;
     this.poolConfig = poolConfig;
 
-    // Without a listener an idle pool client that loses its backend connection
-    // emits an unhandled `error` event, which crashes the process. Route it to
-    // the logger instead. The active NestAppLoggerAdapter `String(...)`-coerces
-    // the first arg and treats a second arg as the Nest log context, so the
-    // structured fields must be embedded in ONE string (matching the
-    // `slow query ${JSON.stringify(...)}` convention above).
+    // Unhandled pg pool `error` crashes the process; logger takes one string arg.
     pool.on("error", (err: Error) => {
       this.logger.error(
         `pg pool error ${JSON.stringify({ phase: "pg.pool.error", message: err.message })}`,
@@ -94,10 +86,6 @@ export class PrismaService
   }
 
   async onModuleInit(): Promise<void> {
-    // Wire query/error/warn event listeners. `$on` is reached through the
-    // PrismaLogEventEmitter structural cast (see above) because Prisma 7's
-    // Client type narrows $on differently depending on the constructor's `log`
-    // shape and TypeScript can't always reconcile the two.
     const debugEnabled = this.env.LOG_LEVEL === "debug";
     const self = this as unknown as PrismaLogEventEmitter;
 
@@ -110,13 +98,10 @@ export class PrismaService
         target?: string;
       }) => {
         if (e.duration >= SLOW_QUERY_MS) {
-          // Slow query — always log at warn-level so it shows up even in
-          // production logs without flipping the global LOG_LEVEL.
           this.logger.warn(
             `slow query ${JSON.stringify({ phase: "db.query", durationMs: e.duration, query: e.query })}`,
           );
         } else if (debugEnabled) {
-          // Verbose per-query trace — only when explicitly debugging.
           this.logger.debug(`query (${e.duration}ms): ${e.query}`);
         }
       },

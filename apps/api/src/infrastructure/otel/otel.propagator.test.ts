@@ -3,14 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { createTraceContextPropagator } from "./otel.bootstrap.js";
 
-/**
- * Propagator precedence for browser→api error/trace correlation.
- *
- * Exercises the REAL CompositePropagator.extract (not array-order inspection)
- * to lock the precedence the browser→api correlation relies on:
- *   - both headers present, different ids → W3C `traceparent` wins;
- *   - only `sentry-trace` present → Sentry bridges it as the active trace.
- */
+// Exercises the real CompositePropagator, not array-order inspection.
 const W3C_TRACE_ID = "11111111111111111111111111111111";
 const W3C_SPAN_ID = "1111111111111111";
 const SENTRY_TRACE_ID = "22222222222222222222222222222222";

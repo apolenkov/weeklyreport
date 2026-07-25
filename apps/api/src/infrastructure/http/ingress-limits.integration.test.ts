@@ -93,8 +93,8 @@ async function floodPost(
 }
 
 function buildClientLogsApp(): express.Express {
-  // Mirror the main.ts mount order: limiter → json parser → handler, so the
-  // limiter guards the log-writing handler ahead of the parse.
+  // Mirror main.ts via mountClientLogsIngress so limiter→parser→handler order
+  // and the byte limit cannot drift here without failing in production too.
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
@@ -102,8 +102,6 @@ function buildClientLogsApp(): express.Express {
     logger: silentLogger,
     isTest: false,
   });
-  // Same shared mount as main.ts — limiter -> parser -> handler order and
-  // the byte limit cannot drift here without failing in production too.
   mountClientLogsIngress(
     app,
     "/api/client-logs",

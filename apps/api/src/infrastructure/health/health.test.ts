@@ -18,10 +18,6 @@ import { RedisHealthIndicator } from "./redis.health.js";
 // override the client anyway, so only the host/port shape is needed.
 const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
 
-// ---------------------------------------------------------------------------
-// HealthController
-// ---------------------------------------------------------------------------
-
 describe("HealthController", () => {
   const threshold = 1_610_612_736;
 
@@ -80,10 +76,6 @@ describe("HealthController", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// PrismaHealthIndicator
-// ---------------------------------------------------------------------------
-
 describe("PrismaHealthIndicator", () => {
   function makeIndicator() {
     const prisma = { $queryRaw: vi.fn() };
@@ -112,10 +104,6 @@ describe("PrismaHealthIndicator", () => {
     expect(result).toMatchObject({ database: { status: "down" } });
   });
 });
-
-// ---------------------------------------------------------------------------
-// RedisHealthIndicator
-// ---------------------------------------------------------------------------
 
 describe("RedisHealthIndicator", () => {
   it("returns up result keyed `redis` when ping succeeds", async () => {
@@ -167,10 +155,6 @@ describe("RedisHealthIndicator", () => {
     expect(redisMock.disconnect).toHaveBeenCalledOnce();
   });
 });
-
-// ---------------------------------------------------------------------------
-// BullMQHealthIndicator
-// ---------------------------------------------------------------------------
 
 describe("BullMQHealthIndicator", () => {
   afterEach(() => {

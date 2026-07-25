@@ -2,14 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { decideOtelBootstrap } from "./otel.bootstrap.js";
 
-/**
- * Bootstrap-decision unit tests.
- *
- * Cover the decision logic that gates whether the SDK actually starts.
- * Doesn't exercise the live SDK (that would pull in a collector at test
- * time); instead asserts the env-knob → decision mapping that the api
- * relies on for its no-overhead-when-disabled invariant.
- */
+// Env-knob → decision only; avoids pulling a live collector into the unit suite.
 describe("OTel bootstrap decision", () => {
   it("returns disabled-flag when OTEL_SDK_DISABLED=true (overrides endpoint)", () => {
     const decision = decideOtelBootstrap({

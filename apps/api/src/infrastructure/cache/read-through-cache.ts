@@ -7,15 +7,9 @@ import { buildRedisConnectionOptions } from "../config/redis-connection";
 /** SCAN batch size for the prefix-invalidation walk (non-blocking, unlike KEYS). */
 const SCAN_BATCH_SIZE = 100;
 
-/**
- * Read-through Redis cache shared by the analytics and telemetry domains. A
- * Redis outage never breaks the read path: reads fall through to the compute
- * function and writes are best-effort. `keyPrefix` is prepended to every key
- * before it reaches Redis; callers that already namespace their keys pass "".
- */
+// Redis outage never breaks the read path: reads fall through to compute; writes are best-effort.
 export interface RedisReadThroughCache {
   getOrCompute<T>(key: string, fn: () => Promise<T>): Promise<T>;
-  /** SCAN + DEL every key under `prefix` (best-effort; survives a Redis outage). */
   invalidateByPrefix(prefix: string): Promise<void>;
   close(): Promise<void>;
 }

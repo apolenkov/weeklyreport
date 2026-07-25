@@ -1,24 +1,6 @@
-/**
- * OpenTelemetry bootstrap.
- *
- * Wires the Node SDK with OTLP/HTTP export + HTTP/Express/Prisma
- * instrumentations. MUST be the first runtime import in main.ts so the
- * SDK can monkey-patch the http module before NestJS / Express / Prisma
- * pull it in.
- *
- * Disabled by default (no exporter endpoint configured). Three env knobs:
- *
- *   OTEL_EXPORTER_OTLP_ENDPOINT  - traces shipped to {endpoint}/v1/traces;
- *                                  unset → SDK doesn't start
- *   OTEL_SDK_DISABLED=true       - hard kill switch (overrides everything)
- *   OTEL_TRACES_SAMPLER_ARG=1.0  - root-span probability sampler ratio
- *                                  (default 1.0), wrapped in ParentBased so a
- *                                  sampled-in parent trace is always honored
- *
- * The `start()` call is synchronous; shutdown on SIGTERM flushes pending
- * spans. Errors during start are non-fatal — the api boots even if the
- * collector is unreachable, just without traces.
- */
+// MUST be the first runtime import in main.ts so the SDK monkey-patches http
+// before Nest/Express/Prisma load it. Unset OTEL_EXPORTER_OTLP_ENDPOINT leaves
+// the SDK off; start errors are non-fatal so a down collector never blocks boot.
 
 import { propagation } from "@opentelemetry/api";
 import { logs } from "@opentelemetry/api-logs";
@@ -79,15 +61,8 @@ export function decideOtelBootstrap(
   return { started: true, reason: "enabled", samplingRatio, endpoint };
 }
 
-/**
- * correlate-errors-to-traces: composite propagator for browser→api trace
- * adoption. CompositePropagator.extract folds the propagators left-to-right,
- * so the LAST one that finds its header wins. W3C is placed last so its
- * `traceparent` wins when both headers are present; `SentryPropagator`
- * (which also carries baggage) bridges browser requests that send only
- * `sentry-trace`. Exported so the precedence is unit-tested against the real
- * CompositePropagator, not asserted by reading the array order.
- */
+// CompositePropagator.extract is left-to-right; last match wins. W3C last so
+// traceparent beats sentry-trace; SentryPropagator bridges sentry-trace-only.
 export function createTraceContextPropagator(): CompositePropagator {
   return new CompositePropagator({
     propagators: [new SentryPropagator(), new W3CTraceContextPropagator()],
@@ -119,11 +94,9 @@ function registerShutdownHandler(signal: NodeJS.Signals): void {
 export function startOtel(
   env: NodeJS.ProcessEnv = process.env,
 ): OtelBootstrapResult {
-  // Register the W3C trace-context propagator globally and unconditionally —
-  // even when the exporter is disabled — so the manual inject/extract on the
-  // BullMQ enqueue->worker boundary always speaks W3C `traceparent`, not the
-  // default no-op propagator. When the SDK starts it re-registers the same
-  // composite via NodeSDK's `textMapPropagator`.
+  // Always register (even when export is off) so BullMQ inject/extract speaks
+  // W3C traceparent, not the default no-op. SDK start re-registers the same
+  // composite via textMapPropagator.
   propagation.setGlobalPropagator(createTraceContextPropagator());
 
   const decision = decideOtelBootstrap(env);
@@ -139,18 +112,13 @@ export function startOtel(
 
   sdk = new NodeSDK({
     resource,
-    // ParentBased so a sampled-in parent (e.g. a browser-originated trace)
-    // is always kept at the api hop; only root spans consult the ratio.
-    // A bare ratio sampler re-dices every span and can drop the api's span
-    // from a trace the browser already decided to keep.
+    // ParentBased keeps a sampled-in parent; a bare ratio re-dices every span
+    // and can drop the api hop from a browser-kept trace.
     sampler: new ParentBasedSampler({
       root: new TraceIdRatioBasedSampler(decision.samplingRatio),
     }),
     traceExporter: new OTLPTraceExporter({ url: `${base}/v1/traces` }),
-    // correlate-errors-to-traces: adopt the browser's trace id on inbound
-    // requests so a browser-originated call shares one id with the api.
-    // Replaces NodeSDK's default W3C trace+baggage propagator; see the
-    // createTraceContextPropagator() doc for the W3C-wins precedence.
+    // Browser→api shared trace id; W3C-wins precedence in createTraceContextPropagator.
     textMapPropagator: createTraceContextPropagator(),
     instrumentations: [
       new HttpInstrumentation(),
