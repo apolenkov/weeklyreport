@@ -4,9 +4,7 @@ const MAX_REPORTING_GROUP_NAME_LENGTH = 200;
 const MAX_ORG_SHORT_NAME_LENGTH = 16;
 const MAX_ORG_FULL_NAME_LENGTH = 200;
 
-/**
- * DB Role enum wire values (must match Prisma; includes admin for SAML persistence).
- */
+// DB Role enum; admin writes must match Prisma. Includes admin for SAML persistence.
 export const roleSchema = z.enum(["lead", "head", "admin", "viewer"]);
 
 /** Session-axis role enum (separate home from DB `roleSchema` / role-type). */

@@ -3,6 +3,9 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 import type * as React from "react";
 
+/**
+ * CVA class map for Badge variants — use to compose matching styles outside Badge.
+ */
 const badgeVariants = cva(
   "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3",
   {
@@ -25,6 +28,9 @@ const badgeVariants = cva(
   },
 );
 
+/**
+ * Pill status/label control. Set `asChild` to compose styles onto a child via Slot.
+ */
 function Badge({
   className,
   variant = "default",

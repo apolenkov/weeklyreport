@@ -3,6 +3,9 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 import type * as React from "react";
 
+/**
+ * CVA class map for Button variants and sizes — compose outside Button when needed.
+ */
 const buttonVariants = cva(
   "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
@@ -41,6 +44,10 @@ const buttonVariants = cva(
   },
 );
 
+/**
+ * Primary action control; set asChild to render via Slot instead of a button.
+ * size="touch" is a ≥44px HIG tap target for primary mobile actions.
+ */
 function Button({
   className,
   variant = "default",

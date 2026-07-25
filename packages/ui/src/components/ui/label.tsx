@@ -4,6 +4,9 @@ import { cn } from "@customreport/ui/lib/utils";
 import { Label as LabelPrimitive } from "radix-ui";
 import type * as React from "react";
 
+/**
+ * Accessible form label (Radix Label) for control association.
+ */
 function Label({
   className,
   ...props

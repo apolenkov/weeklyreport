@@ -43,9 +43,11 @@ const sonarjsRecommended = sonarjs.configs.recommended as unknown as {
   readonly settings?: Linter.Config["settings"];
 };
 
-// jsdoc: the TypeScript-flavored recommended preset (TS supplies types, so the
-// type-requiring jsdoc rules are off — validates jsdoc CORRECTNESS, not presence;
-// no require-jsdoc, which would be the "overhead" the user flagged).
+// jsdoc: TypeScript-flavored recommended as a base, then re-tuned for
+// "strict presence, zero tag overhead": require a short contract block on
+// published-package exports; do NOT require @param/@returns/@types (TS
+// already carries those). Correctness rules (tag names, param names when
+// tags exist) stay on.
 const jsdocRecommendedTs = jsdoc.configs["flat/recommended-typescript"] as {
   readonly rules: Linter.RulesRecord;
 };
@@ -629,21 +631,54 @@ export default defineConfig([
       "sonarjs/no-duplicate-string": "error",
     },
   },
-  // jsdoc — TS-flavored recommended, scoped to the two published packages'
-  // public surface (packages/shared + packages/ui) per the scaffold directive.
-  // Tests are not public source: excluded so docblock pragmas like
-  // `@vitest-environment` are not mis-flagged as invalid jsdoc tags.
+  // jsdoc — published packages only (packages/shared + packages/ui).
+  // Presence: every exported declaration needs a short /** contract */.
+  // Overhead ban: no required @param/@returns/@type tags (TypeScript owns
+  // that surface). Apps/* stay off — app-internal JSDoc is a hygiene defect
+  // enforced by review/comment-hygiene, not by forcing empty blocks here.
+  // Tests excluded so `@vitest-environment` is not a jsdoc tag violation.
   {
     files: ["packages/shared/src/**/*.ts", "packages/ui/src/**/*.{ts,tsx}"],
     ignores: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/__tests__/**"],
     plugins: { jsdoc },
     rules: {
       ...jsdocRecommendedTs.rules,
-      // PRUNE: require-jsdoc forces a doc block on every export (126 sites) —
-      // the presence-overhead the user flagged. We validate jsdoc CORRECTNESS
-      // (require-param/returns, check-tag-names, …) where blocks exist, not
-      // their presence. Flip to error with content in a dedicated docs pass.
-      "jsdoc/require-jsdoc": "off",
+      // Presence on the public export surface only (`publicOnly` skips
+      // file-private helpers — that is the no-overhead cut).
+      "jsdoc/require-jsdoc": [
+        "error",
+        {
+          publicOnly: true,
+          require: {
+            FunctionDeclaration: true,
+            MethodDefinition: true,
+            ClassDeclaration: true,
+            ArrowFunctionExpression: true,
+            FunctionExpression: true,
+          },
+          enableFixer: false,
+        },
+      ],
+      // Zero tag overhead — types already document params/returns.
+      "jsdoc/require-param": "off",
+      "jsdoc/require-param-description": "off",
+      "jsdoc/require-param-name": "off",
+      "jsdoc/require-param-type": "off",
+      "jsdoc/require-returns": "off",
+      "jsdoc/require-returns-description": "off",
+      "jsdoc/require-returns-type": "off",
+      "jsdoc/require-returns-check": "off",
+      "jsdoc/require-yields": "off",
+      "jsdoc/require-yields-check": "off",
+      "jsdoc/require-property": "off",
+      "jsdoc/require-property-description": "off",
+      "jsdoc/require-property-name": "off",
+      "jsdoc/require-property-type": "off",
+      "jsdoc/require-next-type": "off",
+      "jsdoc/require-throws-type": "off",
+      // Keep correctness when someone does write tags.
+      "jsdoc/check-param-names": "error",
+      "jsdoc/check-tag-names": "error",
     },
   },
   // Next-specific correctness rules (Next 16 removed `next lint`, so the
@@ -1033,10 +1068,7 @@ export default defineConfig([
   // TODO); `complexity: 20` still gates new code.
   {
     files: [
-      "apps/web/src/app/(app)/reports/page.tsx", // role-aware history renderer; 5 roles × distinct query/filter/label paths
       "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // status-card multi-branch messaging (streak/viewer/draft/risk)
-      "apps/web/src/features/review/ui/risks-section.tsx", // 3 dialog states across handlers + JSX; prior split broke behavior
-      "apps/web/src/features/report-sections/ui/stage-chip.tsx", // interactive chip; dropdown/status/clear/popover entangled via hooks
     ],
     rules: { complexity: "off" },
   },
@@ -1045,11 +1077,7 @@ export default defineConfig([
   // monoliths).
   {
     files: [
-      "apps/web/src/app/(app)/reports/page.tsx", // see cyclomatic block (same role-aware renderer)
-      "apps/web/src/features/dashboard/ui/remind-lead-button.tsx", // one ConfirmState machine → label/message/icon/disabled
       "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // see cyclomatic block
-      "apps/web/src/features/review/ui/risks-section.tsx", // see cyclomatic block
-      "apps/web/src/features/report-sections/ui/stage-chip.tsx", // see cyclomatic block
       "apps/web/uat-suite/inventory.mjs", // classify() must stay inline (runs inside page.evaluate) + multi-phase report IIFE
     ],
     rules: { "sonarjs/cognitive-complexity": "off" },

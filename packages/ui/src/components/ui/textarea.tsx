@@ -1,6 +1,9 @@
 import { cn } from "@customreport/ui/lib/utils";
 import type * as React from "react";
 
+/**
+ * Auto-sizing multiline text field with focus and invalid styles.
+ */
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (
     <textarea

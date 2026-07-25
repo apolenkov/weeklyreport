@@ -3,6 +3,10 @@ import type { HTMLAttributes } from "react";
 
 type ComingSoonBadgeProps = HTMLAttributes<HTMLSpanElement>;
 
+/**
+ * Amber deferred-feature pill with a visible label — never a hidden flag.
+ * Place on an inert control to mark UI that is deferred (not shipped).
+ */
 export function ComingSoonBadge({ className, ...props }: ComingSoonBadgeProps) {
   return (
     <span
@@ -11,8 +15,8 @@ export function ComingSoonBadge({ className, ...props }: ComingSoonBadgeProps) {
         "bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700",
         className,
       )}
-      data-state="coming-soon"
       {...props}
+      data-state="coming-soon"
     >
       Coming Soon
     </span>

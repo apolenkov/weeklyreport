@@ -13,7 +13,10 @@ const ICON_SHAPE = {
   nav: "h-8 w-10 rounded-[var(--radius-pill)] px-0",
 } as const;
 
-// Icon-only inert control. `shape` picks the toolbar square or the nav pill.
+/**
+ * Inert deferred icon control with ComingSoon tooltip; primitive owns geometry (no className).
+ * `shape` selects toolbar square vs nav pill dimensions.
+ */
 export function ComingSoonIconButton({
   icon: Icon,
   ariaLabel,
@@ -40,7 +43,10 @@ export function ComingSoonIconButton({
   );
 }
 
-// Labelled inert control. `compact` strips the touch-target min-height.
+/**
+ * Inert labelled deferred control with ComingSoon tooltip; primitive owns geometry (no className).
+ * `compact` strips the touch-target min-height for denser toolbars.
+ */
 export function ComingSoonControl({
   icon: Icon,
   ariaLabel,

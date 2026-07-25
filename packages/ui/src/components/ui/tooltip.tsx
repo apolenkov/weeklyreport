@@ -6,6 +6,9 @@ import type * as React from "react";
 
 import { ComingSoonBadge } from "../coming-soon-badge";
 
+/**
+ * Radix tooltip provider (delay/shared config).
+ */
 function TooltipProvider({
   delayDuration = 0,
   ...props
@@ -19,18 +22,27 @@ function TooltipProvider({
   );
 }
 
+/**
+ * Radix tooltip root for a trigger+content pair.
+ */
 function Tooltip({
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Root>) {
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
 }
 
+/**
+ * Element that shows the tooltip on hover/focus.
+ */
 function TooltipTrigger({
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
   return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
 }
 
+/**
+ * Positioned tooltip panel.
+ */
 function TooltipContent({
   className,
   sideOffset = 0,
@@ -61,17 +73,9 @@ function TooltipContent({
   );
 }
 
-/*
- * A self-contained Radix tooltip for the inert "Coming Soon" deferred
- * controls. It embeds its OWN `TooltipProvider`, so every mount works without
- * a shell-level provider (AgentReviewComingSoon renders on many standalone
- * surfaces); it portals the content out of any `overflow` ancestor so the
- * badge is never clipped; and it renders the canonical amber `ComingSoonBadge`
- * on a CHROMELESS content (no dark surface, no arrow) so the
- * single-amber-variant rule holds. The trigger is the existing inert control
- * (`aria-disabled`, so it still receives pointer/focus events); Radix's content
- * carries the `tooltip` role. One shared side/align positions all six controls
- * identically.
+/**
+ * Self-contained Coming Soon tooltip: own provider, portaled chromeless badge,
+ * works without a shell TooltipProvider (deferred-feature controls).
  */
 function ComingSoonTooltip({
   children,

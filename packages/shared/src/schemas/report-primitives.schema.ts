@@ -8,7 +8,7 @@ const noNullBytes = (val: string) => !val.includes("\u0000");
 
 const DEFAULT_SAFE_TEXT_MAX_LENGTH = 500;
 
-// Prefer over z.string().min/max for user-facing text (null bytes + invisible-only).
+/** Zod string for user-facing text: rejects null bytes and invisible-only values. */
 export const safeText = (opts: { min?: number; max?: number } = {}) =>
   z
     .string()
@@ -22,6 +22,7 @@ export const safeText = (opts: { min?: number; max?: number } = {}) =>
 // Reject pre-2000 dates (prevents pre-epoch/nonsensical report dates).
 const MIN_VALID_YEAR = 2000;
 
+/** Zod coerced date that rejects years before 2000. */
 export const reportDate = () =>
   z.coerce.date().refine((d) => d.getFullYear() >= MIN_VALID_YEAR, {
     message: "Date must be after year 2000",
@@ -43,7 +44,7 @@ export const itemWorkflowStatusSchema = z.enum([
 export const CURRENT_ITEM_STATUSES = ["in_progress", "paused", "done"] as const;
 export const NEXT_ITEM_STATUSES = ["planned", "postponed"] as const;
 
-// Legal workflowStatus subset depends on item type; DB CHECK restates this.
+/** Adds a Zod issue when workflowStatus is illegal for the item type. */
 export function addItemTypeStatusIssue(
   type: "current" | "next",
   workflowStatus: string,

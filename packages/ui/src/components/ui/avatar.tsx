@@ -4,6 +4,9 @@ import { cn } from "@customreport/ui/lib/utils";
 import { Avatar as AvatarPrimitive } from "radix-ui";
 import type * as React from "react";
 
+/**
+ * Radix avatar root. `size` maps to sm (24px), default (32px), or lg (40px).
+ */
 function Avatar({
   className,
   size = "default",
@@ -24,6 +27,9 @@ function Avatar({
   );
 }
 
+/**
+ * Image slot for an Avatar root; fills the circle when load succeeds.
+ */
 function AvatarImage({
   className,
   ...props
@@ -37,6 +43,9 @@ function AvatarImage({
   );
 }
 
+/**
+ * Fallback content shown while the image is missing or still loading.
+ */
 function AvatarFallback({
   className,
   ...props
@@ -53,6 +62,9 @@ function AvatarFallback({
   );
 }
 
+/**
+ * Status/badge overlay anchored to the bottom-right of its Avatar parent.
+ */
 function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
@@ -69,6 +81,9 @@ function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
   );
 }
 
+/**
+ * Overlapping stack container for multiple Avatar children.
+ */
 function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -82,6 +97,9 @@ function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/**
+ * Overflow count chip sized to match sibling avatars in an AvatarGroup.
+ */
 function AvatarGroupCount({
   className,
   ...props

@@ -2,8 +2,6 @@
  * Structured ФИО helpers (surname-first); denormalized `name` recomputed on write.
  * See `structured-user-name` / `user-name-display`.
  */
-/* eslint-disable jsdoc/require-param, jsdoc/require-returns --
-   public contract blocks only; param/return shapes are carried by TypeScript. */
 
 /** Surname-first ФИО parts: lastName, firstName, optional middleName (patronymic). */
 export interface UserNameParts {

@@ -4,6 +4,9 @@ import { cn } from "@customreport/ui/lib/utils";
 import { Separator as SeparatorPrimitive } from "radix-ui";
 import type * as React from "react";
 
+/**
+ * Horizontal or vertical visual divider (Radix Separator).
+ */
 function Separator({
   className,
   orientation = "horizontal",
