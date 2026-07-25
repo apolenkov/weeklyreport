@@ -35,7 +35,11 @@ CMD ["pnpm", "exec", "prisma", "migrate", "deploy"]
 # Stage 5: Build and prune devDeps for production
 FROM installer AS builder
 RUN pnpm turbo build --filter=@customreport/api
-RUN pnpm prune --prod --config.ignore-scripts=true
+# confirmModulesPurge=false is required, not cosmetic: prune rewrites
+# node_modules, and pnpm refuses to do that without a TTY to confirm at —
+# which a docker build never has, so the production image cannot build without
+# it.
+RUN pnpm prune --prod --config.ignore-scripts=true --config.confirmModulesPurge=false
 
 # Stage 6: Production runner
 # Use Playwright base image for PDF generation (Chromium pre-installed).
