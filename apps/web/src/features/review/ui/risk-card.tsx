@@ -84,6 +84,24 @@ function deriveRiskCardState(
   };
 }
 
+function RiskSeverityChip({ isBlocked }: { readonly isBlocked: boolean }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold"
+      style={{
+        background: isBlocked
+          ? "var(--color-status-blocked-bg)"
+          : "var(--color-status-at-risk-bg)",
+        color: isBlocked
+          ? "var(--color-destructive)"
+          : "var(--color-status-at-risk-fg)",
+      }}
+    >
+      {isBlocked ? "Blocked" : "At Risk"}
+    </span>
+  );
+}
+
 export function RiskCard({
   risk,
   readOnly,
@@ -113,19 +131,7 @@ export function RiskCard({
       }}
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span
-          className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold"
-          style={{
-            background: isBlocked
-              ? "var(--color-status-blocked-bg)"
-              : "var(--color-status-at-risk-bg)",
-            color: isBlocked
-              ? "var(--color-destructive)"
-              : "var(--color-status-at-risk-fg)",
-          }}
-        >
-          {isBlocked ? "Blocked" : "At Risk"}
-        </span>
+        <RiskSeverityChip isBlocked={isBlocked} />
         <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
           {risk.productName}
         </span>

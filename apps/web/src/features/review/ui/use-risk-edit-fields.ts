@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { type RefObject, useRef, useState } from "react";
 
 interface UseRiskEditFieldsArgs {
   readonly initialText?: string;
@@ -10,6 +10,26 @@ interface RiskEditProseErrors {
   text?: string;
   impact?: string;
   mitigation?: string;
+}
+
+interface ProseFieldRefs {
+  readonly text: RefObject<HTMLTextAreaElement | null>;
+  readonly impact: RefObject<HTMLTextAreaElement | null>;
+  readonly mitigation: RefObject<HTMLTextAreaElement | null>;
+}
+
+// Returns true if a prose field took focus (else the caller tries stages).
+// Order mirrors the visual field order, so the first invalid one wins.
+function focusFirstInvalidProseField(
+  fieldErrors: RiskEditProseErrors,
+  refs: ProseFieldRefs,
+): boolean {
+  const firstInvalid = (["text", "impact", "mitigation"] as const).find(
+    (field) => fieldErrors[field],
+  );
+  if (!firstInvalid) return false;
+  refs[firstInvalid].current?.focus();
+  return true;
 }
 
 export function useRiskEditFields({
@@ -27,46 +47,38 @@ export function useRiskEditFields({
   const impactRef = useRef<HTMLTextAreaElement>(null);
   const mitigationRef = useRef<HTMLTextAreaElement>(null);
 
-  // Returns true if a prose field took focus (else caller tries stages).
-  function focusFirstInvalid(fieldErrors: RiskEditProseErrors): boolean {
-    if (fieldErrors.text) {
-      textRef.current?.focus();
-      return true;
-    }
-    if (fieldErrors.impact) {
-      impactRef.current?.focus();
-      return true;
-    }
-    if (fieldErrors.mitigation) {
-      mitigationRef.current?.focus();
-      return true;
-    }
-    return false;
-  }
+  // Typing in a field clears only that field's error.
+  const clearError = (field: keyof RiskEditProseErrors) =>
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
 
   return {
     text,
     onTextChange: (v: string) => {
       setText(v);
-      setErrors((prev) => ({ ...prev, text: undefined }));
+      clearError("text");
     },
     textError: errors.text,
     textRef,
     impact,
     onImpactChange: (v: string) => {
       setImpact(v);
-      setErrors((prev) => ({ ...prev, impact: undefined }));
+      clearError("impact");
     },
     impactError: errors.impact,
     impactRef,
     mitigation,
     onMitigationChange: (v: string) => {
       setMitigation(v);
-      setErrors((prev) => ({ ...prev, mitigation: undefined }));
+      clearError("mitigation");
     },
     mitigationError: errors.mitigation,
     mitigationRef,
     setFieldErrors: setErrors,
-    focusFirstInvalid,
+    focusFirstInvalid: (fieldErrors: RiskEditProseErrors) =>
+      focusFirstInvalidProseField(fieldErrors, {
+        text: textRef,
+        impact: impactRef,
+        mitigation: mitigationRef,
+      }),
   };
 }

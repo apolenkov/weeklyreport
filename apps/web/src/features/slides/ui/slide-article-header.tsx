@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import type {
   GridAuthor,
+  GridPriorityCard,
   SlideGridModel,
   SlideTrafficStatus,
 } from "../model/slide-grid-model";
@@ -83,6 +84,52 @@ export function SlideGridHeader({
   );
 }
 
+function PriorityCard({
+  card,
+  author,
+}: {
+  readonly card: GridPriorityCard;
+  readonly author: GridAuthor | undefined;
+}) {
+  return (
+    <div className="flex min-w-[180px] max-w-[320px] flex-1 flex-col gap-1.5 rounded-[10px] border border-[var(--color-chip-at-risk-border)] bg-[var(--color-chip-at-risk-bg)] p-2.5">
+      <div className="flex items-start gap-1.5">
+        {/* The rank badge wears its author's identity color, answering
+            "whose priority" at a glance; pastel backgrounds need the
+            dark foreground text, never white. */}
+        <span
+          className="inline-flex h-[15px] shrink-0 items-center rounded px-1 text-[8px] font-semibold text-[var(--color-foreground)]"
+          style={
+            author === undefined
+              ? undefined
+              : { background: authorSlotBackground(author) }
+          }
+        >
+          P{card.rank}
+        </span>
+        <span className="min-w-0 whitespace-normal break-words text-xs text-[var(--color-foreground)]">
+          {card.text}
+        </span>
+      </div>
+      <div className="mt-auto flex items-center justify-between gap-2">
+        <span className="truncate text-[11px] text-[var(--color-muted-foreground)]">
+          {card.productName}
+        </span>
+        {author !== undefined && (
+          <span
+            title={author.name}
+            className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
+            style={{ background: authorSlotBackground(author) }}
+          >
+            <span aria-hidden="true">{author.initials}</span>
+            <span className="sr-only">{author.name}</span>
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** Frameless row of priority cards — every own ranked item, ascending rank. */
 export function SlidePriorityStrip({
   grid,
@@ -94,49 +141,13 @@ export function SlidePriorityStrip({
   if (grid.priorityStrip.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-2" data-testid="slide-priority-strip">
-      {grid.priorityStrip.map((card) => {
-        const author = authorsById.get(card.authorId);
-        return (
-          <div
-            key={card.id}
-            className="flex min-w-[180px] max-w-[320px] flex-1 flex-col gap-1.5 rounded-[10px] border border-[var(--color-chip-at-risk-border)] bg-[var(--color-chip-at-risk-bg)] p-2.5"
-          >
-            <div className="flex items-start gap-1.5">
-              {/* The rank badge wears its author's identity color, answering
-                  "whose priority" at a glance; pastel backgrounds need the
-                  dark foreground text, never white. */}
-              <span
-                className="inline-flex h-[15px] shrink-0 items-center rounded px-1 text-[8px] font-semibold text-[var(--color-foreground)]"
-                style={
-                  author === undefined
-                    ? undefined
-                    : { background: authorSlotBackground(author) }
-                }
-              >
-                P{card.rank}
-              </span>
-              <span className="min-w-0 whitespace-normal break-words text-xs text-[var(--color-foreground)]">
-                {card.text}
-              </span>
-            </div>
-            <div className="mt-auto flex items-center justify-between gap-2">
-              <span className="truncate text-[11px] text-[var(--color-muted-foreground)]">
-                {card.productName}
-              </span>
-              {author !== undefined && (
-                <span
-                  title={author.name}
-                  className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
-                  style={{ background: authorSlotBackground(author) }}
-                >
-                  <span aria-hidden="true">{author.initials}</span>
-                  <span className="sr-only">{author.name}</span>
-                </span>
-              )}
-            </div>
-          </div>
-        );
-      })}
+      {grid.priorityStrip.map((card) => (
+        <PriorityCard
+          key={card.id}
+          card={card}
+          author={authorsById.get(card.authorId)}
+        />
+      ))}
     </div>
   );
 }

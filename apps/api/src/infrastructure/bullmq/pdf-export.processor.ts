@@ -33,6 +33,11 @@ const PRINT_STATE_READY = "ready";
 const READY_OR_ERROR_SELECTOR =
   '[data-print-state="ready"], [data-print-state="error"]';
 
+// Same-origin artifact URL served by the API's static /pdfs mount
+// (PDF_DOWNLOAD_ROUTE in bootstrap/http-access-log.ts). The download handler
+// re-derives this exact shape before streaming a file, so the two must agree.
+const pdfArtifactUrl = (jobId: string): string => `/pdfs/${jobId}.pdf`;
+
 interface PdfExportJobData extends JobTraceContext {
   reportId: string;
   jobId: string;
@@ -133,7 +138,7 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
       writeFileSync(filePath, pdfBuffer);
 
       const checksum = createHash("sha256").update(pdfBuffer).digest("hex");
-      const artifactUrl = `/pdfs/${jobId}.pdf`;
+      const artifactUrl = pdfArtifactUrl(jobId);
 
       await this.pdfExportService.markExportCompleted(
         jobId,

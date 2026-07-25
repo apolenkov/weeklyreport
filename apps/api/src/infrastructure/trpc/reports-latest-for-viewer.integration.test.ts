@@ -3,8 +3,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
-import { WeeklyReportPrismaRepository } from "../../modules/weekly-report/index.js";
-import { WeeklyReportService } from "../../modules/weekly-report/index.js";
+import {
+  WeeklyReportPrismaRepository,
+  WeeklyReportService,
+} from "../../modules/weekly-report/index.js";
 import {
   cleanDatabase,
   createTestPrisma,

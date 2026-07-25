@@ -900,12 +900,14 @@ const REMINDER_POLICY_DEADLINE_ID = "d0000000-0000-4000-9000-000000000001";
 const REMINDER_RULE_DEADLINE_ID = "d0000000-0000-4000-9000-000000000002";
 const REMINDER_OFFSET_MINUTES = -1440; // fire 24h before deadline (seed-simple parity)
 const REMINDER_TIMEZONE = "Europe/Moscow";
+// Local copy: prisma/ deliberately depends on no workspace package.
+const MS_PER_MINUTE = 60_000;
 
 async function seedReminders(): Promise<void> {
   const activeDeadline = new Date(SEED_REPORTS.active.deadline);
   // Deterministic fireAt derived from the active deadline — no wall-clock.
   const fireAt = new Date(
-    activeDeadline.getTime() + REMINDER_OFFSET_MINUTES * 60_000,
+    activeDeadline.getTime() + REMINDER_OFFSET_MINUTES * MS_PER_MINUTE,
   );
   await prisma.reminderPolicy.create({
     data: {

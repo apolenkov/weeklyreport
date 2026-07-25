@@ -72,6 +72,26 @@ export interface UseStatusRiskSyncResult {
   ) => void;
 }
 
+// Rebuilds only the addressed product and stage; every other row keeps its
+// identity so downstream memoization is untouched.
+function applyStageStatus(
+  products: readonly Product[],
+  productId: string,
+  stageName: string,
+  status: StageStatus,
+): Product[] {
+  return products.map((product) =>
+    product.id === productId
+      ? {
+          ...product,
+          stages: product.stages.map((stage) =>
+            stage.stageName === stageName ? { ...stage, status } : stage,
+          ),
+        }
+      : product,
+  );
+}
+
 // Applies stage status only; the lead-form-sync-bridge owns conflicting transitions.
 // A saved risk floors covered chips to at least its severity — no opt-in bump prompt.
 export function useStatusRiskSync(
@@ -82,15 +102,7 @@ export function useStatusRiskSync(
   const handleStageStatusChange = useCallback(
     (productId: string, stageName: string, newStatus: StageStatus) => {
       onProductsChange((prev) =>
-        prev.map((p) => {
-          if (p.id !== productId) return p;
-          return {
-            ...p,
-            stages: p.stages.map((s) =>
-              s.stageName === stageName ? { ...s, status: newStatus } : s,
-            ),
-          };
-        }),
+        applyStageStatus(prev, productId, stageName, newStatus),
       );
     },
     [onProductsChange],

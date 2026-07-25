@@ -26,7 +26,32 @@ export interface AdminSettingsDeps {
   organizationService?: OrganizationService;
 }
 
-export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
+// The optional deps are wiring, not request data: an unwired collaborator is a
+// composition-root bug, so it surfaces as INTERNAL_SERVER_ERROR rather than a
+// silent no-op.
+function requireOrganizationService(
+  deps: AdminSettingsDeps,
+): OrganizationService {
+  if (!deps.organizationService) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "OrganizationService is not wired into the tRPC router.",
+    });
+  }
+  return deps.organizationService;
+}
+
+function requireTelegramOutboundQueue(deps: AdminSettingsDeps): Queue {
+  if (!deps.telegramOutboundQueue) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Telegram outbound queue is not wired into the tRPC router.",
+    });
+  }
+  return deps.telegramOutboundQueue;
+}
+
+function createSnapshotSettingsProcedures(deps: AdminSettingsDeps) {
   return {
     snapshot: adminProcedure.query(async () => {
       try {
@@ -51,6 +76,11 @@ export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
           throw mapDomainError(error);
         }
       }),
+  };
+}
+
+function createTelegramSettingsProcedures(deps: AdminSettingsDeps) {
+  return {
     // Active only when TG_BOT_TOKEN is set AND ≥1 active TelegramBinding.
     integrationsStatus: adminProcedure.query(async () => {
       try {
@@ -65,14 +95,7 @@ export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
       .input(adminTestTelegramSendSchema)
       .mutation(async ({ input, ctx }) => {
         try {
-          if (!deps.telegramOutboundQueue) {
-            throw new TRPCError({
-              code: "INTERNAL_SERVER_ERROR",
-              message:
-                "Telegram outbound queue is not wired into the tRPC router.",
-            });
-          }
-          const job = await deps.telegramOutboundQueue.add(
+          const job = await requireTelegramOutboundQueue(deps).add(
             "telegram-test",
             {
               chatId: input.chatId,
@@ -86,15 +109,14 @@ export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
           throw mapDomainError(error);
         }
       }),
+  };
+}
+
+function createOrganizationProcedures(deps: AdminSettingsDeps) {
+  return {
     getOrganization: adminProcedure.query(async () => {
       try {
-        if (!deps.organizationService) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "OrganizationService is not wired into the tRPC router.",
-          });
-        }
-        return await deps.organizationService.getOrganization();
+        return await requireOrganizationService(deps).getOrganization();
       } catch (error) {
         throw mapDomainError(error);
       }
@@ -104,14 +126,9 @@ export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
       .input(organizationUpdateSchema)
       .mutation(async ({ ctx, input }) => {
         try {
-          if (!deps.organizationService) {
-            throw new TRPCError({
-              code: "INTERNAL_SERVER_ERROR",
-              message: "OrganizationService is not wired into the tRPC router.",
-            });
-          }
-          const previous = await deps.organizationService.getOrganization();
-          const next = await deps.organizationService.updateOrganization(input);
+          const organizationService = requireOrganizationService(deps);
+          const previous = await organizationService.getOrganization();
+          const next = await organizationService.updateOrganization(input);
           clearOrgCache();
           ctx.auditLogger.organizationUpdate({
             userId: ctx.session.userId,
@@ -127,5 +144,13 @@ export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
           throw mapDomainError(error);
         }
       }),
+  };
+}
+
+export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
+  return {
+    ...createSnapshotSettingsProcedures(deps),
+    ...createTelegramSettingsProcedures(deps),
+    ...createOrganizationProcedures(deps),
   };
 }

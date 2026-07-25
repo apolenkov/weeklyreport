@@ -19,17 +19,180 @@ interface GroupEditDialogProps {
   readonly onClose: () => void;
 }
 
-export function GroupEditDialog({
-  editingGroup,
+const FIELD_LABEL_CLASS =
+  "mb-1 block text-sm font-medium text-[var(--color-foreground)]";
+const FIELD_CONTROL_CLASS =
+  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]";
+
+// Every field edits one key of the same immutable form value.
+type GroupFieldProps = Pick<GroupEditDialogProps, "form" | "onFormChange">;
+
+function GroupNameField({ form, onFormChange }: GroupFieldProps) {
+  return (
+    <div>
+      <label htmlFor="group-name" className={FIELD_LABEL_CLASS}>
+        Name
+      </label>
+      <input
+        id="group-name"
+        type="text"
+        value={form.name}
+        onChange={(e) => onFormChange({ ...form, name: e.target.value })}
+        // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
+        autoFocus
+        className={FIELD_CONTROL_CLASS}
+      />
+    </div>
+  );
+}
+
+function GroupDescriptionField({ form, onFormChange }: GroupFieldProps) {
+  return (
+    <div>
+      <label htmlFor="group-description" className={FIELD_LABEL_CLASS}>
+        Description
+      </label>
+      <textarea
+        id="group-description"
+        value={form.description}
+        onChange={(e) => onFormChange({ ...form, description: e.target.value })}
+        rows={3}
+        className="w-full resize-none rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+      />
+    </div>
+  );
+}
+
+function GroupLeaderField({
+  form,
+  onFormChange,
+  headCandidates,
+}: GroupFieldProps & Pick<GroupEditDialogProps, "headCandidates">) {
+  return (
+    <div>
+      <label htmlFor="group-leader" className={FIELD_LABEL_CLASS}>
+        Leader
+      </label>
+      <select
+        id="group-leader"
+        value={form.headUserId}
+        onChange={(e) => onFormChange({ ...form, headUserId: e.target.value })}
+        className={FIELD_CONTROL_CLASS}
+      >
+        <option value="">— No leader —</option>
+        {headCandidates.map((u) => (
+          <option key={u.id} value={u.id}>
+            {u.name} ({u.email})
+          </option>
+        ))}
+      </select>
+      {headCandidates.length === 0 && (
+        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+          No users with role &lsquo;head&rsquo; or &lsquo;admin&rsquo;
+          available.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Only offered when editing: a brand-new group is never born archived.
+function GroupArchivedField({ form, onFormChange }: GroupFieldProps) {
+  return (
+    <div>
+      <label className="flex cursor-pointer items-start gap-3">
+        <input
+          type="checkbox"
+          checked={form.archived}
+          onChange={(e) =>
+            onFormChange({ ...form, archived: e.target.checked })
+          }
+          className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-starbucks-accent)] focus:ring-2 focus:ring-[var(--color-ring)]"
+        />
+        <span className="block text-sm">
+          <span className="font-medium text-[var(--color-foreground)]">
+            Archived
+          </span>
+          <span className="mt-0.5 block text-xs text-[var(--color-muted-foreground)]">
+            Hidden from new user/group pickers; existing references keep
+            working.
+          </span>
+        </span>
+      </label>
+    </div>
+  );
+}
+
+function GroupFormFields({
   form,
   onFormChange,
   headCandidates,
   products,
+  editingGroup,
+}: Pick<
+  GroupEditDialogProps,
+  "form" | "onFormChange" | "headCandidates" | "products" | "editingGroup"
+>) {
+  return (
+    <div className="mt-4 space-y-4">
+      <GroupNameField form={form} onFormChange={onFormChange} />
+      <GroupDescriptionField form={form} onFormChange={onFormChange} />
+      <GroupLeaderField
+        form={form}
+        onFormChange={onFormChange}
+        headCandidates={headCandidates}
+      />
+      {editingGroup && (
+        <GroupArchivedField form={form} onFormChange={onFormChange} />
+      )}
+      {editingGroup && (
+        <GroupProductsEditor groupId={editingGroup.id} products={products} />
+      )}
+    </div>
+  );
+}
+
+function GroupDialogFooter({
+  editingGroup,
   canSave,
   isSaving,
   onSave,
   onClose,
-}: GroupEditDialogProps) {
+}: Pick<
+  GroupEditDialogProps,
+  "editingGroup" | "canSave" | "isSaving" | "onSave"
+> & {
+  readonly onClose: () => void;
+}) {
+  const saveLabel = isSaving
+    ? "Saving…"
+    : editingGroup
+      ? "Save Changes"
+      : "Add Group";
+  return (
+    <div className="mt-6 flex justify-end gap-3">
+      <button
+        type="button"
+        onClick={onClose}
+        disabled={isSaving}
+        className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={!canSave}
+        className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {saveLabel}
+      </button>
+    </div>
+  );
+}
+
+export function GroupEditDialog(props: GroupEditDialogProps) {
+  const { editingGroup, isSaving, onClose } = props;
   const surfaceRef = useRef<HTMLDivElement>(null);
   const closeIfIdle = () => {
     if (!isSaving) onClose();
@@ -63,118 +226,20 @@ export function GroupEditDialog({
         <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
           {editingGroup ? "Edit Group" : "Add Group"}
         </h3>
-        <div className="mt-4 space-y-4">
-          <div>
-            <label
-              htmlFor="group-name"
-              className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-            >
-              Name
-            </label>
-            <input
-              id="group-name"
-              type="text"
-              value={form.name}
-              onChange={(e) => onFormChange({ ...form, name: e.target.value })}
-              // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
-              autoFocus
-              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="group-description"
-              className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-            >
-              Description
-            </label>
-            <textarea
-              id="group-description"
-              value={form.description}
-              onChange={(e) =>
-                onFormChange({ ...form, description: e.target.value })
-              }
-              rows={3}
-              className="w-full resize-none rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="group-leader"
-              className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-            >
-              Leader
-            </label>
-            <select
-              id="group-leader"
-              value={form.headUserId}
-              onChange={(e) =>
-                onFormChange({ ...form, headUserId: e.target.value })
-              }
-              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-            >
-              <option value="">— No leader —</option>
-              {headCandidates.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} ({u.email})
-                </option>
-              ))}
-            </select>
-            {headCandidates.length === 0 && (
-              <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-                No users with role &lsquo;head&rsquo; or &lsquo;admin&rsquo;
-                available.
-              </p>
-            )}
-          </div>
-          {editingGroup && (
-            <div>
-              <label className="flex cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={form.archived}
-                  onChange={(e) =>
-                    onFormChange({ ...form, archived: e.target.checked })
-                  }
-                  className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-starbucks-accent)] focus:ring-2 focus:ring-[var(--color-ring)]"
-                />
-                <span className="block text-sm">
-                  <span className="font-medium text-[var(--color-foreground)]">
-                    Archived
-                  </span>
-                  <span className="mt-0.5 block text-xs text-[var(--color-muted-foreground)]">
-                    Hidden from new user/group pickers; existing references keep
-                    working.
-                  </span>
-                </span>
-              </label>
-            </div>
-          )}
-          {editingGroup && (
-            <GroupProductsEditor
-              groupId={editingGroup.id}
-              products={products}
-            />
-          )}
-        </div>
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={closeIfIdle}
-            disabled={isSaving}
-            className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={!canSave}
-            className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSaving ? "Saving…" : editingGroup ? "Save Changes" : "Add Group"}
-          </button>
-        </div>
+        <GroupFormFields
+          form={props.form}
+          onFormChange={props.onFormChange}
+          headCandidates={props.headCandidates}
+          products={props.products}
+          editingGroup={editingGroup}
+        />
+        <GroupDialogFooter
+          editingGroup={editingGroup}
+          canSave={props.canSave}
+          isSaving={isSaving}
+          onSave={props.onSave}
+          onClose={closeIfIdle}
+        />
       </div>
     </div>
   );

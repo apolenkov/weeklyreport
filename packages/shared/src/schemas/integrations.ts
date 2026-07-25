@@ -15,8 +15,11 @@ export type TelegramIntegrationStatus = z.infer<
 >;
 export type IntegrationsStatus = z.infer<typeof integrationsStatusSchema>;
 
-// chatId stays TEXT (64-bit Telegram ids); 4096 is the Bot API message cap.
+// chatId stays TEXT: a Telegram chat id is either a signed 64-bit integer (at
+// most 20 characters) or an `@username` (at most 32); 64 is the round headroom
+// cap above both, not a Telegram-defined limit.
 const MAX_TELEGRAM_CHAT_ID_LENGTH = 64;
+// Bot API `sendMessage` rejects text longer than this.
 const MAX_TELEGRAM_MESSAGE_LENGTH = 4096;
 
 export const adminTestTelegramSendSchema = z.object({

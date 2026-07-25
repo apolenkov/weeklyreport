@@ -11,74 +11,80 @@ export interface ArchiveRouterDeps {
   periodAdminService: PeriodAdminService;
 }
 
+const reportIdInput = z.object({ reportId: z.uuid() });
+
 // anyRoleProcedure: service-layer where (by role) is the real gate; viewers
 // only ever see published reports.
 
+function buildListProcedure(deps: ArchiveRouterDeps) {
+  return anyRoleProcedure
+    .input(paginationInputSchema.optional())
+    .query(async ({ input, ctx }) => {
+      try {
+        return await deps.archiveService.listArchiveReports(
+          input,
+          ctx.session.role,
+          ctx.session,
+        );
+      } catch (error) {
+        throw mapDomainError(error);
+      }
+    });
+}
+
+function buildDetailProcedure(deps: ArchiveRouterDeps) {
+  return anyRoleProcedure.input(reportIdInput).query(async ({ input, ctx }) => {
+    try {
+      const detail = await deps.archiveService.getArchiveReport(
+        input.reportId,
+        ctx.session.role,
+        ctx.session,
+      );
+      // Empty sections after group-scope filter: likely a probe; rare
+      // genuine empty published reports are an acceptable false-positive.
+      if (ctx.session.role !== "admin" && detail.report.sections.length === 0) {
+        ctx.auditLogger.scopeDenied({
+          userId: ctx.session.userId,
+          role: ctx.session.role,
+          ip: ctx.ip,
+          attemptedScope: "reportSection",
+          resourceId: input.reportId,
+        });
+      }
+      return detail;
+    } catch (error) {
+      throw mapDomainError(error);
+    }
+  });
+}
+
+function buildArchiveReportProcedure(deps: ArchiveRouterDeps) {
+  return headProcedure.input(reportIdInput).mutation(async ({ input }) => {
+    try {
+      await deps.periodAdminService.archivePeriod(input.reportId);
+      return { success: true as const };
+    } catch (error) {
+      throw mapDomainError(error);
+    }
+  });
+}
+
+function buildUnarchiveReportProcedure(deps: ArchiveRouterDeps) {
+  return headProcedure.input(reportIdInput).mutation(async ({ input }) => {
+    try {
+      await deps.periodAdminService.unarchivePeriod(input.reportId);
+      return { success: true as const };
+    } catch (error) {
+      throw mapDomainError(error);
+    }
+  });
+}
+
 export function createArchiveRouter(deps: ArchiveRouterDeps) {
   return router({
-    list: anyRoleProcedure
-      .input(paginationInputSchema.optional())
-      .query(async ({ input, ctx }) => {
-        try {
-          return await deps.archiveService.listArchiveReports(
-            input,
-            ctx.session.role,
-            ctx.session,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-
-    detail: anyRoleProcedure
-      .input(z.object({ reportId: z.uuid() }))
-      .query(async ({ input, ctx }) => {
-        try {
-          const detail = await deps.archiveService.getArchiveReport(
-            input.reportId,
-            ctx.session.role,
-            ctx.session,
-          );
-          // Empty sections after group-scope filter: likely a probe; rare
-          // genuine empty published reports are an acceptable false-positive.
-          if (
-            ctx.session.role !== "admin" &&
-            detail.report.sections.length === 0
-          ) {
-            ctx.auditLogger.scopeDenied({
-              userId: ctx.session.userId,
-              role: ctx.session.role,
-              ip: ctx.ip,
-              attemptedScope: "reportSection",
-              resourceId: input.reportId,
-            });
-          }
-          return detail;
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-
-    archiveReport: headProcedure
-      .input(z.object({ reportId: z.uuid() }))
-      .mutation(async ({ input }) => {
-        try {
-          await deps.periodAdminService.archivePeriod(input.reportId);
-          return { success: true as const };
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-
-    unarchiveReport: headProcedure
-      .input(z.object({ reportId: z.uuid() }))
-      .mutation(async ({ input }) => {
-        try {
-          await deps.periodAdminService.unarchivePeriod(input.reportId);
-          return { success: true as const };
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+    list: buildListProcedure(deps),
+    detail: buildDetailProcedure(deps),
+    archiveReport: buildArchiveReportProcedure(deps),
+    unarchiveReport: buildUnarchiveReportProcedure(deps),
   });
 }

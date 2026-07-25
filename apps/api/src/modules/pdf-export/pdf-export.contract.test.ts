@@ -342,23 +342,19 @@ describe("PdfExportService — contract tests", () => {
   describe("markExportFailed", () => {
     it("delegates to the repository", async () => {
       const repo = createRepository(publishedReport);
-      const markExportFailedCalls: { jobId: string; error: string }[] = [];
-      const originalFn = repo.markExportFailed.bind(repo);
-      repo.markExportFailed = async (jobId: string, error: string) => {
-        markExportFailedCalls.push({ jobId, error });
-        return originalFn(jobId, error);
-      };
+      // spyOn calls through, so the repository still records the failure.
+      const markExportFailed = vi.spyOn(repo, "markExportFailed");
 
       const service = new PdfExportService(repo);
       const queued = await service.requestPdfExport(reportId, requesterSession);
 
       await service.markExportFailed(queued.jobId, "Playwright timeout");
 
-      expect(markExportFailedCalls).toHaveLength(1);
-      expect(markExportFailedCalls[0]).toEqual({
-        jobId: queued.jobId,
-        error: "Playwright timeout",
-      });
+      expect(markExportFailed).toHaveBeenCalledTimes(1);
+      expect(markExportFailed).toHaveBeenCalledWith(
+        queued.jobId,
+        "Playwright timeout",
+      );
     });
   });
 

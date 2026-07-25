@@ -75,34 +75,31 @@ function createRepository(
 ): ReportSectionsRepository {
   let currentSection = structuredClone(section);
 
+  // Stubs return a resolved promise instead of being `async`: same contract,
+  // no per-method require-await suppression.
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReportSectionsRepository contract (no awaitable work in the stub)
-    async getSectionById(reportSectionId) {
-      if (reportSectionId !== currentSection.reportSectionId) {
-        return null;
-      }
-      return structuredClone(currentSection);
+    getSectionById(reportSectionId) {
+      return Promise.resolve(
+        reportSectionId === currentSection.reportSectionId
+          ? structuredClone(currentSection)
+          : null,
+      );
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReportSectionsRepository contract (no awaitable work in the stub)
-    async getReportPeriodStatusForSection() {
-      return periodStatus;
+    getReportPeriodStatusForSection() {
+      return Promise.resolve(periodStatus);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
-    async getReportMeta() {
-      return null;
+    getReportMeta() {
+      return Promise.resolve(null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReportSectionsRepository contract (no awaitable work in the stub)
-    async getPublishedLineage() {
-      return { itemStableIds: [], decisionStableIds: [] };
+    getPublishedLineage() {
+      return Promise.resolve({ itemStableIds: [], decisionStableIds: [] });
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReportSectionsRepository contract (no awaitable work in the stub)
-    async saveSection(nextSection) {
+    saveSection(nextSection) {
       currentSection = structuredClone(nextSection);
-      return structuredClone(currentSection);
+      return Promise.resolve(structuredClone(currentSection));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReportSectionsRepository contract (no awaitable work in the stub)
-    async getMyHistoryRows() {
-      return [];
+    getMyHistoryRows() {
+      return Promise.resolve([]);
     },
   };
 }

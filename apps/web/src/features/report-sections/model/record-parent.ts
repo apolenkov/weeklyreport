@@ -7,7 +7,7 @@ export interface RecordParentSeed {
 }
 
 /**
- * activity-first-class: derive a record's initial parent — the bound row's
+ * Derive a record's initial parent — the bound row's
  * activity or product on edit, else the create-mode seed (an activity lane's
  * "+ Add" presets the activity, a product column presets the product), falling
  * back to the first attached activity for an activity-only lead (no products).

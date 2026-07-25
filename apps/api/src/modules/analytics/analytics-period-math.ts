@@ -136,41 +136,60 @@ export const UNKNOWN_CELL: ComparisonCell = Object.freeze({
   name: "Unknown",
 });
 
+// Status and name come from the section; the running risk tally survives.
 function applyProjectStatuses(
-  cells: Map<string, ComparisonCell>,
+  cells: ReadonlyMap<string, ComparisonCell>,
   section: ComparisonSection,
-): void {
-  for (const ps of section.projectStatuses) {
-    cells.set(ps.projectId, {
-      status: ps.status,
-      risks: cells.get(ps.projectId)?.risks ?? 0,
-      name: ps.project.name,
-    });
-  }
+): Map<string, ComparisonCell> {
+  return new Map<string, ComparisonCell>([
+    ...cells,
+    ...section.projectStatuses.map((ps): [string, ComparisonCell] => [
+      ps.projectId,
+      {
+        status: ps.status,
+        risks: cells.get(ps.projectId)?.risks ?? 0,
+        name: ps.project.name,
+      },
+    ]),
+  ]);
 }
 
 // Null product FK (activity-parented risk) counts toward no product.
+function riskCountsByProject(section: ComparisonSection): Map<string, number> {
+  return section.risks.reduce(
+    (counts, risk) =>
+      risk.projectId
+        ? counts.set(risk.projectId, (counts.get(risk.projectId) ?? 0) + 1)
+        : counts,
+    new Map<string, number>(),
+  );
+}
+
 function accumulateRisks(
-  cells: Map<string, ComparisonCell>,
+  cells: ReadonlyMap<string, ComparisonCell>,
   section: ComparisonSection,
-): void {
-  for (const risk of section.risks) {
-    if (!risk.projectId) continue;
-    const existing = cells.get(risk.projectId) ?? UNKNOWN_CELL;
-    cells.set(risk.projectId, { ...existing, risks: existing.risks + 1 });
-  }
+): Map<string, ComparisonCell> {
+  return new Map<string, ComparisonCell>([
+    ...cells,
+    ...[...riskCountsByProject(section)].map(
+      ([projectId, count]): [string, ComparisonCell] => {
+        const existing = cells.get(projectId) ?? UNKNOWN_CELL;
+        return [projectId, { ...existing, risks: existing.risks + count }];
+      },
+    ),
+  ]);
 }
 
 // Oldest-first so latest status wins; risks accumulate across all reports.
 export function collectComparisonCells(
   reports: ComparisonReport[],
 ): Map<string, ComparisonCell> {
-  const cells = new Map<string, ComparisonCell>();
-  for (const report of [...reports].sort(comparePeriodThenCreated)) {
-    for (const section of report.sections) {
-      applyProjectStatuses(cells, section);
-      accumulateRisks(cells, section);
-    }
-  }
-  return cells;
+  return [...reports]
+    .sort(comparePeriodThenCreated)
+    .flatMap((report) => report.sections)
+    .reduce(
+      (cells, section) =>
+        accumulateRisks(applyProjectStatuses(cells, section), section),
+      new Map<string, ComparisonCell>(),
+    );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { LockBadge } from "../../../shared/ui/report-shell/lock-badge";
 import type { KanbanItem } from "../model/types";
 
@@ -94,8 +96,37 @@ function PauseIcon() {
   );
 }
 
-const NEUTRAL_ACTION_CLASS =
-  "flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]";
+// Shared square icon-button shell; the two variants differ only in hover state.
+const ACTION_BUTTON_BASE =
+  "flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors";
+const NEUTRAL_ACTION_CLASS = `${ACTION_BUTTON_BASE} hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]`;
+const DESTRUCTIVE_ACTION_CLASS = `${ACTION_BUTTON_BASE} hover:border-[color-mix(in_srgb,var(--color-destructive)_20%,transparent)] hover:bg-[var(--color-status-blocked-bg)] hover:text-[var(--color-destructive)]`;
+
+function ActionButton({
+  className,
+  onClick,
+  label,
+  title,
+  children,
+}: {
+  readonly className: string;
+  readonly onClick: () => void;
+  readonly label: string;
+  readonly title?: string;
+  readonly children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className={className}
+      onClick={onClick}
+      aria-label={label}
+      title={title}
+    >
+      {children}
+    </button>
+  );
+}
 
 interface ItemCardActionsProps {
   readonly item: KanbanItem;
@@ -112,18 +143,92 @@ interface ItemCardActionsProps {
   readonly onPause?: (id: string) => void;
 }
 
-export function ItemCardActions({
+function StatusActions({
   item,
-  locked,
-  isEditing,
-  publishedLocked = false,
-  onEdit,
-  onDelete,
   onMarkComplete,
   onMoveToNextWeek,
   onMoveToCurrentWeek,
   onPause,
 }: ItemCardActionsProps) {
+  const isCompleted = item.status === "completed";
+  return (
+    <>
+      {onMoveToCurrentWeek && !isCompleted && (
+        <ActionButton
+          className={NEUTRAL_ACTION_CLASS}
+          onClick={() => onMoveToCurrentWeek(item.id)}
+          label="Move to current week"
+          title="Move to current week"
+        >
+          <ArrowLeftIcon />
+        </ActionButton>
+      )}
+      {onPause && item.status === "in-progress" && (
+        <ActionButton
+          className={NEUTRAL_ACTION_CLASS}
+          onClick={() => onPause(item.id)}
+          label="Pause"
+          title="Pause (a reason is required)"
+        >
+          <PauseIcon />
+        </ActionButton>
+      )}
+      {onMarkComplete && !isCompleted && (
+        <ActionButton
+          className={`${NEUTRAL_ACTION_CLASS} hover:text-[var(--color-primary)]`}
+          onClick={() => onMarkComplete(item.id)}
+          label="Mark complete"
+          title="Mark complete"
+        >
+          <CheckIcon />
+        </ActionButton>
+      )}
+      {onMoveToNextWeek && !isCompleted && (
+        <ActionButton
+          className={NEUTRAL_ACTION_CLASS}
+          onClick={() => onMoveToNextWeek(item.id)}
+          label="Move to next week"
+          title="Move to next week"
+        >
+          <ArrowRightIcon />
+        </ActionButton>
+      )}
+    </>
+  );
+}
+
+function EditDeleteActions({
+  item,
+  publishedLocked = false,
+  onEdit,
+  onDelete,
+}: ItemCardActionsProps) {
+  return (
+    <>
+      {onEdit && (
+        <ActionButton
+          className={NEUTRAL_ACTION_CLASS}
+          onClick={() => onEdit(item.id)}
+          label="Edit"
+        >
+          <EditIcon />
+        </ActionButton>
+      )}
+      {onDelete && !publishedLocked && (
+        <ActionButton
+          className={DESTRUCTIVE_ACTION_CLASS}
+          onClick={() => onDelete(item.id)}
+          label="Delete"
+        >
+          <DeleteIcon />
+        </ActionButton>
+      )}
+    </>
+  );
+}
+
+export function ItemCardActions(props: ItemCardActionsProps) {
+  const { item, locked, isEditing } = props;
   if (locked || isEditing) {
     return item.foreign === true ? (
       <div className="flex shrink-0 gap-1">
@@ -133,70 +238,8 @@ export function ItemCardActions({
   }
   return (
     <div className="flex shrink-0 gap-1">
-      {onMoveToCurrentWeek && item.status !== "completed" && (
-        <button
-          type="button"
-          className={NEUTRAL_ACTION_CLASS}
-          onClick={() => onMoveToCurrentWeek(item.id)}
-          aria-label="Move to current week"
-          title="Move to current week"
-        >
-          <ArrowLeftIcon />
-        </button>
-      )}
-      {onPause && item.status === "in-progress" && (
-        <button
-          type="button"
-          className={NEUTRAL_ACTION_CLASS}
-          onClick={() => onPause(item.id)}
-          aria-label="Pause"
-          title="Pause (a reason is required)"
-        >
-          <PauseIcon />
-        </button>
-      )}
-      {onMarkComplete && item.status !== "completed" && (
-        <button
-          type="button"
-          className={`${NEUTRAL_ACTION_CLASS} hover:text-[var(--color-primary)]`}
-          onClick={() => onMarkComplete(item.id)}
-          aria-label="Mark complete"
-          title="Mark complete"
-        >
-          <CheckIcon />
-        </button>
-      )}
-      {onMoveToNextWeek && item.status !== "completed" && (
-        <button
-          type="button"
-          className={NEUTRAL_ACTION_CLASS}
-          onClick={() => onMoveToNextWeek(item.id)}
-          aria-label="Move to next week"
-          title="Move to next week"
-        >
-          <ArrowRightIcon />
-        </button>
-      )}
-      {onEdit && (
-        <button
-          type="button"
-          className={NEUTRAL_ACTION_CLASS}
-          onClick={() => onEdit(item.id)}
-          aria-label="Edit"
-        >
-          <EditIcon />
-        </button>
-      )}
-      {onDelete && !publishedLocked && (
-        <button
-          type="button"
-          className="flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:border-[color-mix(in_srgb,var(--color-destructive)_20%,transparent)] hover:bg-[var(--color-status-blocked-bg)] hover:text-[var(--color-destructive)]"
-          onClick={() => onDelete(item.id)}
-          aria-label="Delete"
-        >
-          <DeleteIcon />
-        </button>
-      )}
+      <StatusActions {...props} />
+      <EditDeleteActions {...props} />
     </div>
   );
 }

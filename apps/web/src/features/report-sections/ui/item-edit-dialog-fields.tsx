@@ -42,15 +42,112 @@ interface ItemEditDialogFieldsProps {
   readonly onPausedReasonChange: (next: string) => void;
 }
 
-export function ItemEditDialogFields({
+type ItemDescriptionProps = Pick<
+  ItemEditDialogFieldsProps,
+  "text" | "onTextChange" | "textError" | "week"
+>;
+
+type ItemPriorityRankProps = Pick<
+  ItemEditDialogFieldsProps,
+  "priorityRank" | "onPriorityRankChange" | "rankOptions" | "takenRanks"
+>;
+
+type ItemClassificationProps = ItemParentStageProps & ItemStatusProps;
+
+function ItemDescriptionField({
   text,
   onTextChange,
   textError,
+  week,
+}: ItemDescriptionProps) {
+  return (
+    <RecordTextareaField
+      id="item-text"
+      label="Description"
+      required
+      value={text}
+      onChange={onTextChange}
+      error={textError}
+      placeholder={
+        week === "current"
+          ? "What was done or in progress…"
+          : "What is planned for next week…"
+      }
+      minHeightPx={70}
+      // eslint-disable-next-line jsx-a11y/no-autofocus -- forwarded to RecordTextareaField, which owns the actual DOM autofocus and its own justification
+      autoFocus
+    />
+  );
+}
+
+function ItemPriorityRankField({
   priorityRank,
   onPriorityRankChange,
   rankOptions,
   takenRanks,
-  week,
+}: ItemPriorityRankProps) {
+  return (
+    <div>
+      <label
+        className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+        htmlFor="item-priority-rank"
+      >
+        Priority rank{" "}
+        <span className="font-normal">
+          (optional — leave blank if not a priority)
+        </span>
+      </label>
+      <select
+        id="item-priority-rank"
+        className="select-chevron w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[rgba(0,0,0,0.2)] bg-white py-2.5 pl-3 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+        value={priorityRank ?? ""}
+        onChange={(e) => {
+          const v = e.target.value;
+          onPriorityRankChange(v === "" ? null : Number.parseInt(v, 10));
+        }}
+      >
+        <option value="">— none —</option>
+        {rankOptions.map((r) => {
+          const taken = takenRanks.has(r);
+          return (
+            <option key={r} value={r} disabled={taken}>
+              {r}
+              {taken ? " (taken)" : ""}
+            </option>
+          );
+        })}
+      </select>
+    </div>
+  );
+}
+
+type ItemParentStageProps = Pick<
+  ItemEditDialogFieldsProps,
+  | "parent"
+  | "products"
+  | "activities"
+  | "onParentChange"
+  | "isActivityParent"
+  | "stageIds"
+  | "availableStages"
+  | "isDeadEnd"
+  | "stageError"
+  | "parentName"
+  | "onStageChange"
+>;
+
+type ItemStatusProps = Pick<
+  ItemEditDialogFieldsProps,
+  | "statusSlot"
+  | "choices"
+  | "status"
+  | "onStatusSelect"
+  | "pausedReason"
+  | "pausedReasonError"
+  | "onPausedReasonChange"
+>;
+
+function ItemParentStageFields({
   parent,
   products,
   activities,
@@ -62,6 +159,34 @@ export function ItemEditDialogFields({
   stageError,
   parentName,
   onStageChange,
+}: ItemParentStageProps) {
+  return (
+    <>
+      <ParentPicker
+        id="item-product"
+        value={parent}
+        products={products}
+        activities={activities}
+        onChange={onParentChange}
+      />
+
+      {/* Stage step is product-only — activities own no SDLC stage. */}
+      {!isActivityParent && (
+        <StageStep
+          id="item-stage"
+          stageIds={stageIds}
+          availableStages={availableStages}
+          isDeadEnd={isDeadEnd}
+          error={stageError}
+          deadEndNotice={`No stages assigned on ${parentName} — contact admin.`}
+          onChange={onStageChange}
+        />
+      )}
+    </>
+  );
+}
+
+function ItemStatusFields({
   statusSlot,
   choices,
   status,
@@ -69,101 +194,48 @@ export function ItemEditDialogFields({
   pausedReason,
   pausedReasonError,
   onPausedReasonChange,
-}: ItemEditDialogFieldsProps) {
+}: ItemStatusProps) {
+  return (
+    <>
+      <StatusSlotView
+        slot={statusSlot}
+        choices={choices}
+        status={status}
+        onSelect={onStatusSelect}
+      />
+
+      {status === "paused" && (
+        <PausedReasonField
+          value={pausedReason}
+          error={pausedReasonError}
+          onChange={onPausedReasonChange}
+        />
+      )}
+    </>
+  );
+}
+
+function ItemClassificationColumn(props: ItemClassificationProps) {
+  return (
+    <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+      <span className="block text-xs font-semibold tracking-wide text-[var(--color-muted-foreground)] uppercase">
+        Classification
+      </span>
+
+      <ItemParentStageFields {...props} />
+      <ItemStatusFields {...props} />
+    </div>
+  );
+}
+
+export function ItemEditDialogFields(props: ItemEditDialogFieldsProps) {
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-stretch">
       <div className="flex flex-1 flex-col gap-4">
-        <RecordTextareaField
-          id="item-text"
-          label="Description"
-          required
-          value={text}
-          onChange={onTextChange}
-          error={textError}
-          placeholder={
-            week === "current"
-              ? "What was done or in progress…"
-              : "What is planned for next week…"
-          }
-          minHeightPx={70}
-          // eslint-disable-next-line jsx-a11y/no-autofocus -- forwarded to RecordTextareaField, which owns the actual DOM autofocus and its own justification
-          autoFocus
-        />
-
-        <div>
-          <label
-            className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-            htmlFor="item-priority-rank"
-          >
-            Priority rank{" "}
-            <span className="font-normal">
-              (optional — leave blank if not a priority)
-            </span>
-          </label>
-          <select
-            id="item-priority-rank"
-            className="select-chevron w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[rgba(0,0,0,0.2)] bg-white py-2.5 pl-3 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
-            value={priorityRank ?? ""}
-            onChange={(e) => {
-              const v = e.target.value;
-              onPriorityRankChange(v === "" ? null : Number.parseInt(v, 10));
-            }}
-          >
-            <option value="">— none —</option>
-            {rankOptions.map((r) => {
-              const taken = takenRanks.has(r);
-              return (
-                <option key={r} value={r} disabled={taken}>
-                  {r}
-                  {taken ? " (taken)" : ""}
-                </option>
-              );
-            })}
-          </select>
-        </div>
+        <ItemDescriptionField {...props} />
+        <ItemPriorityRankField {...props} />
       </div>
-
-      <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-4">
-        <span className="block text-xs font-semibold tracking-wide text-[var(--color-muted-foreground)] uppercase">
-          Classification
-        </span>
-
-        <ParentPicker
-          id="item-product"
-          value={parent}
-          products={products}
-          activities={activities}
-          onChange={onParentChange}
-        />
-
-        {/* Stage step is product-only — activities own no SDLC stage. */}
-        {!isActivityParent && (
-          <StageStep
-            id="item-stage"
-            stageIds={stageIds}
-            availableStages={availableStages}
-            isDeadEnd={isDeadEnd}
-            error={stageError}
-            deadEndNotice={`No stages assigned on ${parentName} — contact admin.`}
-            onChange={onStageChange}
-          />
-        )}
-
-        <StatusSlotView
-          slot={statusSlot}
-          choices={choices}
-          status={status}
-          onSelect={onStatusSelect}
-        />
-
-        {status === "paused" && (
-          <PausedReasonField
-            value={pausedReason}
-            error={pausedReasonError}
-            onChange={onPausedReasonChange}
-          />
-        )}
-      </div>
+      <ItemClassificationColumn {...props} />
     </div>
   );
 }

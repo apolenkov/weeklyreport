@@ -6,19 +6,40 @@ import { useTRPC } from "../../../lib/trpc-context";
 
 export type ReopenFilterStatus = "pending" | "approved" | "rejected" | "all";
 
-export function useReopenTabState() {
-  const trpc = useTRPC();
-  const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<ReopenFilterStatus>("pending");
-  const [search, setSearch] = useState("");
+// Free-text match across every field the row renders, so what the admin reads
+// is what the search box searches.
+function matchesSearch(
+  fields: readonly (string | null | undefined)[],
+  query: string,
+): boolean {
+  return fields.filter(Boolean).join(" ").toLowerCase().includes(query);
+}
+
+// The response draft: which request is open in the respond form, plus its note.
+function useRespondDraft() {
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [note, setNote] = useState("");
 
-  const listQuery = useQuery(
-    trpc.admin.listReopenRequests.queryOptions({ status: filter }),
-  );
+  return {
+    respondingId,
+    note,
+    setNote,
+    start: (id: string) => {
+      setRespondingId(id);
+      setNote("");
+    },
+    reset: () => {
+      setRespondingId(null);
+      setNote("");
+    },
+  };
+}
 
-  const respondMut = useMutation(
+function useRespondReopenMutation(onResponded: () => void) {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+
+  return useMutation(
     trpc.admin.respondReopenRequest.mutationOptions({
       onSuccess: ({ decision }) => {
         toast.success(
@@ -26,8 +47,7 @@ export function useReopenTabState() {
             ? "Request approved; section reopened."
             : "Request rejected.",
         );
-        setRespondingId(null);
-        setNote("");
+        onResponded();
         void queryClient.invalidateQueries({
           queryKey: trpc.admin.listReopenRequests.queryKey(),
         });
@@ -40,40 +60,38 @@ export function useReopenTabState() {
       },
     }),
   );
+}
+
+export function useReopenTabState() {
+  const trpc = useTRPC();
+  const [filter, setFilter] = useState<ReopenFilterStatus>("pending");
+  const [search, setSearch] = useState("");
+  const draft = useRespondDraft();
+
+  const listQuery = useQuery(
+    trpc.admin.listReopenRequests.queryOptions({ status: filter }),
+  );
+
+  const respondMut = useRespondReopenMutation(draft.reset);
 
   const requests = useMemo(() => listQuery.data ?? [], [listQuery.data]);
 
   const filteredRequests = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return requests;
-    return requests.filter((r) => {
-      const haystack = [
-        r.requestedBy.name,
-        r.requestedBy.email,
-        r.report.weekLabel,
-        r.reason,
-        r.reviewNote,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
-    });
+    return requests.filter((r) =>
+      matchesSearch(
+        [
+          r.requestedBy.name,
+          r.requestedBy.email,
+          r.report.weekLabel,
+          r.reason,
+          r.reviewNote,
+        ],
+        q,
+      ),
+    );
   }, [requests, search]);
-
-  function startRespond(id: string) {
-    setRespondingId(id);
-    setNote("");
-  }
-
-  function cancelRespond() {
-    setRespondingId(null);
-    setNote("");
-  }
-
-  function respond(id: string, decision: "approved" | "rejected") {
-    respondMut.mutate({ id, decision, note: note.trim() || undefined });
-  }
 
   return {
     filter,
@@ -83,12 +101,14 @@ export function useReopenTabState() {
     requests,
     filteredRequests,
     listQuery,
-    respondingId,
-    note,
-    onNoteChange: setNote,
+    respondingId: draft.respondingId,
+    note: draft.note,
+    onNoteChange: draft.setNote,
     isSaving: respondMut.isPending,
-    startRespond,
-    cancelRespond,
-    respond,
+    startRespond: draft.start,
+    cancelRespond: draft.reset,
+    respond: (id: string, decision: "approved" | "rejected") => {
+      respondMut.mutate({ id, decision, note: draft.note.trim() || undefined });
+    },
   };
 }

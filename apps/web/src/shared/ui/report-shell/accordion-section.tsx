@@ -23,6 +23,102 @@ interface AccordionSectionProps {
   readonly children: React.ReactNode;
 }
 
+function AccordionHeading({
+  icon,
+  title,
+  titleColor,
+  badge,
+  badgeStyle,
+  subtitle,
+}: {
+  readonly icon: React.ReactNode;
+  readonly title: string;
+  readonly titleColor: string;
+  readonly badge?: string;
+  readonly badgeStyle?: React.CSSProperties;
+  readonly subtitle?: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center gap-3">
+        {icon}
+        <span
+          className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em]"
+          style={{ color: titleColor }}
+        >
+          {title}
+        </span>
+        {badge && (
+          <span
+            className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold tabular-nums text-[var(--color-muted-foreground)]"
+            style={badgeStyle}
+          >
+            {badge}
+          </span>
+        )}
+      </div>
+      {subtitle && (
+        <span className="mt-1 block text-xs text-[var(--color-muted-foreground)]">
+          {subtitle}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// Rendered only alongside `actions`: the heading button then holds no chevron,
+// so this dedicated control carries the expand/collapse affordance.
+function AccordionActionsToggle({
+  expanded,
+  title,
+  panelId,
+  onToggle,
+}: {
+  readonly expanded: boolean;
+  readonly title: string;
+  readonly panelId: string;
+  readonly onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-pill)] transition-colors hover:bg-white"
+      onClick={onToggle}
+      aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
+      aria-expanded={expanded}
+      aria-controls={panelId}
+    >
+      <RotatingChevron expanded={expanded} />
+    </button>
+  );
+}
+
+function AccordionPanel({
+  panelId,
+  expanded,
+  children,
+}: {
+  readonly panelId: string;
+  readonly expanded: boolean;
+  readonly children: React.ReactNode;
+}) {
+  return (
+    <div
+      id={panelId}
+      className="grid transition-[grid-template-rows] duration-300"
+      style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
+    >
+      <div
+        className="min-h-0 overflow-hidden"
+        inert={expanded ? undefined : true}
+        aria-hidden={!expanded}
+      >
+        <div className="px-5 pb-5 pt-2">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export function AccordionSection({
   icon,
   title,
@@ -46,8 +142,8 @@ export function AccordionSection({
   }
   const currentOverride = groupChanged ? null : expansion.override;
   const expanded = currentOverride ?? groupExpanded ?? defaultOpen;
-  const setExpanded = (value: boolean) =>
-    setExpansion({ groupExpanded, override: value });
+  const toggleExpanded = () =>
+    setExpansion({ groupExpanded, override: !expanded });
   // Stable id on the collapsible panel so both toggles can point their
   // aria-controls at it; derived from testId when present, else a unique id.
   const generatedId = useId();
@@ -62,66 +158,36 @@ export function AccordionSection({
         <button
           type="button"
           className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
-          onClick={() => setExpanded(!expanded)}
+          onClick={toggleExpanded}
           aria-expanded={expanded}
           aria-controls={panelId}
         >
-          <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              {icon}
-              <span
-                className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em]"
-                style={{ color: titleColor }}
-              >
-                {title}
-              </span>
-              {badge && (
-                <span
-                  className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold tabular-nums text-[var(--color-muted-foreground)]"
-                  style={badgeStyle}
-                >
-                  {badge}
-                </span>
-              )}
-            </div>
-            {subtitle && (
-              <span className="mt-1 block text-xs text-[var(--color-muted-foreground)]">
-                {subtitle}
-              </span>
-            )}
-          </div>
+          <AccordionHeading
+            icon={icon}
+            title={title}
+            titleColor={titleColor}
+            badge={badge}
+            badgeStyle={badgeStyle}
+            subtitle={subtitle}
+          />
           {!actions && <RotatingChevron expanded={expanded} />}
         </button>
         {actions ? (
           <div className="flex shrink-0 items-center gap-2">{actions}</div>
         ) : null}
         {actions ? (
-          <button
-            type="button"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-pill)] transition-colors hover:bg-white"
-            onClick={() => setExpanded(!expanded)}
-            aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
-            aria-expanded={expanded}
-            aria-controls={panelId}
-          >
-            <RotatingChevron expanded={expanded} />
-          </button>
+          <AccordionActionsToggle
+            expanded={expanded}
+            title={title}
+            panelId={panelId}
+            onToggle={toggleExpanded}
+          />
         ) : null}
       </div>
 
-      <div
-        id={panelId}
-        className="grid transition-[grid-template-rows] duration-300"
-        style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
-      >
-        <div
-          className="min-h-0 overflow-hidden"
-          inert={expanded ? undefined : true}
-          aria-hidden={!expanded}
-        >
-          <div className="px-5 pb-5 pt-2">{children}</div>
-        </div>
-      </div>
+      <AccordionPanel panelId={panelId} expanded={expanded}>
+        {children}
+      </AccordionPanel>
     </div>
   );
 }

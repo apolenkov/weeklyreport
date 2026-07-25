@@ -67,11 +67,13 @@ export function ProductsTab({
   const stageCountsQuery = useQuery(
     trpc.admin.listStageAssignmentCounts.queryOptions(),
   );
-  const stageCountByProject = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const r of stageCountsQuery.data ?? []) m.set(r.projectId, r.count);
-    return m;
-  }, [stageCountsQuery.data]);
+  const stageCountByProject = useMemo(
+    () =>
+      new Map<string, number>(
+        (stageCountsQuery.data ?? []).map((r) => [r.projectId, r.count]),
+      ),
+    [stageCountsQuery.data],
+  );
 
   const saveProjectMut = useMutation(
     trpc.admin.saveProject.mutationOptions({

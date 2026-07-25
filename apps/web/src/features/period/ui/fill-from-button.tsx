@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 
 import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
 import type { ReportPeriod } from "../../report-sections";
@@ -59,6 +59,82 @@ function CopyIcon() {
   );
 }
 
+function SplitButton({
+  lockedReason,
+  copyDisabled,
+  chevronDisabled,
+  chevronRef,
+  onCopy,
+  onToggleDropdown,
+}: {
+  readonly lockedReason: string | undefined;
+  readonly copyDisabled: boolean;
+  readonly chevronDisabled: boolean;
+  readonly chevronRef: RefObject<HTMLButtonElement | null>;
+  readonly onCopy: () => void;
+  readonly onToggleDropdown: () => void;
+}) {
+  return (
+    <div className={SPLIT_BUTTON_CONTAINER_CLASS}>
+      <button
+        type="button"
+        aria-label="Fill from most recent submitted period"
+        title={lockedReason ?? "Fill from most recent submitted period"}
+        onClick={onCopy}
+        disabled={copyDisabled}
+        className={SPLIT_BUTTON_MAIN_CLASS}
+      >
+        <CopyIcon />
+      </button>
+
+      <button
+        ref={chevronRef}
+        type="button"
+        aria-label="Choose past report to fill from"
+        title={lockedReason ?? "Choose past report to fill from"}
+        onClick={onToggleDropdown}
+        disabled={chevronDisabled}
+        className={SPLIT_BUTTON_CHEVRON_CLASS}
+      >
+        <ChevronDown className="h-3 w-3" aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
+// Position the dropdown via portal to escape the toolbar's overflow clip; the
+// trigger moves with scroll/resize, so the position is re-read on both.
+function useDropdownPosition(
+  open: boolean,
+  triggerRef: RefObject<HTMLButtonElement | null>,
+) {
+  const [dropdownPos, setDropdownPos] = useState<{
+    top: number;
+    right: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const update = () => {
+      const r = triggerRef.current?.getBoundingClientRect();
+      if (!r) return;
+      setDropdownPos({
+        top: r.bottom + DROPDOWN_OFFSET_PX,
+        right: window.innerWidth - r.right,
+      });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [open, triggerRef]);
+
+  return dropdownPos;
+}
+
 export function FillFromButton({
   periods,
   onFillFrom,
@@ -75,10 +151,7 @@ export function FillFromButton({
   const wrapRef = useRef<HTMLDivElement>(null);
   const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
   const dropdownPanelRef = useRef<HTMLDivElement>(null);
-  const [dropdownPos, setDropdownPos] = useState<{
-    top: number;
-    right: number;
-  } | null>(null);
+  const dropdownPos = useDropdownPosition(showDropdown, dropdownTriggerRef);
 
   // `dateRange` is produced by `formatPeriodRangeWithYear`; sorting its start
   // defensively keeps the primary action correct if a caller loses the
@@ -124,26 +197,6 @@ export function FillFromButton({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [showDropdown]);
 
-  // Position the dropdown via portal to escape the toolbar's overflow clip.
-  useEffect(() => {
-    if (!showDropdown) return;
-    const update = () => {
-      const r = dropdownTriggerRef.current?.getBoundingClientRect();
-      if (!r) return;
-      setDropdownPos({
-        top: r.bottom + DROPDOWN_OFFSET_PX,
-        right: window.innerWidth - r.right,
-      });
-    };
-    update();
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-    };
-  }, [showDropdown]);
-
   function handleFillPrevious() {
     if (!previousPeriod) return;
     setSelectedPeriod(previousPeriod);
@@ -172,32 +225,16 @@ export function FillFromButton({
   return (
     <>
       <div className="relative inline-flex items-center" ref={wrapRef}>
-        <div className={SPLIT_BUTTON_CONTAINER_CLASS}>
-          <button
-            type="button"
-            aria-label="Fill from most recent submitted period"
-            title={lockedReason ?? "Fill from most recent submitted period"}
-            onClick={handleFillPrevious}
-            disabled={disabled || locked || !previousPeriod}
-            className={SPLIT_BUTTON_MAIN_CLASS}
-          >
-            <CopyIcon />
-          </button>
-
-          <button
-            ref={dropdownTriggerRef}
-            type="button"
-            aria-label="Choose past report to fill from"
-            title={lockedReason ?? "Choose past report to fill from"}
-            onClick={() =>
-              showDropdown ? closeDropdown() : setShowDropdown(true)
-            }
-            disabled={disabled || locked}
-            className={SPLIT_BUTTON_CHEVRON_CLASS}
-          >
-            <ChevronDown className="h-3 w-3" aria-hidden="true" />
-          </button>
-        </div>
+        <SplitButton
+          lockedReason={lockedReason}
+          copyDisabled={disabled || locked || !previousPeriod}
+          chevronDisabled={disabled || locked}
+          chevronRef={dropdownTriggerRef}
+          onCopy={handleFillPrevious}
+          onToggleDropdown={() =>
+            showDropdown ? closeDropdown() : setShowDropdown(true)
+          }
+        />
       </div>
 
       <FillFromDropdownPanel

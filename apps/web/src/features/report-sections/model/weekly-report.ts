@@ -80,6 +80,57 @@ export function mapWeeklyReport(
   return assembleWeeklyReport(api, buildWeeklyReportPeriod(api), projections);
 }
 
+type LeadSection = WeeklyReportReadModel["leadSections"][number];
+type LeadProject = LeadSection["projects"][number];
+
+// Records the lead filed for one of their products, already sliced by project.
+interface LeadProductRecords {
+  readonly items: {
+    readonly current: WeeklyProductReport["currentWeek"];
+    readonly next: WeeklyProductReport["nextWeek"];
+  };
+  readonly risks: WeeklyProductReport["risks"];
+  readonly decisions: WeeklyProductReport["decisions"];
+  readonly priorities: WeeklyProductReport["priorities"];
+}
+
+function buildLeadProductReport(
+  section: LeadSection,
+  proj: LeadProject,
+  records: LeadProductRecords,
+  escalations: WeeklyReportReadModel["escalations"],
+): WeeklyProductReport {
+  const status = trafficToProductStatus(proj.trafficLight);
+  const attention = escalations.find(
+    (e) =>
+      e.productName === proj.projectName && e.leadName === section.authorName,
+  );
+
+  return {
+    id: proj.projectId,
+    authorIds: [section.authorId],
+    initials: initialsFromName(proj.projectName),
+    name: proj.projectName,
+    status,
+    statusLabel: statusLabel(status, "print"),
+    leads: section.authorName,
+    ...(attention
+      ? {
+          needsAttention: attention.description,
+          needsAttentionSeverity:
+            attention.type === "blocked"
+              ? ("blocked" as const)
+              : ("at-risk" as const),
+        }
+      : {}),
+    currentWeek: records.items.current,
+    nextWeek: records.items.next,
+    risks: records.risks,
+    decisions: records.decisions,
+    priorities: records.priorities,
+  } satisfies WeeklyProductReport;
+}
+
 // Per-lead groups use each leadSection alone so dual-authored products are not
 // repeated under every lead; by-product scope uses mapWeeklyReport aggregates.
 export function mapWeeklyReportLeadGroups(
@@ -99,45 +150,22 @@ export function mapWeeklyReportLeadGroups(
       const prioritiesByProject = groupPrioritiesByProject(single);
 
       const products: WeeklyProductReport[] = section.projects
-        .map((proj) => {
-          const items = itemsByProject.get(proj.projectId) ?? {
-            current: [],
-            next: [],
-          };
-          const risks = risksByProject.get(proj.projectId) ?? [];
-          const decisions = decisionsByProject.get(proj.projectId) ?? [];
-          const priorities = prioritiesByProject.get(proj.projectId) ?? [];
-          const status = trafficToProductStatus(proj.trafficLight);
-          const attention = api.escalations.find(
-            (e) =>
-              e.productName === proj.projectName &&
-              e.leadName === section.authorName,
-          );
-
-          return {
-            id: proj.projectId,
-            authorIds: [section.authorId],
-            initials: initialsFromName(proj.projectName),
-            name: proj.projectName,
-            status,
-            statusLabel: statusLabel(status, "print"),
-            leads: section.authorName,
-            ...(attention
-              ? {
-                  needsAttention: attention.description,
-                  needsAttentionSeverity:
-                    attention.type === "blocked"
-                      ? ("blocked" as const)
-                      : ("at-risk" as const),
-                }
-              : {}),
-            currentWeek: items.current,
-            nextWeek: items.next,
-            risks,
-            decisions,
-            priorities,
-          } satisfies WeeklyProductReport;
-        })
+        .map((proj) =>
+          buildLeadProductReport(
+            section,
+            proj,
+            {
+              items: itemsByProject.get(proj.projectId) ?? {
+                current: [],
+                next: [],
+              },
+              risks: risksByProject.get(proj.projectId) ?? [],
+              decisions: decisionsByProject.get(proj.projectId) ?? [],
+              priorities: prioritiesByProject.get(proj.projectId) ?? [],
+            },
+            api.escalations,
+          ),
+        )
         .filter(reportHasContent);
 
       return { id: section.authorId, name: section.authorName, products };

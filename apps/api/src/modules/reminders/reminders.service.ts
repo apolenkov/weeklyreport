@@ -1,6 +1,7 @@
 import {
   type AdminReminderExecution,
   adminReminderExecutionSchema,
+  type AdminReminderRule,
   type PaginatedResult,
   type PaginationInput,
 } from "@customreport/shared";
@@ -25,10 +26,38 @@ import {
   reviveFailedExecution,
 } from "./reminders-enqueue.js";
 import { paginateReminderExecutions } from "./reminders-execution-pagination.js";
-import { requireRulePeriodLabel } from "./reminders-queue-payload.js";
+import {
+  type ReminderQueuePayload,
+  requireRulePeriodLabel,
+} from "./reminders-queue-payload.js";
 import { RemindersScopeService } from "./reminders-scope.service.js";
 
 export { ReminderDomainError, ReminderScopeError };
+
+interface ReminderExecutionResult {
+  execution: AdminReminderExecution;
+  outcome: "created" | "revived" | "deduplicated";
+}
+
+// Fresh id + queued status per attempt; the dedupe key is what the unique
+// index collides on, so a losing insert still returns the winning row.
+function buildExecutionCandidate(
+  rule: AdminReminderRule,
+  recipientEmail: string,
+  payload: ReminderExecutionPayload | undefined,
+): AdminReminderExecution {
+  return adminReminderExecutionSchema.parse({
+    id: crypto.randomUUID(),
+    ruleId: rule.id,
+    reportId: rule.reportId,
+    dedupeKey: resolveReminderDedupeKey(rule, recipientEmail, payload),
+    status: "queued",
+    scheduledFor: rule.fireAt,
+    sentAt: null,
+    recipientEmail,
+    errorMessage: null,
+  });
+}
 
 export class RemindersService {
   private readonly logger: AppLogger;
@@ -68,62 +97,27 @@ export class RemindersService {
     ruleId: string,
     recipientEmail: string,
     payload?: ReminderExecutionPayload,
-  ): Promise<{
-    execution: AdminReminderExecution;
-    outcome: "created" | "revived" | "deduplicated";
-  }> {
-    const rule = await this.repository.getRule(ruleId);
-
-    if (!rule) {
-      throw new ReminderDomainError(`Reminder rule ${ruleId} was not found.`);
-    }
-
-    if (rule.status !== "active") {
-      throw new ReminderDomainError(
-        "Reminder execution requires an active rule.",
-      );
-    }
-
-    const dedupeKey = resolveReminderDedupeKey(rule, recipientEmail, payload);
-
-    const candidate = adminReminderExecutionSchema.parse({
-      id: crypto.randomUUID(),
-      ruleId: rule.id,
-      reportId: rule.reportId,
-      dedupeKey,
-      status: "queued",
-      scheduledFor: rule.fireAt,
-      sentAt: null,
-      recipientEmail,
-      errorMessage: null,
-    });
+  ): Promise<ReminderExecutionResult> {
+    const rule = await this.loadActiveRule(ruleId);
 
     const { execution, inserted } = await recordExecutionOnConflict(
       this.repository,
-      candidate,
+      buildExecutionCandidate(rule, recipientEmail, payload),
     );
 
+    // Lazy: only the paths that actually enqueue may pay the period-label read.
     const queuePayload = async () =>
       payload ?? {
         reportPeriod: await requireRulePeriodLabel(this.repository, rule.id),
       };
 
     if (!inserted) {
-      const revived = await reviveFailedExecution(
-        this.emailQueue ? this.enqueueContext(this.emailQueue) : null,
-        this.repository.requeueFailedExecution.bind(this.repository),
+      return this.resolveExistingExecution(
+        ruleId,
         execution,
         recipientEmail,
         queuePayload,
       );
-      if (revived) return { execution: revived, outcome: "revived" };
-      // dedupeKey embeds recipientEmail for uniqueness; logging it would
-      // leak that address, so ruleId is the identifier we surface here.
-      this.logger.debug("deduplicated reminder execution", { ruleId });
-      return {
-        execution: adminReminderExecutionSchema.parse(execution),
-        outcome: "deduplicated",
-      };
     }
 
     this.logger.info("creating reminder execution", { ruleId });
@@ -144,6 +138,46 @@ export class RemindersService {
         await queuePayload(),
       ),
       outcome: "created",
+    };
+  }
+
+  private async loadActiveRule(ruleId: string) {
+    const rule = await this.repository.getRule(ruleId);
+
+    if (!rule) {
+      throw new ReminderDomainError(`Reminder rule ${ruleId} was not found.`);
+    }
+
+    if (rule.status !== "active") {
+      throw new ReminderDomainError(
+        "Reminder execution requires an active rule.",
+      );
+    }
+
+    return rule;
+  }
+
+  // The insert lost the race: revive a failed row if we can, else report dedupe.
+  private async resolveExistingExecution(
+    ruleId: string,
+    execution: AdminReminderExecution,
+    recipientEmail: string,
+    queuePayload: () => Promise<ReminderQueuePayload>,
+  ): Promise<ReminderExecutionResult> {
+    const revived = await reviveFailedExecution(
+      this.emailQueue ? this.enqueueContext(this.emailQueue) : null,
+      this.repository.requeueFailedExecution.bind(this.repository),
+      execution,
+      recipientEmail,
+      queuePayload,
+    );
+    if (revived) return { execution: revived, outcome: "revived" };
+    // dedupeKey embeds recipientEmail for uniqueness; logging it would
+    // leak that address, so ruleId is the identifier we surface here.
+    this.logger.debug("deduplicated reminder execution", { ruleId });
+    return {
+      execution: adminReminderExecutionSchema.parse(execution),
+      outcome: "deduplicated",
     };
   }
 

@@ -107,7 +107,7 @@ function makeReq(cookieToken?: string): { req: Request } {
 }
 
 const TEST_REPORT_ID = "11111111-2222-4333-8444-555555555555";
-const PDF_SECRET = "phase-32-b1-pdf-export-secret-32-chars-or-more";
+const PDF_SECRET = "pdf-export-secret-32-chars-or-more";
 const SESSION_SECRET = "integration-test-secret-32-chars-or-more";
 
 describe("createContextFactory — PDF JWT verifier path", () => {

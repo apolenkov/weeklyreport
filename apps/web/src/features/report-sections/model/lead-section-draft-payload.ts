@@ -5,14 +5,70 @@ import type {
 
 export type DraftSaveContent = Omit<DraftSavePayload, "version">;
 
+// Filter blank required text — safeText({min:1}) would reject and toast-fail
+// on every "+ Add" before the user types. Empty rows stay local-only until filled.
+const hasText = (s: string | null | undefined) =>
+  typeof s === "string" && s.trim().length > 0;
+
+function toItemDrafts(items: ReportSectionReadModel["items"]) {
+  return items
+    .filter((it) => hasText(it.text))
+    .map((it) => ({
+      id: it.id,
+      stableId: it.stableId,
+      projectId: it.projectId ?? null,
+      activityId: it.activityId ?? null,
+      type: it.type,
+      text: it.text,
+      tag: it.tag,
+      workflowStatus: it.workflowStatus,
+      carriedOver: it.carriedOver,
+      stageIds: it.stageIds ?? [],
+      priorityRank: it.priorityRank ?? null,
+      pausedReason:
+        it.workflowStatus === "paused" ? (it.pausedReason ?? null) : null,
+    }));
+}
+
+function toRiskDrafts(risks: ReportSectionReadModel["risks"]) {
+  return risks
+    .filter(
+      (r) => hasText(r.risk) && hasText(r.impact) && hasText(r.mitigation),
+    )
+    .map((r) => ({
+      id: r.id,
+      stableId: r.stableId,
+      projectId: r.projectId ?? null,
+      activityId: r.activityId ?? null,
+      risk: r.risk,
+      impact: r.impact,
+      mitigation: r.mitigation,
+      severity: r.severity,
+      stageIds: r.stageIds ?? [],
+    }));
+}
+
+function toDecisionDrafts(decisions: ReportSectionReadModel["decisions"]) {
+  return decisions
+    .filter((d) => hasText(d.text) && hasText(d.owner) && hasText(d.impact))
+    .map((d) => ({
+      id: d.id,
+      stableId: d.stableId,
+      text: d.text,
+      owner: d.owner,
+      deadline: d.deadline ?? null,
+      impact: d.impact,
+      resolvedAt: d.resolvedAt ?? null,
+      stageIds: d.stageIds ?? [],
+      productId: d.productId ?? null,
+      activityId: d.activityId ?? null,
+    }));
+}
+
 // stableId round-trip is load-bearing: dropping it re-mints identity each save.
 export function sectionToDraftPayload(
   section: ReportSectionReadModel,
 ): DraftSaveContent {
-  // Filter blank required text — safeText({min:1}) would reject and toast-fail
-  // on every "+ Add" before the user types. Empty rows stay local-only until filled.
-  const hasText = (s: string | null | undefined) =>
-    typeof s === "string" && s.trim().length > 0;
   return {
     reportSectionId: section.reportSectionId,
     status: "draft",
@@ -32,51 +88,8 @@ export function sectionToDraftPayload(
       status: activity.status,
       note: activity.note ?? null,
     })),
-    items: section.items
-      .filter((it) => hasText(it.text))
-      .map((it) => ({
-        id: it.id,
-        stableId: it.stableId,
-        projectId: it.projectId ?? null,
-        activityId: it.activityId ?? null,
-        type: it.type,
-        text: it.text,
-        tag: it.tag,
-        workflowStatus: it.workflowStatus,
-        carriedOver: it.carriedOver,
-        stageIds: it.stageIds ?? [],
-        priorityRank: it.priorityRank ?? null,
-        pausedReason:
-          it.workflowStatus === "paused" ? (it.pausedReason ?? null) : null,
-      })),
-    risks: section.risks
-      .filter(
-        (r) => hasText(r.risk) && hasText(r.impact) && hasText(r.mitigation),
-      )
-      .map((r) => ({
-        id: r.id,
-        stableId: r.stableId,
-        projectId: r.projectId ?? null,
-        activityId: r.activityId ?? null,
-        risk: r.risk,
-        impact: r.impact,
-        mitigation: r.mitigation,
-        severity: r.severity,
-        stageIds: r.stageIds ?? [],
-      })),
-    decisions: section.decisions
-      .filter((d) => hasText(d.text) && hasText(d.owner) && hasText(d.impact))
-      .map((d) => ({
-        id: d.id,
-        stableId: d.stableId,
-        text: d.text,
-        owner: d.owner,
-        deadline: d.deadline ?? null,
-        impact: d.impact,
-        resolvedAt: d.resolvedAt ?? null,
-        stageIds: d.stageIds ?? [],
-        productId: d.productId ?? null,
-        activityId: d.activityId ?? null,
-      })),
+    items: toItemDrafts(section.items),
+    risks: toRiskDrafts(section.risks),
+    decisions: toDecisionDrafts(section.decisions),
   };
 }

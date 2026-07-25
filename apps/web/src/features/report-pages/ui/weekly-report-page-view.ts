@@ -49,6 +49,87 @@ export interface WeeklyReportPageView {
   readonly showPublishHint: boolean;
 }
 
+type MappedWeeklyReport = ReturnType<typeof mapWeeklyReport>;
+
+interface ReviewSurfaceParams {
+  readonly scope: "product" | "lead";
+  readonly currentRole: CurrentRole;
+  readonly currentUserId: string | null;
+  readonly submissionFilter: "submitted" | "all";
+  readonly onReviewMutated: () => void;
+}
+
+// Reviewer surface + accordion. The submission filter is effective only when
+// review is enabled; the accordion may narrow to submitted-only while
+// header/portfolio/period nav stay on full truth.
+function deriveReviewSurface(
+  reportData: WeeklyReportReadModel,
+  view: MappedWeeklyReport,
+  params: ReviewSurfaceParams,
+) {
+  const { scope, currentRole } = params;
+  // Reviewer surface only for access-holders on a live (non-published) period.
+  const reviewModel = buildReviewModel(reportData, {
+    currentRole,
+    periodStatus: view.period.periodStatus,
+    currentUserId: params.currentUserId,
+    onMutated: params.onReviewMutated,
+  });
+  // By-lead groups only in "lead" scope; overview rows always from FULL groups
+  // so the band shows every section while the filter narrows the accordion.
+  const fullLeadGroups: LeadGroup[] =
+    scope === "lead" ? mapWeeklyReportLeadGroups(reportData) : [];
+  const reviewEnabled = isReviewEnabled(currentRole, view.period.periodStatus);
+  const submittedOnly =
+    reviewEnabled && params.submissionFilter === "submitted";
+
+  return {
+    reviewModel,
+    leadOverviewRows: mapWeeklyReportLeadOverview(fullLeadGroups),
+    reviewEnabled,
+    submittedOnly,
+    // Read|Review offered only when the caller can act on ≥1 section (server-stamped).
+    canReviewAny: reviewModel.sections.some((section) => section.canReview),
+    accordion: buildAccordionModel({
+      reportData,
+      scope,
+      submittedOnly,
+      fullProducts: view.products,
+      fullLeadGroups,
+    }),
+  };
+}
+
+// The focused author's first product WITH content — the same content filter the
+// scroll target uses, so an empty product never steals focus.
+function resolveFocusedProductId(
+  products: MappedWeeklyReport["products"],
+  focusedAuthorId: string | null,
+): string | undefined {
+  if (!focusedAuthorId) return undefined;
+  return products.find(
+    (report) =>
+      report.authorIds.includes(focusedAuthorId) && reportHasContent(report),
+  )?.id;
+}
+
+// Standalone fallback nav (no shell toolbar): single inert active period.
+// Shell-composed head toolbar supplies the multi-period combobox via slot.
+function buildFallbackPeriodNav(
+  period: MappedWeeklyReport["period"],
+): ReportPeriod[] {
+  return [
+    {
+      id: period.id,
+      sourceSectionId: "",
+      weekLabel: period.weekLabel,
+      dateRange: period.dateRange,
+      isCurrent: period.isCurrent,
+      isSubmitted: true,
+    },
+  ];
+}
+
 // Pure view-model from a loaded active report (scope, review gating, filter, focus).
 export function buildWeeklyReportPageView(
   reportData: WeeklyReportReadModel,
@@ -61,50 +142,23 @@ export function buildWeeklyReportPageView(
     readonly onReviewMutated: () => void;
   },
 ): WeeklyReportPageView {
-  const { scope, currentRole, focusedAuthorId } = params;
+  const { currentRole, focusedAuthorId } = params;
   const view = mapWeeklyReport(reportData);
-  // Reviewer surface only for access-holders on a live (non-published) period.
-  const reviewModel = buildReviewModel(reportData, {
-    currentRole,
-    periodStatus: view.period.periodStatus,
-    currentUserId: params.currentUserId,
-    onMutated: params.onReviewMutated,
-  });
+  const {
+    reviewModel,
+    leadOverviewRows,
+    reviewEnabled,
+    canReviewAny,
+    submittedOnly,
+    accordion,
+  } = deriveReviewSurface(reportData, view, params);
+
   const submitted = view.submissionCount;
   const total = view.totalLeads;
   const pendingCount = Math.max(0, total - submitted);
-
   const { portfolio, products } = view;
-  // By-lead groups only in "lead" scope; overview rows always from FULL groups
-  // so the band shows every section while the filter narrows the accordion.
-  const fullLeadGroups: LeadGroup[] =
-    scope === "lead" ? mapWeeklyReportLeadGroups(reportData) : [];
-  const leadOverviewRows = mapWeeklyReportLeadOverview(fullLeadGroups);
 
-  // Toggle effective only when review is enabled; accordion may narrow to
-  // submitted-only while header/portfolio/period nav stay on full truth.
-  const reviewEnabled = isReviewEnabled(currentRole, view.period.periodStatus);
-  // Read|Review offered only when the caller can act on ≥1 section (server-stamped).
-  const canReviewAny = reviewModel.sections.some(
-    (section) => section.canReview,
-  );
-  const submittedOnly =
-    reviewEnabled && params.submissionFilter === "submitted";
-  const accordion = buildAccordionModel({
-    reportData,
-    scope,
-    submittedOnly,
-    fullProducts: products,
-    fullLeadGroups,
-  });
-
-  const focusedProductId = focusedAuthorId
-    ? products.find(
-        (report) =>
-          report.authorIds.includes(focusedAuthorId) &&
-          reportHasContent(report),
-      )?.id
-    : undefined;
+  const focusedProductId = resolveFocusedProductId(products, focusedAuthorId);
   // Empty-state + publish gate use FULL content, never the filtered accordion.
   const hasAnyContent = accordion.hasAnyContent;
   const canPublishReport = submitted > 0 && hasAnyContent;
@@ -114,18 +168,7 @@ export function buildWeeklyReportPageView(
     canMutatePeriod &&
     !canPublishReport &&
     view.period.periodStatus !== "published";
-  // Standalone fallback nav (no shell toolbar): single inert active period.
-  // Shell-composed head toolbar supplies the multi-period combobox via slot.
-  const periods: ReportPeriod[] = [
-    {
-      id: view.period.id,
-      sourceSectionId: "",
-      weekLabel: view.period.weekLabel,
-      dateRange: view.period.dateRange,
-      isCurrent: view.period.isCurrent,
-      isSubmitted: true,
-    },
-  ];
+  const periods = buildFallbackPeriodNav(view.period);
   const periodLabel = joinPeriodLabel(
     view.period.weekLabel,
     view.period.dateRange,

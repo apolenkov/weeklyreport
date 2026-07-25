@@ -3,7 +3,10 @@ import type { INestApplication } from "@nestjs/common";
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 
 import { type AuditLogger, createAuditLogger } from "../../lib/audit-logger.js";
-import { resolveHumanSession } from "../../lib/human-session.js";
+import {
+  type HumanSessionDeps,
+  resolveHumanSession,
+} from "../../lib/human-session.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { resolveSessionCookieName } from "../../lib/session-cookie.js";
 import { SessionRevocationService } from "../../modules/admin/index.js";
@@ -123,6 +126,71 @@ function readRequestId(header: string | string[] | undefined): string {
   return header ?? NO_CORRELATION_ID;
 }
 
+// Everything a context needs that is independent of which session wins.
+type RequestScopedDeps = Pick<
+  TrpcContext,
+  "logger" | "correlationId" | "auditLogger" | "ip"
+> & { prisma: PrismaService };
+
+function humanContext(
+  deps: RequestScopedDeps,
+  session: UserSession | null,
+): TrpcContext {
+  return { ...deps, session, isPdfExport: false, pdfReportId: null };
+}
+
+function pdfExportContext(
+  deps: RequestScopedDeps,
+  session: UserSession,
+  pdfReportId: string,
+): TrpcContext {
+  return { ...deps, session, isPdfExport: true, pdfReportId };
+}
+
+// Cookie-bearing request: real human session first, then the PDF-export JWT.
+// Null means "this token proves nothing" — caller falls through to dev / anon.
+async function resolveTokenContext(
+  token: string,
+  deps: RequestScopedDeps,
+  sessionDeps: Pick<
+    HumanSessionDeps,
+    "verifySessionToken" | "sessionRevocation"
+  >,
+): Promise<TrpcContext | null> {
+  const humanSession = await resolveHumanSession(token, {
+    ...sessionDeps,
+    prisma: deps.prisma,
+  });
+  if (humanSession) return humanContext(deps, humanSession);
+
+  // PDF worker: JWT signed with PDF_EXPORT_JWT_SECRET (≠ session secret).
+  // Rebuilds requester session; pdfExportGuard still enforces allowlist.
+  try {
+    const pdfClaims = verifyPdfExportToken(token);
+    const pdfSession = await buildPdfExportSession(
+      pdfClaims.reportId,
+      pdfClaims.requestedBy,
+      deps.prisma,
+      sessionDeps.sessionRevocation,
+    );
+    return pdfSession
+      ? pdfExportContext(deps, pdfSession, pdfClaims.reportId)
+      : null;
+  } catch {
+    // Not a PDF token either — fall through to dev-mode / null.
+    return null;
+  }
+}
+
+// Dev fallback only when non-prod AND a dev-auth flag is set.
+// Boot fence (dev-auth-fence.ts) doubles this under NODE_ENV=production.
+function isDevAuthEnabled(env: NodeJS.ProcessEnv): boolean {
+  if (env.NODE_ENV === "production") return false;
+  return (
+    env.AUTH_DEV_MODE === "true" || env.AUTH_DEV_MODE_ALLOW_TEST === "true"
+  );
+}
+
 export function createContextFactory(
   _app: INestApplication,
   logger: AppLogger,
@@ -134,91 +202,35 @@ export function createContextFactory(
   const sessionRevocation = _app.get(SessionRevocationService);
 
   return async ({ req }: CreateExpressContextOptions): Promise<TrpcContext> => {
-    const ip = req.ip ?? UNKNOWN_CLIENT_IP;
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- synthetic/test contexts can omit req.headers despite the Express type
-    const correlationId = readRequestId(req.headers?.["x-request-id"]);
+    const deps: RequestScopedDeps = {
+      logger,
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- synthetic/test contexts can omit req.headers despite the Express type
+      correlationId: readRequestId(req.headers?.["x-request-id"]),
+      prisma,
+      auditLogger,
+      ip: req.ip ?? UNKNOWN_CLIENT_IP,
+    };
     // Same resolved name as set/clear paths (AUTH_JWT_COOKIE_NAME aware).
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- req.cookies is populated by cookie-parser at runtime; the optional chain guards the unmounted-middleware case
     const token = req.cookies?.[resolveSessionCookieName(process.env)] as
       string | undefined;
 
     if (token) {
-      // Shared human-session chokepoint; null → fall through to PDF / dev / null.
-      const humanSession = await resolveHumanSession(token, {
+      const tokenContext = await resolveTokenContext(token, deps, {
         verifySessionToken: (value) => authController.verifySessionToken(value),
         sessionRevocation,
-        prisma,
       });
-      if (humanSession) {
-        return {
-          session: humanSession,
-          logger,
-          correlationId,
-          prisma,
-          auditLogger,
-          ip,
-          isPdfExport: false,
-          pdfReportId: null,
-        };
-      }
-
-      // PDF worker: JWT signed with PDF_EXPORT_JWT_SECRET (≠ session secret).
-      // Rebuilds requester session; pdfExportGuard still enforces allowlist.
-      try {
-        const pdfClaims = verifyPdfExportToken(token);
-        const pdfSession = await buildPdfExportSession(
-          pdfClaims.reportId,
-          pdfClaims.requestedBy,
-          prisma,
-          sessionRevocation,
-        );
-        if (pdfSession) {
-          return {
-            session: pdfSession,
-            logger,
-            correlationId,
-            prisma,
-            auditLogger,
-            ip,
-            isPdfExport: true,
-            pdfReportId: pdfClaims.reportId,
-          };
-        }
-      } catch {
-        // Not a PDF token either — fall through to dev-mode / null.
-      }
+      if (tokenContext) return tokenContext;
     }
 
-    // Dev fallback only when non-prod AND a dev-auth flag is set.
-    // Boot fence (dev-auth-fence.ts) doubles this under NODE_ENV=production.
-    const isNonProd = process.env.NODE_ENV !== "production";
-    const devModeEnabled = isNonProd && process.env.AUTH_DEV_MODE === "true";
-    const allowTest =
-      isNonProd && process.env.AUTH_DEV_MODE_ALLOW_TEST === "true";
-    if (devModeEnabled || allowTest) {
+    if (isDevAuthEnabled(process.env)) {
       // Spread keeps DEV_SESSION as a caller-owned baseline (hydrate returns new).
-      const devWithOrg = await hydrateSession({ ...DEV_SESSION }, prisma);
-      return {
-        session: devWithOrg,
-        logger,
-        correlationId,
-        prisma,
-        auditLogger,
-        ip,
-        isPdfExport: false,
-        pdfReportId: null,
-      };
+      return humanContext(
+        deps,
+        await hydrateSession({ ...DEV_SESSION }, prisma),
+      );
     }
 
-    return {
-      session: null,
-      logger,
-      correlationId,
-      prisma,
-      auditLogger,
-      ip,
-      isPdfExport: false,
-      pdfReportId: null,
-    };
+    return humanContext(deps, null);
   };
 }

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo } from "react";
 
 import { getClientErrorDetails } from "../../../lib/client-error-reporting";
@@ -27,6 +28,53 @@ interface ViewerReportShellProps {
   readonly reportId: string;
   readonly mode: "form" | "slides";
   readonly authorId?: string;
+}
+
+// Shown only while the one-shot /reports/latest redirect is in flight, so the
+// terminal "invalid link" notice never flashes during recovery.
+function ViewerRecoveryNotice() {
+  return (
+    <p
+      className="py-16 text-center text-sm text-[var(--color-muted-foreground)]"
+      role="status"
+    >
+      Opening the status report…
+    </p>
+  );
+}
+
+function ViewerSlidesView({
+  reportId,
+  reportScope,
+  headerContextLabel,
+  exportPdf,
+  contextControls,
+}: {
+  readonly reportId: string;
+  readonly reportScope: "lead" | "product";
+  readonly headerContextLabel: ReactNode;
+  readonly exportPdf: ReactNode;
+  readonly contextControls: ReactNode;
+}) {
+  return (
+    <>
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
+            Status Report
+          </h1>
+          {headerContextLabel}
+        </div>
+        {exportPdf}
+      </header>
+      <ReportToolbar contextControls={contextControls} />
+      <HeadSlidesClient
+        reportId={reportId}
+        scope={reportScope}
+        enableActivity={false}
+      />
+    </>
+  );
 }
 
 // Status-entry race recovers once via /reports/latest; direct/History failures are terminal.
@@ -95,16 +143,8 @@ export function ViewerReportShell({
     />
   );
 
-  // Do not flash the terminal notice while the one-shot redirect is in flight.
   if (shouldRecover) {
-    return (
-      <p
-        className="py-16 text-center text-sm text-[var(--color-muted-foreground)]"
-        role="status"
-      >
-        Opening the status report…
-      </p>
-    );
+    return <ViewerRecoveryNotice />;
   }
 
   const displayed = displayedQ.data;
@@ -126,23 +166,13 @@ export function ViewerReportShell({
   return (
     <div className="space-y-4">
       {mode === "slides" ? (
-        <>
-          <header className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex min-w-0 flex-wrap items-center gap-3">
-              <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
-                Status Report
-              </h1>
-              {headerContextLabel}
-            </div>
-            {exportPdf}
-          </header>
-          <ReportToolbar contextControls={contextControls} />
-          <HeadSlidesClient
-            reportId={reportId}
-            scope={reportScope}
-            enableActivity={false}
-          />
-        </>
+        <ViewerSlidesView
+          reportId={reportId}
+          reportScope={reportScope}
+          headerContextLabel={headerContextLabel}
+          exportPdf={exportPdf}
+          contextControls={contextControls}
+        />
       ) : (
         <div className="min-w-0">
           <WeeklyReportPage

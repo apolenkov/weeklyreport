@@ -69,6 +69,11 @@ const LEVEL_SEVERITY: Record<LogLevel, SeverityNumber> = {
   error: SeverityNumber.ERROR,
 };
 
+// Consumer default for callers that omit `minLevel`. Every production
+// construction (main.ts, logger-service.ts, config.module.ts,
+// worker-observability.ts) passes the validated LOG_LEVEL explicitly; this
+// covers only ad-hoc loggers built without a config in reach.
+const DEFAULT_MIN_LEVEL: LogLevel = "info";
 const DEFAULT_MAX_BYTES_MB = 50;
 const BYTES_PER_KB = 1024;
 const KB_PER_MB = 1024;
@@ -101,7 +106,7 @@ class AppLoggerImpl implements AppLogger {
     baseContext: Record<string, unknown> = {},
     inheritedSink?: FileSink,
   ) {
-    this.minLevel = options.minLevel ?? "info";
+    this.minLevel = options.minLevel ?? DEFAULT_MIN_LEVEL;
     this.minPriority = LEVEL_PRIORITY[this.minLevel];
     this.logDir = options.logDir;
     this.clsService = options.clsService;
@@ -180,20 +185,20 @@ class AppLoggerImpl implements AppLogger {
       ...context,
     });
 
+    const spanCtx = trace.getActiveSpan()?.spanContext();
+    const spanFields =
+      spanCtx && trace.isSpanContextValid(spanCtx)
+        ? { traceId: spanCtx.traceId, spanId: spanCtx.spanId }
+        : {};
+
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
       message,
       correlationId: this.resolveCorrelationId(),
       ...mergedContext,
+      ...spanFields,
     };
-
-    const span = trace.getActiveSpan();
-    const spanCtx = span?.spanContext();
-    if (spanCtx && trace.isSpanContextValid(spanCtx)) {
-      entry.traceId = spanCtx.traceId;
-      entry.spanId = spanCtx.spanId;
-    }
 
     const formatted = JSON.stringify(entry);
 

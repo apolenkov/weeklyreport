@@ -37,16 +37,20 @@ export function mergeProductDraft(
   section: DraftSection,
   next: readonly Product[],
 ): DraftSection {
-  const nextStageStatusByKey = new Map<string, StageStatusValue>();
-  for (const product of next) {
-    for (const stage of product.stages) {
-      if (stage.ownership !== "mine") continue;
-      nextStageStatusByKey.set(
-        `${product.id}::${normalizeStageName(stage.stageName)}`,
-        stageStatusToTraffic(stage.status),
-      );
-    }
-  }
+  const nextStageStatusByKey = new Map<string, StageStatusValue>(
+    next.flatMap((product) =>
+      product.stages.flatMap((stage) =>
+        stage.ownership === "mine"
+          ? [
+              [
+                `${product.id}::${normalizeStageName(stage.stageName)}`,
+                stageStatusToTraffic(stage.status),
+              ] as const,
+            ]
+          : [],
+      ),
+    ),
+  );
 
   const projects = section.projects.map((project) => {
     const ownedStages = (project.ownedStages ?? []).map((stage) => {
@@ -176,6 +180,50 @@ export function mergeRiskDraft(
   return { ...section, risks };
 }
 
+function mergeItemRow(
+  item: KanbanItem,
+  itemType: "current" | "next",
+  existing: DraftSection["items"][number] | undefined,
+) {
+  const workflowStatus = WORKFLOW_STATUS_BY_ITEM_STATUS[item.status];
+  const parentFields = item.activityId
+    ? {
+        projectId: null,
+        activityId: item.activityId,
+        stageIds: [] as string[],
+      }
+    : {
+        projectId: item.productId,
+        activityId: null,
+        stageIds: item.stageIds,
+      };
+  const pausedReason =
+    workflowStatus === "paused" ? (item.pausedReason ?? null) : null;
+  if (existing) {
+    return {
+      ...existing,
+      ...parentFields,
+      text: item.text,
+      workflowStatus,
+      stageName: null,
+      priorityRank: item.priorityRank ?? null,
+      pausedReason,
+    };
+  }
+  return {
+    id: item.id,
+    ...parentFields,
+    type: itemType,
+    text: item.text,
+    tag: "general",
+    workflowStatus,
+    carriedOver: false,
+    stageName: null,
+    priorityRank: item.priorityRank ?? null,
+    pausedReason,
+  };
+}
+
 export function mergeItemsDraft(
   section: DraftSection,
   itemType: "current" | "next",
@@ -187,46 +235,9 @@ export function mergeItemsDraft(
       item.type === itemType && item.id ? [[item.id, item] as const] : [],
     ),
   );
-  const mergedTyped = editableItems.map((item) => {
-    const workflowStatus = WORKFLOW_STATUS_BY_ITEM_STATUS[item.status];
-    const existing = existingById.get(item.id);
-    const parentFields = item.activityId
-      ? {
-          projectId: null,
-          activityId: item.activityId,
-          stageIds: [] as string[],
-        }
-      : {
-          projectId: item.productId,
-          activityId: null,
-          stageIds: item.stageIds,
-        };
-    const pausedReason =
-      workflowStatus === "paused" ? (item.pausedReason ?? null) : null;
-    if (existing) {
-      return {
-        ...existing,
-        ...parentFields,
-        text: item.text,
-        workflowStatus,
-        stageName: null,
-        priorityRank: item.priorityRank ?? null,
-        pausedReason,
-      };
-    }
-    return {
-      id: item.id,
-      ...parentFields,
-      type: itemType,
-      text: item.text,
-      tag: "general",
-      workflowStatus,
-      carriedOver: false,
-      stageName: null,
-      priorityRank: item.priorityRank ?? null,
-      pausedReason,
-    };
-  });
+  const mergedTyped = editableItems.map((item) =>
+    mergeItemRow(item, itemType, existingById.get(item.id)),
+  );
   const others = section.items.filter((item) => item.type !== itemType);
   return { ...section, items: [...others, ...mergedTyped] };
 }

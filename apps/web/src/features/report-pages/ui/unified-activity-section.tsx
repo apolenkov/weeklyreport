@@ -57,6 +57,68 @@ function weekItems(
     .map((entry) => entry.item);
 }
 
+function ActivityBucketGroup({
+  bucket,
+  entries,
+  risks,
+  readOnly,
+  publishedLockedIds,
+  onEdit,
+  onDelete,
+  onMarkComplete,
+  onMoveToNextWeek,
+}: {
+  readonly bucket: ActivityBucket;
+  readonly entries: readonly UnifiedActivityEntry[];
+  readonly risks?: readonly RiskEntry[];
+  readonly readOnly: boolean;
+  readonly publishedLockedIds?: ReadonlySet<string>;
+  readonly onEdit: (entry: UnifiedActivityEntry) => void;
+  readonly onDelete: (entry: UnifiedActivityEntry) => void;
+  readonly onMarkComplete?: (id: string) => void;
+  readonly onMoveToNextWeek?: (id: string) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-2">
+        <span
+          data-testid={`bucket-label-${bucket}`}
+          className="font-[family-name:var(--font-sans)] text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]"
+        >
+          {ACTIVITY_BUCKET_LABELS[bucket]}
+        </span>
+        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
+          {entries.length}
+        </span>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {entries.map((entry) => (
+          <ItemCard
+            key={`${entry.week}-${entry.item.id}`}
+            item={entry.item}
+            risks={risks}
+            readOnly={readOnly}
+            isEditing={false}
+            publishedLocked={publishedLockedIds?.has(entry.item.id)}
+            onEdit={() => onEdit(entry)}
+            onDelete={() => onDelete(entry)}
+            onMarkComplete={
+              entry.week === "current" && entry.bucket !== "done"
+                ? onMarkComplete
+                : undefined
+            }
+            onMoveToNextWeek={
+              entry.week === "current" && entry.bucket !== "done"
+                ? onMoveToNextWeek
+                : undefined
+            }
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Opt-in by-state view (AppSettings.unifiedActivityView); create is via quick-add.
 export function UnifiedActivitySection({
   entries,
@@ -83,6 +145,11 @@ export function UnifiedActivitySection({
   function handleEdit(entry: UnifiedActivityEntry) {
     if (readOnly || entry.item.foreign === true) return;
     setEditState((prev) => ({ entry, seq: (prev?.seq ?? 0) + 1 }));
+  }
+
+  function requestDelete(entry: UnifiedActivityEntry) {
+    if (entry.item.foreign === true) return;
+    setPendingDelete(entry);
   }
 
   function handleDialogSave(next: KanbanItem) {
@@ -120,46 +187,18 @@ export function UnifiedActivitySection({
   return (
     <div className="space-y-5" data-testid="unified-activity-section">
       {buckets.map((group) => (
-        <div key={group.bucket}>
-          <div className="mb-2 flex items-center gap-2">
-            <span
-              data-testid={`bucket-label-${group.bucket}`}
-              className="font-[family-name:var(--font-sans)] text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]"
-            >
-              {ACTIVITY_BUCKET_LABELS[group.bucket]}
-            </span>
-            <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
-              {group.entries.length}
-            </span>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {group.entries.map((entry) => (
-              <ItemCard
-                key={`${entry.week}-${entry.item.id}`}
-                item={entry.item}
-                risks={risks}
-                readOnly={readOnly}
-                isEditing={false}
-                publishedLocked={publishedLockedIds?.has(entry.item.id)}
-                onEdit={() => handleEdit(entry)}
-                onDelete={() => {
-                  if (entry.item.foreign === true) return;
-                  setPendingDelete(entry);
-                }}
-                onMarkComplete={
-                  entry.week === "current" && entry.bucket !== "done"
-                    ? onMarkComplete
-                    : undefined
-                }
-                onMoveToNextWeek={
-                  entry.week === "current" && entry.bucket !== "done"
-                    ? onMoveToNextWeek
-                    : undefined
-                }
-              />
-            ))}
-          </div>
-        </div>
+        <ActivityBucketGroup
+          key={group.bucket}
+          bucket={group.bucket}
+          entries={group.entries}
+          risks={risks}
+          readOnly={readOnly}
+          publishedLockedIds={publishedLockedIds}
+          onEdit={handleEdit}
+          onDelete={requestDelete}
+          onMarkComplete={onMarkComplete}
+          onMoveToNextWeek={onMoveToNextWeek}
+        />
       ))}
 
       {/* Edit dialog — the EXISTING per-type item dialog; `week` follows the

@@ -26,6 +26,70 @@ interface UseItemEditFormStateArgs {
   readonly onCancel: () => void;
 }
 
+// Create mode seeds from the requested product, falling back to the lead's
+// first; edit mode takes its parent from the bound row instead.
+function resolveSeedProduct(
+  isCreate: boolean,
+  products: readonly Product[],
+  defaultProductId: string | undefined,
+): Product | undefined {
+  if (!isCreate) return undefined;
+  return products.find((p) => p.id === defaultProductId) ?? products[0];
+}
+
+interface ItemEditFieldsArgs {
+  readonly initial: KanbanItem;
+  readonly item: KanbanItem | null;
+  readonly activities: readonly ParentActivityOption[];
+  readonly seedActivityId: string | undefined;
+}
+
+// Every editable field of the dialog, seeded once at mount.
+function useItemEditFields({
+  initial,
+  item,
+  activities,
+  seedActivityId,
+}: ItemEditFieldsArgs) {
+  const [text, setText] = useState(initial.text);
+  // Legacy blocked coerces to in-progress so re-save never persists bare blocked.
+  const [status, setStatus] = useState<ItemStatus>(
+    coerceInitialStatus(initial.status),
+  );
+  // Seed from bound row so edit preserves pause reason; required only while Paused.
+  const [pausedReason, setPausedReason] = useState(item?.pausedReason ?? "");
+  // XOR parent; activity-lane create presets activity over seed product.
+  const [parent, setParent] = useState<RecordParent>(() =>
+    resolveRecordParent(initial, { activityId: seedActivityId }, activities),
+  );
+  const [priorityRank, setPriorityRank] = useState<number | null>(
+    item?.priorityRank ?? null,
+  );
+  // Create starts with no stage (explicit choice); edit restores saved stages.
+  // Single-owned-stage auto-apply still runs at save.
+  const [stageIds, setStageIds] = useState<string[]>(
+    item?.stageIds ? [...item.stageIds] : [],
+  );
+  const [errors, setErrors] = useState<ItemEditErrors>({});
+
+  return {
+    text,
+    setText,
+    status,
+    setStatus,
+    pausedReason,
+    setPausedReason,
+    parent,
+    setParent,
+    priorityRank,
+    setPriorityRank,
+    stageIds,
+    setStageIds,
+    errors,
+    setErrors,
+  };
+}
+
 // Mount-seeded form state + focus trap. Parent remounts on reopen — no useEffect reset.
 export function useItemEditFormState({
   item,
@@ -48,58 +112,19 @@ export function useItemEditFormState({
     containerRef: dialogSurfaceRef,
   });
 
-  const seedProduct = isCreate
-    ? (products.find((p) => p.id === defaultProductId) ?? products[0])
-    : undefined;
   const initial: KanbanItem = resolveInitialItem({
     item,
     week,
-    seedProduct,
+    seedProduct: resolveSeedProduct(isCreate, products, defaultProductId),
     currentUserName,
   });
 
-  const [text, setText] = useState(initial.text);
-  // Legacy blocked coerces to in-progress so re-save never persists bare blocked.
-  const [status, setStatus] = useState<ItemStatus>(
-    coerceInitialStatus(initial.status),
-  );
-  // Seed from bound row so edit preserves pause reason; required only while Paused.
-  const [pausedReason, setPausedReason] = useState(item?.pausedReason ?? "");
-  // XOR parent; activity-lane create presets activity over seed product.
-  const [parent, setParent] = useState<RecordParent>(() =>
-    resolveRecordParent(
-      initial,
-      { activityId: isCreate ? defaultActivityId : undefined },
-      activities,
-    ),
-  );
-  const [priorityRank, setPriorityRank] = useState<number | null>(
-    item?.priorityRank ?? null,
-  );
-  // Create starts with no stage (explicit choice); edit restores saved stages.
-  // Single-owned-stage auto-apply still runs at save.
-  const [stageIds, setStageIds] = useState<string[]>(
-    item?.stageIds ? [...item.stageIds] : [],
-  );
-  const [errors, setErrors] = useState<ItemEditErrors>({});
-
-  return {
-    isCreate,
+  const fields = useItemEditFields({
     initial,
-    dialogSurfaceRef,
-    text,
-    setText,
-    status,
-    setStatus,
-    pausedReason,
-    setPausedReason,
-    parent,
-    setParent,
-    priorityRank,
-    setPriorityRank,
-    stageIds,
-    setStageIds,
-    errors,
-    setErrors,
-  };
+    item,
+    activities,
+    seedActivityId: isCreate ? defaultActivityId : undefined,
+  });
+
+  return { isCreate, initial, dialogSurfaceRef, ...fields };
 }

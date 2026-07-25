@@ -16,6 +16,10 @@ if (process.env.SENTRY_DSN) {
     // wins over the NodeSDK in otel.bootstrap and starves Tempo of spans.
     // Skip it so the NodeSDK owns tracing; Sentry stays error-capture only.
     skipOpenTelemetrySetup: true,
+    // Raw process.env, not the validated config: init() runs at module load,
+    // before validateEnv(). The fallback is load-bearing — passing undefined
+    // makes Sentry apply its own default of "production" and mislabel every
+    // event from a boot that is about to fail on the missing variable.
     environment: process.env.NODE_ENV ?? "development",
     // Stamp the active OTel span id so Bugsink links to the Tempo trace.
     // Overrides the random id Sentry pre-fills (beforeSend runs after that fill).

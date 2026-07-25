@@ -18,6 +18,40 @@ const EMPTY_STAGE_CHIPS = {
  * stage-less, so neither the warning nor an "All stages" chip applies. */
 type EmptyStageChip = keyof typeof EMPTY_STAGE_CHIPS | "none";
 
+type EmptyStageChipSpec =
+  (typeof EMPTY_STAGE_CHIPS)[keyof typeof EMPTY_STAGE_CHIPS];
+
+function StageChips({
+  stageTags,
+  emptyChip,
+  title,
+}: {
+  readonly stageTags: readonly string[];
+  readonly emptyChip: EmptyStageChipSpec | null;
+  readonly title: string;
+}) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1" title={title}>
+      {stageTags.length === 0
+        ? emptyChip && (
+            <span
+              className={`inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold ${emptyChip.className}`}
+            >
+              {emptyChip.label}
+            </span>
+          )
+        : stageTags.map((stage) => (
+            <span
+              key={stage}
+              className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+            >
+              {stage}
+            </span>
+          ))}
+    </span>
+  );
+}
+
 interface MetaRowProps {
   readonly authorName: string | null | undefined;
   readonly stageTags: readonly string[];
@@ -60,24 +94,7 @@ export function MetaRow({
           </span>
         ) : null}
       </span>
-      <span className="inline-flex flex-wrap items-center gap-1" title={title}>
-        {stageTags.length === 0
-          ? emptyChip && (
-              <span
-                className={`inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold ${emptyChip.className}`}
-              >
-                {emptyChip.label}
-              </span>
-            )
-          : stageTags.map((stage) => (
-              <span
-                key={stage}
-                className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
-              >
-                {stage}
-              </span>
-            ))}
-      </span>
+      <StageChips stageTags={stageTags} emptyChip={emptyChip} title={title} />
     </div>
   );
 }

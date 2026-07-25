@@ -8,6 +8,7 @@ import {
   DAYS_PER_WEEK,
   HOURS_PER_DAY,
   MINUTES_PER_HOUR,
+  MS_PER_DAY,
   MS_PER_SECOND,
   MS_PER_WEEK,
   SECONDS_PER_MINUTE,
@@ -101,22 +102,26 @@ function toDate(date: Date | string): Date {
   return date instanceof Date ? date : new Date(date);
 }
 
+// Thursday of the ISO week containing `utcMidnight`. Day arithmetic in whole
+// milliseconds is exact here because the input is UTC midnight (no DST steps).
+function isoWeekThursday(utcMidnight: Date): Date {
+  const dayNum = (utcMidnight.getUTCDay() + DAYS_PER_WEEK - 1) % DAYS_PER_WEEK;
+  return new Date(
+    utcMidnight.getTime() + (ISO_PIVOT_WEEKDAY_OFFSET - dayNum) * MS_PER_DAY,
+  );
+}
+
 export function isoWeekNumber(date: Date | string): number {
   const d = toDate(date);
-  const target = new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+  const thursday = isoWeekThursday(
+    new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())),
   );
-  const dayNum = (target.getUTCDay() + DAYS_PER_WEEK - 1) % DAYS_PER_WEEK;
-  target.setUTCDate(target.getUTCDate() - dayNum + ISO_PIVOT_WEEKDAY_OFFSET);
-  const firstThursday = new Date(
-    Date.UTC(target.getUTCFullYear(), 0, ISO_PIVOT_JANUARY_DAY),
+  // Year is read off the shifted Thursday, so a Dec/Jan boundary week counts
+  // against the ISO year that owns it.
+  const firstThursday = isoWeekThursday(
+    new Date(Date.UTC(thursday.getUTCFullYear(), 0, ISO_PIVOT_JANUARY_DAY)),
   );
-  const firstThursdayDayNum =
-    (firstThursday.getUTCDay() + DAYS_PER_WEEK - 1) % DAYS_PER_WEEK;
-  firstThursday.setUTCDate(
-    firstThursday.getUTCDate() - firstThursdayDayNum + ISO_PIVOT_WEEKDAY_OFFSET,
-  );
-  const diffMs = target.getTime() - firstThursday.getTime();
+  const diffMs = thursday.getTime() - firstThursday.getTime();
   return 1 + Math.round(diffMs / MS_PER_WEEK);
 }
 

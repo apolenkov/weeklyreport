@@ -47,7 +47,112 @@ function logoutThenRedirect(href: string, onStay: () => void): void {
     .catch(onStay);
 }
 
-export function DevRoleSwitcher() {
+interface RoleSwitcherUser {
+  readonly id: string;
+  readonly name: string;
+  readonly email: string;
+  readonly role: string;
+}
+
+// One labelled block per role, in ROLE_ORDER; roles with no seeded user vanish.
+function RoleUserItems({
+  users,
+  onSelect,
+}: {
+  readonly users: readonly RoleSwitcherUser[];
+  readonly onSelect: (identity: { role: DbRole; email: string }) => void;
+}) {
+  return (
+    <>
+      {ROLE_ORDER.flatMap((role) => {
+        const list = users.filter((u) => u.role === role);
+        if (list.length === 0) return [];
+        return [
+          <DropdownMenuLabel
+            key={`${role}-label`}
+            className="text-xs uppercase tracking-wide text-muted-foreground"
+          >
+            {ROLE_LABEL[role]} ({list.length})
+          </DropdownMenuLabel>,
+          ...list.map((u) => (
+            <DropdownMenuItem
+              key={u.id}
+              onSelect={() => onSelect({ role, email: u.email })}
+              data-testid={`dev-role-switcher-${role}-${u.email}`}
+              className="flex flex-col items-start gap-0.5"
+            >
+              <span className="font-medium">{u.name}</span>
+              <span className="text-xs text-muted-foreground">{u.email}</span>
+            </DropdownMenuItem>
+          )),
+          <DropdownMenuSeparator key={`${role}-sep`} />,
+        ];
+      })}
+    </>
+  );
+}
+
+// Presentation order and testid suffix for each dev-only data reset.
+const DATA_RESET_ACTIONS = [
+  { variant: "small", label: "Wipe + Reseed (small)", testId: "reseed-small" },
+  {
+    variant: "middle",
+    label: "Wipe + Reseed (middle)",
+    testId: "reseed-middle",
+  },
+  { variant: "huge", label: "Wipe + Reseed (huge)", testId: "reseed-huge" },
+  {
+    variant: "manual-uat",
+    label: "Wipe reports (manual UAT)",
+    testId: "wipe-manual-uat",
+  },
+] as const satisfies readonly {
+  variant: DataResetVariant;
+  label: string;
+  testId: string;
+}[];
+
+function DataResetItems({
+  onReseed,
+}: {
+  readonly onReseed: (variant: DataResetVariant) => void;
+}) {
+  return (
+    <>
+      {DATA_RESET_ACTIONS.map((action) => (
+        <DropdownMenuItem
+          key={action.variant}
+          onSelect={() => onReseed(action.variant)}
+          data-testid={`dev-role-switcher-${action.testId}`}
+        >
+          {action.label}
+        </DropdownMenuItem>
+      ))}
+    </>
+  );
+}
+
+// Trigger stays a separate unit so the long Tailwind chain does not crowd the
+// menu structure below.
+function RoleSwitcherTrigger({ pending }: { readonly pending: boolean }) {
+  return (
+    <DropdownMenuTrigger asChild>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={pending}
+        className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-2.5 text-[12px] font-semibold text-[var(--color-muted-foreground)] shadow-none transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)] data-[state=open]:border-amber-400 data-[state=open]:bg-amber-50 data-[state=open]:text-amber-900"
+        data-testid="dev-role-switcher-trigger"
+      >
+        <Users className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      </Button>
+    </DropdownMenuTrigger>
+  );
+}
+
+// Hooks must run unconditionally, so the enabled gate is returned rather than
+// short-circuiting here; the component owns the early return.
+function useDevRoleSwitcher() {
   const [pending, setPending] = useState(false);
   const trpc = useTRPC();
 
@@ -67,7 +172,6 @@ export function DevRoleSwitcher() {
   };
   const logoutThen = (href: string) => logoutThenRedirect(href, stayLoggedIn);
 
-  // Hooks must run unconditionally — guard the gate below.
   const wipeAndReseedMut = useMutation(
     trpc.dev.wipeAndReseed.mutationOptions({
       // Logout then redirect to landing so the next role pick starts clean.
@@ -80,45 +184,42 @@ export function DevRoleSwitcher() {
     }),
   );
 
+  return {
+    enabled,
+    pending,
+    usersQ,
+    users: usersQ.data ?? [],
+    switchTo: (identity: { role: DbRole; email: string }) => {
+      setPending(true);
+      const params = new URLSearchParams({
+        role: identity.role,
+        email: identity.email,
+      });
+      logoutThen(`/auth/dev-login?${params.toString()}`);
+    },
+    logout: () => {
+      setPending(true);
+      logoutThen("/");
+    },
+    reseed: (variant: DataResetVariant) => {
+      setPending(true);
+      wipeAndReseedMut.mutate({ variant });
+    },
+  };
+}
+
+export function DevRoleSwitcher() {
+  const { enabled, pending, usersQ, users, switchTo, logout, reseed } =
+    useDevRoleSwitcher();
+
   if (!enabled) {
     return null;
   }
 
-  const switchTo = (identity: { role: DbRole; email: string }) => {
-    setPending(true);
-    const params = new URLSearchParams({
-      role: identity.role,
-      email: identity.email,
-    });
-    logoutThen(`/auth/dev-login?${params.toString()}`);
-  };
-
-  const users = usersQ.data ?? [];
-
-  const logout = () => {
-    setPending(true);
-    logoutThen("/");
-  };
-
-  const reseed = (variant: DataResetVariant) => {
-    setPending(true);
-    wipeAndReseedMut.mutate({ variant });
-  };
-
   return (
     <div className="contents">
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={pending}
-            className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-2.5 text-[12px] font-semibold text-[var(--color-muted-foreground)] shadow-none transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)] data-[state=open]:border-amber-400 data-[state=open]:bg-amber-50 data-[state=open]:text-amber-900"
-            data-testid="dev-role-switcher-trigger"
-          >
-            <Users className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          </Button>
-        </DropdownMenuTrigger>
+        <RoleSwitcherTrigger pending={pending} />
         <DropdownMenuContent
           align="end"
           side="bottom"
@@ -134,59 +235,11 @@ export function DevRoleSwitcher() {
               Load error
             </DropdownMenuItem>
           )}
-          {ROLE_ORDER.flatMap((role) => {
-            const list = users.filter((u) => u.role === role);
-            if (list.length === 0) return [];
-            return [
-              <DropdownMenuLabel
-                key={`${role}-label`}
-                className="text-xs uppercase tracking-wide text-muted-foreground"
-              >
-                {ROLE_LABEL[role]} ({list.length})
-              </DropdownMenuLabel>,
-              ...list.map((u) => (
-                <DropdownMenuItem
-                  key={u.id}
-                  onSelect={() => switchTo({ role, email: u.email })}
-                  data-testid={`dev-role-switcher-${role}-${u.email}`}
-                  className="flex flex-col items-start gap-0.5"
-                >
-                  <span className="font-medium">{u.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {u.email}
-                  </span>
-                </DropdownMenuItem>
-              )),
-              <DropdownMenuSeparator key={`${role}-sep`} />,
-            ];
-          })}
+          <RoleUserItems users={users} onSelect={switchTo} />
           {/* Dev-only data reset — available to every role; the API side is
               still double-gated on AUTH_DEV_MODE. */}
           <DropdownMenuLabel>Data</DropdownMenuLabel>
-          <DropdownMenuItem
-            onSelect={() => reseed("small")}
-            data-testid="dev-role-switcher-reseed-small"
-          >
-            Wipe + Reseed (small)
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={() => reseed("middle")}
-            data-testid="dev-role-switcher-reseed-middle"
-          >
-            Wipe + Reseed (middle)
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={() => reseed("huge")}
-            data-testid="dev-role-switcher-reseed-huge"
-          >
-            Wipe + Reseed (huge)
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={() => reseed("manual-uat")}
-            data-testid="dev-role-switcher-wipe-manual-uat"
-          >
-            Wipe reports (manual UAT)
-          </DropdownMenuItem>
+          <DataResetItems onReseed={reseed} />
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onSelect={() => logout()}

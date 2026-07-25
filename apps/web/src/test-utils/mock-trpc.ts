@@ -97,22 +97,22 @@ function buildQueryByInput(
   });
 }
 
+// "pending" never settles (loading-state fixtures); a factory is called per
+// fetch so a stub can vary between calls; anything else resolves as-is.
+function resolveQueryFn(query: QueryData | "pending"): () => Promise<unknown> {
+  if (query === "pending") return () => new Promise<never>(() => undefined);
+  if (typeof query === "function") {
+    return () => Promise.resolve((query as () => unknown)());
+  }
+  return () => Promise.resolve(query);
+}
+
 function buildQuery(
   leaf: Record<string, unknown>,
   qk: [[...string[]]],
   query: QueryData | "pending",
 ): void {
-  const isPending = query === "pending";
-
-  let queryFn: () => Promise<unknown>;
-  if (isPending) {
-    queryFn = () => new Promise<never>(() => undefined);
-  } else if (typeof query === "function") {
-    queryFn = () => Promise.resolve((query as () => unknown)());
-  } else {
-    queryFn = () => Promise.resolve(query);
-  }
-
+  const queryFn = resolveQueryFn(query);
   leaf.queryOptions = () => ({ queryKey: qk, queryFn });
 }
 

@@ -24,38 +24,52 @@ export interface AdminPeriodsDeps {
   autoCarryOver?: (targetReportId: string) => Promise<void>;
 }
 
-export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
+// Wraps a whole procedure body — service call, audit write and carry-over
+// alike — so any of them surfaces as a mapped tRPC error, never a raw throw.
+async function withMappedDomainError<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    throw mapDomainError(error);
+  }
+}
+
+type PeriodPatchDiff = Awaited<
+  ReturnType<PeriodAdminService["updatePeriodManual"]>
+>["diff"];
+
+// Date → ISO for audit payload (aggregators serialize to JSON).
+function buildPeriodEditChanges(diff: PeriodPatchDiff) {
+  const toIso = (range: { from: Date; to: Date }) => ({
+    from: range.from.toISOString(),
+    to: range.to.toISOString(),
+  });
+  // Three-state deadline: `to: null` records an explicit clear.
+  const toIsoOrNull = (value: Date | null) =>
+    value === null ? null : value.toISOString();
   return {
-    savePeriod: adminProcedure
-      .input(reportPeriodSchema)
-      .mutation(async ({ input }) => {
-        try {
-          return await deps.periodAdminService.upsertPeriod(input);
-        } catch (error) {
-          throw mapDomainError(error);
+    ...(diff.periodStart ? { periodStart: toIso(diff.periodStart) } : {}),
+    ...(diff.periodEnd ? { periodEnd: toIso(diff.periodEnd) } : {}),
+    ...(diff.deadline
+      ? {
+          deadline: {
+            from: toIsoOrNull(diff.deadline.from),
+            to: toIsoOrNull(diff.deadline.to),
+          },
         }
-      }),
-    // Server-precomputed canReopen/canArchive so the UI needs no policy rules.
-    listPeriodsByState: adminProcedure
-      .input(
-        z.object({
-          bucket: periodListBucketSchema,
-          limit: z.number().int().min(1).max(MAX_PERIOD_LIST_LIMIT).optional(),
-        }),
-      )
-      .query(async ({ input }) => {
-        try {
-          return await deps.periodAdminService.listPeriodsByState(input);
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-    // Escape hatch past the daily cron; audit stays on the router so SIEM gets
-    // real-user attribution (vs system+cron auto-create).
+      : {}),
+    ...(diff.weekLabel ? { weekLabel: diff.weekLabel } : {}),
+  };
+}
+
+// Escape hatch past the daily cron; audit stays on the router so SIEM gets
+// real-user attribution (vs system+cron auto-create).
+function createManualPeriodProcedures(deps: AdminPeriodsDeps) {
+  return {
     createPeriodManual: adminProcedure
       .input(adminCreatePeriodManualSchema)
-      .mutation(async ({ ctx, input }) => {
-        try {
+      .mutation(({ ctx, input }) =>
+        withMappedDomainError(async () => {
           const result =
             await deps.periodAdminService.createPeriodManual(input);
           ctx.auditLogger.periodManualCreate({
@@ -75,85 +89,84 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
             await deps.autoCarryOver?.(result.periodId);
           }
           return result;
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+        }),
+      ),
     // Audit only on non-empty diff so no-op PATCHes stay out of SIEM.
     updatePeriodManual: adminProcedure
       .input(adminUpdatePeriodManualSchema)
-      .mutation(async ({ ctx, input }) => {
-        try {
+      .mutation(({ ctx, input }) =>
+        withMappedDomainError(async () => {
           const { result, diff } =
             await deps.periodAdminService.updatePeriodManual(input);
           if (Object.keys(diff).length > 0) {
-            // Date → ISO for audit payload (aggregators serialize to JSON).
-            const toIso = (range: { from: Date; to: Date }) => ({
-              from: range.from.toISOString(),
-              to: range.to.toISOString(),
-            });
-            // Three-state deadline: `to: null` records an explicit clear.
-            const toIsoOrNull = (value: Date | null) =>
-              value === null ? null : value.toISOString();
-            const changes = {
-              ...(diff.periodStart
-                ? { periodStart: toIso(diff.periodStart) }
-                : {}),
-              ...(diff.periodEnd ? { periodEnd: toIso(diff.periodEnd) } : {}),
-              ...(diff.deadline
-                ? {
-                    deadline: {
-                      from: toIsoOrNull(diff.deadline.from),
-                      to: toIsoOrNull(diff.deadline.to),
-                    },
-                  }
-                : {}),
-              ...(diff.weekLabel ? { weekLabel: diff.weekLabel } : {}),
-            };
             ctx.auditLogger.periodManualEdit({
               userId: ctx.session.userId,
               role: ctx.session.role,
               ip: ctx.ip,
               periodId: result.periodId,
-              changes,
+              changes: buildPeriodEditChanges(diff),
             });
           }
           return result;
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+        }),
+      ),
+  };
+}
+
+function createPeriodLifecycleProcedures(deps: AdminPeriodsDeps) {
+  return {
+    savePeriod: adminProcedure
+      .input(reportPeriodSchema)
+      .mutation(({ input }) =>
+        withMappedDomainError(() =>
+          deps.periodAdminService.upsertPeriod(input),
+        ),
+      ),
+    // Server-precomputed canReopen/canArchive so the UI needs no policy rules.
+    listPeriodsByState: adminProcedure
+      .input(
+        z.object({
+          bucket: periodListBucketSchema,
+          limit: z.number().int().min(1).max(MAX_PERIOD_LIST_LIMIT).optional(),
+        }),
+      )
+      .query(({ input }) =>
+        withMappedDomainError(() =>
+          deps.periodAdminService.listPeriodsByState(input),
+        ),
+      ),
     // Atomic archived=true + periodState=archived (dual-state invariant).
     archivePeriod: adminProcedure
       .input(z.object({ periodId: z.uuid() }))
-      .mutation(async ({ input }) => {
-        try {
-          return await deps.periodAdminService.archivePeriod(input.periodId);
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ input }) =>
+        withMappedDomainError(() =>
+          deps.periodAdminService.archivePeriod(input.periodId),
+        ),
+      ),
     // Derive next periodState from legacy (status, periodStatus) — the new
     // column lost the pre-archive distinction when overwritten with archived.
     unarchivePeriod: adminProcedure
       .input(z.object({ periodId: z.uuid() }))
-      .mutation(async ({ input }) => {
-        try {
-          return await deps.periodAdminService.unarchivePeriod(input.periodId);
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ input }) =>
+        withMappedDomainError(() =>
+          deps.periodAdminService.unarchivePeriod(input.periodId),
+        ),
+      ),
     // Guard: published periods cannot be deleted.
     deleteReport: adminProcedure
       .input(z.object({ reportId: z.uuid() }))
-      .mutation(async ({ input }) => {
-        try {
-          return await deps.periodAdminService.deleteReport(input.reportId);
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ input }) =>
+        withMappedDomainError(() =>
+          deps.periodAdminService.deleteReport(input.reportId),
+        ),
+      ),
+  };
+}
+
+export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
+  return {
+    ...createPeriodLifecycleProcedures(deps),
+    ...createManualPeriodProcedures(deps),
     ...createReopenRequestsProcedures(deps),
   };
 }

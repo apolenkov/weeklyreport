@@ -370,6 +370,25 @@ function endOfDay(d: Date): Date {
   return r;
 }
 
+// Every seeded period is due Friday 15:00 UTC — Friday is 4 days after the
+// period's Monday.
+const DEADLINE_DAY_OFFSET_FROM_MONDAY = 4;
+const DEADLINE_HOUR_UTC = 15;
+
+function weeklyDeadline(monday: Date): string {
+  const friday = plusDays(monday, DEADLINE_DAY_OFFSET_FROM_MONDAY);
+  return new Date(
+    Date.UTC(
+      friday.getUTCFullYear(),
+      friday.getUTCMonth(),
+      friday.getUTCDate(),
+      DEADLINE_HOUR_UTC,
+      0,
+      0,
+    ),
+  ).toISOString();
+}
+
 const NOW = new Date();
 const ACTIVE_MONDAY = mondayOfWeek(NOW);
 const PREV_MONDAY = plusDays(ACTIVE_MONDAY, -7);
@@ -379,17 +398,7 @@ export const SEED_REPORTS = {
     id: ACTIVE_REPORT_ID,
     periodStart: ACTIVE_MONDAY.toISOString(),
     periodEnd: endOfDay(plusDays(ACTIVE_MONDAY, 6)).toISOString(),
-    // Deadline = Friday 15:00 UTC of the active week.
-    deadline: new Date(
-      Date.UTC(
-        plusDays(ACTIVE_MONDAY, 4).getUTCFullYear(),
-        plusDays(ACTIVE_MONDAY, 4).getUTCMonth(),
-        plusDays(ACTIVE_MONDAY, 4).getUTCDate(),
-        15,
-        0,
-        0,
-      ),
-    ).toISOString(),
+    deadline: weeklyDeadline(ACTIVE_MONDAY),
     weekLabel: `Week ${isoWeekNumber(ACTIVE_MONDAY)}`,
     periodStatus: "open" as const,
     status: "draft" as const,
@@ -398,16 +407,7 @@ export const SEED_REPORTS = {
     id: PUBLISHED_REPORT_ID,
     periodStart: PREV_MONDAY.toISOString(),
     periodEnd: endOfDay(plusDays(PREV_MONDAY, 6)).toISOString(),
-    deadline: new Date(
-      Date.UTC(
-        plusDays(PREV_MONDAY, 4).getUTCFullYear(),
-        plusDays(PREV_MONDAY, 4).getUTCMonth(),
-        plusDays(PREV_MONDAY, 4).getUTCDate(),
-        15,
-        0,
-        0,
-      ),
-    ).toISOString(),
+    deadline: weeklyDeadline(PREV_MONDAY),
     weekLabel: `Week ${isoWeekNumber(PREV_MONDAY)}`,
     periodStatus: "published" as const,
     status: "published" as const,
@@ -441,14 +441,7 @@ export const SEED_HISTORY_REPORTS: readonly SeedHistoryReport[] = [
     id: HISTORY_REPORT_2_ID,
     periodStart: PREV2_MONDAY.toISOString(),
     periodEnd: endOfDay(plusDays(PREV2_MONDAY, 6)).toISOString(),
-    deadline: new Date(
-      Date.UTC(
-        plusDays(PREV2_MONDAY, 4).getUTCFullYear(),
-        plusDays(PREV2_MONDAY, 4).getUTCMonth(),
-        plusDays(PREV2_MONDAY, 4).getUTCDate(),
-        15, 0, 0,
-      ),
-    ).toISOString(),
+    deadline: weeklyDeadline(PREV2_MONDAY),
     weekLabel: `Week ${isoWeekNumber(PREV2_MONDAY)}`,
     archived: false,
   },
@@ -456,14 +449,7 @@ export const SEED_HISTORY_REPORTS: readonly SeedHistoryReport[] = [
     id: HISTORY_REPORT_3_ID,
     periodStart: PREV3_MONDAY.toISOString(),
     periodEnd: endOfDay(plusDays(PREV3_MONDAY, 6)).toISOString(),
-    deadline: new Date(
-      Date.UTC(
-        plusDays(PREV3_MONDAY, 4).getUTCFullYear(),
-        plusDays(PREV3_MONDAY, 4).getUTCMonth(),
-        plusDays(PREV3_MONDAY, 4).getUTCDate(),
-        15, 0, 0,
-      ),
-    ).toISOString(),
+    deadline: weeklyDeadline(PREV3_MONDAY),
     weekLabel: `Week ${isoWeekNumber(PREV3_MONDAY)}`,
     archived: true,
   },
@@ -471,14 +457,7 @@ export const SEED_HISTORY_REPORTS: readonly SeedHistoryReport[] = [
     id: HISTORY_REPORT_4_ID,
     periodStart: PREV4_MONDAY.toISOString(),
     periodEnd: endOfDay(plusDays(PREV4_MONDAY, 6)).toISOString(),
-    deadline: new Date(
-      Date.UTC(
-        plusDays(PREV4_MONDAY, 4).getUTCFullYear(),
-        plusDays(PREV4_MONDAY, 4).getUTCMonth(),
-        plusDays(PREV4_MONDAY, 4).getUTCDate(),
-        15, 0, 0,
-      ),
-    ).toISOString(),
+    deadline: weeklyDeadline(PREV4_MONDAY),
     weekLabel: `Week ${isoWeekNumber(PREV4_MONDAY)}`,
     archived: true,
   },

@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 // Matches packages/shared period.schema MAX_WEEK_LABEL_LENGTH (local copy —
 // shared is not re-exported for UI use).
 const MAX_WEEK_LABEL_LENGTH = 64;
@@ -18,130 +20,184 @@ interface CreatePeriodFieldsProps {
   readonly onWeekLabelChange: (value: string) => void;
 }
 
-export function CreatePeriodFields({
+const FIELD_CLASS =
+  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]";
+const INVALID_FIELD_CLASS =
+  "w-full rounded-[var(--radius-sm)] border px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] border-red-400 bg-red-50 focus:border-red-400";
+
+function OptionalHint() {
+  return (
+    <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+      (optional)
+    </span>
+  );
+}
+
+function FieldLabel({
+  htmlFor,
+  children,
+}: {
+  readonly htmlFor: string;
+  readonly children: ReactNode;
+}) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+    >
+      {children}
+    </label>
+  );
+}
+
+function FieldError({
+  id,
+  testId,
+  message,
+}: {
+  readonly id: string;
+  readonly testId: string;
+  readonly message: string;
+}) {
+  return (
+    <p id={id} data-testid={testId} className="mt-1 text-xs text-red-600">
+      {message}
+    </p>
+  );
+}
+
+function PeriodStartField({
   periodStart,
   onPeriodStartChange,
+}: Pick<CreatePeriodFieldsProps, "periodStart" | "onPeriodStartChange">) {
+  return (
+    <div>
+      <FieldLabel htmlFor="period-start">
+        Period start <span className="text-[#991b1b]">*</span>
+      </FieldLabel>
+      <input
+        id="period-start"
+        type="date"
+        value={periodStart}
+        onChange={(e) => onPeriodStartChange(e.target.value)}
+        required
+        // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
+        autoFocus
+        data-testid="periods-create-start"
+        className={FIELD_CLASS}
+      />
+    </div>
+  );
+}
+
+function PeriodEndField({
   periodEnd,
   onPeriodEndChange,
   periodEndError,
+}: Pick<
+  CreatePeriodFieldsProps,
+  "periodEnd" | "onPeriodEndChange" | "periodEndError"
+>) {
+  return (
+    <div>
+      <FieldLabel htmlFor="period-end">
+        Period end <OptionalHint />
+      </FieldLabel>
+      <input
+        id="period-end"
+        type="date"
+        value={periodEnd}
+        onChange={(e) => onPeriodEndChange(e.target.value)}
+        aria-invalid={periodEndError !== null}
+        aria-describedby={periodEndError ? "period-end-error" : undefined}
+        data-testid="periods-create-end"
+        className={periodEndError ? INVALID_FIELD_CLASS : FIELD_CLASS}
+      />
+      {periodEndError && (
+        <FieldError
+          id="period-end-error"
+          testId="periods-end-error"
+          message={periodEndError}
+        />
+      )}
+    </div>
+  );
+}
+
+function DeadlineField({
   deadline,
   onDeadlineChange,
   deadlineError,
   deadlineClearHint,
+}: Pick<
+  CreatePeriodFieldsProps,
+  "deadline" | "onDeadlineChange" | "deadlineError" | "deadlineClearHint"
+>) {
+  return (
+    <div>
+      <FieldLabel htmlFor="period-deadline">
+        Deadline <OptionalHint />
+      </FieldLabel>
+      <input
+        id="period-deadline"
+        type="datetime-local"
+        value={deadline}
+        onChange={(e) => onDeadlineChange(e.target.value)}
+        aria-invalid={deadlineError !== null}
+        aria-describedby={deadlineError ? "period-deadline-error" : undefined}
+        data-testid="periods-create-deadline"
+        className={deadlineError ? INVALID_FIELD_CLASS : FIELD_CLASS}
+      />
+      {deadlineError && (
+        <FieldError
+          id="period-deadline-error"
+          testId="periods-deadline-error"
+          message={deadlineError}
+        />
+      )}
+      {!deadlineError && deadlineClearHint && (
+        <p
+          id="period-deadline-hint"
+          data-testid="periods-deadline-hint"
+          className="mt-1 text-xs text-[var(--color-muted-foreground)]"
+        >
+          {deadlineClearHint}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function WeekLabelField({
   weekLabel,
   onWeekLabelChange,
-}: CreatePeriodFieldsProps) {
+}: Pick<CreatePeriodFieldsProps, "weekLabel" | "onWeekLabelChange">) {
+  return (
+    <div>
+      <FieldLabel htmlFor="period-label">
+        Period label <OptionalHint />
+      </FieldLabel>
+      <input
+        id="period-label"
+        type="text"
+        value={weekLabel}
+        onChange={(e) => onWeekLabelChange(e.target.value)}
+        maxLength={MAX_WEEK_LABEL_LENGTH}
+        placeholder="e.g. Sprint 12 catch-up"
+        data-testid="periods-create-label"
+        className={FIELD_CLASS}
+      />
+    </div>
+  );
+}
+
+export function CreatePeriodFields(props: CreatePeriodFieldsProps) {
   return (
     <div className="mt-4 space-y-4">
-      <div>
-        <label
-          htmlFor="period-start"
-          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-        >
-          Period start <span className="text-[#991b1b]">*</span>
-        </label>
-        <input
-          id="period-start"
-          type="date"
-          value={periodStart}
-          onChange={(e) => onPeriodStartChange(e.target.value)}
-          required
-          // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
-          autoFocus
-          data-testid="periods-create-start"
-          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-        />
-      </div>
-      <div>
-        <label
-          htmlFor="period-end"
-          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-        >
-          Period end{" "}
-          <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
-            (optional)
-          </span>
-        </label>
-        <input
-          id="period-end"
-          type="date"
-          value={periodEnd}
-          onChange={(e) => onPeriodEndChange(e.target.value)}
-          aria-invalid={periodEndError !== null}
-          aria-describedby={periodEndError ? "period-end-error" : undefined}
-          data-testid="periods-create-end"
-          className={`w-full rounded-[var(--radius-sm)] border px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] ${periodEndError ? "border-red-400 bg-red-50 focus:border-red-400" : "border-[var(--color-border)] bg-white focus:border-[var(--color-starbucks-accent)]"}`}
-        />
-        {periodEndError && (
-          <p
-            id="period-end-error"
-            data-testid="periods-end-error"
-            className="mt-1 text-xs text-red-600"
-          >
-            {periodEndError}
-          </p>
-        )}
-      </div>
-      <div>
-        <label
-          htmlFor="period-deadline"
-          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-        >
-          Deadline{" "}
-          <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
-            (optional)
-          </span>
-        </label>
-        <input
-          id="period-deadline"
-          type="datetime-local"
-          value={deadline}
-          onChange={(e) => onDeadlineChange(e.target.value)}
-          aria-invalid={deadlineError !== null}
-          aria-describedby={deadlineError ? "period-deadline-error" : undefined}
-          data-testid="periods-create-deadline"
-          className={`w-full rounded-[var(--radius-sm)] border px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] ${deadlineError ? "border-red-400 focus:border-red-400 bg-red-50" : "border-[var(--color-border)] focus:border-[var(--color-starbucks-accent)] bg-white"}`}
-        />
-        {deadlineError && (
-          <p
-            id="period-deadline-error"
-            data-testid="periods-deadline-error"
-            className="mt-1 text-xs text-red-600"
-          >
-            {deadlineError}
-          </p>
-        )}
-        {!deadlineError && deadlineClearHint && (
-          <p
-            id="period-deadline-hint"
-            data-testid="periods-deadline-hint"
-            className="mt-1 text-xs text-[var(--color-muted-foreground)]"
-          >
-            {deadlineClearHint}
-          </p>
-        )}
-      </div>
-      <div>
-        <label
-          htmlFor="period-label"
-          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-        >
-          Period label{" "}
-          <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
-            (optional)
-          </span>
-        </label>
-        <input
-          id="period-label"
-          type="text"
-          value={weekLabel}
-          onChange={(e) => onWeekLabelChange(e.target.value)}
-          maxLength={MAX_WEEK_LABEL_LENGTH}
-          placeholder="e.g. Sprint 12 catch-up"
-          data-testid="periods-create-label"
-          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-        />
-      </div>
+      <PeriodStartField {...props} />
+      <PeriodEndField {...props} />
+      <DeadlineField {...props} />
+      <WeekLabelField {...props} />
     </div>
   );
 }

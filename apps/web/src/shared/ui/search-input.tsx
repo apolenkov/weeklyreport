@@ -12,6 +12,52 @@ interface SearchInputProps {
   readonly className?: string;
 }
 
+interface SearchComboboxProps {
+  readonly inputId: string;
+  readonly resultsId: string;
+  readonly activeOptionId: string | undefined;
+  readonly expanded: boolean;
+  readonly value: string;
+  readonly placeholder: string;
+  readonly onOpen: () => void;
+  readonly onValueChange: (next: string) => void;
+  readonly onKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+}
+
+function SearchCombobox({
+  inputId,
+  resultsId,
+  activeOptionId,
+  expanded,
+  value,
+  placeholder,
+  onOpen,
+  onValueChange,
+  onKeyDown,
+}: SearchComboboxProps) {
+  return (
+    <input
+      id={inputId}
+      type="search"
+      role="combobox"
+      aria-expanded={expanded}
+      aria-controls={resultsId}
+      aria-activedescendant={activeOptionId}
+      aria-autocomplete="list"
+      autoComplete="off"
+      value={value}
+      placeholder={placeholder}
+      onFocus={onOpen}
+      onChange={(e) => {
+        onValueChange(e.target.value);
+        onOpen();
+      }}
+      onKeyDown={onKeyDown}
+      className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-success)]"
+    />
+  );
+}
+
 export function SearchInput({
   scope,
   placeholder,
@@ -49,24 +95,16 @@ export function SearchInput({
       <label className="sr-only" htmlFor={inputId}>
         Search Reports
       </label>
-      <input
-        id={inputId}
-        type="search"
-        role="combobox"
-        aria-expanded={showResults}
-        aria-controls={resultsId}
-        aria-activedescendant={activeOptionId}
-        aria-autocomplete="list"
-        autoComplete="off"
+      <SearchCombobox
+        inputId={inputId}
+        resultsId={resultsId}
+        activeOptionId={activeOptionId}
+        expanded={showResults}
         value={q}
         placeholder={placeholder ?? "Search…"}
-        onFocus={() => setOpen(true)}
-        onChange={(e) => {
-          setQ(e.target.value);
-          setOpen(true);
-        }}
+        onOpen={() => setOpen(true)}
+        onValueChange={setQ}
         onKeyDown={handleKeyDown}
-        className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-success)]"
       />
 
       {showResults && (

@@ -121,15 +121,9 @@ function collectLeafProcedures(router: {
     record?: Record<string, unknown>;
   };
 }): [string, LeafProcedure][] {
-  const leaves: [string, LeafProcedure][] = [];
-
-  for (const [path, node] of Object.entries(router._def.procedures)) {
-    if (isLeafProcedure(node)) {
-      leaves.push([path, node]);
-    }
-  }
-
-  return leaves;
+  return Object.entries(router._def.procedures).filter(
+    (entry): entry is [string, LeafProcedure] => isLeafProcedure(entry[1]),
+  );
 }
 
 function findUncoveredProcedures(router: {
@@ -138,16 +132,9 @@ function findUncoveredProcedures(router: {
     record?: Record<string, unknown>;
   };
 }): string[] {
-  const leaves = collectLeafProcedures(router);
-  const offending: string[] = [];
-
-  for (const [path, leaf] of leaves) {
-    if (!isProcedureChainAllowed(leaf._def.middlewares)) {
-      offending.push(path);
-    }
-  }
-
-  return offending;
+  return collectLeafProcedures(router)
+    .filter(([, leaf]) => !isProcedureChainAllowed(leaf._def.middlewares))
+    .map(([path]) => path);
 }
 
 describe("default-deny coverage gate", () => {

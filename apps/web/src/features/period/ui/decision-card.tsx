@@ -56,19 +56,33 @@ function formatDeadline(iso: string | null): string {
   }
 }
 
+interface DecisionCardProps {
+  readonly decision: DecisionEntry;
+  readonly readOnly: boolean;
+  readonly publishedLocked: boolean;
+  readonly onEdit: (decision: DecisionEntry) => void;
+  readonly onDelete: (id: string) => void;
+}
+
+// Stage-less product decision is a legacy anomaly — announce "No stage set".
+// Activity-parented decisions are legitimately stage-less.
+function stagesAriaLabel(
+  stageTags: readonly string[],
+  activityId: string | null | undefined,
+): string {
+  if (stageTags.length > 0) return `Decision stages: ${stageTags.join(", ")}`;
+  return activityId != null
+    ? "Decision stages: Activity — no SDLC stage"
+    : "Decision stages: No stage set";
+}
+
 export function DecisionCard({
   decision,
   readOnly,
   publishedLocked,
   onEdit,
   onDelete,
-}: {
-  readonly decision: DecisionEntry;
-  readonly readOnly: boolean;
-  readonly publishedLocked: boolean;
-  readonly onEdit: (decision: DecisionEntry) => void;
-  readonly onDelete: (id: string) => void;
-}) {
+}: DecisionCardProps) {
   const stageTags = (
     decision.stageIds && decision.stageIds.length > 0
       ? decision.stageIds
@@ -97,72 +111,96 @@ export function DecisionCard({
           </span>
         )}
         {publishedLocked && <PublishedRecordMarker />}
-        {!readOnly && !decision.foreign ? (
-          <div className="ml-auto flex gap-1">
-            <button
-              type="button"
-              className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
-              onClick={() => onEdit(decision)}
-              aria-label={`Edit decision`}
-            >
-              <EditIcon />
-            </button>
-            {!publishedLocked && (
-              <button
-                type="button"
-                className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
-                onClick={() => onDelete(decision.id)}
-                aria-label={`Delete decision for ${decision.productName}`}
-              >
-                <DeleteIcon />
-              </button>
-            )}
-          </div>
-        ) : decision.foreign === true ? (
-          <div className="ml-auto flex gap-1">
-            <LockBadge authorName={decision.owner} />
-          </div>
-        ) : null}
+        <DecisionCardActions
+          decision={decision}
+          readOnly={readOnly}
+          publishedLocked={publishedLocked}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       </div>
-      <div className="space-y-2 text-sm text-[var(--color-foreground)]">
-        <div>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-            Decision
-          </span>
-          <div className="mt-0.5 break-words">
-            {decision.text || (
-              <em className="text-[var(--color-muted-foreground)]">
-                — pending
-              </em>
-            )}
-          </div>
-        </div>
-        <div>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-            Impact
-          </span>
-          <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
-            {decision.impact || "—"}
-          </div>
-        </div>
-      </div>
-      {/* Stage-less product decision is a legacy anomaly — show "No stage set".
-          Activity-parented decisions are legitimately stage-less (no chip). */}
+      <DecisionCardBody text={decision.text} impact={decision.impact} />
       <MetaRow
         authorName={decision.owner}
         stageTags={stageTags}
-        ariaLabel={`Decision stages: ${
-          stageTags.length > 0
-            ? stageTags.join(", ")
-            : decision.activityId != null
-              ? "Activity — no SDLC stage"
-              : "No stage set"
-        }`}
+        ariaLabel={stagesAriaLabel(stageTags, decision.activityId)}
         foreign={false}
         emptyStageChip={
           decision.activityId != null ? "none" : "no-stage-warning"
         }
       />
+    </div>
+  );
+}
+
+// Own editable decision gets edit/delete; a foreign one gets the owner lock
+// badge; a read-only own decision gets neither.
+function DecisionCardActions({
+  decision,
+  readOnly,
+  publishedLocked,
+  onEdit,
+  onDelete,
+}: DecisionCardProps) {
+  if (decision.foreign === true) {
+    return (
+      <div className="ml-auto flex gap-1">
+        <LockBadge authorName={decision.owner} />
+      </div>
+    );
+  }
+  if (readOnly) return null;
+  return (
+    <div className="ml-auto flex gap-1">
+      <button
+        type="button"
+        className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+        onClick={() => onEdit(decision)}
+        aria-label={`Edit decision`}
+      >
+        <EditIcon />
+      </button>
+      {!publishedLocked && (
+        <button
+          type="button"
+          className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
+          onClick={() => onDelete(decision.id)}
+          aria-label={`Delete decision for ${decision.productName}`}
+        >
+          <DeleteIcon />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function DecisionCardBody({
+  text,
+  impact,
+}: {
+  readonly text: string;
+  readonly impact: string;
+}) {
+  return (
+    <div className="space-y-2 text-sm text-[var(--color-foreground)]">
+      <div>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+          Decision
+        </span>
+        <div className="mt-0.5 break-words">
+          {text || (
+            <em className="text-[var(--color-muted-foreground)]">— pending</em>
+          )}
+        </div>
+      </div>
+      <div>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+          Impact
+        </span>
+        <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
+          {impact || "—"}
+        </div>
+      </div>
     </div>
   );
 }

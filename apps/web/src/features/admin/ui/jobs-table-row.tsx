@@ -39,6 +39,53 @@ interface JobsTableRowProps {
   readonly onRetry: (jobId: string) => void;
 }
 
+// Long failure reasons collapse to one truncated line; the toggle appears only
+// when truncation actually dropped something.
+function JobErrorCell({
+  jobId,
+  failedReason,
+  isExpanded,
+  onToggleExpand,
+}: {
+  readonly jobId: string;
+  readonly failedReason: string;
+  readonly isExpanded: boolean;
+  readonly onToggleExpand: (jobId: string) => void;
+}) {
+  const reason = failedReason || "—";
+  const truncated = truncate(reason, MAX_ERROR_REASON_LENGTH);
+  const canExpand = reason !== truncated;
+
+  return (
+    <td className="px-4 py-3 text-[var(--color-foreground)]">
+      <div
+        className={
+          isExpanded
+            ? "whitespace-pre-wrap break-words text-xs"
+            : "truncate text-xs"
+        }
+      >
+        {isExpanded ? reason : truncated}
+      </div>
+      {canExpand && (
+        <button
+          type="button"
+          onClick={() => onToggleExpand(jobId)}
+          className="mt-1 text-[11px] font-semibold text-[var(--color-starbucks-accent)] hover:underline"
+          aria-expanded={isExpanded}
+          aria-label={
+            isExpanded
+              ? `Collapse job ${jobId} error`
+              : `Expand job ${jobId} error`
+          }
+        >
+          {isExpanded ? "Collapse" : "Expand"}
+        </button>
+      )}
+    </td>
+  );
+}
+
 export function JobsTableRow({
   job,
   isExpanded,
@@ -47,10 +94,6 @@ export function JobsTableRow({
   onToggleExpand,
   onRetry,
 }: JobsTableRowProps) {
-  const reason = job.failedReason || "—";
-  const truncated = truncate(reason, MAX_ERROR_REASON_LENGTH);
-  const canExpand = reason !== truncated;
-
   return (
     <tr
       className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]"
@@ -63,32 +106,12 @@ export function JobsTableRow({
       <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
         {job.attemptsMade}
       </td>
-      <td className="px-4 py-3 text-[var(--color-foreground)]">
-        <div
-          className={
-            isExpanded
-              ? "whitespace-pre-wrap break-words text-xs"
-              : "truncate text-xs"
-          }
-        >
-          {isExpanded ? reason : truncated}
-        </div>
-        {canExpand && (
-          <button
-            type="button"
-            onClick={() => onToggleExpand(job.id)}
-            className="mt-1 text-[11px] font-semibold text-[var(--color-starbucks-accent)] hover:underline"
-            aria-expanded={isExpanded}
-            aria-label={
-              isExpanded
-                ? `Collapse job ${job.id} error`
-                : `Expand job ${job.id} error`
-            }
-          >
-            {isExpanded ? "Collapse" : "Expand"}
-          </button>
-        )}
-      </td>
+      <JobErrorCell
+        jobId={job.id}
+        failedReason={job.failedReason}
+        isExpanded={isExpanded}
+        onToggleExpand={onToggleExpand}
+      />
       <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
         {formatTimestamp(job.timestamp)}
       </td>

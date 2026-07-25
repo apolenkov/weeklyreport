@@ -110,6 +110,45 @@ export interface ReopenRespondFormProps {
 // Matches admin.respondReopenRequest note cap on the API.
 const MAX_REOPEN_NOTE_LENGTH = 500;
 
+function ReopenRespondActions({
+  isSaving,
+  onCancelRespond,
+  onReject,
+  onApprove,
+}: Pick<
+  ReopenRespondFormProps,
+  "isSaving" | "onCancelRespond" | "onReject" | "onApprove"
+>) {
+  return (
+    <div className="flex flex-wrap justify-end gap-2">
+      <button
+        type="button"
+        onClick={onCancelRespond}
+        disabled={isSaving}
+        className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        onClick={onReject}
+        disabled={isSaving}
+        className="btn-press inline-flex items-center rounded-[var(--radius-pill)] bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+      >
+        Reject
+      </button>
+      <button
+        type="button"
+        onClick={onApprove}
+        disabled={isSaving}
+        className="btn-press inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-primary)] disabled:opacity-50"
+      >
+        {isSaving ? "Saving…" : "Approve"}
+      </button>
+    </div>
+  );
+}
+
 export function ReopenRespondForm({
   requestId,
   note,
@@ -136,32 +175,12 @@ export function ReopenRespondForm({
         className="w-full resize-y rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm focus:border-[var(--color-starbucks-accent)] focus:outline-none"
         style={{ minHeight: "60px" }}
       />
-      <div className="flex flex-wrap justify-end gap-2">
-        <button
-          type="button"
-          onClick={onCancelRespond}
-          disabled={isSaving}
-          className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={onReject}
-          disabled={isSaving}
-          className="btn-press inline-flex items-center rounded-[var(--radius-pill)] bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
-        >
-          Reject
-        </button>
-        <button
-          type="button"
-          onClick={onApprove}
-          disabled={isSaving}
-          className="btn-press inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-primary)] disabled:opacity-50"
-        >
-          {isSaving ? "Saving…" : "Approve"}
-        </button>
-      </div>
+      <ReopenRespondActions
+        isSaving={isSaving}
+        onCancelRespond={onCancelRespond}
+        onReject={onReject}
+        onApprove={onApprove}
+      />
     </div>
   );
 }

@@ -47,6 +47,68 @@ const BADGE_STYLE: Record<VerdictBadge["kind"], { bg: string; fg: string }> = {
   none: { bg: "var(--color-muted)", fg: "var(--color-muted-foreground)" },
 };
 
+// A changes-requested verdict that unsubmitted the section outranks the plain
+// verdict copy — the lead getting the section back is the newsworthy part.
+function verdictToastMessage(result: {
+  unsubmitted: boolean;
+  verdict: ReviewVerdict;
+}): string {
+  if (result.unsubmitted) {
+    return "Changes requested — section returned to the lead";
+  }
+  return result.verdict === "approved"
+    ? "Section approved"
+    : "Changes requested";
+}
+
+const errorToastMessage = (err: unknown): string =>
+  err instanceof Error && err.message
+    ? err.message
+    : "Failed to record verdict";
+
+const APPROVE_BUTTON_CLASSNAME =
+  "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-success-foreground)] transition-colors hover:border-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50";
+
+const REQUEST_CHANGES_BUTTON_CLASSNAME =
+  "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)] transition-colors hover:border-[var(--color-destructive)] disabled:cursor-not-allowed disabled:opacity-50";
+
+function VerdictActions({
+  disabled,
+  onSubmit,
+}: {
+  readonly disabled: boolean;
+  readonly onSubmit: (verdict: ReviewVerdict) => void;
+}) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <button
+        type="button"
+        className={APPROVE_BUTTON_CLASSNAME}
+        onClick={() => onSubmit("approved")}
+        disabled={disabled}
+      >
+        Approve
+      </button>
+      <button
+        type="button"
+        className={REQUEST_CHANGES_BUTTON_CLASSNAME}
+        onClick={() => onSubmit("changes_requested")}
+        disabled={disabled}
+      >
+        Request changes
+      </button>
+    </span>
+  );
+}
+
+interface SectionVerdictControlProps {
+  readonly reportSectionId: string;
+  readonly version: number;
+  readonly reviews: readonly SectionReviewView[];
+  readonly canReview: boolean;
+  readonly onMutated: () => void;
+}
+
 // Verdict badge + Approve/Request-changes for one section. Reflects server
 // unsubmit; never mutates status or offers publish/lock (viewer-reviewer only).
 export function SectionVerdictControl({
@@ -55,13 +117,7 @@ export function SectionVerdictControl({
   reviews,
   canReview,
   onMutated,
-}: {
-  readonly reportSectionId: string;
-  readonly version: number;
-  readonly reviews: readonly SectionReviewView[];
-  readonly canReview: boolean;
-  readonly onMutated: () => void;
-}) {
+}: SectionVerdictControlProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
   const badge = resolveBadge(reviews);
@@ -69,22 +125,12 @@ export function SectionVerdictControl({
   const verdictMut = useMutation(
     trpc.review.verdict.mutationOptions({
       onSuccess: (result: { unsubmitted: boolean; verdict: ReviewVerdict }) => {
-        toast.success(
-          result.unsubmitted
-            ? "Changes requested — section returned to the lead"
-            : result.verdict === "approved"
-              ? "Section approved"
-              : "Changes requested",
-        );
+        toast.success(verdictToastMessage(result));
         invalidateReview(qc, trpc);
         onMutated();
       },
       onError: (err: unknown) => {
-        toast.error(
-          err instanceof Error && err.message
-            ? err.message
-            : "Failed to record verdict",
-        );
+        toast.error(errorToastMessage(err));
       },
     }),
   );
@@ -105,24 +151,7 @@ export function SectionVerdictControl({
         {badge.label}
       </span>
       {canReview ? (
-        <span className="flex items-center gap-1.5">
-          <button
-            type="button"
-            className="btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-success-foreground)] transition-colors hover:border-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={() => submit("approved")}
-            disabled={verdictMut.isPending}
-          >
-            Approve
-          </button>
-          <button
-            type="button"
-            className="btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)] transition-colors hover:border-[var(--color-destructive)] disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={() => submit("changes_requested")}
-            disabled={verdictMut.isPending}
-          >
-            Request changes
-          </button>
-        </span>
+        <VerdictActions disabled={verdictMut.isPending} onSubmit={submit} />
       ) : null}
     </div>
   );

@@ -18,6 +18,14 @@ import type { StageAssignment, StageStatus } from "../model/types";
 const ASSIGNEE_FONT_WEIGHT_MINE = 600;
 const ASSIGNEE_FONT_WEIGHT_OTHER = 400;
 
+const CHIP_BASE_CLASSES =
+  "relative w-full max-md:min-h-[var(--touch-target-min)] p-2 rounded-lg inline-flex items-center justify-center text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150";
+const CHIP_EDITABLE_CLASSES =
+  "cursor-pointer hover:opacity-80 hover:saturate-50 hover:shadow-[0_0_0_2.5px_rgba(0,0,0,0.12)]";
+const CHIP_EMPTY_CLASSES =
+  "cursor-pointer border-dashed animate-[sdlc-pulse_3s_infinite] motion-reduce:animate-none hover:animate-none hover:shadow-[0_0_0_2px_rgba(0,117,74,0.2)]";
+const CHIP_LOCKED_CLASSES = "cursor-not-allowed";
+
 interface StageChipProps {
   readonly stage: StageAssignment;
   readonly onStatusChange?: (stageName: string, newStatus: StageStatus) => void;
@@ -25,6 +33,61 @@ interface StageChipProps {
   // Pre-floor status: distinguishes explicit set vs own-risk floor; click toggles raw.
   // Defaults to floored status for read-only/head paths that pass none.
   readonly rawStatus?: StageStatus;
+}
+
+interface ChipAffordances {
+  readonly isEditable: boolean;
+  readonly isEmpty: boolean;
+  readonly isLocked: boolean;
+}
+
+function chipClassName({
+  isEditable,
+  isEmpty,
+  isLocked,
+}: ChipAffordances): string {
+  return [
+    CHIP_BASE_CLASSES,
+    isEditable && !isEmpty ? CHIP_EDITABLE_CLASSES : "",
+    isEmpty ? CHIP_EMPTY_CLASSES : "",
+    isLocked ? CHIP_LOCKED_CLASSES : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+// Own-risk floor = dashed sketch of the same hue; explicit set = solid.
+function chipBorderStyle(
+  isEmpty: boolean,
+  coveredByRisk: boolean,
+  borderColor: string,
+): string {
+  if (isEmpty) return `1.5px dashed var(--color-starbucks-accent)`;
+  return coveredByRisk
+    ? `1.5px dashed ${borderColor}`
+    : `1.5px solid ${borderColor}`;
+}
+
+// Suffix uses displayed status on own chips: at-risk/blocked → "by risk",
+// on-track → "status set". Foreign/locked chips carry no authoring intent.
+function coverageSuffixFor(stage: StageAssignment): string {
+  if (stage.ownership !== "mine") return "";
+  if (stage.status === "at-risk" || stage.status === "blocked") {
+    return " by risk";
+  }
+  return stage.status === "on-track" ? " — status set" : "";
+}
+
+function chipTitle(stage: StageAssignment, coverageSuffix: string): string {
+  if (stage.ownership === "locked") {
+    return [
+      `Locked — owned by ${stage.assignee ?? "another lead"}`,
+      "You don't have edit permissions",
+    ].join(" · ");
+  }
+  // Append outside ?? so an explicit tooltip still gets the coverage cue.
+  const baseTooltip = stage.tooltip ?? `${stage.stageName} · ${stage.status}`;
+  return `${baseTooltip}${coverageSuffix}`;
 }
 
 function StageIconGlyph({ stageName }: { readonly stageName: string }) {
@@ -38,6 +101,36 @@ function StageIconGlyph({ stageName }: { readonly stageName: string }) {
   );
 }
 
+function LockBadge() {
+  return (
+    <span
+      className="absolute -top-1.5 -right-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-[rgba(0,0,0,0.12)] bg-white"
+      aria-hidden="true"
+    >
+      <Lock className="h-[9px] w-[9px] text-[var(--color-muted-foreground)]" />
+    </span>
+  );
+}
+
+function AssigneeLabel({ stage }: { readonly stage: StageAssignment }) {
+  const isMine = stage.ownership === "mine";
+  return (
+    <span
+      className="text-[11px]"
+      style={{
+        color: isMine
+          ? "var(--color-starbucks-accent)"
+          : "var(--color-muted-foreground)",
+        fontWeight: isMine
+          ? ASSIGNEE_FONT_WEIGHT_MINE
+          : ASSIGNEE_FONT_WEIGHT_OTHER,
+      }}
+    >
+      {stage.assignee ?? "—"}
+    </span>
+  );
+}
+
 export function StageChip({
   stage,
   onStatusChange,
@@ -48,31 +141,13 @@ export function StageChip({
   const isEditable = stage.ownership === "mine" && !readOnly;
   const isLocked = stage.ownership === "locked";
   const isEmpty = stage.status === "empty" && isEditable;
-  // Covered/status-set only applies to own stages; locked chips carry no authoring intent.
-  const isMine = stage.ownership === "mine";
+  // Covered only applies to own stages; locked chips carry no authoring intent.
   const effectiveRawStatus = rawStatus ?? stage.status;
   const coveredByRisk =
-    isMine && effectiveRawStatus === "empty" && stage.coveredByOwnRisk === true;
-
-  const chipClasses = [
-    "relative w-full max-md:min-h-[var(--touch-target-min)] p-2 rounded-lg inline-flex items-center justify-center text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150",
-    isEditable && !isEmpty
-      ? "cursor-pointer hover:opacity-80 hover:saturate-50 hover:shadow-[0_0_0_2.5px_rgba(0,0,0,0.12)]"
-      : "",
-    isEmpty
-      ? "cursor-pointer border-dashed animate-[sdlc-pulse_3s_infinite] motion-reduce:animate-none hover:animate-none hover:shadow-[0_0_0_2px_rgba(0,117,74,0.2)]"
-      : "",
-    isLocked ? "cursor-not-allowed" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  // Own-risk floor = dashed sketch of the same hue; explicit set = solid.
-  const borderStyle = isEmpty
-    ? `1.5px dashed var(--color-starbucks-accent)`
-    : coveredByRisk
-      ? `1.5px dashed ${config.border}`
-      : `1.5px solid ${config.border}`;
+    stage.ownership === "mine" &&
+    effectiveRawStatus === "empty" &&
+    stage.coveredByOwnRisk === true;
+  const coverageSuffix = coverageSuffixFor(stage);
 
   // Toggle is on-track ⇄ empty off RAW status. Risk-floored chips still fire
   // the click; the sync bridge ignores it and points the lead at Risks.
@@ -83,41 +158,20 @@ export function StageChip({
     onStatusChange?.(stage.stageName, next);
   }
 
-  // Suffix uses displayed status on own chips: at-risk/blocked → "by risk", on-track → "status set".
-  const coverageSuffix = !isMine
-    ? ""
-    : stage.status === "at-risk" || stage.status === "blocked"
-      ? " by risk"
-      : stage.status === "on-track"
-        ? " — status set"
-        : "";
-  const ariaLabel = `${stage.stageName}: ${stage.status}${coverageSuffix}`;
-  const baseTooltip = stage.tooltip ?? `${stage.stageName} · ${stage.status}`;
-
-  const title = isLocked
-    ? [
-        `Locked — owned by ${stage.assignee ?? "another lead"}`,
-        "You don't have edit permissions",
-      ]
-        .filter(Boolean)
-        .join(" · ")
-    : // Append outside ?? so an explicit tooltip still gets the coverage cue.
-      `${baseTooltip}${coverageSuffix}`;
-
   return (
     <div className="flex flex-col items-center gap-1 min-w-[90px]">
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             type="button"
-            className={chipClasses}
+            className={chipClassName({ isEditable, isEmpty, isLocked })}
             style={{
               height: STAGE_CHIP_BOX_HEIGHT,
               background: config.bg,
               color: config.text,
-              border: borderStyle,
+              border: chipBorderStyle(isEmpty, coveredByRisk, config.border),
             }}
-            aria-label={ariaLabel}
+            aria-label={`${stage.stageName}: ${stage.status}${coverageSuffix}`}
             data-coverage={coveredByRisk ? "risk" : undefined}
             onClick={handleChipClick}
             aria-disabled={!isEditable}
@@ -126,34 +180,13 @@ export function StageChip({
             {/* Status via color only; lock is a corner badge, not a third inline icon. */}
             <StageIconGlyph stageName={stage.stageName} />
             {stageShortLabel(stage.stageName)}
-            {isLocked && (
-              <span
-                className="absolute -top-1.5 -right-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-[rgba(0,0,0,0.12)] bg-white"
-                aria-hidden="true"
-              >
-                <Lock className="h-[9px] w-[9px] text-[var(--color-muted-foreground)]" />
-              </span>
-            )}
+            {isLocked && <LockBadge />}
           </button>
         </TooltipTrigger>
-        <TooltipContent>{title}</TooltipContent>
+        <TooltipContent>{chipTitle(stage, coverageSuffix)}</TooltipContent>
       </Tooltip>
 
-      <span
-        className="text-[11px]"
-        style={{
-          color:
-            stage.ownership === "mine"
-              ? "var(--color-starbucks-accent)"
-              : "var(--color-muted-foreground)",
-          fontWeight:
-            stage.ownership === "mine"
-              ? ASSIGNEE_FONT_WEIGHT_MINE
-              : ASSIGNEE_FONT_WEIGHT_OTHER,
-        }}
-      >
-        {stage.assignee ?? "—"}
-      </span>
+      <AssigneeLabel stage={stage} />
     </div>
   );
 }

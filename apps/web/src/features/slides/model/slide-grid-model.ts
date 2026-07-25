@@ -85,12 +85,14 @@ export interface SlideGridInput {
 function uniqueProducts(
   projects: ReportSectionReadModel["projects"],
 ): ReportSectionReadModel["projects"] {
-  const seen = new Set<string>();
-  return projects.filter((project) => {
-    if (seen.has(project.projectId)) return false;
-    seen.add(project.projectId);
-    return true;
-  });
+  // First occurrence wins, so a duplicated product keeps the entry the rest of
+  // the model already references. Section product lists are a handful of rows.
+  return projects.filter(
+    (project, index) =>
+      projects.findIndex(
+        (candidate) => candidate.projectId === project.projectId,
+      ) === index,
+  );
 }
 
 interface ProductLookup {

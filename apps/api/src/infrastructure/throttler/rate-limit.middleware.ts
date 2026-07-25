@@ -54,28 +54,9 @@ function redisStoreFor(client: Redis, bucket: string): RedisStore {
   });
 }
 
-// Per-IP limiters for public ingress; Caddy-unmatched routes need their own
-// bucket. Test-mode limits come from TEST_MODE_LIMIT_PER_MINUTE above.
-export function createRateLimits(options: {
-  logger: AppLogger;
-  isTest: boolean;
-  env?: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT">;
-  redis?: Redis;
-}): {
-  authLimiter: RequestHandler;
-  trpcLimiter: RequestHandler;
-  vitalsLimiter: RequestHandler;
-  clientLogsLimiter: RequestHandler;
-} {
-  const { logger, isTest, env, redis } = options;
-
-  // Production uses Redis so the window survives restart; isTest / env-less
-  // unit suites keep MemoryStore. Optional injected `redis` for integration tests.
-  const client = isTest ? undefined : (redis ?? buildStoreClient(env));
-  const storeFor = (bucket: string): Store | undefined =>
-    client ? redisStoreFor(client, bucket) : undefined;
-
-  const baseConfig: Partial<Options> = {
+// `message` doubles as the bucket label the handler reports to logs/metrics.
+function buildBaseConfig(logger: AppLogger): Partial<Options> {
+  return {
     windowMs: RATE_LIMIT_WINDOW_MS,
     standardHeaders: RATE_LIMIT_STANDARD_HEADERS,
     legacyHeaders: false,
@@ -109,36 +90,44 @@ export function createRateLimits(options: {
       });
     },
   };
+}
 
-  const authLimiter = rateLimit({
-    ...baseConfig,
-    limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : AUTH_LIMIT_PER_MINUTE,
-    message: "auth",
-    store: storeFor("auth"),
-  });
+// Per-IP limiters for public ingress; Caddy-unmatched routes need their own
+// bucket. Test-mode limits come from TEST_MODE_LIMIT_PER_MINUTE above.
+export function createRateLimits(options: {
+  logger: AppLogger;
+  isTest: boolean;
+  env?: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT">;
+  redis?: Redis;
+}): {
+  authLimiter: RequestHandler;
+  trpcLimiter: RequestHandler;
+  vitalsLimiter: RequestHandler;
+  clientLogsLimiter: RequestHandler;
+} {
+  const { logger, isTest, env, redis } = options;
 
-  const trpcLimiter = rateLimit({
-    ...baseConfig,
-    limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : TRPC_LIMIT_PER_MINUTE,
-    message: "trpc",
-    store: storeFor("trpc"),
-  });
+  // Production uses Redis so the window survives restart; isTest / env-less
+  // unit suites keep MemoryStore. Optional injected `redis` for integration tests.
+  const client = isTest ? undefined : (redis ?? buildStoreClient(env));
+  const storeFor = (bucket: string): Store | undefined =>
+    client ? redisStoreFor(client, bucket) : undefined;
 
-  // 60/min/IP covers a page's vitals beacons while capping anonymous abuse.
-  const vitalsLimiter = rateLimit({
-    ...baseConfig,
-    limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : VITALS_LIMIT_PER_MINUTE,
-    message: "vitals",
-    store: storeFor("vitals"),
-  });
+  const baseConfig = buildBaseConfig(logger);
+  const limiterFor = (bucket: string, limit: number): RequestHandler =>
+    rateLimit({
+      ...baseConfig,
+      limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : limit,
+      message: bucket,
+      store: storeFor(bucket),
+    });
 
-  // Public, Caddy-unmatched ingress: own per-IP bucket caps app.log floods.
-  const clientLogsLimiter = rateLimit({
-    ...baseConfig,
-    limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : CLIENT_LOGS_LIMIT_PER_MINUTE,
-    message: "client-logs",
-    store: storeFor("client-logs"),
-  });
-
-  return { authLimiter, trpcLimiter, vitalsLimiter, clientLogsLimiter };
+  return {
+    authLimiter: limiterFor("auth", AUTH_LIMIT_PER_MINUTE),
+    trpcLimiter: limiterFor("trpc", TRPC_LIMIT_PER_MINUTE),
+    // 60/min/IP covers a page's vitals beacons while capping anonymous abuse.
+    vitalsLimiter: limiterFor("vitals", VITALS_LIMIT_PER_MINUTE),
+    // Public, Caddy-unmatched ingress: own per-IP bucket caps app.log floods.
+    clientLogsLimiter: limiterFor("client-logs", CLIENT_LOGS_LIMIT_PER_MINUTE),
+  };
 }

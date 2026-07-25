@@ -64,6 +64,46 @@ function CommentComposerForm({
   );
 }
 
+interface RecordCommentThreadProps {
+  readonly comments: readonly RecordCommentView[];
+  // Self-delete needs current canReview (no dead affordance after revoke);
+  // admin deletes anywhere.
+  readonly canDelete: (comment: RecordCommentView) => boolean;
+  readonly onDelete: (commentId: string) => void;
+  readonly isDeletePending: boolean;
+}
+
+function RecordCommentThread({
+  comments,
+  canDelete,
+  onDelete,
+  isDeletePending,
+}: RecordCommentThreadProps) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
+        {comments.length} review {comments.length === 1 ? "note" : "notes"}
+      </span>
+      <ReviewCommentList
+        comments={comments}
+        renderAction={(comment) =>
+          canDelete(comment) ? (
+            <button
+              type="button"
+              className="inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] text-[10px] font-semibold text-[var(--color-destructive)] underline-offset-2 hover:underline disabled:opacity-50"
+              onClick={() => onDelete(comment.id)}
+              disabled={isDeletePending}
+              aria-label="Delete comment"
+            >
+              Delete
+            </button>
+          ) : null
+        }
+      />
+    </div>
+  );
+}
+
 // Designated-reviewer comments on one record; canReview is the affordance gate
 // only — the mutation re-derives group server-side (never the security boundary).
 export function RecordComments({
@@ -100,29 +140,14 @@ export function RecordComments({
     // minimal inset so the block stacks under the record on phones.
     <div className="mt-1.5 flex flex-col gap-2 pl-2 md:pl-[calc(20px+3px+124px+3.5rem)]">
       {hasComments ? (
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
-            {comments.length} review {comments.length === 1 ? "note" : "notes"}
-          </span>
-          <ReviewCommentList
-            comments={comments}
-            renderAction={(comment) =>
-              // Self-delete needs current canReview (no dead affordance after
-              // revoke); admin deletes anywhere.
-              isAdmin || (canReview && comment.reviewerId === currentUserId) ? (
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] text-[10px] font-semibold text-[var(--color-destructive)] underline-offset-2 hover:underline disabled:opacity-50"
-                  onClick={() => deleteComment(comment.id)}
-                  disabled={isDeletePending}
-                  aria-label="Delete comment"
-                >
-                  Delete
-                </button>
-              ) : null
-            }
-          />
-        </div>
+        <RecordCommentThread
+          comments={comments}
+          canDelete={(comment) =>
+            isAdmin || (canReview && comment.reviewerId === currentUserId)
+          }
+          onDelete={deleteComment}
+          isDeletePending={isDeletePending}
+        />
       ) : null}
 
       {canCompose ? (

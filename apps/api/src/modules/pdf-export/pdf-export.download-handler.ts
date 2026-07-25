@@ -1,6 +1,7 @@
 import { createReadStream, existsSync } from "node:fs";
 import { resolve, sep } from "node:path";
 
+import type { UserSession } from "@customreport/shared";
 import type { Request, RequestHandler, Response } from "express";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
@@ -39,37 +40,76 @@ export function createPdfDownloadHandler(
   return (req: Request, res: Response) => handlePdfDownload(req, res, deps);
 }
 
+// Single human-session chokepoint: rejects a missing/invalid/revoked/deactivated
+// token AND the PDF-worker / dev-mode fallbacks the full context chain honors.
+// The cookie-less short-circuit stays ahead of `resolveHumanSession` so an
+// anonymous request never reaches token verification.
+function resolveDownloadSession(
+  req: Request,
+  deps: PdfDownloadDeps,
+): Promise<UserSession | null> {
+  const cookies = req.cookies as Record<string, string> | undefined;
+  const token = cookies?.[resolveSessionCookieName(process.env)];
+  if (!token) {
+    return Promise.resolve(null);
+  }
+  return resolveHumanSession(token, {
+    verifySessionToken: deps.verifySessionToken,
+    sessionRevocation: deps.sessionRevocation,
+    prisma: deps.prisma,
+  });
+}
+
+// Parse the jobId from the `{jobId}.pdf` path param and require a UUID, so the
+// disk path is always derived from a validated id (never the persisted
+// string) and cannot traverse out of pdfDir.
+function parseJobId(req: Request): string | null {
+  const fileParam: unknown = req.params.file;
+  const file = typeof fileParam === "string" ? fileParam : "";
+  const jobId = file.endsWith(".pdf") ? file.slice(0, -".pdf".length) : "";
+  return JOB_ID_RE.test(jobId) ? jobId : null;
+}
+
+// Containment check against the resolved pdfDir; `null` means "do not serve".
+function resolveArtifactPath(pdfDir: string, jobId: string): string | null {
+  const baseDir = resolve(pdfDir);
+  const filePath = resolve(baseDir, `${jobId}.pdf`);
+  if (!filePath.startsWith(baseDir + sep) || !existsSync(filePath)) {
+    return null;
+  }
+  return filePath;
+}
+
+function streamArtifact(res: Response, filePath: string): void {
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", "attachment");
+  const stream = createReadStream(filePath);
+  stream.on("error", () => {
+    // A mid-stream read failure after `existsSync` passed is rare, but an
+    // unhandled stream 'error' would crash the process: 500 if nothing was
+    // sent yet, otherwise tear down the half-written response.
+    if (res.headersSent) {
+      res.destroy();
+    } else {
+      res.status(HTTP.serverError).end();
+    }
+  });
+  stream.pipe(res);
+}
+
 export async function handlePdfDownload(
   req: Request,
   res: Response,
   deps: PdfDownloadDeps,
 ): Promise<void> {
-  const cookies = req.cookies as Record<string, string> | undefined;
-  const token = cookies?.[resolveSessionCookieName(process.env)];
-  if (!token) {
-    res.status(HTTP.unauthorized).end();
-    return;
-  }
-
-  // Single human-session chokepoint: rejects an invalid/revoked/deactivated
-  // token AND the PDF-worker / dev-mode fallbacks the full context chain honors.
-  const session = await resolveHumanSession(token, {
-    verifySessionToken: deps.verifySessionToken,
-    sessionRevocation: deps.sessionRevocation,
-    prisma: deps.prisma,
-  });
+  const session = await resolveDownloadSession(req, deps);
   if (!session) {
     res.status(HTTP.unauthorized).end();
     return;
   }
 
-  // Parse the jobId from the `{jobId}.pdf` path param and require a UUID, so the
-  // disk path is always derived from a validated id (never the persisted
-  // string) and cannot traverse out of pdfDir.
-  const fileParam: unknown = req.params.file;
-  const file = typeof fileParam === "string" ? fileParam : "";
-  const jobId = file.endsWith(".pdf") ? file.slice(0, -".pdf".length) : "";
-  if (!JOB_ID_RE.test(jobId)) {
+  const jobId = parseJobId(req);
+  if (!jobId) {
     res.status(HTTP.notFound).end();
     return;
   }
@@ -91,25 +131,11 @@ export async function handlePdfDownload(
     return;
   }
 
-  const baseDir = resolve(deps.pdfDir);
-  const filePath = resolve(baseDir, `${jobId}.pdf`);
-  if (!filePath.startsWith(baseDir + sep) || !existsSync(filePath)) {
+  const filePath = resolveArtifactPath(deps.pdfDir, jobId);
+  if (!filePath) {
     res.status(HTTP.notFound).end();
     return;
   }
 
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", "attachment");
-  const stream = createReadStream(filePath);
-  stream.on("error", () => {
-    // A mid-stream read failure after `existsSync` passed is rare, but an
-    // unhandled stream 'error' would crash the process: 500 if nothing was
-    // sent yet, otherwise tear down the half-written response.
-    if (res.headersSent) {
-      res.destroy();
-    } else {
-      res.status(HTTP.serverError).end();
-    }
-  });
-  stream.pipe(res);
+  streamArtifact(res, filePath);
 }

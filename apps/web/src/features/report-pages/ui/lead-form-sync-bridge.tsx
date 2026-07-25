@@ -143,24 +143,11 @@ interface LeadFormSyncBridgeProviderProps {
   readonly children: ReactNode;
 }
 
-function Provider({
-  products,
-  risks,
-  onProductsChange,
-  onRisksChange,
-  readOnly = false,
-  activities,
-  stagesForProduct,
-  sectionAuthorName,
-  risksAddSignal,
-  crossAuthors,
-  visibilityMode,
-  displayRisks,
-  externalRiskPrefill,
-  children,
-}: LeadFormSyncBridgeProviderProps) {
-  // RisksSection consumes the chip-raise payload. Sharing it with the external
-  // quick-add and item-alarm channel keeps one canonical dialog-open source.
+// RisksSection consumes the chip-raise payload. Sharing it with the external
+// quick-add and item-alarm channel keeps one canonical dialog-open source.
+function useExternalRiskPrefill(
+  externalRiskPrefill: RiskPrefillRequest | null | undefined,
+): RiskPrefillRequest | null {
   const [riskPrefill, setRiskPrefill] = useState<RiskPrefillRequest | null>(
     null,
   );
@@ -173,6 +160,26 @@ function Provider({
     lastExternalSignal.current = externalRiskPrefill.signal;
     setRiskPrefill(externalRiskPrefill);
   }, [externalRiskPrefill]);
+
+  return riskPrefill;
+}
+
+type BridgeHandlers = Pick<
+  BridgeContextValue,
+  "handleStageStatusChange" | "handleRisksChange"
+>;
+
+function useBridgeHandlers(
+  props: LeadFormSyncBridgeProviderProps,
+): BridgeHandlers {
+  const {
+    products,
+    risks,
+    readOnly = false,
+    onProductsChange,
+    onRisksChange,
+  } = props;
+
   const sync = useStatusRiskSync({
     onProductsChange: (updater) => {
       const next = typeof updater === "function" ? updater(products) : updater;
@@ -207,7 +214,30 @@ function Provider({
     [readOnly, onRisksChange],
   );
 
-  const value = useMemo<BridgeContextValue>(
+  return { handleStageStatusChange, handleRisksChange };
+}
+
+// Optional entries are spread in only when present: consumers branch on
+// `!== undefined`, so an absent key and a present-but-undefined key differ.
+function useBridgeContextValue(
+  props: LeadFormSyncBridgeProviderProps,
+  riskPrefill: RiskPrefillRequest | null,
+  { handleStageStatusChange, handleRisksChange }: BridgeHandlers,
+): BridgeContextValue {
+  const {
+    products,
+    risks,
+    readOnly = false,
+    activities,
+    stagesForProduct,
+    sectionAuthorName,
+    risksAddSignal,
+    crossAuthors,
+    visibilityMode,
+    displayRisks,
+  } = props;
+
+  return useMemo<BridgeContextValue>(
     () => ({
       products,
       risks,
@@ -239,9 +269,17 @@ function Provider({
       handleRisksChange,
     ],
   );
+}
+
+function Provider(props: LeadFormSyncBridgeProviderProps) {
+  const riskPrefill = useExternalRiskPrefill(props.externalRiskPrefill);
+  const handlers = useBridgeHandlers(props);
+  const value = useBridgeContextValue(props, riskPrefill, handlers);
 
   return (
-    <BridgeContext.Provider value={value}>{children}</BridgeContext.Provider>
+    <BridgeContext.Provider value={value}>
+      {props.children}
+    </BridgeContext.Provider>
   );
 }
 

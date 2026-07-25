@@ -211,6 +211,25 @@ async function upsertReminderRules(
   }
 }
 
+// Policy ids the snapshot itself already wrote a rule row for, per report.
+// The applicator skips these pairs so a restored rule status is not clobbered;
+// a report absent from the map yields `undefined`, meaning "skip nothing".
+function groupRestoredPolicyIdsByReport(
+  reminderRules: AdminSnapshot["reminderRules"],
+): ReadonlyMap<string, ReadonlySet<string>> {
+  return reminderRules.reduce<ReadonlyMap<string, ReadonlySet<string>>>(
+    (byReport, rule) => {
+      if (!rule.reportId || !rule.policyId) return byReport;
+      const merged = new Set([
+        ...(byReport.get(rule.reportId) ?? []),
+        rule.policyId,
+      ]);
+      return new Map(byReport).set(rule.reportId, merged);
+    },
+    new Map(),
+  );
+}
+
 // Additive-only whole-snapshot restore in one txn; removals use remove* primitives.
 // Policy applicator runs post-commit on newly created periods.
 // Spec: openspec/specs/admin-snapshot-restore
@@ -245,14 +264,9 @@ export async function saveSnapshot(
   // snapshot already wrote (would clobber restored status) and pass `now` so
   // already-elapsed instants from an old snapshot are not re-dispatched.
   if (policyApplicator) {
-    const restoredPolicyIdsByReport = new Map<string, Set<string>>();
-    for (const rule of snapshot.reminderRules) {
-      if (!rule.reportId || !rule.policyId) continue;
-      const forReport =
-        restoredPolicyIdsByReport.get(rule.reportId) ?? new Set<string>();
-      forReport.add(rule.policyId);
-      restoredPolicyIdsByReport.set(rule.reportId, forReport);
-    }
+    const restoredPolicyIdsByReport = groupRestoredPolicyIdsByReport(
+      snapshot.reminderRules,
+    );
     const now = new Date();
     for (const newPeriod of newlyCreatedPeriods) {
       await policyApplicator.applyToPeriod(

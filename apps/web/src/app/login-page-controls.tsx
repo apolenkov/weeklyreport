@@ -10,9 +10,12 @@ import {
   ROLE_LABEL,
 } from "./login-page-roles";
 
+// Hairline used across the login surfaces. No packages/ui token carries it —
+// the nearest, --color-border, is a different colour (#ccd4c8).
+const LOGIN_HAIRLINE_CLASSNAME = "border-[#ece8e2]";
+
 // Shared min-height (~role-picker height) so AUTH_STUB card swaps do not CLS.
-const STUB_CARD_CLASSNAME =
-  "min-h-[113px] rounded-md border border-[#ece8e2] bg-[var(--color-surface-empty)] px-3 py-2.5 text-left";
+const STUB_CARD_CLASSNAME = `min-h-[113px] rounded-md border ${LOGIN_HAIRLINE_CLASSNAME} bg-[var(--color-surface-empty)] px-3 py-2.5 text-left`;
 
 function RoleOptionsList() {
   return (
@@ -24,7 +27,7 @@ function RoleOptionsList() {
         <li key={role}>
           <a
             href={devLoginHref(role, DEV_EMAIL_FOR_ROLE[role])}
-            className="block rounded border border-[#ece8e2] bg-white px-2 py-1.5 text-center text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
+            className={`block rounded border ${LOGIN_HAIRLINE_CLASSNAME} bg-white px-2 py-1.5 text-center text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]`}
             data-testid={`last-role-option-${role}`}
           >
             {ROLE_LABEL[role]}

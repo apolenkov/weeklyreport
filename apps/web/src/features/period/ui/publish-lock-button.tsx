@@ -17,6 +17,98 @@ interface PublishLockButtonProps {
   readonly publishDisabledReason?: string;
 }
 
+// Published periods expose reopen instead of publish; the confirm state lives
+// here because this control only ever mounts on that branch.
+function ReopenPeriodControl({
+  onReopen,
+  isPending,
+}: {
+  readonly onReopen: () => void;
+  readonly isPending: boolean;
+}) {
+  const [showReopenDialog, setShowReopenDialog] = useState(false);
+
+  function handleConfirmReopen() {
+    setShowReopenDialog(false);
+    onReopen();
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={() => setShowReopenDialog(true)}
+        disabled={isPending}
+        aria-label="Reopen Period"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="h-4 w-4"
+          stroke="currentColor"
+          fill="none"
+          strokeWidth={2}
+          aria-hidden="true"
+        >
+          <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+          <path d="M21 3v5h-5" />
+          <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+          <path d="M3 21v-5h5" />
+        </svg>
+        Reopen Period
+      </button>
+
+      <ConfirmDeleteDialog
+        open={showReopenDialog}
+        title="Reopen this period?"
+        preview="The published report will be unlocked."
+        subtitle="Leads will be able to edit their sections again."
+        consequence="The current published version will be replaced when you publish again."
+        confirmLabel="Reopen"
+        reversible
+        onConfirm={handleConfirmReopen}
+        onCancel={() => setShowReopenDialog(false)}
+      />
+    </>
+  );
+}
+
+function PublishConfirmDialog({
+  open,
+  pendingCount,
+  totalLeads,
+  onConfirm,
+  onCancel,
+}: {
+  readonly open: boolean;
+  readonly pendingCount: number;
+  readonly totalLeads: number;
+  readonly onConfirm: () => void;
+  readonly onCancel: () => void;
+}) {
+  return (
+    <ConfirmDeleteDialog
+      open={open}
+      title="Publish & Lock Report?"
+      preview={
+        pendingCount > 0
+          ? `${pendingCount} of ${totalLeads} leads haven't submitted yet.`
+          : `All ${totalLeads} leads have submitted. The report is ready to publish.`
+      }
+      subtitle={
+        pendingCount > 0
+          ? "Their sections will appear empty in the published report."
+          : undefined
+      }
+      consequence="Once published, all lead forms will be locked and no further edits can be made for this period."
+      confirmLabel={pendingCount > 0 ? "Publish Anyway" : "Publish & Lock"}
+      tone="primary"
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+    />
+  );
+}
+
 export function PublishLockButton({
   pendingCount,
   totalLeads,
@@ -28,7 +120,6 @@ export function PublishLockButton({
   publishDisabledReason = "Publish requires at least one submitted section.",
 }: PublishLockButtonProps) {
   const [showDialog, setShowDialog] = useState(false);
-  const [showReopenDialog, setShowReopenDialog] = useState(false);
 
   function handleConfirm() {
     if (!canPublish) return;
@@ -36,50 +127,8 @@ export function PublishLockButton({
     onPublish();
   }
 
-  function handleConfirmReopen() {
-    setShowReopenDialog(false);
-    onReopen();
-  }
-
   if (periodStatus === "published") {
-    return (
-      <>
-        <button
-          type="button"
-          className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={() => setShowReopenDialog(true)}
-          disabled={isPending}
-          aria-label="Reopen Period"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            className="h-4 w-4"
-            stroke="currentColor"
-            fill="none"
-            strokeWidth={2}
-            aria-hidden="true"
-          >
-            <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-            <path d="M21 3v5h-5" />
-            <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-            <path d="M3 21v-5h5" />
-          </svg>
-          Reopen Period
-        </button>
-
-        <ConfirmDeleteDialog
-          open={showReopenDialog}
-          title="Reopen this period?"
-          preview="The published report will be unlocked."
-          subtitle="Leads will be able to edit their sections again."
-          consequence="The current published version will be replaced when you publish again."
-          confirmLabel="Reopen"
-          reversible
-          onConfirm={handleConfirmReopen}
-          onCancel={() => setShowReopenDialog(false)}
-        />
-      </>
-    );
+    return <ReopenPeriodControl onReopen={onReopen} isPending={isPending} />;
   }
 
   const publishDisabled = isPending || !canPublish;
@@ -99,22 +148,10 @@ export function PublishLockButton({
         {canPublish ? "Publish & Lock" : "Nothing to publish"}
       </button>
 
-      <ConfirmDeleteDialog
+      <PublishConfirmDialog
         open={showDialog && canPublish}
-        title="Publish & Lock Report?"
-        preview={
-          pendingCount > 0
-            ? `${pendingCount} of ${totalLeads} leads haven't submitted yet.`
-            : `All ${totalLeads} leads have submitted. The report is ready to publish.`
-        }
-        subtitle={
-          pendingCount > 0
-            ? "Their sections will appear empty in the published report."
-            : undefined
-        }
-        consequence="Once published, all lead forms will be locked and no further edits can be made for this period."
-        confirmLabel={pendingCount > 0 ? "Publish Anyway" : "Publish & Lock"}
-        tone="primary"
+        pendingCount={pendingCount}
+        totalLeads={totalLeads}
         onConfirm={handleConfirm}
         onCancel={() => setShowDialog(false)}
       />

@@ -59,37 +59,43 @@ export class AutoArchiverScheduler {
 
     const archivedIds: string[] = [];
     for (const candidate of candidates) {
-      try {
-        // Compare-and-set on periodStatus so a reopen between scan and write
-        // drops this update to zero rows (see period-dual-state).
-        const { count } = await this.prisma.report.updateMany({
-          where: {
-            id: candidate.id,
-            archived: false,
-            periodStatus: "published",
-          },
-          data: buildTransition("autoArchive", {}),
-        });
-        if (count === 0) {
-          this.logger.log(
-            `auto-archive skipped period=${candidate.id}: reopened or archived by a concurrent writer`,
-          );
-          continue;
-        }
-        this.logger.log(`auto-archive period=${candidate.id}`);
-        this.auditLogger.periodAutoArchive({
-          periodId: candidate.id,
-          from: "published",
-          to: "archived",
-        });
-        archivedIds.push(candidate.id);
-      } catch (error) {
-        this.logger.error(
-          `auto-archive failed period=${candidate.id}: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
+      // Sequential by design: one guarded write per candidate, and a failure
+      // must not abort the remaining rows.
+      const archivedId = await this.archiveCandidate(candidate.id);
+      if (archivedId !== null) archivedIds.push(archivedId);
     }
 
     return { archived: true, periodIds: archivedIds };
+  }
+
+  // Returns the periodId when this run is the one that archived it; null when
+  // a concurrent writer won the race or the write failed (logged, never thrown).
+  private async archiveCandidate(periodId: string): Promise<string | null> {
+    try {
+      // Compare-and-set on periodStatus so a reopen between scan and write
+      // drops this update to zero rows (see period-dual-state).
+      const { count } = await this.prisma.report.updateMany({
+        where: { id: periodId, archived: false, periodStatus: "published" },
+        data: buildTransition("autoArchive", {}),
+      });
+      if (count === 0) {
+        this.logger.log(
+          `auto-archive skipped period=${periodId}: reopened or archived by a concurrent writer`,
+        );
+        return null;
+      }
+      this.logger.log(`auto-archive period=${periodId}`);
+      this.auditLogger.periodAutoArchive({
+        periodId,
+        from: "published",
+        to: "archived",
+      });
+      return periodId;
+    } catch (error) {
+      this.logger.error(
+        `auto-archive failed period=${periodId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return null;
+    }
   }
 }

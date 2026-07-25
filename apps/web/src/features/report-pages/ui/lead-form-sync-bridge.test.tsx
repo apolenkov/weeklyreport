@@ -143,7 +143,7 @@ function Harness({
 }
 
 describe("LeadFormSyncBridge", () => {
-  it("Test 1: renders Pipeline + Risks with the same data passed to the Provider", () => {
+  it("renders Pipeline + Risks with the same data passed to the Provider", () => {
     const product = buildProduct();
     const risk: RiskEntry = {
       id: "r1",
@@ -226,7 +226,7 @@ describe("LeadFormSyncBridge", () => {
     ).toBeInTheDocument();
   });
 
-  it("Test 3: clicking Edit on a risk opens the RiskEditDialog (edit surface for impact/mitigation)", async () => {
+  it("clicking Edit on a risk opens the RiskEditDialog (edit surface for impact/mitigation)", async () => {
     const user = userEvent.setup();
     const product = buildProduct();
     const risk: RiskEntry = {
@@ -254,7 +254,7 @@ describe("LeadFormSyncBridge", () => {
     expect(textbox).toBeInTheDocument();
   });
 
-  it("Test 4: when readOnly=true, stage chips are disabled and risks render as preview cards without edit/add controls", () => {
+  it("when readOnly=true, stage chips are disabled and risks render as preview cards without edit/add controls", () => {
     const product = buildProduct();
     const risk: RiskEntry = {
       id: "r1",

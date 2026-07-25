@@ -14,100 +14,110 @@ export interface RemindersRouterDeps {
   weeklyReportService: Pick<WeeklyReportService, "getCurrentEditableId">;
 }
 
+function createExecuteProcedure(deps: RemindersRouterDeps) {
+  return headProcedure
+    .input(
+      z.object({
+        ruleId: z.uuid(),
+        recipientEmail: z.email(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        await deps.remindersService.scope.authorizeExecute(
+          ctx.session,
+          input.ruleId,
+          input.recipientEmail,
+        );
+        return await deps.remindersService.requestReminderExecution(
+          input.ruleId,
+          input.recipientEmail,
+        );
+      } catch (error) {
+        throw mapDomainError(error);
+      }
+    });
+}
+
+function createListExecutionsProcedure(deps: RemindersRouterDeps) {
+  return headProcedure
+    .input(
+      z
+        .object({ ruleId: z.uuid() })
+        .extend(paginationInputSchema.partial().shape),
+    )
+    .query(async ({ input, ctx }) => {
+      try {
+        const { ruleId, cursor, limit } = input;
+        const pagination =
+          cursor || limit
+            ? { cursor, limit: limit ?? DEFAULT_EXECUTION_LIST_LIMIT }
+            : undefined;
+
+        // Non-admins see only their group's recipient rows. The allowlist
+        // is resolved here and applied inside the service BEFORE pagination
+        // so out-of-scope rows cannot consume page size or drive nextCursor.
+        const recipientAllowlist =
+          await deps.remindersService.scope.resolveExecutionsRecipientAllowlist(
+            ctx.session,
+            ruleId,
+          );
+
+        return await deps.remindersService.listExecutions(
+          ruleId,
+          pagination,
+          recipientAllowlist,
+        );
+      } catch (error) {
+        throw mapDomainError(error);
+      }
+    });
+}
+
+// Client never sees lead emails; optional leadId scopes to one author.
+function createDispatchPendingProcedure(deps: RemindersRouterDeps) {
+  return headProcedure
+    .input(
+      z.object({
+        reportId: z.uuid(),
+        ruleId: z.uuid().optional(),
+        leadId: z.uuid().optional(),
+      }),
+    )
+    .output(
+      z.object({
+        dispatched: z.number().int().nonnegative(),
+        alreadySent: z.number().int().nonnegative(),
+        skipped: z.number().int().nonnegative(),
+        reason: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const currentEditableReportId =
+          await deps.weeklyReportService.getCurrentEditableId();
+        if (currentEditableReportId !== input.reportId) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "report-not-active",
+          });
+        }
+        return await deps.remindersService.scope.dispatchPendingReminders(
+          ctx.session,
+          input.reportId,
+          input.ruleId,
+          input.leadId,
+        );
+      } catch (error) {
+        throw mapDomainError(error);
+      }
+    });
+}
+
 export function createRemindersRouter(deps: RemindersRouterDeps) {
   return router({
-    execute: headProcedure
-      .input(
-        z.object({
-          ruleId: z.uuid(),
-          recipientEmail: z.email(),
-        }),
-      )
-      .mutation(async ({ input, ctx }) => {
-        try {
-          await deps.remindersService.scope.authorizeExecute(
-            ctx.session,
-            input.ruleId,
-            input.recipientEmail,
-          );
-          return await deps.remindersService.requestReminderExecution(
-            input.ruleId,
-            input.recipientEmail,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-
-    listExecutions: headProcedure
-      .input(
-        z
-          .object({ ruleId: z.uuid() })
-          .extend(paginationInputSchema.partial().shape),
-      )
-      .query(async ({ input, ctx }) => {
-        try {
-          const { ruleId, cursor, limit } = input;
-          const pagination =
-            cursor || limit
-              ? { cursor, limit: limit ?? DEFAULT_EXECUTION_LIST_LIMIT }
-              : undefined;
-
-          // Non-admins see only their group's recipient rows. The allowlist
-          // is resolved here and applied inside the service BEFORE pagination
-          // so out-of-scope rows cannot consume page size or drive nextCursor.
-          const recipientAllowlist =
-            await deps.remindersService.scope.resolveExecutionsRecipientAllowlist(
-              ctx.session,
-              ruleId,
-            );
-
-          return await deps.remindersService.listExecutions(
-            ruleId,
-            pagination,
-            recipientAllowlist,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-
-    // Client never sees lead emails; optional leadId scopes to one author.
-    dispatchPending: headProcedure
-      .input(
-        z.object({
-          reportId: z.uuid(),
-          ruleId: z.uuid().optional(),
-          leadId: z.uuid().optional(),
-        }),
-      )
-      .output(
-        z.object({
-          dispatched: z.number().int().nonnegative(),
-          alreadySent: z.number().int().nonnegative(),
-          skipped: z.number().int().nonnegative(),
-          reason: z.string().optional(),
-        }),
-      )
-      .mutation(async ({ input, ctx }) => {
-        try {
-          const currentEditableReportId =
-            await deps.weeklyReportService.getCurrentEditableId();
-          if (currentEditableReportId !== input.reportId) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message: "report-not-active",
-            });
-          }
-          return await deps.remindersService.scope.dispatchPendingReminders(
-            ctx.session,
-            input.reportId,
-            input.ruleId,
-            input.leadId,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+    execute: createExecuteProcedure(deps),
+    listExecutions: createListExecutionsProcedure(deps),
+    dispatchPending: createDispatchPendingProcedure(deps),
   });
 }

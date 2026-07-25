@@ -16,6 +16,9 @@ import {
 const testGraceSettings = () =>
   Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
 
+// Deadlines in these suites are expressed as offsets from now.
+const ONE_HOUR = 60 * 60 * 1000;
+
 const baseSection: ReportSectionReadModel = {
   reportSectionId: "11111111-1111-4111-8111-111111111111",
   reportId: "22222222-2222-4222-8222-222222222222",
@@ -853,8 +856,6 @@ describe("ReportSectionsService — deadline gate", () => {
     };
   }
 
-  const ONE_HOUR = 60 * 60 * 1000;
-
   it("before deadline: submits with late=false (gate fully bypassed)", async () => {
     const repo = createGracedRepository({
       deadline: new Date(Date.now() + 24 * ONE_HOUR),
@@ -1031,8 +1032,6 @@ describe("ReportSectionsService — product telemetry", () => {
       },
     };
   }
-
-  const ONE_HOUR = 60 * 60 * 1000;
 
   it("increments late=false counter and observes a negative latency when submitted before deadline", async () => {
     const before = await counterValue(customreportSectionsSubmittedTotal, {

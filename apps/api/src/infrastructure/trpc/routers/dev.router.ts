@@ -33,7 +33,8 @@ const PRISMA_AI_DANGEROUS_ACTION_CONSENT = "давай";
 
 export interface DevRouterDeps {
   prisma: PrismaClient;
-  // Validated env from main.ts — reseed root override, not raw process.env.
+  // Validated env from main.ts — dev-mode gate + reseed root override, so
+  // neither reads raw process.env.
   env: EnvConfig;
 }
 
@@ -41,8 +42,9 @@ type ReseedVariant =
   "small" | "middle" | "huge" | typeof RESEED_VARIANT_MANUAL_UAT;
 
 // Refuse unless AUTH_DEV_MODE so an accidental prod deploy cannot wipe data.
-const assertDevMode = (): void => {
-  if (process.env.AUTH_DEV_MODE !== "true") {
+// Reads the validated env (boolean post-transform), never raw process.env.
+const assertDevMode = (env: EnvConfig): void => {
+  if (!env.AUTH_DEV_MODE) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Dev mode is not enabled",
@@ -115,7 +117,7 @@ export function createDevRouter(deps: DevRouterDeps) {
     // them (not just the 3 hardcoded role buckets). publicProcedure so
     // the picker works before any session exists.
     listUsers: publicProcedure.query(async () => {
-      assertDevMode();
+      assertDevMode(deps.env);
       const users = await deps.prisma.user.findMany({
         select: { id: true, email: true, name: true, role: true },
         orderBy: [{ role: "asc" }, { name: "asc" }],
@@ -135,7 +137,7 @@ export function createDevRouter(deps: DevRouterDeps) {
         }),
       )
       .mutation(({ input }) => {
-        assertDevMode();
+        assertDevMode(deps.env);
         // Run Prisma reset as a child process so "wipe & reseed" is a
         // real clean-slate operation in Docker too.
         const repoRoot = resolveRepoRoot(deps.env.CUSTOMREPORT_REPO_ROOT);
