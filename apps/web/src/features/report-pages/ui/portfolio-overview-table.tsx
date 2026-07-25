@@ -5,6 +5,10 @@ import type {
   WeeklyPortfolioProduct,
   WeeklyProductStatus,
 } from "../../report-sections";
+import {
+  LeadOverviewCard,
+  ProductOverviewCard,
+} from "./portfolio-overview-cards";
 
 // Overview band matches report scope: product cards or lead cards (click jumps
 // to that lead's section).
@@ -12,47 +16,18 @@ type PortfolioOverviewTableProps =
   | { readonly scope?: "product"; readonly products: WeeklyPortfolioProduct[] }
   | { readonly scope: "lead"; readonly leads: readonly LeadOverviewRow[] };
 
-const CSS_PRIMARY = "var(--color-primary)";
-
-const STATUS_BG: Record<WeeklyProductStatus, string> = {
-  "on-track": "var(--color-success)",
-  "at-risk": "var(--color-status-at-risk-bg)",
-  blocked: "var(--color-status-blocked-bg)",
-};
-
-const STATUS_TEXT: Record<WeeklyProductStatus, string> = {
-  "on-track": CSS_PRIMARY,
-  "at-risk": "var(--color-status-at-risk-fg)",
-  blocked: "var(--color-destructive)",
-};
-
-const STATUS_ICON: Record<WeeklyProductStatus, string> = {
-  "on-track": "✓",
-  "at-risk": "!",
-  blocked: "✕",
-};
-
-const STATUS_LABEL: Record<WeeklyProductStatus, string> = {
-  "on-track": "On Track",
-  "at-risk": "At Risk",
-  blocked: "Blocked",
-};
-
 const STATUS_SORT: Record<WeeklyProductStatus, number> = {
   blocked: 0,
   "at-risk": 1,
   "on-track": 2,
 };
 
-const EMPTY_CARD_BG = "rgba(0,0,0,0.045)";
-const EMPTY_CARD_TEXT = "var(--color-muted-foreground)";
-
 function GridIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
       className="h-5 w-5 flex-shrink-0"
-      style={{ color: CSS_PRIMARY }}
+      style={{ color: "var(--color-primary)" }}
       stroke="currentColor"
       fill="none"
       strokeWidth={2}
@@ -66,131 +41,8 @@ function GridIcon() {
   );
 }
 
-function countLabel(current: number, next: number, risks: number): string {
-  return `${current} current · ${next} next · ${risks} risk${
-    risks !== 1 ? "s" : ""
-  }`;
-}
-
-// Lead cards never empty (only leads with content); click jumps to the lead
-// section, not a product accordion.
-function LeadOverviewCard({ lead }: { readonly lead: LeadOverviewRow }) {
-  return (
-    <button
-      type="button"
-      className="group grid min-h-[76px] w-full cursor-pointer grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg p-2.5 text-left transition-[box-shadow,border-color,background-color] hover:shadow-[0_8px_18px_-14px_rgba(0,0,0,0.35),0_0_0_2px_rgba(0,117,74,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
-      style={{ background: STATUS_BG[lead.worstStatus] }}
-      title={`Jump to ${lead.name}'s section`}
-      onClick={() => {
-        const el = document.getElementById(`report-lead-${lead.id}`);
-        if (!el) return;
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-        // a11y parity with the product path: move focus to the section so a
-        // keyboard/SR user lands there, without re-scrolling.
-        if (el instanceof HTMLElement) el.focus({ preventScroll: true });
-      }}
-    >
-      <div
-        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-bold"
-        style={{
-          background: STATUS_BG[lead.worstStatus],
-          color: STATUS_TEXT[lead.worstStatus],
-          border: `1.5px solid ${STATUS_TEXT[lead.worstStatus]}`,
-        }}
-      >
-        {STATUS_ICON[lead.worstStatus]}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{lead.name}</div>
-        <div className="text-xs text-[var(--color-muted-foreground)]">
-          {STATUS_LABEL[lead.worstStatus]}
-        </div>
-        <span className="text-[11px] text-[var(--color-muted-foreground)]">
-          {countLabel(lead.currentCount, lead.nextCount, lead.riskCount)}
-        </span>
-      </div>
-      <span
-        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/55 text-[13px] font-semibold text-[var(--color-primary)] opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
-        aria-hidden="true"
-      >
-        ↓
-      </span>
-    </button>
-  );
-}
-
-function ProductOverviewCard({
-  product,
-}: {
-  readonly product: WeeklyPortfolioProduct;
-}) {
-  const isEmpty =
-    product.currentWeekCount === 0 &&
-    product.nextWeekCount === 0 &&
-    product.riskCount === 0;
-  return (
-    <button
-      type="button"
-      className={`group grid min-h-[76px] w-full grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg p-2.5 text-left transition-[box-shadow,border-color,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
-        isEmpty
-          ? "cursor-default text-[var(--color-muted-foreground)]"
-          : "cursor-pointer hover:shadow-[0_8px_18px_-14px_rgba(0,0,0,0.35),0_0_0_2px_rgba(0,117,74,0.18)]"
-      }`}
-      style={{
-        background: isEmpty ? EMPTY_CARD_BG : STATUS_BG[product.status],
-      }}
-      title={isEmpty ? undefined : `Open ${product.name} details`}
-      disabled={isEmpty}
-      aria-disabled={isEmpty}
-      onClick={() => {
-        if (isEmpty) return;
-        const el = document.getElementById(`report-product-${product.id}`);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
-          const btn = el.querySelector<HTMLButtonElement>(
-            '[aria-expanded="false"]',
-          );
-          btn?.click();
-        }
-      }}
-    >
-      <div
-        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-bold"
-        style={{
-          background: isEmpty
-            ? "rgba(255,255,255,0.35)"
-            : STATUS_BG[product.status],
-          color: isEmpty ? EMPTY_CARD_TEXT : STATUS_TEXT[product.status],
-          border: `1.5px solid ${isEmpty ? "rgba(0,0,0,0.18)" : STATUS_TEXT[product.status]}`,
-        }}
-      >
-        {isEmpty ? "–" : STATUS_ICON[product.status]}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{product.name}</div>
-        <div className="text-xs text-[var(--color-muted-foreground)]">
-          {isEmpty ? "No updates" : product.statusLabel}
-        </div>
-        <span className="text-[11px] text-[var(--color-muted-foreground)]">
-          {countLabel(
-            product.currentWeekCount,
-            product.nextWeekCount,
-            product.riskCount,
-          )}
-        </span>
-      </div>
-      <span
-        className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/55 text-[13px] font-semibold text-[var(--color-primary)] shadow-sm transition-opacity ${
-          isEmpty
-            ? "opacity-0"
-            : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
-        }`}
-        aria-hidden="true"
-      >
-        ↓
-      </span>
-    </button>
-  );
+function pluralize(noun: string, count: number): string {
+  return `${noun}${count !== 1 ? "s" : ""}`;
 }
 
 export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
@@ -205,9 +57,7 @@ export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
 
   const count = isLead ? leads.length : sortedProducts.length;
   const heading = isLead ? "Leads Overview" : "Portfolio Overview";
-  const countSuffix = isLead
-    ? `lead${count !== 1 ? "s" : ""}`
-    : `product${count !== 1 ? "s" : ""}`;
+  const countSuffix = pluralize(isLead ? "lead" : "product", count);
   const subtitle = isLead
     ? "Each lead's contribution — open their section below."
     : "Products with content open detailed sections. Empty products stay muted.";

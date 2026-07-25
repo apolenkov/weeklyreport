@@ -5,14 +5,11 @@ import type { ComponentProps } from "react";
 import { AccordionSection } from "../../../shared/ui/report-shell/accordion-section";
 import { CurrentWeekSection } from "../../period";
 import type { KanbanItem } from "../../report-sections";
-import { LeadFormAddButton } from "./lead-form-add-button";
+import { addItemAction } from "./lead-form-add-item-button";
 import { CalendarIcon, NextWeekIcon } from "./lead-form-icons";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { NextWeekSection } from "./next-week-section";
 import { UnifiedActivitySection } from "./unified-activity-section";
-
-export const NO_PRODUCTS_ASSIGNED_MESSAGE =
-  "No products assigned — contact admin";
 
 export interface LeadFormItemSectionsActions {
   readonly onCurrentWeekItemsChange: (items: KanbanItem[]) => void;
@@ -41,31 +38,6 @@ interface LeadFormItemSectionsProps {
 
 // Each branch below renders the same view model; only the layout differs.
 type WeekSectionProps = Omit<LeadFormItemSectionsProps, "unifiedView">;
-
-// Disabled with an explanatory title when the lead owns no product, so the
-// dead-end is legible instead of an inert button.
-function AddItemButton({
-  onClick,
-  products,
-}: {
-  readonly onClick: () => void;
-  readonly products: LeadFormLoadedViewModel["products"];
-}) {
-  const firstProduct = products[0];
-  return (
-    <LeadFormAddButton
-      onClick={onClick}
-      disabled={products.length === 0}
-      title={
-        firstProduct !== undefined
-          ? `Add item to ${firstProduct.name}`
-          : NO_PRODUCTS_ASSIGNED_MESSAGE
-      }
-    >
-      + Add Item
-    </LeadFormAddButton>
-  );
-}
 
 function UnifiedActivityAccordion({
   viewModel,
@@ -138,14 +110,7 @@ function CurrentWeekAccordion({
       title="Current Week"
       badge={`${currentWeekItems.length} items`}
       subtitle="Work completed or still in progress this week, grouped by product and SDLC stage."
-      actions={
-        !isReadOnly ? (
-          <AddItemButton
-            onClick={actions.addCurrentWeekItem}
-            products={products}
-          />
-        ) : null
-      }
+      actions={addItemAction(isReadOnly, actions.addCurrentWeekItem, products)}
     >
       <CurrentWeekSection
         items={currentWeekItems}
@@ -191,14 +156,7 @@ function NextWeekAccordion({
       title="Next Week"
       badge={`${nextWeekItems.length} items`}
       subtitle="Planned work for the next reporting week, scoped to product and SDLC stage."
-      actions={
-        !isReadOnly ? (
-          <AddItemButton
-            onClick={actions.addNextWeekItem}
-            products={products}
-          />
-        ) : null
-      }
+      actions={addItemAction(isReadOnly, actions.addNextWeekItem, products)}
     >
       <NextWeekSection
         items={nextWeekItems}

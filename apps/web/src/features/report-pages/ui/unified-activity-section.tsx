@@ -1,20 +1,13 @@
 "use client";
 
-import { useState } from "react";
-
+import type { ActivityBucket } from "../../../lib/activity-buckets";
+import type { KanbanItem, Product, RiskEntry } from "../../report-sections";
 import {
-  ACTIVITY_BUCKET_LABELS,
-  ACTIVITY_BUCKET_ORDER,
-  type ActivityBucket,
-} from "../../../lib/activity-buckets";
-import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import {
-  ItemCard,
-  ItemEditDialog,
-  type KanbanItem,
-  type Product,
-  type RiskEntry,
-} from "../../report-sections";
+  ActivityBucketList,
+  EmptyActivityPlaceholder,
+} from "./activity-bucket-list";
+import { UnifiedActivityDialogs } from "./unified-activity-dialogs";
+import { useUnifiedActivityEditing } from "./use-unified-activity-editing";
 
 // Bucket is a projection; week is persisted Item.type and never changes here (ADR 0011).
 export interface UnifiedActivityEntry {
@@ -43,82 +36,6 @@ interface UnifiedActivitySectionProps {
   readonly onMoveToNextWeek?: (id: string) => void;
 }
 
-interface EditState {
-  readonly entry: UnifiedActivityEntry;
-  readonly seq: number;
-}
-
-function weekItems(
-  entries: readonly UnifiedActivityEntry[],
-  week: "current" | "next",
-): KanbanItem[] {
-  return entries
-    .filter((entry) => entry.week === week)
-    .map((entry) => entry.item);
-}
-
-function ActivityBucketGroup({
-  bucket,
-  entries,
-  risks,
-  readOnly,
-  publishedLockedIds,
-  onEdit,
-  onDelete,
-  onMarkComplete,
-  onMoveToNextWeek,
-}: {
-  readonly bucket: ActivityBucket;
-  readonly entries: readonly UnifiedActivityEntry[];
-  readonly risks?: readonly RiskEntry[];
-  readonly readOnly: boolean;
-  readonly publishedLockedIds?: ReadonlySet<string>;
-  readonly onEdit: (entry: UnifiedActivityEntry) => void;
-  readonly onDelete: (entry: UnifiedActivityEntry) => void;
-  readonly onMarkComplete?: (id: string) => void;
-  readonly onMoveToNextWeek?: (id: string) => void;
-}) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center gap-2">
-        <span
-          data-testid={`bucket-label-${bucket}`}
-          className="font-[family-name:var(--font-sans)] text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]"
-        >
-          {ACTIVITY_BUCKET_LABELS[bucket]}
-        </span>
-        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
-          {entries.length}
-        </span>
-      </div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {entries.map((entry) => (
-          <ItemCard
-            key={`${entry.week}-${entry.item.id}`}
-            item={entry.item}
-            risks={risks}
-            readOnly={readOnly}
-            isEditing={false}
-            publishedLocked={publishedLockedIds?.has(entry.item.id)}
-            onEdit={() => onEdit(entry)}
-            onDelete={() => onDelete(entry)}
-            onMarkComplete={
-              entry.week === "current" && entry.bucket !== "done"
-                ? onMarkComplete
-                : undefined
-            }
-            onMoveToNextWeek={
-              entry.week === "current" && entry.bucket !== "done"
-                ? onMoveToNextWeek
-                : undefined
-            }
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // Opt-in by-state view (AppSettings.unifiedActivityView); create is via quick-add.
 export function UnifiedActivitySection({
   entries,
@@ -133,99 +50,40 @@ export function UnifiedActivitySection({
   onMarkComplete,
   onMoveToNextWeek,
 }: UnifiedActivitySectionProps) {
-  const [editState, setEditState] = useState<EditState | null>(null);
-  const [pendingDelete, setPendingDelete] =
-    useState<UnifiedActivityEntry | null>(null);
-
-  const buckets = ACTIVITY_BUCKET_ORDER.map((bucket) => ({
-    bucket,
-    entries: entries.filter((entry) => entry.bucket === bucket),
-  })).filter((group) => group.entries.length > 0);
-
-  function handleEdit(entry: UnifiedActivityEntry) {
-    if (readOnly || entry.item.foreign === true) return;
-    setEditState((prev) => ({ entry, seq: (prev?.seq ?? 0) + 1 }));
-  }
-
-  function requestDelete(entry: UnifiedActivityEntry) {
-    if (entry.item.foreign === true) return;
-    setPendingDelete(entry);
-  }
-
-  function handleDialogSave(next: KanbanItem) {
-    if (!editState) return;
-    const week = editState.entry.week;
-    onWeekItemsChange?.(
-      week,
-      weekItems(entries, week).map((item) =>
-        item.id === next.id ? next : item,
-      ),
-    );
-    setEditState(null);
-  }
-
-  function confirmDelete() {
-    if (!pendingDelete) return;
-    const week = pendingDelete.week;
-    onWeekItemsChange?.(
-      week,
-      weekItems(entries, week).filter(
-        (item) => item.id !== pendingDelete.item.id,
-      ),
-    );
-    setPendingDelete(null);
-  }
+  const editing = useUnifiedActivityEditing({
+    entries,
+    readOnly,
+    onWeekItemsChange,
+  });
 
   if (entries.length === 0) {
-    return (
-      <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
-        No items yet — use the + Add button to create one.
-      </div>
-    );
+    return <EmptyActivityPlaceholder />;
   }
 
   return (
     <div className="space-y-5" data-testid="unified-activity-section">
-      {buckets.map((group) => (
-        <ActivityBucketGroup
-          key={group.bucket}
-          bucket={group.bucket}
-          entries={group.entries}
-          risks={risks}
-          readOnly={readOnly}
-          publishedLockedIds={publishedLockedIds}
-          onEdit={handleEdit}
-          onDelete={requestDelete}
-          onMarkComplete={onMarkComplete}
-          onMoveToNextWeek={onMoveToNextWeek}
-        />
-      ))}
-
-      {/* Edit dialog — the EXISTING per-type item dialog; `week` follows the
-          record's physical type so the status chips match its storage. */}
-      <ItemEditDialog
-        key={editState?.seq ?? 0}
-        open={editState !== null}
-        item={editState?.entry.item ?? null}
+      <ActivityBucketList
+        entries={entries}
+        risks={risks}
+        readOnly={readOnly}
+        publishedLockedIds={publishedLockedIds}
+        onEdit={editing.requestEdit}
+        onDelete={editing.requestDelete}
+        onMarkComplete={onMarkComplete}
+        onMoveToNextWeek={onMoveToNextWeek}
+      />
+      <UnifiedActivityDialogs
+        editState={editing.editState}
+        pendingDelete={editing.pendingDelete}
         products={products ?? []}
-        week={editState?.entry.week ?? "current"}
         currentUserName={currentUserName}
         stagesForProduct={stagesForProduct}
         ownPeriodRanks={ownPeriodRanks}
         risks={risks}
-        onSave={handleDialogSave}
-        onCancel={() => setEditState(null)}
-      />
-
-      <ConfirmDeleteDialog
-        open={pendingDelete !== null}
-        title="Delete item?"
-        preview={pendingDelete?.item.text ?? ""}
-        subtitle={
-          pendingDelete ? `From ${pendingDelete.item.productName}` : undefined
-        }
-        onConfirm={confirmDelete}
-        onCancel={() => setPendingDelete(null)}
+        onSave={editing.saveEdited}
+        onCancelEdit={editing.cancelEdit}
+        onConfirmDelete={editing.confirmDelete}
+        onCancelDelete={editing.cancelDelete}
       />
     </div>
   );

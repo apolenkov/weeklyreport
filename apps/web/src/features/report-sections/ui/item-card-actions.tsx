@@ -4,97 +4,14 @@ import type { ReactNode } from "react";
 
 import { LockBadge } from "../../../shared/ui/report-shell/lock-badge";
 import type { KanbanItem } from "../model/types";
-
-function EditIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3 w-3"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      aria-hidden="true"
-    >
-      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-      <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
-}
-
-function DeleteIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3 w-3"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      aria-hidden="true"
-    >
-      <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3 w-3"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      aria-hidden="true"
-    >
-      <path d="M20 6L9 17l-5-5" />
-    </svg>
-  );
-}
-
-function ArrowRightIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3 w-3"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      aria-hidden="true"
-    >
-      <path d="M5 12h14M13 6l6 6-6 6" />
-    </svg>
-  );
-}
-
-function ArrowLeftIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3 w-3"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      aria-hidden="true"
-    >
-      <path d="M19 12H5M11 6l-6 6 6 6" />
-    </svg>
-  );
-}
-
-function PauseIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3 w-3"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      aria-hidden="true"
-    >
-      <path d="M8 5v14M16 5v14" />
-    </svg>
-  );
-}
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CheckIcon,
+  DeleteIcon,
+  EditIcon,
+  PauseIcon,
+} from "./item-card-action-icons";
 
 // Shared square icon-button shell; the two variants differ only in hover state.
 const ACTION_BUTTON_BASE =
@@ -143,56 +60,78 @@ interface ItemCardActionsProps {
   readonly onPause?: (id: string) => void;
 }
 
-function StatusActions({
-  item,
-  onMarkComplete,
-  onMoveToNextWeek,
-  onMoveToCurrentWeek,
-  onPause,
-}: ItemCardActionsProps) {
-  const isCompleted = item.status === "completed";
+interface StatusActionSpec {
+  readonly label: string;
+  readonly title: string;
+  readonly className: string;
+  readonly Icon: () => ReactNode;
+}
+
+interface StatusAction extends StatusActionSpec {
+  readonly onAct: (id: string) => void;
+}
+
+const MOVE_TO_CURRENT_SPEC: StatusActionSpec = {
+  label: "Move to current week",
+  title: "Move to current week",
+  className: NEUTRAL_ACTION_CLASS,
+  Icon: ArrowLeftIcon,
+};
+
+const PAUSE_SPEC: StatusActionSpec = {
+  label: "Pause",
+  title: "Pause (a reason is required)",
+  className: NEUTRAL_ACTION_CLASS,
+  Icon: PauseIcon,
+};
+
+const MARK_COMPLETE_SPEC: StatusActionSpec = {
+  label: "Mark complete",
+  title: "Mark complete",
+  className: `${NEUTRAL_ACTION_CLASS} hover:text-[var(--color-primary)]`,
+  Icon: CheckIcon,
+};
+
+const MOVE_TO_NEXT_SPEC: StatusActionSpec = {
+  label: "Move to next week",
+  title: "Move to next week",
+  className: NEUTRAL_ACTION_CLASS,
+  Icon: ArrowRightIcon,
+};
+
+function offerAction(
+  onAct: ((id: string) => void) | undefined,
+  applicable: boolean,
+  spec: StatusActionSpec,
+): StatusAction | null {
+  return onAct && applicable ? { ...spec, onAct } : null;
+}
+
+// Left-to-right order is fixed: move back, pause, complete, move forward.
+function statusActions(props: ItemCardActionsProps): readonly StatusAction[] {
+  const open = props.item.status !== "completed";
+  return [
+    offerAction(props.onMoveToCurrentWeek, open, MOVE_TO_CURRENT_SPEC),
+    offerAction(props.onPause, props.item.status === "in-progress", PAUSE_SPEC),
+    offerAction(props.onMarkComplete, open, MARK_COMPLETE_SPEC),
+    offerAction(props.onMoveToNextWeek, open, MOVE_TO_NEXT_SPEC),
+  ].filter((action) => action !== null);
+}
+
+function StatusActions(props: ItemCardActionsProps) {
   return (
     <>
-      {onMoveToCurrentWeek && !isCompleted && (
+      {statusActions(props).map(({ label, title, className, Icon, onAct }) => (
         <ActionButton
-          className={NEUTRAL_ACTION_CLASS}
-          onClick={() => onMoveToCurrentWeek(item.id)}
-          label="Move to current week"
-          title="Move to current week"
+          key={label}
+          className={className}
+          onClick={() => onAct(props.item.id)}
+          label={label}
+          title={title}
         >
-          <ArrowLeftIcon />
+          <Icon />
         </ActionButton>
-      )}
-      {onPause && item.status === "in-progress" && (
-        <ActionButton
-          className={NEUTRAL_ACTION_CLASS}
-          onClick={() => onPause(item.id)}
-          label="Pause"
-          title="Pause (a reason is required)"
-        >
-          <PauseIcon />
-        </ActionButton>
-      )}
-      {onMarkComplete && !isCompleted && (
-        <ActionButton
-          className={`${NEUTRAL_ACTION_CLASS} hover:text-[var(--color-primary)]`}
-          onClick={() => onMarkComplete(item.id)}
-          label="Mark complete"
-          title="Mark complete"
-        >
-          <CheckIcon />
-        </ActionButton>
-      )}
-      {onMoveToNextWeek && !isCompleted && (
-        <ActionButton
-          className={NEUTRAL_ACTION_CLASS}
-          onClick={() => onMoveToNextWeek(item.id)}
-          label="Move to next week"
-          title="Move to next week"
-        >
-          <ArrowRightIcon />
-        </ActionButton>
-      )}
+      ))}
     </>
   );
 }
