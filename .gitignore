@@ -53,3 +53,6 @@ e2e/csp/.reports/
 .verify-*/
 
 .omo
+
+# Personal Claude Code settings (per-developer, not shared)
+.claude/settings.local.json
