@@ -4,13 +4,15 @@ const MAX_REPORTING_GROUP_NAME_LENGTH = 200;
 const MAX_ORG_SHORT_NAME_LENGTH = 16;
 const MAX_ORG_FULL_NAME_LENGTH = 200;
 
-// DB Role enum; admin writes must match Prisma. Includes admin for SAML persistence.
+/**
+ * DB Role enum wire values (must match Prisma; includes admin for SAML persistence).
+ */
 export const roleSchema = z.enum(["lead", "head", "admin", "viewer"]);
 
-// Separate alias from roleSchema so session vs DB axes can diverge without a wide refactor.
+/** Session-axis role enum (separate home from DB `roleSchema` / role-type). */
 export const sessionRoleSchema = z.enum(["lead", "head", "admin", "viewer"]);
 
-// Single label map for session Role and DbRole so surfaces cannot drift; total over both axes.
+/** Single role→label map for session and DB axes so surfaces cannot drift. */
 export const ROLE_LABEL: Record<Role | DbRole, string> = {
   lead: "Lead",
   head: "Head",
@@ -18,7 +20,7 @@ export const ROLE_LABEL: Record<Role | DbRole, string> = {
   viewer: "Viewer",
 };
 
-// One home per role for api/web/role-gate. Viewer uses /reports/latest, not the list surface.
+/** Canonical post-login home path per session role (viewer → /reports/latest). */
 export const ROLE_HOME_PATH: Record<Role, string> = {
   lead: "/lead/report",
   head: "/head/dashboard",
@@ -26,7 +28,7 @@ export const ROLE_HOME_PATH: Record<Role, string> = {
   viewer: "/reports/latest",
 };
 
-// Only home for dev login emails — api and web must list the same address per role.
+/** Shared dev-login email roster; api and web must list the same address per role. */
 export const DEV_LOGIN_EMAIL_BY_ROLE: Record<DbRole, string> = {
   lead: "lead1@customreport.local",
   head: "head@customreport.local",
@@ -34,6 +36,10 @@ export const DEV_LOGIN_EMAIL_BY_ROLE: Record<DbRole, string> = {
   viewer: "viewer@customreport.local",
 };
 
+/**
+ * Session JWT/read-model shape: optional name parts, hydrated group/org
+ * fields, viewer group access as a deliberate zero-row filter when empty.
+ */
 export const userSessionSchema = z.object({
   userId: z.uuid(),
   email: z.email(),
@@ -64,7 +70,9 @@ export const userSessionSchema = z.object({
     .optional(),
 });
 
-// Session role for assertRole; use DbRole for admin user writes.
+/** Session-axis role for assertRole. */
 export type Role = z.infer<typeof sessionRoleSchema>;
+/** Persistence-axis role for admin user writes (Prisma Role). */
 export type DbRole = z.infer<typeof roleSchema>;
+/** Authenticated session read model. */
 export type UserSession = z.infer<typeof userSessionSchema>;
