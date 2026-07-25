@@ -12,11 +12,7 @@ import { PortfolioOverviewTable } from "./portfolio-overview-table";
 import { ProductAccordion } from "./product-accordion";
 import type { LeadGroup, ReviewModel } from "./weekly-report-page-helpers";
 
-/**
- * Centered title + body card used for the page's terminal states (invalid-link,
- * no active period). Extracted so the two states share one layout and the page
- * function stays under the cognitive-complexity budget.
- */
+// Shared layout for terminal page states (invalid-link, no active period).
 export function CenteredNotice({
   title,
   body,
@@ -36,11 +32,7 @@ export function CenteredNotice({
   );
 }
 
-/**
- * Accordion body for the report page: a flat per-product list (default) or
- * products bucketed under each authoring lead ("by lead" head split-view).
- * Extracted so the page function stays under the cognitive-complexity budget.
- */
+// Flat per-product list, or products bucketed under each authoring lead.
 export function ReportAccordionBody({
   scope,
   products,
@@ -71,9 +63,7 @@ export function ReportAccordionBody({
     return (
       <div className="space-y-6">
         {leadGroups.map((group) => (
-          // report-overview-scope-parity: stable anchor + focus target so a
-          // by-lead overview card can scroll/focus this section (the by-lead
-          // analogue of report-product-<id>).
+          // Stable anchor so a by-lead overview card can scroll/focus this section.
           <section
             key={group.id}
             id={`report-lead-${group.id}`}
@@ -94,12 +84,7 @@ export function ReportAccordionBody({
   return <div className="space-y-3">{products.map(renderAccordion)}</div>;
 }
 
-/**
- * report-overview-scope-parity: the scope-adaptive Report overview band.
- * Extracted so the page function stays under the cognitive-complexity budget.
- * In by-lead scope it renders lead cards from `leadOverviewRows`; otherwise the
- * product cards from `portfolio`.
- */
+// Scope-adaptive overview: lead cards in by-lead scope, product cards otherwise.
 export function ReportOverviewBand({
   scope,
   portfolio,
@@ -115,12 +100,7 @@ export function ReportOverviewBand({
   return <PortfolioOverviewTable products={portfolio} />;
 }
 
-/**
- * The single labeled Export-PDF control for the toolbar trailing group.
- * head/admin/viewer get the real button; lead gets the inert ComingSoon control
- * (lead is FORBIDDEN from pdfExport). A helper so the branching stays out of
- * WeeklyReportPage's body.
- */
+// head/admin/viewer get the real export; lead is FORBIDDEN and gets ComingSoon.
 export function ToolbarExportControl({
   canExportPdf,
   showComingSoon,
@@ -141,15 +121,8 @@ export function ToolbarExportControl({
   return null;
 }
 
-/**
- * Self-gating Acknowledge control (renders nothing when review is disabled).
- * Mounted in TWO places by role: for a publish-capable reviewer (head/admin)
- * inside the header's Publish & Lock action cluster, so
- * review → acknowledge → publish reads as one sequence; for a
- * non-publishing access-holder (viewer) it stays a band in the report body —
- * relocating it into a cluster the viewer does not have would orphan their
- * acknowledge path.
- */
+// Head/admin: header Publish cluster so review → acknowledge → publish is one
+// sequence. Viewer: body band — they have no publish cluster to host it.
 export function AcknowledgeSurface({
   reviewModel,
   reportId,
@@ -172,11 +145,7 @@ export function AcknowledgeSurface({
   );
 }
 
-/**
- * Self-gating in-report verdict band. Renders only in review mode, so normal
- * mode stays read-only. The head roll-up strip lives on the dashboard now; this
- * keeps a designated viewer-reviewer's verdict home in the report body.
- */
+// Self-gating verdict band: only in review mode so normal mode stays read-only.
 export function ReviewModeVerdictSurface({
   reviewModel,
   reviewMode,

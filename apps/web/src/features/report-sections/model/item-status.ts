@@ -1,11 +1,6 @@
-/**
- * Item-status mapper: bridges the stored ItemWorkflowStatus enum
- * (planned/in_progress/paused/postponed/done) with the UI ItemStatus.
- *
- * The stored enum is the single source of progress (rework-item-status-model):
- * no completed flag, no stored blocked. `blocked` exists in the UI union only
- * as the covering-risk DISPLAY overlay — it is never settable or persistable.
- */
+// Bridges stored ItemWorkflowStatus with UI ItemStatus. Stored enum is the
+// sole progress source: no completed flag, no stored blocked. `blocked` is a
+// covering-risk display overlay only — never settable or persistable.
 
 import {
   type AlarmRisk,
@@ -20,8 +15,7 @@ export type ItemType = "current" | "next";
 export type ItemStatus =
   "in-progress" | "completed" | "planned" | "paused" | "postponed" | "blocked";
 
-/** Converts a stored ItemWorkflowStatus to its presentation ItemStatus.
- * Never produces 'blocked' — that is the risk-derived overlay only. */
+// Never produces 'blocked' — that is the risk-derived overlay only.
 export function workflowToItemStatus(
   ws: ItemWorkflowStatus,
 ): Exclude<ItemStatus, "blocked"> {
@@ -39,8 +33,7 @@ export function workflowToItemStatus(
   }
 }
 
-/** Inverse mapping for settable presentation states — 'blocked' is excluded
- * at the type level (a blocker is a risk, never an item status). */
+// 'blocked' excluded at the type level (a blocker is a risk, never an item status).
 export function itemStatusToWorkflow(
   status: Exclude<ItemStatus, "blocked">,
 ): ItemWorkflowStatus {
@@ -58,8 +51,7 @@ export function itemStatusToWorkflow(
   }
 }
 
-/** The display ItemStatus of a stored item: the enum verbatim, with a
- * type-appropriate default for legacy rows missing a status. */
+// Stored progress, with a type-appropriate default for legacy rows missing status.
 export function deriveItemStatus(item: {
   workflowStatus: ItemWorkflowStatus | null;
   type: ItemType;
@@ -68,13 +60,8 @@ export function deriveItemStatus(item: {
   return item.type === "next" ? "planned" : IN_PROGRESS_STATUS;
 }
 
-/**
- * record-status-derived-from-risk: apply the covering-risk BLOCKED overlay to a
- * base progress status — the SAME derivation the lead card uses. Only an
- * in-progress item is eligible for the derived alarm. `at-risk` amber stays
- * deferred to a later head-parity pass, so ONLY the blocked overlay is applied
- * on the head surfaces.
- */
+// Covering-risk BLOCKED overlay on a base progress status — same rule as the
+// lead card. Only in-progress is eligible; at-risk amber stays deferred on head.
 export function applyBlockedRiskOverlay(
   base: ItemStatus,
   parent: { projectId: string; stageIds?: readonly string[] | null },
@@ -91,10 +78,7 @@ export function applyBlockedRiskOverlay(
   return covered === "blocked" ? "blocked" : base;
 }
 
-/**
- * The head-report item badge status: the stored-field progress status with the
- * covering-risk blocked overlay applied (see {@link applyBlockedRiskOverlay}).
- */
+// Head-report badge: progress status with the blocked overlay applied.
 export function deriveHeadItemStatus(
   item: {
     workflowStatus: ItemWorkflowStatus | null;

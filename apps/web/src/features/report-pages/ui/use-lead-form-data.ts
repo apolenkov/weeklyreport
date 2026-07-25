@@ -20,33 +20,14 @@ import { useLeadFormForeignContentPurge } from "./use-lead-form-foreign-content-
 import { useLeadFormRedirects } from "./use-lead-form-redirects";
 
 interface UseLeadFormDataInput {
-  /**
-   * Explicit report identifier from the dynamic `[reportId]` route segment.
-   * When provided, the data load is scoped to that specific report instead of
-   * the session's active period.
-   */
+  // Path-segment reportId scopes load away from the session's active period.
   readonly reportId?: string;
-  /**
-   * When true, the bare route is replaced (router.replace) with the canonical
-   * addressed URL once the active reportId is known. Off when already on a
-   * `[reportId]` route.
-   */
+  // Bare-route → canonical addressed URL once active reportId is known.
   readonly redirectToCanonical?: boolean;
   readonly isSlidesMode: boolean;
 }
 
-/**
- * The lead form's data-loading boundary: the six lead-form queries with their
- * enablement chains, record-visibility gating, the foreign-content purge
- * guard, canonical/head-away redirects, and query error handlers. Returns the
- * flat value set `LeadForm` previously derived inline.
- *
- * This hook is feature-local at the exact granularity of the sibling
- * `use-lead-form-*` hooks: it owns only THIS form's reads and gating. It is
- * NOT the deferred `ReportDataCoordinator` (reusable/cross-role) and must not
- * absorb the draft/write/merge boundaries or be imported by head/viewer
- * surfaces (see `architecture-refactor-backlog`).
- */
+// Feature-local reads/gating only — not a cross-role ReportDataCoordinator.
 export function useLeadFormData({
   reportId: pinnedReportId,
   redirectToCanonical,
@@ -60,9 +41,6 @@ export function useLeadFormData({
   const isHeadLikeSession = isHeadLike(sessionRole);
   const shouldRouteHeadLikeAwayFromLeadForm = isHeadLikeSession;
 
-  // Three queries compose the lead-form view. `byPeriod` depends on
-  // identifiers from `getActive` (or the pinned `reportId` from the dynamic
-  // route), so it's gated by `enabled`.
   const activeQ = useQuery(trpc.reports.getActive.queryOptions());
   const { activeReportId, activeSectionId } = deriveActiveIds(activeQ.data);
 
@@ -80,23 +58,15 @@ export function useLeadFormData({
     refetchOnWindowFocus: true,
   });
 
-  // The section id for actions (autosave / submit / revoke) comes from the
-  // loaded section when a reportId is pinned (the active session's section
-  // id may not match the pinned report). Fall back to activeSectionId for
-  // the bare-route case until byPeriod resolves.
+  // Pinned report: use loaded section id (active may not match); else active.
   const sectionIdForActions =
     byPeriodQ.data?.section.reportSectionId ?? activeSectionId;
 
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
 
-  // Org-level presentation flag for the opt-in unified by-state view.
-  // Classic two-section format is the default until the flag loads — and
-  // stays the default when it is off.
   const viewSettingsQ = useQuery(trpc.leadForm.viewSettings.queryOptions());
   const unifiedView = viewSettingsQ.data?.unifiedActivityView === true;
 
-  // Load other authors who share a product with the current user. Only
-  // relevant when viewing your own section (not a foreign-author view).
   const crossAuthorsQ = useQuery({
     ...trpc.leadForm.crossAuthors.queryOptions({
       reportId: targetReportId,
@@ -104,10 +74,7 @@ export function useLeadFormData({
     enabled: targetReportId !== "",
   });
 
-  // Record visibility toggle. The key is namespaced by the signed-in user AND
-  // the loaded report so an "everyone" choice cannot bleed across users
-  // (shared browser / dev role-switcher) or across reports. The toggle is
-  // lead-form-only.
+  // Namespaced by user + report so Everyone cannot bleed across users/reports.
   const {
     visibility: recordVisibility,
     hydrated: visibilityHydrated,
@@ -122,12 +89,7 @@ export function useLeadFormData({
     recordVisibility,
   });
 
-  // The full-content read is fetched ONLY in the Everyone state, and only
-  // AFTER the persisted toggle has hydrated — so it never fires on the
-  // pre-hydration "mine" default and then races a restored "everyone". Gate
-  // via the shared predicate, with own-deck = !isForeignSlidesDeck, so a
-  // foreign slides deck NEVER fires the read regardless of the persisted
-  // Everyone toggle (matches LeadSlidesClient).
+  // Full-content only after hydrated Everyone; foreign slides never fetch.
   const crossAuthorContentQ = useQuery({
     ...trpc.leadForm.crossAuthorContent.queryOptions({
       reportId: targetReportId,
@@ -156,7 +118,6 @@ export function useLeadFormData({
     shouldRouteHeadLikeAwayFromLeadForm,
   });
 
-  // Query error policy — log + toast via the unified error-handler hook.
   useQueryErrorHandler(activeQ, {
     event: "leadForm.activeReport.load_failed",
     component: "LeadForm",

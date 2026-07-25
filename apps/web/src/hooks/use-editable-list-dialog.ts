@@ -2,17 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/**
- * Shared dialog lifecycle for editable lead report sections (current week,
- * next week, risks, decisions). Extracted so the readOnly-ref add-signal
- * guard and the openSeq remount key live in exactly one place instead of
- * being hand-copied per section.
- *
- * Owns: the dialog open/create/edit/close state, the add-signal create
- * effect with readOnly-ref semantics, openSeq keying, and pending-delete
- * confirmation. Section-specific behavior (`wasEmpty`/`onRiskFilled`, the
- * risks chip-raise prefill, seed-product resolution) stays caller-side.
- */
+// Shared open/create/edit/close + add-signal guard for lead list sections.
+// Section-specific prefill/seed stays at the call site (lead-dialog-lifecycle).
 export type EditableListDialogState<TEntity> =
   | { open: false }
   | {
@@ -81,37 +72,18 @@ export function useEditableListDialog<TEntity extends { id: string }>({
   const [openSeq, setOpenSeq] = useState(0);
   const [pendingDelete, setPendingDelete] = useState<TEntity | null>(null);
 
-  // Keep a ref so the addSignal effect can read the latest readOnly value
-  // without including readOnly in the dep array. If readOnly were in deps,
-  // the effect would re-fire on snapshot enter/exit and re-open the dialog
-  // from a stale non-zero addSignal counter. Do NOT move the ref-write into
-  // an effect-sync — that reintroduces the stale-signal reopen.
+  // Read via ref so addSignal effect omits readOnly from deps (snapshot enter
+  // would re-open from a stale counter). Do not move this write into an effect.
   const readOnlyRef = useRef(readOnly);
   // eslint-disable-next-line react-hooks/refs -- deliberate render-time ref stamp (see comment above): an effect-sync would re-open the dialog from a stale addSignal
   readOnlyRef.current = readOnly;
 
-  // Close the stale-signal-vs-seed-change residual channel. The seed id stays
-  // in the effect deps, so a products-list change while a stale non-zero
-  // signal exists would otherwise re-open the dialog. Track the highest
-  // handled signal and only open when the counter advances.
-  //
-  // Seed this ref from the CURRENT addSignal at mount, NOT from
-  // NO_SIGNAL_HANDLED. The slides<->edit toggle conditionally renders the
-  // form, so each return to edit REMOUNTS this section while the parent
-  // (LeadForm) persists across the route's searchParams change — carrying a
-  // stale non-zero addSignal. Seeding from 0 made the mount effect read that
-  // stale counter as "advanced" and spuriously re-open the create dialog
-  // (two stacked Add dialogs after Add Risk -> slides -> Add Decision ->
-  // slides). Capturing the mount-time value short-circuits the effect on
-  // remount, while a genuine later "+ Add" increment still advances past it
-  // and opens.
+  // Seed from mount-time addSignal, not 0: slides/edit remounts while LeadForm
+  // keeps a stale non-zero counter; only a later increment should open create.
+  // See lead-dialog-lifecycle.
   const lastHandledSignal = useRef(addSignal);
 
-  // Identity-stable across readOnly changes (guards through readOnlyRef, not
-  // the readOnly prop) so the risks chip-raise effect can list it in deps
-  // without re-running on a snapshot enter/exit. Listing a [readOnly]-keyed
-  // callback there would reopen the dialog on a view-state transition — the
-  // exact lead-report-controls-integrity violation this hook prevents.
+  // Identity-stable across readOnly so chip-raise can list it without reopening on snapshot.
   const openCreate = useCallback((seed?: CreateSeed) => {
     if (readOnlyRef.current) return;
     setOpenSeq((n) => n + 1);

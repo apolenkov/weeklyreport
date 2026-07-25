@@ -3,18 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 
-/**
- * DOM-parity tests for the WeeklyReportSkeleton.
- *
- * The skeleton mirrors {@link WeeklyReportPage}'s 4 top-level sections:
- *   1. page header (title + Live pill | 2 action buttons)
- *   2. period nav shell
- *   3. Portfolio overview card (sm:grid-cols-2 of 6 product cards)
- *   4. per-product accordions × 6
- *
- * These tests pin the structural contract — adding/removing a section
- * on the real page without updating the skeleton would now break a test.
- */
+// DOM-parity for skeleton structure; structural drift vs the real page fails here.
 describe("WeeklyReportSkeleton", () => {
   it("renders with aria-busy and accessible label", () => {
     render(<WeeklyReportSkeleton />);

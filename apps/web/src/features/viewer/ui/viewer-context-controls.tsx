@@ -19,7 +19,7 @@ interface ViewerContextControlsProps {
   readonly mode: "form" | "slides";
 }
 
-/** Toolbar controls shared by both viewer render paths (page and slides). */
+// Shared by both viewer render paths (page and slides).
 export function ViewerContextControls({
   periods,
   reportId,

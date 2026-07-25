@@ -11,6 +11,9 @@ import { TRPCProxyContext } from "./trpc-context";
 
 type TRPCProviderProps = Readonly<{ children: ReactNode }>;
 
+// Sonner defaults make error toasts sticky; cap so notifications never block the workflow.
+const TOAST_DURATION_MS = 5000;
+
 export function TRPCProvider({ children }: TRPCProviderProps) {
   const [queryClient] = useState(() => makeQueryClient());
   const [trpc] = useState<TRPCProxy>(() => makeTRPCProxy(queryClient));
@@ -23,16 +26,12 @@ export function TRPCProvider({ children }: TRPCProviderProps) {
     <QueryClientProvider client={queryClient}>
       <TRPCProxyContext.Provider value={trpc}>
         {children}
-        {/* Toast UX:
-            - position="top-center" — single visual anchor, less off-screen on mobile
-            - no closeButton — `richColors` already renders a status icon, so a
-              second X next to it produced a double-cross visual that read as
-              cluttered. Auto-dismiss handles both ergonomics and clutter.
-            - duration=5000 — sonner defaults make error toasts sticky; cap at
-              5s so notifications never block the workflow. Critical errors
-              still surface on the next user action via the underlying state.
-        */}
-        <Toaster richColors position="top-center" duration={5000} />
+        {/* top-center anchor; no closeButton — richColors already shows a status icon. */}
+        <Toaster
+          richColors
+          position="top-center"
+          duration={TOAST_DURATION_MS}
+        />
       </TRPCProxyContext.Provider>
     </QueryClientProvider>
   );

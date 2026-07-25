@@ -2,13 +2,7 @@ import { ComingSoonTooltip } from "@customreport/ui/components/ui/tooltip";
 import { cn } from "@customreport/ui/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
-/*
- * Single source of the inert "coming soon" button chrome: the ComingSoonTooltip
- * wrapper, the aria-disabled button, the shared inert classes, and a fixed-size
- * lucide icon slot. Every inert BUTTON deferred control composes this so their
- * parity holds by construction, not by per-file source scan. The primitive owns
- * all geometry classes per variant — consumers pass NO className.
- */
+// Parity by construction for inert deferred controls; primitive owns geometry — no consumer className.
 
 const INERT_CHROME =
   "inline-flex cursor-default items-center justify-center border border-[var(--color-border)] bg-[var(--color-surface-empty)] font-semibold text-[var(--color-muted-foreground)]";

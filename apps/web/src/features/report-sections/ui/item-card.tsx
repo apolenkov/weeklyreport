@@ -19,42 +19,19 @@ interface ItemCardProps {
   readonly item: KanbanItem;
   readonly onEdit?: (id: string) => void;
   readonly onDelete?: (id: string) => void;
-  /**
-   * Resolve-not-delete (ADR 0015): the record's lineage appeared in a
-   * published report. Renders the visible marker and withholds Delete —
-   * the record can be marked done or carried forward instead.
-   */
+  // Resolve-not-delete (ADR 0015): published lineage withholds Delete.
   readonly publishedLocked?: boolean;
-  /** In-place move action; see ItemCardActions. */
   readonly onMarkComplete?: (id: string) => void;
-  /** In-place move action; see ItemCardActions. */
   readonly onMoveToNextWeek?: (id: string) => void;
-  /** In-place move action: pull a next-week item back into the current week. */
   readonly onMoveToCurrentWeek?: (id: string) => void;
-  /** require-paused-item-reason: open the pause-reason prompt for this item. */
   readonly onPause?: (id: string) => void;
   readonly readOnly?: boolean;
-  /**
-   * When true, the card renders an inline textarea seeded with `item.text`
-   * instead of the static text. Blur, Enter, or Escape commit/cancel via
-   * `onTextSave`. Owned by the parent section so only one card is editable
-   * at a time.
-   */
+  // Parent owns editingId so only one card is editable at a time.
   readonly isEditing?: boolean;
-  /**
-   * Commit handler for inline edit. Called with `(id, nextText)` on Enter or
-   * blur. Called with the original text on Escape (caller treats this as a
-   * no-op-but-close signal). The parent section is responsible for clearing
-   * its `editingId` state.
-   */
+  // Escape re-sends original text as a no-op-but-close signal.
   readonly onTextSave?: (id: string, nextText: string) => void;
-  /**
-   * The section's own risks. The card's at-risk/blocked pill is DERIVED from
-   * the covering risks (never a free item status), mirroring the stage-chip
-   * render floor. Only product-parented in-progress items derive an alarm; an
-   * activity item's severity stays isolated by design, so the activity
-   * section passes none.
-   */
+  // At-risk/blocked pill is derived from covering risks (not free status).
+  // Activity sections pass none — severity stays isolated by design.
   readonly risks?: readonly RiskEntry[];
 }
 
@@ -148,8 +125,7 @@ export function ItemCard({
         </div>
       )}
 
-      {/* require-paused-item-reason: a paused item always carries the lead's
-          reason, surfaced as a muted line so a reviewer sees WHY it stalled. */}
+      {/* Paused items always carry a reason so reviewers see why it stalled. */}
       {!showEditor &&
         displayStatus === "paused" &&
         item.pausedReason != null &&

@@ -18,7 +18,6 @@ function StatusField({ children }: { readonly children: ReactNode }) {
   );
 }
 
-/** The item status-chip row (Completed / In Progress / Blocked / Planned). */
 function ItemStatusChips({
   choices,
   status,
@@ -35,10 +34,7 @@ function ItemStatusChips({
   );
 }
 
-/**
- * The status slot when a covering risk floors the item: the alarm is derived
- * from that risk, so the free chips are replaced by a read-only lock message.
- */
+// Covering risk owns the alarm — free chips replaced by a read-only lock.
 function CoveredStatusLock() {
   return (
     <StatusField>
@@ -50,8 +46,6 @@ function CoveredStatusLock() {
   );
 }
 
-/** The status slot: the locked message, or the progress chips. Blockers live
- * in Risks & Blockers, not as a free status chip here. */
 export function StatusSlotView({
   slot,
   choices,

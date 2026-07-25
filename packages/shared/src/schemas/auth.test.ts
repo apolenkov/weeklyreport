@@ -25,10 +25,6 @@ const validSession = () => ({
   },
 });
 
-// ---------------------------------------------------------------------------
-// roleSchema
-// ---------------------------------------------------------------------------
-
 describe("roleSchema", () => {
   it('accepts "lead"', () => {
     expect(roleSchema.safeParse("lead").success).toBe(true);
@@ -57,10 +53,6 @@ describe("roleSchema", () => {
     },
   );
 });
-
-// ---------------------------------------------------------------------------
-// userSessionSchema — core fields
-// ---------------------------------------------------------------------------
 
 describe("userSessionSchema — required fields", () => {
   it("accepts valid session with all fields", () => {
@@ -150,10 +142,6 @@ describe("userSessionSchema — hydrated identity bounds", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// userSessionSchema — nullable JWT fields
-// ---------------------------------------------------------------------------
-
 describe("userSessionSchema — nullable JWT fields", () => {
   it("accepts activeReportId as null", () => {
     const session = { ...validSession(), activeReportId: null };
@@ -225,10 +213,6 @@ describe("userSessionSchema — nullable JWT fields", () => {
     expect(result.success).toBe(false);
   });
 });
-
-// ---------------------------------------------------------------------------
-// userSessionSchema — role values
-// ---------------------------------------------------------------------------
 
 describe("userSessionSchema — role validation", () => {
   it("accepts each valid session role in context of full session", () => {

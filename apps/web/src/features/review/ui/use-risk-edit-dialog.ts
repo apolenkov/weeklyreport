@@ -34,13 +34,6 @@ interface UseRiskEditDialogArgs {
   readonly stagesForProduct?: (productId: string) => readonly string[];
 }
 
-/**
- * All state, derived values and handlers behind the risk dialog's form. Kept out of the
- * component so the dialog file stays render-only. Delegates the prose-field
- * state to {@link useRiskEditFields} and the parent/stage/severity
- * classification state to {@link useRiskEditParentStage}; this hook owns only
- * the orchestration that spans both — validation, save, keydown, and focus.
- */
 export function useRiskEditDialog({
   risk,
   products,
@@ -79,14 +72,8 @@ export function useRiskEditDialog({
 
   const dialogSurfaceRef = useRef<HTMLDivElement>(null);
 
-  /**
-   * a11y (validation-focus): moves focus to the first invalid field after a
-   * failed save, in the same order the fields are validated, so a keyboard
-   * or screen-reader user lands on what needs fixing instead of being left
-   * on Save. The stage checkbox group has no local ref of its own — the
-   * dialog surface's only `<fieldset>` is StageMultiSelect's, so its first
-   * checkbox is reached via a scoped query instead of a wrapper ref.
-   */
+  // After failed save, focus first invalid field. Stage checkboxes have no
+  // local ref — query the dialog surface's only fieldset instead.
   function focusFirstInvalidField(fieldErrors: RiskFieldErrors) {
     if (fields.focusFirstInvalid(fieldErrors)) return;
     if (fieldErrors.stageIds) {

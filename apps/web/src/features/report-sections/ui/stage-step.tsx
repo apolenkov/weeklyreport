@@ -15,10 +15,6 @@ interface StageStepProps {
   readonly deadEndNotice: ReactNode;
 }
 
-/**
- * Shared product-parent stage-selection primitive so every record dialog keeps
- * the same required-stage and dead-end behavior.
- */
 export function StageStep({
   id,
   stageIds,

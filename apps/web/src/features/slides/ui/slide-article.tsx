@@ -16,13 +16,7 @@ import {
   StageLegend,
 } from "./slide-article-rows";
 
-/**
- * The one slide article for the whole deck (lead sections AND the head's own
- * section, on every consuming surface): header → priority strip → single
- * column-header row → one card per product → legend. Auto-height canvas:
- * centered at the token max width, never clipped; below the min width the
- * deck's scroll container takes over.
- */
+// Shared slide canvas: auto-height, never clipped; deck scroll owns overflow below min width.
 export function SlideArticle({
   slide,
   heroControls,

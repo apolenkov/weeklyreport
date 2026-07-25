@@ -29,8 +29,6 @@ describe("ForbiddenPage", () => {
   });
 
   it("links the dashboard button to the caller-resolved home (not hardcoded)", () => {
-    // The home link uses the caller-provided homeHref (resolved from the
-    // visitor's role), never a hardcoded /head/dashboard.
     render(<ForbiddenPage requiredRoles={["head"]} homeHref="/lead/report" />);
     const link = screen.getByRole("link", { name: /go to dashboard/i });
     expect(link).toHaveAttribute("href", "/lead/report");

@@ -1,11 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * The read-only viewer shell mirrors the head shell's toolbar primitives
- * (ScopeToggle, ViewModeToggle, Export-PDF, period nav) but renders NO mutation
- * affordance, and its URLs target `/reports/...`, not `/head/report/...`.
- * Back-to-Archive is removed; the Agent-review coming-soon control stays. A
- * published-or-current race NOT_FOUND recovers once through the Status entry.
+ * Read-only shell: head toolbar, no mutations, `/reports/...` URLs.
+ * Status-entry NOT_FOUND recovers once; other failures are terminal.
  */
 
 import "@testing-library/jest-dom/vitest";

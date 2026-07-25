@@ -10,21 +10,14 @@ import { BoardColumnHeader } from "./board-column-header";
 const MAX_LANE_COLUMNS = 3;
 
 interface ActivityLanesBlockProps {
-  /** Lanes from `splitItemBoard` — one per activity that owns rows. */
   readonly lanes: readonly ItemColumn[];
   readonly readOnly: boolean;
   readonly onAdd: (seed: CreateSeed) => void;
-  /** Host-section card render, so Current/Next keep their own item actions. */
   readonly renderItem: (item: KanbanItem) => ReactNode;
 }
 
-/**
- * The week boards' activity level, rendered BELOW the product grid as its own
- * lighter block (the slide precedent: activities are a separate row under the
- * product cards, never peer product columns). A lane exists only when it has
- * rows, so the block self-suppresses on activity-less boards; each lane header
- * carries the activity-preselecting "+ Add".
- */
+// Activities sit in a separate row under product cards (slide precedent), not
+// as peer product columns; empty boards self-suppress via zero lanes.
 export function ActivityLanesBlock({
   lanes,
   readOnly,

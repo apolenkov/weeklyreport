@@ -9,13 +9,7 @@ interface ViewModeToggleProps {
   readonly editHref: string;
   readonly slidesHref: string;
   readonly mode?: "edit" | "slides";
-  /**
-   * When true the non-slides segment is labeled "Report" with a document icon
-   * instead of "Edit"/pencil. The viewer report surface is strictly read-only
-   * (no Publish/Lock, no section editing), so a pencil "Edit" affordance there
-   * is misleading; the head surface keeps "Edit" since it carries lifecycle
-   * actions in that mode.
-   */
+  // Viewer is read-only — pencil "Edit" is misleading; head keeps "Edit".
   readonly readOnly?: boolean;
 }
 
@@ -25,10 +19,7 @@ export function ViewModeToggle({
   mode = "edit",
   readOnly = false,
 }: ViewModeToggleProps) {
-  // Compact icon-only segments in the neutral family. The two segments stay
-  // `<Link>` URL navigation (slides is a separate route; `scroll={false}`), so
-  // middle-click / open-in-new-tab still work. Each keeps an accessible name via
-  // an sr-only span; `title` supplies the hover tooltip.
+  // <Link> segments keep middle-click / open-in-new-tab; slides is its own route.
   const reportLabel = readOnly ? "Report" : "Edit";
   return (
     <SegmentedToggle ariaLabel="View mode">

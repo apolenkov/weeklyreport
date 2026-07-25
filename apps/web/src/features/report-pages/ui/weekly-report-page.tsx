@@ -17,59 +17,24 @@ import {
 import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 
 interface WeeklyReportPageProps {
-  /**
-   * Concrete report identifier (UUID). When provided, the query targets that
-   * specific report; used by /reports/[reportId] route pages.
-   */
+  // Concrete report UUID; when set the query targets that report.
   readonly reportId?: string;
-  /**
-   * When true, the page auto-redirects (router.replace) to the canonical
-   * addressed URL `/head/report/<reportId>` once the active reportId is known.
-   * Off when already on a `[reportId]` route.
-   *
-   * Optional `canonicalBasePath` (defaults to `/head/report`) lets callers
-   * point the redirect at a different addressed surface.
-   */
+  // Auto-redirect to `/head/report/<reportId>` once known; off on `[reportId]`.
+  // `canonicalBasePath` (default `/head/report`) selects the addressed surface.
   readonly redirectToCanonical?: boolean;
   readonly canonicalBasePath?: string;
   readonly authorId?: string;
-  /**
-   * Grouping axis (head split-view parity). "product" (default)
-   * is the classic per-product accordion list; "lead" groups products under
-   * each authoring lead. A product shared by several leads appears under each —
-   * leads own their own phases, so the duplication is expected.
-   */
+  // "product" accordion list, or "lead" grouping (shared products appear under each).
   readonly scope?: "product" | "lead";
-  /**
-   * The page owns the single two-row ReportToolbar. An outer shell
-   * (HeadReportShell) supplies leading Document-action-row controls here —
-   * head passes its labeled Export-PDF — rendered before the page's own
-   * Move-to-archive / Publish lifecycle actions. When omitted the page renders
-   * the shared Export control itself (head/admin/viewer get the real export;
-   * lead sees the inert ComingSoon).
-   */
+  // Shell-supplied Document-action leading controls (before archive/publish).
+  // When omitted the page renders Export itself (ComingSoon for lead).
   readonly documentActionsLeading?: ReactNode;
-  /**
-   * The FULL Context-control row (bottom row), composed by an outer shell that
-   * owns a richer period navigator (HeadReportShell prepends the
-   * active/displayed periods compiledHistory omits). When provided it replaces
-   * the page's default context row, including period navigation. Mutually
-   * exclusive with `contextControlsLeading`.
-   */
+  // Full Context-control row from the shell; replaces the default period nav.
+  // Mutually exclusive with `contextControlsLeading`.
   readonly contextControls?: ReactNode;
-  /**
-   * Context-control-row controls prepended before the page's default period
-   * navigator. Used by standalone consumers (the viewer) that reuse the page's
-   * own period nav but add the Agent-review placeholder (leading edge) and
-   * Back-to-Archive navigation to the bottom row.
-   */
+  // Controls prepended before the page's default period navigator.
   readonly contextControlsLeading?: ReactNode;
-  /**
-   * A context label (department name plus a short page descriptor) rendered on
-   * the header line beside the title. It is a label, not a control, so it
-   * stays out of the two action rows. Head form mode passes it; standalone
-   * consumers omit it.
-   */
+  // Header-line label (not a control) — stays out of the two action rows.
   readonly headerContextLabel?: ReactNode;
 }
 
@@ -104,7 +69,6 @@ export function WeeklyReportPage({
 
   return (
     <div className="space-y-4">
-      {/* Page header */}
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
           <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
@@ -113,22 +77,13 @@ export function WeeklyReportPage({
           <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
             Live &middot; {page.submitted}/{page.total} Submitted
           </span>
-          {/* The publish precondition hint sits on the report-status row
-              (not the action row). */}
           {page.showPublishHint && (
             <span className="text-xs text-[var(--color-muted-foreground)]">
               Publish requires at least one submitted section.
             </span>
           )}
-          {/* Department context label — a label, not a control, so it stays
-              on the header line, out of the action rows. */}
           {headerContextLabel}
         </div>
-        {/* Document actions live on the header line's right slot, not inside
-            the bordered toolbar. The labeled Export-PDF (or a shell-supplied
-            leading action) leads, then the head lifecycle
-            actions (Move-to-archive, Publish & Lock). Viewer and the lead
-            preview have no mutating actions, so only the export control renders. */}
         <DocumentActionGroup>
           {documentActionsLeading ?? (
             <ToolbarExportControl
@@ -138,10 +93,7 @@ export function WeeklyReportPage({
               periodStatus={page.periodStatus}
             />
           )}
-          {/* Move-to-archive — a published-period lifecycle action, so it is a
-              document action (neutral/outline), distinct from the show-archived
-              filter in the context bar. Hidden after archiving because this page
-              only navigates active periods. */}
+          {/* Published-period lifecycle action, distinct from archive filter. */}
           {page.canMutatePeriod && page.periodStatus === "published" && (
             <button
               type="button"
@@ -153,10 +105,7 @@ export function WeeklyReportPage({
               {page.mutationState.archiveLabel}
             </button>
           )}
-          {/* The head/admin Acknowledge control sits WITH Publish & Lock so
-              review → acknowledge → publish reads as one sequence. It never
-              gates publish; AcknowledgeSurface self-suppresses when review is
-              disabled (e.g. a published period). */}
+          {/* With Publish so review → acknowledge → publish reads as one sequence. */}
           {page.canMutatePeriod && (
             <AcknowledgeSurface
               reviewModel={page.reviewModel}
@@ -179,9 +128,6 @@ export function WeeklyReportPage({
         </DocumentActionGroup>
       </header>
 
-      {/* The bordered toolbar holds only the Context-control bar — either a
-          shell-composed row (head) or the page's default period navigator,
-          optionally preceded by leading controls (the viewer's Agent review). */}
       <ReportToolbar
         contextControls={
           contextControls ?? (
@@ -198,9 +144,6 @@ export function WeeklyReportPage({
         }
       />
 
-      {/* Report body: true empty-state OR the review surfaces + filtered
-          accordion. The empty-state gate keys off FULL content, never the
-          submitted count or the filtered accordion. */}
       <ReportContent
         hasAnyContent={page.hasAnyContent}
         periodStatus={page.periodStatus}

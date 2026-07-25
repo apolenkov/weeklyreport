@@ -6,18 +6,13 @@ import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
 
-/** One reviewable group in the report (usually exactly one). */
 export interface AcknowledgeGroup {
   readonly groupId: string;
   readonly label?: string;
 }
 
-/**
- * review-acknowledgement (§6.1): the per-group Acknowledge control on the live
- * current-period report. Available to ANY access-holder (NOT gated by
- * `canReview`). One button per distinct group; the "who acknowledged" roster
- * renders only for head/admin.
- */
+// Per-group Acknowledge on the live report — any access-holder, NOT gated by
+// canReview. "Who acknowledged" roster is head/admin only.
 export function ReviewAcknowledgeBar({
   reportId,
   groups,

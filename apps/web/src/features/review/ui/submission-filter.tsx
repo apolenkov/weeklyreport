@@ -5,13 +5,8 @@ import {
   SegmentedToggle,
 } from "../../../shared/ui/report-shell/segmented-toggle";
 
-/**
- * review-acknowledgement (§7): which sections the reviewer sees in the accordion
- * BODY. Per-user, client-only, default submitted-only. It filters the rendered
- * accordion only — never a server query, read gate, or group scope — so the
- * header submission count, the portfolio band, and the period nav keep showing
- * the truth (all sections).
- */
+// Client-only accordion body filter (default submitted-only). Never a server
+// query or read gate — header counts and portfolio still show all sections.
 export type SubmissionFilter = "submitted" | "all";
 
 const SEGMENTS: readonly { value: SubmissionFilter; label: string }[] = [
@@ -19,7 +14,6 @@ const SEGMENTS: readonly { value: SubmissionFilter; label: string }[] = [
   { value: "all", label: "All" },
 ];
 
-/** The [Submitted | All] toggle, in the shared neutral segmented-toggle family. */
 export function SubmissionFilterToggle({
   value,
   onChange,
@@ -44,12 +38,8 @@ export function SubmissionFilterToggle({
   );
 }
 
-/**
- * review-acknowledgement (§7 anti-empty-state): when submitted-only hides draft
- * sections that DO carry content, this reveal affordance stands in for a
- * misleading empty accordion — it names the hidden count and flips the filter to
- * All, never the "No submissions yet" empty state.
- */
+// Reveal when submitted-only hides draft sections that have content — avoids
+// a misleading empty accordion ("No submissions yet").
 export function DraftHiddenSignal({
   count,
   onShowAll,

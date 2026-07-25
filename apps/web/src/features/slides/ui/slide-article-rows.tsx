@@ -58,10 +58,8 @@ function ItemRow({
     editableRef: row.editableRef,
     onRowActivate,
   });
-  // Every row is the same two-line card (short text still occupies two lines,
-  // longer text clamps to an ellipsis). Hover shows the status plus the full
-  // text — unconditionally, so a clamped row never hides its tail behind the
-  // ellipsis. Badges and icons ride the text inline, so nothing indents the body.
+  // Two-line card always: hover shows status + full text so a clamped row never
+  // hides its tail; badges/icons ride inline so nothing indents the body.
   const statusTooltip = useHoverTooltip<HTMLLIElement>(
     `${row.hoverLabel}\n${row.text}`,
   );

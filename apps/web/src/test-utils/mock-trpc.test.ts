@@ -1,15 +1,3 @@
-/**
- * Contract tests for createMockTRPC.
- *
- * Pins:
- *  (a) pathFilter() returns { queryKey: [splitPath] } — fails under the old
- *      { tag } shape.
- *  (b) invalidateQueries(pathFilter()) marks ONLY the matching query stale
- *      (negative assertion on an unrelated seeded query).
- *  (c) A "pending" descriptor's query promise remains unsettled.
- *  (d) Mutation capture records mutationFn input and caller-passed callbacks.
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -17,17 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { TRPCProxyContext } from "../lib/trpc-context";
 import { createMockTRPC } from "./mock-trpc";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Walks the mock proxy by dotted path and returns the leaf as a plain
- * record. The mock proxy's real type (`TRPCProxy`) is the full production
- * router shape; these tests exercise the dynamically-built stub structure
- * itself (pathFilter/queryOptions/mutationOptions), so a structural
- * `Record<string, unknown>` view — not `any` — is what the assertions need.
- */
+// Structural Record view of the dynamic stub (not the full TRPCProxy type).
 function leaf(proxy: unknown, ...path: string[]): Record<string, unknown> {
   return path.reduce<Record<string, unknown>>(
     (node, segment) => node[segment] as Record<string, unknown>,
@@ -53,10 +31,6 @@ function makeWrapper(proxy: unknown) {
   return { qc, Wrapper };
 }
 
-// ---------------------------------------------------------------------------
-// (a) pathFilter shape — must carry queryKey, not tag
-// ---------------------------------------------------------------------------
-
 describe("createMockTRPC — pathFilter shape (contract pin)", () => {
   it("pathFilter() returns { queryKey: [[...splitPath]] } for a single-segment path", () => {
     const { proxy } = createMockTRPC([
@@ -66,7 +40,6 @@ describe("createMockTRPC — pathFilter shape (contract pin)", () => {
       .pathFilter as () => unknown;
     const filter = pathFilter();
     expect(filter).toEqual({ queryKey: [["admin", "getOrganization"]] });
-    // Old vacuous shape must NOT be present.
     expect(filter).not.toHaveProperty("tag");
   });
 
@@ -80,10 +53,6 @@ describe("createMockTRPC — pathFilter shape (contract pin)", () => {
     expect(filter.queryKey).toEqual([["admin", "jobs", "listFailed"]]);
   });
 });
-
-// ---------------------------------------------------------------------------
-// (b) invalidateQueries marks ONLY the matching query stale
-// ---------------------------------------------------------------------------
 
 describe("createMockTRPC — invalidation is non-vacuous", () => {
   it("invalidateQueries via pathFilter() marks only the matching query stale", async () => {
@@ -107,24 +76,17 @@ describe("createMockTRPC — invalidation is non-vacuous", () => {
     await qc.fetchQuery(orgOpts);
     await qc.fetchQuery(settingsOpts);
 
-    // Both queries are now fresh.
     expect(qc.getQueryState(orgOpts.queryKey)?.isInvalidated).toBe(false);
     expect(qc.getQueryState(settingsOpts.queryKey)?.isInvalidated).toBe(false);
 
-    // Invalidate only getOrganization via its pathFilter.
     const pathFilter = leaf(proxy, "admin", "getOrganization")
       .pathFilter as () => Parameters<typeof qc.invalidateQueries>[0];
     await qc.invalidateQueries(pathFilter());
 
-    // getOrganization is stale; getSettings is NOT.
     expect(qc.getQueryState(orgOpts.queryKey)?.isInvalidated).toBe(true);
     expect(qc.getQueryState(settingsOpts.queryKey)?.isInvalidated).toBe(false);
   });
 });
-
-// ---------------------------------------------------------------------------
-// (c) "pending" descriptor remains unsettled
-// ---------------------------------------------------------------------------
 
 describe("createMockTRPC — pending descriptor", () => {
   it('a "pending" descriptor does not settle after the initial query tick', async () => {
@@ -162,10 +124,6 @@ describe("createMockTRPC — descriptor validation", () => {
     );
   });
 });
-
-// ---------------------------------------------------------------------------
-// (d) Mutation capture
-// ---------------------------------------------------------------------------
 
 describe("createMockTRPC — mutation capture", () => {
   it("records mutationFn input in calls array", async () => {

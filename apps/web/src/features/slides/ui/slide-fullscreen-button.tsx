@@ -7,21 +7,11 @@ interface SlideFullscreenButtonProps {
   readonly isFullscreen: boolean;
   readonly onToggle: () => void;
   readonly variant?: "default" | "floating";
-  /**
-   * Captures the DOM node so the deck-level `useFullscreen` owner can return
-   * focus to this persistent toggle when fullscreen ends (never the floating
-   * pill, which unmounts).
-   */
+  // Focus return target for useFullscreen; never the floating pill (it unmounts).
   readonly buttonRef?: Ref<HTMLButtonElement>;
 }
 
-/**
- * Presentational fullscreen toggle. The state — plus the `f` shortcut and the
- * native `fullscreenchange` subscription — is owned by a single deck-level
- * `useFullscreen` hook, so adding a second visible exit control never
- * double-toggles. The `floating` variant self-gates: it renders nothing unless
- * `isFullscreen`.
- */
+// Presentational only: one deck-level useFullscreen owner so a second control never double-toggles.
 export function SlideFullscreenButton({
   isFullscreen,
   onToggle,

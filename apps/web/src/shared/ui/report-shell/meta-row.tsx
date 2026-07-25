@@ -1,10 +1,7 @@
 "use client";
 
-// Chip presets for an empty `stageTags` array.
-// "all-stages" keeps the items/decisions semantics (empty = all assigned
-// stages); "no-stage-warning" is the loud risk variant — a stage-less risk
-// is an anomaly, never an implicit scope. Warning tokens match the
-// needsStage hint (at-risk bg/fg tokens).
+// Empty stageTags: "all-stages" = implicit full scope for items/decisions;
+// "no-stage-warning" = stage-less risk is an anomaly (at-risk tokens).
 const EMPTY_STAGE_CHIPS = {
   "all-stages": {
     label: "All stages",

@@ -4,19 +4,7 @@ import { cn } from "@customreport/ui/lib/utils";
 import type * as React from "react";
 import { ResponsiveContainer, Tooltip } from "recharts";
 
-/**
- * Minimal chart wrapper around recharts — Tailwind-friendly height/width
- * defaults and a styled Tooltip. A slimmer wrapper than shadcn-ui's full
- * Chart API: exposes the two primitives consumed by the trends page chart
- * components.
- */
-
-// `ResponsiveContainer` seeds its first render from `initialDimension`, which
-// defaults to {-1,-1}; with width/height="100%" that makes the very first
-// paint compute a negative chart size and recharts logs a `width(-1)/height(-1)`
-// warning until the ResizeObserver fires. `min*` props are CSS-only and do not
-// feed that calculation, so we seed a positive initial dimension instead. The
-// height matches the `h-64` wrapper (16rem = 256px at the 16px root font).
+// Seed positive initialDimension so ResponsiveContainer does not paint width/height -1 (h-64 = 256).
 const CHART_INITIAL_DIMENSION = { width: 0, height: 256 } as const;
 
 export function ChartContainer({

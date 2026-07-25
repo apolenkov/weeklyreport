@@ -8,31 +8,11 @@ import {
   decodeTrpcBatchPayload,
   requireApiUrl,
   shouldUseDevAuthFallback,
+  TRPC_BATCH_EMPTY_INPUT,
 } from "./api-url";
 
-/**
- * Server-only helper that reads the session cookie via Next.js `cookies()`
- * and resolves to a verified UserSession by calling the API's `auth.me`
- * tRPC procedure.
- *
- * Threat-model notes:
- *  - T1: layout-level UX gate only — the actual security boundary is the
- *    api's role middleware. This helper exists so
- *    the user does not see protected layout chrome before the tRPC error
- *    surfaces; it is NOT a substitute for server-side authorisation.
- *  - T2: tRPC v11 superjson + httpBatchLink batches even single GET queries
- *    as `?batch=1&input={"0":{"json":<payload>}}`. We issue a single
- *    request to `auth.me` with no payload — input map carries `0: {}` to
- *    satisfy the batch shape.
- *  - T3: stale session — the JWT carries the role at sign-time; if the user
- *    was downgraded in Keycloak after the cookie was issued, this helper
- *    returns the (still-valid) session until the cookie expires (1 h).
- *    Documented limitation: no real-time role revocation.
- *
- * `cache: 'no-store'` is mandatory — every request must consult the API
- * fresh, otherwise role downgrades would be invisible until the Next.js
- * data cache invalidates.
- */
+// Layout UX gate only — API role middleware is the security boundary.
+// no-store is mandatory so role downgrades are not hidden by the data cache.
 function decodeAuthMeResponse(body: unknown): UserSession | null {
   const payload = decodeTrpcBatchPayload(body);
   const result = userSessionSchema.safeParse(payload);
@@ -45,11 +25,7 @@ export async function getServerSession(): Promise<UserSession | null> {
   if (!token && !shouldUseDevAuthFallback()) return null;
 
   const apiUrl = requireApiUrl();
-  // tRPC v11 batched GET — `input` is a JSON map keyed by request index.
-  // For a procedure with no input, `{"0":{}}` is the canonical empty form
-  // (superjson transformer accepts undefined input).
-  const inputParam = encodeURIComponent('{"0":{}}');
-  const url = `${apiUrl}/trpc/auth.me?batch=1&input=${inputParam}`;
+  const url = `${apiUrl}/trpc/auth.me?batch=1&input=${TRPC_BATCH_EMPTY_INPUT}`;
 
   try {
     const response = await fetch(url, {

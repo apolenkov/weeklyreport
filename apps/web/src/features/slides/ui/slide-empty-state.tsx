@@ -1,5 +1,4 @@
-// The one empty-slide placeholder every deck surface shares — no surface may
-// re-inline its own (unify-status-presentation Req3).
+// Shared empty-slide placeholder; no deck surface may re-inline its own.
 export function SlideEmptyState({
   title,
   message,

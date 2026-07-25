@@ -10,8 +10,7 @@ interface SaveNowButtonProps {
   autosave: AutosaveSnapshot;
 }
 
-/** State → { accessible label, visible label, icon }. Kept out of the component
- *  so its branching does not inflate the component's cognitive complexity. */
+// State → label/icon mapping, kept out of the component for complexity budget.
 function deriveSaveView(
   state: AutosaveSnapshot["state"],
   isSaving: boolean,
@@ -34,23 +33,6 @@ function deriveSaveView(
   return { ariaLabel: "Save draft now", label: "Save", icon: <DiscIcon /> };
 }
 
-/**
- * "Save now" labeled pill button — sized like the other labeled toolbar
- * actions (`min-w-[6.5rem]`, `px-4`), NOT icon-only: it renders an icon plus
- * a visible `<span>{label}</span>` beside it. Anchored to the toolbar's
- * far-right slot. Renders a floppy-disc + "Save" by default; swaps to a
- * spinner + "Saving" while a save is in flight; flashes a check + "Saved" on
- * success; shows an alert triangle + "Retry" on error.
- *
- * State → icon + label mapping:
- *   idle / pending          → disc + "Save"      (enabled only in `pending`)
- *   saving (isInFlight)     → spinner + "Saving" (disabled, accent green
- *                                                  fill, white text/icon,
- *                                                  aria-busy="true")
- *   saved (post-success)    → check + "Saved"    (disabled, reverts after
- *                                                  1500ms)
- *   error                   → alert + "Retry"    (enabled — click retries)
- */
 export function SaveNowButton({ autosave }: SaveNowButtonProps) {
   const { state, isInFlight, forceSave } = autosave;
 

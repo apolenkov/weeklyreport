@@ -4,34 +4,13 @@ const MAX_REPORTING_GROUP_NAME_LENGTH = 200;
 const MAX_ORG_SHORT_NAME_LENGTH = 16;
 const MAX_ORG_FULL_NAME_LENGTH = 200;
 
-/**
- * Role of a User row in the database (Prisma `Role` enum).
- * DB-bound writes (admin user CRUD) MUST validate against this set.
- *
- * Includes 'admin' so the SAML callback can persist admin-roled Keycloak
- * users without crashing on Prisma's enum validation. Stays in lockstep with
- * `enum Role` in `prisma/schema.prisma`.
- */
+// DB Role enum; admin writes must match Prisma. Includes admin for SAML persistence.
 export const roleSchema = z.enum(["lead", "head", "admin", "viewer"]);
 
-/**
- * Role attached to an authenticated session (JWT / SAML claim).
- *
- * Identical to `roleSchema` today — both enumerate lead/head/admin/viewer. The
- * two names are kept as separate aliases so the session axis and the DB Role
- * column can diverge later without touching every call site.
- */
+// Separate alias from roleSchema so session vs DB axes can diverge without a wide refactor.
 export const sessionRoleSchema = z.enum(["lead", "head", "admin", "viewer"]);
 
-/**
- * Display label for a role. Single source consumed by the login page, the dev
- * role-switcher, and the lead-form author mapper, so a role's label cannot
- * drift between surfaces (the head label was once "Department Head" in one copy
- * and "Head" in two others). Keyed by BOTH axes — session `Role` consumers and
- * `DbRole` consumers (the author mapper) share it, and the union keeps the map
- * total over both if the axes ever diverge. Adding a role to either axis is a
- * compile error until it has a label.
- */
+// Single label map for session Role and DbRole so surfaces cannot drift; total over both axes.
 export const ROLE_LABEL: Record<Role | DbRole, string> = {
   lead: "Lead",
   head: "Head",
@@ -39,15 +18,7 @@ export const ROLE_LABEL: Record<Role | DbRole, string> = {
   viewer: "Viewer",
 };
 
-/**
- * Canonical per-role post-login landing route. One home backing all three
- * landing surfaces — the api dev-login fallback, the web login default, and
- * `ROLE_HOME_PATH` consumers (brand link / role-gate) — so a role's landing cannot diverge
- * between tiers. Exhaustive on the role enum with NO runtime fallback here:
- * a non-`Role` runtime value (persisted/retired role) is the web call site's
- * concern, guarded there. The viewer lands on `/reports/latest`, its canonical
- * primary Status entry, never the `/reports?tab=published` list surface.
- */
+// One home per role for api/web/role-gate. Viewer uses /reports/latest, not the list surface.
 export const ROLE_HOME_PATH: Record<Role, string> = {
   lead: "/lead/report",
   head: "/head/dashboard",
@@ -55,14 +26,7 @@ export const ROLE_HOME_PATH: Record<Role, string> = {
   viewer: "/reports/latest",
 };
 
-/**
- * Seeded dev-mode login email per role — the ONLY home for this map. Both the
- * api dev-login fallback (`?email=` unset) and the web landing page's dev
- * role-switcher grid read it, so the two tiers cannot list a different email
- * for the same role. Dev/UAT-only: real SSO users never hit this map, and
- * `resolveDevLoginIdentity` (api) 404s loudly if a listed email is not
- * actually seeded — no silent fallback to a phantom user.
- */
+// Only home for dev login emails — api and web must list the same address per role.
 export const DEV_LOGIN_EMAIL_BY_ROLE: Record<DbRole, string> = {
   lead: "lead1@customreport.local",
   head: "head@customreport.local",
@@ -74,58 +38,24 @@ export const userSessionSchema = z.object({
   userId: z.uuid(),
   email: z.email(),
   name: z.string().min(1),
-  /**
-   * Structured ФИО parts, plumbed from `auth.me` so the nav avatar renders
-   * correct surname+given initials. Optional because the synthetic PDF-export
-   * session and SAML stubs carry only `name` — consumers fall back to it.
-   */
+  // Optional: PDF-export and SAML stubs may only carry `name`.
   lastName: z.string().optional(),
   firstName: z.string().optional(),
   middleName: z.string().nullable().optional(),
   role: sessionRoleSchema,
   activeReportId: z.uuid().nullable().optional(),
   activeReportSectionId: z.uuid().nullable().optional(),
-  /**
-   * The user's owning reporting group (mirrors `User.reportingGroupId` in
-   * Prisma). Optional on the session shape because (a) the PDF-export
-   * synthetic session has no group context, (b) legacy JWTs minted before
-   * this field existed do not carry it. Downstream
-   * consumers (groupScopeFilter) treat `undefined` as "no head/lead
-   * group context" and fall through to viewer-style empty filter.
-   */
+  // Optional: PDF session has no group; undefined means no head/lead group context.
   reportingGroupId: z.uuid().optional(),
-  /**
-   * Display name for the owning reporting group. Hydrated per request by the
-   * API context so long-lived JWTs can keep carrying only the stable group id
-   * while the navbar still reflects admin-side group renames.
-   */
+  // Hydrated per request so JWTs keep only the group id while renames stay fresh.
   reportingGroupName: z
     .string()
     .min(1)
     .max(MAX_REPORTING_GROUP_NAME_LENGTH)
     .optional(),
-  /**
-   * List of `ReportingGroup.id` values the viewer
-   * has been granted access to via the `ViewerGroupAccess` join table.
-   * Hydrated in `trpc.context.ts` for viewer sessions ONLY (head/lead/
-   * admin do not use this list). Empty array is meaningful — it means
-   * the viewer has been provisioned but granted access to no groups,
-   * which `groupScopeFilter` translates into a zero-row filter.
-   */
+  // Viewer-only; empty array is a deliberate zero-row filter, not "unset".
   viewerGroupAccess: z.array(z.uuid()).optional(),
-  /**
-   * Organization identity hydrated per-request from the `Organization`
-   * singleton in the tRPC context factory. Optional on the schema for two
-   * reasons:
-   *   1. JWT payloads (signed by createJwtSigner) do NOT carry it — so a
-   *      JWT minted before this field existed still verifies and the context
-   *      factory fills the field after `verifySession`. Baking the field
-   *      into the JWT would invalidate every in-flight cookie on deploy
-   *      and would also stale-cache admin renames until next login.
-   *   2. The PDF-export synthetic session does not need it; the worker
-   *      reads the singleton directly when stamping the report header.
-   * Mirrors the `viewerGroupAccess` hydration pattern.
-   */
+  // Hydrated post-verify so JWTs stay small and admin renames do not stale-cache.
   organization: z
     .object({
       shortName: z.string().min(1).max(MAX_ORG_SHORT_NAME_LENGTH),
@@ -134,12 +64,7 @@ export const userSessionSchema = z.object({
     .optional(),
 });
 
-/**
- * `Role` is the session-level role used by `assertRole` / `buildRoleMiddleware`
- * (api). It enumerates the same members as the DB Role enum today (use `DbRole`
- * for admin user writes); the alias stays separate so the session and
- * persistence axes can diverge without a wide refactor.
- */
+// Session role for assertRole; use DbRole for admin user writes.
 export type Role = z.infer<typeof sessionRoleSchema>;
 export type DbRole = z.infer<typeof roleSchema>;
 export type UserSession = z.infer<typeof userSessionSchema>;

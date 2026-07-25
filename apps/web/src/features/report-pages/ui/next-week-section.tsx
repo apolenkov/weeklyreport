@@ -14,44 +14,20 @@ import { NextWeekDialogs } from "./next-week-dialogs";
 
 interface NextWeekSectionProps {
   readonly items: KanbanItem[];
-  /**
-   * record-status-derived-from-risk: own risks forwarded to each ItemCard so an
-   * in-progress next-week item's alarm derives from covering risks, not a free
-   * status. Planned items never floor (the derivation's in-progress gate).
-   */
+  // Own risks for ItemCard alarm derivation (in-progress only; planned never floors).
   readonly risks?: readonly RiskEntry[];
   readonly readOnly?: boolean;
-  /**
-   * Controlled-component callback fired with the next items array on add /
-   * inline-edit / delete. The parent must merge this back into its raw
-   * `draftSection.items` keyed by id, preserving non-presentation fields
-   * (tag, workflowStatus, carriedOver, completed, type).
-   */
+  // Parent merges into draftSection.items by id, preserving non-presentation fields.
   readonly onItemsChange?: (items: KanbanItem[]) => void;
-  /**
-   * Author label used as the default `author` for newly-created items.
-   * Falls back to "You" when undefined.
-   */
   readonly currentUserName?: string;
-  /** Used to seed empty-state `+ Add` button when no items exist. */
   readonly products?: readonly Product[];
-  /** Attached activities forwarded to the parent picker. */
   readonly activities?: readonly { id: string; name: string }[];
-  /** Forwarded to ItemEditDialog for the SDLC stage selector. */
   readonly stagesForProduct?: (productId: string) => readonly string[];
-  /**
-   * All priority ranks already in use by own items for the full period
-   * (current + next week). Forwarded to ItemEditDialog so taken ranks are
-   * disabled in the picker.
-   */
+  // Full-period ranks so ItemEditDialog can disable taken priority ranks.
   readonly ownPeriodRanks?: readonly number[];
   readonly addSignal?: number;
-  /**
-   * Resolve-not-delete (ADR 0015): item ids whose lineage appeared in a
-   * published report — the card shows the marker and withholds Delete.
-   */
+  // Resolve-not-delete (ADR 0015): published-lineage ids show marker, hide Delete.
   readonly publishedLockedIds?: ReadonlySet<string>;
-  /** In-place move action: pull a next-week item back into the current week. */
   readonly onMoveToCurrentWeek?: (id: string) => void;
 }
 

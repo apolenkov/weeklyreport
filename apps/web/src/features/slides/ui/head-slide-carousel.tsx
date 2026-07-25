@@ -4,17 +4,8 @@ import { Gauge } from "lucide-react";
 
 import type { SectionSlideModel } from "../model/section-slide-contracts";
 
-/**
- * The head deck's slide navigation — a horizontal carousel of slide cards
- * above the active slide, replacing the former left sidebar list. Selecting a
- * card activates that slide; arrow-key navigation is owned by the parent deck
- * section.
- *
- * Cards deliberately carry NO status badge or status text: the slide status
- * (Blocked / Review / Ready) renders exactly once, on the active slide header
- * (the "status renders exactly once per slide" requirement). The old sidebar
- * card duplicated it both here and in the focus slide.
- */
+// Cards omit status: Blocked/Review/Ready must render exactly once, on the
+// active slide header only.
 export function HeadSlideCarousel({
   slides,
   selectedIndex,

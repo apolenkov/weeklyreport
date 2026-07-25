@@ -15,10 +15,8 @@ const KNOWN_ITEM_STATUSES = [
   "done",
 ] as const;
 
-/** Everyone-mode item rows carry `workflowStatus` as a plain string (structural
- * mirror of untyped query data); known values reuse the exhaustive
- * own-item map, anything else reads neutral/"Planned" (same lenient coercion
- * convention as `coerceWorkflowToItemStatus`). */
+// Known statuses reuse the own-item map; unknown values coerce to neutral/"Planned"
+// (same lenient convention as coerceWorkflowToItemStatus).
 function foreignItemToneEntry(workflowStatus: string): ToneEntry {
   const known = KNOWN_ITEM_STATUSES.find((status) => status === workflowStatus);
   return known === undefined
@@ -32,8 +30,7 @@ export interface ForeignGridRow {
   readonly column: GridColumnKey;
 }
 
-/** Everyone-mode co-owner rows WITH author identity (never anonymized) and no
- * priority rank (foreign rows are excluded from ranking by design). */
+// Everyone-mode co-owner rows keep real author identity; foreign rows are never ranked.
 export function buildForeignRows(
   foreign: readonly CrossAuthorContentRow[],
 ): ForeignGridRow[] {

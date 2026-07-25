@@ -19,12 +19,6 @@ interface UseItemEditDialogArgs {
   readonly onCancel: () => void;
 }
 
-/**
- * Composes the item dialog's form state (`use-item-edit-form-state`), pure
- * field derivation (`item-edit-dialog-derive`), and save/keydown handlers
- * (`use-item-edit-save`) into the single shape `ItemEditDialogContent` renders.
- * Kept out of the component so the dialog file stays render-only.
- */
 export function useItemEditDialog({
   item,
   products,

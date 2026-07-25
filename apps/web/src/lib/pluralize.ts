@@ -1,10 +1,4 @@
-/**
- * Pick the singular or plural noun form for a count.
- *
- * Shared by multiple components (reminders tab, product accordion) so each
- * does not guard `value === 1` inline. English-only: callers pass the two
- * literal forms; this helper does not own any vocabulary.
- */
+// English-only: callers pass both literal forms; this helper owns no vocabulary.
 export function pluralize(
   value: number,
   singular: string,

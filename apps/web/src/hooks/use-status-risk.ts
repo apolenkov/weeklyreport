@@ -8,39 +8,18 @@ import type {
   StageStatus,
 } from "../features/report-sections/model/types";
 
-// ---------------------------------------------------------------------------
-// Status <-> Risk coupling (pure, render-time derivation)
-//
-// The two halves are intentionally distinct exports:
-// `computeCoupling`/`validateCoupling` are pure functions called at
-// render/memo time, while `useStatusRiskSync` is a React hook. Folding the
-// pure functions into the hook would convert their render-time call sites
-// into hook calls and change evaluation timing, so they stay as standalone
-// exports.
-// ---------------------------------------------------------------------------
-
-/**
- * Coupling state for a single at-risk/blocked product.
- * Pure derived data — no side effects.
- */
+// Pure functions stay standalone: folding them into the hook would force
+// render-time call sites onto hook rules and change evaluation timing.
 interface ProductCoupling {
   productId: string;
   productName: string;
-  /** overallStatus narrowed to at-risk/blocked */
   status: "at-risk" | "blocked";
-  /** IDs of risk rows for this product that have no stageIds specified */
   riskRowsWithoutStages: string[];
 }
 
 export type CouplingState = ProductCoupling[];
 
-/**
- * For each product whose overallStatus is at-risk or blocked:
- * - returns which risk rows lack explicit stage selection (riskRowsWithoutStages)
- *
- * Empty stageIds remains valid for green products (legacy "all stages"
- * shorthand). This invariant is only enforced for red/yellow products.
- */
+// Empty stageIds is valid for green products (legacy "all stages"); enforced only for red/yellow.
 export function computeCoupling(
   products: readonly Product[],
   risks: readonly RiskEntry[],
@@ -70,12 +49,6 @@ export function computeCoupling(
   });
 }
 
-/**
- * Returns IDs of products that have at-risk/blocked status but contain
- * risk rows without explicit stage selection.
- *
- * Empty result means all coupling invariants are satisfied.
- */
 export function validateCoupling(coupling: CouplingState): {
   missing: string[];
 } {
@@ -84,10 +57,6 @@ export function validateCoupling(coupling: CouplingState): {
     .map((c) => c.productId);
   return { missing };
 }
-
-// ---------------------------------------------------------------------------
-// Stage status apply hook
-// ---------------------------------------------------------------------------
 
 type ProductsUpdater = Product[] | ((prev: Product[]) => Product[]);
 
@@ -103,15 +72,8 @@ export interface UseStatusRiskSyncResult {
   ) => void;
 }
 
-/**
- * Stage status applier.
- *
- * The hook only applies stage status changes; the bridge
- * (`lead-form-sync-bridge`) owns interception of conflicting transitions
- * (raise without a risk, lower with covering risks). A saved risk forces its
- * covered chips to at least its severity (automatic severity floor), so there
- * is no opt-in "bump the chip?" suggestion to make.
- */
+// Applies stage status only; the lead-form-sync-bridge owns conflicting transitions.
+// A saved risk floors covered chips to at least its severity — no opt-in bump prompt.
 export function useStatusRiskSync(
   args: UseStatusRiskSyncArgs,
 ): UseStatusRiskSyncResult {
@@ -119,8 +81,6 @@ export function useStatusRiskSync(
 
   const handleStageStatusChange = useCallback(
     (productId: string, stageName: string, newStatus: StageStatus) => {
-      // Update the stage status. No automatic side-effects on Risks —
-      // risk creation/removal is routed explicitly by the bridge.
       onProductsChange((prev) =>
         prev.map((p) => {
           if (p.id !== productId) return p;

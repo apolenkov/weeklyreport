@@ -53,9 +53,6 @@ type SaveDraftSection = (
   operation: "saved" | "deleted",
 ) => void;
 
-/** Shared body of the three inline-edit save handlers: no-op when the section
- * or the corresponding active record is absent, otherwise apply the edit and
- * hand the resulting section to the draft-save mutation. */
 function saveActiveRecord<T>(
   section: ReportSectionReadModel | null,
   active: ActiveRecord,
@@ -71,8 +68,6 @@ function saveActiveRecord<T>(
   );
 }
 
-/** The four commands that resolve to a `saveDraftSection` call: delete the
- * pending record, or save whichever row kind is currently open. */
 function useInlineSaveHandlers({
   section,
   inlineEditRecord,
@@ -129,9 +124,6 @@ function useInlineSaveHandlers({
   return { onConfirmDelete, onItemSave, onRiskSave, onDecisionSave };
 }
 
-/** Owns the two pieces of inline-edit state (which row is open / pending
- * delete) and composes the derived dialog data with the save/delete/activate
- * commands into the shape `SlideInlineEditorDialogs` expects. */
 function useInlineEditCommands({
   section,
   formData,

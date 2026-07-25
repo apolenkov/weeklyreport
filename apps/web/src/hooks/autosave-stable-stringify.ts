@@ -1,8 +1,4 @@
-/**
- * Stable JSON serialization with sorted keys so payload diffs are deterministic
- * regardless of object construction order. Exported so callers can compute
- * the same baseline key when priming `initialSavedKey`.
- */
+// Sorted-key JSON for deterministic dirty diffs; shared so initialSavedKey primes match.
 export function stableStringify(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (value instanceof Date) return JSON.stringify(value.toISOString());

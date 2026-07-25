@@ -26,11 +26,6 @@ interface NextWeekDialogsProps {
 const NEXT_WEEK_DIALOG_WEEK = "next" as const;
 const DELETE_NEXT_WEEK_ITEM_TITLE = "Delete next-week item?";
 
-/**
- * Bundles the two modals the Next Week board can show — item edit/create and
- * delete confirmation — as a single instance shared across all columns, so the
- * section only wires state in and callbacks out.
- */
 export function NextWeekDialogs({
   dialogKey,
   open,

@@ -14,11 +14,7 @@ interface UseLeadFormForeignContentPurgeInput {
   readonly sessionRole: SessionUser["role"] | null;
 }
 
-/**
- * The lead form's foreign-content purge guard. The two effects and their
- * dependency arrays are load-bearing security behavior;
- * `lead-form-visibility.test.tsx` pins them end-to-end.
- */
+// Effects + deps are load-bearing; lead-form-visibility.test.tsx pins them.
 export function useLeadFormForeignContentPurge({
   isEveryone,
   visibilityHydrated,

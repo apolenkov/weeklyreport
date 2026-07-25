@@ -6,7 +6,6 @@ import { ToolbarIconButton } from "./toolbar-icon-button";
 
 const ARCHIVE_TOGGLE_LABEL = "Show closed (archived) report periods";
 
-// Compact icon button with switch semantics and a distinct checked visual.
 const CHECKED_CLASS =
   "cursor-pointer border-[var(--color-starbucks-accent)] bg-[var(--color-success)] text-[var(--color-starbucks-accent)]";
 const UNCHECKED_CLASS =
@@ -17,13 +16,7 @@ interface ArchiveToggleProps {
   readonly onChange: (checked: boolean) => void;
 }
 
-/**
- * Toolbar switch that folds archived (closed) report periods into the period
- * list. Rendered as a shared token-sized ToolbarIconButton
- * while keeping `role="switch"` + `aria-checked`. The control is a quiet inert
- * state indicator only — it carries no numeric count badge, which read as a
- * "press me" call-to-action rather than a switch.
- */
+// No count badge — a number read as a call-to-action rather than a switch.
 export function ArchiveToggle({ checked, onChange }: ArchiveToggleProps) {
   return (
     <ToolbarIconButton

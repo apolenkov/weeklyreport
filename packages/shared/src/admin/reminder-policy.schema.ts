@@ -1,19 +1,6 @@
 import { z } from "zod";
 
-/**
- * Wire-format schema for ReminderPolicy.
- *
- * The Prisma model uses a screaming-snake `ReminderAudience` enum
- * (`LEAD_WITH_DRAFT | HEAD_OF_LATE`) on the database side. The wire/zod
- * contract uses the lowercase-hyphen form so the React admin UI stays
- * idiomatic and consistent with the rest of the shared schema vocabulary
- * (e.g. `traffic-light` statuses). The repository layer (apps/api)
- * translates between the two via `audienceFromPrisma` / `audienceToPrisma`
- * mappers; this module is the single source of truth for the wire shape.
- *
- * `kind` uses the same values as Prisma `ReminderRuleKind` — already
- * snake_case in the database, so no mapping is needed for that field.
- */
+// Wire audience is lowercase-hyphen; Prisma uses SCREAMING_SNAKE — API mappers translate.
 export const reminderAudienceSchema = z.enum([
   "lead-with-draft",
   "head-of-late",
@@ -25,10 +12,7 @@ export const reminderPolicyKindSchema = z.enum([
   "follow_up",
 ]);
 
-// Resolvability probe rather than an Intl.supportedValuesOf allowlist: the
-// allowlist omits "UTC"/"GMT"/"Etc/*" aliases, which are valid zones the app
-// itself offers and defaults to. DateTimeFormat construction accepts exactly
-// the zones the runtime can resolve and throws on garbage ("UTC+3", "MSK").
+// Resolvability probe: supportedValuesOf omit UTC/GMT/Etc/* the app itself uses.
 const isResolvableTimeZone = (timezone: string): boolean => {
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: timezone });
@@ -52,25 +36,11 @@ export const reminderPolicySchema = z
       ),
     audience: reminderAudienceSchema,
     active: z.boolean(),
-    /**
-     * Validity window for the policy.
-     * `validFrom` defaults to "now" so older fixtures (and the in-memory
-     * test repos) that emit policies without this field still parse — the
-     * schema fills the value rather than rejecting. `validUntil === null`
-     * means the policy is active forever (the UI "forever" checkbox).
-     *
-     * Use `z.coerce.date()` so the wire JSON (ISO string) round-trips into
-     * a JS Date without a separate transform step at every call site.
-     */
+    // validFrom defaults so older fixtures without the field still parse.
     validFrom: z.coerce.date().default(() => new Date()),
     validUntil: z.coerce.date().nullable().default(null),
   })
-  /**
-   * The validity window must be coherent. The UI
-   * already disables Save when `validUntil < validFrom`, but a malicious
-   * admin client could bypass the React layer; the wire-level refine
-   * guarantees the invariant holds at the API boundary too.
-   */
+  // Wire-level window invariant; UI can be bypassed by a malicious admin client.
   .refine(
     (policy) =>
       policy.validUntil === null ||

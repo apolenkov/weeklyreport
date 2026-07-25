@@ -231,23 +231,19 @@ describe("ItemEditDialog — save and reopen status reset", () => {
       />,
     );
 
-    // Verify initial status chip reflects item.status = "completed"
     expect(screen.getByRole("button", { name: /Completed/i })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
 
-    // User clicks "In Progress" chip then saves
     fireEvent.click(screen.getByRole("button", { name: /In Progress/i }));
     expect(
       screen.getByRole("button", { name: /In Progress/i }),
     ).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
 
-    // Parent receives saved item and updates its own state to status:"in-progress"
     const savedItem: KanbanItem = { ...baseItem, status: "in-progress" };
 
-    // Parent closes dialog
     rerender(
       <ItemEditDialog
         open={false}
@@ -259,7 +255,6 @@ describe("ItemEditDialog — save and reopen status reset", () => {
       />,
     );
 
-    // Parent reopens dialog with the updated item
     rerender(
       <ItemEditDialog
         open={true}
@@ -271,8 +266,7 @@ describe("ItemEditDialog — save and reopen status reset", () => {
       />,
     );
 
-    // The reopened dialog must reflect the current item status,
-    // not the stale draft ("completed" from the previous open session).
+    // Reopen must use the updated item, not a stale draft from the prior open.
     expect(
       screen.getByRole("button", { name: /In Progress/i }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -339,7 +333,6 @@ describe("ItemEditDialog — unique rank picker", () => {
     fireEvent.change(screen.getByLabelText(/Description \*/i), {
       target: { value: "New priority item" },
     });
-    // Select rank 3 (not taken)
     fireEvent.change(screen.getByLabelText(/Priority rank/i), {
       target: { value: "3" },
     });

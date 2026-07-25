@@ -1,8 +1,7 @@
 /**
- * Shared date formatting utilities.
  * Locale is per-formatter: `formatDateTime` uses `ru-RU`; relative/period
- * helpers use English month labels and phrasing. Period ranges use UTC
- * accessors so periodStart/periodEnd do not shift by a day in UTC+N.
+ * helpers use English. Period ranges use UTC so periodStart/periodEnd do not
+ * shift by a day in UTC+N.
  */
 
 import {
@@ -24,7 +23,6 @@ const ISO_PIVOT_WEEKDAY_OFFSET = 3;
 const ISO_PIVOT_JANUARY_DAY = 4;
 const ACTIVITY_JUST_NOW_THRESHOLD_SECONDS = 30;
 
-/** Format a date with time (ru-RU locale, short date + short time). */
 export function formatDateTime(date: DateInput): string {
   if (!date) return "\u2014";
   const d = date instanceof Date ? date : new Date(date);
@@ -34,11 +32,7 @@ export function formatDateTime(date: DateInput): string {
   });
 }
 
-/**
- * Short English month labels, indexed by `getUTCMonth()`. The single home for
- * short-date rendering (web-shared-idioms); a month-label correction here
- * propagates to every consuming surface.
- */
+// Single home for short English month labels (getUTCMonth index).
 const MONTHS_SHORT = [
   "Jan",
   "Feb",
@@ -54,23 +48,13 @@ const MONTHS_SHORT = [
   "Dec",
 ];
 
-/**
- * Total tuple lookup: `getUTCMonth()` is always 0–11, so the throw can only
- * fire on a broken Date — it satisfies noUncheckedIndexedAccess without a
- * silent "" fallback that would render a blank month label.
- * @param date the date whose UTC month to label
- * @returns the short month label, e.g. "Apr"
- */
+// Throw on out-of-range rather than a silent "" that would blank the month label.
 export function monthShortLabel(date: Date): string {
   const label = MONTHS_SHORT[date.getUTCMonth()];
   if (label === undefined) throw new Error("month index out of range");
   return label;
 }
 
-/**
- * Short "Mon D" timestamp in UTC (e.g. "Apr 18"). UTC accessors keep the label
- * timezone-stable, matching the period-range formatters above.
- */
 function formatTimestampShort(date: Date): string {
   return `${monthShortLabel(date)} ${date.getUTCDate()}`;
 }
@@ -140,11 +124,7 @@ export function formatWeekLabel(date: Date | string): string {
   return `Week ${isoWeekNumber(date)}`;
 }
 
-/**
- * Format a period date range for display: "May 11\u201317" (same month) or
- * "May 11\u2013Jun 3" (cross-month). Uses UTC getUTC* accessors to prevent
- * off-by-one day shifts for users in UTC+N timezones.
- */
+// UTC getUTC* accessors prevent off-by-one day shifts in UTC+N timezones.
 export function formatPeriodRange(start: DateInput, end: DateInput): string {
   if (!start || !end) return "\u2014";
   const s = toDate(start);

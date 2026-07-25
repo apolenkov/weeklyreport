@@ -1,8 +1,6 @@
 /**
- * Tests for the LeadForm container's mutation wiring (submit + revoke +
- * autosave + dirty-state). The three queries (getActive / byPeriod /
- * myHistory) are mocked at the tRPC-proxy boundary, mirroring the autosave
- * hook test harness.
+ * LeadForm mutation wiring (submit, revoke, autosave, dirty-state) via
+ * mocked tRPC at the proxy boundary.
  */
 
 import type { ReportSectionReadModel } from "@customreport/shared";
@@ -61,9 +59,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
         projectId: PROJECT_ID,
         projectName: "Test Product",
         trafficLight: "green" as const,
-        // 35-04: at least one owned stage so the SDLC pipeline renders
-        // an editable chip — the dirty-flag test clicks it to fire
-        // handleProductsChange.
+        // Owned stage so the SDLC pipeline renders an editable chip for dirty tests.
         ownedStages: [
           {
             stageId: "88888888-8888-4888-8888-888888888888",
@@ -149,9 +145,7 @@ function buildHarness(
         (() => ({
           section: makeSection({ status: opts.sectionStatus }),
           readOnly: opts.byPeriodReadOnly ?? false,
-          // reopen-request-lifecycle (D4): the server-computed flag. Defaults to
-          // true for a submitted section so the existing Request-Reopen test
-          // keeps its precondition; tests override it to assert the hidden case.
+          // Server-computed; default true so Request-Reopen tests have a precondition.
           canRequestReopen:
             opts.canRequestReopen ?? opts.sectionStatus === "submitted",
           publishedLineage: { itemStableIds: [], decisionStableIds: [] },
@@ -621,13 +615,7 @@ describe("LeadForm mutation wiring", () => {
   });
 
   it("changing a stage status marks the form dirty (autosave indicator changes from Autosaved)", async () => {
-    // Originally this test edited a decision row's inline input. After the
-    // modal-driven CRUD refactor, decisions are read-only cards opened via
-    // a pencil — there's no longer a textbox in the section to drive
-    // directly. The dirty-flag path is the same one the user takes when
-    // clicking a stage chip and picking a status, so the test now drives
-    // that flow instead. Same wiring being tested (handleProductsChange →
-    // autosave 'pending'), different entry point.
+    // Stage chip click dirties via handleProductsChange → autosave pending.
     const { Wrapper } = buildHarness();
     render(
       <Wrapper>
@@ -635,13 +623,9 @@ describe("LeadForm mutation wiring", () => {
       </Wrapper>,
     );
 
-    // findByText is act-wrapped by RTL — waits for the query cascade to settle.
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
-    // simplify-stage-status-interaction: the chip is a plain On Track/unset
-    // toggle now — a single click fires onStatusChange and dirties the draft,
-    // no popover menu. Pick an editable chip that is togglable (on-track or
-    // empty); a risk-floored at-risk/blocked chip would be a no-op.
+    // Single click toggles On Track/unset; skip risk-floored chips (no-op).
     const editableChip = screen.getAllByRole("button").find((b) => {
       const label = b.getAttribute("aria-label") ?? "";
       return (
@@ -831,8 +815,6 @@ describe("LeadForm mutation wiring", () => {
   });
 
   it("toolbar renders the inert version-history ComingSoon control", async () => {
-    // defer-versions-coming-soon: the version-history UI is removed; the
-    // toolbar slot carries a disabled ComingSoon control instead.
     const { Wrapper } = buildHarness();
     render(
       <Wrapper>
@@ -869,14 +851,8 @@ describe("LeadForm mutation wiring", () => {
   });
 
   it("submitted-section action: Lead sees Request Reopen, not Revoke", async () => {
-    // The mapper hard-codes currentUser.role to 'Dev Lead' for now (the
-    // read model doesn't yet carry display role), so every harness-driven
-    // render takes the Lead branch of lead-form.tsx — Request Reopen,
-    // never Revoke. The Revoke wiring flows through the same revokeMut
-    // hook that this used to test, but the button that fires it only
-    // renders when role doesn't end in "Lead". Until the harness gains a
-    // role-override (or the mapper stops hard-coding), we assert the
-    // Lead-visible path: submitted section → Request Reopen surfaces.
+    // Harness role is hard-coded 'Dev Lead', so only the Lead-visible path
+    // (Request Reopen) renders; Revoke is Head/Admin.
     const { Wrapper } = buildHarness({ sectionStatus: "submitted" });
     render(
       <Wrapper>
@@ -884,15 +860,13 @@ describe("LeadForm mutation wiring", () => {
       </Wrapper>,
     );
 
-    // Request Reopen renders for Leads on submitted sections — Revoke is
-    // the Head/Admin-side variant.
     expect(
       await screen.findByRole("button", { name: /Request Reopen/i }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Revoke$/i })).toBeNull();
   });
 
-  it("reopen-request-lifecycle: Request Reopen is hidden when canRequestReopen is false", async () => {
+  it("Request Reopen is hidden when canRequestReopen is false", async () => {
     // A submitted section on a closed (published/archived) period, or with a
     // request already pending, comes back with canRequestReopen=false. The
     // control must not render — the client never reconstructs the policy.
@@ -1173,10 +1147,7 @@ describe("LeadForm mutation wiring", () => {
   });
 });
 
-// VA-0a: icon SVG aria-hidden regression — verify-a11y-recommended-flip catalog
 describe("LeadForm icon SVGs — aria-hidden", () => {
-  // Renders LeadForm and waits for the query cascade to settle.
-  // findByText is act-wrapped by RTL — no manual flush needed.
   async function renderAndSettle() {
     const { Wrapper } = buildHarness();
     const { container } = render(
@@ -1219,7 +1190,6 @@ describe("LeadForm icon SVGs — aria-hidden", () => {
     expect(svg).toHaveAttribute("aria-hidden", "true");
   });
 
-  // VA-0b snapshot: all icon SVGs in the rendered form carry aria-hidden=true
   it("snapshot: all icon SVGs rendered in LeadForm have aria-hidden=true", async () => {
     const container = await renderAndSettle();
     const allSvgs = Array.from(container.querySelectorAll("svg"));
@@ -1235,9 +1205,8 @@ describe("LeadForm icon SVGs — aria-hidden", () => {
   });
 });
 
-// slide-mode-collapse-fullscreen-control: the lead context bar's trailing
-// utility is ONE mode-adaptive icon-only slot — collapse-all in edit,
-// fullscreen in slides — always reserved, never an inert "Toggle All".
+// Trailing utility is one mode-adaptive slot: collapse-all (edit) / fullscreen
+// (slides), always reserved — never an inert "Toggle All".
 describe("LeadForm mode-adaptive trailing control", () => {
   it("edit mode: shows an enabled icon-only collapse control whose label reflects state", async () => {
     const { Wrapper } = buildHarness();
@@ -1302,12 +1271,8 @@ describe("LeadForm mode-adaptive trailing control", () => {
   });
 
   it("slides mode: the trailing slot shows the fullscreen toggle, not a collapse/Toggle-All control", async () => {
-    // Drive the addressed route + matching history so LeadSlidesClient
-    // resolves inReportMode=true and actually renders its populated deck.
-    // That is the path where its own (`!inReportMode`) fullscreen button is
-    // suppressed — so the toHaveLength(1) assertion genuinely guards the
-    // "no separate slides-only fullscreen control" spec invariant: if that
-    // guard regressed, the deck would mount a second fullscreen button here.
+    // Addressed route + history → inReportMode deck (suppresses its own
+    // fullscreen); toHaveLength(1) guards against a second deck-mounted control.
     mockPathname = `/lead/report/${REPORT_ID}`;
     const { Wrapper } = buildHarness({
       myHistory: [
@@ -1348,9 +1313,7 @@ describe("LeadForm mode-adaptive trailing control", () => {
     expect(screen.queryByText("Toggle All")).toBeNull();
   });
 
-  it("report-toolbar-layout: + Add stays present (and enabled) when the lead switches to slides mode", async () => {
-    // C2: + Add used to be gated `!isSlidesMode` and vanished on the switch —
-    // it must now stay in the document-action group in slides too.
+  it("+ Add stays present (and enabled) when the lead switches to slides mode", async () => {
     mockPathname = `/lead/report/${REPORT_ID}`;
     const { Wrapper } = buildHarness({
       myHistory: [
@@ -1425,10 +1388,8 @@ describe("sectionToDraftPayload — activity-status slice", () => {
 });
 
 describe("sectionToDraftPayload — durable stableId round-trip", () => {
-  // Make-or-break for introduce-durable-record-identity: the save payload must
-  // carry each existing record's stableId so saveSection preserves identity
-  // instead of re-minting it every write. A brand-new row has none yet (the
-  // server mints it), which must serialize as an absent/undefined key, not fail.
+  // Existing rows must carry stableId so save preserves identity; new rows omit
+  // it (server mints) — absent key, not a failed write.
   it("carries stableId for existing item + decision rows", () => {
     const payload = sectionToDraftPayload(makeSection());
     expect(expectDefined(payload.items[0]).stableId).toBe(
@@ -1460,11 +1421,8 @@ describe("sectionToDraftPayload — durable stableId round-trip", () => {
   });
 });
 
-// unified-activity-entry: the by-state view is opt-in behind the org
-// AppSettings flag. Off (the default in every harness above) keeps the
-// classic two-section format; on swaps the Current/Next sections for the
-// single unified section. Physical Item.type storage never changes — the
-// draft payload derives from the same raw section either way.
+// Org flag: off = Current/Next sections; on = unified by-state. Item.type
+// storage unchanged either way.
 describe("unified by-state view flag", () => {
   it("flag off: classic Current Week / Next Week sections render", async () => {
     const { Wrapper } = buildHarness();

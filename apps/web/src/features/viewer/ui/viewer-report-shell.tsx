@@ -29,11 +29,7 @@ interface ViewerReportShellProps {
   readonly authorId?: string;
 }
 
-/**
- * Read-only analogue of `HeadReportShell`, with the same navigation and view
- * controls but no lifecycle mutation. A Status-entry race recovers once through
- * `/reports/latest`; direct and History failures remain terminal.
- */
+// Status-entry race recovers once via /reports/latest; direct/History failures are terminal.
 export function ViewerReportShell({
   reportId,
   mode,

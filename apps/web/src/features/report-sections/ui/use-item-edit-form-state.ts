@@ -26,17 +26,7 @@ interface UseItemEditFormStateArgs {
   readonly onCancel: () => void;
 }
 
-/**
- * Raw form state + mount-time seeding + the dialog's focus trap. Split out of
- * `useItemEditDialog` so state/seeding, pure derivation
- * (`item-edit-dialog-derive`), and the save/keydown handlers
- * (`use-item-edit-save`) each stay independently readable.
- *
- * State is initialised once at mount from the bound item (or create-mode
- * defaults). The parent unmounts this component on close and mounts a fresh
- * instance on reopen, so state is always in sync with the current item — no
- * useEffect reset required.
- */
+// Mount-seeded form state + focus trap. Parent remounts on reopen — no useEffect reset.
 export function useItemEditFormState({
   item,
   products,
@@ -69,21 +59,13 @@ export function useItemEditFormState({
   });
 
   const [text, setText] = useState(initial.text);
-  // record-status-derived-from-risk: a legacy stored `blocked` opens as
-  // in-progress — `blocked` is no longer a free item status (the covering risk
-  // owns the alarm), so re-saving never re-persists a bare `blocked`.
+  // Legacy blocked coerces to in-progress so re-save never persists bare blocked.
   const [status, setStatus] = useState<ItemStatus>(
     coerceInitialStatus(initial.status),
   );
-  // require-paused-item-reason: seeded from the bound row so editing a paused
-  // item preserves its reason instead of silently wiping it; required only
-  // while Paused is the selected status.
+  // Seed from bound row so edit preserves pause reason; required only while Paused.
   const [pausedReason, setPausedReason] = useState(item?.pausedReason ?? "");
-  // activity-first-class: the record's parent — a product OR an attached
-  // activity (XOR). Seeded from the bound row on edit, or from the create-mode
-  // seed — an activity lane's `+ Add` presets the activity and beats the
-  // baked-in seed product (falling back to the first activity for an
-  // activity-only lead with no products).
+  // XOR parent; activity-lane create presets activity over seed product.
   const [parent, setParent] = useState<RecordParent>(() =>
     resolveRecordParent(
       initial,
@@ -94,11 +76,8 @@ export function useItemEditFormState({
   const [priorityRank, setPriorityRank] = useState<number | null>(
     item?.priorityRank ?? null,
   );
-  // unify-record-dialogs: no stage is pre-selected on create — the lead makes an
-  // explicit choice (mirrors the risk dialog's no "all owned stages" default).
-  // Edit restores the record's saved stages. The required-stage rule +
-  // single-owned-stage auto-apply in handleSave still let a one-stage product
-  // save without a click.
+  // Create starts with no stage (explicit choice); edit restores saved stages.
+  // Single-owned-stage auto-apply still runs at save.
   const [stageIds, setStageIds] = useState<string[]>(
     item?.stageIds ? [...item.stageIds] : [],
   );

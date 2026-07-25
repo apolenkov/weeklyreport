@@ -29,11 +29,8 @@ export interface ReportContentProps {
   readonly periodStatus: PeriodStatus;
   readonly periodLabel: string;
   readonly scope: "product" | "lead";
-  /**
-   * Lead sections feeding the Project Activities band. Narrowed by the same
-   * §7 submitted-only filter as the accordion — a draft section's activity
-   * status/note is unreviewed content and must not leak to head/viewer.
-   */
+  // Lead sections for Project Activities; same submitted-only filter as the
+  // accordion so unreviewed draft activity never leaks to head/viewer.
   readonly activitySections: readonly ReportSectionReadModel[];
   readonly portfolio: WeeklyPortfolioProduct[];
   readonly leadOverviewRows: LeadOverviewRow[];
@@ -41,7 +38,7 @@ export interface ReportContentProps {
   readonly reportId: string;
   readonly accordion: AccordionModel;
   readonly reviewEnabled: boolean;
-  /** The caller can review ≥1 section — gates the Read|Review mode toggle. */
+  // Gates the Read|Review mode toggle (caller can review ≥1 section).
   readonly canReviewAny: boolean;
   readonly reviewMode: ReviewMode;
   readonly onReviewModeChange: (next: ReviewMode) => void;
@@ -52,12 +49,8 @@ export interface ReportContentProps {
   readonly scrollTargetProductId: string | undefined;
 }
 
-/**
- * The report body below the toolbar: the true empty-state when the period has no
- * section content at all (head-report-visibility — keyed off FULL content, never
- * the submitted count), otherwise the review surfaces + the §7-filtered
- * accordion. A helper so WeeklyReportPage stays under the complexity budget.
- */
+// Empty-state keys off FULL content (head-report-visibility), never the
+// submitted count; otherwise review surfaces + submitted-only-filtered accordion.
 export function ReportContent({
   hasAnyContent,
   periodStatus,
@@ -103,9 +96,7 @@ export function ReportContent({
 
   return (
     <>
-      {/* Acknowledge band for NON-publishing access-holders only (viewer);
-          head/admin acknowledge from the Publish & Lock cluster on the header
-          line. */}
+      {/* Viewer acknowledge band; head/admin use the header Publish cluster. */}
       {!reviewModel.isHeadOrAdmin && (
         <AcknowledgeSurface
           reviewModel={reviewModel}
@@ -114,18 +105,14 @@ export function ReportContent({
         />
       )}
 
-      {/* Report overview — scope-adaptive (report-overview-scope-parity). It
-          reads the FULL truth, so it never narrows with the §7 filter. */}
+      {/* Overview always reads FULL truth — never the submitted-only filter. */}
       <ReportOverviewBand
         scope={scope}
         portfolio={portfolio}
         leadOverviewRows={leadOverviewRows}
       />
 
-      {/* Project Activities beside the product surfaces — display-only, never
-          part of portfolio totals or escalations. Self-suppresses when no
-          section carries an activity. Narrows with the §7 filter like the
-          accordion body. */}
+      {/* Display-only; same submitted-only filter as the accordion body. */}
       <ActivityStatusStrip
         sections={
           submittedOnly
@@ -134,9 +121,7 @@ export function ReportContent({
         }
       />
 
-      {/* review-acknowledgement (§7): the per-user Submitted|All accordion
-          filter, shown only to an access-holder on a live period. The Read|
-          Review mode toggle leads the group for a caller who can review. */}
+      {/* Submitted|All filter for access-holders on a live period. */}
       {reviewEnabled ? (
         <div className="flex items-center justify-between gap-3">
           <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
@@ -157,16 +142,12 @@ export function ReportContent({
         </div>
       ) : null}
 
-      {/* Per-section verdict band beneath the mode toggle that reveals it —
-          mounted only in review mode, present in both by-product and by-lead
-          scope. */}
       <ReviewModeVerdictSurface
         reviewModel={reviewModel}
         reviewMode={reviewMode}
       />
 
-      {/* §7 anti-empty-state: submitted-only is hiding draft content — reveal it
-          rather than let the accordion read as empty. */}
+      {/* Anti-empty-state when submitted-only is hiding draft content. */}
       {submittedOnly && accordion.draftCount > 0 ? (
         <DraftHiddenSignal
           count={accordion.draftCount}
@@ -174,9 +155,6 @@ export function ReportContent({
         />
       ) : null}
 
-      {/* Accordion sections — by product (default) or grouped by lead. The
-          reviewer overlay (per-record comments + composer) threads through only
-          in review mode; normal mode renders read-only report content. */}
       <ReportAccordionBody
         scope={scope}
         products={accordion.products}

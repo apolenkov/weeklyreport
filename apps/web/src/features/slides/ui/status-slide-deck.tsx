@@ -37,14 +37,8 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
-/** The head deck owns its fullscreen affordance (the lead deck's lives in
- * LeadSlidesClient). `frameRef`/`isFullscreen`/`onToggle` are hoisted to
- * `StatusSlideDeck`'s persistent root and passed in as props: this wrapper
- * itself is never keyed by slide, so the actual fullscreened DOM node
- * survives arrow-key navigation (only the inner `SlideArticle` remounts per
- * slide) — a browser force-exits fullscreen the instant the requested
- * element itself is unmounted. The frame also provides the horizontal
- * scroll floor for the article's min canvas width. */
+// Unkeyed wrapper so the fullscreened DOM node survives slide navigation;
+// browsers force-exit fullscreen if the requested element unmounts.
 function HeadSlideFrame({
   slide,
   frameRef,
@@ -160,9 +154,6 @@ export function StatusSlideDeck({
           ) : null}
 
           <div className="space-y-3">
-            {/* head-slides-carousel-fullscreen: the head deck navigates via a
-                top carousel of slide cards, with the active slide rendered
-                full-width below. */}
             {!isLead && slides.length > 1 ? (
               <HeadSlideCarousel
                 slides={slides}

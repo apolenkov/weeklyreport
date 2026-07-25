@@ -1,12 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * The lead deck holds `selectedIndex` in local state. When the slide list
- * shrinks below the viewed index (a period rollover or a background refetch
- * dropping own-section pages), the index must clamp back to 0 instead of
- * resolving to `undefined` and rendering the empty state while valid slides
- * still exist. This suite drives the data layer directly so the slide count
- * can shrink under a non-zero index.
+ * selectedIndex must clamp when the slide list shrinks under a non-zero index.
  */
 
 import "@testing-library/jest-dom/vitest";

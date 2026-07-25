@@ -1,30 +1,14 @@
 import { z } from "zod";
 
-/**
- * Rejects strings that contain only whitespace or zero-width characters.
- * @param val - the candidate string to test
- * @returns true when the string has at least one visible character
- */
+// Whitespace / zero-width-only strings fail; null bytes are PostgreSQL-incompatible.
 const noInvisibleOnly = (val: string) =>
   val.replaceAll(/\s|\u200B|\u200C|\u200D|\uFEFF/gu, "").length > 0;
 
-/**
- * Rejects strings containing null bytes (PostgreSQL incompatible).
- * @param val - the candidate string to test
- * @returns true when the string contains no null byte
- */
 const noNullBytes = (val: string) => !val.includes("\u0000");
 
-/**
- * Safe text schema: rejects null bytes and zero-width-space-only strings.
- * Use in place of z.string().min(N).max(M) for all user-facing text fields.
- * @param opts - optional length bounds for the schema
- * @param opts.min - minimum length (default 1)
- * @param opts.max - maximum length (default 500)
- * @returns a Zod string schema enforcing the bounds and content rules
- */
 const DEFAULT_SAFE_TEXT_MAX_LENGTH = 500;
 
+// Prefer over z.string().min/max for user-facing text (null bytes + invisible-only).
 export const safeText = (opts: { min?: number; max?: number } = {}) =>
   z
     .string()
@@ -35,10 +19,7 @@ export const safeText = (opts: { min?: number; max?: number } = {}) =>
       message: "Text must contain visible characters",
     });
 
-/**
- * Rejects dates before year 2000 (prevents pre-epoch/nonsensical report dates).
- * @returns a Zod date schema that coerces input and rejects pre-2000 dates
- */
+// Reject pre-2000 dates (prevents pre-epoch/nonsensical report dates).
 const MIN_VALID_YEAR = 2000;
 
 export const reportDate = () =>
@@ -47,11 +28,6 @@ export const reportDate = () =>
   });
 
 export const trafficLightStatusSchema = z.enum(["green", "yellow", "red"]);
-/**
- * The single source of truth for the traffic-light status value
- * (traffic-light-status-type spec). The three literals live only here;
- * consumers import this type and compose it (`| null`, `| "empty"`, …).
- */
 export type TrafficLightStatus = z.infer<typeof trafficLightStatusSchema>;
 export const itemTypeSchema = z.enum(["current", "next"]);
 // Progress only — alarms (at-risk/blocked) derive from covering risks and are
@@ -67,13 +43,7 @@ export const itemWorkflowStatusSchema = z.enum([
 export const CURRENT_ITEM_STATUSES = ["in_progress", "paused", "done"] as const;
 export const NEXT_ITEM_STATUSES = ["planned", "postponed"] as const;
 
-/**
- * Per-type progress vocabulary (rework-item-status-model): the enum is shared,
- * the legal subset depends on the item type. The DB CHECK restates this.
- * @param type - The item type whose vocabulary applies.
- * @param workflowStatus - The candidate stored status.
- * @param ctx - Zod refinement context receiving the issue.
- */
+// Legal workflowStatus subset depends on item type; DB CHECK restates this.
 export function addItemTypeStatusIssue(
   type: "current" | "next",
   workflowStatus: string,
@@ -90,10 +60,6 @@ export function addItemTypeStatusIssue(
   }
 }
 export const riskSeveritySchema = z.enum(["at-risk", "blocked"]);
-/**
- * The single source of truth for the risk severity value: every risk is
- * explicitly `at-risk` or `blocked` — there is no third state and no default.
- */
 export type RiskSeverity = z.infer<typeof riskSeveritySchema>;
 export const reportSectionStatusSchema = z.enum(["draft", "submitted"]);
 /**

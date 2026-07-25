@@ -107,14 +107,8 @@ function decisionReadiness(decisionCount: number): SlideReadinessItem {
   };
 }
 
-// Project severity comes from the projection's derived, risk-floored product
-// status — the same model the visible badge uses — never from persisted
-// `project.trafficLight`: an unbacked persisted red collapses to On Track
-// (status-risk-unification), so counting the raw value would demand a risk
-// story for a signal the deck does not even show. The synthetic cross-product
-// slide can never contribute: it carries `status: null` by construction
-// (pinned by the "cross-product slide always carries a null status" test),
-// and only "red"/"yellow" are counted.
+// Count projection risk-floored status (status-risk-unification), never raw
+// trafficLight — an unbacked red is not shown. Cross-product is status:null.
 function statusCounts(
   section: ReportSectionReadModel,
   projection: SectionProductProjection,

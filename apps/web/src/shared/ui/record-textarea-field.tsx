@@ -19,20 +19,11 @@ interface RecordTextareaFieldProps {
   readonly autoFocus?: boolean;
   readonly textareaRef?: Ref<HTMLTextAreaElement>;
   readonly hint?: ReactNode;
-  /**
-   * Whether the field and its wrapper absorb extra column height via flex-1.
-   * The item/risk/decision dialogs mix flex-1 fields (which fill a flex
-   * column alongside sibling fields) with plain fields (a lone field with no
-   * height to share) — this toggles both the wrapper and the textarea's own
-   * flex-1 class so each field keeps its dialog's exact layout.
-   */
+  // When true, wrapper and textarea take flex-1 to fill a multi-field column;
+  // false for a lone field with no height to share.
   readonly fill?: boolean;
 }
 
-/**
- * The label + textarea + inline-error block repeated across the item, risk
- * and decision record dialogs.
- */
 export function RecordTextareaField({
   id,
   label,

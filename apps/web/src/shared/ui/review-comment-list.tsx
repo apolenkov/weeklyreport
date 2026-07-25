@@ -3,16 +3,8 @@
 import type { RecordCommentView } from "@customreport/shared";
 import type { ReactNode } from "react";
 
-/**
- * Display-only inline render of a record's reviewer comments (reviewer name +
- * text + short date). It NEVER re-renders the anchor record's own text. Shared
- * by the head/viewer accordion rows and the lead form cards. Comments stack
- * under the anchor (no side rail) so the layout stays usable on narrow viewports.
- *
- * `renderAction` lets a reviewer-facing wrapper inject a per-comment control
- * (e.g. Delete) without this component owning any mutation — the lead surface
- * passes nothing and stays strictly read-only.
- */
+// Shared read-only comment stack. `renderAction` injects a per-comment control
+// (e.g. Delete) without this component owning mutations — lead surface passes nothing.
 export function ReviewCommentList({
   comments,
   className,
@@ -53,7 +45,6 @@ export function ReviewCommentList({
   );
 }
 
-/** Short, locale-stable comment timestamp ("Jul 1"). */
 function formatCommentDate(createdAt: Date): string {
   return createdAt.toLocaleDateString("en-US", {
     month: "short",

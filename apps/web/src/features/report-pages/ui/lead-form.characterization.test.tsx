@@ -1,14 +1,6 @@
 /**
- * Characterization pins for the lead-form draft flow — frozen safety net for
- * the draft-module refactor. Every assertion drives the
- * PUBLIC `<LeadForm>` surface (rendered DOM + the mocked tRPC mutation seam +
- * cache-key invalidation spies), never the module internals, so the file stays
- * byte-identical while the draft hooks are restructured underneath it.
- *
- * Write mutations sit behind the mock-trpc capture boundary (the "fake draft
- * seam"); the read query is driven through the same harness. Invalidation is
- * asserted as calls on the mocked cache-key helpers — real QueryClient cache
- * behavior is out of scope by design.
+ * Characterization pins for the lead-form draft flow. Assertions drive the
+ * public `<LeadForm>` surface only (DOM + mocked tRPC + invalidation spies).
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -158,7 +150,6 @@ function buildHarness(
   return { Wrapper, captured, queryClient };
 }
 
-/** Clicks the first editable (togglable) SDLC stage chip to dirty the draft. */
 function clickEditableStageChip() {
   const chip = screen.getAllByRole("button").find((button) => {
     const label = button.getAttribute("aria-label") ?? "";
@@ -180,7 +171,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("lead-form draft: save-echo + optimistic lock (1.2)", () => {
+describe("lead-form draft: save-echo + optimistic lock", () => {
   it("Save now flushes immediately, before the debounce elapses", async () => {
     const { Wrapper, captured } = buildHarness();
     expectDefined(captured["reports.saveDraft"]).mutationFn.mockResolvedValue({
@@ -305,7 +296,7 @@ describe("lead-form draft: save-echo + optimistic lock (1.2)", () => {
   });
 });
 
-describe("lead-form draft: quick-add + routeToBlocker (1.3)", () => {
+describe("lead-form draft: quick-add + routeToBlocker", () => {
   it("quick-add current-week item opens the item dialog for the current week", async () => {
     const { Wrapper } = buildHarness();
     render(
@@ -345,7 +336,7 @@ describe("lead-form draft: quick-add + routeToBlocker (1.3)", () => {
   });
 });
 
-describe("lead-form draft: submit gating + dialogs (1.4)", () => {
+describe("lead-form draft: submit gating + dialogs", () => {
   it("a risk-stage coupling gap disables Submit and lists the blocker", async () => {
     const seeded = makeSection();
     const blocked = {

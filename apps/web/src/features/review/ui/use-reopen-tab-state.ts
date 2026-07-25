@@ -6,11 +6,6 @@ import { useTRPC } from "../../../lib/trpc-context";
 
 export type ReopenFilterStatus = "pending" | "approved" | "rejected" | "all";
 
-/**
- * All state, queries and handlers behind the Reopen Requests tab: the
- * filter/search inputs, the list + respond mutation, and the derived
- * filtered list. Kept out of the component so ReopenTab stays render-only.
- */
 export function useReopenTabState() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();

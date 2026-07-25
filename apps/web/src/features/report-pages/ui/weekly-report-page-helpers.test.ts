@@ -1,7 +1,4 @@
-/**
- * Pure derivation tests for weekly-report-page-helpers.ts, focused on the
- * fixes to `buildAccordionModel`'s `draftCount`.
- */
+// Pure derivation tests for `buildAccordionModel`'s `draftCount`.
 import type { WeeklyReportReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
@@ -96,7 +93,7 @@ describe("buildAccordionModel — draftCount includes activity-only drafts", () 
               activityId: ACTIVITY_A,
               activityName: "Jira triage duty",
               // Seeded-but-untouched: green with no note and no owned records
-              // is not evidence of lead input (activity-first-class).
+              // is not evidence of lead input.
               status: "green",
               derivedStatus: "green",
               linkedProducts: [],
@@ -118,7 +115,7 @@ describe("buildAccordionModel — draftCount includes activity-only drafts", () 
     expect(accordion.draftCount).toBe(0);
   });
 
-  it("still counts a draft section with draft product content and no activities (pre-existing behavior preserved)", () => {
+  it("still counts a draft section with draft product content and no activities", () => {
     const report = baseReport({
       portfolioOverview: [
         {

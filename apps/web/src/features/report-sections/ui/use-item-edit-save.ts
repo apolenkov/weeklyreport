@@ -33,26 +33,15 @@ interface UseItemEditSaveArgs {
   readonly onSave: (next: KanbanItem) => void;
 }
 
-/**
- * `setParentAndStages` (parent-switch handler) + the save/keydown handlers.
- * Split out of `useItemEditDialog` alongside the raw state
- * (`use-item-edit-form-state`) and the pure derivation
- * (`item-edit-dialog-derive`).
- */
 export function useItemEditSave(args: UseItemEditSaveArgs) {
   function setParentAndStages(nextParent: RecordParent) {
     args.setParent(nextParent);
-    // Clear the stage selection on any parent switch — never default to all
-    // owned stages (mirrors the risk dialog). Switching to an activity hides the
-    // stage step; switching back to a product re-shows it empty. The
-    // single-owned-stage convenience still applies at save time.
+    // Clear stages on parent switch — never default to all owned stages.
     args.setStageIds([]);
   }
 
   function handleSave() {
-    // Dead-end no-op: never call onSave with an empty stageIds array, and never
-    // surface the unsatisfiable "Select at least one stage." error. The
-    // Ctrl/Cmd+Enter shortcut routes through here, so it inherits the guard.
+    // Dead-end: never save empty stageIds or show the unsatisfiable stage error.
     if (args.isDeadEnd) return;
     const trimmed = args.text.trim();
     const trimmedPausedReason = args.pausedReason.trim();
@@ -62,14 +51,12 @@ export function useItemEditSave(args: UseItemEditSaveArgs) {
       availableStages: args.availableStages,
       effectiveStageIds: args.effectiveStageIds,
     });
-    // require-paused-item-reason: a Paused item must carry a reason.
     if (args.status === "paused" && trimmedPausedReason.length === 0) {
       next.pausedReason = "A reason is required to pause an item.";
     }
     if (Object.keys(next).length > 0) {
       args.setErrors(next);
-      // Move focus to the first invalid control so the error is discoverable
-      // by keyboard/screen-reader users instead of leaving focus on Save.
+      // Focus first invalid control so errors are discoverable by keyboard/AT.
       firstInvalidControl(next, args.dialogSurfaceRef.current)?.focus();
       return;
     }
@@ -81,8 +68,7 @@ export function useItemEditSave(args: UseItemEditSaveArgs) {
       priorityRank: args.priorityRank,
       trimmedPausedReason,
     };
-    // activity-first-class: an activity parent yields an activity-parented row
-    // (empty productId, no stage); a product parent keeps today's output.
+    // Activity parent → empty productId, no stage.
     if (args.isActivityParent) {
       args.onSave(
         buildActivityItemSave({

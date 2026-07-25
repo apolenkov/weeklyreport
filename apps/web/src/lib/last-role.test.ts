@@ -12,15 +12,8 @@ import {
   writeLastRole,
 } from "./last-role";
 
-/**
- * Last-role storage helper tests: pin the round-trip contract,
- * malformed-value tolerance, and SSR safety.
- *
- * jsdom 26 (via vitest 4) does NOT ship a working `localStorage` by
- * default; we stub a minimal in-memory implementation per test so the
- * helper's `typeof window !== 'undefined'` guards still resolve true
- * and exercise the real read/write code paths.
- */
+// jsdom 26 has no working localStorage by default — stub an in-memory store
+// so the helper's window guards resolve true and exercise real read/write paths.
 
 function makeMemoryStorage(): Storage {
   const map = new Map<string, string>();

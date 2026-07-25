@@ -6,14 +6,8 @@ import { safeText } from "./report-primitives.schema";
 // `changes_requested` auto-un-submits a submitted section.
 export const reviewVerdictSchema = z.enum(["approved", "changes_requested"]);
 
-// ---------------------------------------------------------------------------
-// Read-model view schemas — embedded in the section read model so a reviewer /
-// lead read carries the feedback. Kept here (not in section.schema) so the
-// verdict enum has one home; section.schema imports these.
-// ---------------------------------------------------------------------------
-
-// A reviewer comment as surfaced on its anchor record. Flat, no threads. The
-// author's display name rides along when the read path joins it.
+// Read-model views live here so the verdict enum has one home; section.schema imports them.
+// Flat comment on its anchor; reviewerName rides along when the read path joins it.
 export const recordCommentViewSchema = z.object({
   id: z.uuid(),
   reviewerId: z.uuid(),
@@ -33,10 +27,6 @@ export const sectionReviewViewSchema = z.object({
   isCurrent: z.boolean(),
   createdAt: z.coerce.date(),
 });
-
-// ---------------------------------------------------------------------------
-// Procedure input schemas.
-// ---------------------------------------------------------------------------
 
 export const reviewAcknowledgeInputSchema = z.object({
   reportId: z.uuid(),
@@ -82,10 +72,6 @@ export const reviewVerdictInputSchema = z.object({
   // race with the head's revoke) transition exactly once.
   version: z.number().int().min(1),
 });
-
-// ---------------------------------------------------------------------------
-// Procedure output schemas.
-// ---------------------------------------------------------------------------
 
 export const reviewAcknowledgementViewSchema = z.object({
   userId: z.uuid(),

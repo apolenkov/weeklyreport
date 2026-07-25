@@ -1,12 +1,9 @@
 /**
  * @vitest-environment node
  *
- * Teeth for the central compact-floor mechanism: every toolbar-token consumer
- * (`h-[var(--toolbar-control-h)]`, class-asserted in component tests) only
- * meets the 44px touch floor below `md` because ONE media override in the
- * shared stylesheet raises the token. jsdom cannot compute media queries, so
- * this test reads the stylesheet as text — deleting or breaking the override
- * must fail CI even though every component class assertion stays green.
+ * jsdom cannot compute media queries, so the touch-floor override is asserted
+ * by reading the stylesheet as text. Component class checks alone stay green
+ * if the media block is deleted.
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -20,7 +17,7 @@ const css = readFileSync(
   "utf8",
 );
 
-describe("shared toolbar control token (responsive-compact-layout)", () => {
+describe("shared toolbar control token", () => {
   it("defines the 2rem desktop token and the 44px touch-target floor", () => {
     expect(css).toMatch(/--toolbar-control-h:\s*2rem/);
     expect(css).toMatch(/--touch-target-min:\s*44px/);

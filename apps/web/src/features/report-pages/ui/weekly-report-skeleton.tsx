@@ -1,31 +1,10 @@
-/**
- * Loading-state skeleton for the Weekly Report page. Mirrors the DOM
- * structure of `weekly-report-page.tsx` so the load-to-data transition
- * has zero layout shift (CLS).
- *
- * Section-by-section parity (top to bottom, mirrors the real page):
- *   1. Page header  — title + Live pill | ExportPdf + PublishLock (2 buttons)
- *   2. Period nav   — PeriodNavigator | "{org} · Live portfolio review"
- *   3. Portfolio    — single gradient card + sm:grid-cols-2 product cards
- *   4. Accordions   — gradient cards × N matching ProductAccordion header
- *
- * The AI Insights slot was removed with the AI module.
- *
- * Stateless and hook-free — safe to render server-side.
- */
+// Loading skeleton for Weekly Report — mirrors page DOM to avoid layout shift.
 
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
 /** Placeholder card count — matches the seeded product count (6 products). */
 const SEEDED_PRODUCT_COUNT = 6;
 
-/**
- * Mirrors {@link PortfolioOverviewTable}'s per-product card:
- *   `grid min-h-[76px] grid-cols-[1.75rem_minmax(0,1fr)_1.5rem]`
- * with a circular status avatar, a 2-line name/status block, and a
- * trailing arrow slot (hidden by default in the real card, kept as a
- * spacer here for column alignment).
- */
 function PortfolioCardSkeleton() {
   return (
     <div className="grid min-h-[76px] w-full grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg bg-[rgba(0,0,0,0.04)] p-2.5">
@@ -40,11 +19,6 @@ function PortfolioCardSkeleton() {
   );
 }
 
-/**
- * Mirrors {@link PortfolioOverviewTable}'s outer card: title row
- * (GridIcon + «Portfolio Overview» + count pill + caption) followed by
- * a `sm:grid-cols-2` grid of product cards.
- */
 function PortfolioSkeleton() {
   return (
     <div className="card-surface">
@@ -67,11 +41,6 @@ function PortfolioSkeleton() {
   );
 }
 
-/**
- * Mirrors {@link ProductAccordion} collapsed header: status avatar +
- * product name + status pill on the left, chevron on the right, inside
- * the same gradient card frame.
- */
 function AccordionSkeleton() {
   return (
     <div className="card-surface p-5">
@@ -96,8 +65,7 @@ export function WeeklyReportSkeleton() {
       aria-label="Loading status report"
       data-testid="weekly-report-skeleton"
     >
-      {/* 1. Page header — title + Live pill | ExportPdf + PublishLock.
-          Real page renders exactly 2 buttons on the right (not 3). */}
+      {/* Header: title + Live pill | Export + Publish (exactly 2 buttons). */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Skeleton className="h-8 w-40" />
@@ -109,9 +77,7 @@ export function WeeklyReportSkeleton() {
         </div>
       </div>
 
-      {/* 2. Period nav shell — PeriodNavigator | dept · Live portfolio review.
-          Right slot is two short bars separated by a dot to mirror the real
-          «{org} · Live portfolio review» line. */}
+      {/* Period nav shell with dept · Live portfolio review right slot. */}
       <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.78)_100%)] px-4 py-3.5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.06),0_10px_24px_-20px_rgba(0,0,0,0.22),0_1px_2px_0_rgba(0,0,0,0.05)]">
         <Skeleton className="h-11 w-60 rounded-lg" />
         <div className="flex min-w-[180px] flex-1 items-center justify-center gap-2">
@@ -121,11 +87,8 @@ export function WeeklyReportSkeleton() {
         </div>
       </div>
 
-      {/* 3. Portfolio Overview — single gradient card containing a 2-col
-          card grid (6 placeholders to match the seeded product count). */}
       <PortfolioSkeleton />
 
-      {/* 4. Per-product accordion placeholders — 6 to match portfolio. */}
       <div className="space-y-3">
         {Array.from({ length: SEEDED_PRODUCT_COUNT }, (_, i) => (
           <AccordionSkeleton key={i} />

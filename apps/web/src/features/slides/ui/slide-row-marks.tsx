@@ -5,7 +5,6 @@ import { useSdlcTooltip } from "../../../shared/ui/sdlc-tooltip";
 import { STAGE_ICONS } from "../../report-sections";
 import type { GridAuthor, GridTone } from "../model/slide-grid-model";
 
-/** Hover/focus handlers wiring an element to the singleton slide tooltip. */
 export function useHoverTooltip<T extends HTMLElement = HTMLSpanElement>(
   content: string,
 ) {
@@ -23,7 +22,7 @@ export function useHoverTooltip<T extends HTMLElement = HTMLSpanElement>(
   };
 }
 
-/** Background for an author's identity slot (cycled tokens, owner = slot 0). */
+// Cycled CSS tokens; owner is always slot 0.
 export function authorSlotBackground(author: GridAuthor): string {
   return `var(--slide-author-${String(author.colorIndex)})`;
 }
@@ -59,10 +58,8 @@ export function AuthorBadge({
   );
 }
 
-/** The frame IS the status: dashed = still in flight (in progress / planned /
- * paused / postponed), tint-only = done / at-risk / blocked — tinted rows
- * carry no visible border, just the fill. Postponed additionally mutes the
- * row text (deprioritized, not alarmed). */
+// Frame is the status: dashed = in flight; tint-only = done/at-risk/blocked.
+// Postponed also mutes text (deprioritized, not alarmed).
 export const TONE_BORDER: Record<GridTone, string> = {
   neutral: "border-dashed border-[rgba(0,0,0,0.18)]",
   note: "border-[rgba(0,0,0,0.10)]",
@@ -74,8 +71,7 @@ export const TONE_BORDER: Record<GridTone, string> = {
     "border-dashed border-[rgba(0,0,0,0.18)] text-[var(--color-muted-foreground)]",
 };
 
-/** sr-only status per tone — keeps the frame hue readable for screen readers
- * and grayscale print. Neutral rows stay silent (expected state). */
+// sr-only status so frame hue remains readable for screen readers and print.
 export const TONE_SR_LABEL: Record<GridTone, string | null> = {
   neutral: null,
   note: null,
@@ -86,8 +82,7 @@ export const TONE_SR_LABEL: Record<GridTone, string | null> = {
   postponed: "Postponed",
 };
 
-/** Quiet trailing glyph per tone — the frame goes grayscale in print, the
- * glyph shape does not. */
+// Glyph shape survives grayscale print when the frame fill does not.
 const TONE_GLYPH: Partial<
   Record<GridTone, { readonly Icon: typeof Check; readonly className: string }>
 > = {
@@ -142,8 +137,7 @@ export function StageWatermarks({
   );
 }
 
-/** Footer legend for the stage watermark icons — one entry per stage that
- * actually appears on the slide, in the canonical pipeline order. */
+// Only stages that appear on the slide, in canonical pipeline order.
 export function StageLegend({
   stageNames,
 }: {

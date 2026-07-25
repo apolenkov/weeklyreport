@@ -1,10 +1,4 @@
-/**
- * The mapper-chain derivation inside
- * `useWeeklyReportPage` must be memoized on the data-dependent inputs only,
- * so a pure UI-toggle re-render (reviewMode) reuses the same view-model
- * object instead of re-running the full chain — while a data-dependent input
- * change (submissionFilter) still recomputes it.
- */
+// Mapper chain memoizes on data inputs only — reviewMode reuses the view-model.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -25,11 +19,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
 }));
 
-/**
- * Narrows a fresh snapshot of the hook's discriminated-union state to the
- * "ready" variant — a plain function (not an inline `if` re-checked against
- * the same `result.current` getter) so each call re-narrows independently.
- */
+// Re-narrow independently each call (not an inline if on result.current).
 function expectReady(
   state: WeeklyReportPageState,
 ): Extract<WeeklyReportPageState, { kind: "ready" }> {

@@ -11,10 +11,6 @@ interface UseLeadFormRedirectsInput {
   readonly shouldRouteHeadLikeAwayFromLeadForm: boolean;
 }
 
-/**
- * Keeps the lead form on its canonical report route and sends head-like roles
- * to their read-only surface.
- */
 export function useLeadFormRedirects({
   pinnedReportId,
   redirectToCanonical,
@@ -24,11 +20,8 @@ export function useLeadFormRedirects({
 }: UseLeadFormRedirectsInput): void {
   const router = useRouter();
 
-  // Replace a bare route with the canonical addressed form once the active
-  // reportId is known. Skip when:
-  //   • the page already renders under `[reportId]` (pinnedReportId set)
-  //   • there is no active period (server returned null) — the form will
-  //     show the existing empty / skeleton state.
+  // Bare route → canonical once active reportId is known; skip if already
+  // pinned or no active period (empty/skeleton).
   useEffect(() => {
     if (!redirectToCanonical) return;
     if (pinnedReportId) return;

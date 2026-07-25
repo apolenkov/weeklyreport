@@ -28,7 +28,6 @@ interface CommentComposerFormProps {
   readonly isPending: boolean;
 }
 
-/** The add-comment textarea + submit button shown to a designated reviewer. */
 function CommentComposerForm({
   draft,
   onDraftChange,
@@ -65,14 +64,8 @@ function CommentComposerForm({
   );
 }
 
-/**
- * review-acknowledgement (§6.2): head/viewer accordion wrapper around
- * {@link ReviewCommentList}. Renders existing reviewer comments inline on their
- * anchor record and, only for a DESIGNATED reviewer, an add-comment composer and
- * a delete control on comments the caller authored (or any comment when admin).
- * Never duplicates the record's own text. The mutation always re-derives the
- * group server-side; `canReview` is the affordance gate, never the boundary.
- */
+// Designated-reviewer comments on one record; canReview is the affordance gate
+// only — the mutation re-derives group server-side (never the security boundary).
 export function RecordComments({
   anchor,
   comments,
@@ -103,12 +96,8 @@ export function RecordComments({
   const submitDisabled = trimmed.length === 0 || isCommentPending;
 
   return (
-    // The md+ indent left-aligns the comment block with its anchor row's
-    // content column: priority (20px) + rail (3px) + gutter (124px) + 3.5rem —
-    // the three ROW_GRID gaps that precede the content column (3 × 0.875rem)
-    // plus one extra gap-width of inset. Below `md` that indent would eat half
-    // a phone viewport, so the block keeps a minimal inset and simply stacks
-    // beneath the record (one responsive layout, no side rail).
+    // md+ indent matches the anchor row content column; below md keep a
+    // minimal inset so the block stacks under the record on phones.
     <div className="mt-1.5 flex flex-col gap-2 pl-2 md:pl-[calc(20px+3px+124px+3.5rem)]">
       {hasComments ? (
         <div className="flex flex-col gap-1">
@@ -118,10 +107,8 @@ export function RecordComments({
           <ReviewCommentList
             comments={comments}
             renderAction={(comment) =>
-              // Self-delete requires CURRENT review capability (a viewer whose
-              // canReview was revoked keeps read access to their old comments —
-              // the server would 403 the delete, so no dead affordance). Admin
-              // deletes everywhere.
+              // Self-delete needs current canReview (no dead affordance after
+              // revoke); admin deletes anywhere.
               isAdmin || (canReview && comment.reviewerId === currentUserId) ? (
                 <button
                   type="button"

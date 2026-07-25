@@ -9,11 +9,7 @@ import { useTRPC } from "../../lib/trpc-context";
 const REVALIDATION_FAILED_MESSAGE =
   "Saved, but the landing page cache may be stale — revalidation failed.";
 
-// Best-effort landing-page cache invalidation after a settings write. The
-// settings mutation has already succeeded by the time this runs, so a non-ok
-// response or a thrown fetch must not turn the successful save into an error:
-// it surfaces a distinct warning instead, so the admin knows the public
-// landing page may lag without the save itself being reported as failed.
+// Post-save cache invalidation only: failures warn, never reclassify a successful write.
 export async function revalidateOrgLandingPage(): Promise<void> {
   try {
     const response = await fetch("/api/revalidate-org", { method: "POST" });
@@ -25,13 +21,7 @@ export async function revalidateOrgLandingPage(): Promise<void> {
   }
 }
 
-// ─── Sub-tab plumbing ────────────────────────────────────────────────────
-//
-// The three settings sub-tabs share an updateSettings mutation helper. We
-// keep the per-tab state local (each sub-tab owns its own draft + dirty flag)
-// but the mutation itself is a thin reusable wrapper so the "Saved" toasts
-// and onError messages stay consistent across tabs. `onSaved` lets a caller
-// clear its local dirty flag once the write lands.
+// Shared updateSettings wrapper so toast copy stays consistent; onSaved clears tab dirty state.
 export function useUpdateSettingsMut(label: string, onSaved?: () => void) {
   const trpc = useTRPC();
   const qc = useQueryClient();

@@ -362,9 +362,8 @@ describe("NavBar — role-aware visibility", () => {
   });
 
   it("hidden links are absent from the DOM (filtered before render — not CSS-hidden)", () => {
-    // T0 invariant from the plan: queryByText returning null is the proof.
-    // Critical: a hostile viewer who reads the rendered HTML must see no
-    // enumeration of /admin or /head routes.
+    // A hostile viewer reading the rendered HTML must see no enumeration of
+    // /admin or /head routes — absence from the DOM is the proof.
     setRole("viewer");
     const { container } = render(<NavBar />);
     expectLinkMissing(container, "/admin");

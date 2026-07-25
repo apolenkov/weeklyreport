@@ -64,15 +64,8 @@ describe("useEditableListDialog", () => {
   });
 
   it("does NOT reopen on remount while the parent signal stays stale (D16 slides toggle)", () => {
-    // The slides<->edit toggle conditionally renders the form, so the section
-    // UNMOUNTS in slides mode and REMOUNTS on return — while the parent
-    // (LeadForm) persists the addSignal counter across the route's searchParams
-    // change. A stale non-zero signal must not auto-open the create dialog on
-    // remount (the "two stacked Add dialogs" bug).
-
-    // First edit-mode mount: the counter starts idle at 0 (LeadForm's initial
-    // state). The "+ Add" click advances it 0→1 → create open, then the user
-    // cancels (the parent does NOT reset the counter).
+    // Slides/edit remounts the section while LeadForm keeps a stale non-zero
+    // addSignal; remount must not auto-open create.
     const first = renderHook(
       ({ addSignal }) =>
         useEditableListDialog<TestEntity>({ readOnly: false, addSignal }),

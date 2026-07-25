@@ -36,12 +36,11 @@ function isSuperJsonEnvelope(value: unknown): value is SuperJsonEnvelope {
   );
 }
 
-// The API's initTRPC transformer is superjson, whose serialized contract is
-// exactly `{ json, meta? }`; domain payload fields remain nested under `json`.
-// A payload that does not match that precise shape is passed through as-is —
-// the config-drift fallback callers pin (an untransformed response must still
-// decode), which also keeps a domain object carrying its own `json` field
-// from being mis-unwrapped.
+// tRPC v11 batched GET empty-input map for procedures with no args.
+export const TRPC_BATCH_EMPTY_INPUT = encodeURIComponent('{"0":{}}');
+
+// Superjson contract is `{ json, meta? }`; non-matching payloads pass through
+// so untransformed responses still decode and domain `json` fields are not unwrapped.
 export function decodeTrpcBatchPayload(body: unknown): unknown {
   if (!Array.isArray(body) || body.length === 0) return null;
   const entry = body[0] as TrpcBatchEntry | undefined;

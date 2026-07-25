@@ -97,7 +97,6 @@ function SidebarProvider({
     }
   }, [isMobile, setOpen, setOpenMobile]);
 
-  // Meta/Ctrl+B toggles the sidebar (desktop and mobile share one shortcut).
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (

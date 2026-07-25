@@ -101,33 +101,17 @@ interface ItemCardActionsProps {
   readonly item: KanbanItem;
   readonly locked: boolean;
   readonly isEditing: boolean;
-  /**
-   * Resolve-not-delete (ADR 0015): the record's lineage appeared in a
-   * published report — Delete is withheld (the server rejects the drop
-   * anyway); the card shows the "In published report" marker instead.
-   */
+  // Resolve-not-delete (ADR 0015): published-lineage records withhold Delete.
   readonly publishedLocked?: boolean;
   readonly onEdit?: (id: string) => void;
   readonly onDelete?: (id: string) => void;
-  /** Move action: flips the item to done IN PLACE (same durable identity). */
+  // Move handlers flip status/type in place so durable identity (comment anchors) survives.
   readonly onMarkComplete?: (id: string) => void;
-  /** Move action: flips `type` to next IN PLACE (same durable identity). */
   readonly onMoveToNextWeek?: (id: string) => void;
-  /** Move action: flips `type` back to current IN PLACE (same durable identity). */
   readonly onMoveToCurrentWeek?: (id: string) => void;
-  /**
-   * Open the pause-reason prompt for this item. Passed only where pausing
-   * applies (current-week, in-progress rows).
-   */
   readonly onPause?: (id: string) => void;
 }
 
-/**
- * The item card's right-side action cluster: the in-place move actions
- * ("mark complete" / "move to next week" — they mutate the existing draft
- * row, never clone, so C1 comment anchors survive), then edit, then delete.
- * Delete is withheld for a published-lineage record.
- */
 export function ItemCardActions({
   item,
   locked,
@@ -217,11 +201,6 @@ export function ItemCardActions({
   );
 }
 
-/**
- * The visible resolve-not-delete marker: this record is part of the published
- * report, so it can be resolved (marked done) or carried forward, never
- * deleted.
- */
 export function PublishedRecordMarker() {
   return (
     <span

@@ -13,7 +13,6 @@ export interface SearchResultsDropdownProps {
   readonly onSelectHit: (url: string) => void;
 }
 
-/** Listbox rows: loading/error/empty states plus the hit list with badge + snippet. */
 export function SearchResultsDropdown({
   resultsId,
   hits,

@@ -21,9 +21,7 @@ import type { LeadSlideFormData } from "./lead-slide-form-data";
 export type { LeadSlideFormData } from "./lead-slide-form-data";
 export type SaveOperation = "saved" | "deleted";
 
-/** The `reports.saveDraft` mutation plus its toast/conflict handling — the one
- * write path every inline save and delete funnels through. `onSaved` clears
- * the caller's active-edit state; a version conflict reloads instead. */
+// Single write path for inline save/delete; conflict reloads rather than toast-retrying.
 export function useSlideDraftSaveMutation({
   refetchSection,
   onSaved,
@@ -77,9 +75,7 @@ export function useSlideDraftSaveMutation({
   return { saveDraftSection, isPending: saveDraftMut.isPending };
 }
 
-/** Derives the dialog-facing option lists and the two possibly-active records
- * (open editor / pending delete) from section + form data — pure lookups, no
- * state of its own. */
+// Pure lookups for dialog options and the open/pending-delete records — no local state.
 export function useInlineEditDialogData({
   section,
   formData,

@@ -1,17 +1,5 @@
-/**
- * Cache invalidation cascade verification.
- *
- * Confirms that `invalidateDashboard` cascades to the queries the head's
- * Publish & Lock flow expects to refresh:
- *   - review.dashboard
- *   - archive.list
- *   - weeklyReport.get
- *
- * We assert against the QueryClient's `invalidateQueries` calls instead of
- * driving a full UI render — the component-level tests already cover that
- * path; this test guarantees the helper itself routes correctly so any future
- * regression in cache-keys.ts is caught here.
- */
+// Asserts invalidate helpers against QueryClient.invalidateQueries rather than
+// a full UI render — component tests cover the UI path; this pins the helper routing.
 
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";

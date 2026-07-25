@@ -12,15 +12,8 @@ const PRECEDENCE: Record<Grid, number> = {
   blocked: 3,
 };
 
-/**
- * Independent restatement of the documented rule (NOT a call into the code
- * under test): severity is the worst of covering risks and any blocked item;
- * an orphaned manual at-risk/blocked with no backing severity collapses to
- * on-track, empty stays empty.
- * Pins this behavior BEFORE the ranking core
- * moves to the shared package. Frozen — do not edit assertions after the
- * move lands; a diff here means a behavior change.
- */
+// Independent restatement of the rule (not a call into the SUT): worst covering
+// severity wins; orphaned manual at-risk/blocked collapses to on-track.
 function expectedStatus(
   explicit: Grid,
   risks: readonly { severity: RiskSeverity }[],

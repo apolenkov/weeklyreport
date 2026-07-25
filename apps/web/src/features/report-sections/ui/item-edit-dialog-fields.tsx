@@ -42,11 +42,6 @@ interface ItemEditDialogFieldsProps {
   readonly onPausedReasonChange: (next: string) => void;
 }
 
-/**
- * The item dialog's two-column form body: description + priority rank on the
- * left, the Product/Stages/Status classification panel on the right.
- * unify-record-dialogs: mirrors the risk dialog's layout.
- */
 export function ItemEditDialogFields({
   text,
   onTextChange,
@@ -77,7 +72,6 @@ export function ItemEditDialogFields({
 }: ItemEditDialogFieldsProps) {
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-stretch">
-      {/* Left column: description + priority rank. */}
       <div className="flex flex-1 flex-col gap-4">
         <RecordTextareaField
           id="item-text"
@@ -96,7 +90,6 @@ export function ItemEditDialogFields({
           autoFocus
         />
 
-        {/* Priority rank — optional; set to mark this item as a top priority */}
         <div>
           <label
             className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
@@ -130,15 +123,11 @@ export function ItemEditDialogFields({
         </div>
       </div>
 
-      {/* Right column: CLASSIFICATION panel — Product, Stages, Status. */}
       <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-4">
         <span className="block text-xs font-semibold tracking-wide text-[var(--color-muted-foreground)] uppercase">
           Classification
         </span>
 
-        {/* Parent picker — shared component. Offers products and the
-            author's attached activities; choosing an activity hides the
-            stage step below. */}
         <ParentPicker
           id="item-product"
           value={parent}
@@ -147,8 +136,7 @@ export function ItemEditDialogFields({
           onChange={onParentChange}
         />
 
-        {/* activity-first-class: the stage step is product-only. An activity
-            owns no SDLC stage, so it is omitted for an activity parent. */}
+        {/* Stage step is product-only — activities own no SDLC stage. */}
         {!isActivityParent && (
           <StageStep
             id="item-stage"
@@ -168,7 +156,6 @@ export function ItemEditDialogFields({
           onSelect={onStatusSelect}
         />
 
-        {/* require-paused-item-reason: a Paused item must explain why. */}
         {status === "paused" && (
           <PausedReasonField
             value={pausedReason}

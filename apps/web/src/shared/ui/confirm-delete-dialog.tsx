@@ -6,68 +6,21 @@ import { createPortal } from "react-dom";
 import { useDialogFocus } from "../../lib/use-dialog-focus";
 
 interface ConfirmDeleteDialogProps {
-  /** Open/close state — caller owns this. */
   readonly open: boolean;
-  /**
-   * Title shown at the top of the modal.
-   * Example: "Delete item?", "Delete risk?"
-   */
   readonly title: string;
-  /**
-   * Single-line preview of the row being deleted. Truncated by the
-   * dialog itself to keep the layout stable for any input length.
-   */
   readonly preview: string;
-  /**
-   * Optional secondary line under the preview, e.g. "from CRM Platform"
-   * or "Owner: Lead 1" — shown muted below the bold preview.
-   */
   readonly subtitle?: string;
-  /**
-   * Optional consequence note rendered above the action buttons. Use it
-   * to surface non-obvious side effects ("This will also remove the
-   * 2 linked items"). Keep to ~one short sentence.
-   */
   readonly consequence?: string;
-  /**
-   * Label for the destructive button. Defaults to "Delete". Set to
-   * "Archive", "Remove", "Discard" etc. when the verb fits the action
-   * better. The button keeps the destructive red styling regardless.
-   */
   readonly confirmLabel?: string;
-  /**
-   * When true, replaces the "This action cannot be undone." footer
-   * with a softer "This can be reversed later." line. Use for archive
-   * / soft-delete flows where the row is recoverable.
-   */
   readonly reversible?: boolean;
-  /**
-   * Confirm-button treatment. "destructive" (default) keeps the red
-   * delete styling; "primary" renders the brand accent for positive
-   * confirmations (publish, approve) that reuse this dialog's shell.
-   */
   readonly tone?: "destructive" | "primary";
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
   readonly triggerRef?: RefObject<HTMLElement | null>;
 }
 
-/**
- * shadcn-style destructive confirm dialog. Shared across every
- * delete surface on /lead/report (items, risks, decisions, priorities)
- * so the UX is identical and the parent sections only need to track
- * `pendingDelete` state, not the modal lifecycle.
- *
- * Keyboard: Escape cancels and Tab is trapped within the dialog via the
- * shared `useDialogFocus` primitive; Enter confirms only while the
- * destructive button holds focus. Click on the overlay also cancels.
- * Initial focus deliberately lands on Cancel (the first focusable), per the
- * ARIA alertdialog practice of focusing the LEAST destructive action — a
- * reflexive Enter must never delete.
- *
- * Rendered through a portal to document.body so it escapes any
- * `overflow:hidden` ancestor and always sits above the form.
- */
+// Initial focus lands on Cancel (least-destructive action) so a reflexive Enter
+// never deletes. Portal escapes overflow:hidden ancestors.
 export function ConfirmDeleteDialog({
   open,
   title,
@@ -84,9 +37,6 @@ export function ConfirmDeleteDialog({
   const confirmRef = useRef<HTMLButtonElement | null>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
 
-  // Escape-to-close, Tab-trap, and focus-restore-to-trigger all come from the
-  // shared primitive; backdrop click and the Cancel button share the same
-  // `onCancel` close path.
   useDialogFocus({
     open,
     onClose: onCancel,

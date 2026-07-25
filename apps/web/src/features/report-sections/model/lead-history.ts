@@ -1,10 +1,5 @@
-/**
- * Translate API `reports.myHistory` entries to the `HistoryEntry` shape the
- * `LeadHistoryList` component expects.
- *
- * Date formatting includes the year and uses an en dash so period labels
- * stay unambiguous around year boundaries.
- */
+// Maps API history entries to HistoryEntry for LeadHistoryList. Date labels
+// include the year and use an en dash so periods stay unambiguous at year edges.
 
 import type {
   CompiledHistoryEntry,
@@ -17,12 +12,7 @@ import {
   isoWeekNumber,
 } from "../../../lib/format-date";
 
-// ---------------------------------------------------------------------------
-// Self-contained presentation type (mirrors the mock's `HistoryEntry` shape).
-// Re-declared here per the self-contained mapper-modules convention, so
-// consumers depend on this barrel rather than `mock-data.ts`.
-// ---------------------------------------------------------------------------
-
+// Self-contained presentation type so consumers don't depend on mock-data.ts.
 export interface HistoryEntry {
   id: string;
   periodId: string;
@@ -40,14 +30,8 @@ export interface HistoryEntry {
   riskCount: number;
   decisionCount: number;
   priorityCount: number;
-  // Prefix the metric line with the lead's assigned-product count for that
-  // period when available.
   productCount?: number;
 }
-
-// ---------------------------------------------------------------------------
-// Helpers (pure, fully unit-testable -- no I/O, no React)
-// ---------------------------------------------------------------------------
 
 function formatHistoryTimestamp(
   value: Date | null | undefined,
@@ -56,21 +40,13 @@ function formatHistoryTimestamp(
   return value == null ? null : formatRelativePast(value, now, "long");
 }
 
-// ---------------------------------------------------------------------------
-// Composite mapper
-// ---------------------------------------------------------------------------
-
-/**
- * Map API `MyHistoryEntry[]` to the presentation `HistoryEntry[]` shape.
- */
 export function mapHistoryEntries(
   api: readonly MyHistoryEntry[],
   now: Date = new Date(),
 ): HistoryEntry[] {
   return api.map((e) => ({
     id: e.sectionId,
-    // No separate periodId in the API; the report id identifies the period
-    // for routing purposes. This is acceptable for the read-only history page.
+    // API has no separate periodId; report id routes the read-only history page.
     periodId: e.reportId,
     weekLabel: `Week ${isoWeekNumber(e.periodStart)}`,
     dateRange: formatPeriodRangeWithYear(e.periodStart, e.periodEnd),

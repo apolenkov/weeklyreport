@@ -1,11 +1,5 @@
-/**
- * Grouping + formatting helpers for {@link mapWeeklyReport} in `./weekly-report`.
- * Pure functions that re-slice `weeklyReport.get` sections by product.
- *
- * Decision/priority grouping + the escalation lookup live in
- * `./weekly-report-groupers-decisions` (split out to keep this file focused
- * on the item/risk re-slicing that shares the section-flattening shape).
- */
+// Grouping helpers for mapWeeklyReport: re-slice weeklyReport.get sections by product.
+// Decision/priority grouping lives in ./weekly-report-groupers-decisions.
 import type {
   PortfolioProductOverview,
   ReportSectionReadModel,
@@ -25,9 +19,7 @@ import type {
 type SectionItem = ReportSectionReadModel["items"][number];
 type SectionRisk = ReportSectionReadModel["risks"][number];
 
-// Avatar initials via the canonical shared helper (surname-first ФИО), with
-// this surface's "??" placeholder for an empty name. The token logic lives once
-// in @customreport/shared so cloned copies can't diverge.
+// Shared surname-first initials; "??" placeholder for empty names on this surface.
 export function initialsFromName(name: string): string {
   return sharedInitialsFromName(name) || "??";
 }
@@ -55,12 +47,8 @@ export function statusLabelFor(
   return `${statusLabel(status, "print")} · ${leads}`;
 }
 
-/**
- * Report-wide projectId→productName map: every section's projects, with the
- * portfolio overview (server-aggregated, names every product) winning on
- * conflict. Badge resolution goes through this so cross-author/secondary
- * references never render "Unknown".
- */
+// Report-wide projectId→name: section projects first, portfolio overview wins
+// on conflict so cross-author references never render "Unknown".
 export function buildProjectNameMap(
   sections: readonly ReportSectionReadModel[],
   portfolioOverview: readonly PortfolioProductOverview[],
@@ -77,11 +65,8 @@ export function buildProjectNameMap(
   return names;
 }
 
-/**
- * One item re-shaped into its head-report row. `index` is the item's
- * 0-based position within its (projectId, type) bucket at the time it is
- * appended — the fallback id embeds it so two legacy ids never collide.
- */
+// `index` is the item's position within its (projectId, type) bucket — the
+// fallback id embeds it so two legacy ids never collide.
 function deriveWeeklyReportItem(
   item: SectionItem & { projectId: string },
   section: ReportSectionReadModel,
@@ -89,15 +74,12 @@ function deriveWeeklyReportItem(
   alarmRisks: readonly AlarmRisk[],
   index: number,
 ): WeeklyReportItem {
-  // The badge shows the item's REAL stage tags (stageIds carries stage names).
   const stagePart = (item.stageIds ?? []).join("+");
   const stageLead = stagePart ? `${stagePart} · ${initials}` : initials;
   return {
     id: item.id ?? `${item.projectId}-${item.type}-${index}`,
-    // stageLead is kept for the print template's `[{stageLead}]`; the
-    // redesigned accordion reads `stage`/`owner` instead. Next-week stays
-    // "Planned" in stageLead (print back-compat) while stage/owner carry the
-    // real values the accordion shows on every row.
+    // stageLead for print `[{stageLead}]`; accordion reads stage/owner.
+    // Next-week stays "Planned" in stageLead (print back-compat).
     stageLead: item.type === "next" ? "Planned" : stageLead,
     stage: stagePart,
     owner: initials,
@@ -112,28 +94,17 @@ function deriveWeeklyReportItem(
       alarmRisks,
     ),
     priorityRank: item.priorityRank ?? null,
-    // Carry the reviewer comments + this caller's review capability for the
-    // section so the accordion row can surface them (comments anchor to the
-    // DB `id`, threaded above).
     comments: item.comments ?? [],
     canReview: section.canReview ?? false,
   };
 }
 
-/**
- * Group items across all sections by `projectId`. Returns a map keyed by
- * projectId of `{ current: WeeklyReportItem[], next: WeeklyReportItem[] }`.
- */
+// Group items by projectId into { current, next }. Activity-parented rows skipped.
 export function groupItemsByProject(
   sections: readonly ReportSectionReadModel[],
 ): Map<string, { current: WeeklyReportItem[]; next: WeeklyReportItem[] }> {
-  // Activity-parented items (projectId null) render under their activity, not
-  // a product column — filtered out so the item's `projectId` narrows to
-  // `string` for the group key.
   const entries = sections.flatMap((section) => {
     const initials = initialsFromName(section.authorName);
-    // Covering risks the head badge overlay reads (blocked-only) — same shape
-    // the lead card derives from.
     const alarmRisks: AlarmRisk[] = section.risks.map((risk) => ({
       productId: risk.projectId ?? "",
       stageIds: risk.stageIds ?? undefined,
@@ -151,8 +122,6 @@ export function groupItemsByProject(
   return new Map(
     [...Map.groupBy(entries, (entry) => entry.item.projectId)].map(
       ([projectId, group]) => {
-        // `index` is the row's position within its (projectId, type) bucket —
-        // filtering to a single type preserves that per-type ordinal.
         const rows = (type: SectionItem["type"]) =>
           group
             .filter((entry) => entry.item.type === type)
@@ -171,7 +140,6 @@ export function groupItemsByProject(
   );
 }
 
-/** One risk re-shaped into its head-report row; `index` seeds the fallback id. */
 function deriveWeeklyReportRisk(
   section: ReportSectionReadModel,
   projectNames: ReadonlyMap<string, string>,
@@ -180,12 +148,10 @@ function deriveWeeklyReportRisk(
 ): WeeklyReportRisk {
   const productName = projectNames.get(risk.projectId) ?? "Unknown";
   const text = `${risk.risk} — Impact: ${risk.impact} — Mitigation: ${risk.mitigation}`;
-  // Show the risk's real stage tags on the badge.
   const riskStages = (risk.stageIds ?? []).join("+");
   return {
     id: risk.id ?? `risk-${section.reportSectionId}-${index}`,
     badge: riskStages ? `${productName} · ${riskStages}` : productName,
-    // Gutter fields for the redesigned risk row; `badge`/`text` stay for print.
     stage: riskStages,
     owner: initialsFromName(section.authorName),
     severity: risk.severity,
@@ -198,20 +164,12 @@ function deriveWeeklyReportRisk(
   };
 }
 
-/**
- * Group risks across all sections by `projectId`.
- *
- * `projectNames` is the REPORT-WIDE id→name map: resolving only against the
- * owning section's projects would render "Unknown" for cross-author/secondary
- * project references.
- */
+// Group risks by projectId. projectNames is REPORT-WIDE so cross-author
+// references don't render "Unknown".
 export function groupRisksByProject(
   sections: readonly ReportSectionReadModel[],
   projectNames: ReadonlyMap<string, string>,
 ): Map<string, WeeklyReportRisk[]> {
-  // Activity-parented risks (projectId null) render under their activity, not
-  // a product column — filtered out so the risk's `projectId` narrows to
-  // `string` for the group key.
   const entries = sections.flatMap((section) =>
     section.risks
       .filter(
@@ -225,7 +183,6 @@ export function groupRisksByProject(
     [...Map.groupBy(entries, (entry) => entry.risk.projectId)].map(
       ([projectId, group]) => [
         projectId,
-        // `index` seeds the fallback id — the risk's position within its product.
         group.map((entry, index) =>
           deriveWeeklyReportRisk(
             entry.section,

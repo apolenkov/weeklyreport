@@ -116,15 +116,7 @@ describe("RisksSection LockBadge", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// a11y regression catalog: EditIcon SVG aria-hidden, DeleteIcon SVG
-// aria-hidden, Edit button + child SVG, Delete button + child SVG,
-// decorative icon accessibility.
-// ---------------------------------------------------------------------------
-
 describe("RisksSection — aria-hidden decorative icons", () => {
-  // baseRisk from above: non-foreign, readOnly=false — both action buttons render.
-
   it("EditIcon SVG has aria-hidden='true'", () => {
     render(<RisksSection risks={[baseRisk]} />);
 
@@ -247,9 +239,9 @@ describe("RisksSection stage scope", () => {
     expect(screen.getByText("Testing")).toBeInTheDocument();
   });
 
-  it("renders a No-stage-set warning chip for omitted stage scope (require-risk-stage)", () => {
-    // New contract: a risk with no stages is a legacy anomaly, never an
-    // implicit "all stages" scope — the card must say so loudly.
+  it("renders a No-stage-set warning chip for omitted stage scope", () => {
+    // A risk with no stages is a legacy anomaly, never an implicit "all stages"
+    // scope — the card must say so loudly.
     render(<RisksSection risks={[baseRisk]} />);
 
     expect(screen.getByText("No stage set")).toBeInTheDocument();
@@ -286,10 +278,6 @@ describe("RisksSection stage scope", () => {
     expect(screen.queryByText("+1")).not.toBeInTheDocument();
   });
 });
-
-// ---------------------------------------------------------------------------
-// One-click blocked <-> at-risk toggle
-// ---------------------------------------------------------------------------
 
 describe("RisksSection — severity toggle", () => {
   it("flips a blocked risk to at-risk in one click and calls onChange", () => {

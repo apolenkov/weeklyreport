@@ -147,7 +147,6 @@ describe("ConfirmationDialog", () => {
       />,
     );
 
-    // Close the dialog by re-rendering with open=false.
     rerender(
       <ConfirmationDialog
         open={false}
@@ -205,7 +204,6 @@ describe("ConfirmationDialog", () => {
     expect(trigger).toHaveFocus();
 
     rerender(<Harness open={true} />);
-    // Focus lands on the dialog's Cancel button, off the trigger.
     expect(trigger).not.toHaveFocus();
 
     rerender(<Harness open={false} />);

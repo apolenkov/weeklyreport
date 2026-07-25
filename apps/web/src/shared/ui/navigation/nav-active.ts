@@ -21,12 +21,9 @@ export function isActiveLink(
   if (href === "/admin") return pathname.startsWith("/admin");
   if (href === HEAD_REPORT_ROUTE) return pathname.startsWith(HEAD_REPORT_ROUTE);
   if (href === HEAD_DASHBOARD_ROUTE) return pathname === HEAD_DASHBOARD_ROUTE;
-  // viewer-live-status: the viewer's Status entry (`/reports/latest`) resolves
-  // to a `/reports/[id]` detail page, so for a viewer a report detail path must
-  // light **Status**, not History — clicking Status and seeing History
-  // highlighted is the reported bug. History stays lit only on the bare
-  // `/reports` list. Scoped to the viewer so the head/lead History-active
-  // contract (lead-history-summary, lit on published-report paths) is untouched.
+  // Viewer Status (`/reports/latest`) resolves to `/reports/[id]`, so a detail
+  // path must light Status, not History. History stays lit only on bare
+  // `/reports`. Scoped so head/lead History-active on detail paths is untouched.
   if (isViewer(role)) {
     if (href === REPORTS_LATEST_ROUTE) {
       return pathname === REPORTS_LATEST_ROUTE || isReportDetailPath(pathname);
@@ -36,10 +33,8 @@ export function isActiveLink(
     }
   }
   if (href === "/reports") {
-    // History active state is pathname-based only — independent of the archive
-    // toggle and of any stray `?tab` param.
-    // Exact match (not startsWith) so report subpaths are matched by the
-    // detail-path check, not this History branch.
+    // Exact match (not startsWith) so report subpaths hit the detail-path
+    // check, not History. Independent of archive toggle / stray `?tab`.
     return pathname === "/reports" || isReportDetailPath(pathname);
   }
   return pathname.startsWith(href);

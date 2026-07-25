@@ -40,14 +40,6 @@ interface RiskEditDialogFieldsProps {
   readonly onSeveritySelect: (value: RiskSeverity) => void;
 }
 
-/**
- * The risk dialog's two-column form body: the Risk/Impact/Mitigation prose on
- * the left, the Parent/Stage/Severity classification panel on the right.
- * Balanced two-column layout: a moderate max-w-3xl grid that collapses to one
- * column on a narrow modal (md: breakpoint). The prose textareas use flex-1 to
- * absorb height up to the taller (bordered) panel, so the two columns finish at
- * a comparable height with no stray space.
- */
 export function RiskEditDialogFields({
   text,
   onTextChange,
@@ -76,8 +68,6 @@ export function RiskEditDialogFields({
 }: RiskEditDialogFieldsProps) {
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-stretch">
-      {/* Left column: Risk / Impact / Mitigation prose fields. flex-col so
-          the textareas can flex-1 and fill the column to the panel height. */}
       <div className="flex flex-1 flex-col gap-4">
         <RecordTextareaField
           id="risk-text"
@@ -116,18 +106,12 @@ export function RiskEditDialogFields({
         />
       </div>
 
-      {/* Classification: the right column — one light bordered panel
-          grouping the stage / severity / product meta so it reads as a
-          distinct block beside the prose fields. */}
       <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-4">
         <span className="block text-xs font-semibold tracking-wide text-[var(--color-muted-foreground)] uppercase">
           Classification
         </span>
 
-        {/* Parent picker kept FIRST so the classification panel orders
-            Parent → Stages → Severity, the same order as the item dialog.
-            Offers products and the author's attached activities; choosing an
-            activity hides the stage step below. */}
+        {/* Parent first (same order as the item dialog); activity hides stages. */}
         <ParentPicker
           id="risk-product"
           value={parent}
@@ -136,7 +120,6 @@ export function RiskEditDialogFields({
           onChange={onParentChange}
         />
 
-        {/* The stage step is product-only. */}
         {!isActivityParent && (
           <StageStep
             id="risk-stage"
@@ -150,7 +133,6 @@ export function RiskEditDialogFields({
           />
         )}
 
-        {/* Severity chips */}
         <div>
           <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
             Severity

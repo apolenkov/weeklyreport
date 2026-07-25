@@ -1,11 +1,5 @@
-/**
- * Characterization + unit tests for the extracted cross-author mappers
- * (refactor-lead-mappers slice). The stage-map fixtures pin today's behavior
- * byte for byte, they are NOT idealized expectations. The foreign-content
- * mappers below (`mapForeignItems` / `mapForeignRisks` / `mapForeignDecisions`
- * / `coerceWorkflowToItemStatus`) are live — called from
- * `lead-form-loaded-view-model-helpers.ts` — and are asserted directly here.
- */
+// Characterization for cross-author mappers. Stage-map fixtures pin current
+// behavior byte-for-byte (not idealized). Foreign-content mappers are live.
 
 import { describe, expect, it } from "vitest";
 
@@ -94,10 +88,8 @@ describe("buildCrossAuthorStageMap", () => {
 });
 
 describe("applyCrossAuthorStageOverrides", () => {
-  // unassigned-stage-reporting-exclusion: foreign-owned stages now arrive as
-  // `locked` with `assignee: null` straight from buildStageGrid; the override
-  // fills the real assignee + status. Mine stays untouched; a locked stage with
-  // no matching cross-author entry keeps its null assignee.
+  // Foreign-owned stages arrive locked with assignee null; the override fills
+  // real assignee + status. Mine stays untouched; unmatched locked keeps null.
   const product: LeadProduct = {
     id: "proj-a",
     name: "Alpha Product",

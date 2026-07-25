@@ -9,11 +9,7 @@ import {
 } from "../../../lib/format-date";
 import type { ReportPeriod } from "../../report-sections";
 
-/**
- * Builds the navigator's period list from compiled history, prepending the
- * currently displayed period when the archive toggle hides it from
- * `compiledHistory` — so the navigator trigger still resolves on this URL.
- */
+// Prepend the displayed period when the archive toggle hides it from compiledHistory.
 export function deriveViewerPeriods(
   historyEntries: readonly CompiledHistoryEntry[] | undefined,
   displayed: WeeklyReportGetResponse | undefined,

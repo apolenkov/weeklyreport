@@ -110,7 +110,7 @@ describe("RecordComments — mutation success", () => {
   });
 });
 
-describe("RecordComments — compact touch floor (responsive-compact-layout)", () => {
+describe("RecordComments — compact touch floor", () => {
   // jsdom cannot evaluate media queries; the class assertions are the teeth.
   it("the per-comment Delete text-link floors its hit area below md", () => {
     renderComments();

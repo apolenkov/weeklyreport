@@ -55,15 +55,8 @@ export type WeeklyReportPageState =
       readonly mutationState: WeeklyReportPageMutationState;
     } & WeeklyReportPageView);
 
-/**
- * The WeeklyReportPage controller: owns the query, the three lifecycle
- * mutations (publish/reopen/archive, via `useWeeklyReportMutations`), the
- * canonical-URL redirect, the document-title effect, and hands loaded data to
- * the pure `buildWeeklyReportPageView` derivation. Returns a discriminated
- * union so the shell keeps the page's early-return semantics — hooks below
- * always run unconditionally; only the final derivation is guarded on
- * loaded, non-terminal data.
- */
+// Discriminated-union return keeps early-return shell semantics: hooks always
+// run; only the final derivation is gated on loaded, non-terminal data.
 export function useWeeklyReportPage(
   params: UseWeeklyReportPageParams,
 ): WeeklyReportPageState {
@@ -77,21 +70,16 @@ export function useWeeklyReportPage(
   const currentUserId = sessionState?.user?.id ?? null;
   const mutations = useWeeklyReportMutations();
 
-  // review-acknowledgement (§7): per-user, client-only accordion filter. Default
-  // submitted-only; rendered (and effective) only when review is enabled — a
-  // head/admin/viewer on a live open|reopened period, never a lead or a
-  // published snapshot.
+  // Per-user, client-only accordion filter. Default submitted-only; effective
+  // only when review is enabled (access-holder on a live period).
   const [submissionFilter, setSubmissionFilter] =
     useState<SubmissionFilter>("submitted");
 
-  // Read|Review body mode. Default "read" so any access-holder lands on the
-  // assembled report; a designated reviewer opts into the per-record comment
-  // composer and per-section verdict controls via the toggle.
+  // Default "read" so access-holders land on the assembled report; reviewers
+  // opt into per-record comments and section verdicts via the toggle.
   const [reviewMode, setReviewMode] = useState<ReviewMode>("read");
 
-  // weeklyReport.get input: { reportId?: string } | undefined.
-  // When reportId is given, scope to that report; otherwise fall back to the
-  // session's active period (server-side default).
+  // Scope to reportId when given; otherwise the session's active period.
   const queryInput = reportId ? { reportId } : {};
   const weeklyQ = useQuery(trpc.weeklyReport.get.queryOptions(queryInput));
 
@@ -103,10 +91,7 @@ export function useWeeklyReportPage(
     toastPrefix: "Failed to load status report",
   });
 
-  // Bare `/head/report` -> redirect to `/head/report/<reportId>` once the
-  // active reportId is known. Skipped when:
-  //   • the page already renders under `[reportId]` (reportId prop set)
-  //   • there is no resolvable report (weeklyQ data not loaded or no-period)
+  // Bare `/head/report` → canonical `/head/report/<reportId>` once known.
   const resolvedReportId =
     weeklyQ.data?.status === "active" ? weeklyQ.data.reportId : null;
   useEffect(() => {
@@ -126,7 +111,6 @@ export function useWeeklyReportPage(
     canonicalBasePath,
   ]);
 
-  // Surface the period in the browser tab title.
   const titleParts = useMemo(() => {
     if (!weeklyQ.data || weeklyQ.data.status === "no-period") return null;
     const start = weeklyQ.data.periodStart;
@@ -147,19 +131,14 @@ export function useWeeklyReportPage(
     };
   }, [titleParts]);
 
-  // Narrows weeklyQ.data off the `no-period` / undefined variants for TS —
-  // used by the memo below and, once past the terminal-state guards, known
-  // to be loaded and active.
+  // Narrows off `no-period` / undefined so the memo sees only active data.
   const reportData =
     weeklyQ.data && weeklyQ.data.status !== "no-period"
       ? weeklyQ.data
       : undefined;
 
-  // review-acknowledgement (§7): the mapper chain is the expensive part of the
-  // derivation (scope/review/§7-filter/focus branching). Keying the memo on
-  // the data-dependent inputs only — never `reviewMode` — means a pure
-  // UI-toggle re-render (e.g. Read|Review) reuses the same view-model object
-  // instead of re-running the full chain.
+  // Mapper chain is expensive; omit `reviewMode` so a pure Read|Review toggle
+  // reuses the same view-model instead of re-running the full derivation.
   const view = useMemo(() => {
     if (!reportData) return null;
     return buildWeeklyReportPageView(reportData, {
@@ -185,8 +164,6 @@ export function useWeeklyReportPage(
     return { kind: "loading" };
   }
 
-  // Terminal states (invalid-link + no-period). Resolved by a pure helper so
-  // the page function stays under the complexity budget.
   const terminalNotice = resolveTerminalNotice(weeklyQ);
   if (terminalNotice) {
     return { kind: "notice", notice: terminalNotice };

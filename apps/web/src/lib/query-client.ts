@@ -18,11 +18,7 @@ const STALE_TIME_MS = STALE_TIME_SECONDS * MS_PER_SECOND;
  */
 const DEFAULT_QUERY_RETRY_COUNT = 3;
 
-/**
- * Retry predicate for the query client. A deterministic client error (4xx /
- * Zod `BAD_REQUEST` / `NOT_FOUND`) cannot succeed on retry, so it fails once;
- * transient errors keep the TanStack default count.
- */
+// Deterministic client errors (4xx / BAD_REQUEST / NOT_FOUND) cannot succeed on retry.
 export function shouldRetryQuery(
   failureCount: number,
   error: unknown,
@@ -39,7 +35,6 @@ export function makeQueryClient(): QueryClient {
       queries: {
         staleTime: STALE_TIME_MS,
         refetchOnWindowFocus: true,
-        // Deterministic client errors cannot succeed on retry.
         retry: shouldRetryQuery,
       },
       dehydrate: {

@@ -1,10 +1,4 @@
-/**
- * A11y regressions for PortfolioOverviewTable.
- *
- * The GridIcon SVG is aria-hidden so the decorative grid icon is hidden from
- * screen readers and the "Portfolio Overview" heading text is the sole
- * accessible label for that region.
- */
+// GridIcon is aria-hidden so "Portfolio Overview" is the sole accessible label.
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -38,9 +32,7 @@ describe("PortfolioOverviewTable — a11y regression", () => {
     const { container } = render(
       <PortfolioOverviewTable products={ONE_PRODUCT} />,
     );
-    // The GridIcon is the only SVG in the header area; it must be hidden from AT.
     const svgs = container.querySelectorAll("svg");
-    // At least one SVG renders (the GridIcon).
     expect(svgs.length).toBeGreaterThan(0);
     const gridIcon = svgs[0];
     expect(gridIcon).toHaveAttribute("aria-hidden", "true");
@@ -48,11 +40,8 @@ describe("PortfolioOverviewTable — a11y regression", () => {
 
   it("'Portfolio Overview' text is readable by screen reader without SVG announcement", () => {
     render(<PortfolioOverviewTable products={ONE_PRODUCT} />);
-    // The heading text is reachable directly — no aria-hidden ancestor blocks it.
     const heading = screen.getByText("Portfolio Overview");
     expect(heading).toBeInTheDocument();
-    // The text node must not be inside an aria-hidden subtree.
-    // Walk up to verify no ancestor has aria-hidden="true".
     let node: HTMLElement | null = heading;
     while (node) {
       expect(node.getAttribute("aria-hidden")).not.toBe("true");

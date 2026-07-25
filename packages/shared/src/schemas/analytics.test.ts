@@ -5,12 +5,7 @@ import {
   trafficLightHistoryInputSchema,
 } from "./analytics";
 
-/**
- * `isoDateOnly` is not exported, so it is exercised through the public input
- * schemas that alias it. The refine must reject impossible calendar dates that
- * the format regex alone would accept, before they flow into `new Date(...)`
- * and produce a wrong or Invalid Date query boundary.
- */
+// isoDateOnly is unexported; exercise it via public aliases that reject impossible dates.
 describe("isoDateOnly real-date validation", () => {
   it("accepts a real calendar date", () => {
     expect(

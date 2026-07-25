@@ -22,13 +22,8 @@ export interface TerminalNotice {
   readonly body: string;
 }
 
-/**
- * Resolves the page's terminal display state (after loading settles).
- *  - invalid-link: a malformed reportId (400 BAD_REQUEST) or a missing report
- *    (404 NOT_FOUND). Transient 5xx / network errors fall through to no-period.
- *  - no active period: no data, or a `no-period` status.
- * Returns null when the report should render normally.
- */
+// Terminal display after loading: invalid-link (400/404) vs no active period.
+// Transient 5xx / network errors fall through to no-period.
 export function resolveTerminalNotice(query: {
   readonly isError: boolean;
   readonly error: unknown;
@@ -65,11 +60,7 @@ const EMPTY_REVIEW_MODEL: ReviewModel = {
   isHeadOrAdmin: false,
 };
 
-/**
- * The reviewer surface is live-only and never for a lead: any access-holder
- * (head/admin/viewer) on an `open`/`reopened` period, never on a published
- * snapshot.
- */
+// Live-only reviewer surface, never for a lead or a published snapshot.
 export function isReviewEnabled(
   role: CurrentRole,
   periodStatus: PeriodStatus,
@@ -78,7 +69,6 @@ export function isReviewEnabled(
   return periodStatus !== "published";
 }
 
-/** Distinct non-null author groups in the report (the Acknowledge group set). */
 function distinctReviewGroups(
   sections: WeeklyReportReadModel["leadSections"],
 ): { groupId: string }[] {
@@ -88,13 +78,8 @@ function distinctReviewGroups(
   return [...new Set(ids)].map((groupId) => ({ groupId }));
 }
 
-/**
- * review-acknowledgement (§6): derive the in-app reviewer surface from the live
- * read model. Returns an empty model when review is disabled — a lead, an
- * anonymous caller, or a published period — so the page renders zero review
- * affordances there. `canReview` is server-stamped; this only shapes the
- * affordances, never the security boundary.
- */
+// Empty model when review is disabled so the page mounts zero review affordances.
+// `canReview` is server-stamped; this only shapes UI, never the security boundary.
 export function buildReviewModel(
   reportData: WeeklyReportReadModel,
   params: {
@@ -132,27 +117,17 @@ export interface LeadGroup {
 export interface AccordionModel {
   readonly products: WeeklyProductReport[];
   readonly leadGroups: LeadGroup[];
-  /** Any section (submitted OR draft) carries content — the "truly empty period" gate. */
+  // Any section (submitted OR draft) carries content — "truly empty period" gate.
   readonly hasAnyContent: boolean;
-  /** Draft sections that DO carry content (empty drafts hide nothing → excluded). */
+  // Draft sections that DO carry content (empty drafts hide nothing → excluded).
   readonly draftCount: number;
 }
 
-/**
- * activity-first-class: a section carries activity content when a lead has
- * TOUCHED an attached activity — deliberately raised its alarm (yellow/red),
- * authored a note, or parented ≥1 record to it. A GREEN status does NOT count:
- * `seedActivityStatuses` defaults every attached activity to green on section
- * create (never null), so a non-null status is not evidence of lead input.
- * Mirrors reportHasContent's strictness (a green product status is not content):
- * a merely-provisioned activity must not defeat the "truly empty period"
- * empty-state. Without the fold an all-activity period (real activity content,
- * zero product content) would read "No submissions yet" and could not publish.
- */
+// Touched activity = alarm (yellow/red), note, or owned records. GREEN alone
+// does not count: seed defaults every attached activity to green on create.
+// Without the fold an all-activity period would read empty and could not publish.
 function sectionHasActivityContent(
-  // `activities` is optional here (unlike the strict read model) so a legacy /
-  // pre-activity fixture section that omits it is treated as no-activity, not a
-  // crash — the same tolerance ActivityStatusStrip applies.
+  // Optional so a pre-activity fixture omitting it is no-activity, not a crash.
   section: Pick<ReportSectionReadModel, "items" | "risks" | "decisions"> & {
     readonly activities?: ReportSectionReadModel["activities"];
   },
@@ -171,22 +146,12 @@ function sectionHasActivityContent(
   });
 }
 
-/**
- * review-acknowledgement (§7): THE submitted-only predicate. Every render
- * surface that narrows with the filter (accordion body, Project Activities
- * strip) must share it so no draft content leaks through one of them.
- */
+// Shared submitted-only predicate for every surface that narrows with the filter.
 export const isSubmittedSection = (section: {
   readonly status: "draft" | "submitted";
 }): boolean => section.status === "submitted";
 
-/**
- * A single draft section's canonical product-content check: run the SAME
- * per-lead grouping `mapWeeklyReportLeadGroups` uses, scoped to just this one
- * section, so a section counts as carrying product content exactly when it
- * would produce a non-empty group on its own — no duplicated grouping logic,
- * no divergence from the canonical product-content rule.
- */
+// Same per-lead grouping as mapWeeklyReportLeadGroups, scoped to one section.
 function sectionHasProductContent(
   section: ReportSectionReadModel,
   reportData: WeeklyReportReadModel,
@@ -197,16 +162,9 @@ function sectionHasProductContent(
   );
 }
 
-/**
- * review-acknowledgement (§7): shape the accordion BODY for the submitted/all
- * filter. `fullProducts` / `fullLeadGroups` are the truth source (header counts,
- * portfolio band, and period nav read them). When submitted-only is active we
- * re-map the submitted-only sections into a filtered view and count the draft
- * sections that still carry content, so an all-draft period surfaces a "N in
- * draft — Show all" signal instead of a misleading empty accordion. Filtering
- * happens at the render layer only — never the server query, read gate, or group
- * scope.
- */
+// Shape the accordion BODY for submitted/all. fullProducts/fullLeadGroups stay
+// the truth source (header, portfolio, period nav). Filtering is render-layer
+// only — never the server query, read gate, or group scope.
 export function buildAccordionModel(params: {
   readonly reportData: WeeklyReportReadModel;
   readonly scope: "product" | "lead";
@@ -216,9 +174,7 @@ export function buildAccordionModel(params: {
 }): AccordionModel {
   const { reportData, scope, submittedOnly, fullProducts, fullLeadGroups } =
     params;
-  // Full-truth "truly empty period" gate: product content on any section, OR a
-  // touched activity on any section (activity-first-class — an all-activity
-  // period is real content and must render + be publishable, not read empty).
+  // Product content OR a touched activity (an all-activity period is real content).
   const hasAnyContent =
     fullProducts.some(reportHasContent) ||
     reportData.leadSections.some(sectionHasActivityContent);
@@ -241,10 +197,7 @@ export function buildAccordionModel(params: {
     mapWeeklyReport(submittedData).products.filter(reportHasContent);
   const leadGroups =
     scope === "lead" ? mapWeeklyReportLeadGroups(submittedData) : [];
-  // A draft section counts toward "N in draft" when it carries product
-  // content OR activity content (mirroring hasAnyContent's product-OR-activity
-  // fold above) — an activity-only draft section must not be invisible to the
-  // count just because mapWeeklyReportLeadGroups only sees product content.
+  // Count product OR activity content so activity-only drafts stay visible.
   const draftCount = draftSections.filter(
     (section) =>
       sectionHasProductContent(section, reportData) ||

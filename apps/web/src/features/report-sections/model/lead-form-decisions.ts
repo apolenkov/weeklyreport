@@ -6,7 +6,6 @@ import type { DecisionEntry, PriorityEntry } from "./types";
 export type LeadDecisionEntry = DecisionEntry;
 export type LeadPriorityEntry = PriorityEntry;
 
-// Element-type aliases for the flat section arrays.
 type SectionItem = ReportSectionReadModel["items"][number];
 type SectionDecision = ReportSectionReadModel["decisions"][number];
 
@@ -57,8 +56,7 @@ export function mapLeadPriorities(
   section: ReportSectionReadModel,
 ): LeadPriorityEntry[] {
   const projectIndex = buildProjectIndex(section);
-  // activity-first-class: priorities are a product-side surface. An activity
-  // item is never a product priority, so keep only product-parented items here.
+  // Priorities are product-side; activity items are never product priorities.
   return section.items
     .filter(
       (i): i is SectionItem & { projectId: string } =>

@@ -22,19 +22,11 @@ interface StageChipProps {
   readonly stage: StageAssignment;
   readonly onStatusChange?: (stageName: string, newStatus: StageStatus) => void;
   readonly readOnly?: boolean;
-  /**
-   * The RAW, pre-floor status of this stage. `stage.status` is the floored
-   * display status (a covering risk may have raised an empty/on-track stage to
-   * at-risk/blocked). Threading the raw status lets the chip distinguish a
-   * severity the lead set explicitly (raw !== "empty") from one that exists
-   * ONLY because the lead's own risk floors an empty stage (raw === "empty" &&
-   * `stage.coveredByOwnRisk`), and lets the click toggle off the raw value.
-   * Defaults to the floored status for read-only / head paths that pass none.
-   */
+  // Pre-floor status: distinguishes explicit set vs own-risk floor; click toggles raw.
+  // Defaults to floored status for read-only/head paths that pass none.
   readonly rawStatus?: StageStatus;
 }
 
-// Status/icon config lives in stage-chip-config.ts.
 function StageIconGlyph({ stageName }: { readonly stageName: string }) {
   const StageIcon = STAGE_ICONS[stageName];
   if (!StageIcon) return null;
@@ -56,10 +48,7 @@ export function StageChip({
   const isEditable = stage.ownership === "mine" && !readOnly;
   const isLocked = stage.ownership === "locked";
   const isEmpty = stage.status === "empty" && isEditable;
-  // The raw status defaults to the floored display status for callers
-  // (read-only / head) that thread no pre-floor signal. The covered/status-set
-  // distinction applies only to the lead's OWN stages — a foreign-owned locked
-  // chip never carries the lead's authoring intent.
+  // Covered/status-set only applies to own stages; locked chips carry no authoring intent.
   const isMine = stage.ownership === "mine";
   const effectiveRawStatus = rawStatus ?? stage.status;
   const coveredByRisk =
@@ -78,20 +67,15 @@ export function StageChip({
     .filter(Boolean)
     .join(" ");
 
+  // Own-risk floor = dashed sketch of the same hue; explicit set = solid.
   const borderStyle = isEmpty
     ? `1.5px dashed var(--color-starbucks-accent)`
-    : // A stage floored to its severity purely by the lead's own risk reads as a
-      // dashed "sketch" of the same hue — same color, not pixel-identical to a
-      // status the lead explicitly set (solid).
-      coveredByRisk
+    : coveredByRisk
       ? `1.5px dashed ${config.border}`
       : `1.5px solid ${config.border}`;
 
-  // The chip is a plain On Track ⇄ unset toggle off the RAW status — no status
-  // menu. A chip whose displayed severity is at-risk/blocked is floored by a
-  // covering risk; clicking it still fires the toggle intent, but the sync
-  // bridge (the single owner of the risk list + the toast) ignores it and
-  // points the lead at the Risks section.
+  // Toggle is on-track ⇄ empty off RAW status. Risk-floored chips still fire
+  // the click; the sync bridge ignores it and points the lead at Risks.
   function handleChipClick() {
     if (!isEditable) return;
     const next: StageStatus =
@@ -99,12 +83,7 @@ export function StageChip({
     onStatusChange?.(stage.stageName, next);
   }
 
-  // The coverage suffix keys off the DISPLAYED status, not the raw one, and
-  // only for the lead's OWN chips (a foreign-owned locked chip carries no
-  // authoring intent). at-risk/blocked come only from risks now, so a mine
-  // chip showing either always reads "by risk" (even one the lead set
-  // on-track that a covering risk then floored up). An explicit on-track
-  // reads "status set".
+  // Suffix uses displayed status on own chips: at-risk/blocked → "by risk", on-track → "status set".
   const coverageSuffix = !isMine
     ? ""
     : stage.status === "at-risk" || stage.status === "blocked"
@@ -122,9 +101,7 @@ export function StageChip({
       ]
         .filter(Boolean)
         .join(" · ")
-    : // Append the coverage suffix OUTSIDE the `??` so a chip that carries an
-      // explicit tooltip still gets the "by risk" / "status set" cue — the
-      // dashed border must never read as unexplained to a sighted hover user.
+    : // Append outside ?? so an explicit tooltip still gets the coverage cue.
       `${baseTooltip}${coverageSuffix}`;
 
   return (
@@ -146,10 +123,7 @@ export function StageChip({
             aria-disabled={!isEditable}
             tabIndex={isEditable || isLocked ? 0 : -1}
           >
-            {/* No status glyph on the chip face — the stage icon + label carry
-                the status through color alone (the tooltip/aria-label still
-                name the status textually). The lock sits as a small corner
-                badge instead of a third inline icon. */}
+            {/* Status via color only; lock is a corner badge, not a third inline icon. */}
             <StageIconGlyph stageName={stage.stageName} />
             {stageShortLabel(stage.stageName)}
             {isLocked && (
@@ -165,7 +139,6 @@ export function StageChip({
         <TooltipContent>{title}</TooltipContent>
       </Tooltip>
 
-      {/* Assignee label */}
       <span
         className="text-[11px]"
         style={{

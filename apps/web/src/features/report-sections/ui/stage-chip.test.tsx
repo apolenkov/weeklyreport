@@ -1,14 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * F2: locked stage chips must show the cross-author's real risk color,
- * not a flat gray "empty" regardless of status.
- *
- * We verify status via aria-label (encodes `${stageName}: ${status}`) and
- * the per-status background token (config.bg from STATUS_CONFIG). Since
- * apply-status-palette the chip face carries no status glyph — color +
- * aria-label/tooltip are the carriers — and var() inline styles pass
- * through jsdom unnormalised, so they are safe to assert.
+ * Locked chips show the cross-author risk color, not flat gray empty.
+ * Assert via aria-label + STATUS_CONFIG bg tokens (chip face has no status glyph).
  */
 import "@testing-library/jest-dom/vitest";
 
@@ -32,7 +26,7 @@ const BASE_LOCKED = {
   assignee: "Boris",
 };
 
-describe("StageChip — locked stage color (F2)", () => {
+describe("StageChip — locked stage color", () => {
   it("locked + empty → chip labelled with empty status", () => {
     render(<StageChip stage={{ ...BASE_LOCKED, status: "empty" }} />);
     expect(
@@ -95,9 +89,7 @@ describe("StageChip — locked stage color (F2)", () => {
   });
 });
 
-// ---- align-pipeline-arrows: chip height token parity (D1) ----
-// Verifies the chip button carries STAGE_CHIP_BOX_HEIGHT as inline height,
-// matching the arrow wrapper in sdlc-pipeline.tsx so both midlines align.
+// Chip height must match the arrow wrapper in sdlc-pipeline.tsx so midlines align.
 
 describe("StageChip — chip box height token", () => {
   it("chip button inline height is 36px", () => {
@@ -106,7 +98,7 @@ describe("StageChip — chip box height token", () => {
     expect(button.style.height).toBe("36px");
   });
 
-  it("chip button floors at the touch target below md (responsive-compact-layout)", () => {
+  it("chip button floors at the touch target below md", () => {
     // jsdom cannot evaluate media queries; the class assertion is the teeth.
     // min-height beats the 36px inline height below `md`, so the chip grows to
     // the touch floor on phones while desktop keeps the aligned 36px box.
@@ -118,11 +110,8 @@ describe("StageChip — chip box height token", () => {
   });
 });
 
-// ---- W11 (fix-report-surface-integrity 3.9): risk-covered vs status-set ----
-// A stage whose displayed severity comes purely from the lead's OWN risk
-// floor on a raw-empty status must read "by risk" and look distinct from a
-// stage the lead explicitly set. A foreign-floored chip (no own coverage)
-// must read neither — it just announces the floored status.
+// Own-risk floor on raw-empty must read "by risk" and look distinct from
+// an explicit set; foreign-floored chips announce floored status only.
 
 const BASE_MINE = {
   stageName: "Design",
@@ -130,7 +119,7 @@ const BASE_MINE = {
   assignee: "Me",
 };
 
-describe("StageChip — covered-by-risk vs status-set distinction (W11 3.9)", () => {
+describe("StageChip — covered-by-risk vs status-set distinction", () => {
   it("covered-empty blocked chip announces 'by risk' in its aria-label", () => {
     render(
       <StageChip
@@ -144,8 +133,7 @@ describe("StageChip — covered-by-risk vs status-set distinction (W11 3.9)", ()
   });
 
   it("a mine on-track chip announces 'status set' in its aria-label", () => {
-    // simplify-stage-status-interaction: on-track is the only severity a lead
-    // sets explicitly on the chip, so it is the only one that reads "status set".
+    // On-track is the only severity a lead sets on the chip — only it reads "status set".
     render(
       <StageChip
         stage={{ ...BASE_MINE, status: "on-track" }}
@@ -184,10 +172,7 @@ describe("StageChip — covered-by-risk vs status-set distinction (W11 3.9)", ()
   });
 
   it("covered-empty and raw-set blocked chips share the 'by risk' label but differ visually", () => {
-    // simplify-stage-status-interaction: both announce "by risk" now (blocked
-    // comes only from risks), but the covered-empty chip stays a dashed sketch
-    // (data-coverage="risk") while a raw-set chip renders solid — the W11 border
-    // distinction survives even though the aria-label no longer splits them.
+    // Both announce "by risk"; covered-empty is dashed (data-coverage=risk), raw-set solid.
     const { unmount } = render(
       <StageChip
         stage={{ ...BASE_MINE, status: "blocked", coveredByOwnRisk: true }}
@@ -244,10 +229,7 @@ describe("StageChip — covered-by-risk vs status-set distinction (W11 3.9)", ()
   });
 });
 
-// ---- assignee-label invariants for the two live ownership states ----
-// `StageOwnership` narrowed to "mine" | "locked" (feat 9f2018fd excludes
-// unassigned stages from the pipeline before they reach a chip), so the old
-// "unassigned" StageChip cases are gone; mine/locked label invariants stay.
+// Pipeline drops unassigned stages before chips; only mine/locked labels remain.
 
 describe("StageChip — assignee label invariants (mine/locked)", () => {
   it("mine chip assignee label is unchanged", () => {
@@ -266,10 +248,7 @@ describe("StageChip — assignee label invariants (mine/locked)", () => {
   });
 });
 
-// ---- simplify-stage-status-interaction (D1): the chip is a plain toggle ----
-// An editable, uncovered chip toggles empty <-> on-track off the RAW status.
-// There is NO status menu — at-risk/blocked are authored only via the Risks
-// section, so a click never opens a popover or offers a severity option.
+// Editable uncovered chips toggle empty ↔ on-track; at-risk/blocked live in Risks only.
 
 describe("StageChip — On Track / unset toggle (no menu)", () => {
   it("clicking an empty chip toggles it to on-track", () => {

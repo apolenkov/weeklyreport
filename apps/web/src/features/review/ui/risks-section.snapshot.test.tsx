@@ -23,7 +23,7 @@ const BASE_RISK = {
   mitigation: "Escalate",
 };
 
-describe("RisksSection meta-row — pre-extract snapshot", () => {
+describe("RisksSection meta-row", () => {
   it("renders author name in the left slot of the meta-row", () => {
     render(
       <RisksSection risks={[BASE_RISK]} sectionAuthorName="Vasily Lead" />,
@@ -31,7 +31,7 @@ describe("RisksSection meta-row — pre-extract snapshot", () => {
     expect(screen.getByText("Vasily Lead")).toBeInTheDocument();
   });
 
-  it("renders the No-stage-set warning pill when stageIds is absent (require-risk-stage)", () => {
+  it("renders the No-stage-set warning pill when stageIds is absent", () => {
     const { container } = render(
       <RisksSection risks={[BASE_RISK]} sectionAuthorName="Anna" />,
     );
@@ -52,7 +52,7 @@ describe("RisksSection meta-row — pre-extract snapshot", () => {
       />,
     );
     expect(screen.getByText("Vasily Lead")).toBeInTheDocument();
-    // "Dev" is canonicalized to "Development" before rendering (L4 fix).
+    // "Dev" is canonicalized to "Development" before rendering.
     expect(screen.getByText("Development")).toBeInTheDocument();
     expect(screen.getByText("Testing")).toBeInTheDocument();
     const stageDiv = container.querySelector('[aria-label^="Risk stages:"]');

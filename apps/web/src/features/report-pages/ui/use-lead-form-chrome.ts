@@ -11,16 +11,10 @@ import {
 interface UseLeadFormChromeInput {
   readonly pinnedReportId: string | undefined;
   readonly activeReportId: string;
-  /** `leadForm.byPeriod` result; only the section's reportId is read. */
   readonly byPeriodData: { section: { reportId: string } } | undefined;
   readonly history: readonly MyHistoryEntry[] | undefined;
 }
 
-/**
- * The lead form's page chrome: the document-title effect and the archived
- * show-state with its auto-expand, plus the selected-period derivation both
- * key on.
- */
 export function useLeadFormChrome({
   pinnedReportId,
   activeReportId,
@@ -31,10 +25,8 @@ export function useLeadFormChrome({
   showArchivePeriods: boolean;
   setShowArchivePeriods: (next: boolean) => void;
 } {
-  // Set document.title to surface the addressed week in the browser
-  // tab. Format: "Week 19, May 4-10 - CustomReport". Resolved from the
-  // history entry whose reportId matches the loaded section so the label
-  // matches the dropdown. Restores the title on unmount.
+  // Title from the history entry matching the loaded section so the tab
+  // label matches the period dropdown; restored on unmount.
   const titleHistoryEntry = useMemo(() => {
     if (!byPeriodData?.section.reportId || !history) return null;
     return (
@@ -54,10 +46,8 @@ export function useLeadFormChrome({
     };
   }, [titleHistoryEntry]);
 
-  // The archived-section visibility auto-expands while an archived period is
-  // selected. A manual toggle is stored PAIRED with the period it was made
-  // on, so it wins only for that period; switching periods falls back to the
-  // auto rule — replacing the old sync effect.
+  // Manual archive toggle is paired with the period it was made on; other
+  // periods fall back to auto-expand when the selected period is archived.
   const [archiveToggle, setArchiveToggle] = useState<{
     readonly periodId: string;
     readonly value: boolean;

@@ -1,9 +1,4 @@
-/**
- * /lead/report/[reportId]/preview must not hydrate-mismatch: the server
- * streams the page's Suspense fallback (WeeklyReportSkeleton), so the
- * client's loading branch must render the same skeleton — a bespoke inline
- * skeleton here would diverge from SSR.
- */
+// Loading branch must reuse WeeklyReportSkeleton so SSR Suspense fallback matches.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
