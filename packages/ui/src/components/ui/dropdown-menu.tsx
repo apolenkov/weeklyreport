@@ -7,6 +7,7 @@ import type * as React from "react";
 
 /**
  * Radix dropdown menu root.
+ * @param props - The props argument.
  */
 function DropdownMenu({
   ...props
@@ -16,6 +17,7 @@ function DropdownMenu({
 
 /**
  * Portal for dropdown content outside the trigger tree.
+ * @param props - The props argument.
  */
 function DropdownMenuPortal({
   ...props
@@ -27,6 +29,7 @@ function DropdownMenuPortal({
 
 /**
  * Control that opens the dropdown menu.
+ * @param props - The props argument.
  */
 function DropdownMenuTrigger({
   ...props
@@ -44,6 +47,7 @@ const DROPDOWN_SIDE_OFFSET_PX = 4;
 
 /**
  * Positioned dropdown panel with default side offset.
+ * @param props - The props argument.
  */
 function DropdownMenuContent({
   className,
@@ -67,6 +71,7 @@ function DropdownMenuContent({
 
 /**
  * Groups related dropdown items.
+ * @param props - The props argument.
  */
 function DropdownMenuGroup({
   ...props
@@ -78,6 +83,7 @@ function DropdownMenuGroup({
 
 /**
  * Selectable dropdown row; supports inset and variant.
+ * @param props - The props argument.
  */
 function DropdownMenuItem({
   className,
@@ -104,6 +110,7 @@ function DropdownMenuItem({
 
 /**
  * Dropdown item with a checkbox indicator.
+ * @param props - The props argument.
  */
 function DropdownMenuCheckboxItem({
   className,
@@ -133,6 +140,7 @@ function DropdownMenuCheckboxItem({
 
 /**
  * Radio group scoped to the dropdown.
+ * @param props - The props argument.
  */
 function DropdownMenuRadioGroup({
   ...props
@@ -147,6 +155,7 @@ function DropdownMenuRadioGroup({
 
 /**
  * Dropdown radio option with indicator.
+ * @param props - The props argument.
  */
 function DropdownMenuRadioItem({
   className,
@@ -174,6 +183,7 @@ function DropdownMenuRadioItem({
 
 /**
  * Non-interactive section label inside a dropdown.
+ * @param props - The props argument.
  */
 function DropdownMenuLabel({
   className,
@@ -197,6 +207,7 @@ function DropdownMenuLabel({
 
 /**
  * Visual separator between dropdown sections.
+ * @param props - The props argument.
  */
 function DropdownMenuSeparator({
   className,
@@ -213,6 +224,7 @@ function DropdownMenuSeparator({
 
 /**
  * Trailing keyboard-shortcut hint in a dropdown item.
+ * @param props - The props argument.
  */
 function DropdownMenuShortcut({
   className,
@@ -232,6 +244,7 @@ function DropdownMenuShortcut({
 
 /**
  * Nested submenu root.
+ * @param props - The props argument.
  */
 function DropdownMenuSub({
   ...props
@@ -241,6 +254,7 @@ function DropdownMenuSub({
 
 /**
  * Item that opens a nested submenu.
+ * @param props - The props argument.
  */
 function DropdownMenuSubTrigger({
   className,
@@ -268,6 +282,7 @@ function DropdownMenuSubTrigger({
 
 /**
  * Panel for a nested submenu.
+ * @param props - The props argument.
  */
 function DropdownMenuSubContent({
   className,

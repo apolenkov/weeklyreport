@@ -5,6 +5,7 @@ import type * as React from "react";
 
 /**
  * Scroll-wrapped HTML table with base cell styles.
+ * @param props - The props argument.
  */
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
@@ -25,6 +26,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
 
 /**
  * Table head section (`thead`).
+ * @param props - The props argument.
  */
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
@@ -38,6 +40,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
 
 /**
  * Table body section (`tbody`).
+ * @param props - The props argument.
  */
 function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
   return (
@@ -51,6 +54,7 @@ function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
 
 /**
  * Table footer section (`tfoot`).
+ * @param props - The props argument.
  */
 function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
   return (
@@ -67,6 +71,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
 
 /**
  * Table row with hover/selected styles.
+ * @param props - The props argument.
  */
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
@@ -83,6 +88,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
 
 /**
  * Header cell (`th`).
+ * @param props - The props argument.
  */
 function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
@@ -99,6 +105,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
 
 /**
  * Body cell (`td`).
+ * @param props - The props argument.
  */
 function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
@@ -115,6 +122,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
 
 /**
  * Caption element for the table.
+ * @param props - The props argument.
  */
 function TableCaption({
   className,

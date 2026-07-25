@@ -7,6 +7,7 @@ import type * as React from "react";
 
 /**
  * Radix tabs root with optional list variants.
+ * @param props - The props argument.
  */
 function Tabs({
   className,
@@ -44,6 +45,7 @@ const tabsListVariants = cva(
 
 /**
  * Tab list container for TabsTrigger items.
+ * @param props - The props argument.
  */
 function TabsList({
   className,
@@ -63,6 +65,7 @@ function TabsList({
 
 /**
  * Tab trigger that activates a TabsContent panel.
+ * @param props - The props argument.
  */
 function TabsTrigger({
   className,
@@ -85,6 +88,7 @@ function TabsTrigger({
 
 /**
  * Panel shown when its tab value is active.
+ * @param props - The props argument.
  */
 function TabsContent({
   className,

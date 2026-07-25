@@ -8,6 +8,7 @@ import { ComingSoonBadge } from "../coming-soon-badge";
 
 /**
  * Radix tooltip provider (delay/shared config).
+ * @param props - The props argument.
  */
 function TooltipProvider({
   delayDuration = 0,
@@ -24,6 +25,7 @@ function TooltipProvider({
 
 /**
  * Radix tooltip root for a trigger+content pair.
+ * @param props - The props argument.
  */
 function Tooltip({
   ...props
@@ -33,6 +35,7 @@ function Tooltip({
 
 /**
  * Element that shows the tooltip on hover/focus.
+ * @param props - The props argument.
  */
 function TooltipTrigger({
   ...props
@@ -42,6 +45,7 @@ function TooltipTrigger({
 
 /**
  * Positioned tooltip panel.
+ * @param props - The props argument.
  */
 function TooltipContent({
   className,
@@ -76,6 +80,7 @@ function TooltipContent({
 /**
  * Self-contained Coming Soon tooltip: own provider, portaled chromeless badge,
  * works without a shell TooltipProvider (deferred-feature controls).
+ * @param options - The options argument.
  */
 function ComingSoonTooltip({
   children,

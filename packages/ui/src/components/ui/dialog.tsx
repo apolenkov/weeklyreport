@@ -8,6 +8,7 @@ import type * as React from "react";
 
 /**
  * Radix Dialog root with a `data-slot` for theming hooks.
+ * @param props - The props argument.
  */
 function Dialog({
   ...props
@@ -17,6 +18,7 @@ function Dialog({
 
 /**
  * Radix dialog trigger that opens the associated dialog.
+ * @param props - The props argument.
  */
 function DialogTrigger({
   ...props
@@ -26,6 +28,7 @@ function DialogTrigger({
 
 /**
  * Radix dialog portal that mounts content outside the parent DOM tree.
+ * @param props - The props argument.
  */
 function DialogPortal({
   ...props
@@ -35,6 +38,7 @@ function DialogPortal({
 
 /**
  * Radix dialog close control for dismissing the open dialog.
+ * @param props - The props argument.
  */
 function DialogClose({
   ...props
@@ -44,6 +48,7 @@ function DialogClose({
 
 /**
  * Full-screen dimming overlay behind dialog content.
+ * @param props - The props argument.
  */
 function DialogOverlay({
   className,
@@ -61,7 +66,10 @@ function DialogOverlay({
   );
 }
 
-/** Dialog panel with portal + overlay; optional corner close control (default on). */
+/**
+ * Dialog panel with portal + overlay; optional corner close control (default on).
+ * @param props - The props argument.
+ */
 function DialogContent({
   className,
   children,
@@ -96,7 +104,10 @@ function DialogContent({
   );
 }
 
-/** Layout shell for dialog title and description. */
+/**
+ * Layout shell for dialog title and description.
+ * @param props - The props argument.
+ */
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -107,7 +118,10 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-/** Action row for dialog buttons; optional outline Close (default off). */
+/**
+ * Action row for dialog buttons; optional outline Close (default off).
+ * @param props - The props argument.
+ */
 function DialogFooter({
   className,
   showCloseButton = false,
@@ -137,6 +151,7 @@ function DialogFooter({
 
 /**
  * Styled Radix dialog title for accessible heading text.
+ * @param props - The props argument.
  */
 function DialogTitle({
   className,
@@ -153,6 +168,7 @@ function DialogTitle({
 
 /**
  * Styled Radix dialog description for secondary accessible text.
+ * @param props - The props argument.
  */
 function DialogDescription({
   className,

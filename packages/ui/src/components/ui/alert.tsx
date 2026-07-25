@@ -20,6 +20,7 @@ const alertVariants = cva(
 
 /**
  * Inline status container with `role="alert"`; variants `default` | `destructive`.
+ * @param props - The props argument.
  */
 function Alert({
   className,
@@ -38,6 +39,7 @@ function Alert({
 
 /**
  * Single-line title slot for {@link Alert}.
+ * @param props - The props argument.
  */
 function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -54,6 +56,7 @@ function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
 
 /**
  * Body/description slot for {@link Alert}.
+ * @param props - The props argument.
  */
 function AlertDescription({
   className,

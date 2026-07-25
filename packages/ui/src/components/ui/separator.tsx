@@ -6,6 +6,7 @@ import type * as React from "react";
 
 /**
  * Horizontal or vertical visual divider (Radix Separator).
+ * @param props - The props argument.
  */
 function Separator({
   className,
