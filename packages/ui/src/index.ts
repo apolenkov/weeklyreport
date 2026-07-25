@@ -1,3 +1,4 @@
+/** Public surface of `@customreport/ui` (components, hooks, `cn`). */
 // Utility
 
 export { ComingSoonBadge } from "./components/coming-soon-badge";

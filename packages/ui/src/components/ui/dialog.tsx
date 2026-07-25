@@ -6,30 +6,45 @@ import { XIcon } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import type * as React from "react";
 
+/**
+ * Radix Dialog root with a `data-slot` for theming hooks.
+ */
 function Dialog({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
 
+/**
+ * Radix dialog trigger that opens the associated dialog.
+ */
 function DialogTrigger({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
   return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
 }
 
+/**
+ * Radix dialog portal that mounts content outside the parent DOM tree.
+ */
 function DialogPortal({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
 
+/**
+ * Radix dialog close control for dismissing the open dialog.
+ */
 function DialogClose({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Close>) {
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
+/**
+ * Full-screen dimming overlay behind dialog content.
+ */
 function DialogOverlay({
   className,
   ...props
@@ -46,6 +61,7 @@ function DialogOverlay({
   );
 }
 
+/** Dialog panel with portal + overlay; optional corner close control (default on). */
 function DialogContent({
   className,
   children,
@@ -80,6 +96,7 @@ function DialogContent({
   );
 }
 
+/** Layout shell for dialog title and description. */
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -90,6 +107,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** Action row for dialog buttons; optional outline Close (default off). */
 function DialogFooter({
   className,
   showCloseButton = false,
@@ -117,6 +135,9 @@ function DialogFooter({
   );
 }
 
+/**
+ * Styled Radix dialog title for accessible heading text.
+ */
 function DialogTitle({
   className,
   ...props
@@ -130,6 +151,9 @@ function DialogTitle({
   );
 }
 
+/**
+ * Styled Radix dialog description for secondary accessible text.
+ */
 function DialogDescription({
   className,
   ...props

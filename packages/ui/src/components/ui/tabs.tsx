@@ -5,6 +5,9 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Tabs as TabsPrimitive } from "radix-ui";
 import type * as React from "react";
 
+/**
+ * Radix tabs root with optional list variants.
+ */
 function Tabs({
   className,
   orientation = "horizontal",
@@ -39,6 +42,9 @@ const tabsListVariants = cva(
   },
 );
 
+/**
+ * Tab list container for TabsTrigger items.
+ */
 function TabsList({
   className,
   variant = "default",
@@ -55,6 +61,9 @@ function TabsList({
   );
 }
 
+/**
+ * Tab trigger that activates a TabsContent panel.
+ */
 function TabsTrigger({
   className,
   ...props
@@ -74,6 +83,9 @@ function TabsTrigger({
   );
 }
 
+/**
+ * Panel shown when its tab value is active.
+ */
 function TabsContent({
   className,
   ...props

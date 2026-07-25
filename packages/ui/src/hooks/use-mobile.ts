@@ -8,6 +8,7 @@ function subscribeToViewport(onStoreChange: () => void): () => void {
   return () => mql.removeEventListener("change", onStoreChange);
 }
 
+/** True when viewport is below the mobile breakpoint; false during SSR. */
 export function useIsMobile() {
   // External viewport state read via useSyncExternalStore: correct on the
   // first client render (no undefined->value flash) and false during SSR.

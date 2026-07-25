@@ -1,6 +1,9 @@
 import { cn } from "@customreport/ui/lib/utils";
 import type * as React from "react";
 
+/**
+ * Text input with focus ring, invalid, and file-input styles.
+ */
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
     <input

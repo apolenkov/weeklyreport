@@ -8,6 +8,9 @@ import type * as React from "react";
 // slid left by the remaining share, so 100 is the "complete" end of that scale.
 const PROGRESS_COMPLETE_PERCENT = 100;
 
+/**
+ * Determinate progress bar; value drives the indicator transform.
+ */
 function Progress({
   className,
   value,

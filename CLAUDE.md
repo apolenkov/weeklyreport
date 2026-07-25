@@ -119,6 +119,19 @@ path must respect them and link the relevant `openspec/specs/` spec.
     Stale markers (work already done) must be deleted. Deferred features follow
     `openspec/specs/deferred-feature-pattern` (loud stub + matching `TODO(<ref>)`,
     or UI `ComingSoonBadge`) — never a hidden flag.
+- **Idealist excellence stack.** Operator skill
+  `.claude/skills/idealist-excellence/SKILL.md` maps which tool illuminates
+  what. Workflows: `idealist-review` (0–1000 score), `excellence-stack`
+  (multi-lens skill fan-out), `comment-hygiene` (docs), plus `mass-review` /
+  `gates` / Vercel web skills / `ai-ui-driver`. Prefer root-by-root campaigns
+  toward avg ≥950 with zero Critical confirmed gaps.
+- **ESLint is the strict mechanical floor (no JSDoc tag overhead).**
+  `packages/shared` + `packages/ui`: `jsdoc/require-jsdoc` **error** on
+  **public exports only** (`publicOnly`) — short `/** contract */` required.
+  `require-param` / `require-returns` / type tags stay **off** (TypeScript
+  already carries them). Tag correctness (`check-param-names`,
+  `check-tag-names`) stays **error** when tags exist. Apps stay off
+  require-jsdoc; internal JSDoc is removed by hygiene review, not forced.
 
 ## Gates
 

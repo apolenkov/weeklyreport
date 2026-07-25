@@ -18,6 +18,9 @@ const alertVariants = cva(
   },
 );
 
+/**
+ * Inline status container with `role="alert"`; variants `default` | `destructive`.
+ */
 function Alert({
   className,
   variant,
@@ -26,13 +29,16 @@ function Alert({
   return (
     <div
       data-slot="alert"
-      role="alert"
       className={cn(alertVariants({ variant }), className)}
       {...props}
+      role="alert"
     />
   );
 }
 
+/**
+ * Single-line title slot for {@link Alert}.
+ */
 function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -46,6 +52,9 @@ function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/**
+ * Body/description slot for {@link Alert}.
+ */
 function AlertDescription({
   className,
   ...props

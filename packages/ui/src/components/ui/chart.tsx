@@ -7,6 +7,9 @@ import { ResponsiveContainer, Tooltip } from "recharts";
 // Seed positive initialDimension so ResponsiveContainer does not paint width/height -1 (h-64 = 256).
 const CHART_INITIAL_DIMENSION = { width: 0, height: 256 } as const;
 
+/**
+ * Fixed-height ResponsiveContainer shell; seeds initialDimension so recharts does not paint -1 size.
+ */
 export function ChartContainer({
   className,
   children,
@@ -27,6 +30,9 @@ export function ChartContainer({
   );
 }
 
+/**
+ * Recharts Tooltip pre-styled with theme CSS variables (card/border).
+ */
 export function ChartTooltip(props: React.ComponentProps<typeof Tooltip>) {
   return (
     <Tooltip

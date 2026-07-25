@@ -1,5 +1,6 @@
 import type {
   DraftSaveInput,
+  ProjectReadModel,
   ReportSectionReadModel,
   SubmitSectionInput,
   SubmitSectionPayload,
@@ -29,6 +30,42 @@ export interface DraftSaveValidationError {
   message: string;
 }
 
+// Submit-time completeness for one product: a traffic light and at least one
+// Current Week item. Neither is expressible in the payload schema, which cannot
+// see which products the section carries.
+function validateProjectSubmission(
+  project: ProjectReadModel,
+  input: SubmitSectionInput | SubmitSectionPayload,
+): DraftSaveValidationError[] {
+  const matchingStatus = input.projectStatuses.find(
+    (status) => status.projectId === project.projectId,
+  );
+
+  const hasCurrentItem = input.items.some(
+    (item) => item.projectId === project.projectId && item.type === "current",
+  );
+
+  return [
+    ...(!matchingStatus?.status
+      ? [
+          {
+            code: "MISSING_TRAFFIC_LIGHT" as const,
+            message: `Project ${project.projectName} must have a traffic light status.`,
+          },
+        ]
+      : []),
+    ...(!hasCurrentItem
+      ? [
+          {
+            code: "MISSING_CURRENT_ITEM" as const,
+            message: `Project ${project.projectName} needs at least one Current Week item.`,
+          },
+        ]
+      : []),
+  ];
+}
+
+/** Validate a section submit payload against draft completeness rules. */
 export function validateSubmitInput(
   section: ReportSectionReadModel,
   input: SubmitSectionInput | SubmitSectionPayload,
@@ -42,34 +79,9 @@ export function validateSubmitInput(
     ];
   }
 
-  const projectErrors = section.projects.flatMap((project) => {
-    const matchingStatus = input.projectStatuses.find(
-      (status) => status.projectId === project.projectId,
-    );
-
-    const hasCurrentItem = input.items.some(
-      (item) => item.projectId === project.projectId && item.type === "current",
-    );
-
-    return [
-      ...(!matchingStatus?.status
-        ? [
-            {
-              code: "MISSING_TRAFFIC_LIGHT" as const,
-              message: `Project ${project.projectName} must have a traffic light status.`,
-            },
-          ]
-        : []),
-      ...(!hasCurrentItem
-        ? [
-            {
-              code: "MISSING_CURRENT_ITEM" as const,
-              message: `Project ${project.projectName} needs at least one Current Week item.`,
-            },
-          ]
-        : []),
-    ];
-  });
+  const projectErrors = section.projects.flatMap((project) =>
+    validateProjectSubmission(project, input),
+  );
 
   // Activities need a traffic light at submit; schema alone cannot catch an omitted entry.
   const activityErrors = section.activities.flatMap((activity) => {
@@ -91,16 +103,8 @@ export function validateSubmitInput(
 }
 
 /**
- * The record-parent activity write guard, shared by BOTH `saveDraft` and
- * `submitSection`. Every item/risk/decision row whose parent is an activity
- * must reference an `activityId` already seeded on the section for its author
- * (`section.activities` is the reference) — the delete-recreate never trusts a
- * client-supplied id. Product-parented rows (null `activityId`) are ignored
- * here; their product is checked by the stage guard. Mirrors
- * `validateActivityStatuses` for record parents.
- * @param section - the server-loaded section read model (seeded activities)
- * @param input - the parsed draft-save / submit payload being validated
- * @returns one error per offending row; the caller hard-rejects on the first
+ * Reject activity-parented draft rows whose activityId is not seeded on the section.
+ * Product-parented rows (null activityId) are out of scope here.
  */
 export function validateRecordActivityIds(
   section: ReportSectionReadModel,
@@ -129,14 +133,7 @@ export function validateRecordActivityIds(
 }
 
 /**
- * The activity-status write guard, shared by BOTH `saveDraft` and
- * `submitSection`. Every written `activityId` must be one already seeded on the
- * section for its author (the server-loaded `section.activities` is the
- * reference) — the delete-recreate never trusts client-supplied ids, closing
- * the same client-trust gap the stage-ownership guard closes for stages.
- * @param section - the server-loaded section read model (seeded activities)
- * @param input - the parsed draft-save / submit payload being validated
- * @returns one error per offending entry; the caller hard-rejects on the first
+ * Reject activityStatuses entries whose activityId is not seeded on the section.
  */
 export function validateActivityStatuses(
   section: ReportSectionReadModel,
@@ -253,8 +250,10 @@ function validateStageRows(
   });
 }
 
-// Stage ownership for saveDraft/submit: new/changed rows must use author-owned stages.
-// Unchanged rows (stableId+product+stages) are grandfathered; never clamps.
+/**
+ * Stage ownership for saveDraft/submit: changed rows need author-owned stages;
+ * unchanged stableId+product+stages rows are grandfathered (never clamps).
+ */
 export function validateStageOwnership(
   section: ReportSectionReadModel,
   input: DraftSaveInput | SubmitSectionInput,
