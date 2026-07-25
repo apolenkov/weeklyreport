@@ -4,12 +4,15 @@ import type { Dispatch, SetStateAction } from "react";
 
 import type { MockSettings } from "../../admin";
 
-/**
- * Period-cycle fields for the Settings → Periods sub-tab. Each field here has a
- * live consumer: `deadlineTime` is the manual-creation deadline default;
- * `allowReopenAfterPublish` + `reopenWindowHours` gate the reopen request path
- * (`period.service`).
- */
+// Empty time inputs resolve here — matches auto-create's fixed 18:00 default.
+const DEFAULT_DEADLINE_TIME = "18:00";
+
+// Same 0..168 (one week) bound used for grace-period hours.
+const REOPEN_WINDOW_HOURS_MIN = 0;
+const REOPEN_WINDOW_HOURS_MAX = 168;
+
+// Live consumers: deadlineTime (manual-create default), allowReopenAfterPublish
+// + reopenWindowHours (period.service reopen gate).
 export function PeriodCycleFields({
   draft,
   setDraft,
@@ -19,7 +22,6 @@ export function PeriodCycleFields({
 }) {
   return (
     <>
-      {/* ── deadlineTime ─────────────────────────────────────────── */}
       <div>
         <label
           htmlFor="deadline-time"
@@ -34,7 +36,10 @@ export function PeriodCycleFields({
           step={60}
           value={draft.deadlineTime}
           onChange={(e) =>
-            setDraft({ ...draft, deadlineTime: e.target.value || "18:00" })
+            setDraft({
+              ...draft,
+              deadlineTime: e.target.value || DEFAULT_DEADLINE_TIME,
+            })
           }
           className="w-40 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
         />
@@ -46,7 +51,6 @@ export function PeriodCycleFields({
         </p>
       </div>
 
-      {/* ── allowReopenAfterPublish + reopenWindowHours ──────────── */}
       <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)]">
         <input
           name="allow-reopen-after-publish"
@@ -85,15 +89,15 @@ export function PeriodCycleFields({
           name="reopen-window-hours"
           type="number"
           inputMode="numeric"
-          min={0}
-          max={168}
+          min={REOPEN_WINDOW_HOURS_MIN}
+          max={REOPEN_WINDOW_HOURS_MAX}
           disabled={!draft.allowReopenAfterPublish}
           value={draft.reopenWindowHours}
           onChange={(e) =>
             setDraft({
               ...draft,
               reopenWindowHours: Math.max(
-                0,
+                REOPEN_WINDOW_HOURS_MIN,
                 Number.parseInt(e.target.value, 10) || 0,
               ),
             })

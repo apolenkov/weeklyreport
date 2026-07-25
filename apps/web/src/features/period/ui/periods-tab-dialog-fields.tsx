@@ -1,26 +1,23 @@
 "use client";
 
+// Matches packages/shared period.schema MAX_WEEK_LABEL_LENGTH (local copy —
+// shared is not re-exported for UI use).
+const MAX_WEEK_LABEL_LENGTH = 64;
+
 interface CreatePeriodFieldsProps {
   readonly periodStart: string;
   readonly onPeriodStartChange: (value: string) => void;
   readonly periodEnd: string;
   readonly onPeriodEndChange: (value: string) => void;
-  /** Edit-mode only: an emptied end date is a loud error, never a silent keep. */
   readonly periodEndError: string | null;
   readonly deadline: string;
   readonly onDeadlineChange: (value: string) => void;
   readonly deadlineError: string | null;
-  /** Consequence note shown when edit-mode clears the deadline (ruling F16). */
   readonly deadlineClearHint: string | null;
   readonly weekLabel: string;
   readonly onWeekLabelChange: (value: string) => void;
 }
 
-/**
- * The create/edit period dialog's four field blocks — start, end, deadline
- * (with inline validation), and label — split out so the dialog itself only
- * owns state and submit chrome.
- */
 export function CreatePeriodFields({
   periodStart,
   onPeriodStartChange,
@@ -139,7 +136,7 @@ export function CreatePeriodFields({
           type="text"
           value={weekLabel}
           onChange={(e) => onWeekLabelChange(e.target.value)}
-          maxLength={64}
+          maxLength={MAX_WEEK_LABEL_LENGTH}
           placeholder="e.g. Sprint 12 catch-up"
           data-testid="periods-create-label"
           className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"

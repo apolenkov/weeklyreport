@@ -16,11 +16,9 @@ export function NotificationsSubTab({
   const [draft, setDraft] = useState<MockSettings>(serverSettings);
   const [isDirty, setIsDirty] = useState(false);
 
-  // Reseed the draft only from FRESH server data: skip while dirty (a
-  // background refetch must not overwrite an in-progress edit) and skip data
-  // already seeded — otherwise the dirty flag's post-save flip re-fires this
-  // effect while the parent still passes the pre-save settings and the
-  // just-typed field flickers back to the old value.
+  // Seed only fresh server data: skip while dirty (refetch must not clobber
+  // edits) and skip already-seeded refs — else post-save dirty flip re-fires
+  // against pre-save props and the field flickers back.
   const lastSeeded = useRef<MockSettings>(serverSettings);
   useEffect(() => {
     if (!isDirty && serverSettings !== lastSeeded.current) {

@@ -17,7 +17,6 @@ export interface PendingSaveEcho {
   readonly serverDraftKey: string;
 }
 
-/** Compares record content without transport and durable identity fields. */
 function recordContentKey(record: DraftRecord): string {
   return stableStringify(
     Object.fromEntries(
@@ -28,7 +27,6 @@ function recordContentKey(record: DraftRecord): string {
   );
 }
 
-/** Finds the saved counterpart for one persisted record, including duplicates. */
 function findSavedRecord(
   record: DraftRecord,
   index: number,
@@ -47,7 +45,6 @@ function findSavedRecord(
   )[occurrence];
 }
 
-/** Replaces only identities from the confirmed save, preserving current content. */
 function reconcileRecordIdentities<T extends DraftRecord>(
   current: readonly T[],
   persisted: readonly DraftRecord[],
@@ -67,7 +64,6 @@ function reconcileRecordIdentities<T extends DraftRecord>(
   });
 }
 
-/** Reconciles identities for every delete-and-recreate record collection. */
 export function reconcileSavedIdentities(
   current: ReportSectionReadModel,
   saved: ReportSectionReadModel,
@@ -94,7 +90,6 @@ export function reconcileSavedIdentities(
   };
 }
 
-/** Classifies an incoming server payload before the orchestration effect acts. */
 export function classifyReseed(
   serverDraftKey: string,
   lastServerDraftKey: string | null,

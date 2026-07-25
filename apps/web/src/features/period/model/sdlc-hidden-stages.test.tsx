@@ -1,14 +1,4 @@
-/**
- * @vitest-environment node
- *
- * pipeline-tooltip-and-indicator: the "+N more" reveal must name a hidden
- * stage's OWNER even when that owner has not set a status — the line MUST read
- * "<stage> — <owner> (no status set)", never "empty" and never "unassigned",
- * for a stage that has an owner. This owned-but-unstatused branch
- * (`hiddenStageLine` in sdlc-hidden-stages.ts) was previously exercised only
- * indirectly through the pipeline fixtures; these assertions pin the wording
- * for both an empty co-owner (cross-author) and an empty locked owner.
- */
+/** @vitest-environment node */
 import type { TrafficLightStatus } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 

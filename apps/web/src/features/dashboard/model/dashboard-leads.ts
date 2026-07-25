@@ -239,7 +239,6 @@ export function buildLeadInfos({
 
 export type PrimaryAction = "open" | "remind" | "review" | "none";
 
-// The queue's action precedence ladder: review beats open beats remind.
 export function primaryAction(lead: LeadInfo): PrimaryAction {
   if (lead.actions.canReview) return "review";
   if (lead.actions.canOpen) return "open";

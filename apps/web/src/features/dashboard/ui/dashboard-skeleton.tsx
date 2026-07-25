@@ -10,7 +10,6 @@ const blockedRows = Array.from(
   (_, index) => index,
 );
 
-/** Loading geometry for the dashboard's independent KPI, queue, and risk slots. */
 export function DashboardSkeleton() {
   return (
     <div className="space-y-6">

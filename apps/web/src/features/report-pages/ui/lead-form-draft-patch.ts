@@ -18,13 +18,7 @@ import {
   patchDraftItem,
 } from "./lead-form-draft-merge-helpers";
 
-/**
- * Every draft mutation the lead form performs, as data. The draft module's
- * `apply(patch)` runs these through `setDraftSection` as a functional updater
- * so each patch composes with whatever draft is already pending — concurrent
- * handler fires never clobber each other, and bridge consumers always read
- * the merged section.
- */
+// Functional-updater patches: concurrent handlers compose instead of clobbering.
 export type DraftPatch =
   | { readonly kind: "products"; readonly products: readonly Product[] }
   | {
@@ -45,7 +39,6 @@ export type DraftPatch =
       readonly patch: Partial<ReportSectionReadModel["items"][number]>;
     };
 
-/** Pure reducer: applies one draft patch to a section, returning a new section. */
 export function applyDraftPatch(
   section: ReportSectionReadModel,
   patch: DraftPatch,

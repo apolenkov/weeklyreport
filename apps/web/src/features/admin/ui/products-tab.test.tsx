@@ -219,7 +219,7 @@ describe("ProductsTab — deep-link panel state", () => {
   });
 });
 
-describe("ProductsTab — Add/Edit dialog a11y (VA-0a high unit-rtl)", () => {
+describe("ProductsTab — Add/Edit dialog a11y", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -275,8 +275,7 @@ describe("ProductsTab — Add/Edit dialog a11y (VA-0a high unit-rtl)", () => {
   });
 });
 
-// admin-dialog-focus-management (autofocus-admin-dialogs)
-describe("ProductsTab — focus management (autofocus-admin-dialogs)", () => {
+describe("ProductsTab — focus management", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -324,7 +323,7 @@ describe("ProductsTab — focus management (autofocus-admin-dialogs)", () => {
   });
 });
 
-describe("ProductsTab — slide-capacity advisory (add-slide-capacity-signals)", () => {
+describe("ProductsTab — slide-capacity advisory", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -366,7 +365,7 @@ describe("ProductsTab — slide-capacity advisory (add-slide-capacity-signals)",
     ).not.toBeInTheDocument();
   });
 
-  it("counts the lead's products from the FULL set, not a filtered view (F8)", async () => {
+  it("counts the lead's products from the FULL set, not a filtered view", async () => {
     const user = userEvent.setup();
     // productFilter narrows the visible list to a single product…
     renderTab({ products: ownedProducts(6), productFilter: "p-0" });

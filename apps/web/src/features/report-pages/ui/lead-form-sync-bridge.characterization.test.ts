@@ -3,12 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Product, RiskEntry } from "../../report-sections";
 import { applyRiskSeverityFloor } from "./lead-form-risk-coverage";
 
-/**
- * Pins `applyRiskSeverityFloor`'s current
- * output over the severity × explicit-status permutation grid BEFORE the
- * ranking core moves to the shared package. Frozen — do not edit assertions
- * after the move lands; a diff here means a behavior change.
- */
+// Frozen severity × status grid for applyRiskSeverityFloor.
 function makeProduct(
   status: Product["stages"][number]["status"],
   ownership: Product["stages"][number]["ownership"] = "mine",

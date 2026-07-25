@@ -13,12 +13,7 @@ import type { buildLeadSubmitPayload } from "../../report-sections";
 
 type LeadSubmitInput = ReturnType<typeof buildLeadSubmitPayload>;
 
-/**
- * The draft module's write dependency: the submit mutation plus the cache
- * invalidation it triggers on success. Extracted so the module owns the submit
- * flow (build payload, advance version, lock) while the transport stays
- * injectable — production wires it from tRPC, tests pass a fake.
- */
+// Injectable write seam: production wires tRPC; tests pass a fake.
 export interface LeadFormDraftSeam {
   readonly submitSection: (
     input: LeadSubmitInput,
@@ -27,7 +22,6 @@ export interface LeadFormDraftSeam {
   readonly onSubmitSuccess: () => void;
 }
 
-/** Production seam: the real `reports.submit` mutation and lead-cache invalidation. */
 export function useLeadFormDraftSeam(): LeadFormDraftSeam {
   const trpc = useTRPC();
   const qc = useQueryClient();

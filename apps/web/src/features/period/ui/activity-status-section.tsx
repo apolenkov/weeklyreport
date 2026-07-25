@@ -31,32 +31,20 @@ function trafficRank(status: TrafficLightStatus): number {
 }
 
 interface ActivityStatusSectionProps {
-  /** The author's attached activities as full record cards. */
   readonly activities: readonly LeadActivityCard[];
   readonly readOnly: boolean;
   readonly onStatusChange: (
     activityId: string,
     status: TrafficLightStatus,
   ) => void;
-  /**
-   * An unbacked raise (At Risk with no covering risk, Blocked with no covering
-   * blocker) routes here instead of `onStatusChange` — the host opens the risk
-   * entry in create mode with the activity preselected and this severity
-   * prefilled. The pill analogue of the stage-chip raise interception.
-   */
+  // Unbacked raise (At Risk/Blocked with no covering risk) routes here so the
+  // host can open risk creation instead of writing status alone.
   readonly onRaiseRequiresRisk: (
     activityId: string,
     severity: "at-risk" | "blocked",
   ) => void;
 }
 
-/**
- * The activity's traffic-light pill row. Renders the FLOORED value
- * (`derivedStatus ?? status`), refuses a manual pick below the floor, and
- * routes an unbacked raise through risk creation — the pill analogue of the
- * stage-chip click interception in both directions. The stored status is
- * preserved, so clearing the covering risk restores the lead's choice.
- */
 function ActivityStatusPills({
   card,
   readOnly,
@@ -167,9 +155,7 @@ function ActivityStatusPills({
   );
 }
 
-/** One attached activity as a status-only card: name, linked products, pill.
- * Records live in the main Current/Next/Risks/Decisions sections under the
- * activity's lane, never here. */
+// Status-only card; full records live under the activity lane, not here.
 function ActivityCard({
   card,
   readOnly,
@@ -212,12 +198,7 @@ function ActivityCard({
   );
 }
 
-/**
- * Weekly reporting for the lead's attached Project Activities — the stage-less
- * reporting units beside products. Each activity is a full card: its own
- * records/risks/blockers, linked products, and a risk/blocker-floored status
- * pill. No add/remove affordance because attachment is admin-provisioned.
- */
+// No add/remove: activity attachment is admin-provisioned.
 export function ActivityStatusSection({
   activities,
   readOnly,

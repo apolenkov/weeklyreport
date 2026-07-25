@@ -1,13 +1,5 @@
-/**
- * Per-lead content counters for the head dashboard summary.
- *
- * Product records and activity records ride the same
- * flat section arrays, discriminated by which parent FK is set. The product
- * summary columns must count ONLY product-parented rows (else activity records
- * inflate them); the activity column counts activity-parented rows. The
- * "has the lead started" signal stays TOTAL so an activity-only lead reads as
- * started.
- */
+// Product columns count only product-parented rows (activity rows would
+// inflate them); "has the lead started" stays TOTAL so activity-only leads count.
 import type {
   ActivityLiveRow,
   ReportSectionReadModel,
@@ -21,11 +13,7 @@ export function countActivityLiveContent(
     : 0;
 }
 
-/**
- * Total content across product AND activity records. Drives deriveLeadStatus
- * ("has the lead started") — kept total on purpose so an activity-only lead who
- * filled activity records is not misread as "not started".
- */
+// Total across product + activity so an activity-only lead is not "not started".
 export function countSectionContent(section: ReportSectionReadModel): number {
   return (
     section.items.length +
@@ -35,7 +23,6 @@ export function countSectionContent(section: ReportSectionReadModel): number {
   );
 }
 
-/** Per-lead PRODUCT work-unit count — product-parented rows only. */
 export function countProductContent(section: ReportSectionReadModel): number {
   return (
     section.items.filter((i) => i.projectId != null).length +
@@ -46,7 +33,6 @@ export function countProductContent(section: ReportSectionReadModel): number {
   );
 }
 
-/** Per-lead ACTIVITY work-unit count — records parented to an activity. */
 export function countActivityRecords(section: ReportSectionReadModel): number {
   return (
     section.items.filter((i) => i.activityId != null).length +
@@ -63,10 +49,6 @@ export interface ProductColumnCounts {
   readonly priorityCount: number;
 }
 
-/**
- * The five per-lead PRODUCT summary columns, each scoped to product-parented
- * rows.
- */
 export function productColumnCounts(
   section: ReportSectionReadModel | undefined,
 ): ProductColumnCounts {

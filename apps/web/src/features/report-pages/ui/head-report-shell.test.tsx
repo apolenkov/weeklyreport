@@ -1,10 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * report-toolbar-layout: the head report shell routes its controls into the
- * page's two-row ReportToolbar — document actions (Export-PDF) on top, context
- * controls (Agent review, period nav, scope / view-mode toggles) on the bottom
- * row — plus a header context label beside the title.
+ * Head shell routes document actions and context controls into the two-row
+ * ReportToolbar, plus a header context label beside the title.
  */
 
 import "@testing-library/jest-dom/vitest";
@@ -16,17 +14,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 /* ---- Module mocks (hoisted above all imports of the SUT) ---- */
 
-// head-surface-uat-polish (F1): the per-slide "Open focused report" drill-in
-// link was removed, so the deck no longer surfaces a focus href to the shell.
-// The stub is a plain marker.
+// Deck no longer surfaces a focus href; stub is a plain marker.
 vi.mock("../../slides/ui/head-slides-client", () => ({
   HeadSlidesClient: () => <div data-testid="head-slides-client-stub" />,
 }));
 
-// head-surface-uat-polish (F1): the slides header hosts the Publish & Lock
-// action (a self-contained component with its own query/mutations). Stub it
-// here — the shell test only verifies it is mounted on the header line, not its
-// publish internals (those live in publish-lock-button.test).
+// Shell test only verifies Publish & Lock is mounted, not its internals.
 vi.mock("../../period/ui/head-publish-lock-action", () => ({
   HeadPublishLockAction: () => (
     <div data-testid="head-publish-lock-action-stub" />
@@ -34,11 +27,7 @@ vi.mock("../../period/ui/head-publish-lock-action", () => ({
 }));
 
 vi.mock("./weekly-report-page", () => ({
-  // report-toolbar-layout: render the header context label + the two toolbar
-  // slots so tests can pin where the shell routes each. The real page renders
-  // the single two-row ReportToolbar below the header; this stub synthesizes
-  // that arrangement — header row first, then a report-toolbar with a
-  // Document-action group and a Context-control group.
+  // Synthesize header + Document/Context toolbar groups so routing is pinable.
   WeeklyReportPage: ({
     documentActionsLeading,
     contextControls,
@@ -96,10 +85,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname(),
 }));
 
-// driver-findings-2026-06-11 finding 4: the shell now runs two queries —
-// reports.compiledHistory (period list) and weeklyReport.get (the displayed
-// period, prepended when absent from history). Branch the mock on queryKey so
-// each query returns its own shape instead of one blanket value.
+// Branch the mock on queryKey: compiledHistory vs weeklyReport.get shapes.
 vi.mock("@tanstack/react-query", async () => {
   const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
     "@tanstack/react-query",
@@ -139,16 +125,13 @@ vi.mock("../../../lib/trpc-context", () => ({
     },
     weeklyReport: {
       get: {
-        // Encode the reportId in the key so tests can tell the DISPLAYED query
-        // (`{ reportId }`) apart from the ACTIVE query (`{}` → null) — item 3.
+        // Encode reportId so DISPLAYED (`{ reportId }`) and ACTIVE (`{}` → null) differ.
         queryOptions: (input?: { reportId?: string }) => ({
           queryKey: ["weeklyReport.get", input?.reportId ?? null],
         }),
       },
     },
-    // report-toolbar-parity: the shell toolbar now renders ExportPdfButton in
-    // its trailing group, which calls these on every render. Stub the surface
-    // so the shell mounts without throwing.
+    // ExportPdfButton calls these on render; stub so the shell mounts cleanly.
     pdfExport: {
       request: { mutationOptions: () => ({}) },
       status: {
@@ -176,9 +159,7 @@ describe("HeadReportShell — agent-review placeholder per mode", () => {
   });
 
   it("slides mode renders exactly one placeholder in the toolbar context controls", () => {
-    // head-slides-lead-parity (S6): the deck's slide-header slot was removed, so
-    // the toolbar context row now hosts the single placeholder in slides mode
-    // too — exactly one per surface, like form mode.
+    // Toolbar hosts the single agent-review placeholder in slides mode too.
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
     expect(screen.getAllByTestId("agent-review-coming-soon")).toHaveLength(1);
     expect(
@@ -189,10 +170,8 @@ describe("HeadReportShell — agent-review placeholder per mode", () => {
     expect(screen.getByTestId("head-slides-client-stub")).toBeInTheDocument();
   });
 
-  it("slides mode drops the Open focused report link and hosts Publish & Lock (F1)", () => {
-    // head-surface-uat-polish (F1): the per-slide drill-in link was removed —
-    // it duplicated the deck's own slide navigation — and replaced by the same
-    // Publish & Lock action the edit mode offers, on the header line.
+  it("slides mode drops the Open focused report link and hosts Publish & Lock", () => {
+    // Drill-in link removed (deck has its own nav); header hosts Publish & Lock.
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
     expect(
       screen.queryByRole("link", { name: /open focused report/i }),
@@ -205,12 +184,9 @@ describe("HeadReportShell — agent-review placeholder per mode", () => {
   });
 });
 
-// head-toolbar-semantics + report-toolbar-parity: the header action cluster
-// keeps the segmented toggles and the agent-review placeholder, but the
-// standalone Present and browser-Print links are GONE. Presentation is reached
-// via the ViewModeToggle Slides mode; the only export is the single labeled
-// Export-PDF in the ReportToolbar trailing group.
-describe("HeadReportShell — context control cluster (head-toolbar-semantics)", () => {
+// Segmented toggles + agent-review stay; Present/Print are gone (Slides mode
+// and labeled Export-PDF replace them).
+describe("HeadReportShell — context control cluster", () => {
   // Wire an ACTIVE displayed period so the shell's Export-PDF renders (it is
   // gated on an active, resolvable period). compiledHistory stays empty.
   function wireActivePeriod() {
@@ -313,17 +289,11 @@ describe("HeadReportShell — context control cluster (head-toolbar-semantics)",
     expect(
       screen.queryByRole("link", { name: /print/i }),
     ).not.toBeInTheDocument();
-    // head-slides-lead-parity (S6): the single Agent-review placeholder now
-    // lives in the slides toolbar context row (asserted in the per-mode suite).
   });
 });
 
-// driver-findings-2026-06-11 finding 4: on /head/report/<activeId> the period
-// navigator showed the latest PUBLISHED week (periods[0]) while the body showed
-// the active week. Two root causes — the active week missing from `periods`
-// (built from compiledHistory) AND currentIndex resolving via a regex that
-// never matched the head path. Both must be fixed.
-describe("HeadReportShell — period navigator addressed-week (finding 4)", () => {
+// Navigator must show the addressed active week, not fall back to periods[0].
+describe("HeadReportShell — period navigator shows addressed week", () => {
   const ACTIVE_ID = "a0000000-0000-4000-8000-000000000001";
   // Two published weeks in history (newest first): NEWER is periods[0], OLDER
   // is periods[1]. Navigating to OLDER proves the regex fix — without it
@@ -395,11 +365,9 @@ describe("HeadReportShell — period navigator addressed-week (finding 4)", () =
     expect(trigger).not.toHaveTextContent(/may 25/i);
   });
 
-  it("head navigator shows NO submitted marker (W3: lead-only)", async () => {
-    // The head shell fabricates isSubmitted:true on every history entry, but
-    // the submitted marker is opt-in via showLeadSubmissionMarkers +
-    // leadSubmittedAt — props the head shell never passes. So neither the
-    // trigger nor the opened listbox may render a "Submitted" pill.
+  it("head navigator shows no submitted marker (lead-only)", async () => {
+    // Head fabricates isSubmitted but never passes showLeadSubmissionMarkers /
+    // leadSubmittedAt, so neither trigger nor listbox may show "Submitted".
     const user = userEvent.setup();
     wireQueries();
     mockPathname.mockReturnValue(`/head/report/${ACTIVE_ID}`);
@@ -432,12 +400,9 @@ describe("HeadReportShell — period navigator addressed-week (finding 4)", () =
   });
 });
 
-// driver-findings-followups item 3: from a PUBLISHED week the navigator must
-// still reach the CURRENT week. The displayed published week IS in history, so
-// the old code prepended nothing and the active week was absent from the
-// dropdown. The shell now fetches the active period separately (`{}` query) and
-// prepends it, so it is always an option.
-describe("HeadReportShell — active week reachable from a published week (item 3)", () => {
+// Active period is fetched separately and prepended so it stays reachable
+// while viewing a published week already in history.
+describe("HeadReportShell — active week reachable from a published week", () => {
   const ACTIVE_ID = "a0000000-0000-4000-8000-000000000001";
   const PUBLISHED_ID = "a0000000-0000-4000-8000-000000000005";
 
@@ -508,9 +473,7 @@ describe("HeadReportShell — active week reachable from a published week (item 
     });
     expect(trigger).toHaveTextContent(/may 18.*24/i);
 
-    // Opening the listbox exposes the CURRENT week (Jun 8-14) as a reachable
-    // option — the regression item 3 fixes. Without the active-prepend it would
-    // be absent (history holds only the published week).
+    // Listbox must expose the current week; without active-prepend it is absent.
     await user.click(trigger);
     const options = screen.getAllByRole("option");
     expect(options.some((o) => /jun 8.*14/i.test(o.textContent))).toBe(true);

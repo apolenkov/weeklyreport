@@ -1,9 +1,5 @@
 export { PlusIcon } from "../../../shared/ui/icons";
 
-/**
- * Centralises 32×32 sizing, hover state, and accessible labels so the action
- * rows remain declarative.
- */
 export function IconButton({
   testId,
   label,
@@ -59,12 +55,6 @@ export function Chevron({ expanded }: { readonly expanded: boolean }) {
   );
 }
 
-// per-action icons used by the inline ActionIconRow. Each icon
-// is a 16×16 stroke-currentColor SVG that the IconButton shell paints in
-// the appropriate tone (muted by default, danger red for Archive). Paths
-// follow the same lucide-style stroke conventions used elsewhere in the
-// admin tabs so the visual language stays consistent.
-
 export function EditIcon() {
   return (
     <svg
@@ -84,7 +74,6 @@ export function EditIcon() {
 }
 
 export function PublishIcon() {
-  // Paper-airplane / "send" silhouette.
   return (
     <svg
       viewBox="0 0 24 24"
@@ -103,7 +92,6 @@ export function PublishIcon() {
 }
 
 export function ReopenIcon() {
-  // Rotate-counter-clockwise / refresh arrow.
   return (
     <svg
       viewBox="0 0 24 24"
@@ -141,7 +129,6 @@ export function ArchiveIcon() {
 }
 
 export function UnarchiveIcon() {
-  // Archive-restore: archive box with an upward arrow on top.
   return (
     <svg
       viewBox="0 0 24 24"
@@ -162,7 +149,6 @@ export function UnarchiveIcon() {
 }
 
 export function DeleteIcon() {
-  // Trash icon for period deletion.
   return (
     <svg
       viewBox="0 0 24 24"

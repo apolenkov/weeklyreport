@@ -33,10 +33,7 @@ interface UseDecisionEditDialogArgs {
   readonly onCancel: () => void;
 }
 
-/**
- * All state, derived values and handlers behind the decision dialog's form.
- * Kept out of the component so the dialog file stays render-only.
- */
+// Form state/handlers for the decision dialog; dialog file stays render-only.
 export function useDecisionEditDialog({
   decision,
   defaultOwner,
@@ -66,18 +63,13 @@ export function useDecisionEditDialog({
   // unmounts this component on close, so no useEffect reset is needed.
   const seed = resolveDecisionFormSeed(decision, defaultOwner);
   const [text, setText] = useState(seed.text);
-  // Owner is not user-editable: a decision is always owned by its author — the
-  // current lead on create, the saved owner on edit (you only ever open your
-  // own decisions; others' are locked). It is persisted but no longer shown as
-  // a field — the old read-only input read as editable and was the lone grey
-  // box among white inputs.
+  // Owner is author-only (create = current lead, edit = saved owner); persisted
+  // but not shown — a read-only field looked editable among white inputs.
   const owner = seed.owner;
   const [impact, setImpact] = useState(seed.impact);
   const [deadline, setDeadline] = useState(seed.deadline);
-  // A decision's parent is either a product or an attached activity. It is
-  // seeded from the bound row on edit, or from the create-mode
-  // default product (falling back to the first activity for an activity-only
-  // lead with no products). Shared seed rule with the item/risk dialogs.
+  // Parent is product or activity; seeded from the row (edit) or default
+  // product / first activity (create). Shared seed rule with item/risk dialogs.
   const [parent, setParent] = useState<RecordParent>(() =>
     resolveRecordParent(
       decision ?? {},
@@ -102,10 +94,8 @@ export function useDecisionEditDialog({
 
   const headerVerb = isCreate ? "Add Decision" : "Edit Decision";
 
-  // A product-parented decision must carry a concrete stage when the lead owns
-  // stages. A single owned stage is implicitly selected; zero owned stages with
-  // nothing to carry is a dead end. Activity parents own no stage, so the stage
-  // step is hidden and never validated.
+  // Product parents need a concrete stage when the lead owns any; one owned
+  // stage auto-selects; zero is a dead end. Activity parents hide stage UI.
   const availableStages = isActivityParent
     ? []
     : (stagesForProduct?.(parent.id) ?? []);
@@ -120,12 +110,8 @@ export function useDecisionEditDialog({
     decision,
   );
 
-  // Moves focus to the first invalid field on a failed save, in the same
-  // top-to-bottom order handleSave validates them, so keyboard/AT users land
-  // on the problem instead of staying parked on the Save button. Stage
-  // errors only ever occur with the multi-choice checkbox group rendered
-  // (a single owned stage auto-applies before validation runs), so the
-  // checkbox-group query always has a target when reached.
+  // Focus first invalid field top-to-bottom (same order as handleSave). Stage
+  // errors only fire when the multi-choice checkbox group is rendered.
   function focusFirstInvalidField(fieldErrors: DecisionFieldErrors) {
     if (fieldErrors.text) {
       textRef.current?.focus();

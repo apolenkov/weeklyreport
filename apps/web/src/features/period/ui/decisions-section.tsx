@@ -16,10 +16,6 @@ interface DecisionsSectionProps {
   readonly decisions: DecisionEntry[];
   readonly readOnly?: boolean;
   readonly onChange?: (decisions: DecisionEntry[]) => void;
-  /**
-   * Optional product label for a newly added decision when the saved value is
-   * empty. The final generic label is "Group".
-   */
   readonly defaultProductName?: string;
   /**
    * Display name of the currently signed-in user. Used to seed the Owner
@@ -32,7 +28,6 @@ interface DecisionsSectionProps {
    * product re-scopes the available stages.
    */
   readonly stagesForProduct?: (productId: string) => readonly string[];
-  /** Products assigned to the lead, passed through to the dialog. */
   readonly products?: readonly Product[];
   /**
    * The author's attached activities, forwarded so a decision can use an
@@ -42,9 +37,8 @@ interface DecisionsSectionProps {
   readonly defaultProductId?: string;
   readonly addSignal?: number;
   /**
-   * Decision ids whose lineage appeared in a published report. These rows
-   * remain resolvable but cannot be deleted because published history is
-   * immutable and the server rejects the deletion.
+   * Decision ids locked because their lineage appeared in a published report;
+   * rows stay resolvable but cannot be deleted (server rejects the write).
    */
   readonly publishedLockedIds?: ReadonlySet<string>;
 }
@@ -62,9 +56,6 @@ export function DecisionsSection({
   addSignal = 0,
   publishedLockedIds,
 }: DecisionsSectionProps) {
-  // The shared lifecycle keeps read-only transitions from consuming an add
-  // signal, remounts state for every open, and tracks pending deletion. Create
-  // mode receives defaultProductId directly, so it does not require a seed.
   const {
     dialogState,
     dialogKey,

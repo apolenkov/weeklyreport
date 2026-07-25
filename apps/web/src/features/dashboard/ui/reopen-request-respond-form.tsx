@@ -11,9 +11,7 @@ interface ReopenRequestRespondFormProps {
   readonly pendingDecision: "approved" | "rejected" | undefined;
 }
 
-/** Note textarea + Cancel/Reject/Approve; each button's own pending label is
- * driven by which decision is actually in flight, not by isPending alone —
- * otherwise both buttons would show "Saving…" no matter which was clicked. */
+// pendingDecision (not isPending alone) drives which button shows "Saving…".
 export function ReopenRequestRespondForm({
   requestId,
   note,

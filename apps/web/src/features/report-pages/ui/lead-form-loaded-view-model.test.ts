@@ -25,7 +25,6 @@ const NEXT_ITEM_ID = "12121212-1212-4121-8121-121212121212";
 const CURRENT_ITEM_RANK = 2;
 const NEXT_ITEM_RANK = 5;
 
-/** The fixture section plus a ranked, postponed next-week item. */
 function makeSection(): ReportSectionReadModel {
   const section = makeDraftMergeSection();
   return {

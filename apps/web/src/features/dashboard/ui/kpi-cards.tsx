@@ -10,11 +10,7 @@ interface KpiCardsProps {
 
 const PERCENT_MAX = 100;
 
-// Compact single-row KPI strip. Each metric is one horizontal card so the three
-// signals (Submissions / Deadline / Risks & Blockers) read as a slim status bar
-// above the dashboard rather than three tall cards that push the real content
-// down. Same signal, far less vertical space; the accent left-rail and the
-// submission ring stay as the recognisable at-a-glance cues.
+// Slim horizontal strip so three signals sit above content without tall cards.
 export function KpiCards({ data }: KpiCardsProps) {
   const submissionPercent =
     data.total > 0
@@ -23,13 +19,11 @@ export function KpiCards({ data }: KpiCardsProps) {
 
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      {/* Submissions */}
       <section
         className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
         style={{ borderLeft: "3px solid var(--color-starbucks-accent)" }}
         aria-label={`Submissions: ${data.submitted} of ${data.total}, ${data.pendingCount} pending`}
       >
-        {/* Conic gradient ring */}
         <div
           className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
           style={{
@@ -61,7 +55,6 @@ export function KpiCards({ data }: KpiCardsProps) {
         </div>
       </section>
 
-      {/* Deadline */}
       <section
         className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
         style={{ borderLeft: "3px solid var(--color-warning)" }}
@@ -82,7 +75,6 @@ export function KpiCards({ data }: KpiCardsProps) {
         </div>
       </section>
 
-      {/* Risks & Blockers */}
       <section
         className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
         style={{ borderLeft: "3px solid var(--color-destructive)" }}

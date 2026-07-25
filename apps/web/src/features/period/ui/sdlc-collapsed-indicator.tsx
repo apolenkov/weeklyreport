@@ -9,12 +9,9 @@ import {
 import type { StageStatus } from "../../report-sections";
 import { STAGE_CHIP_BOX_HEIGHT, STATUS_CONFIG } from "../../report-sections";
 
-// In Mine mode the filter hides foreign-owned and vacant chips. This small
-// inert indicator near the grid reports how many stages are collapsed. Its
-// `aria-label` (non-visual) reveals each hidden stage's name and status; a
-// Radix tooltip — the same shared `packages/ui` component the chips use —
-// reveals the same lines on hover. It never un-hides the chips, nor touches
-// health or completeness.
+// Mine-mode inert indicator for collapsed foreign/vacant stages. aria-label
+// and a shared Radix tooltip reveal names/statuses; never un-hides chips or
+// touches health/completeness.
 const HIDDEN_STAGES_ARIA_PREFIX = "Hidden stages —";
 
 function collapsedStagesIndicatorLabel(count: number): string {
@@ -59,23 +56,14 @@ export function CollapsedStagesIndicator({
           {collapsedStagesIndicatorLabel(count)}
         </span>
       </TooltipTrigger>
-      {/*
-        Softer surface than the shared dark default: the lead found the
-        white-on-black "+N more" reveal harsher than the rest of the UI. Scoped
-        to THIS indicator via a className override (the same light popover tokens
-        as dropdown-menu/select) — the shared dark TooltipContent (stage chips,
-        sidebar) is left untouched. `hideArrow` drops the dark Radix arrow that
-        would clash with the light surface.
-      */}
+      {/* Light popover surface (scoped override); hideArrow avoids the dark default arrow. */}
       <TooltipContent
         hideArrow
         className="border bg-popover text-left text-popover-foreground shadow-md"
       >
         {reveal.map((line, idx) => {
-          // Colour each row by its stage status (reuse STATUS_CONFIG tokens,
-          // no new token) with a leading status dot, so a blocked/at-risk
-          // hidden stage stands out. The status is already announced in the
-          // text/aria-label, so the dot is decorative.
+          // Colour each row by stage status (STATUS_CONFIG); status is already
+          // in text/aria-label, so the leading dot is decorative.
           const status = statuses[idx] ?? "empty";
           const color = STATUS_CONFIG[status].text;
           return (

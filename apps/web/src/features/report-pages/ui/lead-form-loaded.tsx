@@ -38,12 +38,7 @@ type LeadFormLoadedActions = LeadFormEditSectionsActions &
 type LeadFormLoadedWriteActions = LeadFormHeaderWriteActions &
   LeadFormDialogsWriteActions & { readonly handleSubmit: () => void };
 
-/**
- * Exactly the fields `LeadFormLoaded` and its children read from the
- * lead-form data-loading hook — a declared seam instead of the hook's own
- * return type, so a consumer never has to chase the hook to know what it may
- * read.
- */
+// Declared data-loading seam — not the hook's raw return type.
 export interface LeadFormLoadedData {
   readonly byPeriodData:
     { readonly section: ReportSectionReadModel } | undefined;

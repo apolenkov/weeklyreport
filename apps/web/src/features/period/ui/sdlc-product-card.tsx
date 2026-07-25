@@ -6,17 +6,10 @@ import { STAGE_CHIP_BOX_HEIGHT, StageChip } from "../../report-sections";
 import type { ProductPipelineView } from "../model/sdlc-pipeline-view";
 import { CollapsedStagesIndicator } from "./sdlc-collapsed-indicator";
 
-// Empty-own-stages note copy, lifted to a const so the string is not inlined
-// in JSX.
 const NO_OWN_STAGES_NOTE = "No stages assigned to you";
 
-// Label the completeness counter as the lead's OWN stages so "N/M" doesn't
-// read as the whole pipeline. Pure label — the count (computeCompleteness) is
-// unchanged.
 const OWN_STAGES_LABEL = "Your stages";
 
-// completeness ring geometry — named so no magic numbers leak into the style
-// object.
 const COMPLETENESS_RING_WIDTH = "1.5px";
 const COMPLETENESS_RING_STYLE = "dashed";
 const COMPLETENESS_RING_RADIUS = "var(--radius-pill)";
@@ -32,7 +25,6 @@ interface SdlcProductCardProps {
   ) => void;
 }
 
-/** One product's health card: header pill + completeness ring + stage chips row. */
 export function SdlcProductCard({
   product,
   view,
@@ -54,9 +46,8 @@ export function SdlcProductCard({
 
   return (
     <div className="rounded-xl p-4" style={cardStyle}>
-      {/* Product header — an inline-flex pill featuring a *pulsing* red
-      dot (`@keyframes risk-pulse` defined in globals.css) draws the eye
-      to active blockers without users having to read the label. */}
+      {/* Product header — pulsing red dot (`@keyframes risk-pulse` in app.css)
+      flags active blockers without requiring the label to be read. */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]">
@@ -78,11 +69,8 @@ export function SdlcProductCard({
             </span>
           )}
         </div>
-        {/* Own-input completeness affordance — RIGHT side, never the health
-        hue. A dashed/dotted outline ring reads "unfinished sketch" while
-        incomplete; an "N/M stages" counter pill gives the exact state.
-        Neutral foreground only — health lives on the left edge. Read-only
-        mode has nothing to finish, so it is hidden. */}
+        {/* Own-input completeness (right side, neutral): dashed ring while
+        incomplete + N/M counter. Health stays on the left edge; hidden when readOnly. */}
         {!readOnly && completeness.total > 0 && (
           <span
             className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-[var(--color-muted-foreground)]"
@@ -104,9 +92,8 @@ export function SdlcProductCard({
         )}
       </div>
 
-      {/* Stages row: a product on which the lead owns no stage still renders
-      (with its honest health above) and shows a brief note instead of an
-      empty grid. */}
+      {/* Stages row: products with no owned stage still render health above
+      and a brief note instead of an empty grid. */}
       {showNoOwnStagesNote ? (
         <p className="pb-1 text-[13px] italic text-[var(--color-muted-foreground)]">
           {NO_OWN_STAGES_NOTE}
@@ -146,8 +133,7 @@ export function SdlcProductCard({
               </div>
             </div>
           ))}
-          {/* Inert collapsed-stage indicator (Mine only): hover reveals the
-            hidden stages; border+text follow the cross-author status scale. */}
+          {/* Mine-only: hover reveals hidden stages; border+text follow status scale. */}
           {hiddenStages.length > 0 && (
             <CollapsedStagesIndicator
               reveal={hiddenReveal}

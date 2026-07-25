@@ -32,8 +32,6 @@ interface ReopenRequestRowProps {
   readonly pendingDecision: "approved" | "rejected" | undefined;
 }
 
-/** One pending reopen request: requester/period identity, timestamp, the
- * Respond toggle, optional reason block, and the inline responder form. */
 export function ReopenRequestRow({
   request: r,
   isResponding,

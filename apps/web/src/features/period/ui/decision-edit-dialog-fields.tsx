@@ -34,11 +34,6 @@ interface DecisionEditDialogFieldsProps {
   readonly onStageChange: (next: string[]) => void;
 }
 
-/**
- * The decision dialog's two-column form body: decision/deadline/impact prose
- * on the left, a Product + Stages classification panel on the right (a
- * decision carries no status/severity, so the panel is leaner than item/risk).
- */
 export function DecisionEditDialogFields({
   text,
   onTextChange,
@@ -64,7 +59,6 @@ export function DecisionEditDialogFields({
 }: DecisionEditDialogFieldsProps) {
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-stretch">
-      {/* Left column: decision / deadline / impact prose. */}
       <div className="flex flex-1 flex-col gap-4">
         <RecordTextareaField
           id="dec-text"
@@ -87,8 +81,6 @@ export function DecisionEditDialogFields({
           }
         />
 
-        {/* Deadline — Owner is auto-set to the author and no longer shown
-            as a field, so Deadline stands on its own row. */}
         <div>
           <label
             className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
@@ -118,15 +110,11 @@ export function DecisionEditDialogFields({
         />
       </div>
 
-      {/* Right column: CLASSIFICATION panel — Product + Stages. */}
       <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-4">
         <span className="block text-xs font-semibold tracking-wide text-[var(--color-muted-foreground)] uppercase">
           Classification
         </span>
 
-        {/* Parent picker — shared component. Offers products and the
-            author's attached activities; choosing an activity hides the
-            stage step below (an activity owns no SDLC stage). */}
         <ParentPicker
           id="dec-product"
           value={parent}
@@ -135,7 +123,7 @@ export function DecisionEditDialogFields({
           onChange={onParentChange}
         />
 
-        {/* activity-first-class: the stage step is product-only. */}
+        {/* Stage step is product-only — activities own no SDLC stage. */}
         {!isActivityParent && (
           <StageStep
             id="dec-stage"

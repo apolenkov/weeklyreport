@@ -21,11 +21,6 @@ interface PeriodsTabDialogsProps {
   readonly onConfirmDelete: () => void;
 }
 
-/**
- * Bundles the Periods tab's three modals — create, edit (same component,
- * `mode` discriminates), and delete confirmation — so the tab itself only
- * wires state in and mutation callbacks out.
- */
 export function PeriodsTabDialogs({
   showCreate,
   onCancelCreate,

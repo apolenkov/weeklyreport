@@ -14,7 +14,6 @@ import { UnifiedActivitySection } from "./unified-activity-section";
 export const NO_PRODUCTS_ASSIGNED_MESSAGE =
   "No products assigned — contact admin";
 
-/** The draft actions and add-signals the item sections drive. */
 export interface LeadFormItemSectionsActions {
   readonly onCurrentWeekItemsChange: (items: KanbanItem[]) => void;
   readonly onNextWeekItemsChange: (items: KanbanItem[]) => void;
@@ -40,12 +39,6 @@ interface LeadFormItemSectionsProps {
   readonly stagesForProduct: StagesForProduct;
 }
 
-/**
- * The lead form's item sections: classic Current/Next two-section format by
- * default; the opt-in unified by-state view when the org flag is on (a pure
- * projection — physical Item.type is untouched). Rendered INSIDE
- * `LeadFormSyncBridge.Provider` by `LeadFormEditSections`.
- */
 export function LeadFormItemSections({
   viewModel,
   actions,
@@ -95,7 +88,6 @@ export function LeadFormItemSections({
     </AccordionSection>
   ) : (
     <>
-      {/* Current Week */}
       <AccordionSection
         groupExpanded={groupExpanded}
         testId="lead-section-current-week"
@@ -137,7 +129,6 @@ export function LeadFormItemSections({
         />
       </AccordionSection>
 
-      {/* Next Week */}
       <AccordionSection
         groupExpanded={groupExpanded}
         testId="lead-section-next-week"

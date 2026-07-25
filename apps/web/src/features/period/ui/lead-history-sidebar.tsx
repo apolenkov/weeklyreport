@@ -10,12 +10,8 @@ interface LeadHistorySidebarProps {
   readonly viewerMode?: boolean;
 }
 
-// A history row counts as a completed week for the summary stats when the lead
-// submitted the section ("submitted") OR the compiled report was
-// published/archived. The sidebar is shared between the lead personal-history
-// view and the head/viewer compiled-history view; compiled entries never carry
-// "submitted" (see mapCompiledHistoryEntries), so matching only "submitted"
-// left every compiled stat at 0.
+// Completed for stats: lead "submitted" or compiled "published"/"archived"
+// (compiled history never carries "submitted" — see mapCompiledHistoryEntries).
 const COMPLETED_WEEK_STATUSES: ReadonlySet<HistoryEntry["status"]> = new Set([
   "submitted",
   "published",
@@ -121,11 +117,7 @@ export function LeadHistorySidebar({
               <span className="h-2 w-2 rounded-full bg-[var(--color-destructive)]" />{" "}
               {totalRed}
             </span>
-            {/* Denominator counts only the completed periods these
-                traffic-light sums are computed from (submittedEntries), so the
-                numerator and denominator describe the same set. A draft, when
-                present, is disclosed by the "N draft not included" note above,
-                not folded into this count. */}
+            {/* Denominator is completed periods only (same set as traffic-light sums). */}
             <span className="ml-auto">
               across {submitted} {submitted === 1 ? "period" : "periods"}
             </span>

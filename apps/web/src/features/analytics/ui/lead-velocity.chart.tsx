@@ -9,16 +9,8 @@ import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts";
 
 import { type ChartData, type ChartSeries, COLORS } from "./chart-palette";
 
-/**
- * Stacked-bar of submitted-section counts per lead per period.
- */
-
-/**
- * Pivot velocity rows into recharts data points keyed by the stable `leadId`
- * (a UUID) rather than the display name, so two leads that share a name keep
- * separate columns instead of silently overwriting each other. The series
- * descriptor carries the human-readable name for recharts' legend/tooltip.
- */
+// Key by leadId (UUID), not display name, so two leads with the same name
+// keep separate columns.
 export function buildLeadVelocityChartData(rows: LeadVelocityOutput): {
   readonly data: readonly ChartData[];
   readonly series: readonly ChartSeries[];

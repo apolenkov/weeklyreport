@@ -13,27 +13,10 @@ import { useDecisionEditDialog } from "./use-decision-edit-dialog";
 
 interface DecisionEditDialogProps {
   readonly open: boolean;
-  /** null = create mode, DecisionEntry = edit mode. */
   readonly decision: DecisionEntry | null;
-  /**
-   * Default owner for newly-created decisions. Should be the current user's
-   * display name — leads usually own the decisions they raise.
-   */
   readonly defaultOwner?: string;
-  /**
-   * SDLC stages owned on the selected product. Changing the product re-scopes
-   * the decision's stage options instead of using a department-wide union.
-   */
   readonly stagesForProduct?: (productId: string) => readonly string[];
-  /**
-   * Products assigned to the lead. Multiple products enable the picker used to
-   * scope the decision.
-   */
   readonly products?: readonly Product[];
-  /**
-   * The section author's attached activities. Choosing one as the parent hides
-   * the stage step because activities, unlike products, do not own stages.
-   */
   readonly activities?: readonly ParentActivityOption[];
   readonly defaultProductId?: string;
   readonly onSave: (next: DecisionEntry) => void;
@@ -41,11 +24,7 @@ interface DecisionEditDialogProps {
   readonly onDelete?: () => void;
 }
 
-/**
- * The outer component unmounts the dialog content when closed. Each mount
- * initializes fresh state from props, so no reset effect or prop dependency
- * list is needed; the parent's per-open dialog key guarantees a fresh mount.
- */
+// Unmounts when closed; each open remounts fresh from props (no reset effect).
 export function DecisionEditDialog(props: DecisionEditDialogProps) {
   if (!props.open) return null;
   return <DecisionEditDialogContent {...props} />;

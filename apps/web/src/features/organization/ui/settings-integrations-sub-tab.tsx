@@ -2,22 +2,9 @@
 
 import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
 
-/**
- * Read-only surface for external integrations. The messaging card names the
- * roadmapped channel — Element, the corporate messenger — as a Coming-Soon
- * label only. It deliberately renders NO live messaging status: the
- * underlying dispatch seam is still the deferred Telegram transport
- * (`TG_BOT_TOKEN` / TelegramBinding), so surfacing that state under an
- * "Element" heading would assert Telegram status as Element — a false claim
- * when the Telegram transport is configured. The seam is unchanged; only the
- * displayed name is the roadmap target.
- *
- * The messaging integration is seeds-only: there is no real bot, no
- * user-binding UI, no outbound flow beyond the admin smoke-test (which lives
- * on the API surface only, not exposed in this tab). The card stays
- * Coming-Soon so a head/admin reading the tab does not expect messaging to
- * work yet.
- */
+// Element label is the roadmapped channel; dispatch is still Telegram
+// (TG_BOT_TOKEN / TelegramBinding) so no live status is shown — that would
+// mis-claim Telegram state as Element. ComingSoon marks seeds-only.
 export function IntegrationsSubTab() {
   return (
     <div className="max-w-2xl space-y-4">
@@ -26,10 +13,7 @@ export function IntegrationsSubTab() {
         admin-issued credentials and a follow-on rollout phase.
       </p>
 
-      {/* Element — roadmapped messaging channel; Coming-Soon label only. No
-          live status is rendered: the dispatch seam is still the deferred
-          Telegram transport, so showing its state under "Element" would be a
-          false claim. data-testid stays "telegram" (internal seam name). */}
+      {/* data-testid stays "telegram" — internal seam name, not UI label. */}
       <div
         className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
         data-testid="integration-row-telegram"

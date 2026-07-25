@@ -33,10 +33,7 @@ function makeEntry(
 }
 
 describe("LeadHistorySidebar completed-week stats", () => {
-  // Regression: compiled (head/viewer) history entries carry "published" /
-  // "archived" status, never "submitted". Before the driver-sweep fix the
-  // summary filtered on status === "submitted" only, so every compiled stat
-  // read 0/N and 0% even when all displayed weeks were published.
+  // Compiled history uses "published"/"archived", never "submitted" — both must count.
   it("counts published/archived compiled weeks as completed (viewerMode)", () => {
     const entries: HistoryEntry[] = [
       makeEntry("published", 0),

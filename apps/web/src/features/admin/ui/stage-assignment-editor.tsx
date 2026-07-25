@@ -24,21 +24,8 @@ interface StageAssignmentEditorProps {
   readonly leads: readonly MockUser[];
 }
 
-/**
- * Stage Assignment Editor.
- *
- * Renders the FULL 7-stage SDLC catalogue for a project: each stage shows
- * either the current assignee or "Unassigned" with a dropdown to fill it in.
- * This way head sees the complete coverage picture instead of only the rows
- * that already exist (which hides gaps).
- *
- * Two queries: `listStages` (catalogue) + `listStageAssignments` (per-project
- * rows). We index assignments by stageId and walk the stage catalogue in
- * sortOrder so UI order is deterministic.
- *
- * A5: filter leads to only those in the product's owning group. Query the
- * product's group(s) and match against each lead's reportingGroupId.
- */
+// Full catalogue (not only existing rows) so head sees coverage gaps;
+// lead dropdown is scoped to the product's owning group.
 export function StageAssignmentEditor({
   projectId,
   projectName,
@@ -52,9 +39,7 @@ export function StageAssignmentEditor({
     trpc.admin.listStageAssignments.queryOptions({ projectId }),
   );
 
-  // A5: query the product's owning group(s). The schema constraint ensures
-  // each product belongs to exactly one group via the @@unique([groupId])
-  // on GroupProduct. Filter leads to only those in that group.
+  // @@unique([groupId]) on GroupProduct: each product has one owning group.
   const productGroupsQuery = useQuery(
     trpc.admin.listProductGroups.queryOptions({ productId: projectId }),
   );
@@ -65,7 +50,6 @@ export function StageAssignmentEditor({
       // Product not yet assigned to a group; show all leads (graceful degradation).
       return leads;
     }
-    // Typically one group (@@unique([groupId]) constraint), but iterate to be safe.
     const groupIds = new Set(groups.map((g) => g.id));
     return leads.filter((lead) => groupIds.has(lead.groupId));
   }, [leads, productGroupsQuery.data]);
@@ -104,7 +88,6 @@ export function StageAssignmentEditor({
   const stages = stagesQuery.data ?? [];
   const assignments = assignmentsQuery.data ?? [];
 
-  // Map stageId → assignment for O(1) lookup as we walk the stage catalogue.
   const assignmentByStage = new Map(assignments.map((a) => [a.stageId, a]));
 
   if (stagesQuery.isLoading || assignmentsQuery.isLoading) {
@@ -147,7 +130,6 @@ export function StageAssignmentEditor({
 
         function handleChange(nextUserId: string) {
           if (!nextUserId) {
-            // Remove assignment entirely (only meaningful if one exists).
             if (assignment) deleteMut.mutate({ id: assignment.id });
             return;
           }

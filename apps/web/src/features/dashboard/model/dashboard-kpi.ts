@@ -10,10 +10,6 @@ function isoDateLabel(date: Date): string {
   return date.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
-/**
- * Format a deadline as a human-relative label like "2d 5h" or "5h" or "Past".
- * Mirrors the shape used in the mock dashboard.
- */
 export function formatRelativeDeadline(deadline: Date, now: Date): string {
   const diffMs = deadline.getTime() - now.getTime();
   if (diffMs <= 0) return "Past";
@@ -24,10 +20,6 @@ export function formatRelativeDeadline(deadline: Date, now: Date): string {
   return `${hours}h`;
 }
 
-/**
- * Build the dashboard KPI tile data: submission counts, escalation roll-ups,
- * and the deadline label (only shown while the period is editable).
- */
 export function buildKpiData(
   weeklyReport: WeeklyReportReadModel,
   pendingCount: number,
@@ -53,8 +45,7 @@ export function buildKpiData(
   const isEditablePeriod =
     weeklyReport.periodStatus === "open" ||
     weeklyReport.periodStatus === "reopened";
-  // A cleared deadline (ruling F16) is an explicit state, not a countdown of
-  // zero — the card says so instead of inventing a reference point.
+  // A cleared deadline is an explicit state, not a countdown of zero.
   const deadlineLabel = !isEditablePeriod
     ? "Closed"
     : weeklyReport.deadline === null

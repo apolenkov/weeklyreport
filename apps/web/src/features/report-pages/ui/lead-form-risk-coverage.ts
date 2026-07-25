@@ -5,11 +5,7 @@ import {
   type RiskEntry,
 } from "../../report-sections";
 
-/**
- * Own non-empty risks of `productId` that cover `stageName`. Coverage uses
- * the canonical `riskCoversStage` predicate — same as `computeUnbackedStages`.
- * Exported for unit testing.
- */
+// Own non-empty risks covering the stage (same predicate as computeUnbackedStages).
 export function coveringRisksForStage(
   risks: readonly RiskEntry[],
   productId: string,
@@ -23,18 +19,8 @@ export function coveringRisksForStage(
   );
 }
 
-/**
- * Render-time severity floor for the live lead form. Every "mine" stage is
- * routed through `deriveEffectiveStageStatus` — the same rule `mapLeadProducts`
- * applies in the read model, so the live form, head review, and export agree.
- *
- * The derivation runs UNCONDITIONALLY, not only for stages with a covering
- * risk. A covering risk floors the chip UP to its severity; a stage whose
- * raw status is at-risk/blocked but has NO covering risk collapses DOWN to
- * on-track — matching the read model, which already collapses it. Legacy
- * explicit at-risk/blocked stage rows therefore render On Track on next
- * load without a backfill. Exported for unit testing.
- */
+// Unconditional derivation: covering risk floors UP; bare at-risk/blocked
+// without a covering risk collapses DOWN to on-track (matches read model).
 export function applyRiskSeverityFloor(
   products: readonly Product[],
   risks: readonly RiskEntry[],
@@ -54,16 +40,8 @@ export function applyRiskSeverityFloor(
   }));
 }
 
-/**
- * Render-time twin of the mapper's
- * `coveredByOwnRisk` annotation. `ctx.products` is stable across an in-session
- * risk add (no refetch), so the mapper-baked flag goes stale the moment the lead
- * stages a risk; re-deriving it here from the live `risks` lets the completeness
- * counter tick without a reload. Strict, like the mapper: only an OWN non-empty
- * risk that EXPLICITLY names the stage (non-empty stageIds) sets the flag — a
- * covers-all (`[]`) or legacy stage-less risk does not, so it never inflates the
- * counter. Foreign risks (other productId) never set it. Exported for testing.
- */
+// Re-derive coveredByOwnRisk from live risks (products stay stable mid-session).
+// Only own non-empty risks that explicitly name the stage set the flag.
 export function annotateOwnRiskCoverage(
   products: readonly Product[],
   risks: readonly RiskEntry[],

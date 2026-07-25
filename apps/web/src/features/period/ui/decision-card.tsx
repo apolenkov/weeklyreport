@@ -56,10 +56,6 @@ function formatDeadline(iso: string | null): string {
   }
 }
 
-/**
- * One decision card: product/deadline chips, own-record edit/delete vs foreign
- * lock badge, decision/impact body, and the unified author+stage meta-row.
- */
 export function DecisionCard({
   decision,
   readOnly,
@@ -150,10 +146,8 @@ export function DecisionCard({
           </div>
         </div>
       </div>
-      {/* Unified [author …… chip] meta-row. A stage-less PRODUCT decision is
-          a legacy anomaly, never an implicit "all stages" scope — render the
-          loud "No stage set" warning, mirroring risks. An activity-parented
-          decision is legitimately stage-less: no chip at all. */}
+      {/* Stage-less product decision is a legacy anomaly — show "No stage set".
+          Activity-parented decisions are legitimately stage-less (no chip). */}
       <MetaRow
         authorName={decision.owner}
         stageTags={stageTags}

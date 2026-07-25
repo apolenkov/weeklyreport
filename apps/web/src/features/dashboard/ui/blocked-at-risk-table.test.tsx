@@ -113,7 +113,7 @@ describe("BlockedAtRiskTable — grouping by product", () => {
       "Marketing Portal",
       "Billing",
     ]);
-    // The total count badge still sums across groups (F4), not per-group.
+    // Total count badge sums across groups, not per-group.
     expect(screen.getByText("3 issues")).toBeVisible();
   });
 });
@@ -131,7 +131,7 @@ describe("BlockedAtRiskTable", () => {
     expect(screen.getByText("0 issues")).toBeVisible();
   });
 
-  it("is collapsed by default and expands on click when issues exist (F4)", () => {
+  it("is collapsed by default and expands on click when issues exist", () => {
     render(
       <BlockedAtRiskTable
         items={[
@@ -151,7 +151,7 @@ describe("BlockedAtRiskTable", () => {
       name: /blocked & at risk/i,
     });
 
-    // F4: collapsed by default — the report below carries the same content.
+    // Collapsed by default — the report below carries the same content.
     expect(trigger).not.toBeDisabled();
     expect(trigger).toHaveAttribute("aria-expanded", "false");
 

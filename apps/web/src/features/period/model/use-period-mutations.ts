@@ -6,12 +6,7 @@ import { toast } from "sonner";
 import { invalidateAdmin } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
 
-/**
- * All seven Periods-tab lifecycle mutations + the shared list-invalidation
- * helper. `createMut`/`updateMut` close the dialog through the injected
- * `onCreateSuccess`/`onEditSuccess` callbacks so the hook stays decoupled
- * from the tab's `setShowCreate`/`setEditingRow` state.
- */
+// Periods-tab lifecycle mutations; dialog close via injected success callbacks.
 export function usePeriodMutations({
   onCreateSuccess,
   onEditSuccess,
@@ -48,10 +43,6 @@ export function usePeriodMutations({
         toast.success("Period reopened");
       },
       onError: (err) => {
-        // The reopen-policy gate (master switch + window) surfaces
-        // through `PeriodAccessError → BAD_REQUEST` here; the message
-        // already explains *why* the reopen was rejected so we pipe it
-        // through verbatim.
         toast.error(err.message);
       },
     }),
@@ -81,9 +72,7 @@ export function usePeriodMutations({
     }),
   );
 
-  // «New period» mutation. Pipes the server error message
-  // through verbatim so overlap conflicts (server emits the colliding
-  // date range) surface in the toast unchanged.
+  // onError pipes server messages verbatim (overlap ranges, policy rejections, etc.).
   const createMut = useMutation(
     trpc.admin.createPeriodManual.mutationOptions({
       onSuccess: () => {
@@ -97,10 +86,6 @@ export function usePeriodMutations({
     }),
   );
 
-  // «Edit period» mutation. Same error-pipe pattern as create —
-  // the server-side overlap message identifies the conflicting row and
-  // the not-found message names the missing id; both flow through to the
-  // toast verbatim.
   const updateMut = useMutation(
     trpc.admin.updatePeriodManual.mutationOptions({
       onSuccess: () => {
@@ -114,7 +99,6 @@ export function usePeriodMutations({
     }),
   );
 
-  // Delete period mutation with confirmation guard.
   const deleteMut = useMutation(
     trpc.admin.deleteReport.mutationOptions({
       onSuccess: () => {

@@ -33,24 +33,8 @@ import {
 const COVERED_STAGE_HINT_MESSAGE =
   "This stage's status comes from a covering risk. Resolve it in Risks & Blockers to change the stage.";
 
-/**
- * LeadFormSyncBridge — composes useStatusRiskSync with SdlcPipeline + RisksSection.
- *
- * Architecture decision: Provider + sub-components shape.
- * Reason: lead-form.tsx renders the SDLC pipeline and risks list inside two
- * SEPARATE accordion sections, so a single component that emits both children
- * inline cannot be dropped into two different bodies. The Provider holds the
- * sync hook + confirmation dialog state; <Pipeline> and <Risks> are thin
- * consumers that read from React context.
- *
- * Public surface:
- *   <LeadFormSyncBridge.Provider products={...} risks={...} ...>
- *     ...accordions...
- *       <LeadFormSyncBridge.Pipeline />
- *       ...other accordions...
- *       <LeadFormSyncBridge.Risks />
- *   </LeadFormSyncBridge.Provider>
- */
+// Provider + Pipeline/Risks consumers: pipeline and risks live in separate
+// accordion bodies, so one component cannot emit both inline.
 
 /**
  * Payload of a chip-raise interception, carried through context into
@@ -181,12 +165,7 @@ function Provider({
     null,
   );
 
-  // Fold an external one-shot prefill into the same channel. The external
-  // source (`externalRiskPrefill`) lives in the persistent parent (lead-form),
-  // while this Provider remounts on the slides<->edit toggle. Seed the guard ref
-  // from the mount-time signal and open only on a strict increase, so a remount
-  // that re-reads a still-set stale prefill does not reopen the dialog. A
-  // genuine later quick-add still advances past it and opens.
+  // Open only on signal increase so slides↔edit remounts don't reopen stale prefills.
   const lastExternalSignal = useRef(externalRiskPrefill?.signal ?? 0);
   useEffect(() => {
     if (!externalRiskPrefill) return;
@@ -204,14 +183,7 @@ function Provider({
   const handleStageStatusChange = useCallback(
     (productId: string, stageName: string, newStatus: StageStatus) => {
       if (readOnly) return;
-      // The chip is a plain On Track/unset toggle. An own covering risk floors
-      // its displayed severity, and the chip no longer authors or lowers it, so a
-      // floored chip changes nothing and points the lead at the Risks section,
-      // where the risk is the single lever. Only own risks floor the live chip
-      // (`applyRiskSeverityFloor` runs on own risks), so the block gates on own
-      // coverage alone: a foreign risk lives in another lead's section, never
-      // floors this chip, and this lead cannot resolve it here anyway. An
-      // uncovered chip applies the toggle straight through.
+      // Floored chips point at Risks; only own covering risks block the toggle.
       const coveringOwn = coveringRisksForStage(risks, productId, stageName);
       if (coveringOwn.length > 0) {
         toast.info(COVERED_STAGE_HINT_MESSAGE);
@@ -229,14 +201,7 @@ function Provider({
       // (foreign risks belong to other authors).
       const ownNext = next.filter((r) => !r.foreign);
 
-      // Adding or removing a risk must not persist a derived stage status. The
-      // displayed severity is a pure derivation of the covering risks
-      // (applyRiskSeverityFloor
-      // on the live form, mapLeadProducts in the read model), so there is no
-      // separate persisted manual status that can drift. Persisting promotions
-      // on risk add and clearing them on removal corrupts completeness: an
-      // add-then-remove cycle leaves empty stages
-      // persisted as on-track, falsely satisfying "my input is complete".
+      // Never persist derived stage status — write-through corrupts completeness.
       onRisksChange(ownNext);
     },
     [readOnly, onRisksChange],
@@ -282,10 +247,7 @@ function Provider({
 
 function Pipeline() {
   const ctx = useBridgeContext("LeadFormSyncBridge.Pipeline");
-  // Status is derived from risks, so a chip cannot be at-risk or blocked without
-  // a backing risk. Re-derive own-risk coverage from live risks because
-  // ctx.products stays stable across an in-session risk add. The
-  // counter reads this off rawProducts; the chip reads it off the floored array.
+  // Re-derive coverage: products stay stable across an in-session risk add.
   const rawWithCoverage = annotateOwnRiskCoverage(ctx.products, ctx.risks);
   // Apply the same render-time severity floor as mapLeadProducts so live chips
   // cannot show on-track or empty while covering risks exist, and an orphan severity

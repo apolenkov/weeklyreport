@@ -6,12 +6,8 @@ interface UseProductDeepLinkExpandArgs {
   readonly setExpandedId: (id: string) => void;
 }
 
-/**
- * Auto-expands the product row named by the `?product` deep link — once per
- * filter value. The admin's first manual toggle of that row wins until the
- * deep link changes, so the effect never re-expands a row the admin just
- * collapsed. Call `markUserToggle` from the row's toggle handler.
- */
+// Auto-expand `?product` once per filter; first manual toggle wins until
+// the deep link changes so a just-collapsed row is not re-expanded.
 export function useProductDeepLinkExpand({
   productFilter,
   products,

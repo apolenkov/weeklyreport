@@ -6,12 +6,7 @@ import {
   coveringRisksForStage,
 } from "./lead-form-risk-coverage";
 
-/**
- * Pins the two render-time coverage derivations of lead-form-risk-coverage
- * (applyRiskSeverityFloor's grid is pinned separately in
- * lead-form-sync-bridge.characterization.test). Coverage is strict: own,
- * non-empty text, and — for the completeness flag — an EXPLICIT stage name.
- */
+// Render-time coverage pins; severity-floor grid lives in the sync-bridge char test.
 function makeProduct(
   ownership: Product["stages"][number]["ownership"] = "mine",
 ): Product {

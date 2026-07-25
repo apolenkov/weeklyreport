@@ -36,11 +36,6 @@ interface LeadFormToolbarControlsProps {
   readonly setGroupExpanded: (update: (prev: boolean) => boolean) => void;
 }
 
-/**
- * The lead form's sticky toolbar: only the Context-control bar lives here —
- * Agent review · period nav · show-archived · Mine|Everyone · Edit|Slides ·
- * collapse/fullscreen.
- */
 export function LeadFormToolbarControls({
   viewModel,
   leadSubmittedAt,
@@ -94,8 +89,6 @@ export function LeadFormToolbarControls({
             showLeadSubmissionMarkers
             leadSubmittedAt={leadSubmittedAt}
           />
-          {/* Show-archived filter renders only when the lead has archived
-              periods. */}
           {hasArchivedPeriods && (
             <>
               <Separator
@@ -112,11 +105,7 @@ export function LeadFormToolbarControls({
           {/* Inert Agent-review placeholder leads the right-aligned view
               group (compact, leading edge). */}
           <AgentReviewComingSoon compact />
-          {/* The Record-visibility toggle renders in BOTH edit and slides so
-              the controls after it never shift between modes. In slides it
-              drives the deck via the props threaded into LeadSlidesClient.
-              Disabled until the persisted state hydrates so a click cannot
-              race the restored value. */}
+          {/* Always rendered so trailing controls never shift between modes. */}
           <RecordVisibilityToggle
             value={toolbarVisibility}
             onChange={onVisibilityChange}
@@ -137,11 +126,7 @@ export function LeadFormToolbarControls({
                 : "/lead/report"
             }
           />
-          {/* Mode-adaptive trailing utility: one fixed-width icon slot.
-              Edit → collapse/expand all sections (always reserved, disabled
-              when empty so the row never shifts); slides → fullscreen toggle.
-              Both render as a square icon button at the shared toolbar
-              height in the same trailing position. */}
+          {/* Fixed-width trailing slot so the row never shifts across modes. */}
           {isSlidesMode ? (
             <SlideFullscreenButton
               isFullscreen={slidesFullscreen.isFullscreen}

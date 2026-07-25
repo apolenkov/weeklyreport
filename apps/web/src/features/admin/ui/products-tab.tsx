@@ -62,10 +62,8 @@ export function ProductsTab({
   const getUserById = (id: string): MockUser | undefined =>
     users.find((u) => u.id === id);
 
-  // per-project assignment counts from the live DB. The mock-data
-  // mapper hands every product a stages array of 7 nulls (assignment data
-  // ships separately via listStageAssignments), so reading `product.stages`
-  // for a count would always show 0/7. Light groupBy query instead.
+  // product.stages is always 7 nulls — assignment data ships via
+  // listStageAssignments; count with a light groupBy instead.
   const stageCountsQuery = useQuery(
     trpc.admin.listStageAssignmentCounts.queryOptions(),
   );

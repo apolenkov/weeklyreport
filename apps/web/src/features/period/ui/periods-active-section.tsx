@@ -2,11 +2,7 @@ import type { PeriodListItem } from "@customreport/shared";
 
 import { PeriodTable, type PeriodTableProps } from "./periods-tab-table";
 
-/**
- * Active section: rows with periodState ∈ {scheduled, open, published}.
- * Always rendered (unlike the collapsed-by-default archive section) since
- * it's the primary panel a head lands on.
- */
+// Always rendered (unlike the collapsed-by-default archive section).
 export function PeriodsActiveSection({
   isLoading,
   rows,

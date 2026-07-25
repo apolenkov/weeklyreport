@@ -1,9 +1,3 @@
-/**
- * Regression tests for PulseBackground.
- *
- * The background is a static container (gradient + dot grid), kept fully out
- * of the a11y tree via aria-hidden on the wrapper.
- */
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 

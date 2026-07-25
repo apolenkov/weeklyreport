@@ -44,13 +44,7 @@ export const STATUS_CONFIG = {
   },
 } as const satisfies Record<WeeklyProductStatus, StatusConfig>;
 
-// Every content row — item, risk, decision — shares ONE column grid so all
-// stage labels share one left edge and all content shares one left edge (the
-// text no longer jumps). Columns: priority | status rail | gutter
-// (stage+owner) | content | status badge. Below `md` the fixed gutter/badge
-// rails narrow (gutter 84px, badge auto, tighter gaps) so the content column
-// keeps a usable width on a phone; every column — and every status signal —
-// remains present.
+// One shared grid so stage labels and content keep a common left edge.
 export const ROW_GRID =
   "grid grid-cols-[20px_3px_minmax(0,84px)_minmax(0,1fr)_auto] items-start gap-x-2 md:grid-cols-[20px_3px_minmax(0,124px)_minmax(0,1fr)_104px] md:gap-x-3.5";
 

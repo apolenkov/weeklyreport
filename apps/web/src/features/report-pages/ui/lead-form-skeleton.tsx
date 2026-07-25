@@ -1,10 +1,4 @@
-/**
- * Loading-state skeleton for the Lead Form. Mirrors the dimensions of the
- * pipeline + accordion sections so the load-to-data transition has no layout
- * shift.
- *
- * Stateless and hook-free — safe to render server-side.
- */
+// Mirrors pipeline + accordion dimensions so load-to-data has no layout shift.
 
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
@@ -45,7 +39,6 @@ export function LeadFormSkeleton() {
       aria-busy="true"
       aria-label="Loading report form"
     >
-      {/* Page header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Skeleton className="h-8 w-32" />
@@ -58,29 +51,17 @@ export function LeadFormSkeleton() {
         </div>
       </div>
 
-      {/* Period nav + version history shell */}
       <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.78)_100%)] px-4 py-3.5">
         <Skeleton className="h-11 w-60 rounded-lg" />
         <Skeleton className="h-4 w-56" />
         <Skeleton className="h-11 w-40 rounded-[var(--radius-pill)]" />
       </div>
 
-      {/* Pipeline (Product Status) */}
       <PlaceholderAccordion rows={3} minHeight={244} />
-
-      {/* Current Week */}
       <PlaceholderAccordion rows={3} minHeight={404} />
-
-      {/* Next Week */}
       <PlaceholderAccordion rows={3} minHeight={292} />
-
-      {/* Risks & Blockers */}
       <PlaceholderAccordion rows={2} minHeight={342} />
-
-      {/* Decisions */}
       <PlaceholderAccordion rows={7} minHeight={510} />
-
-      {/* Top 3 Priorities */}
       <PlaceholderAccordion rows={6} minHeight={412} />
     </div>
   );

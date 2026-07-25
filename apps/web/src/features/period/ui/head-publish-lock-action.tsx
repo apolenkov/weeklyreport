@@ -16,19 +16,9 @@ import { mapWeeklyReport, reportHasContent } from "../../report-sections";
 import { PublishLockButton } from "./publish-lock-button";
 
 interface HeadPublishLockActionProps {
-  /** The report period the slides deck is showing. */
   readonly reportId: string;
 }
 
-/**
- * The slides-mode header hosts the same Publish & Lock / Reopen action the
- * edit-mode page offers, so the head can lock a period straight from the
- * review deck without a detour into edit mode. Self-contained: it fetches the
- * displayed period, derives the publish gating, and owns the publish/reopen
- * mutations — mirroring `WeeklyReportPage` (the publish gating + cache
- * invalidation are the same). Renders nothing for non-head/admin roles or when
- * no active period resolves, so it is safe to mount unconditionally.
- */
 export function HeadPublishLockAction({
   reportId,
 }: HeadPublishLockActionProps) {
@@ -78,7 +68,6 @@ export function HeadPublishLockAction({
   const view = mapWeeklyReport(weeklyQ.data);
   const submitted = view.submissionCount;
   const total = view.totalLeads;
-  // pendingCount mirrors WeeklyReportPage: total - submitted, clamped >= 0.
   const pendingCount = Math.max(0, total - submitted);
   const hasExpandableProducts = view.products.some(reportHasContent);
   const canPublishReport = submitted > 0 && hasExpandableProducts;

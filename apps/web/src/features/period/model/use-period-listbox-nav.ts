@@ -23,13 +23,8 @@ interface PeriodListboxNavArgs {
   readonly onNext: () => void;
 }
 
-/**
- * Custom listbox + swipe-gesture behaviour for PeriodNavigator, kept out of
- * the component so it focuses on rendering. Native <option> cannot render
- * badge markup, so the select is replaced by a trigger + portaled listbox:
- * focus stays on the trigger and the highlighted option is tracked via
- * aria-activedescendant (roving without DOM focus).
- */
+// PeriodNavigator listbox + swipe: trigger + portaled panel (native <option>
+// can't host badges). Focus stays on the trigger; highlight via aria-activedescendant.
 export function usePeriodListboxNav({
   instanceId,
   currentIndex,
@@ -55,11 +50,7 @@ export function usePeriodListboxNav({
     width: number;
   } | null>(null);
 
-  // Combobox pattern: focus stays on the trigger and the active option is
-  // tracked via aria-activedescendant, so only the primitive's Escape-to-close
-  // and focus-restore-to-trigger apply — containerRef points at the trigger
-  // (never the panel) so focus is never pulled into the option list, and the
-  // panel has no focusable descendants for the Tab-trap to act on.
+  // containerRef = trigger (not panel): Escape/restore only; no focus into the list.
   useDialogFocus({
     open,
     onClose: () => setOpen(false),
@@ -126,10 +117,7 @@ export function usePeriodListboxNav({
     openListbox();
   }, [open, openListbox]);
 
-  // Keep the active option visible: scroll it into view whenever the highlight
-  // moves (Arrow/Home/End), so keyboard navigation never runs off the panel's
-  // visible edge. block: "nearest" no-ops when the option is already visible,
-  // so hover-driven activeIdx changes don't jerk the panel.
+  // Scroll active option into view; block: "nearest" avoids hover-driven panel jerks.
   useEffect(() => {
     if (!open) return;
     document

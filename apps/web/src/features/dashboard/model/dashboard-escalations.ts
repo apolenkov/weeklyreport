@@ -35,8 +35,6 @@ export function escalationToBlockedItem(
       id: `esc-${index}`,
       severity: "at-risk",
       product: escalation.productName,
-      // Always null for at_risk (a product-level flag), so this resolves to
-      // "Flagged" — the product roll-up, not a stage.
       stage: escalation.stageName ?? FLAGGED_STAGE_LABEL,
       assignee: shortNameFromName(escalation.leadName),
       description: escalation.description,

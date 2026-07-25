@@ -13,59 +13,22 @@ import { PeriodsArchiveSection } from "./periods-archive-section";
 import { PeriodsTabDialogs } from "./periods-tab-dialogs";
 import { PlusIcon } from "./periods-tab-icons";
 
-/**
- * Admin → Periods tab.
- *
- *   ┌─ Active ────────────────────────────────────────────┐
- *   │  rows with periodState ∈ {scheduled, open, published}│
- *   │  primary panel, always rendered                      │
- *   └─────────────────────────────────────────────────────┘
- *
- *   ┌─ Archive [show ☐] ─────────────────────────────────┐
- *   │  rows with periodState = archived                  │
- *   │  collapsed by default; query is gated (opt-in)     │
- *   └────────────────────────────────────────────────────┘
- *
- * Row-level actions surface as inline icon buttons. The row table, icon
- * set, the create/edit/delete dialogs, and the seven lifecycle mutations
- * live in sibling modules (periods-tab-table / periods-tab-icons /
- * periods-tab-dialogs / use-period-mutations).
- *
- * `period.publish` and `period.reopen` are head-procedures (admin role is
- * aliased to head, so they're callable here). Archive + Unarchive are
- * admin-procedures. updatePeriodManual backs manual edits.
- */
 export function PeriodsTab() {
   const trpc = useTRPC();
 
-  // Archive section is collapsed by default. The query stays disabled
-  // until the user opens the section to keep the initial page load to
-  // a single round-trip (the active bucket).
+  // Archive section is collapsed by default. The query stays disabled until
+  // the user opens the section (single round-trip for the active bucket).
   const [showArchive, setShowArchive] = useState(false);
 
-  // «New period» dialog state. Opens via header button; submits
-  // to admin.createPeriodManual; on success invalidates the period
-  // lists so the table reflects the new row without a full reload.
   const [showCreate, setShowCreate] = useState(false);
-
-  // edit-mode dialog state. The same component handles both
-  // create and edit; `editingRow` !== null means the dialog opens in
-  // edit-mode prefilled from this row. Submitting calls
-  // admin.updatePeriodManual; on success invalidates the lists and
-  // closes the dialog.
   const [editingRow, setEditingRow] = useState<PeriodListItem | null>(null);
-
-  // delete confirmation state. When user clicks delete, we set this
-  // to the row and show a confirmation dialog.
   const [deleteConfirm, setDeleteConfirm] = useState<PeriodListItem | null>(
     null,
   );
 
-  // admin-dialog-focus-management: save the trigger element before opening
-  // either the create or edit dialog, then restore on close.
+  // Save the trigger element before opening create/edit; restore on close.
   const dialogTriggerRef = useRef<HTMLElement | null>(null);
 
-  // Restore focus when create dialog closes (all close paths set showCreate→false).
   useEffect(() => {
     if (!showCreate && dialogTriggerRef.current) {
       dialogTriggerRef.current.focus();
@@ -73,7 +36,6 @@ export function PeriodsTab() {
     }
   }, [showCreate]);
 
-  // Restore focus when edit dialog closes (all close paths set editingRow→null).
   useEffect(() => {
     if (!editingRow && dialogTriggerRef.current) {
       dialogTriggerRef.current.focus();
@@ -81,7 +43,6 @@ export function PeriodsTab() {
     }
   }, [editingRow]);
 
-  // text search over active periods (weekLabel + date range)
   const [search, setSearch] = useState("");
 
   const activeQuery = useQuery(
@@ -130,9 +91,6 @@ export function PeriodsTab() {
     );
   }, [allActiveRows, search]);
 
-  // Shared across both the active table and the archive section — every
-  // row-level action is wired identically regardless of which bucket the
-  // row lives in.
   const rowActions = {
     onPublish: (row: PeriodListItem) => publishMut.mutate({ reportId: row.id }),
     onReopen: (row: PeriodListItem) => reopenMut.mutate({ reportId: row.id }),
@@ -178,14 +136,12 @@ export function PeriodsTab() {
         }
       />
 
-      {/* ---- Active section ----------------------------------------- */}
       <PeriodsActiveSection
         isLoading={activeQuery.isLoading}
         rows={activeRows}
         {...rowActions}
       />
 
-      {/* ---- Archive section ---------------------------------------- */}
       <PeriodsArchiveSection
         expanded={showArchive}
         onToggle={() => setShowArchive((prev) => !prev)}

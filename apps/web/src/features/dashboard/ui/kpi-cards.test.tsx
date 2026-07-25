@@ -104,9 +104,7 @@ describe("KpiCards — a11y regression", () => {
       render(<KpiCards data={baseData} />);
       const regions = screen.getAllByRole("region");
       const names = regions.map((r) => r.getAttribute("aria-label"));
-      // all present
       names.forEach((name) => expect(name).toBeTruthy());
-      // all unique
       const unique = new Set(names);
       expect(unique.size).toBe(3);
     });
@@ -163,7 +161,6 @@ describe("KpiCards — a11y regression", () => {
   describe("layout snapshot", () => {
     it("KPI cards visual layout: section elements inherit grid container", () => {
       const { container } = render(<KpiCards data={baseData} />);
-      // The outermost div has the grid layout classes
       const grid = container.firstElementChild as HTMLElement;
       expect(grid).not.toBeNull();
       expect(grid.tagName.toLowerCase()).toBe("div");

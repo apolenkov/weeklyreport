@@ -1,5 +1,7 @@
 "use client";
 
+import { STAGE_NAMES } from "@customreport/shared";
+
 import type { MockProduct, MockUser } from "../model/admin-types";
 import { ProductGroupChips } from "./product-group-chips";
 import { StageAssignmentEditor } from "./stage-assignment-editor";
@@ -74,7 +76,7 @@ export function ProductsTable({
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-[var(--color-muted-foreground)]">
-                    {assignedCount}/7 stages
+                    {assignedCount}/{STAGE_NAMES.length} stages
                   </span>
                   <button
                     type="button"
@@ -96,7 +98,6 @@ export function ProductsTable({
                 </div>
               </div>
 
-              {/* Stage assignments (expandable) */}
               <div
                 className="grid transition-[grid-template-rows] duration-300"
                 style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
@@ -118,7 +119,6 @@ export function ProductsTable({
         })}
       </div>
 
-      {/* Archived products */}
       {archivedProducts.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-[var(--color-muted-foreground)]">

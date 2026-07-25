@@ -1,13 +1,9 @@
 /**
  * Tests for the lead-side <PeriodNavigator/>.
  *
- * Nav emits path-segment URLs
- * (`/lead/report/<reportId>`) via `router.push` so each addressed period
- * has a shareable URL and the browser back button walks the period
- * history one week at a time. The legacy `?period=` query was retired.
- *
- * The custom keyboard-accessible listbox replaces a native select so archived
- * options can carry a neutral "Archived" badge.
+ * Nav emits path-segment URLs (`/lead/report/<reportId>`) via `router.push` so
+ * each addressed period is shareable and back-button-friendly. Custom listbox
+ * replaces a native select so archived options can carry a neutral badge.
  */
 import "@testing-library/jest-dom/vitest";
 
@@ -68,7 +64,6 @@ describe("PeriodNavigator (lead)", () => {
     mockPathname = "/lead/report";
   });
 
-  // a11y regression tests — decorative SVGs stay hidden.
   describe("a11y — decorative SVG aria-hidden", () => {
     it("ChevronLeft SVG in Previous button has aria-hidden='true'", () => {
       render(<PeriodNavigator periods={PERIODS} />);
@@ -108,7 +103,6 @@ describe("PeriodNavigator (lead)", () => {
     });
   });
 
-  // container group role.
   it("container div has role='group' with the period navigation aria-label", () => {
     render(<PeriodNavigator periods={PERIODS} />);
     expect(
@@ -118,7 +112,6 @@ describe("PeriodNavigator (lead)", () => {
     ).toBeInTheDocument();
   });
 
-  // ---- Custom listbox contract ----
   describe("custom listbox", () => {
     it("trigger exposes the combobox a11y contract and starts closed", () => {
       render(<PeriodNavigator periods={PERIODS} />);
@@ -135,9 +128,8 @@ describe("PeriodNavigator (lead)", () => {
       expect(screen.getByRole("listbox")).toBeInTheDocument();
       const options = screen.getAllByRole("option");
       expect(options).toHaveLength(PERIODS.length);
-      // responsive-compact-layout: each option row floors at the touch target
-      // below `md`; jsdom cannot evaluate media queries, so the class
-      // assertion is the teeth.
+      // Each option row floors at the touch target below `md`; jsdom cannot
+      // evaluate media queries, so the class assertion is the teeth.
       for (const option of options) {
         expect(option.className).toContain(
           "max-md:min-h-[var(--touch-target-min)]",
@@ -253,7 +245,6 @@ describe("PeriodNavigator (lead)", () => {
     });
   });
 
-  // ---- Selection state reflected on the trigger ----
   it("trigger shows the (Current) suffix for the current period; no week/period numbering", () => {
     render(<PeriodNavigator periods={PERIODS} />);
     const trigger = getTrigger();
@@ -332,11 +323,8 @@ describe("PeriodNavigator (lead)", () => {
     expect(getTrigger()).toHaveTextContent("Apr 21–27, 2026 (Current)");
   });
 
-  // ---- Per-instance scoped listbox/option ids ----
-  // Two navigators can coexist on one page (e.g. a future dual-pane layout, or
-  // a stacked toolbar). Module-level constant ids would collide, breaking the
-  // listbox/option DOM-id contract that `aria-controls` and
-  // `aria-activedescendant` depend on. `useId` scopes the ids per instance.
+  // Two navigators can coexist on one page. Module-level constant ids would
+  // collide, breaking aria-controls / aria-activedescendant. useId scopes per instance.
   describe("scoped instance ids (no duplicate ids across two navigators)", () => {
     it("two navigators on one page expose distinct listbox + option ids", () => {
       render(
@@ -395,10 +383,8 @@ describe("PeriodNavigator (lead)", () => {
     });
   });
 
-  // ---- Per-lead submitted markers ----
-  // The submitted marker is opt-in per instance via `showLeadSubmissionMarkers`
-  // + `leadSubmittedAt`, sourced ONLY from the current lead's section
-  // submittedAt — never the head shell's fabricated `isSubmitted`.
+  // Submitted marker is opt-in via showLeadSubmissionMarkers + leadSubmittedAt,
+  // sourced ONLY from the current lead's section submittedAt.
   describe("lead submission markers", () => {
     const SUBMITTED_AT = new Date("2026-04-22T17:42:00.000Z");
 

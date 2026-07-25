@@ -79,7 +79,7 @@ describe("PauseReasonDialog", () => {
   });
 });
 
-describe("PauseReasonDialog — a11y (dialog-listbox-a11y, period-dialogs-polish)", () => {
+describe("PauseReasonDialog — a11y (dialog-listbox-a11y)", () => {
   it("calls onCancel when Escape is pressed", () => {
     const onCancel = vi.fn();
     render(

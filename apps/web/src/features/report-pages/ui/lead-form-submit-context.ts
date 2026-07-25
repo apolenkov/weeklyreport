@@ -10,25 +10,15 @@ import {
   type Product,
 } from "../../report-sections";
 
-/**
- * Per-render view-model inputs the draft module needs for its interaction
- * callbacks (quick-add merges and the blocker default product). Passed as plain
- * render args every render, never a cross-file ref. Draft-derived readiness does
- * NOT flow through here; it is computed from the module's own live draft so it
- * stays a render fresh.
- */
+// Plain per-render args for draft callbacks; readiness stays on the live draft.
 export interface LeadFormLoadedContext {
   readonly products: readonly Product[];
   readonly currentWeekItems: readonly KanbanItem[];
   readonly nextWeekItems: readonly KanbanItem[];
 }
 
-/**
- * The products the submit gate reads, derived from the live draft. In the
- * Everyone lens the cross-author status overrides are re-applied exactly as the
- * loaded view model does, so the coupling gate stays byte-identical to the
- * pre-module readiness while being computed a render fresh from the draft.
- */
+// Live-draft products for the submit gate; re-apply cross-author overrides
+// in Everyone so the coupling gate matches the loaded view model.
 export function buildReadinessProducts(
   section: ReportSectionReadModel,
   isEveryone: boolean,
@@ -43,16 +33,11 @@ export function buildReadinessProducts(
     : base;
 }
 
-/** Result of a submit attempt, surfaced to the write-actions dialog lifecycle. */
 export type SubmitOutcome =
   "submitted" | "conflict" | "error" | "not-ready" | "no-draft";
 
-/**
- * Projects the submit-readiness stage rows from the draft payload's stage
- * statuses, resolving each stage's display name from the product's owned
- * stages. Locked stages are display-only and never appear in the draft payload,
- * so they must not shift the positional label lookup.
- */
+// Locked stages never appear in the draft payload — exclude them from the
+// positional label lookup so owned-stage names stay aligned.
 export function buildSubmitStages(
   draftPayload: DraftSaveContent | null,
   products: readonly Product[],

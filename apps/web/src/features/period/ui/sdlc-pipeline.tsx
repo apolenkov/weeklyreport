@@ -21,13 +21,8 @@ export interface CrossAuthorEntry {
 
 interface SdlcPipelineProps {
   readonly products: readonly Product[];
-  /**
-   * The RAW, pre-floor products used to compute own-input completeness.
-   * `products` carries the risk-derived render-time floor for the
-   * chips/left edge; completeness must instead count only the lead's
-   * explicit per-stage choices, so it reads these. Defaults to `products`
-   * when omitted (callers that already pass raw, pre-floor data).
-   */
+  // RAW pre-floor products for own-input completeness (products is risk-floored
+  // for chips/left edge; completeness counts only the lead's explicit choices).
   readonly rawProducts?: readonly Product[];
   readonly readOnly?: boolean;
   readonly onStatusChange?: (
@@ -35,20 +30,9 @@ interface SdlcPipelineProps {
     stageName: string,
     newStatus: StageStatus,
   ) => void;
-  /**
-   * Cross-author entries for shared products. Grouped by projectId;
-   * rendered as a subtle "Other contributors" row below each product card.
-   */
   readonly crossAuthors?: readonly CrossAuthorEntry[];
-  /**
-   * lead-mine-hide-unowned-stages: which stage chips render. In "mine" only the
-   * lead's own stages render — foreign-owned and vacant stages are hidden (not
-   * greyed). In "everyone" the full grid renders (own + foreign-owned locked +
-   * vacant). Health (left edge) and own-input completeness are always computed
-   * from the full `product.stages` / `rawProduct.stages`, so hiding chips never
-   * changes those signals. Defaults to "everyone" so slides / head / read-only
-   * paths keep the full pipeline.
-   */
+  // "mine" hides foreign/vacant chips; health + completeness still use full
+  // product/rawProduct stages so hiding never changes those signals.
   readonly visibilityMode?: "mine" | "everyone";
 }
 

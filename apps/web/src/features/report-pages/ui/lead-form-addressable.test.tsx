@@ -1,21 +1,7 @@
 /**
- * Tests for the addressed-URL behaviour layered on top of <LeadForm/>.
- *
- * Two paths under test:
- *
- *   1. Bare route (`/lead/report` with no `reportId` prop,
- *      `redirectToCanonical={true}`) → form fires
- *      `router.replace('/lead/report/<activeReportId>')` once the active
- *      report is resolved. A stale legacy `?period=<week>` query is
- *      ignored (the branch was retired) and does NOT suppress the redirect.
- *
- *   2. Addressed route (`/lead/report/[reportId]`) → form scopes the data
- *      load to the path-segment id, surfaces the "Viewing past period"
- *      banner when the pinned report is not the active one, and does NOT
- *      redirect.
- *
- * The tRPC proxy is mocked at the boundary; we don't exercise the network
- * stack. This mirrors the harness used by lead-form.test.tsx.
+ * Addressed-URL pins for <LeadForm/>: bare route redirects to the active
+ * reportId; addressed route scopes the load, shows the past-period banner
+ * when needed, and never redirects. tRPC mocked at the boundary.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -206,9 +192,7 @@ describe("LeadForm — addressable URLs", () => {
   });
 
   it("bare route with legacy ?period= → param ignored, still redirects to canonical", async () => {
-    // 2026-06: the legacy `?period=<week>` branch was retired. A stale
-    // bookmark carrying the param must NOT suppress the canonical redirect;
-    // viewing a past week now goes through the addressed URL + history.
+    // Stale `?period=` bookmarks must not suppress the canonical redirect.
     mockSearchParams = new URLSearchParams("period=2026-W15");
     const proxy = buildHarness({});
     render(
@@ -261,9 +245,7 @@ describe("LeadForm — addressable URLs", () => {
                 email: "head@example.test",
                 role: "head",
               },
-              // SessionState carries an organization slot. Tests that
-              // don't exercise the brand hydration set it to null — the
-              // consumer falls back to the seeded defaults.
+              // Null org: brand hydration is not under test.
               organization: null,
               isLoading: false,
               isAuthenticated: true,

@@ -1,11 +1,6 @@
 /**
- * Characterization pins for the lead-form AUTOSAVE CADENCE (task 1.1) — frozen
- * safety net for the draft-module refactor. Kept in a
- * separate file from the dialog/gating pins because it drives fake timers for
- * the whole suite; mixing fake timers with RTL's `waitFor` in one file
- * deadlocks. Every assertion targets the public `<LeadForm>` surface (rendered
- * DOM + the mocked `reports.saveDraft` mutation seam), so it stays byte-stable
- * while the draft hooks are restructured underneath it.
+ * Autosave cadence pins on the public `<LeadForm>` surface. Separate file
+ * because fake timers + RTL `waitFor` in one suite deadlock.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -180,7 +175,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("lead-form draft: autosave cadence (1.1)", () => {
+describe("lead-form draft: autosave cadence", () => {
   it("issues no save while the freshly loaded draft is clean", async () => {
     const { captured } = await renderLoaded();
     await act(() => vi.advanceTimersByTimeAsync(10_000));

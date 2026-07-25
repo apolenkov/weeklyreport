@@ -130,12 +130,9 @@ export function CurrentWeekSection({
     );
   }
 
-  // Render one column per assigned product (not per non-empty group), so
-  // that products with zero items still surface a `+ Add` CTA in their
-  // column. Falls back to non-empty groups when `products` is omitted so
-  // the board still paints for callers that only pass items. Activity lanes
-  // render in their own lighter block BELOW the grid — never as peer
-  // product columns.
+  // One column per assigned product (including empty) so `+ Add` stays visible.
+  // Falls back to non-empty groups when products is omitted. Activity lanes
+  // sit below the grid, never as peer product columns.
   const board = splitItemBoard(products, items, activities);
   const dlg = deriveDialogProps(dialogState);
 

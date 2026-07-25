@@ -5,11 +5,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { MockSettings } from "../../admin";
 import * as fieldLimits from "./settings-periods-fields-base-helpers";
 
-/**
- * Period base fields for the Settings → Periods sub-tab. The owning
- * `PeriodsSubTab` shell holds the draft state and Save button; this component
- * renders the field group and writes through the shared `setDraft`.
- */
+// Shell owns draft/Save; this component only renders the field group.
 export function PeriodBaseFields({
   draft,
   setDraft,
@@ -19,7 +15,6 @@ export function PeriodBaseFields({
 }) {
   return (
     <>
-      {/* ── periodLengthDays ── */}
       <div>
         <label
           htmlFor="period-length-days"
@@ -51,7 +46,6 @@ export function PeriodBaseFields({
         </p>
       </div>
 
-      {/* ── workingDays ── */}
       <fieldset>
         <legend className="mb-1 block text-sm font-medium text-[var(--color-foreground)]">
           Working days
@@ -134,7 +128,6 @@ export function PeriodBaseFields({
         </p>
       </div>
 
-      {/* ── gracePeriodHours ── */}
       <div>
         <label
           htmlFor="grace-period-hours"
@@ -168,7 +161,6 @@ export function PeriodBaseFields({
         </p>
       </div>
 
-      {/* ── allowLateSubmissions ── */}
       <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)]">
         <input
           name="allow-late-submissions"
@@ -189,7 +181,6 @@ export function PeriodBaseFields({
         </span>
       </label>
 
-      {/* ── autoPublishAfterDeadline ── */}
       <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)]">
         <input
           name="auto-publish-after-deadline"
@@ -211,7 +202,6 @@ export function PeriodBaseFields({
         </span>
       </label>
 
-      {/* ── autoArchiveWeeksAfterPublish ── */}
       <div>
         <label
           htmlFor="auto-archive-weeks"

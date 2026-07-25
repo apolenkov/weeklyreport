@@ -39,13 +39,8 @@ export interface ForeignMergeResult {
   readonly decisions: DecisionEntry[];
 }
 
-/**
- * Everyone merges co-owners' full records READ-ONLY on top of the lead's own
- * records, from the gated full-content read — only when the persisted toggle
- * has hydrated AND the deck is the lead's own (foreign rows are excluded at
- * BOTH the fetch and this merge). The merge is view-only: the draft-merge
- * handlers strip every `.foreign` row, so it never reaches the submission.
- */
+// Everyone merges co-owners' records read-only after hydration on own deck;
+// draft-merge strips `.foreign` so they never reach submission.
 export function mergeForeignDisplayRecords(
   input: ForeignMergeInput,
 ): ForeignMergeResult {
@@ -76,12 +71,8 @@ export function mergeForeignDisplayRecords(
   };
 }
 
-/**
- * Resolve-not-delete (ADR 0015): translate the server's published lineage
- * (durable stableIds) into the presentation row ids currently on screen, so
- * the cards can mark locked records and withhold Delete. Advisory only —
- * the save-path guard on the server is the enforcement point.
- */
+// ADR 0015 resolve-not-delete: map published lineage stableIds → on-screen
+// row ids so cards can withhold Delete. Advisory; server enforces on save.
 export function publishedLockedIds(
   rows: readonly {
     readonly id?: string | null;
@@ -97,12 +88,7 @@ export function publishedLockedIds(
   );
 }
 
-/**
- * Fallback buckets for rows without a raw draft row (foreign read-only
- * rows): the bucket derives from the presentation status. Statuses outside
- * the map (`in-progress`, the risk-derived `blocked` overlay) read as
- * in-progress work.
- */
+// Foreign rows have no raw draft row; bucket from presentation status.
 const PRESENTATION_STATUS_BUCKETS: Partial<
   Record<KanbanItem["status"], ActivityBucket>
 > = {
@@ -112,12 +98,7 @@ const PRESENTATION_STATUS_BUCKETS: Partial<
   planned: "planned-next",
 };
 
-/**
- * Unified by-state entries: each displayed item plus its derived bucket
- * (deriveActivityBucket over the RAW persisted fields — a pure projection;
- * Item.type storage is untouched). Foreign read-only rows have no raw row
- * in the draft, so their bucket derives from the presentation status.
- */
+// Pure projection over raw fields; foreign rows fall back to presentation status.
 export function buildUnifiedEntries(
   rawItems: readonly SectionItem[],
   currentWeekItems: readonly KanbanItem[],
@@ -159,12 +140,7 @@ export interface VisiblePeriodsResult {
   readonly visiblePeriods: ReportPeriod[];
 }
 
-/**
- * Archived periods hide behind the archive toggle, with two stability rules:
- * the currently selected archived period stays visible (the navigator must
- * render "where you are"), and hiding never empties the list — when every
- * period is archived the full list shows instead.
- */
+// Keep selected archived period visible; never empty the list if all archived.
 export function filterVisiblePeriods(
   periods: readonly ReportPeriod[],
   selectedPeriodId: string,

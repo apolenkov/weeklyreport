@@ -8,21 +8,11 @@ import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 interface PublishLockButtonProps {
   readonly pendingCount: number;
   readonly totalLeads: number;
-  /**
-   * Period lifecycle state. Drives the visible action: when `open` or
-   * `reopened`, the button shows "Publish & Lock"; when `published`, it shows
-   * "Reopen Period".
-   */
   readonly periodStatus: PeriodStatus;
-  /** Invoked after the user confirms the publish dialog. */
   readonly onPublish: () => void;
-  /** Invoked after the user confirms the reopen dialog. Reopen is destructive
-   * — it unlocks an already-published period — so it now goes through a
-   * confirm gate matching the rest of the app's destructive-action UX. */
+  // Reopen unlocks a published period — confirm gate for a destructive action.
   readonly onReopen: () => void;
-  /** Disable the trigger while the parent's mutation is in-flight. */
   readonly isPending?: boolean;
-  /** Guard against publishing an empty period. */
   readonly canPublish?: boolean;
   readonly publishDisabledReason?: string;
 }

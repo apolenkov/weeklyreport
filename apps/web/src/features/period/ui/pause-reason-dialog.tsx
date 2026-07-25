@@ -16,20 +16,14 @@ interface PauseReasonDialogProps {
 }
 
 /**
- * require-paused-item-reason: the reason prompt shown when a lead pauses an
- * item from its card. A pause is never silent — the reason is required, so
- * the confirm button stays disabled until the field is non-empty. Wires the
- * shared `useDialogFocus` primitive for Escape-to-close, Tab-trap, and
- * focus-restore, matching `ConfirmDeleteDialog`; portaled to body to escape
- * any `overflow:hidden` ancestor.
+ * Required pause-reason prompt: confirm stays disabled until non-empty.
+ * useDialogFocus for Escape/Tab-trap/focus-restore; portaled to escape overflow:hidden.
  */
 export function PauseReasonDialog({
   open,
   ...contentProps
 }: PauseReasonDialogProps) {
-  // The form mounts fresh on every open, so `reason` initializes from
-  // `initialReason` on mount — a prior draft never leaks into the next pause
-  // and no reset effect is needed.
+  // Form remounts each open so reason seeds from initialReason without a reset effect.
   if (!open || typeof document === "undefined") return null;
   return <PauseReasonDialogContent {...contentProps} />;
 }
@@ -43,10 +37,7 @@ function PauseReasonDialogContent({
   const [reason, setReason] = useState(initialReason);
   const surfaceRef = useRef<HTMLDivElement>(null);
 
-  // Escape-to-close, Tab-trap, and focus-restore-to-trigger all come from the
-  // shared primitive; the textarea is the surface's first focusable element,
-  // so the primitive's initial-focus fallback autofocuses it for free. The
-  // content component exists only while open.
+  // Escape/Tab-trap/focus-restore via shared primitive; first focusable (textarea) autofocuses.
   useDialogFocus({ open: true, onClose: onCancel, containerRef: surfaceRef });
 
   const trimmed = reason.trim();

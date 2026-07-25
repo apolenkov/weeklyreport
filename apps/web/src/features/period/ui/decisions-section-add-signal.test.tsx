@@ -1,14 +1,6 @@
 /**
- * Snapshot view transitions must not reopen the Add Decision dialog.
- *
- * When readOnly flips false → true → false the addSignal effect must NOT
- * re-fire because readOnly is no longer in the dep array.
- *
- * Scenario:
- *   1. addSignal=1, readOnly=false  → dialog opens
- *   2. User cancels dialog           → dialog closes; addSignal stays at 1
- *   3. readOnly=true  (snapshot)     → no dialog re-open (guard fires in body)
- *   4. readOnly=false (back to live) → must NOT reopen; only a new increment should
+ * Snapshot view transitions must not reopen the Add Decision dialog:
+ * readOnly is out of the addSignal effect deps, so false→true→false must not re-fire.
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
