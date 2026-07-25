@@ -10,7 +10,7 @@ import type { Role } from "@customreport/shared";
  * not absorb server-computed capability flags, and keep these pure — no
  * React, no session access; callers pass their own role operand and keep
  * their own null guards.
-  * @param role - The role argument.
+ * @param role - The role argument.
  */
 
 export function isHead(role: Role | null): boolean {

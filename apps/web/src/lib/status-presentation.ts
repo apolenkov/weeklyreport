@@ -69,7 +69,7 @@ const STATUS_PRESENTATION: Record<CanonicalStatus, StatusPresentation> = {
  * Worst traffic light across a set of values — a thin adapter over the shared
  * canonical fold, so this module keeps no private precedence table. An
  * all-null (or empty) input folds to `"empty"` and adapts back to `null`.
-  * @param statuses - The statuses argument.
+ * @param statuses - The statuses argument.
  */
 export function worstTrafficStatus(
   statuses: readonly (TrafficLightStatus | null | undefined)[],

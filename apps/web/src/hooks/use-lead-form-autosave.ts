@@ -35,7 +35,7 @@ const DEFAULT_DEBOUNCE_MS = 5000;
  * - Tracks dirty state (current payload vs last successfully-saved payload).
  * - Attaches a `beforeunload` listener while dirty to warn on unsaved edits.
  * - Skips autosave entirely when disabled (read-only or submitted).
-  * @param args - The args argument.
+ * @param args - The args argument.
  */
 export function useLeadFormAutosave(
   args: UseLeadFormAutosaveArgs,

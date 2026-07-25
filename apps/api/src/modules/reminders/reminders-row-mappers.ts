@@ -89,7 +89,7 @@ export function formatPeriodLabel(start: Date, end: Date): string {
  * conflict; any other violation returns false (and re-throws). The shared guard
  * carries the pg-adapter matching (serialized meta + message, never
  * `meta.target` alone).
-  * @param error - The error argument.
+ * @param error - The error argument.
  */
 export function isDedupeKeyConflict(error: unknown): boolean {
   return isUniqueViolation(error, {

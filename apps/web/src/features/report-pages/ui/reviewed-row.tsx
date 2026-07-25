@@ -20,7 +20,7 @@ export interface AccordionReviewContext {
  * the composer) stack directly under the anchor row. A no-op when `review` is
  * absent (print/PDF) or the record has nothing to show — {@link RecordComments}
  * self-suppresses, so the row layout is unchanged for non-reviewers.
-  * @param options - The options argument.
+ * @param options - The options argument.
  */
 export function ReviewedRow({
   review,

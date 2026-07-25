@@ -34,7 +34,7 @@ export type LeadReportPeriod = ReportPeriod;
  * the lead-form modals to limit the "SDLC stage" dropdown to stages the
  * current lead actually owns. When `projectId` is undefined (decisions /
  * priorities are department-scoped), returns the union across all projects.
-  * @param section - The section argument.
+ * @param section - The section argument.
  * @param projectId - The projectId argument.
  */
 export function ownedStagesForProject(
@@ -186,7 +186,7 @@ function buildStageGrid(
  * Previously this mapper synthesized a fake grid that hard-coded the lead
  * onto "Dev", so assigning a lead to all 7 stages on the Products admin tab
  * did not show up on /lead/report.
-  * @param section - The section argument.
+ * @param section - The section argument.
  */
 export function mapLeadProducts(
   section: ReportSectionReadModel,
@@ -226,7 +226,7 @@ export function mapLeadProducts(
  *
  * The active reportId (if any) flags `isCurrent: true`; count fields are
  * passed through from `MyHistoryEntry` without mapper-level fallback zeros.
-  * @param history - The history argument.
+ * @param history - The history argument.
  * @param activeReportId - The activeReportId argument.
  */
 export function mapLeadPeriods(

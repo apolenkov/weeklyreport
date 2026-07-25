@@ -34,7 +34,7 @@ export async function requireRulePeriodLabel(
  * (no-payload) path emits the plain-text shape the worker's legacy branch
  * renders — and is also what the reaper re-enqueues, since the rich template
  * fields are not persisted on the execution row.
-  * @param execution - The execution argument.
+ * @param execution - The execution argument.
  * @param recipientEmail - The recipientEmail argument.
  * @param payload - The payload argument.
  */

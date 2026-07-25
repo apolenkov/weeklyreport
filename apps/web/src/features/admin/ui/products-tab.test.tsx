@@ -9,7 +9,6 @@ import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type { MockProduct, MockUser } from "../model/admin-types";
 import { ProductsTab } from "./products-tab";
 
-
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
@@ -52,7 +51,6 @@ vi.mock("../../../shared/ui/confirm-delete-dialog", () => ({
     ) : null,
 }));
 
-
 const LEAD_ID = "u-lead-1";
 const PRODUCT_ID = "p-product-1";
 const SECOND_PRODUCT_ID = "p-product-2";
@@ -84,7 +82,6 @@ const secondProduct: MockProduct = {
   id: SECOND_PRODUCT_ID,
   name: "Second Product",
 };
-
 
 function renderTab(opts?: {
   products?: MockProduct[];
@@ -126,7 +123,6 @@ function renderTab(opts?: {
     { wrapper: Wrapper },
   );
 }
-
 
 describe("ProductsTab — deep-link panel state", () => {
   beforeEach(() => {

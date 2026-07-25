@@ -21,7 +21,7 @@ import type { PeriodRowFromRepo } from "./admin-shared";
  *
  * Uses the `(periodState, periodStart desc)` composite index so filtering and
  * ordering stay on the same access path.
-  * @param prisma - The prisma argument.
+ * @param prisma - The prisma argument.
  * @param filter - The filter argument.
  */
 export async function listPeriodsByState(
@@ -104,7 +104,7 @@ export async function listPeriodsByState(
  * Returns null when the range is free.
  *
  * Closed (inclusive) intersect: a.start <= b.end AND a.end >= b.start.
-  * @param prisma - The prisma argument.
+ * @param prisma - The prisma argument.
  * @param input - The input argument.
  */
 export async function findOverlappingPeriod(
@@ -137,7 +137,7 @@ export async function findOverlappingPeriod(
  * Read a single Report's edit envelope. Used by the service's
  * updatePeriodManual to surface a `NOT_FOUND` error early and to grab
  * the `from`-snapshot for the audit envelope.
-  * @param prisma - The prisma argument.
+ * @param prisma - The prisma argument.
  * @param periodId - The periodId argument.
  */
 export async function readPeriodById(
@@ -176,7 +176,7 @@ export async function readPeriodById(
 /**
  * Read a Report's status fields for delete-guard checks.
  * Returns null if not found.
-  * @param prisma - The prisma argument.
+ * @param prisma - The prisma argument.
  * @param reportId - The reportId argument.
  */
 export async function readReportForDelete(
@@ -197,7 +197,7 @@ export async function readReportForDelete(
 /**
  * Delete a Report and cascade-delete all child rows via Prisma relations
  * (onDelete: Cascade on ReportSection, Item, Risk, Decision, Priority, etc.).
-  * @param prisma - The prisma argument.
+ * @param prisma - The prisma argument.
  * @param reportId - The reportId argument.
  */
 export async function deleteReport(

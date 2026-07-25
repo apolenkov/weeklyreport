@@ -44,7 +44,7 @@ async function openBoundaryGuarded<T>(write: () => Promise<T>): Promise<T> {
  * writes the row; the reminder rules are materialized by the caller —
  * `AdminPrismaRepository.createPeriodManual` invokes `applyToPeriod`
  * after this create commits.
-  * @param prisma - The prisma argument.
+ * @param prisma - The prisma argument.
  * @param input - The input argument.
  */
 export async function createPeriodManual(
@@ -114,7 +114,7 @@ export async function createPeriodManual(
  * lifecycle actions (`publish`, `reopen`, `archive`, scheduler). The
  * Edit dialog only moves dates / label; if a date shift implies a
  * state transition, that's a follow-up plan.
-  * @param prisma - The prisma argument.
+ * @param prisma - The prisma argument.
  * @param input - The input argument.
  */
 export async function updatePeriodManual(
@@ -179,7 +179,7 @@ export async function updatePeriodManual(
  * trusted), so scheduled/open periods stay archivable; only the reopened state
  * — whose archive would freeze just-reset draft sections either way — is
  * refused.
-  * @param prisma - The prisma argument.
+ * @param prisma - The prisma argument.
  * @param periodId - The periodId argument.
  */
 export async function archivePeriod(
@@ -217,7 +217,7 @@ export async function archivePeriod(
  * that is acceptable because admin archive of a SCHEDULED period is
  * a tiny edge case (the PeriodCreator scheduler would just re-mint
  * the row anyway).
-  * @param prisma - The prisma argument.
+ * @param prisma - The prisma argument.
  * @param periodId - The periodId argument.
  */
 export async function unarchivePeriod(

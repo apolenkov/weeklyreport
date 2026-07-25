@@ -8,7 +8,7 @@ const NEXT_MONDAY_OFFSET_BASE = DAYS_PER_WEEK + 1;
  * Compute the scheduler-aligned default start date. Manual periods are not
  * restricted to Mondays; this only keeps the untouched create dialog aligned
  * with the automatic weekly cadence.
-  * @param from - The from argument.
+ * @param from - The from argument.
  */
 export function nextMonday(from: Date): string {
   // getUTCDay: 0=Sun, 1=Mon..6=Sat. For Sun add 1 day; for any other
@@ -35,7 +35,7 @@ export function nextMonday(from: Date): string {
  * and by the edit-mode prefill of an existing row's envelope. The slice
  * matches the existing create-path `${periodStart}T00:00:00.000Z` round-trip
  * so a no-op edit round-trips without spurious diff.
-  * @param d - The d argument.
+ * @param d - The d argument.
  */
 export function dateInputValue(d: Date): string {
   return d.toISOString().slice(0, ISO_DATE_LENGTH);
@@ -49,7 +49,7 @@ export function dateInputValue(d: Date): string {
  * the value as UTC on both sides keeps the round-trip stable in every
  * timezone — a bare `new Date(value)` parse would read it as local time and
  * drift the stored deadline for any non-UTC admin.
-  * @param d - The d argument.
+ * @param d - The d argument.
  */
 export function dateTimeInputValue(d: Date): string {
   return d.toISOString().slice(0, ISO_DATETIME_LOCAL_LENGTH);
@@ -59,7 +59,7 @@ export function dateTimeInputValue(d: Date): string {
  * Deadline range validation: must fall within [periodStart, periodEnd] when
  * both are set. Parses the datetime-local value as UTC wall-clock to match
  * the submit parse and the UTC-parsed start/end bounds.
-  * @param args - The args argument.
+ * @param args - The args argument.
  */
 export function computeDeadlineError(args: {
   readonly deadline: string;

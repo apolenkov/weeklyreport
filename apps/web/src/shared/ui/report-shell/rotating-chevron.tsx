@@ -7,7 +7,7 @@ import { ChevronDown } from "lucide-react";
  * transition and the single `aria-hidden` live in one place. The static
  * split-button glyph is intentionally NOT routed through here (it must not
  * rotate or resize).
-  * @param options - The options argument.
+ * @param options - The options argument.
  */
 export function RotatingChevron({ expanded }: { readonly expanded: boolean }) {
   return (

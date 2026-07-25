@@ -26,7 +26,7 @@ import {
  * with the author's assignments on those products, filtered by
  * `project.archived=false`. Report-independent (assignments are report-wide);
  * report access is proven separately by the caller's own-section read.
-  * @param prisma - The prisma argument.
+ * @param prisma - The prisma argument.
  * @param viewerId - The viewerId argument.
  * @param authorId - The authorId argument.
  */

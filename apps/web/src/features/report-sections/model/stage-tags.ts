@@ -14,7 +14,7 @@ export function canonicalStageName(name: string): string {
  * aliasing (a legacy `["Dev", "Development"]` → `["Development"]`). Record
  * dialogs run saved selections through this so a record always persists the
  * canonical stage name (stage-label-canonicalization spec 1.2).
-  * @param ids - The ids argument.
+ * @param ids - The ids argument.
  */
 export function canonicalStageIds(ids: readonly string[]): string[] {
   return [...new Set(ids.map(canonicalStageName))];

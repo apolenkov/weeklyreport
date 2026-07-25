@@ -103,7 +103,7 @@ function narrowDraftState(
  * every open-writer — admin create/update, reopen, unarchive, the scheduler
  * flip, AND the login/scheduler create via `ensureCurrentPeriod` — translates
  * the SAME violation identically; an unrelated unique violation re-throws.
-  * @param error - The error argument.
+ * @param error - The error argument.
  */
 export function isOpenBoundaryConflict(error: unknown): boolean {
   return isUniqueViolation(error, {
@@ -131,7 +131,7 @@ export function isOpenBoundaryConflict(error: unknown): boolean {
  *   `scheduled` and `open` states. Concurrent creators collide on that index;
  *   the loser catches its P2002, re-reads, and returns the winner's row in
  *   either state. Any other error re-throws.
-  * @param prisma - The prisma argument.
+ * @param prisma - The prisma argument.
  * @param anchorDate - The anchorDate argument.
  * @param now - The now argument.
  * @param settings - The settings argument.

@@ -27,7 +27,7 @@ type FlipReportDelegate = Pick<
  * and skipped. The partial unique boundary index independently protects the
  * update from a competing open row. That `P2002` is recovered by re-reading and
  * logging the winner, while any unrelated error aborts the tick unchanged.
-  * @param report - The report argument.
+ * @param report - The report argument.
  * @param now - The now argument.
  * @param logger - The logger argument.
  */

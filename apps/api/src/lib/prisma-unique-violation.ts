@@ -54,7 +54,7 @@ function containsIdentityToken(identity: string, identifier: string): boolean {
  * `scope`, true only when the violation is that scope's constraint (an
  * unrelated P2002 returns false, so the caller re-throws it); without a scope,
  * true for any P2002.
-  * @param error - The error argument.
+ * @param error - The error argument.
  * @param scope - The scope argument.
  */
 export function isUniqueViolation(

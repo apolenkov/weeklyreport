@@ -109,7 +109,7 @@ export function validateSubmitInput(
 /**
  * Reject activity-parented draft rows whose activityId is not seeded on the section.
  * Product-parented rows (null activityId) are out of scope here.
-  * @param section - The section argument.
+ * @param section - The section argument.
  * @param input - The input argument.
  */
 export function validateRecordActivityIds(
@@ -140,7 +140,7 @@ export function validateRecordActivityIds(
 
 /**
  * Reject activityStatuses entries whose activityId is not seeded on the section.
-  * @param section - The section argument.
+ * @param section - The section argument.
  * @param input - The input argument.
  */
 export function validateActivityStatuses(
@@ -261,7 +261,7 @@ function validateStageRows(
 /**
  * Stage ownership for saveDraft/submit: changed rows need author-owned stages;
  * unchanged stableId+product+stages rows are grandfathered (never clamps).
-  * @param section - The section argument.
+ * @param section - The section argument.
  * @param input - The input argument.
  */
 export function validateStageOwnership(

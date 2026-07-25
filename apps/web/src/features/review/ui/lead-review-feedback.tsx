@@ -16,7 +16,7 @@ const KIND_LABEL: Record<LeadReviewFeedbackRecord["kind"], string> = {
  * so the return is never silent. It reuses {@link ReviewCommentList}; the lead has
  * no review capability, so the panel is strictly display-only (no composer, no
  * delete). Self-suppresses when there is nothing to show.
-  * @param options - The options argument.
+ * @param options - The options argument.
  */
 export function LeadReviewFeedback({
   records,

@@ -52,7 +52,7 @@ export function asTraffic(
  * with no owned stages contributes nothing to floor (covers-all means "all
  * stages the author owns on THIS product"), so the raw `trafficLight` passes
  * through unchanged.
-  * @param project - The project argument.
+ * @param project - The project argument.
  */
 export function deriveEffectiveProductStatus(project: {
   projectId: string;
@@ -97,7 +97,7 @@ export function deriveEffectiveProductStatus(project: {
  * NEVER rewritten. The interactive lead picker gates a manual lower on
  * `alarmFloor` alone, so a lead can still lower a status they raised themselves
  * when no covering risk/blocker holds it up.
-  * @param stored - The stored argument.
+ * @param stored - The stored argument.
  * @param ownRisks - The ownRisks argument.
  */
 export function deriveActivityStatus(
