@@ -6,6 +6,10 @@ const USER_IDENTITY_SLOT_CLASS =
   "hidden h-8 min-w-0 max-w-[260px] flex-col justify-center xl:flex";
 const BRAND_SLOT_CLASS = "flex w-10 shrink-0 items-center justify-center py-4";
 
+/**
+ * Nav Brand.
+ * @param options - The options argument.
+ */
 export function NavBrand({
   role,
   homeLabel,

@@ -67,6 +67,28 @@ function SavePeriodPolicyRow({
   );
 }
 
+// PATCH shape — only this sub-tab's fields. Brand identity lives on Organization.
+function toPeriodPolicyPatch(draft: MockSettings) {
+  return {
+    autoCreatePeriods: draft.autoCreatePeriods,
+    defaultDeadlineDays: draft.defaultDeadlineDays,
+    periodLengthDays: draft.periodLengthDays,
+    workingDays: draft.workingDays,
+    gracePeriodHours: draft.gracePeriodHours,
+    allowLateSubmissions: draft.allowLateSubmissions,
+    autoPublishAfterDeadline: draft.autoPublishAfterDeadline,
+    autoArchiveWeeksAfterPublish: draft.autoArchiveWeeksAfterPublish,
+    deadlineTime: draft.deadlineTime,
+    allowReopenAfterPublish: draft.allowReopenAfterPublish,
+    reopenWindowHours: draft.reopenWindowHours,
+    unifiedActivityView: draft.unifiedActivityView,
+  };
+}
+
+/**
+ * Periods Sub Tab.
+ * @param options - The options argument.
+ */
 export function PeriodsSubTab({
   serverSettings,
 }: {
@@ -77,24 +99,9 @@ export function PeriodsSubTab({
   const updateSettingsMut = useUpdateSettingsMut("Period policy");
 
   function handleSave() {
-    // PATCH — only this sub-tab's fields. Brand identity lives on Organization.
-    updateSettingsMut.mutate(
-      {
-        autoCreatePeriods: draft.autoCreatePeriods,
-        defaultDeadlineDays: draft.defaultDeadlineDays,
-        periodLengthDays: draft.periodLengthDays,
-        workingDays: draft.workingDays,
-        gracePeriodHours: draft.gracePeriodHours,
-        allowLateSubmissions: draft.allowLateSubmissions,
-        autoPublishAfterDeadline: draft.autoPublishAfterDeadline,
-        autoArchiveWeeksAfterPublish: draft.autoArchiveWeeksAfterPublish,
-        deadlineTime: draft.deadlineTime,
-        allowReopenAfterPublish: draft.allowReopenAfterPublish,
-        reopenWindowHours: draft.reopenWindowHours,
-        unifiedActivityView: draft.unifiedActivityView,
-      },
-      { onSuccess: () => markClean() },
-    );
+    updateSettingsMut.mutate(toPeriodPolicyPatch(draft), {
+      onSuccess: () => markClean(),
+    });
   }
 
   const isSaving = updateSettingsMut.isPending;

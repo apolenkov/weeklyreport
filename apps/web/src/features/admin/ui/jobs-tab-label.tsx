@@ -6,6 +6,9 @@ import { useTRPC } from "../../../lib/trpc-context";
 import { TabCountPill } from "../../../shared/ui/tab-count-pill";
 
 // Count badge sits on the Jobs tab corner (not a page-header badge).
+/**
+ * Jobs Tab Label.
+ */
 export function JobsTabLabel() {
   const trpc = useTRPC();
   const countQuery = useQuery({

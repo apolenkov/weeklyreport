@@ -135,6 +135,10 @@ function useDropdownPosition(
   return dropdownPos;
 }
 
+/**
+ * Fill From Button.
+ * @param props - The props argument.
+ */
 export function FillFromButton({
   periods,
   onFillFrom,

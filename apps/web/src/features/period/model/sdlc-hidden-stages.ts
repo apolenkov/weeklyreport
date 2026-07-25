@@ -13,6 +13,11 @@ interface ForeignOwner {
   status: StageStatus;
 }
 
+/**
+ * Foreign Owners For Product.
+ * @param productId - The productId argument.
+ * @param crossAuthors - The crossAuthors argument.
+ */
 export function foreignOwnersForProduct(
   productId: string,
   crossAuthors: readonly CrossAuthorEntry[],
@@ -58,6 +63,11 @@ function hiddenStageLine(
   return `${s.stageName} — another lead`;
 }
 
+/**
+ * Hidden Stages Reveal Lines.
+ * @param hidden - The hidden argument.
+ * @param foreignOwners - The foreignOwners argument.
+ */
 export function hiddenStagesRevealLines(
   hidden: readonly StageAssignment[],
   foreignOwners: Map<string, ForeignOwner>,
@@ -66,6 +76,11 @@ export function hiddenStagesRevealLines(
 }
 
 // Co-owner status from crossAuthors when present — Mine-mode raw status is locked/empty.
+/**
+ * Hidden Stages Effective Statuses.
+ * @param hidden - The hidden argument.
+ * @param foreignOwners - The foreignOwners argument.
+ */
 export function hiddenStagesEffectiveStatuses(
   hidden: readonly StageAssignment[],
   foreignOwners: Map<string, ForeignOwner>,

@@ -24,6 +24,10 @@ export interface CreatePeriodValues {
   weekLabel?: string | null;
 }
 
+/**
+ * Create Period Dialog.
+ * @param options - The options argument.
+ */
 export function CreatePeriodDialog({
   mode,
   initialValues,

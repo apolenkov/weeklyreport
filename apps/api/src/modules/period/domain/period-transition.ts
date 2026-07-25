@@ -112,6 +112,8 @@ function legacyTuple(state: PeriodState): {
  * envelope, log line, and return value — not only for the write. The write
  * itself still flows through {@link buildTransition}. The legacy-tuple helpers
  * have no such external consumer and stay private.
+  * @param periodStart - The periodStart argument.
+ * @param now - The now argument.
  */
 export function initialPeriodState(
   periodStart: Date,

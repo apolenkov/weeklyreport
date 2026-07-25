@@ -8,6 +8,7 @@ import { getServerSession } from "../../../lib/server/get-server-session";
  * Invalidate the landing page org-public cache after admin settings update.
  * Admin-only — its sole caller is the admin settings page.
  * CSRF-guarded — Origin header must match the server's own origin when present.
+  * @param request - The request argument.
  */
 export async function POST(request: NextRequest) {
   const session = await getServerSession();

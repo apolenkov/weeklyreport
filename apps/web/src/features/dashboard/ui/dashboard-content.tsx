@@ -213,6 +213,10 @@ function dashboardPanelModel(
   };
 }
 
+/**
+ * Dashboard Content.
+ * @param props - The props argument.
+ */
 export function DashboardContent(props: DashboardContentProps) {
   const panelModel = dashboardPanelModel(props);
   const submittedCount = props.weeklyReport?.submissionCount ?? 0;

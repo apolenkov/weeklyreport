@@ -10,6 +10,10 @@ import {
 // Tertiary text for footer (muted vs TEXT_SECONDARY).
 const TEXT_TERTIARY = "rgba(0,0,0,0.38)";
 
+/**
+ * Print Report Header.
+ * @param options - The options argument.
+ */
 export function PrintReportHeader({
   periodLabel,
   submissionSummary,
@@ -44,6 +48,10 @@ export function PrintReportHeader({
   );
 }
 
+/**
+ * Print Product Reports.
+ * @param options - The options argument.
+ */
 export function PrintProductReports({
   view,
 }: {
@@ -71,6 +79,10 @@ export function PrintProductReports({
   );
 }
 
+/**
+ * Print Portfolio Overview.
+ * @param options - The options argument.
+ */
 export function PrintPortfolioOverview({
   view,
 }: {
@@ -93,6 +105,10 @@ export function PrintPortfolioOverview({
   );
 }
 
+/**
+ * Print Report Footer.
+ * @param options - The options argument.
+ */
 export function PrintReportFooter({
   generatedAt,
   reportId,

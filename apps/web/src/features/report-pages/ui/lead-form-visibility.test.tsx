@@ -274,7 +274,6 @@ function buildHarness(opts: BuildOpts = {}) {
   return { Wrapper, captured, queryClient, contentFetch };
 }
 
-// Clicks the Everyone segment of the Record visibility toggle.
 async function clickEveryone(): Promise<void> {
   const everyone = await screen.findByRole("button", { name: "Everyone" });
   act(() => {
@@ -282,7 +281,6 @@ async function clickEveryone(): Promise<void> {
   });
 }
 
-// Clicks the Mine only segment.
 function clickMineOnly(): void {
   const mine = screen.getByRole("button", { name: "Mine only" });
   act(() => {

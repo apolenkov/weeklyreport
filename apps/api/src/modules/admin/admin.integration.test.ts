@@ -1,15 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { composeName, type ReminderPolicy } from "@customreport/shared";
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
@@ -25,12 +17,9 @@ import { AdminUserConflictError } from "./admin-shared";
 
 describe("AdminPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
-  let repo: AdminPrismaRepository;
+  const repo = new AdminPrismaRepository(prisma as never);
+  // Re-seeded per test after cleanDatabase, so the binding has to be mutable.
   let testData: Awaited<ReturnType<typeof seedTestData>>;
-
-  beforeAll(() => {
-    repo = new AdminPrismaRepository(prisma as never);
-  });
 
   beforeEach(async () => {
     await cleanDatabase(prisma);
@@ -43,7 +32,6 @@ describe("AdminPrismaRepository (integration)", () => {
   });
 
   it("getSnapshot returns users, projects, periods, and rules", async () => {
-    // Create a reminder rule
     await prisma.reminderRule.create({
       data: {
         id: TEST_IDS.reminderRule,
@@ -63,19 +51,16 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(snapshot.periods.length).toBeGreaterThanOrEqual(1);
     expect(snapshot.reminderRules.length).toBeGreaterThanOrEqual(1);
 
-    // Verify user fields
     const leadUser = snapshot.users.find((u) => u.email === "lead1@test.local");
     expect(leadUser).toBeDefined();
     expect(expectDefined(leadUser).name).toBe("Test Lead 1");
     expect(expectDefined(leadUser).role).toBe("lead");
 
-    // Verify project fields
     const proj = snapshot.projects.find((p) => p.name === "Test Project 1");
     expect(proj).toBeDefined();
     expect(expectDefined(proj).leadId).toBe(testData.lead.id);
     expect(expectDefined(proj).leadName).toBe("Test Lead 1");
 
-    // Verify period fields
     const period = snapshot.periods.find((p) => p.id === testData.report.id);
     expect(period).toBeDefined();
     expect(expectDefined(period).status).toBe("draft");
@@ -100,7 +85,6 @@ describe("AdminPrismaRepository (integration)", () => {
         : u,
     );
 
-    // Add a new project
     const updatedProjects = [
       ...snapshot.projects,
       {
@@ -120,12 +104,10 @@ describe("AdminPrismaRepository (integration)", () => {
 
     const saved = await repo.saveSnapshot(updatedSnapshot);
 
-    // Verify the lead name was updated
     const savedLead = saved.users.find((u) => u.id === testData.lead.id);
     expect(expectDefined(savedLead).name).toBe("Updated Lead Name");
     expect(expectDefined(savedLead).isActive).toBe(false);
 
-    // Verify the new project was created
     const savedProject = saved.projects.find(
       (p) => p.id === TEST_IDS.newProject,
     );

@@ -19,6 +19,10 @@ interface LeadFormDecisionsSectionProps {
 
 // Outside the sync bridge: decisions carry their own change handler and never
 // participate in the product/risk two-way sync.
+/**
+ * Lead Form Decisions Section.
+ * @param props - The props argument.
+ */
 export function LeadFormDecisionsSection({
   viewModel,
   actions,

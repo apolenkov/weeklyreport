@@ -78,9 +78,9 @@ describe("RisksSection LockBadge", () => {
       screen.getByRole("button", { name: /Delete risk/i }),
     ).toBeInTheDocument();
 
-    // responsive-compact-layout: the row icon buttons floor at the touch
-    // target below `md` while keeping the 34px desktop density; jsdom cannot
-    // evaluate media queries, so the class assertions are the teeth.
+    // The row icon buttons floor at the touch target below `md` while keeping
+    // the 34px desktop density; jsdom cannot evaluate media queries, so the
+    // class assertions are the teeth.
     for (const name of [/Edit risk/i, /Delete risk/i]) {
       const button = screen.getByRole("button", { name });
       expect(button.className).toContain("min-h-[var(--touch-target-min)]");

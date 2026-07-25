@@ -3,6 +3,10 @@ import { BotMessageSquare } from "lucide-react";
 
 // compact strips touch-target min-height for tight slide headers.
 // TODO(AGENT-REVIEW-01): mount in lead+head slide and report surfaces
+/**
+ * Agent Review Coming Soon.
+ * @param options - The options argument.
+ */
 export function AgentReviewComingSoon({
   compact = false,
 }: {

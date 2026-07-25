@@ -23,6 +23,11 @@ export interface SlideForeignContent {
   readonly decisions: readonly ForeignTextRow[];
 }
 
+/**
+ * Apply Foreign Product Health.
+ * @param productSlides - The productSlides argument.
+ * @param crossAuthors - The crossAuthors argument.
+ */
 export function applyForeignProductHealth(
   productSlides: readonly SlideProduct[],
   crossAuthors: readonly {
@@ -45,6 +50,10 @@ export function applyForeignProductHealth(
   });
 }
 
+/**
+ * Cross Author Content To Slide Foreign.
+ * @param rows - The rows argument.
+ */
 export function crossAuthorContentToSlideForeign(
   rows: readonly CrossAuthorContentRow[],
 ): SlideForeignContent {
@@ -132,6 +141,11 @@ function foreignCounts(model: SectionSlideModel, foreign: SlideForeignContent) {
   };
 }
 
+/**
+ * Merge Foreign Slide Content.
+ * @param model - The model argument.
+ * @param foreign - The foreign argument.
+ */
 export function mergeForeignSlideContent(
   model: SectionSlideModel,
   foreign: SlideForeignContent,

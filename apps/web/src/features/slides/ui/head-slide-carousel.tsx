@@ -6,6 +6,10 @@ import type { SectionSlideModel } from "../model/section-slide-contracts";
 
 // Cards omit status: Blocked/Review/Ready must render exactly once, on the
 // active slide header only.
+/**
+ * Head Slide Carousel.
+ * @param options - The options argument.
+ */
 export function HeadSlideCarousel({
   slides,
   selectedIndex,

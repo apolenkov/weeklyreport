@@ -24,11 +24,9 @@ import {
   UNKNOWN_CELL,
 } from "./analytics-period-math.js";
 
-/**
- * Analytics reads live sections, so both lifecycle fields must confirm that
- * editing is closed. Archive additionally requires `archived: true` and reads
- * only the frozen snapshot.
- */
+// Analytics reads live sections, so both lifecycle fields must confirm editing
+// is closed. Archive instead requires `archived: true` and reads only the
+// frozen snapshot.
 const PUBLISHED_FLOOR = {
   status: "published" as const,
   periodStatus: "published" as const,
@@ -44,17 +42,14 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
   ): Promise<TrafficLightHistoryOutput> {
     guardGroupScope(session);
     // Load-bearing: a Report is a unified period holding sections from EVERY
-    // group, and this method aggregates over the included sections — so the
-    // scope must filter the nested `include.sections.where`, not only which
-    // reports return. Admin → `{}` → omitted (sees all). Mirrors
-    // weekly-report.prisma-repository.ts.
+    // group and this method aggregates the included sections, so the scope must
+    // filter the nested `include.sections.where`, not only which reports return.
     const scope = groupScopeFilter(session, "reportSection");
     const scoped = Object.keys(scope).length > 0;
     const leadFilter = input.leadId ? { authorId: input.leadId } : {};
-    // The same predicate gates BOTH which reports qualify (`where.sections.some`)
-    // and which sections are aggregated (`include.sections.where`): a leadId
-    // that reaches only the report qualifier still returns every in-scope lead's
-    // sections, so it must land on the include too.
+    // One predicate gates BOTH which reports qualify (`where.sections.some`) and
+    // which sections aggregate (`include.sections.where`): a leadId reaching
+    // only the qualifier still returns every in-scope lead's sections.
     const sectionWhere = { ...leadFilter, ...scope };
     const hasSectionWhere = scoped || Boolean(input.leadId);
 

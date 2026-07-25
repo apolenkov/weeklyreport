@@ -66,6 +66,7 @@ export function readLastRole(): LastRoleRecord | null {
  * Persist the current session's role + email + name. Idempotent — safe
  * to call on every render where the session is known. Storage failure
  * is silent (private mode, quota exceeded).
+  * @param record - The record argument.
  */
 export function writeLastRole(record: LastRoleRecord): void {
   if (typeof window === "undefined") return;

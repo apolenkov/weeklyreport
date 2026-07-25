@@ -15,6 +15,10 @@ interface UseLeadFormChromeInput {
   readonly history: readonly MyHistoryEntry[] | undefined;
 }
 
+/**
+ * Use Lead Form Chrome.
+ * @param props - The props argument.
+ */
 export function useLeadFormChrome({
   pinnedReportId,
   activeReportId,

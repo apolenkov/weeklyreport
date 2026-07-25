@@ -143,6 +143,9 @@ function useActionLogRows(rows: ActionLogRowData[], search: string) {
   return { nonProofRows, visibleRows };
 }
 
+/**
+ * Action Log Tab.
+ */
 export function ActionLogTab() {
   const [search, setSearch] = useState("");
   const pagination = useActionLogPagination();

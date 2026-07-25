@@ -17,6 +17,9 @@ export interface RecordParentSeed {
  * pair). The seed activity is checked BEFORE the row's product: the item dialog
  * bakes its seed product into the bound row, and an activity-lane create must
  * still win over that baked default.
+  * @param row - The row argument.
+ * @param seed - The seed argument.
+ * @param activities - The activities argument.
  */
 export function resolveRecordParent(
   row: { readonly activityId?: string | null; readonly productId?: string },

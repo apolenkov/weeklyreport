@@ -163,6 +163,10 @@ function createPeriodLifecycleProcedures(deps: AdminPeriodsDeps) {
   };
 }
 
+/**
+ * Create Admin Periods Procedures.
+ * @param deps - The deps argument.
+ */
 export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
   return {
     ...createPeriodLifecycleProcedures(deps),

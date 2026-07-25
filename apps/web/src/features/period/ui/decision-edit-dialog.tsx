@@ -25,6 +25,10 @@ interface DecisionEditDialogProps {
 }
 
 // Unmounts when closed; each open remounts fresh from props (no reset effect).
+/**
+ * Decision Edit Dialog.
+ * @param props - The props argument.
+ */
 export function DecisionEditDialog(props: DecisionEditDialogProps) {
   if (!props.open) return null;
   return <DecisionEditDialogContent {...props} />;

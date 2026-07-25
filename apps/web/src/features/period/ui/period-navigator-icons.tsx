@@ -17,6 +17,9 @@ export function ChevronLeft() {
   );
 }
 
+/**
+ * Chevron Right.
+ */
 export function ChevronRight() {
   return (
     <svg

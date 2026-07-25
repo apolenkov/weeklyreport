@@ -34,6 +34,10 @@ interface UseRiskEditDialogArgs {
   readonly stagesForProduct?: (productId: string) => readonly string[];
 }
 
+/**
+ * Use Risk Edit Dialog.
+ * @param props - The props argument.
+ */
 export function useRiskEditDialog({
   risk,
   products,

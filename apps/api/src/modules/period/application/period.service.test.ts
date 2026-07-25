@@ -24,10 +24,6 @@ const noopInvalidate: AnalyticsCacheInvalidator = () => Promise.resolve();
 const noGatingReopenPolicy: ReopenPolicyReader = () =>
   Promise.resolve({ allowReopenAfterPublish: true, reopenWindowHours: 0 });
 
-/* ------------------------------------------------------------------ */
-/*  Fixed test UUIDs                                                   */
-/* ------------------------------------------------------------------ */
-
 const reportId = "22222222-2222-4222-8222-222222222222";
 const otherReportId = "33333333-3333-4333-8333-333333333333";
 
@@ -50,10 +46,6 @@ const adminSession: UserSession = {
 };
 
 const archivedReportId = "44444444-4444-4444-8444-444444444444";
-
-/* ------------------------------------------------------------------ */
-/*  Mock repository with spies                                         */
-/* ------------------------------------------------------------------ */
 
 interface SpyReport {
   id: string;
@@ -82,8 +74,11 @@ function createSpyRepository(
         r?.periodStatus === "published" ? "raced" : "archived";
       return { transitioned: false as const, reason };
     }
-    r.periodStatus = "published";
-    r.publishedAt = new Date();
+    reports.set(id, {
+      ...r,
+      periodStatus: "published",
+      publishedAt: new Date(),
+    });
     return { transitioned: true as const };
   });
 
@@ -91,7 +86,7 @@ function createSpyRepository(
   const reopenFn = vi.fn(async (id: string) => {
     const r = reports.get(id);
     if (r) {
-      r.periodStatus = "reopened";
+      reports.set(id, { ...r, periodStatus: "reopened" });
     }
   });
 
@@ -129,10 +124,6 @@ function createSpyRepository(
     reopenPeriod: reopenFn,
   };
 }
-
-/* ------------------------------------------------------------------ */
-/*  publishPeriod — service-level unit tests                           */
-/* ------------------------------------------------------------------ */
 
 describe("PeriodService — publishPeriod (unit)", () => {
   it("calls repository.publishPeriod with correct args", async () => {
@@ -200,7 +191,6 @@ describe("PeriodService — publishPeriod (unit)", () => {
       Error,
     );
 
-    // Verify it's NOT a PeriodAccessError
     await expect(
       service.publishPeriod(reportId, headSession),
     ).rejects.not.toBeInstanceOf(PeriodAccessError);
@@ -254,17 +244,15 @@ describe("PeriodService — publishPeriod (unit)", () => {
       noGatingReopenPolicy,
     );
 
-    // 1. Publish
     await service.publishPeriod(reportId, headSession);
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.publishPeriod).toHaveBeenCalledOnce();
 
-    // 2. Reopen
     await service.reopenPeriod(reportId, headSession);
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.reopenPeriod).toHaveBeenCalledOnce();
 
-    // 3. Re-publish (reopened -> published is allowed)
+    // A reopened period is publishable again, so this second publish writes.
     await service.publishPeriod(reportId, headSession);
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.publishPeriod).toHaveBeenCalledTimes(2);
@@ -377,7 +365,6 @@ describe("PeriodService — publishPeriod (unit)", () => {
       noGatingReopenPolicy,
     );
 
-    // First report can be published
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
       {
         success: true,
@@ -385,16 +372,12 @@ describe("PeriodService — publishPeriod (unit)", () => {
       },
     );
 
-    // Second is already published — idempotent success, no error.
+    // The other report is already published: idempotent success, not an error.
     await expect(
       service.publishPeriod(otherReportId, headSession),
     ).resolves.toEqual({ success: true, reportId: otherReportId });
   });
 });
-
-/* ------------------------------------------------------------------ */
-/*  reopenPeriod — service-level unit tests                            */
-/* ------------------------------------------------------------------ */
 
 describe("PeriodService — reopenPeriod (unit)", () => {
   it("calls repository.reopenPeriod with correct reportId", async () => {
@@ -491,19 +474,15 @@ describe("PeriodService — reopenPeriod (unit)", () => {
       noGatingReopenPolicy,
     );
 
-    // First reopen works
     await service.reopenPeriod(reportId, headSession);
 
-    // Second reopen fails (now status is 'reopened', not 'published')
+    // The first reopen left periodStatus='reopened', so the second no longer
+    // meets the published precondition.
     await expect(
       service.reopenPeriod(reportId, headSession),
     ).rejects.toBeInstanceOf(PeriodAccessError);
   });
 });
-
-/* ------------------------------------------------------------------ */
-/*  reopen-policy gate                                                 */
-/* ------------------------------------------------------------------ */
 
 describe("PeriodService — reopen policy gate", () => {
   it("throws PeriodAccessError when allowReopenAfterPublish=false", async () => {
@@ -646,14 +625,8 @@ describe("PeriodService — reopen policy gate", () => {
   });
 });
 
-/* ------------------------------------------------------------------ */
-/*  Manual-publish telemetry               */
-/* ------------------------------------------------------------------ */
-
-/**
- * Mirror of the same helper in publication.service.test.ts — introspects
- * a prom-client Counter without leaking registry internals into assertions.
- */
+// Mirror of the same helper in publication.service.test.ts — introspects a
+// prom-client Counter without leaking registry internals into assertions.
 async function getCounterValue(
   counter: {
     get(): Promise<{
@@ -976,10 +949,6 @@ describe("PeriodService — manual-publish telemetry", () => {
     expect(ingestion).not.toHaveBeenCalled();
   });
 });
-
-/* ------------------------------------------------------------------ */
-/*  Lifecycle target scope authorization     */
-/* ------------------------------------------------------------------ */
 
 function openReport(id: string, archived = false): SpyReport {
   return {
@@ -1415,10 +1384,6 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
   });
 });
 
-/* ------------------------------------------------------------------ */
-/*  Reopened publish-target scope (close the reopened bypass)          */
-/* ------------------------------------------------------------------ */
-
 describe("PeriodService — publish reopened-target scope", () => {
   it("lets a head publish the single active reopened period (its own)", async () => {
     const repo = createSpyRepository(
@@ -1487,10 +1452,6 @@ describe("PeriodService — publish reopened-target scope", () => {
     );
   });
 });
-
-/* ------------------------------------------------------------------ */
-/*  Archive landing inside the publish read→write window          */
-/* ------------------------------------------------------------------ */
 
 describe("PeriodService — archive-in-window publish outcome", () => {
   // The pre-write read sees a non-archived open period (it raced ahead of the

@@ -45,6 +45,10 @@ function pluralize(noun: string, count: number): string {
   return `${noun}${count !== 1 ? "s" : ""}`;
 }
 
+/**
+ * Portfolio Overview Table.
+ * @param props - The props argument.
+ */
 export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
   const isLead = props.scope === "lead";
   // Lead rows arrive pre-sorted from the mapper; product rows sort here.

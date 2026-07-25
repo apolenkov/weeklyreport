@@ -34,7 +34,6 @@ export interface RespondReopenRequestResult {
   staleAutoClosed: boolean;
 }
 
-// reopen-request-lifecycle / ADR 0008 — sibling of PeriodAdminService.
 export class ReopenRequestAdminService {
   private readonly logger: AppLogger;
 

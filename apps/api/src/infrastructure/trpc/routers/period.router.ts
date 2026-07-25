@@ -8,6 +8,10 @@ export interface PeriodRouterDeps {
   periodService: PeriodService;
 }
 
+/**
+ * Create Period Router.
+ * @param deps - The deps argument.
+ */
 export function createPeriodRouter(deps: PeriodRouterDeps) {
   return router({
     publish: headProcedure

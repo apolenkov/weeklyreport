@@ -57,11 +57,9 @@ describe("RisksSection — addSignal snapshot regression", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  // The chip-raise interception (addPrefill) is a SEPARATE create-open source
-  // from addSignal, with its own monotonic signal that the form owner does NOT
-  // reset on view transitions. The hook's readOnly-ref guard must keep it from
-  // reopening the dialog when readOnly toggles false→true→false with a stale
-  // prefill.
+  // addPrefill is a separate create-open source from addSignal, with its own
+  // monotonic signal the form owner never resets on view transitions — so the
+  // hook's readOnly-ref guard is the only thing preventing a stale reopen.
   it("does not reopen the dialog when readOnly toggles false→true→false with a stale addPrefill", () => {
     const firstProductId = products[0]?.id ?? "";
     const prefill = {

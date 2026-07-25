@@ -20,6 +20,11 @@ interface ProductCoupling {
 export type CouplingState = ProductCoupling[];
 
 // Empty stageIds is valid for green products (legacy "all stages"); enforced only for red/yellow.
+/**
+ * Compute Coupling.
+ * @param products - The products argument.
+ * @param risks - The risks argument.
+ */
 export function computeCoupling(
   products: readonly Product[],
   risks: readonly RiskEntry[],
@@ -49,6 +54,10 @@ export function computeCoupling(
   });
 }
 
+/**
+ * Validate Coupling.
+ * @param coupling - The coupling argument.
+ */
 export function validateCoupling(coupling: CouplingState): {
   missing: string[];
 } {
@@ -94,6 +103,10 @@ function applyStageStatus(
 
 // Applies stage status only; the lead-form-sync-bridge owns conflicting transitions.
 // A saved risk floors covered chips to at least its severity — no opt-in bump prompt.
+/**
+ * Use Status Risk Sync.
+ * @param args - The args argument.
+ */
 export function useStatusRiskSync(
   args: UseStatusRiskSyncArgs,
 ): UseStatusRiskSyncResult {

@@ -20,10 +20,18 @@ type SectionItem = ReportSectionReadModel["items"][number];
 type SectionRisk = ReportSectionReadModel["risks"][number];
 
 // Shared surname-first initials; "??" placeholder for empty names on this surface.
+/**
+ * Initials From Name.
+ * @param name - The name argument.
+ */
 export function initialsFromName(name: string): string {
   return sharedInitialsFromName(name) || "??";
 }
 
+/**
+ * Traffic To Product Status.
+ * @param traffic - The traffic argument.
+ */
 export function trafficToProductStatus(
   traffic: PortfolioProductOverview["worstStatus"],
 ): WeeklyProductStatus {
@@ -39,6 +47,11 @@ export function trafficToProductStatus(
   return "on-track";
 }
 
+/**
+ * Status Label For.
+ * @param status - The status argument.
+ * @param leadNames - The leadNames argument.
+ */
 export function statusLabelFor(
   status: WeeklyProductStatus,
   leadNames: string[],
@@ -49,6 +62,11 @@ export function statusLabelFor(
 
 // Report-wide projectId→name: section projects first, portfolio overview wins
 // on conflict so cross-author references never render "Unknown".
+/**
+ * Build Project Name Map.
+ * @param sections - The sections argument.
+ * @param portfolioOverview - The portfolioOverview argument.
+ */
 export function buildProjectNameMap(
   sections: readonly ReportSectionReadModel[],
   portfolioOverview: readonly PortfolioProductOverview[],
@@ -100,6 +118,10 @@ function deriveWeeklyReportItem(
 }
 
 // Group items by projectId into { current, next }. Activity-parented rows skipped.
+/**
+ * Group Items By Project.
+ * @param sections - The sections argument.
+ */
 export function groupItemsByProject(
   sections: readonly ReportSectionReadModel[],
 ): Map<string, { current: WeeklyReportItem[]; next: WeeklyReportItem[] }> {
@@ -166,6 +188,11 @@ function deriveWeeklyReportRisk(
 
 // Group risks by projectId. projectNames is REPORT-WIDE so cross-author
 // references don't render "Unknown".
+/**
+ * Group Risks By Project.
+ * @param sections - The sections argument.
+ * @param projectNames - The projectNames argument.
+ */
 export function groupRisksByProject(
   sections: readonly ReportSectionReadModel[],
   projectNames: ReadonlyMap<string, string>,

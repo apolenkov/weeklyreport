@@ -1,8 +1,3 @@
-/**
- * a11y + DOM structure assertions for LeadHistorySkeleton
- * (role=status, aria-busy, aria-label; snapshot locks card count).
- */
-
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 

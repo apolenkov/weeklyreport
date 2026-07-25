@@ -3,6 +3,10 @@ import { STATUS_BADGE, type StatusBadgeStatus } from "./accordion-tokens";
 // Gold rank marker in the dedicated left column — priorities-only hue
 // (status-color-semantics). Sitting in its own column keeps the gutter from
 // floating when an item is prioritized, and scales to several priorities.
+/**
+ * Rank Mark.
+ * @param options - The options argument.
+ */
 export function RankMark({ rank }: { readonly rank: number }) {
   return (
     <span
@@ -18,6 +22,10 @@ export function RankMark({ rank }: { readonly rank: number }) {
   );
 }
 
+/**
+ * Rail.
+ * @param options - The options argument.
+ */
 export function Rail({ tone }: { readonly tone: string }) {
   return (
     <span
@@ -30,6 +38,10 @@ export function Rail({ tone }: { readonly tone: string }) {
 
 // The fixed-width meta gutter: SDLC stage over the contributing lead's
 // initials. An identity surface — it never encodes workflow status.
+/**
+ * Gutter.
+ * @param options - The options argument.
+ */
 export function Gutter({
   stage,
   owner,
@@ -53,6 +65,10 @@ export function Gutter({
   );
 }
 
+/**
+ * Status Badge.
+ * @param options - The options argument.
+ */
 export function StatusBadge({
   status,
 }: {
@@ -71,6 +87,10 @@ export function StatusBadge({
   );
 }
 
+/**
+ * Section Header.
+ * @param options - The options argument.
+ */
 export function SectionHeader({
   title,
   count,

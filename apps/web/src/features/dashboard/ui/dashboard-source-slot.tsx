@@ -32,6 +32,10 @@ function sourceIssueDescription(
     : `${stalledTitle} is taking longer than expected.`;
 }
 
+/**
+ * Dashboard Source Slot.
+ * @param props - The props argument.
+ */
 export function DashboardSourceSlot({
   children,
   kind,
@@ -52,6 +56,10 @@ export function DashboardSourceSlot({
   return ready ? children : <DashboardPanelLoading kind={kind} />;
 }
 
+/**
+ * Dashboard Activity Issue.
+ * @param options - The options argument.
+ */
 export function DashboardActivityIssue({
   source,
 }: {

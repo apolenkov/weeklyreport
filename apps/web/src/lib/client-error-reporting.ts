@@ -88,6 +88,10 @@ function readErrorData(error: unknown): Record<string, unknown> | null {
     : null;
 }
 
+/**
+ * Get Client Error Details.
+ * @param error - The error argument.
+ */
 export function getClientErrorDetails(error: unknown): ClientErrorDetails {
   const data = readErrorData(error);
   const meta =
@@ -131,6 +135,11 @@ export function getClientErrorDetails(error: unknown): ClientErrorDetails {
 const INVALID_LINK_MESSAGE =
   "This link is invalid or the report no longer exists.";
 
+/**
+ * Format Client Error Message.
+ * @param prefix - The prefix argument.
+ * @param error - The error argument.
+ */
 export function formatClientErrorMessage(
   prefix: string,
   error: unknown,
@@ -156,6 +165,12 @@ export function formatClientErrorMessage(
   return `${prefix}${ref}`;
 }
 
+/**
+ * Build Client Error Log Entry.
+ * @param event - The event argument.
+ * @param error - The error argument.
+ * @param context - The context argument.
+ */
 export function buildClientErrorLogEntry(
   event: string,
   error: unknown,
@@ -186,6 +201,12 @@ export function buildClientErrorLogEntry(
   };
 }
 
+/**
+ * Log Client Error.
+ * @param event - The event argument.
+ * @param error - The error argument.
+ * @param context - The context argument.
+ */
 export function logClientError(
   event: string,
   error: unknown,

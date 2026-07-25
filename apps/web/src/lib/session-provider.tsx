@@ -46,6 +46,10 @@ export interface SessionState {
 // useSession() still throws when context is absent.
 export const SessionContext = createContext<SessionState | null>(null);
 
+/**
+ * Session Provider.
+ * @param options - The options argument.
+ */
 export function SessionProvider({ children }: { children: ReactNode }) {
   const trpc = useTRPC();
   const { data, isLoading } = useQuery(trpc.auth.me.queryOptions());
@@ -99,6 +103,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Use Session.
+ */
 export function useSession(): SessionState {
   const ctx = useContext(SessionContext);
   if (!ctx) {

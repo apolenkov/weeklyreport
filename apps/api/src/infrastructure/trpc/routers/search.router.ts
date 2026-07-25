@@ -15,6 +15,10 @@ export interface SearchRouterDeps {
 // Service gates scope='all' via SearchAuthorizationError → FORBIDDEN;
 // protectedProcedure is enough because the service is the real authz gate.
 
+/**
+ * Create Search Router.
+ * @param deps - The deps argument.
+ */
 export function createSearchRouter(deps: SearchRouterDeps) {
   return router({
     query: protectedProcedure

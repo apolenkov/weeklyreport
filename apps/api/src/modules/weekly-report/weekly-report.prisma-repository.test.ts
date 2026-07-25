@@ -397,12 +397,8 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
   });
 
   it("dispatches leadUsers, projects, and the reminder-policy count concurrently", async () => {
-    let releaseUsers: (rows: { id: string }[]) => void = () => {
-      /* set below */
-    };
-    const usersPending = new Promise<{ id: string }[]>((resolve) => {
-      releaseUsers = resolve;
-    });
+    const { promise: usersPending, resolve: releaseUsers } =
+      Promise.withResolvers<{ id: string }[]>();
     const userFindMany = vi.fn().mockReturnValue(usersPending);
     const projectFindMany = vi.fn().mockResolvedValue([]);
     const reminderPolicyCount = vi.fn().mockResolvedValue(0);

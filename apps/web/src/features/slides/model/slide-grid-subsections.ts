@@ -67,6 +67,10 @@ function buildActivityEntries(
 // Status-only activities still render as empty labeled rows (not a separate pill
 // lane). Snapshot-drift activity ids missing from section.activities still get
 // a generically titled subsection.
+/**
+ * Build Product Subsections.
+ * @param input - The input argument.
+ */
 export function buildProductSubsections(
   input: BuildProductSubsectionsInput,
 ): ReadonlyMap<string, readonly GridSubsection[]> {
@@ -117,7 +121,8 @@ interface ProductCards {
 }
 
 /** Builds each product's card (real products, then the pseudo Shared card),
- * collapsing a card with zero rows and no status-only project subsection. */
+ * collapsing a card with zero rows and no status-only project subsection.  * @param input - The input argument.
+ */
 export function deriveProductCards(
   input: DeriveProductCardsInput,
 ): ProductCards {

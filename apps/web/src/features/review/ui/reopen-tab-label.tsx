@@ -7,6 +7,9 @@ import { TabCountPill } from "../../../shared/ui/tab-count-pill";
 
 // Absolute corner badge (no layout shift on hydrate). No polling — refreshes
 // on focus and after respondReopenRequest invalidates the query.
+/**
+ * Reopen Tab Label.
+ */
 export function ReopenTabLabel() {
   const trpc = useTRPC();
   const countQuery = useQuery(

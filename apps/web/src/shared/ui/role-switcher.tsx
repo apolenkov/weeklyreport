@@ -208,6 +208,9 @@ function useDevRoleSwitcher() {
   };
 }
 
+/**
+ * Dev Role Switcher.
+ */
 export function DevRoleSwitcher() {
   const { enabled, pending, usersQ, users, switchTo, logout, reseed } =
     useDevRoleSwitcher();

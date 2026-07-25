@@ -32,6 +32,11 @@ export interface AdminUserFormInput {
 }
 
 // existingId omitted → client mints UUID; name recomputed from ФИО parts.
+/**
+ * To Admin User Input.
+ * @param form - The form argument.
+ * @param existingId - The existingId argument.
+ */
 export function toAdminUserInput(
   form: AdminUserFormInput,
   existingId?: string,
@@ -69,6 +74,11 @@ export interface ReportingGroupFormInput {
   headUserId?: string | null;
 }
 
+/**
+ * To Reporting Group Input.
+ * @param form - The form argument.
+ * @param existingId - The existingId argument.
+ */
 export function toReportingGroupInput(
   form: ReportingGroupFormInput,
   existingId?: string,
@@ -104,6 +114,11 @@ export class UnresolvedProjectLeadError extends Error {
 }
 
 // leadName required by schema; callers resolve from users list when missing.
+/**
+ * To Admin Project Input.
+ * @param form - The form argument.
+ * @param existingId - The existingId argument.
+ */
 export function toAdminProjectInput(
   form: AdminProjectFormInput,
   existingId?: string,
@@ -140,6 +155,11 @@ export interface AdminReminderPolicyFormInput {
 }
 
 // YYYY-MM-DD → Date at midnight UTC (matches Prisma DateTime); null = forever.
+/**
+ * To Reminder Policy Input.
+ * @param form - The form argument.
+ * @param existingId - The existingId argument.
+ */
 export function toReminderPolicyInput(
   form: AdminReminderPolicyFormInput,
   existingId?: string,

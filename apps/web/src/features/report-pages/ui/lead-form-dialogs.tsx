@@ -47,6 +47,10 @@ interface LeadFormDialogsProps {
   readonly draftSection: ReportSectionReadModel;
 }
 
+/**
+ * Lead Form Dialogs.
+ * @param props - The props argument.
+ */
 export function LeadFormDialogs({
   viewModel,
   quickAdd,

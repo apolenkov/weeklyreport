@@ -205,7 +205,7 @@ describe("LeadFormSyncBridge", () => {
       screen.getByRole("button", { name: /Quick-add Blocker/i }),
     );
     await screen.findByRole("dialog", { name: /Add Risk dialog/i });
-    // Close it — the prefill (signal 1) stays set in the persistent parent.
+    // The prefill (signal 1) stays set in the persistent parent.
     await user.click(screen.getByRole("button", { name: /^Cancel$/i }));
     expect(
       screen.queryByRole("dialog", { name: /Add Risk dialog/i }),
@@ -242,7 +242,6 @@ describe("LeadFormSyncBridge", () => {
 
     render(<Harness initialProducts={[product]} initialRisks={[risk]} />);
 
-    // Click the Edit (pencil) button on the risk card → opens RiskEditDialog
     const editBtn = screen.getByRole("button", {
       name: /Edit risk for CRM Platform/i,
     });
@@ -329,11 +328,9 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
       />,
     );
 
-    // Open the Add Risk dialog.
     const addBtn = screen.getByRole("button", { name: /\+ Add Risk/i });
     await user.click(addBtn);
 
-    // Select Blocked severity, fill required fields, select Dev stage.
     const blockedBtn = await screen.findByRole("button", { name: /Blocked/i });
     await user.click(blockedBtn);
 

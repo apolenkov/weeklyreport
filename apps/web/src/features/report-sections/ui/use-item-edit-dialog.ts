@@ -69,6 +69,10 @@ function buildItemEditHandle(
   };
 }
 
+/**
+ * Use Item Edit Dialog.
+ * @param args - The args argument.
+ */
 export function useItemEditDialog(args: UseItemEditDialogArgs) {
   const formState = useItemEditFormState({
     item: args.item,

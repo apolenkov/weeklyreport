@@ -55,6 +55,10 @@ function ActivityPill({ activity }: { readonly activity: SlideActivityPill }) {
 }
 
 // Worst-first grouping; display-only (no edit affordance on the slide).
+/**
+ * Slide Activity Pills.
+ * @param options - The options argument.
+ */
 export function SlideActivityPills({
   activities,
 }: {

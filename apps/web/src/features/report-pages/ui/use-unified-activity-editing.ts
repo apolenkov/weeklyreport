@@ -48,6 +48,10 @@ interface UnifiedActivityEditingArgs {
 
 // Foreign records are read-only regardless of the section's own lock, so both
 // entry points bail before touching state.
+/**
+ * Use Unified Activity Editing.
+ * @param props - The props argument.
+ */
 export function useUnifiedActivityEditing({
   entries,
   readOnly,

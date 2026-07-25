@@ -10,6 +10,10 @@ export const AUDIT_LOGGER = Symbol("AUDIT_LOGGER");
 
 const AUDIT_MESSAGE = "audit";
 
+/**
+ * Create Audit Logger.
+ * @param logger - The logger argument.
+ */
 export function createAuditLogger(logger: AppLogger): AuditLogger {
   // Funnel forces event against AuditEvent; satisfies-envelope would reject
   // per-event fields as excess properties.
@@ -186,6 +190,9 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
   };
 }
 
+/**
+ * Create Null Audit Logger.
+ */
 export function createNullAuditLogger(): AuditLogger {
   return {
     loginSuccess() {

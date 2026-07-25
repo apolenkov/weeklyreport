@@ -1,3 +1,6 @@
+/**
+ * Print Report Styles.
+ */
 export function PrintReportStyles() {
   return (
     <style

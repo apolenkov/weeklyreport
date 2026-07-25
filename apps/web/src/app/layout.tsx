@@ -34,6 +34,9 @@ const sourceSans = Source_Sans_3({
 // Titles were blank on SSR (set later by a client effect). Set them
 // server-side via the Metadata API so the document title is correct on
 // first paint and shareable links resolve a real title.
+/**
+ * Generate Metadata.
+ */
 export async function generateMetadata(): Promise<Metadata> {
   const { fullName: name } = await getOrgPublic();
   return {

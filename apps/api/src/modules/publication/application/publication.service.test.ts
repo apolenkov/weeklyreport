@@ -8,6 +8,7 @@ import {
   customreportPeriodStateTransitionsTotal,
   customreportReportsSubmittedTotal,
 } from "../../../infrastructure/metrics/metrics.registry.js";
+import { createNullLogger } from "../../../lib/logger";
 import { PublicationPrometheusTelemetry } from "../infrastructure/publication-prometheus-telemetry.adapter.js";
 import {
   type AutoPublishResult,
@@ -191,7 +192,7 @@ describe("PublicationService", () => {
     it("returns the assembled report for the active report, sorted by authorName", async () => {
       const service = new PublicationService(
         createRepository(assembledReport),
-        undefined,
+        createNullLogger(),
         noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
@@ -209,7 +210,7 @@ describe("PublicationService", () => {
     it("throws when report not found (null from repo)", async () => {
       const service = new PublicationService(
         createRepository(null),
-        undefined,
+        createNullLogger(),
         noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
@@ -256,7 +257,7 @@ describe("PublicationService", () => {
 
       const service = new PublicationService(
         createRepository(report),
-        undefined,
+        createNullLogger(),
         noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
@@ -300,7 +301,7 @@ describe("PublicationService", () => {
 
       const service = new PublicationService(
         createRepository(report),
-        undefined,
+        createNullLogger(),
         noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
@@ -319,7 +320,7 @@ describe("PublicationService", () => {
 
       const service = new PublicationService(
         createRepository(report),
-        undefined,
+        createNullLogger(),
         noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
@@ -376,7 +377,7 @@ describe("PublicationService", () => {
 
       const service = new PublicationService(
         createRepository(report),
-        undefined,
+        createNullLogger(),
         noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
@@ -435,7 +436,7 @@ describe("PublicationService", () => {
 
       const service = new PublicationService(
         createRepository(report),
-        undefined,
+        createNullLogger(),
         noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
@@ -456,7 +457,7 @@ describe("PublicationService", () => {
     it("publishAuto stamps system attribution (publishedById=null)", async () => {
       const service = new PublicationService(
         createRepository(assembledReport),
-        undefined,
+        createNullLogger(),
         noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
@@ -472,7 +473,7 @@ describe("PublicationService", () => {
     it("publishAuto is idempotent on already-published reports (no throw, returns current)", async () => {
       const service = new PublicationService(
         createRepository(assembledReport),
-        undefined,
+        createNullLogger(),
         noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
@@ -505,7 +506,7 @@ describe("PublicationService", () => {
       };
       const service = new PublicationService(
         repository,
-        undefined,
+        createNullLogger(),
         noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
@@ -529,7 +530,7 @@ describe("PublicationService", () => {
       const saveSpy = vi.spyOn(repository, "saveAutoPublishedReport");
       const service = new PublicationService(
         repository,
-        undefined,
+        createNullLogger(),
         noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
@@ -551,7 +552,7 @@ describe("PublicationService", () => {
       const invalidateAnalyticsCache = vi.fn(() => Promise.resolve());
       const service = new PublicationService(
         repository,
-        undefined,
+        createNullLogger(),
         noopIngestionQueue,
         invalidateAnalyticsCache,
       );
@@ -567,7 +568,7 @@ describe("PublicationService", () => {
     it("publishAuto increments product KPI counters once on success", async () => {
       const service = new PublicationService(
         createRepository(assembledReport),
-        undefined,
+        createNullLogger(),
         noopIngestionQueue,
         noopInvalidateAnalyticsCache,
         new PublicationPrometheusTelemetry(),
@@ -611,7 +612,7 @@ describe("PublicationService", () => {
       };
       const service = new PublicationService(
         repository,
-        undefined,
+        createNullLogger(),
         {
           enqueue: ingestion,
         },
@@ -656,7 +657,7 @@ describe("PublicationService", () => {
       };
       const service = new PublicationService(
         repository,
-        undefined,
+        createNullLogger(),
         noopIngestionQueue,
         invalidateAnalyticsCache,
       );
@@ -673,7 +674,7 @@ describe("PublicationService", () => {
       const ingestion = vi.fn(() => Promise.resolve());
       const service = new PublicationService(
         createRepository(assembledReport),
-        undefined,
+        createNullLogger(),
         { enqueue: ingestion },
         noopInvalidateAnalyticsCache,
       );
@@ -693,7 +694,7 @@ describe("PublicationService", () => {
       const ingestion = vi.fn(() => Promise.resolve());
       const service = new PublicationService(
         createRepository(report),
-        undefined,
+        createNullLogger(),
         { enqueue: ingestion },
         noopInvalidateAnalyticsCache,
       );

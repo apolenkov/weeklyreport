@@ -12,6 +12,10 @@ interface SlideFullscreenButtonProps {
 }
 
 // Presentational only: one deck-level useFullscreen owner so a second control never double-toggles.
+/**
+ * Slide Fullscreen Button.
+ * @param props - The props argument.
+ */
 export function SlideFullscreenButton({
   isFullscreen,
   onToggle,

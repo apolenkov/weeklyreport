@@ -32,6 +32,10 @@ interface HeadReportShellProps {
   readonly authorId?: string;
 }
 
+/**
+ * Head Report Shell.
+ * @param props - The props argument.
+ */
 export function HeadReportShell({
   reportId,
   mode,

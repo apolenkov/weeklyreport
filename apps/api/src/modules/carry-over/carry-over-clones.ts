@@ -4,6 +4,12 @@ import {
   type ReportSectionReadModel,
 } from "@customreport/shared";
 
+/**
+ * Clone Carried Item.
+ * @param sourceReportId - The sourceReportId argument.
+ * @param targetReportId - The targetReportId argument.
+ * @param item - The item argument.
+ */
 export function cloneCarriedItem(
   sourceReportId: string,
   targetReportId: string,
@@ -39,6 +45,12 @@ export function cloneCarriedItem(
   };
 }
 
+/**
+ * Clone Unresolved Decision.
+ * @param sourceReportId - The sourceReportId argument.
+ * @param targetReportId - The targetReportId argument.
+ * @param decision - The decision argument.
+ */
 export function cloneUnresolvedDecision(
   sourceReportId: string,
   targetReportId: string,

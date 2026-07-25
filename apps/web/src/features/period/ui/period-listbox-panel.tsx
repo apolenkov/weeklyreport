@@ -48,6 +48,10 @@ export function ArchivedBadge() {
   );
 }
 
+/**
+ * Period Label.
+ * @param p - The p argument.
+ */
 export const periodLabel = (p: { dateRange: string; isCurrent: boolean }) =>
   p.isCurrent ? `${p.dateRange} (Current)` : p.dateRange;
 
@@ -111,6 +115,10 @@ function PeriodOptionRow({
   );
 }
 
+/**
+ * Period Listbox Panel.
+ * @param props - The props argument.
+ */
 export function PeriodListboxPanel({
   options,
   selectedId,

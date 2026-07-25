@@ -54,12 +54,21 @@ export function coveringRisksForItem<T extends AlarmRisk>(
   });
 }
 
+/**
+ * Highest Alarm Severity.
+ * @param risks - The risks argument.
+ */
 export function highestAlarmSeverity(risks: readonly AlarmRisk[]): ItemAlarm {
   if (risks.some((risk) => risk.severity === "blocked")) return "blocked";
   if (risks.some((risk) => risk.severity === "at-risk")) return "at-risk";
   return null;
 }
 
+/**
+ * Derive Item Alarm From Risks.
+ * @param item - The item argument.
+ * @param risks - The risks argument.
+ */
 export function deriveItemAlarmFromRisks(
   item: AlarmItem,
   risks: readonly AlarmRisk[],

@@ -17,6 +17,10 @@ interface UseLeadFormQuickAddArgs {
 }
 
 // Modal quick-add only routes through `apply` — not version/dual-state writes.
+/**
+ * Use Lead Form Quick Add.
+ * @param props - The props argument.
+ */
 export function useLeadFormQuickAdd({
   apply,
   loaded,

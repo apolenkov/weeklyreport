@@ -263,6 +263,10 @@ function toActivityViews(
     .sort((a, b) => a.activityName.localeCompare(b.activityName, "ru"));
 }
 
+/**
+ * Map Prisma To Report Section.
+ * @param row - The row argument.
+ */
 export function mapPrismaToReportSection(
   row: SectionRow,
 ): ReportSectionReadModel {

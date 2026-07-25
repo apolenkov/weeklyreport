@@ -8,10 +8,9 @@ import type { EnvConfig } from "../config/env.schema.js";
 
 const SLOW_QUERY_MS = 100;
 
-// pg's own defaults, named so an absent env tunable resolves to an explicit,
-// greppable value rather than an implicit library constant. Applied only when
-// the corresponding `DB_POOL_*` env var is unset; a malformed PRESENT value
-// fails boot in `env.schema.ts` and never reaches here.
+// pg's own defaults, named so an absent `DB_POOL_*` env tunable resolves to an
+// explicit, greppable value. A malformed present value fails boot in
+// `env.schema.ts` and never reaches here.
 const DEFAULT_DB_POOL_MAX = 10;
 const DEFAULT_DB_POOL_IDLE_TIMEOUT_MS = 10_000;
 const DEFAULT_DB_POOL_CONNECTION_TIMEOUT_MS = 0;

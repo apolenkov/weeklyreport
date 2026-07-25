@@ -1,4 +1,8 @@
 // Shared empty-slide placeholder; no deck surface may re-inline its own.
+/**
+ * Slide Empty State.
+ * @param options - The options argument.
+ */
 export function SlideEmptyState({
   title,
   message,

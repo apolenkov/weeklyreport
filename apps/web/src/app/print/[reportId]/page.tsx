@@ -4,10 +4,6 @@ import { redirect } from "next/navigation";
 import { getPrintRouteContext } from "../../../lib/server/get-print-route-context";
 import { PrintReportTemplate } from "./print-report-template";
 
-// Worker check first (isPdfExport + pdfReportId): worker token looks like a
-// human session otherwise. Outside proxy matcher — gate no-session here.
-// Redirect is UX only; pdfExportGuard is the data boundary.
-
 interface Props {
   params: Promise<{ reportId: string }>;
 }
@@ -29,21 +25,21 @@ export default async function PrintReportPage({ params }: Props) {
   const { reportId } = await params;
   const ctx = await getPrintRouteContext();
 
-  // 1. PDF worker export-auth, bound to THIS report → render the template.
+  // Worker check must come first: a worker token otherwise looks like a human
+  // session. These redirects are UX only; pdfExportGuard is the data boundary.
   if (ctx.isPdfExport && ctx.pdfReportId === reportId) {
     return <PrintReportTemplate reportId={reportId} />;
   }
 
-  // 2. Authenticated human without worker context → role-specific TEMPORARY
-  //    (307) redirect. The destination depends on the caller's session role, so
-  //    it must NOT be a permanent (308) redirect — a shared cache/proxy could
-  //    otherwise serve one role's /print → destination to another role.
+  // Destination varies by session role, so this must stay a temporary (307)
+  // redirect — a permanent one lets a shared cache serve one role's target
+  // to another.
   if (ctx.session) {
     redirect(humanRedirectPath(ctx.session.role, reportId));
   }
 
-  // 3. No session → 307 to login, preserving the original path (mirrors
-  //    proxy.ts; login is not a permanent redirect).
+  // This route sits outside the proxy matcher, so the no-session bounce to
+  // login is gated here instead (mirrors proxy.ts).
   const nextPath = `/print/${reportId}`;
   redirect(`/?next=${encodeURIComponent(nextPath)}`);
 }

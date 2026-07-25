@@ -17,6 +17,7 @@ export interface ReportContentSummary {
  * publish — when it flags needs-attention or carries any authored item, risk,
  * decision, or priority. Single source for the publish gate, the accordion
  * render guard, and the per-lead grouping filter so the three cannot diverge.
+  * @param report - The report argument.
  */
 export function reportHasContent(report: ReportContentSummary): boolean {
   return (

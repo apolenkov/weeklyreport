@@ -125,6 +125,11 @@ function useRemindersListState(policies: readonly MockReminderPolicy[]) {
   };
 }
 
+/**
+ * Use Reminders Tab State.
+ * @param policies - The policies argument.
+ * @param defaultTimezone - The defaultTimezone argument.
+ */
 export function useRemindersTabState(
   policies: readonly MockReminderPolicy[],
   defaultTimezone: string,

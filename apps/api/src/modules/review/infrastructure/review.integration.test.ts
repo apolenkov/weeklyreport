@@ -49,7 +49,6 @@ describe("ReviewPrismaRepository (integration)", () => {
   });
 
   it("head sees only own-group sections", async () => {
-    // Create a second group and a lead in it; the head belongs to the first group.
     const groupB = await prisma.reportingGroup.create({
       data: {
         id: "b0000000-0000-4000-b000-000000000009",
@@ -77,7 +76,6 @@ describe("ReviewPrismaRepository (integration)", () => {
       },
     });
 
-    // Head of group A should see only the section for the lead in group A.
     const headSession = {
       role: "head" as const,
       reportingGroupId: testData.head.reportingGroupId ?? undefined,

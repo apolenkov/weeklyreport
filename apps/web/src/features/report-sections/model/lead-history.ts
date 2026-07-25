@@ -40,6 +40,11 @@ function formatHistoryTimestamp(
   return value == null ? null : formatRelativePast(value, now, "long");
 }
 
+/**
+ * Map History Entries.
+ * @param api - The api argument.
+ * @param now - The now argument.
+ */
 export function mapHistoryEntries(
   api: readonly MyHistoryEntry[],
   now: Date = new Date(),
@@ -64,6 +69,11 @@ export function mapHistoryEntries(
   }));
 }
 
+/**
+ * Map Compiled History Entries.
+ * @param api - The api argument.
+ * @param now - The now argument.
+ */
 export function mapCompiledHistoryEntries(
   api: readonly CompiledHistoryEntry[],
   now: Date = new Date(),

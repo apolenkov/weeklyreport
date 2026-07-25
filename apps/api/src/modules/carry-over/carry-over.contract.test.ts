@@ -240,10 +240,6 @@ function makeTargetSection(
 }
 
 describe("CarryOverService — contract tests", () => {
-  // -----------------------------------------------------------------------
-  // Validation / guard clauses
-  // -----------------------------------------------------------------------
-
   it("throws when source === target report", async () => {
     const repo = createInMemoryRepository({
       sourceSections: [sourceAlpha],
@@ -293,10 +289,6 @@ describe("CarryOverService — contract tests", () => {
       service.executeCarryOver(sourceReportId, targetReportId),
     ).rejects.toThrow("Carry-over requires both source and target sections.");
   });
-
-  // -----------------------------------------------------------------------
-  // Item carry-over logic
-  // -----------------------------------------------------------------------
 
   it("carries `next` items as `current` with carriedOver=true", async () => {
     const target = makeTargetSection(sourceAlpha);
@@ -359,13 +351,8 @@ describe("CarryOverService — contract tests", () => {
     expect(texts).not.toContain(
       "Alpha already-carried next — should NOT carry again",
     );
-    // Only the 1 eligible next item should appear
     expect(result.targetSection.items).toHaveLength(1);
   });
-
-  // -----------------------------------------------------------------------
-  // Decision carry-over logic
-  // -----------------------------------------------------------------------
 
   it("carries unresolved decisions (resolvedAt === null)", async () => {
     const target = makeTargetSection(sourceAlpha);
@@ -405,10 +392,6 @@ describe("CarryOverService — contract tests", () => {
     expect(decisionTexts).not.toContain("Resolved decision alpha");
   });
 
-  // -----------------------------------------------------------------------
-  // Deduplication / idempotency
-  // -----------------------------------------------------------------------
-
   it("deduplicates: returns existing execution on second call", async () => {
     const target = makeTargetSection(sourceAlpha);
     const repo = createInMemoryRepository({
@@ -426,20 +409,13 @@ describe("CarryOverService — contract tests", () => {
       targetReportId,
     );
 
-    // Same execution ID returned
     expect(second.execution.id).toBe(first.execution.id);
     expect(second.execution.dedupeKey).toBe(
       `${sourceReportId}:${targetReportId}`,
     );
-    // Idempotent replay returns empty records
     expect(second.records).toHaveLength(0);
-    // First call should have created records
     expect(first.records.length).toBeGreaterThan(0);
   });
-
-  // -----------------------------------------------------------------------
-  // Multi-section / authorId matching
-  // -----------------------------------------------------------------------
 
   it("matches sections by authorId", async () => {
     const targetAlpha = makeTargetSection(sourceAlpha);
@@ -486,10 +462,6 @@ describe("CarryOverService — contract tests", () => {
     expect(result.execution.status).toBe("completed");
   });
 
-  // -----------------------------------------------------------------------
-  // Edge case: empty items/decisions
-  // -----------------------------------------------------------------------
-
   it("empty items/decisions = 0 carried counts", async () => {
     // Source section with only current items and only resolved decisions
     const sourceEmpty: ReportSectionReadModel = makeSection({
@@ -535,7 +507,6 @@ describe("CarryOverService — contract tests", () => {
     expect(result.execution.carriedItemCount).toBe(0);
     expect(result.execution.carriedDecisionCount).toBe(0);
     expect(result.records).toHaveLength(0);
-    // Target section should have no carried items or decisions
     expect(result.targetSection.items).toHaveLength(0);
     expect(result.targetSection.decisions).toHaveLength(0);
   });
@@ -555,7 +526,6 @@ describe("CarryOverService — contract tests", () => {
       targetReportId,
     );
 
-    // Target section now has carried items
     expect(result.targetSection.items.length).toBeGreaterThan(0);
   });
 
@@ -572,7 +542,6 @@ describe("CarryOverService — contract tests", () => {
       targetReportId,
     );
 
-    // All items in target from carry-over should be marked carriedOver
     const carriedItems = result.targetSection.items.filter(
       (i) => i.carriedOver,
     );
@@ -648,7 +617,6 @@ describe("CarryOverService — contract tests", () => {
       expect(record.carriedAt).toBeInstanceOf(Date);
     }
 
-    // Item records have sourceItemId + targetItemId set, decision fields null
     const itemRecords = result.records.filter((r) => r.sourceItemId !== null);
     expect(itemRecords).toHaveLength(2);
     for (const r of itemRecords) {
@@ -657,7 +625,6 @@ describe("CarryOverService — contract tests", () => {
       expect(r.targetDecisionId).toBeNull();
     }
 
-    // Decision records have sourceDecisionId + targetDecisionId set, item fields null
     const decisionRecords = result.records.filter(
       (r) => r.sourceDecisionId !== null,
     );
@@ -668,10 +635,6 @@ describe("CarryOverService — contract tests", () => {
       expect(r.targetItemId).toBeNull();
     }
   });
-
-  // -----------------------------------------------------------------------
-  // Counts/records exclude unmatched source authors (no dangling references)
-  // -----------------------------------------------------------------------
 
   it("source lead with no matching target section does not inflate counts or emit dangling records", async () => {
     // sourceGamma's author has NO section in the target report, so its row
@@ -698,10 +661,6 @@ describe("CarryOverService — contract tests", () => {
       false,
     );
   });
-
-  // -----------------------------------------------------------------------
-  // Write-integrity guard: closed period / read-only section rejected
-  // -----------------------------------------------------------------------
 
   it("rejects carry-over into a published target report (no write)", async () => {
     const repo = createInMemoryRepository({

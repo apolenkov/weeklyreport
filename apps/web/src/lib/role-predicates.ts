@@ -10,25 +10,41 @@ import type { Role } from "@customreport/shared";
  * not absorb server-computed capability flags, and keep these pure — no
  * React, no session access; callers pass their own role operand and keep
  * their own null guards.
+  * @param role - The role argument.
  */
 
 export function isHead(role: Role | null): boolean {
   return role === "head";
 }
 
+/**
+ * Is Admin.
+ * @param role - The role argument.
+ */
 export function isAdmin(role: Role | null): boolean {
   return role === "admin";
 }
 
+/**
+ * Is Lead.
+ * @param role - The role argument.
+ */
 export function isLead(role: Role | null): boolean {
   return role === "lead";
 }
 
+/**
+ * Is Viewer.
+ * @param role - The role argument.
+ */
 export function isViewer(role: Role | null): boolean {
   return role === "viewer";
 }
 
-/** Head or admin — the sessions that act on whole periods and groups. */
+/**
+ * Head or admin — the sessions that act on whole periods and groups.
+ * @param role - The role argument.
+ */
 export function isHeadLike(role: Role | null): boolean {
   return role === "head" || role === "admin";
 }

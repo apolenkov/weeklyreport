@@ -35,6 +35,10 @@ interface RisksSectionProps {
   readonly addSignal?: number;
 }
 
+/**
+ * Risks Section.
+ * @param props - The props argument.
+ */
 export function RisksSection({
   risks,
   readOnly = false,

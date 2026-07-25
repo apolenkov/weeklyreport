@@ -10,6 +10,12 @@ import {
 import type { ReportPeriod } from "../../report-sections";
 
 // Prepend the displayed period when the archive toggle hides it from compiledHistory.
+/**
+ * Derive Viewer Periods.
+ * @param historyEntries - The historyEntries argument.
+ * @param displayed - The displayed argument.
+ * @param reportId - The reportId argument.
+ */
 export function deriveViewerPeriods(
   historyEntries: readonly CompiledHistoryEntry[] | undefined,
   displayed: WeeklyReportGetResponse | undefined,

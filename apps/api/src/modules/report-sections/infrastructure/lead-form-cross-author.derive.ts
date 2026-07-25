@@ -27,6 +27,10 @@ interface ForeignRisk {
  * With no covering risk the persisted traffic is used only as the
  * empty/non-empty base — a persisted yellow/red with no backing risk
  * collapses to green; a null base stays null.
+  * @param stageName - The stageName argument.
+ * @param projectId - The projectId argument.
+ * @param risks - The risks argument.
+ * @param persisted - The persisted argument.
  */
 export function deriveForeignStageStatus(
   stageName: string,
@@ -58,6 +62,10 @@ interface ForeignStatusSection {
   }[];
 }
 
+/**
+ * Index Foreign Sections.
+ * @param sections - The sections argument.
+ */
 export function indexForeignSections(
   sections: readonly ForeignStatusSection[],
 ): {
@@ -88,6 +96,12 @@ interface ForeignAssignmentRow {
   user: { id: string; name: string };
 }
 
+/**
+ * Build Cross Author Status Rows.
+ * @param others - The others argument.
+ * @param statusMap - The statusMap argument.
+ * @param risksByAuthor - The risksByAuthor argument.
+ */
 export function buildCrossAuthorStatusRows(
   others: readonly ForeignAssignmentRow[],
   statusMap: ReadonlyMap<string, TrafficLightStatus>,

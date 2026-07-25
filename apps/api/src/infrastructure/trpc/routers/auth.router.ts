@@ -1,5 +1,8 @@
 import { publicProcedure, router } from "../trpc.middleware.js";
 
+/**
+ * Create Auth Router.
+ */
 export function createAuthRouter() {
   return router({
     me: publicProcedure.query(({ ctx }) => {

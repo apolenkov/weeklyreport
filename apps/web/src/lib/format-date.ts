@@ -24,6 +24,10 @@ const ISO_PIVOT_WEEKDAY_OFFSET = 3;
 const ISO_PIVOT_JANUARY_DAY = 4;
 const ACTIVITY_JUST_NOW_THRESHOLD_SECONDS = 30;
 
+/**
+ * Format Date Time.
+ * @param date - The date argument.
+ */
 export function formatDateTime(date: DateInput): string {
   if (!date) return "\u2014";
   const d = date instanceof Date ? date : new Date(date);
@@ -50,6 +54,10 @@ const MONTHS_SHORT = [
 ];
 
 // Throw on out-of-range rather than a silent "" that would blank the month label.
+/**
+ * Month Short Label.
+ * @param date - The date argument.
+ */
 export function monthShortLabel(date: Date): string {
   const label = MONTHS_SHORT[date.getUTCMonth()];
   if (label === undefined) throw new Error("month index out of range");
@@ -70,6 +78,12 @@ function formatRelativeHours(
   return hours === 1 ? "1h ago" : `${hours}h ago`;
 }
 
+/**
+ * Format Relative Past.
+ * @param date - The date argument.
+ * @param now - The now argument.
+ * @param variant - The variant argument.
+ */
 export function formatRelativePast(
   date: Date,
   now: Date,
@@ -111,6 +125,10 @@ function isoWeekThursday(utcMidnight: Date): Date {
   );
 }
 
+/**
+ * Iso Week Number.
+ * @param date - The date argument.
+ */
 export function isoWeekNumber(date: Date | string): number {
   const d = toDate(date);
   const thursday = isoWeekThursday(
@@ -125,11 +143,20 @@ export function isoWeekNumber(date: Date | string): number {
   return 1 + Math.round(diffMs / MS_PER_WEEK);
 }
 
+/**
+ * Format Week Label.
+ * @param date - The date argument.
+ */
 export function formatWeekLabel(date: Date | string): string {
   return `Week ${isoWeekNumber(date)}`;
 }
 
 // UTC getUTC* accessors prevent off-by-one day shifts in UTC+N timezones.
+/**
+ * Format Period Range.
+ * @param start - The start argument.
+ * @param end - The end argument.
+ */
 export function formatPeriodRange(start: DateInput, end: DateInput): string {
   if (!start || !end) return "\u2014";
   const s = toDate(start);
@@ -144,6 +171,11 @@ export function formatPeriodRange(start: DateInput, end: DateInput): string {
   return `${sMonth} ${sDay}\u2013${eMonth} ${eDay}`;
 }
 
+/**
+ * Format Period Range With Year.
+ * @param start - The start argument.
+ * @param end - The end argument.
+ */
 export function formatPeriodRangeWithYear(
   start: DateInput,
   end: DateInput,
@@ -168,11 +200,21 @@ export function formatPeriodRangeWithYear(
   return `${sMonth} ${sDay}, ${s.getUTCFullYear()}–${eMonth} ${eDay}, ${eYear}`;
 }
 
+/**
+ * Format Period Label.
+ * @param start - The start argument.
+ * @param end - The end argument.
+ */
 export function formatPeriodLabel(start: DateInput, end: DateInput): string {
   if (!start || !end) return "Period unavailable";
   return `${formatWeekLabel(start)}, ${formatPeriodRangeWithYear(start, end)}`;
 }
 
+/**
+ * Join Period Label.
+ * @param weekLabel - The weekLabel argument.
+ * @param dateRange - The dateRange argument.
+ */
 export function joinPeriodLabel(
   weekLabel: string | null | undefined,
   dateRange: string | null | undefined,

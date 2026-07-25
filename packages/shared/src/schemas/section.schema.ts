@@ -40,10 +40,8 @@ export const linkedProductSchema = z.object({
   productName: z.string().min(1),
 });
 
-// Read-model view of one seeded ActivityStatus row (activity name joined for
-// display). `status` is the stored lead-chosen light (nullable to tolerate
-// legacy rows, though seeding defaults it green); `derivedStatus` is the
-// risk/blocker floor the pill actually renders.
+// `status` is the stored lead-chosen light, nullable only to tolerate legacy
+// rows; the pill renders `derivedStatus`, the risk/blocker floor.
 export const sectionActivitySchema = z.object({
   activityId: z.uuid(),
   activityName: z.string().min(1),
@@ -87,10 +85,8 @@ export const itemInputSchema = z.object({
 // Read path tolerates stage-less legacy rows; write path rejects them.
 export const itemReadModelSchema = itemInputSchema.extend({
   stageIds: stageIdsField,
-  // Reviewer comments anchored to this item are surfaced
-  // read-only on the section read path. Optional so the write path
-  // (itemInputSchema) and legacy fixtures never carry it; the client never
-  // round-trips it back (mergeSection drops it on parse).
+  // Read-only: optional so the write path and legacy fixtures never carry it,
+  // and mergeSection drops it on parse rather than round-tripping it back.
   comments: z.array(recordCommentViewSchema).optional(),
 });
 

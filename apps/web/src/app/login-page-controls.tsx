@@ -44,6 +44,10 @@ interface PrimaryCtaProps {
   readonly ssoHref: string;
 }
 
+/**
+ * Primary Cta.
+ * @param props - The props argument.
+ */
 export function PrimaryCta({ authStub, lastRole, ssoHref }: PrimaryCtaProps) {
   return (
     <a
@@ -94,6 +98,10 @@ interface LastRoleCardProps {
 }
 
 // Fixed height via STUB_CARD_CLASSNAME: no collapse CLS; always a role path.
+/**
+ * Last Role Card.
+ * @param props - The props argument.
+ */
 export function LastRoleCard({ lastRoleLoaded, lastRole }: LastRoleCardProps) {
   return !lastRoleLoaded ? (
     <div

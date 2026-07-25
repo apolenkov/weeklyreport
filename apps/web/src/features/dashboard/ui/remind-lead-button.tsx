@@ -66,6 +66,10 @@ const confirmStateFromDispatch = (result: {
 };
 
 // Client never sees lead emails — backend resolves rule, recipient, and dedupe.
+/**
+ * Remind Lead Button.
+ * @param props - The props argument.
+ */
 export function RemindLeadButton({
   reportId,
   leadId,

@@ -54,16 +54,9 @@ function deriveHistoryStats(entries: readonly HistoryEntry[]) {
   };
 }
 
-/**
- * Right-rail companion for the lead history page. Three stacked cards —
- * My History Summary, Submission Status, Quick Filters — turn the history
- * page from a flat archive into a working surface. We ship the first two
- * (stats + pattern); Quick Filters are deferred until the parent page owns
- * filter state worth wiring.
- *
- * All numbers are derived from `entries` so the sidebar stays a pure
- * presentational fork of the same query result the list uses.
- */
+// Every number is derived from `entries`, so the rail stays a pure
+// presentational fork of the same query result the list renders — no second
+// fetch to keep in sync.
 export function LeadHistorySidebar({
   entries,
   summaryTitle = "My History Summary",

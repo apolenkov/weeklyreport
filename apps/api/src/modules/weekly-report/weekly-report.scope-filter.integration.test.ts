@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
@@ -9,10 +9,10 @@ import {
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
 import type { WeeklyReportScopeSession } from "./weekly-report.service";
 
-// Portfolio ownership comes from GroupProduct (B1: one product per group), not lead.reportingGroupId.
+// Portfolio ownership comes from GroupProduct (B1: one group per product), not lead.reportingGroupId.
 describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integration)", () => {
   const prisma = createTestPrisma();
-  let repo: WeeklyReportPrismaRepository;
+  const repo = new WeeklyReportPrismaRepository(prisma as never);
 
   // Fixed UUIDs — version digit [1-8] in pos 13, variant [89ab] in pos 17.
   const GROUP_A_ID = "a0000000-0000-4000-a000-0000000000a1";
@@ -33,10 +33,6 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
       reportingGroupId,
     };
   }
-
-  beforeAll(() => {
-    repo = new WeeklyReportPrismaRepository(prisma as never);
-  });
 
   beforeEach(async () => {
     await cleanDatabase(prisma);

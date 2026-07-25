@@ -18,6 +18,8 @@ export interface UnresolvedGroupLogger {
  * pre-resolved with the recipient leads (those whose ReportSection for
  * the rule's reportId is still 'draft' status). Rules without a reportId
  * are skipped — they have no concrete deadline to remind about.
+  * @param prisma - The prisma argument.
+ * @param now - The now argument.
  */
 export async function queryDueDeadlineRules(
   prisma: PrismaService,
@@ -92,6 +94,9 @@ export async function queryDueDeadlineRules(
  * `isActive`); leads whose group has no resolvable active head are logged and
  * dropped. Resolution is independent of `Report.publishedBy` — escalation
  * fires while leads are still in `draft`, before any publish.
+  * @param prisma - The prisma argument.
+ * @param now - The now argument.
+ * @param logger - The logger argument.
  */
 export async function queryDueEscalationRules(
   prisma: PrismaService,

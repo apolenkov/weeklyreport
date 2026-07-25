@@ -15,14 +15,8 @@ const failIfProvisioned: ProvisionLeadWorkspace = vi.fn(() => {
   throw new Error("provisionLeadWorkspace must not be called in this scenario");
 });
 
-/**
- * Admin SAML login regression test.
- *
- * `SamlProfile.role` is typed as `DbRole` and flows uncast into
- * `prisma.user.create`; the Prisma `Role` enum includes `admin`, so the
- * session must round-trip the 'admin' role through to UserSession without a
- * runtime enum error.
- */
+// `SamlProfile.role` flows uncast into `prisma.user.create`, so 'admin' must
+// round-trip into UserSession without a runtime Prisma enum error.
 describe("buildUserSession — admin SAML login", () => {
   function fakePrisma(opts: {
     existingUser?: {
@@ -115,7 +109,6 @@ describe("buildUserSession — admin SAML login", () => {
     expect(session.role).toBe("admin");
     expect(session.email).toBe("admin@customreport.local");
     expect(session.reportingGroupName).toBe("Software Development");
-    // The Prisma create call must have received role='admin' verbatim
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     const createMock = prisma.user.create as unknown as ReturnType<
       typeof vi.fn
@@ -171,10 +164,9 @@ describe("buildUserSession — admin SAML login", () => {
         samlId: "old-saml-id",
       },
     });
-    // samlId matches the stored row: this test is about the create-only
-    // invariant, not identity matching (that has its own describe block
-    // below) — a mismatched samlId here would be a refusal, not a
-    // silent accept.
+    // samlId deliberately matches the stored row: this pins the create-only
+    // invariant, not identity matching (a mismatch is refused, not accepted —
+    // covered by its own describe block below).
     const profile: SamlProfile = {
       samlId: "old-saml-id",
       email: "admin@customreport.local",
@@ -184,10 +176,8 @@ describe("buildUserSession — admin SAML login", () => {
 
     const session = await buildUserSession(prisma, profile, failIfProvisioned);
 
-    // Session reflects the EXISTING row, not the SAML profile.
     expect(session.role).toBe("admin");
     expect(session.name).toBe("Old Name");
-    // The existing row is returned untouched: no write of any kind.
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     const updateMock = prisma.user.update as unknown as ReturnType<
       typeof vi.fn
@@ -198,7 +188,6 @@ describe("buildUserSession — admin SAML login", () => {
     >;
     expect(updateMock).not.toHaveBeenCalled();
     expect(createMock).not.toHaveBeenCalled();
-    // No admin section auto-creation (admin is not a lead)
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     const createSection = prisma.reportSection.create as unknown as ReturnType<
       typeof vi.fn
@@ -239,10 +228,9 @@ describe("buildUserSession — admin SAML login", () => {
   });
 });
 
-// Concurrency regression: two first-logins of the same NEW identity both miss
-// the fast-path find and both reach `prisma.user.create`, colliding on the
-// `email`/`samlId` unique index. The loser must catch that P2002, re-read the
-// winner's row, and return an identical session — never throw a 500.
+// Two concurrent first-logins of the same NEW identity both miss the fast-path
+// find and collide on the `email`/`samlId` unique index; the loser must catch
+// P2002, re-read the winner's row and return that session, never a 500.
 describe("buildUserSession — first-login create race (P2002 reread)", () => {
   const WINNER = {
     id: "winner-user-id",
@@ -307,8 +295,6 @@ describe("buildUserSession — first-login create race (P2002 reread)", () => {
 
     expect(session.userId).toBe("winner-user-id");
     expect(session.email).toBe("racer@customreport.local");
-    // The losing create was attempted exactly once; the re-read found the winner
-    // (2 fast-path finds + 1 catch-branch re-read).
     expect(create).toHaveBeenCalledTimes(1);
     expect(findFirst).toHaveBeenCalledTimes(3);
   });
@@ -349,10 +335,8 @@ describe("buildUserSession — first-login create race (P2002 reread)", () => {
   });
 });
 
-// A reused email pointing at a different IdP identity must not silently
-// inherit the old account's role/group: an email match with a mismatched
-// samlId is refused, not accepted. The "reused email" case below pins that
-// refusal.
+// A reused email pointing at a different IdP identity must not inherit the old
+// account's role/group: an email match with a mismatched samlId is refused.
 describe("buildUserSession — samlId identity cross-check", () => {
   const EXISTING_USER = {
     id: "existing-user-id",

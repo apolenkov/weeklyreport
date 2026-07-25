@@ -78,6 +78,10 @@ function ViewerSlidesView({
 }
 
 // Status-entry race recovers once via /reports/latest; direct/History failures are terminal.
+/**
+ * Viewer Report Shell.
+ * @param props - The props argument.
+ */
 export function ViewerReportShell({
   reportId,
   mode,

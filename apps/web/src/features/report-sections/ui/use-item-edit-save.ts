@@ -33,6 +33,10 @@ interface UseItemEditSaveArgs {
   readonly onSave: (next: KanbanItem) => void;
 }
 
+/**
+ * Use Item Edit Save.
+ * @param args - The args argument.
+ */
 export function useItemEditSave(args: UseItemEditSaveArgs) {
   function setParentAndStages(nextParent: RecordParent) {
     args.setParent(nextParent);

@@ -174,7 +174,6 @@ describe("ReportSectionsService — getActiveSection", () => {
     );
     const result = await service.getActiveSection(SECTION_ID);
 
-    // All required fields present and typed correctly
     expect(typeof result.reportSectionId).toBe("string");
     expect(typeof result.reportId).toBe("string");
     expect(Array.isArray(result.projects)).toBe(true);
@@ -699,7 +698,6 @@ describe("ReportSectionsService — multi-project", () => {
       testGraceSettings,
     );
 
-    // Only provide traffic light for one project
     await expect(
       service.submitSection({
         reportSectionId: SECTION_ID,
@@ -720,7 +718,6 @@ describe("ReportSectionsService — multi-project", () => {
       testGraceSettings,
     );
 
-    // Only provide current item for project 1
     await expect(
       service.submitSection({
         reportSectionId: SECTION_ID,

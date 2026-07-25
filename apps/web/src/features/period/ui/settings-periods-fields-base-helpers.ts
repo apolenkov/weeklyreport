@@ -7,6 +7,11 @@ export const DEFAULT_DEADLINE_DAYS = {
 export const GRACE_PERIOD_HOURS = { min: 0, max: 168, fallback: 0 } as const;
 export const AUTO_ARCHIVE_WEEKS = { min: 0, max: 52, fallback: 0 } as const;
 
+/**
+ * Bounded Integer.
+ * @param raw - The raw argument.
+ * @param bounds - The bounds argument.
+ */
 export function boundedInteger(
   raw: string,
   bounds: {

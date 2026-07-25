@@ -190,6 +190,10 @@ function StagesRow({
   );
 }
 
+/**
+ * Sdlc Product Card.
+ * @param props - The props argument.
+ */
 export function SdlcProductCard({
   product,
   view,

@@ -18,6 +18,8 @@ const ID_TEXT_FRAGMENT_LENGTH = 8;
  *
  * Each item's display status flows through `deriveItemStatus`.
  * Product name is resolved via `section.projects[i].projectName`.
+  * @param section - The section argument.
+ * @param itemType - The itemType argument.
  */
 export function mapLeadItems(
   section: ReportSectionReadModel,

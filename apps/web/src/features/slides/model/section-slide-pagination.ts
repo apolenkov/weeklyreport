@@ -1,5 +1,9 @@
 import type { SectionSlideModel, SlideTone } from "./section-slide-contracts";
 
+/**
+ * Sort Slides For Review.
+ * @param slides - The slides argument.
+ */
 export function sortSlidesForReview(
   slides: readonly SectionSlideModel[],
 ): SectionSlideModel[] {

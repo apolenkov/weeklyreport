@@ -102,6 +102,13 @@ function carryEntryForAuthor(
 }
 
 // Only authors with a target section; activity-parented needs re-attachment.
+/**
+ * Plan Carried Entries.
+ * @param sourceSections - The sourceSections argument.
+ * @param targetSections - The targetSections argument.
+ * @param sourceReportId - The sourceReportId argument.
+ * @param targetReportId - The targetReportId argument.
+ */
 export function planCarriedEntries(
   sourceSections: readonly ReportSectionReadModel[],
   targetSections: readonly ReportSectionReadModel[],
@@ -128,6 +135,11 @@ export function planCarriedEntries(
 
 // Merge carried rows into every matched target section (not just the first),
 // so the repository persists each lead's carried items/decisions.
+/**
+ * Merge Carried Into Targets.
+ * @param targetSections - The targetSections argument.
+ * @param carriedByAuthor - The carriedByAuthor argument.
+ */
 export function mergeCarriedIntoTargets(
   targetSections: readonly ReportSectionReadModel[],
   carriedByAuthor: readonly CarriedAuthorEntry[],
@@ -153,6 +165,10 @@ export function mergeCarriedIntoTargets(
   });
 }
 
+/**
+ * Carried Counts.
+ * @param entries - The entries argument.
+ */
 export function carriedCounts(entries: readonly CarriedAuthorEntry[]): {
   items: number;
   decisions: number;
@@ -166,6 +182,10 @@ export function carriedCounts(entries: readonly CarriedAuthorEntry[]): {
   };
 }
 
+/**
+ * Collect Carry Over Records.
+ * @param entries - The entries argument.
+ */
 export function collectCarryOverRecords(
   entries: readonly CarriedAuthorEntry[],
 ): CarryOverRecord[] {
@@ -177,6 +197,10 @@ export function collectCarryOverRecords(
   ];
 }
 
+/**
+ * Build Carry Over Execution.
+ * @param input - The input argument.
+ */
 export function buildCarryOverExecution(input: {
   sourceReportId: string;
   targetReportId: string;

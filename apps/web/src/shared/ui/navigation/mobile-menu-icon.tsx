@@ -1,3 +1,6 @@
+/**
+ * Mobile Menu Icon.
+ */
 export function MobileMenuIcon() {
   return (
     <svg

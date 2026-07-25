@@ -13,6 +13,10 @@ import { TELEGRAM_ADAPTER, type TelegramAdapter } from "./telegram.adapter.js";
 import { TelegramProcessor } from "./telegram.queue.js";
 
 // Token unset → mock. Token set → fail loud (never silent-mock real delivery).
+/**
+ * Select Telegram Adapter.
+ * @param env - The env argument.
+ */
 export function selectTelegramAdapter(env: EnvConfig): TelegramAdapter {
   if (!isTelegramConfigured(env)) {
     return new MockTelegramAdapter();

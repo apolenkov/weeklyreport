@@ -18,6 +18,10 @@ interface ReportShellUrlState {
 // Shared head/viewer report-shell URL state. stripParams is wiped on every
 // setter call — viewer passes ["source","recovery"] so a later NOT_FOUND is
 // not misread as Status navigation bouncing back to the Status target.
+/**
+ * Use Report Shell Url State.
+ * @param options - The options argument.
+ */
 export function useReportShellUrlState({
   stripParams,
 }: {

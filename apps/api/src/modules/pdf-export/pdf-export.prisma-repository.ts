@@ -165,6 +165,10 @@ function toExportJob(row: {
   };
 }
 
+/**
+ * To Assembled Report.
+ * @param report - The report argument.
+ */
 export function toAssembledReport(
   report: Prisma.ReportGetPayload<{ include: typeof reportFullInclude }>,
 ): AssembledReport {

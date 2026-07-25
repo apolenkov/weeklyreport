@@ -151,6 +151,10 @@ function DecisionsList({
   );
 }
 
+/**
+ * Decisions Section.
+ * @param props - The props argument.
+ */
 export function DecisionsSection(props: DecisionsSectionProps) {
   const editing = useDecisionsEditing(props);
   const { dialogState, pendingDelete } = editing;

@@ -75,6 +75,10 @@ function useStallRecovery(input: RecoveryEffectInput) {
   }, [fetchStatus, name, refetch, setStalled, settled, stalled, status]);
 }
 
+/**
+ * Use Dashboard Query Recovery.
+ * @param props - The props argument.
+ */
 export function useDashboardQueryRecovery({
   fetchStatus,
   hasData,

@@ -39,6 +39,10 @@ function reminderDescription(rule: AdminReminderRule): string {
   }
 }
 
+/**
+ * Map Reminder.
+ * @param api - The api argument.
+ */
 export function mapReminder(api: AdminReminderRule): MockReminder {
   return {
     id: api.id,

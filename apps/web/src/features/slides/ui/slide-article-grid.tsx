@@ -172,7 +172,8 @@ function SubsectionRow({
 
 /** One product card: status stripe + dot + name, then product-level and
  * per-project subsections on the shared grid. A product with no records this
- * period renders as a collapsed dashed row. */
+ * period renders as a collapsed dashed row.  * @param options - The options argument.
+ */
 export function SlideProductCard({
   card,
   authorsById,

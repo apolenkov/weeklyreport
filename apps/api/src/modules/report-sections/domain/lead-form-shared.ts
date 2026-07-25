@@ -176,6 +176,10 @@ export type ReopenBlockedReason =
   | "pending_request_exists";
 
 // Shared by canRequestReopen UI and requestReopen guard — check archived first.
+/**
+ * Compute Reopen Eligibility.
+ * @param facts - The facts argument.
+ */
 export function computeReopenEligibility(facts: ReopenEligibilityFacts): {
   canRequestReopen: boolean;
   reason: ReopenBlockedReason | null;
@@ -195,6 +199,10 @@ export function computeReopenEligibility(facts: ReopenEligibilityFacts): {
   return { canRequestReopen: true, reason: null };
 }
 
+/**
+ * Reopen Blocked Message.
+ * @param reason - The reason argument.
+ */
 export function reopenBlockedMessage(reason: ReopenBlockedReason): string {
   switch (reason) {
     case "not_submitted":
@@ -209,6 +217,10 @@ export function reopenBlockedMessage(reason: ReopenBlockedReason): string {
 }
 
 // Server-side initials so full name never crosses the status-only API boundary.
+/**
+ * Initials From Name.
+ * @param name - The name argument.
+ */
 export function initialsFromName(name: string): string {
   return name
     .trim()

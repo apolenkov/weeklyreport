@@ -21,6 +21,10 @@ interface RemindersTabProps {
   readonly defaultTimezone: string;
 }
 
+/**
+ * Reminders Tab.
+ * @param props - The props argument.
+ */
 export function RemindersTab({
   policies,
   derivedRulesByPolicyId,

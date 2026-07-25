@@ -68,6 +68,10 @@ function PolicyFormActions({
   );
 }
 
+/**
+ * Policy Form Footer.
+ * @param props - The props argument.
+ */
 export function PolicyFormFooter({
   form,
   onChange,

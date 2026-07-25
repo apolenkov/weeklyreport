@@ -1,25 +1,6 @@
-/**
- * SAML signature integration tests using a samlify mock IdP.
- *
- * The live smoke test covers construction and metadata generation. Signed
- * assertion validation and tamper rejection remain explicit deferred cases
- * because the installed crypto stack cannot currently mint a response.
- *
- * Cert-pinning + replay-rejection (validateInResponseTo) are config-level
- * concerns enforced by `@node-saml/passport-saml` itself in production
- * (assertion-level cert pin, in-memory request-id cache). saml.strategy.test.ts
- * asserts the production config sets `idpCert: env.KEYCLOAK_SAML_CERT`,
- * `wantAssertionsSigned: true`, `wantAuthnResponseSigned: true`, and
- * `validateInResponseTo: 'always'` — i.e. the spec-required security
- * primitives are wired. samlify is permissive about embedded KeyInfo certs
- * (it trusts them by default) so cert-pinning isn't observable through the
- * mock; the strategy-options test is the right level for that claim.
- *
- * Fixtures: idp-cert.pem / idp-key.pem (RSA-2048, self-signed, 100-year
- * validity) + sp-cert.pem / sp-key.pem under __fixtures__/saml/. Generated
- * once via `openssl req -x509 -newkey rsa:2048 -nodes -days 36500`. Not
- * real secrets — labelled CN=customreport-test-{idp,sp}.
- */
+// SAML signature tests against a samlify mock IdP. The __fixtures__/saml keys
+// are self-signed CN=customreport-test-{idp,sp} throwaways, not real secrets.
+// Cert-pinning and replay rejection are asserted in saml.strategy.test.ts.
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,10 +8,9 @@ import { fileURLToPath } from "node:url";
 import samlify from "samlify";
 import { describe, expect, it } from "vitest";
 
-// `validator` shipped by samlify is required-but-not-bundled to avoid the
-// xmldom transitive surface. We swap in a permissive validator for tests
-// because the assertion XML we mint is well-formed by construction; the
-// security check we care about is signature validation, not XSD shape.
+// samlify requires a `validator` it does not bundle. A permissive one is fine
+// here: the minted assertion XML is well-formed by construction and the check
+// under test is signature validation, not XSD shape.
 const noopValidator = {
   validate: () => Promise.resolve("skipped"),
 };

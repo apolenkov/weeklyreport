@@ -202,10 +202,6 @@ describe("reminder rule domain mapping and deduplication", () => {
   });
 });
 
-// -----------------------------------------------------------------------
-// kind='deadline' payload ⇒ extended dedupe-key.
-// -----------------------------------------------------------------------
-
 describe("deadline payload — extended dedupe-key shape", () => {
   const deadlinePayload = {
     kind: "deadline" as const,
@@ -315,11 +311,8 @@ describe("deadline payload — extended dedupe-key shape", () => {
   });
 });
 
-// -----------------------------------------------------------------------
 // Enqueue is gated on the atomic insert's `inserted` flag: a caller that did
 // NOT create the row (a concurrent duplicate tick) must enqueue nothing.
-// -----------------------------------------------------------------------
-
 describe("requestReminderExecution — enqueue gated on insert", () => {
   function buildRepo(inserted: boolean): RemindersRepository {
     const existing: AdminReminderExecution = {
@@ -419,13 +412,9 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
   });
 });
 
-// -----------------------------------------------------------------------
-// A terminally failed cycle must stay manually retriable: with the unified
-// dedupe key, the failed row IS the manual re-dispatch's dedupe hit, so the
-// service revives it (atomic failed→queued) and enqueues a fresh job. A row
-// in any other state, or a lost revival CAS, keeps the plain dedup return.
-// -----------------------------------------------------------------------
-
+// A failed row IS the manual re-dispatch's dedupe hit under the unified key, so
+// the service revives it (atomic failed→queued) and enqueues a fresh job. Any
+// other state, or a lost revival CAS, keeps the plain dedup return.
 describe("requestReminderExecution — failed execution revival", () => {
   function buildFailedRepo(opts: {
     status: AdminReminderExecution["status"];
@@ -550,12 +539,9 @@ describe("requestReminderExecution — failed execution revival", () => {
   });
 });
 
-// -----------------------------------------------------------------------
-// A synchronous enqueue throw (Redis down) must NOT leave a committed `queued`
-// row with no job: the execution is marked `failed`, and the throw does not
-// propagate past the recipient boundary so the scheduler tick continues.
-// -----------------------------------------------------------------------
-
+// A synchronous enqueue throw must NOT leave a committed `queued` row with no
+// job: the execution is marked `failed`, and the throw does not propagate past
+// the recipient boundary so the scheduler tick continues.
 describe("requestReminderExecution — enqueue failure is recorded, not swallowed", () => {
   function buildRepoCapturingFailures(failures: [string, string][]) {
     return {

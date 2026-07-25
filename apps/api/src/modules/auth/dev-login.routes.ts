@@ -50,6 +50,11 @@ const readQueryParam = (value: unknown): string | undefined =>
 // `redirect=@evil.com` made `frontendUrl + value` reparse to host evil.com.
 // Returns null when the value is absent, off-origin, or malformed; the leading
 // `//` / `\` rejections are cheap defence-in-depth, not the primary gate.
+/**
+ * Safe Redirect Path.
+ * @param candidate - The candidate argument.
+ * @param frontendUrl - The frontendUrl argument.
+ */
 export function safeRedirectPath(
   candidate: string | undefined,
   frontendUrl: string,
@@ -68,6 +73,12 @@ export function safeRedirectPath(
 
 // Validate and build from the SAME parse (see safeRedirectPath) so a value
 // cannot pass the origin gate yet resolve off-origin at the sink.
+/**
+ * Resolve Dev Login Redirect Url.
+ * @param candidate - The candidate argument.
+ * @param fallbackPath - The fallbackPath argument.
+ * @param frontendUrl - The frontendUrl argument.
+ */
 export function resolveDevLoginRedirectUrl(
   candidate: string | undefined,
   fallbackPath: string,
@@ -101,6 +112,12 @@ function handleDevSamlLoginRedirect(
 // Resolves to an EXISTING seeded user (role's canonical email, or an explicit
 // `?email=`); an unknown email returns null so the caller fails clearly rather
 // than fabricating a phantom user from hardcoded defaults.
+/**
+ * Resolve Dev Login Identity.
+ * @param prisma - The prisma argument.
+ * @param role - The role argument.
+ * @param query - The query argument.
+ */
 export async function resolveDevLoginIdentity(
   prisma: PrismaClient,
   role: DbRole,
@@ -176,6 +193,11 @@ function createDevLoginHandler(deps: DevLoginDeps): RequestHandler {
 // The GET /auth/saml/login dev shortcut is registered here INSTEAD of the
 // production passport handler (Express first-match), so the two are mutually
 // exclusive by construction.
+/**
+ * Mount Dev Login Routes.
+ * @param expressApp - The expressApp argument.
+ * @param deps - The deps argument.
+ */
 export function mountDevLoginRoutes(
   expressApp: Express,
   deps: DevLoginDeps,

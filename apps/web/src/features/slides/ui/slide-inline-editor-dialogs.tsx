@@ -51,24 +51,40 @@ interface SlideInlineEditorDialogsProps {
   readonly onCancelDelete: () => void;
 }
 
+/**
+ * Get Active Item Record.
+ * @param record - The record argument.
+ */
 export function getActiveItemRecord(
   record: SlideInlineEditRecord | null,
 ): SlideInlineItemRecord | null {
   return record?.kind === "item" ? record : null;
 }
 
+/**
+ * Get Active Risk Record.
+ * @param record - The record argument.
+ */
 export function getActiveRiskRecord(
   record: SlideInlineEditRecord | null,
 ): SlideInlineRiskRecord | null {
   return record?.kind === "risk" ? record : null;
 }
 
+/**
+ * Get Active Decision Record.
+ * @param record - The record argument.
+ */
 export function getActiveDecisionRecord(
   record: SlideInlineEditRecord | null,
 ): SlideInlineDecisionRecord | null {
   return record?.kind === "decision" ? record : null;
 }
 
+/**
+ * Slide Inline Editor Dialogs.
+ * @param props - The props argument.
+ */
 export function SlideInlineEditorDialogs({
   inlineEditRecord,
   pendingDeleteRecord,

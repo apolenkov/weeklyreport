@@ -34,6 +34,10 @@ export interface DecisionDialogModel {
 
 // Parent is product or activity; seeded from the row (edit) or default product
 // / first activity (create). Shared seed rule with item/risk dialogs.
+/**
+ * Initial Decision Parent.
+ * @param args - The args argument.
+ */
 export function initialDecisionParent(
   args: UseDecisionEditDialogArgs,
 ): RecordParent {
@@ -44,6 +48,12 @@ export function initialDecisionParent(
   );
 }
 
+/**
+ * Derive Decision Dialog Model.
+ * @param args - The args argument.
+ * @param parent - The parent argument.
+ * @param stageIds - The stageIds argument.
+ */
 export function deriveDecisionDialogModel(
   args: UseDecisionEditDialogArgs,
   parent: RecordParent,

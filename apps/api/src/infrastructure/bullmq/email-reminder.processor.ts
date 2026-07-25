@@ -18,38 +18,43 @@ import {
 // Legacy (kind absent) jobs pre-date the template renderer and send plaintext
 // with a hardcoded brand; deadline/escalation jobs render react-email templates
 // and carry the enqueue-time organization snapshot.
+interface LegacyReminderPayload {
+  executionId: string;
+  recipientEmail: string;
+  reportPeriod: string;
+}
+
+interface DeadlineReminderPayload {
+  executionId: string;
+  recipientEmail: string;
+  kind: "deadline";
+  leadName: string;
+  reportPeriod: string;
+  deadlineIso: string;
+  sectionUrl: string;
+  organization: OrganizationBrand;
+}
+
+interface EscalationReminderPayload {
+  executionId: string;
+  recipientEmail: string;
+  kind: "escalation";
+  headName: string;
+  cycleDate: string;
+  reportPeriod: string;
+  lateLeads: readonly {
+    leadName: string;
+    sectionTitle: string;
+    deadlineIso: string;
+  }[];
+  organization: OrganizationBrand;
+}
+
 export type EmailReminderJobData = JobTraceContext &
-  (
-    | {
-        executionId: string;
-        recipientEmail: string;
-        reportPeriod: string;
-      }
-    | {
-        executionId: string;
-        recipientEmail: string;
-        kind: "deadline";
-        leadName: string;
-        reportPeriod: string;
-        deadlineIso: string;
-        sectionUrl: string;
-        organization: OrganizationBrand;
-      }
-    | {
-        executionId: string;
-        recipientEmail: string;
-        kind: "escalation";
-        headName: string;
-        cycleDate: string;
-        reportPeriod: string;
-        lateLeads: readonly {
-          leadName: string;
-          sectionTitle: string;
-          deadlineIso: string;
-        }[];
-        organization: OrganizationBrand;
-      }
-  );
+  (LegacyReminderPayload | DeadlineReminderPayload | EscalationReminderPayload);
+
+// null means "use the SMTP_FROM env default".
+type FromOverride = string | null;
 
 /** BullMQ worker for the email-reminder queue. */
 @Injectable()
@@ -95,10 +100,9 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
   protected async processJob(job: Job<EmailReminderJobData>): Promise<void> {
     const { executionId } = job.data;
 
-    // Compare-and-set the execution `queued → sending` before any SMTP work.
-    // A retry, a duplicate worker, or an admin `job.retry()` that finds the row
-    // already claimed loses the transition and acks without sending — the guard
-    // against double-delivery.
+    // Compare-and-set `queued → sending` before any SMTP work: a retry or a
+    // duplicate worker that finds the row already claimed loses the transition
+    // and acks without sending — the guard against double-delivery.
     const claimed =
       await this.remindersService.claimExecutionForSending(executionId);
     if (!claimed) {
@@ -111,20 +115,13 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     try {
       await this.dispatchEmail(job.data);
     } catch (error: unknown) {
-      // Dispatch failed — the send never happened, so the row must not stay
-      // permanently `sending`. On the final attempt there is no retry left to
-      // re-claim it, so `failed` is terminal and correct. On any earlier
-      // attempt, release the claim back to the pre-claim status so BullMQ's
-      // retry can call claimExecutionForSending again and actually resend;
-      // marking it `failed` here would defeat the retry (the CAS only
-      // matches the pre-claim status).
+      // The send never happened, so the row must not stay `sending`. On the
+      // last attempt `failed` is terminal; earlier, release the claim back to
+      // the pre-claim status the retry's CAS matches, or the retry cannot send.
       const message = error instanceof Error ? error.message : String(error);
       const maxAttempts = job.opts.attempts ?? 1;
-      // This catch runs INSIDE the processor, before BullMQ's moveToFailed
-      // increments attemptsMade — so the counter still excludes the attempt
-      // that just failed and needs the +1. The pdf-export processor checks in
-      // a worker 'failed' event handler instead, which fires AFTER the
-      // increment and must compare without it.
+      // This catch runs before BullMQ's moveToFailed increments attemptsMade,
+      // so the counter still excludes the attempt that just failed — hence +1.
       if (job.attemptsMade + 1 >= maxAttempts) {
         await this.remindersService.markReminderFailed(executionId, message);
       } else {
@@ -133,11 +130,9 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
       throw error;
     }
 
-    // Outside the try/catch on purpose: if this throws, the send already
-    // succeeded and the row should stay `sending` rather than being marked
-    // `failed` (which would invite a duplicate resend) or `sent` (which
-    // would be a lie if the write never lands). `sending` here reads as
-    // "delivered, persistence unconfirmed — needs investigation."
+    // Outside the try/catch on purpose: if this throws the send already
+    // succeeded, and leaving the row `sending` reads as "delivered,
+    // persistence unconfirmed" — better than `failed`, which invites a resend.
     await this.remindersService.markReminderSent(executionId);
   }
 
@@ -146,61 +141,82 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
       .notificationFromEmail;
 
     if ("kind" in data && data.kind === "deadline") {
-      const rendered = await renderEmail({
-        kind: "deadline",
-        props: {
-          leadName: data.leadName,
-          reportPeriod: data.reportPeriod,
-          deadlineIso: data.deadlineIso,
-          sectionUrl: data.sectionUrl,
-          organization: data.organization,
-        },
-      });
-      await this.emailService.sendMailMultipart(
-        data.recipientEmail,
-        rendered.subject,
-        rendered.html,
-        rendered.text,
-        fromOverride,
-      );
+      await this.sendDeadlineReminder(data, fromOverride);
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- job data is an external BullMQ-queue boundary; the kind check guards against unexpected/corrupt payloads though the narrowed union types it as always-escalation
     } else if ("kind" in data && data.kind === "escalation") {
-      const rendered = await renderEmail({
-        kind: "escalation",
-        props: {
-          headName: data.headName,
-          cycleDate: data.cycleDate,
-          reportPeriod: data.reportPeriod,
-          lateLeads: data.lateLeads,
-          organization: data.organization,
-        },
-      });
-      await this.emailService.sendMailMultipart(
-        data.recipientEmail,
-        rendered.subject,
-        rendered.html,
-        rendered.text,
-        fromOverride,
-      );
+      await this.sendEscalationReminder(data, fromOverride);
     } else {
-      // Legacy plaintext path — preserved verbatim for follow-up reminders that
-      // pre-date the template renderer; brand stays hardcoded on this branch.
-      const subject = "Reminder: Weekly Status Report Due";
-      const body = [
-        "Hello,",
-        "",
-        `This is a reminder to fill in your section for the status report period: ${data.reportPeriod}.`,
-        "",
-        "Please log in and submit your section before the deadline.",
-        "",
-        "Thank you.",
-      ].join("\n");
-      await this.emailService.sendMail(
-        data.recipientEmail,
-        subject,
-        body,
-        fromOverride,
-      );
+      await this.sendLegacyReminder(data, fromOverride);
     }
+  }
+
+  private async sendDeadlineReminder(
+    data: DeadlineReminderPayload,
+    fromOverride: FromOverride,
+  ): Promise<void> {
+    const rendered = await renderEmail({
+      kind: "deadline",
+      props: {
+        leadName: data.leadName,
+        reportPeriod: data.reportPeriod,
+        deadlineIso: data.deadlineIso,
+        sectionUrl: data.sectionUrl,
+        organization: data.organization,
+      },
+    });
+    await this.emailService.sendMailMultipart(
+      data.recipientEmail,
+      rendered.subject,
+      rendered.html,
+      rendered.text,
+      fromOverride,
+    );
+  }
+
+  private async sendEscalationReminder(
+    data: EscalationReminderPayload,
+    fromOverride: FromOverride,
+  ): Promise<void> {
+    const rendered = await renderEmail({
+      kind: "escalation",
+      props: {
+        headName: data.headName,
+        cycleDate: data.cycleDate,
+        reportPeriod: data.reportPeriod,
+        lateLeads: data.lateLeads,
+        organization: data.organization,
+      },
+    });
+    await this.emailService.sendMailMultipart(
+      data.recipientEmail,
+      rendered.subject,
+      rendered.html,
+      rendered.text,
+      fromOverride,
+    );
+  }
+
+  // Legacy plaintext path — preserved verbatim for follow-up reminders that
+  // pre-date the template renderer; brand stays hardcoded on this branch.
+  private async sendLegacyReminder(
+    data: LegacyReminderPayload,
+    fromOverride: FromOverride,
+  ): Promise<void> {
+    const subject = "Reminder: Weekly Status Report Due";
+    const body = [
+      "Hello,",
+      "",
+      `This is a reminder to fill in your section for the status report period: ${data.reportPeriod}.`,
+      "",
+      "Please log in and submit your section before the deadline.",
+      "",
+      "Thank you.",
+    ].join("\n");
+    await this.emailService.sendMail(
+      data.recipientEmail,
+      subject,
+      body,
+      fromOverride,
+    );
   }
 }

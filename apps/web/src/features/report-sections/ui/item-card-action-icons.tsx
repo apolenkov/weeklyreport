@@ -1,5 +1,8 @@
 "use client";
 
+/**
+ * Edit Icon.
+ */
 export function EditIcon() {
   return (
     <svg
@@ -16,6 +19,9 @@ export function EditIcon() {
   );
 }
 
+/**
+ * Delete Icon.
+ */
 export function DeleteIcon() {
   return (
     <svg
@@ -31,6 +37,9 @@ export function DeleteIcon() {
   );
 }
 
+/**
+ * Check Icon.
+ */
 export function CheckIcon() {
   return (
     <svg
@@ -46,6 +55,9 @@ export function CheckIcon() {
   );
 }
 
+/**
+ * Arrow Right Icon.
+ */
 export function ArrowRightIcon() {
   return (
     <svg
@@ -61,6 +73,9 @@ export function ArrowRightIcon() {
   );
 }
 
+/**
+ * Arrow Left Icon.
+ */
 export function ArrowLeftIcon() {
   return (
     <svg
@@ -76,6 +91,9 @@ export function ArrowLeftIcon() {
   );
 }
 
+/**
+ * Pause Icon.
+ */
 export function PauseIcon() {
   return (
     <svg

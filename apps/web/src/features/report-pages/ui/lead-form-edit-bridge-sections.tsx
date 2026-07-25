@@ -25,6 +25,10 @@ interface LeadFormEditBridgeSectionsProps {
 }
 
 // The accordions stay inside the Provider so `.Pipeline` / `.Risks` keep context.
+/**
+ * Lead Form Edit Bridge Sections.
+ * @param props - The props argument.
+ */
 export function LeadFormEditBridgeSections({
   viewModel,
   actions,

@@ -36,6 +36,10 @@ interface LeadFormToolbarControlsProps {
   readonly setGroupExpanded: (update: (prev: boolean) => boolean) => void;
 }
 
+/**
+ * Lead Form Toolbar Controls.
+ * @param props - The props argument.
+ */
 export function LeadFormToolbarControls({
   viewModel,
   leadSubmittedAt,

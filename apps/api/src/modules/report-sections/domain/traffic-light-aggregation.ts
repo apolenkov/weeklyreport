@@ -5,6 +5,10 @@ import {
   worstCanonicalStatus,
 } from "@customreport/shared";
 
+/**
+ * Aggregate Traffic Light.
+ * @param statuses - The statuses argument.
+ */
 export function aggregateTrafficLight(
   statuses: readonly (TrafficLightStatus | null | undefined)[],
 ): TrafficLightStatus | null {

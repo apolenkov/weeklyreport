@@ -14,12 +14,8 @@ export interface CapturedComment {
 const lineageKey = (kind: RecordKind, stableId: string): string =>
   `${kind}::${stableId}`;
 
-/**
- * Read every RecordComment anchored to a record in this section, tagged with
- * its anchor's `stableId` + kind, BEFORE the child rows are deleted (the
- * delete cascades the comments away). One join per anchor kind; exactly one
- * relation is set per comment.
- */
+// Must run BEFORE saveSection deletes the child rows: the delete cascades the
+// comments away. Exactly one anchor relation is set per comment.
 export async function captureRecordComments(
   tx: Prisma.TransactionClient,
   sectionId: string,
@@ -63,20 +59,21 @@ export async function captureRecordComments(
   });
 }
 
-/**
- * Re-anchor captured comments onto the freshly recreated records. Records are
- * matched by lineage (stableId + kind); a comment whose lineage is gone (its
- * record was dropped from the payload this save) is NOT re-inserted, so it
- * hard-dies exactly when the record it flagged is genuinely removed. Runs
- * inside saveSection's transaction, so it is atomic with the version bump.
- */
-export async function reinsertRecordComments(
+interface LineageRow {
+  id: string;
+  stableId: string;
+}
+
+const lineageEntries = (
+  kind: RecordKind,
+  rows: readonly LineageRow[],
+): [string, string][] =>
+  rows.map((row) => [lineageKey(kind, row.stableId), row.id]);
+
+async function loadIdByLineage(
   tx: Prisma.TransactionClient,
   sectionId: string,
-  captured: readonly CapturedComment[],
-): Promise<void> {
-  if (captured.length === 0) return;
-
+): Promise<Map<string, string>> {
   const [items, risks, decisions] = await Promise.all([
     tx.item.findMany({
       where: { reportSectionId: sectionId },
@@ -92,17 +89,24 @@ export async function reinsertRecordComments(
     }),
   ]);
 
-  const lineageEntries = (
-    kind: RecordKind,
-    rows: readonly { id: string; stableId: string }[],
-  ): [string, string][] =>
-    rows.map((row) => [lineageKey(kind, row.stableId), row.id]);
-
-  const idByLineage = new Map<string, string>([
+  return new Map<string, string>([
     ...lineageEntries("item", items),
     ...lineageEntries("risk", risks),
     ...lineageEntries("decision", decisions),
   ]);
+}
+
+// A comment whose lineage is gone (its record was dropped from this save's
+// payload) is NOT re-inserted, so it dies exactly when the record it flagged
+// is genuinely removed. Runs inside saveSection's transaction.
+export async function reinsertRecordComments(
+  tx: Prisma.TransactionClient,
+  sectionId: string,
+  captured: readonly CapturedComment[],
+): Promise<void> {
+  if (captured.length === 0) return;
+
+  const idByLineage = await loadIdByLineage(tx, sectionId);
 
   const data = captured.flatMap((comment) => {
     const newRecordId = idByLineage.get(

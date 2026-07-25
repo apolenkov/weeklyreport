@@ -247,10 +247,17 @@ class NullLogger implements AppLogger {
   }
 }
 
+/**
+ * Create App Logger.
+ * @param options - The options argument.
+ */
 export function createAppLogger(options: LoggerOptions = {}): AppLogger {
   return new AppLoggerImpl(options);
 }
 
+/**
+ * Create Null Logger.
+ */
 export function createNullLogger(): AppLogger {
   return new NullLogger();
 }

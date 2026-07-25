@@ -67,6 +67,10 @@ const ITEM_CARD_REFERENCE_HEIGHT = 150;
 /** Faded opacity applied to a card/row owned by another lead ("foreign"). */
 export const FOREIGN_ENTRY_OPACITY = 0.7;
 
+/**
+ * Card Container Style.
+ * @param opts - The opts argument.
+ */
 export function cardContainerStyle(opts: {
   isPlanned: boolean;
   isBlocked: boolean;

@@ -41,6 +41,10 @@ export type OtelBootstrapResult =
 
 const DEFAULT_TRACES_SAMPLING_RATIO = 1.0;
 
+/**
+ * Decide Otel Bootstrap.
+ * @param env - The env argument.
+ */
 export function decideOtelBootstrap(
   env: NodeJS.ProcessEnv = process.env,
 ): OtelBootstrapResult {
@@ -63,6 +67,9 @@ export function decideOtelBootstrap(
 
 // CompositePropagator.extract is left-to-right; last match wins. W3C last so
 // traceparent beats sentry-trace; SentryPropagator bridges sentry-trace-only.
+/**
+ * Create Trace Context Propagator.
+ */
 export function createTraceContextPropagator(): CompositePropagator {
   return new CompositePropagator({
     propagators: [new SentryPropagator(), new W3CTraceContextPropagator()],
@@ -90,6 +97,10 @@ function registerShutdownHandler(signal: NodeJS.Signals): void {
   }
 }
 
+/**
+ * Start the OpenTelemetry SDK, or record why it stayed off.
+ * @param env - Environment the endpoint and service identity are read from.
+ */
 // eslint-disable-next-line sonarjs/no-invariant-returns -- returns the bootstrap decision object from every path by design (disabled vs started); one semantic return value, not an accidental invariant
 export function startOtel(
   env: NodeJS.ProcessEnv = process.env,

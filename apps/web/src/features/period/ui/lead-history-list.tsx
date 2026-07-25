@@ -63,23 +63,26 @@ function formatCount(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
 }
 
-function buildHistorySummary(entry: HistoryEntry) {
+function describeHealth(lights: HistoryEntry["trafficLights"]) {
+  if (lights.green > 0 && lights.yellow === 0 && lights.red === 0) {
+    return "All green";
+  }
   const statusParts = [
-    entry.trafficLights.green > 0
-      ? formatCount(entry.trafficLights.green, "green status", "green statuses")
+    lights.green > 0
+      ? formatCount(lights.green, "green status", "green statuses")
       : null,
-    entry.trafficLights.yellow > 0
-      ? formatCount(
-          entry.trafficLights.yellow,
-          "yellow status",
-          "yellow statuses",
-        )
+    lights.yellow > 0
+      ? formatCount(lights.yellow, "yellow status", "yellow statuses")
       : null,
-    entry.trafficLights.red > 0
-      ? formatCount(entry.trafficLights.red, "red status", "red statuses")
+    lights.red > 0
+      ? formatCount(lights.red, "red status", "red statuses")
       : null,
   ].filter(Boolean);
 
+  return statusParts.length > 0 ? statusParts.join(", ") : "No statuses";
+}
+
+function buildHistorySummary(entry: HistoryEntry) {
   const scopeParts = [
     entry.itemCount > 0 ? formatCount(entry.itemCount, "item") : null,
     entry.riskCount > 0 ? formatCount(entry.riskCount, "risk") : null,
@@ -88,16 +91,7 @@ function buildHistorySummary(entry: HistoryEntry) {
       : null,
   ].filter(Boolean);
 
-  const health =
-    entry.trafficLights.green > 0 &&
-    entry.trafficLights.yellow === 0 &&
-    entry.trafficLights.red === 0
-      ? "All green"
-      : statusParts.length > 0
-        ? statusParts.join(", ")
-        : "No statuses";
-
-  return [health, ...scopeParts].join(" | ");
+  return [describeHealth(entry.trafficLights), ...scopeParts].join(" | ");
 }
 
 function TimelineRow({
@@ -198,6 +192,10 @@ function HistoryCard({ entry }: { readonly entry: HistoryEntry }) {
   );
 }
 
+/**
+ * Lead History List.
+ * @param props - The props argument.
+ */
 export function LeadHistoryList({ entries }: LeadHistoryListProps) {
   if (entries.length === 0) {
     return (

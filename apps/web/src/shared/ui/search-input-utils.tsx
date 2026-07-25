@@ -17,6 +17,11 @@ export function useDebouncedValue<T>(value: T, delayMs: number): T {
 }
 
 // No `#section-<id>` fragment: lead form has no matching id target (dead scroll).
+/**
+ * Target Url For.
+ * @param hit - The hit argument.
+ * @param isViewer - The isViewer argument.
+ */
 export function targetUrlFor(hit: SearchHit, isViewer: boolean): string {
   if (hit.type === "project") {
     // Viewer has no product surface; project hits are excluded server- and client-side.
@@ -45,6 +50,10 @@ export const TYPE_BADGE: Record<
 const SNIPPET_MARKER_LENGTH = 2;
 
 // Stable keys per chunk so React can reconcile highlight marks across re-renders.
+/**
+ * Render Snippet.
+ * @param snippet - The snippet argument.
+ */
 export function renderSnippet(snippet: string): React.ReactNode {
   if (!snippet) return null;
   // eslint-disable-next-line sonarjs/super-linear-regex -- server-generated literal markers, negated class + lazy quantifier, bounded input

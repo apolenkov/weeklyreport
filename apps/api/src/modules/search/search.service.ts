@@ -14,29 +14,16 @@ import { createServiceLogger } from "../../lib/logger-service.js";
 export interface SearchRepository {
   search(params: {
     q: string;
-    /** When 'mine', only rows authored by `userId` are returned (item/risk/
-     * decision via reportSection.authorId; project via leadId). When 'all',
-     * rows are unfiltered — the service layer enforces the role gate before
-     * calling this. When 'published', rows are unfiltered by author but
-     * constrained to published reports (`Report.periodStatus = 'published'`)
-     * via an INNER JOIN on the item/risk/decision chunks — the viewer's
-     * read-parity search surface. */
+    // 'all' is unfiltered — the service layer enforces the role gate before
+    // calling. 'published' INNER JOINs `Report.periodStatus = 'published'`:
+    // the viewer's read-parity surface (openspec/specs/viewer-published-search).
     scope: "mine" | "all" | "published";
     userId: string;
-    /**
-     * Group IDs derived via groupScopeFilter logic.
-     *   null  → admin; no group filter (see all groups).
-     *   [...] → non-admin; filter rows to these reporting-group IDs.
-     * An empty array is rejected upstream (early-return empty result) so
-     * the repository never receives an empty groupIds array.
-     */
+    // null → no group filter (admin). An empty array never reaches here: the
+    // service short-circuits it to a zero-row result.
     groupIds: string[] | null;
-    /**
-     * Hit types the caller must never see — their UNION ALL chunk is omitted
-     * from the query entirely (not fetched then dropped), so excluded types
-     * never consume a slot in the `limit` budget. The service decides this per
-     * role; an empty array fetches all types.
-     */
+    // Excluded types' UNION ALL chunk is omitted from the query entirely, so
+    // they never consume a slot in the `limit` budget.
     excludeTypes: SearchHit["type"][];
     limit: number;
   }): Promise<SearchHit[]>;
@@ -49,29 +36,16 @@ export class SearchAuthorizationError extends Error {
   }
 }
 
-/**
- * Group IDs a session may search within, matching groupScopeFilter semantics:
- *   admin    → null (no group filter; sees all groups)
- *   viewer   → granted viewerGroupAccess (may be empty)
- *   head/lead → own reportingGroupId (may be absent → empty)
- * A non-null empty array means "no group access": the caller short-circuits to
- * a zero-row result rather than querying (groupScopeFilter({ id: { in: [] } })).
- */
+// Mirrors groupScopeFilter semantics. A non-null empty array means "no group
+// access" — the caller short-circuits to zero rows rather than querying.
 function resolveSearchGroupIds(session: UserSession): string[] | null {
   if (session.role === "admin") return null;
   if (session.role === "viewer") return session.viewerGroupAccess ?? [];
   return session.reportingGroupId ? [session.reportingGroupId] : [];
 }
 
-/**
- * Hit types a session must never see — their UNION ALL chunk is omitted from the
- * query entirely, so excluded types never consume a slot in the `limit` budget.
- *
- * lead + viewer exclude `project`: the only Project destination is /admin
- * (products), unreachable for both roles, so a project hit dead-ends the search
- * ("Page unavailable for your role"). Their own item/risk/decision hits still
- * surface and deep-link correctly. (lead: behavioral-ui-regression-gate 3.1.)
- */
+// lead + viewer exclude `project`: the only Project destination is /admin,
+// unreachable for both roles, so a project hit would dead-end the search.
 function resolveSearchExcludeTypes(session: UserSession): SearchHit["type"][] {
   return session.role === "lead" || session.role === "viewer"
     ? ["project"]
@@ -83,25 +57,9 @@ export class SearchService {
 
   constructor(private readonly repository: SearchRepository) {}
 
-  /**
-   * Run a full-text search across Item / Risk / Decision / Project.
-   *
-   * Authorization:
-   *   - `lead` role + `scope='all'` → SearchAuthorizationError. The router
-   *     maps this to TRPCError code FORBIDDEN.
-   *   - `head` / `admin` roles can use either scope.
-   *   - `viewer` role with `scope='mine'` is technically callable but
-   *     returns an empty list because viewers author nothing; `scope='all'`
-   *     stays rejected. The viewer's real search surface is
-   *     `scope='published'`, which is authorized for every role (it can only
-   *     ever surface published, group-scoped content) and exposes exactly the
-   *     published reports the viewer can already open.
-   *
-   * Query sanitisation: we never interpolate `q` into raw SQL. The Prisma
-   * repository uses `plainto_tsquery('russian', $1)` which auto-quotes
-   * tokens and ignores ts_query operator chars. `q` is also length-bounded
-   * (2..200) by the Zod schema.
-   */
+  // `scope='all'` is head/admin only; `scope='published'` is open to every role
+  // because it can only ever surface published, group-scoped content — that is
+  // the viewer's real surface (openspec/specs/search-contract-precision).
   async query(
     input: SearchQueryInput,
     session: UserSession,

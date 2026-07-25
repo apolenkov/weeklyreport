@@ -7,7 +7,6 @@ export type LeadDecisionEntry = DecisionEntry;
 export type LeadPriorityEntry = PriorityEntry;
 
 type SectionItem = ReportSectionReadModel["items"][number];
-type SectionDecision = ReportSectionReadModel["decisions"][number];
 
 // "YYYY-MM-DD" — length of an ISO date-only prefix.
 const ISO_DATE_LENGTH = 10;
@@ -19,6 +18,10 @@ function clampRank(rank: number): number {
   return rank;
 }
 
+/**
+ * Map Lead Decisions.
+ * @param section - The section argument.
+ */
 export function mapLeadDecisions(
   section: ReportSectionReadModel,
 ): LeadDecisionEntry[] {
@@ -27,8 +30,7 @@ export function mapLeadDecisions(
   // Product-parented, legacy parentless ("Group"), AND activity-parented
   // decisions all render in the Decisions section — activity rows labeled
   // with the activity name.
-  const decisions: SectionDecision[] = section.decisions;
-  return decisions.map((d, idx) => ({
+  return section.decisions.map((d, idx) => ({
     id: d.id ?? `decision-${idx}`,
     productId: d.productId ?? "",
     productName:
@@ -52,6 +54,10 @@ export function mapLeadDecisions(
   }));
 }
 
+/**
+ * Map Lead Priorities.
+ * @param section - The section argument.
+ */
 export function mapLeadPriorities(
   section: ReportSectionReadModel,
 ): LeadPriorityEntry[] {

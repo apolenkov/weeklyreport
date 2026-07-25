@@ -1,5 +1,9 @@
 // Boot fence: refuse production when either dev-auth flag is set, so an
 // ops mis-config cannot promote DEV_SESSION (every user as head) into prod.
+/**
+ * Assert No Dev Auth In Production.
+ * @param env - The env argument.
+ */
 export function assertNoDevAuthInProduction(env: NodeJS.ProcessEnv): void {
   if (env.NODE_ENV !== "production") return;
   const devMode = env.AUTH_DEV_MODE === "true";

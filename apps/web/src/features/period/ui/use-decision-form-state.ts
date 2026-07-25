@@ -42,6 +42,11 @@ export interface DecisionFormFieldsView {
 // Seeded once from the bound decision (or create-mode defaults); the parent
 // unmounts the dialog on close, so no useEffect reset is needed. Owner is not
 // state — it is author-only and stays on the seed.
+/**
+ * Use Decision Form State.
+ * @param seed - The seed argument.
+ * @param initialParent - The initialParent argument.
+ */
 export function useDecisionFormState(
   seed: DecisionFormSeed,
   initialParent: () => RecordParent,
@@ -71,6 +76,10 @@ export function useDecisionFormState(
   };
 }
 
+/**
+ * Decision Fields View.
+ * @param state - The state argument.
+ */
 export function decisionFieldsView(
   state: DecisionFormState,
 ): DecisionFormFieldsView {

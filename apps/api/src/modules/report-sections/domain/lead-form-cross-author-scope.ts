@@ -8,6 +8,14 @@ import {
 } from "./lead-form-shared";
 
 // Lead-only shared-product scope; null for head/admin/own/no-access (see lead-form-cross-author-scope).
+/**
+ * Resolve Cross Author Scope.
+ * @param repository - The repository argument.
+ * @param reportId - The reportId argument.
+ * @param userId - The userId argument.
+ * @param role - The role argument.
+ * @param requestedAuthorId - The requestedAuthorId argument.
+ */
 export async function resolveCrossAuthorScope(
   repository: LeadFormRepository,
   reportId: string,
@@ -37,6 +45,12 @@ export async function resolveCrossAuthorScope(
 }
 
 // Head single-group: reject cross-group target (fail closed). Admin never calls this.
+/**
+ * Assert Head Target In Group.
+ * @param repository - The repository argument.
+ * @param headUserId - The headUserId argument.
+ * @param targetAuthorId - The targetAuthorId argument.
+ */
 export async function assertHeadTargetInGroup(
   repository: LeadFormRepository,
   headUserId: string,
@@ -55,6 +69,14 @@ export async function assertHeadTargetInGroup(
 
 // Head cross-read uses atomic group-scoped query (no race with group reassignment).
 // See openspec/specs/lead-form-cross-author-scope.
+/**
+ * Read Section For By Period.
+ * @param repository - The repository argument.
+ * @param reportId - The reportId argument.
+ * @param sectionAuthorId - The sectionAuthorId argument.
+ * @param userId - The userId argument.
+ * @param isHeadCrossRead - The isHeadCrossRead argument.
+ */
 export async function readSectionForByPeriod(
   repository: LeadFormRepository,
   reportId: string,
@@ -87,6 +109,11 @@ export async function readSectionForByPeriod(
 
 // Filter to co-owned products; strip fields the Everyone lens omits (no leak ceiling).
 // Null-product activity rows drop. See openspec/specs/lead-form-cross-author-scope.
+/**
+ * Filter Section To Shared Products.
+ * @param section - The section argument.
+ * @param sharedProductIds - The sharedProductIds argument.
+ */
 export function filterSectionToSharedProducts(
   section: ReportSectionReadModel,
   sharedProductIds: ReadonlySet<string>,

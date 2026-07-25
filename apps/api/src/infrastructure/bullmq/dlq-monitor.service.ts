@@ -170,8 +170,6 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  // Samples used_memory on the shared registry connection (no new client) and
-  // warns once usage crosses REDIS_MEMORY_WARN_RATIO of the configured cap.
   private async checkRedisMemory(): Promise<void> {
     try {
       const client = await this.registry.get(MEMORY_PROBE_QUEUE).client;

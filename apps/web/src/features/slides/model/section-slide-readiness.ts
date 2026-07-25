@@ -131,6 +131,11 @@ function statusCounts(
   };
 }
 
+/**
+ * Build Section Slide Health.
+ * @param section - The section argument.
+ * @param projection - The projection argument.
+ */
 export function buildSectionSlideHealth(
   section: ReportSectionReadModel,
   projection: SectionProductProjection,

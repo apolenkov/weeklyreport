@@ -83,14 +83,15 @@ const HEAD_ROLE = {
   name: "Антон К.",
 } as const;
 
-let storage: Storage;
+// One holder for the whole file; beforeEach empties it instead of rebinding.
+const storage = makeMemoryStorage();
 
 beforeEach(() => {
   // AUTH_STUB is gated on `process.env.NEXT_PUBLIC_AUTH_STUB === 'true'`
   // at the module top-level — set BEFORE importing the client module.
   process.env.NEXT_PUBLIC_AUTH_STUB = "true";
 
-  storage = makeMemoryStorage();
+  storage.clear();
   Object.defineProperty(window, "localStorage", {
     value: storage,
     configurable: true,

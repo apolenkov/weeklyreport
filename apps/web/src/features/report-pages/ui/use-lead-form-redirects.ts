@@ -11,6 +11,10 @@ interface UseLeadFormRedirectsInput {
   readonly shouldRouteHeadLikeAwayFromLeadForm: boolean;
 }
 
+/**
+ * Use Lead Form Redirects.
+ * @param props - The props argument.
+ */
 export function useLeadFormRedirects({
   pinnedReportId,
   redirectToCanonical,

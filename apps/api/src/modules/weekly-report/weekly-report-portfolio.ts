@@ -10,6 +10,10 @@ import {
 import { computeWorstStatus } from "../published-report-snapshot.js";
 import type { WeeklyReportScopeSession } from "./weekly-report.service.js";
 
+/**
+ * Build Portfolio Overview.
+ * @param projects - The projects argument.
+ */
 export function buildPortfolioOverview(
   projects: {
     id: string;
@@ -58,6 +62,12 @@ export function buildPortfolioOverview(
 }
 
 // undefined when no filter applies (admin or no-session).
+/**
+ * Scope Where.
+ * @param session - The session argument.
+ * @param target - The target argument.
+ * @param options - The options argument.
+ */
 export function scopeWhere(
   session: WeeklyReportScopeSession | undefined,
   target: "user" | "reportSection" | "project",
@@ -70,6 +80,10 @@ export function scopeWhere(
 }
 
 // Lead: own authorId only. Other roles: group-scope (unlike scopeWhere).
+/**
+ * History Section Scope.
+ * @param session - The session argument.
+ */
 export function historySectionScope(
   session: WeeklyReportScopeSession,
 ): Record<string, unknown> {

@@ -223,7 +223,6 @@ describe("ProjectAdminService — stage assignments (integration)", () => {
   it("lists assignments filtered by project", async () => {
     const service = new ProjectAdminService(createRepository());
 
-    // Create assignments in two projects
     await service.saveStageAssignment({
       userId: USER_ID,
       stageId: STAGE_ID,

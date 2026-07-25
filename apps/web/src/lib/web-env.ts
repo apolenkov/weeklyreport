@@ -71,6 +71,9 @@ export const webEnv = {
 // Build-time gate (called from next.config.ts): fails `next build` loud on a
 // present-but-malformed value, naming the offending variable. All seven vars are
 // optional, so absence passes — only a malformed value rejects the build.
+/**
+ * Assert Web Env.
+ */
 export function assertWebEnv(): void {
   const result = webEnvSchema.safeParse(rawWebEnv());
   if (!result.success) {

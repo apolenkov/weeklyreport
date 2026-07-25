@@ -7,6 +7,10 @@ import { toReminderPolicyInput } from "./admin";
 import type { MockReminderPolicy } from "./admin-types";
 import { isoFromDate } from "./reminders-tab-format";
 
+/**
+ * Toggled Payload.
+ * @param policy - The policy argument.
+ */
 export function toggledPayload(policy: MockReminderPolicy) {
   return toReminderPolicyInput(
     {
@@ -23,6 +27,9 @@ export function toggledPayload(policy: MockReminderPolicy) {
   );
 }
 
+/**
+ * Use Reminder Policy Mutations.
+ */
 export function useReminderPolicyMutations() {
   const trpc = useTRPC();
   const qc = useQueryClient();

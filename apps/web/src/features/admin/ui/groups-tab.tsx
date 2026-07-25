@@ -223,6 +223,10 @@ function GroupsTabHeader({
   );
 }
 
+/**
+ * Groups Tab.
+ * @param props - The props argument.
+ */
 export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
   const tab = useGroupsTab(groups, users);
   const { dialog, commands, filters } = tab;

@@ -9,6 +9,12 @@ function reviewErrorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;
 }
 
+/**
+ * Use Record Comment Mutations.
+ * @param anchor - The anchor argument.
+ * @param onCommentAdded - The onCommentAdded argument.
+ * @param onMutated - The onMutated argument.
+ */
 export function useRecordCommentMutations(
   anchor: RecordCommentAnchor,
   onCommentAdded: () => void,

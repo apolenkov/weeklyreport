@@ -10,6 +10,10 @@ import { ensureLeadSection } from "../modules/report-sections/index.js";
 // The auth module delegates lead-workspace provisioning to the period +
 // report-section domains, composed here in the composition root. Settings are
 // read PER CALL so admin changes propagate to newly-created periods.
+/**
+ * Create Provision Lead Workspace.
+ * @param deps - The deps argument.
+ */
 export function createProvisionLeadWorkspace(deps: {
   app: INestApplication;
   prisma: PrismaService;

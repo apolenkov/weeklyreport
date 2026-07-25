@@ -44,6 +44,10 @@ const ROW_GRID =
   "grid grid-cols-[3px_minmax(0,116px)_minmax(0,1fr)_auto] items-start gap-x-3.5";
 
 // Preserve first-appearance (escalation) order; one card per product.
+/**
+ * Group By Product.
+ * @param items - The items argument.
+ */
 export function groupByProduct(
   items: readonly BlockedAtRiskItem[],
 ): readonly ProductGroup[] {
@@ -124,6 +128,10 @@ function IssueRow({ item }: { readonly item: BlockedAtRiskItem }) {
   );
 }
 
+/**
+ * Product Card.
+ * @param options - The options argument.
+ */
 export function ProductCard({ group }: { readonly group: ProductGroup }) {
   const severity = groupSeverity(group);
   const tone = SEVERITY_TONE[severity];

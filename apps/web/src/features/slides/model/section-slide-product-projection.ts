@@ -164,6 +164,10 @@ function buildSectionRecordSummary(
   };
 }
 
+/**
+ * Build Section Product Projection.
+ * @param section - The section argument.
+ */
 export function buildSectionProductProjection(
   section: ReportSectionReadModel,
 ): SectionProductProjection {

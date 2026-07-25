@@ -72,7 +72,7 @@ export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit(): void {
     // prom-client@15: collect is runtime-assignable but TS only types it as a
-    // constructor option — cast required. Capture this.repo for stable prisma.
+    // constructor option — cast required.
     const onTimeRatio = customreportReportsOnTimeRatio as unknown as {
       collect: () => Promise<void>;
     };
@@ -81,10 +81,9 @@ export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
     };
 
     onTimeRatio.collect = async () => {
-      // A rejected query here would fail prom-client's Promise.all over
-      // all collect callbacks, 500-ing the whole scrape during a DB
-      // outage — exactly when the DB-independent metrics matter most.
-      // Catch, log, and leave the gauge unset so the scrape survives.
+      // A rejection here fails prom-client's Promise.all over all collect
+      // callbacks, 500-ing the whole scrape during a DB outage — exactly
+      // when the DB-independent metrics matter most.
       try {
         const value = await this.repo.onTimeRatioLastNPeriods(
           ON_TIME_RATIO_WINDOW_PERIODS,

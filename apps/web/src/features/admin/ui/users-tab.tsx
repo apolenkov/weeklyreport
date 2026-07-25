@@ -13,6 +13,10 @@ interface UsersTabProps {
   readonly groups: MockGroup[];
 }
 
+/**
+ * Users Tab.
+ * @param props - The props argument.
+ */
 export function UsersTab({ users, groups }: UsersTabProps) {
   const state = useUsersTabState(users, groups);
 

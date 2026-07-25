@@ -10,6 +10,10 @@ import { IN_PROGRESS_STATUS } from "./item-status-choices";
 import type { ParentActivityOption } from "./parent-picker";
 
 // Stage is required only for product parents with owned stages.
+/**
+ * Collect Item Errors.
+ * @param args - The args argument.
+ */
 export function collectItemErrors(args: {
   readonly trimmed: string;
   readonly isActivityParent: boolean;
@@ -27,6 +31,11 @@ export function collectItemErrors(args: {
 }
 
 // Focus order: text → stage → pausedReason; later errors never jump past earlier.
+/**
+ * First Invalid Control.
+ * @param next - The next argument.
+ * @param surface - The surface argument.
+ */
 export function firstInvalidControl(
   next: { text?: string; stageIds?: string; pausedReason?: string },
   surface: HTMLElement | null,
@@ -70,11 +79,21 @@ function isItemCovered(args: CoverageArgs): boolean {
 export type StatusSlot = "locked" | "chips";
 
 // Locked when a covering risk owns the alarm; blockers live in Risks & Blockers only.
+/**
+ * Resolve Status Slot.
+ * @param args - The args argument.
+ */
 export function resolveStatusSlot(args: CoverageArgs): StatusSlot {
   return isItemCovered(args) ? "locked" : "chips";
 }
 
 // Keep original product when it is outside the lead's stage-owned list (cross-stage).
+/**
+ * Resolve Save Product.
+ * @param products - The products argument.
+ * @param item - The item argument.
+ * @param parentId - The parentId argument.
+ */
 export function resolveSaveProduct(
   products: readonly Product[],
   item: KanbanItem | null,
@@ -91,6 +110,10 @@ export function resolveSaveProduct(
 // Offer priority ranks 1..10, plus any legacy rank above 10 already on the item.
 const MAX_ITEM_RANK = 10;
 
+/**
+ * Build Rank Options.
+ * @param existingRank - The existingRank argument.
+ */
 export function buildRankOptions(existingRank: number | null): number[] {
   const base = Array.from({ length: MAX_ITEM_RANK }, (_, i) => i + 1);
   return existingRank != null && existingRank > MAX_ITEM_RANK
@@ -98,6 +121,10 @@ export function buildRankOptions(existingRank: number | null): number[] {
     : base;
 }
 
+/**
+ * Resolve Initial Item.
+ * @param args - The args argument.
+ */
 export function resolveInitialItem(args: {
   readonly item: KanbanItem | null;
   readonly week: "current" | "next";
@@ -116,10 +143,18 @@ export function resolveInitialItem(args: {
 }
 
 // Legacy stored `blocked` opens as in-progress so re-save never re-persists bare blocked.
+/**
+ * Coerce Initial Status.
+ * @param status - The status argument.
+ */
 export function coerceInitialStatus(status: ItemStatus): ItemStatus {
   return status === "blocked" ? IN_PROGRESS_STATUS : status;
 }
 
+/**
+ * Resolve Item Parent Name.
+ * @param args - The args argument.
+ */
 export function resolveItemParentName(args: {
   readonly isActivityParent: boolean;
   readonly selectedActivity: ParentActivityOption | undefined;
@@ -140,6 +175,10 @@ interface ItemSaveCommonArgs {
   readonly trimmedPausedReason: string;
 }
 
+/**
+ * Build Activity Item Save.
+ * @param args - The args argument.
+ */
 export function buildActivityItemSave(
   args: ItemSaveCommonArgs & {
     readonly selectedActivity: ParentActivityOption | undefined;
@@ -161,6 +200,10 @@ export function buildActivityItemSave(
   };
 }
 
+/**
+ * Build Product Item Save.
+ * @param args - The args argument.
+ */
 export function buildProductItemSave(
   args: ItemSaveCommonArgs & {
     readonly product: { id: string; name: string };

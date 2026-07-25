@@ -126,6 +126,10 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   [ProjectActivityDomainError, "BAD_REQUEST"],
 ];
 
+/**
+ * Map Domain Error.
+ * @param error - The error argument.
+ */
 export function mapDomainError(error: unknown): TRPCError {
   // Pass an already-typed tRPC error through unchanged.
   if (error instanceof TRPCError) {

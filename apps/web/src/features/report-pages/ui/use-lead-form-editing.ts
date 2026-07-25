@@ -15,7 +15,7 @@ import { useLeadFormChrome } from "./use-lead-form-chrome";
 import { useLeadFormDraft } from "./use-lead-form-draft";
 import { useLeadFormWriteActions } from "./use-lead-form-write-actions";
 
-export interface LeadFormEditingData {
+interface LeadFormEditingData {
   readonly byPeriodData:
     | { readonly section: ReportSectionReadModel; readonly readOnly: boolean }
     | undefined;
@@ -44,6 +44,10 @@ function countUnsetOwnStages(payload: DraftSaveContent | null): number {
 
 // Draft engine, add-signals, write-action dialogs and page chrome, in the
 // order LeadForm called them — the hook count must not drift across renders.
+/**
+ * Use Lead Form Editing.
+ * @param args - The args argument.
+ */
 export function useLeadFormEditing(args: UseLeadFormEditingArgs) {
   const { pinnedReportId, data, loaded } = args;
   const seam = useLeadFormDraftSeam();

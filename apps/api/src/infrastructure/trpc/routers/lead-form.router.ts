@@ -203,6 +203,10 @@ function crossAuthorContentProcedure(deps: LeadFormRouterDeps) {
 // TODO(versions-v2): the version-history procedures (versions, restoreVersion,
 // getVersion, createSnapshot, setVersionPinned) are deferred; re-add them when
 // versions-v2 is designed.
+/**
+ * Create Lead Form Router.
+ * @param deps - The deps argument.
+ */
 export function createLeadFormRouter(deps: LeadFormRouterDeps) {
   return router({
     viewSettings: viewSettingsProcedure(deps),

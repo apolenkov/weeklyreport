@@ -176,20 +176,13 @@ describe("LeadFormPrismaRepository (integration)", () => {
   const STAGE_DEV_ID = "b0000000-0000-4000-b000-000000000001";
   const STAGE_TESTING_ID = "b0000000-0000-4000-b000-000000000002";
 
-  /**
-   * Seed a second lead ("co-lead"), assign both leads to the same project
-   * on different stages, and create a foreign section in the given report.
-   * Returns the co-lead and their section.
-   */
   async function seedCoLead(
     reportId: string,
     opts: {
-      /** Risk rows to seed on the co-lead's section. */
       risks?: {
         severity: string;
         stageNames: string[];
       }[];
-      /** Persisted stage-traffic status for the co-lead on Testing. */
       persistedTestingStatus?: TrafficLightStatus | null;
     } = {},
   ) {
@@ -344,14 +337,8 @@ describe("LeadFormPrismaRepository (integration)", () => {
       );
 
       // getCrossAuthors keys on shared stageAssignment rows, which are
-      // report-independent — NOT on section membership. testData.lead and the
-      // seeded co-lead share Dev/Testing on the same project (seedCoLead), so
-      // a row for the co-lead comes back even though testData.lead has no
-      // section in unrelatedReport. The co-lead's section carries no risks and
-      // no persisted stage status here, so the shared stage's traffic is null.
-      // The real contract this pins: rows are non-empty (report-independent
-      // sharing), yet still carry no foreign content — no full author name, no
-      // item/risk text.
+      // report-independent — so a co-lead row comes back even with no section
+      // in this report, yet still carries no foreign content.
       expect(rows).toHaveLength(1);
       const row = expectDefined(rows[0]);
       expect(row.authorId).toBe(coLead.id);
@@ -518,25 +505,13 @@ describe("LeadFormPrismaRepository (integration)", () => {
     });
   });
 
-  // getCrossAuthorContent — the FULL-content co-ownership filter (the most
-  // sensitive read: foreign item/risk/decision text + author full name). The
-  // service-layer gates (report access AND co-ownership) are pinned in
-  // lead-form.contract.test.ts against a MOCKED repository; those cannot catch
-  // a regression that drops a WHERE clause from the real query. These cases
-  // exercise the live query so that removing any one of the four load-bearing
-  // clauses turns a test red:
-  //   - `userId: { not: userId }`        → self-exclusion (own content absent)
-  //   - `projectId: { in: myProjectIds }`+ per-row `sharedIds.has(...)`
-  //                                       → co-ownership scope (non-shared out)
-  //   - `project: { archived: false }`   → archived shared product denies
-  //   - caller has no assignments        → coOwnsShared:false, []
-  // DB-coupled, so excluded from the DB-free `pnpm test`; runs under
-  // `pnpm --filter @customreport/api test:integration` when Postgres is up.
+  // The contract tests mock the repository and so cannot catch a dropped WHERE
+  // clause; these cases exercise the live query instead. Clauses:
+  // openspec/specs/lead-form-cross-author-scope.
   describe("getCrossAuthorContent — full-content co-ownership filter", () => {
-    /** Second, NON-shared project the caller is never assigned to. */
+    // Second, NON-shared project the caller is never assigned to.
     const OTHER_PROJECT_ID = "a0000000-0000-4000-a000-000000000200";
 
-    /** Seed item/risk/decision rows on a section for a given project. */
     async function seedContent(
       reportSectionId: string,
       projectId: string,

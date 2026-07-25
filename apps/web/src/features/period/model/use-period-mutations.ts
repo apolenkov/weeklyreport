@@ -7,6 +7,10 @@ import { invalidateAdmin } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
 
 // Periods-tab lifecycle mutations; dialog close via injected success callbacks.
+/**
+ * Use Period Mutations.
+ * @param options - The options argument.
+ */
 export function usePeriodMutations({
   onCreateSuccess,
   onEditSuccess,

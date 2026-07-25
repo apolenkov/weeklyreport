@@ -149,6 +149,10 @@ function PeriodSelectTrigger({
   );
 }
 
+/**
+ * Period Navigator.
+ * @param props - The props argument.
+ */
 export function PeriodNavigator({
   periods,
   currentPeriodId,

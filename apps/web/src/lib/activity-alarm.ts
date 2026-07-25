@@ -19,6 +19,11 @@ interface ActivityAlarmRisk {
   readonly text: string;
 }
 
+/**
+ * Derive Activity Alarm Floor.
+ * @param activityId - The activityId argument.
+ * @param risks - The risks argument.
+ */
 export function deriveActivityAlarmFloor(
   activityId: string,
   risks: readonly ActivityAlarmRisk[],

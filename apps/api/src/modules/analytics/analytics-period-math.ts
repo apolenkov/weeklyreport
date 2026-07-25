@@ -4,15 +4,27 @@ import { MS_PER_DAY, type TrafficLightCell } from "@customreport/shared";
 const ISO_DATE_LENGTH = 10;
 
 // TZ-stable: toISOString always returns UTC.
+/**
+ * Iso Date Only.
+ * @param d - The d argument.
+ */
 export function isoDateOnly(d: Date): string {
   return d.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
 // Half-open [startOfUtcDay, nextUtcDay) matches a date-only label to periodEnd.
+/**
+ * Start Of Utc Day.
+ * @param dateOnly - The dateOnly argument.
+ */
 export function startOfUtcDay(dateOnly: string): Date {
   return new Date(`${dateOnly}T00:00:00.000Z`);
 }
 
+/**
+ * Next Utc Day.
+ * @param dateOnly - The dateOnly argument.
+ */
 export function nextUtcDay(dateOnly: string): Date {
   return new Date(startOfUtcDay(dateOnly).getTime() + MS_PER_DAY);
 }
@@ -71,6 +83,11 @@ function findProjectStatus(
   return undefined;
 }
 
+/**
+ * Status For Project.
+ * @param reportsForLabel - The reportsForLabel argument.
+ * @param projectId - The projectId argument.
+ */
 export function statusForProject(
   reportsForLabel: LabelReport[],
   projectId: string,
@@ -96,6 +113,11 @@ export interface NamedReport {
 }
 
 // First name wins; optional projectId filters to one project.
+/**
+ * Collect Project Names.
+ * @param reports - The reports argument.
+ * @param projectId - The projectId argument.
+ */
 export function collectProjectNames(
   reports: NamedReport[],
   projectId?: string,
@@ -181,6 +203,10 @@ function accumulateRisks(
 }
 
 // Oldest-first so latest status wins; risks accumulate across all reports.
+/**
+ * Collect Comparison Cells.
+ * @param reports - The reports argument.
+ */
 export function collectComparisonCells(
   reports: ComparisonReport[],
 ): Map<string, ComparisonCell> {

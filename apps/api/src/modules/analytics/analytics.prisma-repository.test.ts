@@ -4,13 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { AnalyticsPrismaRepository } from "./analytics.prisma-repository";
 
-/**
- * The load-bearing leak fix is the nested `include.sections.where` scope (a
- * Report is a unified period holding every group's sections). These tests
- * assert the exact group-scope fragment lands on the INCLUDED sections — a
- * scope applied only top-level would false-green the integration test, so this
- * runnable unit test guards against that regression directly.
- */
+// A Report is a unified period holding every group's sections, so a scope
+// applied only top-level false-greens the integration test: these tests assert
+// the group-scope fragment lands on the nested `include.sections.where`.
 
 const GROUP = "a0000000-0000-4000-8000-0000000group-g";
 const LEAD = "d0000000-0000-4000-8000-0000000000d1";
@@ -43,8 +39,6 @@ interface ReportQueryArg {
 function makeRepo() {
   // Typed param so vi records a one-element call-args tuple (a no-arg mock
   // infers `[]`, making `.mock.calls[0][0]` an out-of-bounds tuple access).
-  // periodComparison fetches each side via findMany (day-range match), so all
-  // three read paths exercise the same mock.
   const findMany = vi.fn((_query: unknown) => Promise.resolve([]));
   const prisma = {
     report: { findMany },
@@ -164,13 +158,9 @@ describe("AnalyticsPrismaRepository group scoping", () => {
   });
 });
 
-/**
- * When two published reports share an IDENTICAL `periodEnd` AND an identical
- * `createdAt`, the period/createdAt tie-break alone resolves to 0, so the chosen
- * status would fall back to non-deterministic DB row order. The `id` is the
- * final tie-break that makes the order total. These tests prove selection is
- * stable regardless of the order the rows arrive in.
- */
+// With an identical `periodEnd` AND `createdAt` the comparator resolves to 0
+// and status selection would follow non-deterministic DB row order; the `id` is
+// the final tie-break that makes the order total.
 const TIE_PROJECT = "22222222-2222-4222-8222-222222222222";
 
 interface FakeReport {
@@ -230,21 +220,17 @@ describe("AnalyticsPrismaRepository deterministic tie-break", () => {
     const forward = await statusAFor([low, high]);
     const reversed = await statusAFor([high, low]);
 
-    // Identical periodEnd AND createdAt: the id is the only remaining tie-break,
-    // so the winner must not depend on the order the rows arrive in. Reverting
-    // the id tie-break leaves the comparator returning 0 — stable sort then
-    // preserves arrival order and the two runs disagree (green vs red).
+    // Without the id tie-break the comparator returns 0, stable sort preserves
+    // arrival order, and these two runs disagree (green vs red).
     expect(forward).toBe(reversed);
     // The greater id wins the final tie-break.
     expect(forward).toBe("red");
   });
 });
 
-/**
- * A republished period is two published reports sharing a `periodEnd` calendar
- * day. leadVelocity groups by that label, so both reports' leads land in ONE row
- * instead of emitting a duplicate series point per report.
- */
+// A republished period is two published reports sharing a `periodEnd` calendar
+// day; leadVelocity groups by that label so both reports' leads land in ONE row
+// rather than a duplicate series point per report.
 describe("AnalyticsPrismaRepository leadVelocity period-label grouping", () => {
   it("collapses two reports sharing a period label into one row", async () => {
     const findMany = vi.fn().mockResolvedValue([

@@ -57,6 +57,10 @@ export type WeeklyReportPageState =
 
 // Discriminated-union return keeps early-return shell semantics: hooks always
 // run; only the final derivation is gated on loaded, non-terminal data.
+/**
+ * Use Weekly Report Page.
+ * @param params - The params argument.
+ */
 export function useWeeklyReportPage(
   params: UseWeeklyReportPageParams,
 ): WeeklyReportPageState {

@@ -65,6 +65,10 @@ function shouldEmitScopeAudit<T extends { productIds: readonly string[] }>(
 // viewers, leads, heads, and admins all consume this surface. The
 // service layer scopes the read to published periods for viewers.
 
+/**
+ * Create Weekly Report Router.
+ * @param deps - The deps argument.
+ */
 export function createWeeklyReportRouter(deps: WeeklyReportRouterDeps) {
   return router({
     get: anyRoleProcedure

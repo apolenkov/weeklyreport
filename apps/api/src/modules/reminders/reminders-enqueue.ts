@@ -31,6 +31,14 @@ async function addJob(
 
 // Sync enqueue throws become terminal failed (not swallowed) so queued rows
 // without a job never linger; not rethrown so the tick continues.
+/**
+ * Enqueue Or Mark Failed.
+ * @param ctx - The ctx argument.
+ * @param execution - The execution argument.
+ * @param recipientEmail - The recipientEmail argument.
+ * @param payload - The payload argument.
+ * @param jobId - The jobId argument.
+ */
 export async function enqueueOrMarkFailed(
   ctx: EnqueueContext,
   execution: AdminReminderExecution,
@@ -70,6 +78,11 @@ interface ExecutionRecorder {
   ): Promise<{ execution: AdminReminderExecution; inserted: boolean }>;
 }
 
+/**
+ * Record Execution On Conflict.
+ * @param repository - The repository argument.
+ * @param candidate - The candidate argument.
+ */
 export async function recordExecutionOnConflict(
   repository: ExecutionRecorder,
   candidate: AdminReminderExecution,
@@ -79,6 +92,14 @@ export async function recordExecutionOnConflict(
 
 // Revive failed→queued via CAS; without this a exhausted-SMTP cycle reports
 // "already sent" on manual re-dispatch because of the unified dedupe key.
+/**
+ * Revive Failed Execution.
+ * @param ctx - The ctx argument.
+ * @param requeue - The requeue argument.
+ * @param execution - The execution argument.
+ * @param recipientEmail - The recipientEmail argument.
+ * @param payload - The payload argument.
+ */
 export async function reviveFailedExecution(
   ctx: EnqueueContext | null,
   requeue: (executionId: string) => Promise<boolean>,
@@ -105,6 +126,12 @@ export async function reviveFailedExecution(
 }
 
 // Reaper: deterministic jobId dedups late originals; reconstructs plain-text shape.
+/**
+ * Re Enqueue Stuck.
+ * @param ctx - The ctx argument.
+ * @param execution - The execution argument.
+ * @param reportPeriod - The reportPeriod argument.
+ */
 export async function reEnqueueStuck(
   ctx: EnqueueContext,
   execution: AdminReminderExecution,

@@ -130,7 +130,6 @@ describe("WeeklyReportService — unit tests", () => {
     expect(repo.getWeeklyReport).toHaveBeenCalledOnce();
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getWeeklyReport).toHaveBeenCalledWith(reportId, undefined);
-    // Should NOT call getActiveReportId when explicit ID is provided
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getActiveReportId).not.toHaveBeenCalled();
   });
@@ -179,7 +178,6 @@ describe("WeeklyReportService — unit tests", () => {
       report: null,
       crossGroup: null,
     });
-    // Should not have called getWeeklyReport at all
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getWeeklyReport).not.toHaveBeenCalled();
   });
@@ -356,8 +354,7 @@ describe("WeeklyReportService — viewer published-or-current gate", () => {
   // viewer + NO reportId: the default MUST resolve via the SAME source as the
   // gate (getCurrentEditableId), never getActiveReportId — otherwise a tie or an
   // archived-open period would make the resolved default a period the gate then
-  // 404s. This is the teeth: getActiveReportId returns a DIFFERENT (stale) id;
-  // if the code used it, the gate would reject and the call would 404.
+  // 404s.
   it("viewer no-reportId resolves via the current editable id, not getActiveReportId", async () => {
     const current = makeWeeklyReport({ reportId, periodStatus: "open" });
     const stale = makeWeeklyReport({

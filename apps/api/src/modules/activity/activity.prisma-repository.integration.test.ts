@@ -1,5 +1,5 @@
 import type { UserSession } from "@customreport/shared";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
   cleanDatabase,
@@ -10,7 +10,7 @@ import { ActivityPrismaRepository } from "./activity.prisma-repository";
 
 describe("ActivityPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
-  let repo: ActivityPrismaRepository;
+  const repo = new ActivityPrismaRepository(prisma as never);
 
   const groupA = "a0000000-0000-4000-a000-000000000401";
   const groupB = "a0000000-0000-4000-a000-000000000402";
@@ -26,10 +26,6 @@ describe("ActivityPrismaRepository (integration)", () => {
     role: "head",
     reportingGroupId: groupA,
   };
-
-  beforeAll(() => {
-    repo = new ActivityPrismaRepository(prisma as never);
-  });
 
   beforeEach(async () => {
     await cleanDatabase(prisma);

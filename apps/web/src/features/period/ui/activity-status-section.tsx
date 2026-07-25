@@ -221,6 +221,10 @@ function ActivityCard({
 }
 
 // No add/remove: activity attachment is admin-provisioned.
+/**
+ * Activity Status Section.
+ * @param props - The props argument.
+ */
 export function ActivityStatusSection({
   activities,
   readOnly,

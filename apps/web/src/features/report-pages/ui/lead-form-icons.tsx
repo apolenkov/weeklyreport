@@ -23,6 +23,9 @@ export function GridIcon() {
   );
 }
 
+/**
+ * Calendar Icon.
+ */
 export function CalendarIcon() {
   return (
     <svg
@@ -41,6 +44,9 @@ export function CalendarIcon() {
   );
 }
 
+/**
+ * Next Week Icon.
+ */
 export function NextWeekIcon() {
   return (
     <svg
@@ -60,6 +66,9 @@ export function NextWeekIcon() {
   );
 }
 
+/**
+ * Alert Icon.
+ */
 export function AlertIcon() {
   return (
     <svg
@@ -79,6 +88,9 @@ export function AlertIcon() {
   );
 }
 
+/**
+ * Chat Icon.
+ */
 export function ChatIcon() {
   return (
     <svg
@@ -96,6 +108,9 @@ export function ChatIcon() {
   );
 }
 
+/**
+ * Collapse Icon.
+ */
 export function CollapseIcon() {
   return (
     <svg

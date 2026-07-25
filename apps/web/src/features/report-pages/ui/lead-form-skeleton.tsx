@@ -2,6 +2,18 @@
 
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
+// Row count and reserved height measured from each loaded accordion, in the
+// order the form renders them — the numbers only mean anything paired with the
+// section they stand in for.
+const SECTION_PLACEHOLDERS = [
+  { section: "Product Status", rows: 3, minHeight: 244 },
+  { section: "Current Week", rows: 3, minHeight: 404 },
+  { section: "Next Week", rows: 3, minHeight: 292 },
+  { section: "Risks & Blockers", rows: 2, minHeight: 342 },
+  { section: "Decisions", rows: 7, minHeight: 510 },
+  { section: "Priorities", rows: 6, minHeight: 412 },
+] as const;
+
 function PlaceholderAccordion({
   rows,
   minHeight,
@@ -31,6 +43,9 @@ function PlaceholderAccordion({
   );
 }
 
+/**
+ * Lead Form Skeleton.
+ */
 export function LeadFormSkeleton() {
   return (
     <div
@@ -51,18 +66,19 @@ export function LeadFormSkeleton() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.78)_100%)] px-4 py-3.5">
+      <div className="toolbar-band-fill flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[var(--color-border-subtle)] px-4 py-3.5">
         <Skeleton className="h-11 w-60 rounded-lg" />
         <Skeleton className="h-4 w-56" />
         <Skeleton className="h-11 w-40 rounded-[var(--radius-pill)]" />
       </div>
 
-      <PlaceholderAccordion rows={3} minHeight={244} />
-      <PlaceholderAccordion rows={3} minHeight={404} />
-      <PlaceholderAccordion rows={3} minHeight={292} />
-      <PlaceholderAccordion rows={2} minHeight={342} />
-      <PlaceholderAccordion rows={7} minHeight={510} />
-      <PlaceholderAccordion rows={6} minHeight={412} />
+      {SECTION_PLACEHOLDERS.map((placeholder) => (
+        <PlaceholderAccordion
+          key={placeholder.section}
+          rows={placeholder.rows}
+          minHeight={placeholder.minHeight}
+        />
+      ))}
     </div>
   );
 }

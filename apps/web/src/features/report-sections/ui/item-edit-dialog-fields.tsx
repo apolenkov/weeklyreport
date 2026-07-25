@@ -13,7 +13,7 @@ import {
 } from "./parent-picker";
 import { StageStep } from "./stage-step";
 
-interface ItemEditDialogFieldsProps {
+export interface ItemEditDialogFieldsProps {
   readonly text: string;
   readonly onTextChange: (value: string) => void;
   readonly textError: string | undefined;
@@ -228,6 +228,10 @@ function ItemClassificationColumn(props: ItemClassificationProps) {
   );
 }
 
+/**
+ * Item Edit Dialog Fields.
+ * @param props - The props argument.
+ */
 export function ItemEditDialogFields(props: ItemEditDialogFieldsProps) {
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-stretch">

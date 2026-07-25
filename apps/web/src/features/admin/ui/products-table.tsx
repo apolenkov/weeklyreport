@@ -21,6 +21,10 @@ interface ProductsTableProps {
   readonly isSaving: boolean;
 }
 
+/**
+ * Products Table.
+ * @param props - The props argument.
+ */
 export function ProductsTable({
   activeProducts,
   archivedProducts,

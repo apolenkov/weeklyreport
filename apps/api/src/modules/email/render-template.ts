@@ -23,6 +23,10 @@ export interface RenderedEmail {
   text: string;
 }
 
+/**
+ * Render Email.
+ * @param input - The input argument.
+ */
 export async function renderEmail(
   input: EmailRenderInput,
 ): Promise<RenderedEmail> {

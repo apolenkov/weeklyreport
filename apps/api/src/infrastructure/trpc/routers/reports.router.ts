@@ -105,6 +105,10 @@ function createCompiledReportProcedures(deps: ReportsRouterDeps) {
   };
 }
 
+/**
+ * Create Reports Router.
+ * @param deps - The deps argument.
+ */
 export function createReportsRouter(deps: ReportsRouterDeps) {
   return router({
     ...createSectionProcedures(deps),

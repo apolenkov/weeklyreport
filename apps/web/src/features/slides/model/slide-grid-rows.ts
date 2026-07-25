@@ -8,7 +8,8 @@ import {
 export type SlideTrafficStatus = TrafficLightStatus | null;
 
 /** A record's text field counts as content once trimmed non-empty — the
- * shared predicate every row/priority-card filter uses to drop blank rows. */
+ * shared predicate every row/priority-card filter uses to drop blank rows.  * @param text - The text argument.
+ */
 export function hasText(text: string | null | undefined): text is string {
   return typeof text === "string" && text.trim().length > 0;
 }
@@ -76,7 +77,10 @@ function stageRank(stageName: string): number {
   return index === -1 ? UNKNOWN_STAGE_RANK : index;
 }
 
-/** Canonical-pipeline order; names outside the pipeline keep input order last. */
+/**
+ * Canonical-pipeline order; names outside the pipeline keep input order last.
+ * @param names - The names argument.
+ */
 export function sortStageNames(names: readonly string[]): readonly string[] {
   return [...names].sort((a, b) => stageRank(a) - stageRank(b));
 }
@@ -104,7 +108,8 @@ export interface ToneEntry {
 }
 
 /** Exhaustive workflow-status → (tone, hover label) map — no default case, so
- * a new enum member fails the build instead of reading silently neutral. */
+ * a new enum member fails the build instead of reading silently neutral.  * @param status - The status argument.
+ */
 export function itemToneEntry(status: OwnItem["workflowStatus"]): ToneEntry {
   switch (status) {
     case "done":
@@ -120,6 +125,12 @@ export function itemToneEntry(status: OwnItem["workflowStatus"]): ToneEntry {
   }
 }
 
+/**
+ * Build Own Item Row.
+ * @param item - The item argument.
+ * @param owner - The owner argument.
+ * @param index - The index argument.
+ */
 export function buildOwnItemRow(
   item: OwnItem,
   owner: GridAuthor,
@@ -138,6 +149,12 @@ export function buildOwnItemRow(
   };
 }
 
+/**
+ * Build Own Risk Row.
+ * @param risk - The risk argument.
+ * @param owner - The owner argument.
+ * @param index - The index argument.
+ */
 export function buildOwnRiskRow(
   risk: OwnRisk,
   owner: GridAuthor,
@@ -156,6 +173,12 @@ export function buildOwnRiskRow(
   };
 }
 
+/**
+ * Build Own Decision Row.
+ * @param decision - The decision argument.
+ * @param owner - The owner argument.
+ * @param index - The index argument.
+ */
 export function buildOwnDecisionRow(
   decision: OwnDecision,
   owner: GridAuthor,
@@ -184,7 +207,9 @@ function firstStageRank(row: GridRow): number {
 }
 
 /** Stage order first (stage-less rows last), then author (owner first, legend
- * order after), then original position — a stable, deterministic cell order. */
+ * order after), then original position — a stable, deterministic cell order.  * @param rows - The rows argument.
+ * @param authorOrder - The authorOrder argument.
+ */
 export function sortCellRows(
   rows: readonly GridRow[],
   authorOrder: ReadonlyMap<string, number>,
@@ -200,7 +225,10 @@ export function sortCellRows(
   );
 }
 
-/** Badge only on the first row of a consecutive same-author series. */
+/**
+ * Badge only on the first row of a consecutive same-author series.
+ * @param rows - The rows argument.
+ */
 export function collapseAuthorSeries(
   rows: readonly GridRow[],
 ): readonly GridRow[] {

@@ -58,32 +58,13 @@ interface BridgeContextValue {
   products: Product[];
   risks: RiskEntry[];
   readOnly: boolean;
-  /** Attached activities forwarded into the risk parent picker. */
   activities?: readonly { id: string; name: string }[];
-  /**
-   * Stages-the-lead-owns selector forwarded into RisksSection and
-   * RiskEditDialog so the SDLC stage dropdown is per-project. Optional
-   * because the harness used in tests doesn't always feed it.
-   */
   stagesForProduct?: (productId: string) => readonly string[];
-  /**
-   * Display name of the section author, forwarded into RisksSection for the
-   * unified author meta-row.
-   */
   sectionAuthorName?: string;
   risksAddSignal?: number;
-  /** Cross-author entries for the current report period. */
   crossAuthors?: readonly CrossAuthorEntry[];
-  /**
-   * The record visibility mode, forwarded to SdlcPipeline so Mine renders only
-   * the lead's own stage chips. Optional —
-   * tests / non-lead callers omit it and the pipeline defaults to "everyone".
-   */
   visibilityMode?: "mine" | "everyone";
-  /** Merged risks (own + foreign) for visual rendering only. The sync hook
-   * still operates on `risks` (own-only) to avoid false-positive mutations. */
   displayRisks?: RiskEntry[];
-  /** Pending chip-raise prefill for RisksSection's create dialog. */
   riskPrefill: RiskPrefillRequest | null;
   handleStageStatusChange: (
     productId: string,
@@ -111,34 +92,19 @@ interface LeadFormSyncBridgeProviderProps {
   readonly onProductsChange: (next: Product[]) => void;
   readonly onRisksChange: (next: RiskEntry[]) => void;
   readonly readOnly?: boolean;
-  /** Attached activities forwarded into the risk parent picker. */
   readonly activities?: readonly { id: string; name: string }[];
-  /**
-   * Per-project stages-the-lead-owns lookup, forwarded by the Risks consumer
-   * into RiskEditDialog. Optional because tests can omit it.
-   */
   readonly stagesForProduct?: (productId: string) => readonly string[];
-  /**
-   * Display name of the section author, forwarded into RisksSection for the
-   * unified author meta-row.
-   */
   readonly sectionAuthorName?: string;
   readonly risksAddSignal?: number;
-  /** Cross-author entries for shared products. */
   readonly crossAuthors?: readonly CrossAuthorEntry[];
-  /**
-   * Record visibility mode forwarded to the pipeline. Optional — defaults to
-   * "everyone" (full grid) when omitted.
-   */
+  // Omitted defaults to "everyone" (full grid); "mine" renders only the
+  // lead's own stage chips.
   readonly visibilityMode?: "mine" | "everyone";
-  /** Merged risks for rendering; own-only risks drive the sync hook. */
+  // Merged risks for rendering only — the sync hook still runs on own-only
+  // `risks` to avoid false-positive mutations.
   readonly displayRisks?: RiskEntry[];
-  /**
-   * A one-shot risk-prefill routed from OUTSIDE the pipeline — the quick-add
-   * "Blocker" entry (severity blocked) and the item dialog's alarm gesture
-   * (product + stage + severity). Threaded through the same create-dialog
-   * channel the chip-raise interception uses; each new `signal` opens once.
-   */
+  // One-shot prefill routed from outside the pipeline; each new `signal`
+  // opens the create dialog exactly once.
   readonly externalRiskPrefill?: RiskPrefillRequest | null;
   readonly children: ReactNode;
 }

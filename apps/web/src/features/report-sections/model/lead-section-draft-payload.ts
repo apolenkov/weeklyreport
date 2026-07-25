@@ -66,6 +66,10 @@ function toDecisionDrafts(decisions: ReportSectionReadModel["decisions"]) {
 }
 
 // stableId round-trip is load-bearing: dropping it re-mints identity each save.
+/**
+ * Section To Draft Payload.
+ * @param section - The section argument.
+ */
 export function sectionToDraftPayload(
   section: ReportSectionReadModel,
 ): DraftSaveContent {

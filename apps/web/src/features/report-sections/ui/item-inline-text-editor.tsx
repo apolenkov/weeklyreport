@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 
 // Caller keys by item.text so external text changes remount a fresh draft.
+/**
+ * Item Inline Text Editor.
+ * @param options - The options argument.
+ */
 export function ItemInlineTextEditor({
   initialText,
   onCommit,

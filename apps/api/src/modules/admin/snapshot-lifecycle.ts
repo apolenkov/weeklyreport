@@ -20,6 +20,10 @@ export interface ResolvedLifecycle {
 // Not a transition: reinstates three machines verbatim. Absent fields fall
 // back to the legacy-tuple rule so old snapshots stay internally consistent.
 // Spec: openspec/specs/period-dual-state
+/**
+ * Resolve Lifecycle.
+ * @param period - The period argument.
+ */
 export function resolveLifecycle(period: ReportPeriod): ResolvedLifecycle {
   const archived = period.archived ?? false;
   return {

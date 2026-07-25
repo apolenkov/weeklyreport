@@ -316,7 +316,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
       section.projects.find((p) => p.projectId === testData.project.id),
     );
     expect(project.trafficLight).toBe("red");
-    // D4: the raw per-stage status is untouched (no submitted status).
+    // The raw per-stage status is untouched (no submitted status).
     expect(
       project.ownedStages?.find((s) => s.stageName === "Development")?.status ??
         null,

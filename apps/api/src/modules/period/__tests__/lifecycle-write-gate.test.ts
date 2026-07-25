@@ -171,7 +171,7 @@ function collectSourceFiles(root: string): string[] {
     );
 }
 
-describe("lifecycle-write-gate (refactor-period-transition-writer)", () => {
+describe("lifecycle-write-gate", () => {
   it("no hand-assembled Report lifecycle-field writes outside the transition module", () => {
     const files = collectSourceFiles(SRC_ROOT);
     // Sanity: the walk actually found the api source tree.

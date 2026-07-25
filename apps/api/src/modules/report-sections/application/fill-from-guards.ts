@@ -10,6 +10,12 @@ type Section = NonNullable<
   Awaited<ReturnType<LeadFormRepository["getSectionById"]>>
 >;
 
+/**
+ * Assert Fillable Target.
+ * @param repository - The repository argument.
+ * @param targetSectionId - The targetSectionId argument.
+ * @param userId - The userId argument.
+ */
 export async function assertFillableTarget(
   repository: LeadFormRepository,
   targetSectionId: string,
@@ -37,6 +43,8 @@ export async function assertFillableTarget(
  * only blocks a still-published one). Fail closed — reject the whole fill if the
  * target holds any published-lineage record; a never-published draft has none
  * and is unaffected. The same lineage query the save guard uses.
+  * @param repository - The repository argument.
+ * @param target - The target argument.
  */
 export async function assertNoPublishedLineage(
   repository: LeadFormRepository,
@@ -61,6 +69,9 @@ export async function assertNoPublishedLineage(
  * is a forged request — without this guard a lead could copy another group's
  * Item/Risk/Decision content into their own draft on an open report. fillFrom
  * copies your own history; it is never cross-author.
+  * @param repository - The repository argument.
+ * @param sourceSectionId - The sourceSectionId argument.
+ * @param userId - The userId argument.
  */
 export async function assertFillableSource(
   repository: LeadFormRepository,

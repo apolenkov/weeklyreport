@@ -60,14 +60,16 @@ export class AutoPublisherScheduler {
       return { published: true, periodIds: [] };
     }
 
-    // Publishes are sequential and the tally is accumulated in place: each
-    // period must settle before the next one is attempted.
-    const publishedIds: string[] = [];
-    for (const candidate of candidates) {
-      if (await this.publishOne(candidate.id)) {
-        publishedIds.push(candidate.id);
-      }
-    }
+    // Folded sequentially — awaiting the pending tally first is what keeps one
+    // publish in flight at a time; each period must settle before the next.
+    const publishedIds = await candidates.reduce<Promise<readonly string[]>>(
+      async (pending, candidate) => {
+        const tally = await pending;
+        const published = await this.publishOne(candidate.id);
+        return published ? [...tally, candidate.id] : tally;
+      },
+      Promise.resolve([]),
+    );
 
     return { published: true, periodIds: publishedIds };
   }

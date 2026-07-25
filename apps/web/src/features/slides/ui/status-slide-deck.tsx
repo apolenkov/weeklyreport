@@ -217,6 +217,10 @@ function DeckBody(props: DeckBodyProps) {
   );
 }
 
+/**
+ * Status Slide Deck.
+ * @param props - The props argument.
+ */
 export function StatusSlideDeck(props: StatusSlideDeckProps) {
   // Hoisted to the persistent root (never remounted by `selectedIndex`
   // changes) so arrow-key/carousel navigation cannot tear down the actual

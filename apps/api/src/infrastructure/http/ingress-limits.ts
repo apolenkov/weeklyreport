@@ -18,6 +18,14 @@ export const CLIENT_LOGS_JSON_LIMIT = "128kb";
 // Load-bearing order: limiter before JSON parse/handler so unauthenticated
 // flood cannot hit the parser or app.log. main.ts and the integration test
 // both mount through this helper — order cannot drift in one place alone.
+/**
+ * Mount Client Logs Ingress.
+ * @param app - The app argument.
+ * @param route - The route argument.
+ * @param limiter - The limiter argument.
+ * @param jsonParser - The jsonParser argument.
+ * @param handler - The handler argument.
+ */
 export function mountClientLogsIngress(
   app: {
     use: (

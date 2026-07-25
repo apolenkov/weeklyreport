@@ -147,6 +147,10 @@ function createOrganizationProcedures(deps: AdminSettingsDeps) {
   };
 }
 
+/**
+ * Create Admin Settings Procedures.
+ * @param deps - The deps argument.
+ */
 export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
   return {
     ...createSnapshotSettingsProcedures(deps),

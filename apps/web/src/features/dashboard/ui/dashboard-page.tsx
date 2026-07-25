@@ -26,6 +26,9 @@ function DashboardNoPeriod() {
   );
 }
 
+/**
+ * Dashboard Page.
+ */
 export function DashboardPage() {
   const session = useContext(SessionContext);
   const data = useDashboardData();

@@ -12,6 +12,9 @@ function randomIndex(): number {
   return Math.floor(Math.random() * LANDING_TAGLINES.length);
 }
 
+const nextTaglineIndex = (i: number): number =>
+  (i + 1) % LANDING_TAGLINES.length;
+
 // setTimeout chain instead of setInterval: each tick re-arms itself, so at
 // any instant exactly one timer is live and cleanup is a single clearTimeout.
 function CyclingTagline() {
@@ -23,7 +26,7 @@ function CyclingTagline() {
     function cycle() {
       setVisible(false);
       timerRef.current = setTimeout(() => {
-        setIndex((i) => (i + 1) % LANDING_TAGLINES.length);
+        setIndex(nextTaglineIndex);
         setVisible(true);
         timerRef.current = setTimeout(cycle, VISIBLE_MS);
       }, FADE_MS);
@@ -52,6 +55,9 @@ function CyclingTagline() {
 
 // Spec landing-page-hero, "Tagline array is empty": a misconfigured empty
 // array must omit the tagline element entirely, not render an empty <p>.
+/**
+ * Tagline Cycler.
+ */
 export function TaglineCycler() {
   if (LANDING_TAGLINES.length === 0) return null;
   return <CyclingTagline />;

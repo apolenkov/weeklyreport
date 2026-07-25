@@ -170,6 +170,10 @@ async function rebuildOwnedChildRows(
  * FOR UPDATE gate. The archived + missing-row checks inside the gate are
  * load-bearing: archive leaves periodStatus untouched, and a section deleted
  * mid-flight must surface as NOT_FOUND, not a period constraint.
+  * @param prisma - The prisma argument.
+ * @param targetSectionId - The targetSectionId argument.
+ * @param sourceSectionId - The sourceSectionId argument.
+ * @param expectedVersion - The expectedVersion argument.
  */
 export async function fillFromSectionTx(
   prisma: PrismaService,

@@ -37,6 +37,10 @@ function todayIsoString(): string {
 
 // Start from a valid preset; never blend org audience (produced invalid pairs).
 // Only timezone comes from AppSettings.
+/**
+ * Empty Policy Form.
+ * @param timezone - The timezone argument.
+ */
 export function emptyPolicyForm(timezone: string): PolicyFormState {
   const today = todayIsoString();
   const { kind, audience } = presetPairing(DEFAULT_PRESET);
@@ -54,6 +58,10 @@ export function emptyPolicyForm(timezone: string): PolicyFormState {
   };
 }
 
+/**
+ * Policy To Form.
+ * @param policy - The policy argument.
+ */
 export function policyToForm(policy: MockReminderPolicy): PolicyFormState {
   return {
     preset: presetForPolicy(policy.kind, policy.audience),

@@ -1,3 +1,6 @@
+/**
+ * Jobs Skeleton.
+ */
 export function JobsSkeleton() {
   return (
     <div

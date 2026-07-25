@@ -35,8 +35,6 @@ function ChartSkeleton() {
   return <div className="h-64 w-full animate-pulse rounded-md bg-muted/50" />;
 }
 
-// Every chart panel is the same labelled section with a skeleton while its own
-// query is in flight; only the rendered chart differs.
 function TrendsSection({
   headingId,
   title,

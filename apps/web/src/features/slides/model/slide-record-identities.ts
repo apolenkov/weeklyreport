@@ -13,6 +13,10 @@ const COLUMN_ORDER: readonly GridColumnKey[] = [
   "decisions",
 ];
 
+/**
+ * Slide Record Identities.
+ * @param model - The model argument.
+ */
 export function slideRecordIdentities(
   model: SectionSlideModel,
 ): readonly string[] {

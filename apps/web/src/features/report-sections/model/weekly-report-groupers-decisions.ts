@@ -50,6 +50,11 @@ function deriveWeeklyReportDecision(
 
 // Explicit productId when present; legacy without productId → first project.
 // Neither → dropped. projectNames is the report-wide id→name map.
+/**
+ * Group Decisions By Project.
+ * @param sections - The sections argument.
+ * @param projectNames - The projectNames argument.
+ */
 export function groupDecisionsByProject(
   sections: readonly ReportSectionReadModel[],
   projectNames: ReadonlyMap<string, string>,
@@ -82,6 +87,10 @@ export function groupDecisionsByProject(
 }
 
 // Priorities from items with priorityRank, grouped by project, rank ASC.
+/**
+ * Group Priorities By Project.
+ * @param sections - The sections argument.
+ */
 export function groupPrioritiesByProject(
   sections: readonly ReportSectionReadModel[],
 ): Map<string, WeeklyReportPriority[]> {
@@ -114,6 +123,10 @@ export function groupPrioritiesByProject(
   );
 }
 
+/**
+ * Build Product To Author Map.
+ * @param sections - The sections argument.
+ */
 export function buildProductToAuthorMap(
   sections: readonly ReportSectionReadModel[],
 ): Map<string, string[]> {
@@ -135,6 +148,11 @@ export function buildProductToAuthorMap(
 }
 
 // First escalation targeting the product, surfaced as the needsAttention banner.
+/**
+ * Find Needs Attention.
+ * @param api - The api argument.
+ * @param productName - The productName argument.
+ */
 export function findNeedsAttention(
   api: WeeklyReportReadModel,
   productName: string,

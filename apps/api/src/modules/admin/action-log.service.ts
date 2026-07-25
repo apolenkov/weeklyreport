@@ -21,7 +21,7 @@ export type ActionLogEntry = ActionLogFields & { createdAt: string };
 export type ActionLogRow = ActionLogFields & { createdAt: Date };
 
 export interface ActionLogRepository {
-  /** Newest-first composite keyset: `createdAt DESC`, then unique `id DESC`. */
+  // Newest-first composite keyset: `createdAt DESC`, then unique `id DESC`.
   listActionLog(pagination: {
     limit: number;
     cursor?: string;

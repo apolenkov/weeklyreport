@@ -227,6 +227,10 @@ function useSwipeNavigation(onPrev: () => void, onNext: () => void) {
 
 // PeriodNavigator listbox + swipe: trigger + portaled panel (native <option>
 // can't host badges). Focus stays on the trigger; highlight via aria-activedescendant.
+/**
+ * Use Period Listbox Nav.
+ * @param props - The props argument.
+ */
 export function usePeriodListboxNav({
   instanceId,
   currentIndex,

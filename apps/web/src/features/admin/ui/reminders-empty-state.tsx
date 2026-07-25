@@ -27,6 +27,10 @@ function BellIcon() {
   );
 }
 
+/**
+ * Reminders Empty State.
+ * @param props - The props argument.
+ */
 export function RemindersEmptyState({
   hasNoPolicies,
   onCreate,

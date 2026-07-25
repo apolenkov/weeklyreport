@@ -22,12 +22,20 @@ const VIEWER_AUTHORITY_BY_STATUS = {
   },
 } as const satisfies Readonly<Record<PeriodStatus, ViewerAuthority>>;
 
+/**
+ * Derive Viewer Authority.
+ * @param periodStatus - The periodStatus argument.
+ */
 export function deriveViewerAuthority(
   periodStatus: PeriodStatus,
 ): ViewerAuthority {
   return VIEWER_AUTHORITY_BY_STATUS[periodStatus];
 }
 
+/**
+ * Viewer Authority Label.
+ * @param options - The options argument.
+ */
 export function ViewerAuthorityLabel({
   authority,
 }: {

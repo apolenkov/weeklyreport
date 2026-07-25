@@ -96,6 +96,10 @@ function PrintNeedsAttention({ report }: PrintLeadSectionProps) {
   );
 }
 
+/**
+ * Print Lead Section.
+ * @param props - The props argument.
+ */
 export function PrintLeadSection({ report }: PrintLeadSectionProps) {
   return (
     <section style={{ marginBottom: "16px", pageBreakInside: "avoid" }}>

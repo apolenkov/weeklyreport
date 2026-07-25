@@ -16,6 +16,10 @@ interface UsersTableProps {
   readonly onDelete: (user: MockUser, trigger: HTMLButtonElement) => void;
 }
 
+/**
+ * Users Table.
+ * @param props - The props argument.
+ */
 export function UsersTable({
   users,
   deactivatePending,

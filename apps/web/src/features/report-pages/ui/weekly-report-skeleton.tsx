@@ -56,6 +56,9 @@ function AccordionSkeleton() {
   );
 }
 
+/**
+ * Weekly Report Skeleton.
+ */
 export function WeeklyReportSkeleton() {
   return (
     <div

@@ -17,6 +17,10 @@ interface CurrentWeekBoardGridProps {
   readonly renderItem: (item: KanbanItem) => ReactNode;
 }
 
+/**
+ * Current Week Board Grid.
+ * @param props - The props argument.
+ */
 export function CurrentWeekBoardGrid({
   productColumns,
   activityLanes,

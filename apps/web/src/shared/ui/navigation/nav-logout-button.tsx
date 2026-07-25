@@ -3,6 +3,9 @@
 const LOGOUT_BUTTON_CLASS =
   "inline-flex h-8 w-10 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]";
 
+/**
+ * Nav Logout Button.
+ */
 export function NavLogoutButton() {
   return (
     <button

@@ -1,13 +1,5 @@
-/**
- * Tests for useCursorPagination — the generic cursor pagination hook that
- * wraps useInfiniteQuery for any cursor-paginated tRPC endpoint.
- *
- * The hook accepts a factory that mirrors the shape produced by
- * `trpc.<router>.<proc>.infiniteQueryOptions(input, opts)` from
- * `@trpc/tanstack-react-query`. We mock that factory directly with a plain
- * `infiniteQueryOptions` object so the tests do not depend on a real tRPC
- * client.
- */
+// The `infiniteQueryOptions` factory is stubbed directly so these tests need no
+// real tRPC client.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -33,7 +25,6 @@ function makeWrapper() {
   return { client, Wrapper };
 }
 
-/** Build a factory compatible with the hook signature. */
 function makeFactory<T>(
   pages: Record<string, Page<T>>,
   baseQueryKey: readonly unknown[],

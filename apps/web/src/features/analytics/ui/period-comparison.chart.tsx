@@ -30,6 +30,10 @@ function deltaClass(delta: number): string {
   return "text-muted-foreground";
 }
 
+/**
+ * Period Comparison Chart.
+ * @param props - The props argument.
+ */
 export function PeriodComparisonChart({ rows }: PeriodComparisonOutput) {
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">No comparison data.</p>;

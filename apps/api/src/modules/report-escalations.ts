@@ -99,6 +99,10 @@ function productNamesFor(
   );
 }
 
+/**
+ * Build Escalations From Read Sections.
+ * @param sections - The sections argument.
+ */
 export function buildEscalationsFromReadSections(
   sections: readonly ReportSectionReadModel[],
 ): Escalation[] {

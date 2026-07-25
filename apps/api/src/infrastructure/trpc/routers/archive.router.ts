@@ -80,6 +80,10 @@ function buildUnarchiveReportProcedure(deps: ArchiveRouterDeps) {
   });
 }
 
+/**
+ * Create Archive Router.
+ * @param deps - The deps argument.
+ */
 export function createArchiveRouter(deps: ArchiveRouterDeps) {
   return router({
     list: buildListProcedure(deps),

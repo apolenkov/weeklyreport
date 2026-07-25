@@ -44,6 +44,10 @@ function SummaryCard({
   );
 }
 
+/**
+ * Print Executive Summary.
+ * @param props - The props argument.
+ */
 export function PrintExecutiveSummary({
   submitted,
   total,

@@ -3,6 +3,11 @@ import type { AdminReminderRule } from "@customreport/shared";
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { formatPeriodLabel, toRuleDomain } from "./reminders-row-mappers.js";
 
+/**
+ * Query Reminder Rule.
+ * @param prisma - The prisma argument.
+ * @param ruleId - The ruleId argument.
+ */
 export async function queryReminderRule(
   prisma: PrismaService,
   ruleId: string,
@@ -11,6 +16,11 @@ export async function queryReminderRule(
   return rule ? toRuleDomain(rule) : null;
 }
 
+/**
+ * Query Rule Period Label.
+ * @param prisma - The prisma argument.
+ * @param ruleId - The ruleId argument.
+ */
 export async function queryRulePeriodLabel(
   prisma: PrismaService,
   ruleId: string,

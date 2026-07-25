@@ -58,6 +58,10 @@ function HeaderIdentity({
   );
 }
 
+/**
+ * Accordion Header.
+ * @param options - The options argument.
+ */
 export function AccordionHeader({
   report,
   hasContent,

@@ -76,6 +76,10 @@ function stagesAriaLabel(
     : "Decision stages: No stage set";
 }
 
+/**
+ * Decision Card.
+ * @param props - The props argument.
+ */
 export function DecisionCard({
   decision,
   readOnly,

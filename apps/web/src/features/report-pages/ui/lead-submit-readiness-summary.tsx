@@ -71,6 +71,10 @@ function ReadinessGroup({
   );
 }
 
+/**
+ * Lead Submit Readiness Summary.
+ * @param props - The props argument.
+ */
 export function LeadSubmitReadinessSummary({
   readiness,
   onSubmit,

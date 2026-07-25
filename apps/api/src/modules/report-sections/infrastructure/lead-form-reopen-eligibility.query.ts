@@ -59,6 +59,12 @@ function mapSectionForPeriodRow(
   return { section, readOnly, reopenFacts };
 }
 
+/**
+ * Get Section For Period.
+ * @param prisma - The prisma argument.
+ * @param reportId - The reportId argument.
+ * @param userId - The userId argument.
+ */
 export async function getSectionForPeriod(
   prisma: PrismaService,
   reportId: string,
@@ -88,6 +94,10 @@ export async function getSectionForPeriod(
  * there is no gap for the group to change in. A peer with no reporting group
  * (`reportingGroupId: null`) fails the relation filter and yields null —
  * fail closed with no separate null-check needed.
+  * @param prisma - The prisma argument.
+ * @param reportId - The reportId argument.
+ * @param authorId - The authorId argument.
+ * @param peerUserId - The peerUserId argument.
  */
 export async function getSectionForPeriodAsGroupPeer(
   prisma: PrismaService,
@@ -111,6 +121,11 @@ export async function getSectionForPeriodAsGroupPeer(
   return mapSectionForPeriodRow(row);
 }
 
+/**
+ * Get Section Reopen Context.
+ * @param prisma - The prisma argument.
+ * @param sectionId - The sectionId argument.
+ */
 export async function getSectionReopenContext(
   prisma: PrismaService,
   sectionId: string,

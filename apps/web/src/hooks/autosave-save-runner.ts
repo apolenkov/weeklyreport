@@ -24,6 +24,7 @@ export interface DebounceSaveDeps {
  * stashed for the onSuccess drain instead of starting a second parallel
  * mutation on the single in-flight slot (mirrors forceSave's guard); otherwise
  * it starts the save with the live version injected.
+  * @param deps - The deps argument.
  */
 export function runDebouncedSaveTick(deps: DebounceSaveDeps): void {
   const current = deps.payloadRef.current;
@@ -67,6 +68,7 @@ export interface ForceSaveDeps {
  * Cancels the pending debounce timer and triggers an immediate save. If a
  * mutation is already in flight the current payload is queued and fired
  * automatically on success.
+  * @param deps - The deps argument.
  */
 export async function runForceSave(deps: ForceSaveDeps): Promise<void> {
   const current = deps.payloadRef.current;

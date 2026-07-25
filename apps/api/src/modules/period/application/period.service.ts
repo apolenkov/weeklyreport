@@ -124,6 +124,15 @@ export type ReopenPolicyReader = () => Promise<{
   reopenWindowHours: number;
 }>;
 
+// A zero-row compare-and-set is either an archive that landed inside the
+// read→write window (fail closed — the pre-write check cannot see it) or a
+// concurrent publish that already reached the desired state (idempotent).
+function assertPublishRaceIsIdempotent(reason: "raced" | "archived"): void {
+  if (reason === "archived") {
+    throw new PeriodScopeError("Archived periods cannot be published.");
+  }
+}
+
 export class PeriodService {
   constructor(
     private readonly repository: PeriodRepository,
@@ -163,19 +172,11 @@ export class PeriodService {
       return { success: true, reportId };
     }
 
-    // A head publishes either the current editable period (steady state) or the
-    // single active reopened period. getCurrentEditableId resolves the newest
-    // editable by periodStart — the *open* next period when a reopened older
-    // period coexists — so a reopened target is checked against
-    // getReopenedNonArchivedId instead, the one period the single-active-reopen
-    // guard permits. Asserting that equality (rather than skipping the check for
-    // any reopened target) closes the bypass where an admin-reopened historical
-    // period — a second reopened row — could be republished by a head.
-    const resolveActiveId =
-      report.periodStatus === "reopened"
-        ? () => this.repository.getReopenedNonArchivedId()
-        : () => this.repository.getCurrentEditableId();
-    await this.assertHeadTargetMatches(reportId, session, resolveActiveId);
+    await this.assertHeadTargetMatches(
+      reportId,
+      session,
+      this.resolveActiveIdFor(report.periodStatus),
+    );
 
     // Capture prior status before the write so the from-label reflects
     // the actual state (open or reopened), not a hardcoded value.
@@ -187,15 +188,9 @@ export class PeriodService {
     );
 
     if (!outcome.transitioned) {
-      // The guarded compare-and-set matched zero rows for one of two reasons.
-      // An archive landed inside the read→write window (the pre-write
-      // `report.archived` check above cannot catch this): fail closed with the
-      // same domain error. Otherwise a concurrent publish won — idempotent
-      // success that emits no counters and runs no post-publish side-effects so
-      // a redundant publish never inflates the on-time-ratio numerator.
-      if (outcome.reason === "archived") {
-        throw new PeriodScopeError("Archived periods cannot be published.");
-      }
+      // The loser of the race emits no counters and runs no post-publish
+      // side-effects, so a redundant publish never inflates the on-time ratio.
+      assertPublishRaceIsIdempotent(outcome.reason);
       return { success: true, reportId };
     }
 
@@ -214,6 +209,17 @@ export class PeriodService {
     );
 
     return { success: true, reportId };
+  }
+
+  // A reopened target resolves to the ONE period the single-active-reopen guard
+  // permits, never the newest editable — otherwise an admin-reopened historical
+  // period (a second reopened row) could be republished by a head.
+  private resolveActiveIdFor(
+    periodStatus: PeriodStatus,
+  ): () => Promise<string | null> {
+    return periodStatus === "reopened"
+      ? () => this.repository.getReopenedNonArchivedId()
+      : () => this.repository.getCurrentEditableId();
   }
 
   /**

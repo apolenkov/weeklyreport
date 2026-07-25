@@ -131,12 +131,10 @@ function buildHarness() {
   return { Wrapper, captured };
 }
 
-/** Flushes pending promise microtasks while fake timers are installed. */
 async function flush() {
   await act(() => vi.advanceTimersByTimeAsync(0));
 }
 
-/** Renders and settles the loaded form ("Autosaved" badge visible). */
 async function renderLoaded() {
   const harness = buildHarness();
   render(
@@ -152,7 +150,6 @@ async function renderLoaded() {
   return harness;
 }
 
-/** Clicks the first editable SDLC stage chip to dirty the draft. */
 function clickEditableStageChip() {
   const chip = screen.getAllByRole("button").find((button) => {
     const label = button.getAttribute("aria-label") ?? "";

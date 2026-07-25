@@ -35,6 +35,8 @@ const STATUS_TO_VALUE: Record<Exclude<TrafficLightCell, null>, number> = {
  * (a UUID) rather than the project name, so two projects that share a name keep
  * separate lines instead of silently overwriting each other. The series
  * descriptor carries the human-readable name for recharts' tooltip.
+  * @param periods - The periods argument.
+ * @param rows - The rows argument.
  */
 export function buildTrafficLightHistoryChartData(
   periods: TrafficLightHistoryOutput["periods"],
@@ -64,6 +66,10 @@ export function buildTrafficLightHistoryChartData(
   return { data, series };
 }
 
+/**
+ * Traffic Light History Chart.
+ * @param props - The props argument.
+ */
 export function TrafficLightHistoryChart({
   periods,
   rows,

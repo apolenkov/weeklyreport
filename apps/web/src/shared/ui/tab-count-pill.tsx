@@ -11,6 +11,10 @@ function formatTabCount(count: number): string {
   return String(count);
 }
 
+/**
+ * Tab Count Pill.
+ * @param props - The props argument.
+ */
 export function TabCountPill({ ariaLabel, count, testId }: TabCountPillProps) {
   const safeCount = Math.max(0, count);
   const visible = safeCount > 0;

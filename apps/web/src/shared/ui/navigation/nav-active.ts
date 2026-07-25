@@ -25,6 +25,12 @@ function viewerActiveLink(pathname: string, href: string): boolean | undefined {
   return undefined;
 }
 
+/**
+ * Is Active Link.
+ * @param pathname - The pathname argument.
+ * @param href - The href argument.
+ * @param role - The role argument.
+ */
 export function isActiveLink(
   pathname: string,
   href: string,
@@ -45,4 +51,8 @@ export function isActiveLink(
   return pathname.startsWith(href);
 }
 
+/**
+ * Get Logo Href.
+ * @param role - The role argument.
+ */
 export const getLogoHref = (role: Role) => ROLE_HOME_PATH[role];

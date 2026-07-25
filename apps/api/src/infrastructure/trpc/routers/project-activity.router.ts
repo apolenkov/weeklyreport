@@ -28,6 +28,10 @@ async function mapErrors<T>(run: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * Create Project Activity Router.
+ * @param deps - The deps argument.
+ */
 export function createProjectActivityRouter(deps: ProjectActivityRouterDeps) {
   return router({
     list: adminProcedure.query(() =>

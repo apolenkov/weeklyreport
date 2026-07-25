@@ -38,7 +38,7 @@ export {
 
 export const LEAD_FORM_REPOSITORY = Symbol("LeadFormRepository");
 
-// Lead-form facade. TODO(versions-v2) marks version-history re-entry points.
+// TODO(versions-v2) marks version-history re-entry points.
 export class LeadFormService {
   constructor(
     private readonly repository: LeadFormRepository,
@@ -143,7 +143,6 @@ export class LeadFormService {
     return { success: true };
   }
 
-  /** Get lead form for a specific period. */
   async getByPeriod(
     reportId: string,
     userId: string,

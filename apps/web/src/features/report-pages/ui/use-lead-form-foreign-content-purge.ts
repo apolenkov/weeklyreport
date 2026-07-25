@@ -15,6 +15,10 @@ interface UseLeadFormForeignContentPurgeInput {
 }
 
 // Effects + deps are load-bearing; lead-form-visibility.test.tsx pins them.
+/**
+ * Use Lead Form Foreign Content Purge.
+ * @param props - The props argument.
+ */
 export function useLeadFormForeignContentPurge({
   isEveryone,
   visibilityHydrated,

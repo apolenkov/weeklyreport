@@ -44,6 +44,10 @@ function SlideEscHint({ isFullscreen }: { readonly isFullscreen: boolean }) {
 }
 
 // Floating exit pill + Esc hint; both must live inside the fullscreened element.
+/**
+ * Deck Fullscreen Overlay.
+ * @param options - The options argument.
+ */
 export function DeckFullscreenOverlay({
   isFullscreen,
   onToggle,
@@ -64,6 +68,10 @@ export function DeckFullscreenOverlay({
 }
 
 // Shared toolbar cluster; toggleRef returns focus to this control on fullscreen exit.
+/**
+ * Deck Toolbar Controls.
+ * @param options - The options argument.
+ */
 export function DeckToolbarControls({
   isFullscreen,
   onToggle,

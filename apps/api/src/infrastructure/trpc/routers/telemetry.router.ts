@@ -11,6 +11,10 @@ export interface TelemetryRouterDeps {
 // Lead is the KPI data subject, not a consumer — leadershipProcedure only.
 // Redis cache (TelemetryCache) degrades to direct queries on outage.
 
+/**
+ * Create Telemetry Router.
+ * @param deps - The deps argument.
+ */
 export function createTelemetryRouter(deps: TelemetryRouterDeps) {
   return router({
     summary: leadershipProcedure.query(async ({ ctx }) => {

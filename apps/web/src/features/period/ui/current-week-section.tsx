@@ -32,6 +32,10 @@ function deriveDialogProps(dialogState: EditableListDialogState<KanbanItem>): {
   };
 }
 
+/**
+ * Current Week Section.
+ * @param props - The props argument.
+ */
 export function CurrentWeekSection({
   items,
   risks,

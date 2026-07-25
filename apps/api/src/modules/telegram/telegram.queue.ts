@@ -21,12 +21,8 @@ export interface TelegramOutboundJobData extends JobTraceContext {
 
 export const TELEGRAM_OUTBOUND_QUEUE_NAME = "telegram-outbound" as const;
 
-/**
- * Default BullMQ job options used by every enqueue path. Centralised here
- * so producers don't drift on retry policy. `attempts: 3` matches the
- * `EmailReminderProcessor` family; `backoff` is exponential with a 5s
- * floor so a transient Telegram 429 has room to settle.
- */
+// Centralised so producers don't drift on retry policy; the 5s exponential
+// backoff floor gives a transient Telegram 429 room to settle.
 export const TELEGRAM_OUTBOUND_JOB_OPTS = {
   attempts: 3,
   backoff: { type: "exponential" as const, delay: 5000 },

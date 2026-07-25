@@ -89,6 +89,10 @@ function buildRemovePolicy(deps: AdminReminderPoliciesDeps) {
     });
 }
 
+/**
+ * Create Admin Reminder Policies Procedures.
+ * @param deps - The deps argument.
+ */
 export function createAdminReminderPoliciesProcedures(
   deps: AdminReminderPoliciesDeps,
 ) {
