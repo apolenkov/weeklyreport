@@ -56,19 +56,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     const { sectionScope, userScope, projectScope } =
       deriveScopeFilters(session);
 
-    const report = await this.prisma.report.findUnique({
-      where: { id: reportId },
-      include: {
-        sections: {
-          ...(sectionScope ? { where: sectionScope } : {}),
-          include: reportSectionFullInclude,
-          // Same deterministic order as the frozen-snapshot include: the
-          // live/draft render branch (and a published row whose snapshot is
-          // absent) must not serve raw heap order.
-          orderBy: [{ author: { name: "asc" } }, { id: "asc" }],
-        },
-      },
-    });
+    const report = await this.loadReportWithSections(reportId, sectionScope);
 
     if (!report) {
       return null;
@@ -126,6 +114,25 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       totalLeads,
       activePolicyCount,
     );
+  }
+
+  private loadReportWithSections(
+    reportId: string,
+    sectionScope: Record<string, unknown> | undefined,
+  ): Promise<WeeklyReportRow | null> {
+    return this.prisma.report.findUnique({
+      where: { id: reportId },
+      include: {
+        sections: {
+          ...(sectionScope ? { where: sectionScope } : {}),
+          include: reportSectionFullInclude,
+          // Same deterministic order as the frozen-snapshot include: the
+          // live/draft render branch (and a published row whose snapshot is
+          // absent) must not serve raw heap order.
+          orderBy: [{ author: { name: "asc" } }, { id: "asc" }],
+        },
+      },
+    });
   }
 
   private async fetchReportDependencies(

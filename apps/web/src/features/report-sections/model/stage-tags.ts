@@ -1,7 +1,10 @@
 import { STAGE } from "@customreport/shared";
 export { riskCoversStage, splitStageNames } from "@customreport/shared";
 
-/** Normalize a stage name to its canonical DB form (resolves UI chip aliases). */
+/**
+ * Normalize a stage name to its canonical DB form (resolves UI chip aliases).
+ * @param name - The name argument.
+ */
 export function canonicalStageName(name: string): string {
   return name.toLowerCase() === "dev" ? STAGE.DEVELOPMENT : name;
 }
@@ -11,6 +14,7 @@ export function canonicalStageName(name: string): string {
  * aliasing (a legacy `["Dev", "Development"]` → `["Development"]`). Record
  * dialogs run saved selections through this so a record always persists the
  * canonical stage name (stage-label-canonicalization spec 1.2).
+  * @param ids - The ids argument.
  */
 export function canonicalStageIds(ids: readonly string[]): string[] {
   return [...new Set(ids.map(canonicalStageName))];
@@ -25,7 +29,10 @@ const STAGE_SHORT_LABEL: Record<string, string> = {
   [STAGE.DEVELOPMENT]: "Dev",
 };
 
-/** The short pipeline-chip label for a (canonical) stage name; full name if none. */
+/**
+ * The short pipeline-chip label for a (canonical) stage name; full name if none.
+ * @param name - The name argument.
+ */
 export function stageShortLabel(name: string): string {
   return STAGE_SHORT_LABEL[canonicalStageName(name)] ?? name;
 }

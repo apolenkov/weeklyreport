@@ -1,8 +1,7 @@
 // UserActionLog, AppSettings and ViewerGroupAccess are the wipe sentinels:
 // they sit outside seedTestData's fixture graph, so cleanDatabase's dynamic
 // table discovery is the only thing that reaches them — a regression there
-// fails these tests first. Picked up by the src/**/*.integration.test.ts glob
-// in apps/api/vitest.integration.config.ts, which loads ../../.env.test.
+// fails these tests first.
 
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 

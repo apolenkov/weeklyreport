@@ -161,6 +161,10 @@ function createItemHandlers({
   };
 }
 
+/**
+ * Next Week Section.
+ * @param props - The props argument.
+ */
 export function NextWeekSection({
   items,
   risks,

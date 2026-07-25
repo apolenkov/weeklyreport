@@ -23,6 +23,10 @@ interface PolicyRowProps {
 const ACTION_CLASS =
   "btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-empty)] disabled:cursor-not-allowed disabled:opacity-50";
 
+/**
+ * Policy Row.
+ * @param props - The props argument.
+ */
 export function PolicyRow({
   policy,
   derivedRules,

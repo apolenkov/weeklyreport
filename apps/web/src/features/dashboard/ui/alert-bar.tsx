@@ -95,6 +95,10 @@ function ConfigureRemindersLink() {
   );
 }
 
+/**
+ * Alert Bar.
+ * @param props - The props argument.
+ */
 export function AlertBar({
   pendingLeads,
   reportId,

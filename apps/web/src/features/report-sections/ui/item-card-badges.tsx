@@ -9,6 +9,10 @@ interface ItemCardBadgesProps {
   readonly publishedLocked: boolean;
 }
 
+/**
+ * Item Card Badges.
+ * @param props - The props argument.
+ */
 export function ItemCardBadges({
   badge,
   alarmLocked,

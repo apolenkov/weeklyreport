@@ -13,6 +13,7 @@
  * value. Each host maps its own notion of own-deck to `isOwnDeck`
  * (`LeadSlidesClient`: `isOwnDeck` from `authorId` + session; `LeadForm`:
  * `!isForeignSlidesDeck`).
+  * @param options - The options argument.
  */
 export function crossAuthorContentFetchEnabled({
   hasReport,

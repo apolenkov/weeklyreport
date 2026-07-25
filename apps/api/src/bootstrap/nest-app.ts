@@ -1,0 +1,50 @@
+import type { INestApplication } from "@nestjs/common";
+import { HttpAdapterHost, NestFactory } from "@nestjs/core";
+
+import { AppModule } from "../app.module";
+import type { EnvConfig } from "../infrastructure/config/env.schema";
+import { SentryExceptionFilter } from "../infrastructure/filters/sentry-exception.filter";
+import type { OtelBootstrapResult } from "../infrastructure/otel/otel.bootstrap";
+import { APP_LOGGER } from "../lib/audit-logger";
+import type { AppLogger } from "../lib/logger";
+import { createAppLogger } from "../lib/logger";
+import { NestAppLoggerAdapter } from "../lib/nest-app-logger.adapter";
+import { logOtelDecision } from "./otel-decision-log";
+
+// The pre-bootstrap logger has no CLS yet, so it is routed through
+// NestAppLoggerAdapter and swapped for the container-resolved AppLogger as soon
+// as the app exists — one file sink, never a second concurrent writer.
+/**
+ * Create Nest App.
+ * @param deps - The deps argument.
+ */
+export async function createNestApp(deps: {
+  env: EnvConfig;
+  otelDecision: OtelBootstrapResult;
+}): Promise<{ app: INestApplication; logger: AppLogger }> {
+  const { env, otelDecision } = deps;
+
+  const preBootLogger = createAppLogger({
+    service: "customreport-api",
+    minLevel: env.LOG_LEVEL,
+    logDir: env.LOG_DIR,
+  });
+  const nestLoggerAdapter = new NestAppLoggerAdapter(preBootLogger);
+
+  preBootLogger.info("bootstrap starting");
+
+  const app = await NestFactory.create(AppModule, {
+    logger: nestLoggerAdapter,
+  });
+
+  const { httpAdapter } = app.get(HttpAdapterHost);
+  app.useGlobalFilters(new SentryExceptionFilter(httpAdapter));
+
+  const logger = app.get<AppLogger>(APP_LOGGER);
+
+  nestLoggerAdapter.setLogger(logger);
+  logger.info("bootstrap started");
+  logOtelDecision(logger, otelDecision);
+
+  return { app, logger };
+}

@@ -46,6 +46,10 @@ function CoveredStatusLock() {
   );
 }
 
+/**
+ * Status Slot View.
+ * @param options - The options argument.
+ */
 export function StatusSlotView({
   slot,
   choices,

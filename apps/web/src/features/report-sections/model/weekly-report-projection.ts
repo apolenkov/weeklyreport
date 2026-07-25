@@ -46,6 +46,10 @@ export interface ProjectedWeeklyProduct {
   readonly product: WeeklyProductReport;
 }
 
+/**
+ * Build Weekly Report Projection Context.
+ * @param report - The report argument.
+ */
 export function buildWeeklyReportProjectionContext(
   report: WeeklyReportReadModel,
 ): WeeklyReportProjectionContext {
@@ -81,6 +85,11 @@ function attentionProperties(
   };
 }
 
+/**
+ * Project Weekly Product.
+ * @param overview - The overview argument.
+ * @param context - The context argument.
+ */
 export function projectWeeklyProduct(
   overview: PortfolioProductOverview,
   context: WeeklyReportProjectionContext,

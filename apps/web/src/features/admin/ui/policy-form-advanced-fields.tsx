@@ -5,6 +5,10 @@ import {
   POLICY_FORM_LABEL_CLASS,
 } from "./policy-form-styles";
 
+/**
+ * Policy Form Advanced Fields.
+ * @param options - The options argument.
+ */
 export function PolicyFormAdvancedFields({
   form,
   onChange,

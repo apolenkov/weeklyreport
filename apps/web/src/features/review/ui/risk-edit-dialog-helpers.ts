@@ -16,6 +16,11 @@ export interface RiskFieldErrors {
 
 // Called once in useState initializer; never re-run on stage toggles so the
 // user's explicit severity choice stays sticky.
+/**
+ * Derive From Pre Checked.
+ * @param product - The product argument.
+ * @param ownedStages - The ownedStages argument.
+ */
 export function deriveFromPreChecked(
   product: Product | undefined,
   ownedStages: readonly string[],
@@ -29,6 +34,11 @@ export function deriveFromPreChecked(
   return "at-risk";
 }
 
+/**
+ * Compute Initial Stage Ids.
+ * @param risk - The risk argument.
+ * @param initialStageIds - The initialStageIds argument.
+ */
 export function computeInitialStageIds(
   risk: RiskEntry | null,
   initialStageIds: string[] | undefined,
@@ -39,6 +49,11 @@ export function computeInitialStageIds(
 
 // Pre-flagged owned stages for a product parent (info strip only). Empty for
 // an activity parent, so the strip self-suppresses there.
+/**
+ * Compute Pre Checked Stages.
+ * @param seedProduct - The seedProduct argument.
+ * @param ownedStages - The ownedStages argument.
+ */
 export function computePreCheckedStages(
   seedProduct: Product | undefined,
   ownedStages: readonly string[],
@@ -60,6 +75,10 @@ export function computePreCheckedStages(
 }
 
 // Stage required only for a product parent; activities own no stage.
+/**
+ * Collect Risk Errors.
+ * @param args - The args argument.
+ */
 export function collectRiskErrors(args: {
   readonly text: string;
   readonly impact: string;
@@ -81,6 +100,10 @@ export function collectRiskErrors(args: {
   };
 }
 
+/**
+ * Resolve Risk Parent Name.
+ * @param args - The args argument.
+ */
 export function resolveRiskParentName(args: {
   readonly isActivityParent: boolean;
   readonly selectedActivity: ParentActivityOption | undefined;
@@ -97,6 +120,12 @@ export function resolveRiskParentName(args: {
 // Cross-stage rows may reference a project outside stage-owned `products` —
 // keep the original assignment instead of reassigning to the first product.
 // products.at(0) only when the picker was never touched and risk has no product.
+/**
+ * Resolve Risk Save Product.
+ * @param products - The products argument.
+ * @param risk - The risk argument.
+ * @param parentId - The parentId argument.
+ */
 export function resolveRiskSaveProduct(
   products: readonly Product[],
   risk: RiskEntry | null,
@@ -113,6 +142,10 @@ export function resolveRiskSaveProduct(
 type RiskSaveEntry = RiskEntry & { impact: string; mitigation: string };
 
 // Activity-parented: empty productId, no stage (activities own no SDLC stage).
+/**
+ * Build Activity Risk Entry.
+ * @param args - The args argument.
+ */
 export function buildActivityRiskEntry(args: {
   readonly existingId: string | undefined;
   readonly activityId: string;
@@ -136,6 +169,10 @@ export function buildActivityRiskEntry(args: {
   };
 }
 
+/**
+ * Build Product Risk Entry.
+ * @param args - The args argument.
+ */
 export function buildProductRiskEntry(args: {
   readonly existingId: string | undefined;
   readonly product: { id: string; name: string };
@@ -160,6 +197,11 @@ export function buildProductRiskEntry(args: {
 
 // Map dialog-lifecycle + chip-raise prefill onto RiskEditDialog seed props
 // so the section wires the dialog with one spread instead of mode ternaries.
+/**
+ * Derive Risk Dialog Seed Props.
+ * @param dialogState - The dialogState argument.
+ * @param createPrefill - The createPrefill argument.
+ */
 export function deriveRiskDialogSeedProps(
   dialogState:
     | { open: false }

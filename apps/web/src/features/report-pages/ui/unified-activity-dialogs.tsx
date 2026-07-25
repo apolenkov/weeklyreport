@@ -24,6 +24,10 @@ interface UnifiedActivityDialogsProps {
   readonly onCancelDelete: () => void;
 }
 
+/**
+ * Unified Activity Dialogs.
+ * @param props - The props argument.
+ */
 export function UnifiedActivityDialogs({
   editState,
   pendingDelete,

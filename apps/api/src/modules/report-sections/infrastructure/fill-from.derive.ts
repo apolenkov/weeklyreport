@@ -13,6 +13,11 @@ export function remapNextToCurrentStatus<WF extends string>(
 }
 
 // Carry only if product-parented or activity still on target (XOR CHECK).
+/**
+ * Is Carryable.
+ * @param row - The row argument.
+ * @param targetActivityIds - The targetActivityIds argument.
+ */
 export function isCarryable(
   row: { activityId: string | null },
   targetActivityIds: ReadonlySet<string>,
@@ -56,6 +61,11 @@ interface SourceRisk {
   stageNames: string[];
 }
 
+/**
+ * To Filled Risk Rows.
+ * @param sourceRows - The sourceRows argument.
+ * @param targetSectionId - The targetSectionId argument.
+ */
 export function toFilledRiskRows(
   sourceRows: readonly SourceRisk[],
   targetSectionId: string,
@@ -83,6 +93,11 @@ interface SourceDecision {
   activityId: string | null;
 }
 
+/**
+ * To Filled Decision Rows.
+ * @param sourceRows - The sourceRows argument.
+ * @param targetSectionId - The targetSectionId argument.
+ */
 export function toFilledDecisionRows(
   sourceRows: readonly SourceDecision[],
   targetSectionId: string,

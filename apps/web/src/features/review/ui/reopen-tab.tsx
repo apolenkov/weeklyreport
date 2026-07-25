@@ -42,6 +42,9 @@ function ReopenFilterBar({
   );
 }
 
+/**
+ * Reopen Tab.
+ */
 export function ReopenTab() {
   const {
     filter,

@@ -10,6 +10,10 @@ export const EMPTY_PRODUCT_FORM: ProductFormData = {
   leadId: "",
 };
 
+/**
+ * Form From Product.
+ * @param product - The product argument.
+ */
 export function formFromProduct(product: MockProduct): ProductFormData {
   return {
     name: product.name,

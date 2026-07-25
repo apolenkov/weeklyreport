@@ -47,6 +47,10 @@ function DefaultTimezoneField({
   );
 }
 
+/**
+ * Reminders Sub Tab.
+ * @param options - The options argument.
+ */
 export function RemindersSubTab({
   serverSettings,
 }: {

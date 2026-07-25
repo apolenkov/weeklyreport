@@ -102,6 +102,10 @@ function ToolbarSecondaryButton({
 }
 
 // Shared completion presentation so sticky handoff cannot fork action state.
+/**
+ * Lead Form Header Actions.
+ * @param props - The props argument.
+ */
 export function LeadFormHeaderActions({
   viewModel,
   writeActions,

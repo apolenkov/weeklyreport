@@ -33,6 +33,11 @@ function aggregateTrafficLight(
   return null;
 }
 
+/**
+ * Merge Product Draft.
+ * @param section - The section argument.
+ * @param next - The next argument.
+ */
 export function mergeProductDraft(
   section: DraftSection,
   next: readonly Product[],
@@ -71,6 +76,12 @@ export function mergeProductDraft(
   return { ...section, projects };
 }
 
+/**
+ * Merge Activity Status Draft.
+ * @param section - The section argument.
+ * @param activityId - The activityId argument.
+ * @param status - The status argument.
+ */
 export function mergeActivityStatusDraft(
   section: DraftSection,
   activityId: string,
@@ -84,6 +95,11 @@ export function mergeActivityStatusDraft(
   };
 }
 
+/**
+ * Merge Decision Draft.
+ * @param section - The section argument.
+ * @param next - The next argument.
+ */
 export function mergeDecisionDraft(
   section: DraftSection,
   next: readonly DecisionEntry[],
@@ -133,6 +149,11 @@ export function mergeDecisionDraft(
   return { ...section, decisions };
 }
 
+/**
+ * Merge Risk Draft.
+ * @param section - The section argument.
+ * @param next - The next argument.
+ */
 export function mergeRiskDraft(
   section: DraftSection,
   next: readonly RiskEntry[],
@@ -224,6 +245,12 @@ function mergeItemRow(
   };
 }
 
+/**
+ * Merge Items Draft.
+ * @param section - The section argument.
+ * @param itemType - The itemType argument.
+ * @param next - The next argument.
+ */
 export function mergeItemsDraft(
   section: DraftSection,
   itemType: "current" | "next",
@@ -242,6 +269,12 @@ export function mergeItemsDraft(
   return { ...section, items: [...others, ...mergedTyped] };
 }
 
+/**
+ * Patch Draft Item.
+ * @param section - The section argument.
+ * @param itemId - The itemId argument.
+ * @param patch - The patch argument.
+ */
 export function patchDraftItem(
   section: DraftSection,
   itemId: string,

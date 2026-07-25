@@ -102,6 +102,10 @@ function DialogSurface({
   );
 }
 
+/**
+ * Confirmation Dialog.
+ * @param props - The props argument.
+ */
 export function ConfirmationDialog({
   open,
   onClose,

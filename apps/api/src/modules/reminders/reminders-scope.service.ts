@@ -8,10 +8,8 @@ import type {
 
 const REMINDER_RULE_OUT_OF_SCOPE_MESSAGE = "reminder-rule-out-of-scope";
 
-/** Per-section result of {@link RemindersScopeService.classifySectionDispatch}. */
 type SectionDispatchOutcome = "alreadySent" | "dispatched" | "skipped";
 
-/** Pure tally: turns per-section outcomes into the public dispatch counters. */
 function tallyDispatchOutcomes(
   outcomes: readonly SectionDispatchOutcome[],
 ): Pick<DispatchPendingResult, "alreadySent" | "dispatched" | "skipped"> {
@@ -62,11 +60,8 @@ export class RemindersScopeService {
     }
   }
 
-  /**
-   * The recipient of a manual execution must be an in-scope draft-section
-   * author on the rule's report — not an arbitrary address (closes the
-   * open-mailer hole).
-   */
+  // Closes the open-mailer hole: the recipient must be an in-scope
+  // draft-section author on the rule's report, not an arbitrary address.
   private async assertDraftRecipientInScope(
     session: UserSession,
     reportId: string,

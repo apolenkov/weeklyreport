@@ -16,8 +16,6 @@ export class OrganizationPrismaRepository implements OrganizationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async getOrganization(): Promise<Organization> {
-    // Happy path is read-only (seeded row). Upsert fallback avoids P2002
-    // races when two cold first-reads land together on a truncated DB.
     const existing = await this.prisma.organization.findUnique({
       where: { id: "singleton" },
     });

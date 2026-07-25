@@ -21,6 +21,10 @@ const STATUS_PILL_CLASS =
 const STATUS_ARCHIVED_CLASS = `${STATUS_PILL_CLASS} bg-[var(--color-muted)] text-[var(--color-muted-foreground)]`;
 const STATUS_ACTIVE_CLASS = `${STATUS_PILL_CLASS} bg-[var(--color-success)] text-[var(--color-primary)]`;
 
+/**
+ * Groups Table.
+ * @param props - The props argument.
+ */
 export function GroupsTable({
   groups,
   headById,

@@ -1,5 +1,3 @@
-// Editorial-gutter product card: shared row grid, status badge, owner initials,
-// structured risks, chevron a11y, Needs Attention dedup.
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

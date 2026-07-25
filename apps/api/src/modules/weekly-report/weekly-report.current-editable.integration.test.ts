@@ -8,18 +8,9 @@ import {
 } from "../../test-utils/prisma-test-helper";
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
 
-/**
- * Real-Prisma coverage for `getCurrentEditableId()` — the single source of
- * truth for the viewer
- * published-or-current gate and the `latestForViewer` resolver. The stub
- * where-shape test (in weekly-report.prisma-repository.test.ts) pins the query;
- * this one runs the filter against Postgres and proves the behaviour:
- *   - the newest editable (open/reopened) started period wins;
- *   - an archived row still carrying periodStatus="open" is EXCLUDED
- *     (archived:false — the mutation sentinel);
- *   - a scheduled-future period (periodStart > now) is excluded;
- *   - a published-only state returns null (NO published fallback).
- */
+// Real-Postgres counterpart to the stub where-shape test in
+// weekly-report.prisma-repository.test.ts: that one pins the query, this one
+// proves the resulting behaviour of `getCurrentEditableId()`.
 describe("WeeklyReportPrismaRepository.getCurrentEditableId (integration)", () => {
   const prisma = createTestPrisma();
   const repository = new WeeklyReportPrismaRepository(
@@ -111,17 +102,9 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId (integration)", () =
   });
 
   it("breaks a same-periodStart tie deterministically (concurrent editable periods)", async () => {
-    // The partial unique index `Report_one_open_per_boundary` forbids two
-    // periodState='open' rows on the same (periodStart, periodEnd) boundary, so
-    // two editable periods can no longer share a FULL boundary. They can still
-    // tie on periodStart while differing on periodEnd — e.g. an open period and
-    // a reopened one of a different length, both periodState='open'.
-    // getCurrentEditableId orders by periodStart desc then id desc, so the tie
-    // on periodStart is broken by the id-desc key. The gate and the
-    // latestForViewer resolver call this helper SEPARATELY, so the tiebreak must
-    // resolve the same id on every call — otherwise one could authorize a
-    // different period than the other targets. OLD_OPEN (…f1) and NEW_OPEN
-    // (…f2) share a periodStart, so the higher id wins, identically every call.
+    // Two editable periods can still tie on periodStart while differing on
+    // periodEnd. The gate and the latestForViewer resolver call this helper
+    // SEPARATELY, so the id-desc tiebreak must resolve the same id every call.
     await createReport(
       OLD_OPEN,
       "open",

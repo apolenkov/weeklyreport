@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { createServiceLogger } from "../../lib/logger-service.js";
 import { AnalyticsCache, AnalyticsModule } from "../analytics/index.js";
 import {
   NoopIngestionQueue,
@@ -34,7 +35,7 @@ import { PublicationPrometheusTelemetry } from "./infrastructure/publication-pro
       ) =>
         new PublicationService(
           repo,
-          undefined,
+          createServiceLogger("PublicationService"),
           ingestionQueue,
           () => analyticsCache.invalidateAll(),
           telemetry,

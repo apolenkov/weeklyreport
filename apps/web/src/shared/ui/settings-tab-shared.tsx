@@ -10,6 +10,9 @@ const REVALIDATION_FAILED_MESSAGE =
   "Saved, but the landing page cache may be stale — revalidation failed.";
 
 // Post-save cache invalidation only: failures warn, never reclassify a successful write.
+/**
+ * Revalidate Org Landing Page.
+ */
 export async function revalidateOrgLandingPage(): Promise<void> {
   try {
     const response = await fetch("/api/revalidate-org", { method: "POST" });
@@ -22,6 +25,11 @@ export async function revalidateOrgLandingPage(): Promise<void> {
 }
 
 // Shared updateSettings wrapper so toast copy stays consistent; onSaved clears tab dirty state.
+/**
+ * Use Update Settings Mut.
+ * @param label - The label argument.
+ * @param onSaved - The onSaved argument.
+ */
 export function useUpdateSettingsMut(label: string, onSaved?: () => void) {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -40,6 +48,9 @@ export function useUpdateSettingsMut(label: string, onSaved?: () => void) {
   );
 }
 
+/**
+ * Check Icon.
+ */
 export function CheckIcon() {
   return (
     <svg

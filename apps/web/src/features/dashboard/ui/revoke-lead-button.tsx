@@ -15,6 +15,10 @@ interface RevokeLeadButtonProps {
 }
 
 // Invalidates weeklyReport.get so the row shows Draft without a manual refresh.
+/**
+ * Revoke Lead Button.
+ * @param props - The props argument.
+ */
 export function RevokeLeadButton({
   reportSectionId,
   leadName,

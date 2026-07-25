@@ -1,6 +1,7 @@
 import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../../lib/logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -64,7 +65,7 @@ describe("PublicationService analytics invalidation (integration)", () => {
     const analytics = new AnalyticsService(analyticsRepository, cache);
     const publication = new PublicationService(
       new PublicationPrismaRepository(prisma as never),
-      undefined,
+      createNullLogger(),
       new NoopIngestionQueue(),
       () => cache.invalidateAll(),
     );

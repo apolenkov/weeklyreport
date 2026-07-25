@@ -131,6 +131,10 @@ function AssigneeLabel({ stage }: { readonly stage: StageAssignment }) {
   );
 }
 
+/**
+ * Stage Chip.
+ * @param props - The props argument.
+ */
 export function StageChip({
   stage,
   onStatusChange,

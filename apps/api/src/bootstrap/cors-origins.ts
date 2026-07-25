@@ -3,6 +3,10 @@ import type { EnvConfig } from "../infrastructure/config/env.schema";
 // Multi-origin whitelist. FRONTEND_URLS (CSV) optionally extends FRONTEND_URL
 // (single). CORS reflects the request origin only when it matches an entry —
 // wildcard is never allowed (production env validates no '*' is present).
+/**
+ * Resolve Allowed Origins.
+ * @param env - The env argument.
+ */
 export function resolveAllowedOrigins(
   env: Pick<EnvConfig, "FRONTEND_URL" | "FRONTEND_URLS">,
 ): readonly string[] {

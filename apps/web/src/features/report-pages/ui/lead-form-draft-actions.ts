@@ -102,6 +102,12 @@ function buildQuickAddHandler(
   return (kind) => byKind[kind]();
 }
 
+/**
+ * Build Draft Actions.
+ * @param draft - The draft argument.
+ * @param addSignals - The addSignals argument.
+ * @param viewModel - The viewModel argument.
+ */
 export function buildDraftActions(
   draft: LeadFormDraftHandle,
   addSignals: LeadFormAddSignals,

@@ -96,6 +96,9 @@ function ReopenRequestList({
   );
 }
 
+/**
+ * Reopen Requests Card.
+ */
 export function ReopenRequestsCard() {
   const trpc = useTRPC();
   const [respondingId, setRespondingId] = useState<string | null>(null);

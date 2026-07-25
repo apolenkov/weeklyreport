@@ -1,5 +1,8 @@
 "use client";
 
+/**
+ * Edit Icon.
+ */
 export function EditIcon() {
   return (
     <svg
@@ -18,6 +21,9 @@ export function EditIcon() {
   );
 }
 
+/**
+ * Delete Icon.
+ */
 export function DeleteIcon() {
   return (
     <svg

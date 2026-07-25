@@ -14,6 +14,10 @@ const SEGMENTS: readonly { value: ReviewMode; label: string }[] = [
   { value: "review", label: "Review" },
 ];
 
+/**
+ * Review Mode Toggle.
+ * @param options - The options argument.
+ */
 export function ReviewModeToggle({
   value,
   onChange,

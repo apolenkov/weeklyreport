@@ -10,6 +10,11 @@ function isoDateLabel(date: Date): string {
   return date.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
+/**
+ * Format Relative Deadline.
+ * @param deadline - The deadline argument.
+ * @param now - The now argument.
+ */
 export function formatRelativeDeadline(deadline: Date, now: Date): string {
   const diffMs = deadline.getTime() - now.getTime();
   if (diffMs <= 0) return "Past";
@@ -20,6 +25,12 @@ export function formatRelativeDeadline(deadline: Date, now: Date): string {
   return `${hours}h`;
 }
 
+/**
+ * Build Kpi Data.
+ * @param weeklyReport - The weeklyReport argument.
+ * @param pendingCount - The pendingCount argument.
+ * @param now - The now argument.
+ */
 export function buildKpiData(
   weeklyReport: WeeklyReportReadModel,
   pendingCount: number,

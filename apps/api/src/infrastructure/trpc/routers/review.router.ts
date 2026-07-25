@@ -100,6 +100,10 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
   };
 }
 
+/**
+ * Create Review Router.
+ * @param deps - The deps argument.
+ */
 export function createReviewRouter(deps: ReviewRouterDeps) {
   return router({
     // review.dashboard is headProcedure — defense-in-depth: only heads (and

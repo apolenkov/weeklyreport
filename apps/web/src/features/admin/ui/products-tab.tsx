@@ -28,6 +28,10 @@ interface ProductsTabProps {
   readonly productFilter?: string | null;
 }
 
+/**
+ * Products Tab.
+ * @param props - The props argument.
+ */
 export function ProductsTab({
   products,
   users,

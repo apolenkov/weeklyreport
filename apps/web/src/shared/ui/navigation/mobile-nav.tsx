@@ -14,6 +14,10 @@ import { MobileMenuIcon } from "./mobile-menu-icon";
 import { MobileNavLinks } from "./mobile-nav-links";
 import type { NavLink } from "./nav-links";
 
+/**
+ * Mobile Nav.
+ * @param options - The options argument.
+ */
 export function MobileNav({
   links,
   pathname,

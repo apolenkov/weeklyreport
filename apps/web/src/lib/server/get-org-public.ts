@@ -22,6 +22,9 @@ function decodeOrgPublicResponse(body: unknown): OrganizationPublic | null {
 // Failures fall back to DEFAULT_ORGANIZATION_IDENTITY so the landing page still renders.
 const ORG_PUBLIC_REVALIDATE_SECONDS = 60;
 
+/**
+ * Get Org Public.
+ */
 export async function getOrgPublic(): Promise<OrganizationPublic> {
   const apiUrl = requireApiUrl();
   const url = `${apiUrl}/trpc/org.getPublic?batch=1&input=${TRPC_BATCH_EMPTY_INPUT}`;

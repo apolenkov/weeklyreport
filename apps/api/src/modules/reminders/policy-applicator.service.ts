@@ -5,50 +5,21 @@ import { DateTime } from "luxon";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 
-/** Outcome of applying one policy to one period — see {@link PolicyApplicatorService.applyToPeriod}. */
 type PolicyApplyOutcome = "created" | "skipped" | "updated";
 type PolicyApplyTally = Record<PolicyApplyOutcome, number>;
 
-/**
- * The seam that turns ReminderPolicy templates into concrete ReminderRule
- * rows for a given Period (Report).
- *
- * Lifecycle:
- *   - admin.savePeriod creates a Report row → applyToPeriod(report) is
- *     called AFTER the create transaction commits
- *   - prisma/backfill-policy-rules.ts iterates over open periods with its
- *     own inline upsert (it cannot import this service — isolated prisma
- *     tsconfig) applying the same validity gate and fireAt math
- *   - the @Cron scheduler keeps querying ReminderRule directly
- *
- * Validity gate: a policy applies to a period only if
- *   - policy.active === true
- *   - period.deadline >= policy.validFrom
- *   - policy.validUntil === null OR period.deadline <= policy.validUntil
- *
- * Idempotency: applyToPeriod uses upsert against the
- * uq_rule_report_policy unique index. Calling twice is a no-op on the
- * second run; P2002 is caught and logged in case an older database is
- * missing the unique index.
- */
+// Turns ReminderPolicy templates into ReminderRule rows for one Period.
+// Idempotent via upsert on uq_rule_report_policy; P2002 is still caught in case
+// an older database is missing that unique index.
 @Injectable()
 export class PolicyApplicatorService {
   private readonly logger = new Logger(PolicyApplicatorService.name);
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * fireAt math. The deadline is stored as UTC; we shift it into the policy's
-   * zone, add `offsetMinutes` (almost always negative, e.g. -1440 for T-24h)
-   * as an exact-duration span on that zoned instant, then convert back to UTC
-   * for the DB column. This is precise-minute arithmetic, not calendar
-   * wall-clock preservation: an offset that straddles a DST transition lands
-   * `offsetMinutes` of real elapsed time from the deadline, so the local
-   * wall-clock hour can shift by the DST delta.
-   *
-   * Kept in sync BY HAND with prisma/backfill-policy-rules.ts's computeFireAt:
-   * the prisma toolchain's isolated tsconfig cannot import this service.
-   */
+  // Precise-minute arithmetic, not wall-clock preservation: an offset that
+  // straddles a DST transition lands `offsetMinutes` of real elapsed time from
+  // the deadline. Kept in sync BY HAND with prisma/backfill-policy-rules.ts.
   computeFireAt(deadline: Date, offsetMinutes: number, tz: string): Date {
     return DateTime.fromJSDate(deadline, { zone: "utc" })
       .setZone(tz)
@@ -57,10 +28,7 @@ export class PolicyApplicatorService {
       .toJSDate();
   }
 
-  /**
-   * Validity-window gate. Centralized so the unit test and the
-   * applicator and the backfill use the exact same boolean.
-   */
+  // Centralized so the applicator, the backfill and the unit test share one boolean.
   static policyAppliesTo(
     policy: {
       active: boolean;
@@ -80,23 +48,9 @@ export class PolicyApplicatorService {
     return true;
   }
 
-  /**
-   * Attach one ReminderRule per active policy whose validity window
-   * covers period.deadline. Policies that fail the gate produce zero
-   * rules. Idempotent: second call is a no-op (upsert by
-   * uq_rule_report_policy).
-   *
-   * When `now` is supplied, a rule whose computed `fireAt` is already in the
-   * past is skipped rather than materialised as `active`. The reminders
-   * scheduler fires any active rule with `fireAt <= now` (no elapsed-fireAt
-   * lower bound), so creating an already-past active rule would dispatch a
-   * stale reminder on the next tick. This matters for the login-time period
-   * factory, which can create a period AFTER some of its reminder instants have
-   * passed (a late first-login): the still-future instants (e.g. a T+2h
-   * escalation) are kept, only the elapsed ones are dropped. Callers that mint
-   * periods strictly ahead of their reminders (the cron scheduler) omit `now`
-   * and are unaffected.
-   */
+  // With `now` supplied, a rule whose `fireAt` is already past is skipped instead
+  // of created active: the scheduler fires any active rule with `fireAt <= now`,
+  // so a late-created period would otherwise dispatch stale reminders.
   async applyToPeriod(
     period: {
       id: string;

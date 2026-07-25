@@ -74,6 +74,10 @@ function foldReportEntry(
   };
 }
 
+/**
+ * Build Compiled History Entries.
+ * @param reports - The reports argument.
+ */
 export function buildCompiledHistoryEntries(
   reports: readonly CompiledHistoryReportRow[],
 ): CompiledHistoryEntry[] {

@@ -7,7 +7,11 @@ type TestData = Awaited<ReturnType<typeof seedTestData>>;
 
 const publishedAt = new Date("2026-07-22T12:00:00.000Z");
 
-/** Moves the target report through both governed lifecycle representations. */
+/**
+ * Moves the target report through both governed lifecycle representations.
+ * @param prisma - The prisma argument.
+ * @param testData - The testData argument.
+ */
 export async function publishTarget(
   prisma: PrismaClient,
   testData: TestData,
@@ -125,7 +129,11 @@ function seedDecisions(
   });
 }
 
-/** Seeds stale target rows and the carryable published source rows. */
+/**
+ * Seeds stale target rows and the carryable published source rows.
+ * @param prisma - The prisma argument.
+ * @param testData - The testData argument.
+ */
 export async function seedFillRows(
   prisma: PrismaClient,
   testData: TestData,
@@ -139,7 +147,11 @@ export async function seedFillRows(
   return sourceSectionId;
 }
 
-/** Reads the three target child collections for zero-write assertions. */
+/**
+ * Reads the three target child collections for zero-write assertions.
+ * @param prisma - The prisma argument.
+ * @param testData - The testData argument.
+ */
 export function targetRows(prisma: PrismaClient, testData: TestData) {
   const where = { reportSectionId: testData.section.id };
   return Promise.all([

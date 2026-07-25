@@ -36,6 +36,10 @@ interface ItemEditDialogProps {
 // Mount/unmount resets state (react-compiler-safe). stagesForProduct is not in
 // deps — useState seeds once from the mount snapshot so parent re-renders
 // with a new stagesForProduct ref never wipe typed text.
+/**
+ * Item Edit Dialog.
+ * @param props - The props argument.
+ */
 export function ItemEditDialog(props: ItemEditDialogProps) {
   if (!props.open) return null;
   return <ItemEditDialogContent {...props} />;

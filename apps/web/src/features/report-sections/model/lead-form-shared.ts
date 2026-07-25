@@ -1,39 +1,39 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
-// Shared project index so every record-family mapper resolves name/status alike.
-export function buildProjectIndex(section: ReportSectionReadModel): Map<
-  string,
-  {
-    name: string;
-    trafficLight: ReportSectionReadModel["projects"][number]["trafficLight"];
-  }
-> {
-  const map = new Map<
-    string,
-    {
-      name: string;
-      trafficLight: ReportSectionReadModel["projects"][number]["trafficLight"];
-    }
-  >();
-  // Name-only entries for projects that section rows reference but the
-  // author owns no stage on. Seeded first so the stage-owned loop below
-  // wins on conflict; they feed product-name lookup only — `mapLeadProducts`
-  // does not read this index, so no stray product card or stage grid appears.
-  for (const referenced of section.referencedProjects ?? []) {
-    map.set(referenced.projectId, {
-      name: referenced.projectName,
-      trafficLight: null,
-    });
-  }
-  for (const project of section.projects) {
-    map.set(project.projectId, {
-      name: project.projectName,
-      trafficLight: project.trafficLight,
-    });
-  }
-  return map;
+interface ProjectIndexEntry {
+  name: string;
+  trafficLight: ReportSectionReadModel["projects"][number]["trafficLight"];
 }
 
+// Shared project index so every record-family mapper resolves name/status alike.
+/**
+ * Build Project Index.
+ * @param section - The section argument.
+ */
+export function buildProjectIndex(
+  section: ReportSectionReadModel,
+): Map<string, ProjectIndexEntry> {
+  // Referenced projects are name-only entries for rows the author owns no stage
+  // on; the stage-owned spread comes last so it wins on key conflict. Lookup
+  // only — `mapLeadProducts` ignores this index, so no stray product card appears.
+  return new Map([
+    ...(section.referencedProjects ?? []).map(
+      (referenced): [string, ProjectIndexEntry] => [
+        referenced.projectId,
+        { name: referenced.projectName, trafficLight: null },
+      ],
+    ),
+    ...section.projects.map((project): [string, ProjectIndexEntry] => [
+      project.projectId,
+      { name: project.projectName, trafficLight: project.trafficLight },
+    ]),
+  ]);
+}
+
+/**
+ * Build Activity Index.
+ * @param section - The section argument.
+ */
 export function buildActivityIndex(
   section: ReportSectionReadModel,
 ): Map<string, string> {

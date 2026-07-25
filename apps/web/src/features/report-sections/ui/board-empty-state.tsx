@@ -10,6 +10,10 @@ interface BoardEmptyStateProps {
 }
 
 // Stand-alone "+ Add" — empty boards have no per-column headers to hang it on.
+/**
+ * Board Empty State.
+ * @param props - The props argument.
+ */
 export function BoardEmptyState({
   readOnly,
   readOnlyLabel,

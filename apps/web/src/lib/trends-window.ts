@@ -4,6 +4,7 @@
  * empties the charts. The day-of-month is clamped to the target month's
  * length so a Feb 29 anchor maps to the prior year's Feb 28 instead of
  * JS-date-overflowing into Mar 1 and dropping the window's oldest report.
+  * @param now - The now argument.
  */
 export function deriveTrendsWindow(now: Date): {
   periodFrom: string;

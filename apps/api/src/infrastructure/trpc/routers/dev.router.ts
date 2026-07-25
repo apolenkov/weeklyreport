@@ -111,6 +111,10 @@ const toReseedError = (error: unknown): TRPCError =>
     cause: error instanceof Error ? error : undefined,
   });
 
+/**
+ * Create Dev Router.
+ * @param deps - The deps argument.
+ */
 export function createDevRouter(deps: DevRouterDeps) {
   return router({
     // Lists every seeded user so a dev-mode login picker can show all of

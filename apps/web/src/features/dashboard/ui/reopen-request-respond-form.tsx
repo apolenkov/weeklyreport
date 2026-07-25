@@ -16,6 +16,10 @@ interface ReopenRequestRespondFormProps {
 }
 
 // pendingDecision (not isPending alone) drives which button shows "Saving…".
+/**
+ * Reopen Request Respond Form.
+ * @param props - The props argument.
+ */
 export function ReopenRequestRespondForm({
   requestId,
   note,

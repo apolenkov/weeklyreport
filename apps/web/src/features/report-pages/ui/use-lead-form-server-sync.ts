@@ -176,6 +176,10 @@ interface DraftServerSyncArgs {
 
 // Both directions of the server conversation: autosave writes out, and the
 // reseed effect re-bases the draft when a new server section arrives.
+/**
+ * Use Draft Server Sync.
+ * @param props - The props argument.
+ */
 export function useDraftServerSync({
   serverSection,
   reportSectionId,

@@ -4,6 +4,10 @@ import { isActiveLink } from "./nav-active";
 import { NavIcon } from "./nav-icon";
 import type { NavLink } from "./nav-links";
 
+/**
+ * Mobile Nav Links.
+ * @param options - The options argument.
+ */
 export function MobileNavLinks({
   links,
   pathname,

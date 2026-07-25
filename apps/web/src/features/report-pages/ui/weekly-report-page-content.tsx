@@ -13,6 +13,10 @@ import { ProductAccordion } from "./product-accordion";
 import type { LeadGroup, ReviewModel } from "./weekly-report-page-helpers";
 
 // Shared layout for terminal page states (invalid-link, no active period).
+/**
+ * Centered Notice.
+ * @param options - The options argument.
+ */
 export function CenteredNotice({
   title,
   body,
@@ -33,6 +37,10 @@ export function CenteredNotice({
 }
 
 // Flat per-product list, or products bucketed under each authoring lead.
+/**
+ * Report Accordion Body.
+ * @param options - The options argument.
+ */
 export function ReportAccordionBody({
   scope,
   products,
@@ -85,6 +93,10 @@ export function ReportAccordionBody({
 }
 
 // Scope-adaptive overview: lead cards in by-lead scope, product cards otherwise.
+/**
+ * Report Overview Band.
+ * @param options - The options argument.
+ */
 export function ReportOverviewBand({
   scope,
   portfolio,
@@ -101,6 +113,10 @@ export function ReportOverviewBand({
 }
 
 // head/admin/viewer get the real export; lead is FORBIDDEN and gets ComingSoon.
+/**
+ * Toolbar Export Control.
+ * @param options - The options argument.
+ */
 export function ToolbarExportControl({
   canExportPdf,
   showComingSoon,
@@ -123,6 +139,10 @@ export function ToolbarExportControl({
 
 // Head/admin: header Publish cluster so review → acknowledge → publish is one
 // sequence. Viewer: body band — they have no publish cluster to host it.
+/**
+ * Acknowledge Surface.
+ * @param options - The options argument.
+ */
 export function AcknowledgeSurface({
   reviewModel,
   reportId,
@@ -146,6 +166,10 @@ export function AcknowledgeSurface({
 }
 
 // Self-gating verdict band: only in review mode so normal mode stays read-only.
+/**
+ * Review Mode Verdict Surface.
+ * @param options - The options argument.
+ */
 export function ReviewModeVerdictSurface({
   reviewModel,
   reviewMode,

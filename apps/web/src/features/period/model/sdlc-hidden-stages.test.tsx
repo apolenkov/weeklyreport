@@ -70,9 +70,8 @@ describe("hiddenStagesRevealLines — owned-but-unstatused reveal", () => {
   });
 
   it("a foreign stage with no resolved owner reads '<stage> — another lead'", () => {
-    // unassigned-stage-reporting-exclusion: hidden stages are foreign-owned
-    // now; a locked stage whose owner has not been resolved (Mine mode without
-    // cross-author data) reads "another lead", never "unassigned".
+    // Hidden stages are foreign-owned; a locked stage whose owner has not been
+    // resolved (Mine mode without cross-author data) still reads as owned.
     const lines = hiddenStagesRevealLines(
       [hiddenStage("Support", "locked", "empty", null)],
       new Map(),

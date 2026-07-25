@@ -69,6 +69,10 @@ function AddUserButton({ onClick }: { readonly onClick: () => void }) {
   );
 }
 
+/**
+ * Users Tab Header.
+ * @param options - The options argument.
+ */
 export function UsersTabHeader({
   userCount,
   filters,

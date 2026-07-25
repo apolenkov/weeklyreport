@@ -1,5 +1,8 @@
 import type { Product } from "./types";
 
+const DESIGN_ASSIGNEE = "Petrova M.";
+const DEVOPS_ASSIGNEE = "Sidorov P.";
+
 export const MOCK_PRODUCTS: Product[] = [
   {
     id: "crm",
@@ -22,7 +25,7 @@ export const MOCK_PRODUCTS: Product[] = [
         stageName: "Design",
         status: "on-track",
         ownership: "locked",
-        assignee: "Petrova M.",
+        assignee: DESIGN_ASSIGNEE,
       },
       {
         stageName: "Dev",
@@ -41,7 +44,7 @@ export const MOCK_PRODUCTS: Product[] = [
         stageName: "DevOps",
         status: "on-track",
         ownership: "locked",
-        assignee: "Sidorov P.",
+        assignee: DEVOPS_ASSIGNEE,
       },
       {
         stageName: "Support",
@@ -81,7 +84,7 @@ export const MOCK_PRODUCTS: Product[] = [
         stageName: "DevOps",
         status: "on-track",
         ownership: "locked",
-        assignee: "Sidorov P.",
+        assignee: DEVOPS_ASSIGNEE,
       },
     ],
   },
@@ -96,7 +99,7 @@ export const MOCK_PRODUCTS: Product[] = [
         stageName: "Design",
         status: "at-risk",
         ownership: "locked",
-        assignee: "Petrova M.",
+        assignee: DESIGN_ASSIGNEE,
       },
       {
         stageName: "Dev",
@@ -143,7 +146,7 @@ export const MOCK_PRODUCTS: Product[] = [
         stageName: "DevOps",
         status: "on-track",
         ownership: "locked",
-        assignee: "Sidorov P.",
+        assignee: DEVOPS_ASSIGNEE,
       },
     ],
   },
@@ -168,7 +171,7 @@ export const MOCK_PRODUCTS: Product[] = [
         stageName: "Design",
         status: "on-track",
         ownership: "locked",
-        assignee: "Petrova M.",
+        assignee: DESIGN_ASSIGNEE,
       },
       {
         stageName: "Dev",
@@ -205,7 +208,7 @@ export const MOCK_PRODUCTS: Product[] = [
         stageName: "Design",
         status: "on-track",
         ownership: "locked",
-        assignee: "Petrova M.",
+        assignee: DESIGN_ASSIGNEE,
       },
       {
         stageName: "Dev",

@@ -9,6 +9,11 @@ import {
   toExecutionUpdateData,
 } from "./reminders-row-mappers.js";
 
+/**
+ * Query Execution By Dedupe Key.
+ * @param prisma - The prisma argument.
+ * @param dedupeKey - The dedupeKey argument.
+ */
 export async function queryExecutionByDedupeKey(
   prisma: PrismaService,
   dedupeKey: string,
@@ -20,6 +25,11 @@ export async function queryExecutionByDedupeKey(
   return execution ? toExecutionDomain(execution) : null;
 }
 
+/**
+ * Upsert Execution.
+ * @param prisma - The prisma argument.
+ * @param execution - The execution argument.
+ */
 export async function upsertExecution(
   prisma: PrismaService,
   execution: AdminReminderExecution,
@@ -34,6 +44,11 @@ export async function upsertExecution(
   return toExecutionDomain(saved);
 }
 
+/**
+ * Insert Execution On Conflict.
+ * @param prisma - The prisma argument.
+ * @param execution - The execution argument.
+ */
 export async function insertExecutionOnConflict(
   prisma: PrismaService,
   execution: AdminReminderExecution,
@@ -57,6 +72,11 @@ export async function insertExecutionOnConflict(
 }
 
 // CAS claim: only one of two racing workers matches status pending → sending.
+/**
+ * Transition Execution To Sending.
+ * @param prisma - The prisma argument.
+ * @param executionId - The executionId argument.
+ */
 export async function transitionExecutionToSending(
   prisma: PrismaService,
   executionId: string,
@@ -69,6 +89,11 @@ export async function transitionExecutionToSending(
 }
 
 // sending → pending for retryable failures; no-op if already sent/failed.
+/**
+ * Release Execution Claim.
+ * @param prisma - The prisma argument.
+ * @param executionId - The executionId argument.
+ */
 export async function releaseExecutionClaim(
   prisma: PrismaService,
   executionId: string,
@@ -80,6 +105,12 @@ export async function releaseExecutionClaim(
 }
 
 // Terminal failed; guarded so it never clobbers an already-sent row.
+/**
+ * Mark Execution Failed.
+ * @param prisma - The prisma argument.
+ * @param executionId - The executionId argument.
+ * @param errorMessage - The errorMessage argument.
+ */
 export async function markExecutionFailed(
   prisma: PrismaService,
   executionId: string,
@@ -92,6 +123,11 @@ export async function markExecutionFailed(
 }
 
 // failed → queued CAS; exactly one concurrent revival wins.
+/**
+ * Requeue Failed Execution.
+ * @param prisma - The prisma argument.
+ * @param executionId - The executionId argument.
+ */
 export async function requeueFailedExecution(
   prisma: PrismaService,
   executionId: string,
@@ -107,6 +143,11 @@ export async function requeueFailedExecution(
 // Cap per reaper tick so a flood of stuck rows cannot monopolize one sweep.
 const STUCK_QUEUED_REAPER_BATCH_SIZE = 100;
 
+/**
+ * List Stuck Queued Executions.
+ * @param prisma - The prisma argument.
+ * @param olderThan - The olderThan argument.
+ */
 export async function listStuckQueuedExecutions(
   prisma: PrismaService,
   olderThan: Date,
@@ -120,6 +161,11 @@ export async function listStuckQueuedExecutions(
   return executions.map(toExecutionDomain);
 }
 
+/**
+ * Query Execution By Id.
+ * @param prisma - The prisma argument.
+ * @param executionId - The executionId argument.
+ */
 export async function queryExecutionById(
   prisma: PrismaService,
   executionId: string,
@@ -136,6 +182,12 @@ export async function queryExecutionById(
   return toExecutionDomain(execution);
 }
 
+/**
+ * Query Executions Page.
+ * @param prisma - The prisma argument.
+ * @param ruleId - The ruleId argument.
+ * @param page - The page argument.
+ */
 export async function queryExecutionsPage(
   prisma: PrismaService,
   ruleId: string,

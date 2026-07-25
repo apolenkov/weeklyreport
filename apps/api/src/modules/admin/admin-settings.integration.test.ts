@@ -87,9 +87,11 @@ function createRepository(
   snapshot: AdminSnapshot,
   settings: AppSettings = defaultSettings,
 ): AdminRepository {
+  // A repository double has to remember writes across calls, so these three
+  // cells are rebound; every write derives a new value instead of mutating.
   let currentSnapshot = structuredClone(snapshot);
   let currentSettings = structuredClone(settings);
-  const assignments = new Map<string, StageAssignment>();
+  let assignments: readonly StageAssignment[] = [];
 
   const notExercised = (): never => {
     throw new Error("not exercised by the settings integration suite");
@@ -117,27 +119,34 @@ function createRepository(
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async saveReportingGroup(group) {
-      const existingIndex = currentSnapshot.groups.findIndex(
-        (row) => row.id === group.id,
-      );
-      if (existingIndex !== -1) {
-        currentSnapshot.groups[existingIndex] = structuredClone(group);
-      } else {
-        currentSnapshot.groups.push(structuredClone(group));
-      }
+      const exists = currentSnapshot.groups.some((row) => row.id === group.id);
+      currentSnapshot = {
+        ...currentSnapshot,
+        groups: exists
+          ? currentSnapshot.groups.map((row) =>
+              row.id === group.id ? structuredClone(group) : row,
+            )
+          : [...currentSnapshot.groups, structuredClone(group)],
+      };
       return structuredClone(group);
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async archiveReportingGroup(groupId) {
       const group = currentSnapshot.groups.find((row) => row.id === groupId);
       if (!group) throw new Error(`ReportingGroup ${groupId} not found.`);
-      group.archived = true;
-      return structuredClone(group);
+      const archived = { ...group, archived: true };
+      currentSnapshot = {
+        ...currentSnapshot,
+        groups: currentSnapshot.groups.map((row) =>
+          row.id === groupId ? archived : row,
+        ),
+      };
+      return structuredClone(archived);
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async saveStageAssignment(data) {
       const key = `${data.userId}:${data.stageId}:${data.projectId}`;
-      const existing = [...assignments.values()].find(
+      const existing = assignments.find(
         (a) => `${a.userId}:${a.stageId}:${a.projectId}` === key,
       );
       if (existing) {
@@ -151,19 +160,19 @@ function createRepository(
         stageName: "Development",
         userName: "Test User",
       };
-      assignments.set(assignment.id, assignment);
+      assignments = [...assignments, assignment];
       return structuredClone(assignment);
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async deleteStageAssignment(id) {
-      if (!assignments.has(id)) {
+      if (!assignments.some((a) => a.id === id)) {
         throw new Error(`StageAssignment ${id} not found.`);
       }
-      assignments.delete(id);
+      assignments = assignments.filter((a) => a.id !== id);
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async listStageAssignments(projectId) {
-      return [...assignments.values()]
+      return assignments
         .filter((a) => a.projectId === projectId)
         .map((a) => structuredClone(a));
     },

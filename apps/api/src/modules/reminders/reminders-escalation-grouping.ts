@@ -53,6 +53,10 @@ interface ResolvedSection {
 
 // One digest per active head (multi-group heads still get one). Unresolved
 // leads have no active head — caller logs count only, not names.
+/**
+ * Build Escalation Groups.
+ * @param report - The report argument.
+ */
 export function buildEscalationGroups(report: EscalationReport): {
   groups: EscalationGroupDigest[];
   unresolved: string[];

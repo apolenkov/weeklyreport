@@ -64,6 +64,12 @@ function reconcileRecordIdentities<T extends DraftRecord>(
   });
 }
 
+/**
+ * Reconcile Saved Identities.
+ * @param current - The current argument.
+ * @param saved - The saved argument.
+ * @param persisted - The persisted argument.
+ */
 export function reconcileSavedIdentities(
   current: ReportSectionReadModel,
   saved: ReportSectionReadModel,
@@ -90,6 +96,13 @@ export function reconcileSavedIdentities(
   };
 }
 
+/**
+ * Classify Reseed.
+ * @param serverDraftKey - The serverDraftKey argument.
+ * @param lastServerDraftKey - The lastServerDraftKey argument.
+ * @param dirty - The dirty argument.
+ * @param isSaveEcho - The isSaveEcho argument.
+ */
 export function classifyReseed(
   serverDraftKey: string,
   lastServerDraftKey: string | null,

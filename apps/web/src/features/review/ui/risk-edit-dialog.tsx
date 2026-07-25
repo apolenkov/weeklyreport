@@ -40,6 +40,10 @@ interface RiskEditDialogProps {
 
 // Mount/unmount shell: closed returns null so open remounts fresh useState
 // (parent openSeq dialogKey forces a clean snapshot of stagesForProduct).
+/**
+ * Risk Edit Dialog.
+ * @param props - The props argument.
+ */
 export function RiskEditDialog(props: RiskEditDialogProps) {
   if (!props.open) return null;
   return <RiskEditDialogContent {...props} />;

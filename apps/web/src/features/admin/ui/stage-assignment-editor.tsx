@@ -144,6 +144,10 @@ interface StageAssignmentEditorProps {
 
 // Full catalogue (not only existing rows) so head sees coverage gaps;
 // lead dropdown is scoped to the product's owning group.
+/**
+ * Stage Assignment Editor.
+ * @param props - The props argument.
+ */
 export function StageAssignmentEditor({
   projectId,
   projectName,

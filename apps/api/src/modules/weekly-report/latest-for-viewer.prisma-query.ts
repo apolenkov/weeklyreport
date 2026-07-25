@@ -5,6 +5,12 @@ import { historySectionScope } from "./weekly-report-portfolio.js";
 // Resolve the exact-id visibility check for the current editable period —
 // MUST NOT search older editable periods, the gate authorizes only the
 // current editable id.
+/**
+ * Query Visible Report Id.
+ * @param prisma - The prisma argument.
+ * @param reportId - The reportId argument.
+ * @param session - The session argument.
+ */
 export async function queryVisibleReportId(
   prisma: PrismaService,
   reportId: string,
@@ -24,6 +30,11 @@ export async function queryVisibleReportId(
 // Fallback: newest visible published report. `id desc` is a deterministic
 // tiebreak so two published reports sharing a `periodStart` resolve to a
 // stable id (same rationale as getCurrentEditableId).
+/**
+ * Query Latest Published Visible Id.
+ * @param prisma - The prisma argument.
+ * @param session - The session argument.
+ */
 export async function queryLatestPublishedVisibleId(
   prisma: PrismaService,
   session: WeeklyReportScopeSession,

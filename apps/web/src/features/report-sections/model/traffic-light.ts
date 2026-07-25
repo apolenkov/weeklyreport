@@ -9,12 +9,20 @@ import {
 
 export type StageStatus = CanonicalStatus;
 
+/**
+ * Traffic To Stage Status.
+ * @param trafficLight - The trafficLight argument.
+ */
 export function trafficToStageStatus(
   trafficLight: TrafficLightStatus | null,
 ): StageStatus {
   return trafficLightToCanonical(trafficLight);
 }
 
+/**
+ * Stage Status To Traffic.
+ * @param status - The status argument.
+ */
 export function stageStatusToTraffic(
   status: StageStatus,
 ): TrafficLightStatus | null {

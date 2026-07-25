@@ -31,6 +31,10 @@ interface UseRiskEditParentStageArgs {
   readonly stagesForProduct?: (productId: string) => readonly string[];
 }
 
+/**
+ * Use Risk Edit Parent Stage.
+ * @param props - The props argument.
+ */
 export function useRiskEditParentStage({
   risk,
   isCreate,

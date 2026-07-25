@@ -20,54 +20,26 @@ import { createAppRouter } from "../trpc.router.js";
 
 // Default-deny: every leaf must match one of eight base middleware chains by
 // identity. Capture each from a throwaway starter (slice off trailing resolver).
-const PUBLIC_CHAIN = (
-  publicProcedure.query(() => undefined) as unknown as {
-    _def: { middlewares: unknown[] };
-  }
-)._def.middlewares.slice(0, -1);
-const PROTECTED_CHAIN = (
-  protectedProcedure.query(() => undefined) as unknown as {
-    _def: { middlewares: unknown[] };
-  }
-)._def.middlewares.slice(0, -1);
-const HEAD_CHAIN = (
-  headProcedure.query(() => undefined) as unknown as {
-    _def: { middlewares: unknown[] };
-  }
-)._def.middlewares.slice(0, -1);
-const ADMIN_CHAIN = (
-  adminProcedure.query(() => undefined) as unknown as {
-    _def: { middlewares: unknown[] };
-  }
-)._def.middlewares.slice(0, -1);
-const LEAD_CHAIN = (
-  leadProcedure.query(() => undefined) as unknown as {
-    _def: { middlewares: unknown[] };
-  }
-)._def.middlewares.slice(0, -1);
-const VIEWER_CHAIN = (
-  viewerProcedure.query(() => undefined) as unknown as {
-    _def: { middlewares: unknown[] };
-  }
-)._def.middlewares.slice(0, -1);
-const ANY_ROLE_CHAIN = (
-  anyRoleProcedure.query(() => undefined) as unknown as {
-    _def: { middlewares: unknown[] };
-  }
-)._def.middlewares.slice(0, -1);
-const LEADERSHIP_CHAIN = (
-  leadershipProcedure.query(() => undefined) as unknown as {
-    _def: { middlewares: unknown[] };
-  }
-)._def.middlewares.slice(0, -1);
+// `starter` is a tRPC ProcedureBuilder; its generics make the built procedure
+// unassignable to any hand-written shape, so the cast to the _def surface the
+// gate reads happens here once instead of at every capture site.
+function captureChain(starter: unknown): readonly unknown[] {
+  const built = (
+    starter as { query: (resolver: () => undefined) => unknown }
+  ).query(() => undefined) as { _def: { middlewares: unknown[] } };
+  return built._def.middlewares.slice(0, -1);
+}
+
+const ANY_ROLE_CHAIN = captureChain(anyRoleProcedure);
+const LEADERSHIP_CHAIN = captureChain(leadershipProcedure);
 
 const ALLOWED_CHAINS: readonly { name: string; chain: readonly unknown[] }[] = [
-  { name: "publicProcedure", chain: PUBLIC_CHAIN },
-  { name: "protectedProcedure", chain: PROTECTED_CHAIN },
-  { name: "headProcedure", chain: HEAD_CHAIN },
-  { name: "adminProcedure", chain: ADMIN_CHAIN },
-  { name: "leadProcedure", chain: LEAD_CHAIN },
-  { name: "viewerProcedure", chain: VIEWER_CHAIN },
+  { name: "publicProcedure", chain: captureChain(publicProcedure) },
+  { name: "protectedProcedure", chain: captureChain(protectedProcedure) },
+  { name: "headProcedure", chain: captureChain(headProcedure) },
+  { name: "adminProcedure", chain: captureChain(adminProcedure) },
+  { name: "leadProcedure", chain: captureChain(leadProcedure) },
+  { name: "viewerProcedure", chain: captureChain(viewerProcedure) },
   { name: "anyRoleProcedure", chain: ANY_ROLE_CHAIN },
   { name: "leadershipProcedure", chain: LEADERSHIP_CHAIN },
 ];
@@ -148,7 +120,6 @@ describe("default-deny coverage gate", () => {
     const offending = findUncoveredProcedures(appRouter);
 
     if (offending.length > 0) {
-      // Diagnostic surface for CI failures; the assertion below fails the test.
       console.error(
         `Procedures lacking recognised role declaration:\n${offending
           .map((p) => `  - ${p}`)
@@ -162,9 +133,6 @@ describe("default-deny coverage gate", () => {
   });
 
   it("mutation test: a procedure built on bare t.procedure triggers the gate", async () => {
-    // Construct a synthetic router with one bare procedure to prove the gate
-    // fires when role declaration is missing. We import `initTRPC` directly
-    // and build a t.procedure unwrapped — no logging, no auth, no role.
     const { initTRPC } = await import("@trpc/server");
     const t = initTRPC.create();
 
@@ -178,10 +146,8 @@ describe("default-deny coverage gate", () => {
   });
 
   it("mutation test: an alternate logging-only chain (different instance) also triggers the gate", async () => {
-    // Even a procedure that uses a DIFFERENT loggingMiddleware reference
-    // must fail — the gate compares middleware-function identity, not
-    // shape. This guards against a contributor copy-pasting the logging
-    // middleware locally instead of importing the shared base procedures.
+    // The gate compares middleware identity, not shape: a locally copy-pasted
+    // logging middleware must not pass as the shared public base.
     const { initTRPC } = await import("@trpc/server");
     const t = initTRPC.create();
 
@@ -198,11 +164,9 @@ describe("default-deny coverage gate", () => {
   });
 
   it("mutation test: a chain reusing the real metrics+logging prefix with a fake role middleware also triggers the gate", async () => {
-    // This is the case an inequality-tolerant prefix match misses: the chain
-    // starts with the REAL shared metricsMiddleware + loggingMiddleware pair
-    // (same references PUBLIC_CHAIN is built from), so a `.some()` prefix
-    // check matches PUBLIC_CHAIN without ever looking at slot 2 — the
-    // hand-rolled role middleware never gets inspected.
+    // The case a prefix-tolerant match misses: the chain opens with the REAL
+    // shared metrics+logging pair, so only inspecting the slot after them
+    // exposes the hand-rolled role middleware.
     const { initTRPC } = await import("@trpc/server");
     // Context must match TrpcContext — the real metricsMiddleware /
     // loggingMiddleware are typed against it and won't attach to a bare

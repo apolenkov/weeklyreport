@@ -27,6 +27,11 @@ export const ACTIVE_ACTIVITY = {
 
 export const queryStates = new Map<string, Required<QueryState>>();
 
+/**
+ * Set Query State.
+ * @param key - The key argument.
+ * @param overrides - The overrides argument.
+ */
 export function setQueryState(key: string, overrides: QueryState) {
   queryStates.set(key, {
     data: undefined,

@@ -25,6 +25,11 @@ export interface FileSink {
   lastPruneAt: number;
 }
 
+/**
+ * Create File Sink.
+ * @param logDir - The logDir argument.
+ * @param opts - The opts argument.
+ */
 export function createFileSink(
   logDir: string,
   opts: ResolvedFileOpts,
@@ -94,6 +99,11 @@ async function rotateIfNeeded(
   await pruneOldArchives(sink.logDir, sink.opts.maxAgeDays);
 }
 
+/**
+ * Enqueue Write.
+ * @param sink - The sink argument.
+ * @param entry - The entry argument.
+ */
 export function enqueueWrite(
   sink: FileSink,
   entry: Record<string, unknown>,

@@ -57,13 +57,17 @@ export class AutoArchiverScheduler {
       return { archived: true, periodIds: [] };
     }
 
-    const archivedIds: string[] = [];
-    for (const candidate of candidates) {
-      // Sequential by design: one guarded write per candidate, and a failure
-      // must not abort the remaining rows.
-      const archivedId = await this.archiveCandidate(candidate.id);
-      if (archivedId !== null) archivedIds.push(archivedId);
-    }
+    // Folded sequentially — awaiting the pending tally before the next write
+    // keeps one guarded write in flight at a time; a failure must not abort
+    // the remaining rows.
+    const archivedIds = await candidates.reduce<Promise<readonly string[]>>(
+      async (pending, candidate) => {
+        const tally = await pending;
+        const archivedId = await this.archiveCandidate(candidate.id);
+        return archivedId === null ? tally : [...tally, archivedId];
+      },
+      Promise.resolve([]),
+    );
 
     return { archived: true, periodIds: archivedIds };
   }

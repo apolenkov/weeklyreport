@@ -63,6 +63,10 @@ interface MetaRowProps {
   readonly emptyStageChip?: EmptyStageChip;
 }
 
+/**
+ * Meta Row.
+ * @param props - The props argument.
+ */
 export function MetaRow({
   authorName,
   stageTags,

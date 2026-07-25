@@ -177,6 +177,10 @@ function LeadQueueRow({
   );
 }
 
+/**
+ * Lead Summary Table.
+ * @param props - The props argument.
+ */
 export function LeadSummaryTable({
   leads,
   reportId,

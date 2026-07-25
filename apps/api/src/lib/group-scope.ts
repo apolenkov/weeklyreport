@@ -15,6 +15,12 @@ type GroupScopeSession = Pick<
   "role" | "reportingGroupId" | "viewerGroupAccess"
 >;
 
+/**
+ * Group Scope Filter.
+ * @param session - The session argument.
+ * @param target - The target argument.
+ * @param options - The options argument.
+ */
 export function groupScopeFilter(
   session: GroupScopeSession,
   target: ScopeTarget,
@@ -44,6 +50,10 @@ export function groupScopeFilter(
 
 // Fail loud on missing session (undefined). Defined admin (empty filter =
 // full access) is correct and does not throw.
+/**
+ * Guard Group Scope.
+ * @param session - The session argument.
+ */
 export function guardGroupScope(
   session: Pick<UserSession, "role"> | undefined,
 ): void {
@@ -56,6 +66,10 @@ export function guardGroupScope(
 
 // Same source as groupScopeFilter so cache partitions cannot disagree.
 // `|` cannot appear in a UUID; empty string is the no-access partition.
+/**
+ * Scope Discriminator.
+ * @param session - The session argument.
+ */
 export function scopeDiscriminator(session: UserSession): string {
   if (session.role === "admin") return "admin";
   // eslint-disable-next-line sonarjs/no-alphabetical-sort -- UUID ids; default code-unit sort is deterministic across locales (localeCompare is not), which a cache key requires
@@ -63,6 +77,10 @@ export function scopeDiscriminator(session: UserSession): string {
 }
 
 // Shared source for groupScopeFilter and scopeDiscriminator.
+/**
+ * Compute Allowed Group Ids.
+ * @param session - The session argument.
+ */
 export function computeAllowedGroupIds(
   session: Pick<UserSession, "role" | "reportingGroupId" | "viewerGroupAccess">,
 ): string[] {

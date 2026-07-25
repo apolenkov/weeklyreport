@@ -191,6 +191,10 @@ function WeekLabelField({
   );
 }
 
+/**
+ * Create Period Fields.
+ * @param props - The props argument.
+ */
 export function CreatePeriodFields(props: CreatePeriodFieldsProps) {
   return (
     <div className="mt-4 space-y-4">

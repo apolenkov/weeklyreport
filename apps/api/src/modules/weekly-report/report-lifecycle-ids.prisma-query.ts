@@ -1,5 +1,9 @@
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 
+/**
+ * Query Active Report Id.
+ * @param prisma - The prisma argument.
+ */
 export async function queryActiveReportId(
   prisma: PrismaService,
 ): Promise<string | null> {
@@ -33,6 +37,10 @@ export async function queryActiveReportId(
 // Newest non-archived open/reopened that has started. No published fallback
 // (would defeat open→published race rejection). Secondary id desc: gate and
 // latestForViewer call this separately and must pick the same id on ties.
+/**
+ * Query Current Editable Id.
+ * @param prisma - The prisma argument.
+ */
 export async function queryCurrentEditableId(
   prisma: PrismaService,
 ): Promise<string | null> {
@@ -51,6 +59,10 @@ export async function queryCurrentEditableId(
 
 // Head reopen / published-fallback target: newest non-archived published;
 // id desc tiebreak keeps the pick deterministic on a shared periodStart.
+/**
+ * Query Latest Published Non Archived Id.
+ * @param prisma - The prisma argument.
+ */
 export async function queryLatestPublishedNonArchivedId(
   prisma: PrismaService,
 ): Promise<string | null> {

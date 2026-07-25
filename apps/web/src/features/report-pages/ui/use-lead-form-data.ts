@@ -28,6 +28,10 @@ interface UseLeadFormDataInput {
 }
 
 // Feature-local reads/gating only — not a cross-role ReportDataCoordinator.
+/**
+ * Use Lead Form Data.
+ * @param props - The props argument.
+ */
 export function useLeadFormData({
   reportId: pinnedReportId,
   redirectToCanonical,

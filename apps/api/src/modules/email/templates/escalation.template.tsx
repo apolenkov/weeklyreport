@@ -27,6 +27,10 @@ export interface EscalationEmailProps {
   organization: OrganizationBrand;
 }
 
+/**
+ * Escalation Email.
+ * @param props - The props argument.
+ */
 export function EscalationEmail({
   headName,
   cycleDate,
@@ -76,6 +80,10 @@ export function EscalationEmail({
   );
 }
 
+/**
+ * Escalation Email Plaintext.
+ * @param props - The props argument.
+ */
 export function escalationEmailPlaintext(props: EscalationEmailProps): string {
   return [
     `Hello ${props.headName},`,

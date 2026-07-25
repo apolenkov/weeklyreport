@@ -56,10 +56,6 @@ import {
 // stub satisfies the constructor for the processJob-focused tests.
 const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function createMockRemindersService() {
   return {
     claimExecutionForSending: vi.fn().mockResolvedValue(true),
@@ -148,10 +144,6 @@ const renderedEmailFixture = {
   html: "<p>rendered html</p>",
   text: "rendered text",
 };
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe("EmailReminderProcessor.processJob", () => {
   beforeEach(() => {

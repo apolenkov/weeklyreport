@@ -27,6 +27,10 @@ function makeProduct(
 
 const ONE_PRODUCT = [makeProduct()];
 
+function ancestorChain(node: HTMLElement | null): HTMLElement[] {
+  return node === null ? [] : [node, ...ancestorChain(node.parentElement)];
+}
+
 describe("PortfolioOverviewTable — a11y regression", () => {
   it("GridIcon SVG has aria-hidden='true'", () => {
     const { container } = render(
@@ -42,11 +46,10 @@ describe("PortfolioOverviewTable — a11y regression", () => {
     render(<PortfolioOverviewTable products={ONE_PRODUCT} />);
     const heading = screen.getByText("Portfolio Overview");
     expect(heading).toBeInTheDocument();
-    let node: HTMLElement | null = heading;
-    while (node) {
-      expect(node.getAttribute("aria-hidden")).not.toBe("true");
-      node = node.parentElement;
-    }
+    const ariaHiddenUpTheTree = ancestorChain(heading).map((node) =>
+      node.getAttribute("aria-hidden"),
+    );
+    expect(ariaHiddenUpTheTree).not.toContain("true");
   });
 
   it("GridIcon renders the intended four-cell grid", () => {

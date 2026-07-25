@@ -24,6 +24,10 @@ export interface TerminalNotice {
 
 // Terminal display after loading: invalid-link (400/404) vs no active period.
 // Transient 5xx / network errors fall through to no-period.
+/**
+ * Resolve Terminal Notice.
+ * @param query - The query argument.
+ */
 export function resolveTerminalNotice(query: {
   readonly isError: boolean;
   readonly error: unknown;
@@ -61,6 +65,11 @@ const EMPTY_REVIEW_MODEL: ReviewModel = {
 };
 
 // Live-only reviewer surface, never for a lead or a published snapshot.
+/**
+ * Is Review Enabled.
+ * @param role - The role argument.
+ * @param periodStatus - The periodStatus argument.
+ */
 export function isReviewEnabled(
   role: CurrentRole,
   periodStatus: PeriodStatus,
@@ -80,6 +89,11 @@ function distinctReviewGroups(
 
 // Empty model when review is disabled so the page mounts zero review affordances.
 // `canReview` is server-stamped; this only shapes UI, never the security boundary.
+/**
+ * Build Review Model.
+ * @param reportData - The reportData argument.
+ * @param params - The params argument.
+ */
 export function buildReviewModel(
   reportData: WeeklyReportReadModel,
   params: {
@@ -147,6 +161,10 @@ function sectionHasActivityContent(
 }
 
 // Shared submitted-only predicate for every surface that narrows with the filter.
+/**
+ * Is Submitted Section.
+ * @param section - The section argument.
+ */
 export const isSubmittedSection = (section: {
   readonly status: "draft" | "submitted";
 }): boolean => section.status === "submitted";
@@ -165,6 +183,10 @@ function sectionHasProductContent(
 // Shape the accordion BODY for submitted/all. fullProducts/fullLeadGroups stay
 // the truth source (header, portfolio, period nav). Filtering is render-layer
 // only — never the server query, read gate, or group scope.
+/**
+ * Build Accordion Model.
+ * @param params - The params argument.
+ */
 export function buildAccordionModel(params: {
   readonly reportData: WeeklyReportReadModel;
   readonly scope: "product" | "lead";

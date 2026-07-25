@@ -72,6 +72,10 @@ const ISO_DATE_PREFIX_LENGTH = 10;
 
 // Known enums go through workflowToItemStatus; anything else falls back to
 // 'planned'. The fallback is load-bearing — a strict mapper would change behavior.
+/**
+ * Coerce Workflow To Item Status.
+ * @param ws - The ws argument.
+ */
 export function coerceWorkflowToItemStatus(ws: string): ItemStatus {
   if (
     ws === "done" ||
@@ -86,6 +90,12 @@ export function coerceWorkflowToItemStatus(ws: string): ItemStatus {
 }
 
 // Everyone state: foreign kanban items by week type; ids use foreign:<author>:<id>.
+/**
+ * Map Foreign Items.
+ * @param rows - The rows argument.
+ * @param productNameById - The productNameById argument.
+ * @param itemType - The itemType argument.
+ */
 export function mapForeignItems(
   rows: readonly CrossAuthorContentRow[],
   productNameById: ReadonlyMap<string, string>,
@@ -123,6 +133,11 @@ export function mapForeignItems(
 }
 
 // Foreign risks: non-'blocked' severity renders as 'at-risk' presentation-side.
+/**
+ * Map Foreign Risks.
+ * @param rows - The rows argument.
+ * @param productNameById - The productNameById argument.
+ */
 export function mapForeignRisks(
   rows: readonly CrossAuthorContentRow[],
   productNameById: ReadonlyMap<string, string>,
@@ -145,6 +160,11 @@ export function mapForeignRisks(
 }
 
 // Foreign decisions: deadline formatted to yyyy-mm-dd; null passes through.
+/**
+ * Map Foreign Decisions.
+ * @param rows - The rows argument.
+ * @param productNameById - The productNameById argument.
+ */
 export function mapForeignDecisions(
   rows: readonly CrossAuthorContentRow[],
   productNameById: ReadonlyMap<string, string>,

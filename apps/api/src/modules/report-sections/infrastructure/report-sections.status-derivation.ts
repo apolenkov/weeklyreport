@@ -10,12 +10,20 @@ import { aggregateTrafficLight } from "../domain/traffic-light-aggregation";
 
 type TrafficLight = TrafficLightStatus;
 
+/**
+ * Aggregate Stage Traffic.
+ * @param stages - The stages argument.
+ */
 export function aggregateStageTraffic(
   stages: readonly { status?: string | null }[],
 ): TrafficLight | null {
   return aggregateTrafficLight(stages.map((stage) => asTraffic(stage.status)));
 }
 
+/**
+ * As Traffic.
+ * @param status - The status argument.
+ */
 export function asTraffic(
   status: string | null | undefined,
 ): TrafficLight | null {
@@ -44,6 +52,7 @@ export function asTraffic(
  * with no owned stages contributes nothing to floor (covers-all means "all
  * stages the author owns on THIS product"), so the raw `trafficLight` passes
  * through unchanged.
+  * @param project - The project argument.
  */
 export function deriveEffectiveProductStatus(project: {
   projectId: string;
@@ -88,6 +97,8 @@ export function deriveEffectiveProductStatus(project: {
  * NEVER rewritten. The interactive lead picker gates a manual lower on
  * `alarmFloor` alone, so a lead can still lower a status they raised themselves
  * when no covering risk/blocker holds it up.
+  * @param stored - The stored argument.
+ * @param ownRisks - The ownRisks argument.
  */
 export function deriveActivityStatus(
   stored: TrafficLight | null,

@@ -8,6 +8,10 @@ interface AddItemButtonProps {
 }
 
 // Disabled when no assigned product can seed the create dialog.
+/**
+ * Add Item Button.
+ * @param props - The props argument.
+ */
 export function AddItemButton({ defaultProduct, onAdd }: AddItemButtonProps) {
   return (
     <div className="flex justify-end">

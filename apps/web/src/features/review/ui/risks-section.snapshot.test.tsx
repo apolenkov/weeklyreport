@@ -1,10 +1,5 @@
 /**
  * @vitest-environment jsdom
- *
- * Characterizes the MetaRow [author | stage chips] markup rendered by
- * RisksSection (via RiskCard), independent of where that markup lives —
- * these assertions must keep passing across internal refactors of either
- * component.
  */
 import "@testing-library/jest-dom/vitest";
 

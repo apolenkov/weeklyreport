@@ -31,6 +31,10 @@ function clampString(value: unknown, max: number): string | undefined {
 // Browser → server log forwarder. Captures console.error/warn, window.onerror
 // and unhandledrejection from the web app into the same rotating app.log so all
 // debug data lives in one file. `enabled` is dev-only by default.
+/**
+ * Create Client Logs Handler.
+ * @param deps - The deps argument.
+ */
 export function createClientLogsHandler(deps: {
   logger: AppLogger;
   enabled: boolean;

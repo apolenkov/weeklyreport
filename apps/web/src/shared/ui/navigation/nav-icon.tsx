@@ -12,6 +12,10 @@ import {
   REPORTS_LATEST_ROUTE,
 } from "./nav-links";
 
+/**
+ * Nav Icon.
+ * @param options - The options argument.
+ */
 export function NavIcon({ href }: { readonly href: string }) {
   const common = { size: 14, strokeWidth: 2, "aria-hidden": true };
   switch (href) {

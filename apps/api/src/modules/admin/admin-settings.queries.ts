@@ -52,6 +52,10 @@ function rowToAppSettings(row: {
   });
 }
 
+/**
+ * Get Settings.
+ * @param prisma - The prisma argument.
+ */
 export async function getSettings(prisma: PrismaService): Promise<AppSettings> {
   const row = await prisma.appSettings.upsert({
     where: { id: "singleton" },
@@ -62,6 +66,10 @@ export async function getSettings(prisma: PrismaService): Promise<AppSettings> {
   return rowToAppSettings(row);
 }
 
+/**
+ * Count Active Telegram Bindings.
+ * @param prisma - The prisma argument.
+ */
 export async function countActiveTelegramBindings(
   prisma: PrismaService,
 ): Promise<number> {
@@ -104,6 +112,11 @@ function appSettingsToRow(data: Partial<AppSettings>): Record<string, unknown> {
   });
 }
 
+/**
+ * Update Settings.
+ * @param prisma - The prisma argument.
+ * @param data - The data argument.
+ */
 export async function updateSettings(
   prisma: PrismaService,
   data: Partial<AppSettings>,

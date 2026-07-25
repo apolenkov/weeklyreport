@@ -54,6 +54,12 @@ async function collectScoped(
 
 // Recipient allowlist is derived (not a column): filter batches until the
 // page fills. Cursor is a previously returned row id (valid keyset input).
+/**
+ * Paginate Reminder Executions.
+ * @param fetchPage - The fetchPage argument.
+ * @param pagination - The pagination argument.
+ * @param recipientAllowlist - The recipientAllowlist argument.
+ */
 export async function paginateReminderExecutions(
   fetchPage: FetchExecutionsPage,
   pagination?: PaginationInput,

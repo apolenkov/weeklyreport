@@ -76,6 +76,10 @@ function StatusCell({ row }: { readonly row: ActionLogRowData }) {
   );
 }
 
+/**
+ * Action Log Row.
+ * @param options - The options argument.
+ */
 export function ActionLogRow({ row }: { readonly row: ActionLogRowData }) {
   return (
     <tr className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]">

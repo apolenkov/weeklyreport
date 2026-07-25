@@ -1,5 +1,9 @@
 import Link from "next/link";
 
+/**
+ * Product Filter Banner.
+ * @param options - The options argument.
+ */
 export function ProductFilterBanner({
   filterMatched,
 }: {

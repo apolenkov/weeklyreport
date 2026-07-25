@@ -33,6 +33,10 @@ function deriveSaveView(
   return { ariaLabel: "Save draft now", label: "Save", icon: <DiscIcon /> };
 }
 
+/**
+ * Save Now Button.
+ * @param props - The props argument.
+ */
 export function SaveNowButton({ autosave }: SaveNowButtonProps) {
   const { state, isInFlight, forceSave } = autosave;
 

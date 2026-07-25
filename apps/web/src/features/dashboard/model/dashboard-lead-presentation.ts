@@ -2,6 +2,10 @@ import type { SectionReviewView } from "@customreport/shared";
 
 import type { LeadInfo, TrafficLight } from "./dashboard";
 
+/**
+ * Review Presentation.
+ * @param reviews - The reviews argument.
+ */
 export function reviewPresentation(
   reviews: readonly SectionReviewView[],
 ): Pick<LeadInfo, "reviewState" | "reviewLabel"> {
@@ -20,6 +24,10 @@ export function reviewPresentation(
     : { reviewState: "none", reviewLabel: "Not reviewed" };
 }
 
+/**
+ * Attention Label.
+ * @param trafficLights - The trafficLights argument.
+ */
 export function attentionLabel(
   trafficLights: readonly TrafficLight[],
 ): LeadInfo["attentionLabel"] {

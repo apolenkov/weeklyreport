@@ -21,6 +21,9 @@ export interface CellBuckets {
   readonly decisions: readonly GridRow[];
 }
 
+/**
+ * Empty Buckets.
+ */
 export const emptyBuckets = (): CellBuckets => ({
   current: [],
   next: [],
@@ -29,7 +32,10 @@ export const emptyBuckets = (): CellBuckets => ({
 });
 
 /** An activity subsection lives under its single linked product; zero or
- * multiple links place it on the Shared context card (no duplication). */
+ * multiple links place it on the Shared context card (no duplication).  * @param linkedProducts - The linkedProducts argument.
+ * @param knownProductIds - The knownProductIds argument.
+ * @param sharedCardId - The sharedCardId argument.
+ */
 export function activityHomeProduct(
   linkedProducts: readonly { readonly productId: string }[],
   knownProductIds: ReadonlySet<string>,
@@ -162,7 +168,8 @@ function foreignPlacements(
 
 /** Distribute own + foreign rows into per-product product-level buckets and
  * per-activity buckets. Rows on unknown products fold into the shared card;
- * foreign rows land only on products the deck already shows. */
+ * foreign rows land only on products the deck already shows.  * @param input - The input argument.
+ */
 export function collectCells(input: {
   readonly section: ReportSectionReadModel;
   readonly owner: GridAuthor;
@@ -191,6 +198,11 @@ export function collectCells(input: {
   };
 }
 
+/**
+ * Finalize Columns.
+ * @param cells - The cells argument.
+ * @param authorOrder - The authorOrder argument.
+ */
 export function finalizeColumns(
   cells: CellBuckets,
   authorOrder: ReadonlyMap<string, number>,
@@ -205,6 +217,10 @@ export function finalizeColumns(
   };
 }
 
+/**
+ * Columns Row Count.
+ * @param columns - The columns argument.
+ */
 export function columnsRowCount(columns: GridColumns): number {
   return (
     columns.current.length +

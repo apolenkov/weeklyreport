@@ -24,10 +24,8 @@ function makePrismaStub() {
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async Prisma findFirst contract (no awaitable work in the stub)
       findFirst: vi.fn(async () => null),
     },
-    // Context factory hydrates `session.organization` from the singleton
-    // Organization row. The stub returns the seeded
-    // defaults so the dev-session branches resolve without touching a real
-    // database.
+    // The dev-session path hydrates `session.organization` from the singleton
+    // Organization row.
     organization: {
       findUnique: vi.fn(() =>
         Promise.resolve({

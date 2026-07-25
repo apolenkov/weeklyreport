@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339) */
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -29,12 +28,11 @@ vi.mock("../../lib/trpc-context", () => ({
   }),
 }));
 
-// viewer-report-surface-parity: SearchInput now reads the session role to pick
-// per-role result targets. Default to a non-viewer so the existing lead/admin
-// routing assertions hold; viewer tests override this per case.
+// Default to a non-viewer role so the lead/admin routing assertions hold;
+// the viewer cases override it per test.
 const useSessionMock = vi.fn(() => ({ user: { role: "head" } }));
 vi.mock("../../lib/session-provider", () => ({
-  useSession: () => useSessionMock() as unknown as { user: { role: string } },
+  useSession: () => useSessionMock(),
 }));
 
 import { SearchInput } from "./search-input";
@@ -238,6 +236,7 @@ describe("SearchInput", () => {
     });
 
     render(<SearchInput scope="mine" />);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- the app tsconfig needs the element narrowed for .value access (TS2339)
     const input = screen.getByRole("combobox") as HTMLInputElement;
 
     // Open the dropdown: focus, type 2+ chars, wait for debounce.
@@ -399,7 +398,7 @@ describe("SearchInput", () => {
     expect(lastQueryOptionsArg?.scope).toBe("published");
   });
 
-  it("VA badge span has no aria-label attribute (snapshot — verify-a11y catalog)", () => {
+  it("badge span has no aria-label attribute", () => {
     useQueryMock.mockReturnValue({
       data: [
         {
@@ -442,7 +441,7 @@ describe("SearchInput", () => {
     expect(badgeSpan).not.toHaveAttribute("aria-label");
   });
 
-  it("VA badge span has class inline-flex and renders badge.label text (unit-rtl high)", () => {
+  it("badge span has class inline-flex and renders badge.label text", () => {
     const hitTypes = [
       { type: "item", expectedLabel: "Task", id: ITEM_ID },
       { type: "project", expectedLabel: "Product", id: PROJECT_ID },
@@ -488,7 +487,7 @@ describe("SearchInput", () => {
     }
   });
 
-  it("VA badge span is first child of its flex container (snapshot — verify-a11y catalog)", () => {
+  it("badge span is first child of its flex container", () => {
     useQueryMock.mockReturnValue({
       data: [
         {

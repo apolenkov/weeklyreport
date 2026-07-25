@@ -6,6 +6,7 @@
  * two entries are the latest pair: `periodA` is the older of the two, `periodB`
  * the most recent. Returns null when fewer than two periods exist — there is
  * nothing to compare.
+  * @param periods - The periods argument.
  */
 export function latestPeriodPair(
   periods: readonly string[],

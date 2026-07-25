@@ -7,6 +7,10 @@ import { copyToClipboard, truncate } from "../model/action-log-format";
 const MAX_REFERENCE_ID_LENGTH = 14;
 const COPY_FEEDBACK_MS = 1500;
 
+/**
+ * Correlation Cell.
+ * @param options - The options argument.
+ */
 export function CorrelationCell({ value }: { readonly value: string }) {
   const [copied, setCopied] = useState(false);
   return (

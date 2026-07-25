@@ -7,6 +7,9 @@ import type { ItemColumn, KanbanItem } from "../../report-sections";
 import { ActivityLanesBlock, BoardColumnHeader } from "../../report-sections";
 
 const MAX_GRID_COLUMNS = 3;
+// Keeps an empty column as tall as a column holding a couple of item cards, so
+// a board with a mix of empty and filled columns stays visually balanced.
+const EMPTY_COLUMN_MIN_HEIGHT_PX = 150;
 
 interface NextWeekBoardGridProps {
   readonly productColumns: readonly ItemColumn[];
@@ -17,6 +20,10 @@ interface NextWeekBoardGridProps {
   readonly renderItem: (item: KanbanItem) => ReactNode;
 }
 
+/**
+ * Next Week Board Grid.
+ * @param props - The props argument.
+ */
 export function NextWeekBoardGrid({
   productColumns,
   activityLanes,
@@ -49,7 +56,7 @@ export function NextWeekBoardGrid({
             {col.items.length === 0 ? (
               <div
                 className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-[var(--color-surface-hover)] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
-                style={{ minHeight: 150 }}
+                style={{ minHeight: EMPTY_COLUMN_MIN_HEIGHT_PX }}
               >
                 No items yet
               </div>

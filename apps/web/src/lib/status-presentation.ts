@@ -69,6 +69,7 @@ const STATUS_PRESENTATION: Record<CanonicalStatus, StatusPresentation> = {
  * Worst traffic light across a set of values — a thin adapter over the shared
  * canonical fold, so this module keeps no private precedence table. An
  * all-null (or empty) input folds to `"empty"` and adapts back to `null`.
+  * @param statuses - The statuses argument.
  */
 export function worstTrafficStatus(
   statuses: readonly (TrafficLightStatus | null | undefined)[],
@@ -78,6 +79,11 @@ export function worstTrafficStatus(
   );
 }
 
+/**
+ * Status Label.
+ * @param status - The status argument.
+ * @param variant - The variant argument.
+ */
 export function statusLabel(
   status: CanonicalStatus,
   variant: StatusLabelVariant,
@@ -85,14 +91,26 @@ export function statusLabel(
   return STATUS_PRESENTATION[status].labels[variant];
 }
 
+/**
+ * Status Dot Class Name.
+ * @param status - The status argument.
+ */
 export function statusDotClassName(status: CanonicalStatus): string {
   return STATUS_PRESENTATION[status].dotClassName;
 }
 
+/**
+ * Status Tone Class Name.
+ * @param status - The status argument.
+ */
 export function statusToneClassName(status: CanonicalStatus): string {
   return STATUS_PRESENTATION[status].toneClassName;
 }
 
+/**
+ * Status Icon.
+ * @param status - The status argument.
+ */
 export function statusIcon(status: CanonicalStatus): LucideIcon | null {
   return STATUS_PRESENTATION[status].icon;
 }

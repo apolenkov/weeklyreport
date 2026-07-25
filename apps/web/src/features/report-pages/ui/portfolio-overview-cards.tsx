@@ -85,6 +85,10 @@ function openProductDetails(productId: string): void {
 
 // Lead cards never empty (only leads with content); click jumps to the lead
 // section, not a product accordion.
+/**
+ * Lead Overview Card.
+ * @param options - The options argument.
+ */
 export function LeadOverviewCard({ lead }: { readonly lead: LeadOverviewRow }) {
   return (
     <button
@@ -150,6 +154,10 @@ function ProductCardBody({
   );
 }
 
+/**
+ * Product Overview Card.
+ * @param options - The options argument.
+ */
 export function ProductOverviewCard({
   product,
 }: {

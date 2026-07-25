@@ -1,3 +1,6 @@
+/**
+ * Plus Icon.
+ */
 export function PlusIcon() {
   return (
     <svg

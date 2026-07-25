@@ -32,6 +32,10 @@ export const ADMIN_TAB_QUERY_DEPENDENCIES = {
   settings: { snapshot: false, settings: true },
 } as const satisfies Record<AdminTab, AdminTabQueryDependencies>;
 
+/**
+ * Is Admin Tab.
+ * @param value - The value argument.
+ */
 export function isAdminTab(value: string): value is AdminTab {
   return (ADMIN_TABS as readonly string[]).includes(value);
 }

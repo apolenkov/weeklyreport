@@ -50,6 +50,13 @@ function candidateToPeriod(candidate: PrependCandidate): ReportPeriod {
 
 // Prepend current + displayed weeks when history omits them. Prepended entry
 // ids must be reportIds so the navigator's `p.id === pathReportId` match works.
+/**
+ * Derive Head Periods.
+ * @param historyEntries - The historyEntries argument.
+ * @param active - The active argument.
+ * @param displayed - The displayed argument.
+ * @param reportId - The reportId argument.
+ */
 export function deriveHeadPeriods(
   historyEntries: readonly CompiledHistoryEntry[],
   active: WeeklyReportGetResponse | undefined,

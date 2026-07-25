@@ -287,8 +287,8 @@ describe("LeadForm mutation wiring", () => {
     });
     act(() => within(dialog).getByRole("button", { name: "Submit" }).click());
 
-    // Guardrail 5: a cross-writer conflict refetches + surfaces a distinct
-    // reload prompt rather than echoing the raw error message.
+    // A cross-writer conflict surfaces a distinct reload prompt rather than
+    // echoing the raw error message.
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
         expect.stringContaining("changed elsewhere"),
@@ -297,7 +297,7 @@ describe("LeadForm mutation wiring", () => {
     expect(toast.error).not.toHaveBeenCalledWith("stale");
   });
 
-  it("submit after an autosave version bump carries the bumped version, not a stale closure (guardrail 3)", async () => {
+  it("submit after an autosave version bump carries the bumped version, not a stale closure", async () => {
     const { Wrapper, captured } = buildHarness();
     // The success path reads `.version`; resolve a versioned read model so it
     // does not throw. The assertion targets the submit INPUT, not this value.
@@ -336,7 +336,7 @@ describe("LeadForm mutation wiring", () => {
       within(dialog).getByRole("button", { name: "Submit" }).click();
     });
 
-    // Guardrail 3: submit reads the CURRENT version (5) synchronously, not the
+    // Submit reads the CURRENT version (5) synchronously, not the
     // initially-loaded 1 captured in a stale closure.
     await waitFor(() =>
       expect(submitEntry.mutationFn.mock.calls.length).toBeGreaterThan(0),
@@ -529,7 +529,7 @@ describe("LeadForm mutation wiring", () => {
     ).toBeNull();
   });
 
-  it("a refetch updates the held version without dirtying the form, and the new version reaches the next write (guardrail 4)", async () => {
+  it("a refetch updates the held version without dirtying the form, and the new version reaches the next write", async () => {
     let serverVersion = 1;
     const { Wrapper, captured, queryClient } = buildHarness({
       byPeriodQueryFn: () =>
@@ -586,8 +586,7 @@ describe("LeadForm mutation wiring", () => {
   });
 
   it("byPeriod load failure: toast shows prefix + requestId reference", async () => {
-    // Build a TRPCClientError with data.requestId so formatClientErrorMessage
-    // appends "Reference: req-X." — this is the behavior-changing part of task 4.
+    // data.requestId makes formatClientErrorMessage append "Reference: req-X.".
     const err = new TRPCClientError("INTERNAL_SERVER_ERROR");
     Object.defineProperty(err, "data", {
       value: {
@@ -1002,7 +1001,6 @@ describe("LeadForm mutation wiring", () => {
     expect(
       within(documentActions).getByTestId("lead-pdf-export-coming-soon"),
     ).toBeInTheDocument();
-    // Framing controls live in the context row.
     expect(
       within(contextControls).getByRole("link", { name: /slides/i }),
     ).toBeInTheDocument();
@@ -1116,7 +1114,6 @@ describe("LeadForm mutation wiring", () => {
     const documentActions = screen.getByRole("group", {
       name: "Document actions",
     });
-    // Real mutating actions are hidden.
     expect(
       within(documentActions).queryByRole("button", {
         name: /submit section/i,
@@ -1131,14 +1128,12 @@ describe("LeadForm mutation wiring", () => {
     expect(
       within(documentActions).queryByRole("button", { name: "+ Add" }),
     ).toBeNull();
-    // Inert Coming-soon stubs remain visible.
     expect(
       within(documentActions).getByTestId("version-coming-soon"),
     ).toBeInTheDocument();
     expect(
       within(documentActions).getByTestId("lead-pdf-export-coming-soon"),
     ).toBeInTheDocument();
-    // The context control row is still present.
     expect(
       screen.getByRole("group", { name: "Context controls" }),
     ).toBeInTheDocument();

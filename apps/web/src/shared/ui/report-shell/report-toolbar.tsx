@@ -22,6 +22,10 @@ interface ReportToolbarProps {
   readonly sticky?: boolean;
 }
 
+/**
+ * Report Toolbar.
+ * @param props - The props argument.
+ */
 export function ReportToolbar({
   contextControls,
   sticky = false,
@@ -46,6 +50,10 @@ export function ReportToolbar({
 
 // Page-header document-action group (Save, Submit, …). Renders before the
 // context bar in the DOM so keyboard focus hits document actions first.
+/**
+ * Document Action Group.
+ * @param options - The options argument.
+ */
 export function DocumentActionGroup({ children }: { children: ReactNode }) {
   return (
     <div
@@ -65,6 +73,10 @@ interface ReportToolbarCenterLabelProps {
 
 // Shared header label (department + page descriptor) for head review and
 // standalone weekly report — wording/styling live in one place.
+/**
+ * Report Toolbar Center Label.
+ * @param props - The props argument.
+ */
 export function ReportToolbarCenterLabel({
   label,
   detail,

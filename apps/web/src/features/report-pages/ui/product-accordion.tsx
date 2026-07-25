@@ -44,6 +44,10 @@ function surfaceProps(hasContent: boolean, isHighlightActive: boolean) {
   };
 }
 
+/**
+ * Product Accordion.
+ * @param props - The props argument.
+ */
 export function ProductAccordion({
   report,
   defaultOpen = false,

@@ -164,6 +164,10 @@ function groupProductEdgeProcedures(deps: AdminCatalogDeps) {
   };
 }
 
+/**
+ * Create Admin Catalog Procedures.
+ * @param deps - The deps argument.
+ */
 export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
   return {
     ...reportingGroupProcedures(deps),

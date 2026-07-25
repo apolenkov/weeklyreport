@@ -45,6 +45,10 @@ function PeriodTableHeaderRow() {
   );
 }
 
+/**
+ * Period Table.
+ * @param props - The props argument.
+ */
 export function PeriodTable({
   rows,
   testIdPrefix,
@@ -81,7 +85,11 @@ function PeriodStateCell({ row }: { readonly row: PeriodListItem }) {
       <StateBadge state={row.periodState} />
       {row.periodStatus === "reopened" && (
         <span
-          className="ml-2 inline-flex items-center rounded-[var(--radius-pill)] bg-[#fef3c7] px-2 py-0.5 text-[10px] font-semibold uppercase text-[#92400e]"
+          className="ml-2 inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold uppercase"
+          style={{
+            backgroundColor: CHIP_TONE.amber.bg,
+            color: CHIP_TONE.amber.text,
+          }}
           data-testid={`periods-row-${row.id}-reopened-badge`}
         >
           reopened

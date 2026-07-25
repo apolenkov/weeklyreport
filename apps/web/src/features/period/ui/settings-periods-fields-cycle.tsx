@@ -13,6 +13,10 @@ const REOPEN_WINDOW_HOURS_MAX = 168;
 
 // Live consumers: deadlineTime (manual-create default), allowReopenAfterPublish
 // + reopenWindowHours (period.service reopen gate).
+/**
+ * Period Cycle Fields.
+ * @param options - The options argument.
+ */
 export function PeriodCycleFields({
   draft,
   setDraft,

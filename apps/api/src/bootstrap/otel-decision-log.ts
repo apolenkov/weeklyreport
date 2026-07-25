@@ -4,6 +4,11 @@ import type { AppLogger } from "../lib/logger";
 // One structured line recording the OTel bootstrap decision. A prod boot with
 // tracing off warns (not info) so it stands out rather than blending into
 // routine startup lines.
+/**
+ * Log Otel Decision.
+ * @param logger - The logger argument.
+ * @param decision - The decision argument.
+ */
 export function logOtelDecision(
   logger: AppLogger,
   decision: OtelBootstrapResult,

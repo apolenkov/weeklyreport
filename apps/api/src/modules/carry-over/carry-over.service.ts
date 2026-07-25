@@ -194,6 +194,10 @@ export class CarryOverService {
   }
 }
 
+/**
+ * Is Target Editable.
+ * @param state - The state argument.
+ */
 export function isTargetEditable(state: TargetReportState): boolean {
   return (
     !state.archived &&

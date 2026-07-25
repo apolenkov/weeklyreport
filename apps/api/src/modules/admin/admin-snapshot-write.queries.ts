@@ -233,6 +233,12 @@ function groupRestoredPolicyIdsByReport(
 // Additive-only whole-snapshot restore in one txn; removals use remove* primitives.
 // Policy applicator runs post-commit on newly created periods.
 // Spec: openspec/specs/admin-snapshot-restore
+/**
+ * Save Snapshot.
+ * @param prisma - The prisma argument.
+ * @param policyApplicator - The policyApplicator argument.
+ * @param snapshot - The snapshot argument.
+ */
 export async function saveSnapshot(
   prisma: PrismaService,
   policyApplicator: PolicyApplicatorService | undefined,

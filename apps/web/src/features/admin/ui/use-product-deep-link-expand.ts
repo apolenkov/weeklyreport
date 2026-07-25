@@ -8,6 +8,10 @@ interface UseProductDeepLinkExpandArgs {
 
 // Auto-expand `?product` once per filter; first manual toggle wins until
 // the deep link changes so a just-collapsed row is not re-expanded.
+/**
+ * Use Product Deep Link Expand.
+ * @param props - The props argument.
+ */
 export function useProductDeepLinkExpand({
   productFilter,
   products,

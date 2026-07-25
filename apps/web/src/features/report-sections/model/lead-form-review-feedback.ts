@@ -36,6 +36,10 @@ function toFeedbackRecords<
 }
 
 // Collect item/risk/decision rows that carry ≥1 reviewer comment for the feedback panel.
+/**
+ * Map Lead Review Feedback.
+ * @param section - The section argument.
+ */
 export function mapLeadReviewFeedback(
   section: ReportSectionReadModel,
 ): LeadReviewFeedbackRecord[] {

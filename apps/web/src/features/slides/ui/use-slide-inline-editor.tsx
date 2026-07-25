@@ -179,6 +179,10 @@ function useInlineEditCommands({
   };
 }
 
+/**
+ * Use Slide Inline Editor.
+ * @param args - The args argument.
+ */
 export function useSlideInlineEditor(
   args: UseSlideInlineEditorArgs,
 ): SlideInlineEditor {

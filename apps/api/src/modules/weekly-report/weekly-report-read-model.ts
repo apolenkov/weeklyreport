@@ -50,6 +50,10 @@ export type WeeklyReportLiveSection = ReportSectionReadModel & {
   readonly canReview: boolean;
 };
 
+/**
+ * Derive Scope Filters.
+ * @param session - The session argument.
+ */
 export function deriveScopeFilters(
   session: WeeklyReportScopeSession | undefined,
 ): WeeklyReportScopeFilters {
@@ -74,6 +78,15 @@ export function deriveScopeFilters(
   };
 }
 
+/**
+ * Build Snapshot Result.
+ * @param report - The report argument.
+ * @param snapshot - The snapshot argument.
+ * @param session - The session argument.
+ * @param sectionScope - The sectionScope argument.
+ * @param totalLeads - The totalLeads argument.
+ * @param activePolicyCount - The activePolicyCount argument.
+ */
 export function buildSnapshotResult(
   report: WeeklyReportRow,
   snapshot: AssembledReport,
@@ -126,6 +139,16 @@ export function buildSnapshotResult(
   };
 }
 
+/**
+ * Build Live Result.
+ * @param report - The report argument.
+ * @param leadSections - The leadSections argument.
+ * @param projects - The projects argument.
+ * @param crossGroup - The crossGroup argument.
+ * @param submissionCount - The submissionCount argument.
+ * @param totalLeads - The totalLeads argument.
+ * @param activePolicyCount - The activePolicyCount argument.
+ */
 export function buildLiveResult(
   report: WeeklyReportRow,
   leadSections: WeeklyReportLiveSection[],

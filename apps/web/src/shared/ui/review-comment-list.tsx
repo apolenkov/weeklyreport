@@ -5,6 +5,10 @@ import type { ReactNode } from "react";
 
 // Shared read-only comment stack. `renderAction` injects a per-comment control
 // (e.g. Delete) without this component owning mutations — lead surface passes nothing.
+/**
+ * Review Comment List.
+ * @param options - The options argument.
+ */
 export function ReviewCommentList({
   comments,
   className,

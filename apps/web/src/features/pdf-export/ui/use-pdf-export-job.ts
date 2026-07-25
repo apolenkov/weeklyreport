@@ -24,6 +24,10 @@ interface UsePdfExportJobResult {
 
 // Open blank tab on click (user-gesture) so later nav is not a popup; poll
 // until completed/failed and fall back to a download link if open is blocked.
+/**
+ * Use Pdf Export Job.
+ * @param props - The props argument.
+ */
 export function usePdfExportJob({
   reportId,
   periodStatus,

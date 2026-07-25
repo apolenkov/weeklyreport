@@ -23,6 +23,10 @@ const STRIPE_BY_STATUS: Record<StageStatus, string> = {
 const worstStatusOf = worstCanonicalStatus;
 
 // `+N more` colour: blocked > at-risk > empty > on-track across hidden stages.
+/**
+ * Collapsed Indicator Colors.
+ * @param statuses - The statuses argument.
+ */
 export function collapsedIndicatorColors(statuses: readonly StageStatus[]): {
   border: string;
   text: string;
@@ -59,6 +63,11 @@ function worstForeignSeverity(
   return worstStatusOf(severities);
 }
 
+/**
+ * Product Health Status.
+ * @param product - The product argument.
+ * @param crossAuthors - The crossAuthors argument.
+ */
 export function productHealthStatus(
   product: Product,
   crossAuthors: readonly CrossAuthorEntry[],
@@ -87,6 +96,10 @@ export interface CompletenessState {
   complete: boolean;
 }
 
+/**
+ * Compute Completeness.
+ * @param product - The product argument.
+ */
 export function computeCompleteness(product: Product): CompletenessState {
   const mine = product.stages.filter((s) => s.ownership === "mine");
   const filled = mine.filter(
@@ -99,6 +112,10 @@ export function computeCompleteness(product: Product): CompletenessState {
   };
 }
 
+/**
+ * Get Product Card Style.
+ * @param status - The status argument.
+ */
 export function getProductCardStyle(status: StageStatus): CSSProperties {
   return {
     background: "var(--color-card)",

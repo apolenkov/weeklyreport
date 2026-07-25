@@ -111,6 +111,10 @@ function SnapshotContent(props: AdminPanelContentProps) {
   );
 }
 
+/**
+ * Admin Panel Content.
+ * @param props - The props argument.
+ */
 export function AdminPanelContent(props: AdminPanelContentProps) {
   switch (props.activeTab) {
     case "settings":

@@ -93,6 +93,10 @@ function DeckToolbar({
   );
 }
 
+/**
+ * Lead Slides Client.
+ * @param props - The props argument.
+ */
 export function LeadSlidesClient({
   initialReportId = null,
   deckRef: externalDeckRef,

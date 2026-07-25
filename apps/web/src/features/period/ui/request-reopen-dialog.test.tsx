@@ -1,8 +1,3 @@
-/**
- * a11y assertions for RequestReopenDialog: Escape/Cancel/backdrop close,
- * stopPropagation on the inner surface, and autofocus on the textarea.
- */
-
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 

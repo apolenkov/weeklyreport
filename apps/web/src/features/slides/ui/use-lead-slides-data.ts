@@ -154,6 +154,10 @@ function useLeadDeckSlides({
   return useMemo(() => (sectionModel ? [sectionModel] : []), [sectionModel]);
 }
 
+/**
+ * Use Lead Slides Data.
+ * @param props - The props argument.
+ */
 export function useLeadSlidesData({
   initialReportId,
   visibilityMode,

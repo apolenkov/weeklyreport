@@ -1,15 +1,5 @@
-/**
- * The Risk dialog uses an OPTIONAL multi-stage selector
- * (`StageMultiSelect`). Options come from `stagesForProduct(productId)`
- * — the lead's StageAssignment rows.
- *
- * In create mode, only stages that are already marked at-risk/blocked on
- * the SDLC pipeline are pre-selected. If none are flagged, the selection
- * starts empty (= applies to all).
- *
- * Required stage selection (empty = validation error); bidirectional
- * severity decouple; context strip from pipeline.
- */
+// Stage selection is required for a product parent (empty = validation error);
+// options come from the lead's StageAssignment rows via stagesForProduct.
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -537,11 +527,6 @@ describe("RiskEditDialog - SDLC stage selector", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// a11y regression catalog: backdrop onKeyDown Escape, Cancel button,
-// stopPropagation, autoFocus.
-// ---------------------------------------------------------------------------
-
 const a11yProps = {
   open: true,
   risk: null,
@@ -714,13 +699,8 @@ describe("RiskEditDialog — form-race regression", () => {
   });
 });
 
-/**
- * A risk row may reference a project outside the lead's stage-owned
- * `products` (cross-stage row). Saving the edit dialog must preserve the
- * original product assignment instead of silently reassigning to the first
- * stage-owned product, and the dialog header must show the original
- * product name.
- */
+// A cross-stage row references a project outside the lead's stage-owned
+// `products`: saving must preserve it rather than reassign to the first one.
 describe("RiskEditDialog — cross-stage product preservation", () => {
   const crossStageRisk: RiskEntry = {
     id: "r-cross",
@@ -775,13 +755,9 @@ describe("RiskEditDialog — cross-stage product preservation", () => {
   });
 });
 
-/**
- * D12 mount/unmount shell: the outer component returns null when closed and
- * remounts fresh content on reopen, so typed-but-cancelled state never leaks
- * into the next open. This is the structural replacement for the deleted
- * useEffect form-reset.
- */
-describe("RiskEditDialog — D12 reopen renders fresh state", () => {
+// The closed dialog returns null and remounts fresh content on reopen, so
+// typed-but-cancelled state never leaks into the next open.
+describe("RiskEditDialog — reopen renders fresh state", () => {
   it("does not leak typed text from a cancelled create into the next open", () => {
     const { rerender } = render(
       <RiskEditDialog
@@ -832,14 +808,9 @@ describe("RiskEditDialog — D12 reopen renders fresh state", () => {
   });
 });
 
-/**
- * A lead on a product where they own zero stages (stagesForProduct returns
- * []) AND the row carries no stage of its own is a dead end — there is
- * nothing to pick, so Save is disabled and the documented
- * "no stages assigned — contact admin" message shows instead of the
- * unsatisfiable "Select at least one stage." error. A cross-stage row that
- * already carries stageIds stays saveable.
- */
+// Zero owned stages plus no stage on the row is a dead end: nothing is
+// pickable, so Save is disabled and contact-admin replaces the unsatisfiable
+// required-stage error. A row that already carries stageIds stays saveable.
 describe("RiskEditDialog — zero-owned-stage guard", () => {
   it("disables Save and shows contact-admin (never the required-stage error) on a stage-less product", () => {
     render(

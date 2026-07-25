@@ -13,6 +13,9 @@ import { PeriodsArchiveSection } from "./periods-archive-section";
 import { PeriodsTabDialogs } from "./periods-tab-dialogs";
 import { PlusIcon } from "./periods-tab-icons";
 
+/**
+ * Periods Tab.
+ */
 export function PeriodsTab() {
   const trpc = useTRPC();
 

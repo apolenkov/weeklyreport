@@ -247,15 +247,12 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
       undefined,
     );
 
-    // Wait for query to resolve and page to render.
     await screen.findByRole("button", { name: /publish & lock/i });
 
-    // First click opens the confirmation dialog.
     await userEvent.click(
       screen.getByRole("button", { name: /publish & lock/i }),
     );
 
-    // Confirm in the dialog.
     const dialog = await screen.findByRole("alertdialog", {
       name: /publish & lock report/i,
     });
@@ -279,8 +276,8 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     expect(
       await screen.findByRole("heading", { name: "Alice", level: 3 }),
     ).toBeInTheDocument();
-    // report-overview-scope-parity: the overview band follows scope — it shows
-    // the per-lead "Leads Overview" summary, not the product band.
+    // The overview band follows scope: the per-lead "Leads Overview" summary,
+    // not the product band.
     expect(screen.getByText("Leads Overview")).toBeInTheDocument();
     expect(screen.queryByText("Portfolio Overview")).not.toBeInTheDocument();
   });
@@ -334,7 +331,6 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
       submissionCount: 0,
     });
 
-    // Empty-state card must be present.
     const emptyState = await screen.findByTestId("empty-submissions-state");
     expect(emptyState).toBeInTheDocument();
 
@@ -362,7 +358,6 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
       submissionCount: 0,
     });
 
-    // Wait for render to settle.
     await screen.findByRole("button", { name: /reopen period/i });
 
     expect(
@@ -452,9 +447,8 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     // Anchor on the always-present report heading.
     await screen.findByRole("heading", { name: /status report/i });
 
-    // followups item 1: Export PDF is now available to the viewer (the export
-    // render is requester-scoped, so the viewer gets a non-empty PDF of their
-    // own published slice). Period-mutation actions stay head/admin-only.
+    // Export PDF is requester-scoped, so a viewer gets a non-empty PDF of their
+    // own published slice. Period-mutation actions stay head/admin-only.
     expect(
       screen.getByRole("button", { name: /export pdf/i }),
     ).toBeInTheDocument();
@@ -516,7 +510,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
       undefined,
     );
 
-    // Reopen is now destructive → goes through ConfirmDeleteDialog.
+    // Reopen is destructive, so it goes through ConfirmDeleteDialog.
     const reopenBtn = await screen.findByRole("button", {
       name: /reopen period/i,
     });
@@ -853,9 +847,9 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
   });
 });
 
-// Driver finding 1: a load failure (e.g. a malformed reportId → 400
-// BAD_REQUEST) must render a distinct invalid-link state, NOT the misleading
-// "No active reporting period" empty-state.
+// A load failure (e.g. a malformed reportId → 400 BAD_REQUEST) must render a
+// distinct invalid-link state, NOT the misleading "No active reporting period"
+// empty-state.
 describe("WeeklyReportPage — load-failure state (driver finding 1)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -1224,10 +1218,9 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
   });
 
   it("activity-first-class: an all-activity submitted period renders (no empty-state) and can publish", async () => {
-    // Regression for the #5 gap: a submitted section whose ONLY content is a
-    // touched activity (status set, zero product content anywhere) must NOT read
-    // "No submissions yet" and must be publishable — hasAnyContent folds in
-    // activity content, not just product content.
+    // A submitted section whose ONLY content is a touched activity must still
+    // be publishable — hasAnyContent folds in activity content, not just
+    // product content.
     renderPage({
       ...makeWeeklyReportData("open", {
         portfolioOverview: [],

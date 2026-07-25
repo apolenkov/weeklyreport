@@ -11,12 +11,9 @@ import {
 } from "../../test-utils/prisma-test-helper";
 import { AnalyticsPrismaRepository } from "./analytics.prisma-repository";
 
-/**
- * Cross-group leak gate. The fixture is ONE unified published period
- * Report holding BOTH a group-A and a group-B section (two single-group reports
- * would false-green the nested-include scope). A group-A head must see only
- * group-A projects, leads, and risks from all three analytics read paths.
- */
+// Cross-group leak gate: the fixture is deliberately ONE unified published
+// Report holding BOTH a group-A and a group-B section, because two
+// single-group reports would false-green the nested-include scope.
 const GROUP_B = "b0000000-0000-4000-8000-00000000000b";
 const LEAD_B = "b0000000-0000-4000-8000-0000000000b1";
 const PROJECT_B = "b0000000-0000-4000-8000-0000000000b2";
@@ -24,16 +21,9 @@ const SECTION_B = "b0000000-0000-4000-8000-0000000000b3";
 
 const HISTORY_INPUT = { periodFrom: "2026-04-01", periodTo: "2026-04-30" };
 
-/**
- * Day-range matching gate (real Postgres — a mocked-WHERE-args unit test would
- * be self-referential). Proves the three date bugs are closed against a stored
- * full-timestamp `periodEnd`: exact-equality day match, dropped reports under a
- * shared label, and the excluded final day. Uses an admin session so group
- * scoping is off and the assertions isolate the date behaviour.
- *
- * This block is intentionally FIRST in the file so the group-scoping block below
- * owns the single `disconnectTestPrisma()` in its afterAll (it runs last).
- */
+// Real-Postgres day-range gate on a stored full-timestamp `periodEnd`; admin
+// session so group scoping cannot confound it. Must stay FIRST in the file: the
+// group-scoping block runs last and owns the one `disconnectTestPrisma()`.
 const DR_GROUP = "c0000000-0000-4000-8000-00000000000c";
 const DR_LEAD = "c0000000-0000-4000-8000-0000000000c1";
 const DR_PROJECT = "c0000000-0000-4000-8000-0000000000c2";

@@ -163,6 +163,9 @@ function JobsTable({
   );
 }
 
+/**
+ * Jobs Tab.
+ */
 export function JobsTab() {
   const trpc = useTRPC();
 

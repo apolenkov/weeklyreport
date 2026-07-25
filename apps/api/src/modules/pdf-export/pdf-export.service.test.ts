@@ -340,10 +340,6 @@ async function getCounterValue(
   return match?.value ?? 0;
 }
 
-// ---------------------------------------------------------------------------
-// The 5-min PDF export JWT cookie seam.
-// ---------------------------------------------------------------------------
-
 describe("PDF export JWT signing", () => {
   const PDF_SECRET = "integration-test-secret-32-chars-or-more";
 
@@ -365,7 +361,7 @@ describe("PDF export JWT signing", () => {
   });
 
   it("signPdfExportToken throws PdfExportDomainError when secret is too short (<32 chars)", () => {
-    // 17 chars: clears the old 16-char floor, fails the raised 32-char one.
+    // 17 chars: under the 32-char floor.
     vi.stubEnv("PDF_EXPORT_JWT_SECRET", "seventeen-chars-x");
     const service = new PdfExportService(createRepository(publishedReport));
 
@@ -375,7 +371,7 @@ describe("PDF export JWT signing", () => {
   });
 
   it("verifyPdfExportToken throws when secret is too short (<32 chars)", () => {
-    // 17 chars: clears the old 16-char floor, fails the raised 32-char one.
+    // 17 chars: under the 32-char floor.
     vi.stubEnv("PDF_EXPORT_JWT_SECRET", "seventeen-chars-x");
 
     expect(() => verifyPdfExportToken("any.signed.token")).toThrow(

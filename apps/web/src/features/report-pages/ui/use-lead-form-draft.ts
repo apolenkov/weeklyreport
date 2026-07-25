@@ -31,6 +31,10 @@ interface UseLeadFormDraftArgs {
 }
 
 // Live view-model enters as plain `loaded` — no ref crosses into this module.
+/**
+ * Use Lead Form Draft.
+ * @param props - The props argument.
+ */
 export function useLeadFormDraft({
   serverSection,
   sectionIdForActions,

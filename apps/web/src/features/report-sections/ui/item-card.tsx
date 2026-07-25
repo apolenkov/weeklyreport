@@ -31,6 +31,10 @@ interface ItemCardProps {
   readonly risks?: readonly RiskEntry[];
 }
 
+/**
+ * Item Card.
+ * @param props - The props argument.
+ */
 export function ItemCard({
   item,
   risks,

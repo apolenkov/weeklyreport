@@ -9,6 +9,10 @@ export interface OrganizationRouterDeps {
 // Public surface returns only shortName/fullName so future schema fields
 // cannot leak to the anonymous landing page.
 
+/**
+ * Create Organization Router.
+ * @param deps - The deps argument.
+ */
 export function createOrganizationRouter(deps: OrganizationRouterDeps) {
   return router({
     getPublic: publicProcedure.query(async () => {

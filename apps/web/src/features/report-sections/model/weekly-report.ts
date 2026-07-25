@@ -70,6 +70,10 @@ function assembleWeeklyReport(
   };
 }
 
+/**
+ * Map Weekly Report.
+ * @param api - The api argument.
+ */
 export function mapWeeklyReport(
   api: WeeklyReportReadModel,
 ): MapWeeklyReportResult {
@@ -133,6 +137,10 @@ function buildLeadProductReport(
 
 // Per-lead groups use each leadSection alone so dual-authored products are not
 // repeated under every lead; by-product scope uses mapWeeklyReport aggregates.
+/**
+ * Map Weekly Report Lead Groups.
+ * @param api - The api argument.
+ */
 export function mapWeeklyReportLeadGroups(
   api: WeeklyReportReadModel,
 ): { id: string; name: string; products: WeeklyProductReport[] }[] {
@@ -195,6 +203,10 @@ function compareProductStatus(
 
 // Overview rows inherit the groups' content filter (decisions-only leads keep a
 // row). worstStatus is over the lead's own products; sort worst-first, name tiebreak.
+/**
+ * Map Weekly Report Lead Overview.
+ * @param leadGroups - The leadGroups argument.
+ */
 export function mapWeeklyReportLeadOverview(
   leadGroups: readonly {
     id: string;

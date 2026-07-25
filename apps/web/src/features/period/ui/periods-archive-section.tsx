@@ -4,6 +4,10 @@ import { Chevron } from "./periods-tab-icons";
 import { PeriodTable, type PeriodTableProps } from "./periods-tab-table";
 
 // Caller gates the archive query on `expanded` — first fetch is on open.
+/**
+ * Periods Archive Section.
+ * @param props - The props argument.
+ */
 export function PeriodsArchiveSection({
   expanded,
   onToggle,

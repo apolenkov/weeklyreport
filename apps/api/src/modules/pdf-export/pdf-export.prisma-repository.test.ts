@@ -88,7 +88,7 @@ function reportRow(severity: "blocked" | "at-risk") {
   };
 }
 
-describe("toAssembledReport — PDF portfolio totals floor (Shape B)", () => {
+describe("toAssembledReport — PDF portfolio totals floor", () => {
   it("counts the product red (not green) for a covers-all blocked own risk", () => {
     const report = toAssembledReport(
       reportRow("blocked") as unknown as Parameters<

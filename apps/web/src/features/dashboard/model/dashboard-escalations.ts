@@ -16,6 +16,11 @@ const NO_STAGE_LABEL = "No stage set";
 // data defect on a row that legitimately has no stage.
 const FLAGGED_STAGE_LABEL = "Flagged";
 
+/**
+ * Escalation To Blocked Item.
+ * @param escalation - The escalation argument.
+ * @param index - The index argument.
+ */
 export function escalationToBlockedItem(
   escalation: Escalation,
   index: number,

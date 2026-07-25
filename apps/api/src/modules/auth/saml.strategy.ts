@@ -37,6 +37,7 @@ const SAML_ENV_KEYS = [
  * var instead of silently degrading to dev-login-only. Outside production the
  * boot-time guard for the no-SAML + no-dev-login combination is the throw in
  * `mountAuthRoutes`, not the schema fence.
+  * @param env - The env argument.
  */
 export function hasSamlEnv(env: NodeJS.ProcessEnv): boolean {
   return SAML_ENV_KEYS.some((key) => (env[key]?.trim() ?? "") !== "");
@@ -52,6 +53,10 @@ const validateAlways = "always" as NonNullable<
 // Tolerate small IdP/SP clock drift without accepting stale assertions.
 const ACCEPTED_CLOCK_SKEW_MS = 5000;
 
+/**
+ * Create Saml Strategy Options.
+ * @param env - The env argument.
+ */
 export function createSamlStrategyOptions(
   env: NodeJS.ProcessEnv,
 ): SamlStrategyOptions {
@@ -96,6 +101,11 @@ export function createSamlStrategyOptions(
 // Parse the raw SAML profile through the shared Zod schema so a missing or
 // unrecognised attribute fails closed. devMode retains a permissive fallback
 // for local development where no real IdP populates the assertion.
+/**
+ * Verify Saml Profile.
+ * @param options - The options argument.
+ * @param rawProfile - The rawProfile argument.
+ */
 export function verifySamlProfile(
   options: SamlStrategyOptions,
   rawProfile: Record<string, unknown> | null | undefined,
@@ -148,6 +158,10 @@ export function verifySamlProfile(
   };
 }
 
+/**
+ * Create Saml Strategy.
+ * @param options - The options argument.
+ */
 export function createSamlStrategy(options: SamlStrategyOptions): SamlStrategy {
   const verify: VerifyWithoutRequest = (profile, done) => {
     const result = verifySamlProfile(options, profile);

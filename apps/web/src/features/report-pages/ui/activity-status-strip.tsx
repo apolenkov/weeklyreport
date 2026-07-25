@@ -171,6 +171,10 @@ function ActivityBodyCard({ card }: { readonly card: ActivityCardModel }) {
   );
 }
 
+/**
+ * Activity Status Strip.
+ * @param options - The options argument.
+ */
 export function ActivityStatusStrip({
   sections,
 }: {

@@ -10,6 +10,9 @@ import { NavBrand } from "./nav-brand";
 import { NavRightRail } from "./nav-right-rail";
 import { useHydratedClient } from "./use-hydrated-client";
 
+/**
+ * Nav Bar.
+ */
 export function NavBar() {
   const pathname = usePathname();
   const { user, organization, isLoading: sessionLoading } = useSession();

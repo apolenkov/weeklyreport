@@ -9,6 +9,10 @@ import type { MockProduct } from "../model/admin-types";
 import { invalidateGroupProductOwnership } from "../model/group-products-invalidation";
 
 // A product has exactly one owning group — other-group products show locked.
+/**
+ * Group Products Editor.
+ * @param options - The options argument.
+ */
 export function GroupProductsEditor({
   groupId,
   products,

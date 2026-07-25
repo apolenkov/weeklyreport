@@ -120,6 +120,10 @@ function keyDownHandler(args: KeyDownArgs) {
   };
 }
 
+/**
+ * Use Search Controller.
+ * @param scope - The scope argument.
+ */
 export function useSearchController(scope: SearchScope): SearchController {
   const router = useRouter();
   const { user } = useSession();

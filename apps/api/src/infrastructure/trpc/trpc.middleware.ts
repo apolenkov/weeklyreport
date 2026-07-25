@@ -68,6 +68,10 @@ const TRPC_ERROR_HTTP_STATUS: Record<string, string> = {
 
 // Surface real failure (Prisma/Zod) under the generic INTERNAL_SERVER_ERROR
 // wrapper. Stack frames leak paths — only code/meta are logged.
+/**
+ * Derive Cause Info.
+ * @param cause - The cause argument.
+ */
 export function deriveCauseInfo(cause: unknown) {
   if (!(cause instanceof Error)) return undefined;
   return {

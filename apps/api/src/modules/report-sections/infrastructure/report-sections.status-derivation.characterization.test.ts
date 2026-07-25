@@ -6,14 +6,8 @@ import {
   deriveEffectiveProductStatus,
 } from "./report-sections.status-derivation";
 
-/**
- * Pins `deriveEffectiveProductStatus` and
- * `deriveActivityStatus`'s current output over the severity × items ×
- * explicit-status permutation grid (traffic vocabulary, incl. `null`
- * handling) BEFORE the ranking core moves to the shared package. Frozen — do
- * not edit assertions after the move lands; a diff here means a behavior
- * change.
- */
+// Frozen snapshot of the status-derivation grid: a diff in these assertions
+// means a behavior change, not a test that needs updating.
 const PROJECT_ID = "44444444-4444-4444-8444-444444444444";
 
 describe("deriveEffectiveProductStatus — characterization grid", () => {

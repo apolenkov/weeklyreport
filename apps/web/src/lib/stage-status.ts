@@ -7,6 +7,12 @@ import {
 
 // Severity is max over covering risks/blocked items; orphaned manual
 // at-risk/blocked collapses to on-track so the read model matches handleRisksChange.
+/**
+ * Derive Effective Stage Status.
+ * @param explicit - The explicit argument.
+ * @param risks - The risks argument.
+ * @param items - The items argument.
+ */
 export function deriveEffectiveStageStatus(
   explicit: CanonicalStatus,
   risks: readonly { severity: RiskSeverity }[],

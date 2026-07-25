@@ -3,6 +3,10 @@ import type { PeriodListItem } from "@customreport/shared";
 import { PeriodTable, type PeriodTableProps } from "./periods-tab-table";
 
 // Always rendered (unlike the collapsed-by-default archive section).
+/**
+ * Periods Active Section.
+ * @param props - The props argument.
+ */
 export function PeriodsActiveSection({
   isLoading,
   rows,

@@ -45,6 +45,9 @@ function IntegrationCard({
 // Element label is the roadmapped channel; dispatch is still Telegram
 // (TG_BOT_TOKEN / TelegramBinding) so no live status is shown — that would
 // mis-claim Telegram state as Element. ComingSoon marks seeds-only.
+/**
+ * Integrations Sub Tab.
+ */
 export function IntegrationsSubTab() {
   return (
     <div className="max-w-2xl space-y-4">

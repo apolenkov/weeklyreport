@@ -20,7 +20,11 @@ export function createPauseGate(): PauseGate {
   };
 }
 
-/** Pauses immediately before an interactive transaction reaches the database. */
+/**
+ * Pauses immediately before an interactive transaction reaches the database.
+ * @param prisma - The prisma argument.
+ * @param pause - The pause argument.
+ */
 export function pauseBeforeTransaction(
   prisma: PrismaClient,
   pause: () => Promise<void>,
@@ -42,7 +46,11 @@ export function pauseBeforeTransaction(
   });
 }
 
-/** Pauses immediately before the next ReportSection updateMany statement. */
+/**
+ * Pauses immediately before the next ReportSection updateMany statement.
+ * @param prisma - The prisma argument.
+ * @param pause - The pause argument.
+ */
 export function pauseBeforeSectionUpdate(
   prisma: PrismaClient,
   pause: () => Promise<void>,

@@ -14,6 +14,10 @@ const DEFAULT_REPORTING_GROUP_NAME = "Core Development";
 
 // TransactionClient so saveSnapshot upsert cannot commit ahead of a later failure.
 // PrismaService is structurally assignable for non-transaction callers.
+/**
+ * Ensure Fallback Reporting Group.
+ * @param prisma - The prisma argument.
+ */
 export async function ensureFallbackReportingGroup(
   prisma: Prisma.TransactionClient,
 ): Promise<string> {
@@ -38,6 +42,11 @@ export async function ensureFallbackReportingGroup(
   return created.id;
 }
 
+/**
+ * Save Reporting Group.
+ * @param prisma - The prisma argument.
+ * @param group - The group argument.
+ */
 export async function saveReportingGroup(
   prisma: PrismaService,
   group: ReportingGroup,
@@ -62,6 +71,11 @@ export async function saveReportingGroup(
   return reportingGroupSchema.parse(row);
 }
 
+/**
+ * Archive Reporting Group.
+ * @param prisma - The prisma argument.
+ * @param groupId - The groupId argument.
+ */
 export async function archiveReportingGroup(
   prisma: PrismaService,
   groupId: string,
@@ -118,6 +132,11 @@ async function upsertStageAssignmentRow(
   }
 }
 
+/**
+ * Save Stage Assignment.
+ * @param prisma - The prisma argument.
+ * @param data - The data argument.
+ */
 export async function saveStageAssignment(
   prisma: PrismaService,
   data: StageAssignmentInput,
@@ -134,6 +153,11 @@ export async function saveStageAssignment(
   });
 }
 
+/**
+ * Delete Stage Assignment.
+ * @param prisma - The prisma argument.
+ * @param id - The id argument.
+ */
 export async function deleteStageAssignment(
   prisma: PrismaService,
   id: string,
@@ -141,6 +165,11 @@ export async function deleteStageAssignment(
   await prisma.stageAssignment.delete({ where: { id } });
 }
 
+/**
+ * List Stage Assignments.
+ * @param prisma - The prisma argument.
+ * @param projectId - The projectId argument.
+ */
 export async function listStageAssignments(
   prisma: PrismaService,
   projectId: string,
@@ -167,6 +196,10 @@ export async function listStageAssignments(
 }
 
 // Full catalogue including unassigned stages (not just rows that already exist).
+/**
+ * List Stages.
+ * @param prisma - The prisma argument.
+ */
 export async function listStages(
   prisma: PrismaService,
 ): Promise<{ id: string; name: string; sortOrder: number }[]> {
@@ -177,6 +210,10 @@ export async function listStages(
 }
 
 // GROUP BY only — products-tab header without loading every assignment row.
+/**
+ * List Stage Assignment Counts.
+ * @param prisma - The prisma argument.
+ */
 export async function listStageAssignmentCounts(
   prisma: PrismaService,
 ): Promise<{ projectId: string; count: number }[]> {

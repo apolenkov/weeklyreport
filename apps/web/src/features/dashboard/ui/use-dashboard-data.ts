@@ -126,6 +126,9 @@ function useRevokeAllSubmitted() {
   );
 }
 
+/**
+ * Use Dashboard Data.
+ */
 export function useDashboardData() {
   return {
     ...useDashboardQueries(),

@@ -1,5 +1,8 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
+/**
+ * Create Demo Section.
+ */
 export function createDemoSection(): ReportSectionReadModel {
   return {
     reportSectionId: "11111111-1111-4111-8111-111111111111",

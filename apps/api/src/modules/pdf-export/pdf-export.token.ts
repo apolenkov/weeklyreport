@@ -28,6 +28,10 @@ function requirePdfExportSecret(): string {
 }
 
 // Deferred verifier for trpc.context after verifySessionToken fails.
+/**
+ * Verify Pdf Export Token.
+ * @param token - The token argument.
+ */
 export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
   const secret = requirePdfExportSecret();
   const decoded = jwt.verify(token, secret, {
@@ -52,6 +56,11 @@ export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
   };
 }
 
+/**
+ * Sign Pdf Export Token.
+ * @param reportId - The reportId argument.
+ * @param requestedBy - The requestedBy argument.
+ */
 export function signPdfExportToken(
   reportId: string,
   requestedBy?: string,

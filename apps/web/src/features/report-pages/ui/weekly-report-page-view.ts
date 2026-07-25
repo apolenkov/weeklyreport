@@ -131,6 +131,11 @@ function buildFallbackPeriodNav(
 }
 
 // Pure view-model from a loaded active report (scope, review gating, filter, focus).
+/**
+ * Build Weekly Report Page View.
+ * @param reportData - The reportData argument.
+ * @param params - The params argument.
+ */
 export function buildWeeklyReportPageView(
   reportData: WeeklyReportReadModel,
   params: {

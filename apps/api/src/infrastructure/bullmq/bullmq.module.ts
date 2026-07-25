@@ -8,16 +8,14 @@ import { getBullMQOptions } from "./bullmq-options";
 import { DLQMonitorService } from "./dlq-monitor.service.js";
 import { QueueRegistry } from "./queue-registry.js";
 
-// Bounded completed/failed retention shared by the pdf-export and
-// email-reminder queues, matching telegram-outbound's TELEGRAM_OUTBOUND_JOB_OPTS.
+// Bounds retained job hashes so they don't accumulate in Redis without limit
+// (AOF persists them); mirrors telegram-outbound's per-job retention.
 const BOUNDED_RETENTION_JOB_OPTS: DefaultJobOptions = {
   removeOnComplete: { count: 100 },
   removeOnFail: { count: 500 },
 };
 
-// Redis noeviction is enforced in Docker Compose, not code. QueueRegistry owns
-// the shared Queue handles used by the DLQ monitor, Bull Board, and admin
-// bootstrap; DLQMonitorService alerts when failed-job count exceeds threshold.
+// Redis noeviction is enforced in Docker Compose, not code.
 @Module({
   imports: [
     ConfigModule,
@@ -26,9 +24,6 @@ const BOUNDED_RETENTION_JOB_OPTS: DefaultJobOptions = {
       inject: [ENV_CONFIG],
       useFactory: (env: EnvConfig) => getBullMQOptions(env),
     }),
-    // Bound completed/failed retention so job hashes don't accumulate in Redis
-    // without limit (AOF persists them). Mirrors the per-job retention
-    // telegram-outbound already sets via TELEGRAM_OUTBOUND_JOB_OPTS.
     BullModule.registerQueue({
       name: "pdf-export",
       defaultJobOptions: BOUNDED_RETENTION_JOB_OPTS,

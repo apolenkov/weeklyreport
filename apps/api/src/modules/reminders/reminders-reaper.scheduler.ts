@@ -4,24 +4,16 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository";
 import { RemindersService } from "./reminders.service";
 
-/**
- * Periodic sweep that re-enqueues reminder executions stranded in `queued`. It
- * reclaims ONLY `queued` rows — a `sending` row is an in-flight send and
- * re-enqueuing it would risk a duplicate, so it is deliberately left untouched
- * (an accepted, observable residual). Re-enqueue is safe against a late
- * original: the deterministic jobId dedups at the queue and the worker's
- * compare-and-set send guard delivers exactly once.
- */
+// Reclaims ONLY `queued` rows; a `sending` row is an in-flight send whose
+// re-enqueue could duplicate. Re-enqueue is safe against a late original: the
+// deterministic jobId dedups at the queue and the CAS send guard sends once.
 @Injectable()
 export class RemindersReaperScheduler {
   private readonly logger = new Logger(RemindersReaperScheduler.name);
 
-  // A reminder execution committed `queued` whose enqueue never happened (the
-  // pod died between the DB insert and `emailQueue.add`) leaves no job and no
-  // `failed` marker; its pinned dedupeKey never advances, so nothing else
-  // re-enqueues it. Any row still `queued` this long after creation is treated
-  // as stranded — well past the seconds-scale insert→enqueue window, yet healed
-  // within one sweep interval. 15 minutes, in milliseconds.
+  // A row committed `queued` whose enqueue never happened has no job, no
+  // `failed` marker and a pinned dedupeKey, so nothing else retries it. This
+  // age is well past the seconds-scale insert→enqueue window.
   private readonly stuckQueuedTimeoutMs = 900_000;
 
   constructor(

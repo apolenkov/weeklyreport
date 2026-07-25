@@ -27,6 +27,10 @@ interface PrintReportShellProps {
   readonly reportId: string;
 }
 
+/**
+ * Loading Shell.
+ * @param props - The props argument.
+ */
 export function LoadingShell({ reportId }: PrintReportShellProps) {
   return (
     <main
@@ -39,6 +43,10 @@ export function LoadingShell({ reportId }: PrintReportShellProps) {
   );
 }
 
+/**
+ * Error Shell.
+ * @param props - The props argument.
+ */
 export function ErrorShell({ reportId }: PrintReportShellProps) {
   return (
     <main data-print-state={PRINT_STATE.error} style={SHELL_STYLE} role="alert">

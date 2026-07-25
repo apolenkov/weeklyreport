@@ -12,6 +12,10 @@ interface ReopenRequestsDeps {
 
 // headProcedure (not adminProcedure): head ≠ admin in real deploy; reopen
 // decision is a head capability.
+/**
+ * Create Reopen Requests Procedures.
+ * @param deps - The deps argument.
+ */
 export function createReopenRequestsProcedures(deps: ReopenRequestsDeps) {
   return {
     listReopenRequests: headProcedure

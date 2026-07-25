@@ -14,6 +14,10 @@ import {
 } from "./use-decision-form-state";
 
 // Form state/handlers for the decision dialog; dialog file stays render-only.
+/**
+ * Use Decision Edit Dialog.
+ * @param args - The args argument.
+ */
 export function useDecisionEditDialog(args: UseDecisionEditDialogArgs) {
   const { decision, onCancel } = args;
 

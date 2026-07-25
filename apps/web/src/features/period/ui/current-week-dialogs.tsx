@@ -28,6 +28,10 @@ interface CurrentWeekDialogsProps {
 }
 
 // One shared dialog instance across all columns (edit/create, delete, pause).
+/**
+ * Current Week Dialogs.
+ * @param props - The props argument.
+ */
 export function CurrentWeekDialogs({
   dialogKey,
   open,

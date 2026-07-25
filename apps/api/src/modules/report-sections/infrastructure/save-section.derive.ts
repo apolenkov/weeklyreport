@@ -3,6 +3,11 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
+/**
+ * To Project Status Rows.
+ * @param section - The section argument.
+ * @param sectionId - The sectionId argument.
+ */
 export function toProjectStatusRows(
   section: ReportSectionReadModel,
   sectionId: string,
@@ -14,6 +19,11 @@ export function toProjectStatusRows(
   }));
 }
 
+/**
+ * To Stage Status Rows.
+ * @param section - The section argument.
+ * @param sectionId - The sectionId argument.
+ */
 export function toStageStatusRows(
   section: ReportSectionReadModel,
   sectionId: string,
@@ -28,6 +38,11 @@ export function toStageStatusRows(
   );
 }
 
+/**
+ * To Activity Status Rows.
+ * @param section - The section argument.
+ * @param sectionId - The sectionId argument.
+ */
 export function toActivityStatusRows(
   section: ReportSectionReadModel,
   sectionId: string,
@@ -40,6 +55,11 @@ export function toActivityStatusRows(
   }));
 }
 
+/**
+ * To Item Rows.
+ * @param section - The section argument.
+ * @param sectionId - The sectionId argument.
+ */
 export function toItemRows(section: ReportSectionReadModel, sectionId: string) {
   return section.items.map((i) => ({
     // The DB mints the id — rows are recreated wholesale, so trusting a
@@ -65,6 +85,11 @@ export function toItemRows(section: ReportSectionReadModel, sectionId: string) {
   }));
 }
 
+/**
+ * To Risk Rows.
+ * @param section - The section argument.
+ * @param sectionId - The sectionId argument.
+ */
 export function toRiskRows(section: ReportSectionReadModel, sectionId: string) {
   return section.risks.map((r) => ({
     reportSectionId: sectionId,
@@ -81,12 +106,21 @@ export function toRiskRows(section: ReportSectionReadModel, sectionId: string) {
   }));
 }
 
+/**
+ * Is Persistable Decision.
+ * @param decision - The decision argument.
+ */
 export function isPersistableDecision(
   decision: ReportSectionReadModel["decisions"][number],
 ): boolean {
   return decision.productId != null || decision.activityId != null;
 }
 
+/**
+ * To Decision Rows.
+ * @param decisions - The decisions argument.
+ * @param sectionId - The sectionId argument.
+ */
 export function toDecisionRows(
   decisions: readonly ReportSectionReadModel["decisions"][number][],
   sectionId: string,
@@ -108,6 +142,11 @@ export function toDecisionRows(
 }
 
 // Runs inside the caller's open transaction so clear + createMany commit atomically.
+/**
+ * Clear Section Child Rows.
+ * @param tx - The tx argument.
+ * @param sectionId - The sectionId argument.
+ */
 export async function clearSectionChildRows(
   tx: Prisma.TransactionClient,
   sectionId: string,

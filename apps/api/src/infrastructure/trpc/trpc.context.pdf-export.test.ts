@@ -20,25 +20,6 @@ import {
   router as testTrpcRouter,
 } from "./trpc.middleware";
 
-/**
- * PDF JWT verifier path on the receiving end.
- *
- * Asserts that:
- *   1. A valid PDF-export JWT (kind='pdf-export', reportId=X) produces a
- *      synthetic session with isPdfExport=true and pdfReportId=X.
- *   2. A token signed with PDF_EXPORT_JWT_SECRET but missing the `kind`
- *      claim is rejected (would otherwise allow session-jwt impersonation
- *      if both secrets accidentally match).
- *   3. A garbage token falls through to session=null in production
- *      (AUTH_DEV_MODE off + AUTH_DEV_MODE_ALLOW_TEST off).
- *   4. A PDF token with reportId=X cannot be reused after secret rotation
- *      (verifier rejects when secret mismatches).
- *
- * The middleware-level allowlist (only weeklyReport.get + archive.detail
- * with input.reportId === pdfReportId) is exercised via a separate caller
- * test below using the testRouter helper.
- */
-
 interface MockNestApp {
   get: (token: unknown) => unknown;
 }
@@ -54,10 +35,8 @@ function makePrismaStub() {
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma repository contract (no awaitable work in the stub)
       findUnique: vi.fn(async () => ({ isActive: true })),
     },
-    // See trpc.context.test.ts — the regular session path hydrates
-    // `session.organization` from the singleton row before returning.
-    // PDF-export-token paths short-circuit before hitting this stub, but
-    // the regular-JWT regression test does exercise it.
+    // PDF-token paths short-circuit before this stub; the regular-JWT
+    // regression test below does hydrate `session.organization` from it.
     organization: {
       findUnique: vi.fn(() =>
         Promise.resolve({
@@ -427,11 +406,8 @@ describe("buildPdfExportSession — legacy fallback satisfies userSessionSchema"
 });
 
 describe("pdfExportGuard — PDF synthetic session restrictions", () => {
-  // We rebuild a tiny router exposing the same procedure helpers so we can
-  // exercise the guard without spinning up the full app router. The
-  // procedure helpers wire pdfExportGuard into the chain at module load
-  // time, so calling testRouter.createCaller with isPdfExport=true
-  // exercises the guard end-to-end.
+  // A tiny router over the same procedure helpers exercises the guard
+  // end-to-end without spinning up the full app router.
   const testRouter = testTrpcRouter({
     weeklyReport: testTrpcRouter({
       get: anyRoleProcedure
@@ -519,8 +495,6 @@ describe("pdfExportGuard — PDF synthetic session restrictions", () => {
     const reportId = "99999999-2222-4333-8444-aaaaaaaaaaab";
     const caller = testRouter.createCaller(makePdfCtx(reportId));
 
-    // archive.list is NOT in the allowlist, but assert the failure shape
-    // anyway so we know the guard surfaces FORBIDDEN consistently.
     await expect(caller.archive.list()).rejects.toMatchObject({
       code: "FORBIDDEN",
     });

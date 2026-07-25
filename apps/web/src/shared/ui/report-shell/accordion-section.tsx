@@ -119,6 +119,10 @@ function AccordionPanel({
   );
 }
 
+/**
+ * Accordion Section.
+ * @param props - The props argument.
+ */
 export function AccordionSection({
   icon,
   title,

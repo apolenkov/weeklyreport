@@ -65,6 +65,10 @@ function LeadQueueFacts({ lead }: { readonly lead: LeadInfo }) {
   );
 }
 
+/**
+ * Lead Queue Detail.
+ * @param options - The options argument.
+ */
 export function LeadQueueDetail({
   lead,
   reportId,

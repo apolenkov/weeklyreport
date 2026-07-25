@@ -24,6 +24,11 @@ interface SegmentOptions {
   readonly iconOnly?: boolean;
 }
 
+/**
+ * Segment Class Name.
+ * @param active - The active argument.
+ * @param props - The props argument.
+ */
 export function segmentClassName(
   active: boolean,
   { iconOnly = false }: SegmentOptions = {},
@@ -43,6 +48,10 @@ interface SegmentedToggleProps {
   readonly children: ReactNode;
 }
 
+/**
+ * Segmented Toggle.
+ * @param props - The props argument.
+ */
 export function SegmentedToggle({
   role = "group",
   ariaLabel,

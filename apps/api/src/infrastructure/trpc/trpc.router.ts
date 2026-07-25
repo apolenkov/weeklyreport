@@ -107,6 +107,10 @@ export interface AppRouterDeps {
   actionLogService?: ActionLogService;
 }
 
+/**
+ * Create App Router.
+ * @param deps - The deps argument.
+ */
 export function createAppRouter(deps: AppRouterDeps) {
   return router({
     auth: createAuthRouter(),

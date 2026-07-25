@@ -4,6 +4,10 @@
 const PAUSED_REASON_MIN_HEIGHT_PX = 52;
 
 // Parent blocks save while empty — reason is required for paused items.
+/**
+ * Paused Reason Field.
+ * @param options - The options argument.
+ */
 export function PausedReasonField({
   value,
   error,

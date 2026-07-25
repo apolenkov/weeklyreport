@@ -58,6 +58,10 @@ function SearchCombobox({
   );
 }
 
+/**
+ * Search Input.
+ * @param props - The props argument.
+ */
 export function SearchInput({
   scope,
   placeholder,

@@ -94,6 +94,10 @@ function buildBaseConfig(logger: AppLogger): Partial<Options> {
 
 // Per-IP limiters for public ingress; Caddy-unmatched routes need their own
 // bucket. Test-mode limits come from TEST_MODE_LIMIT_PER_MINUTE above.
+/**
+ * Create Rate Limits.
+ * @param options - The options argument.
+ */
 export function createRateLimits(options: {
   logger: AppLogger;
   isTest: boolean;

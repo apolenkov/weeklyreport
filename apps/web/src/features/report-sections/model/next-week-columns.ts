@@ -68,6 +68,12 @@ function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
 
 // Product columns in the shared grid; activity lanes in a lighter block below
 // (activities are their own row, never peer product columns).
+/**
+ * Split Item Board.
+ * @param products - The products argument.
+ * @param items - The items argument.
+ * @param activities - The activities argument.
+ */
 export function splitItemBoard(
   products: readonly Product[] | undefined,
   items: KanbanItem[],
@@ -108,6 +114,12 @@ export function splitItemBoard(
 
 // Attached activities (like products) seed empty lanes, so their presence
 // keeps the board non-empty even with zero items.
+/**
+ * Is Board Empty.
+ * @param items - The items argument.
+ * @param products - The products argument.
+ * @param activities - The activities argument.
+ */
 export function isBoardEmpty(
   items: KanbanItem[],
   products: readonly Product[] | undefined,

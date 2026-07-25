@@ -4,6 +4,10 @@ import { isActiveLink } from "./nav-active";
 import { NavIcon } from "./nav-icon";
 import type { NavLink } from "./nav-links";
 
+/**
+ * Desktop Nav.
+ * @param options - The options argument.
+ */
 export function DesktopNav({
   links,
   pathname,

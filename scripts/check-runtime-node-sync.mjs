@@ -20,8 +20,10 @@ const repoRoot = path.resolve(
 const read = (file) => fs.readFileSync(path.join(repoRoot, file), "utf8");
 const readJson = (file) => JSON.parse(read(file));
 
+const ROOT_MANIFEST = "package.json";
+
 const TYPES_NODE_MANIFESTS = [
-  "package.json",
+  ROOT_MANIFEST,
   "apps/web/package.json",
   "packages/shared/package.json",
 ];
@@ -52,7 +54,7 @@ const declarations = () => [
   { source: ".nvmrc", major: majorOf(read(".nvmrc").trim()) },
   {
     source: "package.json engines.node",
-    major: majorOf(readJson("package.json").engines.node),
+    major: majorOf(readJson(ROOT_MANIFEST).engines.node),
   },
   ...imageNodeMajors(),
   ...typesNodeMajors(),
@@ -61,7 +63,7 @@ const declarations = () => [
 // pnpm is installed with `npm install -g pnpm@<version>` in both images because
 // node:26 dropped corepack, which used to read packageManager for us.
 const pnpmPins = () => {
-  const declared = readJson("package.json").packageManager;
+  const declared = readJson(ROOT_MANIFEST).packageManager;
   return [
     { source: "package.json packageManager", pin: majorless(declared) },
     ...DOCKERFILES.map((file) => ({

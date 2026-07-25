@@ -18,6 +18,7 @@ interface PauseReasonDialogProps {
 /**
  * Required pause-reason prompt: confirm stays disabled until non-empty.
  * useDialogFocus for Escape/Tab-trap/focus-restore; portaled to escape overflow:hidden.
+  * @param props - The props argument.
  */
 export function PauseReasonDialog({
   open,

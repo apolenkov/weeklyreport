@@ -537,7 +537,6 @@ describe("focused admin services", () => {
         createRepository(initialSnapshot),
       );
 
-      // First add the user
       await service.upsertUser({
         id: leadSession.userId,
         email: leadSession.email,
@@ -551,7 +550,6 @@ describe("focused admin services", () => {
         isActive: true,
       });
 
-      // Update the same user by ID
       const result = await service.upsertUser({
         id: leadSession.userId,
         email: "updated@customreport.local",
@@ -777,7 +775,6 @@ describe("removeUser — DB deletion via repository", () => {
     );
     const result = await service.removeUser(leadSession.userId);
 
-    // Verify the user was removed from the snapshot
     expect(result.users).toHaveLength(1);
     expect(
       result.users.find((u) => u.id === leadSession.userId),
@@ -837,7 +834,6 @@ describe("removeUser — DB deletion via repository", () => {
       "99999999-9999-4999-8999-999999999999",
     );
 
-    // User didn't exist, so snapshot remains unchanged
     expect(result.users).toHaveLength(1);
   });
 });
@@ -954,13 +950,11 @@ describe("SnapshotAdminService — settings", () => {
   it("applies partial update preserving other fields", async () => {
     const service = new SnapshotAdminService(createRepository(initialSnapshot));
 
-    // First do a full update
     await service.updateSettings({
       autoCreatePeriods: true,
       defaultDeadlineDays: 10,
     });
 
-    // Partial update only changes one field
     const result = await service.updateSettings({
       defaultDeadlineDays: 3,
     });

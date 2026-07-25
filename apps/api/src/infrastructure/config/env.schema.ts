@@ -229,6 +229,9 @@ export const envSchema = envObjectSchema.superRefine((data, ctx) => {
 
 export type EnvConfig = z.infer<typeof envSchema>;
 
+/**
+ * Validate Env.
+ */
 export function validateEnv(): EnvConfig {
   const result = envSchema.safeParse(process.env);
 

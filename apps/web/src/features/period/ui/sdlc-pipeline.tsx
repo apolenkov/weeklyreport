@@ -36,6 +36,10 @@ interface SdlcPipelineProps {
   readonly visibilityMode?: "mine" | "everyone";
 }
 
+/**
+ * Sdlc Pipeline.
+ * @param props - The props argument.
+ */
 export function SdlcPipeline({
   products,
   rawProducts,

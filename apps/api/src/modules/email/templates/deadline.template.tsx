@@ -25,6 +25,10 @@ export interface DeadlineEmailProps {
 const formatDeadline = (iso: string): string =>
   `${new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeStyle: "short", timeZone: "UTC" }).format(new Date(iso))} UTC`;
 
+/**
+ * Deadline Email.
+ * @param props - The props argument.
+ */
 export function DeadlineEmail({
   leadName,
   reportPeriod,
@@ -67,6 +71,10 @@ export function DeadlineEmail({
   );
 }
 
+/**
+ * Deadline Email Plaintext.
+ * @param props - The props argument.
+ */
 export function deadlineEmailPlaintext(props: DeadlineEmailProps): string {
   return [
     `Hi ${props.leadName},`,

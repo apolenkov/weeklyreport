@@ -11,6 +11,10 @@ interface RemindersTabHeaderProps {
   readonly onNewReminder: () => void;
 }
 
+/**
+ * Reminders Tab Header.
+ * @param props - The props argument.
+ */
 export function RemindersTabHeader({
   policyCount,
   search,

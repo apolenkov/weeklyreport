@@ -149,7 +149,6 @@ describe("WeeklyReportService — contract tests", () => {
     expect(expectDefined(result.leadSections[0]).authorName).toBe("Lead A");
     expect(result.escalations).toEqual([]);
 
-    // Verify output conforms to the Zod response schema.
     // crossGroup is an internal audit signal stripped by the router before
     // the response is sent; exclude it from the schema round-trip check.
     const { crossGroup: _cg, ...publicResult } = result;
@@ -296,7 +295,6 @@ describe("WeeklyReportService — contract tests", () => {
 
     const result = await service.getWeeklyReport(reportId);
 
-    // The service output must parse cleanly through the canonical response schema
     const parsed = weeklyReportGetResponseSchema.parse(result);
     expect(parsed.status).toBe("active");
     if (parsed.status !== "active") throw new Error("expected active");

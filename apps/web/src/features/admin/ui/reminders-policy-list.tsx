@@ -9,7 +9,7 @@ import type { RemindersEditor } from "./use-reminders-tab-state";
 
 // The add-form and the in-place edit-form are the same editor bound to the same
 // draft, so both receive one prop bundle and differ only in `editing`.
-export interface PolicyEditorProps {
+interface PolicyEditorProps {
   readonly form: PolicyFormState;
   readonly isSaving: boolean;
   readonly validityValid: boolean;
@@ -36,6 +36,10 @@ interface RemindersPolicyListProps {
   readonly onRemove: (policy: MockReminderPolicy) => void;
 }
 
+/**
+ * Reminders Policy List.
+ * @param props - The props argument.
+ */
 export function RemindersPolicyList({
   policies,
   filteredPolicies,

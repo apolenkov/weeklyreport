@@ -8,6 +8,10 @@ const SCROLL_FADE_THRESHOLD_PX = 4;
 
 // Drives a bottom fade when the scroll container has content below the fold.
 // Observer guards cover jsdom (observers may be absent); useEffect never runs on SSR.
+/**
+ * Use Scroll Fade.
+ * @param ref - The ref argument.
+ */
 export function useScrollFade(ref: RefObject<HTMLElement | null>): boolean {
   const [canScrollDown, setCanScrollDown] = useState(false);
   useEffect(() => {

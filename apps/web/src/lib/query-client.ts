@@ -19,6 +19,11 @@ const STALE_TIME_MS = STALE_TIME_SECONDS * MS_PER_SECOND;
 const DEFAULT_QUERY_RETRY_COUNT = 3;
 
 // Deterministic client errors (4xx / BAD_REQUEST / NOT_FOUND) cannot succeed on retry.
+/**
+ * Should Retry Query.
+ * @param failureCount - The failureCount argument.
+ * @param error - The error argument.
+ */
 export function shouldRetryQuery(
   failureCount: number,
   error: unknown,
@@ -29,6 +34,9 @@ export function shouldRetryQuery(
   return failureCount < DEFAULT_QUERY_RETRY_COUNT;
 }
 
+/**
+ * Make Query Client.
+ */
 export function makeQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {

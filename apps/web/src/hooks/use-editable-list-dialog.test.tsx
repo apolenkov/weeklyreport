@@ -43,7 +43,7 @@ describe("useEditableListDialog", () => {
 
     // Counter starts idle (parent's initial state); the "+ Add" click advances
     // it 0→1 → create open. (Mounting straight at 1 is a remount, never a first
-    // mount — see the D16 case.)
+    // mount.)
     rerender({ readOnly: false, addSignal: 1 });
     expect(result.current.dialogState.open).toBe(true);
 
@@ -63,7 +63,7 @@ describe("useEditableListDialog", () => {
     expect(result.current.dialogState.open).toBe(true);
   });
 
-  it("does NOT reopen on remount while the parent signal stays stale (D16 slides toggle)", () => {
+  it("does NOT reopen on remount while the parent signal stays stale on the slides toggle", () => {
     // Slides/edit remounts the section while LeadForm keeps a stale non-zero
     // addSignal; remount must not auto-open create.
     const first = renderHook(

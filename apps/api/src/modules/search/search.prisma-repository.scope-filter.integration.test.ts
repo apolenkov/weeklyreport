@@ -8,25 +8,9 @@ import {
 } from "../../test-utils/prisma-test-helper";
 import { SearchPrismaRepository } from "./search.prisma-repository";
 
-/**
- * Load-bearing guard that search content visibility equals weekly-report read
- * visibility for a viewer.
- *
- * The viewer's `published` search scope must surface EXACTLY the item/risk/
- * decision content the viewer can already open in `/reports/[reportId]`. The
- * report-read gate is two predicates:
- *   1. publish gate — `Report.periodStatus = 'published'`
- *      (`weekly-report.service.ts`: NOT_FOUND when `periodStatus !== 'published'`).
- *   2. group gate — the section author's `reportingGroupId` is in the viewer's
- *      granted groups (`weekly-report.prisma-repository.ts` section filter).
- *
- * This suite asserts the search repository applies the SAME two predicates for
- * `scope='published'`, and — critically — that the publish gate keys on
- * `periodStatus`, NOT `status`: a reopened period keeps `status='published'`
- * (the list column) while `periodStatus='reopened'` makes its content
- * unreadable. A `status`-based gate would leak reopened content; this test
- * pins the reopened case as excluded.
- */
+// Pins that the publish gate keys on `periodStatus`, NOT `status`: a reopened
+// period keeps `status='published'` while its content is unreadable, so a
+// `status`-based gate would leak it. Rules: openspec/specs/viewer-published-search.
 describe("SearchPrismaRepository — published scope read-parity (integration)", () => {
   const prisma = createTestPrisma();
   let repo: SearchPrismaRepository;
@@ -256,9 +240,8 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
     expect(ids).not.toContain(ITEM_PUB_OUT_GROUP);
   });
 
-  // Risk + Decision exercise the other two published-gated chunks. A dropped
-  // join from either chunk would surface unpublished/out-of-group content that
-  // the Item-only assertions above cannot catch.
+  // A dropped join from either chunk would surface content the Item-only
+  // assertions above cannot catch.
   it("applies the publish gate to the Risk chunk (in-group published surfaces, unpublished excluded)", async () => {
     const ids = await publishedSearch([GROUP_A_ID]);
     expect(ids).toContain(RISK_PUB_IN_GROUP);

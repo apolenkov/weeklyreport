@@ -18,6 +18,10 @@ interface ActivityLanesBlockProps {
 
 // Activities sit in a separate row under product cards (slide precedent), not
 // as peer product columns; empty boards self-suppress via zero lanes.
+/**
+ * Activity Lanes Block.
+ * @param props - The props argument.
+ */
 export function ActivityLanesBlock({
   lanes,
   readOnly,

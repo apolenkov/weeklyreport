@@ -72,6 +72,10 @@ function ReminderTypeField({ form, onChange }: PolicyFieldProps) {
   );
 }
 
+/**
+ * Policy Form.
+ * @param props - The props argument.
+ */
 export function PolicyForm({
   form,
   editing,

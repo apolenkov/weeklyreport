@@ -1,4 +1,3 @@
-// Pins statusLabel(status, "print") label+color for each WeeklyProductStatus.
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 

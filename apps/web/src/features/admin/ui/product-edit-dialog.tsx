@@ -129,6 +129,10 @@ function ProductDialogFooter({
   );
 }
 
+/**
+ * Product Edit Dialog.
+ * @param props - The props argument.
+ */
 export function ProductEditDialog({
   editingProduct,
   form,

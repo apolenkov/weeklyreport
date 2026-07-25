@@ -40,6 +40,10 @@ function RespondButton({
   );
 }
 
+/**
+ * Reopen Request Card.
+ * @param options - The options argument.
+ */
 export function ReopenRequestCard({
   request: r,
   isResponding,

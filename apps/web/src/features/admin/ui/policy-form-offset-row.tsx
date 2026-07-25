@@ -104,6 +104,10 @@ function OffsetDirectionSelect({
   );
 }
 
+/**
+ * Reminder Offset Row.
+ * @param options - The options argument.
+ */
 export function ReminderOffsetRow({
   form,
   onChange,

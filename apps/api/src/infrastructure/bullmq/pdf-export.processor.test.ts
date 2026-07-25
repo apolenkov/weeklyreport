@@ -4,10 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppLogger } from "../../lib/logger.js";
 import { silenceStderr } from "../../test-utils/silence-logs";
 
-// ---------------------------------------------------------------------------
-// Module mocks — factories use vi.fn() inline (no outer variable references)
-// because vi.mock is hoisted before variable declarations.
-// ---------------------------------------------------------------------------
+// Mock factories use vi.fn() inline (no outer variable references) because
+// vi.mock is hoisted before variable declarations.
 
 // Mock NestJS common so decorators are no-ops in tests
 vi.mock("@nestjs/common", () => ({
@@ -80,10 +78,6 @@ vi.mock("node:crypto", () => ({
   createHash: vi.fn(),
 }));
 
-// ---------------------------------------------------------------------------
-// Import after mocks
-// ---------------------------------------------------------------------------
-
 import { createHash } from "node:crypto";
 import { writeFileSync } from "node:fs";
 
@@ -102,10 +96,6 @@ const STUB_ENV = {
   PDF_BASE_URL: "http://localhost:3000",
   PDF_OUTPUT_DIR: "./storage/pdfs-test",
 } as EnvConfig;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function createMockPdfExportService() {
   return {
@@ -177,10 +167,6 @@ function setupMocks() {
 
   return { mockPage, mockBrowser, mockContext };
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe("PdfExportProcessor.processJob", () => {
   beforeEach(() => {

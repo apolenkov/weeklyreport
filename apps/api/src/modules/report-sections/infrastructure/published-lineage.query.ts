@@ -42,6 +42,11 @@ function queryPublishedDecisions(
   });
 }
 
+/**
+ * Query Published Lineage.
+ * @param prisma - The prisma argument.
+ * @param candidates - The candidates argument.
+ */
 export async function queryPublishedLineage(
   prisma: PrismaService,
   candidates: LineageCandidates,

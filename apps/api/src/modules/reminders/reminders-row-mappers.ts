@@ -37,6 +37,10 @@ const dbExecStatusToDomain: Record<
   failed: "failed",
 };
 
+/**
+ * To Execution Create Data.
+ * @param execution - The execution argument.
+ */
 export function toExecutionCreateData(
   execution: AdminReminderExecution,
 ): Prisma.ReminderExecutionUncheckedCreateInput {
@@ -50,6 +54,10 @@ export function toExecutionCreateData(
   };
 }
 
+/**
+ * To Execution Update Data.
+ * @param execution - The execution argument.
+ */
 export function toExecutionUpdateData(execution: AdminReminderExecution): {
   status: PrismaExecStatus;
   sentAt: Date | null;
@@ -62,6 +70,11 @@ export function toExecutionUpdateData(execution: AdminReminderExecution): {
   };
 }
 
+/**
+ * Format Period Label.
+ * @param start - The start argument.
+ * @param end - The end argument.
+ */
 export function formatPeriodLabel(start: Date, end: Date): string {
   // Compact UTC-formatted label, e.g. "2026-04-13 → 2026-04-19"
   return `${start.toISOString().slice(0, ISO_DATE_LENGTH)} → ${end
@@ -76,6 +89,7 @@ export function formatPeriodLabel(start: Date, end: Date): string {
  * conflict; any other violation returns false (and re-throws). The shared guard
  * carries the pg-adapter matching (serialized meta + message, never
  * `meta.target` alone).
+  * @param error - The error argument.
  */
 export function isDedupeKeyConflict(error: unknown): boolean {
   return isUniqueViolation(error, {
@@ -84,6 +98,10 @@ export function isDedupeKeyConflict(error: unknown): boolean {
   });
 }
 
+/**
+ * To Rule Domain.
+ * @param rule - The rule argument.
+ */
 export function toRuleDomain(rule: {
   id: string;
   kind: string;
@@ -122,12 +140,20 @@ export function toRuleDomain(rule: {
  */
 // eslint-disable-next-line sonarjs/super-linear-regex -- negated character classes are linear; no catastrophic backtracking, input bounded to ~254 chars
 const EMAIL_RE = /^[^@\s:]+@[^@\s:]+\.[^@\s:]+$/;
+/**
+ * Extract Recipient Email.
+ * @param dedupeKey - The dedupeKey argument.
+ */
 export function extractRecipientEmail(dedupeKey: string): string {
   const last = dedupeKey.split(":").pop();
   if (last && EMAIL_RE.test(last)) return last;
   return "";
 }
 
+/**
+ * To Execution Domain.
+ * @param execution - The execution argument.
+ */
 export function toExecutionDomain(execution: {
   id: string;
   ruleId: string;

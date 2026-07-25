@@ -9,6 +9,12 @@ import type { GridRowEditableRef } from "./slide-grid-rows";
 
 type SectionItem = ReportSectionReadModel["items"][number];
 
+/**
+ * Apply Slide Inline Item Edit.
+ * @param section - The section argument.
+ * @param stableId - The stableId argument.
+ * @param item - The item argument.
+ */
 export function applySlideInlineItemEdit(
   section: ReportSectionReadModel,
   stableId: string,
@@ -40,6 +46,12 @@ export function applySlideInlineItemEdit(
   };
 }
 
+/**
+ * Apply Slide Inline Risk Edit.
+ * @param section - The section argument.
+ * @param stableId - The stableId argument.
+ * @param risk - The risk argument.
+ */
 export function applySlideInlineRiskEdit(
   section: ReportSectionReadModel,
   stableId: string,
@@ -69,6 +81,12 @@ export function applySlideInlineRiskEdit(
   };
 }
 
+/**
+ * Apply Slide Inline Decision Edit.
+ * @param section - The section argument.
+ * @param stableId - The stableId argument.
+ * @param decision - The decision argument.
+ */
 export function applySlideInlineDecisionEdit(
   section: ReportSectionReadModel,
   stableId: string,
@@ -102,6 +120,11 @@ export function applySlideInlineDecisionEdit(
   };
 }
 
+/**
+ * Delete Slide Inline Record.
+ * @param section - The section argument.
+ * @param ref - The ref argument.
+ */
 export function deleteSlideInlineRecord(
   section: ReportSectionReadModel,
   ref: GridRowEditableRef,

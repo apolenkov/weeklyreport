@@ -38,6 +38,10 @@ function isOrganizationPublic(value: unknown): value is OrganizationPublic {
   );
 }
 
+/**
+ * Login Page Client.
+ * @param props - The props argument.
+ */
 export function LoginPageClient({ initialOrg }: LoginPageClientProps) {
   // Next 16 strict prerender: useSearchParams must run inside a Suspense
   // boundary or the / page bails out of static export. Wrap the body so

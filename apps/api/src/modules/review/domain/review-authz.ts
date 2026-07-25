@@ -11,6 +11,11 @@ export type ReviewSession = Pick<
 
 // Scope must COVER the target group. Admin short-circuits (matches groupScopeFilter);
 // non-admin uses computeAllowedGroupIds. Access only — never reviewer designation.
+/**
+ * Scope Covers Group.
+ * @param session - The session argument.
+ * @param groupId - The groupId argument.
+ */
 export function scopeCoversGroup(
   session: ReviewSession,
   groupId: string,
@@ -21,6 +26,12 @@ export function scopeCoversGroup(
 
 // Designation for the SECTION's group only — never "any group the caller can
 // review". Head/admin implicit; viewer needs canReview on that group's access row.
+/**
+ * Is Designated Reviewer.
+ * @param session - The session argument.
+ * @param groupId - The groupId argument.
+ * @param canReviewFlag - The canReviewFlag argument.
+ */
 export function isDesignatedReviewer(
   session: ReviewSession,
   groupId: string,
@@ -35,6 +46,10 @@ export function isDesignatedReviewer(
 // A period accepts a verdict / un-submit only while it is editable — `open` or
 // `reopened`, and not archived. A published or archived period is reached only
 // through a period-level reopen first.
+/**
+ * Is Editable Period.
+ * @param period - The period argument.
+ */
 export function isEditablePeriod(period: {
   periodStatus: PeriodStatus;
   archived: boolean;

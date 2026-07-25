@@ -9,6 +9,10 @@ import { RiskCardActions, RiskCardSummary } from "./risk-card-parts";
 
 // Prefer stageIds, fall back to legacy CSV; canonicalize so stored "Dev"
 // always displays as "Development" (stage-label-canonicalization).
+/**
+ * Canonical Risk Stage Tags.
+ * @param risk - The risk argument.
+ */
 export function canonicalRiskStageTags(risk: {
   stageIds?: readonly string[] | null;
   stageName?: string | null;
@@ -102,6 +106,10 @@ function RiskSeverityChip({ isBlocked }: { readonly isBlocked: boolean }) {
   );
 }
 
+/**
+ * Risk Card.
+ * @param props - The props argument.
+ */
 export function RiskCard({
   risk,
   readOnly,

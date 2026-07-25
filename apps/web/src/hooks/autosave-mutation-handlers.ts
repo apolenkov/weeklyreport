@@ -48,6 +48,10 @@ function drainQueuedSave(deps: SaveDraftHandlerDeps): void {
   deps.getMutate()({ ...queued, version: deps.versionRef.current });
 }
 
+/**
+ * Build Save Draft Handlers.
+ * @param deps - The deps argument.
+ */
 export function buildSaveDraftHandlers(deps: SaveDraftHandlerDeps): {
   onSuccess: (saved: ReportSectionReadModel) => void;
   onError: (err: unknown) => void;

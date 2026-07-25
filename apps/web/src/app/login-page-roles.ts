@@ -7,6 +7,11 @@ export { ROLE_LABEL } from "@customreport/shared";
 // Fallback email when no last-role hint; keyed by DbRole (pre-session lookup).
 export { DEV_LOGIN_EMAIL_BY_ROLE as DEV_EMAIL_FOR_ROLE } from "@customreport/shared";
 
+/**
+ * Dev Login Href.
+ * @param role - The role argument.
+ * @param email - The email argument.
+ */
 export function devLoginHref(role: DbRole, email: string): string {
   const params = new URLSearchParams({
     role,
@@ -18,16 +23,28 @@ export function devLoginHref(role: DbRole, email: string): string {
 
 export const FALLBACK_REDIRECT = "/head/dashboard";
 
+/**
+ * Default Redirect For.
+ * @param role - The role argument.
+ */
 export function defaultRedirectFor(role: Role | null | undefined): string {
   if (!role) return FALLBACK_REDIRECT;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- role may be a persisted/retired value absent from ROLE_HOME_PATH at runtime
   return ROLE_HOME_PATH[role] ?? FALLBACK_REDIRECT;
 }
 
+/**
+ * Is Role.
+ * @param value - The value argument.
+ */
 export function isRole(value: unknown): value is Role {
   return sessionRoleSchema.safeParse(value).success;
 }
 
+/**
+ * Get Session Role.
+ * @param value - The value argument.
+ */
 export function getSessionRole(value: unknown): Role | undefined {
   if (typeof value !== "object" || value === null) return undefined;
   const role = (value as { role?: unknown }).role;

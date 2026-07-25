@@ -6,6 +6,12 @@ import {
 } from "../../report-sections";
 
 // Own non-empty risks covering the stage (same predicate as computeUnbackedStages).
+/**
+ * Covering Risks For Stage.
+ * @param risks - The risks argument.
+ * @param productId - The productId argument.
+ * @param stageName - The stageName argument.
+ */
 export function coveringRisksForStage(
   risks: readonly RiskEntry[],
   productId: string,
@@ -21,6 +27,11 @@ export function coveringRisksForStage(
 
 // Unconditional derivation: covering risk floors UP; bare at-risk/blocked
 // without a covering risk collapses DOWN to on-track (matches read model).
+/**
+ * Apply Risk Severity Floor.
+ * @param products - The products argument.
+ * @param risks - The risks argument.
+ */
 export function applyRiskSeverityFloor(
   products: readonly Product[],
   risks: readonly RiskEntry[],
@@ -42,6 +53,11 @@ export function applyRiskSeverityFloor(
 
 // Re-derive coveredByOwnRisk from live risks (products stay stable mid-session).
 // Only own non-empty risks that explicitly name the stage set the flag.
+/**
+ * Annotate Own Risk Coverage.
+ * @param products - The products argument.
+ * @param risks - The risks argument.
+ */
 export function annotateOwnRiskCoverage(
   products: readonly Product[],
   risks: readonly RiskEntry[],

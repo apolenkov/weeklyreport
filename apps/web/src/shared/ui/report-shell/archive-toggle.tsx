@@ -17,6 +17,10 @@ interface ArchiveToggleProps {
 }
 
 // No count badge — a number read as a call-to-action rather than a switch.
+/**
+ * Archive Toggle.
+ * @param props - The props argument.
+ */
 export function ArchiveToggle({ checked, onChange }: ArchiveToggleProps) {
   return (
     <ToolbarIconButton

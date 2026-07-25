@@ -5,7 +5,7 @@ import {
   type ReportSectionReadModel,
 } from "@customreport/shared";
 
-import { type AppLogger, createNullLogger } from "../../../lib/logger";
+import type { AppLogger } from "../../../lib/logger";
 import {
   emitPublishSideEffects,
   type IngestionPublishHook,
@@ -27,22 +27,9 @@ export class PublicationNotFoundError extends Error {
   }
 }
 
-/**
- * Outcome of an auto-publish attempt. The skip cannot be inferred from a
- * returned report — `AssembledReport` carries `status` but neither `archived`
- * nor `periodState` — so a period archived between candidate selection and the
- * guarded write must be signalled explicitly as `{ published: false }` rather
- * than derived from the report's shape.
- *
- * Within `published: true`, `wasAlreadyPublished` distinguishes the two ways
- * a call can land there: `true` means the report was already `status=
- * "published"` when read and no write happened (e.g. a head manually
- * published it between candidate selection and this call); `false` means
- * this call performed the compare-and-set write itself. Neither can be told
- * apart from the returned `report` alone, which is why the flag exists — a
- * caller like the scheduler's audit trail must not treat a race as if it had
- * auto-published.
- */
+// Both discriminants are explicit because `AssembledReport` exposes neither
+// `archived` nor whether this call did the write: a skip and a report someone
+// else published are indistinguishable from the returned report alone.
 export type AutoPublishResult =
   | {
       readonly published: true;
@@ -53,13 +40,9 @@ export type AutoPublishResult =
 
 export interface PublicationRepository {
   getAssembledReport(activeReportId: string): Promise<AssembledReport | null>;
-  /**
-   * Persist a scheduler-driven auto-publish via the `autoPublish` transition,
-   * guarded by a compare-and-set that only writes when the target row is still
-   * `status="draft"` and `archived=false`. A zero-row match (the period was
-   * archived or already published after candidate selection) writes nothing and
-   * returns `{ published: false }`.
-   */
+  // Compare-and-set: writes only while the row is still `status="draft"` and
+  // `archived=false`. A zero-row match writes nothing and returns
+  // `{ published: false }`.
   saveAutoPublishedReport(report: AssembledReport): Promise<AutoPublishResult>;
 }
 
@@ -129,17 +112,13 @@ function deriveAutoPublishedReport(report: AssembledReport): AssembledReport {
 }
 
 export class PublicationService {
-  private readonly logger: AppLogger;
-
   constructor(
     private readonly repository: PublicationRepository,
-    logger: AppLogger | undefined,
+    private readonly logger: AppLogger,
     private readonly ingestionQueue: PublicationIngestionQueue,
     private readonly invalidateAnalyticsCache: () => Promise<void>,
     private readonly telemetry: PublicationTelemetry = NOOP_PUBLICATION_TELEMETRY,
-  ) {
-    this.logger = logger ?? createNullLogger();
-  }
+  ) {}
 
   async getAssembledReport(activeReportId: string): Promise<AssembledReport> {
     const report = await this.repository.getAssembledReport(activeReportId);
@@ -159,32 +138,9 @@ export class PublicationService {
     });
   }
 
-  /**
-   * Scheduler-driven auto-publish. No human actor — `publishedById=null` and
-   * `publishedByName='system'`.
-   *
-   * Returns a discriminated outcome, not the bare report: the underlying write
-   * is a compare-and-set guarded on the row still being `status="draft"` and
-   * `archived=false`, so a period archived between the scheduler's candidate
-   * selection and this write matches zero rows and is SKIPPED. The skip is
-   * signalled as `{ published: false }` (it cannot be inferred from a re-read —
-   * `AssembledReport` exposes neither `archived` nor `periodState`), and the
-   * publish success side-effects below — KPI metrics, cache invalidation, and
-   * ingestion enqueue — fire only on the published branch. The scheduler suppresses its own
-   * side-effects (audit, missing-section count, periodIds) on the same signal.
-   *
-   * Idempotent: an already-published report short-circuits to a published
-   * outcome (`wasAlreadyPublished: true`) without a second write or a
-   * duplicate metric bump. This is not only two-ticks-racing defense-in-depth
-   * (the scheduler's candidate query is `status='draft'`, so that alone is
-   * rare) — a head manually publishing the same report between the
-   * scheduler's candidate selection and this call also lands here, so
-   * callers that audit auto-publishes must branch on `wasAlreadyPublished`
-   * to avoid recording a manual publish as one.
-   *
-   * Missing sections are NOT auto-stubbed in the DB — they render as "Не сдал"
-   * at read time from the head dashboard, keeping the write path narrow.
-   */
+  // Scheduler-driven: no human actor, so `publishedById=null`. A head who
+  // published the same report between candidate selection and this call lands
+  // on `wasAlreadyPublished: true` — audit trails must not count it as auto.
   async publishAuto(activeReportId: string): Promise<AutoPublishResult> {
     const report = await this.getAssembledReport(activeReportId);
 

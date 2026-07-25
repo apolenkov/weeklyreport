@@ -121,7 +121,7 @@ function makeInput(
   };
 }
 
-/** Everyone selected, hydrated, own deck — the full-content merge context. */
+// Everyone selected, hydrated, own deck — the full-content merge context.
 function makeEveryoneInput(
   overrides: Partial<LeadFormLoadedInput> = {},
 ): LeadFormLoadedInput {

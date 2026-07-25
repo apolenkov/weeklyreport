@@ -7,6 +7,10 @@ interface LeadFormPastPeriodBannerProps {
 }
 
 // Shows when the [reportId] segment is not the active report.
+/**
+ * Lead Form Past Period Banner.
+ * @param props - The props argument.
+ */
 export function LeadFormPastPeriodBanner({
   pinnedReportId,
   activeReportId,

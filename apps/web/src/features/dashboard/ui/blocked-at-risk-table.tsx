@@ -30,6 +30,10 @@ function AlertIcon() {
   );
 }
 
+/**
+ * Blocked At Risk Table.
+ * @param props - The props argument.
+ */
 export function BlockedAtRiskTable({ items }: BlockedAtRiskTableProps) {
   // Collapsed by default. The same risk content appears in the report below,
   // so the dashboard treats this as a fast triage peek the head opens on

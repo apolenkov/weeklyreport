@@ -22,6 +22,10 @@ export type { LeadSlideFormData } from "./lead-slide-form-data";
 export type SaveOperation = "saved" | "deleted";
 
 // Single write path for inline save/delete; conflict reloads rather than toast-retrying.
+/**
+ * Use Slide Draft Save Mutation.
+ * @param options - The options argument.
+ */
 export function useSlideDraftSaveMutation({
   refetchSection,
   onSaved,
@@ -76,6 +80,10 @@ export function useSlideDraftSaveMutation({
 }
 
 // Pure lookups for dialog options and the open/pending-delete records — no local state.
+/**
+ * Use Inline Edit Dialog Data.
+ * @param options - The options argument.
+ */
 export function useInlineEditDialogData({
   section,
   formData,

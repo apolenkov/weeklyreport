@@ -73,19 +73,11 @@ describe("protected procedure chain-composition pins", () => {
 const nullAuditLogger = createNullAuditLogger();
 const TEST_IP = "test-ip";
 
-// ---------------------------------------------------------------------------
-// Test router
-// ---------------------------------------------------------------------------
-
 const testRouter = router({
   publicRoute: publicProcedure.query(() => "public-ok"),
   protectedRoute: protectedProcedure.query(() => "auth-ok"),
   headRoute: headProcedure.query(() => "head-ok"),
 });
-
-// ---------------------------------------------------------------------------
-// Caller helpers
-// ---------------------------------------------------------------------------
 
 const nullLogger = createNullLogger();
 
@@ -149,10 +141,6 @@ function makeFakeLogger(): AppLogger & {
   };
   return fake;
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe("tRPC auth middleware", () => {
   it("publicProcedure allows null session", async () => {
@@ -232,10 +220,6 @@ describe("tRPC auth middleware", () => {
     }
   });
 
-  // -----------------------------------------------------------------------
-  // AUTH tRPC middleware scenarios
-  // -----------------------------------------------------------------------
-
   it("protectedProcedure with null session throws UNAUTHORIZED", async () => {
     await expect(nullCaller.protectedRoute()).rejects.toMatchObject(
       expect.objectContaining({ code: "UNAUTHORIZED" }) as Record<
@@ -282,10 +266,6 @@ describe("tRPC auth middleware", () => {
     expect(result3).toBe("public-ok");
   });
 });
-
-// ---------------------------------------------------------------------------
-// Logging middleware tests
-// ---------------------------------------------------------------------------
 
 describe("tRPC logging middleware", () => {
   it("logs entry and exit on a successful query", async () => {
@@ -432,10 +412,6 @@ describe("tRPC logging middleware", () => {
     });
   });
 });
-
-// ---------------------------------------------------------------------------
-// deriveCauseInfo — cause normalization for the error-branch log
-// ---------------------------------------------------------------------------
 
 describe("deriveCauseInfo", () => {
   it("surfaces name + message + code + meta for a Prisma-shaped error", () => {

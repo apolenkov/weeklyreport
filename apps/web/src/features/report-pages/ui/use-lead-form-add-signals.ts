@@ -14,6 +14,9 @@ export interface LeadFormAddSignals {
   readonly addDecision: () => void;
 }
 
+/**
+ * Use Lead Form Add Signals.
+ */
 export function useLeadFormAddSignals(): LeadFormAddSignals {
   const [currentWeekAddSignal, setCurrentWeekAddSignal] = useState(0);
   const [nextWeekAddSignal, setNextWeekAddSignal] = useState(0);

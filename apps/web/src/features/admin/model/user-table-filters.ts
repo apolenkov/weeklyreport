@@ -19,6 +19,10 @@ export const USER_STATUS_FILTER_OPTIONS = [
 export type UserStatusFilter =
   (typeof USER_STATUS_FILTER_OPTIONS)[number]["value"];
 
+/**
+ * User Group Filter Options.
+ * @param groups - The groups argument.
+ */
 export function userGroupFilterOptions(groups: readonly MockGroup[]) {
   return [
     { value: "", label: "All groups" },
@@ -48,6 +52,11 @@ function matchesSearch(user: MockUser, search: string): boolean {
     .includes(needle);
 }
 
+/**
+ * Filter Admin Users.
+ * @param users - The users argument.
+ * @param filters - The filters argument.
+ */
 export function filterAdminUsers(
   users: readonly MockUser[],
   filters: UserTableFilters,

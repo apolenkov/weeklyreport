@@ -18,6 +18,10 @@ interface NavBarModel {
   readonly sessionLoading: boolean;
 }
 
+/**
+ * Build Nav Bar Model.
+ * @param options - The options argument.
+ */
 export function buildNavBarModel({
   user,
   organization,

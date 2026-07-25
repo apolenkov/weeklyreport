@@ -14,6 +14,10 @@ interface RequestChangesButtonProps {
   readonly onMutated: () => void;
 }
 
+/**
+ * Request Changes Button.
+ * @param props - The props argument.
+ */
 export function RequestChangesButton({
   reportSectionId,
   version,

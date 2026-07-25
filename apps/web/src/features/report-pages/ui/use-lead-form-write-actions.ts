@@ -25,6 +25,10 @@ interface UseLeadFormWriteActionsArgs {
 }
 
 // Dialog lifecycle (submit confirm, revoke, reopen, fill-from); draft owns state.
+/**
+ * Use Lead Form Write Actions.
+ * @param props - The props argument.
+ */
 export function useLeadFormWriteActions({
   sectionIdForActions,
   autosaveDirty,
