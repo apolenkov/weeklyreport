@@ -19,7 +19,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "25"
   PNPM_VERSION: "10.11.0"
 
 jobs:
@@ -50,7 +49,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: .nvmrc
 
       - name: Setup pnpm
         run: |
@@ -165,7 +164,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: .nvmrc
 
       - name: Setup pnpm
         run: |
@@ -257,7 +256,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: .nvmrc
 
       - name: Setup pnpm
         run: |
