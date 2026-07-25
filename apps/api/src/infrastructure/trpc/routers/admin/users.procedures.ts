@@ -10,13 +10,7 @@ import { adminProcedure } from "../../trpc.middleware.js";
 
 export interface AdminUsersDeps {
   snapshotAdminService: SnapshotAdminService;
-  /**
-   * Redis-backed session revocation for
-   * deactivate/activate user. Optional so existing role-coverage test
-   * fixtures that build the router with `{}` deps keep compiling —
-   * when undefined the mutations still flip isActive in Prisma but skip
-   * the Redis fast-path (sessions expire naturally via JWT TTL).
-   */
+  // Optional for `{}` fixtures: isActive still flips; JWT TTL expires sessions.
   sessionRevocationService?: SessionRevocationService;
 }
 
@@ -42,11 +36,7 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
         }
       }),
 
-    /**
-     * Deactivate a user — sets isActive=false in
-     * Prisma and adds the userId to the Redis revoked set so any in-flight
-     * JWT session is rejected immediately by the context factory.
-     */
+    // Redis revoke so in-flight JWTs fail immediately (not only JWT TTL).
     deactivateUser: adminProcedure
       .input(z.object({ userId: z.uuid() }))
       .mutation(async ({ input }) => {
@@ -61,11 +51,7 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
         }
       }),
 
-    /**
-     * Re-activate a user — sets isActive=true in
-     * Prisma and removes the userId from the Redis revoked set so new logins
-     * can proceed normally.
-     */
+    // Clear Redis revoke so new logins are not blocked by a stale revoke set.
     activateUser: adminProcedure
       .input(z.object({ userId: z.uuid() }))
       .mutation(async ({ input }) => {

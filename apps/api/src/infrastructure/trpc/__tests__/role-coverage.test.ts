@@ -18,34 +18,8 @@ import {
 } from "../trpc.middleware.js";
 import { createAppRouter } from "../trpc.router.js";
 
-// ---------------------------------------------------------------------------
-// Default-deny coverage gate.
-//
-// Walks `appRouter._def.procedures` and asserts every leaf procedure was
-// constructed via one of the eight recognised base procedures:
-//   - publicProcedure
-//   - protectedProcedure
-//   - leadProcedure
-//   - headProcedure
-//   - viewerProcedure
-//   - adminProcedure   (admin-only, not a head alias)
-//   - anyRoleProcedure
-//   - leadershipProcedure
-//
-// Detection strategy: each tRPC procedure carries `_def.middlewares` — an
-// array whose first slots are the shared metrics, logging, and (when present)
-// auth/role middleware references. We capture the full identities at module
-// init from a starter procedure for each base, then assert every router leaf
-// matches one of those chains.
-//
-// A procedure built directly on `t.procedure` without a recognised base is
-// the failure mode the gate fires on. The mutation-test in the second `it()`
-// proves the assertion fires for that case.
-// ---------------------------------------------------------------------------
-
-// Build dummy resolvers off each base so we can read its middleware-chain
-// identities at module init. The resolver function is appended as the last
-// middleware, so we slice it off.
+// Default-deny: every leaf must match one of eight base middleware chains by
+// identity. Capture each from a throwaway starter (slice off trailing resolver).
 const PUBLIC_CHAIN = (
   publicProcedure.query(() => undefined) as unknown as {
     _def: { middlewares: unknown[] };
@@ -98,17 +72,9 @@ const ALLOWED_CHAINS: readonly { name: string; chain: readonly unknown[] }[] = [
   { name: "leadershipProcedure", chain: LEADERSHIP_CHAIN },
 ];
 
-// A finalized leaf procedure (`.query()`/`.mutation()`/`.subscription()`)
-// always carries a trailing `resolveMiddleware` closure over its own
-// resolver, and — when built with `.input()` / `.output()` — a preceding
-// `inputValidatorMiddleware` / `outputValidatorMiddleware` closure over its
-// own schema. All are created fresh per procedure, so they can never be
-// compared by reference against the canonical chains (which are captured
-// from a throwaway `.query(() => undefined)` with no input/output schema).
-// They are recognised by name instead: this is tRPC's own naming for them,
-// so it fails loud (the tail stops reading as "all plumbing" and the
-// coverage test goes red) rather than silently passing a hand-rolled chain
-// if it ever changes.
+// Per-procedure tRPC plumbing (input/output/resolve) is created fresh and
+// cannot match by reference; recognise by name so a renamed tail fails loud
+// instead of silently accepting a hand-rolled chain.
 const TRPC_PLUMBING_MIDDLEWARE_NAMES = new Set([
   "inputValidatorMiddleware",
   "outputValidatorMiddleware",
@@ -121,13 +87,8 @@ function isPlumbingMiddleware(middleware: unknown): boolean {
   );
 }
 
-/**
- * Assert that a procedure's `_def.middlewares` chain begins with one of the
- * allowed base-procedure middleware identities by exact reference, and that
- * everything after that base is tRPC's own per-procedure plumbing — never a
- * hand-rolled middleware masquerading past a shorter canonical chain (e.g.
- * `PUBLIC_CHAIN` being a prefix of every protected chain).
- */
+// Exact base-chain identity, then only tRPC plumbing after — blocks a shorter
+// chain (e.g. PUBLIC) matching as a prefix of a longer protected chain.
 function isProcedureChainAllowed(middlewares: readonly unknown[]): boolean {
   return ALLOWED_CHAINS.some(
     ({ chain }) =>
@@ -154,11 +115,6 @@ function isLeafProcedure(node: unknown): node is LeafProcedure {
   );
 }
 
-/**
- * Walk a tRPC router's `_def.procedures` (flat record where keys are
- * dot-paths) and the recursive nested-router shape. Returns a list of
- * `[path, leafProcedure]` tuples.
- */
 function collectLeafProcedures(router: {
   _def: {
     procedures: Record<string, unknown>;
@@ -167,9 +123,6 @@ function collectLeafProcedures(router: {
 }): [string, LeafProcedure][] {
   const leaves: [string, LeafProcedure][] = [];
 
-  // tRPC v11: `_def.procedures` is a flat record where keys are dot-separated
-  // paths into nested namespaces (e.g. 'auth.me', 'reports.getActive'). Each
-  // value is a leaf procedure.
   for (const [path, node] of Object.entries(router._def.procedures)) {
     if (isLeafProcedure(node)) {
       leaves.push([path, node]);
@@ -179,11 +132,6 @@ function collectLeafProcedures(router: {
   return leaves;
 }
 
-/**
- * Pure assertion helper — scans a router and returns the list of offending
- * paths. Empty result means full coverage. Used both for the real AppRouter
- * (must be empty) and the synthetic mutation test (must be non-empty).
- */
 function findUncoveredProcedures(router: {
   _def: {
     procedures: Record<string, unknown>;
@@ -290,22 +238,9 @@ describe("default-deny coverage gate", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// W2 (fix-report-surface-integrity): pdfExport.request / .status are gated by
-// `leadershipProcedure` (head + admin + viewer). Lead is FORBIDDEN — a lead is
-// the data subject of the report, not an exporter; the lead UI shows a
-// ComingSoon control instead of firing the export.
-//
-// Positive test: assert EXACT chain identity (leadership, NOT anyRole). The
-// coverage gate's `isProcedureChainAllowed` is true for anyRole too, so it
-// would be green before the change; an exact-identity assertion has teeth.
-// We never invoke the resolver on the success path — stub deps throw there.
-//
-// Negative test: invoke the resolver with a lead session. The role guard runs
-// before the resolver, so stub deps are never reached and the only rejection
-// path is FORBIDDEN (a bare "rejects" would also pass on the resolver's
-// TypeError from empty stub deps — asserting code === 'FORBIDDEN' has teeth).
-// ---------------------------------------------------------------------------
+// pdfExport is leadershipProcedure (head+admin+viewer); lead is the data
+// subject, not an exporter. Assert exact leadership chain (not anyRole — the
+// coverage gate accepts both) and FORBIDDEN for lead (not bare reject).
 
 const VALID_UUID = "00000000-0000-4000-8000-000000000000";
 
@@ -327,7 +262,7 @@ function leadContext(): TrpcContext {
   };
 }
 
-describe("W2 pdfExport authz: leadership chain, lead excluded", () => {
+describe("pdfExport authz: leadership chain, lead excluded", () => {
   const stubDeps = {} as Parameters<typeof createAppRouter>[0];
   const appRouter = createAppRouter(stubDeps);
   const procedures = appRouter._def.procedures as unknown as Record<
@@ -335,10 +270,8 @@ describe("W2 pdfExport authz: leadership chain, lead excluded", () => {
     { _def: { middlewares: readonly unknown[] } }
   >;
 
-  // `.input()` appends an inputValidatorMiddleware after the base chain and the
-  // resolver is appended last, so we compare base-chain PREFIX identity. The
-  // leadership and anyRole bases share slots 0/1/3/4 and differ only at slot 2
-  // (the role middleware), so the full-prefix match discriminates them.
+  // Compare base-chain prefix: leadership vs anyRole differ only at the role
+  // middleware slot after shared metrics/logging.
   function startsWithChain(
     middlewares: readonly unknown[],
     base: readonly unknown[],

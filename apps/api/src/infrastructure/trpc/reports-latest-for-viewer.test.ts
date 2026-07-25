@@ -5,16 +5,8 @@ import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
 import { createAppRouter } from "./trpc.router.js";
 
-/**
- * viewer-live-status (task 1.3): `reports.latestForViewer` delegates to
- * `WeeklyReportService.latestForViewer`, threading the caller's session
- * through and returning its result verbatim. The current-editable-vs-
- * published resolution logic this test used to pin at the router level now
- * lives where the queries are issued — see
- * `WeeklyReportPrismaRepository.getVisibleReportId` /
- * `getLatestPublishedVisibleId`'s coverage in
- * `weekly-report.prisma-repository.test.ts`.
- */
+// Editable-vs-published resolution is covered on getVisibleReportId /
+// getLatestPublishedVisibleId in weekly-report.prisma-repository.test.ts.
 
 const viewerSession: UserSession = {
   userId: "c3333333-3333-4333-8333-333333333333",

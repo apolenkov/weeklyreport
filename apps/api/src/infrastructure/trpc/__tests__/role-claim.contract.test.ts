@@ -8,13 +8,8 @@ import {
   verifySamlProfile,
 } from "../../../modules/auth/index.js";
 
-// ---------------------------------------------------------------------------
-// The SAML assertion carries no role. verifySamlProfile defaults EVERY
-// provisioned user to viewer
-// (least privilege); roles are admin-assigned afterwards. This test pins that
-// posture through the full SAML → JWT → ctx.session.role pipeline: regardless
-// of any asserted role, the session round-trips as viewer.
-// ---------------------------------------------------------------------------
+// SAML carries no role; verifySamlProfile defaults every provisioned user to
+// viewer (least privilege). Pin that through SAML → JWT → ctx.session.role.
 
 const baseOptions = {
   callbackUrl: "http://localhost/callback",
@@ -106,11 +101,8 @@ describe("SAML profile → JWT → session.role round-trip (role-free)", () => {
   });
 });
 
-// The name-part fields are optional in `userSessionSchema`.
-// signSession/verifySessionToken run
-// `.parse()`, and Zod STRIPS unknown keys — so if the schema had omitted the
-// parts they would be silently dropped on every request with a green typecheck.
-// This test pins that they survive the sign → verify round-trip.
+// Zod `.parse()` strips unknown keys; if name parts were omitted from the
+// schema they would vanish silently with a green typecheck.
 describe("session name parts survive sign → verify (not Zod-stripped)", () => {
   it("round-trips lastName / firstName / middleName intact", () => {
     const ctrl = createAuthController(env);

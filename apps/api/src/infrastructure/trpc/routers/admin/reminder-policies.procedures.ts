@@ -17,11 +17,7 @@ export function createAdminReminderPoliciesProcedures(
   deps: AdminReminderPoliciesDeps,
 ) {
   return {
-    /**
-     * Per-period reminder rules are read-only here (scheduler derives them
-     * from `ReminderPolicy`). Read path `admin.getSnapshot.reminderRules`
-     * still visualizes derived rows in the admin UI.
-     */
+    // Rules are scheduler-derived from ReminderPolicy; mutation is blocked.
     saveReminderRule: adminProcedure
       .input(adminReminderRuleSchema)
       .mutation(() => {
@@ -31,7 +27,6 @@ export function createAdminReminderPoliciesProcedures(
             "Per-period reminder rules are read-only; they derive from reminder policies. Use admin.savePolicy instead.",
         });
       }),
-    /** List reminder policies (active + archived) for the policy editor grid. */
     listPolicies: adminProcedure.query(async () => {
       try {
         return await deps.reminderAdminService.listPolicies();
@@ -39,12 +34,7 @@ export function createAdminReminderPoliciesProcedures(
         throw mapDomainError(error);
       }
     }),
-    /**
-     * Upsert a reminder policy by id. Emits `admin.policy.save` plus generic
-     * `mutation` so SIEM can filter on `event` / create-vs-update without
-     * parsing the procedure name. Existence check runs BEFORE the upsert so
-     * audit `action` reflects the pre-state.
-     */
+    // Existence check before upsert so audit action is create vs update.
     savePolicy: adminProcedure
       .input(reminderPolicySchema)
       .mutation(async ({ ctx, input }) => {
@@ -66,11 +56,7 @@ export function createAdminReminderPoliciesProcedures(
           throw mapDomainError(error);
         }
       }),
-    /**
-     * Archive a reminder policy: hard-delete when no derived rules, else flip
-     * `active`. Emits `admin.policy.remove` on success only (failures already
-     * surface via the generic `mutation` audit envelope).
-     */
+    // Hard-delete when no derived rules; else flip active. Audit on success only.
     removePolicy: adminProcedure
       .input(z.object({ id: z.uuid() }))
       .mutation(async ({ ctx, input }) => {

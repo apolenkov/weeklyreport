@@ -9,15 +9,9 @@ import {
   seedTestData,
 } from "../../test-utils/prisma-test-helper";
 
-/**
- * reopen-request-lifecycle (D5): the one-pending-per-section rule is enforced by
- * a PARTIAL unique index `ReopenRequest_one_pending_per_section`
- * ON ("reportSectionId") WHERE "status" = 'pending', hand-written in the init
- * migration because Prisma cannot express the predicate. These integration
- * tests prove the index exists and actually bites — the application-level check
- * gives the friendly error, but this index is the durable guarantee against a
- * race between two requestReopen calls.
- */
+// One-pending-per-section is a hand-written partial unique index (Prisma
+// cannot express the WHERE predicate); the app check is friendly, the index
+// is the durable race guarantee.
 
 describe("ReopenRequest one-pending partial index (integration)", () => {
   const prisma = createTestPrisma();
@@ -68,12 +62,9 @@ describe("ReopenRequest one-pending partial index (integration)", () => {
     expect(count).toBe(1);
   });
 
-  it("serializes two concurrent decisions — exactly one conditional update wins (D6)", async () => {
-    // The race guard behind respondReopenRequest is a conditional
-    // `updateMany({ where: { id, status: 'pending' } })`. Two deciders (head +
-    // admin) can fire at once; Postgres must let only ONE flip the still-pending
-    // row. This proves the load-bearing primitive against the real DB, beyond
-    // the mock-level branch test in reopen-requests.router.test.ts.
+  it("serializes two concurrent decisions — exactly one conditional update wins", async () => {
+    // Conditional updateMany on still-pending: concurrent deciders must let
+    // only one flip the row.
     const req = await prisma.reopenRequest.create({
       data: {
         reportSectionId: testData.section.id,

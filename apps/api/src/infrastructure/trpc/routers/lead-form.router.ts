@@ -22,10 +22,7 @@ export interface LeadFormRouterDeps {
 
 export function createLeadFormRouter(deps: LeadFormRouterDeps) {
   return router({
-    // Org-wide lead-form presentation flags. Read-only slice of AppSettings
-    // (admin-managed via admin.updateSettings, like every other setting);
-    // exposed to every authenticated role so the lead form can pick classic
-    // vs unified view.
+    // AppSettings slice for classic vs unified lead-form view (all auth roles).
     viewSettings: protectedProcedure.query(async () => {
       try {
         const settings = await deps.snapshotAdminService.getSettings();

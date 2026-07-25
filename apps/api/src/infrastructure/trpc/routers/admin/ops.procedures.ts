@@ -11,34 +11,15 @@ import { adminProcedure, router } from "../../trpc.middleware.js";
 const MAX_FAILED_JOBS_LIMIT = 200;
 
 export interface AdminOpsDeps {
-  /**
-   * Read-only BullMQ Queue handle used by
-   * `admin.dlqCount` to surface failed-job count. Optional so existing test
-   * fixtures can call createAppRouter(stubDeps) without instantiating Redis.
-   */
+  // Optional so role-coverage fixtures build with `{}` without Redis.
   emailReminderQueue?: Queue;
-  /**
-   * BullMQ DLQ admin surface — `admin.jobs.listFailed` /
-   * `admin.jobs.retryFailed`. Optional so test fixtures and the role-coverage
-   * harness can build the router with `{}` deps; in that mode the service
-   * is constructed locally from an undefined Queue, `listFailed` returns an
-   * empty result, and `retryFailed` fails loud.
-   */
+  // Optional for `{}` fixtures: listFailed returns empty; retryFailed fails loud.
   jobsService?: JobsService;
-  /**
-   * Queryable in-app mutation-audit history — `admin.actionLog.list`.
-   * Optional so role-coverage test fixtures that build the router with `{}`
-   * deps stay compiling; a real boot always wires it (see
-   * `requireActionLogService` below).
-   */
+  // Optional for `{}` fixtures; real boot always wires it.
   actionLogService?: ActionLogService;
 }
 
-/**
- * Resolve the action-log service or fail loudly.
- * Optional on `AppRouterDeps` only so role-coverage fixtures build with `{}`
- * deps; a real boot always wires it, so `undefined` here is a config bug.
- */
+// Optional on deps only for `{}` fixtures; undefined at runtime is a config bug.
 function requireActionLogService(deps: AdminOpsDeps): ActionLogService {
   if (!deps.actionLogService) {
     throw new TRPCError({
@@ -71,8 +52,6 @@ function requireJobsService(deps: AdminOpsDeps): JobsService {
 
 export function createAdminOpsProcedures(deps: AdminOpsDeps) {
   return {
-    // BullMQ DLQ count — failed-jobs set of the
-    // email-reminder queue. adminProcedure (admin/head only).
     dlqCount: adminProcedure.query(async () => {
       try {
         const count = await requireEmailReminderQueue(deps).getFailedCount();
@@ -82,9 +61,7 @@ export function createAdminOpsProcedures(deps: AdminOpsDeps) {
       }
     }),
 
-    // Queryable in-app mutation audit history. The log rows are
-    // written by mutationAuditMiddleware and keyed by the same correlation id
-    // as the structured app.log line for support/debug lookups.
+    // Rows share correlation id with the structured app.log line for support.
     actionLog: router({
       list: adminProcedure
         .input(paginationInputSchema.optional())
@@ -97,11 +74,7 @@ export function createAdminOpsProcedures(deps: AdminOpsDeps) {
         }),
     }),
 
-    // BullMQ DLQ admin surface. Lifts the Bull Board view
-    // (/admin/queues) into the in-app /admin?tab=jobs page so the head can
-    // triage failed jobs without leaving the SPA. adminProcedure (admin/head
-    // only). Mutation audit (procedure='admin.jobs.retryFailed', target=jobId)
-    // is captured by mutationAuditMiddleware automatically.
+    // In-app DLQ triage so head need not leave the SPA for Bull Board.
     jobs: router({
       listFailed: adminProcedure
         .input(

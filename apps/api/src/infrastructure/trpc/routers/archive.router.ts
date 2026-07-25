@@ -11,10 +11,7 @@ export interface ArchiveRouterDeps {
   periodAdminService: PeriodAdminService;
 }
 
-// archive.list / archive.detail use anyRoleProcedure
-// because heads, leads, admins, and viewers all consume this surface but
-// with different row visibility. The Prisma `where` filter at the service
-// layer (driven by ctx.session.role) is the actual gate — viewers can
+// anyRoleProcedure: service-layer where (by role) is the real gate; viewers
 // only ever see published reports.
 
 export function createArchiveRouter(deps: ArchiveRouterDeps) {
@@ -42,10 +39,8 @@ export function createArchiveRouter(deps: ArchiveRouterDeps) {
             ctx.session.role,
             ctx.session,
           );
-          // Probe detection — non-admin fetched a report but group
-          // scope filtered out all sections. May false-positive on reports
-          // that genuinely have no sections; acceptable given the low rate
-          // of empty published reports in this domain.
+          // Empty sections after group-scope filter: likely a probe; rare
+          // genuine empty published reports are an acceptable false-positive.
           if (
             ctx.session.role !== "admin" &&
             detail.report.sections.length === 0
@@ -64,13 +59,6 @@ export function createArchiveRouter(deps: ArchiveRouterDeps) {
         }
       }),
 
-    /**
-     * Head-only mutation to move a published report into the archive.
-     * Sets `archived=true` on the Report row via periodAdminService.archivePeriod
-     * (which uses Report.id — "period" and "report" are the same table).
-     * After this call the report appears in archive.list and is no longer
-     * shown in the "recently published" surface.
-     */
     archiveReport: headProcedure
       .input(z.object({ reportId: z.uuid() }))
       .mutation(async ({ input }) => {
@@ -82,11 +70,6 @@ export function createArchiveRouter(deps: ArchiveRouterDeps) {
         }
       }),
 
-    /**
-     * Head-only mutation to un-archive a report (move back to
-     * "published but not archived"). Sets `archived=false` via
-     * periodAdminService.unarchivePeriod and removes it from archive.list.
-     */
     unarchiveReport: headProcedure
       .input(z.object({ reportId: z.uuid() }))
       .mutation(async ({ input }) => {

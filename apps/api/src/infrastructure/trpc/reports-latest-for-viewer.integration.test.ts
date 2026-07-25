@@ -13,16 +13,9 @@ import {
 import type { PrismaService } from "../prisma/prisma.service";
 import { createAppRouter } from "./trpc.router.js";
 
-/**
- * viewer-live-status (task 1.2): real-Prisma coverage for the Status-target
- * resolver `reports.latestForViewer`. Adapted from the former
- * `reports-latest-published.integration.test.ts` — it keeps the section-scope
- * relation coverage but asserts the NEW semantics: the resolver targets the
- * current editable period (when it has a viewer-visible section, resolved
- * through the real `getCurrentEditableId()` query), else the newest
- * viewer-visible published report, else null. The current-editable id and the
- * resolver share one repository query, so this also proves they cannot diverge.
- */
+// Real-Prisma: latestForViewer prefers current editable (viewer-visible
+// section via getCurrentEditableId) else newest published else null. Shared
+// repository query means the two paths cannot diverge.
 describe("reports.latestForViewer (integration)", () => {
   const prisma = createTestPrisma();
   // Real service so getCurrentEditableId() runs the actual Postgres query.

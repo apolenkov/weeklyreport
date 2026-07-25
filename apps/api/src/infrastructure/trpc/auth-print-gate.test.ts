@@ -5,22 +5,9 @@ import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
 import { createAppRouter } from "./trpc.router.js";
 
-/**
- * The `/print` web route gate needs ONE bit the regular `auth.me` cannot give
- * it — whether the inbound cookie verified as a PDF-export-scoped JWT
- * (`ctx.isPdfExport`) and, if so, the bound `reportId` (`ctx.pdfReportId`).
- * For a `requestedBy` PDF token the synthetic session IS the requester's real
- * session, so the session alone is indistinguishable from that human's own
- * session — only these two context flags discriminate the PDF worker from a
- * human.
- *
- * `auth.printGate` is a `publicProcedure` (NOT pdfExport-guarded, so the
- * worker token reaches it) that surfaces the two flags plus the session, so
- * the web server gate reads the cookie once and branches:
- *   worker (isPdfExport && pdfReportId === reportId) → render the template
- *   authenticated human → role-specific redirect
- *   no session → login
- */
+// A requestedBy PDF token's synthetic session matches the human's own; only
+// ctx.isPdfExport + ctx.pdfReportId discriminate the worker. printGate is
+// publicProcedure so the worker token reaches it.
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const TEST_IP = "test-ip";

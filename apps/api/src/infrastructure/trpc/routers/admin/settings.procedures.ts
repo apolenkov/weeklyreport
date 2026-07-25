@@ -18,24 +18,11 @@ import { adminProcedure } from "../../trpc.middleware.js";
 
 export interface AdminSettingsDeps {
   snapshotAdminService: SnapshotAdminService;
-  /**
-   * Validated env from main.ts — Telegram configured-check
-   * (`integrationsStatus`) and reseed repo-root override (`dev.wipeAndReseed`);
-   * not raw `process.env`.
-   */
+  // Validated env from main.ts — not raw process.env.
   env: EnvConfig;
-  /**
-   * BullMQ `telegram-outbound` queue for `admin.testTelegramSend` (queue →
-   * worker → MockTelegramAdapter) without an active bot. Optional for `{}`
-   * role-coverage deps; when undefined throws `INTERNAL_SERVER_ERROR` instead
-   * of null-deref 500.
-   */
+  // Optional for `{}` fixtures; undefined throws INTERNAL_SERVER_ERROR, not 500.
   telegramOutboundQueue?: Queue;
-  /**
-   * Organization identity: `org.getPublic` (landing hero shortName/fullName);
-   * `admin.getOrganization` / `admin.updateOrganization` (Settings → Identity).
-   * Optional for role-coverage `{}` deps that never exercise org.* paths.
-   */
+  // Optional for role-coverage `{}` deps that never hit org.* paths.
   organizationService?: OrganizationService;
 }
 
@@ -64,12 +51,7 @@ export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
           throw mapDomainError(error);
         }
       }),
-    /**
-     * External-integrations status for Settings → Integrations (v1: Telegram).
-     * Active only when `TG_BOT_TOKEN` is set AND ≥1 TelegramBinding has
-     * `active=true`; either gate failing keeps the badge muted.
-     * adminProcedure-gated (head/admin) so a lead can't poll the binding count.
-     */
+    // Active only when TG_BOT_TOKEN is set AND ≥1 active TelegramBinding.
     integrationsStatus: adminProcedure.query(async () => {
       try {
         const configured = isTelegramConfigured(deps.env);
@@ -78,13 +60,7 @@ export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
         throw mapDomainError(error);
       }
     }),
-    /**
-     * Admin smoke-test for telegram-outbound: enqueue one job for
-     * TelegramProcessor → MockTelegramAdapter (or real bot). Returns
-     * `{ jobId }` so the UI confirms queue without BullMQ events. Retry
-     * (3 attempts, exponential backoff) is on job options so producers stay
-     * free of queue semantics.
-     */
+    // Retry lives on job options so producers stay free of queue semantics.
     testTelegramSend: adminProcedure
       .input(adminTestTelegramSendSchema)
       .mutation(async ({ input, ctx }) => {
@@ -110,10 +86,6 @@ export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
           throw mapDomainError(error);
         }
       }),
-    /**
-     * Singleton `Organization` for Settings → Identity (full row + timestamps
-     * for "last updated"). Public landing uses `org.getPublic` instead.
-     */
     getOrganization: adminProcedure.query(async () => {
       try {
         if (!deps.organizationService) {
@@ -127,12 +99,7 @@ export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
         throw mapDomainError(error);
       }
     }),
-    /**
-     * Update singleton `Organization`. Emits `admin.organization.update` plus
-     * the generic `mutation` envelope so SIEM/brand dashboards filter on
-     * `event` without parsing the procedure. Before-state is read in the same
-     * call so the audit line has previous and new identity.
-     */
+    // Read before-state in the same call so audit has previous and new identity.
     updateOrganization: adminProcedure
       .input(organizationUpdateSchema)
       .mutation(async ({ ctx, input }) => {
