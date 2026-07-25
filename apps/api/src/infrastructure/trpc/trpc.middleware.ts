@@ -104,78 +104,125 @@ export const metricsMiddleware = t.middleware(({ path, type, next }) =>
   recordTrpcMetrics({ path, type, next }),
 );
 
+type TrpcLogger = TrpcContext["logger"];
+
+// Caller identity repeated on the start/end pair so a log search on either
+// end of a request returns the same fields.
+interface TrpcCallIdentity {
+  readonly procedure: string;
+  readonly type: string;
+  readonly userId: string | null;
+  readonly role: Role | null;
+}
+
+// Debug-level input breadcrumb. Log shape only, never raw values: report
+// text, UUIDs, emails and admin edits can all appear in tRPC input.
+async function logInputBreadcrumb(
+  logger: TrpcLogger,
+  path: string,
+  type: string,
+  getRawInput: () => Promise<unknown>,
+): Promise<void> {
+  if (path === "auth.login" || path === "auth.refresh") return;
+  try {
+    const rawInput = await getRawInput();
+    if (rawInput === undefined) return;
+    logger.debug("trpc request input", {
+      phase: TRPC_REQUEST_LOG_PHASE,
+      stage: "input",
+      procedure: path,
+      type,
+      inputShape: describeShape(rawInput),
+    });
+  } catch {
+    // getRawInput() can throw on malformed bodies — the actual error will
+    // still surface from next() below, so just skip the debug breadcrumb.
+  }
+}
+
+function logSuccessOutcome(
+  logger: TrpcLogger,
+  identity: TrpcCallIdentity,
+  duration: number,
+  data: unknown,
+): void {
+  if (duration > SLOW_TRPC_MS) {
+    logger.warn("slow trpc procedure", {
+      phase: TRPC_REQUEST_LOG_PHASE,
+      stage: "slow",
+      procedure: identity.procedure,
+      type: identity.type,
+      duration,
+    });
+  }
+  logger.info("trpc request end", {
+    phase: TRPC_REQUEST_LOG_PHASE,
+    stage: "end",
+    ...identity,
+    duration,
+    status: "success",
+  });
+  // Shape only (keys/lengths) — never values (PII leak risk).
+  try {
+    logger.debug("trpc request output", {
+      phase: TRPC_REQUEST_LOG_PHASE,
+      stage: "output",
+      procedure: identity.procedure,
+      type: identity.type,
+      outputShape: describeShape(data),
+    });
+  } catch {
+    // Non-introspectable result — skip the breadcrumb rather than throw.
+  }
+}
+
+function logErrorOutcome(
+  logger: TrpcLogger,
+  identity: TrpcCallIdentity,
+  duration: number,
+  error: TRPCError,
+): void {
+  const causeInfo = deriveCauseInfo(error.cause);
+
+  logger.error("trpc request end", {
+    phase: TRPC_REQUEST_LOG_PHASE,
+    stage: "end",
+    ...identity,
+    duration,
+    status: "error",
+    error: {
+      code: error.code,
+      message: error.message,
+      ...(causeInfo ? { cause: causeInfo } : {}),
+    },
+  });
+}
+
 // Before auth so failed-auth attempts are still recorded (forensics).
 export const loggingMiddleware = t.middleware(
   async ({ ctx, next, path, type, getRawInput }) => {
     const start = performance.now();
-    const userId = ctx.session?.userId ?? null;
-    const role = ctx.session?.role ?? null;
+    const identity: TrpcCallIdentity = {
+      procedure: path,
+      type,
+      userId: ctx.session?.userId ?? null,
+      role: ctx.session?.role ?? null,
+    };
 
     ctx.logger.info("trpc request start", {
       phase: TRPC_REQUEST_LOG_PHASE,
       stage: "start",
-      procedure: path,
-      type,
-      userId,
-      role,
+      ...identity,
     });
 
-    // Debug-level input breadcrumb. Log shape only, never raw values: report
-    // text, UUIDs, emails and admin edits can all appear in tRPC input.
-    if (path !== "auth.login" && path !== "auth.refresh") {
-      try {
-        const rawInput = await getRawInput();
-        if (rawInput !== undefined) {
-          ctx.logger.debug("trpc request input", {
-            phase: TRPC_REQUEST_LOG_PHASE,
-            stage: "input",
-            procedure: path,
-            type,
-            inputShape: describeShape(rawInput),
-          });
-        }
-      } catch {
-        // getRawInput() can throw on malformed bodies — the actual error will
-        // still surface from next() below, so just skip the debug breadcrumb.
-      }
-    }
+    await logInputBreadcrumb(ctx.logger, path, type, getRawInput);
 
     const result = await next();
     const duration = Math.round(performance.now() - start);
 
     if (result.ok) {
       observeTrpcDuration(type, path, "200", duration);
-      if (duration > SLOW_TRPC_MS) {
-        ctx.logger.warn("slow trpc procedure", {
-          phase: TRPC_REQUEST_LOG_PHASE,
-          stage: "slow",
-          procedure: path,
-          type,
-          duration,
-        });
-      }
-      ctx.logger.info("trpc request end", {
-        phase: TRPC_REQUEST_LOG_PHASE,
-        stage: "end",
-        procedure: path,
-        type,
-        userId,
-        role,
-        duration,
-        status: "success",
-      });
-      // Shape only (keys/lengths) — never values (PII leak risk).
-      try {
-        ctx.logger.debug("trpc request output", {
-          phase: TRPC_REQUEST_LOG_PHASE,
-          stage: "output",
-          procedure: path,
-          type,
-          outputShape: describeShape(result.data),
-        });
-      } catch {
-        // Non-introspectable result — skip the breadcrumb rather than throw.
-      }
+      logSuccessOutcome(ctx.logger, identity, duration, result.data);
     } else {
       observeTrpcDuration(
         type,
@@ -183,23 +230,7 @@ export const loggingMiddleware = t.middleware(
         TRPC_ERROR_HTTP_STATUS[result.error.code] ?? "500",
         duration,
       );
-      const causeInfo = deriveCauseInfo(result.error.cause);
-
-      ctx.logger.error("trpc request end", {
-        phase: TRPC_REQUEST_LOG_PHASE,
-        stage: "end",
-        procedure: path,
-        type,
-        userId,
-        role,
-        duration,
-        status: "error",
-        error: {
-          code: result.error.code,
-          message: result.error.message,
-          ...(causeInfo ? { cause: causeInfo } : {}),
-        },
-      });
+      logErrorOutcome(ctx.logger, identity, duration, result.error);
     }
 
     return result;
@@ -247,6 +278,49 @@ function extractAuditTarget(raw: unknown): string | undefined {
   return targetKey ? (record[targetKey] as string) : undefined;
 }
 
+// Durable half of the audit trail. Best-effort: a persist failure is warned
+// about, never propagated, so audit bookkeeping cannot fail the mutation that
+// already succeeded. No-op for callers without a Prisma client (unit callers).
+interface UserActionLogEntry {
+  readonly userId: string;
+  readonly role: Role | null;
+  readonly procedure: string;
+  // null, not undefined: the column is nullable and both write NULL, but an
+  // explicit undefined property is not assignable to Prisma's create input.
+  readonly targetId: string | null;
+  // The Prisma enum, not string: the column is an enum and a widened type
+  // would let a typo through to the write.
+  readonly status: "success" | "fail";
+  readonly reason: string | null;
+  readonly durationMs: number;
+}
+
+async function persistUserActionLog(
+  ctx: TrpcContext,
+  entry: UserActionLogEntry,
+): Promise<void> {
+  if (!ctx.prisma?.userActionLog) return;
+  try {
+    await ctx.prisma.userActionLog.create({
+      data: {
+        ...entry,
+        ip: ctx.ip,
+        correlationId: ctx.correlationId ?? "no-context",
+      },
+    });
+  } catch (error) {
+    ctx.logger.warn("user action log persist failed", {
+      phase: "audit.persist",
+      procedure: entry.procedure,
+      status: entry.status,
+      error:
+        error instanceof Error
+          ? { name: error.name, message: error.message }
+          : { name: typeof error, message: String(error) },
+    });
+  }
+}
+
 const mutationAuditMiddleware = t.middleware(
   async ({ ctx, next, path, type, getRawInput }) => {
     if (type !== "mutation") return next();
@@ -273,33 +347,15 @@ const mutationAuditMiddleware = t.middleware(
 
     ctx.auditLogger.mutation(action);
 
-    if (ctx.prisma?.userActionLog) {
-      try {
-        await ctx.prisma.userActionLog.create({
-          data: {
-            userId: action.userId,
-            role: action.role,
-            procedure: path,
-            targetId: target,
-            status: action.status,
-            reason: result.ok ? null : truncateReason(result.error.message),
-            ip: ctx.ip,
-            correlationId: ctx.correlationId ?? "no-context",
-            durationMs: duration,
-          },
-        });
-      } catch (error) {
-        ctx.logger.warn("user action log persist failed", {
-          phase: "audit.persist",
-          procedure: path,
-          status: action.status,
-          error:
-            error instanceof Error
-              ? { name: error.name, message: error.message }
-              : { name: typeof error, message: String(error) },
-        });
-      }
-    }
+    await persistUserActionLog(ctx, {
+      userId: action.userId,
+      role: action.role,
+      procedure: path,
+      targetId: target ?? null,
+      status: action.status,
+      reason: result.ok ? null : truncateReason(result.error.message),
+      durationMs: duration,
+    });
 
     return result;
   },

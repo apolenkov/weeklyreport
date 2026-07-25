@@ -1,6 +1,6 @@
 "use client";
 
-import { type RefObject, useEffect, useRef } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../lib/use-dialog-focus";
@@ -43,28 +43,46 @@ export function ConfirmDeleteDialog({
     containerRef: surfaceRef,
     triggerRef,
   });
-
-  useEffect(() => {
-    if (!open) return;
-    function handleKey(e: KeyboardEvent) {
-      // Confirm on Enter only while the destructive button holds focus —
-      // otherwise the same key in the underlying form would confirm a
-      // delete the user didn't mean.
-      if (e.key === "Enter" && document.activeElement === confirmRef.current) {
-        e.preventDefault();
-        onConfirm();
-      }
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [open, onConfirm]);
+  useConfirmOnEnter(open, onConfirm, confirmRef);
 
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
+    <ConfirmDialogShell surfaceRef={surfaceRef} onDismiss={onCancel}>
+      <ConfirmDeleteBody
+        title={title}
+        preview={preview}
+        subtitle={subtitle}
+        consequence={consequence}
+        reversible={reversible}
+      />
+      <ConfirmDeleteActions
+        confirmRef={confirmRef}
+        confirmLabel={confirmLabel}
+        tone={tone}
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      />
+    </ConfirmDialogShell>,
+    document.body,
+  );
+}
+
+// Backdrop + centred surface. Clicking the backdrop dismisses; clicks inside
+// the surface are stopped so they never reach it.
+function ConfirmDialogShell({
+  surfaceRef,
+  onDismiss,
+  children,
+}: {
+  readonly surfaceRef: RefObject<HTMLDivElement | null>;
+  readonly onDismiss: () => void;
+  readonly children: ReactNode;
+}) {
+  return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
-      onClick={onCancel}
+      onClick={onDismiss}
       role="presentation"
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop-close propagation for inside clicks; no keyboard equivalent needed */}
@@ -77,62 +95,120 @@ export function ConfirmDeleteDialog({
         aria-describedby="confirm-delete-preview"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3
-          id="confirm-delete-title"
-          className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]"
-        >
-          {title}
-        </h3>
-
-        <p
-          id="confirm-delete-preview"
-          className="mt-3 line-clamp-2 break-words rounded-md border border-[var(--color-muted)] bg-[var(--color-surface-hover)] px-3 py-2 text-sm font-medium text-[var(--color-foreground)]"
-          title={preview}
-        >
-          {preview}
-        </p>
-
-        {subtitle && (
-          <p className="mt-2 text-[12px] text-[var(--color-muted-foreground)]">
-            {subtitle}
-          </p>
-        )}
-
-        {consequence && (
-          <p className="mt-3 text-[12px] text-[var(--color-destructive)]">
-            {consequence}
-          </p>
-        )}
-
-        <p className="mt-4 text-[11px] text-[var(--color-muted-foreground)]">
-          {reversible
-            ? "This can be reversed later."
-            : "This action cannot be undone."}
-        </p>
-
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-muted)] bg-transparent px-4 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            ref={confirmRef}
-            type="button"
-            className={`btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] border px-4 text-sm font-semibold transition-[filter] hover:brightness-90 ${
-              tone === "primary"
-                ? "border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-white"
-                : "border-[var(--color-destructive)] bg-[var(--color-destructive)] text-[var(--color-destructive-foreground)]"
-            }`}
-            onClick={onConfirm}
-          >
-            {confirmLabel}
-          </button>
-        </div>
+        {children}
       </div>
-    </div>,
-    document.body,
+    </div>
+  );
+}
+
+// Confirm on Enter only while the destructive button holds focus — otherwise
+// the same key in the underlying form would confirm a delete the user didn't
+// mean.
+function useConfirmOnEnter(
+  open: boolean,
+  onConfirm: () => void,
+  confirmRef: RefObject<HTMLButtonElement | null>,
+) {
+  useEffect(() => {
+    if (!open) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Enter" && document.activeElement === confirmRef.current) {
+        e.preventDefault();
+        onConfirm();
+      }
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [open, onConfirm, confirmRef]);
+}
+
+type ConfirmDeleteBodyProps = Pick<
+  ConfirmDeleteDialogProps,
+  "title" | "preview" | "subtitle" | "consequence"
+> & { readonly reversible: boolean };
+
+function ConfirmDeleteBody({
+  title,
+  preview,
+  subtitle,
+  consequence,
+  reversible,
+}: ConfirmDeleteBodyProps) {
+  return (
+    <>
+      <h3
+        id="confirm-delete-title"
+        className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]"
+      >
+        {title}
+      </h3>
+
+      <p
+        id="confirm-delete-preview"
+        className="mt-3 line-clamp-2 break-words rounded-md border border-[var(--color-muted)] bg-[var(--color-surface-hover)] px-3 py-2 text-sm font-medium text-[var(--color-foreground)]"
+        title={preview}
+      >
+        {preview}
+      </p>
+
+      {subtitle && (
+        <p className="mt-2 text-[12px] text-[var(--color-muted-foreground)]">
+          {subtitle}
+        </p>
+      )}
+
+      {consequence && (
+        <p className="mt-3 text-[12px] text-[var(--color-destructive)]">
+          {consequence}
+        </p>
+      )}
+
+      <p className="mt-4 text-[11px] text-[var(--color-muted-foreground)]">
+        {reversible
+          ? "This can be reversed later."
+          : "This action cannot be undone."}
+      </p>
+    </>
+  );
+}
+
+const ACTION_BUTTON_CLASS =
+  "btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] px-4 text-sm font-semibold";
+const CANCEL_BUTTON_CLASS = `${ACTION_BUTTON_CLASS} border border-[var(--color-muted)] bg-transparent text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]`;
+const CONFIRM_BUTTON_CLASS = `${ACTION_BUTTON_CLASS} border transition-[filter] hover:brightness-90`;
+const CONFIRM_PRIMARY_CLASS = `${CONFIRM_BUTTON_CLASS} border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-white`;
+const CONFIRM_DESTRUCTIVE_CLASS = `${CONFIRM_BUTTON_CLASS} border-[var(--color-destructive)] bg-[var(--color-destructive)] text-[var(--color-destructive-foreground)]`;
+
+interface ConfirmDeleteActionsProps {
+  readonly confirmRef: RefObject<HTMLButtonElement | null>;
+  readonly confirmLabel: string;
+  readonly tone: "destructive" | "primary";
+  readonly onConfirm: () => void;
+  readonly onCancel: () => void;
+}
+
+function ConfirmDeleteActions({
+  confirmRef,
+  confirmLabel,
+  tone,
+  onConfirm,
+  onCancel,
+}: ConfirmDeleteActionsProps) {
+  return (
+    <div className="mt-5 flex justify-end gap-2">
+      <button type="button" className={CANCEL_BUTTON_CLASS} onClick={onCancel}>
+        Cancel
+      </button>
+      <button
+        ref={confirmRef}
+        type="button"
+        className={
+          tone === "primary" ? CONFIRM_PRIMARY_CLASS : CONFIRM_DESTRUCTIVE_CLASS
+        }
+        onClick={onConfirm}
+      >
+        {confirmLabel}
+      </button>
+    </div>
   );
 }

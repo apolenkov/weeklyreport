@@ -77,32 +77,13 @@ export function ReopenTab() {
         actions={<ReopenFilterBar filter={filter} onChange={setFilter} />}
       />
 
-      {listQuery.isPending && (
-        <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 text-sm text-[var(--color-muted-foreground)]">
-          Loading…
-        </div>
-      )}
-
-      {listQuery.isError && (
-        <div
-          role="alert"
-          className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800"
-        >
-          Failed to load requests: {listQuery.error.message}
-        </div>
-      )}
-
-      {!listQuery.isPending &&
-        !listQuery.isError &&
-        filteredRequests.length === 0 && (
-          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
-            {requests.length > 0
-              ? "No requests match the search."
-              : filter === "pending"
-                ? "No pending reopen requests."
-                : "Nothing here yet."}
-          </div>
-        )}
+      <ReopenListStatus
+        isPending={listQuery.isPending}
+        errorMessage={listQuery.isError ? listQuery.error.message : null}
+        isEmpty={filteredRequests.length === 0}
+        hasUnfilteredRequests={requests.length > 0}
+        filter={filter}
+      />
 
       <ul className="space-y-3">
         {filteredRequests.map((r) => (
@@ -122,4 +103,54 @@ export function ReopenTab() {
       </ul>
     </div>
   );
+}
+
+// Loading / load-failure / empty placeholders for the request list. Only one can
+// apply at a time, so the first match wins and the list below renders alone.
+function ReopenListStatus({
+  isPending,
+  errorMessage,
+  isEmpty,
+  hasUnfilteredRequests,
+  filter,
+}: {
+  readonly isPending: boolean;
+  readonly errorMessage: string | null;
+  readonly isEmpty: boolean;
+  readonly hasUnfilteredRequests: boolean;
+  readonly filter: ReopenFilterStatus;
+}) {
+  if (isPending) {
+    return (
+      <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 text-sm text-[var(--color-muted-foreground)]">
+        Loading…
+      </div>
+    );
+  }
+  if (errorMessage !== null) {
+    return (
+      <div
+        role="alert"
+        className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800"
+      >
+        Failed to load requests: {errorMessage}
+      </div>
+    );
+  }
+  if (!isEmpty) return null;
+  return (
+    <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
+      {emptyStateMessage(hasUnfilteredRequests, filter)}
+    </div>
+  );
+}
+
+function emptyStateMessage(
+  hasUnfilteredRequests: boolean,
+  filter: ReopenFilterStatus,
+): string {
+  if (hasUnfilteredRequests) return "No requests match the search.";
+  return filter === "pending"
+    ? "No pending reopen requests."
+    : "Nothing here yet.";
 }

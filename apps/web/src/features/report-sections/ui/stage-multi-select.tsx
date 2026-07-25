@@ -30,6 +30,21 @@ function computeBannerText(
   return `Selected stages will show as ${severityLabel}.`;
 }
 
+// stage-label-canonicalization: match the option against the stored value by
+// canonical name, so a legacy "Dev"-stored selection still reads as checked
+// when the option is the canonical "Development" (and toggling-off removes it).
+function isStageSelected(selected: readonly string[], stage: string): boolean {
+  const canonical = canonicalStageName(stage);
+  return selected.some((item) => canonicalStageName(item) === canonical);
+}
+
+function toggleStage(selected: readonly string[], stage: string): string[] {
+  const canonical = canonicalStageName(stage);
+  return isStageSelected(selected, stage)
+    ? selected.filter((item) => canonicalStageName(item) !== canonical)
+    : [...selected, stage];
+}
+
 export function StageMultiSelect({
   id,
   value,
@@ -43,29 +58,16 @@ export function StageMultiSelect({
   const helperId = `${id}-hint`;
   const errorId = `${id}-error`;
 
-  // stage-label-canonicalization: match the option against the stored value by
-  // canonical name, so a legacy "Dev"-stored selection still reads as checked
-  // when the option is the canonical "Development" (and toggling-off removes it).
-  function isSelected(stage: string): boolean {
-    const canonical = canonicalStageName(stage);
-    return selected.some((item) => canonicalStageName(item) === canonical);
-  }
+  const isSelected = (stage: string) => isStageSelected(selected, stage);
+  const toggle = (stage: string) => onChange(toggleStage(selected, stage));
 
-  function toggle(stage: string) {
-    const canonical = canonicalStageName(stage);
-    const next = isSelected(stage)
-      ? selected.filter((item) => canonicalStageName(item) !== canonical)
-      : [...selected, stage];
-    onChange(next);
-  }
-
-  const singleStage = stages.length === 1 ? stages[0] : undefined;
   const isMultiChoice = stages.length >= 2;
-
   const bannerText =
     isMultiChoice && previewSeverity
       ? computeBannerText(selected, previewSeverity, required)
       : "";
+  const showScopeHint =
+    !required && !previewSeverity && selected.length === 0 && isMultiChoice;
 
   return (
     <fieldset
@@ -75,72 +77,14 @@ export function StageMultiSelect({
       <legend className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
         SDLC Stages
       </legend>
-      <p
-        id={helperId}
-        className="mb-2 text-[11px] text-[var(--color-muted-foreground)]"
-      >
-        {required
-          ? "Required. Select at least one assigned stage — a single owned stage is applied automatically."
-          : "Optional. Leave empty to apply to all assigned stages. Tip: mark the stage as blocked on the SDLC pipeline above before pinning a risk — that keeps your blocker scope honest."}
-      </p>
-      {bannerText && (
-        <div
-          data-testid="stage-scope-banner"
-          role="status"
-          aria-live="polite"
-          className="mb-2 flex w-full items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
-        >
-          <AlertTriangleIcon />
-          <span>{bannerText}</span>
-        </div>
+      <StageHelperText id={helperId} required={required} />
+      {bannerText && <StageScopeBanner text={bannerText} />}
+      <StageChoices stages={stages} isSelected={isSelected} onToggle={toggle} />
+      {showScopeHint && (
+        <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
+          Scope: all assigned stages.
+        </p>
       )}
-      {stages.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[rgba(0,0,0,0.18)] bg-[var(--color-muted)] px-3 py-2.5 text-sm text-[var(--color-muted-foreground)]">
-          No assigned stages available.
-        </div>
-      ) : singleStage ? (
-        <div className="inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-3 py-1 text-xs font-semibold text-[var(--color-muted-foreground)]">
-          {singleStage}
-          <span className="ml-2 text-[10px] font-medium">
-            Applied automatically
-          </span>
-        </div>
-      ) : (
-        <div
-          data-testid="stage-checkbox-group"
-          className="flex flex-wrap gap-2"
-        >
-          {stages.map((stage) => {
-            const checked = isSelected(stage);
-            return (
-              <label
-                key={stage}
-                className={`inline-flex min-h-[var(--touch-target-min)] md:min-h-[34px] items-center gap-2 rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-semibold transition-colors ${
-                  checked
-                    ? "border-[var(--color-starbucks-accent)] bg-[var(--color-success)] text-[var(--color-primary)]"
-                    : "border-[rgba(0,0,0,0.18)] bg-white text-[var(--color-foreground)] hover:border-[var(--color-starbucks-accent)]"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  className="h-3.5 w-3.5 accent-[var(--color-starbucks-accent)]"
-                  checked={checked}
-                  onChange={() => toggle(stage)}
-                />
-                {stage}
-              </label>
-            );
-          })}
-        </div>
-      )}
-      {!required &&
-        !previewSeverity &&
-        selected.length === 0 &&
-        isMultiChoice && (
-          <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
-            Scope: all assigned stages.
-          </p>
-        )}
       {error && (
         <p
           id={errorId}
@@ -150,6 +94,115 @@ export function StageMultiSelect({
         </p>
       )}
     </fieldset>
+  );
+}
+
+function StageHelperText({
+  id,
+  required,
+}: {
+  readonly id: string;
+  readonly required: boolean;
+}) {
+  return (
+    <p
+      id={id}
+      className="mb-2 text-[11px] text-[var(--color-muted-foreground)]"
+    >
+      {required
+        ? "Required. Select at least one assigned stage — a single owned stage is applied automatically."
+        : "Optional. Leave empty to apply to all assigned stages. Tip: mark the stage as blocked on the SDLC pipeline above before pinning a risk — that keeps your blocker scope honest."}
+    </p>
+  );
+}
+
+function StageScopeBanner({ text }: { readonly text: string }) {
+  return (
+    <div
+      data-testid="stage-scope-banner"
+      role="status"
+      aria-live="polite"
+      className="mb-2 flex w-full items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+    >
+      <AlertTriangleIcon />
+      <span>{text}</span>
+    </div>
+  );
+}
+
+// A lone assigned stage is applied automatically — shown as a static chip so
+// the user cannot deselect the only valid scope.
+function StageChoices({
+  stages,
+  isSelected,
+  onToggle,
+}: {
+  readonly stages: readonly string[];
+  readonly isSelected: (stage: string) => boolean;
+  readonly onToggle: (stage: string) => void;
+}) {
+  const singleStage = stages.length === 1 ? stages[0] : undefined;
+  if (stages.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-[rgba(0,0,0,0.18)] bg-[var(--color-muted)] px-3 py-2.5 text-sm text-[var(--color-muted-foreground)]">
+        No assigned stages available.
+      </div>
+    );
+  }
+  if (singleStage) {
+    return (
+      <div className="inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-3 py-1 text-xs font-semibold text-[var(--color-muted-foreground)]">
+        {singleStage}
+        <span className="ml-2 text-[10px] font-medium">
+          Applied automatically
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div data-testid="stage-checkbox-group" className="flex flex-wrap gap-2">
+      {stages.map((stage) => (
+        <StageChoice
+          key={stage}
+          stage={stage}
+          checked={isSelected(stage)}
+          onToggle={onToggle}
+        />
+      ))}
+    </div>
+  );
+}
+
+const STAGE_CHOICE_CLASS =
+  "inline-flex min-h-[var(--touch-target-min)] md:min-h-[34px] items-center gap-2 rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-semibold transition-colors";
+const STAGE_CHOICE_CHECKED_CLASS =
+  "border-[var(--color-starbucks-accent)] bg-[var(--color-success)] text-[var(--color-primary)]";
+const STAGE_CHOICE_UNCHECKED_CLASS =
+  "border-[rgba(0,0,0,0.18)] bg-white text-[var(--color-foreground)] hover:border-[var(--color-starbucks-accent)]";
+
+function StageChoice({
+  stage,
+  checked,
+  onToggle,
+}: {
+  readonly stage: string;
+  readonly checked: boolean;
+  readonly onToggle: (stage: string) => void;
+}) {
+  return (
+    <label
+      className={`${STAGE_CHOICE_CLASS} ${
+        checked ? STAGE_CHOICE_CHECKED_CLASS : STAGE_CHOICE_UNCHECKED_CLASS
+      }`}
+    >
+      <input
+        type="checkbox"
+        className="h-3.5 w-3.5 accent-[var(--color-starbucks-accent)]"
+        checked={checked}
+        onChange={() => onToggle(stage)}
+      />
+      {stage}
+    </label>
   );
 }
 

@@ -61,13 +61,105 @@ function canEditInlineRecord({
   );
 }
 
+// Which period the deck shows: the requested one when it is still in the
+// lead's history, else the active report.
+function useTargetReportId({
+  history,
+  activeReportId,
+  requestedReportId,
+}: {
+  readonly history:
+    Parameters<typeof buildLeadSlidePeriodOptions>[0] | undefined;
+  readonly activeReportId: string | null;
+  readonly requestedReportId: string | null;
+}): string {
+  const periodOptions = useMemo(
+    () => buildLeadSlidePeriodOptions(history ?? [], activeReportId),
+    [history, activeReportId],
+  );
+  return useMemo(
+    () =>
+      resolveLeadSlideReportId({
+        options: periodOptions,
+        requestedReportId,
+        activeReportId,
+      }),
+    [periodOptions, requestedReportId, activeReportId],
+  );
+}
+
+// Cross-author content is a privileged read: drop it from the cache the moment
+// the "everyone" toggle is off (or unhydrated), and whenever the viewer changes.
+function useCrossAuthorContentEviction({
+  isEveryone,
+  visibilityHydrated,
+  targetReportId,
+  currentUserId,
+}: {
+  readonly isEveryone: boolean;
+  readonly visibilityHydrated: boolean;
+  readonly targetReportId: string;
+  readonly currentUserId: string | null;
+}): void {
+  const qc = useQueryClient();
+  const trpc = useTRPC();
+
+  useEffect(() => {
+    if (isEveryone && visibilityHydrated) return;
+    qc.removeQueries({
+      queryKey: trpc.leadForm.crossAuthorContent.queryKey(),
+    });
+  }, [isEveryone, visibilityHydrated, targetReportId, qc, trpc]);
+
+  useEffect(() => {
+    qc.removeQueries({
+      queryKey: trpc.leadForm.crossAuthorContent.queryKey(),
+    });
+  }, [currentUserId, qc, trpc]);
+}
+
+interface LeadDeckSourceData {
+  readonly byPeriodData:
+    { section?: ReportSectionReadModel | null } | undefined;
+  readonly crossAuthors: Parameters<typeof buildLeadDeckModel>[1] | undefined;
+  readonly crossAuthorContent:
+    Parameters<typeof buildLeadDeckModel>[2] | undefined;
+  readonly isOwnDeck: boolean;
+  readonly isEveryone: boolean;
+  readonly visibilityHydrated: boolean;
+}
+
+// The slide read models the deck renders. Foreign rows only ever reach the
+// model while "everyone" is on AND hydrated.
+function useLeadDeckSlides({
+  byPeriodData,
+  crossAuthors,
+  crossAuthorContent,
+  isOwnDeck,
+  isEveryone,
+  visibilityHydrated,
+}: LeadDeckSourceData) {
+  const foreignContentRows = useMemo(
+    () => (isEveryone && visibilityHydrated ? (crossAuthorContent ?? []) : []),
+    [isEveryone, visibilityHydrated, crossAuthorContent],
+  );
+  const sectionModel = useMemo(() => {
+    if (!byPeriodData?.section) return null;
+    return buildLeadDeckModel(
+      byPeriodData.section,
+      isOwnDeck ? (crossAuthors ?? []) : [],
+      foreignContentRows,
+    );
+  }, [byPeriodData, crossAuthors, foreignContentRows, isOwnDeck]);
+  return useMemo(() => (sectionModel ? [sectionModel] : []), [sectionModel]);
+}
+
 export function useLeadSlidesData({
   initialReportId,
   visibilityMode,
   visibilityHydrated,
 }: UseLeadSlidesDataArgs): LeadSlidesData {
   const trpc = useTRPC();
-  const qc = useQueryClient();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const session = useContext(SessionContext);
@@ -83,19 +175,12 @@ export function useLeadSlidesData({
   const currentUserId = session?.user?.id ?? null;
   const isOwnDeck = isOwnLeadDeck(authorId, currentUserId);
   const isEveryone = isOwnDeck && visibilityMode === "everyone";
-  const periodOptions = useMemo(
-    () => buildLeadSlidePeriodOptions(historyQ.data ?? [], activeReportId),
-    [historyQ.data, activeReportId],
-  );
-  const targetReportId = useMemo(
-    () =>
-      resolveLeadSlideReportId({
-        options: periodOptions,
-        requestedReportId,
-        activeReportId,
-      }),
-    [periodOptions, requestedReportId, activeReportId],
-  );
+  const targetReportId = useTargetReportId({
+    history: historyQ.data,
+    activeReportId,
+    requestedReportId,
+  });
+
   const byPeriodQ = useQuery({
     ...trpc.leadForm.byPeriod.queryOptions({
       reportId: targetReportId,
@@ -121,18 +206,12 @@ export function useLeadSlidesData({
     }),
   });
 
-  useEffect(() => {
-    if (isEveryone && visibilityHydrated) return;
-    qc.removeQueries({
-      queryKey: trpc.leadForm.crossAuthorContent.queryKey(),
-    });
-  }, [isEveryone, visibilityHydrated, targetReportId, qc, trpc]);
-
-  useEffect(() => {
-    qc.removeQueries({
-      queryKey: trpc.leadForm.crossAuthorContent.queryKey(),
-    });
-  }, [currentUserId, qc, trpc]);
+  useCrossAuthorContentEviction({
+    isEveryone,
+    visibilityHydrated,
+    targetReportId,
+    currentUserId,
+  });
 
   useQueryErrorHandler(activeQ, {
     event: "leadSlides.getActive.load_failed",
@@ -146,24 +225,14 @@ export function useLeadSlidesData({
     context: { reportId: targetReportId || null },
   });
 
-  const foreignContentRows = useMemo(
-    () =>
-      isEveryone && visibilityHydrated ? (crossAuthorContentQ.data ?? []) : [],
-    [isEveryone, visibilityHydrated, crossAuthorContentQ.data],
-  );
-  const sectionModel = useMemo(() => {
-    if (!byPeriodQ.data?.section) return null;
-    return buildLeadDeckModel(
-      byPeriodQ.data.section,
-      isOwnDeck ? (crossAuthorsQ.data ?? []) : [],
-      foreignContentRows,
-    );
-  }, [byPeriodQ.data, crossAuthorsQ.data, foreignContentRows, isOwnDeck]);
-  const slides = useMemo(
-    () => (sectionModel ? [sectionModel] : []),
-    [sectionModel],
-  );
-  const section = byPeriodQ.data?.section ?? null;
+  const slides = useLeadDeckSlides({
+    byPeriodData: byPeriodQ.data,
+    crossAuthors: crossAuthorsQ.data,
+    crossAuthorContent: crossAuthorContentQ.data,
+    isOwnDeck,
+    isEveryone,
+    visibilityHydrated,
+  });
   const formData = useMemo<LeadSlideFormData | null>(() => {
     if (!byPeriodQ.data?.section) return null;
     return mapLeadFormData({
@@ -179,7 +248,7 @@ export function useLeadSlidesData({
     isLoading: activeQ.isLoading || byPeriodQ.isLoading || historyQ.isLoading,
     isError: activeQ.isError || byPeriodQ.isError || historyQ.isError,
     slides,
-    section,
+    section: byPeriodQ.data?.section ?? null,
     formData,
     canInlineEdit: canEditInlineRecord({
       targetReportId,

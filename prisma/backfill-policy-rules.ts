@@ -4,7 +4,7 @@
 import { resolve } from "node:path";
 
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type ReminderPolicy } from "@prisma/client";
 import { config as loadEnv } from "dotenv";
 import { DateTime } from "luxon";
 import pg from "pg";
@@ -56,6 +56,62 @@ function policyAppliesTo(
   return true;
 }
 
+interface OpenPeriod {
+  readonly id: string;
+  readonly deadline: Date;
+}
+
+async function loadOpenPeriods(prisma: PrismaClient): Promise<OpenPeriod[]> {
+  // deadline: { not: null } — a period whose deadline an admin explicitly
+  // cleared (ruling F16) has no reference point for deadline-relative
+  // rules; the backfill mints nothing for it, same as the live applicator.
+  const rows = await prisma.report.findMany({
+    where: { periodStatus: { not: "published" }, deadline: { not: null } },
+    select: { id: true, deadline: true },
+  });
+  // The SQL filter guarantees non-null; the flatMap narrows the type so a
+  // future query edit cannot silently reintroduce nullable rows here.
+  return rows.flatMap((period) =>
+    period.deadline === null
+      ? []
+      : [{ id: period.id, deadline: period.deadline }],
+  );
+}
+
+// The pre-existing row — looked up before the upsert — is what distinguishes
+// an updated rule from a created one.
+async function applyPolicyToPeriod(
+  prisma: PrismaClient,
+  period: OpenPeriod,
+  policy: ReminderPolicy,
+): Promise<"created" | "updated"> {
+  const where = {
+    reportId_policyId: { reportId: period.id, policyId: policy.id },
+  };
+  const existing = await prisma.reminderRule.findUnique({
+    where,
+    select: { id: true },
+  });
+
+  const ruleFields = {
+    fireAt: computeFireAt(
+      period.deadline,
+      policy.offsetMinutes,
+      policy.timezone,
+    ),
+    kind: policy.kind,
+    timezone: policy.timezone,
+    status: "active" as const,
+  };
+  await prisma.reminderRule.upsert({
+    where,
+    create: { reportId: period.id, policyId: policy.id, ...ruleFields },
+    update: ruleFields,
+  });
+
+  return existing ? "updated" : "created";
+}
+
 async function main(): Promise<void> {
   assertNonProdDestructive("backfill-policy-rules");
   const pool = new pg.Pool({ connectionString: DATABASE_URL });
@@ -70,20 +126,7 @@ async function main(): Promise<void> {
     const policies = await prisma.reminderPolicy.findMany({
       where: { active: true },
     });
-    // deadline: { not: null } — a period whose deadline an admin explicitly
-    // cleared (ruling F16) has no reference point for deadline-relative
-    // rules; the backfill mints nothing for it, same as the live applicator.
-    const periodRows = await prisma.report.findMany({
-      where: { periodStatus: { not: "published" }, deadline: { not: null } },
-      select: { id: true, deadline: true },
-    });
-    // The SQL filter guarantees non-null; the flatMap narrows the type so a
-    // future query edit cannot silently reintroduce nullable rows here.
-    const periods = periodRows.flatMap((period) =>
-      period.deadline === null
-        ? []
-        : [{ id: period.id, deadline: period.deadline }],
-    );
+    const periods = await loadOpenPeriods(prisma);
 
     console.log(
       `[backfill] active policies=${policies.length} open periods=${periods.length}`,
@@ -96,46 +139,8 @@ async function main(): Promise<void> {
           continue;
         }
 
-        const fireAt = computeFireAt(
-          period.deadline,
-          policy.offsetMinutes,
-          policy.timezone,
-        );
-
-        const existing = await prisma.reminderRule.findUnique({
-          where: {
-            reportId_policyId: {
-              reportId: period.id,
-              policyId: policy.id,
-            },
-          },
-          select: { id: true },
-        });
-
-        await prisma.reminderRule.upsert({
-          where: {
-            reportId_policyId: {
-              reportId: period.id,
-              policyId: policy.id,
-            },
-          },
-          create: {
-            reportId: period.id,
-            policyId: policy.id,
-            fireAt,
-            kind: policy.kind,
-            timezone: policy.timezone,
-            status: "active",
-          },
-          update: {
-            fireAt,
-            kind: policy.kind,
-            timezone: policy.timezone,
-            status: "active",
-          },
-        });
-
-        if (existing) {
+        const outcome = await applyPolicyToPeriod(prisma, period, policy);
+        if (outcome === "updated") {
           totalUpdated += 1;
         } else {
           totalCreated += 1;

@@ -15,10 +15,27 @@ import {
   revalidateOrgLandingPage,
 } from "../../../shared/ui/settings-tab-shared";
 
-export function IdentitySubTab() {
+function useSaveOrgIdentity(onSaved: () => void) {
   const trpc = useTRPC();
   const qc = useQueryClient();
 
+  return useMutation(
+    trpc.admin.updateOrganization.mutationOptions({
+      onSuccess: async () => {
+        onSaved();
+        invalidateAdmin(qc, trpc);
+        toast.success("Organization identity saved");
+        await revalidateOrgLandingPage();
+      },
+      onError: (err) => {
+        toast.error(err.message);
+      },
+    }),
+  );
+}
+
+function useOrgIdentityForm() {
+  const trpc = useTRPC();
   const orgQ = useQuery(trpc.admin.getOrganization.queryOptions());
 
   const [shortName, setShortName] = useState("");
@@ -37,39 +54,126 @@ export function IdentitySubTab() {
     }
   }, [orgQ.data, isDirty]);
 
-  const updateOrgMut = useMutation(
-    trpc.admin.updateOrganization.mutationOptions({
-      onSuccess: async () => {
-        setIsDirty(false);
-        invalidateAdmin(qc, trpc);
-        toast.success("Organization identity saved");
-        await revalidateOrgLandingPage();
-      },
-      onError: (err) => {
-        toast.error(err.message);
-      },
-    }),
-  );
-
-  const isSaving = updateOrgMut.isPending;
-  const isLoading = orgQ.isLoading;
-
-  function handleSave() {
-    updateOrgMut.mutate({
-      shortName: shortName.trim(),
-      fullName: fullName.trim(),
-    });
-  }
-
+  const updateOrgMut = useSaveOrgIdentity(() => setIsDirty(false));
   const shortNameOver = shortName.length > MAX_SHORT_NAME_LENGTH;
   const fullNameOver = fullName.length > MAX_FULL_NAME_LENGTH;
-  const canSave =
-    !isSaving &&
-    !isLoading &&
-    shortName.trim().length > 0 &&
-    fullName.trim().length > 0 &&
-    !shortNameOver &&
-    !fullNameOver;
+
+  return {
+    shortName,
+    fullName,
+    shortNameOver,
+    fullNameOver,
+    isSaving: updateOrgMut.isPending,
+    isSaved: updateOrgMut.isSuccess,
+    canSave:
+      !updateOrgMut.isPending &&
+      !orgQ.isLoading &&
+      shortName.trim().length > 0 &&
+      fullName.trim().length > 0 &&
+      !shortNameOver &&
+      !fullNameOver,
+    editShortName: (next: string) => {
+      setIsDirty(true);
+      setShortName(next);
+    },
+    editFullName: (next: string) => {
+      setIsDirty(true);
+      setFullName(next);
+    },
+    save: () =>
+      updateOrgMut.mutate({
+        shortName: shortName.trim(),
+        fullName: fullName.trim(),
+      }),
+  };
+}
+
+// Labelled text input with the hint and a live length counter; the counter
+// turns red once the value is past its cap (only reachable from server data —
+// typing is capped by maxLength).
+function OrgIdentityField({
+  id,
+  label,
+  hint,
+  maxLength,
+  value,
+  isOver,
+  onChange,
+}: {
+  readonly id: string;
+  readonly label: string;
+  readonly hint: string;
+  readonly maxLength: number;
+  readonly value: string;
+  readonly isOver: boolean;
+  readonly onChange: (next: string) => void;
+}) {
+  return (
+    <div>
+      <label
+        htmlFor={id}
+        className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+      >
+        {label}
+      </label>
+      <input
+        id={id}
+        name={id}
+        type="text"
+        autoComplete="off"
+        maxLength={maxLength}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+      />
+      <div className="mt-1 flex items-center justify-between text-xs">
+        <span className="text-[var(--color-muted-foreground)]">{hint}</span>
+        <span
+          className={
+            isOver ? "text-red-600" : "text-[var(--color-muted-foreground)]"
+          }
+        >
+          {value.length}/{maxLength}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function SaveIdentityRow({
+  canSave,
+  isSaving,
+  isSaved,
+  onSave,
+}: {
+  readonly canSave: boolean;
+  readonly isSaving: boolean;
+  readonly isSaved: boolean;
+  readonly onSave: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 pt-2">
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={!canSave}
+        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+        aria-label="Save organization identity"
+      >
+        {isSaving ? "Saving…" : "Save Identity"}
+      </button>
+      {isSaved && (
+        <span className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]">
+          <CheckIcon />
+          Identity saved
+        </span>
+      )}
+    </div>
+  );
+}
+
+export function IdentitySubTab() {
+  const form = useOrgIdentityForm();
 
   return (
     <div className="max-w-lg space-y-5">
@@ -79,96 +183,32 @@ export function IdentitySubTab() {
         full name.
       </p>
 
-      <div>
-        <label
-          htmlFor="org-short-name"
-          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-        >
-          Short name
-        </label>
-        <input
-          id="org-short-name"
-          name="org-short-name"
-          type="text"
-          autoComplete="off"
-          maxLength={MAX_SHORT_NAME_LENGTH}
-          value={shortName}
-          onChange={(e) => {
-            setIsDirty(true);
-            setShortName(e.target.value);
-          }}
-          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-        />
-        <div className="mt-1 flex items-center justify-between text-xs">
-          <span className="text-[var(--color-muted-foreground)]">
-            Shown in the nav-bar brand pill (max {MAX_SHORT_NAME_LENGTH} chars).
-          </span>
-          <span
-            className={
-              shortNameOver
-                ? "text-red-600"
-                : "text-[var(--color-muted-foreground)]"
-            }
-          >
-            {shortName.length}/{MAX_SHORT_NAME_LENGTH}
-          </span>
-        </div>
-      </div>
+      <OrgIdentityField
+        id="org-short-name"
+        label="Short name"
+        hint={`Shown in the nav-bar brand pill (max ${MAX_SHORT_NAME_LENGTH} chars).`}
+        maxLength={MAX_SHORT_NAME_LENGTH}
+        value={form.shortName}
+        isOver={form.shortNameOver}
+        onChange={form.editShortName}
+      />
 
-      <div>
-        <label
-          htmlFor="org-full-name"
-          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-        >
-          Full name
-        </label>
-        <input
-          id="org-full-name"
-          name="org-full-name"
-          type="text"
-          autoComplete="off"
-          maxLength={MAX_FULL_NAME_LENGTH}
-          value={fullName}
-          onChange={(e) => {
-            setIsDirty(true);
-            setFullName(e.target.value);
-          }}
-          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-        />
-        <div className="mt-1 flex items-center justify-between text-xs">
-          <span className="text-[var(--color-muted-foreground)]">
-            Shown on the landing hero and in PDF report headers (max{" "}
-            {MAX_FULL_NAME_LENGTH} chars).
-          </span>
-          <span
-            className={
-              fullNameOver
-                ? "text-red-600"
-                : "text-[var(--color-muted-foreground)]"
-            }
-          >
-            {fullName.length}/{MAX_FULL_NAME_LENGTH}
-          </span>
-        </div>
-      </div>
+      <OrgIdentityField
+        id="org-full-name"
+        label="Full name"
+        hint={`Shown on the landing hero and in PDF report headers (max ${MAX_FULL_NAME_LENGTH} chars).`}
+        maxLength={MAX_FULL_NAME_LENGTH}
+        value={form.fullName}
+        isOver={form.fullNameOver}
+        onChange={form.editFullName}
+      />
 
-      <div className="flex items-center gap-3 pt-2">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!canSave}
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label="Save organization identity"
-        >
-          {isSaving ? "Saving…" : "Save Identity"}
-        </button>
-        {updateOrgMut.isSuccess && (
-          <span className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]">
-            <CheckIcon />
-            Identity saved
-          </span>
-        )}
-      </div>
+      <SaveIdentityRow
+        canSave={form.canSave}
+        isSaving={form.isSaving}
+        isSaved={form.isSaved}
+        onSave={form.save}
+      />
     </div>
   );
 }

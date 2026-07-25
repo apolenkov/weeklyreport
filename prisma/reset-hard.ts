@@ -29,6 +29,12 @@ interface RedisEndpoint {
   readonly source: "REDIS_URL" | "REDIS_HOST/REDIS_PORT";
 }
 
+// Redis' own default listening port — used when neither REDIS_URL nor
+// REDIS_PORT pins one (dev/compose convenience, not product config).
+const DEFAULT_REDIS_PORT = 6379;
+// A local FLUSHALL answers in milliseconds; this only bounds a hung socket.
+const REDIS_FLUSHALL_TIMEOUT_MS = 5000;
+
 const pool = new pg.Pool({ connectionString: DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
@@ -37,7 +43,7 @@ function getRedisEndpoint(): RedisEndpoint {
   const redisUrl = process.env.REDIS_URL;
   if (redisUrl) {
     const url = new URL(redisUrl);
-    const port = Number(url.port || 6379);
+    const port = Number(url.port || DEFAULT_REDIS_PORT);
     if (!Number.isInteger(port) || port <= 0) {
       throw new Error(`Invalid Redis port in REDIS_URL: ${url.port}`);
     }
@@ -48,7 +54,7 @@ function getRedisEndpoint(): RedisEndpoint {
     };
   }
 
-  const port = Number(process.env.REDIS_PORT ?? 6379);
+  const port = Number(process.env.REDIS_PORT ?? DEFAULT_REDIS_PORT);
   if (!Number.isInteger(port) || port <= 0) {
     throw new Error(`Invalid REDIS_PORT: ${process.env.REDIS_PORT ?? "unset"}`);
   }
@@ -80,7 +86,7 @@ export async function flushRedis(): Promise<void> {
     const timer = setTimeout(() => {
       sock.destroy();
       reject(new Error(`Redis FLUSHALL timed out at ${host}:${port}`));
-    }, 5000);
+    }, REDIS_FLUSHALL_TIMEOUT_MS);
     let buf = "";
     let receivedOk = false;
     sock.on("data", (chunk) => {

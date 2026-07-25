@@ -18,45 +18,29 @@ interface BuildProductSubsectionsInput {
   readonly sharedCardId: string;
 }
 
-// Status-only activities still render as empty labeled rows (not a separate pill
-// lane). Snapshot-drift activity ids missing from section.activities still get
-// a generically titled subsection.
-export function buildProductSubsections(
+/** A subsection plus the id of the product card it belongs under. */
+interface HomedSubsection {
+  readonly home: string;
+  readonly subsection: GridSubsection;
+}
+
+type ActivityMeta = ReportSectionReadModel["activities"][number];
+
+function buildActivityEntries(
   input: BuildProductSubsectionsInput,
-): ReadonlyMap<string, readonly GridSubsection[]> {
+  activityMeta: ReadonlyMap<string, ActivityMeta>,
+): readonly HomedSubsection[] {
   const {
     section,
-    productLevel,
     activityCells,
     activityHomeById,
     authorOrder,
     sharedCardId,
   } = input;
-  const activityMeta = new Map(
-    section.activities.map((activity) => [activity.activityId, activity]),
-  );
-
-  const subsectionsByProduct = new Map<string, readonly GridSubsection[]>();
-  const addSubsection = (productId: string, subsection: GridSubsection) => {
-    const list = subsectionsByProduct.get(productId) ?? [];
-    subsectionsByProduct.set(productId, [...list, subsection]);
-  };
-
-  for (const [productId, cells] of productLevel) {
-    addSubsection(productId, {
-      kind: "product-level",
-      id: `${productId}-product-level`,
-      name: "Product-level",
-      status: null,
-      showStages: true,
-      columns: finalizeColumns(cells, authorOrder),
-    });
-  }
-
   const recordOnlyActivityIds = [...activityCells.keys()].filter(
     (activityId) => !activityMeta.has(activityId),
   );
-  [
+  return [
     ...section.activities.map((activity) => activity.activityId),
     ...recordOnlyActivityIds,
   ]
@@ -77,12 +61,43 @@ export function buildProductSubsections(
         },
       };
     })
-    .sort((a, b) => a.subsection.name.localeCompare(b.subsection.name))
-    .forEach(({ home, subsection }) => {
-      addSubsection(home, subsection);
-    });
+    .sort((a, b) => a.subsection.name.localeCompare(b.subsection.name));
+}
 
-  return subsectionsByProduct;
+// Status-only activities still render as empty labeled rows (not a separate pill
+// lane). Snapshot-drift activity ids missing from section.activities still get
+// a generically titled subsection.
+export function buildProductSubsections(
+  input: BuildProductSubsectionsInput,
+): ReadonlyMap<string, readonly GridSubsection[]> {
+  const { section, productLevel, authorOrder } = input;
+  const activityMeta = new Map(
+    section.activities.map((activity) => [activity.activityId, activity]),
+  );
+
+  const productLevelEntries: readonly HomedSubsection[] = [...productLevel].map(
+    ([productId, cells]) => ({
+      home: productId,
+      subsection: {
+        kind: "product-level" as const,
+        id: `${productId}-product-level`,
+        name: "Product-level",
+        status: null,
+        showStages: true,
+        columns: finalizeColumns(cells, authorOrder),
+      },
+    }),
+  );
+
+  // Product-level first, then activities: card order follows insertion order.
+  return [
+    ...productLevelEntries,
+    ...buildActivityEntries(input, activityMeta),
+  ].reduce<ReadonlyMap<string, readonly GridSubsection[]>>(
+    (acc, { home, subsection }) =>
+      new Map(acc).set(home, [...(acc.get(home) ?? []), subsection]),
+    new Map<string, readonly GridSubsection[]>(),
+  );
 }
 
 interface DeriveProductCardsInput {

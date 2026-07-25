@@ -32,6 +32,49 @@ interface ReopenRequestRowProps {
   readonly pendingDecision: "approved" | "rejected" | undefined;
 }
 
+function ReopenRequestHeader({
+  request: r,
+  isResponding,
+  onStartRespond,
+}: {
+  readonly request: DashboardReopenRequest;
+  readonly isResponding: boolean;
+  readonly onStartRespond: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-[var(--color-foreground)]">
+            {r.requestedBy.name}
+          </span>
+          <span className="text-xs text-[var(--color-muted-foreground)]">
+            {joinPeriodLabel(
+              r.report.weekLabel,
+              formatPeriodRangeWithYear(
+                r.report.periodStart,
+                r.report.periodEnd,
+              ),
+            )}
+          </span>
+        </div>
+        <div className="text-xs text-[var(--color-muted-foreground)]">
+          Requested {formatDateTime(r.createdAt)}
+        </div>
+      </div>
+      {!isResponding && (
+        <button
+          type="button"
+          onClick={onStartRespond}
+          className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
+        >
+          Respond
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function ReopenRequestRow({
   request: r,
   isResponding,
@@ -46,36 +89,11 @@ export function ReopenRequestRow({
 }: ReopenRequestRowProps) {
   return (
     <li className="rounded-[var(--radius)] border border-[var(--color-border)] p-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-[var(--color-foreground)]">
-              {r.requestedBy.name}
-            </span>
-            <span className="text-xs text-[var(--color-muted-foreground)]">
-              {joinPeriodLabel(
-                r.report.weekLabel,
-                formatPeriodRangeWithYear(
-                  r.report.periodStart,
-                  r.report.periodEnd,
-                ),
-              )}
-            </span>
-          </div>
-          <div className="text-xs text-[var(--color-muted-foreground)]">
-            Requested {formatDateTime(r.createdAt)}
-          </div>
-        </div>
-        {!isResponding && (
-          <button
-            type="button"
-            onClick={onStartRespond}
-            className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
-          >
-            Respond
-          </button>
-        )}
-      </div>
+      <ReopenRequestHeader
+        request={r}
+        isResponding={isResponding}
+        onStartRespond={onStartRespond}
+      />
 
       {r.reason && (
         <div className="mt-2 rounded-[var(--radius)] bg-[var(--color-surface-hover)] p-2 text-sm text-[var(--color-foreground)]">

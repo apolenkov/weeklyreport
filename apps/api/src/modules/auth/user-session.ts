@@ -83,40 +83,79 @@ function isUserUniqueViolation(error: unknown): boolean {
   );
 }
 
+// Every non-viewer owns a ReportingGroup: keep the one already on record, else
+// adopt the oldest active group, else materialize the seeded default so a fresh
+// install can still complete a first login. Viewers own none.
+async function resolveNextReportingGroupId(
+  prisma: PrismaClient,
+  profile: SamlProfile,
+  existing: { reportingGroupId: string | null } | null,
+): Promise<string | null> {
+  if (profile.role === "viewer") return null;
+  if (existing?.reportingGroupId) return existing.reportingGroupId;
+
+  const oldestActive = await prisma.reportingGroup.findFirst({
+    where: { archived: false },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  if (oldestActive) return oldestActive.id;
+
+  const seededDefault = await prisma.reportingGroup.upsert({
+    where: { id: DEFAULT_REPORTING_GROUP_ID },
+    create: {
+      id: DEFAULT_REPORTING_GROUP_ID,
+      name: "Core Development",
+      description: "Default reporting group for newly provisioned users",
+      archived: false,
+    },
+    update: { archived: false },
+    select: { id: true },
+  });
+  return seededDefault.id;
+}
+
 // Two concurrent first-logins of the same new identity both miss the find and
 // collide on the email/samlId unique index, so the create catches the unique
 // violation and re-reads the winner's full row instead of throwing a 500.
+async function createUserOrAdoptRaceWinner(
+  prisma: PrismaClient,
+  profile: SamlProfile,
+  reportingGroupId: string | null,
+) {
+  try {
+    return await prisma.user.create({
+      data: {
+        samlId: profile.samlId,
+        email: profile.email,
+        name: profile.displayName,
+        lastName: profile.displayName.trim() || profile.email,
+        firstName: SAML_STUB_FIRST_NAME_PLACEHOLDER,
+        middleName: null,
+        position: null,
+        role: profile.role,
+        reportingGroupId,
+      },
+    });
+  } catch (error) {
+    if (!isUserUniqueViolation(error)) throw error;
+    // Create-race loser re-resolves; different samlId for this email must refuse.
+    const won = await resolveExistingUser(prisma, profile);
+    if (!won) throw error;
+    return won;
+  }
+}
+
 async function writeProvisionedUser(
   prisma: PrismaClient,
   profile: SamlProfile,
   existing: { id: string; reportingGroupId: string | null } | null,
 ) {
-  const needsOwningGroup =
-    profile.role !== "viewer" && !existing?.reportingGroupId;
-  const fallbackReportingGroup = needsOwningGroup
-    ? ((await prisma.reportingGroup.findFirst({
-        where: { archived: false },
-        orderBy: { createdAt: "asc" },
-        select: { id: true },
-      })) ??
-      (await prisma.reportingGroup.upsert({
-        where: { id: DEFAULT_REPORTING_GROUP_ID },
-        create: {
-          id: DEFAULT_REPORTING_GROUP_ID,
-          name: "Core Development",
-          description: "Default reporting group for newly provisioned users",
-          archived: false,
-        },
-        update: { archived: false },
-        select: { id: true },
-      })))
-    : null;
-  const nextReportingGroupId =
-    profile.role === "viewer"
-      ? null
-      : (existing?.reportingGroupId ??
-        fallbackReportingGroup?.id ??
-        DEFAULT_REPORTING_GROUP_ID);
+  const nextReportingGroupId = await resolveNextReportingGroupId(
+    prisma,
+    profile,
+    existing,
+  );
 
   if (existing) {
     return prisma.user.update({
@@ -129,28 +168,54 @@ async function writeProvisionedUser(
       },
     });
   }
+  return createUserOrAdoptRaceWinner(prisma, profile, nextReportingGroupId);
+}
 
-  try {
-    return await prisma.user.create({
-      data: {
-        samlId: profile.samlId,
-        email: profile.email,
-        name: profile.displayName,
-        lastName: profile.displayName.trim() || profile.email,
-        firstName: SAML_STUB_FIRST_NAME_PLACEHOLDER,
-        middleName: null,
-        position: null,
-        role: profile.role,
-        reportingGroupId: nextReportingGroupId,
-      },
-    });
-  } catch (error) {
-    if (!isUserUniqueViolation(error)) throw error;
-    // Create-race loser re-resolves; different samlId for this email must refuse.
-    const won = await resolveExistingUser(prisma, profile);
-    if (!won) throw error;
-    return won;
+// A lead with no active section gets their workspace provisioned (period +
+// section) through the injected seam — the auth module does not own that
+// persistence. Other roles never auto-create a section, but head/viewer still
+// need the active report id, so they fall back to the newest draft report.
+async function resolveActiveWorkspace(
+  prisma: PrismaClient,
+  user: { id: string; role: string },
+  provisionLeadWorkspace: ProvisionLeadWorkspace,
+): Promise<{
+  activeReportId: string | null;
+  activeReportSectionId: string | null;
+}> {
+  // Multiple draft reports possible; order by report.createdAt so pick is recency, not insert order.
+  const existingSection = await prisma.reportSection.findFirst({
+    where: { authorId: user.id, report: { status: "draft" } },
+    select: { id: true, reportId: true },
+    orderBy: { report: { createdAt: "desc" } },
+  });
+
+  const provisioned =
+    !existingSection && user.role === "lead"
+      ? await provisionLeadWorkspace(user.id)
+      : null;
+
+  const activeSection =
+    existingSection ??
+    (provisioned
+      ? { id: provisioned.sectionId, reportId: provisioned.reportId }
+      : null);
+  if (activeSection) {
+    return {
+      activeReportId: activeSection.reportId,
+      activeReportSectionId: activeSection.id,
+    };
   }
+
+  const activeReport = await prisma.report.findFirst({
+    where: { status: "draft" },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  return {
+    activeReportId: activeReport?.id ?? null,
+    activeReportSectionId: null,
+  };
 }
 
 export async function buildUserSession(
@@ -176,35 +241,8 @@ export async function buildUserSession(
       })
     : null;
 
-  // Multiple draft reports possible; order by report.createdAt so pick is recency, not insert order.
-  const existingSection = await prisma.reportSection.findFirst({
-    where: { authorId: user.id, report: { status: "draft" } },
-    select: { id: true, reportId: true },
-    orderBy: { report: { createdAt: "desc" } },
-  });
-
-  // A lead with no active section gets their workspace provisioned (period +
-  // section) through the injected seam — the auth module does not own that
-  // persistence. Other roles never auto-create a section.
-  const provisioned =
-    !existingSection && user.role === "lead"
-      ? await provisionLeadWorkspace(user.id)
-      : null;
-
-  const activeSection =
-    existingSection ??
-    (provisioned
-      ? { id: provisioned.sectionId, reportId: provisioned.reportId }
-      : null);
-
-  // All roles: find the active report (head/viewer have no section but need the reportId)
-  const activeReport = activeSection
-    ? null
-    : await prisma.report.findFirst({
-        where: { status: "draft" },
-        orderBy: { createdAt: "desc" },
-        select: { id: true },
-      });
+  const { activeReportId, activeReportSectionId } =
+    await resolveActiveWorkspace(prisma, user, provisionLeadWorkspace);
 
   return {
     userId: user.id,
@@ -216,8 +254,8 @@ export async function buildUserSession(
     firstName: user.firstName,
     middleName: user.middleName,
     role: user.role,
-    activeReportId: activeSection?.reportId ?? activeReport?.id ?? null,
-    activeReportSectionId: activeSection?.id ?? null,
+    activeReportId,
+    activeReportSectionId,
     // Carry the owning ReportingGroup id in the JWT so groupScopeFilter needs no
     // per-request Prisma lookup. viewer sessions may have none; their visibility
     // hydrates lazily through `viewerGroupAccess` in trpc.context.

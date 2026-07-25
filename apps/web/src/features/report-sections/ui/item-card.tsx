@@ -1,11 +1,7 @@
 "use client";
 
 import { deriveCardStatus } from "../model/item-card-status";
-import {
-  cardContainerStyle,
-  STATUS_BADGE,
-  type StatusBadge,
-} from "../model/item-card-style";
+import { cardContainerStyle, STATUS_BADGE } from "../model/item-card-style";
 import type { KanbanItem, RiskEntry } from "../model/types";
 import { ItemCardActions } from "./item-card-actions";
 import { ItemCardBadges } from "./item-card-badges";
@@ -51,9 +47,7 @@ export function ItemCard({
 }: ItemCardProps) {
   const { displayStatus, isBlocked, isPlanned, alarmLocked, lockAuthorName } =
     deriveCardStatus(item, risks);
-  const badge =
-    (STATUS_BADGE as Record<string, StatusBadge>)[displayStatus] ??
-    STATUS_BADGE["in-progress"];
+  const badge = STATUS_BADGE[displayStatus];
   const locked = readOnly || item.foreign === true;
   // Same gate as the render branch below — the style must track whichever
   // branch actually renders so an editable-but-locked card still gets the
@@ -102,52 +96,86 @@ export function ItemCard({
         />
       </div>
 
-      {/* Item text — editable when in edit mode, static otherwise. The
-          textarea always shows the full, untruncated `item.text` (seeded
-          into `draft`); only the static render below clamps. */}
-      {showEditor ? (
-        <ItemInlineTextEditor
-          key={item.text}
-          initialText={item.text}
-          onCommit={commit}
-        />
-      ) : (
-        // flex-1 min-h-0 lets this region absorb whatever space is left
-        // inside the card's fixed height once the shrink-0 chrome rows take
-        // theirs, instead of growing the card. line-clamp-3 then clips
-        // within that space with an ellipsis; native title gives the full
-        // text on hover without pulling in a Tooltip dependency.
-        <div
-          className="line-clamp-3 min-h-0 flex-1 text-sm text-[var(--color-foreground)]"
-          title={item.text}
-        >
-          {item.text}
-        </div>
+      <ItemCardText
+        text={item.text}
+        showEditor={showEditor}
+        onCommit={commit}
+      />
+
+      {!showEditor && displayStatus === "paused" && (
+        <PausedReasonNote reason={item.pausedReason} />
       )}
 
-      {/* Paused items always carry a reason so reviewers see why it stalled. */}
-      {!showEditor &&
-        displayStatus === "paused" &&
-        item.pausedReason != null &&
-        item.pausedReason.trim().length > 0 && (
-          <p
-            className="mt-1 line-clamp-2 shrink-0 text-[11px] italic text-[var(--color-muted-foreground)]"
-            title={item.pausedReason}
-          >
-            Paused: {item.pausedReason}
-          </p>
-        )}
+      <ItemCardFooter author={item.author} stageTagsState={stageTagsState} />
+    </div>
+  );
+}
 
-      {/* Footer: author on the left, compact stage tags on the right.
-          shrink-0 mirrors the top row — never compressed by the fixed
-          height. */}
-      <div className="mt-auto flex shrink-0 items-end justify-between gap-2 pt-2">
-        <div className="min-w-0 flex-1 truncate text-[11px] text-[var(--color-muted-foreground)]">
-          {item.author}
-        </div>
-        <div className="flex min-w-0 max-w-[72%] flex-wrap items-center justify-end gap-1">
-          <ItemCardStageTagsRow {...stageTagsState} />
-        </div>
+// Item text — editable when in edit mode, static otherwise. The textarea always
+// shows the full, untruncated text (seeded into `draft`); only the static
+// render clamps.
+function ItemCardText({
+  text,
+  showEditor,
+  onCommit,
+}: {
+  readonly text: string;
+  readonly showEditor: boolean;
+  readonly onCommit: (next: string) => void;
+}) {
+  if (showEditor) {
+    return (
+      <ItemInlineTextEditor key={text} initialText={text} onCommit={onCommit} />
+    );
+  }
+  // flex-1 min-h-0 lets this region absorb whatever space is left inside the
+  // card's fixed height once the shrink-0 chrome rows take theirs, instead of
+  // growing the card. line-clamp-3 then clips within that space with an
+  // ellipsis; native title gives the full text on hover without pulling in a
+  // Tooltip dependency.
+  return (
+    <div
+      className="line-clamp-3 min-h-0 flex-1 text-sm text-[var(--color-foreground)]"
+      title={text}
+    >
+      {text}
+    </div>
+  );
+}
+
+// Paused items always carry a reason so reviewers see why it stalled.
+function PausedReasonNote({
+  reason,
+}: {
+  readonly reason: string | null | undefined;
+}) {
+  if (reason == null || reason.trim().length === 0) return null;
+  return (
+    <p
+      className="mt-1 line-clamp-2 shrink-0 text-[11px] italic text-[var(--color-muted-foreground)]"
+      title={reason}
+    >
+      Paused: {reason}
+    </p>
+  );
+}
+
+// Author on the left, compact stage tags on the right. shrink-0 mirrors the top
+// row — never compressed by the fixed height.
+function ItemCardFooter({
+  author,
+  stageTagsState,
+}: {
+  readonly author: string;
+  readonly stageTagsState: ReturnType<typeof deriveItemCardStageTags>;
+}) {
+  return (
+    <div className="mt-auto flex shrink-0 items-end justify-between gap-2 pt-2">
+      <div className="min-w-0 flex-1 truncate text-[11px] text-[var(--color-muted-foreground)]">
+        {author}
+      </div>
+      <div className="flex min-w-0 max-w-[72%] flex-wrap items-center justify-end gap-1">
+        <ItemCardStageTagsRow {...stageTagsState} />
       </div>
     </div>
   );

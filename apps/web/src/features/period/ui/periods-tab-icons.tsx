@@ -1,5 +1,12 @@
 export { PlusIcon } from "../../../shared/ui/icons";
 
+// Tailwind red-800 → red-900 on hover: no theme token covers the destructive
+// icon tone (--color-destructive is the brighter #c82014 alert red). Kept as a
+// literal class string so Tailwind's source scanner still emits the CSS.
+const DANGER_ICON_CLASSES = "text-[#991b1b] hover:text-[#7f1d1d]";
+const NEUTRAL_ICON_CLASSES =
+  "text-[var(--color-muted-foreground)] hover:text-[var(--color-starbucks-accent)]";
+
 export function IconButton({
   testId,
   label,
@@ -27,9 +34,7 @@ export function IconButton({
         disabled
           ? "cursor-not-allowed opacity-50"
           : `hover:border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] ${
-              tone === "danger"
-                ? "text-[#991b1b] hover:text-[#7f1d1d]"
-                : "text-[var(--color-muted-foreground)] hover:text-[var(--color-starbucks-accent)]"
+              tone === "danger" ? DANGER_ICON_CLASSES : NEUTRAL_ICON_CLASSES
             }`
       }`}
     >

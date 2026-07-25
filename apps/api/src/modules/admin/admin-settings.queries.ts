@@ -68,41 +68,47 @@ export async function countActiveTelegramBindings(
   return prisma.telegramBinding.count({ where: { active: true } });
 }
 
+// A partial update must touch only the columns the caller actually sent, so
+// undefined entries are dropped rather than written as nulls.
+function definedOnly(fields: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(fields).filter(([, value]) => value !== undefined),
+  );
+}
+
+// Enumerated explicitly (never a blind spread of `data`) so an unknown key on
+// the input can never reach Prisma. Enum translate mirrors `rowToAppSettings`.
+function appSettingsToRow(data: Partial<AppSettings>): Record<string, unknown> {
+  return definedOnly({
+    autoCreatePeriods: data.autoCreatePeriods,
+    defaultDeadlineDays: data.defaultDeadlineDays,
+    periodLengthDays: data.periodLengthDays,
+    workingDays:
+      data.workingDays === undefined
+        ? undefined
+        : workingDaysToPrisma[data.workingDays],
+    gracePeriodHours: data.gracePeriodHours,
+    defaultTimezone: data.defaultTimezone,
+    defaultReminderAudience:
+      data.defaultReminderAudience === undefined
+        ? undefined
+        : audienceToPrisma[data.defaultReminderAudience],
+    notificationFromEmail: data.notificationFromEmail,
+    allowLateSubmissions: data.allowLateSubmissions,
+    autoPublishAfterDeadline: data.autoPublishAfterDeadline,
+    autoArchiveWeeksAfterPublish: data.autoArchiveWeeksAfterPublish,
+    deadlineTime: data.deadlineTime,
+    allowReopenAfterPublish: data.allowReopenAfterPublish,
+    reopenWindowHours: data.reopenWindowHours,
+    unifiedActivityView: data.unifiedActivityView,
+  });
+}
+
 export async function updateSettings(
   prisma: PrismaService,
   data: Partial<AppSettings>,
 ): Promise<AppSettings> {
-  const dbData: Record<string, unknown> = {};
-  if (data.autoCreatePeriods !== undefined)
-    dbData.autoCreatePeriods = data.autoCreatePeriods;
-  if (data.defaultDeadlineDays !== undefined)
-    dbData.defaultDeadlineDays = data.defaultDeadlineDays;
-  if (data.periodLengthDays !== undefined)
-    dbData.periodLengthDays = data.periodLengthDays;
-  if (data.workingDays !== undefined)
-    dbData.workingDays = workingDaysToPrisma[data.workingDays];
-  if (data.gracePeriodHours !== undefined)
-    dbData.gracePeriodHours = data.gracePeriodHours;
-  if (data.defaultTimezone !== undefined)
-    dbData.defaultTimezone = data.defaultTimezone;
-  if (data.defaultReminderAudience !== undefined)
-    dbData.defaultReminderAudience =
-      audienceToPrisma[data.defaultReminderAudience];
-  if (data.notificationFromEmail !== undefined)
-    dbData.notificationFromEmail = data.notificationFromEmail;
-  if (data.allowLateSubmissions !== undefined)
-    dbData.allowLateSubmissions = data.allowLateSubmissions;
-  if (data.autoPublishAfterDeadline !== undefined)
-    dbData.autoPublishAfterDeadline = data.autoPublishAfterDeadline;
-  if (data.autoArchiveWeeksAfterPublish !== undefined)
-    dbData.autoArchiveWeeksAfterPublish = data.autoArchiveWeeksAfterPublish;
-  if (data.deadlineTime !== undefined) dbData.deadlineTime = data.deadlineTime;
-  if (data.allowReopenAfterPublish !== undefined)
-    dbData.allowReopenAfterPublish = data.allowReopenAfterPublish;
-  if (data.reopenWindowHours !== undefined)
-    dbData.reopenWindowHours = data.reopenWindowHours;
-  if (data.unifiedActivityView !== undefined)
-    dbData.unifiedActivityView = data.unifiedActivityView;
+  const dbData = appSettingsToRow(data);
 
   const row = await prisma.appSettings.upsert({
     where: { id: "singleton" },

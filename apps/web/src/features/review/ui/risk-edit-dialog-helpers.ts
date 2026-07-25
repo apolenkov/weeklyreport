@@ -67,14 +67,18 @@ export function collectRiskErrors(args: {
   readonly isActivityParent: boolean;
   readonly effectiveStageIds: readonly string[];
 }): RiskFieldErrors {
-  const errors: RiskFieldErrors = {};
-  if (args.text.length === 0) errors.text = "Risk description is required";
-  if (args.impact.length === 0) errors.impact = "Impact is required";
-  if (args.mitigation.length === 0)
-    errors.mitigation = "Mitigation is required";
-  if (!args.isActivityParent && args.effectiveStageIds.length === 0)
-    errors.stageIds = "Select at least one stage.";
-  return errors;
+  // Only the failing fields get a key, so `Object.keys(...).length === 0`
+  // still reads as "valid".
+  return {
+    ...(args.text.length === 0 ? { text: "Risk description is required" } : {}),
+    ...(args.impact.length === 0 ? { impact: "Impact is required" } : {}),
+    ...(args.mitigation.length === 0
+      ? { mitigation: "Mitigation is required" }
+      : {}),
+    ...(!args.isActivityParent && args.effectiveStageIds.length === 0
+      ? { stageIds: "Select at least one stage." }
+      : {}),
+  };
 }
 
 export function resolveRiskParentName(args: {

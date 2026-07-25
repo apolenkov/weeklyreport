@@ -68,19 +68,21 @@ function saveActiveRecord<T>(
   );
 }
 
-function useInlineSaveHandlers({
-  section,
-  inlineEditRecord,
-  pendingDeleteRef,
-  saveDraftSection,
-}: {
+interface InlineSaveHandlersArgs {
   readonly section: ReportSectionReadModel | null;
   readonly inlineEditRecord: ReturnType<
     typeof useInlineEditDialogData
   >["inlineEditRecord"];
   readonly pendingDeleteRef: GridRowEditableRef | null;
   readonly saveDraftSection: SaveDraftSection;
-}) {
+}
+
+function useInlineSaveHandlers({
+  section,
+  inlineEditRecord,
+  pendingDeleteRef,
+  saveDraftSection,
+}: InlineSaveHandlersArgs) {
   const activeItem = getActiveItemRecord(inlineEditRecord);
   const activeRisk = getActiveRiskRecord(inlineEditRecord);
   const activeDecision = getActiveDecisionRecord(inlineEditRecord);

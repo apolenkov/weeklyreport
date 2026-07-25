@@ -13,6 +13,18 @@ function isReportDetailPath(pathname: string): boolean {
   );
 }
 
+// Viewer Status (`/reports/latest`) resolves to `/reports/[id]`, so a detail
+// path must light Status, not History. History stays lit only on bare
+// `/reports`. `undefined` = no viewer-specific opinion, so the shared rules
+// below still apply (head/lead History-active on detail paths is untouched).
+function viewerActiveLink(pathname: string, href: string): boolean | undefined {
+  if (href === REPORTS_LATEST_ROUTE) {
+    return pathname === REPORTS_LATEST_ROUTE || isReportDetailPath(pathname);
+  }
+  if (href === "/reports") return pathname === "/reports";
+  return undefined;
+}
+
 export function isActiveLink(
   pathname: string,
   href: string,
@@ -21,16 +33,9 @@ export function isActiveLink(
   if (href === "/admin") return pathname.startsWith("/admin");
   if (href === HEAD_REPORT_ROUTE) return pathname.startsWith(HEAD_REPORT_ROUTE);
   if (href === HEAD_DASHBOARD_ROUTE) return pathname === HEAD_DASHBOARD_ROUTE;
-  // Viewer Status (`/reports/latest`) resolves to `/reports/[id]`, so a detail
-  // path must light Status, not History. History stays lit only on bare
-  // `/reports`. Scoped so head/lead History-active on detail paths is untouched.
   if (isViewer(role)) {
-    if (href === REPORTS_LATEST_ROUTE) {
-      return pathname === REPORTS_LATEST_ROUTE || isReportDetailPath(pathname);
-    }
-    if (href === "/reports") {
-      return pathname === "/reports";
-    }
+    const viewerMatch = viewerActiveLink(pathname, href);
+    if (viewerMatch !== undefined) return viewerMatch;
   }
   if (href === "/reports") {
     // Exact match (not startsWith) so report subpaths hit the detail-path

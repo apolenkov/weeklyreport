@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
+import type { ReactNode } from "react";
 
 import { latestPeriodPair } from "../../../../lib/analytics-periods";
 import { deriveTrendsWindow } from "../../../../lib/trends-window";
@@ -34,7 +35,30 @@ function ChartSkeleton() {
   return <div className="h-64 w-full animate-pulse rounded-md bg-muted/50" />;
 }
 
-export default function TrendsPage() {
+// Every chart panel is the same labelled section with a skeleton while its own
+// query is in flight; only the rendered chart differs.
+function TrendsSection({
+  headingId,
+  title,
+  isLoading,
+  children,
+}: {
+  readonly headingId: string;
+  readonly title: string;
+  readonly isLoading: boolean;
+  readonly children: ReactNode;
+}) {
+  return (
+    <section aria-labelledby={headingId}>
+      <h2 id={headingId} className="mb-3 text-lg font-medium">
+        {title}
+      </h2>
+      {isLoading ? <ChartSkeleton /> : children}
+    </section>
+  );
+}
+
+function useTrendsQueries() {
   const trpc = useTRPC();
   // Window relative to now — seed period-ends and real reports keep advancing.
   const { periodFrom, periodTo } = deriveTrendsWindow(new Date());
@@ -61,6 +85,12 @@ export default function TrendsPage() {
     enabled: periodPair !== null,
   });
 
+  return { history, historyData, velocity, comparison };
+}
+
+export default function TrendsPage() {
+  const { history, historyData, velocity, comparison } = useTrendsQueries();
+
   return (
     <main
       id="main-content"
@@ -68,38 +98,35 @@ export default function TrendsPage() {
     >
       <h1 className="text-2xl font-semibold">Trends</h1>
 
-      <section aria-labelledby="trends-history-heading">
-        <h2 id="trends-history-heading" className="mb-3 text-lg font-medium">
-          Traffic-light history
-        </h2>
-        {history.isLoading ? (
-          <ChartSkeleton />
-        ) : historyData !== undefined ? (
+      <TrendsSection
+        headingId="trends-history-heading"
+        title="Traffic-light history"
+        isLoading={history.isLoading}
+      >
+        {historyData !== undefined ? (
           <TrafficLightHistoryChart {...historyData} />
         ) : null}
-      </section>
+      </TrendsSection>
 
-      <section aria-labelledby="trends-velocity-heading">
-        <h2 id="trends-velocity-heading" className="mb-3 text-lg font-medium">
-          Lead velocity
-        </h2>
-        {velocity.isLoading ? (
-          <ChartSkeleton />
-        ) : velocity.data !== undefined ? (
+      <TrendsSection
+        headingId="trends-velocity-heading"
+        title="Lead velocity"
+        isLoading={velocity.isLoading}
+      >
+        {velocity.data !== undefined ? (
           <LeadVelocityChart rows={velocity.data} />
         ) : null}
-      </section>
+      </TrendsSection>
 
-      <section aria-labelledby="trends-comparison-heading">
-        <h2 id="trends-comparison-heading" className="mb-3 text-lg font-medium">
-          Period comparison
-        </h2>
-        {comparison.isLoading ? (
-          <ChartSkeleton />
-        ) : comparison.data !== undefined ? (
+      <TrendsSection
+        headingId="trends-comparison-heading"
+        title="Period comparison"
+        isLoading={comparison.isLoading}
+      >
+        {comparison.data !== undefined ? (
           <PeriodComparisonChart {...comparison.data} />
         ) : null}
-      </section>
+      </TrendsSection>
     </main>
   );
 }

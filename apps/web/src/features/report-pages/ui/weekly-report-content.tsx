@@ -49,51 +49,52 @@ export interface ReportContentProps {
   readonly scrollTargetProductId: string | undefined;
 }
 
-// Empty-state keys off FULL content (head-report-visibility), never the
-// submitted count; otherwise review surfaces + submitted-only-filtered accordion.
-export function ReportContent({
-  hasAnyContent,
-  periodStatus,
+function NoSubmissionsEmptyState({
   periodLabel,
-  scope,
-  activitySections,
-  portfolio,
-  leadOverviewRows,
+}: {
+  readonly periodLabel: string;
+}) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] py-16 text-center"
+      data-testid="empty-submissions-state"
+    >
+      <p className="text-base font-semibold text-[var(--color-foreground)]">
+        No submissions yet for {periodLabel}
+      </p>
+      <p className="mt-1.5 text-sm text-[var(--color-muted-foreground)]">
+        Leads have not filed their sections for this period.
+      </p>
+      <Link
+        href="/reports?tab=published"
+        className="mt-4 text-sm font-medium text-[var(--color-primary)] underline-offset-4 hover:underline"
+      >
+        View archived reports in Archive &rarr;
+      </Link>
+    </div>
+  );
+}
+
+type ReportTopSurfacesProps = Pick<
+  ReportContentProps,
+  | "reviewModel"
+  | "reportId"
+  | "scope"
+  | "portfolio"
+  | "leadOverviewRows"
+  | "activitySections"
+  | "submittedOnly"
+>;
+
+function ReportTopSurfaces({
   reviewModel,
   reportId,
-  accordion,
-  reviewEnabled,
-  canReviewAny,
-  reviewMode,
-  onReviewModeChange,
+  scope,
+  portfolio,
+  leadOverviewRows,
+  activitySections,
   submittedOnly,
-  submissionFilter,
-  onFilterChange,
-  focusedProductId,
-  scrollTargetProductId,
-}: ReportContentProps) {
-  if (!hasAnyContent && periodStatus !== "published") {
-    return (
-      <div
-        className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] py-16 text-center"
-        data-testid="empty-submissions-state"
-      >
-        <p className="text-base font-semibold text-[var(--color-foreground)]">
-          No submissions yet for {periodLabel}
-        </p>
-        <p className="mt-1.5 text-sm text-[var(--color-muted-foreground)]">
-          Leads have not filed their sections for this period.
-        </p>
-        <Link
-          href="/reports?tab=published"
-          className="mt-4 text-sm font-medium text-[var(--color-primary)] underline-offset-4 hover:underline"
-        >
-          View archived reports in Archive &rarr;
-        </Link>
-      </div>
-    );
-  }
-
+}: ReportTopSurfacesProps) {
   return (
     <>
       {/* Viewer acknowledge band; head/admin use the header Publish cluster. */}
@@ -120,38 +121,78 @@ export function ReportContent({
             : activitySections
         }
       />
+    </>
+  );
+}
 
-      {/* Submitted|All filter for access-holders on a live period. */}
-      {reviewEnabled ? (
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
-            Sections
-          </span>
-          <div className="flex items-center gap-2">
-            {canReviewAny ? (
-              <ReviewModeToggle
-                value={reviewMode}
-                onChange={onReviewModeChange}
-              />
-            ) : null}
-            <SubmissionFilterToggle
-              value={submissionFilter}
-              onChange={onFilterChange}
-            />
-          </div>
-        </div>
-      ) : null}
+type SectionsToolbarProps = Pick<
+  ReportContentProps,
+  | "canReviewAny"
+  | "reviewMode"
+  | "onReviewModeChange"
+  | "submissionFilter"
+  | "onFilterChange"
+>;
+
+// Submitted|All filter for access-holders on a live period.
+function SectionsToolbar({
+  canReviewAny,
+  reviewMode,
+  onReviewModeChange,
+  submissionFilter,
+  onFilterChange,
+}: SectionsToolbarProps) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
+        Sections
+      </span>
+      <div className="flex items-center gap-2">
+        {canReviewAny ? (
+          <ReviewModeToggle value={reviewMode} onChange={onReviewModeChange} />
+        ) : null}
+        <SubmissionFilterToggle
+          value={submissionFilter}
+          onChange={onFilterChange}
+        />
+      </div>
+    </div>
+  );
+}
+
+type SectionsSurfaceKeys =
+  | "reviewEnabled"
+  | "reviewModel"
+  | "submittedOnly"
+  | "accordion"
+  | "scope"
+  | "focusedProductId"
+  | "scrollTargetProductId";
+
+function ReportSectionsSurface({
+  reviewEnabled,
+  reviewModel,
+  submittedOnly,
+  accordion,
+  scope,
+  focusedProductId,
+  scrollTargetProductId,
+  ...toolbar
+}: SectionsToolbarProps & Pick<ReportContentProps, SectionsSurfaceKeys>) {
+  return (
+    <>
+      {reviewEnabled ? <SectionsToolbar {...toolbar} /> : null}
 
       <ReviewModeVerdictSurface
         reviewModel={reviewModel}
-        reviewMode={reviewMode}
+        reviewMode={toolbar.reviewMode}
       />
 
       {/* Anti-empty-state when submitted-only is hiding draft content. */}
       {submittedOnly && accordion.draftCount > 0 ? (
         <DraftHiddenSignal
           count={accordion.draftCount}
-          onShowAll={() => onFilterChange("all")}
+          onShowAll={() => toolbar.onFilterChange("all")}
         />
       ) : null}
 
@@ -161,7 +202,46 @@ export function ReportContent({
         leadGroups={accordion.leadGroups}
         focusedProductId={focusedProductId}
         scrollTargetProductId={scrollTargetProductId}
-        review={reviewMode === "review" ? reviewModel.context : undefined}
+        review={
+          toolbar.reviewMode === "review" ? reviewModel.context : undefined
+        }
+      />
+    </>
+  );
+}
+
+// Empty-state keys off FULL content (head-report-visibility), never the
+// submitted count; otherwise review surfaces + submitted-only-filtered accordion.
+export function ReportContent(props: ReportContentProps) {
+  if (!props.hasAnyContent && props.periodStatus !== "published") {
+    return <NoSubmissionsEmptyState periodLabel={props.periodLabel} />;
+  }
+
+  return (
+    <>
+      <ReportTopSurfaces
+        reviewModel={props.reviewModel}
+        reportId={props.reportId}
+        scope={props.scope}
+        portfolio={props.portfolio}
+        leadOverviewRows={props.leadOverviewRows}
+        activitySections={props.activitySections}
+        submittedOnly={props.submittedOnly}
+      />
+
+      <ReportSectionsSurface
+        reviewEnabled={props.reviewEnabled}
+        reviewModel={props.reviewModel}
+        submittedOnly={props.submittedOnly}
+        accordion={props.accordion}
+        scope={props.scope}
+        focusedProductId={props.focusedProductId}
+        scrollTargetProductId={props.scrollTargetProductId}
+        canReviewAny={props.canReviewAny}
+        reviewMode={props.reviewMode}
+        onReviewModeChange={props.onReviewModeChange}
+        submissionFilter={props.submissionFilter}
+        onFilterChange={props.onFilterChange}
       />
     </>
   );

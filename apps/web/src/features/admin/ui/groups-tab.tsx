@@ -35,9 +35,9 @@ interface GroupsTabProps {
   readonly products?: MockProduct[];
 }
 
-export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
-  // only head/admin users may lead a group. Filter the candidate
-  // dropdown so leads/viewers can't be picked.
+// only head/admin users may lead a group. Filter the candidate
+// dropdown so leads/viewers can't be picked.
+function useGroupLeadCandidates(users: MockUser[]) {
   const headCandidates = useMemo(
     () => users.filter((u) => u.role === "head" || u.role === "admin"),
     [users],
@@ -46,74 +46,13 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
     () => new Map(headCandidates.map((u) => [u.id, u])),
     [headCandidates],
   );
-  const trpc = useTRPC();
-  const qc = useQueryClient();
+  return { headCandidates, headById };
+}
 
-  const [editingGroup, setEditingGroup] = useState<MockGroup | null>(null);
-  const [archiveTarget, setArchiveTarget] = useState<MockGroup | null>(null);
-  const [showDialog, setShowDialog] = useState(false);
-  const [form, setForm] = useState<GroupFormData>(EMPTY_GROUP_FORM);
+function useGroupFilters(groups: MockGroup[]) {
   const [search, setSearch] = useState("");
   const [archiveFilter, setArchiveFilter] =
     useState<ArchiveFilterValue>("active");
-
-  const saveGroupMut = useMutation(
-    trpc.admin.saveReportingGroup.mutationOptions({
-      onSuccess: () => {
-        invalidateAdmin(qc, trpc);
-        toast.success("Group saved");
-        setShowDialog(false);
-      },
-      onError: (err) => {
-        toast.error(err.message);
-      },
-    }),
-  );
-
-  const archiveGroupMut = useMutation(
-    trpc.admin.archiveReportingGroup.mutationOptions({
-      onSuccess: () => {
-        invalidateAdmin(qc, trpc);
-        toast.success("Group archived");
-        setArchiveTarget(null);
-      },
-      onError: (err) => {
-        toast.error(err.message);
-      },
-    }),
-  );
-
-  function openAdd() {
-    setEditingGroup(null);
-    setForm(EMPTY_GROUP_FORM);
-    setShowDialog(true);
-  }
-
-  function openEdit(group: MockGroup) {
-    setEditingGroup(group);
-    setForm(formFromGroup(group));
-    setShowDialog(true);
-  }
-
-  function handleSave() {
-    saveGroupMut.mutate(
-      toReportingGroupInput(
-        {
-          ...form,
-          headUserId: form.headUserId === "" ? null : form.headUserId,
-        },
-        editingGroup?.id,
-      ),
-    );
-  }
-
-  function handleArchive() {
-    if (!archiveTarget) return;
-    archiveGroupMut.mutate({ groupId: archiveTarget.id });
-    // Close immediately (same pattern as users/reminders): the confirm dialog
-    // has no pending state, so leaving it open would allow a double-fire.
-    setArchiveTarget(null);
-  }
 
   const filteredGroups = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -128,88 +67,209 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
     });
   }, [groups, search, archiveFilter]);
 
-  const isSaving = saveGroupMut.isPending;
-  const canSave = form.name.trim().length > 0 && !isSaving;
-  const activeGroupCount = groups.filter((group) => !group.archived).length;
+  return {
+    search,
+    setSearch,
+    archiveFilter,
+    setArchiveFilter,
+    filteredGroups,
+  };
+}
+
+function useGroupDialogState() {
+  const [editingGroup, setEditingGroup] = useState<MockGroup | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<MockGroup | null>(null);
+  const [showDialog, setShowDialog] = useState(false);
+  const [form, setForm] = useState<GroupFormData>(EMPTY_GROUP_FORM);
+
+  // Add and Edit differ only by the group the form is seeded from.
+  function openDialog(group: MockGroup | null) {
+    setEditingGroup(group);
+    setForm(group === null ? EMPTY_GROUP_FORM : formFromGroup(group));
+    setShowDialog(true);
+  }
+
+  return {
+    editingGroup,
+    archiveTarget,
+    setArchiveTarget,
+    showDialog,
+    closeDialog: () => setShowDialog(false),
+    form,
+    setForm,
+    openDialog,
+  };
+}
+
+type GroupDialogState = ReturnType<typeof useGroupDialogState>;
+
+function useGroupCommands(dialog: GroupDialogState) {
+  const trpc = useTRPC();
+  const qc = useQueryClient();
+
+  const saveGroupMut = useMutation(
+    trpc.admin.saveReportingGroup.mutationOptions({
+      onSuccess: () => {
+        invalidateAdmin(qc, trpc);
+        toast.success("Group saved");
+        dialog.closeDialog();
+      },
+      onError: (err) => {
+        toast.error(err.message);
+      },
+    }),
+  );
+
+  const archiveGroupMut = useMutation(
+    trpc.admin.archiveReportingGroup.mutationOptions({
+      onSuccess: () => {
+        invalidateAdmin(qc, trpc);
+        toast.success("Group archived");
+        dialog.setArchiveTarget(null);
+      },
+      onError: (err) => {
+        toast.error(err.message);
+      },
+    }),
+  );
+
+  const { form, editingGroup, archiveTarget } = dialog;
+
+  return {
+    isSaving: saveGroupMut.isPending,
+    save: () =>
+      saveGroupMut.mutate(
+        toReportingGroupInput(
+          {
+            ...form,
+            headUserId: form.headUserId === "" ? null : form.headUserId,
+          },
+          editingGroup?.id,
+        ),
+      ),
+    archive: () => {
+      if (!archiveTarget) return;
+      archiveGroupMut.mutate({ groupId: archiveTarget.id });
+      // Close immediately (same pattern as users/reminders): the confirm dialog
+      // has no pending state, so leaving it open would allow a double-fire.
+      dialog.setArchiveTarget(null);
+    },
+  };
+}
+
+function useGroupsTab(groups: MockGroup[], users: MockUser[]) {
+  const { headCandidates, headById } = useGroupLeadCandidates(users);
+  const filters = useGroupFilters(groups);
+  const dialog = useGroupDialogState();
+  const commands = useGroupCommands(dialog);
+
+  return {
+    headCandidates,
+    headById,
+    filters,
+    dialog,
+    commands,
+    activeGroupCount: groups.filter((group) => !group.archived).length,
+  };
+}
+
+type GroupsTabModel = ReturnType<typeof useGroupsTab>;
+
+// Admin UI uses "Group/Groups" wording; the Prisma model
+// (ReportingGroup) and test ids keep the original naming.
+function GroupsTabHeader({
+  tab,
+  totalCount,
+}: {
+  readonly tab: GroupsTabModel;
+  readonly totalCount: number;
+}) {
+  const { filters } = tab;
+  return (
+    <TabHeader
+      title="Groups"
+      description={`Reporting groups (organisational units). ${tab.activeGroupCount} active.`}
+      count={`${totalCount} groups`}
+      search={
+        <>
+          <TabFilter
+            value={filters.archiveFilter}
+            onChange={(v) => filters.setArchiveFilter(v as ArchiveFilterValue)}
+            options={ARCHIVE_OPTIONS}
+            testId="groups-archive-filter"
+            ariaLabel="Filter by archive status"
+          />
+          <TabSearch
+            value={filters.search}
+            onChange={filters.setSearch}
+            placeholder="Search groups…"
+            testId="groups-search"
+            ariaLabel="Search groups"
+          />
+        </>
+      }
+      actions={
+        <button
+          type="button"
+          onClick={() => tab.dialog.openDialog(null)}
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+          aria-label="Add group"
+        >
+          <PlusIcon />
+          Add Group
+        </button>
+      }
+    />
+  );
+}
+
+export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
+  const tab = useGroupsTab(groups, users);
+  const { dialog, commands, filters } = tab;
 
   return (
     <>
       <div className="space-y-4" data-testid="groups-tab">
-        {/* Admin UI uses "Group/Groups" wording; the Prisma model
-            (ReportingGroup) and test ids keep the original naming. */}
-        <TabHeader
-          title="Groups"
-          description={`Reporting groups (organisational units). ${activeGroupCount} active.`}
-          count={`${groups.length} groups`}
-          search={
-            <>
-              <TabFilter
-                value={archiveFilter}
-                onChange={(v) => setArchiveFilter(v as ArchiveFilterValue)}
-                options={ARCHIVE_OPTIONS}
-                testId="groups-archive-filter"
-                ariaLabel="Filter by archive status"
-              />
-              <TabSearch
-                value={search}
-                onChange={setSearch}
-                placeholder="Search groups…"
-                testId="groups-search"
-                ariaLabel="Search groups"
-              />
-            </>
-          }
-          actions={
-            <button
-              type="button"
-              onClick={openAdd}
-              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
-              aria-label="Add group"
-            >
-              <PlusIcon />
-              Add Group
-            </button>
-          }
-        />
+        <GroupsTabHeader tab={tab} totalCount={groups.length} />
 
         <GroupsTable
-          groups={filteredGroups}
-          headById={headById}
-          activeGroupCount={activeGroupCount}
-          onEdit={openEdit}
-          onArchive={setArchiveTarget}
+          groups={filters.filteredGroups}
+          headById={tab.headById}
+          activeGroupCount={tab.activeGroupCount}
+          onEdit={dialog.openDialog}
+          onArchive={dialog.setArchiveTarget}
         />
 
-        {filteredGroups.length === 0 && (
+        {filters.filteredGroups.length === 0 && (
           <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
             No groups match the search.
           </div>
         )}
       </div>
 
-      {showDialog && (
+      {dialog.showDialog && (
         <GroupEditDialog
-          editingGroup={editingGroup}
-          form={form}
-          onFormChange={setForm}
-          headCandidates={headCandidates}
+          editingGroup={dialog.editingGroup}
+          form={dialog.form}
+          onFormChange={dialog.setForm}
+          headCandidates={tab.headCandidates}
           products={products}
-          canSave={canSave}
-          isSaving={isSaving}
-          onSave={handleSave}
-          onClose={() => setShowDialog(false)}
+          canSave={dialog.form.name.trim().length > 0 && !commands.isSaving}
+          isSaving={commands.isSaving}
+          onSave={commands.save}
+          onClose={dialog.closeDialog}
         />
       )}
 
       <ConfirmDeleteDialog
-        open={archiveTarget !== null}
+        open={dialog.archiveTarget !== null}
         title="Archive Group?"
-        preview={archiveTarget ? archiveTarget.name : ""}
+        preview={dialog.archiveTarget ? dialog.archiveTarget.name : ""}
         subtitle="Existing users keep the group, but new users cannot select it."
         reversible
         confirmLabel="Archive"
-        onConfirm={handleArchive}
-        onCancel={() => setArchiveTarget(null)}
+        onConfirm={commands.archive}
+        onCancel={() => dialog.setArchiveTarget(null)}
       />
     </>
   );

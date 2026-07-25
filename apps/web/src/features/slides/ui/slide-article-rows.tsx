@@ -1,4 +1,4 @@
-import { type KeyboardEvent } from "react";
+import { type KeyboardEvent, type ReactNode } from "react";
 
 import type {
   GridAuthor,
@@ -42,6 +42,42 @@ function useRowActivation({
   return { activatable, activate, handleKeyDown };
 }
 
+/** The clamped two-line row text. Only a row with editable lineage becomes a
+ * role="button" target; an inert row keeps the identical box. */
+function RowBody({
+  activatable,
+  ariaLabel,
+  onActivate,
+  onKeyDown,
+  children,
+}: {
+  readonly activatable: boolean;
+  readonly ariaLabel: string;
+  readonly onActivate: () => void;
+  readonly onKeyDown: (event: KeyboardEvent<HTMLSpanElement>) => void;
+  readonly children: ReactNode;
+}) {
+  if (!activatable) {
+    return (
+      <span className="line-clamp-2 min-h-[34px] whitespace-normal break-words">
+        {children}
+      </span>
+    );
+  }
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label={ariaLabel}
+      onDoubleClick={onActivate}
+      onKeyDown={onKeyDown}
+      className="line-clamp-2 min-h-[34px] cursor-pointer whitespace-normal break-words rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"
+    >
+      {children}
+    </span>
+  );
+}
+
 function ItemRow({
   row,
   author,
@@ -78,22 +114,14 @@ function ItemRow({
       className={`min-w-0 rounded-md border px-2 py-1 text-[13px] leading-[1.3] ${TONE_BORDER[row.tone]}`}
     >
       {/* min-h = 2 lines at 13px x 1.3 line-height. */}
-      {activatable ? (
-        <span
-          role="button"
-          tabIndex={0}
-          aria-label={`Edit ${row.hoverLabel}: ${row.text}`}
-          onDoubleClick={activate}
-          onKeyDown={handleKeyDown}
-          className="line-clamp-2 min-h-[34px] cursor-pointer whitespace-normal break-words rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"
-        >
-          {content}
-        </span>
-      ) : (
-        <span className="line-clamp-2 min-h-[34px] whitespace-normal break-words">
-          {content}
-        </span>
-      )}
+      <RowBody
+        activatable={activatable}
+        ariaLabel={`Edit ${row.hoverLabel}: ${row.text}`}
+        onActivate={activate}
+        onKeyDown={handleKeyDown}
+      >
+        {content}
+      </RowBody>
     </li>
   );
 }

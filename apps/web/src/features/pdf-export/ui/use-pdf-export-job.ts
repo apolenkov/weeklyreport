@@ -71,40 +71,29 @@ export function usePdfExportJob({
 
   useEffect(() => {
     if (jobId === null) return;
+    const outcome = readJobOutcome(statusQ.isError, statusQ.data);
+    if (outcome === null) return;
 
-    if (statusQ.isError) {
+    if (outcome.kind === "failed") {
       closeHeldTab(openedTabRef);
       deliveryModeRef.current = null;
-      toast.error("PDF export status check failed. Please try again.");
+      toast.error(outcome.message);
       // eslint-disable-next-line react-hooks/set-state-in-effect -- polling pipeline reacting to the export job's server status — external-system sync owns this state
       setJobId(null);
       return;
     }
 
-    const data = statusQ.data;
-    if (!data) return;
-
-    if (data.status === "completed" && data.artifactUrl) {
-      if (lastDownloadedJobIdRef.current === data.jobId) return;
-      lastDownloadedJobIdRef.current = data.jobId;
-      deliverArtifact(
-        data.artifactUrl,
-        deliveryModeRef,
-        openedTabRef,
-        setFallbackUrl,
-      );
-      deliveryModeRef.current = null;
-      openedTabRef.current = null;
-      setJobId(null);
-      return;
-    }
-
-    if (data.status === "failed") {
-      closeHeldTab(openedTabRef);
-      deliveryModeRef.current = null;
-      toast.error("PDF export failed. Please try again.");
-      setJobId(null);
-    }
+    if (lastDownloadedJobIdRef.current === outcome.jobId) return;
+    lastDownloadedJobIdRef.current = outcome.jobId;
+    deliverArtifact(
+      outcome.artifactUrl,
+      deliveryModeRef,
+      openedTabRef,
+      setFallbackUrl,
+    );
+    deliveryModeRef.current = null;
+    openedTabRef.current = null;
+    setJobId(null);
   }, [statusQ.data, statusQ.isError, jobId]);
 
   const isExportable = periodStatus === "published";
@@ -114,19 +103,56 @@ export function usePdfExportJob({
   function handleExport() {
     if (disabled) return;
     setFallbackUrl(null);
-    // Must open before any await so the browser still treats this as a user gesture.
-    const tab = window.open("", "_blank");
-    if (tab === null) {
-      deliveryModeRef.current = "fallback";
-      openedTabRef.current = null;
-    } else {
-      deliveryModeRef.current = "tab";
-      openedTabRef.current = tab;
-    }
+    openDeliveryTab(deliveryModeRef, openedTabRef);
     requestMut.mutate({ reportId });
   }
 
   return { isExportable, isGenerating, disabled, fallbackUrl, handleExport };
+}
+
+type JobOutcome =
+  | { readonly kind: "failed"; readonly message: string }
+  | {
+      readonly kind: "completed";
+      readonly jobId: string;
+      readonly artifactUrl: string;
+    };
+
+// null means "keep polling": no status yet, or the job is still queued.
+function readJobOutcome(
+  isError: boolean,
+  data:
+    { status: string; jobId: string; artifactUrl?: string | null } | undefined,
+): JobOutcome | null {
+  if (isError) {
+    return {
+      kind: "failed",
+      message: "PDF export status check failed. Please try again.",
+    };
+  }
+  if (!data) return null;
+  if (data.status === "completed" && data.artifactUrl) {
+    return {
+      kind: "completed",
+      jobId: data.jobId,
+      artifactUrl: data.artifactUrl,
+    };
+  }
+  if (data.status === "failed") {
+    return { kind: "failed", message: "PDF export failed. Please try again." };
+  }
+  return null;
+}
+
+// Must open before any await so the browser still treats this as a user
+// gesture; a blocked popup (null) switches delivery to the fallback link.
+function openDeliveryTab(
+  deliveryModeRef: { current: DeliveryMode | null },
+  openedTabRef: { current: Window | null },
+): void {
+  const tab = window.open("", "_blank");
+  deliveryModeRef.current = tab === null ? "fallback" : "tab";
+  openedTabRef.current = tab;
 }
 
 function closeHeldTab(ref: { current: Window | null }): void {

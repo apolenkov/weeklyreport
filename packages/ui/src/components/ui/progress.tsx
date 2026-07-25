@@ -4,6 +4,10 @@ import { cn } from "@customreport/ui/lib/utils";
 import { Progress as ProgressPrimitive } from "radix-ui";
 import type * as React from "react";
 
+// Radix reports progress as a 0-100 percentage; the indicator is a full-width bar
+// slid left by the remaining share, so 100 is the "complete" end of that scale.
+const PROGRESS_COMPLETE_PERCENT = 100;
+
 function Progress({
   className,
   value,
@@ -21,7 +25,9 @@ function Progress({
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"
         className="h-full w-full flex-1 bg-primary transition-all"
-        style={{ transform: `translateX(-${100 - (value ?? 0)}%)` }}
+        style={{
+          transform: `translateX(-${PROGRESS_COMPLETE_PERCENT - (value ?? 0)}%)`,
+        }}
       />
     </ProgressPrimitive.Root>
   );

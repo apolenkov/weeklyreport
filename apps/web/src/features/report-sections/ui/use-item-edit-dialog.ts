@@ -19,67 +19,17 @@ interface UseItemEditDialogArgs {
   readonly onCancel: () => void;
 }
 
-export function useItemEditDialog({
-  item,
-  products,
-  activities,
-  week,
-  currentUserName,
-  defaultProductId,
-  defaultActivityId,
-  stagesForProduct,
-  ownPeriodRanks,
-  risks,
-  onSave,
-  onCancel,
-}: UseItemEditDialogArgs) {
-  const formState = useItemEditFormState({
-    item,
-    products,
-    activities,
-    week,
-    currentUserName,
-    defaultProductId,
-    defaultActivityId,
-    onCancel,
-  });
+type ItemEditFormState = ReturnType<typeof useItemEditFormState>;
+type ItemEditDerived = ReturnType<typeof deriveItemEditFields>;
+type ItemEditSave = ReturnType<typeof useItemEditSave>;
 
-  const derived = deriveItemEditFields({
-    isCreate: formState.isCreate,
-    item,
-    initial: formState.initial,
-    parent: formState.parent,
-    products,
-    activities,
-    stageIds: formState.stageIds,
-    stagesForProduct,
-    ownPeriodRanks,
-    status: formState.status,
-    risks,
-  });
-
-  const { setParentAndStages, handleSave, handleKeyDown } = useItemEditSave({
-    item,
-    initial: formState.initial,
-    products,
-    currentUserName,
-    dialogSurfaceRef: formState.dialogSurfaceRef,
-    text: formState.text,
-    status: formState.status,
-    pausedReason: formState.pausedReason,
-    priorityRank: formState.priorityRank,
-    parent: formState.parent,
-    selectedActivity: derived.selectedActivity,
-    isActivityParent: derived.isActivityParent,
-    isDeadEnd: derived.isDeadEnd,
-    availableStages: derived.availableStages,
-    effectiveStageIds: derived.effectiveStageIds,
-    setParent: formState.setParent,
-    setStageIds: formState.setStageIds,
-    setErrors: formState.setErrors,
-    onSave,
-  });
-
+// The dialog's whole surface. Every editable field clears its own validation
+// error on change, so a corrected field stops complaining before save.
+function buildItemEditHandle(
+  formState: ItemEditFormState,
+  derived: ItemEditDerived,
+  save: ItemEditSave,
+) {
   return {
     dialogSurfaceRef: formState.dialogSurfaceRef,
     headerVerb: derived.headerVerb,
@@ -95,7 +45,7 @@ export function useItemEditDialog({
     rankOptions: derived.rankOptions,
     takenRanks: derived.takenRanks,
     parent: formState.parent,
-    onParentChange: setParentAndStages,
+    onParentChange: save.setParentAndStages,
     isActivityParent: derived.isActivityParent,
     stageIds: formState.stageIds,
     availableStages: derived.availableStages,
@@ -114,7 +64,58 @@ export function useItemEditDialog({
       formState.setPausedReason(next);
       formState.setErrors((prev) => ({ ...prev, pausedReason: undefined }));
     },
-    handleSave,
-    handleKeyDown,
+    handleSave: save.handleSave,
+    handleKeyDown: save.handleKeyDown,
   };
+}
+
+export function useItemEditDialog(args: UseItemEditDialogArgs) {
+  const formState = useItemEditFormState({
+    item: args.item,
+    products: args.products,
+    activities: args.activities,
+    week: args.week,
+    currentUserName: args.currentUserName,
+    defaultProductId: args.defaultProductId,
+    defaultActivityId: args.defaultActivityId,
+    onCancel: args.onCancel,
+  });
+
+  const derived = deriveItemEditFields({
+    isCreate: formState.isCreate,
+    item: args.item,
+    initial: formState.initial,
+    parent: formState.parent,
+    products: args.products,
+    activities: args.activities,
+    stageIds: formState.stageIds,
+    stagesForProduct: args.stagesForProduct,
+    ownPeriodRanks: args.ownPeriodRanks,
+    status: formState.status,
+    risks: args.risks,
+  });
+
+  const save = useItemEditSave({
+    item: args.item,
+    initial: formState.initial,
+    products: args.products,
+    currentUserName: args.currentUserName,
+    dialogSurfaceRef: formState.dialogSurfaceRef,
+    text: formState.text,
+    status: formState.status,
+    pausedReason: formState.pausedReason,
+    priorityRank: formState.priorityRank,
+    parent: formState.parent,
+    selectedActivity: derived.selectedActivity,
+    isActivityParent: derived.isActivityParent,
+    isDeadEnd: derived.isDeadEnd,
+    availableStages: derived.availableStages,
+    effectiveStageIds: derived.effectiveStageIds,
+    setParent: formState.setParent,
+    setStageIds: formState.setStageIds,
+    setErrors: formState.setErrors,
+    onSave: args.onSave,
+  });
+
+  return buildItemEditHandle(formState, derived, save);
 }

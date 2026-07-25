@@ -20,6 +20,51 @@ type ConfirmState =
 
 const CONFIRM_HOLD_MS = 2400;
 
+// Confirmation feedback owns the label while it holds; `null` hands the label
+// back to the busy/idle pair.
+const CONFIRM_LABELS: Record<ConfirmState, string | null> = {
+  idle: null,
+  sent: "Sent",
+  already: "Already sent",
+  [NO_SECTION_CONFIRM_STATE]: "No sections matched",
+  error: "Retry",
+};
+
+// aria-live surfaces sent/error transitions to assistive tech without
+// duplicating the button label (sr-only sibling avoids visual noise).
+const CONFIRM_LIVE_MESSAGES: Record<
+  ConfirmState,
+  (leadName: string) => string
+> = {
+  idle: () => "",
+  sent: (leadName) => `Reminder sent to ${leadName}`,
+  already: (leadName) => `Reminder already sent to ${leadName} this cycle`,
+  [NO_SECTION_CONFIRM_STATE]: (leadName) =>
+    `No sections matched this lead for ${leadName}`,
+  error: (leadName) => `Reminder to ${leadName} failed; retry available`,
+};
+
+// States where re-sending is pointless or would duplicate: the button locks.
+const SETTLED_CONFIRM_STATES: ReadonlySet<ConfirmState> = new Set<ConfirmState>(
+  ["sent", "already", NO_SECTION_CONFIRM_STATE],
+);
+
+// Only a delivered/deduplicated reminder earns the check glyph.
+const CHECKED_CONFIRM_STATES: ReadonlySet<ConfirmState> = new Set<ConfirmState>(
+  ["sent", "already"],
+);
+
+const confirmStateFromDispatch = (result: {
+  readonly reason?: string;
+  readonly dispatched: number;
+  readonly alreadySent: number;
+}): ConfirmState => {
+  if (result.reason === "no-matching-section") return NO_SECTION_CONFIRM_STATE;
+  if (result.dispatched > 0) return "sent";
+  if (result.alreadySent > 0) return "already";
+  return "error";
+};
+
 // Client never sees lead emails — backend resolves rule, recipient, and dedupe.
 export function RemindLeadButton({
   reportId,
@@ -55,15 +100,7 @@ export function RemindLeadButton({
     // eslint-disable-next-line react-hooks/refs -- refs are touched inside mutation callbacks (event time); the options factory just runs during render
     trpc.reminders.dispatchPending.mutationOptions({
       onSuccess: (result) => {
-        if (result.reason === "no-matching-section") {
-          setConfirm(NO_SECTION_CONFIRM_STATE);
-        } else if (result.dispatched > 0) {
-          setConfirm("sent");
-        } else if (result.alreadySent > 0) {
-          setConfirm("already");
-        } else {
-          setConfirm("error");
-        }
+        setConfirm(confirmStateFromDispatch(result));
         onMutated();
         scheduleReset();
       },
@@ -79,50 +116,22 @@ export function RemindLeadButton({
   };
 
   const busy = mutation.isPending;
-  const label =
-    confirm === "sent"
-      ? "Sent"
-      : confirm === "already"
-        ? "Already sent"
-        : confirm === NO_SECTION_CONFIRM_STATE
-          ? "No sections matched"
-          : confirm === "error"
-            ? "Retry"
-            : busy
-              ? "Sending"
-              : "Remind";
-
-  // aria-live surfaces sent/error transitions to assistive tech without
-  // duplicating the button label (sr-only sibling avoids visual noise).
-  const liveMessage =
-    confirm === "sent"
-      ? `Reminder sent to ${leadName}`
-      : confirm === "already"
-        ? `Reminder already sent to ${leadName} this cycle`
-        : confirm === NO_SECTION_CONFIRM_STATE
-          ? `No sections matched this lead for ${leadName}`
-          : confirm === "error"
-            ? `Reminder to ${leadName} failed; retry available`
-            : "";
+  const label = CONFIRM_LABELS[confirm] ?? (busy ? "Sending" : "Remind");
+  const liveMessage = CONFIRM_LIVE_MESSAGES[confirm](leadName);
 
   return (
     <>
       <button
         type="button"
         onClick={handleClick}
-        disabled={
-          busy ||
-          confirm === "sent" ||
-          confirm === "already" ||
-          confirm === NO_SECTION_CONFIRM_STATE
-        }
+        disabled={busy || SETTLED_CONFIRM_STATES.has(confirm)}
         aria-busy={busy}
         aria-label={`Send reminder to ${leadName}`}
         title={`Send reminder to ${leadName}`}
         data-testid="remind-lead-button"
         className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-2 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-default disabled:opacity-60 max-md:min-h-[var(--touch-target-min)]"
       >
-        {confirm === "sent" || confirm === "already" ? (
+        {CHECKED_CONFIRM_STATES.has(confirm) ? (
           <Check size={12} strokeWidth={2.5} aria-hidden="true" />
         ) : busy ? (
           <BellRing size={12} strokeWidth={2} aria-hidden="true" />

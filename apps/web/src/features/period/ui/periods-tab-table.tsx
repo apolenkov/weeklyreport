@@ -20,15 +20,35 @@ export interface PeriodTableProps {
   readonly onEdit: (row: PeriodListItem) => void;
 }
 
+const PERIOD_COLUMN_HEADINGS = [
+  "Period",
+  "State",
+  "Progress",
+  "Deadline",
+] as const;
+
+function PeriodTableHeaderRow() {
+  return (
+    <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
+      {PERIOD_COLUMN_HEADINGS.map((heading) => (
+        <th
+          key={heading}
+          className="px-4 py-3 font-semibold text-[var(--color-foreground)]"
+        >
+          {heading}
+        </th>
+      ))}
+      <th className="px-4 py-3 text-right font-semibold text-[var(--color-foreground)]">
+        Actions
+      </th>
+    </tr>
+  );
+}
+
 export function PeriodTable({
   rows,
   testIdPrefix,
-  onPublish,
-  onReopen,
-  onArchive,
-  onUnarchive,
-  onDelete,
-  onEdit,
+  ...actions
 }: PeriodTableProps) {
   return (
     <div
@@ -37,23 +57,7 @@ export function PeriodTable({
     >
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
-            <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-              Period
-            </th>
-            <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-              State
-            </th>
-            <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-              Progress
-            </th>
-            <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-              Deadline
-            </th>
-            <th className="px-4 py-3 text-right font-semibold text-[var(--color-foreground)]">
-              Actions
-            </th>
-          </tr>
+          <PeriodTableHeaderRow />
         </thead>
         <tbody>
           {rows.map((row) => (
@@ -61,12 +65,7 @@ export function PeriodTable({
               key={row.id}
               row={row}
               testIdPrefix={testIdPrefix}
-              onPublish={onPublish}
-              onReopen={onReopen}
-              onArchive={onArchive}
-              onUnarchive={onUnarchive}
-              onDelete={onDelete}
-              onEdit={onEdit}
+              {...actions}
             />
           ))}
         </tbody>
@@ -75,15 +74,27 @@ export function PeriodTable({
   );
 }
 
+// State pill plus the "reopened" marker — the only cell with two signals.
+function PeriodStateCell({ row }: { readonly row: PeriodListItem }) {
+  return (
+    <td className="px-4 py-3">
+      <StateBadge state={row.periodState} />
+      {row.periodStatus === "reopened" && (
+        <span
+          className="ml-2 inline-flex items-center rounded-[var(--radius-pill)] bg-[#fef3c7] px-2 py-0.5 text-[10px] font-semibold uppercase text-[#92400e]"
+          data-testid={`periods-row-${row.id}-reopened-badge`}
+        >
+          reopened
+        </span>
+      )}
+    </td>
+  );
+}
+
 function PeriodRow({
   row,
   testIdPrefix,
-  onPublish,
-  onReopen,
-  onArchive,
-  onUnarchive,
-  onDelete,
-  onEdit,
+  ...actions
 }: {
   readonly row: PeriodListItem;
   readonly testIdPrefix: "active" | "archive";
@@ -102,17 +113,7 @@ function PeriodRow({
       <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">
         {periodLabel}
       </td>
-      <td className="px-4 py-3">
-        <StateBadge state={row.periodState} />
-        {row.periodStatus === "reopened" && (
-          <span
-            className="ml-2 inline-flex items-center rounded-[var(--radius-pill)] bg-[#fef3c7] px-2 py-0.5 text-[10px] font-semibold uppercase text-[#92400e]"
-            data-testid={`periods-row-${row.id}-reopened-badge`}
-          >
-            reopened
-          </span>
-        )}
-      </td>
+      <PeriodStateCell row={row} />
       <td className="px-4 py-3">
         <ProgressBadge
           submitted={row.submittedCount}
@@ -124,35 +125,36 @@ function PeriodRow({
         {row.deadline === null ? "No deadline" : formatDate(row.deadline)}
       </td>
       <td className="px-4 py-3 text-right">
-        <ActionIconRow
-          row={row}
-          onPublish={onPublish}
-          onReopen={onReopen}
-          onArchive={onArchive}
-          onUnarchive={onUnarchive}
-          onDelete={onDelete}
-          onEdit={onEdit}
-        />
+        <ActionIconRow row={row} {...actions} />
       </td>
     </tr>
   );
 }
 
+// Admin-table chip tones for the states the design tokens do not cover yet
+// (only success/primary have tokens). Background + foreground are paired so a
+// tone is picked as one unit and contrast never drifts.
+const CHIP_TONE = {
+  neutral: { bg: "#e5e7eb", text: "#374151" },
+  brand: { bg: "var(--color-success)", text: "var(--color-primary)" },
+  violet: { bg: "#e8e0f0", text: "#6b21a8" },
+  muted: { bg: "#f3f4f6", text: "#6b7280" },
+  amber: { bg: "#fef3c7", text: "#92400e" },
+  red: { bg: "#fee2e2", text: "#991b1b" },
+} as const;
+
+const STATE_BADGE_STYLES: Record<
+  PeriodState,
+  { bg: string; text: string; label: string }
+> = {
+  scheduled: { ...CHIP_TONE.neutral, label: "scheduled" },
+  open: { ...CHIP_TONE.brand, label: "open" },
+  published: { ...CHIP_TONE.violet, label: "published" },
+  archived: { ...CHIP_TONE.muted, label: "archived" },
+};
+
 function StateBadge({ state }: { readonly state: PeriodState }) {
-  const styles: Record<
-    PeriodState,
-    { bg: string; text: string; label: string }
-  > = {
-    scheduled: { bg: "#e5e7eb", text: "#374151", label: "scheduled" },
-    open: {
-      bg: "var(--color-success)",
-      text: "var(--color-primary)",
-      label: "open",
-    },
-    published: { bg: "#e8e0f0", text: "#6b21a8", label: "published" },
-    archived: { bg: "#f3f4f6", text: "#6b7280", label: "archived" },
-  };
-  const s = styles[state];
+  const s = STATE_BADGE_STYLES[state];
   return (
     <span
       className="inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold capitalize"
@@ -165,6 +167,12 @@ function StateBadge({ state }: { readonly state: PeriodState }) {
 }
 
 const PROGRESS_AMBER_THRESHOLD = 0.5;
+
+const PROGRESS_TONE_STYLES = {
+  success: CHIP_TONE.brand,
+  amber: CHIP_TONE.amber,
+  red: CHIP_TONE.red,
+} as const;
 
 // submitted/total with a 3-tier color scale for quick scan of lagging periods.
 function ProgressBadge({
@@ -196,12 +204,7 @@ function ProgressBadge({
       : ratio >= PROGRESS_AMBER_THRESHOLD
         ? "amber"
         : "red";
-  const colors = {
-    success: { bg: "var(--color-success)", text: "var(--color-primary)" },
-    amber: { bg: "#fef3c7", text: "#92400e" },
-    red: { bg: "#fee2e2", text: "#991b1b" },
-  } as const;
-  const c = colors[tone];
+  const c = PROGRESS_TONE_STYLES[tone];
   const pending = total - submitted;
   const tooltipText =
     pending > 0

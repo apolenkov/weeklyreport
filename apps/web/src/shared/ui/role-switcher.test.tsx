@@ -95,21 +95,22 @@ describe("DevRoleSwitcher — data-reset controls for every dev role", () => {
 
 describe("DevRoleSwitcher — logout honesty", () => {
   const fetchMock = vi.fn();
-  let assignedHref: string | undefined;
+  // Spy instead of a mutable capture: the assignment history IS the assertion.
+  const hrefAssign = vi.fn<(value: string) => void>();
   const realLocation = window.location;
 
   beforeEach(() => {
     process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER = "true";
     useQueryMock.mockReset();
     useMutationMock.mockReset();
-    assignedHref = undefined;
+    hrefAssign.mockReset();
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("alert", vi.fn());
     Object.defineProperty(window, "location", {
       configurable: true,
       value: {
         set href(value: string) {
-          assignedHref = value;
+          hrefAssign(value);
         },
       },
     });
@@ -135,7 +136,7 @@ describe("DevRoleSwitcher — logout honesty", () => {
     await user.click(screen.getByTestId("dev-role-switcher-logout"));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
-    expect(assignedHref).toBeUndefined();
+    expect(hrefAssign).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(
         screen.getByTestId("dev-role-switcher-trigger"),
@@ -152,7 +153,7 @@ describe("DevRoleSwitcher — logout honesty", () => {
     await user.click(screen.getByTestId("dev-role-switcher-trigger"));
     await user.click(screen.getByTestId("dev-role-switcher-logout"));
 
-    await waitFor(() => expect(assignedHref).toBe("/"));
+    await waitFor(() => expect(hrefAssign).toHaveBeenCalledWith("/"));
   });
 });
 

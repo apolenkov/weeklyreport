@@ -41,6 +41,44 @@ import {
 const DEFAULT_PERIOD_LIST_LIMIT = 50;
 const MAX_PERIOD_LIST_LIMIT = 200;
 
+// A backwards envelope is reported through the overlap error so create and
+// patch surface one message shape for an unusable range.
+function assertEndNotBeforeStart(periodStart: Date, periodEnd: Date): void {
+  if (periodEnd.getTime() < periodStart.getTime()) {
+    throw new AdminPeriodOverlapError(
+      `periodEnd (${periodEnd.toISOString()}) is before periodStart (${periodStart.toISOString()}).`,
+    );
+  }
+}
+
+// Manual-create defaults mirror the scheduler's date math. The order here is
+// load-bearing: the envelope is resolved and validated BEFORE the deadline is
+// computed, so a backwards range always surfaces as the overlap error rather
+// than as whatever computeDeadline would raise first.
+function resolveManualPeriodEnvelope(
+  input: AdminCreatePeriodManualInput,
+  settings: AppSettings,
+): { periodEnd: Date; deadline: Date } {
+  // Manual path accepts any start day; only the scheduler is Monday-anchored.
+  const periodEnd =
+    input.periodEnd ??
+    defaultPeriodEnd(input.periodStart, settings.periodLengthDays);
+
+  assertEndNotBeforeStart(input.periodStart, periodEnd);
+
+  const deadline =
+    input.deadline ??
+    computeDeadline(
+      input.periodStart,
+      settings.defaultDeadlineDays,
+      settings.workingDays,
+      settings.defaultTimezone,
+      deadlineHourFromSetting(settings.deadlineTime),
+    );
+
+  return { periodEnd, deadline };
+}
+
 export class PeriodAdminService {
   private readonly logger: AppLogger;
 
@@ -104,26 +142,10 @@ export class PeriodAdminService {
     const settings = await this.getSettings();
     const now = options.now ?? new Date();
 
-    // Manual path accepts any start day; only the scheduler is Monday-anchored.
-    const periodEnd =
-      input.periodEnd ??
-      defaultPeriodEnd(input.periodStart, settings.periodLengthDays);
-
-    if (periodEnd.getTime() < input.periodStart.getTime()) {
-      throw new AdminPeriodOverlapError(
-        `periodEnd (${periodEnd.toISOString()}) is before periodStart (${input.periodStart.toISOString()}).`,
-      );
-    }
-
-    const deadline =
-      input.deadline ??
-      computeDeadline(
-        input.periodStart,
-        settings.defaultDeadlineDays,
-        settings.workingDays,
-        settings.defaultTimezone,
-        deadlineHourFromSetting(settings.deadlineTime),
-      );
+    const { periodEnd, deadline } = resolveManualPeriodEnvelope(
+      input,
+      settings,
+    );
 
     const conflict = await this.repository.findOverlappingPeriod({
       periodStart: input.periodStart,
@@ -194,11 +216,7 @@ export class PeriodAdminService {
       // Effective envelope (incoming where provided) so the gate matches the write.
       const effectiveStart = data.periodStart ?? existing.periodStart;
       const effectiveEnd = data.periodEnd ?? existing.periodEnd;
-      if (effectiveEnd.getTime() < effectiveStart.getTime()) {
-        throw new AdminPeriodOverlapError(
-          `periodEnd (${effectiveEnd.toISOString()}) is before periodStart (${effectiveStart.toISOString()}).`,
-        );
-      }
+      assertEndNotBeforeStart(effectiveStart, effectiveEnd);
       const conflict = await this.repository.findOverlappingPeriod({
         periodStart: effectiveStart,
         periodEnd: effectiveEnd,

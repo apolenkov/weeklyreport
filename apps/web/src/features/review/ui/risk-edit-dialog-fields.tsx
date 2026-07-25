@@ -40,114 +40,150 @@ interface RiskEditDialogFieldsProps {
   readonly onSeveritySelect: (value: RiskSeverity) => void;
 }
 
-export function RiskEditDialogFields({
-  text,
-  onTextChange,
-  textError,
-  textRef,
-  impact,
-  onImpactChange,
-  impactError,
-  impactRef,
-  mitigation,
-  onMitigationChange,
-  mitigationError,
-  mitigationRef,
-  parent,
-  products,
-  activities,
-  onParentChange,
-  isActivityParent,
-  stageIds,
-  availableStages,
+// Textarea heights: the risk statement gets one extra line over its two
+// follow-ups, which are typically one sentence each.
+const RISK_TEXT_MIN_HEIGHT_PX = 60;
+const RISK_FOLLOW_UP_MIN_HEIGHT_PX = 50;
+
+type RiskProseColumnProps = Pick<
+  RiskEditDialogFieldsProps,
+  | "text"
+  | "onTextChange"
+  | "textError"
+  | "textRef"
+  | "impact"
+  | "onImpactChange"
+  | "impactError"
+  | "impactRef"
+  | "mitigation"
+  | "onMitigationChange"
+  | "mitigationError"
+  | "mitigationRef"
+>;
+
+// Risk → Impact → Mitigation, the order a reader needs them.
+function RiskProseColumn(props: RiskProseColumnProps) {
+  return (
+    <div className="flex flex-1 flex-col gap-4">
+      <RecordTextareaField
+        id="risk-text"
+        label="Risk"
+        required
+        value={props.text}
+        onChange={props.onTextChange}
+        error={props.textError}
+        placeholder="e.g. Vendor API regression delays OAuth2 integration"
+        minHeightPx={RISK_TEXT_MIN_HEIGHT_PX}
+        // eslint-disable-next-line jsx-a11y/no-autofocus -- forwarded to RecordTextareaField, which owns the actual DOM autofocus and its own justification
+        autoFocus
+        textareaRef={props.textRef}
+      />
+      <RecordTextareaField
+        id="risk-impact"
+        label="Impact"
+        required
+        value={props.impact}
+        onChange={props.onImpactChange}
+        error={props.impactError}
+        placeholder="e.g. Delays Q3 launch by 2 weeks; 4 downstream teams idle"
+        minHeightPx={RISK_FOLLOW_UP_MIN_HEIGHT_PX}
+        textareaRef={props.impactRef}
+      />
+      <RecordTextareaField
+        id="risk-mitigation"
+        label="Mitigation"
+        required
+        value={props.mitigation}
+        onChange={props.onMitigationChange}
+        error={props.mitigationError}
+        placeholder="e.g. Vendor escalation in progress; ETA 48h"
+        minHeightPx={RISK_FOLLOW_UP_MIN_HEIGHT_PX}
+        textareaRef={props.mitigationRef}
+      />
+    </div>
+  );
+}
+
+type RiskClassificationPanelProps = Pick<
+  RiskEditDialogFieldsProps,
+  | "parent"
+  | "products"
+  | "activities"
+  | "onParentChange"
+  | "isActivityParent"
+  | "stageIds"
+  | "availableStages"
+  | "severity"
+  | "isZeroOwnedStageDeadEnd"
+  | "stageError"
+  | "onStageChange"
+  | "onSeveritySelect"
+>;
+
+function RiskClassificationPanel(props: RiskClassificationPanelProps) {
+  return (
+    <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+      <span className="block text-xs font-semibold tracking-wide text-[var(--color-muted-foreground)] uppercase">
+        Classification
+      </span>
+
+      {/* Parent first (same order as the item dialog); activity hides stages. */}
+      <ParentPicker
+        id="risk-product"
+        value={props.parent}
+        products={props.products}
+        activities={props.activities}
+        onChange={props.onParentChange}
+      />
+
+      {!props.isActivityParent && (
+        <StageStep
+          id="risk-stage"
+          stageIds={props.stageIds}
+          availableStages={props.availableStages}
+          previewSeverity={props.severity}
+          isDeadEnd={props.isZeroOwnedStageDeadEnd}
+          error={props.stageError}
+          deadEndNotice="No stages assigned — contact admin."
+          onChange={props.onStageChange}
+        />
+      )}
+
+      <SeverityChoice
+        severity={props.severity}
+        onSeveritySelect={props.onSeveritySelect}
+      />
+    </div>
+  );
+}
+
+function SeverityChoice({
   severity,
-  isZeroOwnedStageDeadEnd,
-  stageError,
-  onStageChange,
   onSeveritySelect,
-}: RiskEditDialogFieldsProps) {
+}: Pick<RiskEditDialogFieldsProps, "severity" | "onSeveritySelect">) {
+  return (
+    <div>
+      <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
+        Severity
+      </span>
+      <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
+        <strong>At Risk</strong> = needs attention; <strong>Blocked</strong> =
+        work stopped.
+      </p>
+      <ChoiceChipRow
+        choices={SEVERITY_CHOICES}
+        value={severity}
+        onSelect={onSeveritySelect}
+      />
+    </div>
+  );
+}
+
+export function RiskEditDialogFields(props: RiskEditDialogFieldsProps) {
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-stretch">
-      <div className="flex flex-1 flex-col gap-4">
-        <RecordTextareaField
-          id="risk-text"
-          label="Risk"
-          required
-          value={text}
-          onChange={onTextChange}
-          error={textError}
-          placeholder="e.g. Vendor API regression delays OAuth2 integration"
-          minHeightPx={60}
-          // eslint-disable-next-line jsx-a11y/no-autofocus -- forwarded to RecordTextareaField, which owns the actual DOM autofocus and its own justification
-          autoFocus
-          textareaRef={textRef}
-        />
-        <RecordTextareaField
-          id="risk-impact"
-          label="Impact"
-          required
-          value={impact}
-          onChange={onImpactChange}
-          error={impactError}
-          placeholder="e.g. Delays Q3 launch by 2 weeks; 4 downstream teams idle"
-          minHeightPx={50}
-          textareaRef={impactRef}
-        />
-        <RecordTextareaField
-          id="risk-mitigation"
-          label="Mitigation"
-          required
-          value={mitigation}
-          onChange={onMitigationChange}
-          error={mitigationError}
-          placeholder="e.g. Vendor escalation in progress; ETA 48h"
-          minHeightPx={50}
-          textareaRef={mitigationRef}
-        />
-      </div>
-
-      <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-4">
-        <span className="block text-xs font-semibold tracking-wide text-[var(--color-muted-foreground)] uppercase">
-          Classification
-        </span>
-
-        {/* Parent first (same order as the item dialog); activity hides stages. */}
-        <ParentPicker
-          id="risk-product"
-          value={parent}
-          products={products}
-          activities={activities}
-          onChange={onParentChange}
-        />
-
-        {!isActivityParent && (
-          <StageStep
-            id="risk-stage"
-            stageIds={stageIds}
-            availableStages={availableStages}
-            previewSeverity={severity}
-            isDeadEnd={isZeroOwnedStageDeadEnd}
-            error={stageError}
-            deadEndNotice="No stages assigned — contact admin."
-            onChange={onStageChange}
-          />
-        )}
-
-        <div>
-          <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
-            Severity
-          </span>
-          <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
-            <strong>At Risk</strong> = needs attention; <strong>Blocked</strong>{" "}
-            = work stopped.
-          </p>
-          <ChoiceChipRow
-            choices={SEVERITY_CHOICES}
-            value={severity}
-            onSelect={onSeveritySelect}
-          />
-        </div>
-      </div>
+      <RiskProseColumn {...props} />
+      <RiskClassificationPanel {...props} />
     </div>
   );
 }

@@ -64,6 +64,53 @@ export function SubmittedBadge() {
   );
 }
 
+function PeriodOptionRow({
+  option,
+  optionId,
+  isSelected,
+  isActive,
+  onHover,
+  onSelect,
+}: {
+  readonly option: PeriodOption;
+  readonly optionId: string;
+  readonly isSelected: boolean;
+  readonly isActive: boolean;
+  readonly onHover: () => void;
+  readonly onSelect: () => void;
+}) {
+  return (
+    <div
+      id={optionId}
+      role="option"
+      tabIndex={-1}
+      aria-selected={isSelected}
+      className={[
+        "flex max-md:min-h-[var(--touch-target-min)] cursor-pointer items-center gap-2 px-3 py-2 text-[13px]",
+        isSelected
+          ? "font-semibold text-[var(--color-starbucks-accent)]"
+          : "text-[var(--color-foreground)]",
+        isActive ? "bg-[var(--color-surface-hover)]" : "",
+      ].join(" ")}
+      onMouseEnter={onHover}
+      onMouseDown={(e) => {
+        // Keep focus on the trigger; prevent the panel from stealing it.
+        e.preventDefault();
+        onSelect();
+      }}
+    >
+      <span className="flex-1 truncate">{periodLabel(option)}</span>
+      {option.submitted && <SubmittedBadge />}
+      {option.archived && <ArchivedBadge />}
+      {isSelected && (
+        <span aria-hidden="true" className="text-xs">
+          ✓
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function PeriodListboxPanel({
   options,
   selectedId,
@@ -92,40 +139,17 @@ export function PeriodListboxPanel({
       }}
       onKeyDown={onKeyDown}
     >
-      {options.map((opt, idx) => {
-        const isSelected = opt.id === selectedId;
-        return (
-          <div
-            key={opt.id}
-            id={`${optionIdPrefix}${idx}`}
-            role="option"
-            tabIndex={-1}
-            aria-selected={isSelected}
-            className={[
-              "flex max-md:min-h-[var(--touch-target-min)] cursor-pointer items-center gap-2 px-3 py-2 text-[13px]",
-              isSelected
-                ? "font-semibold text-[var(--color-starbucks-accent)]"
-                : "text-[var(--color-foreground)]",
-              idx === activeIdx ? "bg-[var(--color-surface-hover)]" : "",
-            ].join(" ")}
-            onMouseEnter={() => onHover(idx)}
-            onMouseDown={(e) => {
-              // Keep focus on the trigger; prevent the panel from stealing it.
-              e.preventDefault();
-              onSelect(opt.id);
-            }}
-          >
-            <span className="flex-1 truncate">{periodLabel(opt)}</span>
-            {opt.submitted && <SubmittedBadge />}
-            {opt.archived && <ArchivedBadge />}
-            {isSelected && (
-              <span aria-hidden="true" className="text-xs">
-                ✓
-              </span>
-            )}
-          </div>
-        );
-      })}
+      {options.map((opt, idx) => (
+        <PeriodOptionRow
+          key={opt.id}
+          option={opt}
+          optionId={`${optionIdPrefix}${idx}`}
+          isSelected={opt.id === selectedId}
+          isActive={idx === activeIdx}
+          onHover={() => onHover(idx)}
+          onSelect={() => onSelect(opt.id)}
+        />
+      ))}
     </div>,
     document.body,
   );

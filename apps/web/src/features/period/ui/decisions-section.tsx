@@ -43,18 +43,28 @@ interface DecisionsSectionProps {
   readonly publishedLockedIds?: ReadonlySet<string>;
 }
 
-export function DecisionsSection({
+// A decision created from this section inherits the section's product when the
+// dialog left it blank; "Group" is the catch-all for group-level decisions.
+function withCreateDefaults(
+  saved: DecisionEntry,
+  defaultProductName: string | undefined,
+): DecisionEntry {
+  return {
+    ...saved,
+    productName: saved.productName || defaultProductName || "Group",
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
+    stageName: saved.stageName ?? "—",
+  };
+}
+
+// Owns the create/edit dialog and the confirm-delete flow; every write rebuilds
+// the list and hands it back through `onChange`.
+function useDecisionsEditing({
   decisions,
   readOnly = false,
   onChange,
   defaultProductName,
-  currentUserName,
-  stagesForProduct,
-  products,
-  activities,
-  defaultProductId,
   addSignal = 0,
-  publishedLockedIds,
 }: DecisionsSectionProps) {
   const {
     dialogState,
@@ -66,81 +76,110 @@ export function DecisionsSection({
     clearPendingDelete,
   } = useEditableListDialog<DecisionEntry>({ readOnly, addSignal });
 
-  function handleDelete(id: string) {
+  const requestDeleteById = (id: string) => {
     const decision = decisions.find((d) => d.id === id);
     if (!decision) return;
     requestDelete(decision);
-  }
+  };
 
-  function confirmDelete() {
+  const confirmDelete = () => {
     if (!pendingDelete) return;
     onChange?.(decisions.filter((d) => d.id !== pendingDelete.id));
     clearPendingDelete();
-  }
+  };
 
-  function handleEdit(decision: DecisionEntry) {
-    openEdit(decision);
-  }
-
-  function handleDialogSave(saved: DecisionEntry) {
+  const saveDecision = (saved: DecisionEntry) => {
     if (readOnly) return;
     if (dialogState.open && dialogState.mode === "create") {
-      onChange?.([
-        ...decisions,
-        {
-          ...saved,
-          productName: saved.productName || defaultProductName || "Group",
-          // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-          stageName: saved.stageName ?? "—",
-        },
-      ]);
+      onChange?.([...decisions, withCreateDefaults(saved, defaultProductName)]);
     } else {
       onChange?.(decisions.map((d) => (d.id === saved.id ? saved : d)));
     }
     close();
-  }
+  };
 
-  function handleDialogCancel() {
-    close();
+  return {
+    dialogState,
+    dialogKey,
+    pendingDelete,
+    clearPendingDelete,
+    openEdit,
+    requestDeleteById,
+    confirmDelete,
+    saveDecision,
+    cancelDialog: close,
+  };
+}
+
+function DecisionsList({
+  decisions,
+  readOnly,
+  publishedLockedIds,
+  onEdit,
+  onDelete,
+}: {
+  readonly decisions: DecisionEntry[];
+  readonly readOnly: boolean;
+  readonly publishedLockedIds: ReadonlySet<string> | undefined;
+  readonly onEdit: (decision: DecisionEntry) => void;
+  readonly onDelete: (id: string) => void;
+}) {
+  if (decisions.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
+        {readOnly
+          ? "No decisions reported."
+          : "No decisions yet. Use “+ Add Decision” to flag one for the head."}
+      </div>
+    );
   }
 
   return (
+    <>
+      {decisions.map((decision) => (
+        <Fragment key={decision.id}>
+          <DecisionCard
+            decision={decision}
+            readOnly={readOnly}
+            publishedLocked={publishedLockedIds?.has(decision.id) === true}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+export function DecisionsSection(props: DecisionsSectionProps) {
+  const editing = useDecisionsEditing(props);
+  const { dialogState, pendingDelete } = editing;
+
+  return (
     <div className="space-y-3">
-      {decisions.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
-          {readOnly
-            ? "No decisions reported."
-            : "No decisions yet. Use “+ Add Decision” to flag one for the head."}
-        </div>
-      ) : (
-        decisions.map((decision) => (
-          <Fragment key={decision.id}>
-            <DecisionCard
-              decision={decision}
-              readOnly={readOnly}
-              publishedLocked={publishedLockedIds?.has(decision.id) === true}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          </Fragment>
-        ))
-      )}
+      <DecisionsList
+        decisions={props.decisions}
+        readOnly={props.readOnly ?? false}
+        publishedLockedIds={props.publishedLockedIds}
+        onEdit={editing.openEdit}
+        onDelete={editing.requestDeleteById}
+      />
 
       <DecisionEditDialog
-        key={dialogKey}
+        key={editing.dialogKey}
         open={dialogState.open}
         decision={
           dialogState.open && dialogState.mode === "edit"
             ? dialogState.entity
             : null
         }
-        defaultOwner={currentUserName}
-        stagesForProduct={stagesForProduct}
-        products={products}
-        activities={activities}
-        defaultProductId={defaultProductId}
-        onSave={handleDialogSave}
-        onCancel={handleDialogCancel}
+        defaultOwner={props.currentUserName}
+        stagesForProduct={props.stagesForProduct}
+        products={props.products}
+        activities={props.activities}
+        defaultProductId={props.defaultProductId}
+        onSave={editing.saveDecision}
+        onCancel={editing.cancelDialog}
       />
 
       <ConfirmDeleteDialog
@@ -148,8 +187,8 @@ export function DecisionsSection({
         title="Delete decision?"
         preview={pendingDelete?.text || "(no description)"}
         subtitle={pendingDelete ? `Owner: ${pendingDelete.owner}` : undefined}
-        onConfirm={confirmDelete}
-        onCancel={clearPendingDelete}
+        onConfirm={editing.confirmDelete}
+        onCancel={editing.clearPendingDelete}
       />
     </div>
   );

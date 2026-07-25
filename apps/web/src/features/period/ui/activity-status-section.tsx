@@ -30,8 +30,7 @@ function trafficRank(status: TrafficLightStatus): number {
   return CANONICAL_STATUS_PRECEDENCE[trafficLightToCanonical(status)];
 }
 
-interface ActivityStatusSectionProps {
-  readonly activities: readonly LeadActivityCard[];
+interface ActivityStatusHandlers {
   readonly readOnly: boolean;
   readonly onStatusChange: (
     activityId: string,
@@ -45,23 +44,97 @@ interface ActivityStatusSectionProps {
   ) => void;
 }
 
+interface ActivityStatusSectionProps extends ActivityStatusHandlers {
+  readonly activities: readonly LeadActivityCard[];
+}
+
+interface ActivityCardProps extends ActivityStatusHandlers {
+  readonly card: LeadActivityCard;
+}
+
+// What a pill click means, given the lead's stored pick and the record-only
+// alarm floor. Pure so the pill row stays presentation-only.
+type StatusPickOutcome =
+  | { readonly kind: "refused" }
+  | { readonly kind: "requires-risk"; readonly severity: "at-risk" | "blocked" }
+  | { readonly kind: "ignored" }
+  | { readonly kind: "write" };
+
+function resolveStatusPick(
+  next: TrafficLightStatus,
+  stored: TrafficLightStatus,
+  floor: TrafficLightStatus | null,
+): StatusPickOutcome {
+  if (floor != null && trafficRank(next) < trafficRank(floor)) {
+    return { kind: "refused" };
+  }
+  // A raise is never the only record of an alarm: yellow needs any covering
+  // risk (floor != null), red a covering blocker (floor === "red"). An
+  // unbacked raise routes through risk creation instead of persisting — the
+  // status lands via the render-time floor once the risk is saved; cancel
+  // changes nothing.
+  if (next !== "green" && trafficRank(next) > trafficRank(floor ?? "green")) {
+    return {
+      kind: "requires-risk",
+      severity: next === "red" ? "blocked" : "at-risk",
+    };
+  }
+  // When the alarm floor sits ABOVE the lead's stored choice the pill is showing
+  // the floor, not their pick — clicking it must NOT overwrite the lower stored
+  // value, so clearing the covering risk restores it. When stored
+  // is at/above the floor, a pick is a genuine change and writes through.
+  if (
+    floor != null &&
+    trafficRank(floor) > trafficRank(stored) &&
+    trafficRank(next) === trafficRank(floor)
+  ) {
+    return { kind: "ignored" };
+  }
+  return { kind: "write" };
+}
+
+function StatusPill({
+  option,
+  isActive,
+  disabled,
+  onSelect,
+}: {
+  readonly option: (typeof STATUS_OPTIONS)[number];
+  readonly isActive: boolean;
+  readonly disabled: boolean;
+  readonly onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={isActive}
+      disabled={disabled}
+      onClick={onSelect}
+      className={[
+        "inline-flex min-h-[var(--touch-target-min)] md:min-h-[34px] items-center gap-1.5 rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+        isActive
+          ? "border-[var(--color-primary)] bg-[var(--color-success)] text-[var(--color-primary)]"
+          : "border-[rgba(0,0,0,0.10)] bg-white/70 text-[var(--color-muted-foreground)] hover:border-[var(--color-border)] hover:bg-white",
+      ].join(" ")}
+    >
+      <span
+        aria-hidden="true"
+        className={[
+          "inline-block h-2 w-2 shrink-0 rounded-full",
+          option.dotClass,
+        ].join(" ")}
+      />
+      {option.label}
+    </button>
+  );
+}
+
 function ActivityStatusPills({
   card,
   readOnly,
   onStatusChange,
   onRaiseRequiresRisk,
-}: {
-  readonly card: LeadActivityCard;
-  readonly readOnly: boolean;
-  readonly onStatusChange: (
-    activityId: string,
-    status: TrafficLightStatus,
-  ) => void;
-  readonly onRaiseRequiresRisk: (
-    activityId: string,
-    severity: "at-risk" | "blocked",
-  ) => void;
-}) {
+}: ActivityCardProps) {
   const [refused, setRefused] = useState(false);
   // The enforceable floor is the RECORD-ONLY alarmFloor (covering risks/blockers),
   // NOT derivedStatus — which folds in the lead's own stored choice and would
@@ -74,35 +147,13 @@ function ActivityStatusPills({
     floor != null && trafficRank(floor) > trafficRank(stored) ? floor : stored;
 
   function pick(next: TrafficLightStatus) {
-    if (floor != null && trafficRank(next) < trafficRank(floor)) {
-      setRefused(true);
+    const outcome = resolveStatusPick(next, stored, floor);
+    setRefused(outcome.kind === "refused");
+    if (outcome.kind === "requires-risk") {
+      onRaiseRequiresRisk(card.activityId, outcome.severity);
       return;
     }
-    setRefused(false);
-    // A raise is never the only record of an alarm: yellow needs any covering
-    // risk (floor != null), red a covering blocker (floor === "red"). An
-    // unbacked raise routes through risk creation instead of persisting — the
-    // status lands via the render-time floor once the risk is saved; cancel
-    // changes nothing.
-    if (next !== "green" && trafficRank(next) > trafficRank(floor ?? "green")) {
-      onRaiseRequiresRisk(
-        card.activityId,
-        next === "red" ? "blocked" : "at-risk",
-      );
-      return;
-    }
-    // When the alarm floor sits ABOVE the lead's stored choice the pill is showing
-    // the floor, not their pick — clicking it must NOT overwrite the lower stored
-    // value, so clearing the covering risk restores it. When stored
-    // is at/above the floor, a pick is a genuine change and writes through.
-    if (
-      floor != null &&
-      trafficRank(floor) > trafficRank(stored) &&
-      trafficRank(next) === trafficRank(floor)
-    ) {
-      return;
-    }
-    onStatusChange(card.activityId, next);
+    if (outcome.kind === "write") onStatusChange(card.activityId, next);
   }
 
   return (
@@ -112,33 +163,15 @@ function ActivityStatusPills({
         aria-label={`Status for ${card.activityName}`}
         className="inline-flex items-center gap-1.5"
       >
-        {STATUS_OPTIONS.map((option) => {
-          const isActive = displayStatus === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={isActive}
-              disabled={readOnly}
-              onClick={() => pick(option.value)}
-              className={[
-                "inline-flex min-h-[var(--touch-target-min)] md:min-h-[34px] items-center gap-1.5 rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-                isActive
-                  ? "border-[var(--color-primary)] bg-[var(--color-success)] text-[var(--color-primary)]"
-                  : "border-[rgba(0,0,0,0.10)] bg-white/70 text-[var(--color-muted-foreground)] hover:border-[var(--color-border)] hover:bg-white",
-              ].join(" ")}
-            >
-              <span
-                aria-hidden="true"
-                className={[
-                  "inline-block h-2 w-2 shrink-0 rounded-full",
-                  option.dotClass,
-                ].join(" ")}
-              />
-              {option.label}
-            </button>
-          );
-        })}
+        {STATUS_OPTIONS.map((option) => (
+          <StatusPill
+            key={option.value}
+            option={option}
+            isActive={displayStatus === option.value}
+            disabled={readOnly}
+            onSelect={() => pick(option.value)}
+          />
+        ))}
       </div>
       {refused && (
         <p
@@ -161,18 +194,7 @@ function ActivityCard({
   readOnly,
   onStatusChange,
   onRaiseRequiresRisk,
-}: {
-  readonly card: LeadActivityCard;
-  readonly readOnly: boolean;
-  readonly onStatusChange: (
-    activityId: string,
-    status: TrafficLightStatus,
-  ) => void;
-  readonly onRaiseRequiresRisk: (
-    activityId: string,
-    severity: "at-risk" | "blocked",
-  ) => void;
-}) {
+}: ActivityCardProps) {
   const linkedNames = card.linkedProducts.map((p) => p.productName).join(", ");
   return (
     <li className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-white/80 px-4 py-3">

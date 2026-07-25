@@ -39,6 +39,28 @@ function decodeParent(raw: string): RecordParent {
   };
 }
 
+// Option values carry the parent kind so the XOR survives the round trip
+// through the DOM's string-only value.
+function ParentOptionGroup({
+  label,
+  kind,
+  options,
+}: {
+  readonly label: string;
+  readonly kind: RecordParentKind;
+  readonly options: readonly { readonly id: string; readonly name: string }[];
+}) {
+  return (
+    <optgroup label={label}>
+      {options.map((option) => (
+        <option key={option.id} value={encodeParent({ kind, id: option.id })}>
+          {option.name}
+        </option>
+      ))}
+    </optgroup>
+  );
+}
+
 export function ParentPicker({
   id,
   value,
@@ -66,28 +88,18 @@ export function ParentPicker({
         disabled={totalOptions <= 1}
       >
         {products.length > 0 && (
-          <optgroup label="Products">
-            {products.map((p) => (
-              <option
-                key={p.id}
-                value={encodeParent({ kind: "product", id: p.id })}
-              >
-                {p.name}
-              </option>
-            ))}
-          </optgroup>
+          <ParentOptionGroup
+            label="Products"
+            kind="product"
+            options={products}
+          />
         )}
         {hasActivities && (
-          <optgroup label="Activities">
-            {activities.map((a) => (
-              <option
-                key={a.id}
-                value={encodeParent({ kind: "activity", id: a.id })}
-              >
-                {a.name}
-              </option>
-            ))}
-          </optgroup>
+          <ParentOptionGroup
+            label="Activities"
+            kind="activity"
+            options={activities}
+          />
         )}
       </select>
     </div>

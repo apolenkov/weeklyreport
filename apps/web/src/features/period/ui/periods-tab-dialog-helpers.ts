@@ -10,17 +10,22 @@ const NEXT_MONDAY_OFFSET_BASE = DAYS_PER_WEEK + 1;
  * with the automatic weekly cadence.
  */
 export function nextMonday(from: Date): string {
-  const d = new Date(from);
   // getUTCDay: 0=Sun, 1=Mon..6=Sat. For Sun add 1 day; for any other
   // weekday add (NEXT_MONDAY_OFFSET_BASE - day) % DAYS_PER_WEEK days. For
-  // Monday this evaluates to 0 → returns `from` unchanged.
-  const day = d.getUTCDay();
+  // Monday this evaluates to 0 → returns `from`'s own date.
+  const day = from.getUTCDay();
   const offset =
     day === 0 ? 1 : (NEXT_MONDAY_OFFSET_BASE - day) % DAYS_PER_WEEK;
-  d.setUTCDate(d.getUTCDate() + offset);
-  d.setUTCHours(0, 0, 0, 0);
+  // Date.UTC normalises the day overflow and pins the time to UTC midnight.
+  const monday = new Date(
+    Date.UTC(
+      from.getUTCFullYear(),
+      from.getUTCMonth(),
+      from.getUTCDate() + offset,
+    ),
+  );
   // Render as `YYYY-MM-DD` for the <input type="date"> value.
-  return d.toISOString().slice(0, ISO_DATE_LENGTH);
+  return monday.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
 /**

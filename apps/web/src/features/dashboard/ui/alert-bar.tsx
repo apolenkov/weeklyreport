@@ -32,6 +32,69 @@ function AlertIcon() {
   );
 }
 
+function pluralSuffix(count: number): string {
+  return count === 1 ? "" : "s";
+}
+
+// Parenthesised tail listing the leads the dispatch did NOT newly notify.
+function formatDispatchExtras(alreadySent: number, skipped: number): string {
+  const extras = [
+    alreadySent > 0 ? `${alreadySent} already sent this cycle` : null,
+    skipped > 0 ? `${skipped} opted out` : null,
+  ].filter((extra) => extra !== null);
+  return extras.length > 0 ? ` (${extras.join(", ")})` : "";
+}
+
+// Primitive-typed mirror of the dispatch result so the copy lives outside the
+// component without importing the tRPC output type.
+interface DispatchOutcome {
+  readonly dispatched: number;
+  readonly alreadySent: number;
+  readonly skipped: number;
+  readonly noActiveRule: boolean;
+}
+
+function toastDispatchOutcome({
+  dispatched,
+  alreadySent,
+  skipped,
+  noActiveRule,
+}: DispatchOutcome): void {
+  if (noActiveRule) {
+    toast.info(
+      "Reminder rule is not configured for this period. Configure it in Admin → Reminders.",
+    );
+    return;
+  }
+  if (dispatched === 0 && alreadySent === 0 && skipped === 0) {
+    toast.info("No pending leads to remind.");
+    return;
+  }
+  if (dispatched === 0 && alreadySent > 0) {
+    toast.info(
+      `All ${alreadySent} pending lead${pluralSuffix(alreadySent)} already received this cycle's reminder.`,
+    );
+    return;
+  }
+  toast.success(
+    `Reminder sent to ${dispatched} lead${pluralSuffix(dispatched)}${formatDispatchExtras(alreadySent, skipped)}.`,
+  );
+}
+
+function ConfigureRemindersLink() {
+  return (
+    // eslint-disable-next-line jsx-a11y/aria-role -- role is a custom prop on IfRole component, not an HTML aria role
+    <IfRole role="admin">
+      <a
+        href="/admin?tab=reminders"
+        className="text-xs font-semibold text-[var(--color-starbucks-accent)] underline-offset-4 hover:underline"
+      >
+        Configure reminders
+      </a>
+    </IfRole>
+  );
+}
+
 export function AlertBar({
   pendingLeads,
   reportId,
@@ -41,30 +104,12 @@ export function AlertBar({
   const dispatchMut = useMutation(
     trpc.reminders.dispatchPending.mutationOptions({
       onSuccess: ({ dispatched, alreadySent, skipped, reason }) => {
-        if (reason === "no-active-rule") {
-          toast.info(
-            "Reminder rule is not configured for this period. Configure it in Admin → Reminders.",
-          );
-          return;
-        }
-        if (dispatched === 0 && alreadySent === 0 && skipped === 0) {
-          toast.info("No pending leads to remind.");
-          return;
-        }
-        if (dispatched === 0 && alreadySent > 0) {
-          toast.info(
-            `All ${alreadySent} pending lead${alreadySent === 1 ? "" : "s"} already received this cycle's reminder.`,
-          );
-          return;
-        }
-        const extras: string[] = [];
-        if (alreadySent > 0)
-          extras.push(`${alreadySent} already sent this cycle`);
-        if (skipped > 0) extras.push(`${skipped} opted out`);
-        const tail = extras.length > 0 ? ` (${extras.join(", ")})` : "";
-        toast.success(
-          `Reminder sent to ${dispatched} lead${dispatched === 1 ? "" : "s"}${tail}.`,
-        );
+        toastDispatchOutcome({
+          dispatched,
+          alreadySent,
+          skipped,
+          noActiveRule: reason === "no-active-rule",
+        });
       },
       onError: (err) => {
         toast.error(
@@ -85,7 +130,7 @@ export function AlertBar({
       <div className="flex flex-1 flex-col gap-1 text-sm">
         <span>
           <strong>{pendingLeads.length}</strong> lead
-          {pendingLeads.length === 1 ? "" : "s"} haven&apos;t started
+          {pluralSuffix(pendingLeads.length)} haven&apos;t started
         </span>
       </div>
       <button
@@ -97,17 +142,7 @@ export function AlertBar({
       >
         {dispatchMut.isPending ? "Sending…" : "Send Reminder"}
       </button>
-      {!canSendReminder && (
-        // eslint-disable-next-line jsx-a11y/aria-role -- role is a custom prop on IfRole component, not an HTML aria role
-        <IfRole role="admin">
-          <a
-            href="/admin?tab=reminders"
-            className="text-xs font-semibold text-[var(--color-starbucks-accent)] underline-offset-4 hover:underline"
-          >
-            Configure reminders
-          </a>
-        </IfRole>
-      )}
+      {!canSendReminder && <ConfigureRemindersLink />}
     </div>
   );
 }

@@ -16,15 +16,14 @@ export function collectItemErrors(args: {
   readonly availableStages: readonly string[];
   readonly effectiveStageIds: readonly string[];
 }): { text?: string; stageIds?: string } {
-  const errors: { text?: string; stageIds?: string } = {};
-  if (args.trimmed.length === 0) errors.text = "Description is required";
-  if (
+  const stageRequired =
     !args.isActivityParent &&
     args.availableStages.length > 0 &&
-    args.effectiveStageIds.length === 0
-  )
-    errors.stageIds = "Select at least one stage.";
-  return errors;
+    args.effectiveStageIds.length === 0;
+  return {
+    ...(args.trimmed.length === 0 ? { text: "Description is required" } : {}),
+    ...(stageRequired ? { stageIds: "Select at least one stage." } : {}),
+  };
 }
 
 // Focus order: text → stage → pausedReason; later errors never jump past earlier.

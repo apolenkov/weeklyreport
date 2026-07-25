@@ -1,6 +1,46 @@
 "use client";
 
 import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
+import type { ReactNode } from "react";
+
+// Every row is inert until its rollout phase lands, so the card is dashed,
+// dimmed and badged rather than switchable.
+function IntegrationCard({
+  name,
+  description,
+  rowTestId,
+  badgeTestId,
+  children,
+}: {
+  readonly name: string;
+  readonly description: string;
+  readonly rowTestId: string;
+  readonly badgeTestId: string;
+  readonly children?: ReactNode;
+}) {
+  return (
+    <div
+      className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
+      data-testid={rowTestId}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
+            {name}
+          </h3>
+          <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+            {description}
+          </p>
+        </div>
+        <ComingSoonBadge
+          className="self-start sm:self-auto"
+          data-testid={badgeTestId}
+        />
+      </div>
+      {children}
+    </div>
+  );
+}
 
 // Element label is the roadmapped channel; dispatch is still Telegram
 // (TG_BOT_TOKEN / TelegramBinding) so no live status is shown — that would
@@ -14,50 +54,22 @@ export function IntegrationsSubTab() {
       </p>
 
       {/* data-testid stays "telegram" — internal seam name, not UI label. */}
-      <div
-        className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
-        data-testid="integration-row-telegram"
-      >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-              Element
-            </h3>
-            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Push notifications and quick-reply via Element — replaces email
-              reminders for mobile-first teams.
-            </p>
-          </div>
-          <ComingSoonBadge
-            className="self-start sm:self-auto"
-            data-testid="integration-badge-telegram"
-          />
-        </div>
-      </div>
+      <IntegrationCard
+        name="Element"
+        description="Push notifications and quick-reply via Element — replaces email reminders for mobile-first teams."
+        rowTestId="integration-row-telegram"
+        badgeTestId="integration-badge-telegram"
+      />
 
       {/* AI Integration — seeds-only; placeholder until a provider
           is selected (Anthropic / Yandex / Llama). A single provider/model
           selection drives every AI feature (summary, risk extraction, RAG). */}
-      <div
-        className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
-        data-testid="integration-row-ai"
+      <IntegrationCard
+        name="AI"
+        description="One provider and model applied across every AI feature — status summaries, risk extraction, and RAG search."
+        rowTestId="integration-row-ai"
+        badgeTestId="integration-badge-ai"
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-              AI
-            </h3>
-            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              One provider and model applied across every AI feature — status
-              summaries, risk extraction, and RAG search.
-            </p>
-          </div>
-          <ComingSoonBadge
-            className="self-start sm:self-auto"
-            data-testid="integration-badge-ai"
-          />
-        </div>
-
         <dl className="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 text-xs text-[var(--color-muted-foreground)]">
           <dt>Provider</dt>
           <dd className="font-mono" data-testid="integration-ai-provider">
@@ -68,7 +80,7 @@ export function IntegrationsSubTab() {
             empty
           </dd>
         </dl>
-      </div>
+      </IntegrationCard>
     </div>
   );
 }

@@ -39,15 +39,41 @@ interface LeadFormItemSectionsProps {
   readonly stagesForProduct: StagesForProduct;
 }
 
-export function LeadFormItemSections({
+// Each branch below renders the same view model; only the layout differs.
+type WeekSectionProps = Omit<LeadFormItemSectionsProps, "unifiedView">;
+
+// Disabled with an explanatory title when the lead owns no product, so the
+// dead-end is legible instead of an inert button.
+function AddItemButton({
+  onClick,
+  products,
+}: {
+  readonly onClick: () => void;
+  readonly products: LeadFormLoadedViewModel["products"];
+}) {
+  const firstProduct = products[0];
+  return (
+    <LeadFormAddButton
+      onClick={onClick}
+      disabled={products.length === 0}
+      title={
+        firstProduct !== undefined
+          ? `Add item to ${firstProduct.name}`
+          : NO_PRODUCTS_ASSIGNED_MESSAGE
+      }
+    >
+      + Add Item
+    </LeadFormAddButton>
+  );
+}
+
+function UnifiedActivityAccordion({
   viewModel,
   actions,
   groupExpanded,
-  unifiedView,
   stagesForProduct,
-}: LeadFormItemSectionsProps) {
+}: WeekSectionProps) {
   const {
-    activityOptions,
     currentUser,
     currentWeekItems,
     nextWeekItems,
@@ -58,8 +84,7 @@ export function LeadFormItemSections({
     risks,
     unifiedEntries,
   } = viewModel;
-  const firstProduct = products[0];
-  return unifiedView ? (
+  return (
     <AccordionSection
       groupExpanded={groupExpanded}
       testId="lead-section-unified"
@@ -86,87 +111,124 @@ export function LeadFormItemSections({
         onMoveToNextWeek={actions.onMoveToNextWeek}
       />
     </AccordionSection>
-  ) : (
-    <>
-      <AccordionSection
-        groupExpanded={groupExpanded}
-        testId="lead-section-current-week"
-        icon={<CalendarIcon />}
-        title="Current Week"
-        badge={`${currentWeekItems.length} items`}
-        subtitle="Work completed or still in progress this week, grouped by product and SDLC stage."
-        actions={
-          !isReadOnly ? (
-            <LeadFormAddButton
-              onClick={actions.addCurrentWeekItem}
-              disabled={products.length === 0}
-              title={
-                firstProduct !== undefined
-                  ? `Add item to ${firstProduct.name}`
-                  : NO_PRODUCTS_ASSIGNED_MESSAGE
-              }
-            >
-              + Add Item
-            </LeadFormAddButton>
-          ) : null
-        }
-      >
-        <CurrentWeekSection
-          items={currentWeekItems}
-          risks={risks}
-          readOnly={isReadOnly}
-          onItemsChange={actions.onCurrentWeekItemsChange}
-          currentUserName={currentUser.name}
-          products={products}
-          activities={activityOptions}
-          stagesForProduct={stagesForProduct}
-          ownPeriodRanks={ownPeriodRanks}
-          addSignal={actions.currentWeekAddSignal}
-          publishedLockedIds={publishedLockedItemIds}
-          onMarkComplete={actions.onMarkComplete}
-          onMoveToNextWeek={actions.onMoveToNextWeek}
-          onPauseItem={actions.onPauseItem}
-        />
-      </AccordionSection>
+  );
+}
 
-      <AccordionSection
-        groupExpanded={groupExpanded}
-        testId="lead-section-next-week"
-        icon={<NextWeekIcon />}
-        title="Next Week"
-        badge={`${nextWeekItems.length} items`}
-        subtitle="Planned work for the next reporting week, scoped to product and SDLC stage."
-        actions={
-          !isReadOnly ? (
-            <LeadFormAddButton
-              onClick={actions.addNextWeekItem}
-              disabled={products.length === 0}
-              title={
-                firstProduct !== undefined
-                  ? `Add item to ${firstProduct.name}`
-                  : NO_PRODUCTS_ASSIGNED_MESSAGE
-              }
-            >
-              + Add Item
-            </LeadFormAddButton>
-          ) : null
-        }
-      >
-        <NextWeekSection
-          items={nextWeekItems}
-          risks={risks}
-          readOnly={isReadOnly}
-          onItemsChange={actions.onNextWeekItemsChange}
-          currentUserName={currentUser.name}
-          products={products}
-          activities={activityOptions}
-          stagesForProduct={stagesForProduct}
-          ownPeriodRanks={ownPeriodRanks}
-          addSignal={actions.nextWeekAddSignal}
-          publishedLockedIds={publishedLockedItemIds}
-          onMoveToCurrentWeek={actions.onMoveToCurrentWeek}
-        />
-      </AccordionSection>
+function CurrentWeekAccordion({
+  viewModel,
+  actions,
+  groupExpanded,
+  stagesForProduct,
+}: WeekSectionProps) {
+  const {
+    activityOptions,
+    currentUser,
+    currentWeekItems,
+    isReadOnly,
+    ownPeriodRanks,
+    products,
+    publishedLockedItemIds,
+    risks,
+  } = viewModel;
+  return (
+    <AccordionSection
+      groupExpanded={groupExpanded}
+      testId="lead-section-current-week"
+      icon={<CalendarIcon />}
+      title="Current Week"
+      badge={`${currentWeekItems.length} items`}
+      subtitle="Work completed or still in progress this week, grouped by product and SDLC stage."
+      actions={
+        !isReadOnly ? (
+          <AddItemButton
+            onClick={actions.addCurrentWeekItem}
+            products={products}
+          />
+        ) : null
+      }
+    >
+      <CurrentWeekSection
+        items={currentWeekItems}
+        risks={risks}
+        readOnly={isReadOnly}
+        onItemsChange={actions.onCurrentWeekItemsChange}
+        currentUserName={currentUser.name}
+        products={products}
+        activities={activityOptions}
+        stagesForProduct={stagesForProduct}
+        ownPeriodRanks={ownPeriodRanks}
+        addSignal={actions.currentWeekAddSignal}
+        publishedLockedIds={publishedLockedItemIds}
+        onMarkComplete={actions.onMarkComplete}
+        onMoveToNextWeek={actions.onMoveToNextWeek}
+        onPauseItem={actions.onPauseItem}
+      />
+    </AccordionSection>
+  );
+}
+
+function NextWeekAccordion({
+  viewModel,
+  actions,
+  groupExpanded,
+  stagesForProduct,
+}: WeekSectionProps) {
+  const {
+    activityOptions,
+    currentUser,
+    nextWeekItems,
+    isReadOnly,
+    ownPeriodRanks,
+    products,
+    publishedLockedItemIds,
+    risks,
+  } = viewModel;
+  return (
+    <AccordionSection
+      groupExpanded={groupExpanded}
+      testId="lead-section-next-week"
+      icon={<NextWeekIcon />}
+      title="Next Week"
+      badge={`${nextWeekItems.length} items`}
+      subtitle="Planned work for the next reporting week, scoped to product and SDLC stage."
+      actions={
+        !isReadOnly ? (
+          <AddItemButton
+            onClick={actions.addNextWeekItem}
+            products={products}
+          />
+        ) : null
+      }
+    >
+      <NextWeekSection
+        items={nextWeekItems}
+        risks={risks}
+        readOnly={isReadOnly}
+        onItemsChange={actions.onNextWeekItemsChange}
+        currentUserName={currentUser.name}
+        products={products}
+        activities={activityOptions}
+        stagesForProduct={stagesForProduct}
+        ownPeriodRanks={ownPeriodRanks}
+        addSignal={actions.nextWeekAddSignal}
+        publishedLockedIds={publishedLockedItemIds}
+        onMoveToCurrentWeek={actions.onMoveToCurrentWeek}
+      />
+    </AccordionSection>
+  );
+}
+
+export function LeadFormItemSections({
+  unifiedView,
+  ...sectionProps
+}: LeadFormItemSectionsProps) {
+  if (unifiedView) {
+    return <UnifiedActivityAccordion {...sectionProps} />;
+  }
+  return (
+    <>
+      <CurrentWeekAccordion {...sectionProps} />
+      <NextWeekAccordion {...sectionProps} />
     </>
   );
 }

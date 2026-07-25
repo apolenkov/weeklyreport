@@ -22,6 +22,24 @@ export interface ReopenRequest {
   };
 }
 
+function RespondButton({
+  onStartRespond,
+}: {
+  readonly onStartRespond: () => void;
+}) {
+  return (
+    <div className="flex gap-2">
+      <button
+        type="button"
+        onClick={onStartRespond}
+        className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
+      >
+        Respond
+      </button>
+    </div>
+  );
+}
+
 export function ReopenRequestCard({
   request: r,
   isResponding,
@@ -48,15 +66,7 @@ export function ReopenRequestCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <ReopenRequestMeta request={r} />
         {r.status === "pending" && !isResponding && (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onStartRespond}
-              className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
-            >
-              Respond
-            </button>
-          </div>
+          <RespondButton onStartRespond={onStartRespond} />
         )}
       </div>
 

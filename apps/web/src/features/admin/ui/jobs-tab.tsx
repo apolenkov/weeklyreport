@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { type ComponentProps, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
@@ -11,17 +11,14 @@ import { JobsTableRow } from "./jobs-table-row";
 
 const QUEUE_NAME = "email-reminder" as const;
 
-export function JobsTab() {
+type FailedJob = ComponentProps<typeof JobsTableRow>["job"];
+
+// Retry of a single failed job plus the id currently in flight, so the row
+// that was clicked is the only one showing a spinner.
+function useRetryFailedJob() {
   const trpc = useTRPC();
   const qc = useQueryClient();
-
-  const listQuery = useQuery(
-    trpc.admin.jobs.listFailed.queryOptions({ queue: QUEUE_NAME }),
-  );
-
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const [retryingId, setRetryingId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
 
   const retryMut = useMutation(
     trpc.admin.jobs.retryFailed.mutationOptions({
@@ -54,8 +51,32 @@ export function JobsTab() {
     }),
   );
 
-  const jobs = useMemo(() => listQuery.data?.jobs ?? [], [listQuery.data]);
-  const filteredJobs = useMemo(() => {
+  return {
+    retryingId,
+    isPending: retryMut.isPending,
+    retry: (jobId: string) => {
+      setRetryingId(jobId);
+      retryMut.mutate({ queue: QUEUE_NAME, jobId });
+    },
+  };
+}
+
+function useExpandedRows() {
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  return {
+    expanded,
+    toggle: (jobId: string) => {
+      setExpanded((prev) =>
+        prev.has(jobId)
+          ? new Set([...prev].filter((id) => id !== jobId))
+          : new Set([...prev, jobId]),
+      );
+    },
+  };
+}
+
+function useFilteredJobs(jobs: readonly FailedJob[], search: string) {
+  return useMemo(() => {
     const needle = search.trim().toLowerCase();
     if (!needle) return jobs;
     return jobs.filter((job) =>
@@ -66,19 +87,95 @@ export function JobsTab() {
         .includes(needle),
     );
   }, [jobs, search]);
+}
 
-  function handleRetry(jobId: string) {
-    setRetryingId(jobId);
-    retryMut.mutate({ queue: QUEUE_NAME, jobId });
-  }
+function JobsErrorState({ message }: { readonly message: string }) {
+  return (
+    <div
+      role="alert"
+      data-testid="jobs-error-state"
+      className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800"
+    >
+      Failed to load list: {message}
+    </div>
+  );
+}
 
-  function toggleExpanded(jobId: string) {
-    setExpanded((prev) =>
-      prev.has(jobId)
-        ? new Set([...prev].filter((id) => id !== jobId))
-        : new Set([...prev, jobId]),
-    );
-  }
+function JobsEmptyState({ queueIsClean }: { readonly queueIsClean: boolean }) {
+  return (
+    <div
+      data-testid="jobs-empty-state"
+      className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]"
+    >
+      {queueIsClean
+        ? "No failed email reminder jobs. Queue is clean."
+        : "No failed jobs match the search."}
+    </div>
+  );
+}
+
+const HEAD_CELL_CLASSNAME =
+  "px-4 py-3 font-semibold text-[var(--color-foreground)]";
+
+function JobsTable({
+  jobs,
+  expanded,
+  retryingId,
+  retryPending,
+  onToggleExpand,
+  onRetry,
+}: {
+  readonly jobs: readonly FailedJob[];
+  readonly expanded: ReadonlySet<string>;
+  readonly retryingId: string | null;
+  readonly retryPending: boolean;
+  readonly onToggleExpand: (jobId: string) => void;
+  readonly onRetry: (jobId: string) => void;
+}) {
+  return (
+    <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+      <table className="w-full text-left text-sm" data-testid="jobs-table">
+        <thead>
+          <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
+            <th className={HEAD_CELL_CLASSNAME}>ID</th>
+            <th className={HEAD_CELL_CLASSNAME}>Name</th>
+            <th className={HEAD_CELL_CLASSNAME}>Attempts</th>
+            <th className={HEAD_CELL_CLASSNAME}>Error</th>
+            <th className={HEAD_CELL_CLASSNAME}>Time</th>
+            <th className={`${HEAD_CELL_CLASSNAME} text-right`}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {jobs.map((job) => (
+            <JobsTableRow
+              key={job.id}
+              job={job}
+              isExpanded={expanded.has(job.id)}
+              isRetrying={retryingId === job.id && retryPending}
+              retryDisabled={retryPending}
+              onToggleExpand={onToggleExpand}
+              onRetry={onRetry}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function JobsTab() {
+  const trpc = useTRPC();
+
+  const listQuery = useQuery(
+    trpc.admin.jobs.listFailed.queryOptions({ queue: QUEUE_NAME }),
+  );
+
+  const [search, setSearch] = useState("");
+  const rows = useExpandedRows();
+  const retry = useRetryFailedJob();
+
+  const jobs = useMemo(() => listQuery.data?.jobs ?? [], [listQuery.data]);
+  const filteredJobs = useFilteredJobs(jobs, search);
 
   return (
     <div className="space-y-4" data-testid="jobs-tab">
@@ -100,68 +197,24 @@ export function JobsTab() {
       {listQuery.isPending && <JobsSkeleton />}
 
       {listQuery.isError && (
-        <div
-          role="alert"
-          data-testid="jobs-error-state"
-          className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800"
-        >
-          Failed to load list: {listQuery.error.message}
-        </div>
+        <JobsErrorState message={listQuery.error.message} />
       )}
 
       {!listQuery.isPending &&
         !listQuery.isError &&
         filteredJobs.length === 0 && (
-          <div
-            data-testid="jobs-empty-state"
-            className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]"
-          >
-            {jobs.length === 0
-              ? "No failed email reminder jobs. Queue is clean."
-              : "No failed jobs match the search."}
-          </div>
+          <JobsEmptyState queueIsClean={jobs.length === 0} />
         )}
 
       {filteredJobs.length > 0 && (
-        <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-          <table className="w-full text-left text-sm" data-testid="jobs-table">
-            <thead>
-              <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-                  ID
-                </th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-                  Name
-                </th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-                  Attempts
-                </th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-                  Error
-                </th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-                  Time
-                </th>
-                <th className="px-4 py-3 text-right font-semibold text-[var(--color-foreground)]">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredJobs.map((job) => (
-                <JobsTableRow
-                  key={job.id}
-                  job={job}
-                  isExpanded={expanded.has(job.id)}
-                  isRetrying={retryingId === job.id && retryMut.isPending}
-                  retryDisabled={retryMut.isPending}
-                  onToggleExpand={toggleExpanded}
-                  onRetry={handleRetry}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <JobsTable
+          jobs={filteredJobs}
+          expanded={rows.expanded}
+          retryingId={retry.retryingId}
+          retryPending={retry.isPending}
+          onToggleExpand={rows.toggle}
+          onRetry={retry.retry}
+        />
       )}
     </div>
   );

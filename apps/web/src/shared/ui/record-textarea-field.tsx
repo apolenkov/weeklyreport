@@ -24,6 +24,24 @@ interface RecordTextareaFieldProps {
   readonly fill?: boolean;
 }
 
+function FieldErrorMessage({
+  id,
+  error,
+}: {
+  readonly id: string;
+  readonly error: string;
+}) {
+  return (
+    <p
+      id={id}
+      role="alert"
+      className="mt-1 text-xs text-[var(--color-destructive)]"
+    >
+      {error}
+    </p>
+  );
+}
+
 export function RecordTextareaField({
   id,
   label,
@@ -68,15 +86,7 @@ export function RecordTextareaField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
       />
-      {error && (
-        <p
-          id={errorId}
-          role="alert"
-          className="mt-1 text-xs text-[var(--color-destructive)]"
-        >
-          {error}
-        </p>
-      )}
+      {error && <FieldErrorMessage id={errorId} error={error} />}
     </div>
   );
 }

@@ -92,13 +92,17 @@ export async function reinsertRecordComments(
     }),
   ]);
 
-  const idByLineage = new Map<string, string>();
-  for (const row of items)
-    idByLineage.set(lineageKey("item", row.stableId), row.id);
-  for (const row of risks)
-    idByLineage.set(lineageKey("risk", row.stableId), row.id);
-  for (const row of decisions)
-    idByLineage.set(lineageKey("decision", row.stableId), row.id);
+  const lineageEntries = (
+    kind: RecordKind,
+    rows: readonly { id: string; stableId: string }[],
+  ): [string, string][] =>
+    rows.map((row) => [lineageKey(kind, row.stableId), row.id]);
+
+  const idByLineage = new Map<string, string>([
+    ...lineageEntries("item", items),
+    ...lineageEntries("risk", risks),
+    ...lineageEntries("decision", decisions),
+  ]);
 
   const data = captured.flatMap((comment) => {
     const newRecordId = idByLineage.get(

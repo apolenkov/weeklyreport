@@ -11,6 +11,34 @@ const DEFAULT_ACTION_HOVER_CLASS =
 const DESTRUCTIVE_ACTION_HOVER_CLASS =
   "text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]";
 
+interface ToggleSeverityButtonProps {
+  readonly risk: RiskEntry;
+  readonly isBlocked: boolean;
+  readonly onToggleSeverity: (risk: RiskEntry) => void;
+}
+
+// Severity flips both ways from one control; the label states the destination.
+function ToggleSeverityButton({
+  risk,
+  isBlocked,
+  onToggleSeverity,
+}: ToggleSeverityButtonProps) {
+  return (
+    <button
+      type="button"
+      className={`${ACTION_BUTTON_CLASS} ${DEFAULT_ACTION_HOVER_CLASS}`}
+      onClick={() => onToggleSeverity(risk)}
+      aria-label={
+        isBlocked
+          ? `Downgrade risk for ${risk.productName} to at risk`
+          : `Escalate risk for ${risk.productName} to blocked`
+      }
+    >
+      <ArrowDownUp className="h-4 w-4" aria-hidden="true" />
+    </button>
+  );
+}
+
 interface RiskCardActionsProps {
   readonly risk: RiskEntry;
   readonly sectionAuthorName?: string;
@@ -40,18 +68,11 @@ export function RiskCardActions({
   return (
     <div className="ml-auto flex gap-1">
       {onToggleSeverity && (
-        <button
-          type="button"
-          className={`${ACTION_BUTTON_CLASS} ${DEFAULT_ACTION_HOVER_CLASS}`}
-          onClick={() => onToggleSeverity(risk)}
-          aria-label={
-            isBlocked
-              ? `Downgrade risk for ${risk.productName} to at risk`
-              : `Escalate risk for ${risk.productName} to blocked`
-          }
-        >
-          <ArrowDownUp className="h-4 w-4" aria-hidden="true" />
-        </button>
+        <ToggleSeverityButton
+          risk={risk}
+          isBlocked={isBlocked}
+          onToggleSeverity={onToggleSeverity}
+        />
       )}
       <button
         type="button"

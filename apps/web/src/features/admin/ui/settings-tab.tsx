@@ -67,13 +67,7 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
         </TabsContent>
 
         <TabsContent value="holidays" className="pt-6">
-          <div className="max-w-lg space-y-5">
-            <p className="text-sm text-[var(--color-muted-foreground)]">
-              Holiday calendar management coming soon. Schedule
-              organization-wide closures to exclude from deadline calculations
-              and report period boundaries.
-            </p>
-          </div>
+          <HolidaysComingSoonPanel />
         </TabsContent>
       </Tabs>
     </div>
@@ -81,6 +75,18 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
 }
 
 // ─── Holidays Coming Soon Control ────────────────────────────────────────
+
+function HolidaysComingSoonPanel() {
+  return (
+    <div className="max-w-lg space-y-5">
+      <p className="text-sm text-[var(--color-muted-foreground)]">
+        Holiday calendar management coming soon. Schedule organization-wide
+        closures to exclude from deadline calculations and report period
+        boundaries.
+      </p>
+    </div>
+  );
+}
 
 function HolidaysComingSoonControl() {
   // Nested label is a <span> (not <button>): TabsTrigger is already a button;

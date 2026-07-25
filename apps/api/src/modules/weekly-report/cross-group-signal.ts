@@ -46,13 +46,14 @@ export function computeCrossGroupSignalFromSnapshotProjects(
   if (allowedGroupIds.length === 0) return null;
 
   const allowedSet = new Set(allowedGroupIds);
-  const crossGroupOwnerByProductId = new Map<string, string>();
-
-  for (const { projectId, ownerGroupId } of projects) {
-    if (ownerGroupId != null && !allowedSet.has(ownerGroupId)) {
-      crossGroupOwnerByProductId.set(projectId, ownerGroupId);
-    }
-  }
+  // Keyed by productId so a product repeated in the snapshot yields one entry.
+  const crossGroupOwnerByProductId = new Map(
+    projects.flatMap(({ projectId, ownerGroupId }) =>
+      ownerGroupId != null && !allowedSet.has(ownerGroupId)
+        ? [[projectId, ownerGroupId] as const]
+        : [],
+    ),
+  );
 
   if (crossGroupOwnerByProductId.size === 0) return null;
 

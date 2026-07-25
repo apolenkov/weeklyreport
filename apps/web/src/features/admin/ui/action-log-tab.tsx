@@ -13,11 +13,91 @@ const PAGE_SIZE = 20;
 // page of only proof rows as an empty log.
 const MANUAL_ACTION_LOG_PROOF_PREFIX = "manual-action-log-proof";
 
-export function ActionLogTab() {
-  const trpc = useTRPC();
-  const [search, setSearch] = useState("");
+const COLUMN_HEADERS = [
+  "Time",
+  "User",
+  "Procedure",
+  "Status",
+  "Reference",
+] as const;
 
-  const pagination = useCursorPagination<ActionLogRowData>(
+function ActionLogTable({ rows }: { readonly rows: ActionLogRowData[] }) {
+  return (
+    <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+      <table className="w-full text-left text-sm">
+        <thead>
+          <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
+            {COLUMN_HEADERS.map((header) => (
+              <th
+                key={header}
+                className="px-4 py-3 font-semibold text-[var(--color-foreground)]"
+              >
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <ActionLogRow key={row.id} row={row} />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ActionLogLoadFailed({ error }: { readonly error: unknown }) {
+  return (
+    <div
+      role="alert"
+      className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-[var(--color-destructive)] p-4 text-sm text-[var(--color-destructive-foreground)]"
+    >
+      Failed to load action log:{" "}
+      {error instanceof Error ? error.message : "Unknown error"}
+    </div>
+  );
+}
+
+// An empty log and a search that matched nothing read differently to the admin.
+function ActionLogEmpty({
+  hasLoadedRows,
+}: {
+  readonly hasLoadedRows: boolean;
+}) {
+  return (
+    <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
+      {hasLoadedRows
+        ? "No loaded actions match the search."
+        : "No actions recorded yet."}
+    </div>
+  );
+}
+
+function LoadMoreButton({
+  onClick,
+  isFetching,
+}: {
+  readonly onClick: () => void;
+  readonly isFetching: boolean;
+}) {
+  return (
+    <div className="flex justify-center">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={isFetching}
+        className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-background)] px-4 py-2 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
+      >
+        {isFetching ? "Loading…" : "Load more"}
+      </button>
+    </div>
+  );
+}
+
+function useActionLogPagination() {
+  const trpc = useTRPC();
+  return useCursorPagination<ActionLogRowData>(
     (input) =>
       trpc.admin.actionLog.list.infiniteQueryOptions(
         { limit: input.limit ?? PAGE_SIZE },
@@ -29,8 +109,25 @@ export function ActionLogTab() {
       ),
     { limit: PAGE_SIZE },
   );
+}
 
-  const rows = pagination.items;
+// Search is a substring match over every displayed column of a loaded row.
+function matchesNeedle(row: ActionLogRowData, needle: string): boolean {
+  return [
+    row.userId,
+    row.role ?? "",
+    row.procedure,
+    row.targetId ?? "",
+    row.status,
+    row.reason ?? "",
+    row.correlationId,
+  ]
+    .join(" ")
+    .toLowerCase()
+    .includes(needle);
+}
+
+function useActionLogRows(rows: ActionLogRowData[], search: string) {
   const nonProofRows = useMemo(
     () =>
       rows.filter(
@@ -41,21 +138,18 @@ export function ActionLogTab() {
   const visibleRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
     if (!needle) return nonProofRows;
-    return nonProofRows.filter((row) =>
-      [
-        row.userId,
-        row.role ?? "",
-        row.procedure,
-        row.targetId ?? "",
-        row.status,
-        row.reason ?? "",
-        row.correlationId,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(needle),
-    );
+    return nonProofRows.filter((row) => matchesNeedle(row, needle));
   }, [nonProofRows, search]);
+  return { nonProofRows, visibleRows };
+}
+
+export function ActionLogTab() {
+  const [search, setSearch] = useState("");
+  const pagination = useActionLogPagination();
+  const { nonProofRows, visibleRows } = useActionLogRows(
+    pagination.items,
+    search,
+  );
 
   return (
     <div className="space-y-4" data-testid="action-log-tab">
@@ -80,70 +174,21 @@ export function ActionLogTab() {
 
       {pagination.isLoading && <ActionLogSkeleton />}
 
-      {pagination.isError && (
-        <div
-          role="alert"
-          className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-[var(--color-destructive)] p-4 text-sm text-[var(--color-destructive-foreground)]"
-        >
-          Failed to load action log:{" "}
-          {pagination.error instanceof Error
-            ? pagination.error.message
-            : "Unknown error"}
-        </div>
-      )}
+      {pagination.isError && <ActionLogLoadFailed error={pagination.error} />}
 
       {!pagination.isLoading &&
         !pagination.isError &&
         visibleRows.length === 0 && (
-          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
-            {nonProofRows.length === 0
-              ? "No actions recorded yet."
-              : "No loaded actions match the search."}
-          </div>
+          <ActionLogEmpty hasLoadedRows={nonProofRows.length > 0} />
         )}
 
-      {visibleRows.length > 0 && (
-        <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-                  Time
-                </th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-                  User
-                </th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-                  Procedure
-                </th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-                  Status
-                </th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-                  Reference
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleRows.map((row) => (
-                <ActionLogRow key={row.id} row={row} />
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {visibleRows.length > 0 && <ActionLogTable rows={visibleRows} />}
 
       {pagination.hasNextPage && (
-        <div className="flex justify-center">
-          <button
-            type="button"
-            onClick={pagination.fetchNextPage}
-            disabled={pagination.isFetchingNextPage}
-            className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-background)] px-4 py-2 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
-          >
-            {pagination.isFetchingNextPage ? "Loading…" : "Load more"}
-          </button>
-        </div>
+        <LoadMoreButton
+          onClick={pagination.fetchNextPage}
+          isFetching={pagination.isFetchingNextPage}
+        />
       )}
     </div>
   );

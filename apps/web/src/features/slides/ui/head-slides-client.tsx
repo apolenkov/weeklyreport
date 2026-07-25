@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { type ReactElement, useMemo, useState } from "react";
 
 import { useTRPC } from "../../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
@@ -28,14 +28,20 @@ interface HeadSlidesClientProps {
   readonly enableActivity?: boolean;
 }
 
-export function HeadSlidesClient({
+interface SlideDeckArgs {
+  readonly reportId: string | undefined;
+  readonly scope: "lead" | "product";
+  readonly enableActivity: boolean;
+  readonly density: SlideDensity;
+}
+
+function useHeadSlideDeck({
   reportId,
-  scope = "lead",
-  enableActivity = true,
-}: HeadSlidesClientProps = {}) {
+  scope,
+  enableActivity,
+  density,
+}: SlideDeckArgs) {
   const trpc = useTRPC();
-  const [rawSelectedIndex, setSelectedIndex] = useState(0);
-  const [density, setDensity] = useState<SlideDensity>("document");
 
   const weeklyQ = useQuery(
     trpc.weeklyReport.get.queryOptions(reportId ? { reportId } : {}),
@@ -77,17 +83,24 @@ export function HeadSlidesClient({
     [documentSlides, density],
   );
 
-  // Two-sided clamp derived at render — see lead-slides-client: a negative
-  // index from an empty-deck arrow press must clamp too, not just an
-  // out-of-range one.
-  const selectedIndex =
-    rawSelectedIndex >= 0 && rawSelectedIndex < slides.length
-      ? rawSelectedIndex
-      : 0;
+  return { weeklyQ, activityQ, needsActivityFallback, slides };
+}
 
-  if (weeklyQ.isLoading) return <SlideSkeleton />;
+interface SlideDeckState {
+  readonly isWeeklyLoading: boolean;
+  readonly isWeeklyError: boolean;
+  readonly hasPeriod: boolean;
+  readonly needsActivityFallback: boolean;
+  readonly isActivityLoading: boolean;
+  readonly isActivityError: boolean;
+}
 
-  if (weeklyQ.isError) {
+// The non-deck states, in the order they must win: the weekly report gates
+// everything, and the activity fallback only gates when it is the source.
+function slideDeckFallback(state: SlideDeckState): ReactElement | null {
+  if (state.isWeeklyLoading) return <SlideSkeleton />;
+
+  if (state.isWeeklyError) {
     return (
       <SlideEmptyState
         title="Slides could not load"
@@ -96,7 +109,7 @@ export function HeadSlidesClient({
     );
   }
 
-  if (!weeklyQ.data || weeklyQ.data.status === "no-period") {
+  if (!state.hasPeriod) {
     return (
       <SlideEmptyState
         title="No active deck"
@@ -105,9 +118,11 @@ export function HeadSlidesClient({
     );
   }
 
-  if (needsActivityFallback && activityQ.isLoading) return <SlideSkeleton />;
+  if (!state.needsActivityFallback) return null;
 
-  if (needsActivityFallback && activityQ.isError) {
+  if (state.isActivityLoading) return <SlideSkeleton />;
+
+  if (state.isActivityError) {
     return (
       <SlideEmptyState
         title="Slides could not load"
@@ -115,6 +130,38 @@ export function HeadSlidesClient({
       />
     );
   }
+
+  return null;
+}
+
+export function HeadSlidesClient({
+  reportId,
+  scope = "lead",
+  enableActivity = true,
+}: HeadSlidesClientProps = {}) {
+  const [rawSelectedIndex, setSelectedIndex] = useState(0);
+  const [density, setDensity] = useState<SlideDensity>("document");
+
+  const { weeklyQ, activityQ, needsActivityFallback, slides } =
+    useHeadSlideDeck({ reportId, scope, enableActivity, density });
+
+  // Two-sided clamp derived at render — see lead-slides-client: a negative
+  // index from an empty-deck arrow press must clamp too, not just an
+  // out-of-range one.
+  const selectedIndex =
+    rawSelectedIndex >= 0 && rawSelectedIndex < slides.length
+      ? rawSelectedIndex
+      : 0;
+
+  const fallback = slideDeckFallback({
+    isWeeklyLoading: weeklyQ.isLoading,
+    isWeeklyError: weeklyQ.isError,
+    hasPeriod: !!weeklyQ.data && weeklyQ.data.status !== "no-period",
+    needsActivityFallback,
+    isActivityLoading: activityQ.isLoading,
+    isActivityError: activityQ.isError,
+  });
+  if (fallback) return fallback;
 
   return (
     <StatusSlideDeck

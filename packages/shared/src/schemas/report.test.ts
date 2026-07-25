@@ -126,7 +126,7 @@ const makeStageStatuses = (count: number) =>
   }));
 
 // ---------------------------------------------------------------------------
-// Group 1: draftSaveSchema boundaries
+// draftSaveSchema boundaries
 // ---------------------------------------------------------------------------
 
 describe("draftSaveSchema", () => {
@@ -283,7 +283,7 @@ describe("itemWriteSchema — per-type progress vocabulary", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 2: itemInputSchema — safeText boundaries
+// itemInputSchema — safeText boundaries
 // ---------------------------------------------------------------------------
 
 describe("itemInputSchema — safeText", () => {
@@ -374,7 +374,7 @@ describe("itemInputSchema — safeText", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 3: riskInputSchema — safeText on risk/impact/mitigation
+// riskInputSchema — safeText on risk/impact/mitigation
 // ---------------------------------------------------------------------------
 
 describe("riskInputSchema — safeText", () => {
@@ -429,7 +429,7 @@ describe("riskInputSchema — safeText", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 3b: risks, items, AND decisions must each carry ≥1 concrete SDLC stage
+// risks, items, AND decisions must each carry ≥1 concrete SDLC stage
 // on the write path; the read model stays tolerant of stage-less legacy rows
 // (rendered as a loud "No stage set" warning).
 // ---------------------------------------------------------------------------
@@ -549,7 +549,7 @@ describe("riskInputSchema — required stageIds", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 4: decisionInputSchema — safeText
+// decisionInputSchema — safeText
 // ---------------------------------------------------------------------------
 
 describe("decisionInputSchema — safeText", () => {
@@ -600,7 +600,7 @@ describe("decisionInputSchema — safeText", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 5: submitSectionSchema boundaries
+// submitSectionSchema boundaries
 // ---------------------------------------------------------------------------
 
 describe("submitSectionSchema", () => {
@@ -678,7 +678,7 @@ describe("submitSectionSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 6: itemInputSchema — priorityRank field
+// itemInputSchema — priorityRank field
 // ---------------------------------------------------------------------------
 
 describe("itemInputSchema priorityRank", () => {
@@ -729,7 +729,7 @@ describe("itemInputSchema priorityRank", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 7: Enum schemas
+// Enum schemas
 // ---------------------------------------------------------------------------
 
 describe("enum schemas", () => {
@@ -785,7 +785,7 @@ describe("enum schemas", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 8: carryOverStatusSchema
+// carryOverStatusSchema
 // ---------------------------------------------------------------------------
 
 describe("carryOverStatusSchema", () => {
@@ -814,7 +814,7 @@ describe("carryOverStatusSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 9: Date validation — reportDate()
+// Date validation — reportDate()
 // ---------------------------------------------------------------------------
 
 describe("reportDate via assembledReportSchema", () => {
@@ -900,7 +900,7 @@ describe("reportDate via reportPeriodSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 10: projectStatusInputSchema
+// projectStatusInputSchema
 // ---------------------------------------------------------------------------
 
 describe("projectStatusInputSchema", () => {
@@ -927,7 +927,7 @@ describe("projectStatusInputSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 11: portfolioOverviewSchema
+// portfolioOverviewSchema
 // ---------------------------------------------------------------------------
 
 describe("portfolioOverviewSchema", () => {
@@ -957,7 +957,7 @@ describe("portfolioOverviewSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 12: archiveReportSummarySchema — reportDate usage
+// archiveReportSummarySchema — reportDate usage
 // ---------------------------------------------------------------------------
 
 describe("archiveReportSummarySchema", () => {
@@ -987,7 +987,7 @@ describe("archiveReportSummarySchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 13: validateSubmitInput function
+// validateSubmitInput function
 // ---------------------------------------------------------------------------
 
 describe("validateSubmitInput", () => {
@@ -1118,7 +1118,7 @@ describe("validateSubmitInput", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 13b: XOR parent + conditional stage + activityId write guard
+// XOR parent + conditional stage + activityId write guard
 // (validateRecordActivityIds)
 // ---------------------------------------------------------------------------
 
@@ -1241,7 +1241,7 @@ describe("validateRecordActivityIds", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 14: periodStatusSchema
+// periodStatusSchema
 // ---------------------------------------------------------------------------
 
 describe("periodStatusSchema", () => {
@@ -1271,7 +1271,7 @@ describe("periodStatusSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 14b: periodStateSchema
+// periodStateSchema
 // ---------------------------------------------------------------------------
 
 describe("periodStateSchema", () => {
@@ -1367,7 +1367,7 @@ describe("periodStateSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 14c: periodListBucketSchema + periodListItemSchema
+// periodListBucketSchema + periodListItemSchema
 // ---------------------------------------------------------------------------
 
 describe("periodListBucketSchema", () => {
@@ -1442,7 +1442,7 @@ describe("periodListItemSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 15: stageSchema
+// stageSchema
 // ---------------------------------------------------------------------------
 
 describe("stageSchema", () => {
@@ -1493,7 +1493,7 @@ describe("stageSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 16: stageAssignmentSchema
+// stageAssignmentSchema
 // ---------------------------------------------------------------------------
 
 describe("stageAssignmentSchema", () => {
@@ -1552,7 +1552,7 @@ describe("stageAssignmentSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 18: appSettingsSchema
+// appSettingsSchema
 // ---------------------------------------------------------------------------
 
 describe("appSettingsSchema", () => {
@@ -1778,7 +1778,7 @@ describe("appSettingsSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 19: appSettingsUpdateSchema (partial)
+// appSettingsUpdateSchema (partial)
 // ---------------------------------------------------------------------------
 
 describe("appSettingsUpdateSchema", () => {
@@ -1875,7 +1875,7 @@ describe("appSettingsUpdateSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 20: weeklyReportReadModelSchema
+// weeklyReportReadModelSchema
 // ---------------------------------------------------------------------------
 
 describe("weeklyReportReadModelSchema", () => {
@@ -1956,7 +1956,7 @@ describe("weeklyReportReadModelSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 21: portfolioProductOverviewSchema
+// portfolioProductOverviewSchema
 // ---------------------------------------------------------------------------
 
 describe("portfolioProductOverviewSchema", () => {
@@ -2006,7 +2006,7 @@ describe("portfolioProductOverviewSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 22: escalationSchema
+// escalationSchema
 // ---------------------------------------------------------------------------
 
 describe("escalationSchema", () => {
@@ -2228,7 +2228,7 @@ describe("compiledHistoryResultSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 21: safeText — noInvisibleOnly validator
+// safeText — noInvisibleOnly validator
 //
 // Guards the alternation form of the invisible-only check in
 // report-primitives.schema.ts so single-character escapes cannot slip through
@@ -2326,7 +2326,7 @@ describe("safeText — noInvisibleOnly", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 22: schema-level invisible-only rejection gap-fills
+// schema-level invisible-only rejection gap-fills
 //
 // Note: catalog names fields "description"/"title"/"rationale" but the actual
 // schema fields are riskInputSchema.risk/impact/mitigation and

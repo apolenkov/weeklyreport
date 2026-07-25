@@ -51,102 +51,166 @@ export function LeadFormToolbarControls({
   groupExpanded,
   setGroupExpanded,
 }: LeadFormToolbarControlsProps) {
-  const {
-    currentWeekItems,
-    decisions,
-    hasArchivedPeriods,
-    nextWeekItems,
-    risks,
-    visiblePeriods,
-  } = viewModel;
-
-  function handleToggleAll() {
-    setGroupExpanded((prev) => !prev);
-  }
-
-  // Trailing utility control (edit mode): collapse/expand all sections. The
-  // slot is always reserved and disabled when the report has nothing to
-  // collapse, so adding/removing sections in-session never shifts the row.
-  const hasCollapsibleContent =
-    currentWeekItems.length > 0 ||
-    nextWeekItems.length > 0 ||
-    risks.length > 0 ||
-    decisions.length > 0;
-  const collapseAllLabel = groupExpanded
-    ? "Collapse all sections"
-    : "Expand all sections";
-
   return (
     <ReportToolbar
       sticky
       contextControls={
         <>
-          {/* Period navigation (and the show-archived filter) anchor the
-              left; the view controls are pushed to the right by the spacer
-              so "where you are" and "how you see it" read as two clusters. */}
-          <PeriodNavigator
-            periods={visiblePeriods}
-            showLeadSubmissionMarkers
+          <ToolbarPeriodCluster
+            viewModel={viewModel}
             leadSubmittedAt={leadSubmittedAt}
+            showArchivePeriods={showArchivePeriods}
+            onShowArchivePeriodsChange={onShowArchivePeriodsChange}
           />
-          {hasArchivedPeriods && (
-            <>
-              <Separator
-                orientation="vertical"
-                className="h-5 bg-[var(--color-border)]"
-              />
-              <ArchiveToggle
-                checked={showArchivePeriods}
-                onChange={onShowArchivePeriodsChange}
-              />
-            </>
-          )}
           <div className="grow" aria-hidden="true" />
-          {/* Inert Agent-review placeholder leads the right-aligned view
-              group (compact, leading edge). */}
-          <AgentReviewComingSoon compact />
-          {/* Always rendered so trailing controls never shift between modes. */}
-          <RecordVisibilityToggle
-            value={toolbarVisibility}
-            onChange={onVisibilityChange}
-            disabled={isForeignSlidesDeck}
+          <ToolbarViewCluster
+            toolbarVisibility={toolbarVisibility}
+            onVisibilityChange={onVisibilityChange}
+            isForeignSlidesDeck={isForeignSlidesDeck}
+            isSlidesMode={isSlidesMode}
+            targetReportId={targetReportId}
           />
-          <ViewModeToggle
-            mode={isSlidesMode ? "slides" : "edit"}
-            editHref={
-              targetReportId
-                ? `/lead/report/${encodeURIComponent(targetReportId)}`
-                : "/lead/report"
-            }
-            slidesHref={
-              targetReportId
-                ? `/lead/report/${encodeURIComponent(
-                    targetReportId,
-                  )}?mode=slides`
-                : "/lead/report"
-            }
+          <ToolbarTrailingSlot
+            viewModel={viewModel}
+            isSlidesMode={isSlidesMode}
+            slidesFullscreen={slidesFullscreen}
+            fullscreenToggleRef={fullscreenToggleRef}
+            groupExpanded={groupExpanded}
+            setGroupExpanded={setGroupExpanded}
           />
-          {/* Fixed-width trailing slot so the row never shifts across modes. */}
-          {isSlidesMode ? (
-            <SlideFullscreenButton
-              isFullscreen={slidesFullscreen.isFullscreen}
-              onToggle={slidesFullscreen.toggle}
-              buttonRef={fullscreenToggleRef}
-            />
-          ) : (
-            <button
-              type="button"
-              className="btn-press inline-flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={handleToggleAll}
-              disabled={!hasCollapsibleContent}
-              aria-label={collapseAllLabel}
-              title={collapseAllLabel}
-            >
-              <CollapseIcon />
-            </button>
-          )}
         </>
       }
     />
+  );
+}
+
+interface ToolbarPeriodClusterProps {
+  readonly viewModel: LeadFormLoadedViewModel;
+  readonly leadSubmittedAt: LeadSubmittedAt;
+  readonly showArchivePeriods: boolean;
+  readonly onShowArchivePeriodsChange: (next: boolean) => void;
+}
+
+// Period navigation (and the show-archived filter) anchor the left; the view
+// controls are pushed to the right by the spacer so "where you are" and "how
+// you see it" read as two clusters.
+function ToolbarPeriodCluster({
+  viewModel,
+  leadSubmittedAt,
+  showArchivePeriods,
+  onShowArchivePeriodsChange,
+}: ToolbarPeriodClusterProps) {
+  return (
+    <>
+      <PeriodNavigator
+        periods={viewModel.visiblePeriods}
+        showLeadSubmissionMarkers
+        leadSubmittedAt={leadSubmittedAt}
+      />
+      {viewModel.hasArchivedPeriods && (
+        <>
+          <Separator
+            orientation="vertical"
+            className="h-5 bg-[var(--color-border)]"
+          />
+          <ArchiveToggle
+            checked={showArchivePeriods}
+            onChange={onShowArchivePeriodsChange}
+          />
+        </>
+      )}
+    </>
+  );
+}
+
+interface ToolbarViewClusterProps {
+  readonly toolbarVisibility: RecordVisibility;
+  readonly onVisibilityChange: (next: RecordVisibility) => void;
+  readonly isForeignSlidesDeck: boolean;
+  readonly isSlidesMode: boolean;
+  readonly targetReportId: string;
+}
+
+function ToolbarViewCluster({
+  toolbarVisibility,
+  onVisibilityChange,
+  isForeignSlidesDeck,
+  isSlidesMode,
+  targetReportId,
+}: ToolbarViewClusterProps) {
+  const editHref = targetReportId
+    ? `/lead/report/${encodeURIComponent(targetReportId)}`
+    : "/lead/report";
+  return (
+    <>
+      {/* Inert Agent-review placeholder leads the right-aligned view
+          group (compact, leading edge). */}
+      <AgentReviewComingSoon compact />
+      {/* Always rendered so trailing controls never shift between modes. */}
+      <RecordVisibilityToggle
+        value={toolbarVisibility}
+        onChange={onVisibilityChange}
+        disabled={isForeignSlidesDeck}
+      />
+      <ViewModeToggle
+        mode={isSlidesMode ? "slides" : "edit"}
+        editHref={editHref}
+        slidesHref={targetReportId ? `${editHref}?mode=slides` : "/lead/report"}
+      />
+    </>
+  );
+}
+
+interface ToolbarTrailingSlotProps {
+  readonly viewModel: LeadFormLoadedViewModel;
+  readonly isSlidesMode: boolean;
+  readonly slidesFullscreen: SlidesFullscreen;
+  readonly fullscreenToggleRef: RefObject<HTMLButtonElement | null>;
+  readonly groupExpanded: boolean;
+  readonly setGroupExpanded: (update: (prev: boolean) => boolean) => void;
+}
+
+// Fixed-width trailing slot so the row never shifts across modes. In edit mode
+// it holds collapse/expand-all: the slot stays reserved and merely disabled
+// when the report has nothing to collapse, so adding or removing sections
+// in-session never shifts the row.
+function ToolbarTrailingSlot({
+  viewModel,
+  isSlidesMode,
+  slidesFullscreen,
+  fullscreenToggleRef,
+  groupExpanded,
+  setGroupExpanded,
+}: ToolbarTrailingSlotProps) {
+  if (isSlidesMode) {
+    return (
+      <SlideFullscreenButton
+        isFullscreen={slidesFullscreen.isFullscreen}
+        onToggle={slidesFullscreen.toggle}
+        buttonRef={fullscreenToggleRef}
+      />
+    );
+  }
+
+  const hasCollapsibleContent =
+    viewModel.currentWeekItems.length > 0 ||
+    viewModel.nextWeekItems.length > 0 ||
+    viewModel.risks.length > 0 ||
+    viewModel.decisions.length > 0;
+  const collapseAllLabel = groupExpanded
+    ? "Collapse all sections"
+    : "Expand all sections";
+
+  return (
+    <button
+      type="button"
+      className="btn-press inline-flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+      onClick={() => setGroupExpanded((prev) => !prev)}
+      disabled={!hasCollapsibleContent}
+      aria-label={collapseAllLabel}
+      title={collapseAllLabel}
+    >
+      <CollapseIcon />
+    </button>
   );
 }

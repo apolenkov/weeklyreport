@@ -17,12 +17,13 @@ export function collectDecisionErrors(args: {
   readonly availableStages: readonly string[];
   readonly effectiveStageIds: readonly string[];
 }): DecisionFieldErrors {
-  const errors: DecisionFieldErrors = {};
-  if (args.text.length === 0) errors.text = "Decision text is required";
-  if (args.impact.length === 0) errors.impact = "Impact is required";
-  if (args.availableStages.length > 0 && args.effectiveStageIds.length === 0)
-    errors.stageIds = "Select at least one stage.";
-  return errors;
+  const stageRequired =
+    args.availableStages.length > 0 && args.effectiveStageIds.length === 0;
+  return {
+    ...(args.text.length === 0 ? { text: "Decision text is required" } : {}),
+    ...(args.impact.length === 0 ? { impact: "Impact is required" } : {}),
+    ...(stageRequired ? { stageIds: "Select at least one stage." } : {}),
+  };
 }
 
 export interface DecisionFormSeed {

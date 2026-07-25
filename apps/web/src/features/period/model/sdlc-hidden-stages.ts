@@ -17,18 +17,26 @@ export function foreignOwnersForProduct(
   productId: string,
   crossAuthors: readonly CrossAuthorEntry[],
 ): Map<string, ForeignOwner> {
-  const map = new Map<string, ForeignOwner>();
-  for (const ca of crossAuthors.filter((c) => c.projectId === productId)) {
-    for (const name of ca.stageNames) {
-      const key = canonicalStageName(name);
-      const st = ca.stages.find((s) => canonicalStageName(s.stageName) === key);
-      map.set(key, {
-        owner: ca.authorInitials,
-        status: trafficToStageStatus(st?.status ?? null),
-      });
-    }
-  }
-  return map;
+  // Later entries win, exactly as the sequential writes they replace did.
+  return new Map<string, ForeignOwner>(
+    crossAuthors
+      .filter((c) => c.projectId === productId)
+      .flatMap((ca) =>
+        ca.stageNames.map((name): [string, ForeignOwner] => {
+          const key = canonicalStageName(name);
+          const st = ca.stages.find(
+            (s) => canonicalStageName(s.stageName) === key,
+          );
+          return [
+            key,
+            {
+              owner: ca.authorInitials,
+              status: trafficToStageStatus(st?.status ?? null),
+            },
+          ];
+        }),
+      ),
+  );
 }
 
 // Named owner → "— <owner> (no status set)" / "— <owner>: <status>"; else "another lead".

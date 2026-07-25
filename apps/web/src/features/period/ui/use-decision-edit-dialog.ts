@@ -33,6 +33,51 @@ interface UseDecisionEditDialogArgs {
   readonly onCancel: () => void;
 }
 
+// Assemble and emit the saved row from already-validated fields. Activity
+// parents produce an empty productId and no stage; product parents retain
+// product and stage data. The write schema enforces the XOR.
+function emitDecisionSave(args: {
+  readonly decision: DecisionEntry | null;
+  readonly text: string;
+  readonly owner: string;
+  readonly impact: string;
+  readonly deadline: string;
+  readonly isActivityParent: boolean;
+  readonly selectedActivity: ParentActivityOption | undefined;
+  readonly selectedProduct: Product | undefined;
+  readonly parentId: string;
+  readonly effectiveStageIds: readonly string[];
+  readonly onSave: (next: DecisionEntry) => void;
+}): void {
+  const base = buildDecisionSaveBase({
+    decision: args.decision,
+    text: args.text,
+    owner: args.owner,
+    impact: args.impact,
+    deadline: args.deadline,
+  });
+  if (args.isActivityParent) {
+    args.onSave(
+      buildActivityDecisionSave({
+        base,
+        decision: args.decision,
+        selectedActivity: args.selectedActivity,
+        activityId: args.parentId,
+      }),
+    );
+    return;
+  }
+  args.onSave(
+    buildProductDecisionSave({
+      base,
+      decision: args.decision,
+      selectedProduct: args.selectedProduct,
+      parentId: args.parentId,
+      effectiveStageIds: args.effectiveStageIds,
+    }),
+  );
+}
+
 // Form state/handlers for the decision dialog; dialog file stays render-only.
 export function useDecisionEditDialog({
   decision,
@@ -145,35 +190,19 @@ export function useDecisionEditDialog({
       focusFirstInvalidField(next);
       return;
     }
-    const base = buildDecisionSaveBase({
+    emitDecisionSave({
       decision,
       text: t,
       owner: o,
       impact: im,
       deadline,
+      isActivityParent,
+      selectedActivity,
+      selectedProduct,
+      parentId: parent.id,
+      effectiveStageIds,
+      onSave,
     });
-    // Activity parents produce an empty productId and no stage; product parents
-    // retain product and stage data. The write schema enforces the XOR.
-    if (isActivityParent) {
-      onSave(
-        buildActivityDecisionSave({
-          base,
-          decision,
-          selectedActivity,
-          activityId: parent.id,
-        }),
-      );
-      return;
-    }
-    onSave(
-      buildProductDecisionSave({
-        base,
-        decision,
-        selectedProduct,
-        parentId: parent.id,
-        effectiveStageIds,
-      }),
-    );
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {

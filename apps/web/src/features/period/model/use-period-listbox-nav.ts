@@ -1,5 +1,8 @@
 import {
+  type Dispatch,
   type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject,
+  type SetStateAction,
   type TouchEvent as ReactTouchEvent,
   useCallback,
   useEffect,
@@ -13,6 +16,12 @@ const SWIPE_THRESHOLD_PX = 50;
 // Gap between the trigger and the portaled listbox panel.
 const PERIOD_PANEL_GAP_PX = 4;
 
+interface PeriodPanelPosition {
+  readonly top: number;
+  readonly left: number;
+  readonly width: number;
+}
+
 interface PeriodListboxNavArgs {
   readonly instanceId: string;
   readonly currentIndex: number;
@@ -23,40 +32,18 @@ interface PeriodListboxNavArgs {
   readonly onNext: () => void;
 }
 
-// PeriodNavigator listbox + swipe: trigger + portaled panel (native <option>
-// can't host badges). Focus stays on the trigger; highlight via aria-activedescendant.
-export function usePeriodListboxNav({
-  instanceId,
+// Open/highlight state plus the two ways a period gets chosen. `openListbox`
+// stays out of the public surface — only the keyboard handlers need it.
+function useListboxSelection({
   currentIndex,
-  periodOptionIds,
   selectedPeriodId,
   navigateTo,
-  onPrev,
-  onNext,
-}: PeriodListboxNavArgs) {
-  // Per-instance scoped listbox/option ids so two navigators on one page
-  // never collide on the DOM ids that aria-controls / aria-activedescendant
-  // reference.
-  const listboxId = `period-listbox-${instanceId}`;
-  const optionIdPrefix = `period-option-${instanceId}-`;
-
+}: Pick<
+  PeriodListboxNavArgs,
+  "currentIndex" | "selectedPeriodId" | "navigateTo"
+>) {
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(currentIndex);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [panelPos, setPanelPos] = useState<{
-    top: number;
-    left: number;
-    width: number;
-  } | null>(null);
-
-  // containerRef = trigger (not panel): Escape/restore only; no focus into the list.
-  useDialogFocus({
-    open,
-    onClose: () => setOpen(false),
-    containerRef: triggerRef,
-    triggerRef,
-  });
 
   const selectOption = useCallback(
     (periodId: string) => {
@@ -69,7 +56,42 @@ export function usePeriodListboxNav({
     [navigateTo, selectedPeriodId],
   );
 
-  // Position the panel via portal to escape the toolbar's overflow clip.
+  // Opening anchors the highlight on the currently selected option — done in
+  // the open EVENT (openListbox/toggleOpen own every open transition), not in
+  // a state-sync effect.
+  const openListbox = useCallback(() => {
+    setActiveIdx(currentIndex);
+    setOpen(true);
+  }, [currentIndex]);
+
+  const toggleOpen = useCallback(() => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    openListbox();
+  }, [open, openListbox]);
+
+  return {
+    selection: {
+      open,
+      setOpen,
+      activeIdx,
+      setActiveIdx,
+      toggleOpen,
+      selectOption,
+    },
+    openListbox,
+  };
+}
+
+// Position the panel via portal to escape the toolbar's overflow clip.
+function usePanelPosition(
+  open: boolean,
+  triggerRef: RefObject<HTMLButtonElement | null>,
+): PeriodPanelPosition | null {
+  const [panelPos, setPanelPos] = useState<PeriodPanelPosition | null>(null);
+
   useEffect(() => {
     if (!open) return;
     const update = () => {
@@ -88,9 +110,18 @@ export function usePeriodListboxNav({
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
     };
-  }, [open]);
+  }, [open, triggerRef]);
 
-  // Dual-ref outside click: trigger or panel keeps the listbox open.
+  return panelPos;
+}
+
+// Dual-ref outside click: trigger or panel keeps the listbox open.
+function useCloseOnOutsideClick(
+  open: boolean,
+  triggerRef: RefObject<HTMLButtonElement | null>,
+  panelRef: RefObject<HTMLDivElement | null>,
+  setOpen: Dispatch<SetStateAction<boolean>>,
+): void {
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       const target = e.target as Node;
@@ -100,31 +131,40 @@ export function usePeriodListboxNav({
     }
     if (open) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
+  }, [open, triggerRef, panelRef, setOpen]);
+}
 
-  // Opening anchors the highlight on the currently selected option — done in
-  // the open EVENT (openListbox/toggleOpen own every open transition), not in
-  // a state-sync effect.
-  const openListbox = useCallback(() => {
-    setActiveIdx(currentIndex);
-    setOpen(true);
-  }, [currentIndex]);
-  const toggleOpen = useCallback(() => {
-    if (open) {
-      setOpen(false);
-      return;
-    }
-    openListbox();
-  }, [open, openListbox]);
-
-  // Scroll active option into view; block: "nearest" avoids hover-driven panel jerks.
+// Scroll active option into view; block: "nearest" avoids hover-driven panel jerks.
+function useActiveOptionScroll(
+  open: boolean,
+  activeIdx: number,
+  optionIdPrefix: string,
+): void {
   useEffect(() => {
     if (!open) return;
     document
       .getElementById(`${optionIdPrefix}${activeIdx}`)
       ?.scrollIntoView({ block: "nearest" });
   }, [open, activeIdx, optionIdPrefix]);
+}
 
+interface ListboxKeyHandlerArgs {
+  readonly open: boolean;
+  readonly activeIdx: number;
+  readonly setActiveIdx: Dispatch<SetStateAction<number>>;
+  readonly periodOptionIds: readonly string[];
+  readonly selectOption: (periodId: string) => void;
+  readonly openListbox: () => void;
+}
+
+function createListboxKeyHandlers({
+  open,
+  activeIdx,
+  setActiveIdx,
+  periodOptionIds,
+  selectOption,
+  openListbox,
+}: ListboxKeyHandlerArgs) {
   function handleListKeyDown(
     e: ReactKeyboardEvent<HTMLButtonElement | HTMLDivElement>,
   ) {
@@ -158,12 +198,18 @@ export function usePeriodListboxNav({
     }
   }
 
-  // Swipe gesture. Left = next week, right = previous week.
+  return { handleTriggerKeyDown, handleListKeyDown };
+}
+
+// Swipe gesture. Left = next week, right = previous week.
+function useSwipeNavigation(onPrev: () => void, onNext: () => void) {
   const touchStartXRef = useRef<number | null>(null);
+
   function handleTouchStart(e: ReactTouchEvent<HTMLDivElement>) {
     const t = Array.from(e.touches).at(0);
     touchStartXRef.current = t ? t.clientX : null;
   }
+
   function handleTouchEnd(e: ReactTouchEvent<HTMLDivElement>) {
     const start = touchStartXRef.current;
     touchStartXRef.current = null;
@@ -176,21 +222,65 @@ export function usePeriodListboxNav({
     else onPrev();
   }
 
+  return { handleTouchStart, handleTouchEnd };
+}
+
+// PeriodNavigator listbox + swipe: trigger + portaled panel (native <option>
+// can't host badges). Focus stays on the trigger; highlight via aria-activedescendant.
+export function usePeriodListboxNav({
+  instanceId,
+  currentIndex,
+  periodOptionIds,
+  selectedPeriodId,
+  navigateTo,
+  onPrev,
+  onNext,
+}: PeriodListboxNavArgs) {
+  // Per-instance scoped listbox/option ids so two navigators on one page
+  // never collide on the DOM ids that aria-controls / aria-activedescendant
+  // reference.
+  const listboxId = `period-listbox-${instanceId}`;
+  const optionIdPrefix = `period-option-${instanceId}-`;
+
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { selection, openListbox } = useListboxSelection({
+    currentIndex,
+    selectedPeriodId,
+    navigateTo,
+  });
+  const { open, setOpen } = selection;
+  const panelPos = usePanelPosition(open, triggerRef);
+
+  // containerRef = trigger (not panel): Escape/restore only; no focus into the list.
+  useDialogFocus({
+    open,
+    onClose: () => setOpen(false),
+    containerRef: triggerRef,
+    triggerRef,
+  });
+
+  useCloseOnOutsideClick(open, triggerRef, panelRef, setOpen);
+  useActiveOptionScroll(open, selection.activeIdx, optionIdPrefix);
+
+  const keyHandlers = createListboxKeyHandlers({
+    open,
+    activeIdx: selection.activeIdx,
+    setActiveIdx: selection.setActiveIdx,
+    periodOptionIds,
+    selectOption: selection.selectOption,
+    openListbox,
+  });
+  const swipeHandlers = useSwipeNavigation(onPrev, onNext);
+
   return {
     listboxId,
     optionIdPrefix,
-    open,
-    setOpen,
-    toggleOpen,
-    activeIdx,
-    setActiveIdx,
     triggerRef,
     panelRef,
     panelPos,
-    selectOption,
-    handleTriggerKeyDown,
-    handleListKeyDown,
-    handleTouchStart,
-    handleTouchEnd,
+    ...selection,
+    ...keyHandlers,
+    ...swipeHandlers,
   };
 }

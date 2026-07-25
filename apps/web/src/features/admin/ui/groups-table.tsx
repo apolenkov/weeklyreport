@@ -16,6 +16,11 @@ const ROW_ACTION_CLASS =
 const ROW_ACTION_EDIT_CLASS = `${ROW_ACTION_CLASS} text-[var(--color-starbucks-accent)] hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)]`;
 const ROW_ACTION_ARCHIVE_CLASS = `${ROW_ACTION_CLASS} text-[var(--color-destructive)] hover:border-[rgba(200,32,20,0.3)] hover:bg-red-50`;
 
+const STATUS_PILL_CLASS =
+  "inline-flex rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold";
+const STATUS_ARCHIVED_CLASS = `${STATUS_PILL_CLASS} bg-[var(--color-muted)] text-[var(--color-muted-foreground)]`;
+const STATUS_ACTIVE_CLASS = `${STATUS_PILL_CLASS} bg-[var(--color-success)] text-[var(--color-primary)]`;
+
 export function GroupsTable({
   groups,
   headById,
@@ -26,79 +31,102 @@ export function GroupsTable({
   return (
     <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)]">
       <table className="w-full text-left text-sm" data-testid="groups-table">
-        <thead>
-          <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
-            <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-              Name
-            </th>
-            <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-              Description
-            </th>
-            <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-              Leader
-            </th>
-            <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-              Status
-            </th>
-            <th className="px-4 py-3 text-right font-semibold text-[var(--color-foreground)]">
-              Actions
-            </th>
-          </tr>
-        </thead>
+        <GroupsTableHead />
         <tbody>
           {groups.map((group) => (
-            <tr
+            <GroupRow
               key={group.id}
-              className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]"
-            >
-              <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">
-                {group.name}
-              </td>
-              <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
-                {group.description || "—"}
-              </td>
-              <td className="px-4 py-3 text-[var(--color-foreground)]">
-                {group.headUserId
+              group={group}
+              headName={
+                group.headUserId
                   ? (headById.get(group.headUserId)?.name ?? "—")
-                  : "—"}
-              </td>
-              <td className="px-4 py-3">
-                <span
-                  className={
-                    group.archived
-                      ? "inline-flex rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-muted-foreground)]"
-                      : "inline-flex rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary)]"
-                  }
-                >
-                  {group.archived ? "Archived" : "Active"}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onEdit(group)}
-                    className={ROW_ACTION_EDIT_CLASS}
-                    aria-label={`Edit ${group.name}`}
-                  >
-                    Edit
-                  </button>
-                  {!group.archived && activeGroupCount > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => onArchive(group)}
-                      className={ROW_ACTION_ARCHIVE_CLASS}
-                      aria-label={`Archive ${group.name}`}
-                    >
-                      Archive
-                    </button>
-                  )}
-                </div>
-              </td>
-            </tr>
+                  : "—"
+              }
+              // The last active group must stay unarchivable, so the action is
+              // withheld rather than rendered disabled.
+              canArchive={!group.archived && activeGroupCount > 1}
+              onEdit={onEdit}
+              onArchive={onArchive}
+            />
           ))}
         </tbody>
       </table>
     </div>
+  );
+}
+
+const HEAD_CELL_CLASS =
+  "px-4 py-3 font-semibold text-[var(--color-foreground)]";
+
+function GroupsTableHead() {
+  return (
+    <thead>
+      <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
+        <th className={HEAD_CELL_CLASS}>Name</th>
+        <th className={HEAD_CELL_CLASS}>Description</th>
+        <th className={HEAD_CELL_CLASS}>Leader</th>
+        <th className={HEAD_CELL_CLASS}>Status</th>
+        <th className={`${HEAD_CELL_CLASS} text-right`}>Actions</th>
+      </tr>
+    </thead>
+  );
+}
+
+interface GroupRowProps {
+  readonly group: MockGroup;
+  readonly headName: string;
+  readonly canArchive: boolean;
+  readonly onEdit: (group: MockGroup) => void;
+  readonly onArchive: (group: MockGroup) => void;
+}
+
+function GroupRow({
+  group,
+  headName,
+  canArchive,
+  onEdit,
+  onArchive,
+}: GroupRowProps) {
+  return (
+    <tr className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]">
+      <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">
+        {group.name}
+      </td>
+      <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
+        {group.description || "—"}
+      </td>
+      <td className="px-4 py-3 text-[var(--color-foreground)]">{headName}</td>
+      <td className="px-4 py-3">
+        <span
+          className={
+            group.archived ? STATUS_ARCHIVED_CLASS : STATUS_ACTIVE_CLASS
+          }
+        >
+          {group.archived ? "Archived" : "Active"}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-right">
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => onEdit(group)}
+            className={ROW_ACTION_EDIT_CLASS}
+            aria-label={`Edit ${group.name}`}
+          >
+            Edit
+          </button>
+          {canArchive && (
+            <button
+              type="button"
+              onClick={() => onArchive(group)}
+              className={ROW_ACTION_ARCHIVE_CLASS}
+              aria-label={`Archive ${group.name}`}
+            >
+              Archive
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
   );
 }

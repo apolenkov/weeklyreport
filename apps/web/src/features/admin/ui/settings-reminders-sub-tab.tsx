@@ -8,6 +8,45 @@ import { useServerSeededDraft } from "../../../shared/ui/use-server-seeded-draft
 import type { MockSettings } from "../model/admin-types";
 import { TIMEZONE_OPTIONS } from "../model/timezone-options";
 
+function DefaultTimezoneField({
+  value,
+  onChange,
+}: {
+  readonly value: string;
+  readonly onChange: (next: string) => void;
+}) {
+  return (
+    <div>
+      <label
+        htmlFor="default-timezone"
+        className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+      >
+        Default timezone
+      </label>
+      <select
+        id="default-timezone"
+        name="default-timezone"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+      >
+        {TIMEZONE_OPTIONS.map((group) => (
+          <optgroup key={group.group} label={group.group}>
+            {group.zones.map((z) => (
+              <option key={z.value} value={z.value}>
+                {z.label}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+        IANA zone used as the default when an admin creates a new reminder.
+      </p>
+    </div>
+  );
+}
+
 export function RemindersSubTab({
   serverSettings,
 }: {
@@ -37,36 +76,10 @@ export function RemindersSubTab({
         reminders keep their own timezone.
       </p>
 
-      <div>
-        <label
-          htmlFor="default-timezone"
-          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-        >
-          Default timezone
-        </label>
-        <select
-          id="default-timezone"
-          name="default-timezone"
-          value={draft.defaultTimezone}
-          onChange={(e) =>
-            setDraft({ ...draft, defaultTimezone: e.target.value })
-          }
-          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-        >
-          {TIMEZONE_OPTIONS.map((group) => (
-            <optgroup key={group.group} label={group.group}>
-              {group.zones.map((z) => (
-                <option key={z.value} value={z.value}>
-                  {z.label}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-          IANA zone used as the default when an admin creates a new reminder.
-        </p>
-      </div>
+      <DefaultTimezoneField
+        value={draft.defaultTimezone}
+        onChange={(defaultTimezone) => setDraft({ ...draft, defaultTimezone })}
+      />
 
       <div className="flex items-center gap-3 pt-2">
         <button

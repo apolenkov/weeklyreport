@@ -40,28 +40,17 @@ export function ReviewAcknowledgeBar({
   );
 }
 
-function AcknowledgeGroupControl({
-  reportId,
-  group,
-  currentUserId,
-  isHeadOrAdmin,
-}: {
-  readonly reportId: string;
-  readonly group: AcknowledgeGroup;
-  readonly currentUserId: string;
-  readonly isHeadOrAdmin: boolean;
-}) {
+function useAcknowledgeGroup(
+  reportId: string,
+  groupId: string,
+  currentUserId: string,
+) {
   const trpc = useTRPC();
   const qc = useQueryClient();
-  const suffix = group.label ? ` · ${group.label}` : "";
   const acksQ = useQuery(
-    trpc.review.acknowledgements.queryOptions({
-      reportId,
-      groupId: group.groupId,
-    }),
+    trpc.review.acknowledgements.queryOptions({ reportId, groupId }),
   );
   const acks: ReviewAcknowledgementView[] = acksQ.data ?? [];
-  const acknowledged = acks.some((ack) => ack.userId === currentUserId);
 
   const ackMut = useMutation(
     trpc.review.acknowledge.mutationOptions({
@@ -77,6 +66,31 @@ function AcknowledgeGroupControl({
         );
       },
     }),
+  );
+
+  return {
+    acks,
+    acknowledged: acks.some((ack) => ack.userId === currentUserId),
+    ackMut,
+  };
+}
+
+function AcknowledgeGroupControl({
+  reportId,
+  group,
+  currentUserId,
+  isHeadOrAdmin,
+}: {
+  readonly reportId: string;
+  readonly group: AcknowledgeGroup;
+  readonly currentUserId: string;
+  readonly isHeadOrAdmin: boolean;
+}) {
+  const suffix = group.label ? ` · ${group.label}` : "";
+  const { acks, acknowledged, ackMut } = useAcknowledgeGroup(
+    reportId,
+    group.groupId,
+    currentUserId,
   );
 
   return (

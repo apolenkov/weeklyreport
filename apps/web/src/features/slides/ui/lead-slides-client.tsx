@@ -1,6 +1,12 @@
 "use client";
 
-import { type RefObject, useMemo, useRef, useState } from "react";
+import {
+  type ReactElement,
+  type RefObject,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { useFullscreen } from "../../../hooks/use-fullscreen";
 import {
@@ -28,6 +34,63 @@ interface LeadSlidesClientProps {
   // Lead-form threads one useRecordVisibility instance for Mine vs Everyone; default Mine-only.
   readonly visibilityMode?: "mine" | "everyone";
   readonly visibilityHydrated?: boolean;
+}
+
+// What renders instead of the deck; `null` means the deck itself is ready.
+function deckPlaceholder(state: {
+  readonly isLoading: boolean;
+  readonly isError: boolean;
+  readonly hasTargetReport: boolean;
+}): ReactElement | null {
+  if (state.isLoading) {
+    return <SlideSkeleton />;
+  }
+  if (state.isError) {
+    return (
+      <SlideEmptyState
+        title="Slides could not load"
+        message="Refresh the page after the report data is available."
+      />
+    );
+  }
+  if (!state.hasTargetReport) {
+    return (
+      <SlideEmptyState
+        title="No active slide"
+        message="There is no report section available for this session."
+      />
+    );
+  }
+  return null;
+}
+
+function DeckToolbar({
+  density,
+  onDensityChange,
+  showFullscreenControls,
+  isFullscreen,
+  onToggle,
+  toggleRef,
+}: {
+  readonly density: SlideDensity;
+  readonly onDensityChange: (next: SlideDensity) => void;
+  readonly showFullscreenControls: boolean;
+  readonly isFullscreen: boolean;
+  readonly onToggle: () => void;
+  readonly toggleRef: RefObject<HTMLButtonElement | null>;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <SlideDensityControl value={density} onChange={onDensityChange} />
+      {showFullscreenControls ? (
+        <DeckToolbarControls
+          isFullscreen={isFullscreen}
+          onToggle={onToggle}
+          toggleRef={toggleRef}
+        />
+      ) : null}
+    </div>
+  );
 }
 
 export function LeadSlidesClient({
@@ -71,26 +134,13 @@ export function LeadSlidesClient({
       ? rawSelectedIndex
       : 0;
 
-  if (leadSlides.isLoading) {
-    return <SlideSkeleton />;
-  }
-
-  if (leadSlides.isError) {
-    return (
-      <SlideEmptyState
-        title="Slides could not load"
-        message="Refresh the page after the report data is available."
-      />
-    );
-  }
-
-  if (!leadSlides.targetReportId) {
-    return (
-      <SlideEmptyState
-        title="No active slide"
-        message="There is no report section available for this session."
-      />
-    );
+  const placeholder = deckPlaceholder({
+    isLoading: leadSlides.isLoading,
+    isError: leadSlides.isError,
+    hasTargetReport: Boolean(leadSlides.targetReportId),
+  });
+  if (placeholder !== null) {
+    return placeholder;
   }
 
   return (
@@ -109,16 +159,14 @@ export function LeadSlidesClient({
         mode="lead"
         onRowActivate={inlineEditor.onRowActivate}
         toolbar={
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <SlideDensityControl value={density} onChange={setDensity} />
-            {!leadSlides.inReportMode ? (
-              <DeckToolbarControls
-                isFullscreen={isFullscreen}
-                onToggle={onToggle}
-                toggleRef={toggleButtonRef}
-              />
-            ) : null}
-          </div>
+          <DeckToolbar
+            density={density}
+            onDensityChange={setDensity}
+            showFullscreenControls={!leadSlides.inReportMode}
+            isFullscreen={isFullscreen}
+            onToggle={onToggle}
+            toggleRef={toggleButtonRef}
+          />
         }
       />
       <DeckFullscreenOverlay isFullscreen={isFullscreen} onToggle={onToggle} />

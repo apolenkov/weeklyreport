@@ -37,25 +37,37 @@ export function PeriodsArchiveSection({
 
       {expanded && (
         <div id="periods-archive-body" data-testid="periods-archive-body">
-          {isLoading ? (
-            <div
-              className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-muted-foreground)]"
-              data-testid="periods-archive-loading"
-            >
-              Loading archive…
-            </div>
-          ) : rows.length === 0 ? (
-            <div
-              className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-muted-foreground)]"
-              data-testid="periods-archive-empty"
-            >
-              No archived periods.
-            </div>
-          ) : (
-            <PeriodTable testIdPrefix="archive" rows={rows} {...rowActions} />
-          )}
+          <ArchiveBody isLoading={isLoading} rows={rows} {...rowActions} />
         </div>
       )}
     </section>
   );
+}
+
+const PLACEHOLDER_CLASS =
+  "rounded-[var(--radius)] border border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-muted-foreground)]";
+
+function ArchiveBody({
+  isLoading,
+  rows,
+  ...rowActions
+}: {
+  readonly isLoading: boolean;
+  readonly rows: readonly PeriodListItem[];
+} & Omit<PeriodTableProps, "rows" | "testIdPrefix">) {
+  if (isLoading) {
+    return (
+      <div className={PLACEHOLDER_CLASS} data-testid="periods-archive-loading">
+        Loading archive…
+      </div>
+    );
+  }
+  if (rows.length === 0) {
+    return (
+      <div className={PLACEHOLDER_CLASS} data-testid="periods-archive-empty">
+        No archived periods.
+      </div>
+    );
+  }
+  return <PeriodTable testIdPrefix="archive" rows={rows} {...rowActions} />;
 }

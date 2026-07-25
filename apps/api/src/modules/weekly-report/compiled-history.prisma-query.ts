@@ -8,6 +8,43 @@ import { historySectionScope } from "./weekly-report-portfolio.js";
 // Cap history list size; archive count is separate so the UI can still offer expand.
 const COMPILED_HISTORY_PAGE_SIZE = 100;
 
+type HistorySectionScope = ReturnType<typeof historySectionScope>;
+
+// Viewer-only: reopened periods (status published, periodStatus reopened)
+// would appear as broken History links; head/lead must still see them.
+function viewerPeriodWhere(
+  session: WeeklyReportScopeSession,
+): Prisma.ReportWhereInput {
+  return session.role === "viewer"
+    ? { periodStatus: "published" as const }
+    : {};
+}
+
+function historyListWhere(
+  session: WeeklyReportScopeSession,
+  sectionScope: HistorySectionScope,
+  includeArchive: boolean,
+): Prisma.ReportWhereInput {
+  return {
+    status: "published" as const,
+    ...(includeArchive ? {} : { archived: false }),
+    ...viewerPeriodWhere(session),
+    sections: { some: sectionScope },
+  };
+}
+
+function historyArchiveCountWhere(
+  session: WeeklyReportScopeSession,
+  sectionScope: HistorySectionScope,
+): Prisma.ReportWhereInput {
+  return {
+    status: "published" as const,
+    archived: true,
+    ...viewerPeriodWhere(session),
+    sections: { some: sectionScope },
+  };
+}
+
 export async function queryCompiledHistory(
   prisma: PrismaService,
   session: WeeklyReportScopeSession,
@@ -17,29 +54,10 @@ export async function queryCompiledHistory(
   archiveCount: number;
 }> {
   const sectionScope = historySectionScope(session);
-  const visibleSectionWhere: Prisma.ReportWhereInput = {
-    sections: { some: sectionScope },
-  };
-  // Viewer-only: reopened periods (status published, periodStatus reopened)
-  // would appear as broken History links; head/lead must still see them.
-  const viewerPeriodFilter: Prisma.ReportWhereInput =
-    session.role === "viewer" ? { periodStatus: "published" as const } : {};
-  const listWhere: Prisma.ReportWhereInput = {
-    status: "published" as const,
-    ...(includeArchive ? {} : { archived: false }),
-    ...viewerPeriodFilter,
-    ...visibleSectionWhere,
-  };
-  const archiveCountWhere: Prisma.ReportWhereInput = {
-    status: "published" as const,
-    archived: true,
-    ...viewerPeriodFilter,
-    ...visibleSectionWhere,
-  };
 
   const [reports, archiveCount] = await Promise.all([
     prisma.report.findMany({
-      where: listWhere,
+      where: historyListWhere(session, sectionScope, includeArchive),
       orderBy: { periodStart: "desc" },
       take: COMPILED_HISTORY_PAGE_SIZE,
       include: {
@@ -60,7 +78,9 @@ export async function queryCompiledHistory(
         },
       },
     }),
-    prisma.report.count({ where: archiveCountWhere }),
+    prisma.report.count({
+      where: historyArchiveCountWhere(session, sectionScope),
+    }),
   ]);
 
   return { reports, archiveCount };

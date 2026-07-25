@@ -170,10 +170,18 @@ export class PolicyApplicatorService {
     if (!PolicyApplicatorService.policyAppliesTo(policy, period) || elapsed) {
       return "skipped";
     }
+    return this.upsertRuleForPolicy(policy, period, fireAt);
+  }
 
+  // findUnique runs before the upsert purely so the tally can distinguish
+  // created from updated; both share one try so a concurrent P2002 from either
+  // is recovered as "skipped".
+  private async upsertRuleForPolicy(
+    policy: ReminderPolicy,
+    period: { id: string; deadline: Date },
+    fireAt: Date,
+  ): Promise<PolicyApplyOutcome> {
     try {
-      // Look up existing first so we can report created vs updated;
-      // the upsert itself is the source of truth for idempotency.
       const existing = await this.prisma.reminderRule.findUnique({
         where: {
           reportId_policyId: { reportId: period.id, policyId: policy.id },

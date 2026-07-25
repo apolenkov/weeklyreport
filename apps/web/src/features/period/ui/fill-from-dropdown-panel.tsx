@@ -19,6 +19,74 @@ function SearchIcon() {
   );
 }
 
+function PeriodSearchInput({
+  value,
+  onChange,
+}: {
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+}) {
+  return (
+    <div className="relative mb-2">
+      <SearchIcon />
+      <input
+        type="text"
+        className="w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-1.5 pl-8 text-[13px] text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+        placeholder="Search reports…"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
+function PeriodRowButton({
+  period,
+  isPrevious,
+  onSelect,
+}: {
+  readonly period: ReportPeriod;
+  readonly isPrevious: boolean;
+  readonly onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={[
+        "flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors",
+        isPrevious
+          ? "border border-[var(--color-starbucks-accent)] bg-[var(--color-success)] hover:brightness-95"
+          : "border border-transparent bg-[var(--color-background)] hover:bg-[var(--color-surface-hover)]",
+      ].join(" ")}
+      onClick={onSelect}
+    >
+      <div className="flex-1">
+        {/* Badges share the title line, right-aligned — one
+            horizontal level for Archived and Previous. */}
+        <div className="flex items-center gap-1.5 text-sm font-semibold">
+          <span className="flex-1 truncate">
+            {period.weekLabel} &middot; {period.dateRange}
+          </span>
+          {period.archived && (
+            <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[9px] font-semibold text-[var(--color-muted-foreground)]">
+              Archived
+            </span>
+          )}
+          {isPrevious && (
+            <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2 py-0.5 text-[9px] font-semibold text-white">
+              Previous
+            </span>
+          )}
+        </div>
+        <div className="text-[11px] text-[var(--color-muted-foreground)]">
+          {period.productCount ?? 0} products &middot; {period.itemCount ?? 0}{" "}
+          items &middot; {period.riskCount ?? 0} risks
+        </div>
+      </div>
+    </button>
+  );
+}
+
 interface FillFromDropdownPanelProps {
   readonly open: boolean;
   readonly pos: { top: number; right: number } | null;
@@ -55,16 +123,7 @@ export function FillFromDropdownPanel({
       style={{ top: pos.top, right: pos.right }}
     >
       {pastPeriods.length > 0 && (
-        <div className="relative mb-2">
-          <SearchIcon />
-          <input
-            type="text"
-            className="w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-1.5 pl-8 text-[13px] text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
-            placeholder="Search reports…"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </div>
+        <PeriodSearchInput value={search} onChange={onSearchChange} />
       )}
       <div className="max-h-[200px] space-y-1 overflow-y-auto">
         {pastPeriods.length === 0 ? (
@@ -77,41 +136,12 @@ export function FillFromDropdownPanel({
           </p>
         ) : null}
         {filteredPeriods.map((p) => (
-          <button
+          <PeriodRowButton
             key={p.id}
-            type="button"
-            className={[
-              "flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors",
-              p.id === previousPeriodId
-                ? "border border-[var(--color-starbucks-accent)] bg-[var(--color-success)] hover:brightness-95"
-                : "border border-transparent bg-[var(--color-background)] hover:bg-[var(--color-surface-hover)]",
-            ].join(" ")}
-            onClick={() => onSelect(p)}
-          >
-            <div className="flex-1">
-              {/* Badges share the title line, right-aligned — one
-                  horizontal level for Archived and Previous. */}
-              <div className="flex items-center gap-1.5 text-sm font-semibold">
-                <span className="flex-1 truncate">
-                  {p.weekLabel} &middot; {p.dateRange}
-                </span>
-                {p.archived && (
-                  <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[9px] font-semibold text-[var(--color-muted-foreground)]">
-                    Archived
-                  </span>
-                )}
-                {p.id === previousPeriodId && (
-                  <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2 py-0.5 text-[9px] font-semibold text-white">
-                    Previous
-                  </span>
-                )}
-              </div>
-              <div className="text-[11px] text-[var(--color-muted-foreground)]">
-                {p.productCount ?? 0} products &middot; {p.itemCount ?? 0} items
-                &middot; {p.riskCount ?? 0} risks
-              </div>
-            </div>
-          </button>
+            period={p}
+            isPrevious={p.id === previousPeriodId}
+            onSelect={() => onSelect(p)}
+          />
         ))}
       </div>
     </div>,

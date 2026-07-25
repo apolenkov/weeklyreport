@@ -17,66 +17,57 @@ export interface ProjectActivityRouterDeps {
 // not under activity.* (that namespace is the live-status feed). Attachment
 // and reference validation live in ProjectActivityService.
 
+// Every procedure funnels domain failures through one mapper so the router stays
+// a thin binding layer; each leaf still names `adminProcedure` literally, which
+// the role-coverage gate matches by reference identity.
+async function mapErrors<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    throw mapDomainError(error);
+  }
+}
+
 export function createProjectActivityRouter(deps: ProjectActivityRouterDeps) {
   return router({
-    list: adminProcedure.query(async () => {
-      try {
-        return await deps.projectActivityService.list();
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    }),
+    list: adminProcedure.query(() =>
+      mapErrors(() => deps.projectActivityService.list()),
+    ),
 
     create: adminProcedure
       .input(projectActivityCreateSchema)
-      .mutation(async ({ input }) => {
-        try {
-          return await deps.projectActivityService.create(input);
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ input }) =>
+        mapErrors(() => deps.projectActivityService.create(input)),
+      ),
 
     update: adminProcedure
       .input(projectActivityUpdateSchema)
-      .mutation(async ({ input }) => {
-        try {
-          return await deps.projectActivityService.update(input);
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ input }) =>
+        mapErrors(() => deps.projectActivityService.update(input)),
+      ),
 
     archive: adminProcedure
       .input(projectActivityArchiveSchema)
-      .mutation(async ({ input }) => {
-        try {
-          return await deps.projectActivityService.archive(input);
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ input }) =>
+        mapErrors(() => deps.projectActivityService.archive(input)),
+      ),
 
     attachLead: adminProcedure
       .input(projectActivityLeadEdgeSchema)
-      .mutation(async ({ input }) => {
-        try {
+      .mutation(({ input }) =>
+        mapErrors(async () => {
           await deps.projectActivityService.attachLead(input);
           return { success: true as const };
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+        }),
+      ),
 
     detachLead: adminProcedure
       .input(projectActivityLeadEdgeSchema)
-      .mutation(async ({ input }) => {
-        try {
+      .mutation(({ input }) =>
+        mapErrors(async () => {
           await deps.projectActivityService.detachLead(input);
           return { success: true as const };
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+        }),
+      ),
   });
 }

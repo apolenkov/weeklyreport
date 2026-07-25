@@ -18,41 +18,89 @@ const STAGE_COLORS: Record<StageName, string> = {
   Support: "var(--color-muted-foreground)",
 };
 
-interface StageAssignmentEditorProps {
-  readonly projectId: string;
-  readonly projectName: string;
-  readonly leads: readonly MockUser[];
+// stage.name is DB data cast to StageName; an unknown stage yields no
+// STAGE_COLORS entry at runtime. Partial keeps the lookup honestly
+// `string | undefined` so the fallback stays a real guard.
+function stageColorOf(stageName: StageName): string {
+  return (
+    (STAGE_COLORS as Partial<Record<StageName, string>>)[stageName] ??
+    "var(--color-muted-foreground)"
+  );
 }
 
-// Full catalogue (not only existing rows) so head sees coverage gaps;
-// lead dropdown is scoped to the product's owning group.
-export function StageAssignmentEditor({
+// One editable slot: the API treats (projectId, stageId) as a single
+// assignment, so picking a different lead replaces the assignee instead of
+// adding a second row, and clearing the select deletes the row.
+function StageCell({
+  stage,
+  assignment,
   projectId,
   projectName,
   leads,
-}: StageAssignmentEditorProps) {
+  disabled,
+  onAssign,
+  onClear,
+}: {
+  readonly stage: { readonly id: string; readonly name: string };
+  readonly assignment:
+    { readonly id: string; readonly userId: string } | undefined;
+  readonly projectId: string;
+  readonly projectName: string;
+  readonly leads: readonly MockUser[];
+  readonly disabled: boolean;
+  readonly onAssign: (stageId: string, userId: string) => void;
+  readonly onClear: (assignmentId: string) => void;
+}) {
+  const stageName = stage.name as StageName;
+  const currentAssignee = assignment?.userId ?? "";
+  const selectId = `${projectId}-${stage.id}`;
+
+  function handleChange(nextUserId: string) {
+    if (!nextUserId) {
+      if (assignment) onClear(assignment.id);
+      return;
+    }
+    if (nextUserId === currentAssignee) return;
+    onAssign(stage.id, nextUserId);
+  }
+
+  return (
+    <div className="space-y-1">
+      <label
+        htmlFor={selectId}
+        className="block text-center text-[11px] font-semibold uppercase tracking-wider"
+        style={{ color: stageColorOf(stageName) }}
+      >
+        {stageName}
+      </label>
+      <select
+        id={selectId}
+        value={currentAssignee}
+        onChange={(e) => handleChange(e.target.value)}
+        disabled={disabled}
+        className={`w-full rounded-[var(--radius-sm)] border bg-white px-1.5 py-1.5 text-xs transition-colors focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50 ${
+          currentAssignee
+            ? "border-[var(--color-border)] text-[var(--color-foreground)]"
+            : "border-dashed border-[var(--color-muted-foreground)] text-[var(--color-muted-foreground)]"
+        }`}
+        aria-label={`Assign ${stageName} stage for ${projectName}`}
+      >
+        <option value="">-- unassigned --</option>
+        {leads.map((lead) => (
+          <option key={lead.id} value={lead.id}>
+            {shortName(lead)}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// Both writes move the same (projectId, stageId) slot, so both refresh the
+// assignment list and the per-product coverage counts.
+function useStageAssignmentMutations() {
   const trpc = useTRPC();
   const qc = useQueryClient();
-
-  const stagesQuery = useQuery(trpc.admin.listStages.queryOptions());
-  const assignmentsQuery = useQuery(
-    trpc.admin.listStageAssignments.queryOptions({ projectId }),
-  );
-
-  // @@unique([groupId]) on GroupProduct: each product has one owning group.
-  const productGroupsQuery = useQuery(
-    trpc.admin.listProductGroups.queryOptions({ productId: projectId }),
-  );
-
-  const filteredLeads = useMemo(() => {
-    const groups = productGroupsQuery.data ?? [];
-    if (groups.length === 0) {
-      // Product not yet assigned to a group; show all leads (graceful degradation).
-      return leads;
-    }
-    const groupIds = new Set(groups.map((g) => g.id));
-    return leads.filter((lead) => groupIds.has(lead.groupId));
-  }, [leads, productGroupsQuery.data]);
 
   function invalidateAssignments() {
     void qc.invalidateQueries(trpc.admin.listStageAssignments.pathFilter());
@@ -85,6 +133,46 @@ export function StageAssignmentEditor({
     }),
   );
 
+  return { saveMut, deleteMut };
+}
+
+interface StageAssignmentEditorProps {
+  readonly projectId: string;
+  readonly projectName: string;
+  readonly leads: readonly MockUser[];
+}
+
+// Full catalogue (not only existing rows) so head sees coverage gaps;
+// lead dropdown is scoped to the product's owning group.
+export function StageAssignmentEditor({
+  projectId,
+  projectName,
+  leads,
+}: StageAssignmentEditorProps) {
+  const trpc = useTRPC();
+
+  const stagesQuery = useQuery(trpc.admin.listStages.queryOptions());
+  const assignmentsQuery = useQuery(
+    trpc.admin.listStageAssignments.queryOptions({ projectId }),
+  );
+
+  // @@unique([groupId]) on GroupProduct: each product has one owning group.
+  const productGroupsQuery = useQuery(
+    trpc.admin.listProductGroups.queryOptions({ productId: projectId }),
+  );
+
+  const filteredLeads = useMemo(() => {
+    const groups = productGroupsQuery.data ?? [];
+    if (groups.length === 0) {
+      // Product not yet assigned to a group; show all leads (graceful degradation).
+      return leads;
+    }
+    const groupIds = new Set(groups.map((g) => g.id));
+    return leads.filter((lead) => groupIds.has(lead.groupId));
+  }, [leads, productGroupsQuery.data]);
+
+  const { saveMut, deleteMut } = useStageAssignmentMutations();
+
   const stages = stagesQuery.data ?? [];
   const assignments = assignmentsQuery.data ?? [];
 
@@ -116,65 +204,21 @@ export function StageAssignmentEditor({
 
   return (
     <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-      {stages.map((stage) => {
-        const stageName = stage.name as StageName;
-        // stage.name is DB data cast to StageName; an unknown stage yields no
-        // STAGE_COLORS entry at runtime. Partial keeps the lookup honestly
-        // `string | undefined` so the fallback stays a real guard.
-        const stageColor =
-          (STAGE_COLORS as Partial<Record<StageName, string>>)[stageName] ??
-          "var(--color-muted-foreground)";
-        const assignment = assignmentByStage.get(stage.id);
-        const currentAssignee = assignment?.userId ?? "";
-        const selectId = `${projectId}-${stage.id}`;
-
-        function handleChange(nextUserId: string) {
-          if (!nextUserId) {
-            if (assignment) deleteMut.mutate({ id: assignment.id });
-            return;
+      {stages.map((stage) => (
+        <StageCell
+          key={stage.id}
+          stage={stage}
+          assignment={assignmentByStage.get(stage.id)}
+          projectId={projectId}
+          projectName={projectName}
+          leads={filteredLeads}
+          disabled={saveMut.isPending || deleteMut.isPending}
+          onAssign={(stageId, userId) =>
+            saveMut.mutate({ userId, stageId, projectId })
           }
-          if (nextUserId === currentAssignee) return;
-          // The API treats (projectId, stageId) as one editable slot: selecting
-          // a different lead replaces the assignee instead of adding a second
-          // assignment row for the same stage.
-          saveMut.mutate({
-            userId: nextUserId,
-            stageId: stage.id,
-            projectId,
-          });
-        }
-
-        return (
-          <div key={stage.id} className="space-y-1">
-            <label
-              htmlFor={selectId}
-              className="block text-center text-[11px] font-semibold uppercase tracking-wider"
-              style={{ color: stageColor }}
-            >
-              {stageName}
-            </label>
-            <select
-              id={selectId}
-              value={currentAssignee}
-              onChange={(e) => handleChange(e.target.value)}
-              disabled={saveMut.isPending || deleteMut.isPending}
-              className={`w-full rounded-[var(--radius-sm)] border bg-white px-1.5 py-1.5 text-xs transition-colors focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50 ${
-                currentAssignee
-                  ? "border-[var(--color-border)] text-[var(--color-foreground)]"
-                  : "border-dashed border-[var(--color-muted-foreground)] text-[var(--color-muted-foreground)]"
-              }`}
-              aria-label={`Assign ${stageName} stage for ${projectName}`}
-            >
-              <option value="">-- unassigned --</option>
-              {filteredLeads.map((lead) => (
-                <option key={lead.id} value={lead.id}>
-                  {shortName(lead)}
-                </option>
-              ))}
-            </select>
-          </div>
-        );
-      })}
+          onClear={(assignmentId) => deleteMut.mutate({ id: assignmentId })}
+        />
+      ))}
     </div>
   );
 }

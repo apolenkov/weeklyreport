@@ -127,6 +127,77 @@ function TimelineRow({
   );
 }
 
+function HistoryTimeline({ entry }: { readonly entry: HistoryEntry }) {
+  return (
+    <div className="mt-4 space-y-1.5 border-t border-[rgba(0,0,0,0.07)] pt-3">
+      {entry.createdAt && (
+        <TimelineRow label="Created" value={entry.createdAt} />
+      )}
+      {entry.lastEditAt && (
+        <TimelineRow label="Last edit" value={entry.lastEditAt} />
+      )}
+      {entry.submittedAt ? (
+        <TimelineRow label="Submitted" value={entry.submittedAt} />
+      ) : entry.publishedAt ? (
+        <TimelineRow label="Published" value={entry.publishedAt} />
+      ) : (
+        <TimelineRow label="Submitted" value="Not submitted" muted />
+      )}
+    </div>
+  );
+}
+
+function HistoryCard({ entry }: { readonly entry: HistoryEntry }) {
+  return (
+    <Link
+      // card clicks land on the addressed URL so the browser tab can be
+      // bookmarked and shared. `entry.periodId` already maps to the
+      // report id via mapHistoryEntries.
+      href={entry.href ?? `/lead/report/${entry.periodId}`}
+      className="card-surface card-surface-hover group block p-5 transition-[box-shadow,border-color,background-color]"
+      // 3px tealA left strip gives submitted reports the same visual
+      // anchor as kanban current-week cards, so the history page reads as
+      // a continuation of the form.
+      style={{
+        textDecoration: "none",
+        color: "inherit",
+        borderLeft: "3px solid var(--color-starbucks-accent)",
+      }}
+    >
+      <div className="mb-3 flex items-center justify-between">
+        <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-foreground)]">
+          {joinPeriodLabel(entry.weekLabel, entry.dateRange)}
+        </span>
+        <StatusBadge status={entry.archived ? "archived" : entry.status} />
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <TrafficDot
+          label="Green statuses"
+          count={entry.trafficLights.green}
+          className="bg-[var(--color-starbucks-accent)]"
+        />
+        <TrafficDot
+          label="Yellow statuses"
+          count={entry.trafficLights.yellow}
+          className="bg-[var(--color-status-dot-at-risk)]"
+        />
+        <TrafficDot
+          label="Red statuses"
+          count={entry.trafficLights.red}
+          className="bg-[var(--color-destructive)]"
+        />
+      </div>
+
+      <p className="mt-3 line-clamp-2 text-[13px] leading-5 text-[var(--color-muted-foreground)]">
+        {buildHistorySummary(entry)}
+      </p>
+
+      <HistoryTimeline entry={entry} />
+    </Link>
+  );
+}
+
 export function LeadHistoryList({ entries }: LeadHistoryListProps) {
   if (entries.length === 0) {
     return (
@@ -141,67 +212,7 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {entries.map((entry) => (
-        <Link
-          key={entry.id}
-          // card clicks land on the addressed URL so the browser tab can be
-          // bookmarked and shared. `entry.periodId` already maps to the
-          // report id via mapHistoryEntries.
-          href={entry.href ?? `/lead/report/${entry.periodId}`}
-          className="card-surface card-surface-hover group block p-5 transition-[box-shadow,border-color,background-color]"
-          // 3px tealA left strip gives submitted reports the same visual
-          // anchor as kanban current-week cards, so the history page reads as
-          // a continuation of the form.
-          style={{
-            textDecoration: "none",
-            color: "inherit",
-            borderLeft: "3px solid var(--color-starbucks-accent)",
-          }}
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-foreground)]">
-              {joinPeriodLabel(entry.weekLabel, entry.dateRange)}
-            </span>
-            <StatusBadge status={entry.archived ? "archived" : entry.status} />
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <TrafficDot
-              label="Green statuses"
-              count={entry.trafficLights.green}
-              className="bg-[var(--color-starbucks-accent)]"
-            />
-            <TrafficDot
-              label="Yellow statuses"
-              count={entry.trafficLights.yellow}
-              className="bg-[var(--color-status-dot-at-risk)]"
-            />
-            <TrafficDot
-              label="Red statuses"
-              count={entry.trafficLights.red}
-              className="bg-[var(--color-destructive)]"
-            />
-          </div>
-
-          <p className="mt-3 line-clamp-2 text-[13px] leading-5 text-[var(--color-muted-foreground)]">
-            {buildHistorySummary(entry)}
-          </p>
-
-          <div className="mt-4 space-y-1.5 border-t border-[rgba(0,0,0,0.07)] pt-3">
-            {entry.createdAt && (
-              <TimelineRow label="Created" value={entry.createdAt} />
-            )}
-            {entry.lastEditAt && (
-              <TimelineRow label="Last edit" value={entry.lastEditAt} />
-            )}
-            {entry.submittedAt ? (
-              <TimelineRow label="Submitted" value={entry.submittedAt} />
-            ) : entry.publishedAt ? (
-              <TimelineRow label="Published" value={entry.publishedAt} />
-            ) : (
-              <TimelineRow label="Submitted" value="Not submitted" muted />
-            )}
-          </div>
-        </Link>
+        <HistoryCard key={entry.id} entry={entry} />
       ))}
     </div>
   );

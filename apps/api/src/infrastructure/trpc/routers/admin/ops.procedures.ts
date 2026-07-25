@@ -50,6 +50,61 @@ function requireJobsService(deps: AdminOpsDeps): JobsService {
   return deps.jobsService;
 }
 
+// Rows share correlation id with the structured app.log line for support.
+function createActionLogRouter(deps: AdminOpsDeps) {
+  return router({
+    list: adminProcedure
+      .input(paginationInputSchema.optional())
+      .query(async ({ input }) => {
+        try {
+          return await requireActionLogService(deps).list(input);
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+  });
+}
+
+const listFailedInputSchema = z.object({
+  queue: queueNameSchema,
+  cursor: z.number().int().min(0).optional(),
+  limit: z.number().int().min(1).max(MAX_FAILED_JOBS_LIMIT).optional(),
+});
+
+const retryFailedInputSchema = z.object({
+  queue: queueNameSchema,
+  jobId: z.string().min(1),
+});
+
+// In-app DLQ triage so head need not leave the SPA for Bull Board.
+function createJobsRouter(deps: AdminOpsDeps) {
+  return router({
+    listFailed: adminProcedure
+      .input(listFailedInputSchema)
+      .query(async ({ input }) => {
+        try {
+          const service = deps.jobsService;
+          if (!service) {
+            return { jobs: [], nextCursor: null };
+          }
+          return await service.listFailed(input);
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
+    retryFailed: adminProcedure
+      .input(retryFailedInputSchema)
+      .mutation(async ({ input }) => {
+        try {
+          return await requireJobsService(deps).retryFailed(input);
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+  });
+}
+
 export function createAdminOpsProcedures(deps: AdminOpsDeps) {
   return {
     dlqCount: adminProcedure.query(async () => {
@@ -60,61 +115,7 @@ export function createAdminOpsProcedures(deps: AdminOpsDeps) {
         throw mapDomainError(error);
       }
     }),
-
-    // Rows share correlation id with the structured app.log line for support.
-    actionLog: router({
-      list: adminProcedure
-        .input(paginationInputSchema.optional())
-        .query(async ({ input }) => {
-          try {
-            return await requireActionLogService(deps).list(input);
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-    }),
-
-    // In-app DLQ triage so head need not leave the SPA for Bull Board.
-    jobs: router({
-      listFailed: adminProcedure
-        .input(
-          z.object({
-            queue: queueNameSchema,
-            cursor: z.number().int().min(0).optional(),
-            limit: z
-              .number()
-              .int()
-              .min(1)
-              .max(MAX_FAILED_JOBS_LIMIT)
-              .optional(),
-          }),
-        )
-        .query(async ({ input }) => {
-          try {
-            const service = deps.jobsService;
-            if (!service) {
-              return { jobs: [], nextCursor: null };
-            }
-            return await service.listFailed(input);
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      retryFailed: adminProcedure
-        .input(
-          z.object({
-            queue: queueNameSchema,
-            jobId: z.string().min(1),
-          }),
-        )
-        .mutation(async ({ input }) => {
-          try {
-            return await requireJobsService(deps).retryFailed(input);
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-    }),
+    actionLog: createActionLogRouter(deps),
+    jobs: createJobsRouter(deps),
   };
 }

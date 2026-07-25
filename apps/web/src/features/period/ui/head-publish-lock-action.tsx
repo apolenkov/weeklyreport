@@ -19,6 +19,26 @@ interface HeadPublishLockActionProps {
   readonly reportId: string;
 }
 
+// Publish and reopen flip the same period state, so both have to refresh the
+// dashboard, the lead form and lead history together — only the copy differs.
+function periodMutationCallbacks(
+  qc: ReturnType<typeof useQueryClient>,
+  trpc: ReturnType<typeof useTRPC>,
+  messages: { readonly success: string; readonly failure: string },
+) {
+  return {
+    onSuccess: () => {
+      invalidateDashboard(qc, trpc);
+      invalidateLeadForm(qc, trpc);
+      invalidateLeadHistory(qc, trpc);
+      toast.success(messages.success);
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : messages.failure);
+    },
+  };
+}
+
 export function HeadPublishLockAction({
   reportId,
 }: HeadPublishLockActionProps) {
@@ -31,35 +51,21 @@ export function HeadPublishLockAction({
   const weeklyQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
 
   const publishMut = useMutation(
-    trpc.period.publish.mutationOptions({
-      onSuccess: () => {
-        invalidateDashboard(qc, trpc);
-        invalidateLeadForm(qc, trpc);
-        invalidateLeadHistory(qc, trpc);
-        toast.success("Period published & locked");
-      },
-      onError: (err: unknown) => {
-        toast.error(
-          err instanceof Error ? err.message : "Failed to publish period",
-        );
-      },
-    }),
+    trpc.period.publish.mutationOptions(
+      periodMutationCallbacks(qc, trpc, {
+        success: "Period published & locked",
+        failure: "Failed to publish period",
+      }),
+    ),
   );
 
   const reopenMut = useMutation(
-    trpc.period.reopen.mutationOptions({
-      onSuccess: () => {
-        invalidateDashboard(qc, trpc);
-        invalidateLeadForm(qc, trpc);
-        invalidateLeadHistory(qc, trpc);
-        toast.success("Period reopened");
-      },
-      onError: (err: unknown) => {
-        toast.error(
-          err instanceof Error ? err.message : "Failed to reopen period",
-        );
-      },
-    }),
+    trpc.period.reopen.mutationOptions(
+      periodMutationCallbacks(qc, trpc, {
+        success: "Period reopened",
+        failure: "Failed to reopen period",
+      }),
+    ),
   );
 
   if (!canMutatePeriod) return null;
