@@ -32,30 +32,40 @@ RUN DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport 
 FROM installer AS migrator
 CMD ["pnpm", "exec", "prisma", "migrate", "deploy"]
 
-# Stage 5: Build and prune devDeps for production
+# Stage 5: Build
 FROM installer AS builder
 RUN pnpm turbo build --filter=@customreport/api
-# confirmModulesPurge=false is required, not cosmetic: prune rewrites
-# node_modules, and pnpm refuses to do that without a TTY to confirm at —
-# which a docker build never has, so the production image cannot build without
-# it.
-RUN pnpm prune --prod --config.ignore-scripts=true --config.confirmModulesPurge=false
 
-# Stage 6: Production runner
-# ~1.5GB because PDF export needs a real Chromium. The 200MB target applies to
-# the web image (alpine, ~150MB); this one cannot meet it by construction.
+# Stage 6: Production dependencies, installed fresh from the same lockfile.
+# NOT `pnpm prune --prod`: run at the workspace root it keeps the virtual store
+# but empties every workspace's node_modules, so the built app resolves nothing
+# at runtime. --ignore-scripts keeps playwright from pulling a browser here;
+# the runner installs Chromium explicitly.
+FROM base AS prod-deps
+WORKDIR /app
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=pruner /app/out/json/ .
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts
+
+# Stage 7: Production runner
+# ~4.3GB: a real Chromium plus the apt dependencies `playwright install
+# --with-deps` pulls onto the full bookworm base. The 200MB target applies to
+# the web image (alpine, ~150MB); this one cannot meet it by construction, but
+# a slim base would still be worth measuring.
 FROM base AS runner
 WORKDIR /app
 
-# Copy pruned monorepo structure with production deps only
+# Manifests and the built app come from the build; every node_modules tree comes
+# from prod-deps, so no devDependency reaches the image.
 COPY --from=builder --chown=node:node /app/package.json ./package.json
 COPY --from=builder --chown=node:node /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=builder --chown=node:node /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=builder --chown=node:node /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/apps/api/dist ./apps/api/dist
 COPY --from=builder --chown=node:node /app/apps/api/package.json ./apps/api/package.json
-COPY --from=builder --chown=node:node /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=prod-deps --chown=node:node /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder --chown=node:node /app/packages ./packages
 
 # Prisma client and schema needed at runtime
@@ -64,13 +74,14 @@ COPY --from=builder --chown=node:node /app/prisma ./prisma
 # Chromium is installed by the very `playwright` package this image runs, so the
 # browser revision cannot drift from the dependency — the failure mode a separate
 # base-image pin used to have, where PDF export died at chromium.launch() while
-# every suite stayed green.
+# every suite stayed green. Runs from the api workspace, not the repo root:
+# playwright is a dependency of apps/api, so its bin is linked only there.
+WORKDIR /app/apps/api
 RUN pnpm exec playwright install --with-deps chromium
 
 # Create PDF storage directory
 RUN mkdir -p /app/data/pdfs && chown node:node /app/data/pdfs
 USER node
-WORKDIR /app/apps/api
 ENV NODE_ENV=production
 # EXPOSE/HEALTHCHECK must match the runtime bind port (PORT=3001); a plain
 # `docker run` with the baked healthcheck would otherwise report permanently
