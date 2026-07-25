@@ -73,18 +73,16 @@ jobs:
       - name: Typecheck
         run: pnpm turbo typecheck
 
-      - name: Unit Tests with coverage
-        run: pnpm turbo test -- --coverage
-
-      - name: Upload coverage reports
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: coverage-reports
-          path: |
-            apps/web/coverage/
-            apps/api/coverage/
-          retention-days: 14
+      # The same command the pre-push hook runs, so CI and the local gate cannot
+      # disagree. It also covers the root prisma-script suite, which a bare
+      # `turbo test` skips.
+      #
+      # No `-- --coverage`: turbo forwards it to every workspace, and
+      # packages/ui's `test` is `tsc --noEmit`, which dies on the unknown flag.
+      # Coverage was collected but never thresholded, so nothing enforced it —
+      # reinstate it behind a filter and a minimum if it is to mean anything.
+      - name: Unit Tests
+        run: pnpm test
 
       # 34-03: mutation-audit gate. Catches new tRPC mutations that ship
       # without a consumer query (the reopen-request black-hole pattern).

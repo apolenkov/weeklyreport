@@ -43,6 +43,7 @@ scheduled_tasks.lock
 
 # Behavioral UI sweep phase-1 reports (regenerated each run)
 e2e/sweep/.reports/
+e2e/csp/.reports/
 # pnpm content-addressable store (local cache, never committed)
 .pnpm-store/
 
