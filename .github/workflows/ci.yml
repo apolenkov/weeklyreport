@@ -18,9 +18,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  PNPM_VERSION: "10.11.0"
-
 jobs:
   # ------------------------------------------------------------------
   # Job 1: Lint + Typecheck + Unit Tests
@@ -52,9 +49,7 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Setup pnpm
-        run: |
-          corepack enable
-          corepack prepare "pnpm@${PNPM_VERSION}" --activate
+        run: corepack enable
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -165,9 +160,7 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Setup pnpm
-        run: |
-          corepack enable
-          corepack prepare "pnpm@${PNPM_VERSION}" --activate
+        run: corepack enable
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -257,9 +250,7 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Setup pnpm
-        run: |
-          corepack enable
-          corepack prepare "pnpm@${PNPM_VERSION}" --activate
+        run: corepack enable
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

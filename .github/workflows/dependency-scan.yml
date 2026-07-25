@@ -14,9 +14,6 @@ on:
     - cron: "0 6 * * 1"
   workflow_dispatch: {}
 
-env:
-  PNPM_VERSION: "10.11.0"
-
 jobs:
   audit:
     name: Audit production dependencies
@@ -33,9 +30,7 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Setup pnpm
-        run: |
-          corepack enable
-          corepack prepare "pnpm@${PNPM_VERSION}" --activate
+        run: corepack enable
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
