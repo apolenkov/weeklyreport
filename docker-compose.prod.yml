@@ -99,6 +99,62 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # A replicated volume is not a backup: it faithfully replicates a DROP TABLE
+  # and an encrypted-by-ransomware datadir too. This service is the RECOVERY
+  # MECHANISM (periodic pg_dump + retention + a staleness healthcheck); the
+  # RECOVERY POLICY is whatever the operator sets the two required intervals
+  # to, and where they replicate the pgbackups volume off this host. Nothing
+  # here ships backups off-box — an unreplicated local dump survives a bad
+  # migration, not a dead disk.
+  backup:
+    # Same digest-pinned image as postgres: pg_dump must match the server
+    # major version, and reusing it adds no new supply-chain surface.
+    image: postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f
+    command: ["/usr/local/bin/backup-loop.sh"]
+    environment:
+      # Direct to postgres, NOT pgbouncer — pg_dump needs one session for the
+      # whole dump, which transaction-mode pooling cannot hold.
+      PGHOST: postgres
+      PGUSER: customreport
+      PGPASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      PGDATABASE: customreport
+      BACKUP_DIR: /backups
+      # Required with no default, both of them: together they ARE the
+      # recovery-point objective. A default would invent an RPO nobody agreed
+      # to and silently delete history on that schedule. 3600 = hourly,
+      # 14 = keep two weeks.
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:?set the backup cadence in seconds (e.g. 3600) — this is your RPO}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:?set how many days of dumps to keep (e.g. 14) — older ones are deleted}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # Liveness proves nothing here: a loop whose every pg_dump fails looks
+      # identical to a working one until someone needs a restore. Health is
+      # "a recent dump exists".
+      test: ["CMD", "/usr/local/bin/backup-health.sh"]
+      interval: 5m
+      timeout: 10s
+      retries: 2
+      # One full cadence before the first verdict, so a fresh stack is not
+      # reported unhealthy merely for having taken no backup yet.
+      start_period: ${BACKUP_INTERVAL_SECONDS:?set the backup cadence in seconds (e.g. 3600) — this is your RPO}s
+    restart: unless-stopped
+    volumes:
+      - pgbackups:/backups
+      - ./deploy/postgres/backup-loop.sh:/usr/local/bin/backup-loop.sh:ro
+      - ./deploy/postgres/backup-health.sh:/usr/local/bin/backup-health.sh:ro
+      - ./deploy/postgres/restore.sh:/usr/local/bin/restore.sh:ro
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   redis:
     image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     command:
@@ -361,6 +417,9 @@ services:
 
 volumes:
   pgdata:
+  # Replicate this volume off-host — a dump that dies with the disk it was
+  # taken from only protects against bad writes, not lost hardware.
+  pgbackups:
   redisdata:
   pdfdata:
   apilogs:
