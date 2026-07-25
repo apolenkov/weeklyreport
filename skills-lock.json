@@ -13,6 +13,12 @@
       "skillPath": "skills/agentation-self-driving/SKILL.md",
       "computedHash": "4a543f93d3edc770a684aa554321ca113debc74b276e1cdc4b8a5a8c44932ab7"
     },
+    "beautify-github-readme": {
+      "source": "oil-oil/beautify-github-readme",
+      "sourceType": "github",
+      "skillPath": "skills/beautify-github-readme/SKILL.md",
+      "computedHash": "64791a34897ce3106709a5b51b7abca5b5db839fe9102d5c34e5e9e53db9397c"
+    },
     "vercel-composition-patterns": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
