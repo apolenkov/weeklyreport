@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "kill-port 3002 || true && node --env-file-if-exists=../../.env --import tsx --watch src/main.ts",
+    "dev": "kill-port 3002 || true && node --env-file-if-exists=../../.env --import @swc-node/register/esm-register --watch src/main.ts",
     "build": "tsc -p tsconfig.json && node scripts/fix-esm-extensions.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run --exclude '**/*.integration.test.ts' --exclude '**/*.eval.test.ts' --exclude '**/dist/**'",
@@ -62,6 +62,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@swc-node/register": "^1.12.1",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
