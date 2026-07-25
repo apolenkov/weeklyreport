@@ -1,10 +1,4 @@
-// Characterization pins for the row-builders behind
-// ReportSectionsPrismaRepository.saveSection. Direct, DB-free assertions on the
-// delete-recreate createMany payloads: stableId omit-vs-value, projectId/
-// activityId XOR nulling, the decision persistability filter, and empty-array
-// outputs (so the caller's `length > 0` createMany guard still holds). Guards
-// the delete-recreate persistence semantics the integration suite covers at the
-// DB level.
+// Pins saveSection row-builders (stableId omit, XOR nulling, empty-array guards).
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
@@ -88,12 +82,9 @@ describe("toItemRows", () => {
       SECTION_ID,
     );
 
-    // Behaviour-preserving with the original inline mapper: `stableId:
-    // i.stableId` — undefined for a new row (Prisma then mints the default),
-    // the supplied value otherwise.
+    // undefined stableId → Prisma mints default; supplied value is preserved.
     expect(rows[0]?.stableId).toBeUndefined();
     expect(rows[1]?.stableId).toBe("stable-1");
-    // priorityRank/pausedReason/stageNames defaulting.
     expect(rows[0]?.priorityRank).toBeNull();
     expect(rows[0]?.pausedReason).toBeNull();
     expect(rows[0]?.stageNames).toEqual([]);

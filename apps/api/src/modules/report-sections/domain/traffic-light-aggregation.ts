@@ -5,7 +5,6 @@ import {
   worstCanonicalStatus,
 } from "@customreport/shared";
 
-/** Return the highest-severity traffic light, ignoring missing inputs. */
 export function aggregateTrafficLight(
   statuses: readonly (TrafficLightStatus | null | undefined)[],
 ): TrafficLightStatus | null {

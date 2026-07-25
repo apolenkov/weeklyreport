@@ -10,12 +10,7 @@ import {
 } from "../../../test-utils/prisma-test-helper";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";
 
-/**
- * P0-6 BOLA gate (real DB). A group-A scope must not read or write a group-B
- * section, even when both sit on the same report. Proves Prisma honours the
- * `author.reportingGroupId` relation filter on the scoped `findFirst` (read)
- * and the scoped `updateMany` (bulk write) the revoke paths rely on.
- */
+// BOLA: group-A scope must not read/write group-B section on the same report.
 const GROUP_B = "b0000000-0000-4000-8000-00000000000b";
 const LEAD_B = "b0000000-0000-4000-8000-0000000000b1";
 const SECTION_B = "b0000000-0000-4000-8000-0000000000b3";

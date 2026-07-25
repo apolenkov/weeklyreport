@@ -1,29 +1,11 @@
 import jwt from "jsonwebtoken";
 
-/**
- * Claim shape carried in the 5-min PDF export JWT.
- *
- * The reportId claim binds the cookie to a single resource so a leaked
- * cookie cannot be reused to render arbitrary reports. The `kind` claim
- * disambiguates this token from regular session JWTs (which use a
- * different secret and a much wider claim shape) so the tRPC context
- * verifier can route it to the correct check path.
- *
- * The server-side verifier (`verifyPdfExportToken`) is wired into
- * `trpc.context.ts`; the synthetic session it produces is restricted to a
- * hard-coded allowlist of read procedures scoped to the JWT's reportId.
- */
+// reportId binds the cookie to one resource; kind routes the verifier away
+// from session JWTs. requestedBy rebuilds the worker session as the requester
+// (legacy tokens without it fall back to a narrow viewer synthetic session).
 export interface PdfExportTokenClaims {
   reportId: string;
   kind: "pdf-export";
-  /**
-   * The session userId of the requester. The PDF worker renders
-   * `/print/<id>` under a session rebuilt for THIS user, so the exported
-   * report is scoped exactly to what the requester sees in-app (head → full
-   * report, lead/viewer → their slice). Optional for back-compat with legacy
-   * tokens that predate the claim — those fall back to the narrow
-   * viewer-synthetic session in `trpc.context.ts`.
-   */
   requestedBy?: string;
 }
 
@@ -45,13 +27,7 @@ function requirePdfExportSecret(): string {
   return secret;
 }
 
-/**
- * Verify a token signed by `signPdfExportToken` against
- * `PDF_EXPORT_JWT_SECRET`. Returns the typed claim shape on success;
- * throws if the token is invalid, expired, missing the kind claim, or signed
- * with a different secret. This is the deferred verifier called from
- * `trpc.context.ts` after `verifySessionToken` fails.
- */
+// Deferred verifier for trpc.context after verifySessionToken fails.
 export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
   const secret = requirePdfExportSecret();
   const decoded = jwt.verify(token, secret, {
@@ -76,10 +52,6 @@ export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
   };
 }
 
-/**
- * Sign a 5-min scoped JWT with `{reportId}` claim.
- * Throws if the signing secret is missing or shorter than 32 chars.
- */
 export function signPdfExportToken(
   reportId: string,
   requestedBy?: string,

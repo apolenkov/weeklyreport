@@ -8,10 +8,6 @@ import {
   PeriodCreatorScheduler,
 } from "./period-creator.scheduler.js";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   return {
     autoCreatePeriods: true,
@@ -54,11 +50,7 @@ interface StubPrisma {
 function makePrismaStub(opts: {
   mostRecent: { id: string; periodEnd: Date } | null;
   createdId?: string;
-  // A pre-existing draft in the factory's target window (defaults to none).
-  // The scheduler creates via the period factory, which does a find-by-bounds
-  // before creating; the most-recent
-  // lookup (orderBy) and that find share the `report.findFirst` mock, so the
-  // stub branches on whether the call carries an `orderBy`.
+  // mostRecent (orderBy) and find-by-bounds share findFirst; stub branches on orderBy.
   existingInWindow?: {
     id: string;
     periodStart: Date;
@@ -101,11 +93,6 @@ function makePrismaStub(opts: {
 // PrismaService + settings service; tests pass a minimal shape with only the
 // methods exercised.
 const asAny = <T>(x: unknown): T => x as T;
-
-// ---------------------------------------------------------------------------
-// Tests — three per processor (skip-when-disabled, fire-when-eligible,
-// idempotent)
-// ---------------------------------------------------------------------------
 
 describe("PeriodCreatorScheduler", () => {
   it("skip-when-disabled: autoCreatePeriods=false → no create, no audit", async () => {
@@ -381,14 +368,10 @@ describe("PeriodCreatorScheduler", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// flipDueScheduledToOpen — per-boundary SCHEDULED→OPEN recovery
-// ---------------------------------------------------------------------------
-
 const W = new Date("2026-05-11T00:00:00.000Z");
 const W_END = new Date("2026-05-17T23:59:59.999Z");
 
-/** A Prisma P2002 carrying the open-boundary index name in `meta.target`. */
+// Prisma P2002 whose meta.target is the open-boundary index name.
 function openBoundaryP2002(): Prisma.PrismaClientKnownRequestError {
   return new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
     code: "P2002",

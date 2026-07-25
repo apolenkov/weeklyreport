@@ -58,7 +58,6 @@ describe("PdfExportPrismaRepository (integration)", () => {
     expect(created.reportId).toBe(testData.report.id);
     expect(created.status).toBe("queued");
 
-    // Verify in database
     const dbJob = await prisma.pdfExportJob.findUnique({
       where: { id: TEST_IDS.pdfJob1 },
     });
@@ -67,7 +66,6 @@ describe("PdfExportPrismaRepository (integration)", () => {
   });
 
   it("saveExportJob updates status and filePath", async () => {
-    // Create a job first
     await repo.createExportJob({
       jobId: TEST_IDS.pdfJob2,
       reportId: testData.report.id,
@@ -79,7 +77,6 @@ describe("PdfExportPrismaRepository (integration)", () => {
       artifactUrl: null,
     });
 
-    // Update the job to completed, carrying a checksum.
     const completedChecksum = "sha256:deadbeef";
     const updated = await repo.saveExportJob({
       jobId: TEST_IDS.pdfJob2,
@@ -96,7 +93,6 @@ describe("PdfExportPrismaRepository (integration)", () => {
     expect(updated.artifactUrl).toBe("/exports/report-2026-04-07.pdf");
     expect(updated.checksum).toBe(completedChecksum);
 
-    // Verify in database
     const dbJob = await prisma.pdfExportJob.findUnique({
       where: { id: TEST_IDS.pdfJob2 },
     });
@@ -112,22 +108,8 @@ describe("PdfExportPrismaRepository (integration)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Cookie seam.
-//
-// Integration-shaped guard that exercises the service against the real Prisma
-// repository with AUTH_DEV_MODE=false / AUTH_DEV_MODE_ALLOW_TEST=true.
-//
-// Strict end-to-end (BullMQ + Playwright bring-up) is the ceiling — out of
-// scope here because the integration harness does not stand up a real
-// browser. This test is the floor:
-//   1. Seed a published report.
-//   2. Call PdfExportService.requestPdfExport (real Prisma repo, fake queue).
-//   3. Assert the enqueued job carries a JWT-shaped authToken bound to the
-//      reportId, AND that AUTH_DEV_MODE_ALLOW_TEST=true is honoured by the
-//      tRPC dev-fallback (asserted at the unit layer in trpc.context.test.ts).
-// ---------------------------------------------------------------------------
-
+// Floor against real Prisma (no browser): enqueued job carries a JWT bound
+// to reportId under AUTH_DEV_MODE=false / AUTH_DEV_MODE_ALLOW_TEST=true.
 describe("cookie seam — service against real Prisma repo", () => {
   const prisma = createTestPrisma();
   let repo: PdfExportPrismaRepository;
@@ -202,9 +184,8 @@ describe("cookie seam — service against real Prisma repo", () => {
       "integration-test-secret-32-chars-or-more",
     ) as { reportId: string; requestedBy?: string };
     expect(decoded.reportId).toBe(testData.report.id);
-    // empty-PDF fix: the token binds the worker's render session to the
-    // requester so the export is scoped to their in-app view (not an empty
-    // viewer session). buildPdfExportSession in trpc.context rebuilds this user.
+    // Token binds the worker render session to the requester so export
+    // matches their in-app view (not an empty viewer session).
     expect(decoded.requestedBy).toBe(testData.head.id);
   });
 

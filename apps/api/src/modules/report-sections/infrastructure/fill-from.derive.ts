@@ -3,11 +3,7 @@
 // plain createMany payloads and the carry/remap decisions, leaving the
 // transaction/lock-order/CAS/P2002 handling in the repository method.
 
-/**
- * Fill From flips next → current, so next-only statuses must land in the
- * current vocabulary (same remap as carry-over): planned/postponed →
- * in_progress, every other value passes through unchanged.
- */
+// planned/postponed → in_progress when next flips to current (same as carry-over).
 export function remapNextToCurrentStatus<WF extends string>(
   status: WF,
 ): WF | "in_progress" {
@@ -16,12 +12,7 @@ export function remapNextToCurrentStatus<WF extends string>(
     : status;
 }
 
-/**
- * A source record carries forward only when it is product-parented (activityId
- * null → always) or its activity is still attached to the TARGET section.
- * Dropping activityId to force-carry would collapse the row to no-parent and
- * trip the XOR CHECK, aborting the whole Fill From.
- */
+// Carry only if product-parented or activity still on target (XOR CHECK).
 export function isCarryable(
   row: { activityId: string | null },
   targetActivityIds: ReadonlySet<string>,
@@ -38,7 +29,6 @@ interface SourceItem<WF extends string> {
   stageNames: string[];
 }
 
-/** Maps carryable source items to Current-Week createMany rows on the target. */
 export function toFilledItemRows<WF extends string>(
   sourceRows: readonly SourceItem<WF>[],
   targetSectionId: string,
@@ -66,7 +56,6 @@ interface SourceRisk {
   stageNames: string[];
 }
 
-/** Maps carryable source risks to createMany rows on the target. */
 export function toFilledRiskRows(
   sourceRows: readonly SourceRisk[],
   targetSectionId: string,
@@ -94,7 +83,6 @@ interface SourceDecision {
   activityId: string | null;
 }
 
-/** Maps carryable source decisions to createMany rows on the target. */
 export function toFilledDecisionRows(
   sourceRows: readonly SourceDecision[],
   targetSectionId: string,

@@ -6,17 +6,6 @@ import {
   OrganizationService,
 } from "./organization.service";
 
-/**
- * Contract tests for OrganizationService.
- *
- * The service is a thin wrapper around the repository — its value is
- * zod-validating both the read and write paths so the wire shape cannot
- * drift. We exercise:
- *   - getOrganization returns the validated full row.
- *   - getPublic projects to the public shape (no timestamps).
- *   - updateOrganization round-trips through the schema.
- *   - input bounds (shortName ≤ 16, fullName ≤ 200) are enforced.
- */
 function makeRepo(): OrganizationRepository {
   const baseRow = {
     id: "singleton" as const,

@@ -14,10 +14,7 @@ import type {
 } from "./reminders.types";
 import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
 
-// Stub OrganizationService used by the scheduler to snapshot the brand
-// identity onto every BullMQ job. Tests drive
-// through the public `getPublic()` surface; the in-memory stub returns a
-// deterministic shape so payload assertions can match `[PEO]` subjects.
+// Deterministic brand snapshot for payload subject assertions (`[PEO]`).
 const fakeOrganizationService = {
   // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async OrganizationService contract (no awaitable work in the stub)
   getPublic: async () => ({
@@ -25,10 +22,6 @@ const fakeOrganizationService = {
     fullName: "Product Engineering & Operations",
   }),
 } as unknown as OrganizationService;
-
-/* ------------------------------------------------------------------ */
-/*  Fixtures                                                           */
-/* ------------------------------------------------------------------ */
 
 const ruleId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const reportId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -63,10 +56,6 @@ function dueRuleFromRecipients(
     })),
   };
 }
-
-/* ------------------------------------------------------------------ */
-/*  In-memory RemindersRepository for the service                       */
-/* ------------------------------------------------------------------ */
 
 function createServiceRepo(): RemindersRepository {
   const executions = new Map<string, AdminReminderExecution>();
@@ -111,10 +100,6 @@ function createServiceRepo(): RemindersRepository {
     },
   };
 }
-
-/* ------------------------------------------------------------------ */
-/*  Tests                                                               */
-/* ------------------------------------------------------------------ */
 
 describe("RemindersScheduler — deadline reminder dispatch", () => {
   let queueAdds: { name: string; data: Record<string, unknown> }[];
@@ -317,11 +302,6 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     expect(queueAdds).toHaveLength(2);
   });
 });
-
-// -----------------------------------------------------------------------
-// T+2h escalation digest dispatch.
-// One digest email per (rule, head) per cycle; idempotent across re-ticks.
-// -----------------------------------------------------------------------
 
 describe("RemindersScheduler — escalation dispatch", () => {
   const escalationRuleId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
@@ -580,11 +560,6 @@ describe("RemindersScheduler — escalation dispatch", () => {
   });
 });
 
-// -----------------------------------------------------------------------
-// Per-user opt-out for kind='deadline' only. kind='escalation' bypasses
-// the flag entirely.
-// -----------------------------------------------------------------------
-
 describe("RemindersScheduler — opt-out", () => {
   let queueAdds: { name: string; data: Record<string, unknown> }[];
   let fakeQueue: { enqueue: ReturnType<typeof vi.fn> };
@@ -736,10 +711,6 @@ describe("RemindersScheduler — opt-out", () => {
     expect(queueAdds[0]?.data.kind).toBe("escalation");
   });
 });
-
-/* ------------------------------------------------------------------ */
-/*  Per-recipient isolation: one recipient's failure never aborts the tick */
-/* ------------------------------------------------------------------ */
 
 describe("RemindersScheduler — per-recipient isolation", () => {
   it("continues to the remaining recipients when one dispatch throws", async () => {

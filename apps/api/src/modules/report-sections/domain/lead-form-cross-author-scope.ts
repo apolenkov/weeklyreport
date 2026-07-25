@@ -7,22 +7,7 @@ import {
   type ReopenEligibilityFacts,
 } from "./lead-form-shared";
 
-/**
- * Lead cross-author read scoping: resolving the shared-product scope for a
- * requested foreign author, and filtering a section's product-keyed
- * collections down to that scope.
- */
-
-/**
- * Resolve the lead cross-author read's product scope. Returns the shared
- * non-archived product-id set ONLY when the caller is a lead requesting
- * another author AND holds their own section in the report (report access is
- * report-independent co-ownership's missing half) AND co-owns at least one
- * non-archived product with that author. Every other case — head/admin,
- * own-section, no report access, or archived-only co-ownership — returns null,
- * so `getByPeriod` reads the caller's own section and exposes no foreign
- * status, metadata, or records.
- */
+// Lead-only shared-product scope; null for head/admin/own/no-access (see lead-form-cross-author-scope).
 export async function resolveCrossAuthorScope(
   repository: LeadFormRepository,
   reportId: string,
@@ -51,15 +36,7 @@ export async function resolveCrossAuthorScope(
   return sharedProductIds.length > 0 ? new Set(sharedProductIds) : null;
 }
 
-/**
- * Bound a head's cross-author read to its own reporting group. A head is a
- * single-group role, so it may read another author's section only when that
- * author shares the head's group. `targetAuthorId` reaches the caller from a
- * client URL param, so resolve both groups and reject a cross-group target with
- * a 403-equivalent access error before any section is loaded. A head with no
- * group (null) is rejected too (fail closed). admin never calls this — it reads
- * globally.
- */
+// Head single-group: reject cross-group target (fail closed). Admin never calls this.
 export async function assertHeadTargetInGroup(
   repository: LeadFormRepository,
   headUserId: string,
@@ -76,16 +53,8 @@ export async function assertHeadTargetInGroup(
   }
 }
 
-/**
- * The `getByPeriod` section load, branching on `isHeadCrossRead`: a head's
- * cross-author read goes through the atomic, group-scoped
- * `getSectionForPeriodAsGroupPeer` (the group predicate is evaluated in the
- * same query as the read, so `assertHeadTargetInGroup`'s separate pre-check
- * cannot be raced by a concurrent group reassignment); every other caller
- * keeps the unscoped `getSectionForPeriod`. A null result on the head-cross
- * path is `LeadFormAccessError` (fail closed, no existence leak); elsewhere
- * it is the generic `LeadFormDomainError`.
- */
+// Head cross-read uses atomic group-scoped query (no race with group reassignment).
+// See openspec/specs/lead-form-cross-author-scope.
 export async function readSectionForByPeriod(
   repository: LeadFormRepository,
   reportId: string,
@@ -116,47 +85,18 @@ export async function readSectionForByPeriod(
   return result;
 }
 
-/**
- * Scope a foreign section's product-keyed collections to the products the
- * viewer co-owns. Every product-scoped collection the read model exposes is
- * filtered: items (current and next week), risks, decisions, and the `projects`
- * array — whose entries carry the per-stage statuses, traffic light, owned
- * stages, and stage set, so dropping an unshared entry removes its whole card
- * and stage grid. `referencedProjects` is recomputed from the surviving rows so
- * a dropped unshared product can never re-leak its name. A decision with a
- * null/undefined `productId` IS dropped by this filter too, mirroring
- * `getCrossAuthorContent`: the shared-product scope has no product to check it
- * against, so it is treated as not-on-a-shared-product rather than let through.
- * An activity-parented item/risk/decision carries a null product FK and IS
- * dropped here for the same reason (this lens is product-scoped).
- * Section-identity fields (status, version, author, submittedAt) are preserved
- * unchanged.
- *
- * Ceiling: this shared-product lens never exposes a field the curated Everyone
- * lens (`CrossAuthorSectionRow`) omits. `activities` (per-activity status +
- * free-text notes), `reviews`, per-record `comments`, and the item
- * `pausedReason` free text are on this read model but absent from the Everyone
- * lens, so they are stripped — `activities` emptied (the read model requires
- * the array), `reviews` dropped, and comments/pausedReason omitted from
- * retained rows — rather than passed through the spread.
- */
+// Filter to co-owned products; strip fields the Everyone lens omits (no leak ceiling).
+// Null-product activity rows drop. See openspec/specs/lead-form-cross-author-scope.
 export function filterSectionToSharedProducts(
   section: ReportSectionReadModel,
   sharedProductIds: ReadonlySet<string>,
 ): ReportSectionReadModel {
-  // This lens is product-scoped — an activity-parented item/risk (null product
-  // FK) is on no shared product and is dropped, the same way a non-shared-
-  // product decision is.
   const items = section.items
     .filter((i) => i.projectId != null && sharedProductIds.has(i.projectId))
     .map(stripItemAuthorPrivateFields);
   const risks = section.risks
     .filter((r) => r.projectId != null && sharedProductIds.has(r.projectId))
     .map(stripRecordComments);
-  // Mirror getCrossAuthorContent's `sharedIds.has(d.productId)`: a cross-author
-  // co-lead view drops every decision not on a shared product — INCLUDING a
-  // null-productId (cross-cutting/group) decision — so this byPeriod lens
-  // discloses exactly what the curated Everyone lens does, never more.
   const decisions = section.decisions
     .filter((d) => d.productId != null && sharedProductIds.has(d.productId))
     .map(stripRecordComments);
@@ -185,7 +125,7 @@ export function filterSectionToSharedProducts(
   };
 }
 
-/** Reviewer feedback belongs to the section author and is outside the co-lead lens. */
+// Comments stay with the author; co-lead lens omits them.
 function stripRecordComments<T extends { comments?: unknown }>(
   row: T,
 ): Omit<T, "comments"> {
@@ -193,7 +133,7 @@ function stripRecordComments<T extends { comments?: unknown }>(
   return restOfRow;
 }
 
-/** An item's pause rationale is the author's free text; the Everyone lens omits it. */
+// pausedReason is author free text; Everyone lens omits it.
 function stripItemAuthorPrivateFields<
   T extends { comments?: unknown; pausedReason?: unknown },
 >(row: T): Omit<T, "comments" | "pausedReason"> {

@@ -31,15 +31,8 @@ export interface PdfDownloadDeps {
   sessionRevocation: HumanSessionDeps["sessionRevocation"];
 }
 
-/**
- * Authenticated, authorized PDF artifact download. Replaces the unauthenticated
- * `express.static('/pdfs')` mount: the artifact is streamed only to a caller
- * with a valid human session who currently has read access to the bound report.
- *
- * The artifact URL is relative/same-origin (`/pdfs/{jobId}.pdf`), so the
- * browser's `window.open` GET carries the `customreport_session` cookie
- * automatically — this handler depends on that invariant for authentication.
- */
+// Same-origin URL (`/pdfs/{jobId}.pdf`) so window.open carries the session
+// cookie; streams only to callers with a valid human session and report read.
 export function createPdfDownloadHandler(
   deps: PdfDownloadDeps,
 ): RequestHandler {

@@ -5,26 +5,9 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
-// ---------------------------------------------------------------------------
-// refactor-period-transition-writer CI gate.
-//
-// The `period-dual-state` invariant requires that every lifecycle mutation of a
-// `Report` go through the single transition module, so the three coupled
-// representations (periodState, the legacy status/archived tuple, periodStatus)
-// plus the audit flags can never be written apart. Historically this was a
-// review-only convention; this gate makes it machine-checked.
-//
-// It scans api source for `prisma.report.create/update/updateMany/upsert(...)`
-// calls whose `data` (or upsert `create`/`update`) object literal contains a
-// GOVERNED lifecycle field as a literal key. Compliant writers source those
-// fields from `buildTransition(...)` via spread (`{ ...buildTransition(...) }`)
-// — a spread has no literal key, so it does not trip the gate. A hand-assembled
-// `{ periodState: "published" }` does.
-//
-// Mirrors the role-coverage gate's spirit (CI-enforced invariant) but operates
-// statically on source, since lifecycle writes are a code pattern, not a
-// runtime reference.
-// ---------------------------------------------------------------------------
+// CI gate for period-dual-state: every Report lifecycle write must spread
+// buildTransition(...); hand-assembled governed keys trip this static scan.
+// See openspec/specs/period-dual-state.
 
 const GOVERNED_FIELDS = new Set([
   "periodState",
@@ -53,13 +36,8 @@ const EXEMPT_SUFFIXES = [
   join("modules", "period", "domain", "period-transition.ts"),
 ];
 
-// A call-site opt-out. Reserved for writes that genuinely are NOT lifecycle
-// transitions — e.g. a snapshot restore that reinstates three independently
-// persisted values rather than coupling them into one intent (deriving them
-// through a transition would corrupt legitimately-divergent rows such as a
-// reopened period: status="published" while periodState="open"). The marker
-// must sit in a comment on or above the offending statement and MUST name a
-// follow-up ref, so every exemption is greppable and reviewable.
+// Opt-out for non-lifecycle writes (e.g. snapshot restore of divergent
+// dual-state rows). Marker must sit on/above the statement and name a follow-up.
 const EXEMPT_MARKER = "lifecycle-write-gate-allow";
 
 export interface LifecycleViolation {
@@ -69,11 +47,7 @@ export interface LifecycleViolation {
   method: string;
 }
 
-/**
- * Find hand-assembled lifecycle-field writes to `report.<writeMethod>(...)` in
- * a single source string. Exported so the self-test can prove the detector
- * actually fires.
- */
+// Exported for self-tests that prove the detector fires.
 export function findLifecycleViolationsInSource(
   sourceText: string,
   fileName: string,
@@ -115,10 +89,7 @@ export function findLifecycleViolationsInSource(
 
   const fullText = sf.getFullText();
 
-  // True when the statement enclosing `node` carries the exempt marker in a
-  // leading comment (the marker may sit on the statement or any ancestor up to
-  // the enclosing statement, covering both `await x.report.update({...})` and
-  // multi-line call chains).
+  // Exempt when a leading comment on the statement (or ancestor) carries the marker.
   const isExempt = (node: ts.Node): boolean => {
     let current: ts.Node | undefined = node;
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- current is reassigned to node.parent (ts.Node | undefined) inside the loop

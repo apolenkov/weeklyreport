@@ -164,7 +164,7 @@ afterEach(() => {
 });
 
 describe("handlePdfDownload", () => {
-  it("4.1/4.2 streams the PDF for an authenticated, in-scope caller (200)", async () => {
+  it("streams the PDF for an authenticated, in-scope caller (200)", async () => {
     writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
     const res = new MockResponse();
     const finished = new Promise<void>((r) => res.on("finish", () => r()));
@@ -189,7 +189,7 @@ describe("handlePdfDownload", () => {
     expect(res.body).toBe("PDF-BYTES");
   });
 
-  it("4.3 rejects an unauthenticated request (401, no bytes)", async () => {
+  it("rejects an unauthenticated request (401, no bytes)", async () => {
     const res = new MockResponse();
 
     await handlePdfDownload(makeReq({}), asResponse(res), makeDeps());
@@ -198,7 +198,7 @@ describe("handlePdfDownload", () => {
     expect(res.body).toBe("");
   });
 
-  it("4.4/4.7 rejects an out-of-scope caller, requester identity notwithstanding (403)", async () => {
+  it("rejects an out-of-scope caller, requester identity notwithstanding (403)", async () => {
     writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
     const res = new MockResponse();
 
@@ -219,7 +219,7 @@ describe("handlePdfDownload", () => {
     expect(res.body).toBe("");
   });
 
-  it("4.5 rejects a revoked session (401)", async () => {
+  it("rejects a revoked session (401)", async () => {
     const res = new MockResponse();
 
     await handlePdfDownload(
@@ -234,7 +234,7 @@ describe("handlePdfDownload", () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it("4.5 rejects a deactivated account (401)", async () => {
+  it("rejects a deactivated account (401)", async () => {
     const res = new MockResponse();
 
     await handlePdfDownload(
@@ -252,7 +252,7 @@ describe("handlePdfDownload", () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it("4.6 returns 404 when the job row is missing", async () => {
+  it("returns 404 when the job row is missing", async () => {
     const res = new MockResponse();
 
     await handlePdfDownload(
@@ -264,7 +264,7 @@ describe("handlePdfDownload", () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it("4.6 returns 404 when the job is completed but the file is missing on disk", async () => {
+  it("returns 404 when the job is completed but the file is missing on disk", async () => {
     const res = new MockResponse();
 
     await handlePdfDownload(
@@ -278,7 +278,7 @@ describe("handlePdfDownload", () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it("4.8 returns 404 for a non-completed job even with a same-named file on disk", async () => {
+  it("returns 404 for a non-completed job even with a same-named file on disk", async () => {
     writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
     const res = new MockResponse();
 
@@ -301,7 +301,7 @@ describe("handlePdfDownload", () => {
     expect(res.body).toBe("");
   });
 
-  it("4.8 returns 404 when the persisted artifact path mismatches the requested path", async () => {
+  it("returns 404 when the persisted artifact path mismatches the requested path", async () => {
     writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
     const res = new MockResponse();
 
@@ -336,7 +336,7 @@ describe("handlePdfDownload", () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it("4.9 rejects a PDF-export worker token in the session cookie (401)", async () => {
+  it("rejects a PDF-export worker token in the session cookie (401)", async () => {
     const authController = createAuthController(process.env);
     const workerToken = jwt.sign(
       { reportId: REPORT_ID, kind: "pdf-export" },
@@ -358,7 +358,7 @@ describe("handlePdfDownload", () => {
     expect(res.body).toBe("");
   });
 
-  it("4.9 dev-mode does not authorize a download (401 on an invalid token even with AUTH_DEV_MODE=true)", async () => {
+  it("dev-mode does not authorize a download (401 on an invalid token even with AUTH_DEV_MODE=true)", async () => {
     process.env.AUTH_DEV_MODE = "true";
     const authController = createAuthController(process.env);
     const res = new MockResponse();

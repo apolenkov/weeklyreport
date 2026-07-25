@@ -300,11 +300,7 @@ describe("AutoPublisherScheduler", () => {
     expect(prisma.reportSection.count).toHaveBeenCalledTimes(1);
   });
 
-  // A head manually publishing a candidate between selection and the
-  // scheduler's publishAuto call must not be recorded as an auto-publish:
-  // publishAuto's idempotent short-circuit reports wasAlreadyPublished=true,
-  // and the scheduler must suppress the same side-effects it suppresses for
-  // the archived-after-selection skip.
+  // Manual publish between selection and publishAuto must not audit as auto.
   it("raced outcome: wasAlreadyPublished=true emits no audit, no log, no count, excluded from periodIds", async () => {
     const prisma = {
       report: { findMany: vi.fn().mockResolvedValue([{ id: "rep-race" }]) },

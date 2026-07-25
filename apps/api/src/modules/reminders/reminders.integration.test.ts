@@ -23,7 +23,6 @@ describe("RemindersPrismaRepository (integration)", () => {
     await cleanDatabase(prisma);
     testData = await seedTestData(prisma);
 
-    // Create a reminder rule for this test suite
     await prisma.reminderRule.create({
       data: {
         id: TEST_IDS.reminderRule,
@@ -71,7 +70,6 @@ describe("RemindersPrismaRepository (integration)", () => {
     expect(updated.dedupeKey).toBe(execution.dedupeKey);
     expect(updated.status).toBe("sent");
 
-    // Verify only one execution exists
     const allExecutions = await prisma.reminderExecution.findMany({
       where: { dedupeKey: execution.dedupeKey },
     });
@@ -79,7 +77,6 @@ describe("RemindersPrismaRepository (integration)", () => {
   });
 
   it("listExecutions returns executions ordered by createdAt", async () => {
-    // Create two executions
     await prisma.reminderExecution.create({
       data: {
         id: TEST_IDS.reminderExec1,

@@ -34,10 +34,6 @@ export class RemindersReaperScheduler {
     await this.runOnce(new Date());
   }
 
-  /**
-   * Scheduler-internal entry point. Exposed for unit tests so the sweep can be
-   * driven deterministically with a stubbed `now`.
-   */
   async runOnce(now: Date): Promise<void> {
     const olderThan = new Date(now.getTime() - this.stuckQueuedTimeoutMs);
     const stuck = await this.repository.listStuckQueuedExecutions(olderThan);

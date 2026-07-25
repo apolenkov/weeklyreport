@@ -13,10 +13,6 @@ import {
   PdfExportService,
 } from "./pdf-export.service";
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
 const reportId = "22222222-2222-4222-8222-222222222222";
 const unknownReportId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const requesterSession: UserSession = {
@@ -56,10 +52,6 @@ const draftReport: AssembledReport = {
   publishedById: null,
   publishedByName: null,
 };
-
-// ---------------------------------------------------------------------------
-// In-memory repository
-// ---------------------------------------------------------------------------
 
 function createRepository(
   report: AssembledReport | null,
@@ -113,10 +105,6 @@ function createRepository(
 function createMockQueue() {
   return { enqueue: vi.fn() };
 }
-
-// ---------------------------------------------------------------------------
-// Contract tests
-// ---------------------------------------------------------------------------
 
 describe("PdfExportService — contract tests", () => {
   describe("requestPdfExport", () => {
@@ -225,7 +213,6 @@ describe("PdfExportService — contract tests", () => {
     });
   });
 
-  // Regression — export job status transitions
   describe("requestPdfExport — job lifecycle", () => {
     it("export job transitions: queued -> completed", async () => {
       const service = new PdfExportService(createRepository(publishedReport));

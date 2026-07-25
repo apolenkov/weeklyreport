@@ -8,12 +8,6 @@ import {
 
 import { aggregateTrafficLight } from "./traffic-light-aggregation";
 
-/**
- * The draft/submit write-path merge: folds a save/submit payload onto the
- * server-loaded section read model — stage statuses, per-project traffic-light
- * aggregation, lead-owned decisions, and the activity-status slice.
- */
-
 export function mergeSection(
   section: ReportSectionReadModel,
   input: DraftSavePayload | SubmitSectionPayload,

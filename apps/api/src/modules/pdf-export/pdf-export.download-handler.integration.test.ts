@@ -10,13 +10,8 @@ import {
 } from "../../test-utils/prisma-test-helper";
 import { canReadReport } from "./pdf-export.download-handler";
 
-/**
- * D3 security gate against a real database: `canReadReport` must return true
- * only when the caller's current group scope intersects the report (≥1 section
- * authored in a group the caller can see), so a viewer whose access was revoked
- * cannot pull the artifact. The seeded report has one section authored by the
- * lead, whose `reportingGroupId` is `TEST_IDS.group`.
- */
+// canReadReport is true only when the caller's group scope intersects the
+// report; a revoked viewer must not pull the artifact (real DB).
 describe("canReadReport (integration)", () => {
   const prisma = createTestPrisma();
   let testData: Awaited<ReturnType<typeof seedTestData>>;

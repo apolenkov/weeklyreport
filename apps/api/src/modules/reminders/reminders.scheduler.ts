@@ -8,27 +8,10 @@ import { RemindersPrismaRepository } from "./reminders.prisma-repository";
 import { RemindersService } from "./reminders.service";
 import type { DueDeadlineRule, DueEscalationRule } from "./reminders.types";
 
-/** Length of an ISO calendar date (`YYYY-MM-DD`) after `toISOString().slice(0, n)`. */
 const ISO_DATE_LENGTH = 10;
 
-/**
- * Hourly tick that dispatches T-24h deadline reminders AND T+2h escalation
- * digests in one scheduler pass.
- *
- * The scheduler is contract-light:
- *   1. Query active deadline rules whose fireAt is in the past AND that have
- *      ≥1 lead with a 'draft' section for the rule's reportId.
- *   2. For each (rule, recipient) pair, call the existing
- *      `requestReminderExecution` with kind='deadline' payload — UNLESS the
- *      recipient has notificationOptOut=true.
- *   3. Query active escalation rules whose fireAt is in the past AND that
- *      have ≥1 late lead. For each (rule, head) pair, call
- *      `requestReminderExecution` once with kind='escalation' digest payload.
- *      Escalation BYPASSES notificationOptOut — heads always notified.
- *   4. The service's idempotent dedupeKey
- *      (`${rule.id}:${kind}:${cycleDate}:${email}`) collapses two ticks
- *      within one UTC day into exactly one email per (rule, recipient, day).
- */
+// Hourly tick: deadline (T-24h) + escalation (T+2h). Escalation bypasses
+// notificationOptOut. Dedupe key collapses two ticks in one UTC day to one email.
 @Injectable()
 export class RemindersScheduler {
   private readonly logger = new Logger(RemindersScheduler.name);
@@ -49,17 +32,12 @@ export class RemindersScheduler {
     });
   }
 
-  // CronExpression.EVERY_HOUR === '0 * * * *' — fires at the top of every hour.
-  // The same tick handles deadline (T-24h) and escalation (T+2h).
   @Cron(CronExpression.EVERY_HOUR)
   async dispatchDueReminders(): Promise<void> {
     await this.runOnce(new Date());
   }
 
-  /**
-   * Scheduler-internal entry point. Exposed for unit tests so we can drive
-   * the tick deterministically with a stubbed `now`.
-   */
+  // Test seam: drive the tick with a stubbed now.
   async runOnce(now: Date): Promise<void> {
     const dueDeadlineRules = await this.repository.findDueDeadlineRules(now);
     const dueEscalationRules =
@@ -90,7 +68,7 @@ export class RemindersScheduler {
     rule: DueDeadlineRule,
     organization: OrganizationBrand,
   ): Promise<void> {
-    const cycleDate = rule.fireAt.toISOString().slice(0, ISO_DATE_LENGTH); // YYYY-MM-DD UTC
+    const cycleDate = rule.fireAt.toISOString().slice(0, ISO_DATE_LENGTH);
     const sectionUrl = buildSectionUrl(rule.reportId);
     const deadlineIso = rule.fireAt.toISOString();
     for (const recipient of rule.recipients) {

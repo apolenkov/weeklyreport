@@ -1,9 +1,5 @@
-// The PDF top-line portfolio totals re-route lives in `toAssembledReport`, a
-// function separate from the snapshot-module builder. It must count the floored
-// `trafficLight` of the mapped sections (NOT raw `projectStatuses`), so an owned
-// stage with no submitted status covered by a covers-all own risk reads
-// red/yellow in the PDF top-line, agreeing with the PDF per-product cards
-// inside the same document.
+// PDF top-line totals must count floored trafficLight (not raw projectStatuses)
+// so cards and totals agree inside the same document.
 import { describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";

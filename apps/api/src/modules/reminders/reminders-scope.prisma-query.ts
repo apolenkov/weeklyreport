@@ -3,15 +3,8 @@ import type { UserSession } from "@customreport/shared";
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter } from "../../lib/group-scope.js";
 
-/**
- * Verbatim query transplants backing `RemindersService`'s scope-assertion
- * methods and `dispatchPendingReminders`, split out of
- * `RemindersPrismaRepository` to keep that file cohesive. Every function
- * mirrors the where-clause a reminders authorization check evaluated before
- * this module existed; changing a predicate here changes who is authorized.
- */
+// Changing a predicate here changes who is authorized (fail-closed scope).
 
-/** A reminder rule's report id, or null when the rule is missing or reportless. */
 export function queryRuleReportId(
   prisma: PrismaService,
   ruleId: string,
@@ -21,11 +14,7 @@ export function queryRuleReportId(
     .then((rule) => rule?.reportId ?? null);
 }
 
-/**
- * Id of an in-scope `ReportSection` on `reportId`, or null when none exists.
- * The scope fragment filters on `author`, so it is applied via `AND` to avoid
- * clobbering any sibling `author` predicate a caller adds later.
- */
+// Scope fragment filters on author — AND avoids clobbering a sibling author predicate.
 export async function queryInScopeSectionId(
   prisma: PrismaService,
   session: UserSession,
@@ -38,10 +27,6 @@ export async function queryInScopeSectionId(
   return section?.id ?? null;
 }
 
-/**
- * Id of an in-scope DRAFT `ReportSection` on `reportId` authored by
- * `recipientEmail`, or null when none exists.
- */
 export async function queryInScopeDraftSectionId(
   prisma: PrismaService,
   session: UserSession,
@@ -60,7 +45,6 @@ export async function queryInScopeDraftSectionId(
   return section?.id ?? null;
 }
 
-/** Author emails of every in-scope `ReportSection` on `reportId`. */
 export async function queryInScopeSectionAuthorEmails(
   prisma: PrismaService,
   session: UserSession,
@@ -73,7 +57,6 @@ export async function queryInScopeSectionAuthorEmails(
   return sections.map((s) => s.author.email);
 }
 
-/** Id of an in-scope `User` row for `leadId`, or null when out of reach. */
 export async function queryInScopeLeadId(
   prisma: PrismaService,
   session: UserSession,
@@ -86,11 +69,6 @@ export async function queryInScopeLeadId(
   return lead?.id ?? null;
 }
 
-/**
- * The earliest-firing active reminder rule for `reportId` (`orderBy fireAt
- * asc`), optionally narrowed to `ruleId`. Only the fields
- * `dispatchPendingReminders` reads are selected.
- */
 export function queryActiveRuleForDispatch(
   prisma: PrismaService,
   reportId: string,
@@ -107,10 +85,6 @@ export function queryActiveRuleForDispatch(
   });
 }
 
-/**
- * Draft sections on `reportId`, scoped to the caller's group and optionally
- * narrowed to one lead's authored section — the dispatch candidate set.
- */
 export async function queryDraftSectionsForDispatch(
   prisma: PrismaService,
   session: UserSession,

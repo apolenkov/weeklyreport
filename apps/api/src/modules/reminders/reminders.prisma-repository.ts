@@ -56,9 +56,6 @@ export class RemindersPrismaRepository implements RemindersRepository {
     return queryDueEscalationRules(this.prisma, now, this.logger);
   }
 
-  // --- Scope authorization + dispatch (reminders namespace) — thin
-  // delegates to reminders-scope.prisma-query.ts's verbatim query fns. ---
-
   getRuleReportId(ruleId: string): Promise<string | null> {
     return queryRuleReportId(this.prisma, ruleId);
   }

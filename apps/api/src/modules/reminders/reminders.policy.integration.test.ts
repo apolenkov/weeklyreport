@@ -9,16 +9,7 @@ import {
 } from "../../test-utils/prisma-test-helper";
 import { PolicyApplicatorService } from "./policy-applicator.service";
 
-/**
- * Full create-policy → create-period → assert-rule pipeline against the
- * real Postgres test database.
- *
- * Complements the unit tests in `policy-applicator.test.ts` (which mock
- * Prisma) by exercising the actual unique index `uq_rule_report_policy`,
- * the actual nullable FK on `ReminderRule.policyId`, and the actual
- * `ReminderAudience` enum mapping. If the schema drifts, the unit
- * tests pass but this one fails.
- */
+// Unit tests mock Prisma; schema drift only fails here (real unique index/FK).
 describe("PolicyApplicatorService (integration)", () => {
   const prisma = createTestPrisma();
   let applicator: PolicyApplicatorService;

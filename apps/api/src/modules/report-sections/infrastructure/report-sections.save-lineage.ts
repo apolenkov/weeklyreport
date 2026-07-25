@@ -1,10 +1,7 @@
 import { Prisma } from "@prisma/client";
 
-// review-acknowledgement: a reviewer comment lifted out of the DB just before
-// saveSection delete-recreates its anchor record, keyed by the record's DURABLE
-// lineage (stableId + kind) rather than the volatile PK that the recreate
-// re-mints. Re-inserted against the new PK for every lineage that survives the
-// save — see the comment-transfer note on saveSection.
+// Captured by durable stableId+kind (not volatile PK) so comments re-attach
+// after saveSection delete-recreates anchor rows.
 type RecordKind = "item" | "risk" | "decision";
 export interface CapturedComment {
   stableId: string;

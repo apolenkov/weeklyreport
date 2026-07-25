@@ -37,10 +37,7 @@ export function deriveForeignStageStatus(
   const covering = risks.filter(
     (r) =>
       r.projectId === projectId &&
-      // An empty stageNames is the canonical "covers all assigned stages"
-      // marker (mirrors riskCoversStage in stage-tags.ts and the Add-Risk
-      // dialog default). Without this, a co-lead's covers-all blocked risk
-      // would colour no foreign stage and product health would read green.
+      // Empty stageNames = covers-all; without this covers-all risks colour nothing.
       (r.stageNames.length === 0 ||
         r.stageNames.some((name) => stageNamesMatch(name, stageName))),
   );
@@ -51,7 +48,6 @@ export function deriveForeignStageStatus(
   return persisted === null ? null : "green";
 }
 
-/** Foreign section shape for the status-only cross-author read. */
 interface ForeignStatusSection {
   authorId: string;
   risks: ForeignRisk[];
@@ -62,11 +58,6 @@ interface ForeignStatusSection {
   }[];
 }
 
-/**
- * Indexes foreign sections into the two lookups the status-row builder needs:
- * a persisted-traffic map keyed "authorId::projectId::stageId" (non-null only)
- * and the per-author covering risks.
- */
 export function indexForeignSections(
   sections: readonly ForeignStatusSection[],
 ): {
@@ -97,11 +88,6 @@ interface ForeignAssignmentRow {
   user: { id: string; name: string };
 }
 
-/**
- * Groups foreign stage assignments by (projectId, authorId) into status rows,
- * preserving first-seen insertion order. Archived-project rows are dropped.
- * Each stage's status is risk-derived via {@link deriveForeignStageStatus}.
- */
 export function buildCrossAuthorStatusRows(
   others: readonly ForeignAssignmentRow[],
   statusMap: ReadonlyMap<string, TrafficLightStatus>,
@@ -133,10 +119,7 @@ export function buildCrossAuthorStatusRows(
         projectId: head.row.projectId,
         projectName: head.row.project.name,
         authorId: head.row.user.id,
-        // Derive display forms server-side: the two-letter mark for
-        // avatars/micro-chips, and the SHORT form ("Кузнецова М.А.") for the
-        // cross-author stage label. Only these leave the method — never the
-        // full ФИО.
+        // Server-side initials + short name only — full name never leaves.
         authorInitials: initialsFromName(head.row.user.name),
         authorShortName: shortNameFromName(head.row.user.name),
         stageNames: [...new Set(stageEntries.map((e) => e.stageName))],

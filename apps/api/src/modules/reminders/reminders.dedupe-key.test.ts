@@ -15,13 +15,7 @@ import {
 import { extractRecipientEmail } from "./reminders-row-mappers";
 import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
 
-/**
- * Dedupe-key recipient extraction regression.
- *
- * Pre-fix the legacy regex `/Z:(.+)$/` matched only the v2.0 ISO-suffixed
- * shape and silently returned '' for the newer keyed shapes. Both shapes
- * must round-trip the recipient email correctly.
- */
+// Both legacy ISO-Z and keyed deadline/escalation shapes must round-trip email.
 describe("extractRecipientEmail", () => {
   it("parses legacy v2.0 shape: ruleId:<ISO with Z>:email", () => {
     const key =
@@ -63,19 +57,7 @@ describe("extractRecipientEmail", () => {
   });
 });
 
-/**
- * Cross-caller dedupe-key divergence regression.
- *
- * Pre-fix, `RemindersScopeService.dispatchDraftSections` built its own
- * `${ruleId}:${fireAt.toISOString()}:${email}` key (and called
- * `requestReminderExecution` with no payload, which built that same legacy
- * shape internally) while `RemindersScheduler.dispatchRule` supplied a
- * `{ kind: "deadline", cycleDate, ... }` payload, which built
- * `${ruleId}:deadline:${cycleDate}:${email}`. The two shapes could never
- * collide for the same rule/recipient/cycle, so a manual head "Remind" after
- * an automated deadline send always inserted a second execution and sent a
- * duplicate email.
- */
+// Manual (no payload) and scheduler deadline keys must be byte-identical.
 describe("resolveReminderDedupeKey — cross-caller divergence regression", () => {
   const rule = {
     id: "66666666-6666-4666-8666-666666666666",
@@ -110,12 +92,7 @@ describe("resolveReminderDedupeKey — cross-caller divergence regression", () =
   });
 });
 
-/**
- * End-to-end regression: a manual head "Remind" for a rule/lead/cycle that
- * already received the automated deadline reminder must report
- * `alreadySent`, not insert a second `ReminderExecution` row / send a
- * duplicate email.
- */
+// Manual Remind after automated send must report alreadySent, not duplicate.
 describe("RemindersScopeService.dispatchDraftSections — manual dispatch after an automated send (regression)", () => {
   const REPORT_ID = "22222222-2222-4222-8222-222222222222";
   const rule: AdminReminderRule = {

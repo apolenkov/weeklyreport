@@ -468,13 +468,10 @@ describe("markExportFailed", () => {
     const repo = createRepository(publishedReport);
     const service = new PdfExportService(repo);
 
-    // Create a job first
     const queued = await service.requestPdfExport(reportId, requesterSession);
 
-    // Mark it as failed
     await service.markExportFailed(queued.jobId, "timeout error");
 
-    // Verify the job status was updated
     const job = await service.getPdfExportStatus(
       queued.jobId,
       requesterSession.userId,

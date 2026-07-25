@@ -15,9 +15,10 @@ import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
 } from "../report-sections/index.js";
-import type {
-  PdfExportJobRecord,
-  PdfExportRepository,
+import {
+  PDF_EXPORT_TEMPLATE_VERSION,
+  type PdfExportJobRecord,
+  type PdfExportRepository,
 } from "./pdf-export.service.js";
 
 const pdfStatusToDb: Record<
@@ -130,7 +131,6 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
     return toExportJob(updated);
   }
 
-  /** Called by BullMQ onFailed event handler to mark a PDF export job as failed. */
   async markExportFailed(jobId: string, error: string): Promise<void> {
     await this.prisma.pdfExportJob.update({
       where: { id: jobId },
@@ -158,7 +158,7 @@ function toExportJob(row: {
       requestedAt: row.createdAt,
       completedAt: row.status === "completed" ? row.updatedAt : null,
       checksum: row.checksum,
-      templateVersion: "phase-2-pdf-v1",
+      templateVersion: PDF_EXPORT_TEMPLATE_VERSION,
       artifactUrl: row.filePath,
     }),
     requestedBy: row.requestedBy,
@@ -171,11 +171,8 @@ export function toAssembledReport(
   const sections = report.sections.map((section) =>
     mapPrismaToReportSection(section),
   );
-  // Compute the PDF top-line totals from the floored `trafficLight` of the
-  // mapped sections, NOT from raw `projectStatuses`, so the per-product cards
-  // and the top-line totals agree inside the same PDF.
-  // `computePortfolioOverviewFromReadSections` re-applies the same own-risk
-  // floor the mapper baked into each card.
+  // Top-line totals from floored trafficLight (not raw projectStatuses) so
+  // cards and totals agree; re-applies the mapper's own-risk floor.
   const portfolio = computePortfolioOverviewFromReadSections(sections);
 
   return assembledReportSchema.parse({

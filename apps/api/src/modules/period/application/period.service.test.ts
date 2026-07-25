@@ -647,7 +647,7 @@ describe("PeriodService — reopen policy gate", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  Manual-publish telemetry (remove-dead-modules spec)               */
+/*  Manual-publish telemetry               */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -978,7 +978,7 @@ describe("PeriodService — manual-publish telemetry", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  Lifecycle target scope authorization (period-lifecycle-authz)     */
+/*  Lifecycle target scope authorization     */
 /* ------------------------------------------------------------------ */
 
 function openReport(id: string, archived = false): SpyReport {
@@ -1416,7 +1416,7 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
 });
 
 /* ------------------------------------------------------------------ */
-/*  Reopened publish-target scope (close the reopened bypass, D3)      */
+/*  Reopened publish-target scope (close the reopened bypass)          */
 /* ------------------------------------------------------------------ */
 
 describe("PeriodService — publish reopened-target scope", () => {
@@ -1489,7 +1489,7 @@ describe("PeriodService — publish reopened-target scope", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  Archive landing inside the publish read→write window (D2)          */
+/*  Archive landing inside the publish read→write window          */
 /* ------------------------------------------------------------------ */
 
 describe("PeriodService — archive-in-window publish outcome", () => {
