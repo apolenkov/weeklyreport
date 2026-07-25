@@ -76,10 +76,6 @@ function createMockEmailService() {
   };
 }
 
-/**
- * Settings-service stub for from-address injection.
- * Pass `notificationFromEmail` to control what the processor pulls in.
- */
 function createMockSnapshotAdminService(
   notificationFromEmail: string | null = null,
 ) {

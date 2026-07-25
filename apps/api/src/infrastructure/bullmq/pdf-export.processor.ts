@@ -25,12 +25,9 @@ const PAGE_GOTO_TIMEOUT_MS = 60_000;
 // after network idle before failing the job.
 const PRINT_READY_TIMEOUT_MS = 30_000;
 
-// Shared contract with the web print template
-// (apps/web/src/app/print/[reportId]/print-report-template.tsx): it stamps
-// data-print-state on the root of each render branch. The worker captures only
-// the "ready" branch, so a loading spinner or terminal error page is never
-// checksummed as a completed export. These strings MUST stay in sync with the
-// template's PRINT_STATE tokens.
+// Must stay in sync with the web print template's PRINT_STATE tokens
+// (print-report-template.tsx). Worker captures only "ready"; loading/error
+// markers must never be checksummed as a completed export.
 const PRINT_STATE_ATTR = "data-print-state";
 const PRINT_STATE_READY = "ready";
 const READY_OR_ERROR_SELECTOR =
@@ -45,7 +42,6 @@ interface PdfExportJobData extends JobTraceContext {
   authToken: string;
 }
 
-/** BullMQ worker for the pdf-export queue. */
 @Injectable()
 export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
   protected readonly queueName = "pdf-export";
@@ -149,11 +145,6 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
     }
   }
 
-  /**
-   * Wait for the print template's terminal render marker after network idle and
-   * assert it is "ready". Throws when the "error" marker is present or when no
-   * terminal marker appears within the timeout, so a failed render fails the job.
-   */
   private async assertPrintReady(page: Page, jobId: string): Promise<void> {
     const marker = await this.timed(jobId, "wait.ready", () =>
       page.waitForSelector(READY_OR_ERROR_SELECTOR, {

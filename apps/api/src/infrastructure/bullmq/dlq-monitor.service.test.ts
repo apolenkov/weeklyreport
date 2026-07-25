@@ -39,10 +39,6 @@ function seam(): DlqTestSeam {
   ) as unknown as DlqTestSeam;
 }
 
-// Threshold resolution is now a validated-config read (env.DLQ_ALERT_THRESHOLD
-// ?? DEFAULT_THRESHOLD); a malformed value fails boot at validateEnv(), so the
-// former parse-and-warn seam is gone — see env.schema.ts DLQ_ALERT_THRESHOLD.
-
 describe("DLQMonitorService.recordTerminalFailure", () => {
   beforeEach(() => {
     vi.spyOn(Logger.prototype, "error").mockImplementation(() => {

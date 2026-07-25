@@ -11,13 +11,8 @@ import {
   runInJobTraceContext,
 } from "./worker-observability.js";
 
-/**
- * Shared lifecycle for the raw-BullMQ workers. Each worker uses a raw `Worker`
- * (not @Processor/WorkerHost) to avoid the DiscoveryService DI bug in
- * @nestjs/bullmq 11 with NestJS 11; this base owns that construction, the
- * trace/CLS wrapping, and the module lifecycle so a subclass supplies only its
- * queue name, span name, handler, failure hook, and any extra worker options.
- */
+// Raw `Worker` (not @Processor/WorkerHost) avoids the DiscoveryService DI bug
+// in @nestjs/bullmq 11 with NestJS 11. Subclass supplies queue/span/handler.
 export abstract class RawBullMqProcessor<TData extends JobTraceContext>
   implements OnModuleInit, OnModuleDestroy
 {
@@ -42,7 +37,6 @@ export abstract class RawBullMqProcessor<TData extends JobTraceContext>
     error: Error,
   ): void;
 
-  /** Worker options merged over the shared connection/prefix (concurrency, limiter, …). */
   protected extraWorkerOptions(): Partial<WorkerOptions> {
     return {};
   }
