@@ -8,14 +8,8 @@ import { LeadFormService } from "../../modules/report-sections/index.js";
 import { LeadFormPrismaRepository } from "../../modules/report-sections/index.js";
 import { createAppRouter } from "./trpc.router.js";
 
-/**
- * scope-leadform-revoke-authz: the two revoke procedures are headProcedures
- * (head + admin) whose OBJECT authz must bind to the caller's reporting group.
- * Driven through the real router → real LeadFormService → real
- * LeadFormPrismaRepository against a mock Prisma, so the router's scope
- * threading (groupScopeFilter → service → repo where-clause) is exercised end
- * to end. A router that fails to build/pass the scope makes these fail.
- */
+// Revoke procedures are headProcedures whose object authz binds to the
+// caller's reporting group; exercise router scope threading end to end.
 
 const GROUP_ID = "99999999-9999-4999-8999-999999999999";
 const SECTION_ID = "22222222-2222-4222-8222-222222222222";

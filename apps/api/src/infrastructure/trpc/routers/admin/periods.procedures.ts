@@ -19,12 +19,8 @@ const MAX_PERIOD_LIST_LIMIT = 200;
 export interface AdminPeriodsDeps {
   periodAdminService: PeriodAdminService;
   reopenRequestAdminService: ReopenRequestAdminService;
-  /**
-   * Best-effort auto carry-over when a manually created period is minted open
-   * (scheduled-born ones carry later at scheduled→open flip). Never rejects.
-   * Optional so role-coverage fixtures with `{}` deps compile; main.ts always
-   * provides it.
-   */
+  // Best-effort carry-over for open-born manual periods; scheduled ones carry
+  // at flip. Optional for `{}` fixtures; main.ts always provides it.
   autoCarryOver?: (targetReportId: string) => Promise<void>;
 }
 
@@ -39,12 +35,7 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
           throw mapDomainError(error);
         }
       }),
-    /**
-     * Paginated period list for Admin → Periods. Filters by lifecycle bucket
-     * (`active | archive | <PeriodState>`) via `(periodState, periodStart desc)`
-     * index. Rows include server-precomputed `canReopen` / `canArchive` so the
-     * UI does not need reopen-policy rules.
-     */
+    // Server-precomputed canReopen/canArchive so the UI needs no policy rules.
     listPeriodsByState: adminProcedure
       .input(
         z.object({
@@ -59,15 +50,8 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
           throw mapDomainError(error);
         }
       }),
-    /**
-     * Admin escape hatch that mints a Period without waiting for the daily
-     * `PeriodCreatorScheduler` (00:05 UTC cron). Fresh dev/staging DBs were
-     * blocked on the cron tick before this; admins can seed a period from the
-     * Periods-tab «New period» dialog. Audit envelope (`period.manual-create`)
-     * is emitted from the router — same pattern as `savePolicy` /
-     * `removePolicy` — so audit IO stays out of the service layer and the SIEM
-     * stream gets real-user attribution (vs system+cron `auto-create`).
-     */
+    // Escape hatch past the daily cron; audit stays on the router so SIEM gets
+    // real-user attribution (vs system+cron auto-create).
     createPeriodManual: adminProcedure
       .input(adminCreatePeriodManualSchema)
       .mutation(async ({ ctx, input }) => {
@@ -95,14 +79,7 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
           throw mapDomainError(error);
         }
       }),
-    /**
-     * In-place edit of a Period's date envelope + weekLabel. Symmetric to
-     * `createPeriodManual` so the Periods-tab Edit icon reuses
-     * `<CreatePeriodDialog>` in "edit" mode. Audit (`period.manual-edit`)
-     * only when the diff is non-empty — service short-circuits no-ops with an
-     * empty diff the router treats as "nothing to audit", keeping SIEM free
-     * of empty-payload noise from no-op PATCH calls.
-     */
+    // Audit only on non-empty diff so no-op PATCHes stay out of SIEM.
     updatePeriodManual: adminProcedure
       .input(adminUpdatePeriodManualSchema)
       .mutation(async ({ ctx, input }) => {
@@ -115,8 +92,7 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
               from: range.from.toISOString(),
               to: range.to.toISOString(),
             });
-            // deadline is three-state (ruling F16): `to: null` records an
-            // explicit clear in the audit trail.
+            // Three-state deadline: `to: null` records an explicit clear.
             const toIsoOrNull = (value: Date | null) =>
               value === null ? null : value.toISOString();
             const changes = {
@@ -147,10 +123,7 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
           throw mapDomainError(error);
         }
       }),
-    /**
-     * Manual archive. Sets `archived=true` and `periodState='archived'`
-     * atomically so the two-state-machine invariant is preserved.
-     */
+    // Atomic archived=true + periodState=archived (dual-state invariant).
     archivePeriod: adminProcedure
       .input(z.object({ periodId: z.uuid() }))
       .mutation(async ({ input }) => {
@@ -160,12 +133,8 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
           throw mapDomainError(error);
         }
       }),
-    /**
-     * Manual un-archive — flips `archived=false` and derives next
-     * `periodState` from the legacy `(status, periodStatus)` tuple at write
-     * time (new state column lost the pre-archive distinction when overwritten
-     * with 'archived').
-     */
+    // Derive next periodState from legacy (status, periodStatus) — the new
+    // column lost the pre-archive distinction when overwritten with archived.
     unarchivePeriod: adminProcedure
       .input(z.object({ periodId: z.uuid() }))
       .mutation(async ({ input }) => {
@@ -175,10 +144,7 @@ export function createAdminPeriodsProcedures(deps: AdminPeriodsDeps) {
           throw mapDomainError(error);
         }
       }),
-    /**
-     * Delete a period (Report) and cascade-delete all child rows.
-     * Guard: cannot delete published periods.
-     */
+    // Guard: published periods cannot be deleted.
     deleteReport: adminProcedure
       .input(z.object({ reportId: z.uuid() }))
       .mutation(async ({ input }) => {

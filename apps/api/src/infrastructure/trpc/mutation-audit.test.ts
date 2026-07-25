@@ -12,11 +12,6 @@ import {
   router,
 } from "./trpc.middleware.js";
 
-/**
- * Covers mutation-audit emission, bypasses, failures, target extraction, and
- * persistence.
- */
-
 function makeAuditSpy(): {
   audit: AuditLogger;
   mutation: ReturnType<typeof vi.fn>;
@@ -78,22 +73,18 @@ const groupProductTargetMutation = adminProcedure
   .mutation(() => "ok");
 
 const auditTestRouter = router({
-  // Mutation with sectionId in input — target should be extracted.
   saveDraft: leadProcedure
     .input(z.object({ sectionId: z.string(), text: z.string() }))
     .mutation(({ input }) => ({ id: input.sectionId, ok: true })),
 
-  // Mutation that throws — status should be fail with reason.
   failingMutation: leadProcedure
     .input(z.object({ id: z.string() }))
     .mutation(() => {
       throw new TRPCError({ code: "BAD_REQUEST", message: "boom" });
     }),
 
-  // Query — should NOT trigger mutation event.
   queryRoute: protectedProcedure.query(() => "q-ok"),
 
-  // auth.* mutation — should be skipped (covered by login events).
   auth: router({
     fakeMutation: protectedProcedure
       .input(z.object({ id: z.string() }))

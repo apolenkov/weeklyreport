@@ -9,18 +9,11 @@ import { mapDomainError } from "../trpc.error-mapper.js";
 import { anyRoleProcedure, router } from "../trpc.middleware.js";
 
 export interface AnalyticsRouterDeps {
-  /**
-   * Analytics surface — traffic light history,
-   * lead velocity, period comparison. Cached via Redis with prefix-wide
-   * invalidation on PeriodService.publishPeriod / reopenPeriod.
-   */
   analyticsService: AnalyticsService;
 }
 
-// These procedures use anyRoleProcedure because heads, leads, admins, and
-// viewers all consume trend data. The repository layer enforces the
-// published-only floor (PUBLISHED_FLOOR mirrors archive.prisma-repository
-// pattern), so viewer sessions only ever see published-period rows.
+// anyRoleProcedure: all roles consume trends; repository published-only floor
+// keeps viewers on published-period rows.
 
 export function createAnalyticsRouter(deps: AnalyticsRouterDeps) {
   return router({

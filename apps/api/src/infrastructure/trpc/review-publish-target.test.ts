@@ -4,17 +4,8 @@ import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
 import { createAppRouter } from "./trpc.router.js";
 
-/**
- * `review.assembledReport` and `review.dashboard` must resolve their target
- * period from the DB via `weeklyReportService.getCurrentEditableId()`, never
- * from `ctx.session.activeReportId` (baked into the JWT at login, so it can
- * be stale). These guard that resolution: routing either at the stale
- * `activeReportId` would fail here.
- *
- * `review.publish` used to be pinned here too; it was deleted in favor of
- * `period.publish` — see
- * `routers/period.router.test.ts` for that mutation's router-wiring pin.
- */
+// assembledReport/dashboard must resolve the period via getCurrentEditableId,
+// never session.activeReportId (JWT-baked at login, can be stale).
 
 const STALE_ACTIVE_REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const DB_RESOLVED_REPORT_ID = "22222222-2222-4222-8222-222222222222";

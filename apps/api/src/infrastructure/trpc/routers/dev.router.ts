@@ -28,21 +28,19 @@ const DEFAULT_RESEED_TIMEOUT_MS =
 const RESEED_OUTPUT_TAIL_LINES = 15;
 const RESEED_STDERR_TAIL_LENGTH = 500;
 const RESEED_VARIANT_MANUAL_UAT = "manual-uat";
+// Prisma AI consent gate expects this Russian yes; any other value aborts reset.
+const PRISMA_AI_DANGEROUS_ACTION_CONSENT = "давай";
 
 export interface DevRouterDeps {
   prisma: PrismaClient;
-  /**
-   * Validated env, threaded from main.ts. Read for the reseed repo-root
-   * override (`dev.wipeAndReseed`) instead of raw `process.env`.
-   */
+  // Validated env from main.ts — reseed root override, not raw process.env.
   env: EnvConfig;
 }
 
 type ReseedVariant =
   "small" | "middle" | "huge" | typeof RESEED_VARIANT_MANUAL_UAT;
 
-/** Every dev.* procedure refuses to act unless AUTH_DEV_MODE is set, so an
- * accidental deploy of this router to a production runtime cannot wipe data. */
+// Refuse unless AUTH_DEV_MODE so an accidental prod deploy cannot wipe data.
 const assertDevMode = (): void => {
   if (process.env.AUTH_DEV_MODE !== "true") {
     throw new TRPCError({
@@ -52,10 +50,7 @@ const assertDevMode = (): void => {
   }
 };
 
-/** Tiers mirror the package.json seed scripts: small/huge run the tiered demo
- * writer; middle delegates to the standalone seed-simple; manual-uat wipes
- * without a full reset. The Prisma config applies migrations on reset; the
- * requested seed then runs explicitly. */
+// Tiers mirror package.json seed scripts; reset applies migrations, then seed.
 const buildReseedScript = (variant: ReseedVariant): string => {
   if (variant === RESEED_VARIANT_MANUAL_UAT) {
     return "pnpm --dir apps/api exec tsx ../../prisma/wipe-manual-uat.ts";
@@ -76,10 +71,8 @@ const reseedTimeoutMs = (variant: ReseedVariant): number => {
     : DEFAULT_RESEED_TIMEOUT_MS;
 };
 
-/** Resolve repo root in both dev TS execution and built dist images. Built
- * Docker paths include dist/apps/api/src/... so a fixed relative hop from
- * import.meta.url can land under /app/apps. Prefer the real cwd/workspace
- * candidates and verify by schema existence. */
+// Built Docker paths nest under dist/... so a fixed hop from import.meta.url
+// can miss the repo root; prefer cwd/workspace and verify via schema.prisma.
 const resolveRepoRoot = (envRoot: string | undefined): string => {
   const moduleDir = path.dirname(url.fileURLToPath(import.meta.url));
   const candidates = [
@@ -116,11 +109,6 @@ const toReseedError = (error: unknown): TRPCError =>
     cause: error instanceof Error ? error : undefined,
   });
 
-/**
- * Dev namespace (only mounted when AUTH_DEV_MODE=true). Surfaces wipe/reseed
- * shortcuts for the in-page DevRoleSwitcher widget so a presenter can reset
- * demo state between recordings without dropping into a terminal.
- */
 export function createDevRouter(deps: DevRouterDeps) {
   return router({
     // Lists every seeded user so a dev-mode login picker can show all of
@@ -158,7 +146,8 @@ export function createDevRouter(deps: DevRouterDeps) {
             encoding: "utf8",
             env: {
               ...process.env,
-              PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
+              PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION:
+                PRISMA_AI_DANGEROUS_ACTION_CONSENT,
             },
             timeout: reseedTimeoutMs(input.variant),
           });

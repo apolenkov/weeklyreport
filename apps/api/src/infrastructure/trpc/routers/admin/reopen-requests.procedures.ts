@@ -10,11 +10,8 @@ interface ReopenRequestsDeps {
   reopenRequestAdminService: ReopenRequestAdminService;
 }
 
-// Reopen requests — Lead-initiated, Head-decided. Lead's
-// `leadForm.requestReopen` persists status=pending; head dashboard + Admin
-// "Reopen Requests" tab consume these. Gate is `headProcedure`
-// (head + admin), not `adminProcedure` — head ≠ admin in real deploy, and
-// reopen-decisioning is a head capability.
+// headProcedure (not adminProcedure): head ≠ admin in real deploy; reopen
+// decision is a head capability.
 export function createReopenRequestsProcedures(deps: ReopenRequestsDeps) {
   return {
     listReopenRequests: headProcedure

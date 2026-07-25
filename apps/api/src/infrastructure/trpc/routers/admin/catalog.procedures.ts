@@ -117,18 +117,8 @@ export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
       }
     }),
 
-    // -----------------------------------------------------------------
-    // Explicit Group ↔ Product M:M surface.
-    //
-    // Mutations are idempotent (attach upserts on the unique tuple;
-    // detach uses deleteMany so a double-click is harmless). Reads are
-    // straight findMany joins ordered by name. All four procedures are
-    // gated by adminProcedure — head/admin only, like saveProject and
-    // saveReportingGroup. The generic mutationAuditMiddleware captures
-    // the {procedure, targetId} envelope; no dedicated audit event is
-    // emitted yet (consistent with saveProject — added later only if
-    // SIEM needs the split).
-    // -----------------------------------------------------------------
+    // Group↔Product edges: attach upserts / detach deleteMany so double-click
+    // is harmless. Generic mutation audit only (no dedicated SIEM event).
 
     attachProductToGroup: adminProcedure
       .input(groupProductEdgeInputSchema)

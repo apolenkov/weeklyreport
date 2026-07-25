@@ -10,17 +10,9 @@ import { ReopenRequestAdminService } from "../../modules/admin/index.js";
 import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
 import { createAppRouter } from "./trpc.router.js";
 
-/**
- * reopen-request-lifecycle: the three reopen procedures (list / respond /
- * count) are gated to headProcedure (ADR 0008), group-scoped (D8), and the
- * decision is race-safe (D6). Persistence sits behind
- * `ReopenRequestAdminService` (backed by `AdminPrismaRepository`); this suite drives the
- * router → service → repository seam against a mock Prisma so the gate, the
- * where-clause shape (still asserted at the repository boundary the
- * adapter issues), and the race branches are exercised without a DB. The
- * DB-level guarantees (the partial unique index, real concurrency) live in the
- * integration suite.
- */
+// Reopen list/respond/count: headProcedure (ADR 0008), group-scoped, race-safe
+// decision. Router→service→repo against mock Prisma; DB guarantees in the
+// integration suite.
 
 const GROUP_ID = "99999999-9999-4999-8999-999999999999";
 const REQUEST_ID = "11111111-1111-4111-8111-111111111111";

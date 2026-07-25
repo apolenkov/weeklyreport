@@ -5,14 +5,8 @@ import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
 import { createAppRouter } from "./trpc.router.js";
 
-/**
- * `reports.compiledHistory` delegates to `WeeklyReportService.compiledHistory`,
- * resolving `input?.includeArchive ?? false` and threading the caller's
- * session through. The viewer-only `periodStatus="published"` filter lives
- * where the query is issued — see
- * `WeeklyReportPrismaRepository.getCompiledHistory`'s coverage in
- * `weekly-report.prisma-repository.test.ts`.
- */
+// Viewer periodStatus filter is covered on getCompiledHistory in
+// weekly-report.prisma-repository.test.ts.
 
 const viewerSession: UserSession = {
   userId: "c3333333-3333-4333-8333-333333333333",
