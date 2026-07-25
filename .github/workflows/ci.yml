@@ -1,18 +1,19 @@
 name: CI
 
-# GitHub Enterprise has no runners assigned to this repository right now
-# (actions/runners total=0 on 2026-05-15). Automatic PR/push triggers
-# leave checks queued forever, so CI stays manual until a runner is
-# provisioned. Local pre-push gates remain the active quality gate.
+# The "no runners" premise this workflow sat on for months was wrong: the
+# repository is on github.com and uses GitHub-hosted runners, which never
+# appear in actions/runners — that endpoint lists self-hosted only. Dispatched
+# runs execute normally, so the dispatch-only posture bought nothing.
 #
-# Pre-production-point requirement (openspec/specs/ci-merge-gate, 2026-07-13):
-# before the repo reaches its first production point a runner MUST be
-# provisioned and this trigger MUST expand to
-#   on: { pull_request, push: { branches: [main] } }
-# with required status checks enabled on main. Until then the dispatch-only
-# posture is an accepted, tracked interim state, not a permanent design.
+# Still missing for openspec/specs/ci-merge-gate: required status checks on
+# main. That one is deliberate — enforcing it ends the MVP direct-push
+# workflow CLAUDE.md pre-authorises, so it waits for the first production
+# point rather than for a green run.
 on:
   workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
