@@ -37,6 +37,11 @@ jobs:
       # a connection. No database exists in this job; the value only has to
       # parse.
       DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_generate_only
+      # Type-aware ESLint holds the whole monorepo's type graph in memory and
+      # aborts (SIGABRT/134) against Node's default heap cap on a hosted
+      # runner. The runner has 16 GB; half of it is headroom for the ~1.5 GB
+      # the pass actually peaks at locally.
+      NODE_OPTIONS: --max-old-space-size=8192
 
     steps:
       - name: Checkout
