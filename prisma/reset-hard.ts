@@ -47,8 +47,11 @@ function getRedisEndpoint(): RedisEndpoint {
     if (!Number.isInteger(port) || port <= 0) {
       throw new Error(`Invalid Redis port in REDIS_URL: ${url.port}`);
     }
+    if (!url.hostname) {
+      throw new Error(`REDIS_URL has no host: ${redisUrl}`);
+    }
     return {
-      host: url.hostname || "localhost",
+      host: url.hostname,
       port,
       source: "REDIS_URL",
     };
@@ -58,8 +61,12 @@ function getRedisEndpoint(): RedisEndpoint {
   if (!Number.isInteger(port) || port <= 0) {
     throw new Error(`Invalid REDIS_PORT: ${process.env.REDIS_PORT ?? "unset"}`);
   }
+  const host = process.env.REDIS_HOST;
+  if (!host) {
+    throw new Error("REDIS_HOST must be set in .env (or provide REDIS_URL)");
+  }
   return {
-    host: process.env.REDIS_HOST ?? "localhost",
+    host,
     port,
     source: "REDIS_HOST/REDIS_PORT",
   };
@@ -87,36 +94,36 @@ export async function flushRedis(): Promise<void> {
       sock.destroy();
       reject(new Error(`Redis FLUSHALL timed out at ${host}:${port}`));
     }, REDIS_FLUSHALL_TIMEOUT_MS);
-    let buf = "";
-    let receivedOk = false;
-    sock.on("data", (chunk) => {
-      buf += chunk.toString("utf8");
-      if (buf.startsWith("+OK")) {
-        receivedOk = true;
+    // The reply can arrive split across segments; carrying the bytes seen so
+    // far as an argument keeps the accumulator out of a mutable binding.
+    const readReply = (buffered: string): void => {
+      if (buffered.startsWith("+OK")) {
         clearTimeout(timer);
         sock.end();
         resolve();
-      } else if (buf.startsWith("-")) {
+      } else if (buffered.startsWith("-")) {
         clearTimeout(timer);
         sock.end();
-        reject(new Error(`Redis FLUSHALL failed: ${buf.trim()}`));
+        reject(new Error(`Redis FLUSHALL failed: ${buffered.trim()}`));
+      } else {
+        sock.once("data", (chunk: Buffer) => {
+          readReply(buffered + chunk.toString("utf8"));
+        });
       }
+    };
+    sock.once("data", (chunk: Buffer) => {
+      readReply(chunk.toString("utf8"));
     });
     sock.on("error", (error) => {
       clearTimeout(timer);
       reject(error);
     });
+    // Settling twice is a no-op, so this only bites when +OK never arrived.
     sock.on("end", () => {
       clearTimeout(timer);
-      if (receivedOk) {
-        resolve();
-      } else {
-        reject(
-          new Error(
-            "Redis FLUSHALL: connection closed before +OK was received",
-          ),
-        );
-      }
+      reject(
+        new Error("Redis FLUSHALL: connection closed before +OK was received"),
+      );
     });
   });
 

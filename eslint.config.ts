@@ -194,7 +194,6 @@ export default defineConfig([
     "prisma/seed.ts",
     "prisma/seed-simple.ts",
     "prisma/seed-demo.ts",
-    "prisma/seed-constants.ts",
     "**/e2e/**",
     "openspec/**",
     // Workflow-harness scripts (the `Workflow` tool wraps these in an async
@@ -631,20 +630,22 @@ export default defineConfig([
       "sonarjs/no-duplicate-string": "error",
     },
   },
-  // jsdoc — published packages only (packages/shared + packages/ui).
-  // Presence: every exported declaration needs a short /** contract */.
-  // Overhead ban: no required @param/@returns/@type tags (TypeScript owns
-  // that surface). Apps/* stay off — app-internal JSDoc is a hygiene defect
-  // enforced by review/comment-hygiene, not by forcing empty blocks here.
-  // Tests excluded so `@vitest-environment` is not a jsdoc tag violation.
+  // jsdoc — Level 4+5: public exports across packages AND apps.
+  // Presence: exported fn/class/method/arrow need short /** contract */.
+  // Params: @param name - prose required; types OFF (TS owns shapes); returns OFF.
+  // enableFixer false — never inject bare @param tags via eslint --fix.
+  // publicOnly — file-private helpers free. Tests excluded.
   {
-    files: ["packages/shared/src/**/*.ts", "packages/ui/src/**/*.{ts,tsx}"],
+    files: [
+      "packages/shared/src/**/*.ts",
+      "packages/ui/src/**/*.{ts,tsx}",
+      "apps/api/src/**/*.{ts,tsx}",
+      "apps/web/src/**/*.{ts,tsx}",
+    ],
     ignores: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/__tests__/**"],
     plugins: { jsdoc },
     rules: {
       ...jsdocRecommendedTs.rules,
-      // Presence on the public export surface only (`publicOnly` skips
-      // file-private helpers — that is the no-overhead cut).
       "jsdoc/require-jsdoc": [
         "error",
         {
@@ -659,10 +660,18 @@ export default defineConfig([
           enableFixer: false,
         },
       ],
-      // Zero tag overhead — types already document params/returns.
-      "jsdoc/require-param": "off",
-      "jsdoc/require-param-description": "off",
-      "jsdoc/require-param-name": "off",
+      "jsdoc/require-param": [
+        "error",
+        {
+          enableFixer: false,
+          // Skip fully-destructured params (React props bags → no root0 noise).
+          // Named params still require `@param name - prose`.
+          checkDestructured: false,
+          checkDestructuredRoots: false,
+        },
+      ],
+      "jsdoc/require-param-description": "error",
+      "jsdoc/require-param-name": "error",
       "jsdoc/require-param-type": "off",
       "jsdoc/require-returns": "off",
       "jsdoc/require-returns-description": "off",
@@ -676,9 +685,14 @@ export default defineConfig([
       "jsdoc/require-property-type": "off",
       "jsdoc/require-next-type": "off",
       "jsdoc/require-throws-type": "off",
-      // Keep correctness when someone does write tags.
-      "jsdoc/check-param-names": "error",
+      "jsdoc/check-param-names": [
+        "error",
+        { checkDestructured: false, enableFixer: false },
+      ],
       "jsdoc/check-tag-names": "error",
+      "jsdoc/check-alignment": "off",
+      "jsdoc/multiline-blocks": "off",
+      "jsdoc/escape-inline-tags": "off",
     },
   },
   // Next-specific correctness rules (Next 16 removed `next lint`, so the
@@ -1018,8 +1032,6 @@ export default defineConfig([
     files: [
       "apps/web/src/features/report-sections/model/mock-data.ts", // fixture data, no logic
       "packages/ui/src/components/ui/sidebar.tsx", // shadcn/ui generated primitive bundle
-      "prisma/wipe-manual-uat.ts", // one-off operational script (cf. seeds, ignored)
-      "packages/shared/src/schemas/report.schema.ts", // dense Zod schema catalogue, no logic
       // Long-tail (300-500): each is one cohesive concern where a split would
       // shed few lines at a clarity cost — exempt, not churn.
       "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // tRPC instance + all procedure builders share the private `t` binding
@@ -1037,10 +1049,6 @@ export default defineConfig([
       // and the rule fires inside const arrays anyway (verified).
       "apps/api/src/infrastructure/metrics/web-vitals.metrics.ts",
       "apps/api/src/infrastructure/metrics/metrics.registry.ts",
-      // One-off operational scripts (cf. the max-lines exempt for
-      // wipe-manual-uat and the globally-ignored seeds).
-      "prisma/reset-hard.ts",
-      "prisma/wipe-manual-uat.ts",
       // Vendored shadcn/ui primitive bundle (generated upstream code; editing
       // it creates drift against the shadcn source).
       "packages/ui/src/components/ui/**",
@@ -1049,14 +1057,13 @@ export default defineConfig([
     ],
     rules: { "@typescript-eslint/no-magic-numbers": "off" },
   },
-  // Fixture catalogues, vendored primitives and one-off ops scripts: repeated
-  // literals ARE the data (product names, seed emails, generated class
+  // Fixture catalogues, vendored primitives and the UAT harness: repeated
+  // literals ARE the data (product names, route fixtures, generated class
   // strings) — same footing as the test carve-out above.
   {
     files: [
       "apps/web/src/features/report-sections/model/mock-data.ts",
       "packages/ui/src/components/ui/sidebar.tsx",
-      "prisma/wipe-manual-uat.ts",
       "apps/web/uat-suite/**",
     ],
     rules: { "sonarjs/no-duplicate-string": "off" },
@@ -1088,8 +1095,6 @@ export default defineConfig([
   {
     files: [
       "apps/web/src/features/landing/ui/tagline-cycler.tsx", // self-recursive setTimeout handler mutating timer/visible/index state
-      "apps/web/src/hooks/use-status-risk.ts", // arrow callbacks in state-update chains; consolidated to avoid loops via syncSourceRef
-      "apps/web/src/lib/trpc.ts", // RxJS observer/cleanup handlers in the error-link middleware
     ],
     rules: { "sonarjs/no-nested-functions": "off" },
   },

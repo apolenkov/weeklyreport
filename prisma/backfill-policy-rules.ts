@@ -23,12 +23,9 @@ const DATABASE_URL: string = (() => {
   return raw;
 })();
 
-// Kept in sync BY HAND with PolicyApplicatorService.computeFireAt in
-// apps/api/src/modules/reminders/policy-applicator.service.ts: the prisma
+// Kept in sync BY HAND with PolicyApplicatorService.computeFireAt: the prisma
 // toolchain's isolated tsconfig.prisma.json cannot import apps/api or
-// packages/shared (same constraint as prisma/seed-constants.ts), so the zone-
-// aware math is duplicated here. Both shift the UTC deadline into the policy's
-// zone, add the exact-duration offset, and convert back to UTC.
+// packages/shared, so the zone-aware math has to be duplicated here.
 function computeFireAt(
   deadline: Date,
   offsetMinutes: number,
@@ -63,8 +60,8 @@ interface OpenPeriod {
 
 async function loadOpenPeriods(prisma: PrismaClient): Promise<OpenPeriod[]> {
   // deadline: { not: null } — a period whose deadline an admin explicitly
-  // cleared (ruling F16) has no reference point for deadline-relative
-  // rules; the backfill mints nothing for it, same as the live applicator.
+  // cleared has no reference point for deadline-relative rules; the backfill
+  // mints nothing for it, same as the live applicator.
   const rows = await prisma.report.findMany({
     where: { periodStatus: { not: "published" }, deadline: { not: null } },
     select: { id: true, deadline: true },
@@ -112,15 +109,42 @@ async function applyPolicyToPeriod(
   return existing ? "updated" : "created";
 }
 
+interface Totals {
+  readonly created: number;
+  readonly updated: number;
+  readonly skipped: number;
+}
+
+const NO_TOTALS: Totals = { created: 0, updated: 0, skipped: 0 };
+
+// Sequential by construction: every step awaits the carried accumulator, so the
+// upserts stay serialised against the table exactly as the nested loops were.
+async function applyAll(
+  prisma: PrismaClient,
+  periods: readonly OpenPeriod[],
+  policies: readonly ReminderPolicy[],
+): Promise<Totals> {
+  const pairs = periods.flatMap((period) =>
+    policies.map((policy) => ({ period, policy })),
+  );
+
+  return pairs.reduce<Promise<Totals>>(async (carried, { period, policy }) => {
+    const totals = await carried;
+    if (!policyAppliesTo(policy, period)) {
+      return { ...totals, skipped: totals.skipped + 1 };
+    }
+    const outcome = await applyPolicyToPeriod(prisma, period, policy);
+    return outcome === "updated"
+      ? { ...totals, updated: totals.updated + 1 }
+      : { ...totals, created: totals.created + 1 };
+  }, Promise.resolve(NO_TOTALS));
+}
+
 async function main(): Promise<void> {
   assertNonProdDestructive("backfill-policy-rules");
   const pool = new pg.Pool({ connectionString: DATABASE_URL });
   const adapter = new PrismaPg(pool);
   const prisma = new PrismaClient({ adapter });
-
-  let totalCreated = 0;
-  let totalUpdated = 0;
-  let totalSkipped = 0;
 
   try {
     const policies = await prisma.reminderPolicy.findMany({
@@ -132,24 +156,10 @@ async function main(): Promise<void> {
       `[backfill] active policies=${policies.length} open periods=${periods.length}`,
     );
 
-    for (const period of periods) {
-      for (const policy of policies) {
-        if (!policyAppliesTo(policy, period)) {
-          totalSkipped += 1;
-          continue;
-        }
-
-        const outcome = await applyPolicyToPeriod(prisma, period, policy);
-        if (outcome === "updated") {
-          totalUpdated += 1;
-        } else {
-          totalCreated += 1;
-        }
-      }
-    }
+    const totals = await applyAll(prisma, periods, policies);
 
     console.log(
-      `[backfill] done created=${totalCreated} updated=${totalUpdated} skipped=${totalSkipped}`,
+      `[backfill] done created=${totals.created} updated=${totals.updated} skipped=${totals.skipped}`,
     );
   } finally {
     await prisma.$disconnect();
