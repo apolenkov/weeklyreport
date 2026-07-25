@@ -1,7 +1,9 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "types": ["node", "@playwright/test"]
+    // `types` lists ambient/global type packages only. @playwright/test ships
+    // its own module types and is picked up through the import, not from here.
+    "types": ["node"]
   },
   "include": ["**/*.ts"]
 }

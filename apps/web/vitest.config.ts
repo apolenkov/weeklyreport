@@ -2,13 +2,15 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vitest/config";
+import { defineConfig, mergeConfig } from "vitest/config";
+
+import baseConfig from "../../vitest.base.config";
 
 const require = createRequire(
   path.resolve(__dirname, "../../packages/shared/package.json"),
 );
 
-export default defineConfig({
+const webConfig = defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
@@ -21,9 +23,6 @@ export default defineConfig({
     // Coverage floors. Web has more UI code than tests can drive without a
     // full E2E layer, so the bar is lower than api.
     coverage: {
-      provider: "v8",
-      reporter: ["text", "lcov", "html"],
-      reportsDirectory: "./coverage",
       include: ["src/**/*.{ts,tsx}"],
       exclude: [
         "src/**/*.test.{ts,tsx}",
@@ -57,3 +56,5 @@ export default defineConfig({
     },
   },
 });
+
+export default mergeConfig(baseConfig, webConfig);

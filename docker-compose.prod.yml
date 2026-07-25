@@ -42,10 +42,9 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # 39-01: PgBouncer in transaction mode fronts Postgres. The api uses this
-  # for runtime tRPC/queue traffic; the migrate init-container bypasses it
-  # via DIRECT_URL (DDL needs session-mode). Pool sized for ~20 concurrent
-  # backend connections supporting ~100 client connections from the API.
+  # PgBouncer in transaction mode fronts Postgres for the api's runtime traffic;
+  # migrate bypasses it with a DATABASE_URL aimed straight at postgres:5432,
+  # since DDL needs session-mode. Pool: ~20 backend conns serving ~100 clients.
   pgbouncer:
     # 1.22.1-p0 is the NEWEST 1.22.1 packaging revision published on Docker
     # Hub (registry-verified: the -p2 tag this file used to name was never
@@ -192,9 +191,9 @@ services:
       target: migrator
     command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
     environment:
-      # 39-01: migrate connects DIRECTLY to postgres (bypassing pgbouncer)
-      # because DDL needs session-mode. Both DATABASE_URL and DIRECT_URL
-      # are set so Prisma 7 honors `directUrl` from schema.prisma.
+      # migrate connects DIRECTLY to postgres (bypassing pgbouncer) because DDL
+      # needs session-mode — that is what DATABASE_URL below encodes. Prisma
+      # reads only DATABASE_URL; DIRECT_URL is the direct-connection escape hatch.
       DATABASE_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/customreport
       DIRECT_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/customreport
     depends_on:
@@ -255,6 +254,11 @@ services:
       # a baked-in default would report "started" while exporting into a
       # nonexistent host, losing every trace silently.
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      # Trace/log resource identity, read via requireEnv once the SDK starts:
+      # an endpoint-enabled deploy that leaves the release version unset fails
+      # at boot instead of publishing traces under a stale build label.
+      OTEL_SERVICE_NAME: customreport-api
+      OTEL_SERVICE_VERSION: ${OTEL_SERVICE_VERSION:-}
       OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
       # /health/ready heap threshold (bytes) — required, no schema default.
       # Set to ~75% of the api container memory limit.
@@ -337,11 +341,10 @@ services:
         API_URL: http://api:3001
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL must be set}
     environment:
-      # NEXT_PUBLIC_* is inlined into the client bundle at BUILD time (supplied
-      # via build.args above), so a runtime env line for it is a no-op and has
-      # been dropped. Only the server-side API_URL (read at runtime) belongs
-      # here — kept pointed at the compose-internal origin.
-      API_URL: ${API_URL:-http://api:3001}
+      # Only the server-side API_URL (read at runtime) belongs here: NEXT_PUBLIC_*
+      # is inlined at BUILD time via build.args above, so a runtime line for it
+      # would be a no-op. Required — a default would mask a misrouted origin.
+      API_URL: ${API_URL:?API_URL must be set (server-side origin, e.g. http://api:3001)}
     depends_on:
       api:
         condition: service_healthy

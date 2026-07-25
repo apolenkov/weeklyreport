@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f
     # 39-03: load pg_stat_statements so we can mine real slow-query stats
     # from the running dev DB. The extension itself is created via the
     # init script below on first boot. log_min_duration_statement=200 logs
@@ -50,7 +50,7 @@ services:
       retries: 3
 
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     command:
       [
         "redis-server",
@@ -109,7 +109,10 @@ services:
       PDF_OUTPUT_DIR: /app/data/pdfs
       PDF_EXPORT_JWT_SECRET: ${PDF_EXPORT_JWT_SECRET:-dev-only-replace-in-production-min-32-chars}
       OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
-      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-0.1}
+      # Dev rate: capture every span, per .env.example. Inert while the SDK
+      # stays disabled above, and overridden anyway whenever the dev overlay
+      # is layered on — it enables the SDK and pins its own 1.0.
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
       HEAP_HEALTH_THRESHOLD_BYTES: ${HEAP_HEALTH_THRESHOLD_BYTES:-1610612736}
       SMTP_HOST: mailhog
       SMTP_PORT: ${SMTP_PORT:-1025}

@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["vitest.base.config.ts"],
   "tasks": {
     "build": {
       "dependsOn": ["^build", "db:generate"],
@@ -32,7 +33,7 @@
       "dependsOn": ["^typecheck", "db:generate"]
     },
     "test": {
-      "dependsOn": ["^test"],
+      "dependsOn": ["^test", "db:generate"],
       "outputs": ["coverage/**"]
     }
   }
