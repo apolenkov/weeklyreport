@@ -212,10 +212,10 @@ jobs:
   # Job 2b: Prisma migrate-reset gate (34-04)
   # ------------------------------------------------------------------
   # Catches schema-vs-migration drift that `migrate deploy` doesn't see:
-  # `migrate reset --force --skip-seed` rebuilds from scratch and fails
-  # if any migration's SQL is invalid against the current schema.prisma.
-  # Documented Prisma 7 quirk: prisma.config.ts does NOT auto-seed despite
-  # docs implying it does — `--skip-seed` makes that explicit.
+  # `migrate reset --force` rebuilds from scratch and fails if any migration's
+  # SQL is invalid against the current schema.prisma.
+  # No `--skip-seed`: Prisma 7 dropped the flag, and its reset does not seed
+  # anyway — passing it aborts the command outright.
   migrate-reset:
     name: Prisma migrate-reset gate
     runs-on: ubuntu-latest
@@ -256,7 +256,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: prisma migrate reset (fresh DB, no seed)
-        run: pnpm exec prisma migrate reset --force --skip-seed
+        run: pnpm exec prisma migrate reset --force
 
       - name: prisma generate (post-reset)
         run: pnpm exec prisma generate
@@ -294,6 +294,10 @@ jobs:
       KEYCLOAK_SAML_CERT: ci-build-only
       CADDY_SITE_ADDRESS: http://localhost
       CADDY_CSP_REPORT_URI: http://localhost/csp-report
+      # The backup service declares its cadence and retention required, so
+      # compose cannot render the model without them — even for `build`.
+      BACKUP_INTERVAL_SECONDS: "3600"
+      BACKUP_RETENTION_DAYS: "14"
 
     steps:
       - name: Checkout
