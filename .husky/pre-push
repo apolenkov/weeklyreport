@@ -38,4 +38,7 @@ echo "[pre-push] mutation-consumer audit…"
 pnpm uat:audit --check
 
 echo "[pre-push] running unit tests…"
-pnpm test
+# CI=true only for this step: vitest downgrades an obsolete snapshot to a
+# warning when it thinks a human can rerun with --update, so without it the
+# local suite exits 0 on a failure the server-side gate rejects.
+CI=true pnpm test
