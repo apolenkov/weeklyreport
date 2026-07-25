@@ -1,3 +1,8 @@
+// Must stay the first import: it configures zod before any module that parses
+// a schema at load time (web-env does), and imports are hoisted above
+// statements, so this cannot be a call in the body below.
+import "./src/lib/zod-jitless";
+
 import * as Sentry from "@sentry/nextjs";
 
 import { webEnv } from "./src/lib/web-env";

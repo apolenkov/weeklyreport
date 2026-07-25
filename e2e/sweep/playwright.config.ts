@@ -55,7 +55,10 @@ export default defineConfig({
   // integration suite (3102/3105) so the two can coexist.
   webServer: [
     {
-      command: `node --env-file=${REPO_ROOT}/.env --import tsx src/main.ts`,
+      // @swc-node/register, not tsx: esbuild does not implement
+      // emitDecoratorMetadata, so Nest cannot resolve type-injected providers
+      // and the api never finishes booting.
+      command: `node --env-file=${REPO_ROOT}/.env --import @swc-node/register/esm-register src/main.ts`,
       cwd: path.join(REPO_ROOT, "apps", "api"),
       url: `${API_URL}/health/live`,
       reuseExistingServer: !process.env.CI,
