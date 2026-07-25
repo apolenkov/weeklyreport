@@ -94,7 +94,7 @@ export async function getSectionForPeriod(
  * there is no gap for the group to change in. A peer with no reporting group
  * (`reportingGroupId: null`) fails the relation filter and yields null —
  * fail closed with no separate null-check needed.
-  * @param prisma - The prisma argument.
+ * @param prisma - The prisma argument.
  * @param reportId - The reportId argument.
  * @param authorId - The authorId argument.
  * @param peerUserId - The peerUserId argument.

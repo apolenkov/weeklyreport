@@ -107,7 +107,7 @@ async function resolveSectionId(
 /**
  * A fixed pipeline keeps request and PDF-export sessions aligned on mutable
  * authorization scope; file-local steps prevent callers from skipping one.
-  * @param session - The session argument.
+ * @param session - The session argument.
  * @param prisma - The prisma argument.
  */
 export async function hydrateSession(

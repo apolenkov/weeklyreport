@@ -8,7 +8,7 @@ import { useTRPC } from "../../../lib/trpc-context";
  * Save/delete/deactivate/activate mutations for the Users tab: each wires
  * cache invalidation and toast feedback so the tab component only has to
  * call `.mutate`.
-  * @param onSaved - The onSaved argument.
+ * @param onSaved - The onSaved argument.
  */
 export function useUserMutations(onSaved: () => void) {
   const trpc = useTRPC();

@@ -27,7 +27,7 @@ interface ForeignRisk {
  * With no covering risk the persisted traffic is used only as the
  * empty/non-empty base — a persisted yellow/red with no backing risk
  * collapses to green; a null base stays null.
-  * @param stageName - The stageName argument.
+ * @param stageName - The stageName argument.
  * @param projectId - The projectId argument.
  * @param risks - The risks argument.
  * @param persisted - The persisted argument.

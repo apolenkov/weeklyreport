@@ -19,7 +19,7 @@ export interface SectionReviewRow {
  * Project the live read model's lead sections onto the per-section review rows.
  * Shared by the head dashboard roll-up strip and the in-report review-mode
  * verdict band so both read the same shape from one place.
-  * @param leadSections - The leadSections argument.
+ * @param leadSections - The leadSections argument.
  */
 export function toSectionReviewRows(
   leadSections: WeeklyReportReadModel["leadSections"],

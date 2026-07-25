@@ -12,7 +12,7 @@ import { useTRPC } from "../../../lib/trpc-context";
  * `GroupProductsEditor` companion component). This keeps the Products
  * tab a read surface for the M:M edge and avoids two competing edit
  * paths for the same edge.
-  * @param options - The options argument.
+ * @param options - The options argument.
  */
 export function ProductGroupChips({
   productId,

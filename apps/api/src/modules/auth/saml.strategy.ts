@@ -37,7 +37,7 @@ const SAML_ENV_KEYS = [
  * var instead of silently degrading to dev-login-only. Outside production the
  * boot-time guard for the no-SAML + no-dev-login combination is the throw in
  * `mountAuthRoutes`, not the schema fence.
-  * @param env - The env argument.
+ * @param env - The env argument.
  */
 export function hasSamlEnv(env: NodeJS.ProcessEnv): boolean {
   return SAML_ENV_KEYS.some((key) => (env[key]?.trim() ?? "") !== "");

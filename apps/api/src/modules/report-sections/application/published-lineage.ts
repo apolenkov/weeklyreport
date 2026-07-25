@@ -53,7 +53,7 @@ function collectStableIds(rows: unknown): Set<string> {
  * legacy snapshot (pre-stableId, or a shape drift) degrades to an empty set —
  * the lock then simply does not fire for those rows — rather than 500-ing
  * every save on a reopened period.
-  * @param snapshot - The snapshot argument.
+ * @param snapshot - The snapshot argument.
  * @param reportSectionId - The reportSectionId argument.
  */
 export function snapshotLineageForSection(
@@ -80,7 +80,7 @@ export function snapshotLineageForSection(
  * Union of every item/decision `stableId` a snapshot holds across ALL its
  * sections. Used for cross-report lineage from OTHER reopened periods, where
  * the live rows are untrustworthy (editable) but the frozen snapshot is not.
-  * @param snapshot - The snapshot argument.
+ * @param snapshot - The snapshot argument.
  */
 export function snapshotLineageAllSections(snapshot: unknown): {
   itemStableIds: Set<string>;

@@ -91,7 +91,7 @@ export interface LeadFormLoadedViewModel {
  * cross-author Everyone gating, own-only write arrays, published-lineage
  * locks, unified activity buckets, activity alarm floors, and archived-period
  * visibility all preserve the pre-extraction LeadForm semantics.
-  * @param input - The input argument.
+ * @param input - The input argument.
  */
 export function buildLeadFormLoadedViewModel(
   input: LeadFormLoadedInput,

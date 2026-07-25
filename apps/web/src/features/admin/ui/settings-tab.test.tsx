@@ -522,7 +522,6 @@ describe("SettingsTab — Notifications sub-tab", () => {
   });
 });
 
-
 describe("SettingsTab — Integrations sub-tab", () => {
   // Element has no live status because the available configured and binding
   // values describe Telegram and would be false under an Element heading.

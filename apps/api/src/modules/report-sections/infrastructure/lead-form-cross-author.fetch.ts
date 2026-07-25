@@ -3,7 +3,7 @@ import type { PrismaService } from "../../../infrastructure/prisma/prisma.servic
 /**
  * The caller's distinct assigned productIds (report-wide; assignments are not
  * report-scoped). Both cross-author reads start from this same join.
-  * @param prisma - The prisma argument.
+ * @param prisma - The prisma argument.
  * @param userId - The userId argument.
  */
 export async function fetchViewerProjectIds(
@@ -46,7 +46,7 @@ export function fetchForeignStatusAssignments(
  * status is RISK-DERIVED (covering risks that name the stage), never the
  * foreign item text. The persisted traffic is consulted only as the
  * empty/non-empty base when no risk covers the stage.
-  * @param prisma - The prisma argument.
+ * @param prisma - The prisma argument.
  * @param reportId - The reportId argument.
  * @param otherUserIds - The otherUserIds argument.
  */
@@ -72,7 +72,7 @@ export function fetchForeignStatusSections(
 /**
  * Co-owners on shared, NON-ARCHIVED products, with the author's role (the
  * full-content read scopes to non-archived products only).
-  * @param prisma - The prisma argument.
+ * @param prisma - The prisma argument.
  * @param myProjectIds - The myProjectIds argument.
  * @param userId - The userId argument.
  */

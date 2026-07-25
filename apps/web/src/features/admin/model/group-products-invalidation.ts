@@ -11,7 +11,7 @@ type TRPCContext = ReturnType<typeof useTRPC>;
  * invalidate `listGroupProducts` themselves, scoped differently per
  * direction (attach may reassign and so must refresh every group's list;
  * detach only ever affects the current group's list).
-  * @param qc - The qc argument.
+ * @param qc - The qc argument.
  * @param trpc - The trpc argument.
  */
 export function invalidateGroupProductOwnership(
