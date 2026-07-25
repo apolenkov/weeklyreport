@@ -1,17 +1,20 @@
 {
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM"],
-    "module": "CommonJS",
-    "moduleResolution": "Node",
-    "ignoreDeprecations": "6.0",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
     "noEmit": true,
-    "verbatimModuleSyntax": false
+    // Playwright and axe are installed only in apps/web (the package that runs
+    // the suite); nothing hoists them to a node_modules directory reachable
+    // from `e2e/`. Point the typecheck at that install — Playwright's own
+    // loader resolves them at runtime. The four workspace mappings restate the
+    // base ones, because `paths` replaces rather than merges.
+    "paths": {
+      "@customreport/shared": ["../packages/shared/src/index.ts"],
+      "@customreport/shared/*": ["../packages/shared/src/*"],
+      "@customreport/ui": ["../packages/ui/src/index.ts"],
+      "@customreport/ui/*": ["../packages/ui/src/*"],
+      "@playwright/test": ["../apps/web/node_modules/@playwright/test"],
+      "@axe-core/playwright": ["../apps/web/node_modules/@axe-core/playwright"]
+    }
   },
   "include": ["./**/*.ts"]
 }

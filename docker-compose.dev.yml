@@ -36,7 +36,7 @@ services:
       FRONTEND_URL: http://localhost:3000
       APP_BASE_URL: http://localhost:3000
       AUTH_DEV_MODE: "true"
-      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-production-min-32-chars!!}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-development-min-32-chars!!}
       PDF_BASE_URL: http://web:3000
       PDF_OUTPUT_DIR: /app/data/pdfs
       PDF_EXPORT_JWT_SECRET: ${PDF_EXPORT_JWT_SECRET:-dev-only-replace-in-production-min-32-chars}
@@ -49,6 +49,9 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://host.docker.internal:4318
       OTEL_SDK_DISABLED: "false"
       OTEL_SERVICE_NAME: customreport-api
+      # Required whenever the SDK starts (otel.bootstrap requireEnv) so a build
+      # label is never inherited from a code default.
+      OTEL_SERVICE_VERSION: dev
       OTEL_TRACES_SAMPLER_ARG: "1.0"
       HEAP_HEALTH_THRESHOLD_BYTES: ${HEAP_HEALTH_THRESHOLD_BYTES:-1610612736}
       SENTRY_DSN: ${SENTRY_DSN_DOCKER:-}
