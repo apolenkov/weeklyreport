@@ -13,7 +13,6 @@ import {
   type ReminderQueuePayload,
 } from "./reminders-queue-payload.js";
 
-/** Collaborators the enqueue helpers need from the owning service. */
 export interface EnqueueContext {
   queue: RemindersEnqueuer;
   telemetry: RemindersTelemetry;
@@ -30,13 +29,8 @@ async function addJob(
   await ctx.queue.enqueue(jobId, data, ctx.telemetry.captureJobContext());
 }
 
-/**
- * Enqueue the just-inserted execution's email job. A synchronous `add` throw
- * (Redis down, and the like) is recorded as a terminal `failed` state on the
- * row rather than swallowed — otherwise a committed `queued` row with no job
- * would linger invisibly. The failure is not rethrown, so a scheduler tick
- * continues to its remaining recipients.
- */
+// Sync enqueue throws become terminal failed (not swallowed) so queued rows
+// without a job never linger; not rethrown so the tick continues.
 export async function enqueueOrMarkFailed(
   ctx: EnqueueContext,
   execution: AdminReminderExecution,
@@ -70,14 +64,12 @@ export async function enqueueOrMarkFailed(
   }
 }
 
-/** The persistence slice `recordExecutionOnConflict` needs. */
 interface ExecutionRecorder {
   insertExecutionOnConflict(
     execution: AdminReminderExecution,
   ): Promise<{ execution: AdminReminderExecution; inserted: boolean }>;
 }
 
-/** Record an execution atomically against the dedupe-key unique index. */
 export async function recordExecutionOnConflict(
   repository: ExecutionRecorder,
   candidate: AdminReminderExecution,
@@ -85,15 +77,8 @@ export async function recordExecutionOnConflict(
   return repository.insertExecutionOnConflict(candidate);
 }
 
-/**
- * Manual-retry path: atomically revive a terminally `failed` execution
- * (failed → queued via the repository CAS; exactly one concurrent caller
- * wins) and re-enqueue its email. Returns null when the row was not revived
- * — not `failed`, or a concurrent revival won — so the caller falls back to
- * the plain deduplicated return. Without this, the unified dedupe key makes
- * a cycle whose send exhausted its SMTP attempts permanently report
- * "already sent" to a manual re-dispatch.
- */
+// Revive failed→queued via CAS; without this a exhausted-SMTP cycle reports
+// "already sent" on manual re-dispatch because of the unified dedupe key.
 export async function reviveFailedExecution(
   ctx: EnqueueContext | null,
   requeue: (executionId: string) => Promise<boolean>,
@@ -109,10 +94,7 @@ export async function reviveFailedExecution(
     errorMessage: null,
   });
   if (!ctx) return requeued;
-  // Fresh jobId: the original failed job is retained by removeOnFail, and the
-  // queue backend silently dedups an add against ANY still-existing jobId —
-  // reusing execution.id would make the revival a no-op. At-most-once send is
-  // still guaranteed by the revival CAS plus the worker's own send claim.
+  // Fresh jobId — removeOnFail keeps the failed job; reusing execution.id is a no-op.
   return enqueueOrMarkFailed(
     ctx,
     requeued,
@@ -122,13 +104,7 @@ export async function reviveFailedExecution(
   );
 }
 
-/**
- * Reaper path: re-enqueue an execution stranded in `queued`. The deterministic
- * `jobId` lets the queue backend dedup against any late-arriving original, and
- * the worker's compare-and-set send guard guarantees exactly-once delivery. The
- * rich template fields are not persisted, so the legacy plain-text job shape is
- * reconstructed.
- */
+// Reaper: deterministic jobId dedups late originals; reconstructs plain-text shape.
 export async function reEnqueueStuck(
   ctx: EnqueueContext,
   execution: AdminReminderExecution,

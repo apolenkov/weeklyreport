@@ -62,7 +62,6 @@ function makeSection(
   });
 }
 
-/** Build two section occurrences of one cross-lead product. */
 function makeCoOwnedProductSections(): ReportSectionReadModel[] {
   return [
     makeSection({
@@ -199,7 +198,7 @@ describe("buildEscalationsFromReadSections", () => {
     expect(escalations[0]?.stageName).toBeNull();
   });
 
-  it("record-status-derived-from-risk: a blocked-severity risk yields ONE escalation, never also unresolved_risk", () => {
+  it("a blocked-severity risk yields ONE escalation, never also unresolved_risk", () => {
     const escalations = buildEscalationsFromReadSections([
       makeSection({
         risks: [
@@ -221,7 +220,7 @@ describe("buildEscalationsFromReadSections", () => {
     expect(escalations.some((e) => e.type === "unresolved_risk")).toBe(false);
   });
 
-  it("record-status-derived-from-risk: an item's own workflowStatus is never an escalation source", () => {
+  it("an item's own workflowStatus is never an escalation source", () => {
     const escalations = buildEscalationsFromReadSections([
       makeSection({
         items: [
@@ -269,12 +268,8 @@ describe("buildEscalationsFromReadSections", () => {
   });
 });
 
-// fix-flagged-red-escalation-dedup: a product co-owned by N (>= 2) leads and
-// flagged red appears once in EACH co-owner's section, so the builder used to
-// emit N identical "flagged red" `at_risk` rows. The dedupe collapses them to
-// ONE per `projectId` (cross-section), while leaving per-record `blocked` items
-// and `unresolved_risk` risks untouched. The single shared builder feeds both
-// the live dashboard and the published snapshot, so this regression covers both.
+// Co-owned red products appear once per co-owner section; dedupe to ONE at_risk
+// per projectId. Per-record blocked/unresolved_risk stay untouched.
 describe("buildEscalationsFromReadSections — flagged-red dedupe", () => {
   const SECOND_SECTION_ID = "3b334e9c-d5c3-484d-9b8c-26fdd63206d8";
 
@@ -380,12 +375,8 @@ describe("buildEscalationsFromReadSections — flagged-red dedupe", () => {
   });
 });
 
-// fix-published-empty-stage-risk-floor: an OWNED stage with no submitted
-// status (raw `status: null`) covered by the section author's OWN at-risk /
-// blocked risk must floor the product status. Today
-// `buildPortfolioProductsFromSnapshotSections` reads only the raw
-// `trafficLight` (the stale green fallback) and never folds `section.risks`,
-// so these cases fail until the read-layer floor lands.
+// OWNED empty stage covered by the author's own at-risk/blocked risk must
+// floor product status via effectiveProjectStatus (not raw trafficLight).
 describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => {
   it("1.1 floors red for a covers-all blocked own risk on an empty stage", () => {
     const products = buildPortfolioProductsFromSnapshotSections([
@@ -653,8 +644,7 @@ describe("buildEscalationsFromReadSections — own-risk floor side effect", () =
     expect(escalations.filter((e) => e.type === "at_risk")).toMatchObject([
       { productName: "CRM Portal", stageName: null },
     ]);
-    // record-status-derived-from-risk: the blocked-severity risk itself now
-    // escalates as `blocked` (previously `unresolved_risk`).
+    // Blocked-severity risk escalates as `blocked`.
     expect(escalations.filter((e) => e.type === "blocked")).toMatchObject([
       { productName: "CRM Portal" },
     ]);
@@ -692,10 +682,7 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
   const STAGE_NAME = "Development";
   const FIXED_TIMESTAMP = new Date("2026-01-01T00:00:00.000Z");
 
-  // `buildAssembledReportFromPrismaRow` now
-  // takes the generated `Prisma.ReportGetPayload`, which carries every base
-  // scalar column (not just the ones this test reads) — these defaults keep
-  // the fixture honest without repeating them at every call site.
+  // Full scalar defaults for Prisma.ReportGetPayload fixtures.
   function fullProject(name: string) {
     return {
       id: OWNED_PRODUCT,

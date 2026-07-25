@@ -2,17 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { buildTransition } from "./period-transition.js";
 
-// ---------------------------------------------------------------------------
-// The pure builder is the single source of truth for the Report lifecycle
-// field set. Each test asserts the EXACT object a transition produces
-// (`toEqual`, not `toMatchObject`) so the suite fails if a transition gains
-// or drops a governed field.
-//
-// Governed fields: periodState, the legacy (status, archived) tuple,
-// periodStatus (reopen flavour), the autoPublished/autoArchived audit flags,
-// and the publishedAt/publishedById/reopenedAt timestamps. Identity fields
-// (periodStart/periodEnd/deadline/weekLabel) are NOT governed here.
-// ---------------------------------------------------------------------------
+// Asserts the exact object each transition produces (toEqual) so a gained
+// or dropped governed field fails the suite. See openspec/specs/period-dual-state.
 
 const NOW = new Date("2026-05-29T12:00:00.000Z");
 

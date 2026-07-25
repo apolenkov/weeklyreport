@@ -9,12 +9,6 @@ import {
   toExecutionUpdateData,
 } from "./reminders-row-mappers.js";
 
-/**
- * `ReminderExecution` row CRUD, following the module's
- * `reminders-rule.prisma-query.ts` / `reminders-scope.prisma-query.ts`
- * query-sibling-file idiom.
- */
-
 export async function queryExecutionByDedupeKey(
   prisma: PrismaService,
   dedupeKey: string,
@@ -51,10 +45,7 @@ export async function insertExecutionOnConflict(
     });
     return { execution: toExecutionDomain(created), inserted: true };
   } catch (error: unknown) {
-    // A concurrent tick won the dedupeKey insert: re-read its committed row
-    // and report `inserted: false` so the caller enqueues nothing. The losing
-    // INSERT blocks until the winner commits, so the re-read always sees it.
-    // Any other failure re-throws.
+    // Concurrent tick won the dedupeKey insert — re-read, report inserted:false.
     if (!isDedupeKeyConflict(error)) throw error;
     const existing = await queryExecutionByDedupeKey(
       prisma,
@@ -65,11 +56,7 @@ export async function insertExecutionOnConflict(
   }
 }
 
-/**
- * Atomic `queued → sending` claim. The predicate lives in the write's WHERE,
- * so two racing workers cannot both move the same row: exactly one `updateMany`
- * matches `status: "pending"` and returns count 1; the loser returns 0.
- */
+// CAS claim: only one of two racing workers matches status pending → sending.
 export async function transitionExecutionToSending(
   prisma: PrismaService,
   executionId: string,
@@ -81,12 +68,7 @@ export async function transitionExecutionToSending(
   return result.count > 0;
 }
 
-/**
- * Reverses the claim above (`sending → pending`) so a retryable dispatch
- * failure can be re-claimed by the next BullMQ attempt. Guarded to
- * `sending` in the write, so it is a no-op against a row that is already
- * `sent`/`failed` under a concurrent caller.
- */
+// sending → pending for retryable failures; no-op if already sent/failed.
 export async function releaseExecutionClaim(
   prisma: PrismaService,
   executionId: string,
@@ -97,11 +79,7 @@ export async function releaseExecutionClaim(
   });
 }
 
-/**
- * Terminal `failed` write. Guarded to the non-terminal states so it never
- * clobbers a row that already reached `sent` (a late enqueue-error write
- * arriving after a concurrent successful send stays a no-op).
- */
+// Terminal failed; guarded so it never clobbers an already-sent row.
 export async function markExecutionFailed(
   prisma: PrismaService,
   executionId: string,
@@ -113,11 +91,7 @@ export async function markExecutionFailed(
   });
 }
 
-/**
- * Atomic `failed → queued` revival for a manual re-dispatch. Guarded to
- * `failed` in the write itself, so exactly one of two concurrent revivals
- * wins and only the winner enqueues a fresh email job.
- */
+// failed → queued CAS; exactly one concurrent revival wins.
 export async function requeueFailedExecution(
   prisma: PrismaService,
   executionId: string,
@@ -129,12 +103,10 @@ export async function requeueFailedExecution(
   return result.count > 0;
 }
 
-/**
- * Executions still `queued` (Prisma `pending`) whose row is older than
- * `olderThan` — the pod-died-before-enqueue case that leaves no job and no
- * `failed` marker. `sending` rows are intentionally excluded: re-enqueuing an
- * in-flight send would risk a duplicate.
- */
+// Pod-died-before-enqueue: queued older than threshold. Exclude sending (dup risk).
+// Cap per reaper tick so a flood of stuck rows cannot monopolize one sweep.
+const STUCK_QUEUED_REAPER_BATCH_SIZE = 100;
+
 export async function listStuckQueuedExecutions(
   prisma: PrismaService,
   olderThan: Date,
@@ -143,7 +115,7 @@ export async function listStuckQueuedExecutions(
     where: { status: "pending", createdAt: { lt: olderThan } },
     include: { rule: true },
     orderBy: [{ createdAt: "asc" }],
-    take: 100,
+    take: STUCK_QUEUED_REAPER_BATCH_SIZE,
   });
   return executions.map(toExecutionDomain);
 }

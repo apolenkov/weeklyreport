@@ -8,13 +8,6 @@ import type { Prisma } from "@prisma/client";
 
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 
-/**
- * Pure Prisma-row <-> domain-model mappers for `RemindersPrismaRepository`:
- * execution/rule row translation, the dedupeKey P2002 conflict detector, and
- * the recipient-email extractor.
- */
-
-/** Length of an ISO calendar date (`YYYY-MM-DD`) after `toISOString().slice(0, n)`. */
 const ISO_DATE_LENGTH = 10;
 
 // Domain `queued` persists as the Prisma `pending` enum value; every other
@@ -44,7 +37,6 @@ const dbExecStatusToDomain: Record<
   failed: "failed",
 };
 
-/** Map a domain execution to the Prisma row written on create/insert. */
 export function toExecutionCreateData(
   execution: AdminReminderExecution,
 ): Prisma.ReminderExecutionUncheckedCreateInput {
@@ -58,7 +50,6 @@ export function toExecutionCreateData(
   };
 }
 
-/** Map a domain execution's status to the Prisma row written on update. */
 export function toExecutionUpdateData(execution: AdminReminderExecution): {
   status: PrismaExecStatus;
   sentAt: Date | null;

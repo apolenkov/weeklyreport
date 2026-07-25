@@ -10,10 +10,6 @@ import { ReminderDomainError, RemindersService } from "./reminders.service";
 import type { RemindersRepository } from "./reminders.types";
 import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
 const activeRule: AdminReminderRule = {
   id: "66666666-6666-4666-8666-666666666666",
   reportId: "22222222-2222-4222-8222-222222222222",
@@ -34,10 +30,6 @@ const pausedRule: AdminReminderRule = {
 const recipientEmail = "lead1@customreport.local";
 const recipientEmail2 = "lead2@customreport.local";
 const REPORT_PERIOD_LABEL = "2026-04-07 → 2026-04-13";
-
-// ---------------------------------------------------------------------------
-// In-memory repository
-// ---------------------------------------------------------------------------
 
 function createRepository(...rules: AdminReminderRule[]): RemindersRepository {
   const executions = new Map<string, AdminReminderExecution>();
@@ -91,10 +83,6 @@ function createRepository(...rules: AdminReminderRule[]): RemindersRepository {
 function createMockQueue() {
   return { enqueue: vi.fn() };
 }
-
-// ---------------------------------------------------------------------------
-// Contract tests
-// ---------------------------------------------------------------------------
 
 describe("RemindersService — contract tests", () => {
   describe("requestReminderExecution", () => {
@@ -240,12 +228,10 @@ describe("RemindersService — contract tests", () => {
 
       expect(exec1.recipientEmail).toBe(recipientEmail);
       expect(exec2.recipientEmail).toBe(recipientEmail2);
-      // Different recipients produce different executions
       expect(exec1.id).not.toBe(exec2.id);
     });
   });
 
-  // Regression — execution edge cases
   describe("requestReminderExecution — regression", () => {
     it("execution has correct scheduledFor from rule.fireAt", async () => {
       const service = new RemindersService(createRepository(activeRule));
@@ -366,14 +352,11 @@ describe("RemindersService — contract tests", () => {
       expect(result.items).toHaveLength(1);
       const execution = expectDefined(result.items[0]);
 
-      // Verify Zod coercion produced correct types
       expect(execution.scheduledFor).toBeInstanceOf(Date);
       expect(typeof execution.id).toBe("string");
       expect(typeof execution.dedupeKey).toBe("string");
       expect(execution.sentAt).toBeNull();
       expect(execution.errorMessage).toBeNull();
-
-      // Also validate independently with the schema (no throw = pass)
       const parsed = adminReminderExecutionSchema.parse(execution);
       expect(parsed.id).toBe(execution.id);
     });

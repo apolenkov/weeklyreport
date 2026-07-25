@@ -29,7 +29,7 @@ const baseSection: ReportSectionReadModel = {
       projectId: "44444444-4444-4444-8444-444444444444",
       projectName: "Project 1",
       trafficLight: null,
-      // lead-form-stage-access-integrity: the author owns the Development stage
+      // the author owns the Development stage
       // on this project, so the seeded write payloads (stageIds: ["Development"])
       // pass the ownership guard.
       ownedStages: [
@@ -49,7 +49,7 @@ const baseSection: ReportSectionReadModel = {
       tag: "feature",
       workflowStatus: "in_progress",
       carriedOver: false,
-      // enforce-item-decision-stage-schema: items carry ≥1 stage on write;
+      // items carry ≥1 stage on write;
       // validSubmitPayload() reuses these items as a submit payload.
       stageIds: ["Development"],
     },
@@ -59,7 +59,7 @@ const baseSection: ReportSectionReadModel = {
   activities: [],
 };
 
-// enforce-item-decision-stage-schema: the read-model item types stageIds as
+// the read-model item types stageIds as
 // optional, but draft-save/submit payloads require it. Expose a stage-guaranteed
 // copy of the seeded items for the write-path test payloads below.
 const writeItems = baseSection.items.map((it) => ({
@@ -506,14 +506,6 @@ describe("ReportSectionsService", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// lead-form-stage-access-integrity: the server stage-ownership guard rejects a
-// write whose new/changed row carries a stage the SECTION AUTHOR does not own,
-// on BOTH saveDraft and submitSection; grandfathers an unchanged legacy/cross
-// row; and (security) re-validates a row that reuses a stableId but changes its
-// stage set OR its product.
-// ---------------------------------------------------------------------------
-
 describe("ReportSectionsService — stage-ownership guard", () => {
   const PROJECT_P = "44444444-4444-4444-8444-444444444444";
   const CROSS_PROJECT = "77777777-7777-4777-8777-777777777777";
@@ -796,23 +788,6 @@ describe("ReportSectionsService — stage-ownership guard", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// submitSection deadline gate (grace + late matrix)
-//
-// Combinations under test:
-//
-//   ┌──────────────────────┬──────────────────────┬───────────────────────┐
-//   │ now vs deadline      │ allowLateSubmissions │ Expected outcome      │
-//   ├──────────────────────┼──────────────────────┼───────────────────────┤
-//   │ before deadline      │ (any)                │ submit, late=false    │
-//   │ past deadline,       │ true                 │ submit, late=true     │
-//   │   within grace       │ false                │ submit, late=true     │
-//   │ past grace window    │ true                 │ submit, late=true     │
-//   │ past grace window    │ false                │ 403 ReportSection-    │
-//   │                      │                      │ AccessError           │
-//   └──────────────────────┴──────────────────────┴───────────────────────┘
-// ---------------------------------------------------------------------------
-
 describe("ReportSectionsService — deadline gate", () => {
   function createGracedRepository(opts: {
     section?: ReportSectionReadModel;
@@ -1010,7 +985,7 @@ describe("ReportSectionsService — product telemetry", () => {
           projectId: "44444444-4444-4444-8444-444444444444",
           projectName: "Project 1",
           trafficLight: "green",
-          // lead-form-stage-access-integrity: the submitted item carries the
+          // the submitted item carries the
           // Development stage, so the author must own it to pass the guard.
           ownedStages: [
             {
@@ -1091,7 +1066,7 @@ describe("ReportSectionsService — product telemetry", () => {
           text: "Current item",
           tag: "feature" as const,
           workflowStatus: "in_progress" as const,
-          // enforce-item-decision-stage-schema: items carry ≥1 stage on write.
+          // items carry ≥1 stage on write.
           stageIds: ["Development"],
         },
       ],
@@ -1140,7 +1115,7 @@ describe("ReportSectionsService — product telemetry", () => {
           text: "Current item",
           tag: "feature" as const,
           workflowStatus: "in_progress" as const,
-          // enforce-item-decision-stage-schema: items carry ≥1 stage on write.
+          // items carry ≥1 stage on write.
           stageIds: ["Development"],
         },
       ],

@@ -9,40 +9,16 @@ import {
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 
 export interface OrganizationRepository {
-  /**
-   * Reads the singleton `Organization` row. Implementations MUST return a
-   * row even on fresh databases — the canonical implementation upserts
-   * with seed defaults so the public landing page always renders the brand.
-   */
+  // Implementations MUST return a row even on fresh DBs (upsert with seed
+  // defaults) so the public landing page always has a brand to render.
   getOrganization(): Promise<Organization>;
-  /**
-   * Updates the singleton `Organization` row. Implementations MUST respect
-   * the `id='singleton'` invariant — no new id is accepted on the wire.
-   */
+  // Implementations MUST keep id='singleton' — no new id is accepted on the wire.
   updateOrganization(input: OrganizationUpdate): Promise<Organization>;
 }
 
-/**
- * Organization identity service.
- *
- * Owns the singleton `Organization` row. Two read paths:
- *  - {@link getOrganization}: returns the full row including timestamps;
- *    used by the admin Settings → Identity tab.
- *  - {@link getPublic}: returns only `{ shortName, fullName }`; used by
- *    the anonymous landing page (`org.getPublic` tRPC procedure) and by
- *    the tRPC context factory when hydrating `session.organization` on
- *    every authenticated request.
- *
- * TODO(multi-org): the singleton invariant (`id='singleton'`) is the seam
- * that turns this service into a true multi-tenant root — drop the singleton
- * constant, accept any id, and take `organizationId` from
- * `session.organization.id` on every read. Until then all tRPC procedures +
- * scope-filter assume exactly one row.
- *
- * The write path ({@link updateOrganization}) is admin-only; the
- * `admin.organization.update` audit event is emitted by the router (where
- * the session/IP/correlation-id are in scope), not by the service.
- */
+// Singleton Organization identity. TODO(multi-org): drop id='singleton',
+// take organizationId from session on every read. Audit on write lives in
+// the router (session/IP/correlation-id), not here.
 export class OrganizationService {
   private readonly logger: AppLogger;
 

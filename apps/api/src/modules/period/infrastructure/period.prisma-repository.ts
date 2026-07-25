@@ -59,11 +59,7 @@ export class PeriodPrismaRepository implements PeriodRepository {
   }
 
   async getReopenedNonArchivedId(): Promise<string | null> {
-    // A reopened period keeps the legacy tuple (status='published',
-    // archived=false) but flips periodStatus to 'reopened' (period-transition
-    // `reopen`). Match on that canonical marker. The deterministic ordering is
-    // not load-bearing — the single-active-reopen guard only needs to know one
-    // exists — but mirrors the other resolvers for a stable pick.
+    // periodStatus='reopened' is the canonical reopen marker (legacy tuple stays published).
     const reopened = await this.prisma.report.findFirst({
       where: { periodStatus: "reopened", archived: false },
       orderBy: [{ periodStart: "desc" }, { id: "desc" }],
@@ -77,12 +73,8 @@ export class PeriodPrismaRepository implements PeriodRepository {
     userId: string,
   ): Promise<PublishPeriodOutcome> {
     return this.prisma.$transaction(async (tx) => {
-      // Shared compare-and-set: only a not-yet-published, non-archived period
-      // transitions, and a zero-row match is disambiguated (raced vs archived)
-      // by a re-read through this same `tx`. The complete publish field set
-      // comes from the transition builder (preserving the single
-      // transition-writer invariant); the snapshot is written as a second
-      // statement inside this transaction below, so state + snapshot stay atomic.
+      // CAS via transition builder; snapshot is a second statement in the same tx.
+      // See openspec/specs/period-dual-state.
       const outcome = await publishCompareAndSet(
         tx,
         reportId,
@@ -112,13 +104,6 @@ export class PeriodPrismaRepository implements PeriodRepository {
     });
   }
 
-  /**
-   * All section ids for a report. Read by the post-publish ingestion seam
-   * (see `IngestionPublishHook`) so a future async consumer can enqueue
-   * per-section work after `publishPeriod` resolves. Returns an empty
-   * array when the report has no sections (legal — period was published
-   * without anyone filling in their section).
-   */
   async listSectionIds(reportId: string): Promise<string[]> {
     const sections = await this.prisma.reportSection.findMany({
       where: { reportId },
@@ -130,13 +115,8 @@ export class PeriodPrismaRepository implements PeriodRepository {
   async reopenPeriod(reportId: string): Promise<void> {
     try {
       await this.prisma.$transaction(async (tx) => {
-        // Guarded compare-and-set: only a still-published, non-archived row
-        // reopens. `archived: false` plus `periodStatus: "published"` are the
-        // single point that closes the reopen-versus-archive race, so an
-        // archive that lands after the service pre-check cannot be reopened.
-        // The complete reopen field set (the intentional asymmetry — periodState
-        // →'open', periodStatus→'reopened', legacy tuple untouched, reopenedAt
-        // stamped) comes from the transition builder.
+        // CAS on archived+periodStatus closes the reopen-vs-archive race.
+        // Field set from transition builder (period-dual-state).
         const outcome = await reopenCompareAndSet(
           tx,
           reportId,
@@ -144,11 +124,7 @@ export class PeriodPrismaRepository implements PeriodRepository {
         );
 
         if (outcome !== "transitioned") {
-          // Fail closed: a zero-row match means an archive won the row, or the
-          // period is no longer published (already reopened). Raise the same
-          // domain error the service pre-checks raise (→ FORBIDDEN) and reset
-          // no sections — an archived period must never be left with its
-          // sections silently reset to draft.
+          // Fail closed: zero-row match means archive won or already reopened.
           throw new PeriodScopeError(
             outcome === "archived"
               ? "Archived periods cannot be reopened."
@@ -156,8 +132,7 @@ export class PeriodPrismaRepository implements PeriodRepository {
           );
         }
 
-        // Gated on the transition: only the winning reopen resets its submitted
-        // sections, inside this same transaction so state + reset stay atomic.
+        // Only the winning reopen resets submitted sections, same tx.
         await tx.reportSection.updateMany({
           where: {
             reportId,
@@ -170,10 +145,7 @@ export class PeriodPrismaRepository implements PeriodRepository {
         });
       });
     } catch (error) {
-      // Reopen moves the row to periodState='open'; if another open period
-      // already holds this boundary the partial unique index rejects it.
-      // Surface the same friendly overlap error as the admin create/update
-      // paths (→ BAD_REQUEST), never a 500. Any other error re-throws.
+      // Open-boundary unique index: surface as BAD_REQUEST, never 500.
       if (isOpenBoundaryConflict(error)) {
         throw new AdminPeriodOverlapError(
           "A period already exists for these dates.",

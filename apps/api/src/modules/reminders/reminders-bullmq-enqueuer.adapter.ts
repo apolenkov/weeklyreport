@@ -4,6 +4,11 @@ import type {
   RemindersEnqueuer,
 } from "./reminders.ports.js";
 
+// Three attempts with 5s exponential floor — matches EmailReminderProcessor
+// and telegram-outbound so transient SMTP blips settle before DLQ.
+const REMINDER_JOB_ATTEMPTS = 3;
+const REMINDER_JOB_BACKOFF_DELAY_MS = 5000;
+
 export class RemindersBullmqEnqueuer implements RemindersEnqueuer {
   constructor(private readonly queue: JobEnqueuer) {}
 
@@ -16,8 +21,11 @@ export class RemindersBullmqEnqueuer implements RemindersEnqueuer {
       "send",
       { ...data, ...context },
       {
-        attempts: 3,
-        backoff: { type: "exponential", delay: 5000 },
+        attempts: REMINDER_JOB_ATTEMPTS,
+        backoff: {
+          type: "exponential",
+          delay: REMINDER_JOB_BACKOFF_DELAY_MS,
+        },
         jobId: executionId,
       },
     );

@@ -33,11 +33,7 @@ export { ReminderDomainError, ReminderScopeError };
 export class RemindersService {
   private readonly logger: AppLogger;
   private readonly emailQueue: RemindersEnqueuer | null;
-  /**
-   * Scope-authorization + dispatch surface for the reminders.* procedures
-   * (see `RemindersScopeService`). Composed, not inherited, so the router
-   * calls `remindersService.scope.authorizeExecute(...)` etc. directly.
-   */
+  // Composed scope surface; router calls remindersService.scope.* directly.
   readonly scope: RemindersScopeService;
 
   constructor(
@@ -53,14 +49,7 @@ export class RemindersService {
     );
   }
 
-  /**
-   * Record (idempotently) and enqueue one reminder execution. The dedupe key
-   * (`resolveReminderDedupeKey`) is shared with every other caller so a
-   * manual dispatch collides with an already-sent automated reminder for the
-   * same rule/recipient/cycle. The email job is enqueued only when this call
-   * actually inserted the row, so a concurrent duplicate tick enqueues
-   * nothing.
-   */
+  // Shared dedupe key; enqueue only when this call inserted the row.
   async requestReminderExecution(
     ruleId: string,
     recipientEmail: string,
@@ -74,14 +63,7 @@ export class RemindersService {
     return execution;
   }
 
-  /**
-   * Same as `requestReminderExecution`, plus the atomic dispatch outcome the
-   * insert itself proved: "created" (this call inserted and enqueued),
-   * "revived" (an earlier failed row was re-queued — a send WILL happen), or
-   * "deduplicated" (an earlier execution already owns this dedupe key). The
-   * outcome is the ground truth counters need — no timestamp comparison can
-   * substitute for it.
-   */
+  // Returns created | revived | deduplicated from the atomic insert — counters need this.
   async requestReminderExecutionWithOutcome(
     ruleId: string,
     recipientEmail: string,
@@ -176,17 +158,11 @@ export class RemindersService {
     };
   }
 
-  /**
-   * Compare-and-set claim used by the email-reminder worker before any send:
-   * true only when this caller moved the row `queued → sending`. A false result
-   * means a retry, a duplicate worker, or an admin manual retry already claimed
-   * (or completed) the execution and the worker must send nothing.
-   */
+  // CAS claim: true only when this caller moved queued → sending.
   async claimExecutionForSending(executionId: string): Promise<boolean> {
     return this.repository.transitionExecutionToSending(executionId);
   }
 
-  /** Record a terminal `failed` state after a send error. */
   async markReminderFailed(
     executionId: string,
     errorMessage: string,
@@ -194,19 +170,12 @@ export class RemindersService {
     await this.repository.markExecutionFailed(executionId, errorMessage);
   }
 
-  /**
-   * Undo a `queued → sending` claim after a retryable dispatch failure, so
-   * the next BullMQ attempt's `claimExecutionForSending` can re-claim and
-   * actually resend the row instead of finding it permanently stuck.
-   */
+  // Undo sending claim after retryable failure so the next attempt can re-claim.
   async releaseExecutionClaim(executionId: string): Promise<void> {
     await this.repository.releaseExecutionClaim(executionId);
   }
 
-  /**
-   * Reaper path: re-enqueue an execution stranded in `queued` (its enqueue
-   * never happened). Idempotent against the original job and the send guard.
-   */
+  // Reaper: re-enqueue a stranded queued execution (enqueue never happened).
   async reEnqueueStuckExecution(
     execution: AdminReminderExecution,
   ): Promise<void> {

@@ -14,10 +14,6 @@ import {
 const testGraceSettings = () =>
   Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
 const SECTION_ID = "11111111-1111-4111-8111-111111111111";
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";
 const AUTHOR_ID = "33333333-3333-4333-8333-333333333333";
@@ -37,7 +33,7 @@ const baseSection: ReportSectionReadModel = {
       projectId: PROJECT_ID_1,
       projectName: "Project Alpha",
       trafficLight: null,
-      // lead-form-stage-access-integrity: the author owns the Development stage
+      // the author owns the Development stage
       // on this project, so the write payloads (stageIds: ["Development"]) pass
       // the stage-ownership guard.
       ownedStages: [
@@ -57,7 +53,7 @@ const baseSection: ReportSectionReadModel = {
       tag: "feature",
       workflowStatus: "in_progress",
       carriedOver: false,
-      // enforce-item-decision-stage-schema: items carry ≥1 stage on write.
+      // items carry ≥1 stage on write.
       stageIds: ["Development"],
     },
   ],
@@ -66,7 +62,7 @@ const baseSection: ReportSectionReadModel = {
   activities: [],
 };
 
-// enforce-item-decision-stage-schema: read-model item types stageIds optional;
+// read-model item types stageIds optional;
 // the write payloads below require it. Expose a stage-guaranteed copy.
 const writeItems = baseSection.items.map((it) => ({
   ...it,
@@ -132,10 +128,6 @@ function validSubmit(overrides: Record<string, unknown> = {}) {
   };
 }
 
-// ---------------------------------------------------------------------------
-// getActiveSection
-// ---------------------------------------------------------------------------
-
 describe("ReportSectionsService — getActiveSection", () => {
   it("returns section when found", async () => {
     const service = new ReportSectionsService(
@@ -193,10 +185,6 @@ describe("ReportSectionsService — getActiveSection", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// saveDraft — happy path
-// ---------------------------------------------------------------------------
-
 describe("ReportSectionsService — saveDraft happy path", () => {
   it("updates traffic light status", async () => {
     const service = new ReportSectionsService(
@@ -248,7 +236,7 @@ describe("ReportSectionsService — saveDraft happy path", () => {
             impact: "Revenue",
             mitigation: "Hire contractor",
             severity: "at-risk",
-            // require-risk-stage: stageIds is required (min 1) on writes.
+            // stageIds is required (min 1) on writes.
             stageIds: ["Development"],
           },
         ],
@@ -268,7 +256,7 @@ describe("ReportSectionsService — saveDraft happy path", () => {
       validDraft({
         decisions: [
           {
-            // activity-first-class XOR: a decision now needs exactly one parent;
+            // a decision now needs exactly one parent;
             // product-parent it (stageIds is then required, as here).
             productId: PROJECT_ID_1,
             text: "Upgrade DB",
@@ -315,10 +303,6 @@ describe("ReportSectionsService — saveDraft happy path", () => {
     expect(saved.projects[0]?.trafficLight).toBeNull();
   });
 });
-
-// ---------------------------------------------------------------------------
-// saveDraft — error paths
-// ---------------------------------------------------------------------------
 
 describe("ReportSectionsService — saveDraft error paths", () => {
   it("rejects when section is already submitted", async () => {
@@ -472,10 +456,6 @@ describe("ReportSectionsService — saveDraft error paths", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// submitSection — happy path
-// ---------------------------------------------------------------------------
-
 describe("ReportSectionsService — submitSection happy path", () => {
   it("submits section with valid input", async () => {
     const service = new ReportSectionsService(
@@ -527,7 +507,7 @@ describe("ReportSectionsService — submitSection happy path", () => {
             impact: "Impact",
             mitigation: "Mitigation",
             severity: "at-risk",
-            // require-risk-stage: stageIds is required (min 1) on writes.
+            // stageIds is required (min 1) on writes.
             stageIds: ["Development"],
           },
         ],
@@ -538,10 +518,6 @@ describe("ReportSectionsService — submitSection happy path", () => {
     expect(result.risks).toHaveLength(1);
   });
 });
-
-// ---------------------------------------------------------------------------
-// submitSection — validation errors
-// ---------------------------------------------------------------------------
 
 describe("ReportSectionsService — submitSection validation errors", () => {
   it("rejects when section already submitted", async () => {
@@ -620,7 +596,7 @@ describe("ReportSectionsService — submitSection validation errors", () => {
         // Negative test: schema requires `confirmed: true` (z.literal(true)).
         confirmed: false as unknown as true,
       }),
-    ).rejects.toThrow(); // Zod: z.literal(true)
+    ).rejects.toThrow();
   });
 
   it("rejects empty projectStatuses", async () => {
@@ -635,13 +611,9 @@ describe("ReportSectionsService — submitSection validation errors", () => {
           projectStatuses: [],
         }),
       ),
-    ).rejects.toThrow(); // Zod: .min(1)
+    ).rejects.toThrow();
   });
 });
-
-// ---------------------------------------------------------------------------
-// Multi-project scenarios
-// ---------------------------------------------------------------------------
 
 describe("ReportSectionsService — multi-project", () => {
   const multiProjectSection: ReportSectionReadModel = {
@@ -651,7 +623,7 @@ describe("ReportSectionsService — multi-project", () => {
         projectId: PROJECT_ID_1,
         projectName: "Project Alpha",
         trafficLight: null,
-        // lead-form-stage-access-integrity: author owns Development on both
+        // author owns Development on both
         // projects so the Development-staged items pass the ownership guard.
         ownedStages: [
           {
@@ -696,7 +668,7 @@ describe("ReportSectionsService — multi-project", () => {
     ],
   };
 
-  // enforce-item-decision-stage-schema: stage-guaranteed copy for write payloads.
+  // stage-guaranteed copy for write payloads.
   const multiWriteItems = multiProjectSection.items.map((it) => ({
     ...it,
     stageIds: it.stageIds ?? [],
@@ -804,10 +776,6 @@ describe("ReportSectionsService — multi-project", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Edge cases
-// ---------------------------------------------------------------------------
-
 describe("ReportSectionsService — edge cases", () => {
   it("saveDraft with empty items/risks/decisions is allowed", async () => {
     const service = new ReportSectionsService(
@@ -867,7 +835,7 @@ describe("ReportSectionsService — edge cases", () => {
     );
     const saved = await service.saveDraft(
       validDraft({
-        projectStatuses: [], // empty project statuses
+        projectStatuses: [],
       }),
     );
 
@@ -878,10 +846,6 @@ describe("ReportSectionsService — edge cases", () => {
     expect(saved.projects[0]?.trafficLight).toBeNull();
   });
 });
-
-// ---------------------------------------------------------------------------
-// Regression — traffic light statuses
-// ---------------------------------------------------------------------------
 
 describe("ReportSectionsService — traffic light all valid statuses", () => {
   it.each(["green", "yellow", "red"] as const)(
@@ -913,10 +877,6 @@ describe("ReportSectionsService — traffic light all valid statuses", () => {
     expect(saved.projects[0]?.trafficLight).toBeNull();
   });
 });
-
-// ---------------------------------------------------------------------------
-// Regression — items with varied tag/workflowStatus combos
-// ---------------------------------------------------------------------------
 
 describe("ReportSectionsService — item tag and workflowStatus combinations", () => {
   const tags = [
@@ -961,10 +921,6 @@ describe("ReportSectionsService — item tag and workflowStatus combinations", (
   }
 });
 
-// ---------------------------------------------------------------------------
-// Regression — submit double-submit idempotency
-// ---------------------------------------------------------------------------
-
 describe("ReportSectionsService — double submit rejected", () => {
   it("second submit on same section throws SECTION_ALREADY_SUBMITTED", async () => {
     const service = new ReportSectionsService(
@@ -972,11 +928,9 @@ describe("ReportSectionsService — double submit rejected", () => {
       testGraceSettings,
     );
 
-    // First submit succeeds
     const submitted = await service.submitSection(validSubmit());
     expect(submitted.status).toBe("submitted");
 
-    // Second submit rejects
     await expect(service.submitSection(validSubmit())).rejects.toMatchObject({
       code: "SECTION_ALREADY_SUBMITTED",
     });
@@ -996,10 +950,6 @@ describe("ReportSectionsService — double submit rejected", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Regression — Zod validation for risks and decisions
-// ---------------------------------------------------------------------------
-
 describe("ReportSectionsService — risk/decision Zod validation", () => {
   it("rejects risk with empty risk text", async () => {
     const service = new ReportSectionsService(
@@ -1017,7 +967,7 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
               impact: "Some impact",
               mitigation: "Some mitigation",
               severity: "at-risk",
-              // require-risk-stage: keep stageIds valid so the rejection
+              // keep stageIds valid so the rejection
               // stays attributable to the empty text under test.
               stageIds: ["Development"],
             },
@@ -1043,7 +993,7 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
               impact: "",
               mitigation: "Some mitigation",
               severity: "at-risk",
-              // require-risk-stage: keep stageIds valid so the rejection
+              // keep stageIds valid so the rejection
               // stays attributable to the empty impact under test.
               stageIds: ["Development"],
             },
@@ -1053,7 +1003,7 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
     ).rejects.toThrow();
   });
 
-  it("rejects risk without stageIds (require-risk-stage)", async () => {
+  it("rejects risk without stageIds", async () => {
     const service = new ReportSectionsService(
       createRepository(baseSection),
       testGraceSettings,

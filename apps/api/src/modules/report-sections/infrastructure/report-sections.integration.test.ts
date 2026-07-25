@@ -52,7 +52,6 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
 
   it("getSectionById returns full section with nested relations", async () => {
     await assignLeadToProject();
-    // Seed additional nested data for the section
     await prisma.projectStatus.create({
       data: {
         reportSectionId: testData.section.id,
@@ -101,11 +100,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     expect(expectDefined(result).authorName).toBe("Test Lead 1");
     expect(expectDefined(result).status).toBe("draft");
     expect(expectDefined(result).projects).toHaveLength(1);
-    // The fixture's risk carries an explicit `severity: "at-risk"` and empty
-    // stageNames (covers-all), so it floors the owned stage's product status
-    // up to yellow at the read layer. The dedicated "floors trafficLight by
-    // an own covering risk" test pins this semantics; here we only track the
-    // consequence.
+    // Seed risk is at-risk covers-all → floors product trafficLight to yellow.
     expect(expectDefined(expectDefined(result).projects[0]).trafficLight).toBe(
       "yellow",
     );
@@ -291,11 +286,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     expect(expectDefined(saved.decisions[0]).stageIds).toEqual(["Design"]);
   });
 
-  // The derived effective product status reflects the author's OWN covering
-  // risk on an owned stage with no submitted status (raw StageStatus.status
-  // = null). The author owns "Development"; a covers-all blocked own risk
-  // (empty stageIds) and a stale green ProjectStatus must read red through
-  // the read-layer floor, while the raw persisted stage status stays null.
+  // Own covers-all blocked risk floors empty owned stage to red; raw status stays null.
   it("getSectionById floors trafficLight by an own covering risk on an owned empty stage", async () => {
     await assignLeadToProject();
     await prisma.projectStatus.create({
@@ -334,7 +325,6 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
 
   it("saveSection persists all nested entities and returns updated section", async () => {
     await assignLeadToProject();
-    // First seed a project status so the section has a project
     await prisma.projectStatus.create({
       data: {
         reportSectionId: testData.section.id,
@@ -343,11 +333,9 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
       },
     });
 
-    // Get the section via the repository
     const original = await repo.getSectionById(testData.section.id);
     expect(original).not.toBeNull();
 
-    // Modify the section with new items, risks, decisions
     const modified = {
       ...expectDefined(original),
       status: "draft" as const,
@@ -433,7 +421,6 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
       testData.project.id,
     );
 
-    // Confirm persistence via a fresh read
     const refetched = await repo.getSectionById(testData.section.id);
     expect(expectDefined(refetched).decisions).toHaveLength(1);
     expect(expectDefined(expectDefined(refetched).decisions[0]).productId).toBe(
@@ -441,12 +428,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     );
   });
 
-  // Optimistic-lock characterization, driven through the SERVICE (saveDraft)
-  // rather than the repository, so it exercises the full path that decides the
-  // expected version: the lock must compare against the CLIENT-loaded value
-  // carried in the payload, not the row the service just re-fetched. If it ever
-  // regressed to the fetched row, the second save below would silently succeed
-  // (lost update) instead of conflicting.
+  // Lock must compare against client-loaded version, not a just-refetched row.
   describe("optimistic lock (lost-update guard via saveDraft)", () => {
     const draftAtVersion = (version: number) => ({
       reportSectionId: testData.section.id,
@@ -492,11 +474,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     });
   });
 
-  // The repository-level backstop behind the service gate: saveSection's
-  // transaction locks the parent report row (SELECT ... FOR UPDATE) and fails
-  // closed on a published period, so even a caller that bypassed (or raced)
-  // the service-level periodStatus check can never rewrite a published
-  // report's live rows or interleave with a publish snapshot freeze.
+  // Repo FOR UPDATE fails closed on published even if service gate is raced.
   describe("publish/save mutual exclusion (repo-level row lock)", () => {
     it("fails a direct repository save closed on a published report, touching no child rows", async () => {
       const section = await repo.getSectionById(testData.section.id);
@@ -531,11 +509,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     });
   });
 
-  // introduce-durable-record-identity: a record's stableId must outlive
-  // saveSection's delete-recreate (the PK id is re-minted every write) and be
-  // minted once for a brand-new record. These go through the real DB so the
-  // `@default(uuid())` mint and the (reportSectionId, stableId) guard are
-  // exercised, not mocked.
+  // stableId must outlive delete-recreate; mint once for new records.
   describe("durable record identity (stableId)", () => {
     beforeEach(async () => {
       await assignLeadToProject();
@@ -677,11 +651,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     });
   });
 
-  // Both lead write paths gate on the canonical periodStatus, never the legacy
-  // Report.status column. The reopen transition leaves Report.status at
-  // "published" while flipping periodStatus, so a save on a reopened period must
-  // succeed; a submit on a published period must be rejected before the
-  // destructive delete-recreate touches the live rows.
+  // Gate on periodStatus not legacy status; reopened stays editable.
   describe("period-status write gates", () => {
     it("saveDraft persists on a reopened period even though the legacy status reads published", async () => {
       await assignLeadToProject();

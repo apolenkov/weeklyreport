@@ -6,12 +6,7 @@ import {
   type TrafficLightStatus,
 } from "@customreport/shared";
 
-/**
- * Raw shape `ReportSectionsRepository.getMyHistoryRows` returns — the exact
- * columns the `myHistory` read touches, kept local so the port stays
- * Prisma-free (Zone-4b: `report-sections.service.ts` must not import
- * `@prisma/client`).
- */
+// Prisma-free row shape for myHistory (service must not import @prisma/client).
 export interface MyHistorySectionRow {
   readonly id: string;
   readonly status: ReportSectionStatus;
@@ -50,11 +45,6 @@ export interface MyHistorySectionRow {
   }[];
 }
 
-/**
- * Pure post-processing of `getMyHistoryRows` rows into `MyHistoryEntry`s:
- * folds each section's traffic lights, distinct product ids, and last-edit
- * timestamp across its items/risks/decisions/projectStatuses/stageStatuses.
- */
 export function buildMyHistoryEntries(
   sections: readonly MyHistorySectionRow[],
 ): MyHistoryEntry[] {
@@ -69,8 +59,7 @@ export function buildMyHistoryEntries(
         { green: 0, yellow: 0, red: 0 },
       );
 
-      // activity-first-class: activity-parented rows carry a null product
-      // FK and contribute no product id to the distinct-product count.
+      // Activity-parented rows carry null product FK — no product-id count.
       const productIds = new Set([
         ...s.projectStatuses.map((row) => row.projectId),
         ...s.stageStatuses.map((row) => row.projectId),

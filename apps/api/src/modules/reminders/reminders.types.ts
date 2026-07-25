@@ -16,56 +16,27 @@ export interface RemindersRepository extends RemindersScopeRepository {
   saveExecution(
     execution: AdminReminderExecution,
   ): Promise<AdminReminderExecution>;
-  /**
-   * Atomic insert-on-conflict against the `ReminderExecution.dedupeKey` unique
-   * index. `inserted` is true only when THIS call created the row; a caller
-   * that loses the race gets the existing row with `inserted: false`. The
-   * service uses that flag to enqueue the email exactly once, even when two
-   * scheduler ticks fire concurrently.
-   */
+  // Atomic insert-on-conflict; inserted=true only for the winner (enqueue once).
   insertExecutionOnConflict(
     execution: AdminReminderExecution,
   ): Promise<{ execution: AdminReminderExecution; inserted: boolean }>;
-  /**
-   * Atomic `queued → sending` compare-and-set. Returns true only when THIS
-   * call wins the transition out of `queued`; a caller that finds it already
-   * `sending`/`sent`/`failed` gets false and must send nothing. Enforced in the
-   * write itself (a guarded `updateMany`), so a retry or a duplicate worker
-   * cannot both claim the same execution.
-   */
+  // CAS queued → sending; false means another worker already claimed.
   transitionExecutionToSending(executionId: string): Promise<boolean>;
-  /**
-   * Terminal `failed` write with an error message, guarded to the non-terminal
-   * states so it can never overwrite a row that already reached `sent`.
-   */
+  // Terminal failed; never overwrites an already-sent row.
   markExecutionFailed(executionId: string, errorMessage: string): Promise<void>;
   getRulePeriodLabel(ruleId: string): Promise<string | null>;
-  /**
-   * Reverses the `queued → sending` claim so a retryable send failure can be
-   * re-claimed by the next BullMQ attempt instead of being stranded. Guarded
-   * to `sending` in the write itself, so it is a no-op against a row that has
-   * already reached `sent`/`failed`.
-   */
+  // Undo sending claim for retryable failure; no-op if already sent/failed.
   releaseExecutionClaim(executionId: string): Promise<void>;
-  /**
-   * Atomic `failed → queued` revival; true only when THIS call won the
-   * transition (see `reviveFailedExecution` for why it exists).
-   */
+  // failed → queued revival; true only when this call won.
   requeueFailedExecution(executionId: string): Promise<boolean>;
   getExecution(executionId: string): Promise<AdminReminderExecution | null>;
-  /** One DB-level keyset page (newest first) starting strictly after `cursor`. */
   listExecutions(
     ruleId: string,
     page: ExecutionPageRequest,
   ): Promise<AdminReminderExecution[]>;
 }
 
-/**
- * One due deadline rule, pre-resolved with the recipient leads whose
- * `ReportSection` for the rule's report is still in `draft`. The scheduler
- * fans out one `kind='deadline'` reminder per recipient; `notificationOptOut`
- * flows through so opted-out leads are skipped (escalation digests ignore it).
- */
+// Draft-section leads for a due deadline rule; opt-out skips deadline only.
 export interface DueDeadlineRule {
   id: string;
   reportId: string;
@@ -79,12 +50,7 @@ export interface DueDeadlineRule {
   }[];
 }
 
-/**
- * One due escalation rule, fanned out per reporting-group head. Each entry in
- * `groups` becomes exactly one digest email to that head, aggregating only
- * that group's late leads. Resolution is independent of `Report.publishedBy`:
- * escalation fires while leads are still in `draft`, before any publish.
- */
+// One digest per group head; fires while leads are still draft (pre-publish).
 export interface DueEscalationRule {
   id: string;
   reportId: string;
@@ -93,20 +59,8 @@ export interface DueEscalationRule {
   groups: EscalationGroupDigest[];
 }
 
-/**
- * The richer payload threaded by the scheduler through
- * `requestReminderExecution`. The dedupeKey uses
- * `${rule.id}:${kind}:${cycleDate}:${recipientEmail}` (see
- * `resolveReminderDedupeKey`) so two scheduler ticks within one UTC day
- * collapse to a single execution for both kinds — a caller that omits
- * `payload` gets the same shape, defaulted to `kind: "deadline"`.
- *
- * Every payload carries `organization` —
- * `{shortName, fullName}` snapshotted at enqueue time from the
- * `Organization` singleton. The worker re-renders the template with that
- * snapshot, so a mid-flight admin edit of the brand strings does NOT
- * affect already-queued emails (one fewer race to debug).
- */
+// organization is snapshotted at enqueue so mid-flight brand edits do not
+// affect already-queued emails. Omit payload → defaults to kind deadline.
 export interface DeadlineReminderPayload {
   kind: "deadline";
   cycleDate: string; // ISO YYYY-MM-DD UTC of the fireAt deadline

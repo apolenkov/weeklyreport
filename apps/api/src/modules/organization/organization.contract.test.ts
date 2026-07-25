@@ -5,14 +5,9 @@ import {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-/**
- * Contract tests for the Organization zod schemas.
- *
- * Boundary checks: shortName ≤ 16, fullName ≤ 200, both non-empty, id
- * locked to the literal 'singleton'. These are the invariants the rest
- * of the system relies on (nav-bar width, PDF header width, singleton
- * write path).
- */
+// shortName/fullName bounds and the singleton id are load-bearing for
+// nav-bar width, PDF header width, and the singleton write path.
+
 describe("organizationSchema", () => {
   const validRow = {
     id: "singleton" as const,

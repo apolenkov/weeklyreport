@@ -16,10 +16,7 @@ import {
   deriveEffectiveProductStatus,
 } from "./report-sections.status-derivation";
 
-// Groups the author's non-archived stage assignments by projectId, preserving
-// per-project assignment order. Each entry
-// carries the product's full cross-lead `stageAssignments` (via the row's
-// `project` relation) so the per-product `stageSet` can be derived downstream.
+// Group author assignments by projectId; stageSet comes from full product set.
 function groupAuthorAssignmentsByProject(
   stageAssignments: PrismaReportSectionWithRelations["author"]["stageAssignments"],
 ) {
@@ -69,10 +66,6 @@ function toReviewViews(
   }));
 }
 
-/**
- * Maps a Prisma ReportSection with all relations to the domain ReportSectionReadModel.
- * Field names are mapped from Prisma conventions to Zod schema conventions.
- */
 export function mapPrismaToReportSection(
   row: PrismaReportSectionWithRelations,
 ): ReportSectionReadModel {
@@ -84,19 +77,11 @@ export function mapPrismaToReportSection(
       (ss) => [`${ss.projectId}::${ss.stageId}`, ss.status] as const,
     ),
   );
-  // Carries each product's full cross-lead `stageAssignments` (via the row's
-  // `project` relation) so the per-product `stageSet` can be derived below.
   const assignmentsByProjectId = groupAuthorAssignmentsByProject(
     row.author.stageAssignments,
   );
 
-  // Name-only entries for projects that items/risks/decisions reference but
-  // the author owns no stage on, so the lead-surface mappers can resolve the
-  // real product name instead of "Unknown"/"Group". Names ride the row's
-  // `project` relation (no extra query). Stage-owned projects are excluded —
-  // they already carry their name in `projects` and win on conflict. Archived
-  // referenced projects resolve too: the name is not secret and a placeholder
-  // would misread as data loss.
+  // Name-only for referenced-but-unowned projects (incl. archived); no extra query.
   const referencedRows = [
     ...row.items.map((i) => ({ projectId: i.projectId, project: i.project })),
     ...row.risks.map((r) => ({ projectId: r.projectId, project: r.project })),
@@ -121,17 +106,10 @@ export function mapPrismaToReportSection(
     reportId: row.reportId,
     authorId: row.authorId,
     authorName: row.author.name,
-    // Surface the section author's system role end-to-end so the /lead/report
-    // chrome can switch between Request Reopen (lead) and Revoke (head/admin
-    // viewing this lead's section).
     authorRole: row.author.role,
-    // Optimistic-concurrency row revision the client echoes back on its next
-    // save; every section read carries the current value.
     version: row.version,
     status: row.status,
     submittedAt: row.submittedAt,
-    // late flag stamped by submitSection when `now > Report.deadline` at
-    // submit-time.
     late: row.late,
     projects: [...assignmentsByProjectId.values()]
       .map(({ project, assignments }) => {
@@ -145,11 +123,7 @@ export function mapPrismaToReportSection(
           }))
           .sort((a, b) => a.sortOrder - b.sortOrder);
 
-        // The product's assigned-stage set — every stage with an assignment to
-        // ANY lead on the product, deduped by stageId and ordered by pipeline
-        // sortOrder. READ-ONLY display metadata; the lead-form grid renders only
-        // stages in this set (a vacant stage is excluded). The writable
-        // `ownedStages` is untouched.
+        // Cross-lead stageSet is display-only; vacant stages stay excluded.
         const stageSet = [
           ...new Map(
             project.stageAssignments.map(
@@ -174,11 +148,7 @@ export function mapPrismaToReportSection(
         return {
           projectId: project.id,
           projectName: project.name,
-          // Floor the product status by the author's own covering risks
-          // (scoped to this product) so an owned stage with no submitted status
-          // covered by a blocked/at-risk risk reads red/yellow. Raw
-          // `ownedStages[].status` is left untouched; only this derived
-          // product-level status is floored.
+          // Own covering risks floor empty owned stages (not raw trafficLight).
           trafficLight: deriveEffectiveProductStatus({
             projectId: project.id,
             trafficLight: asTraffic(rawTrafficLight),
@@ -248,11 +218,7 @@ export function mapPrismaToReportSection(
       activityId: d.activityId ?? undefined,
       comments: toCommentViews(d.recordComments),
     })),
-    // Every seeded activity status, name joined, name-sorted. Seeding already
-    // excludes archived activities; a row seeded before a mid-period archive
-    // stays listed so the delete-recreate save never silently drops it.
-    // Each row carries its label-only `linkedProducts` and the risk/blocker-
-    // derived status floor.
+    // Keep mid-period archived activity rows listed (history); name-sorted.
     activities: row.activityStatuses
       .map((status) => ({
         activityId: status.activityId,

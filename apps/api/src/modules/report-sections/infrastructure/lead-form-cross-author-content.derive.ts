@@ -129,10 +129,7 @@ export function buildCrossAuthorContentRows(
     if (!authorEntry) return [];
     const sharedIds = authorEntry.sharedProjectIds;
 
-    // Risk-derived foreign stage chips (canonical rule), reusing the same
-    // derivation as the status-only read. The author's stage assignments on
-    // shared products (collected above) define which chips exist; the
-    // section's persisted statuses provide the empty/non-empty base.
+    // Foreign chips are risk-derived; persisted status is only the empty/non-empty base.
     const persistedStatus = indexNonNullStageStatuses(
       section.stageStatuses,
       (status) => `${status.projectId}::${status.stageId}`,

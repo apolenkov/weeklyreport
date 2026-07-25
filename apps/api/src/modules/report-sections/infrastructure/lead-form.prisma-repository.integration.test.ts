@@ -172,10 +172,6 @@ describe("LeadFormPrismaRepository (integration)", () => {
     ).rejects.toBeInstanceOf(LeadFormDomainError);
   });
 
-  // -----------------------------------------------------------------------
-  // getCrossAuthors
-  // -----------------------------------------------------------------------
-
   // Shared stage UUIDs used by the getCrossAuthors describe block.
   const STAGE_DEV_ID = "b0000000-0000-4000-b000-000000000001";
   const STAGE_TESTING_ID = "b0000000-0000-4000-b000-000000000002";
@@ -522,7 +518,6 @@ describe("LeadFormPrismaRepository (integration)", () => {
     });
   });
 
-  // -----------------------------------------------------------------------
   // getCrossAuthorContent — the FULL-content co-ownership filter (the most
   // sensitive read: foreign item/risk/decision text + author full name). The
   // service-layer gates (report access AND co-ownership) are pinned in

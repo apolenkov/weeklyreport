@@ -3,11 +3,7 @@ import { vi } from "vitest";
 
 import type { RemindersRepository } from "./reminders.types.js";
 
-/**
- * A complete inert `RemindersRepository` for unit tests. Test doubles spread
- * this object and override only the behavior under test, while still
- * implementing every required production capability.
- */
+// Inert full repository; tests spread and override only the methods under test.
 export function unusedRemindersRepositoryStubs(): RemindersRepository {
   return {
     getRule: vi.fn().mockResolvedValue(null),

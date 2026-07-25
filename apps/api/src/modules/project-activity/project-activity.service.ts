@@ -49,14 +49,9 @@ export interface ProjectActivityRepository {
   ): Promise<{ role: DbRole; reportingGroupId: string | null } | null>;
 }
 
-/**
- * Admin provisioning of Project Activities — the stage-less reporting units
- * beside products. Exposed as the `projectActivity.*` tRPC namespace (the
- * `activity.*` namespace is the live-status feed and must not be reused).
- * Attachment is constrained to the activity's authoritative group at write:
- * only a lead whose reporting group matches `activity.groupId` can be attached,
- * so the per-period read path never needs its own group filter.
- */
+// projectActivity.* is admin provisioning; activity.* is the live-status feed
+// and must not be reused. Attachment is group-constrained at write so the
+// per-period read path needs no group filter.
 export class ProjectActivityService {
   constructor(private readonly repository: ProjectActivityRepository) {}
 

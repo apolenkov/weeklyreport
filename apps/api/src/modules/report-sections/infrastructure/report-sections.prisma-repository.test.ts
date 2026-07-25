@@ -1,8 +1,4 @@
-// Pins the name-only `referencedProjects` emission of
-// mapPrismaToReportSection — rows (items / risks / decisions) referencing a
-// project the section author owns no stage on contribute the project's name so
-// the lead-surface mappers never show "Unknown"/"Group" for a product the
-// system can name.
+// Pins referencedProjects name emission for unowned projects (no "Unknown").
 import type { TrafficLightStatus } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
@@ -39,11 +35,7 @@ type FabricatedRow = Pick<
   version: number;
 };
 
-// The generated payload always carries the
-// full base scalar columns for every `include`d relation (Project, Item,
-// Risk, Decision, Stage, StageAssignment, ...), not just the fields the
-// mapper reads. These factories supply honest defaults for those columns so
-// individual tests only spell out what they actually care about.
+// Full scalar defaults for Prisma payload fixtures.
 const FIXED_TIMESTAMP = new Date("2026-01-01T00:00:00.000Z");
 
 function fullProjectScalars(
@@ -305,7 +297,7 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
     expect(section.referencedProjects).toEqual([]);
   });
 
-  it("resolves a referenced-only archived project's name (design Open Question 2)", () => {
+  it("resolves a referenced-only archived project's name", () => {
     // The author's stage assignment on an archived project is skipped from
     // `projects`, so the project counts as referenced-only — yet its name
     // still resolves rather than degrading to a placeholder.
@@ -351,11 +343,7 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
   });
 });
 
-// unassigned-stage-reporting-exclusion: the read model exposes a per-product
-// `stageSet` — the union of all leads' assignments on the product — as READ-ONLY
-// display metadata. The writable `ownedStages` stays the author's own stages, so
-// the write path (handleProductsChange skips non-mine chips; sectionToDraftPayload
-// and saveSection persist from ownedStages only) can never write a foreign stage.
+// stageSet excludes vacant stages; ownedStages stay author-writable only.
 describe("mapPrismaToReportSection — ownerGroupId freeze", () => {
   it("stamps each project entry with the PRODUCT lead's reporting group, not the section author's", () => {
     const assignment = fullOwnedStageAssignment();
@@ -457,11 +445,7 @@ describe("mapPrismaToReportSection — assigned-stage set", () => {
   });
 });
 
-// The PDF export product mapping inherits the floor because it maps via the
-// SAME mapPrismaToReportSection. These pin the mapper-level floor: an OWNED
-// stage with no submitted status (`StageStatus.status = null`, i.e. absent
-// from `stageStatuses`) covered by the author's OWN risk floors the product's
-// derived `trafficLight` — while the raw per-stage `status` stays null.
+// Own risk on empty owned stage floors trafficLight; raw stage status stays null.
 describe("mapPrismaToReportSection — own-risk product floor", () => {
   function coveringRisk(severity: "blocked" | "at-risk", stageNames: string[]) {
     return fullRisk({
@@ -546,10 +530,6 @@ describe("mapPrismaToReportSection — own-risk product floor", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// saveSection — optimistic-concurrency compare-and-set
-// ---------------------------------------------------------------------------
-
 describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set", () => {
   function makeTx(updateCount: number, reReadResult: FabricatedRow | null) {
     const noop = vi.fn(() => Promise.resolve({ count: 0 }));
@@ -575,9 +555,7 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
       },
       risk: { deleteMany: noop, createMany: noop },
       decision: { deleteMany: noop, createMany: noop },
-      // review-acknowledgement (comment-aware save): capture reads existing
-      // comments before the child delete-recreate. No comments here → the
-      // re-insert step is skipped, so record findMany stubs are not needed.
+      // No comments → re-insert skipped (no findMany stubs needed).
       recordComment: {
         findMany: vi.fn(() => Promise.resolve([])),
         createMany: noop,
@@ -653,10 +631,7 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
   });
 });
 
-// The mapper keeps activity-parented records in the FLAT top-level arrays
-// (discriminated by activityId, product FK null), joins each activity's
-// label-only linkedProducts, and floors the pill by its OWN records without
-// ever rewriting the stored ActivityStatus.status.
+// Activity pill floors from own records without rewriting stored status.
 describe("mapPrismaToReportSection — activity derived-status floor", () => {
   const ACTIVITY_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const LINKED_PRODUCT = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";

@@ -9,11 +9,7 @@ import type {
 export type ReminderQueuePayload =
   ReminderExecutionPayload | { reportPeriod: string };
 
-/**
- * Resolve the formatted period label a legacy/reaper payload requires. The
- * label is required by every enqueue that reaches here; a missing one is a
- * domain error, never a silently empty email subject.
- */
+// Missing period label is a domain error — never a silently empty subject.
 export async function requireRulePeriodLabel(
   repository: Pick<RemindersRepository, "getRulePeriodLabel">,
   ruleId: string,

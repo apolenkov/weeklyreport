@@ -7,24 +7,9 @@ import type { AuditLogger } from "../../../lib/audit-logger.js";
 import { SnapshotAdminService } from "../../admin/index.js";
 import { PublicationService } from "../../publication/index.js";
 
-/**
- * Hourly scheduler that auto-publishes draft Reports whose `deadline +
- * gracePeriodHours` has passed and where the org has
- * opted in via `AppSettings.autoPublishAfterDeadline=true`.
- *
- * Missing sections render as «Не сдал» placeholders at read time — we do
- * NOT stub empty ReportSection rows in the DB. Keeps history clean and
- * `ReportSection.late` semantics intact (no row → never submitted).
- *
- * Idempotency: each candidate Report is fetched via
- * `PublicationService.publishAuto`, which short-circuits when the report
- * is already published. The scheduler iterates one report at a time so
- * a single slow-write does not stall the whole tick.
- *
- * Cron: fires every hour. The grace window can be sub-hour (minimum 0h)
- * but the auto-publish granularity is hourly — a deadline at 18:00 with
- * grace=2h auto-publishes at 21:00 (next top-of-hour after 20:00).
- */
+// Auto-publishes draft Reports past deadline+grace when opted in.
+// No empty section stubs — missing sections render as placeholders at read time.
+// See openspec/specs/period-dual-state.
 @Injectable()
 export class AutoPublisherScheduler {
   private readonly logger = new Logger(AutoPublisherScheduler.name);
@@ -41,11 +26,7 @@ export class AutoPublisherScheduler {
     await this.runOnce(new Date());
   }
 
-  /**
-   * Test seam. Returns the list of published periodIds so unit tests can
-   * assert "fires when eligible" / "skips when disabled" without scraping
-   * audit calls.
-   */
+  // Test seam: returns published periodIds without scraping audit calls.
   async runOnce(
     now: Date,
   ): Promise<
@@ -60,11 +41,8 @@ export class AutoPublisherScheduler {
     const graceMs = settings.gracePeriodHours * MS_PER_HOUR;
     const cutoff = new Date(now.getTime() - graceMs);
 
-    // Candidate set: draft Reports whose deadline + grace is in the past.
-    // `archived:false` excludes admin-archived periods: `archive` leaves
-    // `status="draft"`, so without this guard an archived draft would match and
-    // be promoted to `published` — the invalid `archived=true, periodState=
-    // "published"` dual-state. Mirrors the auto-archiver candidate filter.
+    // archived:false — archive leaves status=draft; without this an archived
+    // draft would promote to the invalid archived+published dual-state.
     const candidates = await this.prisma.report.findMany({
       where: {
         status: "draft",
@@ -82,38 +60,21 @@ export class AutoPublisherScheduler {
     const publishedIds: string[] = [];
     for (const candidate of candidates) {
       try {
-        // `publishAuto` writes the COMPLETE autoPublish field set (status,
-        // periodStatus, periodState, publishedAt, publishedById=null,
-        // autoPublished=true) in a single guarded update. It is the sole
-        // lifecycle writer here — a second `report.update` would be both
-        // redundant and a torn-write hazard (a failure after the publish
-        // commit would leave the now-`status=published` row never re-selected
-        // by the `status:"draft"` candidate query, stuck at autoPublished=false).
+        // Sole lifecycle writer here — a second report.update after publish
+        // risks a torn autoPublished flag (see period-dual-state).
         const outcome = await this.publicationService.publishAuto(candidate.id);
 
         if (!outcome.published) {
-          // Skipped: the period was archived (or already published) between
-          // candidate selection and the compare-and-set write, so it matched
-          // zero rows. An expected no-op, distinct from the `catch` failure
-          // branch — emit no audit, count no sections, and keep it out of
-          // `periodIds`.
+          // Archived or already published between scan and CAS — expected no-op.
           continue;
         }
 
         if (outcome.wasAlreadyPublished) {
-          // Raced with a manual publish: a head published this same report
-          // between candidate selection and this call, so `publishAuto`'s
-          // idempotent short-circuit returned the current row without
-          // writing. Auditing this as an auto-publish would misattribute a
-          // human action to the scheduler — same treatment as the archived
-          // skip above: no audit, no count, keep it out of `periodIds`.
+          // Manual publish won the race; do not audit as auto-publish.
           continue;
         }
 
-        // Count sections that never reached `submitted` status; these
-        // render as «Не сдал» placeholders downstream. Counted post-
-        // publish so the audit number matches what the head dashboard
-        // will surface.
+        // Count post-publish so the audit number matches the head dashboard.
         const missingSectionsCount = await this.prisma.reportSection.count({
           where: { reportId: candidate.id, status: "draft" },
         });

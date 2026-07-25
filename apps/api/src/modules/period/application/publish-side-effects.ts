@@ -1,29 +1,17 @@
 import type { PeriodStatus } from "@customreport/shared";
 
-/**
- * Post-publish ingestion seam: awaited after a successful publish with the
- * just-published section ids, so its latency is on the publish response path.
- * Only errors are isolated — swallowed by {@link emitPublishSideEffects} so a
- * downstream consumer blip cannot fail a real-user publish action. No
- * consumer is currently wired; the seam exists so one can attach without
- * touching either publish path.
- */
+// Post-publish ingestion seam; errors are swallowed so a consumer blip
+// cannot fail a real-user publish. Attach a consumer without touching publish paths.
 export type IngestionPublishHook = (
   sectionIds: readonly string[],
 ) => Promise<void>;
 
-/**
- * The counter pair both publish paths bump on a real transition. `S` is the
- * label-union width the concrete telemetry port can honor — `PeriodTelemetry`
- * accepts any `PeriodStatus`, `PublicationTelemetry` only `"open"` — so the
- * compiler, not a call-site literal, keeps `priorStatus` inside that width.
- */
+// S is the telemetry port's label-union width so priorStatus stays in bounds.
 interface PublishSideEffectsTelemetry<S extends PeriodStatus> {
   recordPublishedReport(): void;
   recordPeriodPublished(from: S): void;
 }
 
-/** Collaborators required after every successful publish transition. */
 export interface PublishSideEffectsDeps<S extends PeriodStatus = PeriodStatus> {
   telemetry: PublishSideEffectsTelemetry<S>;
   ingestionHook: IngestionPublishHook;
@@ -35,24 +23,13 @@ export interface PublishSideEffectsDeps<S extends PeriodStatus = PeriodStatus> {
 export interface PublishSideEffectsParams<
   S extends PeriodStatus = PeriodStatus,
 > {
-  /** The report's periodStatus immediately before the write that just transitioned it. */
   priorStatus: S;
-  /**
-   * Resolves the section ids to hand to the ingestion hook. `publishPeriod`
-   * re-reads them from the repository AFTER the transaction (picking up
-   * sections that raced in before commit); `publishAuto` already holds them
-   * on the just-saved assembled report, so its resolver is synchronous.
-   */
+  // publishPeriod re-reads section ids after the tx; publishAuto already has them.
   getSectionIds: () => Promise<readonly string[]> | readonly string[];
 }
 
-/**
- * Emitted only after a real publish transition, so a redundant or failed
- * write never inflates the on-time-ratio numerator: telemetry pair first,
- * then cache invalidation, then the awaited-but-swallowed ingestion enqueue.
- */
-// `NoInfer` pins `S` to what the telemetry port declares: `priorStatus` must
-// fit the port's width, and can never widen the inference instead.
+// Only after a real transition (telemetry → cache → swallowed ingestion).
+// NoInfer pins S to the telemetry port so priorStatus cannot widen inference.
 export async function emitPublishSideEffects<S extends PeriodStatus>(
   deps: PublishSideEffectsDeps<S>,
   params: PublishSideEffectsParams<NoInfer<S>>,

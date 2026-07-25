@@ -29,7 +29,6 @@ describe("PublicationPrismaRepository (integration)", () => {
   });
 
   it("getAssembledReport returns full report with all sections", async () => {
-    // Add some data to the section to make the report non-trivial
     const stage = await prisma.stage.create({
       data: {
         id: "a0000000-0000-4000-a000-000000000aa2",
@@ -148,9 +147,7 @@ describe("PublicationPrismaRepository (integration)", () => {
     const reloaded = await prisma.report.findUnique({
       where: { id: testData.report.id },
     });
-    // The auto path used to leave periodStatus="open" and rely on a SECOND
-    // transaction for autoPublished — a torn-write window. autoPublish now
-    // writes the complete set in one compare-and-set update.
+    // autoPublish writes status/periodStatus/periodState/autoPublished in one CAS.
     expect(expectDefined(reloaded).status).toBe("published");
     expect(expectDefined(reloaded).periodStatus).toBe("published");
     expect(expectDefined(reloaded).periodState).toBe("published");

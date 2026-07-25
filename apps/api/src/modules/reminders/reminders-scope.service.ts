@@ -22,18 +22,12 @@ function tallyDispatchOutcomes(
   };
 }
 
-/** The zero-activity result shape shared by `dispatchPendingReminders`'s two early-exit paths. */
 function noDispatchResult(reason: string): DispatchPendingResult {
   return { dispatched: 0, alreadySent: 0, skipped: 0, reason };
 }
 
-/**
- * Scope-authorization + dispatch logic for the reminders namespace, split out
- * of `RemindersService` (which holds one as a private field) to keep that
- * file under the line budget. `requestReminderExecution` is threaded in as a
- * callback rather than an inherited method; it returns the atomic dispatch
- * outcome the insert itself proved, which is what counters classify on.
- */
+// Scope-authorization + dispatch for the reminders namespace. requestReminderExecution
+// is a callback so counters classify on the atomic insert outcome.
 export class RemindersScopeService {
   constructor(
     private readonly repository: RemindersScopeRepository,
@@ -46,12 +40,7 @@ export class RemindersScopeService {
     }>,
   ) {}
 
-  /**
-   * A reminder rule's only group link is `rule.report -> section.author
-   * group`. Resolve the rule's report id, rejecting a missing rule or a rule
-   * with no report — a non-admin caller cannot be scoped against it, so it
-   * is out of reach (FORBIDDEN, fail-closed).
-   */
+  // Fail closed: missing/reportless rule is out of reach for non-admin.
   private async resolveScopedReportId(ruleId: string): Promise<string> {
     const reportId = await this.repository.getRuleReportId(ruleId);
     if (!reportId) {
@@ -60,10 +49,6 @@ export class RemindersScopeService {
     return reportId;
   }
 
-  /**
-   * The rule is in scope iff its report carries at least one section whose
-   * author is in the caller's group.
-   */
   private async assertReportHasInScopeSection(
     session: UserSession,
     reportId: string,
@@ -97,12 +82,7 @@ export class RemindersScopeService {
     }
   }
 
-  /**
-   * A single-lead dispatch is authorized against the `User` row, not a
-   * section — an in-scope lead may have no section yet, which a section
-   * check could not distinguish from an out-of-scope lead. Admin's empty
-   * scope fragment matches any user (god-mode).
-   */
+  // Authorize against the User row: in-scope lead may have no section yet.
   private async assertLeadInScope(
     session: UserSession,
     leadId: string,
@@ -116,11 +96,6 @@ export class RemindersScopeService {
     }
   }
 
-  /**
-   * Authorization for `reminders.execute`: admin bypasses; a non-admin
-   * caller must own the rule's report scope AND the recipient must be an
-   * in-scope draft-section author.
-   */
   async authorizeExecute(
     session: UserSession,
     ruleId: string,
@@ -132,13 +107,7 @@ export class RemindersScopeService {
     await this.assertDraftRecipientInScope(session, reportId, recipientEmail);
   }
 
-  /**
-   * The recipient-email allowlist for `reminders.listExecutions`: null for
-   * admin (unfiltered), otherwise every in-scope section author on the
-   * rule's report plus the caller's own email (escalation digests are
-   * addressed to the head themself). Rejects a rule whose report has no
-   * in-scope section (out of reach).
-   */
+  // Admin: unfiltered. Else in-scope authors + caller's email (escalation digests).
   async resolveExecutionsRecipientAllowlist(
     session: UserSession,
     ruleId: string,
@@ -155,14 +124,7 @@ export class RemindersScopeService {
     return new Set([...emails, session.email]);
   }
 
-  /**
-   * Authorization + dispatch for `reminders.dispatchPending`. An
-   * out-of-scope report fails closed BEFORE any rule is resolved, so the
-   * response cannot reveal whether a rule exists there (no rule-existence
-   * oracle). A single-lead dispatch is authorized against the lead's `User`
-   * row, not a section, preserving the no-section success state for an
-   * in-scope lead with no draft yet.
-   */
+  // Fail closed on scope before rule resolution (no rule-existence oracle).
   async dispatchPendingReminders(
     session: UserSession,
     reportId: string,
@@ -190,12 +152,7 @@ export class RemindersScopeService {
     return this.dispatchDraftSections(rule, draftSections);
   }
 
-  /**
-   * Race-safe attribution straight from the atomic insert: the dedupeKey
-   * unique index means exactly one caller ever gets "created" (and a revived
-   * failed row also produces a real send), so counters classify on the
-   * outcome the write itself proved — no clocks involved.
-   */
+  // Classify from the atomic insert outcome (dedupeKey unique index); no clocks.
   private async classifySectionDispatch(
     rule: { id: string; fireAt: Date },
     section: { email: string; notificationOptOut: boolean },
@@ -208,11 +165,7 @@ export class RemindersScopeService {
     return outcome === "deduplicated" ? "alreadySent" : "dispatched";
   }
 
-  /**
-   * Sequential accumulation, one section at a time, so dispatch side effects
-   * (enqueue, revive) and their outcomes resolve in a deterministic order
-   * instead of interleaving across sections under a fanned-out Promise.all.
-   */
+  // Sequential so enqueue/revive outcomes resolve in deterministic order.
   private async collectDispatchOutcomes(
     rule: { id: string; fireAt: Date },
     remaining: readonly { email: string; notificationOptOut: boolean }[],

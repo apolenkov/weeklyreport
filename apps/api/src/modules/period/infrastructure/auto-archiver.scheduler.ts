@@ -7,22 +7,9 @@ import type { AuditLogger } from "../../../lib/audit-logger.js";
 import { SnapshotAdminService } from "../../admin/index.js";
 import { buildTransition } from "../domain/period-transition.js";
 
-/**
- * Daily scheduler that flips published Reports to `archived=true` once their
- * `publishedAt + autoArchiveWeeksAfterPublish * 7d` cutoff has passed.
- *
- * Skips entirely when `autoArchiveWeeksAfterPublish === 0` — the admin's
- * way of saying "never auto-archive". This is the opt-IN default; the schema
- * default of 0 keeps existing orgs on the manual-archive path until they flip
- * the toggle.
- *
- * Idempotency: the where-clause already excludes `archived=true` rows, so
- * a tick that runs twice on the same day is a no-op on the second pass.
- *
- * Cron: fires daily at 00:15 UTC. The 10-minute offset from the
- * period-creator (00:05) avoids two transactions competing for the same
- * advisory locks at midnight.
- */
+// Archives published Reports past publishedAt + retention. 0 weeks = never.
+// 00:15 UTC offsets period-creator (00:05) to avoid lock contention.
+// See openspec/specs/period-dual-state.
 @Injectable()
 export class AutoArchiverScheduler {
   private readonly logger = new Logger(AutoArchiverScheduler.name);
@@ -39,11 +26,7 @@ export class AutoArchiverScheduler {
     await this.runOnce(new Date());
   }
 
-  /**
-   * Test seam. Returns the list of archived periodIds so unit tests can
-   * assert "fires when eligible" / "skips when disabled" without scraping
-   * audit calls.
-   */
+  // Test seam: returns archived periodIds without scraping audit calls.
   async runOnce(
     now: Date,
   ): Promise<
@@ -63,13 +46,8 @@ export class AutoArchiverScheduler {
         status: "published",
         archived: false,
         publishedAt: { lt: cutoff, not: null },
-        // A reopened period keeps the legacy tuple (status='published',
-        // archived=false) and its original publishedAt, but reverts the
-        // canonical `periodState` to 'open' (period-transition.ts `reopen`).
-        // Without this guard a period reopened after its retention cutoff
-        // matches all three legacy predicates and gets silently auto-archived,
-        // destroying the in-progress editing session. periodState is the
-        // canonical column (audit comment below) — exclude any reopened period.
+        // Reopened periods keep status=published/archived=false but periodState=open;
+        // without this guard they would be auto-archived mid-edit.
         periodState: { not: "open" },
       },
       select: { id: true },
@@ -82,14 +60,8 @@ export class AutoArchiverScheduler {
     const archivedIds: string[] = [];
     for (const candidate of candidates) {
       try {
-        // The autoArchive transition writes the legacy `archived` boolean, the
-        // new `periodState` column, and the `autoArchived` audit flag as one
-        // atomic row-level field set. The write re-asserts the candidate
-        // predicates: a head can reopen a period between the candidate scan and
-        // this write, and an unconditional update would then archive a row
-        // whose sections the reopen just reset to draft. `periodStatus` is the
-        // discriminator column the reopen compare-and-set flips, so a reopen
-        // that wins the window drops this write to zero rows.
+        // Compare-and-set on periodStatus so a reopen between scan and write
+        // drops this update to zero rows (see period-dual-state).
         const { count } = await this.prisma.report.updateMany({
           where: {
             id: candidate.id,

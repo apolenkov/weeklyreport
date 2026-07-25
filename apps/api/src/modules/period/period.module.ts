@@ -31,20 +31,8 @@ import { PeriodPrismaRepository } from "./infrastructure/period.prisma-repositor
 import { PeriodCreatorScheduler } from "./infrastructure/period-creator.scheduler.js";
 import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-telemetry.adapter.js";
 
-/**
- * Three scheduler classes (`PeriodCreatorScheduler`,
- * `AutoPublisherScheduler`, `AutoArchiverScheduler`) are wired here. They
- * consume `SnapshotAdminService` (settings), `PrismaService` (DB), and — for the
- * auto-publisher — `PublicationService` (publishAuto). NestSchedule's
- * `@Cron` decorators in those classes only fire when `ScheduleModule.forRoot()`
- * is present in the root `AppModule` — already wired there for the
- * pre-existing `RemindersScheduler`.
- *
- * Audit envelopes are emitted through the real `AuditLogger`: each scheduler
- * factory injects the `AUDIT_LOGGER` token (config.module.ts), which resolves
- * the AppLogger-backed sink shared with `main.ts`. The arg is required — a
- * missing sink fails DI resolution loudly rather than degrading to a no-op.
- */
+// Schedulers need ScheduleModule.forRoot() in AppModule and a real AuditLogger
+// DI (missing sink fails loud). See openspec/specs/period-scheduler-wiring.
 @Module({
   imports: [
     AnalyticsModule,

@@ -16,12 +16,8 @@ import { deriveEffectiveProductStatus } from "./report-sections/infrastructure/r
 export const reportFullIncludeForSnapshot = {
   sections: {
     include: reportSectionFullInclude,
-    // Postgres's default collation orders author names ascending here, but it
-    // only approximates the live preview's Node/ICU localeCompare(..., "ru")
-    // order. Exact parity is not guaranteed; this accepted residual gap keeps
-    // the durable snapshot's ordering in one query-level location.
-    // The id tiebreak keeps the order stable across reads when two authors
-    // share a display name.
+    // Postgres collation approximates Node/ICU localeCompare("ru"); id
+    // tiebreak stabilizes shared display names. Exact parity not guaranteed.
     orderBy: [{ author: { name: "asc" } }, { id: "asc" }],
   },
   publishedBy: true,
@@ -90,7 +86,7 @@ export function filterSnapshotSections(
   });
 }
 
-/** Re-flooring keeps stale stored traffic lights aligned with product risks. */
+// Re-flooring keeps stale stored traffic lights aligned with product risks.
 export function effectiveProjectStatus(
   section: ReportSectionReadModel,
   project: ReportSectionReadModel["projects"][number],
@@ -108,7 +104,6 @@ interface ProjectOccurrence {
   project: ReportSectionReadModel["projects"][number];
 }
 
-/** Group every section-level occurrence by its stable product identity. */
 function groupProjectOccurrences(
   sections: readonly ReportSectionReadModel[],
 ): Map<string, ProjectOccurrence[]> {
@@ -120,7 +115,7 @@ function groupProjectOccurrences(
   );
 }
 
-/** Prefer the frozen cross-lead union while retaining legacy snapshot support. */
+// Prefer frozen cross-lead union; retain legacy snapshot support.
 function computePublishedStageCount(
   occurrences: readonly ProjectOccurrence[],
 ): number {

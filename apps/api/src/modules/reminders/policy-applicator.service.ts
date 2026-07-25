@@ -122,20 +122,14 @@ export class PolicyApplicatorService {
     return tally;
   }
 
-  /**
-   * Sequential accumulation, one policy at a time: each policy's
-   * findUnique-then-upsert must fully resolve before the next one starts, so
-   * a policy's own P2002 recovery (log + continue) cannot interleave with —
-   * or be masked by — a concurrently-inflight sibling policy's write.
-   */
+  // Sequential: each policy's findUnique-then-upsert must finish before the next
+  // so P2002 recovery cannot interleave with a sibling write.
   private async collectPolicyTally(
     remaining: readonly ReminderPolicy[],
     period: { id: string; deadline: Date },
     now: Date | undefined,
     excludePolicyIds: ReadonlySet<string> | undefined,
   ): Promise<PolicyApplyTally> {
-    // `await tallyPromise` before each policy's write keeps the fold strictly
-    // sequential — a policy's own upsert fully resolves before the next starts.
     return remaining.reduce<Promise<PolicyApplyTally>>(
       async (tallyPromise, policy) => {
         const tally = await tallyPromise;
@@ -151,13 +145,7 @@ export class PolicyApplicatorService {
     );
   }
 
-  /**
-   * Apply one policy to one period: validity/elapsed gate, then an
-   * idempotent upsert against `uq_rule_report_policy`. A P2002 during the
-   * upsert is the (reportId, policyId) race between two concurrent
-   * `applyToPeriod` calls — logged and reported as `"skipped"` rather than
-   * thrown, the swallow-any behavior this path has always had.
-   */
+  // Validity/elapsed gate then upsert; concurrent P2002 races report as "skipped".
   private async applyPolicyToPeriod(
     policy: ReminderPolicy,
     period: { id: string; deadline: Date },
@@ -215,13 +203,8 @@ export class PolicyApplicatorService {
 
       return existing ? "updated" : "created";
     } catch (error: unknown) {
-      // Unscoped: any P2002 here is the (reportId, policyId) race — the
-      // swallow-any behavior this loop has always had.
+      // Concurrent applyToPeriod on the same (reportId, policyId): log and continue.
       if (isUniqueViolation(error)) {
-        // Two concurrent applyToPeriod calls raced on the same
-        // (reportId, policyId). The unique index prevents duplicates;
-        // log + continue so the loop finishes the rest of the
-        // policies for this period.
         this.logger.warn(
           `applyToPeriod race on (period=${period.id}, policy=${policy.id}); rule already exists`,
         );

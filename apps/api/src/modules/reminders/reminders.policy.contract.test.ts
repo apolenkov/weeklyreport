@@ -1,19 +1,8 @@
 import { reminderPolicySchema } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-/**
- * Wire-format contract tests for ReminderPolicy.
- *
- * These tests pin the zod schema on the wire boundary so a malicious
- * admin client cannot drift the audience/kind enums or smuggle an
- * incoherent validity window past the API. The router uses
- * `reminderPolicySchema` as `.input(...)` on `admin.savePolicy`, so
- * everything asserted here also holds for the live tRPC endpoint.
- *
- * Pure zod tests — no Prisma, no DI, no HTTP. They live next to the
- * other reminder contract tests so test discovery picks them up under
- * the same `reminders/` glob.
- */
+// Pins reminderPolicySchema so a client cannot drift audience/kind or
+// smuggle an incoherent validity window past admin.savePolicy.
 describe("reminderPolicySchema", () => {
   const baseId = "11111111-1111-4111-8111-111111111111";
   const validFrom = new Date("2026-05-01T00:00:00.000Z");

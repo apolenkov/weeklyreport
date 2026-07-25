@@ -166,12 +166,8 @@ export class ProjectActivityPrismaRepository implements ProjectActivityRepositor
   }
 
   async detachLead(edge: ProjectActivityLeadEdge): Promise<void> {
-    // deleteMany so detaching an already-detached lead is a no-op, not a P2025.
-    // The same transaction removes the lead's ActivityStatus rows on OPEN /
-    // REOPENED periods (the editable-period predicate the lead-form read gate
-    // uses): otherwise the seeded rows keep rendering in the assembled report
-    // and remain in the section read model. Published/archived history stays
-    // frozen — those rows are part of the record the head signed off on.
+    // deleteMany is a no-op if already detached. Cascade ActivityStatus on
+    // open/reopened only — published history stays frozen for the signed record.
     await this.prisma.$transaction([
       this.prisma.projectActivityLead.deleteMany({ where: edge }),
       this.prisma.activityStatus.deleteMany({

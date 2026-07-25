@@ -6,12 +6,7 @@ import type { AppLogger } from "../../lib/logger.js";
 import { OrganizationPrismaRepository } from "./organization.prisma-repository.js";
 import { OrganizationService } from "./organization.service.js";
 
-/**
- * Organization identity module.
- *
- * Owns the singleton `Organization` row. Exposed to the tRPC router via
- * `OrganizationService` (the router resolves it from the Nest container).
- */
+// Owns the singleton Organization row.
 @Module({
   imports: [ConfigModule],
   providers: [

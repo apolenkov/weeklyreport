@@ -52,13 +52,8 @@ async function collectScoped(
   );
 }
 
-/**
- * Paginate a rule's execution history over a DB-level keyset source. The
- * recipient allowlist is derived data (not a DB column), so scoping filters
- * each fetched batch and keeps fetching until the page fills or the history
- * ends — without an allowlist the page fills from the first query. `cursor`
- * is the id of a previously returned row, so it is valid keyset input.
- */
+// Recipient allowlist is derived (not a column): filter batches until the
+// page fills. Cursor is a previously returned row id (valid keyset input).
 export async function paginateReminderExecutions(
   fetchPage: FetchExecutionsPage,
   pagination?: PaginationInput,

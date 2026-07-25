@@ -16,7 +16,6 @@ const activeRule: AdminReminderRule = {
   timezone: "Europe/Moscow",
   status: "active",
   version: 1,
-  // Nullable FK back to ReminderPolicy.
   policyId: null,
 };
 
@@ -170,7 +169,6 @@ describe("reminder rule domain mapping and deduplication", () => {
       "lead2@customreport.local",
     );
 
-    // Different emails must produce different executions
     expect(exec1.id).not.toBe(exec2.id);
     expect(exec1.dedupeKey).not.toBe(exec2.dedupeKey);
     expect(exec1.recipientEmail).toBe("lead1@customreport.local");
