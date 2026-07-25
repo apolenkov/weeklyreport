@@ -6,6 +6,7 @@ type ComingSoonBadgeProps = HTMLAttributes<HTMLSpanElement>;
 /**
  * Amber deferred-feature pill with a visible label — never a hidden flag.
  * Place on an inert control to mark UI that is deferred (not shipped).
+ * @param props - The props argument.
  */
 export function ComingSoonBadge({ className, ...props }: ComingSoonBadgeProps) {
   return (

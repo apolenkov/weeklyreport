@@ -5,6 +5,7 @@ import type * as React from "react";
 
 /**
  * Radix Collapsible root with `data-slot="collapsible"` for themed targeting.
+ * @param props - The props argument.
  */
 function Collapsible({
   ...props
@@ -14,6 +15,7 @@ function Collapsible({
 
 /**
  * Radix collapsible trigger with `data-slot="collapsible-trigger"`.
+ * @param props - The props argument.
  */
 function CollapsibleTrigger({
   ...props
@@ -25,6 +27,7 @@ function CollapsibleTrigger({
 
 /**
  * Radix collapsible content panel with `data-slot="collapsible-content"`.
+ * @param props - The props argument.
  */
 function CollapsibleContent({
   ...props

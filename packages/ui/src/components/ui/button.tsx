@@ -47,6 +47,7 @@ const buttonVariants = cva(
 /**
  * Primary action control; set asChild to render via Slot instead of a button.
  * size="touch" is a ≥44px HIG tap target for primary mobile actions.
+ * @param props - The props argument.
  */
 function Button({
   className,

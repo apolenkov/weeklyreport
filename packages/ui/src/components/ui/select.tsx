@@ -7,6 +7,7 @@ import type * as React from "react";
 
 /**
  * Radix select root.
+ * @param props - The props argument.
  */
 function Select({
   ...props
@@ -16,6 +17,7 @@ function Select({
 
 /**
  * Groups related select items.
+ * @param props - The props argument.
  */
 function SelectGroup({
   ...props
@@ -25,6 +27,7 @@ function SelectGroup({
 
 /**
  * Displays the selected value in the trigger.
+ * @param props - The props argument.
  */
 function SelectValue({
   ...props
@@ -34,6 +37,7 @@ function SelectValue({
 
 /**
  * Button that opens the select and shows SelectValue.
+ * @param props - The props argument.
  */
 function SelectTrigger({
   className,
@@ -63,6 +67,7 @@ function SelectTrigger({
 
 /**
  * Positioned select listbox panel.
+ * @param props - The props argument.
  */
 function SelectContent({
   className,
@@ -103,6 +108,7 @@ function SelectContent({
 
 /**
  * Non-interactive label inside a select group.
+ * @param props - The props argument.
  */
 function SelectLabel({
   className,
@@ -119,6 +125,7 @@ function SelectLabel({
 
 /**
  * Selectable option row with check indicator.
+ * @param props - The props argument.
  */
 function SelectItem({
   className,
@@ -149,6 +156,7 @@ function SelectItem({
 
 /**
  * Visual separator inside select content.
+ * @param props - The props argument.
  */
 function SelectSeparator({
   className,
@@ -165,6 +173,7 @@ function SelectSeparator({
 
 /**
  * Scroll-up control for long select lists.
+ * @param props - The props argument.
  */
 function SelectScrollUpButton({
   className,
@@ -186,6 +195,7 @@ function SelectScrollUpButton({
 
 /**
  * Scroll-down control for long select lists.
+ * @param props - The props argument.
  */
 function SelectScrollDownButton({
   className,

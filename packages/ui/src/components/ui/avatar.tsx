@@ -6,6 +6,7 @@ import type * as React from "react";
 
 /**
  * Radix avatar root. `size` maps to sm (24px), default (32px), or lg (40px).
+ * @param props - The props argument.
  */
 function Avatar({
   className,
@@ -29,6 +30,7 @@ function Avatar({
 
 /**
  * Image slot for an Avatar root; fills the circle when load succeeds.
+ * @param props - The props argument.
  */
 function AvatarImage({
   className,
@@ -45,6 +47,7 @@ function AvatarImage({
 
 /**
  * Fallback content shown while the image is missing or still loading.
+ * @param props - The props argument.
  */
 function AvatarFallback({
   className,
@@ -64,6 +67,7 @@ function AvatarFallback({
 
 /**
  * Status/badge overlay anchored to the bottom-right of its Avatar parent.
+ * @param props - The props argument.
  */
 function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
   return (
@@ -83,6 +87,7 @@ function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
 
 /**
  * Overlapping stack container for multiple Avatar children.
+ * @param props - The props argument.
  */
 function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -99,6 +104,7 @@ function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
 
 /**
  * Overflow count chip sized to match sibling avatars in an AvatarGroup.
+ * @param props - The props argument.
  */
 function AvatarGroupCount({
   className,

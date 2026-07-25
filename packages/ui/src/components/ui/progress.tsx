@@ -10,6 +10,7 @@ const PROGRESS_COMPLETE_PERCENT = 100;
 
 /**
  * Determinate progress bar; value drives the indicator transform.
+ * @param props - The props argument.
  */
 function Progress({
   className,
