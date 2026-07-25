@@ -22,14 +22,8 @@ interface UsePdfExportJobResult {
   readonly handleExport: () => void;
 }
 
-/**
- * Wires the leadership-scoped (head/admin/viewer; lead FORBIDDEN)
- * `pdfExport.request` mutation to start a BullMQ job, then
- * polls `pdfExport.status` every 2 seconds until the worker reports
- * `completed` or `failed`. Opens a blank tab synchronously on click so the
- * later navigation is not treated as an unsolicited popup; if open is blocked,
- * exposes a fallback URL once the artifact URL is known.
- */
+// Open blank tab on click (user-gesture) so later nav is not a popup; poll
+// until completed/failed and fall back to a download link if open is blocked.
 export function usePdfExportJob({
   reportId,
   periodStatus,
@@ -143,11 +137,8 @@ function closeHeldTab(ref: { current: Window | null }): void {
   ref.current = null;
 }
 
-/**
- * Hands the artifact to the user via the held tab (success toast) or, when
- * the tab was closed, via the fallback download link with an info toast —
- * never a success claim for a delivery the user cannot see.
- */
+// Prefer the held tab; if closed/blocked, fall back to download link + info
+// toast — never claim success for a delivery the user cannot see.
 function deliverArtifact(
   artifactUrl: string,
   deliveryModeRef: { current: DeliveryMode | null },

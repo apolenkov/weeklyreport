@@ -1,10 +1,10 @@
 /**
  * @vitest-environment jsdom
  *
- * rethink-pipeline-state-vs-completeness: the left edge carries ONLY product
- * health (always solid). Own-input completeness is a SEPARATE right-side
- * affordance (dashed ring + "N/M stages" counter) and never shares the health
- * hue. Tests prove the two signals are independent across all four quadrants.
+ * Left edge carries ONLY product health (always solid). Own-input completeness
+ * is a SEPARATE right-side affordance (dashed ring + "N/M stages" counter) and
+ * never shares the health hue. Tests prove the two signals are independent
+ * across all four quadrants.
  */
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
@@ -554,7 +554,7 @@ function getStagesRow(container: HTMLElement): HTMLElement | null {
   );
 }
 
-describe("SdlcPipeline — align-pipeline-arrows structural contract", () => {
+describe("SdlcPipeline — pipeline arrow structural contract", () => {
   it("stages row carries items-start", () => {
     const { container } = render(
       <SdlcPipeline products={[BASE_PRODUCT]} readOnly={false} />,
@@ -603,12 +603,9 @@ describe("SdlcPipeline — align-pipeline-arrows structural contract", () => {
   });
 });
 
-// ---- lead-mine-hide-unowned-stages: Mine renders only own stages ----
-//
-// In Mine mode the pipeline renders ONLY the lead's own stage chips; foreign-
-// owned (locked) and vacant (unassigned) chips are hidden, not greyed. Everyone
-// renders the full grid. Hiding chips MUST NOT move product health (left edge)
-// or own-input completeness, which read the full `product`/`rawProduct`.
+// Mine renders only own stages; foreign-owned (locked) and vacant chips are
+// hidden, not greyed. Everyone renders the full grid. Hiding chips MUST NOT
+// move product health (left edge) or own-input completeness.
 
 /** The stage names of every rendered chip (chips are buttons with aria-label). */
 function renderedStageNames(container: HTMLElement): string[] {
@@ -617,11 +614,9 @@ function renderedStageNames(container: HTMLElement): string[] {
   );
 }
 
-describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () => {
-  // unassigned-stage-reporting-exclusion: post-mapper grids never carry a
-  // vacant "unassigned" stage anymore — a non-owned stage is foreign-owned
-  // (locked). One own stage + a locked stage with a resolved owner (OL) + a
-  // locked stage whose owner is not resolved in the lead's own grid (null).
+describe("SdlcPipeline — Mine chip visibility", () => {
+  // Post-mapper grids never carry a vacant "unassigned" stage — a non-owned
+  // stage is foreign-owned (locked). Fixture: one own + locked(OL) + locked(null).
   const PRODUCT_OWN_FOREIGN_VACANT: Product = {
     id: "p-vis",
     name: "Visibility Product",
@@ -700,10 +695,8 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     expect(indicator?.getAttribute("tabindex")).toBeNull();
     // Visible count of collapsed stages (Testing + DevOps hidden).
     expect(indicator?.textContent).toContain("2");
-    // pipeline-tooltip-and-indicator: the aria-label lists each hidden stage with
-    // an honest owner line — an owned-but-unstatused stage names its owner, a
-    // foreign-owned stage with no resolved owner reads "another lead" (never
-    // "empty", never "unassigned").
+    // aria-label lists each hidden stage with an honest owner line — owned
+    // stages name their owner; unresolved foreign reads "another lead".
     const reveal = "Testing — OL: at-risk, DevOps — another lead";
     expect(indicator?.getAttribute("title")).toBeNull();
     expect(indicator?.getAttribute("aria-label")).toContain(reveal);
@@ -734,7 +727,7 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     expect(tip).toHaveTextContent("DevOps — another lead");
   });
 
-  it("pipeline-tooltip-and-indicator: each reveal row carries its stage status colour", async () => {
+  it("each reveal row carries its stage status colour", async () => {
     // PRODUCT_OWN_FOREIGN_VACANT hides Testing (OL: at-risk) + DevOps
     // (foreign-owned, empty). Each reveal row MUST take its own status text
     // token — at-risk for Testing, neutral for the empty DevOps — not plain text.
@@ -933,7 +926,7 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     // +N more reveal must consult it — a DevOps stage held by IG reads as "IG",
     // and an unresolved foreign stage (Support) reads "another lead" (the user
     // reported the tooltip showing every hidden stage as empty while co-owners
-    // held them). unassigned-stage-reporting-exclusion: "unassigned" is gone.
+    // held them). The "unassigned" label is gone.
     const product: Product = {
       id: "p-foreign-owned",
       name: "Foreign Owned",

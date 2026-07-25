@@ -48,12 +48,7 @@ describe("DecisionsSection meta-row", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Buttons render when: !readOnly && !foreign. Ownership is the id-based
-// `foreign` flag, NOT a free-text owner/name match — so an own (non-foreign)
-// decision shows Edit/Delete regardless of the owner string.
-// ---------------------------------------------------------------------------
-
+// Buttons when !readOnly && !foreign (id-based flag, not free-text owner match).
 describe("DecisionsSection — EditIcon and DeleteIcon aria-hidden", () => {
   it("EditIcon svg has aria-hidden='true'", () => {
     render(<DecisionsSection decisions={[BASE_DECISION]} />);
@@ -111,10 +106,6 @@ describe("DecisionsSection — EditIcon and DeleteIcon aria-hidden", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Snapshots lock the accessibility tree of the edit/delete buttons.
-// ---------------------------------------------------------------------------
-
 describe("DecisionsSection — Edit and Delete button DOM accessibility tree", () => {
   it("Edit button DOM accessibility tree — icon hidden from a11y tree (snapshot)", () => {
     render(<DecisionsSection decisions={[BASE_DECISION]} />);
@@ -131,15 +122,7 @@ describe("DecisionsSection — Edit and Delete button DOM accessibility tree", (
   });
 });
 
-// ---------------------------------------------------------------------------
-// Regression: ownership is the id-based `foreign` flag, not a name match.
-// A lead lost Edit/Delete on their OWN decisions whenever the seeded owner
-// string ("Василий И.") differed from their user display name — the old
-// `isMine(owner, currentUserName)` gate failed on the mismatch. Own
-// (non-foreign) decisions must always be editable, regardless of the owner
-// string vs the signed-in name.
-// ---------------------------------------------------------------------------
-
+// Own (non-foreign) decisions stay editable regardless of owner string vs signed-in name.
 describe("DecisionsSection — own decision stays editable despite owner/name mismatch", () => {
   it("renders Edit and Delete when the owner string differs from currentUserName", () => {
     render(

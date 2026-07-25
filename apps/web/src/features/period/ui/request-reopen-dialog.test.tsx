@@ -1,13 +1,6 @@
 /**
- * VA-0a regression: a11y assertions for RequestReopenDialog.
- *
- * Covers the high-priority unit-rtl rows from the verify-a11y catalog
- * (openspec/changes/verify-a11y-recommended-flip/design.md):
- *  - Escape key on backdrop fires onCancel (onKeyDown on backdrop div)
- *  - Cancel button click fires onCancel
- *  - Backdrop div has role="presentation"
- *  - Clicking inside the dialog (inner div) does NOT fire onCancel (stopPropagation)
- *  - Escape while focus is inside the dialog fires onCancel via event bubble
+ * a11y assertions for RequestReopenDialog: Escape/Cancel/backdrop close,
+ * stopPropagation on the inner surface, and autofocus on the textarea.
  */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -28,7 +21,7 @@ function renderDialog(
   );
 }
 
-describe("RequestReopenDialog — a11y regression (VA-0a)", () => {
+describe("RequestReopenDialog — a11y regression", () => {
   it("calls onCancel when Escape is pressed on the backdrop div", () => {
     const onCancel = vi.fn();
     renderDialog({ onCancel });

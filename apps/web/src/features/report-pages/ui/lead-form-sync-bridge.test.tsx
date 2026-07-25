@@ -293,11 +293,7 @@ describe("LeadFormSyncBridge", () => {
   });
 });
 
-// Saving a risk reflects up to the chip via the render-time floor
-// (applyRiskSeverityFloor) — NOT by persisting a derived status onto the
-// products. Write-through of derived status would corrupt completeness;
-// these tests pin the display-only behavior plus the no-persisted-status
-// contract.
+// Risk severity is display-only via applyRiskSeverityFloor — never persisted.
 describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-through)", () => {
   it("saving a Blocked risk renders the covered chip blocked WITHOUT persisting a status", async () => {
     const user = userEvent.setup();
@@ -473,18 +469,8 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     expect(onProductsChangeSpy).not.toHaveBeenCalled();
   });
 
-  it("reload regression: a raw-empty stage covered by an OWN risk renders floored, counts in X/7, and stays distinguishable from an explicit status", () => {
-    // Inputs mirror the read model after a risk add WITHOUT a refetch: the raw
-    // Dev stage persists `empty` and the risk arrives via state (initialRisks),
-    // with no baked coveredByOwnRisk flag. The bridge re-derives
-    // coveredByOwnRisk and re-applies the severity floor at render. The
-    // mapper-bake half of reload (the flag arriving already set from the DB
-    // read) is proven in lead-form.test.ts; together they cover both reload
-    // entry points. Three guarantees in one place:
-    //   1. render floored — the empty Dev chip shows the risk severity (blocked),
-    //   2. counts in X/7 — coveredByOwnRisk ticks the pill 1/2 → 2/2,
-    //   3. stays distinguishable — Dev reads "by risk" (covered), Testing reads
-    //      "status set" (explicit), so the chip distinction survives the reload.
+  it("empty stage covered by own risk renders floored, counts in X/7, stays distinct from explicit status", () => {
+    // No-refetch path: raw empty + live risk → re-derive coverage and floor.
     const product = buildProduct({
       stages: [
         {

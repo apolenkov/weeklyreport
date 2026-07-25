@@ -14,14 +14,7 @@ interface RevokeLeadButtonProps {
   readonly onMutated: () => void;
 }
 
-/**
- * Per-lead Revoke button for the head dashboard.
- *
- * Reuses the existing `leadForm.revoke` tRPC mutation — no new backend logic.
- * Shows a ConfirmationDialog before mutating; toasts on success or error.
- * Invalidates the `weeklyReport.get` query so the row reflects "Draft" state
- * without a manual refresh.
- */
+// Invalidates weeklyReport.get so the row shows Draft without a manual refresh.
 export function RevokeLeadButton({
   reportSectionId,
   leadName,

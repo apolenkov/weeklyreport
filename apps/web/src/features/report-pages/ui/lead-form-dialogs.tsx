@@ -13,14 +13,12 @@ import {
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import type { QuickAddItem } from "./use-lead-form-draft";
 
-/** The quick-add dialog slice the dialogs host renders from. */
 export interface LeadFormDialogsQuickAdd {
   readonly quickAddItem: QuickAddItem | null;
   readonly onQuickAddSave: (item: KanbanItem) => void;
   readonly onQuickAddCancel: () => void;
 }
 
-/** The dialog-lifecycle slice the dialogs host drives. */
 export interface LeadFormDialogsWriteActions {
   readonly showSubmitConfirm: boolean;
   readonly setShowSubmitConfirm: (open: boolean) => void;
@@ -44,21 +42,11 @@ interface LeadFormDialogsProps {
   readonly viewModel: LeadFormLoadedViewModel;
   readonly quickAdd: LeadFormDialogsQuickAdd;
   readonly writeActions: LeadFormDialogsWriteActions;
-  /**
-   * Count of the lead's own unset stages. Derived in `LeadForm` from
-   * `draftPayload.stageStatuses` — the
-   * same single count feeds the submit coercion, so the warning here and the
-   * coercion can never disagree.
-   */
+  // Same count that feeds submit coercion — warning and coercion cannot disagree.
   readonly unsetOwnStageCount: number;
-  /** The editable draft section — the stage selector derives from it. */
   readonly draftSection: ReportSectionReadModel;
 }
 
-/**
- * The lead form's dialog cluster: submit confirmation, the quick-add item
- * dialog host, request-reopen, and revoke confirmation.
- */
 export function LeadFormDialogs({
   viewModel,
   quickAdd,
@@ -66,8 +54,6 @@ export function LeadFormDialogs({
   unsetOwnStageCount,
   draftSection,
 }: LeadFormDialogsProps) {
-  // Scope the quick-add stage selector to the stages the lead owns for that
-  // project, matching the section-hosted dialogs.
   const stagesForProduct: StagesForProduct = (productId) =>
     ownedStagesForProject(draftSection, productId);
   const {
@@ -83,7 +69,6 @@ export function LeadFormDialogs({
   } = viewModel;
   return (
     <>
-      {/* Submit Confirmation Dialog */}
       {writeActions.showSubmitConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
           <div

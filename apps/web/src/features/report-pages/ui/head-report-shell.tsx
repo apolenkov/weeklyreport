@@ -32,11 +32,6 @@ interface HeadReportShellProps {
   readonly authorId?: string;
 }
 
-/**
- * Inline form ↔ slides mode toggle for the head status report page, with a
- * period navigator + archive toggle matching the lead report toolbar. Head
- * remains read-only — no version browsing, no section editing.
- */
 export function HeadReportShell({
   reportId,
   mode,
@@ -44,17 +39,13 @@ export function HeadReportShell({
 }: HeadReportShellProps) {
   const trpc = useTRPC();
 
-  // The department label is the Organization singleton's fullName from auth.me;
-  // the shell suppresses the WeeklyReportPage context bar that would otherwise
-  // carry it, so it is surfaced here instead.
+  // Org fullName from auth.me; context bar is suppressed, so surface it here.
   const sessionState = useContext(SessionContext);
   const departmentLabel =
     sessionState?.organization?.fullName ?? "CustomReport";
 
-  // Scope and the show-archived filter live in the URL so navigation, refresh, and
-  // shared links all restore the selection. `mode` is already a route concern
-  // (`?mode=slides`), resolved server-side and passed in as the `mode` prop. The
-  // head strips nothing (no one-shot markers), so `stripParams` is empty.
+  // Scope + archive filter in the URL so refresh/shared links restore them.
+  // Head strips nothing (no one-shot markers).
   const { buildQuery, includeArchive, setIncludeArchive, scope, setScope } =
     useReportShellUrlState({ stripParams: HEAD_STRIP_PARAMS });
 
@@ -62,17 +53,11 @@ export function HeadReportShell({
     trpc.reports.compiledHistory.queryOptions({ includeArchive }),
   );
 
-  // Compiled history lists only published and archived periods, so the active
-  // week shown on `/head/report/<activeId>` is absent and the navigator falls back to
-  // periods[0] (latest published). Fetch the displayed report and prepend it
-  // when it is not already in history. Same query key as WeeklyReportPage's
-  // identical call, so React Query dedupes — no extra network request.
+  // History omits the active week; fetch displayed and prepend when missing.
+  // Same key as WeeklyReportPage, so RQ dedupes.
   const displayedQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
 
-  // Fetch the current active period independently of the displayed one. Without
-  // a reportId the server returns the session's active period, so the navigator
-  // can always chevron back to the current week — even when the displayed
-  // period is itself a published, historical one.
+  // Active period without reportId so the navigator can always return to it.
   const activeQ = useQuery(trpc.weeklyReport.get.queryOptions({}));
 
   const periods: ReportPeriod[] = useMemo(
@@ -86,23 +71,15 @@ export function HeadReportShell({
     [historyQ.data, activeQ.data, displayedQ.data, reportId],
   );
 
-  // Period navigation preserves the current view state (mode, authorId, scope,
-  // show-archived) — all already live in the URL, so `buildQuery({})` carries
-  // them onto the next period's URL unchanged.
   const urlBuilder = useCallback(
     (periodId: string) =>
       `/head/report/${encodeURIComponent(periodId)}${buildQuery({})}`,
     [buildQuery],
   );
 
-  // The view-mode toggle only flips `mode`; every other view param (authorId,
-  // scope, show-archived) is preserved so switching Edit↔Slides keeps state.
   const editHref = `/head/report/${encodeURIComponent(reportId)}${buildQuery({ mode: null })}`;
   const slidesHref = `/head/report/${encodeURIComponent(reportId)}${buildQuery({ mode: "slides" })}`;
 
-  // The form-mode status pane groups by product or by lead. The selection stays
-  // in the URL (`?scope=lead`) so it survives navigation / refresh — `scope` /
-  // `setScope` come from the shared URL-state hook above.
   const reportScope = scope === "lead" ? "lead" : "product";
 
   // The department context belongs on the page header beside the title because
@@ -114,10 +91,7 @@ export function HeadReportShell({
     />
   );
 
-  // The context row carries period navigation, the archive filter, the inert
-  // Agent-review placeholder, and the scope and view-mode toggles. The deck has
-  // no separate Agent-review slot, so the toolbar hosts the single placeholder
-  // in BOTH form and slides mode — exactly one per surface, no double-mount.
+  // Toolbar hosts the single Agent-review placeholder in both modes.
   const contextControls = (
     <>
       {periods.length > 0 ? (
@@ -139,10 +113,7 @@ export function HeadReportShell({
     </>
   );
 
-  // Exactly one labeled Export-PDF lives in the shared toolbar's trailing group.
-  // In head form mode this toolbar is passed into WeeklyReportPage, so the action
-  // must be built here. It renders only for a resolvable active period, with
-  // the displayed period's lifecycle status driving its enabled state.
+  // Built here for form mode (passed into WeeklyReportPage); gated on period.
   const displayed = displayedQ.data;
   const exportPdf =
     displayed && displayed.status !== "no-period" ? (
@@ -152,19 +123,13 @@ export function HeadReportShell({
       />
     ) : undefined;
 
-  // In slides mode the shell renders the toolbar itself
-  // (slides has no WeeklyReportPage). The bordered toolbar carries only the
-  // Context-control bar (period nav + scope / view-mode toggles); the labeled
-  // Export-PDF document action lives on the slides header line below. Publish &
-  // Lock is a form-mode page action and is absent here, as before.
+  // Slides has no WeeklyReportPage; shell owns the context toolbar itself.
   const slidesToolbar = <ReportToolbar contextControls={contextControls} />;
 
   return (
     <div className="space-y-4">
       {mode === "slides" ? (
         <>
-          {/* Slides mode has no WeeklyReportPage header, so the shell renders
-              the lead-style page header directly above the toolbar and deck. */}
           <header className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex min-w-0 flex-wrap items-center gap-3">
               <div className="min-w-0">
@@ -174,10 +139,7 @@ export function HeadReportShell({
               </div>
               {headerContextLabel}
             </div>
-            {/* Document actions sit on the header line, not inside the bordered
-                toolbar. The deck already provides focused-report navigation, so
-                this slot exposes the Publish & Lock / Reopen action and lets the
-                head lock directly from the review deck. */}
+            {/* Header hosts document actions; deck already covers slide nav. */}
             <DocumentActionGroup>
               {exportPdf}
               <HeadPublishLockAction reportId={reportId} />

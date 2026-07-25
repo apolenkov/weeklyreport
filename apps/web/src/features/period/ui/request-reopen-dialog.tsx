@@ -5,39 +5,18 @@ import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
 
+// Matches the leadForm.requestReopen API max (local copy — do not import from api).
+const MAX_REOPEN_REASON_LENGTH = 500;
+
 interface RequestReopenDialogProps {
   readonly open: boolean;
-  /**
-   * Whether the mutation is currently in flight. Drives the disabled
-   * state on the destructive button so a double-click doesn't queue
-   * two reopen requests for the same section.
-   */
   readonly pending?: boolean;
-  /**
-   * Caller-side error to surface inside the dialog when the mutation
-   * fails. Kept as a generic string so the caller can inline whatever
-   * its tRPC layer returns without coupling shapes.
-   */
   readonly error?: string | null;
-  /**
-   * Called with the reason (trimmed). The reason is optional per the
-   * API contract — empty/whitespace-only resolves to undefined so the
-   * server doesn't store a blank string.
-   */
   readonly onConfirm: (reason: string | undefined) => void;
   readonly onCancel: () => void;
 }
 
-/**
- * Lead-side modal for asking Head to reopen a submitted section.
- *
- * Submitted sections are read-only by default — the Lead can't simply
- * un-submit them (only Head can revoke). This is the polite path: the
- * Lead writes a one-line reason and the request goes to Head.
- *
- * Backend: leadForm.requestReopen mutation already exists
- * (`apps/api/src/modules/report-sections/lead-form.service.ts`).
- */
+// Lead-side modal to ask Head to reopen a submitted (read-only) section.
 export function RequestReopenDialog({
   open,
   ...contentProps
@@ -119,7 +98,7 @@ function RequestReopenDialogContent({
           >
             Reason{" "}
             <span className="font-normal text-[var(--color-muted-foreground)]">
-              (optional, max 500 chars)
+              (optional, max {MAX_REOPEN_REASON_LENGTH} chars)
             </span>
           </label>
           <textarea
@@ -127,13 +106,13 @@ function RequestReopenDialogContent({
             ref={textareaRef}
             className="w-full resize-y rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
             style={{ minHeight: "80px" }}
-            maxLength={500}
+            maxLength={MAX_REOPEN_REASON_LENGTH}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="e.g. Forgot to add the carry-over from last week."
           />
           <div className="mt-1 text-right text-[11px] text-[var(--color-muted-foreground)]">
-            {reason.length}/500
+            {reason.length}/{MAX_REOPEN_REASON_LENGTH}
           </div>
         </div>
 

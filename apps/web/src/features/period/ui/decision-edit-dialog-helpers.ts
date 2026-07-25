@@ -11,7 +11,6 @@ export interface DecisionFieldErrors {
   stageIds?: string;
 }
 
-/** Per-field validation for the decision save. */
 export function collectDecisionErrors(args: {
   readonly text: string;
   readonly impact: string;
@@ -34,7 +33,6 @@ export interface DecisionFormSeed {
   readonly stageIds: string[];
 }
 
-/** The mount-time seed for the dialog's local state, read off the bound decision. */
 export function resolveDecisionFormSeed(
   decision: DecisionEntry | null,
   defaultOwner: string | undefined,
@@ -50,7 +48,6 @@ export function resolveDecisionFormSeed(
   };
 }
 
-/** The header's product name — the selected product, or the saved one on edit. */
 export function resolveDecisionProductName(
   selectedProduct: Product | undefined,
   decision: DecisionEntry | null,
@@ -66,7 +63,6 @@ interface DecisionSaveBase {
   readonly deadline: string | null;
 }
 
-/** The common fields every decision save shares, independent of parent kind. */
 export function buildDecisionSaveBase(args: {
   readonly decision: DecisionEntry | null;
   readonly text: string;
@@ -83,7 +79,6 @@ export function buildDecisionSaveBase(args: {
   };
 }
 
-/** Builds the activity-parented save payload — empty productId, no stage. */
 export function buildActivityDecisionSave(args: {
   readonly base: DecisionSaveBase;
   readonly decision: DecisionEntry | null;
@@ -101,10 +96,9 @@ export function buildActivityDecisionSave(args: {
   };
 }
 
-/** Legacy parentless product label — matches mapLeadDecisions / DecisionsSection. */
+// Legacy parentless product label — matches mapLeadDecisions / DecisionsSection.
 const LEGACY_GROUP_PRODUCT_NAME = "Group";
 
-/** Builds the product-parented save payload. */
 export function buildProductDecisionSave(args: {
   readonly base: DecisionSaveBase;
   readonly decision: DecisionEntry | null;

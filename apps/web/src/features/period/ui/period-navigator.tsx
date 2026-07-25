@@ -82,10 +82,8 @@ export function PeriodNavigator({
   const selectedPeriod = periods.at(currentIndex);
   const hasPrev = currentIndex < periods.length - 1;
   const hasNext = currentIndex > 0;
-  // the submitted marker is per-lead and only known for the displayed
-  // period (the navigator carries one submittedAt value, never the whole
-  // history). It shows on the selected period iff the lead surface opted in
-  // and the lead's own section is submitted.
+  // Per-lead marker is only known for the displayed period (one submittedAt,
+  // not whole history). Shows when the lead surface opted in and is submitted.
   const selectedSubmitted =
     showLeadSubmissionMarkers && leadSubmittedAt != null;
   // options expose structured fields (not a flattened label string) so
@@ -127,8 +125,6 @@ export function PeriodNavigator({
     if (hasNext && next) navigateTo(next.id);
   }
 
-  // ---- Custom listbox + swipe gesture live in a hook so this component
-  // stays focused on rendering. ----
   const {
     listboxId,
     optionIdPrefix,

@@ -16,10 +16,7 @@ export interface PeriodTableProps {
   readonly onReopen: (row: PeriodListItem) => void;
   readonly onArchive: (row: PeriodListItem) => void;
   readonly onUnarchive: (row: PeriodListItem) => void;
-  // delete opens a confirmation dialog before deletion.
   readonly onDelete: (row: PeriodListItem) => void;
-  // row-level edit opens the dialog in edit-mode prefilled
-  // from this row.
   readonly onEdit: (row: PeriodListItem) => void;
 }
 
@@ -169,11 +166,7 @@ function StateBadge({ state }: { readonly state: PeriodState }) {
 
 const PROGRESS_AMBER_THRESHOLD = 0.5;
 
-/**
- * Progress badge — `<submitted>/<total>` with a 3-tier color scale.
- * Used in the row instead of just a number so heads can scan the
- * lifecycle list and spot the lagging periods at a glance.
- */
+// submitted/total with a 3-tier color scale for quick scan of lagging periods.
 function ProgressBadge({
   submitted,
   total,

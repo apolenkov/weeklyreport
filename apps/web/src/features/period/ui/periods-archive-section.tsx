@@ -3,12 +3,7 @@ import type { PeriodListItem } from "@customreport/shared";
 import { Chevron } from "./periods-tab-icons";
 import { PeriodTable, type PeriodTableProps } from "./periods-tab-table";
 
-/**
- * Archive section: collapsed-by-default disclosure over
- * `periodState = archived` rows. The query itself stays gated by
- * `expanded` in the caller so opening this section is the first
- * round-trip that fetches archived periods.
- */
+// Caller gates the archive query on `expanded` — first fetch is on open.
 export function PeriodsArchiveSection({
   expanded,
   onToggle,

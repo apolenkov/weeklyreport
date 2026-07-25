@@ -43,11 +43,7 @@ const SEVERITY_BADGE = {
 const ROW_GRID =
   "grid grid-cols-[3px_minmax(0,116px)_minmax(0,1fr)_auto] items-start gap-x-3.5";
 
-/**
- * Clusters issues by product, preserving the first-appearance order the mapper
- * produced (escalation order), so a product carrying several issues renders as
- * one card instead of repeating its name on every row.
- */
+// Preserve first-appearance (escalation) order; one card per product.
 export function groupByProduct(
   items: readonly BlockedAtRiskItem[],
 ): readonly ProductGroup[] {
@@ -128,7 +124,6 @@ function IssueRow({ item }: { readonly item: BlockedAtRiskItem }) {
   );
 }
 
-/** One product's cluster of blocked/at-risk issues, ProductAccordion-style. */
 export function ProductCard({ group }: { readonly group: ProductGroup }) {
   const severity = groupSeverity(group);
   const tone = SEVERITY_TONE[severity];

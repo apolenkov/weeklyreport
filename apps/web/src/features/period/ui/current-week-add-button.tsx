@@ -7,10 +7,7 @@ interface AddItemButtonProps {
   readonly onAdd: (productId: string) => void;
 }
 
-/**
- * The section-level "+ Add Item" CTA. Disabled (with an explanatory title)
- * when the lead has no assigned product to seed the create dialog with.
- */
+// Disabled when no assigned product can seed the create dialog.
 export function AddItemButton({ defaultProduct, onAdd }: AddItemButtonProps) {
   return (
     <div className="flex justify-end">

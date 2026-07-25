@@ -33,7 +33,6 @@ type SyncBridgeProviderProps = ComponentProps<
   typeof LeadFormSyncBridge.Provider
 >;
 
-/** The draft actions the edit stack drives, plus the item-section slice it forwards. */
 export interface LeadFormEditSectionsActions extends LeadFormItemSectionsActions {
   readonly onProductsChange: SyncBridgeProviderProps["onProductsChange"];
   readonly onRisksChange: SyncBridgeProviderProps["onRisksChange"];
@@ -57,7 +56,7 @@ interface LeadFormEditSectionsProps {
   readonly viewModel: LeadFormLoadedViewModel;
   readonly actions: LeadFormEditSectionsActions;
   readonly draftSection: ReportSectionReadModel;
-  /** The authoritative SERVER section — reviewer feedback derives from it. */
+  // Authoritative server section — reviewer feedback derives from it.
   readonly serverSection: ReportSectionReadModel;
   readonly groupExpanded: boolean;
   readonly unifiedView: boolean;
@@ -66,12 +65,7 @@ interface LeadFormEditSectionsProps {
   readonly crossAuthorEntries: CrossAuthorEntry[];
 }
 
-/**
- * The lead form's edit-mode section stack: reviewer feedback, the sync-bridge
- * Provider with the Product Status / Activities / item / Risks accordions,
- * and the Decisions accordion. `LeadFormItemSections` stays a child INSIDE
- * the Provider so `.Pipeline` / `.Risks` keep their context.
- */
+// Item sections stay inside the Provider so `.Pipeline` / `.Risks` keep context.
 export function LeadFormEditSections({
   viewModel,
   actions,
@@ -104,10 +98,6 @@ export function LeadFormEditSections({
     risks,
   } = viewModel;
   return (
-    // Split-view: at xl the edit form (left) sits beside a live slide
-    // preview (right) fed from the same draftSection — one source, no
-    // extra fetch. Below xl it stays single-column; ?mode=slides handles
-    // the standalone deck.
     <div className="min-w-0 space-y-6">
       {/* Reviewer feedback on a returned section surfaces read-only above
           the editable content, so the lead sees what to fix before
@@ -126,10 +116,7 @@ export function LeadFormEditSections({
           : {})}
         risksAddSignal={actions.risksAddSignal}
         crossAuthors={crossAuthorEntries}
-        // lead-mine-hide-unowned-stages: until the persisted visibility is
-        // hydrated, render the full grid ("everyone") to avoid a flash that
-        // briefly hides foreign/vacant chips when the restored value is
-        // "everyone" (the gated content fetch is likewise hydration-guarded).
+        // Pre-hydration: full grid avoids a flash that hides foreign chips.
         visibilityMode={visibilityHydrated ? recordVisibility : "everyone"}
         displayRisks={risks}
         externalRiskPrefill={actions.riskPrefill}

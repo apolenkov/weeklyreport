@@ -25,9 +25,8 @@ describe("VersionComingSoonControl", () => {
   });
 
   it("derives its circle size from the shared toolbar token like its siblings", () => {
-    // responsive-compact-layout: the token is 32px on desktop and rises to the
-    // touch-target floor below `md` — a hard-coded h-8/w-8 would stay 32px on
-    // phones while every sibling circle grows.
+    // ui-control-density: token is 32px desktop and rises to the touch floor
+    // below `md` — hard-coded h-8/w-8 would stay 32px while siblings grow.
     render(<VersionComingSoonControl />);
     const control = screen.getByTestId("version-coming-soon");
 

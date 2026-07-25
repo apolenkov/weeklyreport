@@ -3,9 +3,9 @@
 import { type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 
-// Custom listbox geometry (D3): the panel portals to document.body so the
-// toolbar's overflow clip cannot truncate it. Mirrors the FillFromButton
-// portal — position:fixed from the trigger rect, scroll/resize tracked.
+// Portals to document.body so the toolbar's overflow clip cannot truncate it
+// (position:fixed from the trigger rect; scroll/resize tracked — same pattern
+// as FillFromButton).
 const PERIOD_PANEL_MAX_HEIGHT_PX = 280;
 
 interface PeriodOption {
@@ -13,9 +13,9 @@ interface PeriodOption {
   readonly dateRange: string;
   readonly isCurrent: boolean;
   readonly archived: boolean;
-  // W3: per-lead submitted marker. Only ever true for the lead surface and
-  // only on the currently-selected period (the navigator has a submittedAt
-  // value for the displayed period alone, never the whole history).
+  // Per-lead submitted marker. Only ever true for the lead surface and only on
+  // the currently-selected period (the navigator has a submittedAt value for
+  // the displayed period alone, never the whole history).
   readonly submitted?: boolean;
 }
 
@@ -29,7 +29,7 @@ interface PeriodListboxPanelProps {
     readonly width: number;
   };
   readonly panelRef: React.RefObject<HTMLDivElement | null>;
-  // W4: per-instance scoped ids (useId) so two navigators on one page never
+  // Per-instance scoped ids (useId) so two navigators on one page never
   // collide on the listbox / option DOM ids that aria-controls and
   // aria-activedescendant point at.
   readonly listboxId: string;
@@ -39,10 +39,7 @@ interface PeriodListboxPanelProps {
   readonly onKeyDown: (e: ReactKeyboardEvent<HTMLDivElement>) => void;
 }
 
-/**
- * Neutral identity badge (D2) — muted pill, never a status hue. Shared by the
- * trigger and the listbox options, matching the FillFromButton "Archived" pill.
- */
+/** Neutral identity badge — muted pill, never a status hue. Shared by the trigger and listbox options. */
 export function ArchivedBadge() {
   return (
     <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--color-muted-foreground)]">
@@ -55,9 +52,9 @@ export const periodLabel = (p: { dateRange: string; isCurrent: boolean }) =>
   p.isCurrent ? `${p.dateRange} (Current)` : p.dateRange;
 
 /**
- * Per-lead submitted marker (W3) — neutral pill, never a status hue. Sourced
- * only from the current lead's `ReportSection.submittedAt`; the head/viewer
- * navigators never render it (they do not pass the markers prop).
+ * Per-lead submitted marker — neutral pill, never a status hue. Sourced only
+ * from the current lead's `ReportSection.submittedAt`; head/viewer navigators
+ * never pass the markers prop.
  */
 export function SubmittedBadge() {
   return (
@@ -67,11 +64,6 @@ export function SubmittedBadge() {
   );
 }
 
-/**
- * Portaled listbox panel (D3). Lives in document.body so the toolbar's
- * overflow clip cannot truncate it; position:fixed from the trigger rect,
- * tracked on scroll + resize (mirrors FillFromButton).
- */
 export function PeriodListboxPanel({
   options,
   selectedId,

@@ -1,12 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts are required for value, checked, and options access under the app tsconfig. */
-/**
- * SettingsTab Identity sub-tab test.
- *
- * Strategy mirrors jobs-tab.test.tsx: stub the tRPC proxy and intercept
- * `admin.getOrganization.queryOptions` / `admin.updateOrganization
- * .mutationOptions`. We assert the Save button drives the mutation with
- * the form values and the success toast fires.
- */
 
 import { MAX_FULL_NAME_LENGTH } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -60,11 +52,6 @@ const ORG_DATA = {
   updatedAt: new Date("2026-05-10T00:00:00Z"),
 };
 
-/**
- * Builds the tRPC proxy for SettingsTab tests using the shared factory.
- * Returns both the proxy and the captured mutation registry so tests can
- * assert against specific mutation calls.
- */
 function buildProxy(integrations: IntegrationStub = DEFAULT_INTEGRATIONS) {
   return createMockTRPC([
     { path: ["admin", "getOrganization"], query: ORG_DATA },
@@ -79,10 +66,6 @@ function buildProxy(integrations: IntegrationStub = DEFAULT_INTEGRATIONS) {
   ]);
 }
 
-/**
- * Renders SettingsTab inside QueryClientProvider + TRPCProxyContext, returning
- * the QueryClient so tests can spy on invalidations.
- */
 function renderSettings(
   proxy: ReturnType<typeof buildProxy>["proxy"],
   settingsOverride?: Partial<MockSettings>,
@@ -106,8 +89,7 @@ function renderSettings(
   return { qc };
 }
 
-// MockSettings covers 9 fields beyond the base pair. Defaults here mirror
-// the SQL defaults so the Periods / Reminders / Notifications sub-tabs
+// Defaults mirror SQL defaults so Periods / Reminders / Notifications
 // render with realistic initial state.
 const baseSettings: MockSettings = {
   autoCreatePeriods: false,
@@ -148,12 +130,8 @@ describe("SettingsTab — Identity sub-tab", () => {
   });
 
   it("exposes the inert Holidays tab's coming-soon state via its accessible name", () => {
-    // The Holidays trigger holds an inert span whose visible label is hidden
-    // below xl. Its
-    // coming-soon state reaches the tab's accessible name through the descendant
-    // ComingSoonBadge text. Removing the redundant native title="Coming Soon"
-    // must not strip that name — this locks it so the source scan has a runtime
-    // companion.
+    // Holidays label is visually hidden below xl; ComingSoonBadge text is
+    // the only source of the tab's accessible "coming soon" name.
     const { proxy } = buildProxy();
     renderSettings(proxy);
 
@@ -301,12 +279,6 @@ describe("SettingsTab — Identity sub-tab", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Periods / Reminders / Notifications sub-tabs.
-// Each test follows the same shape: switch to the sub-tab, mutate one field,
-// click Save, assert the mutation was called with the merged PATCH payload.
-// ---------------------------------------------------------------------------
-
 describe("SettingsTab — Periods sub-tab (new fields)", () => {
   beforeEach(() => {
     toastSuccess.mockReset();
@@ -366,15 +338,6 @@ describe("SettingsTab — Periods sub-tab (new fields)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Periods sub-tab period-cycle inputs (deadline-time default + reopen
-// gating). The four consumer-less inputs (firstDayOfWeek, deadlineDayOfWeek,
-// maxOpenPeriods, requireAllSectionsToPublish) were removed. Tests assert:
-// (1) the remaining inputs render with seeded values, (2) edits flow to the
-// updateSettings PATCH payload, (3) «reopen window» greys out when «allow
-// reopen» is off.
-// ---------------------------------------------------------------------------
-
 describe("SettingsTab — Periods sub-tab (period-cycle inputs)", () => {
   beforeEach(() => {
     toastSuccess.mockReset();
@@ -394,7 +357,6 @@ describe("SettingsTab — Periods sub-tab (period-cycle inputs)", () => {
     ) as HTMLInputElement;
     expect(deadlineTime.value).toBe("18:00");
 
-    // The four consumer-less inputs were removed.
     expect(screen.queryByLabelText(/monday \(iso\)/i)).toBeNull();
     expect(screen.queryByLabelText(/deadline day of week/i)).toBeNull();
     expect(screen.queryByLabelText(/max open periods/i)).toBeNull();
@@ -586,9 +548,7 @@ describe("SettingsTab — Integrations sub-tab", () => {
   });
 
   it("renders no Telegram-derived messaging status under the Element card", async () => {
-    // Even when the Telegram transport reports configured + active bindings,
-    // the Element card surfaces NO live status — showing Telegram state under
-    // an "Element" heading would be a false claim. Honesty rule (Codex review).
+    // Telegram status under an "Element" heading would be a false claim.
     const { proxy } = buildProxy({
       telegram: { configured: true, bindings: 4 },
     });
@@ -608,7 +568,7 @@ describe("SettingsTab — Integrations sub-tab", () => {
     expect(within(row).queryByText(/^yes$/i)).toBeNull();
   });
 
-  it("does not render Slack or CI cards (removed in cleanup)", async () => {
+  it("does not render Slack or CI cards", async () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
 

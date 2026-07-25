@@ -5,18 +5,14 @@ import {
 } from "../../report-sections";
 import type { CrossAuthorEntry } from "../ui/sdlc-pipeline";
 
-// pipeline-tooltip-and-indicator / unassigned-stage-reporting-exclusion: the
-// "+N more" reveal must name who holds each hidden stage. Prefer
-// `crossAuthors` (same source as product health). Mine mode ships locked
-// stages with a null assignee; the assignee branch below is only a fallback
-// when initials already sit on the stage (Everyone override shapes / fixtures).
+// Prefer `crossAuthors` (same source as product health) over stage assignee;
+// Mine mode ships locked stages with a null assignee.
 
 interface ForeignOwner {
   owner: string;
   status: StageStatus;
 }
 
-/** Canonical stage name → the co-owner (initials + status) holding it. */
 export function foreignOwnersForProduct(
   productId: string,
   crossAuthors: readonly CrossAuthorEntry[],
@@ -35,14 +31,7 @@ export function foreignOwnersForProduct(
   return map;
 }
 
-/**
- * One honest line per hidden stage. unassigned-stage-reporting-exclusion: a
- * hidden stage is always foreign-owned now (the "unassigned" category is gone).
- * A stage whose co-owner is resolved (via `crossAuthors`) names their initials;
- * one whose owner has not been resolved yet (Mine mode without cross-author
- * data) reads "another lead". "empty" is never shown for a stage that has an
- * owner.
- */
+// Named owner → "— <owner> (no status set)" / "— <owner>: <status>"; else "another lead".
 function hiddenStageLine(
   s: StageAssignment,
   foreignOwners: Map<string, ForeignOwner>,
@@ -68,14 +57,7 @@ export function hiddenStagesRevealLines(
   return hidden.map((s) => hiddenStageLine(s, foreignOwners));
 }
 
-/**
- * The status that drives each hidden stage's at-a-glance colour. A foreign-held
- * stage uses the co-owner's status from `crossAuthors` (in Mine mode the lead's
- * own grid carries it as locked/"empty", so its raw status is meaningless);
- * any other stage uses its own status. The "+N more" indicator colour is built
- * from these so it always matches the reveal text, instead of collapsing to grey
- * whenever the only severity lives in a foreign co-owner's stage.
- */
+// Co-owner status from crossAuthors when present — Mine-mode raw status is locked/empty.
 export function hiddenStagesEffectiveStatuses(
   hidden: readonly StageAssignment[],
   foreignOwners: Map<string, ForeignOwner>,

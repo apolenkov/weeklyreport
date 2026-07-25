@@ -11,28 +11,6 @@ import {
 } from "./periods-tab-icons";
 import type { PeriodTableProps } from "./periods-tab-table";
 
-/**
- * Inline icon-button row for per-row lifecycle actions. Icons sit directly
- * in the row (simpler for users than a kebab dropdown).
- *
- * Visibility rules (driven by server-precomputed flags so the UI does
- * not have to know the reopen-policy or archive-state rules):
- *
- *   - Edit       — unconditional. The Edit dialog only moves dates /
- *                  label, no state transition required.
- *   - Publish    — only when `periodState === 'open'`. Matches the
- *                  /head/report Publish button (auto-publisher handles
- *                  it for un-clicked rows).
- *   - Reopen     — only when `periodState === 'published' && canReopen`.
- *                  `canReopen` is server-computed from the master switch
- *                  + reopen-window math.
- *   - Archive    — only when `canArchive` (skips already-archived rows).
- *   - Unarchive  — only when `periodState === 'archived'`.
- *
- * Each icon is 32×32 with a hover state + `aria-label` + `title`. The
- * `data-testid` shape stays `action-<verb>-{id}` so tests asserting on
- * `action-publish-{id}` etc. resolve.
- */
 export function ActionIconRow({
   row,
   onPublish,

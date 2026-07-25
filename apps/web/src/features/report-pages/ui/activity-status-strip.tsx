@@ -13,12 +13,8 @@ type StripActivity = Omit<SectionActivity, "linkedProducts"> & {
   readonly linkedProducts?: SectionActivity["linkedProducts"];
 };
 
-/**
- * The section slice the band reads. `activities` and the flat record arrays are
- * optional so pre-activity snapshot shapes and legacy fixtures render as "no
- * activities" instead of crashing. Fed the full section, so each activity's
- * own records are rendered in the report body.
- */
+// Optional fields so pre-activity snapshots and legacy fixtures render empty
+// instead of crashing.
 interface ActivitySectionSlice {
   readonly authorId: string;
   readonly authorName: string;
@@ -64,7 +60,6 @@ function toTone(status: TrafficLightStatus | null): ActivityTone {
   return "empty";
 }
 
-/** Build one body card per (activity, author) with the activity's own records. */
 function toActivityCard(
   section: ActivitySectionSlice,
   activity: StripActivity,
@@ -109,7 +104,6 @@ function buildActivityCards(
     );
 }
 
-/** One labeled record list inside an activity card (self-suppresses when empty). */
 function RecordList({
   label,
   rows,
@@ -177,13 +171,6 @@ function ActivityBodyCard({ card }: { readonly card: ActivityCardModel }) {
   );
 }
 
-/**
- * "Project Activities" band on the assembled weekly report — the stage-less
- * units beside products, each rendered like a product body card (its own
- * records + linked products), minus the SDLC stage lane. Display-only: activity
- * status never feeds portfolio totals, escalations, or product health.
- * Self-suppresses when no section carries an activity.
- */
 export function ActivityStatusStrip({
   sections,
 }: {

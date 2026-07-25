@@ -1,11 +1,5 @@
 /**
  * @vitest-environment jsdom
- *
- * A11y assertions for LeadFormSkeleton:
- *  - root div has role="status"
- *  - root div has aria-busy="true"
- *  - root div has aria-label="Loading report form"
- *  - PlaceholderAccordion skeleton rows render in stable order
  */
 
 import { render, screen } from "@testing-library/react";
@@ -48,17 +42,11 @@ describe("LeadFormSkeleton — root a11y attributes", () => {
   });
 
   it("PlaceholderAccordion skeleton rows render in the expected order", () => {
-    // The first PlaceholderAccordion has rows=3 (Pipeline section).
-    // We verify the .space-y-2 containers each have the correct number of
-    // skeleton rows, and that the order is stable by snapshotting the
-    // data-slot attributes of children.
     const { container } = render(<LeadFormSkeleton />);
 
     const spaceContainers = container.querySelectorAll(".space-y-2");
-    // There are 6 PlaceholderAccordion blocks; each produces one .space-y-2
     expect(spaceContainers).toHaveLength(6);
 
-    // Snapshot the first block's row count and slot values for stability
     const firstBlock = expectDefined(spaceContainers[0]);
     const firstSnapshot = Array.from(firstBlock.children).map(
       (el) => (el as HTMLElement).dataset.slot,

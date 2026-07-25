@@ -1,19 +1,5 @@
-/**
- * Composes `review.dashboard` + `weeklyReport.get` into the KPI / leads /
- * blocked-at-risk / pending-leads shape that `DashboardPage` expects.
- *
- * - `review.dashboard` returns `SubmissionDashboardRow[]` only — it does NOT
- *   carry submission counts, deadlines, escalations, or completion percentages.
- *   We source those from `weeklyReport.get` (`WeeklyReportReadModel`) instead.
- * - `weeklyReport.deadline` is the only source for the dashboard deadline.
- *   Never infer it from `periodEnd`: a period can stay open/reopened while the
- *   reporting deadline has already passed.
- * - No v5.0 read model carries a prior-period submission count, so `KpiData`
- *   omits a "last week" field entirely rather than fabricate one; `KpiCards`
- *   renders that comparison as explicitly unavailable.
- * - The `PendingLead` type in mock-data is just `string[]` (lead names) — we
- *   produce that directly.
- */
+// Deadline comes only from weeklyReport.deadline — never infer from
+// periodEnd (period can stay open after the reporting deadline).
 
 import type {
   ActivityLiveResponse,

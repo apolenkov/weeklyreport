@@ -17,11 +17,6 @@ interface CurrentWeekBoardGridProps {
   readonly renderItem: (item: KanbanItem) => ReactNode;
 }
 
-/**
- * The Current Week board's product grid plus the activity lanes block below
- * it — split out of the section so the section itself only wires dialogs and
- * handlers.
- */
 export function CurrentWeekBoardGrid({
   productColumns,
   activityLanes,

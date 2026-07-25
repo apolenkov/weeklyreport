@@ -32,12 +32,8 @@ export interface ProductPipelineView {
   readonly hiddenColors: { border: string; text: string };
 }
 
-/**
- * Composes the per-product health/completeness/hidden-stage helpers into one
- * view object for `SdlcProductCard`. Completeness and health always read the
- * RAW (pre-floor) product and the FULL stage list — the `visibilityMode`
- * filter below only ever narrows which chips render, never those signals.
- */
+// Health/completeness always use the RAW pre-floor product + full stage list;
+// visibilityMode only narrows which chips render.
 export function deriveProductPipelineView(args: {
   readonly product: Product;
   readonly rawProducts: readonly Product[] | undefined;

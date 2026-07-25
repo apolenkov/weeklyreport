@@ -1,11 +1,7 @@
 /**
  * @vitest-environment node
  *
- * Guards the lead-form prop seams: every component under
- * `features/report-pages/ui` must receive its inputs through declared
- * interfaces, never as `ReturnType<typeof useX>` whole-hook blobs. Scans the
- * source as text so a reintroduced hook-return prop fails even though it
- * would still typecheck.
+ * Prop-seam guard: no `ReturnType<typeof useX>` whole-hook props under ui/.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";

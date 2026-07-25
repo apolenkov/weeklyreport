@@ -9,12 +9,8 @@ import type {
 import { STATUS_CONFIG, trafficToStageStatus } from "../../report-sections";
 import type { CrossAuthorEntry } from "../ui/sdlc-pipeline";
 
-// Every product card shares ONE body — neutral card surface, neutral ring —
-// and only the 4px left-stripe color changes with the HEALTH status. The
-// left edge is ALWAYS solid and only carries health (severity); the
-// completeness signal lives on the right (dashed ring + N/M counter) and
-// never shares this hue. paddingLeft compensates the 3px-wider left border
-// so content padding reads equal.
+// Left 4px stripe = health only; completeness lives on the right (ring + N/M).
+// paddingLeft offsets the wider left border so content padding reads equal.
 const STRIPE_BY_STATUS: Record<StageStatus, string> = {
   blocked: "var(--color-chip-blocked-border)",
   "at-risk": "var(--color-status-at-risk-border)",
@@ -26,11 +22,7 @@ const STRIPE_BY_STATUS: Record<StageStatus, string> = {
 // (blocked > at-risk > on-track > empty; empty = nothing set yet).
 const worstStatusOf = worstCanonicalStatus;
 
-// The collapsed `+N more` indicator colours by the FULL status scale of the
-// hidden stages, by precedence — red if any blocked, else yellow if any
-// at-risk, else grey if any is unfilled (empty), else green when every
-// hidden stage is on-track. This lets the lead trace the product's left
-// health stripe to the collapsed stages at a glance.
+// `+N more` colour: blocked > at-risk > empty > on-track across hidden stages.
 export function collapsedIndicatorColors(statuses: readonly StageStatus[]): {
   border: string;
   text: string;
@@ -55,14 +47,7 @@ function worstOwnStatus(stages: StageAssignment[]): StageStatus {
   );
 }
 
-/**
- * A stage status raised by ANY stage owner — including another lead on a
- * shared product — must light the left edge. Foreign status arrives
- * RISK-DERIVED via `crossAuthors[].stages` (the server folds covering risks
- * into the per-stage traffic light), so the health hue is max(own worst
- * stage, worst foreign stage). An `empty`/`null` foreign stage contributes
- * nothing.
- */
+// Health = max(own, foreign). Foreign is risk-derived via crossAuthors; empty/null no-ops.
 function worstForeignSeverity(
   productId: string,
   crossAuthors: readonly CrossAuthorEntry[],

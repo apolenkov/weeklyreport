@@ -7,18 +7,7 @@ import { toast } from "sonner";
 import { useTRPC } from "../../../lib/trpc-context";
 import { ReopenRequestRow } from "./reopen-request-row";
 
-/**
- * A head-dashboard queue of pending reopen requests with inline Approve /
- * Reject + optional note. It reads the SAME data as the admin Reopen
- * Requests tab (`listReopenRequests` with the pending filter) and, on a
- * decision, invalidates BOTH the list and the pending count so the
- * dashboard, the AlertBar indicator, and the admin tab never diverge.
- *
- * Intentionally lighter than the admin tab: it shows only pending requests (a
- * queue, not an archive). Heads who want history use the admin panel.
- *
- * Anchored by `id` so the AlertBar reopen indicator can scroll to it.
- */
+// Anchor id for the AlertBar reopen indicator scroll target.
 const REOPEN_REQUESTS_CARD_ID = "reopen-requests-card";
 
 export function ReopenRequestsCard() {

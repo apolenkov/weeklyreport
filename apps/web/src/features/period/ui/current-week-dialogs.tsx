@@ -27,11 +27,7 @@ interface CurrentWeekDialogsProps {
   readonly onCancelPause: () => void;
 }
 
-/**
- * Bundles the three modals the Current Week board can show — item edit/create,
- * delete confirmation, pause reason — as a single instance shared across all
- * columns, so the section only wires state in and callbacks out.
- */
+// One shared dialog instance across all columns (edit/create, delete, pause).
 export function CurrentWeekDialogs({
   dialogKey,
   open,

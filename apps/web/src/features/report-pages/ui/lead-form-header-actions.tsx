@@ -13,7 +13,6 @@ import {
 } from "./lead-completion-actions";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 
-/** The dialog-lifecycle slice the page header drives. */
 export interface LeadFormHeaderWriteActions {
   readonly fillFromMut: { readonly isPending: boolean };
   readonly handleFillFrom: (sourceSectionId: string) => void;
@@ -33,11 +32,7 @@ interface LeadFormHeaderActionsProps {
   readonly isSubmitted: boolean;
 }
 
-/**
- * The lead form's page header: title, submitted/autosave badge, and the
- * contextual document actions. Save/Add/Submit use the shared completion
- * presentation so the observed sticky handoff cannot fork action state.
- */
+// Shared completion presentation so sticky handoff cannot fork action state.
 export function LeadFormHeaderActions({
   viewModel,
   writeActions,
@@ -56,7 +51,6 @@ export function LeadFormHeaderActions({
   } = viewModel;
   const { autosave } = completionActions;
 
-  // Autosave indicator label — 4-state badge.
   const autosaveLabel =
     autosave.state === "saving"
       ? "↻ Saving…"
@@ -89,10 +83,7 @@ export function LeadFormHeaderActions({
             Your report draft and status context.
           </p>
         </div>
-        {/* Submitted state uses the .b-ok variant (light teal bg + dark
-            teal text) — matches mockup s2 rather than the heavier
-            white-on-dark-teal `.b-done` look that read as a destructive
-            "locked" signal. */}
+        {/* Light-teal success badge reads as progress, not a locked signal. */}
         {!isSlidesMode &&
           (isSubmitted ? (
             <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)]">
@@ -106,13 +97,7 @@ export function LeadFormHeaderActions({
             </span>
           ))}
       </div>
-      {/* Document actions live on the header line's right slot, not inside
-          the bordered toolbar. A read-only past period hides the real
-          mutating actions (Save/Submit/Fill-From) while the inert
-          Coming-soon stubs remain. Submit is the single brand-green
-          forward primary; reversal actions (Request Reopen / Revoke) stay
-          neutral/outline so green keeps one "forward, safe-to-commit"
-          meaning. */}
+      {/* Mutating actions hide on read-only; green stays the sole forward primary. */}
       <DocumentActionGroup>
         <VersionComingSoonControl />
         {/* TODO(lead-pdf-export): lead is excluded from pdfExport
@@ -131,10 +116,7 @@ export function LeadFormHeaderActions({
             onFillFrom={writeActions.handleFillFrom}
           />
         )}
-        {/* The control is driven by the server-computed `canRequestReopen`
-            flag — hidden when the period is published/archived or a request
-            is already pending. The client does NOT reconstruct the lifecycle
-            policy. */}
+        {/* Server-computed `canRequestReopen` only — client never rebuilds policy. */}
         {isSubmitted && isLead(currentUser.authorRole) && canRequestReopen && (
           <button
             type="button"

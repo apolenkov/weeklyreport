@@ -1,14 +1,6 @@
 /**
- * Snapshot view transitions must not reopen the Add Item dialog.
- *
- * When readOnly flips false → true → false, the addSignal effect must not
- * re-fire because readOnly is not one of its dependencies.
- *
- * Scenario (mirrors real usage):
- *   1. addSignal=1, readOnly=false  → dialog opens
- *   2. User cancels dialog           → dialog closes; addSignal stays at 1
- *   3. readOnly=true  (snapshot)     → no dialog re-open (guard fires in body)
- *   4. readOnly=false (back to live) → must NOT reopen; only a new increment should
+ * Snapshot transitions must not reopen Add Item: readOnly is deliberately
+ * not an addSignal effect dependency, so false→true→false must not re-fire.
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -72,7 +64,7 @@ describe("CurrentWeekSection — addSignal snapshot regression", () => {
   });
 });
 
-describe("CurrentWeekSection — compact touch floor (responsive-compact-layout)", () => {
+describe("CurrentWeekSection — compact touch floor", () => {
   it("the per-product '+ Add' button floors at the touch target below md", () => {
     // jsdom cannot evaluate media queries; the class assertions are the teeth.
     // Two products are required — the "+ Add" affordance only renders when a

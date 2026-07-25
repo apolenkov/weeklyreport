@@ -36,11 +36,6 @@ interface FillFromDropdownPanelProps {
   readonly onSelect: (period: ReportPeriod) => void;
 }
 
-/**
- * The fill-from split-button's dropdown list: portals to document.body so the
- * toolbar's overflow clip cannot truncate it, position:fixed from the trigger
- * rect tracked by the caller.
- */
 export function FillFromDropdownPanel({
   open,
   pos,

@@ -26,11 +26,6 @@ vi.mock("sonner", () => ({
   },
 }));
 
-// ---------------------------------------------------------------------------
-// Minimal tRPC stub — only the shapes UsersTab actually calls.
-// UsersTab calls: saveUser, deleteUser, deactivateUser, activateUser
-//   (all mutations). invalidateAdmin also calls pathFilter on several routes.
-// ---------------------------------------------------------------------------
 function buildProxy() {
   return createMockTRPC([
     { path: ["admin", "saveUser"], mutation: true },
@@ -46,9 +41,6 @@ function buildProxy() {
   ]);
 }
 
-// ---------------------------------------------------------------------------
-// Fixed test fixtures
-// ---------------------------------------------------------------------------
 const GROUP: MockGroup = {
   id: "g1",
   name: "Alpha",
@@ -71,9 +63,6 @@ const USER: MockUser = {
   isActive: true,
 };
 
-// ---------------------------------------------------------------------------
-// Render helper
-// ---------------------------------------------------------------------------
 function renderTab(users: MockUser[] = [USER], groups: MockGroup[] = [GROUP]) {
   const { proxy, captured } = buildProxy();
   const qc = new QueryClient({
@@ -94,17 +83,10 @@ function renderTab(users: MockUser[] = [USER], groups: MockGroup[] = [GROUP]) {
   return { qc, captured };
 }
 
-// ---------------------------------------------------------------------------
-// Helper: open the Add User dialog
-// ---------------------------------------------------------------------------
 function openDialog() {
   const addBtn = screen.getByRole("button", { name: /add new user/i });
   fireEvent.click(addBtn);
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe("UsersTab — dialog keyboard and click behavior", () => {
   beforeEach(() => {
@@ -115,7 +97,6 @@ describe("UsersTab — dialog keyboard and click behavior", () => {
     renderTab();
 
     openDialog();
-    // Dialog is open
     expect(screen.getByTestId("crud-sheet")).toBeInTheDocument();
 
     fireEvent.keyDown(document, { key: "Escape" });

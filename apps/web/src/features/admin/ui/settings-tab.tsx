@@ -23,13 +23,6 @@ interface SettingsTabProps {
   readonly settings: MockSettings;
 }
 
-/**
- * Settings tab laid out as a set of sub-tabs, ordered identity-first (the
- * Organization singleton is the source of truth for brand strings) and
- * Coming-Soon placeholders last. Each sub-tab and the shared helpers live in
- * sibling modules (settings-*-sub-tab / settings-tab-shared) — the tab list
- * below is the single source for order and labels.
- */
 export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
   return (
     <div className="space-y-6">
@@ -47,8 +40,6 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
           <TabsTrigger value="periods">Periods</TabsTrigger>
           <TabsTrigger value="reminders">Reminders</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          {/* external-integrations badges. Surfaces Element (roadmapped
-              messaging, Coming-Soon label) and AI (Coming-Soon). */}
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="holidays">
             <HolidaysComingSoonControl />
@@ -92,13 +83,8 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
 // ─── Holidays Coming Soon Control ────────────────────────────────────────
 
 function HolidaysComingSoonControl() {
-  // TODO(holidays-activation): replace with real holidays calendar form when
-  // the dedicated holiday-management phase ships.
-  // The trigger matches the sibling tabs' plain-text underline style so no
-  // sub-tab trigger stands out. The nested label stays inert (rendered as
-  // a <span>, not a <button>, since the holidays TabsTrigger is itself a
-  // <button> and a nested <button> would be invalid HTML / hydration error),
-  // while the surrounding TabsTrigger remains selectable like its siblings.
+  // Nested label is a <span> (not <button>): TabsTrigger is already a button;
+  // nesting would be invalid HTML / hydration error.
   return (
     <ComingSoonTooltip>
       <span
@@ -107,10 +93,8 @@ function HolidaysComingSoonControl() {
         className="inline-flex cursor-default items-center"
       >
         Holidays
-        {/* The Radix tooltip badge is portaled and only mounts on hover, so a
-            PERSISTENT visually-hidden ComingSoonBadge keeps the coming-soon
-            state in the holidays tab's accessible name (a descendant
-            ComingSoonBadge text, no aria-label on the inert span). */}
+        {/* Portaled hover badge vanishes; sr-only badge keeps coming-soon
+            in the tab's accessible name without a title attribute. */}
         <ComingSoonBadge className="sr-only" />
       </span>
     </ComingSoonTooltip>

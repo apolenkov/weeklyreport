@@ -6,12 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { deriveHeadPeriods } from "./head-report-periods";
 
-/**
- * Pins the head navigator's prepend + dedup rule as implemented by the pure
- * `deriveHeadPeriods` helper: active leads, displayed follows, and each is
- * skipped when its id is already reachable (in history, or — for displayed —
- * already prepended by the active week under the same route id).
- */
+// Active leads, displayed follows; skip when the id is already reachable.
 function historyEntry(reportId: string): CompiledHistoryEntry {
   return {
     reportId,

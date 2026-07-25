@@ -1,12 +1,4 @@
-/**
- * Static background for the landing left column.
- *
- * Two layers, GPU-friendly, 0 JS, 0 motion:
- *  1. Gradient base — deeper at the bottom (radial darken), warmer
- *     toward the top-right (see `.pulse-bg` in pulse.css).
- *  2. Dot grid — subtle 32px radial-gradient pattern, masked to a soft
- *     center vignette so the corners breathe.
- */
+// Visual lives entirely in `.pulse-bg` / pulse.css (static gradient + dots).
 export function PulseBackground() {
   return (
     <div className="pulse-bg" aria-hidden="true">

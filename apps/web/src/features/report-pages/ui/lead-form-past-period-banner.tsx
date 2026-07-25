@@ -6,11 +6,7 @@ interface LeadFormPastPeriodBannerProps {
   readonly isSubmitted: boolean;
 }
 
-/**
- * Read-only banner for past periods. Triggered when the page renders under a
- * `[reportId]` segment that points at a past report instead of the lead's
- * active section. Self-suppresses otherwise.
- */
+// Shows when the [reportId] segment is not the active report.
 export function LeadFormPastPeriodBanner({
   pinnedReportId,
   activeReportId,

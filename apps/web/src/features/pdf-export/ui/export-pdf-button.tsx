@@ -10,12 +10,8 @@ interface ExportPdfButtonProps {
   readonly periodStatus: PeriodStatus;
 }
 
-/**
- * Export PDF button.
- *
- * Export stays disabled while a report is editable, including during a reopen,
- * because the backend only exports the genuinely published read model.
- */
+// Disabled while editable (incl. reopen): backend exports only the
+// published read model.
 export function ExportPdfButton({
   reportId,
   periodStatus,
@@ -24,12 +20,8 @@ export function ExportPdfButton({
     usePdfExportJob({ reportId, periodStatus });
   const disabledReasonId = `${reportId}-export-pdf-disabled-reason`;
 
-  // Rendered through the shared 32px ToolbarIconButton so the head/lead
-  // toolbars share one icon-action vocabulary. Per the icon-button primitive
-  // the tooltip stays equivalent to the aria-label ("Export PDF"); the
-  // unpublished precondition is surfaced via an aria-describedby/sr-only
-  // hint instead of the tooltip, since a disabled control cannot receive
-  // hover/focus to reveal one.
+  // Unpublished reason goes on aria-describedby/sr-only — disabled controls
+  // cannot reveal a tooltip on hover/focus.
   const buttonClassName = isGenerating
     ? "border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-white disabled:opacity-100"
     : "border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-40";
@@ -60,10 +52,7 @@ export function ExportPdfButton({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Internal icons (14×14, centred in the 32px circle — matches SaveNowButton).
-// ---------------------------------------------------------------------------
-
+// 14×14 icons, centred in the 32px ToolbarIconButton circle (matches SaveNowButton).
 function ExportPdfIcon() {
   return (
     <svg

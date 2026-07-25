@@ -1,12 +1,7 @@
 /**
- * Typed text must survive parent re-renders that pass a new stagesForProduct
- * function reference (autosave → React Query invalidate cycle). The stages
- * prop is intentionally not in the form-state effect deps so a new ref does
- * not wipe user input.
- *
- * Also covers a11y regression for biome-ignore justifications
- * (noStaticElementInteractions on backdrop, useKeyWithClickEvents on inner
- * dialog div, noAutofocus on textarea).
+ * Typed text must survive parent re-renders with a new stagesForProduct ref
+ * (autosave invalidate). stages is not a form-state effect dep, so a new ref
+ * must not wipe input. Also covers backdrop Escape / autofocus a11y.
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -86,7 +81,7 @@ describe("DecisionEditDialog — form-race regression", () => {
     fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
       target: { value: "Unblocks team expansion" },
     });
-    // unify-record-dialogs: a multi-stage product requires an explicit pick.
+    // Multi-stage product requires an explicit stage pick.
     fireEvent.click(screen.getByRole("checkbox", { name: "Planning" }));
     fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
 
@@ -120,8 +115,7 @@ describe("DecisionEditDialog — form-race regression", () => {
     fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
       target: { value: "Unblocks team expansion" },
     });
-    // unify-record-dialogs: nothing pre-selected, so clicking "Planning" selects
-    // exactly that stage.
+    // Nothing pre-selected; clicking "Planning" selects exactly that stage.
     fireEvent.click(screen.getByRole("checkbox", { name: "Planning" }));
     fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
 
@@ -292,11 +286,7 @@ describe("DecisionEditDialog — a11y (backdrop onKeyDown + click behavior)", ()
   });
 });
 
-/**
- * Mount/unmount shell: the outer component returns null when closed and
- * remounts fresh content on reopen, so typed-but-cancelled state never leaks
- * into the next open.
- */
+// Closed shell returns null and remounts fresh — cancelled draft must not leak.
 describe("DecisionEditDialog — reopen renders fresh state", () => {
   it("does not leak typed text from a cancelled create into the next open", () => {
     const { rerender } = render(
@@ -351,8 +341,7 @@ describe("DecisionEditDialog — reopen renders fresh state", () => {
   });
 });
 
-// require-stage-on-items-and-decisions: a decision must carry a concrete stage
-// when the lead owns stages (parity with the risk dialog).
+// Decision must carry a concrete stage when the lead owns stages.
 describe("DecisionEditDialog — require a stage", () => {
   it("blocks save with no stage when stages are available", () => {
     const onSave = vi.fn();
@@ -368,8 +357,7 @@ describe("DecisionEditDialog — require a stage", () => {
         onCancel={() => undefined}
       />,
     );
-    // unify-record-dialogs: create starts with no stage selected, so the gap is
-    // reached without any deselection.
+    // Create starts with no stage selected — gap needs no deselection step.
     fireEvent.change(screen.getByLabelText(/^Decision \*/i), {
       target: { value: "A decision without a stage" },
     });
@@ -413,9 +401,7 @@ describe("DecisionEditDialog — require a stage", () => {
   });
 });
 
-// unify-record-dialogs: changing the product re-scopes the stage options to the
-// new product and CLEARS the prior selection — never defaults to all owned
-// stages (regression guard: the product-switch handler once selected them all).
+// Product switch re-scopes stages and clears prior selection (never all-owned).
 describe("DecisionEditDialog — product switch re-scopes + clears stages", () => {
   const twoProducts: Product[] = [
     { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
@@ -453,9 +439,7 @@ describe("DecisionEditDialog — product switch re-scopes + clears stages", () =
   });
 });
 
-// lead-form-stage-access-integrity (4.4): the decision dialog visibly locks a
-// single owned stage and dead-ends (Save disabled) on a zero-owned-stage product,
-// mirroring the risk/item dialogs.
+// Single owned stage locks; zero-owned-stage product dead-ends Save.
 describe("DecisionEditDialog — stage-ownership scoping", () => {
   it("visibly pre-selects and locks a single owned stage (no checkbox to deselect)", () => {
     render(
@@ -539,11 +523,8 @@ describe("DecisionEditDialog — stage-ownership scoping", () => {
   });
 });
 
-// activity-first-class (Decision 0.4): a lead can scope a NEW decision to an
-// attached activity. Choosing an activity parent hides the stage step (an
-// activity owns no SDLC stage) and emits an activity-parented payload — parity
-// with the item/risk dialogs.
-describe("DecisionEditDialog — activity parenting (activity-first-class)", () => {
+// Activity parent hides the stage step and saves an activity-parented payload.
+describe("DecisionEditDialog — activity parenting", () => {
   const activities = [{ id: "act1", name: "Jira triage duty" }];
 
   it("hides the stage step and saves an activity-parented decision with no stage", () => {

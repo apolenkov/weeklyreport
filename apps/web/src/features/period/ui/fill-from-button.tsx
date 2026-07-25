@@ -171,10 +171,6 @@ export function FillFromButton({
 
   return (
     <>
-      {/* One split-button — a wider main segment (copy = fill from most recent
-          submitted period) joined to a slim chevron segment (open the past-
-          report picker). The dropdown portals to document.body with
-          position:fixed so it escapes the toolbar's overflow clip. */}
       <div className="relative inline-flex items-center" ref={wrapRef}>
         <div className={SPLIT_BUTTON_CONTAINER_CLASS}>
           <button
@@ -204,9 +200,6 @@ export function FillFromButton({
         </div>
       </div>
 
-      {/* Dropdown list — portal to document.body so the toolbar's
-          overflow clip cannot truncate it; position:fixed from the trigger
-          rect, tracked on scroll + resize. */}
       <FillFromDropdownPanel
         open={showDropdown}
         pos={dropdownPos}

@@ -69,10 +69,7 @@ export function RiskRow({ risk }: { readonly risk: WeeklyReportRisk }) {
   );
 }
 
-// A lead-raised escalation ("needs attention") is folded into Risks &
-// Blockers as a leading row instead of a separate banner. It carries only a
-// description + severity (no stage/impact/mitigation), so it renders as a
-// compact risk-style row with a "Flagged" gutter and a Blocked / At Risk badge.
+// Escalations fold into Risks & Blockers instead of a separate banner.
 export function EscalationRow({
   description,
   severity,
