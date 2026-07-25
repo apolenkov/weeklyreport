@@ -5,12 +5,8 @@ import {
   SegmentedToggle,
 } from "../../../shared/ui/report-shell/segmented-toggle";
 
-/**
- * Report body mode. "read" renders the assembled report as read-only content;
- * "review" surfaces the per-record comment composer and per-section verdict
- * controls. Client-only, default "read", offered only to a caller who can
- * review at least one section.
- */
+// "review" surfaces comment composers and section verdicts; offered only when
+// the caller can review at least one section.
 export type ReviewMode = "read" | "review";
 
 const SEGMENTS: readonly { value: ReviewMode; label: string }[] = [
@@ -18,7 +14,6 @@ const SEGMENTS: readonly { value: ReviewMode; label: string }[] = [
   { value: "review", label: "Review" },
 ];
 
-/** The [Read | Review] toggle, in the shared neutral segmented-toggle family. */
 export function ReviewModeToggle({
   value,
   onChange,

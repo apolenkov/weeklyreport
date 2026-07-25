@@ -103,7 +103,6 @@ const validSubmit = () => ({
   confirmed: true as const,
 });
 
-// Helper to generate arrays of a given size
 const makeItems = (count: number) =>
   Array.from({ length: count }, () => validItem());
 
@@ -1597,13 +1596,6 @@ describe("appSettingsSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  // -------------------------------------------------------------------
-  // 9 new configurable fields. Each has `.default()` so the original
-  // 2-key fixture above still parses; these tests assert the defaults
-  // are applied AND that the new constraints reject garbage.
-  // (Legacy `departmentName` field removed from this schema.)
-  // -------------------------------------------------------------------
-
   it("applies defaults for the 9 new fields when omitted", () => {
     const result = appSettingsSchema.safeParse({
       autoCreatePeriods: false,
@@ -1713,12 +1705,6 @@ describe("appSettingsSchema", () => {
     ).toBe(false);
   });
 
-  // -------------------------------------------------------------------
-  // 8 new period-cycle fields on AppSettings. Same pattern as the block
-  // above — each has `.default()` so partial PATCH payloads keep working
-  // and constraints reject garbage.
-  // -------------------------------------------------------------------
-
   it("applies defaults for the period-cycle fields when omitted", () => {
     const result = appSettingsSchema.safeParse({
       autoCreatePeriods: false,
@@ -1772,10 +1758,6 @@ describe("appSettingsSchema", () => {
       }).success,
     ).toBe(true);
   });
-
-  // periodCadence removed — no validation test needed.
-  // firstDayOfWeek / deadlineDayOfWeek / maxOpenPeriods /
-  // requireAllSectionsToPublish removed — bounds tests dropped.
 
   it("rejects reopenWindowHours out of [0..168]", () => {
     expect(

@@ -13,15 +13,7 @@ import superjson from "superjson";
 
 import { fetchWithTraceparent } from "./trace-context";
 
-// ---------------------------------------------------------------------------
-// 401 interceptor — redirect logic
-// ---------------------------------------------------------------------------
-
-/**
- * Pages where a 401 must NOT trigger a redirect (would cause loops).
- *   /            login page
- *   /auth/*      SAML callback + error pages
- */
+// Pages where a 401 must not redirect (would loop): login and /auth/* callbacks.
 const AUTH_REDIRECT_EXEMPT = /^\/(?:$|auth(?:\/|$))/;
 
 const HTTP_UNAUTHORIZED = 401;
@@ -38,19 +30,7 @@ export function isProgressiveDashboardProcedure(path: string): boolean {
   return (PROGRESSIVE_DASHBOARD_PROCEDURES as readonly string[]).includes(path);
 }
 
-/**
- * Pure function exported for unit testing. Given an unknown error captured
- * by the tRPC link, returns true if a redirect was issued, false otherwise.
- *
- * Skips when:
- *   - running on the server (no `window`),
- *   - the error is not a TRPCClientError,
- *   - neither `httpStatus === 401` nor `code === 'UNAUTHORIZED'`,
- *   - the current path matches AUTH_REDIRECT_EXEMPT.
- *
- * Redirect target: '/' (the login page in this app — there is no /login
- * route). The original path + search is appended as ?next=<encoded>.
- */
+// Redirect target is '/' (no /login route); original path is ?next=.
 export function createAuthRedirectHandler(): (err: unknown) => boolean {
   return (err: unknown): boolean => {
     if (typeof window === "undefined") return false;
@@ -73,14 +53,8 @@ export function createAuthRedirectHandler(): (err: unknown) => boolean {
   };
 }
 
-/**
- * Custom tRPC link that runs BEFORE httpBatchLink. It observes errors
- * flowing back from the network and triggers a redirect on 401, then
- * swallows the error (so downstream callers don't also fire toast/throw
- * during the in-flight navigation).
- *
- * @internal — exported for unit tests; production wiring stays via makeTRPCClient
- */
+// Runs before httpBatchLink; swallows the error once redirect is in flight
+// so callers do not also toast/throw during navigation.
 export function createAuthRedirectLink(): TRPCLink<AppRouter> {
   const handle = createAuthRedirectHandler();
   return () =>
@@ -101,20 +75,12 @@ export function createAuthRedirectLink(): TRPCLink<AppRouter> {
       });
 }
 
-/**
- * True when an error is a tRPC CONFLICT (HTTP 409) — the optimistic-lock
- * rejection a stale section write produces. Callers use it to react to a
- * lost-update (refetch + surface) rather than treating it as a generic error.
- */
+// Optimistic-lock rejection on a stale section write — callers refetch rather than generic-error.
 export function isConflictError(err: unknown): boolean {
   if (!(err instanceof TRPCClientError)) return false;
   const data = err.data as { httpStatus?: number; code?: string } | undefined;
   return data?.code === "CONFLICT" || data?.httpStatus === HTTP_CONFLICT;
 }
-
-// ---------------------------------------------------------------------------
-// Client + proxy factories
-// ---------------------------------------------------------------------------
 
 export function makeTRPCClient() {
   const transportOptions = {

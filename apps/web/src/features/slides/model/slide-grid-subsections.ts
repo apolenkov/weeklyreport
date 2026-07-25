@@ -18,12 +18,9 @@ interface BuildProductSubsectionsInput {
   readonly sharedCardId: string;
 }
 
-/** Product-level subsections (one per product with own/foreign rows) plus one
- * project subsection per attached activity — status-only activities (no
- * records this period) still render as a labeled header row with empty
- * columns, so they read like Product-level lines rather than a separate pill
- * lane. A record referencing an activity id absent from `section.activities`
- * (frozen snapshot drift) still gets a subsection, titled generically. */
+// Status-only activities still render as empty labeled rows (not a separate pill
+// lane). Snapshot-drift activity ids missing from section.activities still get
+// a generically titled subsection.
 export function buildProductSubsections(
   input: BuildProductSubsectionsInput,
 ): ReadonlyMap<string, readonly GridSubsection[]> {

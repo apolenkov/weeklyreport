@@ -1,9 +1,5 @@
-/**
- * Characterization tests for `useItemEditDialog`, pinning the hook's return
- * shape directly. The existing `item-edit-dialog.test.tsx` suite exercises the
- * hook only indirectly through rendered DOM; these tests catch return-shape
- * regressions without mounting the full dialog.
- */
+// Pins useItemEditDialog return shape; DOM suite only exercises the hook indirectly.
+
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 

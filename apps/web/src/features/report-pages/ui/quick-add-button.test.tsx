@@ -66,7 +66,7 @@ describe("QuickAddButton", () => {
   });
 });
 
-describe("record-status-derived-from-risk: item dialog has no free Blocked chip", () => {
+describe("item dialog has no free Blocked chip", () => {
   const products = [
     {
       id: "p1",

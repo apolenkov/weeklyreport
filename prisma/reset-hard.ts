@@ -1,15 +1,4 @@
-/**
- * Hard reset for clean UAT.
- *
- * Drops EVERY row in EVERY app table (CASCADE), flushes Redis (BullMQ + cache),
- * then re-seeds via seed-simple. Use before manual UAT runs to start from a
- * known-zero state — no leftover audit logs, no stale jobs, no orphaned admin
- * data.
- *
- *   pnpm db:reset:hard
- *
- * Prereqs: docker compose stack running (postgres + redis healthy).
- */
+// Drop all app rows, flush Redis, re-seed (seed-simple). Requires healthy postgres+redis.
 
 import { spawnSync } from "node:child_process";
 import net from "node:net";
@@ -152,7 +141,6 @@ async function truncateAll(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  // Destructive-guard: refuse on prod-looking DATABASE_URL.
   assertNonProdDestructive("reset-hard");
 
   console.log("[reset-hard] Starting hard reset…");

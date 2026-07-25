@@ -10,10 +10,9 @@ import { z } from "zod";
 const emptyToUndefined = (value: unknown): unknown =>
   value === "" ? undefined : value;
 
-// Shared by the five boolean toggles: only "true"/"false"/unset, so a typo like
-// `ture` is rejected at build time rather than silently read as "off". Empty
-// string coerces to unset inside the schema so both parse sites (the build
-// assert and the accessor) treat an empty value as absent uniformly.
+// Shared by the five boolean toggles: only "true"/"false"/unset so a typo is
+// rejected at build rather than silently read as "off". Empty string coerces
+// to unset so both parse sites treat absence uniformly.
 const optionalToggle = z.preprocess(
   emptyToUndefined,
   z.enum(["true", "false"]).optional(),

@@ -3,7 +3,7 @@ import type { KanbanItem } from "../model/types";
 
 export type ItemCardStageTags =
   | {
-      /** Activity-parented rows are legitimately stage-less — no tags, no warning. */
+      // Activity-parented rows are legitimately stage-less — no tags, no warning.
       isActivityItem: true;
     }
   | {
@@ -14,15 +14,13 @@ export type ItemCardStageTags =
       isActivityItem: false;
     };
 
-/**
- * Derive the item card's stage-tag footer state from the raw item. Pure —
- * no rendering.
- */
+// Cap visible stage pills; remainder collapses into a "+N" overflow chip.
+const MAX_VISIBLE_STAGE_TAGS = 2;
+
 export function deriveItemCardStageTags(
   item: Pick<KanbanItem, "stageIds" | "stageName" | "activityId">,
 ): ItemCardStageTags {
-  // Activities carry no SDLC stage by design, so a stage-less activity item is
-  // the expected shape — never the "No stage set" anomaly warning.
+  // Activities carry no SDLC stage by design — never the "No stage set" warning.
   if (item.activityId != null) {
     return {
       isActivityItem: true,
@@ -33,16 +31,12 @@ export function deriveItemCardStageTags(
       ? item.stageIds
       : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
         splitStageNames(item.stageName);
-  // Heal a legacy short "Dev" at render so the
-  // card reads the canonical "Development" alongside seeded rows; the pipeline
-  // chip keeps its own short label.
+  // Heal legacy short "Dev" at render so the card matches seeded canonical names.
   const stageTags = [...new Set(rawStageTags.map(canonicalStageName))];
-  // A stage-less item is a legacy anomaly,
-  // never an implicit "all stages" scope — render the loud "No stage set"
-  // warning, mirroring the risk row.
+  // Stage-less product item is a legacy anomaly (not "all stages") — mirror risk row.
   const stageTagsLabel =
     stageTags.length === 0 ? "No stage set" : stageTags.join(", ");
-  const visibleStageTags = stageTags.slice(0, 2);
+  const visibleStageTags = stageTags.slice(0, MAX_VISIBLE_STAGE_TAGS);
   const hiddenStageCount = Math.max(
     stageTags.length - visibleStageTags.length,
     0,
@@ -56,10 +50,6 @@ export function deriveItemCardStageTags(
   };
 }
 
-/**
- * Footer stage-tag badges: the "No stage set" warning chip, up to two visible
- * stage-name pills, and a "+N" overflow pill. Presentational only.
- */
 export function ItemCardStageTagsRow(props: ItemCardStageTags) {
   if (props.isActivityItem) return null;
   const { stageTags, stageTagsLabel, visibleStageTags, hiddenStageCount } =

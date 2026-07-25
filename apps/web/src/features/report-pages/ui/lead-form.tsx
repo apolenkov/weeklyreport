@@ -32,13 +32,9 @@ import { useLeadFormDraft } from "./use-lead-form-draft";
 import { useLeadFormWriteActions } from "./use-lead-form-write-actions";
 
 interface LeadFormProps {
-  /**
-   * Explicit report identifier from the dynamic `[reportId]` route segment;
-   * addressed-route semantics are documented on `UseLeadFormDataInput`.
-   */
+  // Explicit report id from `[reportId]`; bare-route redirect on UseLeadFormDataInput.
   readonly reportId?: string;
   readonly mode?: "edit" | "slides";
-  /** Bare-route canonical redirect; see `UseLeadFormDataInput`. */
   readonly redirectToCanonical?: boolean;
 }
 
@@ -65,22 +61,16 @@ export function LeadForm({
   // LeadSlidesClient (deck root div).
   const deckRef = useRef<HTMLDivElement>(null);
   const fullscreenToggleRef = useRef<HTMLButtonElement>(null);
-  // lead-form is the SINGLE fullscreen owner on the hosted path: it threads
-  // isFullscreen + toggle into BOTH its toolbar toggle AND LeadSlidesClient
-  // (whose local hook is disabled), so exactly one `f`/fullscreenchange
-  // listener exists. Focus returns to the toolbar toggle on exit. Gated on
-  // slides mode so the edit form adds no `f` listener.
+  // Single fullscreen owner: threads toggle into toolbar + LeadSlidesClient
+  // (local hook disabled) so one `f` listener exists; gated to slides mode.
   const slidesFullscreen = useFullscreen(
     deckRef,
     fullscreenToggleRef,
     isSlidesMode,
   );
 
-  // Draft module: editable section, autosave, version, readiness, submit, and
-  // every merge behind one handle. Its live view-model inputs enter as the
-  // `loaded` render arg, carried across renders by this component's local ref
-  // (the value is one render behind — benign for the modal quick-add
-  // callbacks — and no ref object crosses into the module).
+  // Draft module handle; `loaded` is one render behind via local ref
+  // (benign for modal quick-add; no ref object crosses into the module).
   const loadedContextRef = useRef<LeadFormLoadedContext>(EMPTY_LOADED_CONTEXT);
   const seam = useLeadFormDraftSeam();
   const draft = useLeadFormDraft({
@@ -108,11 +98,9 @@ export function LeadForm({
     handleConflict: draft.handleConflict,
   });
 
-  // simplify-stage-status-interaction: stages the lead left unset (null
-  // traffic) auto-promote to On Track at submit, warned first. stageStatuses
-  // only carries the lead's OWN stages, so a null entry is a genuinely unset
-  // own stage. Both the confirm-dialog warning and the coercion read this one
-  // count, so they can never disagree.
+  // Null-traffic own stages auto-promote to On Track at submit (warned first).
+  // stageStatuses is own-only, so null means genuinely unset; warning +
+  // coercion share this count so they cannot disagree.
   const unsetOwnStageCount = (draft.draftPayload?.stageStatuses ?? []).filter(
     (status) => status.status == null,
   ).length;

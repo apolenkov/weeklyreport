@@ -8,11 +8,7 @@ const CSS_MUTED = "var(--color-muted)";
 const CSS_MUTED_FG = "var(--color-muted-foreground)";
 const CHIP_IDLE_BORDER = "rgba(0,0,0,0.15)";
 
-// record-status-derived-from-risk: no free "Blocked" chip and no in-dialog
-// blocker gesture. An item's blocked / at-risk alarm is DERIVED from a
-// covering risk, never a free item status — a blocker is created in Risks &
-// Blockers (or the quick-add "Blocker" entry). Each item type authors only
-// its own progress vocabulary (rework-item-status-model).
+// No free Blocked chip — alarm is derived from a covering risk (Risks & Blockers).
 export const CURRENT_WEEK_CHOICES: readonly ChipChoice<ItemStatus>[] = [
   {
     value: IN_PROGRESS_STATUS,

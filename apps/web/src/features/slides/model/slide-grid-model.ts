@@ -162,12 +162,7 @@ function buildHeaderSummary(
   };
 }
 
-/**
- * Pure view model for the by-product slide grid: products → (product-level +
- * per-activity subsections) → four sorted, author-collapsed record columns,
- * plus header stats, priority strip, and the legend roster. Own rows carry the
- * section author; Everyone-mode foreign rows keep their real author identity.
- */
+// Own rows carry the section author; Everyone-mode foreign rows keep real author identity.
 export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
   const { section, foreign = [] } = input;
   const productStatuses =

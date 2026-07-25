@@ -484,7 +484,6 @@ describe("RiskEditDialog - SDLC stage selector", () => {
     );
   });
 
-  // P3.6 layout smoke tests
   it("renders Save Risk and Cancel buttons in the sticky footer", () => {
     render(
       <RiskEditDialog
@@ -505,11 +504,8 @@ describe("RiskEditDialog - SDLC stage selector", () => {
   });
 
   it("renders all fields in a balanced two-column layout with a Classification panel", () => {
-    // lead-live-walk-2026-06-14 1.x: the single-column layout (PR #10) ran the
-    // full 92vh with the Product picker clipped off-screen. It is replaced by a
-    // balanced md+ two-column grid — prose fields on the left, the Classification
-    // panel on the right. Assert the new contract: a responsive two-column grid
-    // exists, and every field survived the relayout.
+    // md+ two-column grid keeps the product picker on-screen; assert the grid
+    // and that every field is still present after the relayout.
     render(
       <RiskEditDialog
         open
@@ -525,15 +521,8 @@ describe("RiskEditDialog - SDLC stage selector", () => {
       />,
     );
 
-    // The responsive two-column grid is present (collapses to one column on a
-    // narrow modal via the md: breakpoint).
     expect(document.querySelector('[class*="md:grid-cols-2"]')).not.toBeNull();
-
-    // The grouped Classification panel is present.
     expect(screen.getByText("Classification")).toBeInTheDocument();
-
-    // Every field survived the relayout: the three prose fields, severity
-    // chips, the stage selector, and the product picker (>1 product).
     expect(screen.getByLabelText(/^Risk \*/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^Impact \*/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^Mitigation \*/i)).toBeInTheDocument();
@@ -639,15 +628,8 @@ describe("RiskEditDialog — backdrop keydown/click a11y", () => {
   });
 });
 
-/**
- * Typed text AND selected severity must survive parent re-renders that pass a
- * new stagesForProduct function reference (autosave → React Query
- * invalidate cycle).
- *
- * Before fix: useEffect has stagesForProduct in deps → fires on new ref →
- *             setText('') and setSeverity('at-risk') wipe user input.
- * After fix:  stagesForProduct removed from deps → state preserved.
- */
+// Typed text and selected severity must survive parent re-renders that pass a
+// new stagesForProduct function reference (autosave → React Query invalidate).
 describe("RiskEditDialog — form-race regression", () => {
   it("preserves typed text when parent re-renders with a new stagesForProduct ref", () => {
     const onSave = vi.fn();
@@ -685,8 +667,6 @@ describe("RiskEditDialog — form-race regression", () => {
       />,
     );
 
-    // Before fix, text was wiped back to '' by useEffect firing on the new
-    // stagesForProduct reference.
     expect(screen.getByLabelText(/^Risk \*/i)).toHaveValue(
       "user typed this — must survive",
     );
@@ -727,7 +707,6 @@ describe("RiskEditDialog — form-race regression", () => {
       />,
     );
 
-    // Before fix, severity was reset to 'at-risk' by the same useEffect.
     expect(screen.getByRole("button", { name: /Blocked/i })).toHaveAttribute(
       "aria-pressed",
       "true",

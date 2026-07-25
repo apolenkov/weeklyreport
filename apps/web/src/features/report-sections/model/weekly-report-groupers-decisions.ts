@@ -1,9 +1,3 @@
-/**
- * Decision/priority grouping + author/escalation lookups for
- * {@link mapWeeklyReport} in `./weekly-report`. Split out from
- * `./weekly-report-groupers` to keep that file focused on the item/risk
- * re-slicing that shares the section-flattening shape.
- */
 import type {
   ReportSectionReadModel,
   WeeklyReportReadModel,
@@ -23,11 +17,7 @@ interface ResolvedProduct {
   readonly projectName: string;
 }
 
-/**
- * Resolve the product a decision attaches to: its explicit `productId` when
- * present, else the section author's first project (legacy entries predating
- * per-decision product scoping).
- */
+// Explicit productId when present, else the section author's first project (legacy).
 function resolveDecisionProduct(
   section: ReportSectionReadModel,
   projectNames: ReadonlyMap<string, string>,
@@ -42,7 +32,6 @@ function resolveDecisionProduct(
   return section.projects.at(0);
 }
 
-/** One decision re-shaped into its head-report row; `index` seeds the fallback id. */
 function deriveWeeklyReportDecision(
   section: ReportSectionReadModel,
   target: ResolvedProduct,
@@ -59,22 +48,14 @@ function deriveWeeklyReportDecision(
   };
 }
 
-/**
- * Group decisions by their explicit productId when present.
- * Legacy entries without productId fall back to the section author's first
- * project. If neither exists, the entry is dropped (no place to render it).
- *
- * `projectNames` is the report-wide id→name map — see `groupRisksByProject`
- * in `./weekly-report-groupers`.
- */
+// Explicit productId when present; legacy without productId → first project.
+// Neither → dropped. projectNames is the report-wide id→name map.
 export function groupDecisionsByProject(
   sections: readonly ReportSectionReadModel[],
   projectNames: ReadonlyMap<string, string>,
 ): Map<string, WeeklyReportDecision[]> {
   const entries = sections.flatMap((section) =>
-    // Activity-parented decisions render under their activity, not a product —
-    // skipped so they never fall back to firstProject. `idx` is the decision's
-    // ordinal within its section (seeds the fallback id).
+    // Activity-parented decisions skip product fallback (render under activity).
     section.decisions.flatMap((decision, idx) => {
       if (decision.activityId != null) return [];
       const target = resolveDecisionProduct(section, projectNames, decision);
@@ -100,15 +81,11 @@ export function groupDecisionsByProject(
   );
 }
 
-/**
- * Derive priorities from items with priorityRank set, grouped by projectId,
- * sorted by rank ASC within each product.
- */
+// Priorities from items with priorityRank, grouped by project, rank ASC.
 export function groupPrioritiesByProject(
   sections: readonly ReportSectionReadModel[],
 ): Map<string, WeeklyReportPriority[]> {
-  // Each section's priority items are rank-sorted, then concatenated in section
-  // order — a product owned by two sections keeps each section's sorted block.
+  // Rank-sorted per section, then concatenated — dual-owned products keep blocks.
   const entries = sections.flatMap((section) =>
     section.items
       .filter(
@@ -118,8 +95,7 @@ export function groupPrioritiesByProject(
           projectId: string;
           priorityRank: number;
         } =>
-          // A product priority is product-parented; skip activity items
-          // (projectId null).
+          // Product-parented only; skip activity items (projectId null).
           i.priorityRank != null && i.projectId != null,
       )
       .toSorted((a, b) => a.priorityRank - b.priorityRank),
@@ -138,7 +114,6 @@ export function groupPrioritiesByProject(
   );
 }
 
-/** Report-wide projectId → the (deduped) list of authors who own it. */
 export function buildProductToAuthorMap(
   sections: readonly ReportSectionReadModel[],
 ): Map<string, string[]> {
@@ -153,17 +128,13 @@ export function buildProductToAuthorMap(
     [...Map.groupBy(entries, (entry) => entry.projectId)].map(
       ([projectId, group]) => [
         projectId,
-        // Dedupe authors, keeping first-owning-section order.
         [...new Set(group.map((entry) => entry.authorId))],
       ],
     ),
   );
 }
 
-/**
- * Find the first escalation that targets a given product and surface its
- * description as the `needsAttention` banner.
- */
+// First escalation targeting the product, surfaced as the needsAttention banner.
 export function findNeedsAttention(
   api: WeeklyReportReadModel,
   productName: string,

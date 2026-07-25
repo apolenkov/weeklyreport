@@ -1,12 +1,7 @@
 "use client";
 
-// Captures browser console.error/warn, window error events and unhandled
-// promise rejections, batches them, and POSTs to /api/client-logs so all
-// debug data lives in apps/api/.logs/app.log alongside server entries.
-//
-// Dev-only by default — installClientLogger() is a no-op when
-// NEXT_PUBLIC_CLIENT_LOG_FORWARDING is not 'true'. Enable via
-// .env.development by default; opt-in in prod.
+// Batches browser console/window errors to /api/client-logs.
+// Dev-only by default — no-op unless NEXT_PUBLIC_CLIENT_LOG_FORWARDING is 'true'.
 
 import { webEnv } from "./web-env";
 
@@ -74,7 +69,6 @@ async function flush() {
   }
 }
 
-/** Wrap console.error/warn so both entries are queued for forwarding and still print. */
 function patchConsole(): void {
   const origError = console.error.bind(console);
   const origWarn = console.warn.bind(console);
@@ -103,7 +97,6 @@ function patchConsole(): void {
   };
 }
 
-/** Wire window error/rejection capture and the tab-hide flush trigger. */
 function registerWindowListeners(): void {
   window.addEventListener("error", (event) => {
     enqueue({
@@ -128,7 +121,6 @@ function registerWindowListeners(): void {
     });
   });
 
-  // Flush on tab hide/unload.
   window.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") void flush();
   });

@@ -8,38 +8,19 @@ import { useDialogFocus } from "../../lib/use-dialog-focus";
 type ConfirmationDialogVariant = "default" | "destructive";
 
 interface ConfirmationDialogProps {
-  /** Whether the dialog is visible */
   readonly open: boolean;
-  /** Called when dialog is dismissed or cancelled */
   readonly onClose: () => void;
-  /** Called when user confirms the action */
   readonly onConfirm: () => void;
-  /** Dialog title */
   readonly title: string;
-  /** Dialog description / body text */
   readonly description: React.ReactNode;
-  /** Label for the confirm button (defaults to "Confirm") */
   readonly confirmLabel?: string;
-  /** Label for the cancel button (defaults to "Cancel") */
   readonly cancelLabel?: string;
-  /** Visual variant — destructive shows red confirm button */
   readonly variant?: ConfirmationDialogVariant;
-  /** Disable both actions while the confirm operation is pending. */
   readonly isPending?: boolean;
-  /** Optional stable selector for an integration flow's backdrop. */
   readonly testId?: string;
-  /** Optional extra content between description and buttons */
   readonly children?: React.ReactNode;
 }
 
-/**
- * Reusable confirmation dialog for confirmation actions.
- * - Traps focus inside the dialog and restores it to the trigger on close
- *   (via the shared `useDialogFocus` primitive)
- * - Closes on Escape
- * - Closes on backdrop click
- * - Supports destructive (red) and standard (green) confirm buttons
- */
 export function ConfirmationDialog({
   open,
   onClose,

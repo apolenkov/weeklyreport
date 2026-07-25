@@ -16,12 +16,7 @@ export interface WeeklyReportMutations {
   readonly isArchivePending: boolean;
 }
 
-/**
- * The report's three lifecycle mutations (publish/reopen/archive), each
- * cascading cache invalidation across the surfaces that must refetch on
- * success. Extracted so the controller hook stays under the complexity
- * budget.
- */
+// Publish/reopen/archive with cascading invalidation on success.
 export function useWeeklyReportMutations(): WeeklyReportMutations {
   const trpc = useTRPC();
   const qc = useQueryClient();

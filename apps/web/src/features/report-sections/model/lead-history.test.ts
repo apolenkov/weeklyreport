@@ -80,7 +80,6 @@ describe("isoWeekNumber", () => {
   });
 
   it("returns 1 for 2026-01-05 (Monday of ISO week 2 of 2026)", () => {
-    // 2026-01-05 is a Monday in ISO week 2 of 2026.
     expect(isoWeekNumber(new Date("2026-01-05T00:00:00.000Z"))).toBe(2);
   });
 });

@@ -31,12 +31,6 @@ interface UseRiskEditParentStageArgs {
   readonly stagesForProduct?: (productId: string) => readonly string[];
 }
 
-/**
- * The risk dialog's classification half: parent (product/activity), stage
- * selection, and severity state, plus the values derived from them
- * (available/effective stages, dead-end, the pre-checked context strip, and
- * the parent's display name).
- */
 export function useRiskEditParentStage({
   risk,
   isCreate,
@@ -52,9 +46,8 @@ export function useRiskEditParentStage({
     ? (products.find((p) => p.id === defaultProductId) ?? products[0])
     : products.find((p) => p.id === risk?.productId);
 
-  // Severity derived ONCE from pipeline on create; user choice is sticky thereafter.
-  // Severity is NOT re-derived when the user toggles stage checkboxes.
-  // A chip-raise prefill (initialSeverity) wins over the derived default.
+  // Derived once on create; sticky thereafter (not re-run on stage toggles).
+  // Chip-raise initialSeverity wins over the derived default.
   const [severity, setSeverity] = useState<RiskSeverity>(() => {
     if (risk?.severity) return risk.severity;
     if (initialSeverity) return initialSeverity;
@@ -62,10 +55,7 @@ export function useRiskEditParentStage({
     return deriveFromPreChecked(seedProduct, ownedStages);
   });
 
-  // The record's parent — a product OR an attached activity (XOR). Seeded
-  // from the bound risk on edit, else the create-mode seed — a pill raise's
-  // activity beats the default product (shared seed rule; falls back to the
-  // first activity for an activity-only lead).
+  // Product XOR activity; pill-raise activity beats default product seed.
   const [parent, setParent] = useState<RecordParent>(() =>
     resolveRecordParent(
       risk ?? {},
@@ -78,10 +68,8 @@ export function useRiskEditParentStage({
   );
   const isActivityParent = parent.kind === "activity";
 
-  // Stage checkboxes start empty on create. The user marks stages explicitly.
-  // preCheckedStages still renders an info strip (context only), but does not
-  // influence initial selection. A chip-raise prefill (initialStageIds)
-  // pre-checks the clicked stage.
+  // Empty on create — user marks stages; preCheckedStages is info only.
+  // Chip-raise initialStageIds pre-checks the clicked stage.
   const [stageIds, setStageIds] = useState<string[]>(() =>
     computeInitialStageIds(risk, initialStageIds),
   );
@@ -89,27 +77,18 @@ export function useRiskEditParentStage({
 
   function handleStageChange(nextStageIds: string[]) {
     setStageIds(nextStageIds);
-    // Clear stageIds error as soon as the user selects something.
     if (nextStageIds.length > 0) {
       setStageError(undefined);
     }
-    // Severity is NOT updated here — user's explicit severity choice is sticky.
   }
 
   function setParentAndStages(nextParent: RecordParent) {
     setParent(nextParent);
-    // Clear the stage selection on any parent switch. NEVER default to all
-    // owned stages — that "covers all" default is the root cause of the
-    // inflated-completeness ("6/7") defect. Switching to an activity hides
-    // the stage step; the lead marks product stages explicitly; the
-    // single-owned-stage convenience lives in handleSave.
+    // Never default to all owned stages — that caused inflated completeness.
     setStageIds([]);
   }
 
-  // The context strip tracks the currently selected parent, exactly like the
-  // editable stage list below — a mount-time snapshot would attribute the
-  // seed product's flagged stages to a newly selected product, because the
-  // banner's product name follows `parent`.
+  // Track selected parent (not mount-time seed) so the strip's name matches.
   const parentProduct = isActivityParent
     ? undefined
     : products.find((p) => p.id === parent.id);
@@ -122,8 +101,7 @@ export function useRiskEditParentStage({
     [parentProduct, stagesForProduct],
   );
 
-  // The stage step is product-only. An activity owns no SDLC stage
-  // (Decision 5), so no stages are available and no dead-end applies.
+  // Activities own no SDLC stage — no stages and no dead-end.
   const availableStages = isActivityParent
     ? []
     : (stagesForProduct?.(parent.id) ?? []);

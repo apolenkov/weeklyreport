@@ -10,8 +10,7 @@ import {
   worstTrafficStatus,
 } from "./status-presentation";
 
-// Frozen expectations mirror the exact vocabulary the surfaces rendered before
-// consolidation — a parity guard, so a value drift fails here.
+// Canonical vocabulary parity — a value drift fails here.
 const LABELS: Record<
   CanonicalStatus,
   { screen: string; print: string; worstPill: string }
@@ -30,7 +29,7 @@ const DOTS: Record<CanonicalStatus, string> = {
 };
 
 describe("statusLabel", () => {
-  it("resolves every status/variant to its pre-change label", () => {
+  it("resolves every status/variant to its expected label", () => {
     for (const status of Object.keys(LABELS) as CanonicalStatus[]) {
       expect(statusLabel(status, "screen")).toBe(LABELS[status].screen);
       expect(statusLabel(status, "print")).toBe(LABELS[status].print);
@@ -40,7 +39,7 @@ describe("statusLabel", () => {
 });
 
 describe("statusDotClassName", () => {
-  it("resolves every status to its pre-change dot class", () => {
+  it("resolves every status to its expected dot class", () => {
     for (const status of Object.keys(DOTS) as CanonicalStatus[]) {
       expect(statusDotClassName(status)).toBe(DOTS[status]);
     }

@@ -2,12 +2,7 @@
 
 import { useState } from "react";
 
-/**
- * The four "+ Add" UI signal counters for the lead form's section-hosted create
- * dialogs. Each bump opens the matching section's own editor (the section reads
- * the counter as an `addSignal` prop). These are pure UI open-triggers, not
- * draft state — kept out of the draft module so it owns only persisted content.
- */
+// UI open-triggers only — kept out of the draft module (persisted content).
 export interface LeadFormAddSignals {
   readonly currentWeekAddSignal: number;
   readonly nextWeekAddSignal: number;

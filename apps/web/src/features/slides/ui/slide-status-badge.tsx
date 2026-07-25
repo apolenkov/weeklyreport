@@ -7,11 +7,7 @@ import {
   statusToneClassName,
 } from "../../../lib/status-presentation";
 
-/**
- * The shared worst-status pill: a canonical status plus its label variant in,
- * label + icon + tone resolved from the canonical map. No pre-formatted
- * tone/color prop, so a caller cannot bypass the map and re-introduce drift.
- */
+// No pre-formatted tone prop — callers must go through the canonical map.
 export function SlideStatusBadge({
   status,
   labelVariant,

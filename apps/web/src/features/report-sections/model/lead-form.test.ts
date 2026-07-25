@@ -103,11 +103,8 @@ describe("mapLeadProducts", () => {
   });
 
   it("renders a stageSet stage the lead does not own as foreign-owned (locked) and excludes stages absent from the set", () => {
-    // unassigned-stage-reporting-exclusion: the grid is sourced from the
-    // product's `stageSet` (assignments across all leads). A set stage the
-    // lead owns → `mine`; a set stage owned by another lead → `locked`
-    // (read-only, assignee filled later from cross-author data); a stage
-    // absent from the set → excluded.
+    // Grid from product `stageSet`: own → mine, other lead → locked (read-only),
+    // absent from set → excluded.
     const section = baseSection({
       projects: [
         {
@@ -154,11 +151,9 @@ describe("mapLeadProducts", () => {
   });
 
   it("uses per-stage statuses instead of copying the product status to every owned stage", () => {
-    // rethink-pipeline-state-vs-completeness: status is now derived from risks.
-    // The Testing severity must come from a covering blocker, not a persisted
-    // red with nothing to back it (that would collapse to on-track). The point
-    // of the test — stages carry DISTINCT statuses, not the product-wide red —
-    // still holds: Dev=on-track, Testing=blocked, DevOps=empty.
+    // Status derives from risks: Testing severity must come from a covering
+    // blocker, not a bare persisted red. Stages stay distinct
+    // (Dev=on-track, Testing=blocked, DevOps=empty).
     const section = baseSection({
       projects: [
         {
@@ -269,10 +264,8 @@ describe("mapLeadProducts", () => {
   });
 
   it("without ownedStages or stageSet, the grid is empty (the lead has no stake and no stage is assigned)", () => {
-    // unassigned-stage-reporting-exclusion: with no owned stages AND no
-    // assigned-stage set, there is nothing to render — every canonical stage
-    // is vacant on this product, and vacant stages are excluded. The grid is
-    // empty rather than seven grey "unassigned" placeholders.
+    // No owned stages and no assigned-stage set → nothing to render; vacant
+    // stages are excluded rather than grey "unassigned" placeholders.
     const section = baseSection({
       projects: [
         {
@@ -1035,10 +1028,8 @@ describe("mapLeadReviewFeedback", () => {
   });
 });
 
-// fix-lead-surface-name-resolution: cards referencing a project the section
-// author owns no stage on must resolve the real name from the read model's
-// name-only `referencedProjects`, never the placeholder. The placeholder
-// survives only for an id the entire name source cannot resolve.
+// Cards for projects the author owns no stage on resolve names from
+// `referencedProjects`, never the placeholder (only truly unknown ids keep it).
 describe("report-wide name resolution (referencedProjects)", () => {
   const FOREIGN_PROJECT = "66666666-6666-4666-8666-666666666666";
   const TRULY_UNKNOWN = "99999999-9999-4999-8999-999999999999";

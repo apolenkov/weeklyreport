@@ -1,75 +1,34 @@
-/**
- * Shared tRPC mock factory for web component and hook tests.
- *
- * Each procedure is declared once as a path descriptor; `queryOptions()`,
- * `queryKey()`, and `pathFilter()` all derive from that single path so the
- * shapes can never diverge — `pathFilter()` always returns
- * `{ queryKey: [splitPath] }`, never a vacuous `{ tag }` filter.
- *
- * @internal — test utility only; not imported by production code.
- */
-
+// pathFilter/queryKey/queryOptions derive from one path so they cannot diverge.
 import { vi } from "vitest";
 
 import type { TRPCProxy } from "../lib/trpc";
 
-// ---------------------------------------------------------------------------
-// Public API types
-// ---------------------------------------------------------------------------
-
-/** Data variant for a query descriptor (zero-arg). */
 type QueryData = unknown | (() => unknown);
 
 export interface ProcedureDescriptor {
-  /** e.g. ["admin", "jobs", "listFailed"] */
   path: string[];
-  /**
-   * Query stub. Accepts:
-   *  - a value — returned from queryFn wrapped in Promise.resolve
-   *  - a () => value factory — called each time queryFn runs
-   *  - "pending" — queryFn never resolves (keeps isPending true)
-   *
-   * For input-parameterized queries use `queryByInput` instead.
-   */
+  // value | factory | "pending" (never resolves). Prefer queryByInput for parameterized queries.
   query?: QueryData | "pending";
-  /**
-   * Input-parameterized query stub. When provided, `queryOptions(input)`
-   * passes the input to this function and includes it in the queryKey so
-   * multiple calls with different inputs get independent cache entries.
-   * Incompatible with `query`.
-   */
+  // Input-aware stub; input lands in queryKey so distinct inputs cache separately. Incompatible with query.
   queryByInput?: (input: unknown) => unknown;
-  /** If true, registers a capturing mutation at this path. */
   mutation?: boolean;
 }
 
 export interface CapturedMutation {
-  /** mutationFn inputs, in order */
   calls: unknown[];
-  /** last caller-passed options object (onSuccess/onError/etc.) */
   lastOptions: Record<string, unknown>;
-  /** the vi.fn() used as mutationFn */
   mutationFn: ReturnType<typeof vi.fn>;
 }
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-/** Converts a path array to a dotted string key for the `captured` map. */
 function toDotted(path: string[]): string {
   return path.join(".");
 }
 
-/**
- * Key shape that mirrors @trpc/tanstack-react-query@11 getQueryKeyInternal:
- * the "input-omitted" form is [[...splitPath]].
- */
+// Matches @trpc/tanstack-react-query input-omitted key: [[...splitPath]].
 function toQueryKey(path: string[]): [[...string[]]] {
   return [[...path]];
 }
 
-/** Walks `root`, creating intermediate objects as needed, and returns the leaf. */
 function ensureLeaf(
   root: Record<string, unknown>,
   path: string[],
@@ -84,17 +43,6 @@ function ensureLeaf(
   return node;
 }
 
-// ---------------------------------------------------------------------------
-// Factory
-// ---------------------------------------------------------------------------
-
-/**
- * Creates a minimal tRPC proxy stub from path descriptors.
- *
- * @returns
- *  - `proxy` — the typed proxy stub; pass to TRPCProxyContext.Provider
- *  - `captured` — mutation-capture registry keyed by dotted path
- */
 export function createMockTRPC(descriptors: ProcedureDescriptor[]): {
   proxy: TRPCProxy;
   captured: Record<string, CapturedMutation>;
@@ -116,7 +64,6 @@ export function createMockTRPC(descriptors: ProcedureDescriptor[]): {
 
     const leaf = ensureLeaf(root, path);
 
-    // pathFilter and bare queryKey() always derive from the same path.
     leaf.pathFilter = () => ({ queryKey: qk });
     leaf.queryKey = () => qk;
 
@@ -137,17 +84,7 @@ export function createMockTRPC(descriptors: ProcedureDescriptor[]): {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Internal builders — separate functions keep createMockTRPC under the
-// complexity limit.
-// ---------------------------------------------------------------------------
-
-/**
- * Builds an input-parameterized queryOptions stub.
- * queryOptions(input) returns { queryKey: [[...path], input], queryFn }.
- * The input is appended to the TanStack nested key so distinct inputs get
- * independent cache entries (mirrors tRPC's input-aware key derivation).
- */
+// Input appended to the TanStack key so distinct inputs get independent cache entries.
 function buildQueryByInput(
   leaf: Record<string, unknown>,
   path: string[],

@@ -46,14 +46,7 @@ interface UseLeadFormDraftArgs {
   readonly isEveryone: boolean;
 }
 
-/**
- * The deep draft module: owns the editable section, autosave + save-echo
- * reconciliation, optimistic-lock version, submit readiness + submit, and every
- * draft merge behind one handle. The modal quick-add + blocker-prefill cluster
- * lives in `useLeadFormQuickAdd`; its results are spread onto this handle so the
- * public shape is unchanged. Live view-model inputs a callback needs enter as
- * the plain `loaded` render arg, forwarded to that hook — no ref crosses here.
- */
+// Live view-model enters as plain `loaded` — no ref crosses into this module.
 export function useLeadFormDraft({
   serverSection,
   sectionIdForActions,

@@ -1,11 +1,4 @@
-/**
- * Fixture data for Lead Form components.
- * Real data will come from tRPC endpoints in a later phase.
- */
-
 import type { Product } from "./types";
-
-// ---- Mock Data ----
 
 export const MOCK_PRODUCTS: Product[] = [
   {

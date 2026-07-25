@@ -5,19 +5,12 @@ import type {
 
 export type DraftSaveContent = Omit<DraftSavePayload, "version">;
 
-/**
- * Durable `stableId` round-trip is load-bearing: dropping it makes every save
- * re-mint record identity and breaks published-lineage preservation.
- */
+// stableId round-trip is load-bearing: dropping it re-mints identity each save.
 export function sectionToDraftPayload(
   section: ReportSectionReadModel,
 ): DraftSaveContent {
-  // Drop rows whose required text fields are empty or whitespace-only. The
-  // server's safeText({min:1}) Zod refinement rejects them, which would
-  // otherwise produce "Save failed" toast every time the user clicks
-  // "+ Add Risk/Decision/Item" before typing. Empty rows live only in
-  // local UI state until the user fills them in; once any required field
-  // becomes non-empty the row joins the autosave payload.
+  // Filter blank required text — safeText({min:1}) would reject and toast-fail
+  // on every "+ Add" before the user types. Empty rows stay local-only until filled.
   const hasText = (s: string | null | undefined) =>
     typeof s === "string" && s.trim().length > 0;
   return {

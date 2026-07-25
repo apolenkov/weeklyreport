@@ -9,12 +9,6 @@ function reviewErrorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;
 }
 
-/**
- * The comment/delete tRPC mutations behind {@link RecordComments}, with their
- * toast + review-cache-invalidate wiring. Kept out of the component so it
- * stays gating+render only. `onCommentAdded` fires only on a successful add
- * (the component uses it to clear the draft textarea).
- */
 export function useRecordCommentMutations(
   anchor: RecordCommentAnchor,
   onCommentAdded: () => void,

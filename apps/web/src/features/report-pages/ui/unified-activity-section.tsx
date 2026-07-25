@@ -16,11 +16,7 @@ import {
   type RiskEntry,
 } from "../../report-sections";
 
-/**
- * One row of the unified view: a presentation item plus its derived bucket
- * and the physical week it is stored under. The bucket is a projection —
- * `week` is the persisted `Item.type` and never changes here (ADR 0011).
- */
+// Bucket is a projection; week is persisted Item.type and never changes here (ADR 0011).
 export interface UnifiedActivityEntry {
   readonly item: KanbanItem;
   readonly bucket: ActivityBucket;
@@ -29,20 +25,11 @@ export interface UnifiedActivityEntry {
 
 interface UnifiedActivitySectionProps {
   readonly entries: readonly UnifiedActivityEntry[];
-  /**
-   * record-status-derived-from-risk: own risks, forwarded to each ItemCard so an
-   * own product item's at-risk/blocked pill derives from its covering risks here
-   * too — parity with the classic Current/Next Week view. Activity items in this
-   * view are excluded from derivation inside ItemCard because they have no
-   * product-stage parent.
-   */
+  // Own risks for ItemCard alarm derivation (parity with Current/Next); activity
+  // items skip derivation (no product-stage parent).
   readonly risks?: readonly RiskEntry[];
   readonly readOnly?: boolean;
-  /**
-   * Controlled-component callback mirroring CurrentWeekSection /
-   * NextWeekSection: fired with the next items array FOR ONE WEEK on edit or
-   * delete, so the parent reuses its existing per-type merge handlers.
-   */
+  // Per-week items so the parent reuses existing per-type merge handlers.
   readonly onWeekItemsChange?: (
     week: "current" | "next",
     items: KanbanItem[],
@@ -51,17 +38,13 @@ interface UnifiedActivitySectionProps {
   readonly products?: readonly Product[];
   readonly stagesForProduct?: (productId: string) => readonly string[];
   readonly ownPeriodRanks?: readonly number[];
-  /** Item ids whose lineage is published (resolve-not-delete marker). */
   readonly publishedLockedIds?: ReadonlySet<string>;
-  /** In-place move action for current-week open items. */
   readonly onMarkComplete?: (id: string) => void;
-  /** In-place move action for current-week open items. */
   readonly onMoveToNextWeek?: (id: string) => void;
 }
 
 interface EditState {
   readonly entry: UnifiedActivityEntry;
-  /** Remount key so the dialog re-seeds its state per open. */
   readonly seq: number;
 }
 
@@ -74,13 +57,7 @@ function weekItems(
     .map((entry) => entry.item);
 }
 
-/**
- * The opt-in unified by-state view: one section folding current-week and
- * next-week items into groups derived by `deriveActivityBucket`. Rendered
- * only when the org `AppSettings.unifiedActivityView` flag is on; the
- * classic two-section format stays the default. Creation goes through the
- * quick-add affordance — this section edits, deletes, and moves.
- */
+// Opt-in by-state view (AppSettings.unifiedActivityView); create is via quick-add.
 export function UnifiedActivitySection({
   entries,
   risks,

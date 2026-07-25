@@ -8,16 +8,8 @@ import {
 } from "@customreport/ui/components/ui/card";
 import Link from "next/link";
 
-/**
- * Shared 403 page composed into each (app)/route-group layout when the SSR
- * role check fails.
- *
- * Only `requiredRoles` is rendered into the DOM. The user's actual role is
- * intentionally NOT displayed, so a hostile viewer cannot enumerate role
- * state by hitting protected routes. `homeHref` is a pre-resolved path the
- * caller computes from the shared role-home map (or `/` for anonymous),
- * keeping this component role-agnostic.
- */
+// Only requiredRoles is rendered — the viewer's own role is withheld so
+// protected routes cannot be used to enumerate role state.
 export interface ForbiddenPageProps {
   readonly requiredRoles: readonly Role[];
   readonly homeHref: string;

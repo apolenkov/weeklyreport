@@ -1,19 +1,5 @@
-/**
- * head-report-accordion-redesign (user sign-off 2026-06-23): the product card
- * body is the uniform "Editorial Gutter" grid — every row (item / risk /
- * decision) shares one column grid (priority | rail | stage+owner gutter |
- * content | status badge), so stage labels and content share one left edge.
- *
- * Contract covered here:
- * - prioritized items sort first and carry a gold rank mark in the rank column
- *   (duplicate ranks render without React key warnings; rows key on item.id);
- * - workflow status reads from a right-side status BADGE (report-card-clarity:
- *   the stage gutter stays an identity surface, never a status fill);
- * - owner initials render on item, risk, AND decision rows;
- * - risks render structured Impact / Mitigation;
- * - ChevronDown aria-hidden + rotation + accordion expand/collapse grid;
- * - Needs Attention dedup against a rendered item.
- */
+// Editorial-gutter product card: shared row grid, status badge, owner initials,
+// structured risks, chevron a11y, Needs Attention dedup.
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -86,7 +72,6 @@ function makeDecision(
   };
 }
 
-/** Report with at least one content item so hasContent=true and ChevronDown renders. */
 const reportWithContent = makeReport({
   currentWeek: [makeItem({ id: "c1", text: "Ship it", priorityRank: 1 })],
 });
@@ -225,10 +210,6 @@ describe("ProductAccordion prioritized items", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Status badge: workflow status reads from a right-side badge, not the gutter.
-// ---------------------------------------------------------------------------
-
 describe("ProductAccordion — item status badge", () => {
   it("maps each workflow status to its badge label", () => {
     render(
@@ -300,10 +281,6 @@ describe("ProductAccordion — item status badge", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Owner initials render on every content row.
-// ---------------------------------------------------------------------------
-
 describe("ProductAccordion — owner initials on every row", () => {
   it("renders owner initials on item, risk, and decision rows", () => {
     render(
@@ -323,10 +300,6 @@ describe("ProductAccordion — owner initials on every row", () => {
     expect(screen.getByText("DD")).toBeInTheDocument();
   });
 });
-
-// ---------------------------------------------------------------------------
-// Risks render structured Impact / Mitigation, not a run-on string.
-// ---------------------------------------------------------------------------
 
 describe("ProductAccordion — structured risk row", () => {
   it("renders problem, Impact and Mitigation as separate fields", () => {
@@ -360,10 +333,6 @@ describe("ProductAccordion — structured risk row", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// ChevronDown SVG aria-hidden
-// ---------------------------------------------------------------------------
-
 describe("ProductAccordion — ChevronDown SVG aria-hidden", () => {
   it("ChevronDown svg has aria-hidden=true when accordion has content", () => {
     const { container } = render(
@@ -375,10 +344,6 @@ describe("ProductAccordion — ChevronDown SVG aria-hidden", () => {
     expect(svg).toHaveAttribute("aria-hidden", "true");
   });
 });
-
-// ---------------------------------------------------------------------------
-// ChevronDown rotation transform
-// ---------------------------------------------------------------------------
 
 describe("ProductAccordion — ChevronDown rotation transform", () => {
   it("svg has rotate(-90deg) when accordion is collapsed (defaultOpen=false)", () => {
@@ -399,10 +364,6 @@ describe("ProductAccordion — ChevronDown rotation transform", () => {
     expect((svg as SVGElement).style.transform).toBe("rotate(0deg)");
   });
 });
-
-// ---------------------------------------------------------------------------
-// Accordion expand/collapse grid behavior
-// ---------------------------------------------------------------------------
 
 describe("ProductAccordion — expand/collapse grid", () => {
   it("gridTemplateRows=1fr when expanded (defaultOpen=true)", () => {
@@ -428,13 +389,8 @@ describe("ProductAccordion — expand/collapse grid", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Needs Attention dedup
-// ---------------------------------------------------------------------------
-
-// head-surface-uat-polish (F2): the escalation no longer renders as a separate
-// "Needs Attention" banner — it folds into Risks & Blockers as a leading row.
-describe("ProductAccordion — escalation folds into Risks (F2)", () => {
+// Escalation folds into Risks & Blockers as a leading row, not a separate banner.
+describe("ProductAccordion — escalation folds into Risks", () => {
   const DUP_TEXT = "Auth refactor blocked: waiting on IdP access";
 
   it("suppresses the escalation row when its text matches a rendered item", () => {

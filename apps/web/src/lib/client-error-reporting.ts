@@ -128,11 +128,6 @@ export function getClientErrorDetails(error: unknown): ClientErrorDetails {
   };
 }
 
-/**
- * Clean human message shown for a deterministic client error (4xx / Zod
- * validation / not-found). Replaces the raw `error.message` (a serialized Zod
- * issues array) so the user never sees the validation `pattern` regex.
- */
 const INVALID_LINK_MESSAGE =
   "This link is invalid or the report no longer exists.";
 

@@ -2,26 +2,12 @@
 
 import type { ReactNode } from "react";
 
-/**
- * Shared header for every admin tab so users / groups /
- * products / periods / reminders / reopen / jobs / actions / settings all
- * share the same shape: title + description + count badge on the left,
- * search input + actions on the right.
- *
- * Tabs that don't need search or actions just omit those slots; the layout
- * still aligns visually because the row is a single flex container with a
- * consistent gap.
- */
 export interface TabHeaderProps {
   readonly title: string;
   readonly description?: string;
-  /** Optional count chip rendered next to the title (e.g. "12 users"). */
   readonly count?: ReactNode;
-  /** Right-rail search input. Pass a controlled `<input>` or skip. */
   readonly search?: ReactNode;
-  /** Right-rail action buttons (Add new, Refresh, etc.). */
   readonly actions?: ReactNode;
-  /** data-testid for E2E. Defaults to derived "<title>-tab-header". */
   readonly testId?: string;
 }
 
@@ -67,11 +53,6 @@ export function TabHeader({
   );
 }
 
-/**
- * Convenience search input that matches the canonical admin-tab search
- * styling. Wrapping in a stable component keeps every tab visually aligned
- * without each one re-styling the input.
- */
 export interface TabSearchProps {
   readonly value: string;
   readonly onChange: (next: string) => void;
@@ -100,11 +81,6 @@ export function TabSearch({
   );
 }
 
-/**
- * Quick-filter select — drop-in complement to TabSearch for admin tabs
- * that need a categorical dimension filter (e.g. role, status, group).
- * Options include a sentinel "All" entry with value "".
- */
 interface TabFilterOption {
   readonly value: string;
   readonly label: string;

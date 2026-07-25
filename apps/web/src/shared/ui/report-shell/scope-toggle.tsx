@@ -6,34 +6,24 @@ import { segmentClassName, SegmentedToggle } from "./segmented-toggle";
 
 export type ScopeValue = "own" | "product" | "lead";
 
-// Generic over the allowed subset so a surface that only offers
-// product/lead (the report-shell URL state) can pass its narrowed setter
-// type-soundly. allowedScopes is REQUIRED: the caller's list is what makes
-// the inference sound (a defaulted full list could feed "own" into a
-// narrowed onChange).
+// Generic over the allowed subset so a product/lead-only surface can pass its
+// narrowed setter. allowedScopes is REQUIRED: a defaulted full list could feed
+// "own" into a narrowed onChange.
 interface ScopeToggleProps<T extends ScopeValue> {
   value: T;
   onChange: (next: T) => void;
   allowedScopes: readonly T[];
-  /** "sm" = toolbar (default); "lg" = slide-hero row height. */
   size?: "sm" | "lg";
 }
 
-// slides-record-visibility (Decision 2): the slide layout scope "own" is
-// labeled "Summary" (section-summary vs per-product grid) so it does not read
-// as the Mine/Everyone RECORD-visibility scope, which lives in the toolbar. The
-// value/key stays "own"; only the label changes. The head deck reuses this with
-// ["lead","product"] and is unaffected.
+// Slide layout "own" is labeled "Summary" so it is not confused with the
+// toolbar's Mine/Everyone record-visibility scope. Value stays "own".
 const LABELS: Record<ScopeValue, string> = {
   own: "Summary",
   product: "Product",
   lead: "Leads",
 };
 
-// Neutral segmented-toggle family via the shared primitive (same chrome as
-// ViewModeToggle and RecordVisibilityToggle). The segment count is variable
-// (2 or 3, driven by allowedScopes); the track owns the pill shape so no
-// index-aware edge rounding is needed.
 export function ScopeToggle<T extends ScopeValue>({
   value,
   onChange,

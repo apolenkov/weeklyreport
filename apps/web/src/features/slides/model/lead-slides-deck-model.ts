@@ -9,12 +9,8 @@ import {
 } from "./section-slide-foreign";
 import { buildSectionSlideModel } from "./section-slide-model";
 
-/**
- * Assemble the lead deck's slide model: own records, then the risk-derived
- * foreign HEALTH fold (own deck only), then the Everyone CONTENT merge. Each
- * step returns NEW objects — the input `section` (the cached read-model the
- * draft serializes) is never mutated, so Everyone stays view-only.
- */
+// Each step returns new objects — the cached section is never mutated so
+// Everyone content stays view-only.
 export function buildLeadDeckModel(
   section: ReportSectionReadModel,
   foreignHealth: Parameters<typeof applyForeignProductHealth>[1],

@@ -12,19 +12,11 @@ export interface QuickAddItem {
 }
 
 interface UseLeadFormQuickAddArgs {
-  /** The draft-patch applier; a quick-add commit appends one week item. */
   readonly apply: (patch: DraftPatch) => void;
-  /** Live loaded context, bridged into the post-commit save callback. */
   readonly loaded: LeadFormLoadedContext;
 }
 
-/**
- * The modal quick-add + blocker-prefill cluster: pending quick-add / risk
- * prefill signals plus the merge callback that appends the newly-authored item
- * to the current draft. Separated from the autosave/version/submit core because
- * it touches neither the optimistic-lock version nor the dual-state write path —
- * it only routes a modal gesture back through `apply`.
- */
+// Modal quick-add only routes through `apply` — not version/dual-state writes.
 export function useLeadFormQuickAdd({
   apply,
   loaded,

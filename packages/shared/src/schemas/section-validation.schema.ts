@@ -71,10 +71,7 @@ export function validateSubmitInput(
     ];
   });
 
-  // An activity has no SDLC stage and no current-item requirement, but every
-  // attached activity must carry a traffic-light status at submit.
-  // Server-authoritative — schema tightening alone cannot catch an OMITTED
-  // attached activity (a payload that simply drops the status entry).
+  // Activities need a traffic light at submit; schema alone cannot catch an omitted entry.
   const activityErrors = section.activities.flatMap((activity) => {
     const matchingStatus = (input.activityStatuses ?? []).find(
       (status) => status.activityId === activity.activityId,
@@ -200,11 +197,7 @@ const canonicalStageKey = (stageIds: readonly string[]): string =>
     .sort((a, b) => a.localeCompare(b))
     .join("|");
 
-// A row is grandfathered — skipped by the guard — only when an existing server
-// row shares its stableId AND its product AND its exact stage set. stableId is
-// client-authoritative, so an id match alone is NOT enough: a payload that keeps
-// a stableId but swaps in an unowned stage (or moves the row to another product)
-// changes the key and is re-validated.
+// Grandfather only on stableId + product + exact stage set; id alone is client-authoritative.
 function isGrandfathered(
   row: StageOwnershipRow,
   serverByStableId: Map<string, StageOwnershipRow>,
@@ -260,14 +253,8 @@ function validateStageRows(
   });
 }
 
-// The server-side stage-ownership guard, shared by BOTH `saveDraft` and
-// `submitSection`. For every new/changed item / risk / decision row it confirms
-// each stage name is one the SECTION AUTHOR owns on that row's product
-// (canonical compare against the server-loaded `ownedStages`). Unchanged
-// legacy/cross rows (identical stableId, product, and stage set) are
-// grandfathered so pre-existing rows with resolved surface names still save.
-// Returns one error per offending row; the caller hard-rejects on the first —
-// never clamps.
+// Stage ownership for saveDraft/submit: new/changed rows must use author-owned stages.
+// Unchanged rows (stableId+product+stages) are grandfathered; never clamps.
 export function validateStageOwnership(
   section: ReportSectionReadModel,
   input: DraftSaveInput | SubmitSectionInput,

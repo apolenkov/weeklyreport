@@ -1,12 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
 
-/**
- * Post-seed sanity check: every demo dataset must exercise the full status
- * vocabulary so the UI's status treatments are all visible out of the box —
- * every stored Progress value, both derived Alarm severities (an at-risk and
- * a blocked-severity risk), and a priority spread beyond P1. Throws (and so
- * fails the seed run loudly) when a treatment has no example.
- */
 export async function assertSeedCoverage(
   prisma: PrismaClient,
   label: string,

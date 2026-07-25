@@ -30,40 +30,25 @@ function trapTab(event: KeyboardEvent, container: HTMLElement): void {
 }
 
 interface DialogFocusOptions {
-  /** Whether the dialog is currently mounted/visible. */
   readonly open: boolean;
-  /** Called on Escape (and, for the caller's own close paths). */
   readonly onClose: () => void;
-  /** The dialog surface whose focus is trapped. */
   readonly containerRef: RefObject<HTMLElement | null>;
   /**
-   * Optional caller-managed trigger element to restore focus to on close.
-   * Rarely needed: the hook self-captures the opener at first render (before an
-   * inner `autoFocus` fires). Pass this only for an always-mounted dialog — one
-   * that does not remount on open — where the render-time capture is stale.
+   * Optional caller-managed trigger for always-mounted dialogs whose
+   * first-render opener capture is stale. Remount-on-open dialogs need none.
    */
   readonly triggerRef?: RefObject<HTMLElement | null>;
 }
 
-/**
- * Shared modal focus management for every non-Radix dialog: while `open`, it
- * captures the trigger element, moves focus inside (unless the surface already
- * owns focus via an inner `autoFocus`), traps Tab within the surface, closes on
- * Escape, and restores focus to the trigger when the dialog closes or unmounts.
- * The opener is captured at first render, so restore works even for a surface
- * that `autoFocus`es a field. One implementation so no dialog silently ships a
- * half-built focus trap.
- */
+// Shared non-Radix modal focus: trap Tab, Escape-close, restore to opener.
 export function useDialogFocus({
   open,
   onClose,
   containerRef,
   triggerRef,
 }: DialogFocusOptions): void {
-  // Capture the opener during the FIRST render — before an inner `autoFocus`
-  // moves focus inside on commit — so an auto-focusing dialog still restores
-  // focus to its trigger. These dialogs mount on open (content is null until
-  // then), so first render === open and document.activeElement is the trigger.
+  // Capture opener on first render before autoFocus moves focus inside on commit.
+  // These dialogs mount on open, so first render === open and activeElement is the trigger.
   const [capturedOpener] = useState<HTMLElement | null>(
     () => document.activeElement as HTMLElement | null,
   );
@@ -73,11 +58,8 @@ export function useDialogFocus({
     const container = containerRef.current;
     const focusIsInside = container?.contains(document.activeElement) ?? false;
 
-    // Element to restore focus to on close. A caller-managed triggerRef wins.
-    // When focus already moved inside (an inner autoFocus fired before this
-    // effect), the effect can no longer read the trigger, so fall back to the
-    // opener captured at render — but only if it is outside the surface.
-    // Otherwise capture the current, still-outside trigger.
+    // triggerRef wins. When autoFocus already sits inside the container, the
+    // captured opener is the only remaining outside anchor.
     const openerOutside =
       capturedOpener && container && !container.contains(capturedOpener)
         ? capturedOpener
@@ -88,8 +70,7 @@ export function useDialogFocus({
         ? openerOutside
         : (document.activeElement as HTMLElement | null));
 
-    // Respect an inner `autoFocus`: only pull focus in when nothing inside the
-    // surface holds it yet, so a field-level autofocus is never overridden.
+    // Respect an inner autoFocus: only pull focus in when nothing inside holds it yet.
     if (container && !focusIsInside) {
       (focusableWithin(container)[0] ?? container).focus();
     }

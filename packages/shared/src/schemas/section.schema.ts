@@ -55,11 +55,7 @@ export const sectionActivitySchema = z.object({
   // The risk/blocker-derived status floor is what the pill renders
   // when set, else falls back to `status`. `.default(null)` for snapshot compat.
   derivedStatus: trafficLightStatusSchema.nullable().default(null),
-  // The RECORD-ONLY floor (covering risks/blockers), excluding the lead's stored
-  // choice — unlike `derivedStatus` which folds it in. The interactive lead pill
-  // gates a manual lower on THIS, so a lead can still lower a status they raised
-  // themselves when no covering risk holds it up. Optional so legacy fixtures and
-  // frozen snapshots that predate it still parse (consumers read `?? null`).
+  // Record-only alarm floor (excludes lead's choice); optional for legacy fixtures.
   alarmFloor: trafficLightStatusSchema.nullable().optional(),
 });
 
@@ -71,15 +67,9 @@ export const stageStatusInputSchema = z.object({
 
 export const itemInputSchema = z.object({
   id: z.uuid().optional(),
-  // Durable lineage key round-tripped from the read model so identity survives
-  // saveSection's delete-recreate. Optional: a brand-new client record has none
-  // yet (the DB mints it on first persist); the read model inherits this
-  // optionality, mirroring `id`, because mergeSection parses the raw input
-  // items against the read-model schema.
+  // Lineage key so identity survives saveSection delete-recreate; DB mints on first persist.
   stableId: z.uuid().optional(),
-  // XOR parent: exactly one of projectId / activityId. Both nullable/optional at
-  // the field level; the itemWriteSchema superRefine enforces the XOR + the
-  // conditional stage rule. The DB CHECK is the defence-in-depth backstop.
+  // XOR parent enforced by itemWriteSchema superRefine (DB CHECK is defence-in-depth).
   projectId: z.uuid().nullable().optional(),
   activityId: z.uuid().nullable().optional(),
   type: itemTypeSchema,
@@ -88,18 +78,13 @@ export const itemInputSchema = z.object({
   workflowStatus: itemWorkflowStatusSchema,
   carriedOver: z.boolean().default(false),
   priorityRank: z.number().int().min(1).nullable().optional(),
-  // require-paused-item-reason: the lead's reason for pausing. Nullable/optional —
-  // legacy paused rows predate it and non-paused items never carry one. The UI
-  // requires it when pausing; the schema stays permissive so existing paused rows
-  // still round-trip on the next save.
+  // Optional so legacy paused rows and non-paused items still round-trip; UI requires when pausing.
   pausedReason: safeText({ max: 500 }).nullable().optional(),
-  // Length-tolerant here; the itemWriteSchema superRefine requires ≥1 stage for a
-  // product parent and rejects any stage on an activity parent.
+  // Length-tolerant; write superRefine requires stages for product parents only.
   stageIds: writeStageIdsField,
 });
 
-// The read model stays tolerant of stage-less legacy item rows so they load and
-// can render the loud "No stage set" marker; only the write path rejects them.
+// Read path tolerates stage-less legacy rows; write path rejects them.
 export const itemReadModelSchema = itemInputSchema.extend({
   stageIds: stageIdsField,
   // Reviewer comments anchored to this item are surfaced
@@ -162,11 +147,7 @@ export const decisionReadModelSchema = decisionInputSchema.extend({
   comments: z.array(recordCommentViewSchema).optional(),
 });
 
-// Exactly one parent (product XOR activity) plus the
-// conditional stage rule, enforced per record on the write path. Kept off the
-// base input objects so the read models keep `.extend`ing them and the submit
-// schema keeps `.extend`ing draftSaveSchema (a superRefine yields a ZodEffects,
-// which is not `.extend`able). The DB CHECK is the defence-in-depth backstop.
+// Parent XOR + stages stay off base inputs so read/submit schemas remain .extend-able.
 const addParentXorIssues = (
   value: {
     readonly activityId?: string | null;
@@ -244,11 +225,7 @@ export const draftSaveSchema = z.object({
 
 export const submitSectionSchema = draftSaveSchema.extend({
   confirmed: z.literal(true),
-  // Relaxed from `.min(1)` because an activity-only section (0
-  // products) submits. Present product statuses stay required non-null; the
-  // "at least one product OR activity" and "every attached activity has a status"
-  // checks are server-authoritative in validateSubmitInput (schema tightening
-  // alone cannot catch an OMITTED attached activity).
+  // May be empty for activity-only sections; omitted activities need server-side checks.
   projectStatuses: z
     .array(
       projectStatusInputSchema.extend({
@@ -266,12 +243,7 @@ export const submitSectionSchema = draftSaveSchema.extend({
     .default([]),
 });
 
-// Per-project list of stages owned by the section author on this
-// project. Sourced from `StageAssignment` rows scoped by (projectId,
-// userId=author). Empty array == author has no stake on this project.
-// The lead form renders the grid from assignments across all leads; a stage
-// the author does not own
-// shows foreign-owned, and a stage with no assignment is excluded entirely.
+// Author's StageAssignment rows for this product; empty means no stake.
 export const ownedStageSchema = z.object({
   stageId: z.uuid(),
   stageName: z.string().min(1),
@@ -279,11 +251,7 @@ export const ownedStageSchema = z.object({
   status: trafficLightStatusSchema.nullable().optional(),
 });
 
-// One entry per stage that has an assignment to any lead on the product. This is
-// READ-ONLY display metadata: it sources the lead-form stage grid so a stage
-// with NO assignment is excluded entirely (not rendered as a vacant chip),
-// while a stage assigned to another lead renders foreign-owned. It NEVER feeds
-// the write path — `saveSection` persists status only from `ownedStages`.
+// Display-only stage grid metadata; saveSection writes status only from ownedStages.
 export const stageSetEntrySchema = z.object({
   stageId: z.uuid(),
   stageName: z.string().min(1),
@@ -294,102 +262,44 @@ export const projectReadModelSchema = z.object({
   projectId: z.uuid(),
   projectName: z.string().min(1),
   trafficLight: trafficLightStatusSchema.nullable(),
-  /**
-   * Stages this project's section author owns via `StageAssignment`. The
-   * lead-form renders the standard 7-stage grid and marks each stage as
-   * "mine" iff its name matches one of these. Optional so existing
-   * fixtures and contract-test factories that pre-date this field still
-   * type-check; missing -> empty array means "no stake on this project"
-   * which the lead-form mapper handles symmetrically.
-   */
+  // Author-owned stages; missing means no stake (optional for legacy fixtures).
   ownedStages: z.array(ownedStageSchema).optional(),
-  /**
-   * The product's assigned-stage set —
-   * every stage with an assignment to ANY lead on the product. READ-ONLY
-   * display metadata that sources the lead-form grid (a stage absent from the
-   * set is excluded; one present but not in `ownedStages` is foreign-owned).
-   * Optional so legacy fixtures and frozen snapshots that pre-date this change
-   * still parse; missing -> the mapper falls back to `ownedStages` (own stages
-   * only, no foreign chips).
-   */
+  // All assigned stages on the product (read-only grid); missing falls back to ownedStages.
   stageSet: z.array(stageSetEntrySchema).optional(),
-  /**
-   * The product's natural owner group — its lead's `reportingGroupId`,
-   * frozen into every section's `projects[]` entry at snapshot-build time so
-   * the published read can decide cross-group access from the snapshot's own
-   * data instead of a live re-query. Optional so frozen snapshots and fixtures
-   * that pre-date this field still parse; missing/null means "unknown owner"
-   * and is NEVER treated as cross-group.
-   */
+  // Frozen owner group for published cross-group decisions; null is never cross-group.
   ownerGroupId: z.uuid().nullable().optional(),
 });
 
-// Name-only entry for a project that a
-// section row (item / risk / decision) references but the section author
-// owns no stage on. Carried separately from `projects` on purpose:
-// widening `projects` would leak an editable product card
-// (`mapLeadProducts`), spurious `ProjectStatus` writes (`saveSection`),
-// and submit-validation demands (`validateSubmitInput`). Consumers use it
-// for product-name resolution only.
+// Name-only for products outside author-owned projects — not in `projects` (avoids write leakage).
 export const referencedProjectSchema = z.object({
   projectId: z.uuid(),
   projectName: z.string().min(1),
 });
 
-// Role label of the section author, surfaced end-to-end so the
-// /lead/report chrome can switch between "Request Reopen" (lead-on-own-
-// section) and "Revoke" (head/admin viewing someone else's section).
-// Optional so legacy fixtures continue to parse — consumers that gate
-// on the role default to `'lead'` when missing.
+// authorRole drives reopen vs revoke chrome; optional for legacy fixtures (default lead).
 export const reportSectionReadModelSchema = z.object({
   reportSectionId: z.uuid(),
   reportId: z.uuid(),
   authorId: z.uuid(),
   authorName: z.string().min(1),
   authorRole: roleSchema.optional(),
-  // Optimistic-concurrency row revision the client must echo back in its next
-  // save (see draftSaveSchema). Mints at 1; the repository increments it on
-  // every successful write and returns the bumped value here.
+  // Optimistic concurrency: client echoes this; repository bumps on each write.
   version: z.number().int().min(1),
-  // `departmentName` is NOT on the section read-model — a redundant
-  // per-section copy. Consumers that need a brand label read it from the
-  // per-request session (`auth.me.organization.shortName` / `.fullName`).
   status: reportSectionStatusSchema,
   submittedAt: z.coerce.date().nullable(),
-  // Stamped true by submitSection when `now > Report.deadline` at
-  // submit-time (regardless of grace). Drives a "late" badge on the head
-  // dashboard + lead form. Optional in the inferred TS type so legacy
-  // fixtures and older test payloads still construct ReportSectionReadModel
-  // without breaking. Consumers treat `late === true` only — undefined/false
-  // both mean "on time".
+  // True when submitted after deadline; only `late === true` means late.
   late: z.boolean().optional(),
   projects: z.array(projectReadModelSchema),
-  // Name source for rows referencing a
-  // project outside the author's stage-owned `projects`. Optional so
-  // legacy fixtures and pre-existing snapshots still parse; missing means
-  // "no extra names" and the mappers fall back exactly as before.
+  // Extra product names outside author-owned projects; optional for legacy fixtures.
   referencedProjects: z.array(referencedProjectSchema).optional(),
   items: z.array(itemReadModelSchema),
   risks: z.array(riskReadModelSchema),
   decisions: z.array(decisionReadModelSchema),
-  // The author's attached Project Activities with their per-period status.
-  // `.default([])` keeps older published snapshots (frozen before activities
-  // existed) and legacy fixtures parsing.
+  // default([]) keeps pre-activity published snapshots parsing.
   activities: z.array(sectionActivitySchema).default([]),
-  // Per-section verdicts are surfaced read-only. Each
-  // carries `isCurrent` (judgedVersion === version) so a re-submitted section
-  // reads as awaiting review, not "needs changes". Optional so legacy fixtures
-  // and the write path never carry it.
+  // Read-only verdicts; isCurrent means judgedVersion === version.
   reviews: z.array(sectionReviewViewSchema).optional(),
-  // The section author's reporting group and whether the
-  // CURRENT caller is a designated reviewer for it. Stamped ONLY on the live
-  // head/viewer weekly-report read (never the write path nor the published
-  // snapshot). The client gates the per-record comment composer and the
-  // per-section verdict control on `canReview`, and derives the Acknowledge
-  // control's group set from the distinct `groupId`s; every mutation still
-  // re-derives the group server-side, so these are UI-affordance hints, never
-  // the security boundary. Both optional so the write path and legacy fixtures
-  // never carry them.
+  // Live weekly-report UI hints only — server re-derives group for mutations.
   groupId: z.uuid().nullable().optional(),
   canReview: z.boolean().optional(),
 });

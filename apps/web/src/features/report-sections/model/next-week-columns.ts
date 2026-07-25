@@ -1,38 +1,25 @@
 import { splitStageNames } from "./stage-tags";
 import type { KanbanItem, Product } from "./types";
 
-/**
- * Column model for the Next Week board: one column per assigned product so
- * empty products still get a "+ Add" CTA, falling back to stage-tag grouping
- * when `products` is not supplied.
- */
+// One column per assigned product so empty products still get a "+ Add" CTA;
+// falls back to stage-tag grouping when `products` is not supplied.
 export interface ItemColumn {
   readonly key: string;
   readonly productId: string;
   readonly productName: string;
-  /**
-   * Set on an activity lane — the column groups activity-parented rows.
-   * `productId` is empty and `productName` carries the activity name on
-   * these lanes.
-   */
+  // Set on an activity lane — productId is empty; productName is the activity name.
   readonly activityId?: string;
   readonly items: KanbanItem[];
 }
 
-/** The attached-activity shape a lane is seeded from (id + display name). */
 export interface LaneActivity {
   readonly id: string;
   readonly name: string;
 }
 
-/**
- * One lane per ATTACHED activity, in attached order — activities behave like
- * products: an attached activity with no rows still gets an empty lane with a
- * "+ Add" CTA, so the reporting structure is visible before anything is filled.
- * Any activity that owns rows but is not in the attached list (defensive — the
- * write path forbids it) is appended so no row is ever dropped. With no attached
- * activities supplied, lanes fall back to the activities that own rows.
- */
+// One lane per attached activity (empty lanes keep the structure visible).
+// Orphan activity ids that own rows but aren't attached are appended so no
+// row is dropped. With no attached list, lanes fall back to row-owning activities.
 function activityLanes(
   items: KanbanItem[],
   activities: readonly LaneActivity[],
@@ -79,18 +66,14 @@ function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
   return Map.groupBy(items, groupKeyFor);
 }
 
-/**
- * The board's two levels, split so the sections can render product columns in
- * the shared grid and activity lanes in the lighter block below it (the slide
- * precedent — activities are their own row, never peer product columns).
- */
+// Product columns in the shared grid; activity lanes in a lighter block below
+// (activities are their own row, never peer product columns).
 export function splitItemBoard(
   products: readonly Product[] | undefined,
   items: KanbanItem[],
   activities: readonly LaneActivity[] = [],
 ): { productColumns: ItemColumn[]; activityLanes: ItemColumn[] } {
-  // Activity rows carry productId "" — they'd match no product column and
-  // silently vanish, so they always route through their own lanes.
+  // Activity rows carry productId "" — route through lanes so they never vanish.
   const productRows = items.filter((it) => it.activityId == null);
   const lanes = activityLanes(items, activities);
   if (products && products.length > 0) {
@@ -123,11 +106,8 @@ export function splitItemBoard(
   };
 }
 
-/**
- * True when the board has nothing to render at all — no items, no product
- * column, and no attached activity lane. An attached activity (like a product)
- * seeds an empty lane, so its presence keeps the board non-empty.
- */
+// Attached activities (like products) seed empty lanes, so their presence
+// keeps the board non-empty even with zero items.
 export function isBoardEmpty(
   items: KanbanItem[],
   products: readonly Product[] | undefined,

@@ -6,11 +6,8 @@ import { useCallback } from "react";
 export type ReportShellScopeValue = "product" | "lead";
 
 interface ReportShellUrlState {
-  /**
-   * Build a query string from the current params with `overrides` applied
-   * (a `null`/`""` value deletes the key). Members of `stripParams` are always
-   * deleted first, so one-shot markers never survive an in-shell navigation.
-   */
+  // null/"" deletes a key. stripParams members are always deleted first so
+  // one-shot markers never survive an in-shell navigation.
   readonly buildQuery: (overrides: Record<string, string | null>) => string;
   readonly includeArchive: boolean;
   readonly setIncludeArchive: (value: boolean) => void;
@@ -18,17 +15,9 @@ interface ReportShellUrlState {
   readonly setScope: (value: ReportShellScopeValue) => void;
 }
 
-/**
- * Shared head/viewer report-shell URL state (web-shared-idioms): the
- * search-params reader, the `URLSearchParams`-based setter, and the
- * archive/scope derivations both shells previously duplicated.
- *
- * `stripParams` members are deleted on EVERY setter call. The head passes `[]`;
- * the viewer passes `["source", "recovery"]` — its load-bearing one-shot-marker
- * strip that keeps a later NOT_FOUND from being misread as a Status navigation
- * and bouncing the viewer back to the Status target. The viewer concern is
- * realised through this list, never by re-forking the setter.
- */
+// Shared head/viewer report-shell URL state. stripParams is wiped on every
+// setter call — viewer passes ["source","recovery"] so a later NOT_FOUND is
+// not misread as Status navigation bouncing back to the Status target.
 export function useReportShellUrlState({
   stripParams,
 }: {

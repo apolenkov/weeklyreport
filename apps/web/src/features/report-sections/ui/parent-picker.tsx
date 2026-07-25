@@ -4,33 +4,23 @@ import type { Product } from "../model/types";
 
 type RecordParentKind = "product" | "activity";
 
-/** The chosen parent of a record — a product OR an activity (XOR). */
+// XOR: a record parents to either a product or an activity, never both.
 export interface RecordParent {
   readonly id: string;
   readonly kind: RecordParentKind;
 }
 
-/** One attached-activity option offered as a parent. */
 export interface ParentActivityOption {
   readonly id: string;
   readonly name: string;
 }
 
 interface ParentPickerProps {
-  /** Unique id so the label/select pair stays accessible per dialog. */
   readonly id: string;
-  /** Currently selected parent (product or activity). */
   readonly value: RecordParent;
-  /** Products the lead can scope the record to. */
   readonly products: readonly Product[];
-  /**
-   * The section author's attached activities. When
-   * non-empty the picker offers them in a second group; the chosen parent's
-   * `kind` tells the host dialog whether a stage is required (product) or
-   * forbidden (activity). Omit for a product-only picker (e.g. decisions).
-   */
+  // kind drives stage required (product) vs forbidden (activity). Omit for product-only.
   readonly activities?: readonly ParentActivityOption[];
-  /** Called with the newly selected parent. */
   readonly onChange: (parent: RecordParent) => void;
 }
 
@@ -49,14 +39,6 @@ function decodeParent(raw: string): RecordParent {
   };
 }
 
-/**
- * The one parent picker shared by
- * the Item and Risk dialogs. It offers the lead's products and — when passed —
- * the author's attached activities in a second group, returning the chosen
- * parent's id AND kind so the dialog can require a stage for a product and hide
- * the stage step for an activity. Disabled when there is a single parent (no
- * choice to make).
- */
 export function ParentPicker({
   id,
   value,

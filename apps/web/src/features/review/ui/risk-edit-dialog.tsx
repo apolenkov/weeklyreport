@@ -14,70 +14,38 @@ import { useRiskEditDialog } from "./use-risk-edit-dialog";
 
 interface RiskEditDialogProps {
   readonly open: boolean;
-  /** null = create mode, RiskEntry = edit mode. */
+  // null = create mode, RiskEntry = edit mode.
   readonly risk: RiskEntry | null;
   readonly products: readonly Product[];
-  /**
-   * The section author's attached activities. When non-empty the parent
-   * picker offers them; choosing an activity hides the stage step and
-   * parents the risk to the activity instead of a product.
-   */
+  // When set, parent picker offers activities; activity parent hides stages.
   readonly activities?: readonly ParentActivityOption[];
   readonly onSave: (
     next: RiskEntry & { impact: string; mitigation: string },
   ) => void;
   readonly onCancel: () => void;
   readonly defaultProductId?: string;
-  /**
-   * In create mode, preselect this activity as the parent — an activity
-   * pill's unbacked raise. Wins over the seed product (XOR parent).
-   */
+  // Create-mode activity parent seed (XOR with product); activity pill raise.
   readonly defaultActivityId?: string;
-  /**
-   * The mockup-aligned dialog also exposes raw `impact` and `mitigation`
-   * fields. The presentation `RiskEntry` doesn't carry them, but the
-   * caller (lead-form) needs to write them onto the raw section.risks
-   * row, so we let the dialog produce a richer object than the read
-   * model.
-   */
+  // Impact/mitigation are not on presentation RiskEntry but the lead-form
+  // writes them onto section.risks, so the dialog returns a richer object.
   readonly initialImpact?: string;
   readonly initialMitigation?: string;
-  /**
-   * Create-mode prefill from a chip-raise interception — the clicked stage
-   * arrives pre-checked and the clicked severity pre-selected. Ignored in
-   * edit mode (the risk's own values win).
-   */
+  // Chip-raise create prefill; ignored in edit mode (risk values win).
   readonly initialStageIds?: string[];
   readonly initialSeverity?: RiskSeverity;
-  /**
-   * Callback returning the SDLC stages the current lead owns on a given
-   * project (= options for the "SDLC Stage" select). Returning `[]` disables
-   * the Save button and surfaces an inline "no stages assigned — contact admin"
-   * message.
-   */
+  // Owned stages for the stage select; [] disables Save with a dead-end notice.
   readonly stagesForProduct?: (productId: string) => readonly string[];
   readonly onDelete?: () => void;
 }
 
-/**
- * Mount/unmount shell (react-compiler-safe): the outer component returns null
- * when closed and mounts the inner content otherwise. Mount = fresh useState
- * from props; close = unmount. No useEffect reset is needed — the remount is the
- * structural reset, and the parent's openSeq dialogKey forces a fresh mount on
- * every open. That gives stagesForProduct a fresh useState snapshot on each
- * mount, so its value at open time matters rather than reactive re-reads.
- */
+// Mount/unmount shell: closed returns null so open remounts fresh useState
+// (parent openSeq dialogKey forces a clean snapshot of stagesForProduct).
 export function RiskEditDialog(props: RiskEditDialogProps) {
   if (!props.open) return null;
   return <RiskEditDialogContent {...props} />;
 }
 
-/**
- * Context strip: flagged owned SDLC stages — product parents only. An
- * activity owns no stage, so the caller suppresses this for an activity
- * parent (preCheckedStages derives from the mount-time seed product and does
- * not clear on a parent switch).
- */
+// Flagged owned stages for product parents only (activities own no stage).
 function PreCheckedStagesBanner({
   parentName,
   preCheckedStages,

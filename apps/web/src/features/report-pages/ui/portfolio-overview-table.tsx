@@ -6,10 +6,8 @@ import type {
   WeeklyProductStatus,
 } from "../../report-sections";
 
-// report-overview-scope-parity: the overview band follows the report's active
-// scope. In `product` scope it summarizes products (unchanged); in `lead` scope
-// it summarizes leads — one card per lead with content, click jumps to that
-// lead's section. The grouping unit always matches the report body's unit.
+// Overview band matches report scope: product cards or lead cards (click jumps
+// to that lead's section).
 type PortfolioOverviewTableProps =
   | { readonly scope?: "product"; readonly products: WeeklyPortfolioProduct[] }
   | { readonly scope: "lead"; readonly leads: readonly LeadOverviewRow[] };
@@ -68,19 +66,14 @@ function GridIcon() {
   );
 }
 
-// Shared card chrome: a status-colored circle, a label column, and a hover
-// "jump" arrow. The countLabel reads e.g. "3 current · 1 next · 0 risks".
 function countLabel(current: number, next: number, risks: number): string {
   return `${current} current · ${next} next · ${risks} risk${
     risks !== 1 ? "s" : ""
   }`;
 }
 
-// report-overview-scope-parity: a lead overview card. Leads are never empty
-// (only leads WITH content appear), so there is no muted/disabled state. A click
-// scrolls + focuses the lead's section anchor; it does NOT force-expand any
-// product accordion (the lead owns several products; the section is the honest
-// landing target).
+// Lead cards never empty (only leads with content); click jumps to the lead
+// section, not a product accordion.
 function LeadOverviewCard({ lead }: { readonly lead: LeadOverviewRow }) {
   return (
     <button
@@ -126,8 +119,6 @@ function LeadOverviewCard({ lead }: { readonly lead: LeadOverviewRow }) {
   );
 }
 
-// Existing product overview card — muted/disabled when the product has no
-// content; click scrolls to the product accordion and expands it if collapsed.
 function ProductOverviewCard({
   product,
 }: {
@@ -156,7 +147,6 @@ function ProductOverviewCard({
         const el = document.getElementById(`report-product-${product.id}`);
         if (el) {
           el.scrollIntoView({ behavior: "smooth", block: "start" });
-          // Expand the accordion if collapsed
           const btn = el.querySelector<HTMLButtonElement>(
             '[aria-expanded="false"]',
           );
@@ -205,8 +195,7 @@ function ProductOverviewCard({
 
 export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
   const isLead = props.scope === "lead";
-  // Sort: blocked first, then at-risk, then on-track (lead rows arrive already
-  // sorted by the mapper; product rows sort here as before).
+  // Lead rows arrive pre-sorted from the mapper; product rows sort here.
   const sortedProducts = isLead
     ? []
     : [...props.products].sort(

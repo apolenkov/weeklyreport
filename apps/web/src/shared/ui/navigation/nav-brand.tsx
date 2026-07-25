@@ -38,9 +38,8 @@ export function NavBrand({
           </div>
         ) : (
           <>
-            {/* Brand skeleton until session.organization resolves.
-                Uses the same fixed brand slot as the resolved logo so
-                the nav center line stays still while auth hydrates. */}
+            {/* Brand skeleton until userName resolves. Same fixed brand
+                slot as the resolved mark so the nav center stays still. */}
             <div
               className="h-8 w-8 shrink-0 rounded-full bg-[var(--color-muted)]/40"
               aria-hidden="true"

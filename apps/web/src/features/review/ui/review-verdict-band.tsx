@@ -9,13 +9,8 @@ function statusLabel(status: ReportSectionReadModel["status"]): string {
   return status === "submitted" ? "Submitted" : "Draft";
 }
 
-/**
- * In-report per-section verdict control, mounted only in review mode. Scoped to
- * the sections the caller can act on, giving a designated viewer-reviewer a
- * verdict home (the head-only roll-up strip lives on the dashboard). Like the
- * strip, it renders NO publish/lock control — a viewer-reviewer judges but never
- * publishes. Self-suppresses when the caller can review nothing.
- */
+// In-report section verdicts for designated reviewers; no publish/lock control
+// (viewer-reviewers judge only). Self-suppresses when nothing is reviewable.
 export function ReviewVerdictBand({
   sections,
   onMutated,

@@ -1,17 +1,3 @@
-/**
- * a11y assertions for ConfirmDeleteDialog.
- *
- *  - Escape key calls onCancel (via the shared useDialogFocus primitive)
- *  - Cancel button click calls onCancel
- *  - Backdrop (role=presentation) click calls onCancel
- *  - Inner dialog click does NOT call onCancel (stopPropagation guard)
- *  - Backdrop div has role="presentation"
- *  - Inner dialog has correct ARIA attributes
- *  - The first focusable control (Cancel) receives focus on open
- *  - Tab is trapped within the dialog (Shift+Tab from the first control wraps)
- *  - Focus returns to the trigger when the dialog closes
- */
-
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -92,7 +78,7 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
     );
   });
 
-  it("both dialog actions floor at the touch target below md (responsive-compact-layout)", () => {
+  it("both dialog actions floor at the touch target below md", () => {
     // jsdom cannot evaluate media queries; the class assertions are the teeth.
     renderDialog();
 

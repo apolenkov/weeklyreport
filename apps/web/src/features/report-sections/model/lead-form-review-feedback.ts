@@ -5,12 +5,8 @@ import type {
 
 import { buildActivityIndex, buildProjectIndex } from "./lead-form-shared";
 
-/**
- * review-acknowledgement: one of the lead's OWN records that carries
- * reviewer comments. Surfaced read-only when a returned (draft) section comes
- * back, so the feedback is not silent. `text` is the record's OWN text — context
- * for the lead, NEVER re-rendered as a comment.
- */
+// One of the lead's own records with reviewer comments. `text` is the record's
+// own text (context for the lead) — never re-rendered as a comment.
 export interface LeadReviewFeedbackRecord {
   readonly id: string;
   readonly kind: "item" | "risk" | "decision";
@@ -19,13 +15,7 @@ export interface LeadReviewFeedbackRecord {
   readonly comments: readonly RecordCommentView[];
 }
 
-/**
- * Reshape one record collection (items / risks / decisions) into feedback
- * rows: records with zero reviewer comments are dropped, the rest carry an
- * id-fallback of `""` and the caller-resolved kind/text/label. Shared by the
- * three `mapLeadReviewFeedback` branches below so they differ only in which
- * fields feed `textOf` / `labelOf`.
- */
+// Drop records with zero comments; shared by the three mapLeadReviewFeedback branches.
 function toFeedbackRecords<
   T extends { id?: string | null; comments?: readonly RecordCommentView[] },
 >(
@@ -45,21 +35,13 @@ function toFeedbackRecords<
     }));
 }
 
-/**
- * Collect every item/risk/decision on the section that carries ≥1 reviewer
- * comment, keyed to the record's own text + resolved product name. Records with
- * no comments are dropped (nothing to surface). The comment payload rides the
- * read model (the repo joins `RecordComment` into the section read); this mapper
- * only reshapes it for the lead's feedback panel.
- */
+// Collect item/risk/decision rows that carry ≥1 reviewer comment for the feedback panel.
 export function mapLeadReviewFeedback(
   section: ReportSectionReadModel,
 ): LeadReviewFeedbackRecord[] {
   const projectIndex = buildProjectIndex(section);
-  // activity-first-class: an activity-parented record has a null projectId, so
-  // resolve its label from the section's activities instead of falling through
-  // to "Unknown". The product name wins when present (XOR — a record parents to
-  // exactly one), else the activity name, else "Unknown" for orphaned legacy.
+  // Activity-parented records have null projectId — resolve label from activities.
+  // Product name wins when present (XOR parent), else activity name, else "Unknown".
   const activityIndex = buildActivityIndex(section);
   const labelFor = (
     projectId: string | null | undefined,

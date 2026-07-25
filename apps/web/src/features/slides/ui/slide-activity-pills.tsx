@@ -17,7 +17,6 @@ function toPillStatus(status: SlideActivityPill["status"]): PillStatus {
   return status ?? "empty";
 }
 
-/** Traffic-light pill key → canonical status for map lookups. */
 function pillToStatus(pill: PillStatus): CanonicalStatus {
   if (pill === "red") return "blocked";
   if (pill === "yellow") return "at-risk";
@@ -55,12 +54,7 @@ function ActivityPill({ activity }: { readonly activity: SlideActivityPill }) {
   );
 }
 
-/**
- * Activity status-pill lane on a section slide — one neutral pill per attached
- * Project Activity, grouped by traffic-light status (worst first) with the
- * risk/blocker-floored dot, linked product names, and an sr-only status label.
- * Display-only; self-suppresses when the section carries no activities.
- */
+// Worst-first grouping; display-only (no edit affordance on the slide).
 export function SlideActivityPills({
   activities,
 }: {

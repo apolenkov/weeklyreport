@@ -8,28 +8,12 @@ interface StageMultiSelectProps {
   readonly stages: readonly string[];
   readonly error?: string;
   readonly onChange: (next: string[]) => void;
-  /** When provided, shows a consequence-preview banner above the stage chips. */
   readonly previewSeverity?: "at-risk" | "blocked";
-  /**
-   * When true, the host dialog requires at least one stage, so the helper copy
-   * drops the "optional / empty = all assigned stages" wording and the
-   * empty-selection "all stages" hint. A single owned stage still
-   * auto-applies, and saving with no stage is blocked by the host dialog.
-   */
+  // Required: drop "empty = all stages" copy; empty selection is invalid.
   readonly required?: boolean;
 }
 
-/**
- * Builds the consequence-preview banner copy: a generic line for many selected
- * stages, the named stage for exactly one, and the "all assigned stages"
- * default only when nothing is selected AND the host does not require a stage.
- * In required mode an empty selection is invalid, so the "all stages" outcome
- * can never happen and the banner is suppressed (empty string).
- * @param selected - the currently selected stage names
- * @param previewSeverity - the severity the preview describes
- * @param required - whether the host dialog requires at least one stage
- * @returns the banner text, or an empty string when no banner should show
- */
+// Empty selection → "all stages" only when optional; required mode suppresses that banner.
 function computeBannerText(
   selected: readonly string[],
   previewSeverity: "at-risk" | "blocked",

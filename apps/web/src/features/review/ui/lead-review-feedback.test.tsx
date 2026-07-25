@@ -1,9 +1,4 @@
-/**
- * review-acknowledgement (§8): the lead's read-only reviewer-feedback surface.
- * Covers the mapper (which of the lead's OWN records carry reviewer comments)
- * and the panel (marker + comments inline on each anchor record, never a
- * composer — the lead has no review capability).
- */
+// Lead read-only feedback surface — no composer (lead has no review capability).
 
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
@@ -25,10 +20,7 @@ function comment(id: string, text: string) {
   };
 }
 
-// mapLeadReviewFeedback reads projects/items/risks/decisions plus `activities`
-// (to label an activity-parented record), so a faithful fixture provides all of
-// them — `activities: []` mirrors the read model's schema default (the cast
-// keeps the test free of unrelated fields).
+// Fixture must include activities: [] so the mapper can label activity-parented rows.
 function sectionWith(
   overrides: Partial<
     Pick<

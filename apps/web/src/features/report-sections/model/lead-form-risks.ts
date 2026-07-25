@@ -5,16 +5,8 @@ import type { RiskEntry } from "./types";
 
 export type LeadRiskEntry = RiskEntry;
 
-/**
- * Map a section's risks into RiskEntry presentation rows. The UI surfaces a
- * single textarea for the user-controlled `risk` field; impact/mitigation are
- * stored on the raw row but not shown (handler keeps non-empty defaults so
- * the schema's safeText({min:1}) refinement on those fields stays satisfied).
- *
- * Earlier the mapper concatenated `${risk} — Impact: ${impact} — Mitigation: ${mitigation}`
- * into `text`, but `handleRisksChange` writes `risk: r.text` straight back, so
- * every render double-concatenated the existing fields and corrupted the row.
- */
+// `text` is only the risk field — impact/mitigation stay on the row but are not
+// shown. Handlers keep non-empty defaults for safeText({min:1}) on those fields.
 export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
   const projectIndex = buildProjectIndex(section);
   const activityNameById = buildActivityIndex(section);

@@ -10,76 +10,32 @@ import type { ParentActivityOption } from "./parent-picker";
 import { useItemEditDialog } from "./use-item-edit-dialog";
 
 interface ItemEditDialogProps {
-  /** Open/close state. Caller controls so it can wire submit/cancel. */
   readonly open: boolean;
-  /**
-   * The item being edited. When `null` the dialog is in "create" mode and
-   * the caller will append the result to the items list. When non-null
-   * it's an "edit" mode and the caller upserts by id.
-   */
+  // null = create (append); non-null = edit (upsert by id).
   readonly item: KanbanItem | null;
-  /** Available products — required so the user can re-assign the item to another column. */
   readonly products: readonly Product[];
-  /**
-   * activity-first-class: the section author's attached activities. When
-   * non-empty the parent picker offers them; choosing an activity hides the
-   * stage step and parents the item to the activity instead of a product.
-   */
+  // When set, parent picker offers activities; activity parent hides stage step.
   readonly activities?: readonly ParentActivityOption[];
-  /**
-   * Whether this is the Current Week or Next Week. Only affects which
-   * status chips are shown — Next Week doesn't show "Completed" or
-   * "Blocked" because those are workflow-state semantics for in-flight
-   * work, not yet-to-start work.
-   */
+  // Next week omits Completed/Blocked — those are in-flight, not yet-to-start.
   readonly week: "current" | "next";
-  /** Author label used as the default for newly-created items. */
   readonly currentUserName?: string;
-  /**
-   * In create mode, preselect this product. Without it the dialog would
-   * default to `products[0]`, which is misleading when the user clicked
-   * `+ Add` in a specific column.
-   */
+  // Preselect column product; without it create would misleadingly use products[0].
   readonly defaultProductId?: string;
-  /**
-   * In create mode, preselect this activity as the parent — an activity
-   * lane's `+ Add`. Wins over the seed product (XOR parent).
-   */
+  // Activity-lane create; XOR with defaultProductId.
   readonly defaultActivityId?: string;
-  /**
-   * Callback returning the SDLC stages the current lead owns on the given
-   * project. Constrains the "SDLC Stage" select.
-   */
   readonly stagesForProduct?: (productId: string) => readonly string[];
-  /**
-   * All priority ranks currently in use by own items for the full period
-   * (current + next week combined). The dialog excludes the edited item's
-   * own existing rank from this set before marking options as taken, so
-   * the user can keep the same rank without seeing it disabled.
-   * Legacy rank collisions (multiple items sharing a rank) are handled
-   * gracefully — the collision set is visible but the dialog never crashes.
-   */
+  // Ranks in use this period (own item's rank excluded). Collisions stay visible, never crash.
   readonly ownPeriodRanks?: readonly number[];
-  /**
-   * The section's own risks. An item a covering risk floors shows an inline
-   * locked message in place of the status chips (its at-risk/blocked alarm is
-   * derived from the risk, never a free chip — record-status-derived-from-risk).
-   */
+  // Covering risk floors status chips to a locked message (alarm is risk-derived).
   readonly risks?: readonly RiskEntry[];
   readonly onSave: (next: KanbanItem) => void;
   readonly onCancel: () => void;
   readonly onDelete?: () => void;
 }
 
-/**
- * react-compiler-safe: outer shell conditionally mounts the inner content
- * component. Mount = fresh useState from props; unmount on close. No useEffect
- * reset needed — structural guarantee via mount/unmount.
- *
- * Invariant: stagesForProduct is NOT in any deps array. useState initialises
- * once at mount from the stable `initial` snapshot, so parent re-renders with a
- * new stagesForProduct reference don't wipe typed text.
- */
+// Mount/unmount resets state (react-compiler-safe). stagesForProduct is not in
+// deps — useState seeds once from the mount snapshot so parent re-renders
+// with a new stagesForProduct ref never wipe typed text.
 export function ItemEditDialog(props: ItemEditDialogProps) {
   if (!props.open) return null;
   return <ItemEditDialogContent {...props} />;
@@ -169,9 +125,6 @@ function ItemEditDialogContent({
           ) : null}
         </h2>
 
-        {/* unify-record-dialogs: two-column layout mirroring the risk dialog —
-            prose on the left, a CLASSIFICATION panel (Product + Stages + Status)
-            on the right. */}
         <ItemEditDialogFields
           text={text}
           onTextChange={onTextChange}

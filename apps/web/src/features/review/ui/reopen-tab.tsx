@@ -14,7 +14,6 @@ const FILTERS: readonly { value: ReopenFilterStatus; label: string }[] = [
   { value: "all", label: "All" },
 ];
 
-/** Segmented filter-status button row above the reopen-request list. */
 function ReopenFilterBar({
   filter,
   onChange,
@@ -43,16 +42,6 @@ function ReopenFilterBar({
   );
 }
 
-/**
- * Reopen Requests tab — Head-side queue of lead-initiated reopen asks.
- *
- * Each request shows: who asked, which week+section, when, and the optional
- * reason. Head can Approve (section flips back to draft, lead can edit) or
- * Reject (section stays submitted; head writes a short note explaining why).
- *
- * Pending count is exposed via `admin.pendingReopenCount` so the tab badge
- * stays in sync without polling.
- */
 export function ReopenTab() {
   const {
     filter,

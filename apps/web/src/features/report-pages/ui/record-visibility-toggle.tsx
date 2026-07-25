@@ -8,12 +8,7 @@ import {
   SegmentedToggle,
 } from "../../../shared/ui/report-shell/segmented-toggle";
 
-/**
- * The lead form's Record visibility toggle. A two-state segmented control —
- * "Mine only" (default) / "Everyone". Lead-form only; view-only (it changes
- * what the lead sees, never what is submitted or published). English label
- * per the repo UI-string rule.
- */
+// View-only: changes what the lead sees, never what is submitted/published.
 export function RecordVisibilityToggle({
   value,
   onChange,
@@ -21,11 +16,7 @@ export function RecordVisibilityToggle({
 }: {
   readonly value: RecordVisibility;
   readonly onChange: (next: RecordVisibility) => void;
-  /**
-   * On a FOREIGN-author slide deck Everyone is not offered — the toggle is
-   * forced to Mine and made inert so the current user's co-owner rows can
-   * never be merged onto another author's deck.
-   */
+  // Foreign slide decks force Mine so co-owner rows never merge onto another deck.
   readonly disabled?: boolean;
 }) {
   // Icon-only (User = mine, Users = everyone) so the toggle stays compact and

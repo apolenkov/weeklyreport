@@ -49,12 +49,7 @@ export interface WeeklyReportPageView {
   readonly showPublishHint: boolean;
 }
 
-/**
- * Pure derivation of the report view-model from a loaded, active report. Split
- * out of the controller hook so the hook itself stays under the complexity
- * budget — this is where the branching (scope, review gating, §7 filtering,
- * focus targeting) lives.
- */
+// Pure view-model from a loaded active report (scope, review gating, filter, focus).
 export function buildWeeklyReportPageView(
   reportData: WeeklyReportReadModel,
   params: {
@@ -68,9 +63,7 @@ export function buildWeeklyReportPageView(
 ): WeeklyReportPageView {
   const { scope, currentRole, focusedAuthorId } = params;
   const view = mapWeeklyReport(reportData);
-  // review-acknowledgement (§6): the reviewer surface renders only for an
-  // access-holder (head/admin/viewer, never a lead) on a live (non-published)
-  // period. `buildReviewModel` returns an empty model otherwise.
+  // Reviewer surface only for access-holders on a live (non-published) period.
   const reviewModel = buildReviewModel(reportData, {
     currentRole,
     periodStatus: view.period.periodStatus,
@@ -79,29 +72,19 @@ export function buildWeeklyReportPageView(
   });
   const submitted = view.submissionCount;
   const total = view.totalLeads;
-  // pendingCount mirrors mock semantics: total - submitted, clamped >= 0.
   const pendingCount = Math.max(0, total - submitted);
 
   const { portfolio, products } = view;
-  // Head split-view "by lead" grouping (report-card-clarity): slice each product
-  // to the lead's OWN contribution — mapWeeklyReportLeadGroups builds per-lead
-  // cards from each single section, drops empty leads, and is computed only in
-  // "lead" scope (the default product path stays cheap).
-  // report-overview-scope-parity: per-lead overview rows derived from the SAME
-  // FULL groups (truth) — the overview band always shows every section, even
-  // while the §7 filter narrows the accordion body below.
+  // By-lead groups only in "lead" scope; overview rows always from FULL groups
+  // so the band shows every section while the filter narrows the accordion.
   const fullLeadGroups: LeadGroup[] =
     scope === "lead" ? mapWeeklyReportLeadGroups(reportData) : [];
   const leadOverviewRows = mapWeeklyReportLeadOverview(fullLeadGroups);
 
-  // review-acknowledgement (§7): the toggle is effective only when review is
-  // enabled (head/admin/viewer on a live period). `buildAccordionModel` narrows
-  // the accordion products/leadGroups to submitted-only when active, leaving the
-  // header count, portfolio band, and period nav on the full truth above.
+  // Toggle effective only when review is enabled; accordion may narrow to
+  // submitted-only while header/portfolio/period nav stay on full truth.
   const reviewEnabled = isReviewEnabled(currentRole, view.period.periodStatus);
-  // The Read|Review toggle is offered only to a caller who can act on ≥1
-  // section (a designated reviewer / head / admin); `canReview` is server-
-  // stamped per section.
+  // Read|Review offered only when the caller can act on ≥1 section (server-stamped).
   const canReviewAny = reviewModel.sections.some(
     (section) => section.canReview,
   );
@@ -122,22 +105,17 @@ export function buildWeeklyReportPageView(
           reportHasContent(report),
       )?.id
     : undefined;
-  // Empty-state + publish gate key off the FULL content (head sees live draft
-  // content when showing all), never the filtered accordion.
+  // Empty-state + publish gate use FULL content, never the filtered accordion.
   const hasAnyContent = accordion.hasAnyContent;
   const canPublishReport = submitted > 0 && hasAnyContent;
   const canMutatePeriod = isHeadLike(currentRole);
-  // head-toolbar-semantics: the publish precondition hint sits on the status
-  // row, shown only to publish-capable roles while the period is unpublished
-  // and has no submitted content to publish yet.
+  // Publish hint for head-like roles while unpublished and not yet publishable.
   const showPublishHint =
     canMutatePeriod &&
     !canPublishReport &&
     view.period.periodStatus !== "published";
-  // The standalone fallback navigator (when no shell-composed `toolbar` slot
-  // arrives — e.g. the viewer /reports/[reportId] route) surfaces the active
-  // period only; a single inert option. The shell-composed head toolbar
-  // supplies the full multi-period combobox via the `toolbar` slot.
+  // Standalone fallback nav (no shell toolbar): single inert active period.
+  // Shell-composed head toolbar supplies the multi-period combobox via slot.
   const periods: ReportPeriod[] = [
     {
       id: view.period.id,
@@ -156,11 +134,8 @@ export function buildWeeklyReportPageView(
   return {
     currentRole,
     canMutatePeriod,
-    // Export-PDF authz (fix-report-surface-integrity): head/admin/viewer get
-    // the real export; lead is FORBIDDEN at the backend (pdfExport on
-    // leadershipProcedure) and sees the inert ComingSoon control instead —
-    // never an active button that would 403. The viewer's export is
-    // requester-scoped (their own published slice).
+    // head/admin/viewer get real export; lead is FORBIDDEN (pdfExport on
+    // leadershipProcedure) and sees ComingSoon — never a button that would 403.
     canExportPdf: currentRole !== null && !isLead(currentRole),
     showLeadExportComingSoon: isLead(currentRole),
     periodId: view.period.id,
@@ -180,7 +155,7 @@ export function buildWeeklyReportPageView(
     submittedOnly,
     activitySections: reportData.leadSections,
     focusedProductId,
-    // report-routing: same content filter as focusedProductId (reportHasContent).
+    // Same content filter as focusedProductId (reportHasContent).
     scrollTargetProductId: focusedProductId,
     hasAnyContent,
     canPublishReport,

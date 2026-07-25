@@ -1,15 +1,5 @@
-/**
- * Weekly Report page wiring tests.
- *
- * Strategy: mock the tRPC proxy as a stub so we can intercept
- * `period.publish.mutationOptions` / `period.reopen.mutationOptions` and the
- * `weeklyReport.get.queryOptions`. We DO NOT extend MSW handlers — these
- * mutations are only exercised at the wire-up level here.
- *
- * The structural goal: when the head clicks the publish button, the parent's
- * mutation fires with `{ reportId }`; on success, cache invalidation helpers
- * fire and a toast confirms.
- */
+// Wire-up tests: tRPC stub intercepts publish/reopen/get; no MSW handlers.
+// Assert mutation variables, cache invalidation, and toast on success.
 
 import type { TrafficLightStatus } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -165,10 +155,6 @@ function makeWeeklyReportData(
   };
 }
 
-// ---------------------------------------------------------------------------
-// tRPC test double
-// ---------------------------------------------------------------------------
-
 function renderPage(
   data: ReturnType<typeof makeWeeklyReportData>,
   authorId?: string,
@@ -194,8 +180,7 @@ function renderPage(
     { path: ["review", "verdict"], mutation: true },
     { path: ["review", "comment"], mutation: true },
     { path: ["review", "deleteComment"], mutation: true },
-    // Acknowledge-placement (HF1) tests give sections a group id, which mounts
-    // the per-group Acknowledge control; an empty roster keeps it un-acked.
+    // Group id mounts the per-group Acknowledge control; empty roster = un-acked.
     { path: ["review", "acknowledgements"], queryByInput: () => [] },
     { path: ["review", "acknowledge"], mutation: true },
     { path: ["archive", "list"] },
@@ -340,7 +325,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     ).not.toHaveBeenCalled();
   });
 
-  it("A32: shows empty-state with archive link when the report has no content and the period is open", async () => {
+  it("shows empty-state with archive link when the report has no content and the period is open", async () => {
     renderPage({
       ...makeWeeklyReportData("open", {
         portfolioOverview: [],
@@ -366,7 +351,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
-  it("A32: shows normal report (no empty-state) when submissionCount === 0 but period is published", async () => {
+  it("shows normal report (no empty-state) when submissionCount === 0 but period is published", async () => {
     // published + 0 submissions: edge case (head published empty period).
     // Empty-state must NOT appear — show the normal layout instead.
     renderPage({
@@ -385,12 +370,9 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("head-report-visibility (C1): draft content is hidden by the submitted-only default, revealed via Show all — never the empty-state", async () => {
-    // C1 locks the head default to submitted-only + anti-empty-state. With 0
-    // submissions but live draft content, the accordion is empty BUT the period
-    // is not content-less, so the "N in draft — Show all" signal stands in for
-    // the misleading empty-state. Flipping to All reveals the focused product's
-    // draft row (authorId auto-expands it once shown).
+  it("head-report-visibility: draft content is hidden by the submitted-only default, revealed via Show all — never the empty-state", async () => {
+    // Default submitted-only + anti-empty-state: with 0 submissions but live
+    // draft content, "N in draft — Show all" stands in for a false empty-state.
     renderPage(
       {
         ...makeWeeklyReportData("open", {
@@ -677,16 +659,14 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
   });
 });
 
-describe("WeeklyReportPage — async Export PDF button role gating (driver sweep 2026-06-09)", () => {
+describe("WeeklyReportPage — async Export PDF button role gating", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
-  // fix-report-surface-integrity W2: the real async export is offered to
-  // head/admin/viewer only (the export render is requester-scoped, so the viewer
-  // gets their own non-empty published slice). The API (pdfExport.request /
-  // .status) is now leadershipProcedure — lead is FORBIDDEN.
+  // Real export for head/admin/viewer (viewer slice is requester-scoped).
+  // pdfExport is leadershipProcedure — lead is FORBIDDEN.
   it.each(["head", "admin", "viewer"] as const)(
     "renders the async Export PDF button for %s",
     async (role) => {
@@ -959,10 +939,8 @@ describe("WeeklyReportPage — load-failure state (driver finding 1)", () => {
   });
 });
 
-// review-acknowledgement (§7): the per-user Submitted|All accordion filter +
-// anti-empty-state. The toggle filters the RENDERED accordion only — the header
-// count, portfolio band, and period nav stay on the truth. Default submitted-
-// only, shown only for an access-holder on a live (non-published) period.
+// Submitted|All filters the rendered accordion only; header/portfolio/nav stay
+// on full truth. Default submitted-only for access-holders on a live period.
 const AUTHOR_ID_B = "11111111-1111-4111-8111-bbbbbbbbbbbb";
 
 function submittedSection() {
@@ -1111,11 +1089,8 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
   });
 
   it("an activity-only draft section (no draft product content) still surfaces the 'N in draft — Show all' signal", async () => {
-    // Regression for weekly-report-view-gaps (b): draftCount used to derive
-    // from mapWeeklyReportLeadGroups alone, which only sees product content —
-    // a draft section whose only content is a touched activity was invisible
-    // to both the draft-hidden signal AND the empty-state (hasAnyContent was
-    // already activity-aware), a dead-end with no recovery affordance.
+    // draftCount must count activity content, not only product groupings —
+    // otherwise an activity-only draft is invisible to the recovery signal.
     renderPage({
       ...makeWeeklyReportData("open", {
         portfolioOverview: [],
@@ -1397,7 +1372,7 @@ function makeReviewableData(): ReturnType<typeof makeWeeklyReportData> {
   };
 }
 
-describe("WeeklyReportPage — review-mode split (report-review-mode HF9/HF3)", () => {
+describe("WeeklyReportPage — review-mode split (report-review-mode)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -1506,7 +1481,7 @@ function makeAcknowledgeableData(): ReturnType<typeof makeWeeklyReportData> {
   };
 }
 
-describe("WeeklyReportPage — acknowledge placement (HF1)", () => {
+describe("WeeklyReportPage — acknowledge placement", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();

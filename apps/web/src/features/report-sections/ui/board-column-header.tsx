@@ -6,22 +6,12 @@ import type { ItemColumn } from "../model/next-week-columns";
 interface BoardColumnHeaderProps {
   readonly col: ItemColumn;
   readonly readOnly: boolean;
-  /**
-   * Multi-product gate for PRODUCT columns: with a single product the
-   * section-level "+ Add Item" button already targets it, so the per-column
-   * button would duplicate it. Activity lanes ignore the gate — the activity
-   * is never that single default parent.
-   */
+  // PRODUCT columns: hide per-column Add when the section-level button already
+  // targets the sole product. Activity lanes always show Add (activity ≠ default parent).
   readonly showProductAdd: boolean;
   readonly onAdd: (seed: CreateSeed) => void;
 }
 
-/**
- * Column header shared by the Current/Next week boards: the column label plus
- * a "+ Add" button that opens the item dialog with the column's parent
- * preselected — the activity on an activity lane, the product on a product
- * column.
- */
 export function BoardColumnHeader({
   col,
   readOnly,

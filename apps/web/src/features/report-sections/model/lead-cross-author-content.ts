@@ -1,14 +1,6 @@
-/**
- * Cross-author CONTENT mappers for the lead form (Everyone state). Pure
- * functions; behavior is pinned by `lead-cross-author.test.ts`.
- *
- * `crossAuthorContent` (full content, fetched ONLY in the Everyone state)
- * carries the co-owners' item / risk / decision text + the owning author's
- * full name. This module reshapes those rows into the `Foreign*` presentation
- * types the lead form renders read-only alongside the author's own records.
- * The status-only stage-map mappers (always fetched) live in
- * `./lead-cross-author`.
- */
+// Cross-author content mappers for the lead form Everyone state. Reshape
+// co-owners' item/risk/decision text into Foreign* rows rendered read-only
+// beside the author's own records. Status-only stage maps live in ./lead-cross-author.
 
 import type { DbRole, RiskSeverity } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
@@ -24,18 +16,12 @@ import type {
   LeadRiskEntry,
 } from "./lead-form";
 
-/**
- * Subset of one `leadForm.crossAuthorContent` row consumed by the content
- * mappers. Structural mirror of the backend `CrossAuthorSectionRow`; carries
- * the co-owners' full item / risk / decision text + the owning author's full
- * name (the strictly-more-sensitive Everyone read). The per-product `stages[]`
- * are not consumed here — foreign chips come from the status-only read.
- */
+// Subset of one crossAuthorContent row: co-owners' full text + author name.
+// Per-product stages are unused here — foreign chips come from the status-only read.
 export interface CrossAuthorContentRow {
   authorId: string;
   authorName: string;
-  /** The author's access role — the slide legend labels every author with it.
-   * Optional so frozen snapshots predating the field still parse. */
+  // Access role for the slide legend; optional so older snapshots still parse.
   authorRole?: DbRole;
   items: {
     id: string;
@@ -84,13 +70,8 @@ export type ForeignDecisionEntry = LeadDecisionEntry & {
 /** Length of the `yyyy-mm-dd` prefix of an ISO-8601 timestamp. */
 const ISO_DATE_PREFIX_LENGTH = 10;
 
-/**
- * Lenient workflow→ItemStatus coercion. The cross-author content
- * rows carry `workflowStatus` as a plain string; the known enum values
- * delegate to the tested `workflowToItemStatus`, anything else falls back to
- * `'planned'`. The fallback is load-bearing — substituting the strict mapper
- * would be a silent behavior change.
- */
+// Known enums go through workflowToItemStatus; anything else falls back to
+// 'planned'. The fallback is load-bearing — a strict mapper would change behavior.
 export function coerceWorkflowToItemStatus(ws: string): ItemStatus {
   if (
     ws === "done" ||
@@ -104,20 +85,14 @@ export function coerceWorkflowToItemStatus(ws: string): ItemStatus {
   return "planned";
 }
 
-/**
- * Everyone state: project foreign-author kanban items (read-only) filtered by
- * week type. Ids follow the `foreign:<authorId>:<itemId>` scheme; product name
- * falls back to the raw projectId when the lookup misses.
- */
+// Everyone state: foreign kanban items by week type; ids use foreign:<author>:<id>.
 export function mapForeignItems(
   rows: readonly CrossAuthorContentRow[],
   productNameById: ReadonlyMap<string, string>,
   itemType: "current" | "next",
 ): ForeignKanbanItem[] {
   return rows.flatMap((ca) => {
-    // record-status-derived-from-risk: the foreign item's blocked derives from
-    // the author's own covering risks (blocked-only overlay) — the SAME rule the
-    // lead card applies — so a stored blocked never shows without a backing risk.
+    // Blocked derives from the author's own covering risks (same lead-card rule).
     const alarmRisks = ca.risks.map((r) => ({
       productId: r.projectId,
       stageIds: r.stageNames,
@@ -138,8 +113,7 @@ export function mapForeignItems(
         ),
         text: i.text,
         author: shortNameFromName(ca.authorName),
-        // Foreign (read-only) items never surface a priority control, and
-        // the cross-author read model carries no paused metadata.
+        // Foreign items never surface priority; cross-author has no paused metadata.
         priorityRank: null,
         pausedReason: null,
         authorId: ca.authorId,
@@ -148,10 +122,7 @@ export function mapForeignItems(
   });
 }
 
-/**
- * Everyone state: project foreign-author risks. Severity is coerced to the
- * binary presentation union: everything non-`'blocked'` renders as `'at-risk'`.
- */
+// Foreign risks: non-'blocked' severity renders as 'at-risk' presentation-side.
 export function mapForeignRisks(
   rows: readonly CrossAuthorContentRow[],
   productNameById: ReadonlyMap<string, string>,
@@ -173,10 +144,7 @@ export function mapForeignRisks(
   );
 }
 
-/**
- * Everyone state: project foreign-author decisions. `deadline` is formatted to
- * the `yyyy-mm-dd` ISO date prefix; null passes through.
- */
+// Foreign decisions: deadline formatted to yyyy-mm-dd; null passes through.
 export function mapForeignDecisions(
   rows: readonly CrossAuthorContentRow[],
   productNameById: ReadonlyMap<string, string>,

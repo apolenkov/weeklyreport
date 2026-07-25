@@ -87,12 +87,7 @@ function ComingSoonTooltip({
           side="bottom"
           align="center"
           sideOffset={6}
-          // The amber badge is a VISUAL reinforcement only. Radix would otherwise
-          // wire the trigger's `aria-describedby` to a sr-only copy of this badge
-          // ("Coming Soon"), doubling up with each control's own `aria-label`
-          // (".. is coming soon") on focus. A whitespace `aria-label` here makes
-          // Radix's sr-only description blank (it renders `ariaLabel || children`),
-          // so the control's persistent `aria-label` stays the single source.
+          // Whitespace blanking so Radix does not double the control's aria-label with the badge.
           aria-label=" "
           className="border-0 bg-transparent p-0 shadow-none"
         >

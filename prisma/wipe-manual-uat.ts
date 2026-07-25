@@ -1,29 +1,4 @@
-/**
- * Full factory-reset wipe + rich preset reseed for manual UAT.
- *
- * Behavior:
- *   - Wipes EVERY user-customised table (users, groups, products,
- *     reminder policies, action log, org identity, app settings, etc.).
- *   - Re-seeds a minimal-but-rich preset (2 reporting groups, 7 leads,
- *     6 products with explicit GroupProduct edges, 7 SDLC stages, 1 open
- *     report covering the current week, PEO brand on Organization,
- *     defaults on AppSettings).
- *   - Idempotent: safe to re-run; transactional so partial state never
- *     becomes visible.
- *
- * The single-transaction approach mirrors `prisma/seed-simple.ts`'s
- * FK-safe delete order and re-uses the canonical IDs
- * from `prisma/seed-constants.ts` so existing manual-uat E2E regressions
- * (`apps/web/e2e/regression/admin-stage-reassignment.spec.ts`,
- * `admin-groups.spec.ts`) keep finding `DevOps-инструменты`, `Игорь`,
- * `Мария К.`, etc. by the same names + UUIDs.
- *
- * Production guard: refuses to run when `NODE_ENV=production`.
- *
- * Run:
- *   pnpm exec tsx prisma/wipe-manual-uat.ts
- * Or via tRPC: dev.wipeAndReseed({ variant: 'manual-uat' }).
- */
+// Factory-reset wipe + reseed for manual UAT; reuses seed-constants IDs for E2E stability.
 
 import "dotenv/config";
 
@@ -64,10 +39,7 @@ const prisma = new PrismaClient({ adapter });
 
 type CountMap = Record<string, number>;
 
-// --- Extra preset IDs -----------------------------------------
-// Beyond the 8 canonical IDs in seed-constants (head, viewer, 6 leads), we
-// add: 1 admin, 1 finance head, 1 finance lead, and the Finance
-// reporting group so wipe lands with two real groups instead of one.
+// Extra users/group so wipe lands with two groups (admin + finance head/lead).
 const ADMIN_USER_ID = "a0000000-0000-4000-8000-000000000097";
 const FINANCE_HEAD_USER_ID = "a0000000-0000-4000-8000-000000000095";
 const FINANCE_LEAD_USER_ID = "a0000000-0000-4000-8000-000000000094";
@@ -90,8 +62,6 @@ const STAGE_DEV = "a0000000-0000-4000-8000-000000000704";
 const STAGE_TEST = "a0000000-0000-4000-8000-000000000705";
 const STAGE_DEVOPS = "a0000000-0000-4000-8000-000000000706";
 const STAGE_SUPPORT = "a0000000-0000-4000-8000-000000000707";
-
-// --- Redis flush -------------------------------------------------------
 
 function writeRedisCommand(command: string, ...args: string[]): Buffer {
   const parts = [command, ...args];
@@ -157,29 +127,12 @@ export async function flushRedisDb(): Promise<
   });
 }
 
-// --- Main --------------------------------------------------------------
-
 async function main() {
-  // Destructive-guard: refuse on prod-looking DATABASE_URL — catches
-  // misconfigured envs, not just NODE_ENV=production.
   assertNonProdDestructive("wipe-manual-uat");
 
   const result = await prisma.$transaction(
     async (tx) => {
-      // ---------- 1. WIPE (FK-safe order) ----------
-      //
-      // Same FK-safe ordering principle as `seed-simple.ts`. Tables wiped
-      // beyond the report/section content:
-      //   - userActionLog        (audit log clutter)
-      //   - reminderPolicy       (templates — wipe all)
-      //   - groupProduct         (M:M — must drop before Project)
-      //   - telegramBinding      (stub — must drop before User)
-      //   - organization         (singleton; reseed to PEO brand below)
-      //   - appSettings          (force-reset to schema defaults)
-      //
-      // Reminder rule policyId FK has no onDelete clause → default RESTRICT
-      // in Postgres. We delete ALL reminder rules (including no-reportId
-      // templates) before any policy so the policy delete doesn't FK-fail.
+      // FK-safe wipe: reminder rules before policies (RESTRICT); activities before groups.
       const deleted: CountMap = {
         reminderExecution: (await tx.reminderExecution.deleteMany({})).count,
         reminderRule: (await tx.reminderRule.deleteMany({})).count,
@@ -219,7 +172,6 @@ async function main() {
         appSettings: (await tx.appSettings.deleteMany({})).count,
       };
 
-      // ---------- 2. RESEED: ReportingGroups ----------
       // Two groups so head dashboards have a realistic «pick a group» state.
       // headUserId is wired below after Users are created.
       await tx.reportingGroup.create({
@@ -237,7 +189,6 @@ async function main() {
         },
       });
 
-      // ---------- 3. RESEED: Users ----------
       // Re-uses canonical UUIDs from seed-constants so existing E2E specs
       // (admin-stage-reassignment, admin-groups) continue to match Игорь /
       // Мария / DevOps-инструменты by name.
@@ -400,7 +351,6 @@ async function main() {
         },
       });
 
-      // ---------- 4. RESEED: Products (one per primary lead) ----------
       await tx.project.createMany({
         data: [
           {
@@ -442,7 +392,6 @@ async function main() {
         ],
       });
 
-      // ---------- 5. RESEED: GroupProduct ownership edges ----------
       // Current invariant is one owning group per product. Keep the demo
       // split aligned with the seeded lead's reporting group so Products,
       // Groups, dashboard scoping, and viewer access all tell the same story.
@@ -457,7 +406,6 @@ async function main() {
         ],
       });
 
-      // ---------- 6. RESEED: Stages + StageAssignments ----------
       await tx.stage.createMany({
         data: [
           { id: STAGE_PLAN, name: "Planning", sortOrder: 0 },
@@ -524,7 +472,6 @@ async function main() {
         ],
       });
 
-      // ---------- 7. RESEED: Organization (PEO brand) ----------
       await tx.organization.create({
         data: {
           id: "singleton",
@@ -533,12 +480,10 @@ async function main() {
         },
       });
 
-      // ---------- 8. RESEED: AppSettings (force-default) ----------
       // Empty `data` hydrates every column from its @default(...) so future
       // schema additions don't silently drift.
       await tx.appSettings.create({ data: { id: "singleton" } });
 
-      // ---------- 9. RESEED: Active Report (current week) ----------
       const report = await tx.report.create({
         data: {
           id: ACTIVE_REPORT_ID,
@@ -577,7 +522,6 @@ async function main() {
         sections.push(section);
       }
 
-      // ---------- 10. RESEED: ReminderPolicy templates + derived rules ----------
       // Mirrors seed-simple.ts so the reminder dashboard has visible policy
       // rows AND concrete derived rules under each policy.
       const deadlineFire = new Date(SEED_REPORTS.active.deadline);
@@ -628,7 +572,6 @@ async function main() {
         ],
       });
 
-      // ---------- 11. Post-wipe counts (verification) ----------
       const after = {
         users: await tx.user.count(),
         leads: await tx.user.count({ where: { role: Role.lead } }),

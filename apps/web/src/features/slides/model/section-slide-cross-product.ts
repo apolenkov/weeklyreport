@@ -56,9 +56,7 @@ function crossProductSlices(
   };
 }
 
-/** Synthetic "Cross-product" slide for records with no product/activity
- * parent, or a parent the deck doesn't otherwise show — null when nothing
- * qualifies, so the deck never renders an empty extra slide. */
+// Null when nothing qualifies so the deck never renders an empty extra slide.
 export function buildCrossProductSlide(
   section: ReportSectionReadModel,
   projectIds: ReadonlySet<string>,

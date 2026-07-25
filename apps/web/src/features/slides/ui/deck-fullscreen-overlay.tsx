@@ -8,12 +8,8 @@ import { SlideFullscreenButton } from "./slide-fullscreen-button";
 /** How long the transient "Press Esc to exit" hint stays on entering fullscreen. */
 const ESC_HINT_MS = 3000;
 
-/**
- * Transient "Press Esc to exit" hint, shown ~3s on entering fullscreen then
- * auto-dismissed. It MUST render inside the fullscreened element (else it is
- * invisible in fullscreen) and is positioned top-center to avoid the floating
- * exit pill (top-right). Renders nothing outside fullscreen.
- */
+// Must render inside the fullscreened element (else invisible); top-center
+// avoids the floating exit pill at top-right.
 function SlideEscHint({ isFullscreen }: { readonly isFullscreen: boolean }) {
   const [show, setShow] = useState(false);
 
@@ -30,10 +26,8 @@ function SlideEscHint({ isFullscreen }: { readonly isFullscreen: boolean }) {
 
   if (!isFullscreen) return null;
 
-  // Keep the polite live region in the DOM the whole time we are fullscreen and
-  // toggle only its text — several screen readers miss a region that mounts
-  // already populated, so it must exist (empty) before the text is injected.
-  // When dismissed it collapses to an empty sr-only node.
+  // Keep the live region mounted while fullscreen and toggle only its text —
+  // some screen readers miss a region that mounts already populated.
   return (
     <div
       role="status"
@@ -49,12 +43,7 @@ function SlideEscHint({ isFullscreen }: { readonly isFullscreen: boolean }) {
   );
 }
 
-/**
- * The in-fullscreen overlay shared by every slide deck — the persistent
- * floating "Exit" pill plus the transient Esc hint. Both must render INSIDE
- * the fullscreened element; both self-gate on `isFullscreen`. The deck-level
- * `useFullscreen` owner supplies the state.
- */
+// Floating exit pill + Esc hint; both must live inside the fullscreened element.
 export function DeckFullscreenOverlay({
   isFullscreen,
   onToggle,
@@ -74,12 +63,7 @@ export function DeckFullscreenOverlay({
   );
 }
 
-/**
- * The standalone lead deck's toolbar control cluster: the Agent-review
- * coming-soon control + the persistent "Enter/Exit fullscreen" toggle. Shared
- * by both deck render branches (own/summary + product). `toggleRef` lets the
- * deck-level `useFullscreen` owner return focus to this toggle on exit.
- */
+// Shared toolbar cluster; toggleRef returns focus to this control on fullscreen exit.
 export function DeckToolbarControls({
   isFullscreen,
   onToggle,

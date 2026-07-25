@@ -2,12 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/**
- * Inline text editor mounted only while edit mode is on: `draft` initializes
- * from the committed text on mount, and the caller keys this component by
- * `item.text`, so an external text change remounts it — replacing the old
- * reset-in-effect. The textarea always shows the full, untruncated text.
- */
+// Caller keys by item.text so external text changes remount a fresh draft.
 export function ItemInlineTextEditor({
   initialText,
   onCommit,

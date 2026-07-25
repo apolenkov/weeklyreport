@@ -37,10 +37,6 @@ export interface SearchController {
   readonly navigateTo: (url: string) => void;
 }
 
-/**
- * Bundles the query lifecycle (debounce, fetch, active-hit selection) and
- * keyboard navigation for a single SearchInput mount.
- */
 export function useSearchController(scope: SearchScope): SearchController {
   const router = useRouter();
   const trpc = useTRPC();

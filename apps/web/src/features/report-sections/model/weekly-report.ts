@@ -1,26 +1,5 @@
-/**
- * Translates `weeklyReport.get` (`WeeklyReportReadModel`) into the slices the
- * existing Weekly Report and `/reports/[reportId]` pages expect:
- *
- *   - `period`       : period-nav metadata (id, weekLabel, dateRange, isCurrent)
- *   - `portfolio`    : per-product summary rows for the overview table
- *   - `products`     : per-product accordion sections (current / next / risks /
- *                      decisions / priorities)
- *
- * The presentation types live in `./weekly-report-types` and the section
- * grouping/formatting helpers in `./weekly-report-groupers` (item/risk
- * re-slicing) and `./weekly-report-groupers-decisions` (decisions/priorities/
- * authors/escalations); all are re-exported here so existing importers are
- * unaffected.
- *
- * How the slices are derived:
- * - `weeklyReport.get` returns `leadSections: ReportSectionReadModel[]` (sliced
- *   per LEAD). We re-slice by `projectId` across all leadSections, then attach
- *   risks/decisions/priorities.
- * - `weeklyReport.portfolioOverview` already provides per-product `worstStatus`
- *   + `leadNames`; we use it directly. Counts are derived from the re-sliced
- *   items.
- */
+// Maps weeklyReport.get into page slices; re-slices leadSections by projectId
+// and re-exports types/groupers so existing importers stay stable.
 import type {
   TrafficLightStatus,
   WeeklyReportReadModel,
@@ -91,7 +70,6 @@ function assembleWeeklyReport(
   };
 }
 
-/** Compose `weeklyReport.get` into the page's portfolio + per-product slices. */
 export function mapWeeklyReport(
   api: WeeklyReportReadModel,
 ): MapWeeklyReportResult {
@@ -102,16 +80,8 @@ export function mapWeeklyReport(
   return assembleWeeklyReport(api, buildWeeklyReportPeriod(api), projections);
 }
 
-/**
- * Build the head report's "by lead" groups so each product card under a lead
- * shows ONLY that lead's own contribution (their items, risks, decisions,
- * stages) — not the cross-lead aggregate. Each `api.leadSections` entry is
- * already sliced per lead, so we run the per-product groupers over that single
- * section. Reusing aggregate cards would repeat a dual-authored product's
- * merged content under each lead.
- *
- * "By product" scope keeps using {@link mapWeeklyReport}'s aggregate `products`.
- */
+// Per-lead groups use each leadSection alone so dual-authored products are not
+// repeated under every lead; by-product scope uses mapWeeklyReport aggregates.
 export function mapWeeklyReportLeadGroups(
   api: WeeklyReportReadModel,
 ): { id: string; name: string; products: WeeklyProductReport[] }[] {
@@ -138,7 +108,6 @@ export function mapWeeklyReportLeadGroups(
           const decisions = decisionsByProject.get(proj.projectId) ?? [];
           const priorities = prioritiesByProject.get(proj.projectId) ?? [];
           const status = trafficToProductStatus(proj.trafficLight);
-          // This lead's own escalation for this product, if any.
           const attention = api.escalations.find(
             (e) =>
               e.productName === proj.projectName &&
@@ -196,18 +165,8 @@ function compareProductStatus(
     : 1;
 }
 
-/**
- * Derive the `by lead` Report overview rows from the already-computed lead
- * groups (the output of `mapWeeklyReportLeadGroups`). One row per lead WITH
- * content — membership inherits the body's content filter (the groups are
- * already pruned of empty leads), so a decisions-only or Needs-Attention-only
- * lead still gets a row. Pure mapping: no new server data.
- *
- * `worstStatus` is the worst traffic light across the lead's sliced products
- * (their own contribution); counts are summed over those products. Rows sort
- * worst-status-first, ties broken by lead name — a total, stable order matching
- * the product overview's status-first sort.
- */
+// Overview rows inherit the groups' content filter (decisions-only leads keep a
+// row). worstStatus is over the lead's own products; sort worst-first, name tiebreak.
 export function mapWeeklyReportLeadOverview(
   leadGroups: readonly {
     id: string;
@@ -242,7 +201,6 @@ export function mapWeeklyReportLeadOverview(
     );
 }
 
-// Internal exports for tests.
 export const __testing = {
   initialsFromName,
   trafficToProductStatus,

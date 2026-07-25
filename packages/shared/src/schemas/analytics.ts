@@ -2,14 +2,9 @@ import { z } from "zod";
 
 import { trafficLightStatusSchema } from "./report-primitives.schema";
 
-// A format regex alone accepts impossible dates (2026-02-30, 2026-13-45) that
-// then flow into `new Date(...)` and produce a wrong or Invalid Date query
-// boundary. The refine parses the value as a UTC instant and rejects anything
-// that does not round-trip back to the same YYYY-MM-DD. The regex stays as the
-// cheap first gate so the refine only runs on well-shaped input; the
-// `Number.isNaN` guard keeps `toISOString()` from throwing on Invalid Date.
 const ISO_DATE_LENGTH = "YYYY-MM-DD".length;
 
+// Regex alone accepts 2026-02-30; refine requires UTC round-trip to the same YYYY-MM-DD.
 const isoDateOnly = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)

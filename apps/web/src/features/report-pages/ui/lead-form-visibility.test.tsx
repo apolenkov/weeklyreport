@@ -1,29 +1,7 @@
 /**
- * scope-lead-report-to-own-contribution, section 7d — component tests for the
- * Record visibility toggle (Mine only / Everyone) on the lead form.
- *
- * The three lead-form queries (getActive / byPeriod / myHistory) plus
- * crossAuthors (status-only, always fetched) and crossAuthorContent
- * (full-content, Everyone-only) are mocked at the tRPC-proxy boundary, mirroring
- * lead-form.test.tsx. A SessionContext + an in-memory localStorage stub supply
- * the per-user/per-report toggle state the conditional fetch gates on.
- *
- * Coverage map (deferred items are noted, not silently skipped):
- *   7d.1  Mine only issues NO crossAuthorContent fetch + renders no foreign text.
- *   7d.2  Everyone renders co-owners' full records (text + full name) read-only.
- *   7d.4  Honest health holds in BOTH states; Mine only hides foreign chips.
- *   7d.5  View-only: Everyone → submit payload carries own records only.
- *   7d.7  Purge: Everyone → Mine only purges cache; later Everyone re-fetches;
- *         identity / report change also purges (removeQueries fires).
- *   7d.8  Submit payload byte-identical across Mine only vs Everyone.
- *   7d.8b Lead export control is inert (ComingSoon); slides preview issues no
- *         crossAuthorContent fetch for the publish/export-equivalent surface.
- *
- *   7d.3 / 7d.9 (authz matrix)         → lead-form.contract.test.ts (service).
- *   7d.6 (persistence)                 → use-record-visibility.test.ts (hook).
- *   7d.10 (status-only co-owned scoping) + the repo-level own-author/co-owner split of
- *         7d.9                          → lead-form.prisma-repository.integration
- *         .test.ts + live verify (needs the _test DB — out of the DB-free gate).
+ * Record visibility (Mine only / Everyone) on the lead form — see
+ * lead-form-cross-author-scope. Authz/persistence/status-only coverage lives in
+ * lead-form.contract, use-record-visibility, and lead-form.prisma-repository.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -115,9 +93,8 @@ function makeSection() {
             sortOrder: 3,
           },
         ],
-        // unassigned-stage-reporting-exclusion: the product's assigned-stage set
-        // includes the lead's own Development AND the co-lead's Testing, so the
-        // foreign Testing stage renders as a locked chip in Everyone mode.
+        // Product stage set includes own Development and co-lead Testing so the
+        // foreign Testing stage can render as a locked chip in Everyone mode.
         stageSet: [
           {
             stageId: "88888888-8888-4888-8888-888888888888",
@@ -157,11 +134,8 @@ function makeSection() {
   };
 }
 
-// One status-only cross-author row: a co-lead's red "Testing" stage. The lead
-// owns "Dev" (matched from the section's "Development" ownedStage) but NOT
-// "Testing", so Testing is unassigned for the lead and the override rewrites it
-// to a foreign "locked" chip in Everyone. Health folds the red in via this
-// always-fetched status read in BOTH toggle states.
+// Status-only row: co-lead red "Testing" (unassigned for this lead). Health
+// folds it in via the always-fetched status read in both toggle states.
 const FOREIGN_STAGE = "Testing";
 const STATUS_ONLY_ROW = {
   projectId: PROJECT_ID,
@@ -327,7 +301,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("LeadForm — Record visibility: Mine only (7d.1)", () => {
+describe("LeadForm — Record visibility: Mine only", () => {
   it("issues NO crossAuthorContent fetch and renders no foreign text/name/chip", async () => {
     const { Wrapper, contentFetch } = buildHarness();
     render(
@@ -351,17 +325,13 @@ describe("LeadForm — Record visibility: Mine only (7d.1)", () => {
     expect(screen.queryByText(FOREIGN_RISK_TEXT)).toBeNull();
     expect(screen.queryByText(FOREIGN_ITEM_TEXT)).toBeNull();
     expect(screen.queryByText(CO_OWNER_NAME)).toBeNull();
-    // lead-mine-hide-unowned-stages: Mine renders only the lead's own chips, so
-    // the foreign "Testing" stage is hidden entirely — neither the co-lead's
-    // locked red nor a greyed "unassigned" chip. The lead's own Development
-    // chip still renders (aria-label uses the canonical name; the chip face
-    // shows the short "Dev").
+    // Mine shows only own chips; foreign Testing is fully hidden.
     expect(screen.queryByLabelText(/^Testing:/)).toBeNull();
     expect(screen.queryByLabelText(/^Development:/)).not.toBeNull();
   });
 });
 
-describe("LeadForm — Record visibility: Everyone (7d.2)", () => {
+describe("LeadForm — Record visibility: Everyone", () => {
   it("renders co-owners' full records (text + full name) read-only alongside own", async () => {
     const { Wrapper, contentFetch } = buildHarness({ seedEveryone: true });
     render(
@@ -385,22 +355,11 @@ describe("LeadForm — Record visibility: Everyone (7d.2)", () => {
   });
 });
 
-describe("LeadForm — Record visibility: honest health is toggle-independent (7d.4)", () => {
-  // The status-only row carries a red Development stage assigned to the co-lead.
-  // The pipeline rewrites the lead's UNASSIGNED Development chip to a foreign
-  // red "locked" chip in Everyone; product health folds the foreign red in via
-  // the always-fetched status read in BOTH states (D4a/D4d). The own stage of
-  // the same name is owned, so the foreign override lands on a sibling product
-  // stage rather than the owned one — health is the observable proxy: a red
-  // status badge / at-risk signal in the product-status section.
+describe("LeadForm — Record visibility: honest health is toggle-independent", () => {
+  // Assert the card's left-edge stripe (blocked token), not section text —
+  // the static subtitle already contains "Blocked" and would always match.
   async function productSectionRedSignal(): Promise<boolean> {
     const section = await screen.findByTestId("lead-section-product-status");
-    // Health is the product card's LEFT-EDGE stripe (getProductCardStyle). When
-    // the foreign red folds in, the stripe carries the blocked token; when it
-    // does not, it stays on-track. Asserting the actual stripe — not section
-    // text — gives the test teeth: an earlier text/destructive-token proxy was
-    // toothless because the section's static subtitle already contains the word
-    // "Blocked", so it matched on every render regardless of health.
     const card = Array.from(section.querySelectorAll(".rounded-xl")).find(
       (el) => (el.getAttribute("style") ?? "").includes("border-left"),
     );
@@ -441,7 +400,7 @@ describe("LeadForm — Record visibility: honest health is toggle-independent (7
   });
 });
 
-describe("LeadForm — Record visibility: view-only submit (7d.5 / 7d.8)", () => {
+describe("LeadForm — Record visibility: view-only submit", () => {
   // Drives Submit → Confirm in a given toggle state and returns the captured
   // submit payload. Foreign records must never reach the payload.
   async function captureSubmitPayload(seedEveryone: boolean): Promise<unknown> {
@@ -503,7 +462,7 @@ describe("LeadForm — Record visibility: view-only submit (7d.5 / 7d.8)", () =>
   });
 });
 
-describe("LeadForm — Record visibility: purge on toggle/identity/report (7d.7)", () => {
+describe("LeadForm — Record visibility: purge on toggle/identity/report", () => {
   it("Everyone → Mine only purges foreign content; later Everyone re-fetches", async () => {
     const { Wrapper, queryClient, contentFetch } = buildHarness({
       seedEveryone: true,
@@ -628,32 +587,24 @@ describe("LeadForm — Record visibility: purge on toggle/identity/report (7d.7)
   });
 });
 
-describe("LeadForm — Record visibility: publish/export independence (7d.8b)", () => {
+describe("LeadForm — Record visibility: publish/export independence", () => {
   it("the lead export control is inert (ComingSoon) and slides preview issues no content fetch", async () => {
-    // Slides mode renders the lead's own slide preview, the publish/export-
-    // adjacent surface. The toggle is not rendered there, and the content read
-    // must not feed published/exported output. Seed Everyone to prove even a
-    // stored Everyone does not surface foreign content into the slides path
-    // beyond the always-honest status read.
+    // Seed Everyone: even a stored Everyone must not surface foreign content
+    // into the slides path beyond the always-honest status read.
     const { Wrapper } = buildHarness({ seedEveryone: true });
     render(
       <Wrapper>
         <LeadForm mode="slides" />
       </Wrapper>,
     );
-    // The slides client owns its own data fetch; the edit-only foreign merge
-    // does not render here. Wait for a stable render then assert no foreign
-    // content text leaked into the slide preview surface.
     await waitFor(() => {
       expect(screen.queryByText(FOREIGN_DECISION_TEXT)).toBeNull();
     });
   });
 
-  it("foreign slides deck (?authorId) fires NO crossAuthorContent read even with persisted Everyone (tail 1)", async () => {
-    // close-slides-visibility-tails: on a foreign `authorId` slides deck the
-    // own-deck gate must keep the sensitive content read disabled on the
-    // toolbar host, regardless of the current user's persisted Everyone toggle
-    // (7d.2 is the positive control proving the harness CAN fire it).
+  it("foreign slides deck (?authorId) fires NO crossAuthorContent read even with persisted Everyone", async () => {
+    // Foreign authorId slides deck keeps the content read disabled on the
+    // toolbar host, regardless of the user's persisted Everyone toggle.
     navState.searchParams = new URLSearchParams(`authorId=${CO_OWNER_ID}`);
     const { Wrapper, contentFetch } = buildHarness({ seedEveryone: true });
     render(

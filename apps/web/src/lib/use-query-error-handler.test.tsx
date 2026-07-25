@@ -1,18 +1,4 @@
-/**
- * Contract tests for useQueryErrorHandler — the single error-policy seam for
- * TanStack Query load failures (design.md D2).
- *
- * Tests (a)-(e) pin the semantics described in design.md D2:
- *   (a) on isError flip: logClientError fires exactly once with
- *       event/component/procedure + caller context.
- *   (b) toastPrefix set → toast.error called with formatClientErrorMessage
- *       output.
- *   (c) toastPrefix absent → toast never called (slides silent policy).
- *   (d) rerender with the same error object → no second log/toast.
- *   (e) context prop change during a persistent error → no re-fire (ref
- *       semantics — deliberately less noisy than today's per-context-change
- *       re-toast).
- */
+// Pins toastPrefix / log-only split (openspec/specs/client-error-policy).
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
@@ -57,7 +43,7 @@ afterEach(() => {
 });
 
 describe("useQueryErrorHandler", () => {
-  it("(a) on isError flip: logClientError fires exactly once with event/component/procedure + context", () => {
+  it("on isError flip: logClientError fires exactly once with event/component/procedure + context", () => {
     const { Wrapper } = makeWrapper();
     const error = new Error("load failed");
 
@@ -92,7 +78,7 @@ describe("useQueryErrorHandler", () => {
     );
   });
 
-  it("(b) toastPrefix set → toast.error called with formatClientErrorMessage output", () => {
+  it("toastPrefix set → toast.error called with formatClientErrorMessage output", () => {
     const { Wrapper } = makeWrapper();
     const error = new Error("load failed");
 
@@ -119,7 +105,7 @@ describe("useQueryErrorHandler", () => {
     expect(toast.error).toHaveBeenCalledWith("Failed to load form.");
   });
 
-  it("(c) toastPrefix absent → toast never called (pins the slides silent policy)", () => {
+  it("toastPrefix absent → toast never called (pins the slides silent policy)", () => {
     const { Wrapper } = makeWrapper();
     const error = new Error("load failed");
 
@@ -141,7 +127,7 @@ describe("useQueryErrorHandler", () => {
     expect(toast.error).not.toHaveBeenCalled();
   });
 
-  it("(d) rerender with the same error object → no second log/toast", () => {
+  it("rerender with the same error object → no second log/toast", () => {
     const { Wrapper } = makeWrapper();
     const error = new Error("load failed");
 
@@ -169,7 +155,7 @@ describe("useQueryErrorHandler", () => {
     expect(toast.error).toHaveBeenCalledTimes(1);
   });
 
-  it("(e) context prop change during persistent error → no re-fire (ref semantics)", () => {
+  it("context prop change during persistent error → no re-fire (ref semantics)", () => {
     const { Wrapper } = makeWrapper();
     const error = new Error("load failed");
 

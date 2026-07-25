@@ -27,8 +27,6 @@ describe("SlideSkeleton — skeleton-list", () => {
   it("renders exactly 4 skeleton divs in the sidebar list container", () => {
     const { container } = render(<SlideSkeleton />);
 
-    // The sidebar list container has class "hidden space-y-2 lg:block".
-    // Each child is an animate-pulse skeleton div with class h-24.
     const listContainer = container.querySelector(".hidden.space-y-2");
     expect(listContainer).not.toBeNull();
     const skeletonItems =

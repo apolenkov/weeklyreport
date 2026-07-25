@@ -1,28 +1,6 @@
-/**
- * C7 destructive-guard (UAT plan v7.2, 2026-05-12).
- *
- * Refuse to run scripts that wipe / reset / truncate data on a
- * production-looking environment. Layered check:
- *   1. NODE_ENV=production         → refuse
- *   2. DATABASE_URL not set        → refuse
- *   3. db name contains "prod"     → refuse (catches tunneled prod)
- *   4. host non-local AND name lacks non-prod suffix → refuse
- *
- * Allow rules:
- *   - host is truly local — localhost / 127.0.0.1 / *.local — which cannot
- *     physically reach prod, so it is allowed unconditionally
- *   - OR db name explicitly suffixed _uat / _dev / _test / _local / _staging
- *
- * The Docker Compose `postgres` service host is NOT truly local: a staging
- * stack can reuse that service name while pointing at production data, so it
- * is allowed ONLY when the db name carries one of the non-prod suffixes above
- * (matching the `isTrulyLocal` check below).
- *
- * Override (e.g. prod data migration with backup):
- *   ALLOW_PROD_DESTRUCTIVE=yes pnpm db:reset:hard
- *
- * Underscore-prefixed file name → internal helper, not a Prisma seed file.
- */
+// Refuse wipe/reset on prod-looking DBs. Docker host `postgres` is not local —
+// allow only when the db name carries a non-prod suffix (_uat/_dev/_test/…).
+// Override: ALLOW_PROD_DESTRUCTIVE=yes. See openspec/specs/destructive-db-guard.
 export function assertNonProdDestructive(scriptName: string): void {
   // ESLint lints this file under the default project (not tsconfig.prisma.json),
   // where `process` resolves to `any`; cast `process` itself to a concrete shape

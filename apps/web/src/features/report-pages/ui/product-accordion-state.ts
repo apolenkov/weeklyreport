@@ -3,10 +3,8 @@ import { useEffect } from "react";
 import type { WeeklyProductReport } from "../../report-sections";
 import { SCROLL_INTO_VIEW_DELAY_MS } from "./accordion-tokens";
 
-// A manual toggle is stored PAIRED with the highlight state it was made under:
-// a fresh highlight (search jump) invalidates the stored value, so the card
-// force-opens; a collapse made WHILE highlighted sticks until the highlight
-// changes — the old force-open effect's semantics, derived.
+// Toggle is paired with the highlight it was made under: a new search-jump
+// highlight invalidates it (force-open); collapse while highlighted sticks.
 export interface AccordionToggle {
   readonly highlighted: boolean;
   readonly value: boolean;
@@ -24,12 +22,8 @@ export function resolveExpanded(
   return (highlighted && hasContent) || defaultOpen;
 }
 
-// Suppress the escalation when its text is verbatim a row already rendered in
-// this card. The escalation is DERIVED from a blocked item or risk, so it would
-// otherwise repeat that row — and since it folds INTO Risks & Blockers, a
-// matching risk would sit immediately above its duplicate. A genuinely distinct
-// head-facing summary (no exact item/risk match) still surfaces as a leading
-// Flagged row.
+// Skip escalation when its text already appears as a row (derived from blocked
+// item/risk; would duplicate inside Risks & Blockers). Distinct summaries still show.
 export function shouldShowNeedsAttention(report: WeeklyProductReport): boolean {
   const attention = report.needsAttention;
   if (typeof attention !== "string" || attention.length === 0) {

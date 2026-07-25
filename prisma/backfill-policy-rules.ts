@@ -1,23 +1,5 @@
-/**
- * One-shot backfill that applies every active ReminderPolicy to every open
- * ReportPeriod.
- *
- *   pnpm db:backfill:reminder-policies
- *
- * Re-running is safe: the applicator upserts on
- * uq_rule_report_policy(reportId, policyId) — second run logs zero
- * created and N updated.
- *
- * Same validity gate as the live applicator:
- *   - policy.active === true
- *   - period.deadline >= policy.validFrom
- *   - policy.validUntil === null OR period.deadline <= policy.validUntil
- *
- * "Open" period = `periodStatus !== 'published'`. Published periods are
- * historical and we don't want to spam late reminders for already-closed
- * weeks; the live admin.savePeriod path stays the source of truth for
- * brand-new periods.
- */
+// One-shot apply of active ReminderPolicies to open (non-published) periods.
+// Open excludes published so closed weeks do not get late reminders.
 
 import { resolve } from "node:path";
 

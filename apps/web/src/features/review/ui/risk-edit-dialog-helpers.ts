@@ -14,11 +14,8 @@ export interface RiskFieldErrors {
   stageIds?: string;
 }
 
-/**
- * Derives initial severity from pipeline-flagged stages.
- * Called ONCE in useState initializer; never re-run on stage checkbox toggles
- * so the user's explicit severity choice is sticky.
- */
+// Called once in useState initializer; never re-run on stage toggles so the
+// user's explicit severity choice stays sticky.
 export function deriveFromPreChecked(
   product: Product | undefined,
   ownedStages: readonly string[],
@@ -32,7 +29,6 @@ export function deriveFromPreChecked(
   return "at-risk";
 }
 
-/** Computes which stage IDs to pre-select on dialog open. */
 export function computeInitialStageIds(
   risk: RiskEntry | null,
   initialStageIds: string[] | undefined,
@@ -41,11 +37,8 @@ export function computeInitialStageIds(
   return initialStageIds ? [...initialStageIds] : [];
 }
 
-/**
- * The context strip's pre-flagged owned stages for a product parent: the
- * product's at-risk/blocked stages the current lead owns. Empty for an activity
- * parent (no seed product), which is why the strip self-suppresses there.
- */
+// Pre-flagged owned stages for a product parent (info strip only). Empty for
+// an activity parent, so the strip self-suppresses there.
 export function computePreCheckedStages(
   seedProduct: Product | undefined,
   ownedStages: readonly string[],
@@ -66,10 +59,7 @@ export function computePreCheckedStages(
     }));
 }
 
-/**
- * Per-field validation for the risk save. A stage is required only for a
- * product parent; an activity owns no stage, so it is never demanded there.
- */
+// Stage required only for a product parent; activities own no stage.
 export function collectRiskErrors(args: {
   readonly text: string;
   readonly impact: string;
@@ -87,7 +77,6 @@ export function collectRiskErrors(args: {
   return errors;
 }
 
-/** The parent's display name for the header — the activity or the product. */
 export function resolveRiskParentName(args: {
   readonly isActivityParent: boolean;
   readonly selectedActivity: ParentActivityOption | undefined;
@@ -101,14 +90,9 @@ export function resolveRiskParentName(args: {
   return args.risk?.productId === args.parentId ? args.risk.productName : "";
 }
 
-/**
- * Resolve the product a product-parented save writes to. A cross-stage row may
- * reference a project outside the lead's stage-owned `products`, so keep the
- * original assignment instead of silently reassigning to the first product.
- * The trailing `products.at(0)` is only reachable when the picker was never
- * touched AND the risk carries no product — with an empty list it yields
- * `undefined`, which the caller surfaces as the "No product available" error.
- */
+// Cross-stage rows may reference a project outside stage-owned `products` —
+// keep the original assignment instead of reassigning to the first product.
+// products.at(0) only when the picker was never touched and risk has no product.
 export function resolveRiskSaveProduct(
   products: readonly Product[],
   risk: RiskEntry | null,
@@ -124,10 +108,7 @@ export function resolveRiskSaveProduct(
 
 type RiskSaveEntry = RiskEntry & { impact: string; mitigation: string };
 
-/**
- * Builds the save payload for an activity-parented risk: empty productId, no
- * stage — an activity owns no SDLC stage (Decision 5).
- */
+// Activity-parented: empty productId, no stage (activities own no SDLC stage).
 export function buildActivityRiskEntry(args: {
   readonly existingId: string | undefined;
   readonly activityId: string;
@@ -151,7 +132,6 @@ export function buildActivityRiskEntry(args: {
   };
 }
 
-/** Builds the save payload for a product-parented risk. */
 export function buildProductRiskEntry(args: {
   readonly existingId: string | undefined;
   readonly product: { id: string; name: string };
@@ -174,11 +154,8 @@ export function buildProductRiskEntry(args: {
   };
 }
 
-/**
- * Maps the shared dialog-lifecycle state (+ the caller-side chip-raise
- * prefill) onto RiskEditDialog's seed props, so the section component wires
- * the dialog with one spread instead of seven mode ternaries.
- */
+// Map dialog-lifecycle + chip-raise prefill onto RiskEditDialog seed props
+// so the section wires the dialog with one spread instead of mode ternaries.
 export function deriveRiskDialogSeedProps(
   dialogState:
     | { open: false }

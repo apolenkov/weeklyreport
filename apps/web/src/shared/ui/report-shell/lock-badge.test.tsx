@@ -61,11 +61,9 @@ describe("LockBadge", () => {
         <LockBadge authorName="Alice" />
       </>,
     );
-    // Focus the preceding button first, then Tab forward.
     const btn = screen.getByRole("button", { name: "preceding" });
     btn.focus();
     await user.tab();
-    // After Tab, focus must NOT land on the lock-badge div (no tabIndex).
     const badge = screen.getByRole("img", { name: /Read-only — authored by/ });
     expect(document.activeElement).not.toBe(badge);
   });

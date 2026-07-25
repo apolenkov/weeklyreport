@@ -1,10 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
-/**
- * Index a section's projects by id -> { name, trafficLight }. Shared by every
- * record-family mapper so they resolve a row's product name and status the same
- * way.
- */
+// Shared project index so every record-family mapper resolves name/status alike.
 export function buildProjectIndex(section: ReportSectionReadModel): Map<
   string,
   {
@@ -38,7 +34,6 @@ export function buildProjectIndex(section: ReportSectionReadModel): Map<
   return map;
 }
 
-/** Index a section's activities by id -> name. Shared by the record-family mappers. */
 export function buildActivityIndex(
   section: ReportSectionReadModel,
 ): Map<string, string> {

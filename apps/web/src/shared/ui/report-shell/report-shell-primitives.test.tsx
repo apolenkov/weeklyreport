@@ -189,7 +189,6 @@ describe("AccordionSection", () => {
         Content
       </AccordionSection>,
     );
-    // Find the secondary chevron button — it has aria-label (Expand/Collapse Tasks)
     const chevronBtn = screen.getByRole("button", {
       name: /expand tasks|collapse tasks/i,
     });

@@ -1,7 +1,5 @@
 /**
  * @vitest-environment jsdom
- *
- * Source: apps/web/src/features/report-sections/ui/item-card.tsx
  */
 import "@testing-library/jest-dom/vitest";
 

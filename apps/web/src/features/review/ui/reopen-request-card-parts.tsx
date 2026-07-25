@@ -28,7 +28,6 @@ function formatPeriod(
   );
 }
 
-/** Requester name/email, status chip, and the period + submitted-at meta line. */
 export function ReopenRequestMeta({
   request: r,
 }: {
@@ -65,7 +64,6 @@ export function ReopenRequestMeta({
   );
 }
 
-/** The requester's reason block and, once answered, the head's review comment. */
 export function ReopenRequestNotes({
   request: r,
 }: {
@@ -109,7 +107,9 @@ export interface ReopenRespondFormProps {
   readonly onApprove: () => void;
 }
 
-/** The inline note textarea + Cancel/Reject/Approve buttons for the request being answered. */
+// Matches admin.respondReopenRequest note cap on the API.
+const MAX_REOPEN_NOTE_LENGTH = 500;
+
 export function ReopenRespondForm({
   requestId,
   note,
@@ -125,13 +125,13 @@ export function ReopenRespondForm({
         htmlFor={`note-${requestId}`}
         className="block text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]"
       >
-        Comment (optional, up to 500 characters)
+        {`Comment (optional, up to ${MAX_REOPEN_NOTE_LENGTH} characters)`}
       </label>
       <textarea
         id={`note-${requestId}`}
         value={note}
         onChange={(e) => onNoteChange(e.target.value)}
-        maxLength={500}
+        maxLength={MAX_REOPEN_NOTE_LENGTH}
         placeholder="Example: approved, please move the deadline to Friday 15:00"
         className="w-full resize-y rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm focus:border-[var(--color-starbucks-accent)] focus:outline-none"
         style={{ minHeight: "60px" }}

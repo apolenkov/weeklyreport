@@ -8,22 +8,11 @@ import {
   decodeTrpcBatchPayload,
   requireApiUrl,
   shouldUseDevAuthFallback,
+  TRPC_BATCH_EMPTY_INPUT,
 } from "./api-url";
 
-/**
- * Server-only helper for the `/print/[reportId]` route gate. Reads the session
- * cookie via Next.js `cookies()` and resolves the API's `auth.printGate` tRPC
- * procedure, which surfaces the PDF-worker-vs-human discriminator
- * (`isPdfExport` + `pdfReportId`) alongside the session.
- *
- * The `/print` route is NOT under the proxy.ts auth matcher, so the gate must
- * handle the no-session case itself — this helper resolves to a context with
- * `session: null` and `isPdfExport: false` for an unauthenticated request, and
- * the gate redirects it to login.
- *
- * Mirrors `get-server-session.ts`: single batched GET to the API, superjson
- * decode, fail-closed on any network/parse error.
- */
+// /print is outside the proxy auth matcher — this gate handles no-session itself
+// (session: null, isPdfExport: false → redirect to login). Fail-closed on errors.
 const COOKIE_NAME = AUTH_COOKIE_NAME;
 
 export interface PrintRouteContext {
@@ -55,8 +44,7 @@ export async function getPrintRouteContext(): Promise<PrintRouteContext> {
   if (!token && !shouldUseDevAuthFallback()) return NO_CONTEXT;
 
   const apiUrl = requireApiUrl();
-  const inputParam = encodeURIComponent('{"0":{}}');
-  const url = `${apiUrl}/trpc/auth.printGate?batch=1&input=${inputParam}`;
+  const url = `${apiUrl}/trpc/auth.printGate?batch=1&input=${TRPC_BATCH_EMPTY_INPUT}`;
 
   try {
     const response = await fetch(url, {

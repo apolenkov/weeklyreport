@@ -1,9 +1,5 @@
 /**
  * @vitest-environment jsdom
- *
- * Pre-extract snapshot: ViewModeToggle [Edit | Slides] pill pair in LeadForm.
- * Baseline before Wave 1 A1 extracts this markup to report-shell/view-mode-toggle.tsx.
- * After extraction, these tests must pass without changes.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -117,7 +113,7 @@ function Wrapper({ children }: { readonly children: ReactNode }) {
   );
 }
 
-describe("LeadForm view-mode toggle — pre-extract snapshot", () => {
+describe("LeadForm view-mode toggle", () => {
   afterEach(() => {
     document.title = "";
   });

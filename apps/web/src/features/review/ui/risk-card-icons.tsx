@@ -1,9 +1,5 @@
 "use client";
 
-/**
- * Edit / delete glyphs for the risk cards.
- */
-
 export function EditIcon() {
   return (
     <svg

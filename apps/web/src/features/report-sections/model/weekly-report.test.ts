@@ -487,14 +487,9 @@ describe("mapWeeklyReport", () => {
     expect(expectDefined(crmReport?.risks[0]).severity).toBe("blocked");
   });
 
-  it("W6 regression: a blocking risk does NOT floor product status — export status follows the traffic light", () => {
-    // fix-report-surface-integrity W6 deviation guard. The head/PDF export
-    // surface renders the product-level `worstStatus` (computed server-side from
-    // the leads' traffic lights), and has NO stage grid. Risks color stage chips
-    // on the LIVE lead form only; they must NOT floor the exported product status.
-    // A product with a blocking risk in its section but a green traffic light
-    // must still export as on-track — flooring here would be a behavior change
-    // outside W6 (export status stays traffic-light-driven).
+  it("a blocking risk does NOT floor product status — export status follows the traffic light", () => {
+    // Head/PDF export uses server worstStatus from traffic lights only (no stage
+    // grid). Risks color live-form chips; they must not floor exported status.
     const report = baseReport({
       portfolioOverview: [
         {
@@ -549,9 +544,8 @@ describe("mapWeeklyReport", () => {
     expect(expectDefined(crm?.risks[0]).severity).toBe("blocked");
   });
 
-  it("W6 regression: a red traffic light exports blocked product status", () => {
-    // The other direction of the same guard: a broken passthrough that dropped
-    // the worstStatus would turn this red into on-track and flip the assertion.
+  it("a red traffic light exports blocked product status", () => {
+    // Opposite direction: dropping worstStatus would turn red into on-track.
     const report = baseReport({
       portfolioOverview: [
         {

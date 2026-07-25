@@ -7,11 +7,8 @@ import {
 } from "../../report-sections";
 import { RiskCardActions, RiskCardSummary } from "./risk-card-parts";
 
-/**
- * The canonical, display-ready stage tags for a risk (stage-label-canonicalization):
- * prefer stageIds, fall back to the legacy CSV, canonicalize every value so a
- * stored "Dev" reads as "Development" everywhere it is shown.
- */
+// Prefer stageIds, fall back to legacy CSV; canonicalize so stored "Dev"
+// always displays as "Development" (stage-label-canonicalization).
 export function canonicalRiskStageTags(risk: {
   stageIds?: readonly string[] | null;
   stageName?: string | null;
@@ -23,6 +20,12 @@ export function canonicalRiskStageTags(risk: {
   return raw.map(canonicalStageName);
 }
 
+// Soft card washes — token vars only cover the severity chip, not the card.
+const BLOCKED_CARD_BG = "#fdf8f8";
+const AT_RISK_CARD_BG = "#fffcf5";
+const BLOCKED_CARD_BORDER = "rgba(200,32,20,0.15)";
+const AT_RISK_CARD_BORDER = "rgba(212,160,23,0.15)";
+
 interface RiskCardProps {
   readonly risk: RiskEntry;
   readonly readOnly: boolean;
@@ -30,17 +33,14 @@ interface RiskCardProps {
   readonly linkedProductStatus?: StageStatus;
   readonly onEdit: (risk: RiskEntry) => void;
   readonly onDelete: (id: string) => void;
-  /**
-   * simplify-stage-status-interaction: one-click blocked <-> at-risk severity
-   * flip, without opening the full edit dialog. Omitted on read-only / foreign
-   * cards (their action row is a LockBadge, not buttons).
-   */
+  // One-click blocked <-> at-risk without the full edit dialog. Omitted on
+  // read-only / foreign cards (action row is a LockBadge).
   readonly onToggleSeverity?: (risk: RiskEntry) => void;
 }
 
 interface RiskCardState {
   isBlocked: boolean;
-  /** Activity-parented rows are legitimately stage-less — no warning chip. */
+  // Activity-parented rows are legitimately stage-less — no warning chip.
   isActivityRisk: boolean;
   stageTags: string[];
   stageTagsLabel: string;
@@ -84,11 +84,6 @@ function deriveRiskCardState(
   };
 }
 
-/**
- * One risk card: severity/product header, edit + delete actions (or a foreign
- * LockBadge when locked), the risk/impact/mitigation summary, the "select a
- * stage" warning, and the unified author + stage meta-row.
- */
 export function RiskCard({
   risk,
   readOnly,
@@ -112,8 +107,8 @@ export function RiskCard({
       data-testid="risk-card"
       className="rounded-xl p-4"
       style={{
-        background: isBlocked ? "#fdf8f8" : "#fffcf5",
-        border: `1px solid ${isBlocked ? "rgba(200,32,20,0.15)" : "rgba(212,160,23,0.15)"}`,
+        background: isBlocked ? BLOCKED_CARD_BG : AT_RISK_CARD_BG,
+        border: `1px solid ${isBlocked ? BLOCKED_CARD_BORDER : AT_RISK_CARD_BORDER}`,
         opacity: risk.foreign ? FOREIGN_ENTRY_OPACITY : 1,
       }}
     >
@@ -145,13 +140,11 @@ export function RiskCard({
         />
       </div>
       <RiskCardSummary risk={risk} />
-      {/* Required-mark when product is at-risk/blocked but no stage selected */}
       {needsStage && (
         <p className="mt-2 text-[11px] font-semibold text-[var(--color-status-at-risk-fg)]">
           ⚠ Select at least one stage — required for at-risk/blocked products.
         </p>
       )}
-      {/* Unified [author …… chip] meta-row */}
       <MetaRow
         authorName={risk.authorName ?? sectionAuthorName}
         stageTags={stageTags}

@@ -43,12 +43,7 @@ interface ItemEditDerivedFields {
   readonly rankOptions: number[];
 }
 
-/**
- * Pure derivation of every value the dialog's fields/footer need from the raw
- * form state — no hooks, so it is unit-testable in isolation from React.
- * Split out of `useItemEditDialog` alongside `use-item-edit-form-state`
- * (state) and `use-item-edit-save` (handlers).
- */
+// Pure form derivation — no hooks, unit-testable without React.
 export function deriveItemEditFields(
   args: DeriveItemEditFieldsArgs,
 ): ItemEditDerivedFields {
@@ -63,10 +58,7 @@ export function deriveItemEditFields(
   });
   const headerVerb = args.isCreate ? "Add Item" : "Edit Item";
 
-  // require-stage-on-items-and-decisions: a PRODUCT-parented item must carry a
-  // concrete stage when the product has owned stages — mirrors the risk dialog.
-  // An ACTIVITY-parented item owns no stage (Decision 5), so the stage step is
-  // hidden and never validated.
+  // Product parents need a stage when owned stages exist; activity parents have none.
   const availableStages = isActivityParent
     ? []
     : (args.stagesForProduct?.(args.parent.id) ?? []);

@@ -1,11 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * Deferred-feature ComingSoon controls render their tooltip through the shared
- * Radix portal (escaping `overflow-x-auto` clipping that would hide tooltips
- * inside scroll containers). These guards pin: the single canonical amber
- * badge, the Radix wrapper on every control, retirement of the CSS anchor, and
- * the no-bespoke-pill invariant.
+ * ComingSoon tooltips use a Radix portal (escape overflow clipping). Guards pin
+ * the canonical amber badge, shared Radix wrapper, and no-bespoke-pill invariant.
  */
 
 import "@testing-library/jest-dom/vitest";
@@ -43,8 +40,7 @@ describe("ComingSoonBadge — single canonical style", () => {
 });
 
 describe("shared coming-soon primitive owns the inert button chrome", () => {
-  // Parity-by-construction: the five button controls compose this primitive, so
-  // asserting the chrome here replaces the retired per-file source scans.
+  // Button controls compose this primitive — chrome is asserted once here.
   const INERT_CLASSES = [
     "cursor-default",
     "border-[var(--color-border)]",
@@ -186,9 +182,8 @@ describe("Coming-Soon controls render the amber badge through the Radix portal",
       fireEvent.focus(screen.getByTestId(testid));
 
       await screen.findByRole("tooltip");
-      // The VISIBLE badge lives in the Radix content (`data-slot`), not in the
-      // sr-only `role="tooltip"` description node (which the whitespace
-      // `aria-label` now blanks — see below).
+      // Visible badge lives in Radix content (`data-slot`), not the blanked
+      // sr-only `role="tooltip"` description node.
       const content = document.querySelector('[data-slot="tooltip-content"]');
       expect(content).not.toBeNull();
       const badge = content?.querySelector('[data-state="coming-soon"]');
@@ -216,10 +211,8 @@ describe("Coming-Soon controls render the amber badge through the Radix portal",
 });
 
 describe("every tooltip control uses the shared Radix wrapper (source scan)", () => {
-  // Holidays-only scope: the five button controls now compose the shared
-  // ComingSoonIconButton/ComingSoonControl primitive (verified by its unit test
-  // below), so they can no longer drift. Holidays keeps its own inert-span
-  // composition (nested-button HTML validity), so it stays a source scan.
+  // Holidays keeps its own inert-span (nested-button validity); other controls
+  // compose the shared primitive and are covered by its unit tests.
   const componentsRoot = path.dirname(fileURLToPath(import.meta.url));
   const TOOLTIP_CONTROL_FILES = ["../../features/admin/ui/settings-tab.tsx"];
 
@@ -228,7 +221,6 @@ describe("every tooltip control uses the shared Radix wrapper (source scan)", ()
       const source = readFileSync(path.join(componentsRoot, rel), "utf8");
       expect(source).toContain("ComingSoonTooltip");
       expect(source).not.toContain("COMING_SOON_TOOLTIP_ANCHOR");
-      // A bespoke `right-0` anchor on a ComingSoon tooltip was the original bug.
       expect(source).not.toContain("absolute right-0");
     }
   });
@@ -247,13 +239,8 @@ describe("every tooltip control uses the shared Radix wrapper (source scan)", ()
 });
 
 describe("every inert Coming Soon control — no stacked native title", () => {
-  // Inert ComingSoon controls expose their state through their `aria-label`
-  // (or visible text) plus the amber ComingSoonBadge tooltip. A native
-  // `title="Coming Soon"` on the same control stacked a SECOND browser-native
-  // tooltip over the badge — the double-tooltip glitch. No control may carry a
-  // native title; this source scan guards every one of them.
-  // Holidays-only scope: the five button controls inherit the no-native-title
-  // guarantee from the shared primitive (verified by its unit test below).
+  // Native `title` stacks a second browser tooltip over the amber badge.
+  // Shared primitive already forbids it; scan remaining hand-rolled controls.
   const componentsRoot = path.dirname(fileURLToPath(import.meta.url));
   const INERT_CONTROL_FILES = ["../../features/admin/ui/settings-tab.tsx"];
 

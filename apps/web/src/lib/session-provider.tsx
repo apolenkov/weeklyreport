@@ -13,27 +13,14 @@ import {
 import { writeLastRole } from "./last-role";
 import { useTRPC } from "./trpc-context";
 
-/**
- * SessionProvider — exposes the currently logged-in user across (app)/ pages.
- *
- * Source of truth: `auth.me` tRPC query. Backend returns:
- *   - UserSession with verified cookie (real mode)
- *   - DEV_SESSION when AUTH_DEV_MODE=true and cookie missing (stub mode)
- *   - null when AUTH_DEV_MODE=false and cookie missing (real, unauthenticated)
- *
- * The query uses publicProcedure (does NOT throw on null), so the 401
- * interceptor in trpc.ts will not see UNAUTHORIZED and will not redirect.
- * That keeps the loading boundary on this provider, not on routing.
- */
+// auth.me is publicProcedure so a null session does not trip the 401 redirect;
+// the loading boundary stays on this provider rather than on routing.
 
-// The session-level role enum (sessionRoleSchema) includes 'admin' for SAML
-// claim mapping. adminProcedure === headProcedure for v6.0.
+// sessionRoleSchema includes 'admin' for SAML claim mapping; adminProcedure === headProcedure for v6.0.
 export interface SessionUser {
   id: string;
   name: string;
-  // Structured ФИО parts plumbed from `auth.me`; optional because SAML stubs
-  // and the PDF-export session carry only `name`. The nav avatar prefers these
-  // for initials and falls back to `name` when absent.
+  // Structured ФИО from auth.me; optional for SAML stubs / PDF-export sessions.
   lastName?: string;
   firstName?: string;
   middleName?: string | null;
@@ -42,11 +29,7 @@ export interface SessionUser {
   reportingGroupName?: string;
 }
 
-/**
- * Organization identity hydrated by the API on the `auth.me` response. The
- * nav-bar consumes `organization.shortName` for the brand string; anonymous
- * pages (landing) use `org.getPublic` instead.
- */
+// Hydrated on auth.me for the nav brand; anonymous pages use org.getPublic instead.
 interface SessionOrganization {
   shortName: string;
   fullName: string;
@@ -59,9 +42,8 @@ export interface SessionState {
   isAuthenticated: boolean;
 }
 
-// Exported so consumer components can opt-in to graceful degradation when
-// rendered without a SessionProvider (e.g. narrow unit-test harnesses).
-// The canonical hook `useSession()` still throws when context is absent.
+// Exported so tests can opt in to graceful degradation without a provider.
+// useSession() still throws when context is absent.
 export const SessionContext = createContext<SessionState | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -90,10 +72,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         role: data.role,
         reportingGroupName: data.reportingGroupName,
       },
-      // `auth.me` carries the org identity hydrated per-request by the tRPC
-      // context factory. The field is optional in the schema (older JWTs may
-      // lack it), so the consumer must handle `organization === null`
-      // gracefully.
+      // organization is optional in the schema (older JWTs may lack it).
       organization: data.organization
         ? {
             shortName: data.organization.shortName,
@@ -105,11 +84,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, [data, isLoading]);
 
-  // Persist the last authenticated role + email + name
-  // into localStorage so the landing page can offer a 1-click resume hint
-  // («You were here as {Name} · {Role} — use this role or change?»).
-  // Fire from a useEffect so the write is strictly client-only and never
-  // runs during SSR / prerender.
+  // Client-only write so the landing page can offer a 1-click resume hint.
   useEffect(() => {
     if (!value.isAuthenticated || !value.user) return;
     writeLastRole({

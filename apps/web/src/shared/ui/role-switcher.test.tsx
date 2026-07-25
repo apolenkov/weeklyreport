@@ -89,7 +89,6 @@ describe("DevRoleSwitcher — data-reset controls for every dev role", () => {
     expect(
       screen.getByTestId("dev-role-switcher-wipe-manual-uat"),
     ).toBeInTheDocument();
-    // The role picker itself still renders — only the Data reset block is gated.
     expect(screen.getByTestId("dev-role-switcher-logout")).toBeInTheDocument();
   });
 });

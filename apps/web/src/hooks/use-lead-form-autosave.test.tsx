@@ -47,7 +47,7 @@ function makePayload(text = "first"): DraftSavePayload {
         tag: "tag",
         workflowStatus: "in_progress",
         carriedOver: false,
-        // enforce-item-decision-stage-schema: stageIds required on write.
+        // stageIds required on write.
         stageIds: ["Development"],
       },
     ],
@@ -464,7 +464,6 @@ describe("useLeadFormAutosave", () => {
       { wrapper },
     );
 
-    // Trigger via forceSave.
     await act(async () => {
       void result.current.forceSave();
       await vi.advanceTimersByTimeAsync(0);
@@ -473,7 +472,6 @@ describe("useLeadFormAutosave", () => {
     // While mutation is pending, isInFlight should be true.
     expect(result.current.isInFlight).toBe(true);
 
-    // Resolve the mutation.
     await act(async () => {
       resolveMutation();
       await vi.advanceTimersByTimeAsync(0);

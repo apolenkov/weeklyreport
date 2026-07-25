@@ -9,11 +9,7 @@ import type {
 import { IN_PROGRESS_STATUS } from "./item-status-choices";
 import type { ParentActivityOption } from "./parent-picker";
 
-/**
- * Per-field validation for the item save. A stage is required only for a
- * product parent with owned stages; an activity owns no stage, so it is never
- * demanded there.
- */
+// Stage is required only for product parents with owned stages.
 export function collectItemErrors(args: {
   readonly trimmed: string;
   readonly isActivityParent: boolean;
@@ -31,11 +27,7 @@ export function collectItemErrors(args: {
   return errors;
 }
 
-/**
- * The first invalid control in DOM order — text, then the stage fieldset,
- * then the paused-reason field. A later error must never steal focus past an
- * earlier one (a pausedReason error does not outrank a missing stage).
- */
+// Focus order: text → stage → pausedReason; later errors never jump past earlier.
 export function firstInvalidControl(
   next: { text?: string; stageIds?: string; pausedReason?: string },
   surface: HTMLElement | null,
@@ -59,13 +51,8 @@ export interface CoverageArgs {
   readonly risks: readonly RiskEntry[] | undefined;
 }
 
-/**
- * Whether a covering risk floors the item in its LIVE edit state. `status` is
- * already coerced (a stored blocked opens as in-progress), so this floors to the
- * risk's severity exactly as the card does. Product parents with a concrete
- * stage only — an activity item's severity stays isolated, and a stage-less row
- * (a fresh create before a stage is picked) is never pre-locked by the wildcard.
- */
+// Covering risk floors live edit for product+stage only; activity severity is isolated.
+// Stage-less creates are never pre-locked by the wildcard.
 function isItemCovered(args: CoverageArgs): boolean {
   if (args.isActivityParent || args.productId === "") return false;
   if (args.stageIds.length === 0) return false;
@@ -83,20 +70,12 @@ function isItemCovered(args: CoverageArgs): boolean {
 
 export type StatusSlot = "locked" | "chips";
 
-/**
- * The status slot to render: `locked` (a covering risk owns the alarm) or the
- * per-type progress `chips`. No in-dialog blocker gesture exists — blockers
- * are created in Risks & Blockers (rework-item-status-model).
- */
+// Locked when a covering risk owns the alarm; blockers live in Risks & Blockers only.
 export function resolveStatusSlot(args: CoverageArgs): StatusSlot {
   return isItemCovered(args) ? "locked" : "chips";
 }
 
-/**
- * Resolve the product a product-parented save writes to. A cross-stage row may
- * reference a project outside the lead's stage-owned `products`, so keep the
- * original assignment instead of silently reassigning to the first product.
- */
+// Keep original product when it is outside the lead's stage-owned list (cross-stage).
 export function resolveSaveProduct(
   products: readonly Product[],
   item: KanbanItem | null,
@@ -120,11 +99,6 @@ export function buildRankOptions(existingRank: number | null): number[] {
     : base;
 }
 
-/**
- * The mount-time seed for the dialog's local state: the bound item on edit, or
- * a fresh create-mode row seeded from the column's product and the current
- * user.
- */
 export function resolveInitialItem(args: {
   readonly item: KanbanItem | null;
   readonly week: "current" | "next";
@@ -142,14 +116,11 @@ export function resolveInitialItem(args: {
   };
 }
 
-// record-status-derived-from-risk: a legacy stored `blocked` opens as
-// in-progress — `blocked` is no longer a free item status (the covering risk
-// owns the alarm), so re-saving never re-persists a bare `blocked`.
+// Legacy stored `blocked` opens as in-progress so re-save never re-persists bare blocked.
 export function coerceInitialStatus(status: ItemStatus): ItemStatus {
   return status === "blocked" ? IN_PROGRESS_STATUS : status;
 }
 
-/** The header's parent name — the activity or the product, edit- or create-seeded. */
 export function resolveItemParentName(args: {
   readonly isActivityParent: boolean;
   readonly selectedActivity: ParentActivityOption | undefined;
@@ -170,7 +141,6 @@ interface ItemSaveCommonArgs {
   readonly trimmedPausedReason: string;
 }
 
-/** Builds the activity-parented save payload — empty productId, no stage. */
 export function buildActivityItemSave(
   args: ItemSaveCommonArgs & {
     readonly selectedActivity: ParentActivityOption | undefined;
@@ -192,7 +162,6 @@ export function buildActivityItemSave(
   };
 }
 
-/** Builds the product-parented save payload. */
 export function buildProductItemSave(
   args: ItemSaveCommonArgs & {
     readonly product: { id: string; name: string };

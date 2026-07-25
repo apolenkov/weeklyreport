@@ -26,14 +26,12 @@ describe("StageMultiSelect", () => {
       true,
     );
 
-    // responsive-compact-layout: each stage chip (the checkbox's label) floors
-    // at the touch target below `md`; jsdom cannot evaluate media queries, so
-    // the class assertion is the teeth.
+    // Touch-target floor below md; jsdom cannot eval media queries — class is the teeth.
     const chipLabel = checkboxes[0]?.closest("label");
     expect(chipLabel?.className).toContain("min-h-[var(--touch-target-min)]");
     expect(chipLabel?.className).toContain("md:min-h-[34px]");
 
-    // No "Scope:" duplicate summary — the commit removed it when stages are selected.
+    // No duplicate "Scope:" summary when stages are selected.
     expect(screen.queryByText("Scope:")).not.toBeInTheDocument();
     // No "all assigned stages" footer when at least one stage is selected.
     expect(
@@ -168,13 +166,7 @@ describe("StageMultiSelect", () => {
   });
 });
 
-/**
- * fix-risk-stage-integrity-impl: in required mode an empty selection is invalid,
- * so the "All assigned stages will show as …" banner falsely advertises an
- * outcome the required rule forbids. Suppress that empty-selection banner when
- * required is true; the one-stage and many-stage banner branches are unchanged,
- * and non-required hosts keep the existing copy.
- */
+// Required mode: empty selection is invalid, so suppress the "all stages" banner.
 describe("StageMultiSelect — required-mode banner honesty", () => {
   it("suppresses the empty-selection banner when required is true", () => {
     render(

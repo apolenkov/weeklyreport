@@ -76,7 +76,6 @@ export function SlideColumnHeaderRow() {
   );
 }
 
-/** Traffic light → canonical status for the dot map lookup. */
 function trafficDotStatus(status: TrafficLightStatus): CanonicalStatus {
   if (status === "red") return "blocked";
   if (status === "yellow") return "at-risk";

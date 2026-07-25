@@ -1,12 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * Characterization for the extracted lead-form data-loading hook
- * (lead-form-data-loading spec): query enablement chains, Everyone/Mine
- * full-content gating, the foreign-content purge guard, and route redirects
- * must preserve the pre-extraction LeadForm semantics. The end-to-end pins
- * stay in lead-form.test.tsx / lead-form-visibility.test.tsx (7d.*); this
- * file makes the hook boundary independently testable.
+ * Data-loading hook: query enablement, Everyone/Mine gating, purge, redirects.
+ * End-to-end pins stay in lead-form*.test.tsx.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

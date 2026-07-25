@@ -5,15 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useTRPC } from "../../../lib/trpc-context";
 import { TabCountPill } from "../../../shared/ui/tab-count-pill";
 
-/**
- * Tab label for the Reopen Requests admin tab. The count is an absolute
- * corner badge so async query hydration cannot move the tab row. Active
- * styling belongs to the admin page's tab link.
- *
- * Polling is intentionally absent — the count refreshes on tab focus +
- * after a respondReopenRequest mutation invalidates the query. New requests
- * arriving while the page is open are surfaced on the next interaction.
- */
+// Absolute corner badge (no layout shift on hydrate). No polling — refreshes
+// on focus and after respondReopenRequest invalidates the query.
 export function ReopenTabLabel() {
   const trpc = useTRPC();
   const countQuery = useQuery(

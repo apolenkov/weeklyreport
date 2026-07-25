@@ -22,16 +22,9 @@ interface HeadSlidesClientProps {
   /** When provided, loads slides for that specific report period instead of
    * the current active period. Used by HeadReportShell slides mode. */
   readonly reportId?: string;
-  /**
-   * Grouping axis for the deck. "lead" (default) = one slide per lead section;
-   * "product" transposes into one slide per product, aggregating every lead's
-   * content for that product. Driven by the head shell ScopeToggle.
-   */
+  // "product" aggregates every lead's content per product (head ScopeToggle).
   readonly scope?: "lead" | "product";
-  /**
-   * The empty-report fallback uses a head-only procedure. The viewer shell
-   * passes `false` so its deck depends only on published sections.
-   */
+  // Viewer shell passes false so the empty-report fallback never hits a head-only procedure.
   readonly enableActivity?: boolean;
 }
 

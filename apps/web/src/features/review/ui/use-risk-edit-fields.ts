@@ -12,13 +12,6 @@ interface RiskEditProseErrors {
   mitigation?: string;
 }
 
-/**
- * The risk dialog's three prose fields (text/impact/mitigation): value state,
- * per-field error state that self-clears on edit, and the a11y refs used to
- * move focus to the first invalid field after a failed save. `setFieldErrors`
- * replaces the whole error set at once (mirrors a fresh validation pass), the
- * same way each per-field change handler only clears its own key.
- */
 export function useRiskEditFields({
   initialText,
   initialImpact,
@@ -29,18 +22,12 @@ export function useRiskEditFields({
   const [mitigation, setMitigation] = useState(initialMitigation ?? "");
   const [errors, setErrors] = useState<RiskEditProseErrors>({});
 
-  // a11y (validation-focus): refs for the three local textareas so a failed
-  // save can move focus to the first invalid field instead of stranding it
-  // on Save.
+  // a11y: focus first invalid prose field after a failed save.
   const textRef = useRef<HTMLTextAreaElement>(null);
   const impactRef = useRef<HTMLTextAreaElement>(null);
   const mitigationRef = useRef<HTMLTextAreaElement>(null);
 
-  /**
-   * Moves focus to the first invalid prose field, in validated order.
-   * Returns whether it found one, so the caller knows whether to fall
-   * through to the next field group (the stage checkboxes).
-   */
+  // Returns true if a prose field took focus (else caller tries stages).
   function focusFirstInvalid(fieldErrors: RiskEditProseErrors): boolean {
     if (fieldErrors.text) {
       textRef.current?.focus();

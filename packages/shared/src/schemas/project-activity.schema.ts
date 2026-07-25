@@ -7,19 +7,12 @@ const MAX_JIRA_ACCOUNT_LENGTH = 100;
 const MAX_LINKED_PRODUCTS = 50;
 const MAX_JIRA_ACCOUNTS = 20;
 
-/**
- * A Project Activity — an admin-provisioned, stage-less reporting unit beside
- * Products. Carries the authoritative owning `groupId`, M:N label-only product
- * links, and plain-text Jira account references (no integration). `leads` lists
- * the attached lead ids (M:M — many leads report one activity).
- */
+// Stage-less reporting unit beside Products; linkedProducts are label-only.
 export const projectActivitySchema = z.object({
   id: z.uuid(),
   name: z.string().min(1).max(MAX_ACTIVITY_NAME_LENGTH),
   groupId: z.uuid(),
-  // activity-first-class: M:N label-only product links (id + name), replacing the
-  // former single nullable projectId. Reconciled by the admin CRUD from
-  // `linkedProductIds`. Label-only — never feeds product health.
+  // M:N label-only product links from linkedProductIds — never feeds product health.
   linkedProducts: z
     .array(z.object({ productId: z.uuid(), productName: z.string().min(1) }))
     .default([]),
@@ -31,13 +24,9 @@ export const projectActivitySchema = z.object({
 });
 
 export const projectActivityCreateSchema = z.object({
-  name: safeText({ max: 200 }),
+  name: safeText({ max: MAX_ACTIVITY_NAME_LENGTH }),
   groupId: z.uuid(),
-  // 0..N label-only product links. Reject an in-payload duplicate at the wire
-  // boundary so it never reaches the ProjectActivityProduct
-  // @@unique([activityId, productId]) constraint as a 500. The column is
-  // case-sensitive text, so ids are lowercased here into the canonical form
-  // every downstream comparison operates on.
+  // Reject duplicates at the wire; lowercase for case-sensitive @@unique comparisons.
   linkedProductIds: z
     .array(z.uuid())
     .max(MAX_LINKED_PRODUCTS)

@@ -16,11 +16,6 @@ interface ChoiceChipRowProps<T extends string> {
 
 const CHIP_IDLE_BORDER = "rgba(0,0,0,0.15)";
 
-/**
- * The pill-button choice row shared by the item status and risk severity
- * pickers — a selected chip fills with its color trio, an idle chip shows a
- * neutral outline.
- */
 export function ChoiceChipRow<T extends string>({
   choices,
   value,

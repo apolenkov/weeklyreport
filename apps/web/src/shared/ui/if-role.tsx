@@ -6,30 +6,7 @@ import type { ReactNode } from "react";
 
 import { useTRPC } from "../../lib/trpc-context";
 
-/**
- * Centralised role-guard wrapper.
- *
- * Renders {children} only when the current session role matches `role`.
- * When `role` is an array, the gate passes if the session role is in the
- * array. Returns `null` while the session is still loading or when the
- * role does not match — this means admin-only affordances disappear
- * completely for head/lead/viewer users, rather than rendering disabled.
- *
- * Source of truth: `auth.me` tRPC query (publicProcedure that returns the
- * `UserSession | null` for the current request). The same query backs
- * `SessionProvider`, so callers do not pay an extra round-trip — React
- * Query dedupes by queryKey.
- *
- * Usage:
- *
- *   <IfRole role="admin">
- *     <a href="/admin?tab=reminders">Configure reminders</a>
- *   </IfRole>
- *
- *   <IfRole role={["admin", "head"]}>
- *     <ReviewControls />
- *   </IfRole>
- */
+// Uses auth.me (same query as SessionProvider) so React Query dedupes the fetch.
 export function IfRole({
   role,
   children,

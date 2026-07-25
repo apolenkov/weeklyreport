@@ -1,23 +1,8 @@
 import type { ReactNode } from "react";
 
-/**
- * Shared presentational primitive for the report toolbar's segmented toggles.
- *
- * One neutral, compact visual family for every segmented view-toggle
- * (Edit/Slides, Product/Leads, Mine/Everyone): a neutral-bordered track on a
- * solid `--color-surface-empty` surface, with the active segment filled with a
- * soft slate (`--color-toggle-active`, white text) — NOT the brand accent.
- * Brand green is reserved for the header-line forward actions (Submit,
- * Publish & Lock).
- *
- * Every control sits on the shared toolbar height (`--toolbar-control-h`, 32px)
- * so the toolbar reads as one row of equal-height controls.
- *
- * The primitive owns only the chrome. Each consumer supplies its own segment
- * element so its mechanics survive: `ViewModeToggle` renders `<Link>` URL
- * navigation, `ScopeToggle` a `radiogroup`, `RecordVisibilityToggle`
- * `aria-pressed` buttons.
- */
+// Chrome-only segmented track for report toolbar toggles. Soft slate active
+// fill (not brand green — reserved for forward actions). Consumers supply
+// their own segment elements (Link, radiogroup, aria-pressed buttons).
 
 const TRACK_BASE =
   "inline-flex items-center gap-0.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-0.5";
@@ -35,16 +20,10 @@ const INACTIVE_CLASS =
   "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]";
 
 interface SegmentOptions {
-  /** Icon-only segment — square, no min-width. The consumer MUST supply an
-   *  aria-label + title so the icon keeps an accessible name. */
+  // Icon-only segment — square, no min-width. Consumer must supply aria-label.
   readonly iconOnly?: boolean;
 }
 
-/**
- * Class for one segment. `active` drives the slate fill; the rest is shared
- * shape (full track height, pill radius, compact `text-xs`). Text segments get
- * a comfortable min-width; icon-only segments are square.
- */
 export function segmentClassName(
   active: boolean,
   { iconOnly = false }: SegmentOptions = {},
@@ -58,15 +37,12 @@ export function segmentClassName(
 }
 
 interface SegmentedToggleProps {
-  /** Group semantics — `radiogroup` for single-select, `group` otherwise. */
   readonly role?: "radiogroup" | "group";
   readonly ariaLabel: string;
-  /** Track height: "sm" = toolbar control height (default); "lg" = slide-hero row. */
   readonly size?: "sm" | "lg";
   readonly children: ReactNode;
 }
 
-/** The track wrapper. Children are segments using {@link segmentClassName}. */
 export function SegmentedToggle({
   role = "group",
   ariaLabel,

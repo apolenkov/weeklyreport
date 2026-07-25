@@ -20,23 +20,12 @@ import { useSlideInlineEditor } from "./use-slide-inline-editor";
 
 interface LeadSlidesClientProps {
   readonly initialReportId?: string | null;
-  /** When provided, this ref is applied to the deck root div so the caller
-   *  (lead-form header) can host the fullscreen button. */
+  // Caller (lead-form header) can host the fullscreen button on the deck root.
   readonly deckRef?: RefObject<HTMLDivElement | null>;
-  /**
-   * On the lead-form-hosted path the caller owns the single `useFullscreen`
-   * hook and threads its state here, so the deck's floating pill + Esc hint
-   * are presentational and add no second listener. Absent on the standalone
-   * path, where the deck owns the hook.
-   */
+  // Lead-form-hosted path owns useFullscreen and threads state; standalone owns the hook.
   readonly isFullscreen?: boolean;
   readonly onToggle?: () => void;
-  /**
-   * slides-record-visibility: the lead-form owns the Record-visibility toggle
-   * (one `useRecordVisibility` instance) and threads its state down so the deck
-   * shows Mine vs Everyone. Defaults keep the deck Mine-only for any caller that
-   * does not drive the toggle.
-   */
+  // Lead-form threads one useRecordVisibility instance for Mine vs Everyone; default Mine-only.
   readonly visibilityMode?: "mine" | "everyone";
   readonly visibilityHydrated?: boolean;
 }
@@ -53,10 +42,7 @@ export function LeadSlidesClient({
   const [density, setDensity] = useState<SlideDensity>("document");
   const internalDeckRef = useRef<HTMLDivElement>(null);
   const deckRef = externalDeckRef ?? internalDeckRef;
-  // The lead-form-hosted path passes isFullscreen/onToggle (it owns the single
-  // hook), so the local hook is disabled to keep exactly one fullscreenchange
-  // listener. The standalone path owns the hook here and returns focus to its
-  // toolbar toggle on exit.
+  // Hosted path disables the local hook so only one fullscreenchange listener is active.
   const hosted = externalOnToggle !== undefined;
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const localFs = useFullscreen(internalDeckRef, toggleButtonRef, !hosted);
@@ -78,11 +64,8 @@ export function LeadSlidesClient({
     [leadSlides.slides, density],
   );
 
-  // Two-sided clamp derived at render (no reset effect): a shrink strands the
-  // stored index past the end, and an ArrowRight on an EMPTY deck stores -1
-  // (Math.min(length-1, ...)), which a one-sided upper-bound check would
-  // accept forever once slides arrive. The child always navigates from this
-  // clamped value, so the stale raw value is never observed.
+  // Two-sided clamp at render: shrink can strand the index past the end, and an
+  // empty-deck ArrowRight stores -1, which a one-sided upper bound would accept.
   const selectedIndex =
     rawSelectedIndex >= 0 && rawSelectedIndex < slides.length
       ? rawSelectedIndex

@@ -30,9 +30,12 @@ function DropdownMenuTrigger({
   );
 }
 
+// Small offset so the menu sits just clear of the trigger edge.
+const DROPDOWN_SIDE_OFFSET_PX = 4;
+
 function DropdownMenuContent({
   className,
-  sideOffset = 4,
+  sideOffset = DROPDOWN_SIDE_OFFSET_PX,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   return (

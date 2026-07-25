@@ -10,17 +10,8 @@ interface Props {
   readonly reportId: string;
 }
 
-/**
- * Resolves the current lead's userId from auth.me and renders
- * WeeklyReportPage.
- *
- * The preview shows the lead's GROUP's products — those the lead's reporting
- * group owns via GroupProduct — not the whole portfolio and not only the
- * products the lead personally authors. That scoping is enforced server-side
- * by weeklyReport.get; the `authorId` passed below only drives open /
- * highlight / scroll of the lead's own section, it does not filter the
- * product list.
- */
+// authorId only opens/highlights the lead's own section; product scope is
+// server-side (group products via weeklyReport.get).
 export function LeadSectionPreviewAuth({ reportId }: Props) {
   const trpc = useTRPC();
   const meQ = useQuery(trpc.auth.me.queryOptions());

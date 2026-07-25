@@ -1,19 +1,6 @@
 "use client";
 
-/**
- * Singleton tooltip portal for SDLC stage chips. Mirrors the mockup's
- * `#sdlc-tip` pattern: a single fixed-positioned element appended to
- * `document.body` so it can escape `overflow:hidden` clipping inside
- * collapsed accordion bodies.
- *
- * Usage:
- *   <SdlcTooltipProvider>
- *     <App />
- *   </SdlcTooltipProvider>
- *
- * Consumers (e.g. StageChip) call `useSdlcTooltip()` and invoke
- * `show(rect, content)` / `hide()` on hover events.
- */
+// Single body portal so stage tooltips escape overflow:hidden inside collapsed accordions.
 
 import {
   createContext,
@@ -26,9 +13,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
-// Hydration gate without effect-driven state: the store never changes, so the
-// hook returns the server snapshot (false) during SSR/hydration and the client
-// snapshot (true) afterwards — exactly the old `mounted` flag, minus a render.
+// Hydration gate without effect-driven state: server snapshot is false, client true.
 const emptySubscribe = () => () => {
   /* nothing to unsubscribe — the hydration "store" never changes */
 };
@@ -81,7 +66,6 @@ export function SdlcTooltipProvider({
 
   const show = useCallback((rect: DOMRect, content: string) => {
     if (!content) return;
-    // Position centered horizontally, just above the cell.
     const top = rect.top - TOOLTIP_VERTICAL_GAP_PX;
     const left = rect.left + rect.width / 2;
     setState({ content, top, left });

@@ -4,19 +4,12 @@ import type { ReactNode } from "react";
 
 interface BoardEmptyStateProps {
   readonly readOnly: boolean;
-  /** Read-only copy, e.g. "No current-week items." */
   readonly readOnlyLabel: string;
-  /** Editable copy, e.g. "No current-week items yet." */
   readonly editableLabel: string;
-  /** The stand-alone "+ Add Item" CTA, seeded by the host section. */
   readonly addButton: ReactNode;
 }
 
-/**
- * The week boards' empty state, shared by Current/Next week: a dashed band with
- * a stand-alone "+ Add" CTA (there are no per-product columns to hang the
- * per-column button on when the board is empty). Read-only mode drops the CTA.
- */
+// Stand-alone "+ Add" — empty boards have no per-column headers to hang it on.
 export function BoardEmptyState({
   readOnly,
   readOnlyLabel,

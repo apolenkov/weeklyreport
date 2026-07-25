@@ -1,11 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339); wave-6c-ii */
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339) */
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// 39-05: search-input renders results from `trpc.search.query`. Mock the
-// tRPC context + useQuery so we can drive the data path without a real
-// network. next/navigation is stubbed so the click-through router.push
-// doesn't require Next's app shell.
+// Mock tRPC + useQuery to drive search without a network; next/navigation so
+// router.push does not need the app shell.
 
 const useQueryMock = vi.fn();
 const queryOptionsMock = vi.fn((args: unknown) => ({
@@ -213,10 +211,7 @@ describe("SearchInput", () => {
       fireEvent.keyDown(input, { key: "Enter" });
     });
 
-    // Search hits land on the addressed report URL. The hit carries a
-    // reportSectionId, but `/lead/report/[reportId]` has no
-    // `id="section-<id>"` target, so the dead `#section-` fragment is
-    // stripped rather than emitted (driver finding 6).
+    // Lead form has no `id="section-<id>"` target — omit the dead fragment.
     expect(pushMock).toHaveBeenCalledWith(`/lead/report/${REPORT_ID}`);
     expect(pushMock).not.toHaveBeenCalledWith(
       expect.stringContaining("#section-"),
@@ -317,8 +312,7 @@ describe("SearchInput", () => {
     );
   });
 
-  // viewer-report-surface-parity (task 4.2): a viewer's item/risk/decision hit
-  // routes to the read-only `/reports/[reportId]`, never the lead form.
+  // Viewer item/risk/decision hits route to the read-only published report.
   it("routes a viewer's item hit to /reports/[reportId], not /lead/report", () => {
     useSessionMock.mockReturnValue({ user: { role: "viewer" } });
     useQueryMock.mockReturnValue({
@@ -357,7 +351,7 @@ describe("SearchInput", () => {
     );
   });
 
-  // task 4.2: even if the server leaks a project hit, the viewer never sees it.
+  // Even if the server leaks a project hit, the viewer never sees it.
   it("suppresses a project hit for a viewer", () => {
     useSessionMock.mockReturnValue({ user: { role: "viewer" } });
     useQueryMock.mockReturnValue({
@@ -404,9 +398,6 @@ describe("SearchInput", () => {
       { scope?: string } | undefined;
     expect(lastQueryOptionsArg?.scope).toBe("published");
   });
-
-  // VA-0a / VA-0b: badge span — aria-label removed, visible text retained.
-  // Catalog rows: snapshot(high), unit-rtl(high), snapshot(medium).
 
   it("VA badge span has no aria-label attribute (snapshot — verify-a11y catalog)", () => {
     useQueryMock.mockReturnValue({
@@ -531,9 +522,7 @@ describe("SearchInput", () => {
     );
     if (!badgeSpan) throw new Error("badge span not found");
     const flexContainer = badgeSpan.parentElement;
-    // Badge span must be the first child of the flex container (line 263 of source).
     expect(flexContainer?.firstElementChild).toBe(badgeSpan);
-    // Flex container carries the justify-between layout class.
     expect(flexContainer?.className).toContain("flex");
     expect(flexContainer?.className).toContain("items-center");
     expect(flexContainer?.className).toContain("justify-between");

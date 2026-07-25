@@ -17,24 +17,14 @@ import type { SubmitOutcome } from "./lead-form-submit-context";
 interface UseLeadFormWriteActionsArgs {
   readonly sectionIdForActions: string;
   readonly autosaveDirty: boolean;
-  /** Draft-owned readiness, derived from the live draft by the draft module. */
   readonly submitReadiness: LeadSubmitReadiness;
-  /** Draft-owned submit: builds the payload, advances version, locks the form. */
   readonly submit: () => Promise<SubmitOutcome>;
-  /** Draft-owned optimistic-lock version, carried into fill-from as an argument. */
   readonly version: number;
-  /** Draft-owned submitted flag; revoke returns the section to draft. */
   readonly setIsSubmitted: (next: boolean) => void;
-  /** Draft-owned conflict recovery (refetch + reload prompt). */
   readonly handleConflict: () => void;
 }
 
-/**
- * The lead form's dialog-lifecycle module: submit confirmation, revoke, reopen,
- * and fill-from dialogs and their mutations. Draft state lives in the draft
- * module — this calls its `submit` and reads its `submitReadiness`; the submit
- * mutation and readiness projection no longer live here.
- */
+// Dialog lifecycle (submit confirm, revoke, reopen, fill-from); draft owns state.
 export function useLeadFormWriteActions({
   sectionIdForActions,
   autosaveDirty,

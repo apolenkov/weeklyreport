@@ -13,13 +13,8 @@ type VerdictBadge =
   | { kind: "awaiting"; label: string }
   | { kind: "none"; label: string };
 
-/**
- * Resolve the badge from the section's verdicts. `isCurrent` is server-derived
- * (judgedVersion === section.version), so a verdict left stale by a re-submission
- * reads "Awaiting review", never "Needs changes". With several reviewers a
- * current `changes_requested` outranks a current `approved` (the blocking signal
- * wins), keeping the badge deterministic.
- */
+// isCurrent is server-derived — a stale post-resubmit verdict reads "Awaiting
+// review". Current changes_requested outranks approved (blocking signal wins).
 export function resolveBadge(
   reviews: readonly SectionReviewView[],
 ): VerdictBadge {
@@ -52,14 +47,8 @@ const BADGE_STYLE: Record<VerdictBadge["kind"], { bg: string; fg: string }> = {
   none: { bg: "var(--color-muted)", fg: "var(--color-muted-foreground)" },
 };
 
-/**
- * review-acknowledgement (§6.3): the current-verdict badge plus, for a
- * designated reviewer, Approve / Request-changes buttons for one section. A
- * `changes_requested` verdict auto-un-submits server-side; this control reflects
- * the returned `unsubmitted` flag and invalidates the report query, it never
- * mutates status itself. It renders NO publish/lock control (that stays the
- * head/admin lifecycle), so a viewer-reviewer can judge but never publish.
- */
+// Verdict badge + Approve/Request-changes for one section. Reflects server
+// unsubmit; never mutates status or offers publish/lock (viewer-reviewer only).
 export function SectionVerdictControl({
   reportSectionId,
   version,

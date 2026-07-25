@@ -21,7 +21,6 @@ interface RiskCardActionsProps {
   readonly onToggleSeverity?: (risk: RiskEntry) => void;
 }
 
-/** Edit/delete/toggle-severity buttons, or a foreign LockBadge when locked. */
 export function RiskCardActions({
   risk,
   sectionAuthorName,
@@ -78,7 +77,7 @@ interface RiskCardSummaryProps {
   readonly risk: RiskEntry;
 }
 
-/** Read-only Risk/Impact/Mitigation grid; the dialog is the only edit surface. */
+// Dialog is the only edit surface — summary is always read-only.
 export function RiskCardSummary({ risk }: RiskCardSummaryProps) {
   return (
     <div className="space-y-2 text-sm text-[var(--color-foreground)]">
