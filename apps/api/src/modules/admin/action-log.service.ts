@@ -2,11 +2,7 @@ import type { PaginatedResult, PaginationInput } from "@customreport/shared";
 
 const DEFAULT_ACTION_LOG_LIMIT = 20;
 
-/**
- * One row of the queryable in-app mutation-audit history. The rows are
- * written by `mutationAuditMiddleware` and keyed by the same correlation id
- * as the structured app.log line, for support/debug lookups.
- */
+// Mutation-audit rows share correlationId with app.log for support lookups.
 interface ActionLogFields {
   id: string;
   userId: string;
@@ -35,11 +31,7 @@ export interface ActionLogRepository {
 export class ActionLogService {
   constructor(private readonly repository: ActionLogRepository) {}
 
-  /**
-   * Cursor-paginated mutation-audit history for the Admin Panel. Reads one
-   * extra row (`limit + 1`) to detect whether a further page exists without
-   * a separate count query.
-   */
+  // limit+1 detects a further page without a separate count query.
   async list(
     pagination?: PaginationInput,
   ): Promise<PaginatedResult<ActionLogEntry>> {

@@ -10,21 +10,12 @@ import {
   type ReopenRequestRow,
 } from "./admin-shared.js";
 
-/**
- * Reopen-request lifecycle writes/reads for the Admin Panel "Reopen
- * Requests" tab and the head dashboard card (reopen-request-lifecycle,
- * ADR 0008): group-scoped list/count, and the race-safe decide transaction.
- */
+// reopen-request-lifecycle / ADR 0008 — group-scoped list/count + race-safe decide.
 
 // Soft cap: list is newest-first; UI shows a page, not the full history.
 const REOPEN_REQUEST_LIST_CAP = 100;
 
-/**
- * Group-scoped reopen-request list. A head sees only its own group's
- * requests; admin scope is `{}` (global). The scope fragment is a
- * ReportSectionWhereInput, so it nests UNDER reportSection — these are
- * ReopenRequest queries, not ReportSection queries.
- */
+// Scope is ReportSectionWhereInput, so it nests under reportSection.
 export async function listReopenRequests(
   prisma: PrismaService,
   input: ListReopenRequestsInput,
@@ -72,7 +63,6 @@ export async function listReopenRequests(
   }));
 }
 
-/** Group-scoped pending-reopen count — same group scope as the list. */
 export async function countPendingReopenRequests(
   prisma: PrismaService,
   session: UserSession,
@@ -83,15 +73,8 @@ export async function countPendingReopenRequests(
   });
 }
 
-/**
- * The full race-safe decision: a scoped re-load (a head cannot decide an
- * out-of-group request by passing its id — the scoped findFirst finds
- * nothing → NOT_FOUND) followed by the compare-and-set transaction. The
- * decision is race-safe against a second decider (head + admin can both
- * act): the status re-check and the section flip happen inside ONE
- * transaction via conditional updateMany; only the row-count-1 winner takes
- * effect.
- */
+// Scoped findFirst blocks out-of-group decide; conditional updateMany in one
+// txn so only the row-count-1 winner of concurrent head+admin acts takes effect.
 export async function decideReopenRequest(
   prisma: PrismaService,
   input: DecideReopenRequestInput,
@@ -137,10 +120,7 @@ export async function decideReopenRequest(
       },
     });
     if (flipped.count === 0) {
-      // Stale approve: the section was already reopened elsewhere. Make the
-      // request terminal (rejected + auto-note) so it leaves the pending
-      // queue, flip nothing, and skew NO funnel metric — an auto-close is
-      // not a real decision (the funnel stays requested/approved/rejected).
+      // Stale approve: terminal auto-close, no section flip, no funnel skew.
       await tx.reopenRequest.update({
         where: { id: req.id },
         data: {

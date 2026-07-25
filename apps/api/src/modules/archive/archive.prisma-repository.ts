@@ -25,21 +25,11 @@ import type {
 } from "./archive.service.js";
 import { decodeArchiveCursor, encodeArchiveCursor } from "./archive-cursor.js";
 
-/**
- * Defense-in-depth status floor.
- *
- * The archive surface has always been "published reports only" — the
- * hardcoded floor below is the single source of truth for that contract.
- * The service-layer filter passed in via `ArchiveReadFilter` is allowed to
- * NARROW further (e.g. an explicit `status: 'published'` from a viewer role
- * is identical to the floor and a no-op) but cannot widen — the repo will
- * never return non-published rows even if a caller mis-built the filter.
- *
- * `archived: true` so the Archive tab only shows reports the head has
- * explicitly archived. Published-but-not-yet-archived reports remain on
- * the head dashboard until the head moves them to the archive.
- */
+// Hard floor: published + archived only; callers may narrow, never widen.
 const PUBLISHED_FLOOR = { status: "published" as const, archived: true };
+
+// Display sentinel when snapshot and publisher name are both missing.
+const UNKNOWN_PUBLISHER_NAME = "Unknown";
 
 // The paginated list query loads section ids only (enough to scope the
 // snapshot filter); the full nested graph is fetched lazily for fallback rows.
@@ -69,10 +59,7 @@ export class ArchivePrismaRepository implements ArchiveRepository {
     const sectionScope = sectionScopeWhere(session);
     const where = { ...filter, ...PUBLISHED_FLOOR };
 
-    // Fetch section ids only — enough to scope the snapshot filter — plus one
-    // probe row beyond the page so we can tell whether a further page exists
-    // without re-reading the whole archive. The heavy nested section graph is
-    // loaded lazily below, only for the snapshot-less fallback rows.
+    // Page + one probe; full graph loads only for snapshot-less fallback rows.
     const rows = await this.fetchArchivePage(where, sectionScope, pagination);
 
     const limit = pagination?.limit;
@@ -144,9 +131,7 @@ export class ArchivePrismaRepository implements ArchiveRepository {
     sectionScope: Record<string, unknown> | undefined,
   ): Promise<Map<string, ArchiveFullRow>> {
     if (ids.length === 0) return new Map();
-    // Full include only for the snapshot-less rows: the fallback path rebuilds
-    // the same risk-floored, assignment-scoped read model the detail uses, so
-    // an archive summary's portfolio total never disagrees with its detail.
+    // Fallback rebuilds the same risk-floored model as detail (totals must agree).
     const fullRows = await this.prisma.report.findMany({
       where: { id: { in: ids } },
       include: {
@@ -165,9 +150,7 @@ export class ArchivePrismaRepository implements ArchiveRepository {
     filter?: ArchiveReadFilter,
     session?: ArchiveScopeSession,
   ): Promise<ArchiveReportDetail | null> {
-    // findFirst (not findUnique) because we compose `status` into the where
-    // for defense-in-depth — Prisma's WhereUniqueInput rejects non-unique
-    // fields. The id-equality on the unique PK still produces ≤1 row.
+    // findFirst: status is non-unique so WhereUniqueInput cannot take it.
     const sectionScope = sectionScopeWhere(session);
     const report = await this.prisma.report.findFirst({
       where: { id: reportId, ...filter, ...PUBLISHED_FLOOR },
@@ -194,13 +177,7 @@ export class ArchivePrismaRepository implements ArchiveRepository {
   }
 }
 
-/**
- * Narrow the archive `where` to rows strictly after the cursor coordinate,
- * matching the `publishedAt desc, id desc` order exactly so pagination neither
- * skips nor duplicates a row across the tie. A cursor that fails to decode
- * throws `BadRequestException` (400) — it never falls back to an unnarrowed,
- * first-page `where`.
- */
+// Keyset after cursor on publishedAt desc, id desc; bad cursor → 400, not page 1.
 function withArchiveKeyset(
   where: Prisma.ReportWhereInput,
   cursor: string,
@@ -221,11 +198,7 @@ function withArchiveKeyset(
   };
 }
 
-/**
- * Build the nested-sections where fragment from the
- * caller's session. Returns `undefined` when no scope filter applies (admin,
- * or no session passed at all — legacy callers / scripts).
- */
+// undefined when no scope applies (admin / no session).
 function sectionScopeWhere(
   session: ArchiveScopeSession | undefined,
 ): Record<string, unknown> | undefined {
@@ -264,7 +237,9 @@ function toArchiveSummaryFromSnapshot(
     periodEnd: snapshot.periodEnd,
     publishedAt: snapshot.publishedAt,
     publishedByName:
-      snapshot.publishedByName ?? report.publishedBy?.name ?? "Unknown",
+      snapshot.publishedByName ??
+      report.publishedBy?.name ??
+      UNKNOWN_PUBLISHER_NAME,
     portfolioStatus: snapshot.portfolioOverview.status,
   });
 }

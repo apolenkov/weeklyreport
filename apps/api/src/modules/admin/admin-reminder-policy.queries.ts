@@ -6,10 +6,6 @@ import {
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { audienceFromPrisma, audienceToPrisma } from "./admin-enum-mappers";
 
-/**
- * ReminderPolicy CRUD.
- */
-
 export async function listReminderPolicies(
   prisma: PrismaService,
 ): Promise<ReminderPolicy[]> {
@@ -62,11 +58,8 @@ export async function saveReminderPolicy(
     create: { id: parsed.id, ...data },
     update: data,
   });
-  // Cascade the policy's active flag onto its derived ReminderRule rows:
-  // an inactive policy parks its rules as `paused` so the @Cron scheduler
-  // skips them; re-activating the policy resumes them. The derived-rules
-  // panel renders this status; the applicator only ever (re)creates rules
-  // for active policies, so it never clobbers a parked `paused` row.
+  // Inactive policy parks derived rules as paused (cron skips them).
+  // Applicator only (re)creates for active policies, so paused rows stay.
   await prisma.reminderRule.updateMany({
     where: { policyId: row.id },
     data: { status: row.active ? "active" : "paused" },
@@ -83,13 +76,7 @@ export async function saveReminderPolicy(
   });
 }
 
-/**
- * Hard-delete a reminder policy and its derived rules. The policy→rule FK is
- * `ON DELETE SET NULL`, so we delete the `ReminderRule` rows explicitly first
- * (their `ReminderExecution` rows cascade with them) rather than orphaning
- * them, then delete the `ReminderPolicy` itself. This is a true delete — the
- * previous archive/soft-delete semantics are gone.
- */
+// FK is ON DELETE SET NULL — delete rules first so they are not orphaned.
 export async function deleteReminderPolicy(
   prisma: PrismaService,
   policyId: string,

@@ -15,14 +15,7 @@ import {
   type ProductGroupOwnership,
 } from "./admin-shared.js";
 
-/**
- * Group ↔ Product M:M edge mutations + reads.
- */
-
-/**
- * Reject ownership moves with the current group name so the admin can resolve
- * the conflict explicitly instead of silently moving the product.
- */
+// Name the current owner so the admin can resolve the conflict explicitly.
 async function throwProductOwnershipConflict(
   prisma: PrismaService,
   groupId: string,
@@ -36,12 +29,8 @@ async function throwProductOwnershipConflict(
   );
 }
 
-/**
- * Strict one-group-per-product attach. If the product already belongs
- * to the target group the call is idempotent. If it belongs to a
- * different group we reject instead of silently moving ownership; the
- * admin UI must detach from the current group first.
- */
+// One group per product: same group is idempotent; different group rejects
+// (no silent ownership move — UI must detach first).
 export async function attachProductToGroup(
   prisma: PrismaService,
   input: GroupProductEdgeInput,
@@ -86,12 +75,7 @@ export async function attachProductToGroup(
   }
 }
 
-/**
- * No-op safe detach. `deleteMany` on the unique tuple returns
- * `{ count: 0 }` if the edge is already absent (vs `delete` which
- * throws). This keeps the UI toggle resilient against double-clicks
- * and races without a pre-read.
- */
+// deleteMany so an already-absent edge is a no-op (UI double-click / race safe).
 export async function detachProductFromGroup(
   prisma: PrismaService,
   input: GroupProductEdgeInput,
@@ -101,12 +85,7 @@ export async function detachProductFromGroup(
   });
 }
 
-/**
- * Return Projects attached to a ReportingGroup ordered by name. The
- * Project rows are projected to {@link AdminProject} so the UI
- * consumer can render alongside the existing snapshot.projects rows
- * without a separate shape.
- */
+// Projects as AdminProject so the UI reuses the snapshot.projects shape.
 export async function listGroupProducts(
   prisma: PrismaService,
   groupId: string,
@@ -127,9 +106,6 @@ export async function listGroupProducts(
   );
 }
 
-/**
- * Return ReportingGroups attached to a Project ordered by group name.
- */
 export async function listProductGroups(
   prisma: PrismaService,
   productId: string,
@@ -142,13 +118,7 @@ export async function listProductGroups(
   return rows.map((row) => reportingGroupSchema.parse(row.group));
 }
 
-/**
- * Batched owning-group lookup for many products in one query. Resolves the
- * single owning group (a product belongs to at most one group) for every
- * requested id, so the "products attached" editor answers ownership for the
- * whole catalog without one round-trip per product. Every requested id is
- * present in the result; `group` is `null` when the product is unowned.
- */
+// One query for the catalog; every requested id is present (group null if unowned).
 export async function listProductGroupOwnership(
   prisma: PrismaService,
   productIds: readonly string[],

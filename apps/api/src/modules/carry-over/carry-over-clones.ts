@@ -4,12 +4,6 @@ import {
   type ReportSectionReadModel,
 } from "@customreport/shared";
 
-/**
- * Clone builders for carry-over: each
- * produces the target-period copy of a source record plus its CarryOverRecord
- * audit row, preserving the durable `stableId` lineage via the spread.
- */
-
 export function cloneCarriedItem(
   sourceReportId: string,
   targetReportId: string,
@@ -21,11 +15,7 @@ export function cloneCarriedItem(
   const targetItemId = crypto.randomUUID();
 
   return {
-    // The spread preserves `priorityRank` across the carry-over so a lead
-    // doesn't lose ranking
-    // when an unfinished next-week item lands in the new period. Reset
-    // intentionally rejected — leads otherwise re-prioritize on every
-    // boundary, undoing the previous week's signal.
+    // Keep priorityRank; resetting would force re-prioritize every boundary.
     item: {
       ...item,
       id: targetItemId,

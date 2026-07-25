@@ -9,10 +9,6 @@ import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
 import type { AdminRepository } from "./admin-shared.js";
 import { ProjectAdminService } from "./project-admin.service.js";
 
-/* ------------------------------------------------------------------ */
-/*  Constants & defaults                                               */
-/* ------------------------------------------------------------------ */
-
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const USER_ID_2 = "22222222-2222-4222-8222-222222222222";
 const STAGE_ID = "33333333-3333-4333-8333-333333333333";
@@ -51,9 +47,7 @@ const initialSnapshot: AdminSnapshot = {
   policies: [],
 };
 
-// AppSettings carries 9 knobs beyond the legacy fields.
-// The legacy `departmentName` field was removed.
-// 8 period-cycle knobs mirror the SQL defaults.
+// Fixture mirrors SQL defaults.
 const defaultSettings: AppSettings = {
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
@@ -71,10 +65,6 @@ const defaultSettings: AppSettings = {
   reopenWindowHours: 72,
   unifiedActivityView: false,
 };
-
-/* ------------------------------------------------------------------ */
-/*  Repository factory                                                 */
-/* ------------------------------------------------------------------ */
 
 function createRepository(
   snapshot: AdminSnapshot = initialSnapshot,
@@ -175,10 +165,6 @@ function createRepository(
   };
 }
 
-/* ------------------------------------------------------------------ */
-/*  Stage assignment integration tests                                 */
-/* ------------------------------------------------------------------ */
-
 describe("ProjectAdminService — stage assignments (integration)", () => {
   it("creates a valid assignment and returns it", async () => {
     const service = new ProjectAdminService(createRepository());
@@ -213,7 +199,6 @@ describe("ProjectAdminService — stage assignments (integration)", () => {
     expect(second.id).toBe(first.id);
     expect(second.userId).toBe(USER_ID_2);
 
-    // Verify only one exists for the project/stage pair.
     const list = await service.listStageAssignments(PROJECT_ID);
     expect(list).toHaveLength(1);
     expect(list[0]?.userId).toBe(USER_ID_2);

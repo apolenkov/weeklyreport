@@ -13,18 +13,11 @@ import {
   Text,
 } from "react-email";
 
-/**
- * T-24h deadline reminder email.
- *
- * react-email + <Tailwind> per CONTEXT.md decision lock (MJML rejected).
- * Renders to HTML via react-email's render; the matching plaintext fallback
- * lives next to the component so multipart emails carry both halves —
- * corporate spam filters score multipart > HTML-only.
- */
+// Multipart HTML + plaintext; spam filters score multipart over HTML-only.
 export interface DeadlineEmailProps {
   leadName: string;
-  reportPeriod: string; // human-readable e.g. "2026-W17" or "2026-04-13 to 2026-04-19"
-  deadlineIso: string; // ISO datetime
+  reportPeriod: string; // e.g. "2026-W17" or "2026-04-13 to 2026-04-19"
+  deadlineIso: string;
   sectionUrl: string; // deep link to /lead/report
   organization: OrganizationBrand;
 }

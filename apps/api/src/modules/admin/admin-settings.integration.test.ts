@@ -13,10 +13,6 @@ import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
 import type { AdminRepository } from "./admin-shared.js";
 import { SnapshotAdminService } from "./snapshot-admin.service.js";
 
-/* ------------------------------------------------------------------ */
-/*  Sessions & defaults                                                */
-/* ------------------------------------------------------------------ */
-
 const headSession: UserSession = {
   userId: "00000000-0000-4000-8000-000000000001",
   email: "head@customreport.local",
@@ -67,10 +63,7 @@ const initialSnapshot: AdminSnapshot = {
   policies: [],
 };
 
-// AppSettings carries 9 knobs beyond the legacy fields. The integration
-// fixture mirrors the SQL defaults so the in-memory repo round-trips identical
-// shape to the Prisma path.
-// The legacy `departmentName` field was removed.
+// Fixture mirrors SQL defaults so the in-memory repo matches the Prisma path.
 const defaultSettings: AppSettings = {
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
@@ -89,10 +82,6 @@ const defaultSettings: AppSettings = {
   reopenWindowHours: 72,
   unifiedActivityView: false,
 };
-
-/* ------------------------------------------------------------------ */
-/*  Repository factory                                                 */
-/* ------------------------------------------------------------------ */
 
 function createRepository(
   snapshot: AdminSnapshot,
@@ -189,10 +178,6 @@ function createRepository(
   };
 }
 
-/* ------------------------------------------------------------------ */
-/*  Settings integration tests                                         */
-/* ------------------------------------------------------------------ */
-
 describe("SnapshotAdminService — settings (integration)", () => {
   it("returns default settings when nothing has been configured", async () => {
     const service = new SnapshotAdminService(createRepository(initialSnapshot));
@@ -201,7 +186,6 @@ describe("SnapshotAdminService — settings (integration)", () => {
     expect(result).toEqual(defaultSettings);
   });
 
-  // round-trip the new fields through updateSettings.
   it("round-trips the 9 new AppSettings fields", async () => {
     const service = new SnapshotAdminService(createRepository(initialSnapshot));
 
@@ -250,8 +234,6 @@ describe("SnapshotAdminService — settings (integration)", () => {
     expect(result.defaultDeadlineDays).toBe(10);
   });
 
-  // round-trip the retained period-cycle knobs (a settings surface cleanup
-  // removed the four consumer-less ones).
   it("round-trips the period-cycle AppSettings fields", async () => {
     const service = new SnapshotAdminService(createRepository(initialSnapshot));
 

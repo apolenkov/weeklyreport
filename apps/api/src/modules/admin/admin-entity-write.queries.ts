@@ -14,18 +14,10 @@ import { ensureFallbackReportingGroup } from "./admin-group.queries";
 import { AdminUserConflictError } from "./admin-shared.js";
 import { resolveLifecycle } from "./snapshot-lifecycle.js";
 
-/**
- * Targeted, single-entity admin write primitives: each mutates ONLY the named
- * row (upsert by id; delete/archive by id). They replace the whole-snapshot
- * destructive reconcile — a row absent from any payload is never touched, which
- * closes the concurrent-insert data-loss window an admin edit used to open.
- */
+// Single-entity writes only — never touch rows absent from the payload
+// (closes concurrent-insert data loss from whole-snapshot reconcile).
 
-/**
- * Resolve a non-viewer user's reporting group: viewers carry none; everyone
- * else keeps their explicit group or falls back to the provisioned default
- * (the same rule the whole-snapshot user phase applies).
- */
+// Viewers carry no group; others keep explicit group or fall back to default.
 async function resolveReportingGroupId(
   prisma: PrismaService,
   user: AdminUser,
@@ -104,7 +96,7 @@ export async function removeUser(
   }
 }
 
-/** Set `isActive=false`. Session revocation is the caller's job. */
+// Session revocation is the caller's job.
 export async function deactivateUser(
   prisma: PrismaService,
   userId: string,
@@ -115,7 +107,7 @@ export async function deactivateUser(
   });
 }
 
-/** Set `isActive=true`. Session restoration is the caller's job. */
+// Session restoration is the caller's job.
 export async function activateUser(
   prisma: PrismaService,
   userId: string,
@@ -184,17 +176,9 @@ export async function removeReminderRule(
   await prisma.reminderRule.deleteMany({ where: { id: ruleId } });
 }
 
-/**
- * Create-or-update a single Report's envelope plus its governed lifecycle set,
- * returning whether a NEW row was created so the caller can run the
- * post-commit applicator. `resolveLifecycle` is spread (not hand-assembled) so
- * the three independently-persisted lifecycle machines are reinstated verbatim
- * — this is a non-transition restore write, not a lifecycle transition, and
- * deriving the coupled set from one field would corrupt a legitimately
- * divergent row (a reopened period is status="published" while
- * periodState="open"). The spread carries no literal governed key, so the
- * period-dual-state write gate passes without an exemption marker.
- */
+// Spreads resolveLifecycle so all three lifecycle machines restore verbatim;
+// deriving one field from another corrupts divergent rows (reopened: status
+// published + periodState open). Returns created so the post-commit applicator can run.
 export async function writePeriodRow(
   client: Prisma.TransactionClient,
   period: ReportPeriod,
@@ -237,11 +221,8 @@ export async function upsertPeriod(
       return writeInTransaction();
     },
   );
-  // A newly-created period materializes one ReminderRule per active policy.
-  // Runs AFTER the write commits (an applicator failure must not roll the
-  // period back) — mirrors the whole-snapshot restore's post-commit step.
-  // A deadline-less period (ruling F16) gets no rules: every offset is
-  // deadline-relative, so there is nothing to schedule.
+  // Post-commit only: applicator failure must not roll the period back.
+  // Deadline-less periods get no rules (offsets are deadline-relative).
   if (created && policyApplicator && period.deadline !== null) {
     await policyApplicator.applyToPeriod({
       id: period.id,

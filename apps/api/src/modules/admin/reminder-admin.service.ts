@@ -14,10 +14,6 @@ interface ReminderAdminRepository extends AdminRepository {
   reminderPolicyExists(policyId: string): Promise<boolean>;
 }
 
-/**
- * Owns reminder rules (snapshot-level) and the ReminderPolicy CRUD
- * surface.
- */
 export class ReminderAdminService {
   private readonly logger: AppLogger;
 
@@ -44,36 +40,16 @@ export class ReminderAdminService {
     return this.getSnapshot();
   }
 
-  // -----------------------------------------------------------------
-  // ReminderPolicy surface
-  // -----------------------------------------------------------------
-
-  /**
-   * List all reminder policies (active and archived). Audit-log helper
-   * (`auditLogger.policySave`) is wired into the write paths; this read
-   * path stays silent.
-   */
   async listPolicies(): Promise<ReminderPolicy[]> {
     const rows = await this.repository.listReminderPolicies();
     return rows.map((row) => reminderPolicySchema.parse(row));
   }
 
-  /**
-   * Existence check used by the tRPC router to
-   * decide whether the upcoming `savePolicy` call is a create or an
-   * update — feeds the `admin.policy.save` audit event so SIEM rules
-   * and dashboards can split the two cases without diffing payloads.
-   */
+  // create vs update for admin.policy.save audit / SIEM split.
   async policyExists(policyId: string): Promise<boolean> {
     return this.repository.reminderPolicyExists(policyId);
   }
 
-  /**
-   * Upsert a reminder policy by id. Input is zod-validated so the
-   * audience enum (`lead-with-draft | head-of-late`) and kind enum
-   * (`deadline | follow_up | escalation`) cannot drift to invalid wire
-   * values from a malicious admin client.
-   */
   async savePolicy(policy: ReminderPolicy): Promise<ReminderPolicy> {
     const parsed = reminderPolicySchema.parse(policy);
     this.logger.info("upserted reminder policy", { policyId: parsed.id });
@@ -82,11 +58,7 @@ export class ReminderAdminService {
     );
   }
 
-  /**
-   * Permanently delete a reminder policy and its derived rules. The
-   * repository hard-deletes the rules (executions cascade) then the policy;
-   * there is no soft-delete fallback.
-   */
+  // Hard-delete; no soft-delete fallback.
   async removePolicy(policyId: string): Promise<{ success: true }> {
     this.logger.info("deleted reminder policy", { policyId });
     await this.repository.deleteReminderPolicy(policyId);

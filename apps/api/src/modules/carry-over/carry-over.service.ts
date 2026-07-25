@@ -17,12 +17,7 @@ export class CarryOverDomainError extends Error {
   }
 }
 
-/**
- * Distinct from CarryOverDomainError so the tRPC error mapper can map it to
- * CONFLICT. CarryOverDomainError is mapped class-wide to BAD_REQUEST and is
- * shared by the validation errors, so reusing it for the dedupe race would
- * either regress those responses or never reach a conflict branch.
- */
+// Mapped to CONFLICT; CarryOverDomainError is BAD_REQUEST class-wide.
 export class CarryOverConflictError extends Error {
   constructor(message: string) {
     super(message);
@@ -36,12 +31,7 @@ export interface CarryOverResult {
   targetSection: ReportSectionReadModel;
 }
 
-/**
- * Period-editability facts for the carry-over write guard: editable iff the
- * period is open or reopened AND not archived (the canonical
- * `computeReopenEligibility` rule). `archived` is a separate Report flag — the
- * archive path does not force `periodStatus` — so both must be read.
- */
+// Editable iff open/reopened AND not archived (archived is a separate flag).
 export interface TargetReportState {
   periodStatus: PeriodStatus;
   archived: boolean;
@@ -53,12 +43,6 @@ export interface CarryOverRepository {
   ): Promise<CarryOverExecution | null>;
   getSourceSections(sourceReportId: string): Promise<ReportSectionReadModel[]>;
   getTargetSections(targetReportId: string): Promise<ReportSectionReadModel[]>;
-  /**
-   * The latest report ending on/before the target's start — the "prior
-   * period" the automatic carry-over reads its source from. Required so a
-   * repository omitting it fails to compile rather than silently resolving
-   * the source empty. Null when no prior period exists.
-   */
   findPreviousReportId(targetReportId: string): Promise<string | null>;
   getTargetReportState(
     targetReportId: string,
@@ -70,13 +54,7 @@ export interface CarryOverRepository {
   ): Promise<CarryOverResult>;
 }
 
-/**
- * A carried record needs a live parent in the target period. A product-parented
- * record (no `activityId` — the XOR then
- * guarantees a product FK) always qualifies, the product survives. An
- * activity-parented record carries only when its activity is re-attached to the
- * author's target section; an archived/detached activity's records are dropped.
- */
+// Activity-parented only if re-attached on the target; product-parented always qualifies.
 function isActivityCarryable(
   activityId: string | null | undefined,
   targetActivityIds: ReadonlySet<string>,
@@ -136,12 +114,7 @@ export class CarryOverService {
       );
     }
 
-    // Write-integrity guard: carry-over is the only report write path with no
-    // period/section state check, so without this it could diverge the live
-    // rows from a published snapshot. Editable iff the target period is open or
-    // reopened AND not archived (the canonical computeReopenEligibility rule),
-    // and no matched target section is already submitted (read-only). Mirrors
-    // the fillFrom / saveDraft guards.
+    // Only write path without built-in period check — must match fillFrom/saveDraft.
     const targetState =
       await this.repository.getTargetReportState(targetReportId);
     if (!targetState || !isTargetEditable(targetState)) {
@@ -158,14 +131,7 @@ export class CarryOverService {
       );
     }
 
-    // Build carried rows ONLY for source sections whose author has a target
-    // section: a source-only author has nowhere to persist, so counting it
-    // would inflate the execution counts and emit dangling CarryOverRecord
-    // rows. A carried record must also have a live parent in the target period:
-    // a product-parented record always does (the product survives), but an
-    // activity-parented record is carried ONLY when its activity is re-attached
-    // to the author's target section (design decision 0.3) — an
-    // archived/detached activity's records are not carried forward.
+    // Only authors with a target section; activity-parented needs re-attachment.
     const targetByAuthor = new Map(
       targetSections.map((target) => [target.authorId, target] as const),
     );
@@ -179,12 +145,8 @@ export class CarryOverService {
       const targetActivityIds = new Set(
         targetSection.activities.map((activity) => activity.activityId),
       );
-      // Never carry a lineage the target section already holds. The
-      // `@@unique([reportSectionId, stableId])`
-      // would otherwise make the item insert silently skip (leaving an orphan
-      // CarryOverRecord) or trip P2002 on the decision insert (misread as a
-      // dedupe-key race). Filtering here keeps carry-over idempotent by lineage,
-      // not only by the execution dedupeKey, and counts/records stay accurate.
+      // Skip lineages the target already holds — keeps counts accurate and
+      // avoids silent skipDuplicates / P2002 misread as dedupe race.
       const targetItemLineage = new Set(
         targetSection.items
           .map((i) => i.stableId)

@@ -26,16 +26,7 @@ export interface ArchiveReadFilter {
   status?: ReportStatus;
 }
 
-/**
- * Archive section visibility filter.
- *
- * Repository receives the requester's session (or the narrow Pick used by
- * tests) so it can spread `groupScopeFilter(session, 'reportSection')` into
- * the nested `sections.where` clause. The Report row itself stays globally
- * visible (still gated by PUBLISHED_FLOOR + ArchiveReadFilter) so the user
- * can browse the period list, but the assembled view only includes sections
- * the requester is allowed to read.
- */
+// Session pick for section-level group scope; Report rows stay floor-gated.
 export type ArchiveScopeSession = Pick<
   UserSession,
   "role" | "reportingGroupId" | "viewerGroupAccess"
@@ -54,14 +45,7 @@ export interface ArchiveRepository {
   ): Promise<ArchiveReportDetail | null>;
 }
 
-/**
- * Translate the session role into the read filter.
- * Viewers MUST see only published reports — defense-in-depth on top of the
- * repository's existing hard floor (`status: 'published'`). For non-viewer
- * roles (head/lead/admin) and for `undefined` (legacy callers / no-role
- * scripts) the filter is empty — the repository's hardcoded floor still
- * keeps everyone on published rows, so widening here is safe.
- */
+// Viewer-only status filter; other roles rely on the repository floor.
 function buildArchiveReadFilter(role: Role | undefined): ArchiveReadFilter {
   if (role === "viewer") {
     return { status: "published" };
@@ -69,12 +53,6 @@ function buildArchiveReadFilter(role: Role | undefined): ArchiveReadFilter {
   return {};
 }
 
-/**
- * Order an archive detail's sections by author name ascending. Pure — never
- * mutates the input array — so a viewer scanning the archived report finds
- * authors alphabetically rather than in whatever order the assembled report
- * happened to produce them.
- */
 function sortSectionsByAuthorName(
   detail: ArchiveReportDetail,
 ): ArchiveReportDetail {
@@ -98,9 +76,6 @@ export class ArchiveService {
     session?: ArchiveScopeSession,
   ): Promise<PaginatedResult<ArchiveReportSummary>> {
     const filter = buildArchiveReadFilter(role);
-    // Pagination lives in the repository now: it pages at the database with a
-    // stable `publishedAt desc, id desc` cursor and only reads the page plus
-    // one probe row, instead of loading the whole archive to slice in memory.
     const page = await this.repository.listArchiveReports(
       pagination,
       filter,

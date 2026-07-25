@@ -12,13 +12,7 @@ import {
   type EscalationEmailProps,
 } from "./templates/escalation.template.js";
 
-/**
- * Central renderer for the email template catalog.
- *
- * Returns `{subject, html, text}`. The processor passes all three to
- * nodemailer so the email is multipart (HTML + plaintext) — corporate
- * spam filters score multipart higher than HTML-only.
- */
+// Multipart subject+html+text — spam filters score multipart over HTML-only.
 export type EmailRenderInput =
   | { kind: "deadline"; props: DeadlineEmailProps }
   | { kind: "escalation"; props: EscalationEmailProps };

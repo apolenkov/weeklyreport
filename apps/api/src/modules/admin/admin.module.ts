@@ -35,11 +35,8 @@ const focusedAdminProvider = <T>(
 @Module({
   imports: [ConfigModule],
   providers: [
-    // the policy applicator is the seam that
-    // turns ReminderPolicy templates into concrete ReminderRule rows
-    // when admin.savePeriod creates a new Period. Provided here (not
-    // re-imported from RemindersModule) to keep the cycle tight: admin
-    // owns Period.create, so admin owns the post-create hook wiring.
+    // Admin owns Period.create, so it owns the post-create policy applicator hook
+    // (not re-imported from RemindersModule).
     PolicyApplicatorService,
     AdminPrometheusTelemetry,
     { provide: ADMIN_TELEMETRY, useExisting: AdminPrometheusTelemetry },

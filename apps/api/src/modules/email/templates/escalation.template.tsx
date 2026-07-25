@@ -12,20 +12,7 @@ import {
   Text,
 } from "react-email";
 
-/**
- * T+2h escalation digest sent to the head when leads miss the deadline.
- *
- * Reverse shape of the deadline reminder: the deadline reminder fires
- * per-lead at T-24h; the escalation fires per-head at T+2h aggregating ALL
- * late leads into a single email. The dedupe key shape mirrors deadline
- * (`${rule.id}:escalation:${cycleDate}:${recipientEmail}`) so two scheduler
- * ticks within one UTC day collapse to a single email even if Cron
- * misfires.
- *
- * Per CONTEXT.md: escalation BYPASSES User.notificationOptOut.
- * Heads must always be notified of late submissions; the opt-out flag only
- * silences kind='deadline' reminders.
- */
+// Per-head late-leads digest; opt-out / timing / dedupe live on the scheduler path.
 export interface LateLead {
   readonly leadName: string;
   readonly sectionTitle: string;

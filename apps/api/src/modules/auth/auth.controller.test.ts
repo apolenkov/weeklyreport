@@ -4,10 +4,6 @@ import { describe, expect, it } from "vitest";
 
 import { createJwtSigner } from "./auth.controller";
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
 const TEST_SECRET = "test-jwt-secret-for-unit-tests-only";
 const TEST_ENV = {
   AUTH_JWT_SECRET: TEST_SECRET,
@@ -22,17 +18,13 @@ const validSession: UserSession = {
   activeReportSectionId: null,
 };
 
-// ---------------------------------------------------------------------------
-// Tests — regression scenarios
-// ---------------------------------------------------------------------------
-
 describe("createJwtSigner — contract tests", () => {
   it("signs and verifies a valid session", () => {
     const signer = createJwtSigner(TEST_ENV);
     const token = signer.signSession(validSession);
 
     expect(typeof token).toBe("string");
-    expect(token.split(".")).toHaveLength(3); // JWT has 3 parts
+    expect(token.split(".")).toHaveLength(3);
 
     const verified = signer.verifySession(token);
     expect(verified.userId).toBe(validSession.userId);
@@ -41,12 +33,10 @@ describe("createJwtSigner — contract tests", () => {
   });
 
   it("expired JWT throws on verify", () => {
-    // Sign a token that already expired
-    const expiredToken = jwt.sign(
-      { ...validSession },
-      TEST_SECRET,
-      { algorithm: "HS256", expiresIn: -10 }, // expired 10 seconds ago
-    );
+    const expiredToken = jwt.sign({ ...validSession }, TEST_SECRET, {
+      algorithm: "HS256",
+      expiresIn: -10,
+    });
 
     const signer = createJwtSigner(TEST_ENV);
     expect(() => signer.verifySession(expiredToken)).toThrow();
@@ -56,7 +46,6 @@ describe("createJwtSigner — contract tests", () => {
     const signer = createJwtSigner(TEST_ENV);
     const token = signer.signSession(validSession);
 
-    // Tamper with the token signature
     const tamperedToken = `${token.slice(0, -5)}xxxxx`;
 
     expect(() => signer.verifySession(tamperedToken)).toThrow();
@@ -91,7 +80,6 @@ describe("createJwtSigner — contract tests", () => {
     const signer = createJwtSigner(TEST_ENV);
     expect(() => signer.verifySession(hs384Token)).toThrow();
 
-    // A valid HS256 token still verifies.
     const hs256Token = signer.signSession(validSession);
     expect(signer.verifySession(hs256Token).userId).toBe(validSession.userId);
   });
@@ -139,7 +127,7 @@ describe("createJwtSigner — contract tests", () => {
 
     expect(typeof decoded.exp).toBe("number");
     expect(typeof decoded.iat).toBe("number");
-    // exp should be ~3600 seconds after iat
+
     const diff = (decoded.exp as number) - (decoded.iat as number);
     expect(diff).toBe(3600);
   });
