@@ -8,7 +8,10 @@ const noNullBytes = (val: string) => !val.includes("\u0000");
 
 const DEFAULT_SAFE_TEXT_MAX_LENGTH = 500;
 
-/** Zod string for user-facing text: rejects null bytes and invisible-only values. */
+/**
+ * Zod string for user-facing text: rejects null bytes and invisible-only values.
+ * @param opts - The opts argument.
+ */
 export const safeText = (opts: { min?: number; max?: number } = {}) =>
   z
     .string()
@@ -44,7 +47,12 @@ export const itemWorkflowStatusSchema = z.enum([
 export const CURRENT_ITEM_STATUSES = ["in_progress", "paused", "done"] as const;
 export const NEXT_ITEM_STATUSES = ["planned", "postponed"] as const;
 
-/** Adds a Zod issue when workflowStatus is illegal for the item type. */
+/**
+ * Adds a Zod issue when workflowStatus is illegal for the item type.
+ * @param type - The type argument.
+ * @param workflowStatus - The workflowStatus argument.
+ * @param ctx - The ctx argument.
+ */
 export function addItemTypeStatusIssue(
   type: "current" | "next",
   workflowStatus: string,

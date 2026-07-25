@@ -37,7 +37,10 @@ export const STAGE_NAMES: readonly StageName[] = [
 // the alias rule — the server ownership guard and the client dialog scoping both
 // canonicalize through here so they never disagree on whether two names refer to
 // the same pipeline stage.
-/** Canonical stage-name key: lower-case with Development→Dev alias. */
+/**
+ * Canonical stage-name key: lower-case with Development→Dev alias.
+ * @param stageName - The stageName argument.
+ */
 export function normalizeStageName(stageName: string): string {
   const lower = stageName.toLowerCase();
   return lower === "development" ? "dev" : lower;
@@ -45,14 +48,21 @@ export function normalizeStageName(stageName: string): string {
 
 // True when two stage names refer to the same pipeline slot (handles the
 // "Development" ↔ "Dev" alias).
-/** True when two stage labels refer to the same pipeline slot. */
+/**
+ * True when two stage labels refer to the same pipeline slot.
+ * @param a - The a argument.
+ * @param b - The b argument.
+ */
 export function stageNamesMatch(a: string, b: string): boolean {
   return normalizeStageName(a) === normalizeStageName(b);
 }
 
 const STAGE_NAME_SEPARATOR = /[,;]+/;
 
-/** Split a CSV/semicolon stage field into unique trimmed names (or []). */
+/**
+ * Split a CSV/semicolon stage field into unique trimmed names (or []).
+ * @param stageName - The stageName argument.
+ */
 export function splitStageNames(
   stageName: string | null | undefined,
 ): string[] {
@@ -73,7 +83,11 @@ export function splitStageNames(
 // (empty means "covers everything"), falling back to the legacy CSV
 // stageName field (absent/blank/"—" also means "covers everything") when
 // stageIds itself is absent.
-/** Whether a risk applies to a stage (stageIds preferred; empty = all stages). */
+/**
+ * Whether a risk applies to a stage (stageIds preferred; empty = all stages).
+ * @param risk - The risk argument.
+ * @param stageName - The stageName argument.
+ */
 export function riskCoversStage(
   risk: { stageName?: string | null; stageIds?: readonly string[] },
   stageName: string,
