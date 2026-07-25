@@ -1,33 +1,24 @@
 /**
- * Structured ФИО (surname / first name / patronymic) helpers.
- *
- * `name` stays the stored, denormalized display value; these helpers recompute
- * it from the parts on write and derive the short form + avatar initials.
- *
- * Order is surname-first (ФИО): [lastName, firstName, middleName].
+ * Structured ФИО helpers (surname-first); denormalized `name` recomputed on write.
+ * See `structured-user-name` / `user-name-display`.
  */
 
+/** Surname-first ФИО parts: lastName, firstName, optional middleName (patronymic). */
 export interface UserNameParts {
   lastName: string;
   firstName: string;
   middleName?: string | null;
 }
 
-/**
- * First non-whitespace character of a part (Cyrillic-safe), or "".
- * @param part raw name part (may be null/undefined/whitespace)
- * @returns the first character, or "" when the part is empty
- */
 function firstLetter(part?: string | null): string {
   const trimmed = (part ?? "").trim();
   return trimmed[0] ?? "";
 }
 
 /**
- * Canonical display name: surname-first, single-spaced, absent patronymic
- * omitted. e.g. "Петров Алексей Иванович" / "Петров Алексей".
- * @param parts structured ФИО parts
- * @returns the composed display name
+ * Canonical display name: surname-first, single-spaced; omit absent patronymic.
+ * e.g. "Петров Алексей Иванович" / "Петров Алексей".
+ * @param parts
  */
 export function composeName(parts: UserNameParts): string {
   return [parts.lastName, parts.firstName, parts.middleName]
@@ -37,10 +28,9 @@ export function composeName(parts: UserNameParts): string {
 }
 
 /**
- * Short form: surname + given/patronymic initials, e.g. "Берёзов А.В." or
- * "Берёзов А." when there is no patronymic.
- * @param parts structured ФИО parts
- * @returns the short display form
+ * Short form: surname + given/patronymic initials, e.g. "Берёзов А.В."
+ * or "Берёзов А." when there is no patronymic.
+ * @param parts
  */
 export function shortName(parts: UserNameParts): string {
   const surname = parts.lastName.trim();
@@ -53,12 +43,9 @@ export function shortName(parts: UserNameParts): string {
 }
 
 /**
- * Avatar initials from a plain name string: first + second whitespace token
- * under the surname-first order (NOT first + last), e.g.
- * "Берёзов Александр Владимирович" → "БА". A single token yields its first
- * two letters. This is the fallback for part-less records (SAML stubs).
- * @param name a plain display name string
- * @returns up to two uppercase initials
+ * Avatar initials from a plain name: first + second token (surname-first),
+ * not first+last. Single token → first two letters. Fallback for SAML stubs.
+ * @param name
  */
 export function initialsFromName(name: string): string {
   const [first, second] = name.trim().split(/\s+/).filter(Boolean);
@@ -68,15 +55,9 @@ export function initialsFromName(name: string): string {
 }
 
 /**
- * Short display form from a plain name string: surname plus the dotted initials
- * of every following token, under the surname-first order. e.g.
- * "Иванов Василий Петрович" → "Иванов В.П."; "Каштанова Мария" → "Каштанова М.".
- * A single token returns just that token; an empty string returns "". Use this
- * everywhere a name is rendered as a text label (stage owners, slide owners,
- * cross-author authors) — the full ФИО stays only in the top user badge, and the
- * compact 2-letter form ({@link initialsFromName}) stays for round avatar chips.
- * @param name a plain surname-first display name string
- * @returns the short "Surname I.O." form
+ * Short "Surname I.O." from a plain surname-first name string.
+ * Surface usage: see `user-name-display`.
+ * @param name
  */
 export function shortNameFromName(name: string): string {
   const [surname, ...rest] = name.trim().split(/\s+/).filter(Boolean);
@@ -89,14 +70,12 @@ export function shortNameFromName(name: string): string {
 }
 
 /**
- * Avatar initials, preferring structured parts (surname-initial +
- * given-initial → "БА"). Falls back to the name-string heuristic when the
- * parts are absent — the common SAML-stub case where only `name` is set.
- * @param input optional structured parts plus a fallback `name`
- * @param input.lastName surname (preferred first initial)
- * @param input.firstName given name (preferred second initial)
- * @param input.name fallback display name when the parts are absent
- * @returns up to two uppercase initials
+ * Avatar initials preferring structured parts; fall back to name-string
+ * heuristic when parts are absent (SAML-stub case).
+ * @param input
+ * @param input.lastName
+ * @param input.firstName
+ * @param input.name
  */
 export function initials(input: {
   lastName?: string | null;

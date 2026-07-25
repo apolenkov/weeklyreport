@@ -1,3 +1,4 @@
+/** Package identity string for `@customreport/shared`. */
 export const sharedPackageName = "@customreport/shared";
 
 export * from "./admin/reminder-policy.schema";

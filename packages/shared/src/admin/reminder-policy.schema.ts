@@ -1,11 +1,12 @@
 import { z } from "zod";
 
-// Wire audience is lowercase-hyphen; Prisma uses SCREAMING_SNAKE — API mappers translate.
+/** Wire audience tokens (lowercase-hyphen); Prisma SCREAMING_SNAKE is mapped at the API. */
 export const reminderAudienceSchema = z.enum([
   "lead-with-draft",
   "head-of-late",
 ]);
 
+/** Reminder policy kind: deadline, escalation, or follow_up. */
 export const reminderPolicyKindSchema = z.enum([
   "deadline",
   "escalation",
@@ -22,6 +23,10 @@ const isResolvableTimeZone = (timezone: string): boolean => {
   }
 };
 
+/**
+ * Wire reminder policy; `validUntil` must be on or after `validFrom` when set.
+ * Timezone must be a resolvable IANA identifier.
+ */
 export const reminderPolicySchema = z
   .object({
     id: z.uuid(),
@@ -51,6 +56,9 @@ export const reminderPolicySchema = z
     },
   );
 
+/** Wire audience token for reminder delivery targeting. */
 export type ReminderAudience = z.infer<typeof reminderAudienceSchema>;
+/** Reminder policy kind discriminator. */
 export type ReminderPolicyKind = z.infer<typeof reminderPolicyKindSchema>;
+/** Parsed wire reminder policy. */
 export type ReminderPolicy = z.infer<typeof reminderPolicySchema>;

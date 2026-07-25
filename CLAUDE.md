@@ -101,9 +101,24 @@ path must respect them and link the relevant `openspec/specs/` spec.
   environment; boot must fail loud on a missing var. No non-obvious magic literals
   — name+document or remove.
 - **Comment hygiene — no archaeology.** Comments explain the non-obvious WHY of
-  the current code. Delete change-log/ticket/phase refs (`Phase 35-08`, `UFB-036`,
-  `AUTH-08`, `FIX-02`, `R3a-4`, …) — git history holds that. Keep load-bearing
-  rationale, rewritten without the prefix; never narrate what the code already says.
+  the current code (≤3 lines). Delete change-log/ticket/phase refs (`Phase 35-08`,
+  `UFB-036`, `AUTH-08`, `FIX-02`, `R3a-4`, …) — git history holds that. Keep
+  load-bearing rationale, rewritten without the prefix; never narrate what the
+  code already says. Over-budget load-bearing WHY relocates to `openspec/specs/`
+  (leave a ≤2-line pointer) — do not silent-delete.
+- **Doc / comment / marker hygiene (for agents).** Full audit+fix lane:
+  workflow `comment-hygiene` (`.grok/workflows/comment-hygiene.rhai`).
+  - **JSDoc** is public-API-only: required on exported surface of
+    `packages/shared` and `packages/ui`; **remove** from `apps/*`, Nest, tRPC,
+    and non-exported helpers. When required, fill to SHAPE: English; first line
+    is the contract (not a name restatement); `@param`/`@returns`/`@throws` only
+    when types are insufficient; no `@example` walls, no archaeology, no
+    implementation walkthrough.
+  - **Markers:** canonical form `TODO(<ref>): short imperative note`. Bare
+    `TODO`/`FIXME`/`HACK`/`XXX` without `(<ref>)` is a defect; convert or remove.
+    Stale markers (work already done) must be deleted. Deferred features follow
+    `openspec/specs/deferred-feature-pattern` (loud stub + matching `TODO(<ref>)`,
+    or UI `ComingSoonBadge`) — never a hidden flag.
 
 ## Gates
 
