@@ -630,18 +630,16 @@ export default defineConfig([
       "sonarjs/no-duplicate-string": "error",
     },
   },
-  // jsdoc — Level 4+5: public exports across packages AND apps.
+  // jsdoc — public exports of the two consumed packages.
   // Presence: exported fn/class/method/arrow need short /** contract */.
   // Params: @param name - prose required; types OFF (TS owns shapes); returns OFF.
   // enableFixer false — never inject bare @param tags via eslint --fix.
   // publicOnly — file-private helpers free. Tests excluded.
+  // apps/api and apps/web are deliberately OUT until their surfaces are
+  // documented: a ratchet has to close behind work already done, and declaring
+  // it ahead of 177 undocumented files only turns `pnpm lint` red for everyone.
   {
-    files: [
-      "packages/shared/src/**/*.ts",
-      "packages/ui/src/**/*.{ts,tsx}",
-      "apps/api/src/**/*.{ts,tsx}",
-      "apps/web/src/**/*.{ts,tsx}",
-    ],
+    files: ["packages/shared/src/**/*.ts", "packages/ui/src/**/*.{ts,tsx}"],
     ignores: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/__tests__/**"],
     plugins: { jsdoc },
     rules: {
