@@ -1,9 +1,5 @@
-/**
- * Unit tests for the shared read-through cache. `ioredis` is replaced by an
- * in-memory fake (a Map) so the tests run without infrastructure and can
- * assert the one behavior the analytics/telemetry wrappers rely on but never
- * covered: keyPrefix composition (the Redis key) vs the caller-supplied key.
- */
+// Asserts keyPrefix composition (Redis key) vs the caller-supplied key —
+// the behavior analytics/telemetry wrappers rely on but never cover themselves.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EnvConfig } from "../config/env.schema";

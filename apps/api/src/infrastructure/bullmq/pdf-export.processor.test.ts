@@ -139,8 +139,8 @@ function createMockJob(
   return { data, attemptsMade, opts: { attempts } } as Job<PdfExportJobData>;
 }
 
-// Test seam — `processJob` is `private` on the class, but tests need to invoke
-// it directly. Cast through this interface to call without `as any`.
+// Test seam — `processJob` is `protected`; cast through this interface so
+// tests can invoke it directly without `as any`.
 interface ProcessorTestSeam {
   processJob(job: Job<PdfExportJobData>): Promise<void>;
 }

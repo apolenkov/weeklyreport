@@ -28,12 +28,8 @@ const REDIS_MEMORY_WARN_PERCENT = REDIS_MEMORY_WARN_RATIO * PERCENT_SCALE;
 // all point at the same Redis instance.
 const MEMORY_PROBE_QUEUE = QUEUE_NAMES[0];
 
-/**
- * Parse `used_memory` (bytes) from a Redis `INFO` reply. Returns null when the
- * field is absent or non-numeric so the caller can log rather than set a bogus
- * gauge value. The anchored `used_memory:` match excludes sibling fields like
- * `used_memory_rss:` / `used_memory_peak:`.
- */
+// Anchored `used_memory:` match excludes siblings like used_memory_rss/peak.
+// Returns null when absent or non-numeric so the gauge is never set bogus.
 function parseUsedMemoryBytes(info: string): number | null {
   const match = /^used_memory:(\d+)/m.exec(info);
   if (!match) return null;
@@ -42,24 +38,9 @@ function parseUsedMemoryBytes(info: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-/**
- * DLQ monitor. Two responsibilities:
- *
- *   1. Increment cr_dlq_failed_total{queue} every time a BullMQ job exhausts
- *      its retry budget (attemptsMade >= attempts). This is the
- *      Prometheus-rate signal that ops graphs and that alertmanager rules
- *      hang off.
- *   2. Every POLL_INTERVAL_MS, compare the absolute failed-job count from
- *      Redis against DLQ_ALERT_THRESHOLD (env, default 5). When exceeded,
- *      emit a structured ERROR log line. Repeated emissions are fine —
- *      alertmanager dedups upstream.
- *
- * QueueEvents is the right BullMQ surface for cross-process listening: it
- * subscribes to Redis pub/sub channels rather than embedding inside a
- * Worker, so failures observed by ANY worker for the queue increment our
- * counter exactly once. The `Queue` handles come from QueueRegistry (shared,
- * closed there); only the QueueEvents subscribers are owned here.
- */
+// QueueEvents (Redis pub/sub) so any worker's terminal failure increments the
+// counter once; Queue handles come from QueueRegistry — only QueueEvents
+// subscribers are owned here. Polls failed-count against DLQ_ALERT_THRESHOLD.
 @Injectable()
 export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DLQMonitorService.name);
@@ -113,13 +94,8 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * Increment `cr_dlq_failed_total{queue}` exactly once per terminal failure.
-   * BullMQ emits 'failed' for every retry too, so only a job whose
-   * `attemptsMade` has reached its configured `attempts` counts as terminal.
-   * This monitor is the sole owner of the counter — no worker handler must
-   * also increment it, or terminal failures would be double-counted.
-   */
+  // Sole owner of cr_dlq_failed_total — workers must not also inc. BullMQ emits
+  // 'failed' on every retry; only attemptsMade >= attempts is terminal.
   private async recordTerminalFailure(
     name: QueueName,
     queue: Queue,
@@ -144,7 +120,6 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** Publish queue depths and authoritative failed counts for one poll cycle. */
   private async pollQueueMetrics(threshold: number): Promise<void> {
     await Promise.all([
       this.checkThresholds(threshold),
@@ -170,7 +145,6 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** Publish waiting, active, and delayed depths for every registered queue. */
   private async checkQueueDepths(): Promise<void> {
     await Promise.all(
       QUEUE_NAMES.map(async (name) => {
@@ -196,12 +170,8 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  /**
-   * Sample Redis `used_memory` via the shared registry connection, publish it
-   * to the `cr_redis_memory_used_bytes` gauge, and warn once per poll when
-   * usage crosses REDIS_MEMORY_WARN_RATIO of the configured cap. Reuses an
-   * existing queue connection rather than opening a new Redis client.
-   */
+  // Samples used_memory on the shared registry connection (no new client) and
+  // warns once usage crosses REDIS_MEMORY_WARN_RATIO of the configured cap.
   private async checkRedisMemory(): Promise<void> {
     try {
       const client = await this.registry.get(MEMORY_PROBE_QUEUE).client;

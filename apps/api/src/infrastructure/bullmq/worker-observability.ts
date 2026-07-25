@@ -11,31 +11,23 @@ import { validateEnv } from "../config/env.schema.js";
 const CORRELATION_ID_KEY = "correlationId";
 const WORKER_TRACER_NAME = "customreport-bullmq";
 
-/**
- * Trace/correlation context threaded from an enqueuer into a BullMQ job so the
- * worker can re-link its run to the trace that queued it. Both fields are
- * optional: they are omitted from the job payload when no trace is active or
- * the enqueuer runs outside a request scope (a cron tick), never written as
- * `undefined`.
- */
+// Trace/correlation threaded into a BullMQ job so the worker re-links to the
+// enqueue trace. Fields omitted (never written as undefined) when no trace is
+// active or the enqueuer is outside a request scope.
 export interface JobTraceContext {
   traceparent?: string;
   tracestate?: string;
   correlationId?: string;
 }
 
-/** Read the correlationId from an active CLS scope, or undefined outside one. */
 export function resolveCorrelationId(cls?: ClsService): string | undefined {
   if (!cls?.isActive()) return undefined;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cls.get returns undefined when the key is unset despite the generic return type
   return cls.get<string>(CORRELATION_ID_KEY) ?? undefined;
 }
 
-/**
- * Capture the active W3C trace context plus the caller's correlationId at
- * `queue.add` time. The global propagator (registered in the OTel bootstrap)
- * injects `traceparent`; the correlationId is supplied by the enqueuer.
- */
+// Capture W3C trace at queue.add via the global propagator; correlationId is
+// supplied by the enqueuer (not injected).
 export function captureJobTraceContext(
   correlationId?: string,
 ): JobTraceContext {
@@ -48,11 +40,8 @@ export function captureJobTraceContext(
   };
 }
 
-/**
- * Run a job body linked to its enqueue trace and inside a CLS scope seeded with
- * the enqueue correlationId, so logs emitted during the job carry the same
- * trace/correlation context as the request that queued it.
- */
+// Link the job body to its enqueue trace and seed CLS with the enqueue
+// correlationId so job logs share the request's trace/correlation context.
 export async function runInJobTraceContext(
   jobContext: JobTraceContext,
   spanName: string,
@@ -90,15 +79,9 @@ export async function runInJobTraceContext(
 /** A W3C traceparent header has exactly 4 hyphen-separated segments: version-traceId-spanId-flags. */
 const TRACEPARENT_SEGMENT_COUNT = 4;
 
-/**
- * Pull the W3C trace id out of a job's captured `traceparent`
- * (`00-<traceId>-<spanId>-<flags>`). The failure handler runs after
- * `runInJobTraceContext` has already ended the span, so the ambient OTel
- * context no longer carries the trace id — reading it back from the job's
- * own carrier is the only link from a failure log to the enqueue trace.
- * Returns undefined when no traceparent was captured or it is malformed.
- * Deliberately loose (segment count + non-empty only): all-zero/etc. still pass — failure-log linkage only.
- */
+// Failure handler runs after the span ends, so ambient OTel no longer has the
+// trace id — read it back from the job carrier. Loose parse (segment count +
+// non-empty only): failure-log linkage, not strict W3C validation.
 export function extractTraceId(ctx: JobTraceContext): string | undefined {
   const segments = ctx.traceparent?.split("-");
   if (segments?.length !== TRACEPARENT_SEGMENT_COUNT) return undefined;
@@ -106,11 +89,8 @@ export function extractTraceId(ctx: JobTraceContext): string | undefined {
   return traceId !== undefined && traceId.length > 0 ? traceId : undefined;
 }
 
-/**
- * Build a worker's AppLogger. Workers run outside the request pipeline that
- * main.ts wires, so each processor owns a logger seeded with the same CLS
- * service — job-scoped logs then resolve correlationId like in-request logs do.
- */
+// Workers sit outside main.ts's request pipeline; seed with the same CLS so
+// job-scoped logs resolve correlationId like in-request logs.
 export function createWorkerLogger(
   service: string,
   cls?: ClsService,

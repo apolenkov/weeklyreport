@@ -29,10 +29,9 @@ export function createProvisionLeadWorkspace(deps: {
       policyApplicator,
     );
     const { sectionId } = await ensureLeadSection(prisma, reportId, userId);
-    // Unconditional, not gated on "just created": the execution-dedupe
-    // short-circuit makes an already-carried period a single indexed read, so
-    // every login doubles as a free retry. Never rejects — a carry problem
-    // must not block login.
+    // Unconditional (not "just created"): dedupe short-circuits an already-
+    // carried period to one indexed read, so every login is a free retry.
+    // Never rejects — a carry problem must not block login.
     await autoCarryOver(reportId);
     return { reportId, sectionId };
   };

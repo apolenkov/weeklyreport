@@ -27,15 +27,9 @@ interface RequireHeadDeps {
   sessionRevocation: Pick<SessionRevocationService, "isRevoked">;
 }
 
-/**
- * Express guard for /admin/queues: verify the session JWT, require the `head`
- * role, then re-check the user's revoked/deactivated state through the shared
- * `isUserAccessBarred` helper so a deactivated head loses queue admin
- * immediately rather than for the JWT's TTL.
- *
- * Express 5 awaits async handlers and forwards rejections, so the try/catch
- * still maps a thrown verify (or a rejected Prisma read) to 401.
- */
+// Re-check revoked/deactivated via isUserAccessBarred so a deactivated head
+// loses queue admin immediately (not for the JWT TTL). Express 5 awaits async
+// handlers; try/catch maps a thrown verify or rejected Prisma read to 401.
 export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
   return async (
     req: Request,
@@ -81,13 +75,6 @@ export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
   };
 }
 
-/**
- * Mount Bull Board monitoring UI at /admin/queues.
- *
- * Reads the shared queue handles from QueueRegistry (single owner, closed on
- * shutdown). Protected by JWT auth — only an active (non-revoked) head can
- * access.
- */
 export function mountBullBoard(app: INestApplication): void {
   const registry = app.get(QueueRegistry);
   const pdfQueue = registry.get("pdf-export");
@@ -103,10 +90,9 @@ export function mountBullBoard(app: INestApplication): void {
 
   const authController = createAuthController(process.env);
 
-  // Resolve the DI-managed singletons (non-strict, application-wide): Prisma is
-  // @Global and SessionRevocationService is provided+exported by AdminModule,
-  // so reusing them here keeps the service's onModuleDestroy cleanup intact —
-  // a `new` instance would leak an unmanaged ioredis client.
+  // DI-managed singletons (non-strict, app-wide): Prisma is @Global and
+  // SessionRevocationService is from AdminModule — reusing them keeps
+  // onModuleDestroy intact; `new` would leak an unmanaged ioredis client.
   const requireHead = createRequireHeadGuard({
     verifySessionToken: (token) => authController.verifySessionToken(token),
     prisma: app.get(PrismaService),

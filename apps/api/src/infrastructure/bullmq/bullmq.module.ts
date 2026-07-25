@@ -15,18 +15,9 @@ const BOUNDED_RETENTION_JOB_OPTS: DefaultJobOptions = {
   removeOnFail: { count: 500 },
 };
 
-/**
- * BullMQ infrastructure module.
- *
- * Registers the Redis connection (maxRetriesPerRequest: null for worker
- * compatibility) and the pdf-export, email-reminder, and telegram-outbound
- * queues. Redis noeviction policy is enforced in Docker Compose, not code.
- *
- * QueueRegistry owns one shared `Queue` handle per name (injected by the DLQ
- * monitor, Bull Board, and the admin bootstrap queues); DLQMonitorService
- * counts terminal failures and alerts when the failed-job count exceeds
- * DLQ_ALERT_THRESHOLD.
- */
+// Redis noeviction is enforced in Docker Compose, not code. QueueRegistry owns
+// the shared Queue handles used by the DLQ monitor, Bull Board, and admin
+// bootstrap; DLQMonitorService alerts when failed-job count exceeds threshold.
 @Module({
   imports: [
     ConfigModule,
