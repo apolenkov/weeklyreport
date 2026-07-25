@@ -34,13 +34,7 @@ export interface RespondReopenRequestResult {
   staleAutoClosed: boolean;
 }
 
-/**
- * Reopen-request lifecycle surface (reopen-request-lifecycle, ADR 0008) —
- * reopen requests are period lifecycle, so this is a sibling of
- * `PeriodAdminService` as a focused lifecycle service
- * (kept in its own file rather than inlined into
- * `PeriodAdminService` to keep that file under the line budget).
- */
+// reopen-request-lifecycle / ADR 0008 — sibling of PeriodAdminService.
 export class ReopenRequestAdminService {
   private readonly logger: AppLogger;
 
@@ -52,11 +46,7 @@ export class ReopenRequestAdminService {
     this.logger = logger ?? createNullLogger();
   }
 
-  /**
-   * Group-scoped reopen-request list for the Admin Panel "Reopen Requests"
-   * tab and the head dashboard card. A head sees only its own group's
-   * requests; admin scope is global.
-   */
+  // Head sees own group only; admin scope is global.
   async listReopenRequests(
     input: ListReopenRequestsArgs,
   ): Promise<ReopenRequestListItem[]> {
@@ -67,19 +57,13 @@ export class ReopenRequestAdminService {
     return rows.map(toReopenRequestListItem);
   }
 
-  /** Group-scoped pending-reopen count — same group scope as the list. */
   async pendingReopenCount(session: UserSession): Promise<{ count: number }> {
     const count = await this.repository.countPendingReopenRequests(session);
     return { count };
   }
 
-  /**
-   * Decide a reopen request (approve/reject). Race-safe against a second
-   * decider (head + admin can both act) — see
-   * `admin-reopen-request-lifecycle.ts` for the compare-and-set transaction.
-   * Only a winning, real decision increments the funnel metric, AFTER the
-   * transaction commits.
-   */
+  // Race-safe CAS in admin-reopen-request-lifecycle; funnel metric only after
+  // a real winning decision commits.
   async respondReopenRequest(
     input: RespondReopenRequestArgs,
   ): Promise<RespondReopenRequestResult> {
@@ -95,14 +79,11 @@ export class ReopenRequestAdminService {
       decidedBy: input.decidedBy,
       session: input.session,
     });
-    // Loser of a concurrent decision: changed nothing. A 409 CONFLICT is the
-    // honest code (the request slipped out from under this call); no funnel
-    // metric.
+    // Concurrent loser: 409, no funnel metric.
     if (outcome.kind === "already-processed") {
       throw new AdminReopenRequestAlreadyProcessedError("Already processed.");
     }
-    // Stale auto-close: the request is now terminal and out of the pending
-    // queue; report it without skewing the funnel.
+    // Stale auto-close: terminal, out of pending, no funnel skew.
     if (outcome.kind === "stale") {
       return { success: true, decision: "rejected", staleAutoClosed: true };
     }

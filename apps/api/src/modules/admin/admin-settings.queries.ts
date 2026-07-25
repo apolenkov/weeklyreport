@@ -12,16 +12,7 @@ import {
   workingDaysToPrisma,
 } from "./admin-enum-mappers";
 
-/**
- * AppSettings domain queries. The facade class delegates
- * getSettings/updateSettings here; the screaming-snake
- * `WorkingDays`/`ReminderAudience` enums are translated at this boundary
- * (single point) so callers see only lowercase-hyphen.
- */
-
-/**
- * Map a Prisma `AppSettings` row to the wire shape.
- */
+// Enum translate at this boundary so callers see only lowercase-hyphen.
 function rowToAppSettings(row: {
   autoCreatePeriods: boolean;
   defaultDeadlineDays: number;
@@ -34,7 +25,6 @@ function rowToAppSettings(row: {
   allowLateSubmissions: boolean;
   autoPublishAfterDeadline: boolean;
   autoArchiveWeeksAfterPublish: number;
-  // period-cycle knobs
   deadlineTime: string;
   allowReopenAfterPublish: boolean;
   reopenWindowHours: number;
@@ -72,7 +62,6 @@ export async function getSettings(prisma: PrismaService): Promise<AppSettings> {
   return rowToAppSettings(row);
 }
 
-/** Count of active `TelegramBinding` rows, for the Settings → Integrations sub-tab. */
 export async function countActiveTelegramBindings(
   prisma: PrismaService,
 ): Promise<number> {
@@ -83,8 +72,6 @@ export async function updateSettings(
   prisma: PrismaService,
   data: Partial<AppSettings>,
 ): Promise<AppSettings> {
-  // Translate enum fields explicitly (mon-fri → MON_FRI, etc.)
-  // before handing the payload to Prisma. Other fields pass through.
   const dbData: Record<string, unknown> = {};
   if (data.autoCreatePeriods !== undefined)
     dbData.autoCreatePeriods = data.autoCreatePeriods;

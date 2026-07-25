@@ -14,10 +14,6 @@ import {
   type TargetReportState,
 } from "./carry-over.service";
 
-// ---------------------------------------------------------------------------
-// Fixture IDs
-// ---------------------------------------------------------------------------
-
 const sourceReportId = "aaaa0000-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const targetReportId = "bbbb0000-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
@@ -27,10 +23,6 @@ const leadGammaId = "33330000-3333-4333-8333-333333333333";
 
 const projectAlphaId = "cccc0000-cccc-4ccc-8ccc-cccccccccccc";
 const projectBetaId = "dddd0000-dddd-4ddd-8ddd-dddddddddddd";
-
-// ---------------------------------------------------------------------------
-// Fixture section builder
-// ---------------------------------------------------------------------------
 
 function makeSection(
   overrides: Partial<ReportSectionReadModel> & {
@@ -58,10 +50,6 @@ function makeSection(
     ...overrides,
   };
 }
-
-// ---------------------------------------------------------------------------
-// Source sections with varied item types
-// ---------------------------------------------------------------------------
 
 const sourceAlpha: ReportSectionReadModel = makeSection({
   reportSectionId: "a1a10000-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
@@ -175,10 +163,6 @@ const sourceGamma: ReportSectionReadModel = makeSection({
   decisions: [],
 });
 
-// ---------------------------------------------------------------------------
-// In-memory repository factory
-// ---------------------------------------------------------------------------
-
 function createInMemoryRepository(opts: {
   sourceSections: ReportSectionReadModel[];
   targetSections: ReportSectionReadModel[];
@@ -254,10 +238,6 @@ function makeTargetSection(
     decisions: [],
   });
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe("CarryOverService — contract tests", () => {
   // -----------------------------------------------------------------------
@@ -560,13 +540,9 @@ describe("CarryOverService — contract tests", () => {
     expect(result.targetSection.decisions).toHaveLength(0);
   });
 
-  // -----------------------------------------------------------------------
-  // P0/P1 Regression — carry-over edge cases
-  // -----------------------------------------------------------------------
-
   it("carry-over creates items in target section", async () => {
     const target = makeTargetSection(sourceAlpha);
-    expect(target.items).toHaveLength(0); // target starts empty
+    expect(target.items).toHaveLength(0);
 
     const repo = createInMemoryRepository({
       sourceSections: [sourceAlpha],

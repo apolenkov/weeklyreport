@@ -14,12 +14,7 @@ const TTL_SECONDS = 3600;
 // root, so the shared cache adds no key prefix; invalidateAll SCANs the root.
 const PREFIX = "customreport:analytics:";
 
-/**
- * Read-through Redis cache for the analytics namespace — a thin domain wrapper
- * over the shared cache. Keys arrive already namespaced from AnalyticsService.
- * invalidateAll (SCAN + DEL over the prefix) is called from every publish path
- * and from reopen via constructor-injected ports.
- */
+// invalidateAll is called from every publish path and from reopen.
 @Injectable()
 export class AnalyticsCache implements AnalyticsCachePort, OnModuleDestroy {
   private readonly cache: RedisReadThroughCache;

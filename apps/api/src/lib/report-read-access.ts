@@ -3,18 +3,9 @@ import type { UserSession } from "@customreport/shared";
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter } from "./group-scope.js";
 
-/**
- * Authorizes on the same group-scope read the report surfaces apply,
- * re-evaluated per request — never on a stored grant such as an export job's
- * `requestedBy`, which is baked into the row and would let a viewer keep
- * pulling bytes after their `ViewerGroupAccess` is revoked.
- *
- * Reuses `groupScopeFilter`: a caller is authorized when the report has at
- * least one section authored within the caller's group scope. A viewer with
- * no (or revoked) access collapses to the `{ id: { in: [] } }` zero-row
- * filter, so no section matches and access is denied — mirroring the empty
- * report the read path serves such a viewer. `admin` reads any report.
- */
+// Per-request group-scope re-check — not a stored grant (e.g. export job
+// requestedBy), so revoked ViewerGroupAccess cannot keep reading bytes.
+// Admin bypasses scope; empty scope collapses to zero-row deny.
 export async function canReadReport(
   session: UserSession,
   reportId: string,

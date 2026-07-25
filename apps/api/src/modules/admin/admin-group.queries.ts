@@ -9,20 +9,11 @@ import type { Prisma } from "@prisma/client";
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation";
 
-/**
- * ReportingGroup + StageAssignment domain queries. `ensureFallbackReportingGroup`
- * is also consumed by the snapshot domain (saveSnapshot), so it is exported.
- */
-
 const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
 const DEFAULT_REPORTING_GROUP_NAME = "Core Development";
 
-/**
- * Accepts the transaction client so it can run under `saveSnapshot`'s
- * `$transaction` (its `reportingGroup.upsert` must not commit ahead of a
- * later-phase failure). The full PrismaService is structurally assignable, so
- * the targeted per-entity callers can still pass `this.prisma` directly.
- */
+// TransactionClient so saveSnapshot upsert cannot commit ahead of a later failure.
+// PrismaService is structurally assignable for non-transaction callers.
 export async function ensureFallbackReportingGroup(
   prisma: Prisma.TransactionClient,
 ): Promise<string> {
@@ -94,14 +85,8 @@ const STAGE_ASSIGNMENT_RELATIONS = {
   user: { select: { name: true } },
 } satisfies Prisma.StageAssignmentInclude;
 
-/**
- * Writes the assignment idempotently against the `stageId_projectId` unique
- * constraint. A reassign only ever changes the assignee, so `update` touches
- * `userId` only. Prisma's `upsert` on this secondary compound key is not a
- * native `INSERT ... ON CONFLICT`, so two concurrent first-assigns of the same
- * pair still race the constraint; the loser catches its own P2002 and resolves
- * to the update path rather than surfacing a raw 500.
- */
+// Reassign updates userId only. Prisma upsert on this compound key is not
+// native ON CONFLICT, so concurrent first-assigns race P2002 → loser updates.
 async function upsertStageAssignmentRow(
   prisma: PrismaService,
   data: StageAssignmentInput,
@@ -181,11 +166,7 @@ export async function listStageAssignments(
   );
 }
 
-/**
- * Full SDLC stage catalogue. Used by the Stage Assignment editor so it can
- * render *every* stage (including unassigned ones), not just the stages that
- * already have an assignment row for the project.
- */
+// Full catalogue including unassigned stages (not just rows that already exist).
 export async function listStages(
   prisma: PrismaService,
 ): Promise<{ id: string; name: string; sortOrder: number }[]> {
@@ -195,11 +176,7 @@ export async function listStages(
   });
 }
 
-/**
- * Per-project assignment count for the products-tab "X/7 stages" header.
- * Light query (single GROUP BY) so we can render the count without loading
- * every assignment row.
- */
+// GROUP BY only — products-tab header without loading every assignment row.
 export async function listStageAssignmentCounts(
   prisma: PrismaService,
 ): Promise<{ projectId: string; count: number }[]> {

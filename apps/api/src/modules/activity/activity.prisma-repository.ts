@@ -103,17 +103,7 @@ const sortActivityRows = (rows: readonly ActivityLiveRow[]) =>
 export class ActivityPrismaRepository implements ActivityRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Assemble the activity rows for the head dashboard panel.
-   *
-   * 1. Load the report selected by the shared leadership lifecycle resolver.
-   * 2. Load every scoped lead once.
-   * 3. Load every scoped section for the period, joining items /
-   *    risks / decisions / priorities so we can compute counts and the
-   *    last-edit timestamp without N round-trips.
-   * 4. Map leads → rows (some may have no section yet → status=draft,
-   *    counts=0, lastEditAt=null).
-   */
+  // Single join of sections+children avoids N round-trips for counts and last-edit.
   async getLiveActivity(
     reportId: string | null,
     session: UserSession,

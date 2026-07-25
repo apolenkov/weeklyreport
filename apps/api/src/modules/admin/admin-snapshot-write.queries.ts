@@ -42,10 +42,8 @@ async function applyGroupHeads(
   tx: Prisma.TransactionClient,
   groups: AdminSnapshot["groups"],
 ): Promise<void> {
-  // Runs AFTER upsertUsers so every referenced head's User row exists.
-  // upsertGroups creates/updates the group rows first but deliberately omits
-  // headUserId: groups precede users in the payload, so on create the head's
-  // User row does not exist yet and the FK would fail.
+  // After upsertUsers: groups precede users, so headUserId was omitted earlier
+  // (FK would fail on create while the head User row did not exist yet).
   for (const group of groups) {
     await tx.reportingGroup.update({
       where: { id: group.id },
@@ -144,10 +142,8 @@ async function upsertPeriods(
   tx: Prisma.TransactionClient,
   periods: AdminSnapshot["periods"],
 ): Promise<{ newlyCreatedPeriods: { id: string; deadline: Date }[] }> {
-  // Track which periods are NEW so the applicator runs on them AFTER the
-  // transaction commits. Updates do not re-trigger it — policies attach once
-  // at create. Deadline-less periods (ruling F16) are excluded: reminder
-  // offsets are deadline-relative, so the applicator has nothing to schedule.
+  // New periods only (post-commit applicator); deadline-less excluded
+  // because reminder offsets are deadline-relative.
   const newlyCreatedPeriods: { id: string; deadline: Date }[] = [];
   for (const period of periods) {
     const { created } = await writePeriodRow(tx, period);
@@ -215,15 +211,9 @@ async function upsertReminderRules(
   }
 }
 
-/**
- * Whole-snapshot restore. All DB work runs in ONE interactive
- * transaction so a mid-write failure rolls the entire restore back instead of
- * leaving a partial org state. The restore is ADDITIVE-ONLY: it upserts every
- * supplied row and never deletes/archives a row for being absent from the
- * payload — removals route through the targeted `remove*` primitives. The
- * optional PolicyApplicatorService materializes derived rules on newly-created
- * periods, strictly AFTER the transaction commits.
- */
+// Additive-only whole-snapshot restore in one txn; removals use remove* primitives.
+// Policy applicator runs post-commit on newly created periods.
+// Spec: openspec/specs/admin-snapshot-restore
 export async function saveSnapshot(
   prisma: PrismaService,
   policyApplicator: PolicyApplicatorService | undefined,
@@ -232,10 +222,7 @@ export async function saveSnapshot(
   const { newlyCreatedPeriods } = await prisma.$transaction(async (tx) => {
     const currentRules = await tx.reminderRule.findMany();
 
-    // Upsert reporting groups before users so required User.reportingGroupId
-    // can be validated by the database. The fallback group's own upsert
-    // (ensureFallbackReportingGroup) runs under `tx` too, so it cannot commit
-    // ahead of a later-phase failure.
+    // Groups before users (User.reportingGroupId FK); fallback upsert under tx.
     await upsertGroups(tx, snapshot.groups);
 
     const fallbackReportingGroupId =
@@ -254,14 +241,9 @@ export async function saveSnapshot(
     return periods;
   });
 
-  // Materialize one ReminderRule per active policy on each newly-created
-  // Period. Run AFTER the transaction commits so a failure in the applicator
-  // (e.g. an unreachable Prisma engine) cannot roll back the periods. Two
-  // restore-specific guards: pairs the snapshot itself just wrote are
-  // excluded (re-materializing would clobber the restored status/fireAt —
-  // e.g. force a deliberately paused rule back to active), and `now` is
-  // passed so an old snapshot's already-elapsed instants are skipped instead
-  // of dispatching stale reminders on the next tick.
+  // Post-commit so applicator failure cannot roll back periods. Skip pairs the
+  // snapshot already wrote (would clobber restored status) and pass `now` so
+  // already-elapsed instants from an old snapshot are not re-dispatched.
   if (policyApplicator) {
     const restoredPolicyIdsByReport = new Map<string, Set<string>>();
     for (const rule of snapshot.reminderRules) {

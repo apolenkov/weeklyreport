@@ -135,14 +135,7 @@ describe("ArchiveService", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Viewer-scoped read filter at the service layer.
-// Defense-in-depth: even if a future router mis-wires the procedure, the
-// service propagates a `status: 'published'` filter to the repository for
-// viewer sessions. Heads / leads / admins continue to receive an empty
-// filter (the repo's hardcoded floor still keeps them on published rows).
-// ---------------------------------------------------------------------------
-
+// Service must pass status:published for viewers even if a router mis-wires.
 describe("viewer scoping", () => {
   function createSpyRepository(): {
     repo: ArchiveRepository;

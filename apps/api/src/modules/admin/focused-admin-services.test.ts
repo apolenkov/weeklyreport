@@ -31,11 +31,7 @@ const adminSession: UserSession = {
   activeReportSectionId: null,
 };
 
-/**
- * Drive the live `admin.snapshot` procedure (adminProcedure, admin-only) so the
- * gate is asserted against the wired path, not a parallel router copy. Heads get
- * FORBIDDEN here — the admin panel is admin-only.
- */
+// Drive the live adminProcedure, not a router copy — heads get FORBIDDEN.
 function buildAdminCaller(service: SnapshotAdminService, session: UserSession) {
   const deps = { snapshotAdminService: service } as unknown as Parameters<
     typeof createAppRouter
@@ -910,10 +906,6 @@ describe("admin.snapshot (live adminProcedure)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// getSettings / updateSettings
-// ---------------------------------------------------------------------------
-
 describe("SnapshotAdminService — settings", () => {
   it("returns default settings", async () => {
     const service = new SnapshotAdminService(createRepository(initialSnapshot));
@@ -922,7 +914,6 @@ describe("SnapshotAdminService — settings", () => {
     expect(result).toEqual(defaultSettings);
   });
 
-  // the 9 new fields round-trip through partial update.
   it("round-trips the 9 new AppSettings fields", async () => {
     const service = new SnapshotAdminService(createRepository(initialSnapshot));
 
@@ -978,10 +969,6 @@ describe("SnapshotAdminService — settings", () => {
     expect(result.defaultDeadlineDays).toBe(3);
   });
 });
-
-// ---------------------------------------------------------------------------
-// saveStageAssignment / deleteStageAssignment / listStageAssignments
-// ---------------------------------------------------------------------------
 
 describe("ProjectAdminService — stage assignments", () => {
   const USER_ID = "11111111-1111-4111-8111-111111111111";
@@ -1046,10 +1033,6 @@ describe("ProjectAdminService — stage assignments", () => {
     expect(list[0]?.userId).toBe("44444444-4444-4444-8444-444444444444");
   });
 });
-
-// ---------------------------------------------------------------------------
-// listPeriodsByState + archivePeriod + unarchivePeriod
-// ---------------------------------------------------------------------------
 
 const PERIOD_ID_OPEN = "11111111-1111-4111-8111-111111111101";
 const PERIOD_ID_PUBLISHED_FRESH = "11111111-1111-4111-8111-111111111102";
@@ -1264,10 +1247,6 @@ describe("PeriodAdminService — archivePeriod / unarchivePeriod", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Group <-> Product M:M surface
-// ---------------------------------------------------------------------------
-
 describe("ProjectAdminService — Group <-> Product M:M", () => {
   const GROUP_A = "11111111-1111-4111-8111-111111111aaa";
   const GROUP_B = "11111111-1111-4111-8111-111111111bbb";
@@ -1468,14 +1447,8 @@ describe("ProjectAdminService — Group <-> Product M:M", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// createPeriodManual — admin escape hatch
-// ---------------------------------------------------------------------------
-
 function makeCreatePeriodRepository(opts: {
-  /** Pre-seeded periods used by the overlap gate. */
   seedPeriods?: { id: string; periodStart: Date; periodEnd: Date }[];
-  /** Settings to override; falls back to defaultSettings. */
   settings?: AppSettings;
 }): AdminRepository & {
   // Test-only inspector for the row the service asked the repo to mint.
@@ -1675,10 +1648,6 @@ describe("PeriodAdminService — createPeriodManual", () => {
     ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
   });
 });
-
-// ---------------------------------------------------------------------------
-// updatePeriodManual — admin escape hatch for in-place edits
-// ---------------------------------------------------------------------------
 
 interface EditableRow {
   id: string;

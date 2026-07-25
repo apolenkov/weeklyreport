@@ -123,15 +123,7 @@ function createSamlCallbackHandler(deps: AuthRouteDeps): RequestHandler {
 
 const HTTP_FORBIDDEN = 403;
 
-/**
- * Every frontend origin logout accepts, as serialized URL origins. Browsers
- * send the Origin header in bare origin form (scheme://host[:port], never a
- * trailing slash or path), while FRONTEND_URL/FRONTEND_URLS are full URLs —
- * comparing the raw strings 403s every legitimate logout the moment the env
- * carries a trailing slash, and ignoring FRONTEND_URLS breaks logout for any
- * secondary CORS-whitelisted origin. Unparseable entries are dropped
- * (fail closed).
- */
+// Normalize FRONTEND_URL(S) to bare origins; raw string compare fails on trailing slash.
 export function deriveLogoutOrigins(
   frontendUrl: string,
   frontendUrlsCsv: string | undefined,
@@ -158,10 +150,8 @@ export function createLogoutHandler(
   },
 ): RequestHandler {
   return (request: Request, res: Response) => {
-    // Reject a cross-site auto-submit logout: a present Origin header must be
-    // one of the configured frontend origins. A missing Origin (same-origin
-    // form POST, server-to-server) passes through, matching revalidate-org's
-    // CSRF rule.
+    // Present Origin must be a configured frontend origin; missing Origin passes
+    // (same-origin form / server-to-server), matching revalidate-org CSRF.
     const requestOrigin = request.headers.origin;
     if (
       requestOrigin !== undefined &&
@@ -171,10 +161,7 @@ export function createLogoutHandler(
       return;
     }
 
-    // Emit logout audit using whatever session shape was attached upstream.
-    // With no session, fall back to userId='anonymous' / role=null (not a fake
-    // "unknown" literal) so SIEM rules keyed on the Role enum or null see the
-    // no-session logout explicitly.
+    // No session → anonymous/null so SIEM sees no-session logout (not a fake role).
     const reqUser = (request as Request & { user?: UserSession }).user;
     deps.auditLogger.logout({
       userId: reqUser?.userId ?? "anonymous",
@@ -192,13 +179,8 @@ export function createLogoutHandler(
   };
 }
 
-/**
- * Explicit trace for a deployment without an IdP (dev-login only): the SAML
- * callback stays mounted but answers 503 instead of silently 404ing, so a
- * misdirected assertion reports "not configured", not "no such route". Only
- * POST /auth/saml/callback needs this — in the same posture GET
- * /auth/saml/login is always claimed first by the dev-login shortcut.
- */
+// Dev-login-only: callback stays mounted as 503 so misdirected assertions
+// report "not configured", not 404.
 export function createSamlUnavailableHandler(): RequestHandler {
   const HTTP_SERVICE_UNAVAILABLE = 503;
   return (_req, res) => {

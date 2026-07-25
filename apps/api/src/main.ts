@@ -17,19 +17,16 @@ if (process.env.SENTRY_DSN) {
     // Skip it so the NodeSDK owns tracing; Sentry stays error-capture only.
     skipOpenTelemetrySetup: true,
     environment: process.env.NODE_ENV ?? "development",
-    // correlate-errors-to-traces: stamp the active OTel span's id onto the
-    // error so the Bugsink event links to its Tempo trace. Overrides the
-    // random id Sentry pre-fills here (beforeSend runs after that fill).
+    // Stamp the active OTel span id so Bugsink links to the Tempo trace.
+    // Overrides the random id Sentry pre-fills (beforeSend runs after that fill).
     beforeSend: stampActiveTrace,
     // Bugsink stores errors only — never let a transaction reach it.
     beforeSendTransaction: () => null,
   });
 }
 
-// OTel bootstrap MUST run before any module that imports http /
-// express / prisma so the SDK can monkey-patch them. startOtel() is a
-// no-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set and OTEL_SDK_DISABLED
-// is not 'true'.
+// OTel must load before http/express/prisma so the SDK can monkey-patch them.
+// startOtel() no-ops unless OTEL_EXPORTER_OTLP_ENDPOINT is set and not disabled.
 import { startOtel } from "./infrastructure/otel/otel.bootstrap";
 
 const otelDecision = startOtel();
@@ -84,10 +81,8 @@ import { mountBullBoard } from "./infrastructure/bullmq/bull-board.module";
 import { createPdfDownloadHandler } from "./modules/pdf-export/index.js";
 
 async function bootstrap() {
-  // The dev-auth fence runs from AppModule.onApplicationBootstrap so every
-  // NestFactory.create caller is protected uniformly (see app.module.ts).
-  // validateEnv() exits the process on any missing/invalid required var, so past
-  // this point every value is present and valid; the schema has no defaults.
+  // Dev-auth fence is in AppModule.onApplicationBootstrap (all NestFactory callers).
+  // validateEnv() exits on missing/invalid required vars; schema has no defaults.
   const env = validateEnv();
 
   // Pre-bootstrap logger (no CLS yet) routed through NestAppLoggerAdapter so all
@@ -120,10 +115,8 @@ async function bootstrap() {
   app.use(helmet());
   app.use(cookieParser());
 
-  // Both middlewares MUST run here (not via NestModule.configure): Nest's
-  // MiddlewareConsumer only wraps controller routes, so the raw Express handlers
-  // registered below (/trpc, SAML/dev-login) would otherwise see no CLS scope
-  // and the logger would fall back to 'no-context' instead of a real request id.
+  // Must run here, not NestModule.configure: MiddlewareConsumer skips raw Express
+  // handlers (/trpc, SAML), so without this CLS would fall back to 'no-context'.
   app.use(new ClsMiddleware({ generateId: false, saveReq: false }).use);
   const correlationIdMiddleware = app.get(CorrelationIdMiddleware);
   app.use(correlationIdMiddleware.use.bind(correlationIdMiddleware));
@@ -192,17 +185,12 @@ async function bootstrap() {
 
   const expressApp = app.getHttpAdapter().getInstance() as express.Express;
 
-  // Caddy is the only edge proxy and sets X-Forwarded-For; trusting exactly one
-  // hop makes req.ip the real client IP. Single hop = `1`, not `true` (which
-  // would trust a forged header from any direct caller) — safe only while the
-  // API is reachable solely through Caddy: the direct API host port must be
-  // closed before this is relied on in production.
+  // Trust exactly one hop (Caddy's X-Forwarded-For). `true` would accept a forged
+  // header from any direct caller — safe only while the API host port is closed.
   expressApp.set("trust proxy", 1);
 
-  // Authenticated, authorized PDF handler. The frontend opens the relative
-  // `/pdfs/{jobId}.pdf` same-origin so the session cookie rides along and the
-  // handler authorizes the caller against the bound report — no unauthenticated
-  // path to the bytes remains on any port.
+  // Same-origin /pdfs/{jobId}.pdf so the session cookie rides; handler authorizes
+  // against the bound report — no unauthenticated path to the bytes.
   const pdfDir = resolve(env.PDF_OUTPUT_DIR);
   mkdirSync(pdfDir, { recursive: true });
   const pdfAuthController = createAuthController(process.env);
@@ -237,11 +225,8 @@ async function bootstrap() {
   // app.listen so it runs ahead of the Nest controller handling the beacon.
   expressApp.use("/api/web-vitals", vitalsLimiter);
 
-  // No SAML env at all → dev-login-only posture (env.schema's production fence
-  // forbids that combination in prod; outside prod the throw inside
-  // mountAuthRoutes refuses to boot when dev-login is off too). ANY SAML var
-  // present → build the real strategy, where a partial set fails loud via
-  // requireEnv naming the missing variable.
+  // No SAML env → dev-login only (prod fence + mountAuthRoutes refuse boot if
+  // both off). Any SAML var present → real strategy; partial set fails via requireEnv.
   const samlStrategy = hasSamlEnv(process.env)
     ? createSamlStrategy(createSamlStrategyOptions(process.env))
     : undefined;
@@ -252,10 +237,8 @@ async function bootstrap() {
   }
   const authCtrl = createAuthController(process.env);
   const auditLogger = createAuditLogger(logger);
-  // Gate all /auth/* behind the strict auth limiter, registered BEFORE
-  // mountAuthRoutes so it covers every route the module mounts. Skip
-  // /auth/dev-login — gated by AUTH_DEV_MODE (dev-only), not a brute-force
-  // surface, and 5/min would block E2E suites.
+  // Auth limiter before mountAuthRoutes so every /auth/* route is covered.
+  // Skip /auth/dev-login: AUTH_DEV_MODE-gated, not brute-force; 5/min blocks E2E.
   expressApp.use("/auth", ((req, res, next) => {
     if (req.path === "/dev-login") {
       next();
@@ -286,11 +269,8 @@ async function bootstrap() {
   logger.info(`API server listening on port ${env.PORT}`);
 }
 
-// A boot-time throw must terminate the process. `void bootstrap()` would rely
-// on Node's default unhandled-rejection crash, which any 'unhandledRejection'
-// listener (e.g. Sentry's warn-mode integration, installed at module load when
-// SENTRY_DSN is set) silently disables — leaving a zombie that never listens
-// yet never exits, so a supervisor sees no crash-loop.
+// Explicit catch: void bootstrap() relies on unhandled-rejection crash, which
+// Sentry's listener (when SENTRY_DSN is set) disables — leaving a zombie process.
 bootstrap().catch((error: unknown) => {
   console.error(error);
   process.exit(1);

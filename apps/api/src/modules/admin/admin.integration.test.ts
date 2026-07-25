@@ -194,11 +194,7 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(restoredUser.isActive).toBe(true);
   });
 
-  // add-structured-user-name (review finding P2): the denormalized `User.name`
-  // is recomputed from the structured parts SERVER-SIDE on every snapshot write,
-  // so a client/import that supplies a name disagreeing with the parts cannot
-  // persist drift — the data layer owns the `name === composeName(parts)`
-  // invariant, not just the web form mapper.
+  // Server recomputes User.name from structured parts so clients cannot persist drift.
   it("recomputes a drifted name from the structured parts on saveSnapshot", async () => {
     const snapshot = await repo.getSnapshot();
 
@@ -342,19 +338,10 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(unowned?.group).toBeNull();
   });
 
-  // -------------------------------------------------------------------
-  // A snapshot getSnapshot → saveSnapshot round-trip MUST preserve a Report's
-  // complete governed lifecycle field set, so a restored period is never left
-  // in a state the `period-dual-state` invariant forbids.
-  // -------------------------------------------------------------------
+  // getSnapshot → saveSnapshot must preserve the full governed lifecycle set
+  // (period-dual-state). CREATE-branch cases delete the row first.
 
-  // These restore through the CREATE branch (capture → delete → saveSnapshot
-  // re-creates the row), which is where the data loss the proposal describes
-  // lives: the old create branch wrote only `status` and defaulted
-  // periodState='open' even for a published/archived snapshot. Stubbing
-  // `resolveLifecycle` to `{ status }` turns both assertions red.
-
-  it("re-creates a published period with its full lifecycle, not flattened (fix-snapshot-lifecycle-restore)", async () => {
+  it("re-creates a published period with its full lifecycle, not flattened", async () => {
     const publishedAt = new Date("2026-04-12T10:00:00.000Z");
     // Promote the seeded period to a fully-published lifecycle state.
     await prisma.report.update({
@@ -393,7 +380,7 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(restored.publishedById).toBe(testData.head.id);
   });
 
-  it("re-creates a reopened period keeping its three distinct values (fix-snapshot-lifecycle-restore)", async () => {
+  it("re-creates a reopened period keeping its three distinct values", async () => {
     const reopenedAt = new Date("2026-04-20T09:00:00.000Z");
     // A reopened period is the canonical legitimately-divergent row.
     const reopened = await prisma.report.create({
@@ -430,10 +417,9 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(restored.reopenedAt?.toISOString()).toBe(reopenedAt.toISOString());
   });
 
-  it("repairs a divergent live period via the update branch (fix-snapshot-lifecycle-restore)", async () => {
-    // Capture a healthy published row, then corrupt the LIVE row before
-    // restoring. The old update branch wrote only `status`, leaving the
-    // corruption in place; the fix overwrites the full governed set.
+  it("repairs a divergent live period via the update branch", async () => {
+    // Capture a healthy published row, then corrupt the live row before restore;
+    // the update branch must overwrite the full governed set.
     await prisma.report.update({
       where: { id: testData.report.id },
       data: {
@@ -460,14 +446,9 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(restored.periodStatus).toBe("published");
   });
 
-  // -------------------------------------------------------------------
-  // admin-snapshot-head-restore: the whole-snapshot restore path must apply
-  // each group's `headUserId`. upsertGroups writes name/description/archived
-  // only (a group may be upserted before its head's User row exists), so a
-  // second pass after upsertUsers sets the head assignments.
-  // -------------------------------------------------------------------
+  // headUserId is applied in a second pass after users exist (groups upsert first).
 
-  it("restores a group's headUserId from the snapshot (admin-snapshot-head-restore)", async () => {
+  it("restores a group's headUserId from the snapshot", async () => {
     const snapshot = await repo.getSnapshot();
     // Point the seeded group at the head user (a valid head candidate).
     const groups = snapshot.groups.map((g) =>
@@ -483,7 +464,7 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(group.headUserId).toBe(testData.head.id);
   });
 
-  it("clears a previously-headed group's headUserId to null on restore (admin-snapshot-head-restore)", async () => {
+  it("clears a previously-headed group's headUserId to null on restore", async () => {
     // Seed a head on the live group first.
     await prisma.reportingGroup.update({
       where: { id: TEST_IDS.group },
@@ -504,7 +485,7 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(group.headUserId).toBeNull();
   });
 
-  it("applies a changed headUserId into an existing DB on restore (admin-snapshot-head-restore)", async () => {
+  it("applies a changed headUserId into an existing DB on restore", async () => {
     // Start with the head user leading the group, in the live DB.
     await prisma.reportingGroup.update({
       where: { id: TEST_IDS.group },
@@ -532,10 +513,8 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(group.headUserId).toBe(testData.lead.id);
   });
 
-  // fix-snapshot-restore-policyid: getSnapshot reads a reminder rule's
-  // policyId FK, but the restore path built `ruleData` without it, so a
-  // policy-derived rule detached from its policy on every restore.
-  it("preserves a reminder rule's policyId through a getSnapshot -> saveSnapshot restore (fix-snapshot-restore-policyid)", async () => {
+  // Restore must carry rule.policyId so derived rules stay attached to policies.
+  it("preserves a reminder rule's policyId through a getSnapshot -> saveSnapshot restore", async () => {
     const policyId = "d1111111-1111-4111-8111-111111111111";
     const ruleId = "d2222222-2222-4222-8222-222222222222";
 
@@ -564,9 +543,7 @@ describe("AdminPrismaRepository (integration)", () => {
     });
 
     const snapshot = await repo.getSnapshot();
-    // Drop BOTH the rule and its policy: a fresh-database restore must
-    // re-create the policy first or the rule's policyId FK cannot resolve
-    // (the original fix without policy restore crashed here with P2003).
+    // Drop both so a fresh-DB restore must re-create policy before the rule FK.
     await prisma.reminderRule.delete({ where: { id: ruleId } });
     await prisma.reminderPolicy.delete({ where: { id: policyId } });
 
@@ -594,11 +571,7 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(reRestored.policyId).toBe(policyId);
   });
 
-  // Council finding (Fable + Codex, independently): the post-commit
-  // applicator's (reportId, policyId) upsert used to clobber restored rows —
-  // forcing a deliberately paused rule back to `active` with a recomputed
-  // fireAt on every fresh-DB restore. The restore now excludes the pairs its
-  // own transaction wrote.
+  // Post-commit applicator must not re-materialize pairs the restore already wrote.
   it("fresh-DB restore keeps a snapshot rule paused instead of re-materializing it active", async () => {
     const policyId = "d3333333-3333-4333-8333-333333333333";
     const ruleId = "d4444444-4444-4444-8444-444444444444";
@@ -664,7 +637,7 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(pairRules).toHaveLength(1);
   });
 
-  it("attachProductToGroup rejects moving a product from another group (UAT v7)", async () => {
+  it("attachProductToGroup rejects moving a product from another group", async () => {
     await prisma.groupProduct.deleteMany({});
     const leadGroupId = expectDefined(testData.lead.reportingGroupId);
     const otherGroup = await prisma.reportingGroup.create({
@@ -691,10 +664,7 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(groups.map((g) => g.id)).toEqual([testData.lead.reportingGroupId]);
   });
 
-  // cleanup-dead-enum-states: `ReminderRuleStatus.paused` is written by
-  // cascading a policy's `active` flag onto its derived rules. The pause
-  // toggle lives on the policy (the only editable surface); the derived
-  // ReminderRule rows are read-only and mirror the policy state.
+  // Policy active cascades to derived rules; pause toggle lives on the policy only.
   describe("reminder policy active flag cascades to derived rule status", () => {
     const policyId = "c1111111-1111-4111-8111-111111111111";
     const ruleId = "c2222222-2222-4222-8222-222222222222";
@@ -766,11 +736,7 @@ describe("AdminPrismaRepository (integration)", () => {
     });
   });
 
-  // -------------------------------------------------------------------
-  // transactional-snapshot-restore: the multi-entity restore is atomic
-  // (all-or-nothing) and per-entity admin mutations are targeted by id
-  // (never reconcile an unrelated, concurrently-inserted row away).
-  // -------------------------------------------------------------------
+  // Multi-entity restore is atomic; targeted mutations never reconcile concurrent rows away.
 
   const NONEXISTENT_REPORT_ID = "a0000000-0000-4000-a000-0000000009ff";
   const SECOND_PROJECT_ID = "a0000000-0000-4000-a000-000000000200";
@@ -787,7 +753,7 @@ describe("AdminPrismaRepository (integration)", () => {
     samlId: "jit-test",
   };
 
-  it("saveSnapshot is additive-only: rows absent from the payload survive (5.7)", async () => {
+  it("saveSnapshot is additive-only: rows absent from the payload survive", async () => {
     // Capture the snapshot, then insert rows that are NOT part of it.
     const snapshot = await repo.getSnapshot();
     const extraUser = await prisma.user.create({
@@ -923,7 +889,7 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(await prisma.user.count({ where: { email } })).toBe(1);
   });
 
-  it("a concurrently-inserted user survives an unrelated targeted edit (5.4)", async () => {
+  it("a concurrently-inserted user survives an unrelated targeted edit", async () => {
     // A SAML just-in-time user lands while the admin holds a stale read; a
     // targeted project edit must not reconcile it away (it never reads users).
     const jit = await prisma.user.create({
@@ -950,7 +916,7 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(proj.name).toBe("Renamed Project");
   });
 
-  it("a mid-restore failure rolls the whole saveSnapshot back (5.3)", async () => {
+  it("a mid-restore failure rolls the whole saveSnapshot back", async () => {
     const snapshot = await repo.getSnapshot();
     // Rename the lead in an earlier phase, and add a reminder rule whose
     // reportId does not resolve so the LAST phase throws (FK P2003). The whole
@@ -991,7 +957,7 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(lead.name).toBe("Test Lead 1");
   });
 
-  it("removeUser honors the FK-reference guard (5.5)", async () => {
+  it("removeUser honors the FK-reference guard", async () => {
     // The seeded lead leads a project and authored a section → not deletable.
     await repo.removeUser(testData.lead.id);
     expect(
@@ -1009,7 +975,7 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(await prisma.user.findUnique({ where: { id: free.id } })).toBeNull();
   });
 
-  it("removeProject archives only the named row (5.5)", async () => {
+  it("removeProject archives only the named row", async () => {
     const second = await prisma.project.create({
       data: { id: SECOND_PROJECT_ID, name: "Second", leadId: testData.lead.id },
     });
@@ -1026,7 +992,7 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(untouched.archived).toBe(false);
   });
 
-  it("removeReminderRule deletes only the named row (5.5)", async () => {
+  it("removeReminderRule deletes only the named row", async () => {
     const ruleData = {
       kind: "deadline" as const,
       fireAt: new Date("2026-04-11T09:00:00.000Z"),
@@ -1054,7 +1020,7 @@ describe("AdminPrismaRepository (integration)", () => {
     ).not.toBeNull();
   });
 
-  it("upsertPeriod touches only the named period; a concurrent user survives (5.6)", async () => {
+  it("upsertPeriod touches only the named period; a concurrent user survives", async () => {
     const jit = await prisma.user.create({
       data: {
         ...jitUserData,
@@ -1082,11 +1048,9 @@ describe("AdminPrismaRepository (integration)", () => {
     );
   });
 
-  it("saveStageAssignment resolves two concurrent reassigns atomically, leaving one row (stage-assignment-upsert)", async () => {
-    // Both callers target the same stage/project pair with different assignees.
-    // The old findFirst-then-create raced: both saw no row, both created, and
-    // the loser raised a raw P2002. The composite-unique upsert must instead
-    // resolve to a single row with one of the two assignees.
+  it("saveStageAssignment resolves two concurrent reassigns atomically, leaving one row", async () => {
+    // Concurrent first-assigns of the same stage/project must leave one row
+    // (composite-unique upsert), not two creates with a raw P2002.
     const stage = await prisma.stage.create({
       data: { id: "a0000000-0000-4000-a000-000000000700", name: "Test Stage" },
     });
@@ -1116,7 +1080,7 @@ describe("AdminPrismaRepository (integration)", () => {
     );
   });
 
-  it("upsertPeriod that CREATES a period runs the post-commit applicator (5.6)", async () => {
+  it("upsertPeriod that CREATES a period runs the post-commit applicator", async () => {
     const applyToPeriod = vi.fn(() =>
       Promise.resolve({ created: 0, updated: 0, skipped: 0 }),
     );

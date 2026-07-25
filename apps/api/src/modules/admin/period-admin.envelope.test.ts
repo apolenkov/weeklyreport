@@ -47,7 +47,7 @@ describe("computePeriodPatch", () => {
     });
   });
 
-  it("treats a deadline null-clear as a change carrying `to: null` (ruling F16)", () => {
+  it("treats a deadline null-clear as a change carrying `to: null`", () => {
     const { data, diff } = computePeriodPatch(existing, { deadline: null });
     expect(data).toEqual({ deadline: null });
     expect(diff).toEqual({

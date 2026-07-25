@@ -8,17 +8,8 @@ import {
   type CarryOverService,
 } from "./carry-over.service";
 
-/**
- * Automatic carry-over runs when a period becomes OPEN — never for a
- * `scheduled` period, whose source is
- * still being edited and whose `(source, target)` dedupe key must not be
- * burned early. Three call sites share this orchestrator: the login
- * provisioning path, the scheduler's per-tick reconcile loop, and the manual
- * admin create. All of them rely on it being best-effort: it NEVER rejects,
- * so a carry failure cannot abort a login, a scheduler tick, or a period
- * create. Retry comes for free from the callers re-entering it (every login,
- * every daily tick) against the cheap execution-dedupe short-circuit.
- */
+// Best-effort OPEN-period carry only (never scheduled — would burn dedupe early).
+// Never rejects: carry failure must not abort login, scheduler tick, or period create.
 export interface AutoCarryOverDeps {
   repository: Pick<
     CarryOverRepository,
@@ -90,15 +81,7 @@ type AutoCarryOverPrisma = Pick<
   | "activityStatus"
 >;
 
-/**
- * Real-dependency wiring shared by the composition root and the scheduler.
- * Roster = distinct authors of the prior period's sections, filtered to
- * still-active users — a deactivated lead never logged in under the manual
- * flow, so their target section never existed and nothing was carried; the
- * filter preserves those effective semantics. Section materialization reuses
- * `ensureLeadSection` so carried sections get the same seeded
- * ProjectStatus/ActivityStatus rows a login-provisioned section gets.
- */
+// Active authors only; ensureLeadSection seeds the same status rows as login provision.
 export function buildAutoCarryOverDeps(input: {
   prisma: AutoCarryOverPrisma;
   repository: AutoCarryOverDeps["repository"];

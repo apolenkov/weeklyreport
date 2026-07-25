@@ -17,10 +17,6 @@ import {
   ArchiveService,
 } from "./archive.service";
 
-// ---------------------------------------------------------------------------
-// Fixture data
-// ---------------------------------------------------------------------------
-
 const headUserId = "00000000-0000-4000-8000-000000000001";
 
 const sectionLead1: ReportSectionReadModel = {
@@ -113,10 +109,6 @@ function makeDetail(
   };
 }
 
-// ---------------------------------------------------------------------------
-// In-memory repository
-// ---------------------------------------------------------------------------
-
 function createInMemoryRepository(
   summaries: ArchiveReportSummary[],
   details: Map<string, ArchiveReportDetail>,
@@ -156,15 +148,7 @@ function createInMemoryRepository(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe("ArchiveService — contract tests", () => {
-  // -----------------------------------------------------------------------
-  // listArchiveReports
-  // -----------------------------------------------------------------------
-
   describe("listArchiveReports", () => {
     it("returns empty array when no published reports", async () => {
       const repo = createInMemoryRepository([], new Map());
@@ -202,7 +186,6 @@ describe("ArchiveService — contract tests", () => {
       const reports = result.items;
 
       expect(reports).toHaveLength(1);
-      // Verify each report passes schema independently
       for (const report of reports) {
         expect(() => archiveReportSummarySchema.parse(report)).not.toThrow();
       }
@@ -251,7 +234,6 @@ describe("ArchiveService — contract tests", () => {
       const reports = result.items;
 
       expect(reports).toHaveLength(7);
-      // Verify descending sort
       for (let i = 0; i < reports.length - 1; i++) {
         expect(
           expectDefined(reports[i]).publishedAt.getTime(),
@@ -261,10 +243,6 @@ describe("ArchiveService — contract tests", () => {
       }
     });
   });
-
-  // -----------------------------------------------------------------------
-  // getArchiveReport
-  // -----------------------------------------------------------------------
 
   describe("getArchiveReport", () => {
     it("returns report detail when found", async () => {

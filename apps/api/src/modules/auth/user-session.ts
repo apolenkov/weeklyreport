@@ -27,13 +27,8 @@ const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
 // the name helpers treat as absent (canSave trims it, so it never re-saves).
 const SAML_STUB_FIRST_NAME_PLACEHOLDER = " ";
 
-/**
- * Thrown by `buildUserSession` when an email match's stored `samlId` and the
- * incoming profile's `samlId` are both present and differ — a reused email
- * now points at a different IdP identity. The caller's existing catch-all
- * (auth.routes.ts / dev-login.routes.ts) already turns any thrown error into
- * a failed login, so no separate wiring is needed for the refusal.
- */
+// Email match with both samlIds present and differing — reused email, different IdP identity.
+// Caller's catch-all already maps any throw to a failed login.
 export class SamlIdentityMismatchError extends Error {
   constructor(message: string) {
     super(message);
@@ -151,10 +146,7 @@ async function writeProvisionedUser(
     });
   } catch (error) {
     if (!isUserUniqueViolation(error)) throw error;
-    // A concurrent first-login won the create race. Re-resolve through the
-    // SAME guarded lookup the fast path uses: if the winner's row carries a
-    // different samlId for this email, the loser must be refused — not
-    // silently bound to the winner's identity/role/group.
+    // Create-race loser re-resolves; different samlId for this email must refuse.
     const won = await resolveExistingUser(prisma, profile);
     if (!won) throw error;
     return won;
@@ -184,10 +176,7 @@ export async function buildUserSession(
       })
     : null;
 
-  // Lead users: find or auto-create their section in the active (draft)
-  // report. Ordered the same way the report-only fallback below already is:
-  // nothing at the DB layer guarantees only one report is ever `draft`, so
-  // without this the pick would follow insertion order, not report recency.
+  // Multiple draft reports possible; order by report.createdAt so pick is recency, not insert order.
   const existingSection = await prisma.reportSection.findFirst({
     where: { authorId: user.id, report: { status: "draft" } },
     select: { id: true, reportId: true },

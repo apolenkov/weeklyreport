@@ -14,11 +14,6 @@ import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { extractRecipientEmail } from "../reminders/index.js";
 import { audienceFromPrisma } from "./admin-enum-mappers";
 
-/**
- * AdminSnapshot read path. The write path lives in
- * `admin-snapshot-write.queries.ts`.
- */
-
 export async function getSnapshot(
   prisma: PrismaService,
 ): Promise<AdminSnapshot> {
@@ -64,7 +59,6 @@ export async function getSnapshot(
         role: u.role,
         reportingGroupId: u.reportingGroupId ?? null,
         reportingGroupName: u.reportingGroup?.name ?? null,
-        // surface the soft-deactivation flag.
         isActive: u.isActive,
       }),
     ),
@@ -84,9 +78,7 @@ export async function getSnapshot(
         periodEnd: r.periodEnd,
         deadline: r.deadline,
         status: r.status,
-        // Capture the complete governed
-        // lifecycle set so restore can reinstate it verbatim. `findMany()`
-        // above already returns every column — no query change.
+        // Full governed lifecycle set so restore can reinstate it verbatim.
         periodState: r.periodState,
         periodStatus: r.periodStatus,
         archived: r.archived,
@@ -101,8 +93,7 @@ export async function getSnapshot(
       adminReminderRuleSchema.parse({
         id: rule.id,
         reportId: rule.reportId,
-        // expose the policy FK so the admin
-        // UI can group derived rules under their owning policy.
+        // Policy FK so the UI can group derived rules under their owning policy.
         policyId: rule.policyId,
         kind: rule.kind,
         fireAt: rule.fireAt,
@@ -127,8 +118,7 @@ export async function getSnapshot(
         errorMessage: exec.error,
       }),
     ),
-    // policies surfaced inline so the admin
-    // snapshot fetch is one round trip on the wire.
+    // Inline policies keep the snapshot fetch one round trip.
     policies: reminderPolicies.map((row) =>
       reminderPolicySchema.parse({
         id: row.id,

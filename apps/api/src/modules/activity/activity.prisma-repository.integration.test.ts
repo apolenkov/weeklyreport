@@ -181,10 +181,8 @@ describe("ActivityPrismaRepository (integration)", () => {
   });
 
   it("sorts a draft-status lead before a submitted-status lead regardless of name or record recency", async () => {
-    // A submitted-status lead whose name sorts BEFORE the seeded draft lead
-    // ("AAA…" < "Lead A") and whose item is edited later than any draft record.
-    // The draft lead must still come first: status dominates both the alpha
-    // tiebreaker and record recency.
+    // Draft must sort first even when a submitted lead has an earlier name and
+    // a later edit: status dominates alpha tiebreaker and record recency.
     const leadSubmitted = "a0000000-0000-4000-a000-000000000411";
     const projectSubmitted = "a0000000-0000-4000-a000-000000000413";
     await prisma.user.create({
@@ -234,11 +232,8 @@ describe("ActivityPrismaRepository (integration)", () => {
   });
 
   it("computes lastEditAt as the max across the LEAD's own records — a later reviewer comment does not count", async () => {
-    // Section timestamp is the EARLIEST; each child record is progressively
-    // later, so lastEditAt must resolve to the latest record's timestamp, not
-    // the section's own updatedAt. The reviewer comment is deliberately the
-    // MOST RECENT timestamp of all: live activity tracks the lead's editing,
-    // so a repository that leaked comments into the max would fail this test.
+    // lastEditAt is max of the lead's own records, not section.updatedAt.
+    // A later reviewer comment must not count — live activity tracks lead edits only.
     const leadMulti = "a0000000-0000-4000-a000-000000000420";
     const projectMulti = "a0000000-0000-4000-a000-000000000421";
     const sectionUpdatedAt = new Date("2026-05-05T10:00:00.000Z");

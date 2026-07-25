@@ -4,14 +4,7 @@ import type {
   WorkingDays as PrismaWorkingDays,
 } from "@prisma/client";
 
-/**
- * Wire format ↔ Prisma enum mappers shared by the per-domain query
- * modules (settings / reminder-policy / snapshot) as one boundary.
- *
- * `ReminderAudience`: Prisma uses screaming-snake
- * (`LEAD_WITH_DRAFT | HEAD_OF_LATE`); the wire/zod contract uses
- * lowercase-hyphen (`lead-with-draft | head-of-late`).
- */
+// Prisma screaming-snake ↔ wire lowercase-hyphen for ReminderAudience.
 export const audienceFromPrisma: Record<
   PrismaReminderAudience,
   ReminderAudience
@@ -27,12 +20,7 @@ export const audienceToPrisma: Record<
   "head-of-late": "HEAD_OF_LATE",
 };
 
-/**
- * Wire ↔ Prisma translators for the `WorkingDays`
- * enum. Mirrors the audience mappers so the DB convention
- * (`MON_FRI | MON_SAT | MON_SUN`) does not leak past this boundary into
- * shared schemas or the React UI.
- */
+// Prisma WorkingDays (MON_FRI…) ↔ wire mon-fri; keep DB enum out of shared/UI.
 export const workingDaysFromPrisma: Record<PrismaWorkingDays, WorkingDays> = {
   MON_FRI: "mon-fri",
   MON_SAT: "mon-sat",

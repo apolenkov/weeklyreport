@@ -23,6 +23,9 @@ import {
 } from "./carry-over.write-transaction";
 import { requirePrimaryTargetSection } from "./carry-over-row-writes";
 
+// Multi-section clone can exceed Prisma's default 5s under load.
+const CARRY_OVER_TX_TIMEOUT_MS = 15_000;
+
 @Injectable()
 export class CarryOverPrismaRepository implements CarryOverRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -46,12 +49,7 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
     return row ? mapPrismaToExecution(row) : null;
   }
 
-  /**
-   * The "prior period" the automatic carry-over reads from: the latest report
-   * whose periodEnd is on/before the target's periodStart. Deterministic
-   * total order (periodEnd, createdAt, id — all desc) so two candidates
-   * sharing a boundary never flip between reads.
-   */
+  // Latest report with periodEnd ≤ target.periodStart; total order periodEnd, createdAt, id.
   async findPreviousReportId(targetReportId: string): Promise<string | null> {
     const target = await this.prisma.report.findUnique({
       where: { id: targetReportId },
@@ -112,16 +110,11 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
     try {
       return await this.prisma.$transaction(
         (tx) => writeCarryOver(tx, execution, records, targetSections),
-        { timeout: 15_000 },
+        { timeout: CARRY_OVER_TX_TIMEOUT_MS },
       );
     } catch (error) {
-      // Dedupe race: two carry-overs for the same source/target both pass the
-      // app-level existing-execution check, then the second insert hits the
-      // `dedupeKey` unique constraint (P2002). Resolve to the already-recorded
-      // execution (idempotent success) rather than surfacing a raw 500; only if
-      // it cannot be re-read does this become a distinct conflict. The
-      // in-transaction editability re-check throws CarryOverConflictError, a
-      // distinct type, so it propagates past this branch unchanged.
+      // Concurrent carry hits dedupeKey P2002 → resolve to winner (idempotent).
+      // CarryOverConflictError from editability re-check propagates unchanged.
       if (isUniqueViolation(error)) {
         return this.resolveDedupeRace(execution);
       }

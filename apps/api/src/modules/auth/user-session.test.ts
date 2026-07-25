@@ -126,10 +126,7 @@ describe("buildUserSession — admin SAML login", () => {
     expect(createArg?.data.role).toBe("admin");
   });
 
-  // add-structured-user-name (review finding P3): the SAML stub synthesizes the
-  // structured parts since the IdP name order is unknown — lastName = whole
-  // displayName, firstName = " " (a single-space placeholder an admin completes
-  // on edit; canSave trims it so it can't be re-saved), middleName/position null.
+  // SAML stub: lastName=displayName, firstName whitespace placeholder (canSave trims it).
   it("create: SAML stub synthesizes name parts from displayName", async () => {
     const prisma = fakePrisma({ existingUser: null });
     const profile: SamlProfile = {
@@ -163,13 +160,7 @@ describe("buildUserSession — admin SAML login", () => {
     expect(data?.data.position).toBeNull();
   });
 
-  // add-structured-user-name (Decision: SAML is create-only). An existing user
-  // hit by a plain SAML re-login is returned UNTOUCHED — no update, no create —
-  // and the session reflects the EXISTING row, never the SAML profile's values.
-  // (Previously this test was mislabeled "existing user update": it called the
-  // create-only branch but only checked role==='admin', which is true of the
-  // existing row regardless, so it gave false confidence on the central
-  // contract. Review finding P2.)
+  // SAML re-login is create-only: existing row is untouched; session uses existing values.
   it("create-only: a SAML re-login never overwrites an existing user", async () => {
     const prisma = fakePrisma({
       existingUser: {

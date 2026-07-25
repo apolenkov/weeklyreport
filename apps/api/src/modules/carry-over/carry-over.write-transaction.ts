@@ -20,10 +20,6 @@ import {
   requirePrimaryTargetSection,
 } from "./carry-over-row-writes";
 
-/**
- * Maps a Prisma CarryOverExecution row (+ records) to the domain CarryOverExecution shape.
- * Bridges Prisma model fields to Zod schema fields.
- */
 export function mapPrismaToExecution(row: {
   id: string;
   sourceReportId: string;
@@ -73,14 +69,7 @@ export function mapPrismaToExecution(row: {
   return { execution, records };
 }
 
-/**
- * The write transaction. Re-validates target editability against freshly-read
- * period state (closing the window between the service's pre-transaction check
- * and this commit), then either records a new execution or, when a concurrent
- * winner already committed one for this source/target pair, resolves to that
- * winner's execution and records instead of inserting against an id that was
- * never committed.
- */
+// Re-check editability inside the txn; concurrent winner → resolve, don't insert phantom.
 export async function writeCarryOver(
   tx: Prisma.TransactionClient,
   execution: CarryOverExecution,
@@ -111,13 +100,7 @@ export async function writeCarryOver(
   return result;
 }
 
-/**
- * Locks the target report row (SELECT ... FOR UPDATE, house pattern from the
- * section-save transaction) and rejects a no-longer-editable period. The lock
- * is what closes the window: a concurrent publish/archive writes this same
- * row, so it either committed first (this read then aborts before any
- * carry-over write) or blocks until this transaction commits.
- */
+// FOR UPDATE on Report closes the race with concurrent publish/archive.
 async function assertTargetEditable(
   tx: Prisma.TransactionClient,
   targetReportId: string,
@@ -133,11 +116,7 @@ async function assertTargetEditable(
   }
 }
 
-/**
- * Loser of a concurrent race: the winner's execution already holds this
- * source/target pair, keyed on an id the caller never committed. Return the
- * winner's own recorded rows rather than inserting the caller's phantom ones.
- */
+// Concurrent loser: return the winner's recorded rows, not the caller's phantom ids.
 async function resolveExistingExecution(
   tx: Prisma.TransactionClient,
   existing: PrismaCarryOverExecutionRow,

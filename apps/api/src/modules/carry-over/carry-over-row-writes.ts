@@ -1,13 +1,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
-/**
- * The result's `targetSection` is the first target section; the service
- * guarantees a non-empty list before any write, so an empty one here is a
- * broken caller invariant — fail loud instead of typing the field optional.
- * @param targetSections the target report's sections, service-validated non-empty
- * @returns the first target section
- */
+// Empty list is a broken caller invariant — fail loud (service pre-validates).
 export function requirePrimaryTargetSection(
   targetSections: ReportSectionReadModel[],
 ): ReportSectionReadModel {
@@ -20,14 +14,7 @@ export function requirePrimaryTargetSection(
   return primary;
 }
 
-/**
- * Persists one target section's carried rows inside the caller's transaction.
- * Both inserts
- * ride `skipDuplicates`: a carried lineage the target section already holds
- * (the `@@unique([reportSectionId, stableId])` index) is skipped, not a P2002
- * misread as a dedupe-key race — the service also filters such lineages
- * upstream; this is defense-in-depth against a race.
- */
+// skipDuplicates on stableId unique — defense-in-depth if lineage filter races.
 export async function persistCarriedRowsForSection(
   tx: Prisma.TransactionClient,
   targetSection: ReportSectionReadModel,

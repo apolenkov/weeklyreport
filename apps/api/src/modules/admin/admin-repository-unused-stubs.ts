@@ -34,10 +34,7 @@ export type AdminRepositoryUnusedStubs = Pick<AdminRepository, StubbedMethod>;
 const STUB_ID = "00000000-0000-4000-8000-000000000000";
 const STUB_DATE = new Date(0);
 
-/**
- * Neutral implementations for required repository methods a test does not
- * exercise. Test doubles spread these stubs and override the owned behavior.
- */
+// Neutral stubs for methods a test does not exercise; doubles override owned behavior.
 export function unusedAdminRepositoryStubs(): AdminRepositoryUnusedStubs {
   return {
     activateUser: vi.fn().mockResolvedValue(undefined),

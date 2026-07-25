@@ -16,15 +16,7 @@ import {
 
 import { scopeDiscriminator } from "../../lib/group-scope.js";
 
-/**
- * AnalyticsRepository contract — Prisma-free at the service boundary so the
- * domain stays test-friendly. The Prisma implementation lives in
- * analytics.prisma-repository.ts.
- *
- * Every read takes the caller `session`: analytics aggregates the contents of a
- * unified period's sections, which span all groups, so each query MUST be bound
- * to the caller's group scope (see analytics.prisma-repository.ts).
- */
+// Every read takes session — sections span groups, so queries must bind group scope.
 export interface AnalyticsRepository {
   trafficLightHistory(
     input: TrafficLightHistoryInput,
@@ -40,34 +32,17 @@ export interface AnalyticsRepository {
   ): Promise<PeriodComparisonOutput>;
 }
 
-/**
- * Cache port — wraps Redis behind this minimal interface so unit
- * tests can supply an in-memory fake (the real Redis client is opt-in via
- * AnalyticsCache in analytics.cache.ts).
- */
 export interface AnalyticsCachePort {
   getOrCompute<T>(key: string, fn: () => Promise<T>): Promise<T>;
 }
 
-// Namespace under `customreport:` so analytics keys do not
-// collide with other applications sharing the Redis instance. The cache's
-// SCAN-based invalidation (analytics.cache.ts) walks the same prefix, so all
-// three sub-prefixes must remain on the `customreport:analytics:` root.
-// `:v2:` segment: the date-matching fix returns a different (correct) result
-// for an unchanged input, so the bump orphans pre-fix cached entries on deploy
-// instead of serving them stale until TTL. The version stays UNDER the
-// `customreport:analytics:` root so SCAN-based invalidateAll still reaches it.
+// Under customreport:analytics: so SCAN invalidation reaches all three.
+// v2 under that root orphans stale pre-bump entries without breaking invalidateAll.
 const PREFIX_HISTORY = "customreport:analytics:traffic-light:v2:";
 const PREFIX_VELOCITY = "customreport:analytics:lead-velocity:v2:";
 const PREFIX_COMPARISON = "customreport:analytics:period-comparison:v2:";
 
-/**
- * Stable serialization with keys sorted at EVERY nesting depth, so equivalent
- * inputs hit the same cache key regardless of property order. A top-level-keys
- * replacer array (`JSON.stringify(value, keys)`) whitelists those keys at every
- * depth, silently dropping any nested key absent at the top level — this
- * recurses instead, so nested cache-key inputs hash correctly.
- */
+// Sort keys at every nesting depth — JSON.stringify key whitelist would drop nested keys.
 export function stableHash(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stableHash).join(",")}]`;

@@ -4,21 +4,7 @@ import type { AdminJobsQueue } from "./admin-jobs.port.js";
 const DEFAULT_FAILED_JOBS_LIMIT = 50;
 const MAX_FAILED_JOBS_LIMIT = 200;
 
-/**
- * Admin BullMQ DLQ surface.
- *
- * Thin wrapper around the live `email-reminder` Queue handle so the tRPC
- * router can stay declarative and the unit tests can swap in a fake queue
- * without spinning up Redis. The shape mirrors what `admin.dlqCount` already
- * does for the failed-count badge — same Queue instance, same accessor
- * pattern — but extends it to enumerate / retry individual failed jobs.
- *
- * No mutation audit emit lives here: the existing `mutationAuditMiddleware`
- * captures every authenticated mutation through tRPC procedure-level wiring
- * (see infrastructure/trpc/trpc.middleware.ts § mutationAuditMiddleware). The
- * `procedure: 'admin.jobs.retryFailed'`, `target: jobId`, and
- * `userId/role/ip` envelope are emitted automatically.
- */
+// No mutation audit here: mutationAuditMiddleware captures tRPC mutations.
 
 interface FailedJob {
   id: string;
@@ -49,12 +35,7 @@ interface JobsServiceOptions {
   reminderExecutionExists?: (executionId: string) => Promise<boolean>;
 }
 
-/**
- * When the queue port is absent (e.g. unit-test wiring with
- * `createAppRouter({})`), the service still needs to be callable. Caller
- * surfaces an empty list / no-op retry so the tRPC procedure never throws
- * for missing infra.
- */
+// Absent queue (test wiring) → empty list / no-op retry so procedures never throw.
 export class JobsService {
   private readonly logger: AppLogger;
 
@@ -94,8 +75,6 @@ export class JobsService {
       data: job.data,
     }));
 
-    // If the slice came back full, advance the cursor; otherwise the failed
-    // set is exhausted.
     const nextCursor = jobs.length < limit ? null : start + limit;
 
     return { jobs, nextCursor };
@@ -111,9 +90,7 @@ export class JobsService {
 
     const job = await this.emailReminderQueue.getJob(input.jobId);
     if (!job) {
-      // The id might have been pruned by BullMQ's removeOnFail config or by
-      // a parallel retry. Surface a structured no-op so the caller can show
-      // a "job no longer exists" toast instead of a 500.
+      // Pruned by removeOnFail or a parallel retry — structured no-op, not 500.
       return { retried: false, jobId: input.jobId };
     }
 

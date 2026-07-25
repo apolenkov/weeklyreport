@@ -104,14 +104,8 @@ describe("existingSection lookup — draft-report ordering", () => {
     await disconnectTestPrisma();
   });
 
-  // With the explicit ordering, `buildUserSession` picks the NEWER draft
-  // report's section despite the adversarial insertion order above — it
-  // agrees with the report-only fallback's "most recently created draft
-  // report" pick. (An earlier characterization pin asserted the un-ordered
-  // query's insertion-order result; dropped once superseded — Postgres
-  // guarantees nothing about un-ordered result order, so that pin could
-  // flake on a plan change.)
-  it("fixed: buildUserSession resolves the NEWER draft report's section deterministically", async () => {
+  // Ordered pick must match report-only fallback: most recently created draft.
+  it("buildUserSession resolves the NEWER draft report's section deterministically", async () => {
     const profile: SamlProfile = {
       samlId: "lead-order",
       email: "lead-order@t.local",

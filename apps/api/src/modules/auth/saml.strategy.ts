@@ -12,7 +12,7 @@ export type SamlStrategyOptions = PassportSamlConfig & {
 };
 
 /** Verified profile shape downstream consumers (auth.routes) expect. */
-// eslint-disable-next-line @typescript-eslint/consistent-type-definitions -- must stay a type alias: it is passed where a `Record<string, unknown>` index signature is required (saml.strategy.ts:153), which an interface does not satisfy.
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions -- must stay a type alias: passed where a Record index signature is required (done(null, result.profile)), which an interface does not satisfy.
 export type VerifiedSamlProfile = {
   samlId: string;
   email: string;
@@ -49,6 +49,9 @@ const validateAlways = "always" as NonNullable<
   PassportSamlConfig["validateInResponseTo"]
 >;
 
+// Tolerate small IdP/SP clock drift without accepting stale assertions.
+const ACCEPTED_CLOCK_SKEW_MS = 5000;
+
 export function createSamlStrategyOptions(
   env: NodeJS.ProcessEnv,
 ): SamlStrategyOptions {
@@ -70,7 +73,7 @@ export function createSamlStrategyOptions(
       digestAlgorithm: "sha256",
       wantAssertionsSigned: true,
       wantAuthnResponseSigned: true,
-      acceptedClockSkewMs: 5000,
+      acceptedClockSkewMs: ACCEPTED_CLOCK_SKEW_MS,
     };
   }
 
@@ -86,7 +89,7 @@ export function createSamlStrategyOptions(
     digestAlgorithm: "sha256",
     wantAssertionsSigned: true,
     wantAuthnResponseSigned: true,
-    acceptedClockSkewMs: 5000,
+    acceptedClockSkewMs: ACCEPTED_CLOCK_SKEW_MS,
   };
 }
 

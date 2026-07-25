@@ -20,10 +20,6 @@ import type {
   StageRow,
 } from "./admin-shared";
 
-/**
- * Owns projects, reporting groups, stage assignments, and the
- * Group ↔ Product M:M surface.
- */
 export class ProjectAdminService {
   private readonly logger: AppLogger;
 
@@ -65,7 +61,6 @@ export class ProjectAdminService {
     return this.getSnapshot();
   }
 
-  /** Upsert a stage assignment (unique on stageId+projectId). */
   async saveStageAssignment(data: {
     userId: string;
     stageId: string;
@@ -76,29 +71,17 @@ export class ProjectAdminService {
     );
   }
 
-  /** Delete a stage assignment by ID. */
   async deleteStageAssignment(id: string): Promise<{ success: true }> {
     await this.repository.deleteStageAssignment(id);
     return { success: true };
   }
 
-  /** List stage assignments for a project. */
   async listStageAssignments(projectId: string): Promise<StageAssignment[]> {
     const rows = await this.repository.listStageAssignments(projectId);
     return rows.map((r) => stageAssignmentSchema.parse(r));
   }
 
-  // -----------------------------------------------------------------
-  // Group ↔ Product M:M surface
-  // -----------------------------------------------------------------
-
-  /**
-   * Attach a Product to a ReportingGroup. The repository upserts on the
-   * (groupId, productId) unique tuple so re-calls are idempotent — useful
-   * for the UI toggle that may race against itself if a user clicks
-   * twice. Returns the canonical {@link GroupProduct} row so the caller
-   * can echo `createdAt` into the audit envelope.
-   */
+  // Unique-tuple upsert keeps UI double-clicks idempotent.
   async attachProductToGroup(
     input: GroupProductEdgeInput,
   ): Promise<GroupProduct> {
@@ -108,12 +91,7 @@ export class ProjectAdminService {
     );
   }
 
-  /**
-   * Detach a Product from a ReportingGroup. No-op when the edge is
-   * already absent (repository swallows the delete-not-found). Returns
-   * `{ success: true }` so the tRPC mutation has a non-undefined
-   * response shape that audit / toast handlers can key off.
-   */
+  // No-op when the edge is already absent.
   async detachProductFromGroup(
     input: GroupProductEdgeInput,
   ): Promise<{ success: true }> {
@@ -122,55 +100,30 @@ export class ProjectAdminService {
     return { success: true };
   }
 
-  /**
-   * List the Products attached to a ReportingGroup via the explicit
-   * `GroupProduct` edge. Used by the admin Groups tab's «Products
-   * attached» section. Returns `AdminProject` rows so the UI gets the
-   * existing project shape (id, name, archived, leadId, leadName)
-   * without a second snapshot call.
-   */
+  // AdminProject shape so the UI reuses project rows without a second snapshot.
   async listGroupProducts(groupId: string): Promise<AdminProject[]> {
     const rows = await this.repository.listGroupProducts(groupId);
     return rows.map((row) => adminProjectSchema.parse(row));
   }
 
-  /**
-   * List the ReportingGroups that own a given Product via the explicit
-   * `GroupProduct` edge. Used by the admin Products tab's «Groups»
-   * column. Returns full `ReportingGroup` rows so the chip renderer can
-   * show the group name without a join.
-   */
   async listProductGroups(productId: string): Promise<ReportingGroup[]> {
     const rows = await this.repository.listProductGroups(productId);
     return rows.map((row) => reportingGroupSchema.parse(row));
   }
 
-  /**
-   * Batched owning-group lookup for the admin Groups tab's «Products
-   * attached» editor. One repository query resolves the single owning group
-   * for every requested product, replacing the per-product
-   * `listProductGroups` fan-out.
-   */
+  // One query for the catalog editor instead of per-product listProductGroups.
   async listProductGroupOwnership(
     productIds: readonly string[],
   ): Promise<ProductGroupOwnership[]> {
     return this.repository.listProductGroupOwnership(productIds);
   }
 
-  /**
-   * Full SDLC stage catalogue. Used by the Stage Assignment editor so it can
-   * render *every* stage (including unassigned ones), not just the stages
-   * that already have an assignment row for the project.
-   */
+  // Full catalogue including unassigned stages.
   listStages(): Promise<StageRow[]> {
     return this.repository.listStages();
   }
 
-  /**
-   * Per-project assignment count for the products-tab "X/7 stages" header.
-   * Light query (single GROUP BY) so we can render the count without
-   * loading every assignment row.
-   */
+  // GROUP BY only — products-tab header without loading every assignment.
   listStageAssignmentCounts(): Promise<StageAssignmentCountRow[]> {
     return this.repository.listStageAssignmentCounts();
   }

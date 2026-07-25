@@ -1,35 +1,18 @@
 import { MS_PER_DAY, type TrafficLightCell } from "@customreport/shared";
 
-/**
- * Pure analytics helpers shared by the repository: TZ-stable date-label
- * formatting, half-open day-range bounds, the deterministic report ordering used
- * to pick a winner among reports sharing a date-label, and the project-keyed
- * aggregations. No Prisma dependency — every helper takes a minimal structural
- * shape, so all of it is independently testable.
- */
-
-/** Length of an ISO calendar date (`YYYY-MM-DD`) after `toISOString().slice(0, n)`. */
+// ISO YYYY-MM-DD length after toISOString().slice(0, n).
 const ISO_DATE_LENGTH = 10;
 
-/**
- * Format a Date as the UTC date-only ISO string (YYYY-MM-DD). This is
- * TZ-stable because Date.prototype.toISOString always returns UTC.
- */
+// TZ-stable: toISOString always returns UTC.
 export function isoDateOnly(d: Date): string {
   return d.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
-/**
- * Start of the UTC calendar day for a `YYYY-MM-DD` label. A date-only input
- * must match a full-timestamp `periodEnd` column, so periods are matched over a
- * half-open `[startOfUtcDay, nextUtcDay)` range — the DST-free, TZ-stable way to
- * match a calendar day against a timestamp, consistent with `isoDateOnly`.
- */
+// Half-open [startOfUtcDay, nextUtcDay) matches a date-only label to periodEnd.
 export function startOfUtcDay(dateOnly: string): Date {
   return new Date(`${dateOnly}T00:00:00.000Z`);
 }
 
-/** Start of the UTC calendar day AFTER `dateOnly` (the half-open upper bound). */
 export function nextUtcDay(dateOnly: string): Date {
   return new Date(startOfUtcDay(dateOnly).getTime() + MS_PER_DAY);
 }
@@ -40,13 +23,7 @@ interface PeriodStamped {
   createdAt: Date;
 }
 
-/**
- * Total ascending order over reports: periodEnd, then createdAt, then id. The
- * id is the final tie-break so two reports sharing an identical periodEnd AND
- * an identical millisecond createdAt still order deterministically instead of
- * falling back to DB row order (non-deterministic across query plans). Default
- * code-unit string compare, locale-stable like the cache key.
- */
+// periodEnd, then createdAt, then id — never fall back to non-deterministic DB order.
 function comparePeriodThenCreated(a: PeriodStamped, b: PeriodStamped): number {
   const byPeriod = a.periodEnd.getTime() - b.periodEnd.getTime();
   if (byPeriod !== 0) return byPeriod;
@@ -57,22 +34,12 @@ function comparePeriodThenCreated(a: PeriodStamped, b: PeriodStamped): number {
   return 0;
 }
 
-/**
- * Deterministic tie-break across reports sharing a date-label: the latest
- * `periodEnd`, then the latest `createdAt`, then the greater `id`. The most
- * recent (republished) period is authoritative for a project's status.
- */
+// Latest periodEnd/createdAt/id wins; most recent republish is authoritative.
 function laterReport<T extends PeriodStamped>(a: T, b: T): T {
   return comparePeriodThenCreated(a, b) >= 0 ? a : b;
 }
 
-/**
- * Group reports by their UTC date-only period label. Multiple reports can share
- * one label (a republished period, or two periods differing only by
- * periodStart), so callers aggregate per label instead of assuming one report
- * per label. Insertion order follows the input, so a periodEnd-ascending query
- * yields ascending labels.
- */
+// Multiple reports can share a label; insertion order follows the input query.
 export function groupReportsByLabel<T extends { periodEnd: Date }>(
   reports: readonly T[],
 ): Map<string, T[]> {
@@ -91,7 +58,6 @@ interface SectionStatusRow {
 }
 export type LabelReport = PeriodStamped & { sections: SectionStatusRow[] };
 
-/** First project-status entry for `projectId` in a report, or undefined. */
 function findProjectStatus(
   report: LabelReport,
   projectId: string,
@@ -105,10 +71,6 @@ function findProjectStatus(
   return undefined;
 }
 
-/**
- * Status a project carries in a date-label: scan every report under the label
- * that has an entry for the project and pick the winner via {@link laterReport}.
- */
 export function statusForProject(
   reportsForLabel: LabelReport[],
   projectId: string,
@@ -133,11 +95,7 @@ export interface NamedReport {
   sections: NamedSection[];
 }
 
-/**
- * Project id → display name over every project-status in `reports`, first name
- * wins. `projectId`, when set, keeps only that project. Flattened rather than
- * nested-looped so the dedupe reads as one pass.
- */
+// First name wins; optional projectId filters to one project.
 export function collectProjectNames(
   reports: NamedReport[],
   projectId?: string,
@@ -178,7 +136,6 @@ export const UNKNOWN_CELL: ComparisonCell = Object.freeze({
   name: "Unknown",
 });
 
-/** Latest project-status wins; existing risk tally is preserved. */
 function applyProjectStatuses(
   cells: Map<string, ComparisonCell>,
   section: ComparisonSection,
@@ -192,7 +149,7 @@ function applyProjectStatuses(
   }
 }
 
-/** Accumulate risk counts. An activity-parented risk (null product FK) counts toward no product. */
+// Null product FK (activity-parented risk) counts toward no product.
 function accumulateRisks(
   cells: Map<string, ComparisonCell>,
   section: ComparisonSection,
@@ -204,11 +161,7 @@ function accumulateRisks(
   }
 }
 
-/**
- * Per-project status+risk cells for one comparison side. Reports are processed
- * oldest first so the latest report's status wins (deterministic tie-break)
- * while risks accumulate across every contributing report.
- */
+// Oldest-first so latest status wins; risks accumulate across all reports.
 export function collectComparisonCells(
   reports: ComparisonReport[],
 ): Map<string, ComparisonCell> {

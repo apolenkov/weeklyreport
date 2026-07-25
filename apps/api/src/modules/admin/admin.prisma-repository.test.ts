@@ -82,13 +82,7 @@ describe("AdminPrismaRepository.upsertPeriod — transaction boundary", () => {
   });
 });
 
-/**
- * Reminder-parity regression: the admin manual create path
- * (`createPeriodManual`) must materialise reminder rules for the new period
- * via the injected `PolicyApplicatorService`, exactly as `saveSnapshot` does
- * for snapshot-created periods. Before the fix it minted the Report row and
- * returned — a manually-created period carried no reminder rules.
- */
+// Manual create must reach PolicyApplicatorService like saveSnapshot does.
 describe("AdminPrismaRepository.createPeriodManual — reminder parity", () => {
   const CREATED = {
     id: "report-1",
@@ -160,14 +154,7 @@ describe("AdminPrismaRepository.createPeriodManual — reminder parity", () => {
   });
 });
 
-/**
- * period-uniqueness (D3/D5): a race that defeats the `findOverlappingPeriod`
- * pre-check, a date edit onto a contested boundary, or an unarchive into one
- * lands on the `Report_one_open_per_boundary` partial unique index as a Prisma
- * P2002. The repository writers translate it into `AdminPeriodOverlapError`
- * (→ BAD_REQUEST), never a raw 500. Teeth: drop the catch and the raw P2002
- * surfaces, failing each assertion below.
- */
+// Open-boundary P2002 → AdminPeriodOverlapError (BAD_REQUEST), never a raw 500.
 describe("AdminPrismaRepository period writers — open-boundary P2002 translation", () => {
   function openBoundaryP2002(): Prisma.PrismaClientKnownRequestError {
     return new Prisma.PrismaClientKnownRequestError(
@@ -245,12 +232,7 @@ describe("AdminPrismaRepository period writers — open-boundary P2002 translati
   });
 });
 
-/**
- * The live admin writers translate unique races at the Prisma boundary. Product
- * attach resolves the winning edge when it is idempotent and reports competing
- * ownership as a domain conflict; user creation reports either identity index
- * as the same domain conflict.
- */
+// Product attach: idempotent win vs domain conflict; user identity race → conflict.
 describe("AdminPrismaRepository entity writers — P2002 race handling", () => {
   const PRODUCT_INPUT = {
     groupId: "a0000000-0000-4000-8000-000000000301",
@@ -357,12 +339,7 @@ describe("AdminPrismaRepository entity writers — P2002 race handling", () => {
   });
 });
 
-/**
- * Admin namespace repository coverage for deactivate/activate, integrations
- * status, stage catalogue, and the reopen-request lifecycle. Group-scope
- * where-clause pinning lives at this repository boundary (the layer that
- * issues the query).
- */
+// Group-scope where-clause pinning lives at this repository boundary.
 describe("AdminPrismaRepository — deactivate/activate, integrations, stages", () => {
   it("deactivateUser sets isActive=false", async () => {
     const update = vi.fn(() => Promise.resolve({}));

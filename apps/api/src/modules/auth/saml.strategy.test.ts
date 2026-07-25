@@ -107,15 +107,8 @@ describe("verifySamlProfile", () => {
   });
 });
 
-/**
- * 38-03 — production strategy-options security posture.
- *
- * Asserts the prod-mode options that wire @node-saml/passport-saml hard-pin
- * the IdP cert from env, demand signed assertions+responses, validate
- * InResponseTo (replay protection), and refuse to start when any required
- * SAML env var is missing.
- */
-describe("createSamlStrategyOptions — production posture (38-03)", () => {
+// Prod options hard-pin IdP cert, demand signed assertions/responses, validate InResponseTo.
+describe("createSamlStrategyOptions — production posture", () => {
   const prodEnv = {
     NODE_ENV: "production",
     AUTH_DEV_MODE: "false",
