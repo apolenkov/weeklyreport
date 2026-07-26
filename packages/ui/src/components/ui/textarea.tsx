@@ -3,7 +3,6 @@ import type * as React from "react";
 
 /**
  * Auto-sizing multiline text field with focus and invalid styles.
- * @param props - The props argument.
  */
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (

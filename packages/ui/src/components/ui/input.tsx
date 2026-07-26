@@ -3,7 +3,6 @@ import type * as React from "react";
 
 /**
  * Text input with focus ring, invalid, and file-input styles.
- * @param props - The props argument.
  */
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (

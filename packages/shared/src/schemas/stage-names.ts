@@ -39,7 +39,7 @@ export const STAGE_NAMES: readonly StageName[] = [
 // the same pipeline stage.
 /**
  * Canonical stage-name key: lower-case with Development→Dev alias.
- * @param stageName - The stageName argument.
+ * @param stageName - Stage label as stored or typed; case is irrelevant.
  */
 export function normalizeStageName(stageName: string): string {
   const lower = stageName.toLowerCase();
@@ -50,8 +50,8 @@ export function normalizeStageName(stageName: string): string {
 // "Development" ↔ "Dev" alias).
 /**
  * True when two stage labels refer to the same pipeline slot.
- * @param a - The a argument.
- * @param b - The b argument.
+ * @param a - Either stage label; comparison is symmetric.
+ * @param b - The other stage label.
  */
 export function stageNamesMatch(a: string, b: string): boolean {
   return normalizeStageName(a) === normalizeStageName(b);
@@ -61,7 +61,7 @@ const STAGE_NAME_SEPARATOR = /[,;]+/;
 
 /**
  * Split a CSV/semicolon stage field into unique trimmed names (or []).
- * @param stageName - The stageName argument.
+ * @param stageName - Raw field; blank, absent or the em-dash placeholder yield [].
  */
 export function splitStageNames(
   stageName: string | null | undefined,
@@ -85,8 +85,8 @@ export function splitStageNames(
 // stageIds itself is absent.
 /**
  * Whether a risk applies to a stage (stageIds preferred; empty = all stages).
- * @param risk - The risk argument.
- * @param stageName - The stageName argument.
+ * @param risk - Carries stageIds when structured, else the legacy stageName CSV.
+ * @param stageName - The stage being tested for coverage.
  */
 export function riskCoversStage(
   risk: { stageName?: string | null; stageIds?: readonly string[] },

@@ -7,7 +7,6 @@ import type * as React from "react";
 
 /**
  * Radix dialog-based side sheet root.
- * @param props - The props argument.
  */
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;
@@ -15,7 +14,6 @@ function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
 
 /**
  * Control that opens the sheet.
- * @param props - The props argument.
  */
 function SheetTrigger({
   ...props
@@ -25,7 +23,6 @@ function SheetTrigger({
 
 /**
  * Control that closes the sheet.
- * @param props - The props argument.
  */
 function SheetClose({
   ...props
@@ -63,7 +60,6 @@ function SheetOverlay({
 
 /**
  * Side panel content; side prop picks edge.
- * @param props - The props argument.
  */
 function SheetContent({
   className,
@@ -108,7 +104,6 @@ function SheetContent({
 
 /**
  * Top layout slot for sheet title/actions.
- * @param props - The props argument.
  */
 function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -122,7 +117,6 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
 
 /**
  * Bottom layout slot for sheet actions.
- * @param props - The props argument.
  */
 function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -136,7 +130,6 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
 
 /**
  * Accessible title for the sheet.
- * @param props - The props argument.
  */
 function SheetTitle({
   className,
@@ -153,7 +146,6 @@ function SheetTitle({
 
 /**
  * Supporting description under the sheet title.
- * @param props - The props argument.
  */
 function SheetDescription({
   className,

@@ -9,7 +9,6 @@ const CHART_INITIAL_DIMENSION = { width: 0, height: 256 } as const;
 
 /**
  * Fixed-height ResponsiveContainer shell; seeds initialDimension so recharts does not paint -1 size.
- * @param props - The props argument.
  */
 export function ChartContainer({
   className,

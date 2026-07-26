@@ -6,7 +6,6 @@ import type * as React from "react";
 
 /**
  * Accessible form label (Radix Label) for control association.
- * @param props - The props argument.
  */
 function Label({
   className,

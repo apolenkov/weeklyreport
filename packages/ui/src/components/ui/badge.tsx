@@ -30,7 +30,6 @@ const badgeVariants = cva(
 
 /**
  * Pill status/label control. Set `asChild` to compose styles onto a child via Slot.
- * @param props - The props argument.
  */
 function Badge({
   className,
