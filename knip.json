@@ -7,17 +7,21 @@
     ".": {
       "entry": [
         "prisma/*.ts",
-        "scripts/*.mjs",
+        "scripts/*.{ts,mjs}",
         "e2e/playwright.integration.config.ts",
         "e2e/playwright.prodbuild.config.ts",
         "e2e/playwright.csp.config.ts",
         "e2e/sweep/playwright.config.ts",
-        "e2e/sweep/render-checklist.mjs",
+        "e2e/sweep/render-checklist.ts",
         "e2e/**/*.spec.ts",
         "e2e/integration/global-setup.ts",
         "e2e/integration/global-teardown.ts"
       ],
-      "project": ["prisma/**/*.ts", "scripts/**/*.mjs", "e2e/**/*.{ts,mjs}"]
+      "project": [
+        "prisma/**/*.ts",
+        "scripts/**/*.{ts,mjs}",
+        "e2e/**/*.{ts,mjs}"
+      ]
     },
     "apps/api": {
       "entry": ["src/**/*.test.ts", "src/**/*.fixture.ts"],

@@ -49,7 +49,7 @@ type RouteFinding = {
   violations: CspViolation[];
 };
 
-const CATALOG_DIR = path.resolve(__dirname, "..", "catalog");
+const CATALOG_DIR = path.resolve(import.meta.dirname, "..", "catalog");
 
 // The catalog directory IS the enumeration of role surfaces — one
 // `<role>.yaml` per role — so a new role's catalog is covered the day it
@@ -60,7 +60,7 @@ const CATALOG_ROLES: readonly Role[] = fs
   .map((file) => path.basename(file, ".yaml") as Role)
   .sort();
 
-const REPORT_PATH = path.resolve(__dirname, ".reports", "csp-validation.md");
+const REPORT_PATH = path.resolve(import.meta.dirname, ".reports", "csp-validation.md");
 
 // Byte-identical to deploy/caddy/Caddyfile's enforcing header apart from the
 // dropped report-uri. Keep the two in lockstep: a directive added there and

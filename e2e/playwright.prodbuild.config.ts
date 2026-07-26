@@ -27,7 +27,7 @@ import baseConfig, {
  * production ARTIFACTS (compiled output, standalone server, baked rewrites),
  * not the production auth path.
  */
-const repoRoot = path.join(__dirname, "..");
+const repoRoot = path.join(import.meta.dirname, "..");
 
 const portOverrides = ["E2E_API_PORT", "E2E_WEB_PORT"].filter(
   (key) =>

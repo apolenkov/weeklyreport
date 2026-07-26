@@ -7,9 +7,9 @@ import { findRepoRoot } from "./global-setup";
 
 describe("findRepoRoot", () => {
   it("walks up from e2e/integration to the repo root (2 levels, not the old hardcoded 4)", () => {
-    const expectedRoot = path.resolve(__dirname, "../..");
+    const expectedRoot = path.resolve(import.meta.dirname, "../..");
 
-    expect(findRepoRoot(__dirname)).toBe(expectedRoot);
+    expect(findRepoRoot(import.meta.dirname)).toBe(expectedRoot);
   });
 
   it("throws a descriptive error instead of guessing when no ancestor has a package.json", () => {

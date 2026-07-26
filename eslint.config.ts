@@ -590,6 +590,18 @@ export default defineConfig([
       },
     },
   },
+  // `scripts/` has the same shape as `prisma/`: no tsconfig the project service
+  // can discover, so its `node:*` imports would resolve to `any`. Point it at
+  // the project that typechecks these entrypoints.
+  {
+    files: ["scripts/**/*.ts"],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: ["./tsconfig.scripts.json"],
+      },
+    },
+  },
   // sonarjs (community recommended preset). Per the user directive
   // (community-strict, no overhead, default presets win), the full recommended
   // ruleset is enabled — every rule that fires ZERO times is enforced going

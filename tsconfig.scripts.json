@@ -1,0 +1,33 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // Ambient @types are not auto-discovered for this project, so the Node
+    // globals these entrypoints run on are requested by name.
+    "types": ["node"],
+    // These files run straight off Node's type stripping, so every construct
+    // here must erase to nothing — no enums, namespaces or parameter properties.
+    "erasableSyntaxOnly": true,
+    // Node applies its own resolver, which the base `Bundler` mode does not
+    // model: extensionless relative specifiers typecheck there and throw at
+    // runtime. nodenext makes tsc reject what Node would reject.
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    // There is no build step to rewrite a `.js` specifier back to `.ts`, so a
+    // sibling import names the file Node actually opens. Legal under noEmit.
+    "allowImportingTsExtensions": true,
+    // Deliberately REPLACES the base workspace mappings: neither tree is a
+    // workspace package and Node resolves these imports itself, so a mapping
+    // here would typecheck an import that fails at runtime.
+    "paths": {}
+  },
+  "include": ["scripts/**/*.ts", "e2e/sweep/**/*.ts"],
+  // The Playwright-loaded half of e2e/sweep resolves @playwright/test out of
+  // apps/web's install and is typechecked by e2e/tsconfig.json, which carries
+  // that mapping. Only the plain-node entrypoints belong to this project.
+  "exclude": [
+    "e2e/sweep/**/*.spec.ts",
+    "e2e/sweep/playwright.config.ts",
+    "e2e/sweep/helpers/**"
+  ]
+}

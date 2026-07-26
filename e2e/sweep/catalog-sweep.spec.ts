@@ -68,8 +68,8 @@ type RouteResult = {
   skipped?: string;
 };
 
-const CATALOG_DIR = path.resolve(__dirname, "..", "catalog");
-const REPORT_DIR = path.resolve(__dirname, ".reports");
+const CATALOG_DIR = path.resolve(import.meta.dirname, "..", "catalog");
+const REPORT_DIR = path.resolve(import.meta.dirname, ".reports");
 
 // Known-benign console noise that must NOT be reported as an anomaly.
 // Favicon 404s are expected under the sweep shell and are not product defects.

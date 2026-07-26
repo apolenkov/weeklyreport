@@ -19,7 +19,7 @@ import prodbuildConfig from "./playwright.prodbuild.config";
  */
 export default {
   ...prodbuildConfig,
-  testDir: path.join(__dirname, "csp"),
+  testDir: path.join(import.meta.dirname, "csp"),
   // The inherited projects exist to split desktop from the @MOB- tagged mobile
   // specs; this suite has neither, and a policy is not viewport-dependent.
   projects: undefined,

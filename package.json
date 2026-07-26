@@ -2,6 +2,7 @@
   "name": "customreport",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=26.0.0"
@@ -18,12 +19,13 @@
     "dev:fresh": "rm -rf apps/web/.next && turbo run dev --parallel",
     "dev:watch": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --watch",
     "build": "turbo run build",
-    "lint": "eslint . && stylelint \"**/*.css\" --allow-empty-input && pnpm lint:prisma:typecheck && pnpm lint:status-literal-unions && pnpm lint:runtime-node && pnpm depcruise && pnpm knip",
+    "lint": "eslint . && stylelint \"**/*.css\" --allow-empty-input && pnpm lint:prisma:typecheck && pnpm lint:scripts:typecheck && pnpm lint:status-literal-unions && pnpm lint:runtime-node && pnpm depcruise && pnpm knip",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:prisma:typecheck": "tsc --project tsconfig.prisma.json --noEmit",
-    "lint:status-literal-unions": "node --test scripts/find-status-literal-unions.test.mjs && node scripts/find-status-literal-unions.mjs --all",
-    "lint:runtime-node": "node scripts/check-runtime-node-sync.mjs",
+    "lint:scripts:typecheck": "tsc --project tsconfig.scripts.json --noEmit",
+    "lint:status-literal-unions": "node --test scripts/status-ssot-gate.test.ts && node scripts/status-ssot-gate.ts --all",
+    "lint:runtime-node": "node scripts/check-runtime-node-sync.ts",
     "knip": "knip",
     "typecov": "type-coverage -p packages/shared --at-least 100 && type-coverage -p packages/ui --at-least 99.9 && type-coverage -p apps/api --at-least 99.95 && type-coverage -p apps/web --at-least 99.6",
     "depcruise": "depcruise apps/api/src apps/web/src packages/shared/src packages/ui/src --config .dependency-cruiser.cjs",
@@ -34,7 +36,7 @@
     "test:e2e:prodbuild": "pnpm build:e2e:prodbuild && pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.prodbuild.config.ts",
     "test:e2e:csp": "pnpm build:e2e:prodbuild && pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.csp.config.ts",
     "test:uat": "pnpm --filter @customreport/web exec playwright test --config ../../e2e/sweep/playwright.config.ts",
-    "catalog:check": "node e2e/sweep/catalog-check.mjs",
+    "catalog:check": "node e2e/sweep/catalog-check.ts",
     "db:fresh:simple": "pnpm db:reset:hard && tsx prisma/seed-simple.ts",
     "db:fresh:advanced": "pnpm db:reset:hard && tsx prisma/seed.ts",
     "db:seed:small": "tsx prisma/seed-demo.ts small",
@@ -99,7 +101,7 @@
       "eslint --fix --no-warn-ignored",
       "prettier --write",
       "node scripts/find-archaeology.mjs",
-      "node scripts/find-status-literal-unions.mjs"
+      "node scripts/status-ssot-gate.ts"
     ],
     "*.css": [
       "stylelint --fix",

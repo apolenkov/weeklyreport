@@ -106,7 +106,7 @@ competing test framework in the repo.
 
 Every `role:` and `access:` token read from `e2e/catalog/*.yaml` MUST be
 validated against the canonical four-role set (`lead`, `head`, `admin`,
-`viewer`) before use. Both catalog parsers (`e2e/sweep/catalog-parser.mjs`,
+`viewer`) before use. Both catalog parsers (`e2e/sweep/catalog-parser.ts`,
 shared by the drift gate and the human checklist renderer, and
 `e2e/sweep/catalog-sweep.spec.ts`'s own reader) MUST throw immediately when
 an unrecognized token appears, rather than passing it through as an unchecked
@@ -119,7 +119,7 @@ string.
   role)
 - **THEN** the parser throws immediately, naming the bad token and its
   location
-- **AND** both the CI-blocking drift gate (`catalog-check.mjs`) and the
-  human checklist renderer (`render-checklist.mjs`) surface the failure
+- **AND** both the CI-blocking drift gate (`catalog-check.ts`) and the
+  human checklist renderer (`render-checklist.ts`) surface the failure
   instead of silently treating the row as having no role or an empty access
   list
