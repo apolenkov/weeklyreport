@@ -22,11 +22,10 @@ const readJson = (file) => JSON.parse(read(file));
 
 const ROOT_MANIFEST = "package.json";
 
-const TYPES_NODE_MANIFESTS = [
-  ROOT_MANIFEST,
-  "apps/web/package.json",
-  "packages/shared/package.json",
-];
+// One declaration, because every manifest resolves `@types/node` through
+// `catalog:` — pnpm enforces the agreement at install time, so this guard only
+// has to check that the single catalogued major matches the runtime.
+const WORKSPACE_MANIFEST = "pnpm-workspace.yaml";
 
 const DOCKERFILES = ["Dockerfile.api", "Dockerfile.web"];
 
@@ -39,16 +38,12 @@ const imageNodeMajors = () =>
     major: read(file).match(/FROM node:(\d+)-[a-z]+@sha256:[0-9a-f]{64}/)?.[1],
   }));
 
-const typesNodeMajors = () =>
-  TYPES_NODE_MANIFESTS.flatMap((file) => {
-    const manifest = readJson(file);
-    const declared =
-      manifest.devDependencies?.["@types/node"] ??
-      manifest.dependencies?.["@types/node"];
-    return declared === undefined
-      ? []
-      : [{ source: `${file} @types/node`, major: majorOf(declared) }];
-  });
+const catalogTypesNodeMajor = () => ({
+  source: `${WORKSPACE_MANIFEST} catalog @types/node`,
+  major: majorOf(
+    read(WORKSPACE_MANIFEST).match(/^ +"@types\/node": "([^"]+)"$/m)?.[1] ?? "",
+  ),
+});
 
 const declarations = () => [
   { source: ".nvmrc", major: majorOf(read(".nvmrc").trim()) },
@@ -57,7 +52,7 @@ const declarations = () => [
     major: majorOf(readJson(ROOT_MANIFEST).engines.node),
   },
   ...imageNodeMajors(),
-  ...typesNodeMajors(),
+  catalogTypesNodeMajor(),
 ];
 
 // pnpm is installed with `npm install -g pnpm@<version>` in both images because

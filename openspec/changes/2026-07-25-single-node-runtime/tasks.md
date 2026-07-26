@@ -44,4 +44,4 @@
 - [x] Record the removed Playwright-image requirement with its reason
 - [x] `pnpm lint` and the full unit suite green on Node 26 — whole chain exit 0,
       417 test files passing
-- [ ] CI green on all jobs after push
+- [x] CI green on all jobs after push
