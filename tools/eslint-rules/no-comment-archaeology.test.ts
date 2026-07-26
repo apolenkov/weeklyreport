@@ -21,10 +21,10 @@ const slug = (letters: string, digits: string): string =>
 const interpolation = (name: string): string => `$\{${name}}`;
 
 const TICKET = `ticket-slug (e.g. ${slug("UFB", "036")}, ${slug("AUTH", "08")}, ${slug("SC", "160")})`;
-const NARRATION = "change-history narration (moved/extracted/... into/from/by)";
-const REWRITE = "change-history narration (was rewritten/refactored/...)";
-const PRIOR_STATE =
-  "prior-state narration (used to be/formerly/previously this)";
+const NARRATION = "change-history narration (moved/extracted/... into/out of)";
+const FLOW = "change-history narration (moved/migrated/... from/to/by)";
+const REWRITE = "change-history narration (refactored/reworked/reimplemented)";
+const PRIOR_STATE = "prior-state narration (formerly/previously this)";
 
 ruleTester.run("no-comment-archaeology", noCommentArchaeology, {
   valid: [
@@ -44,9 +44,18 @@ ruleTester.run("no-comment-archaeology", noCommentArchaeology, {
     "// Cursor is a previously returned row id (valid keyset input).",
     "// Do not clear a previously-stamped late flag on the reopen path.",
     "// `from: null` means a deadline was set on a previously deadline-less period.",
-    // Likewise a passive verb about what the code does now, not what was done
-    // to it: only the `was/has been` frame narrates an edit.
+    // These read as archaeology and are not. A `was <verb>` frame was tried to
+    // separate them and does not: every one below is a legitimate sentence
+    // about data or about what the code does now, in a repo whose domain is
+    // draft/submitted/published. They stay pinned so the pattern is not
+    // re-widened to "catch" them.
     "// Live rows can never be rewritten by a save that read a stale status.",
+    "// The URL was rewritten by the proxy before the handler saw it.",
+    "// The bearer token was extracted from the Authorization header.",
+    "// Skip a section that was previously submitted — its late flag is final.",
+    "// Rows that were previously published stay frozen in the snapshot.",
+    "// A column that was renamed upstream still maps onto this field.",
+    "// If the value used to be null the backfill has not run yet.",
     // Interpolation must not forge a slug across the boundary, and an
     // interpolated title that carries no archaeology stays legal.
     `it(\`renders ${interpolation("role")} without a banner\`, () => {});`,
@@ -76,21 +85,23 @@ ruleTester.run("no-comment-archaeology", noCommentArchaeology, {
       errors: [{ messageId: "comment", data: { label: NARRATION } }],
     },
     {
-      // The verb list carried no rewrite verb, so a comment narrating a loop's
-      // conversion to a recursion went in under the rule.
-      code: "// The retry loop was rewritten from a `for` into a recursion.",
+      code: "// Migrated the period rules from the scheduler.",
+      errors: [{ messageId: "comment", data: { label: FLOW } }],
+    },
+    {
+      code: "// The merge step was refactored out of the transaction.",
       errors: [{ messageId: "comment", data: { label: REWRITE } }],
     },
     {
-      code: "// This used to be a loop over the raw rows.",
-      errors: [{ messageId: "comment", data: { label: PRIOR_STATE } }],
+      code: "// Reworked so the cursor survives a page boundary.",
+      errors: [{ messageId: "comment", data: { label: REWRITE } }],
     },
     {
       code: "// Previously this mapper synthesized a fake grid.",
       errors: [{ messageId: "comment", data: { label: PRIOR_STATE } }],
     },
     {
-      code: "// Admins were previously blocked until the next cron tick.",
+      code: "// The field formerly carried the publisher's display name.",
       errors: [{ messageId: "comment", data: { label: PRIOR_STATE } }],
     },
     {

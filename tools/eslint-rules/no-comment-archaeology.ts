@@ -49,6 +49,12 @@ type Detector = RegExp | ((text: string) => boolean);
 // Each entry is a high-precision pattern that essentially never appears in a
 // legitimate comment, so a match is almost certainly archaeology, plus a label.
 // Order is meaningful: the first match names the hit.
+//
+// Precision is the whole contract, and it is bought with recall on purpose: a
+// rule that fires on honest comments gets disabled, and a disabled rule catches
+// nothing. Phrasings that read as archaeology but collide with this domain's
+// vocabulary are left to review, and sit in the test file as valid fixtures so
+// the trade is visible rather than rediscovered.
 const DETECTORS: readonly (readonly [Detector, string])[] = [
   [hasTicketSlug, "ticket-slug (e.g. UFB-036, AUTH-08, SC-160)"],
   [/\bR\d+[a-z]?-\d+\b/, "plan-slug (e.g. R3a-4)"],
@@ -57,23 +63,33 @@ const DETECTORS: readonly (readonly [Detector, string])[] = [
   [/\bSynthesis notes\b/i, "synthesis-notes header"],
   [/\bPITFALLS?\b.*\bPitfall\b/i, "pitfalls doc ref"],
   [/\bdesign D\d+\b/i, "design-doc ref"],
+  // `into` / `out of` name a destination, which only a code unit has.
   [
-    /\b(moved|relocated|extracted|graduated|dissolved|renamed|migrated)\b[^.\n]{0,40}\b(into|from|out of|to|by|verbatim)\b/i,
-    "change-history narration (moved/extracted/... into/from/by)",
+    /\b(moved|relocated|extracted|graduated|dissolved|renamed|migrated)\b[^.\n]{0,40}\b(into|out of|verbatim)\b/i,
+    "change-history narration (moved/extracted/... into/out of)",
   ],
-  // The auxiliary is what makes this precise. "was rewritten" narrates a past
-  // edit; "can be rewritten by a later save" describes what the code does now,
-  // and a bare verb cannot tell the two apart.
+  // `from` / `to` / `by` also read as plain data flow, so `extracted` is out of
+  // this arm: "the token was extracted from the Authorization header" is an
+  // honest comment, and the rule used to reject it.
   [
-    /\b(was|were|has been|have been)\s+(rewritten|refactored|reworked|reimplemented|extracted|renamed)\b/i,
-    "change-history narration (was rewritten/refactored/...)",
+    /\b(moved|relocated|graduated|dissolved|renamed|migrated)\b[^.\n]{0,40}\b(from|to|by)\b/i,
+    "change-history narration (moved/migrated/... from/to/by)",
   ],
-  // Naming the code's own former state, which git already records. Deliberately
-  // narrow: "a previously returned row id" and "a previously-stamped flag"
-  // describe DATA, not an edit, and must keep passing.
+  // Only verbs with no data sense. `rewritten`, `extracted` and `renamed` were
+  // tried here and removed: a URL is rewritten by a proxy, a token is extracted
+  // from a header, a column is renamed upstream — all legitimate, none an edit
+  // to this code. The valid fixtures in the test file pin those out.
   [
-    /\b(used to be|used to have|formerly)\b|\bpreviously\s+(this|it)\b|\b(was|were)\s+previously\b/i,
-    "prior-state narration (used to be/formerly/previously this)",
+    /\b(refactored|reworked|reimplemented)\b/i,
+    "change-history narration (refactored/reworked/reimplemented)",
+  ],
+  // Narrating the code's own former state. `previously` must point at the code
+  // (`previously this …`) — bare `previously` and `was previously` describe a
+  // ROW's lifecycle far more often than a commit in a repo built on
+  // draft/submitted/published, and were removed for exactly that.
+  [
+    /\bformerly\b|\bpreviously\s+this\b/i,
+    "prior-state narration (formerly/previously this)",
   ],
   [/\b\w+ dissolve\b/i, "dissolve narration"],
   [/\bmax-lines split\b/i, "split narration"],
