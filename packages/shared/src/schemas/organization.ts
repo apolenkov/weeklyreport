@@ -82,15 +82,13 @@ export type OrganizationBrand = z.infer<typeof organizationPublicSchema>;
  * tenant's brand — doing so leaks one tenant's identity into a system meant
  * to be deployable for any organization.
  *
- *   - This constant is the SOLE in-code fallback when org.getPublic fails
- *     (offline first-boot, race on JWT hydration, etc.).
+ *   - It is the identity shown whenever the real one is not resolvable yet:
+ *     `getOrgPublic` when the API is unreachable (which also reports the
+ *     failure), and the nav bar before the session query settles.
  *   - The real brand strings live exclusively in the Organization row of
  *     the database. The seed file (`prisma/seed-simple.ts`) is the only
  *     place that still names a concrete brand — and that's demo data, not
  *     a hard-coded fallback.
- *   - Under multi-org, this constant stays — it is the pre-tenant-resolution
- *     chrome render. Once a tenant resolves, real values from
- *     `session.organization` win.
  *
  * Keep these strings ASCII-only so they render in any monospace context
  * (terminal logs, fallback PDF chrome) without font fallback noise.

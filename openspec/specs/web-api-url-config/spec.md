@@ -42,6 +42,63 @@ than silently targeting localhost.
 - **WHEN** a consumer calls `requireApiUrl`
 - **THEN** it returns `https://api.public`
 
+### Requirement: Org-identity transport failure degrades to the generic identity and is reported
+
+Config resolution and transport failure are separate categories in
+`apps/web/src/lib/server/get-org-public.ts`. `requireApiUrl()` is called OUTSIDE
+the try, so a missing base URL still fails loud per the requirement above. A
+failure of the `org.getPublic` FETCH — non-ok status, undecodable payload, or a
+thrown transport error — MUST NOT propagate: `getOrgPublic` feeds the ROOT
+`generateMetadata` in `apps/web/src/app/layout.tsx` as well as
+`apps/web/src/app/page.tsx`, so a throw blanks every route that renders the root
+layout, not just the landing page. It MUST return `DEFAULT_ORGANIZATION_IDENTITY`
+instead.
+
+That degrade MUST NOT be silent. Each of the three branches MUST emit a
+server-side error log naming which branch fired — stderr is the sink every
+deployment has, so this clause is enforceable regardless of observability
+wiring — AND MUST forward the same failure to Sentry, which reports only where a
+DSN is configured (`docker-compose.prod.yml` supplies `SENTRY_DSN` to the `web`
+service for that reason).
+
+This requirement is scoped to `getOrgPublic`. Applying
+`DEFAULT_ORGANIZATION_IDENTITY` elsewhere is not a failure and MUST NOT be
+reported: `apps/web/src/shared/ui/navigation/nav-bar-model.ts` uses it as a
+loading skeleton while the session query is in flight.
+
+#### Scenario: non-ok response from org.getPublic
+
+- **GIVEN** the API answers `org.getPublic` with a non-ok HTTP status
+- **WHEN** `getOrgPublic` runs
+- **THEN** it returns `DEFAULT_ORGANIZATION_IDENTITY`, logs a server-side error
+  naming the `http-status` branch, and captures the failure to Sentry tagged
+  with that branch
+
+#### Scenario: undecodable payload
+
+- **GIVEN** the API answers with a body that `decodeOrgPublicResponse` cannot
+  narrow to an `OrganizationPublic`
+- **WHEN** `getOrgPublic` runs
+- **THEN** it returns `DEFAULT_ORGANIZATION_IDENTITY`, logs a server-side error
+  naming the `decode` branch, and captures the failure to Sentry tagged with
+  that branch
+
+#### Scenario: transport error
+
+- **GIVEN** the fetch to `org.getPublic` rejects (API down, DNS failure, body
+  read error)
+- **WHEN** `getOrgPublic` runs
+- **THEN** it returns `DEFAULT_ORGANIZATION_IDENTITY`, logs a server-side error
+  naming the `transport` branch, and captures the failure to Sentry tagged with
+  that branch
+
+#### Scenario: a missing base URL still fails loud
+
+- **GIVEN** neither `API_URL` nor `NEXT_PUBLIC_API_URL` is set
+- **WHEN** `getOrgPublic` runs
+- **THEN** `requireApiUrl` throws before any fetch is attempted and the generic
+  identity is NOT substituted, because config is not a transport failure
+
 ### Requirement: A single seam decodes tRPC v11 superjson batch responses
 
 The web app MUST decode tRPC v11 superjson-batched query responses through one
