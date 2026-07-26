@@ -39,10 +39,6 @@ function selectAccessLevel(
 // HTTP access log for everything outside the tRPC adapter (/auth, /pdfs,
 // /health, /metrics, /admin/queues). tRPC has its own procedure-level
 // middleware, so /trpc/* is skipped here to avoid duplicate envelopes.
-/**
- * Create Http Access Log.
- * @param logger - The logger argument.
- */
 export function createHttpAccessLog(logger: AppLogger): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/trpc")) {

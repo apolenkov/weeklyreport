@@ -13,10 +13,6 @@ function getBullMQPrefix(env: EnvConfig): string | undefined {
   return prefix ? prefix : undefined;
 }
 
-/**
- * Get Bull MQ Options.
- * @param env - The env argument.
- */
 export function getBullMQOptions(env: EnvConfig) {
   return {
     connection: getBullMQConnectionOptions(env),

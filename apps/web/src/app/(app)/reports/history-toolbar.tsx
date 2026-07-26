@@ -49,10 +49,6 @@ function HistoryArchiveToggle({
 
 // Before the session resolves there is no role to scope search by, so the row
 // holds its height instead of rendering controls that would shift the layout.
-/**
- * History Toolbar.
- * @param options - The options argument.
- */
 export function HistoryToolbar({
   role,
   includeArchive,

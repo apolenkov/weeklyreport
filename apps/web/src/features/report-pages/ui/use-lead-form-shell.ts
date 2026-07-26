@@ -14,10 +14,6 @@ interface UseLeadFormShellInput {
 
 // Queries, gating, purges, redirects and the slides deck refs. Called first
 // from LeadForm so the hook order stays fixed.
-/**
- * Use Lead Form Shell.
- * @param props - The props argument.
- */
 export function useLeadFormShell({
   pinnedReportId,
   redirectToCanonical,

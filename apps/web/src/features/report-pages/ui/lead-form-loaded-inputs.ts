@@ -51,11 +51,6 @@ export interface LeadFormPresentationState {
 
 // Null until every query settles and the draft mirror exists; LeadForm renders
 // its skeleton on null, and the non-null bundle carries the narrowed rows.
-/**
- * Resolve Lead Form Loaded.
- * @param data - The data argument.
- * @param draftSection - The draftSection argument.
- */
 export function resolveLeadFormLoaded(
   data: LeadFormLoadingState,
   draftSection: ReportSectionReadModel | null,
@@ -79,12 +74,6 @@ export function resolveLeadFormLoaded(
   };
 }
 
-/**
- * Lead Form View Model Input.
- * @param data - The data argument.
- * @param loaded - The loaded argument.
- * @param presentation - The presentation argument.
- */
 export function leadFormViewModelInput(
   data: LeadFormViewModelData,
   loaded: LeadFormLoadedBundle,
@@ -110,10 +99,6 @@ export function leadFormViewModelInput(
 
 // The declared slice LeadFormLoaded and its children read — narrower than the
 // shell data, which also carries LeadForm's own draft/chrome inputs.
-/**
- * Build Lead Form Loaded Data.
- * @param data - The data argument.
- */
 export function buildLeadFormLoadedData(
   data: LeadFormLoadedData,
 ): LeadFormLoadedData {
@@ -133,10 +118,6 @@ export function buildLeadFormLoadedData(
 
 // Only VALUES flow into the draft module — no ref protocol crosses the file
 // boundary, so the module owns its own refresh ordering.
-/**
- * Loaded Context Of.
- * @param viewModel - The viewModel argument.
- */
 export function loadedContextOf(viewModel: {
   readonly products: LeadFormLoadedContext["products"];
   readonly currentWeekItems: LeadFormLoadedContext["currentWeekItems"];

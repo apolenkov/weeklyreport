@@ -106,10 +106,6 @@ function RecordCommentThread({
 
 // Designated-reviewer comments on one record; canReview is the affordance gate
 // only — the mutation re-derives group server-side (never the security boundary).
-/**
- * Record Comments.
- * @param options - The options argument.
- */
 export function RecordComments({
   anchor,
   comments,

@@ -13,10 +13,6 @@ interface ViewModeToggleProps {
   readonly readOnly?: boolean;
 }
 
-/**
- * View Mode Toggle.
- * @param props - The props argument.
- */
 export function ViewModeToggle({
   editHref,
   slidesHref,

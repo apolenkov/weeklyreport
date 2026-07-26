@@ -11,10 +11,6 @@ import { createBootstrapJobsService } from "./jobs-service";
 
 // The cross-cutting singletons every ingress surface needs, assembled once so
 // the queue handles and the carry-over closure have exactly one owner.
-/**
- * Create App Services.
- * @param deps - The deps argument.
- */
 export function createAppServices(deps: {
   app: INestApplication;
   env: EnvConfig;

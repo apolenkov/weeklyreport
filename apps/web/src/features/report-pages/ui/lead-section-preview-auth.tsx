@@ -12,10 +12,6 @@ interface Props {
 
 // authorId only opens/highlights the lead's own section; product scope is
 // server-side (group products via weeklyReport.get).
-/**
- * Lead Section Preview Auth.
- * @param props - The props argument.
- */
 export function LeadSectionPreviewAuth({ reportId }: Props) {
   const trpc = useTRPC();
   const meQ = useQuery(trpc.auth.me.queryOptions());

@@ -1,11 +1,6 @@
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { MyHistorySectionRow } from "../domain/my-history.js";
 
-/**
- * Query My History Rows.
- * @param prisma - The prisma argument.
- * @param authorId - The authorId argument.
- */
 export function queryMyHistoryRows(
   prisma: PrismaService,
   authorId: string,

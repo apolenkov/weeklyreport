@@ -52,10 +52,6 @@ function ShowAllButton({
   );
 }
 
-/**
- * History Panel.
- * @param props - The props argument.
- */
 export function HistoryPanel({
   entries,
   includeArchive,

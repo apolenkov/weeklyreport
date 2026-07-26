@@ -1,11 +1,6 @@
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 
 // Shared by dashboard summary and Prometheus gauge so the two never drift.
-/**
- * Query Active Leads Last Published Period.
- * @param prisma - The prisma argument.
- * @param sectionScope - The sectionScope argument.
- */
 export async function queryActiveLeadsLastPublishedPeriod(
   prisma: PrismaService,
   sectionScope: Record<string, unknown>,

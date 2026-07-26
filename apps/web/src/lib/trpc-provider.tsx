@@ -14,10 +14,6 @@ type TRPCProviderProps = Readonly<{ children: ReactNode }>;
 // Sonner defaults make error toasts sticky; cap so notifications never block the workflow.
 const TOAST_DURATION_MS = 5000;
 
-/**
- * TRPC Provider.
- * @param props - The props argument.
- */
 export function TRPCProvider({ children }: TRPCProviderProps) {
   const [queryClient] = useState(() => makeQueryClient());
   const [trpc] = useState<TRPCProxy>(() => makeTRPCProxy(queryClient));

@@ -186,10 +186,6 @@ function WeeklyReportBody({
   );
 }
 
-/**
- * Weekly Report Page.
- * @param props - The props argument.
- */
 export function WeeklyReportPage({
   reportId,
   redirectToCanonical,

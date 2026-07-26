@@ -1,10 +1,6 @@
 import type { RecordVisibility } from "../../../hooks/use-record-visibility";
 import type { SessionState, SessionUser } from "../../../lib/session-provider";
 
-/**
- * Derive Session Actors.
- * @param sessionState - The sessionState argument.
- */
 export function deriveSessionActors(sessionState: SessionState | null): {
   sessionRole: SessionUser["role"] | null;
   currentUserId: string | null;
@@ -17,10 +13,6 @@ export function deriveSessionActors(sessionState: SessionState | null): {
   };
 }
 
-/**
- * Derive Active Ids.
- * @param active - The active argument.
- */
 export function deriveActiveIds(
   active: { reportId: string; reportSectionId: string } | null | undefined,
 ): { activeReportId: string; activeSectionId: string } {
@@ -31,11 +23,6 @@ export function deriveActiveIds(
 }
 
 // Prefer path-segment reportId so a lead can view/bookmark past weeks.
-/**
- * Derive Target Report Id.
- * @param pinnedReportId - The pinnedReportId argument.
- * @param activeReportId - The activeReportId argument.
- */
 export function deriveTargetReportId(
   pinnedReportId: string | undefined,
   activeReportId: string,
@@ -46,10 +33,6 @@ export function deriveTargetReportId(
 }
 
 // Foreign ?authorId deck: force Mine on the toolbar; deck enforces its own gate.
-/**
- * Derive Deck Visibility.
- * @param options - The options argument.
- */
 export function deriveDeckVisibility({
   isSlidesMode,
   slidesAuthorId,

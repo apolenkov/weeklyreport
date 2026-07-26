@@ -149,7 +149,6 @@ function mapReminderPolicy(api: ReminderPolicy): MockReminderPolicy {
  * The Reminder status → active mapping:
  *   apiStatus === 'active' => mock.active === true
  *   apiStatus === 'paused' => mock.active === false
- * @param api - The api argument.
  */
 export function mapAdminSnapshot(api: AdminSnapshot): MappedAdminSnapshot {
   return {
@@ -168,7 +167,6 @@ export function mapAdminSnapshot(api: AdminSnapshot): MappedAdminSnapshot {
  * Translates `admin.getSettings` API output into the SettingsTab presentation
  * shape. Field-for-field copy — `appSettingsSchema` and `MockSettings` stay
  * structurally identical.
- * @param api - The api argument.
  */
 export function mapAdminSettings(api: AppSettings): MockSettings {
   return {

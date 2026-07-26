@@ -20,10 +20,6 @@ export interface JobTraceContext {
   correlationId?: string;
 }
 
-/**
- * Resolve Correlation Id.
- * @param cls - The cls argument.
- */
 export function resolveCorrelationId(cls?: ClsService): string | undefined {
   if (!cls?.isActive()) return undefined;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cls.get returns undefined when the key is unset despite the generic return type
@@ -32,10 +28,6 @@ export function resolveCorrelationId(cls?: ClsService): string | undefined {
 
 // Capture W3C trace at queue.add via the global propagator; correlationId is
 // supplied by the enqueuer (not injected).
-/**
- * Capture Job Trace Context.
- * @param correlationId - The correlationId argument.
- */
 export function captureJobTraceContext(
   correlationId?: string,
 ): JobTraceContext {
@@ -50,13 +42,6 @@ export function captureJobTraceContext(
 
 // Link the job body to its enqueue trace and seed CLS with the enqueue
 // correlationId so job logs share the request's trace/correlation context.
-/**
- * Run In Job Trace Context.
- * @param jobContext - The jobContext argument.
- * @param spanName - The spanName argument.
- * @param cls - The cls argument.
- * @param body - The body argument.
- */
 export async function runInJobTraceContext(
   jobContext: JobTraceContext,
   spanName: string,
@@ -97,10 +82,6 @@ const TRACEPARENT_SEGMENT_COUNT = 4;
 // Failure handler runs after the span ends, so ambient OTel no longer has the
 // trace id — read it back from the job carrier. Loose parse (segment count +
 // non-empty only): failure-log linkage, not strict W3C validation.
-/**
- * Extract Trace Id.
- * @param ctx - The ctx argument.
- */
 export function extractTraceId(ctx: JobTraceContext): string | undefined {
   const segments = ctx.traceparent?.split("-");
   if (segments?.length !== TRACEPARENT_SEGMENT_COUNT) return undefined;
@@ -110,11 +91,6 @@ export function extractTraceId(ctx: JobTraceContext): string | undefined {
 
 // Workers sit outside main.ts's request pipeline; seed with the same CLS so
 // job-scoped logs resolve correlationId like in-request logs.
-/**
- * Create Worker Logger.
- * @param service - The service argument.
- * @param cls - The cls argument.
- */
 export function createWorkerLogger(
   service: string,
   cls?: ClsService,

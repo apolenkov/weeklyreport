@@ -7,10 +7,6 @@ const DANGER_ICON_CLASSES = "text-[#991b1b] hover:text-[#7f1d1d]";
 const NEUTRAL_ICON_CLASSES =
   "text-[var(--color-muted-foreground)] hover:text-[var(--color-starbucks-accent)]";
 
-/**
- * Icon Button.
- * @param options - The options argument.
- */
 export function IconButton({
   testId,
   label,
@@ -47,10 +43,6 @@ export function IconButton({
   );
 }
 
-/**
- * Chevron.
- * @param options - The options argument.
- */
 export function Chevron({ expanded }: { readonly expanded: boolean }) {
   return (
     <svg
@@ -68,9 +60,6 @@ export function Chevron({ expanded }: { readonly expanded: boolean }) {
   );
 }
 
-/**
- * Edit Icon.
- */
 export function EditIcon() {
   return (
     <svg
@@ -89,9 +78,6 @@ export function EditIcon() {
   );
 }
 
-/**
- * Publish Icon.
- */
 export function PublishIcon() {
   return (
     <svg
@@ -110,9 +96,6 @@ export function PublishIcon() {
   );
 }
 
-/**
- * Reopen Icon.
- */
 export function ReopenIcon() {
   return (
     <svg
@@ -131,9 +114,6 @@ export function ReopenIcon() {
   );
 }
 
-/**
- * Archive Icon.
- */
 export function ArchiveIcon() {
   return (
     <svg
@@ -153,9 +133,6 @@ export function ArchiveIcon() {
   );
 }
 
-/**
- * Unarchive Icon.
- */
 export function UnarchiveIcon() {
   return (
     <svg
@@ -176,9 +153,6 @@ export function UnarchiveIcon() {
   );
 }
 
-/**
- * Delete Icon.
- */
 export function DeleteIcon() {
   return (
     <svg

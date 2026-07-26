@@ -89,10 +89,6 @@ function focusFirstInvalidField(
   }
 }
 
-/**
- * Run Decision Save.
- * @param args - The args argument.
- */
 export function runDecisionSave(args: {
   readonly input: UseDecisionEditDialogArgs;
   readonly seed: DecisionFormSeed;

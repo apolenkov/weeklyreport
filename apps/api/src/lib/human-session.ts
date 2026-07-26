@@ -14,11 +14,6 @@ export interface HumanSessionDeps {
 // Human-only chokepoint (no PDF worker / dev synthetic). Redis revoke fails
 // open, Prisma isActive fails closed. Hydration supplies viewerGroupAccess
 // (not in JWT). createContext layers PDF/dev fallbacks on top of this.
-/**
- * Resolve Human Session.
- * @param token - The token argument.
- * @param deps - The deps argument.
- */
 export async function resolveHumanSession(
   token: string,
   deps: HumanSessionDeps,

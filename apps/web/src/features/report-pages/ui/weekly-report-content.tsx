@@ -212,10 +212,6 @@ function ReportSectionsSurface({
 
 // Empty-state keys off FULL content (head-report-visibility), never the
 // submitted count; otherwise review surfaces + submitted-only-filtered accordion.
-/**
- * Report Content.
- * @param props - The props argument.
- */
 export function ReportContent(props: ReportContentProps) {
   if (!props.hasAnyContent && props.periodStatus !== "published") {
     return <NoSubmissionsEmptyState periodLabel={props.periodLabel} />;

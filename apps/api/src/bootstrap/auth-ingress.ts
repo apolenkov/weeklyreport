@@ -40,10 +40,6 @@ function resolveSamlStrategy(logger: AppLogger) {
   return createSamlStrategy(createSamlStrategyOptions(process.env));
 }
 
-/**
- * Mount Auth Ingress.
- * @param deps - The deps argument.
- */
 export function mountAuthIngress(deps: {
   app: INestApplication;
   expressApp: Express;

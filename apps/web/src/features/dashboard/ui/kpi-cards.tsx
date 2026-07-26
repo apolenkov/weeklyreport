@@ -151,10 +151,6 @@ function RisksCard({
 }
 
 // Slim horizontal strip so three signals sit above content without tall cards.
-/**
- * Kpi Cards.
- * @param props - The props argument.
- */
 export function KpiCards({ data }: KpiCardsProps) {
   return (
     <div className="grid gap-3 sm:grid-cols-3">

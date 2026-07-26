@@ -30,10 +30,6 @@ type SnapshotReportRow = Prisma.ReportGetPayload<{
   include: typeof reportFullIncludeForSnapshot;
 }>;
 
-/**
- * Build Assembled Report From Prisma Row.
- * @param row - The row argument.
- */
 export function buildAssembledReportFromPrismaRow(
   row: SnapshotReportRow,
 ): AssembledReport {
@@ -59,10 +55,6 @@ export function buildAssembledReportFromPrismaRow(
   });
 }
 
-/**
- * To Published Snapshot Json.
- * @param report - The report argument.
- */
 export function toPublishedSnapshotJson(
   report: AssembledReport,
 ): Prisma.InputJsonValue {
@@ -70,10 +62,6 @@ export function toPublishedSnapshotJson(
   return JSON.parse(JSON.stringify(parsed)) as Prisma.InputJsonValue;
 }
 
-/**
- * Parse Published Snapshot.
- * @param value - The value argument.
- */
 export function parsePublishedSnapshot(
   value: Prisma.JsonValue | null | undefined,
 ): AssembledReport | null {
@@ -81,11 +69,6 @@ export function parsePublishedSnapshot(
   return assembledReportSchema.parse(value);
 }
 
-/**
- * Filter Snapshot Sections.
- * @param snapshot - The snapshot argument.
- * @param allowedSectionIds - The allowedSectionIds argument.
- */
 export function filterSnapshotSections(
   snapshot: AssembledReport,
   allowedSectionIds: ReadonlySet<string> | undefined,
@@ -104,11 +87,6 @@ export function filterSnapshotSections(
 }
 
 // Re-flooring keeps stale stored traffic lights aligned with product risks.
-/**
- * Effective Project Status.
- * @param section - The section argument.
- * @param project - The project argument.
- */
 export function effectiveProjectStatus(
   section: ReportSectionReadModel,
   project: ReportSectionReadModel["projects"][number],
@@ -153,10 +131,6 @@ function computePublishedStageCount(
       );
 }
 
-/**
- * Compute Portfolio Overview From Read Sections.
- * @param sections - The sections argument.
- */
 export function computePortfolioOverviewFromReadSections(
   sections: readonly ReportSectionReadModel[],
 ): PortfolioOverview {
@@ -184,10 +158,6 @@ export function computePortfolioOverviewFromReadSections(
   return { status, totals };
 }
 
-/**
- * Build Portfolio Products From Snapshot Sections.
- * @param sections - The sections argument.
- */
 export function buildPortfolioProductsFromSnapshotSections(
   sections: readonly ReportSectionReadModel[],
 ): PortfolioProductOverview[] {
@@ -222,10 +192,6 @@ export function buildPortfolioProductsFromSnapshotSections(
     .sort((a, b) => a.productName.localeCompare(b.productName, "ru"));
 }
 
-/**
- * Compute Worst Status.
- * @param statuses - The statuses argument.
- */
 export function computeWorstStatus(
   statuses: readonly TrafficLightStatus[],
 ): TrafficLightStatus | null {

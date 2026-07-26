@@ -104,10 +104,6 @@ function NotificationSaveRow({
   );
 }
 
-/**
- * Notifications Sub Tab.
- * @param options - The options argument.
- */
 export function NotificationsSubTab({
   serverSettings,
 }: {

@@ -21,10 +21,6 @@ interface NumberFieldBounds {
 
 // Integer field clamped to its declared bounds on every keystroke, so the draft
 // never holds a value the API would reject.
-/**
- * Number Field.
- * @param options - The options argument.
- */
 export function NumberField({
   id,
   label,
@@ -64,10 +60,6 @@ export function NumberField({
 }
 
 // Checkbox card: the whole card is the label, so the description is clickable.
-/**
- * Toggle Field.
- * @param options - The options argument.
- */
 export function ToggleField({
   name,
   title,
@@ -106,10 +98,6 @@ const WORKING_DAY_OPTIONS = [
   { value: "mon-sun", label: "Mon-Sun (7-day week)" },
 ] as const;
 
-/**
- * Working Days Field.
- * @param options - The options argument.
- */
 export function WorkingDaysField({
   value,
   onChange,

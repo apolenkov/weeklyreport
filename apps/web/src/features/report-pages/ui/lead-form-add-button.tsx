@@ -7,10 +7,6 @@ interface LeadFormAddButtonProps extends Pick<
   readonly children: ReactNode;
 }
 
-/**
- * Lead Form Add Button.
- * @param props - The props argument.
- */
 export function LeadFormAddButton({
   children,
   disabled,

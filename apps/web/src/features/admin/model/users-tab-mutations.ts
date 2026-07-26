@@ -4,12 +4,8 @@ import { toast } from "sonner";
 import { invalidateAdmin } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
 
-/**
- * Save/delete/deactivate/activate mutations for the Users tab: each wires
- * cache invalidation and toast feedback so the tab component only has to
- * call `.mutate`.
- * @param onSaved - The onSaved argument.
- */
+// Each mutation wires its own cache invalidation and toast feedback so the
+// Users tab component only has to call `.mutate`.
 export function useUserMutations(onSaved: () => void) {
   const trpc = useTRPC();
   const qc = useQueryClient();

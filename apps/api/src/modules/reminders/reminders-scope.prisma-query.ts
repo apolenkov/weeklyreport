@@ -5,11 +5,6 @@ import { groupScopeFilter } from "../../lib/group-scope.js";
 
 // Changing a predicate here changes who is authorized (fail-closed scope).
 
-/**
- * Query Rule Report Id.
- * @param prisma - The prisma argument.
- * @param ruleId - The ruleId argument.
- */
 export function queryRuleReportId(
   prisma: PrismaService,
   ruleId: string,
@@ -20,12 +15,6 @@ export function queryRuleReportId(
 }
 
 // Scope fragment filters on author — AND avoids clobbering a sibling author predicate.
-/**
- * Query In Scope Section Id.
- * @param prisma - The prisma argument.
- * @param session - The session argument.
- * @param reportId - The reportId argument.
- */
 export async function queryInScopeSectionId(
   prisma: PrismaService,
   session: UserSession,
@@ -38,13 +27,6 @@ export async function queryInScopeSectionId(
   return section?.id ?? null;
 }
 
-/**
- * Query In Scope Draft Section Id.
- * @param prisma - The prisma argument.
- * @param session - The session argument.
- * @param reportId - The reportId argument.
- * @param recipientEmail - The recipientEmail argument.
- */
 export async function queryInScopeDraftSectionId(
   prisma: PrismaService,
   session: UserSession,
@@ -63,12 +45,6 @@ export async function queryInScopeDraftSectionId(
   return section?.id ?? null;
 }
 
-/**
- * Query In Scope Section Author Emails.
- * @param prisma - The prisma argument.
- * @param session - The session argument.
- * @param reportId - The reportId argument.
- */
 export async function queryInScopeSectionAuthorEmails(
   prisma: PrismaService,
   session: UserSession,
@@ -81,12 +57,6 @@ export async function queryInScopeSectionAuthorEmails(
   return sections.map((s) => s.author.email);
 }
 
-/**
- * Query In Scope Lead Id.
- * @param prisma - The prisma argument.
- * @param session - The session argument.
- * @param leadId - The leadId argument.
- */
 export async function queryInScopeLeadId(
   prisma: PrismaService,
   session: UserSession,
@@ -99,12 +69,6 @@ export async function queryInScopeLeadId(
   return lead?.id ?? null;
 }
 
-/**
- * Query Active Rule For Dispatch.
- * @param prisma - The prisma argument.
- * @param reportId - The reportId argument.
- * @param ruleId - The ruleId argument.
- */
 export function queryActiveRuleForDispatch(
   prisma: PrismaService,
   reportId: string,
@@ -121,13 +85,6 @@ export function queryActiveRuleForDispatch(
   });
 }
 
-/**
- * Query Draft Sections For Dispatch.
- * @param prisma - The prisma argument.
- * @param session - The session argument.
- * @param reportId - The reportId argument.
- * @param leadId - The leadId argument.
- */
 export async function queryDraftSectionsForDispatch(
   prisma: PrismaService,
   session: UserSession,

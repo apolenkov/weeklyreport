@@ -32,10 +32,6 @@ const DEFAULT_PRESET = "deadline-leads" as const;
 
 // Start from a valid preset; never blend org audience (produced invalid pairs).
 // Only timezone comes from AppSettings.
-/**
- * Empty Policy Form.
- * @param timezone - The timezone argument.
- */
 export function emptyPolicyForm(timezone: string): PolicyFormState {
   const today = toIsoDateString(new Date());
   const { kind, audience } = presetPairing(DEFAULT_PRESET);
@@ -53,10 +49,6 @@ export function emptyPolicyForm(timezone: string): PolicyFormState {
   };
 }
 
-/**
- * Policy To Form.
- * @param policy - The policy argument.
- */
 export function policyToForm(policy: MockReminderPolicy): PolicyFormState {
   return {
     preset: presetForPolicy(policy.kind, policy.audience),

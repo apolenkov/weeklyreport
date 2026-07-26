@@ -5,10 +5,6 @@ interface AdminQueryIssueProps {
   readonly onRetry: () => void;
 }
 
-/**
- * Admin Query Issue.
- * @param props - The props argument.
- */
 export function AdminQueryIssue({
   description,
   onRetry,

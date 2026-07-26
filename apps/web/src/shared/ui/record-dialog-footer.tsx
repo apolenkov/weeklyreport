@@ -9,10 +9,6 @@ interface RecordDialogFooterProps {
   readonly sticky?: boolean;
 }
 
-/**
- * Record Dialog Footer.
- * @param props - The props argument.
- */
 export function RecordDialogFooter({
   saveLabel,
   onCancel,

@@ -11,10 +11,6 @@ export interface TabHeaderProps {
   readonly testId?: string;
 }
 
-/**
- * Tab Header.
- * @param props - The props argument.
- */
 export function TabHeader({
   title,
   description,
@@ -65,10 +61,6 @@ export interface TabSearchProps {
   readonly ariaLabel?: string;
 }
 
-/**
- * Tab Search.
- * @param props - The props argument.
- */
 export function TabSearch({
   value,
   onChange,
@@ -102,10 +94,6 @@ export interface TabFilterProps {
   readonly ariaLabel?: string;
 }
 
-/**
- * Tab Filter.
- * @param props - The props argument.
- */
 export function TabFilter({
   value,
   onChange,

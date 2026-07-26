@@ -36,10 +36,6 @@ interface RemindersPolicyListProps {
   readonly onRemove: (policy: MockReminderPolicy) => void;
 }
 
-/**
- * Reminders Policy List.
- * @param props - The props argument.
- */
 export function RemindersPolicyList({
   policies,
   filteredPolicies,

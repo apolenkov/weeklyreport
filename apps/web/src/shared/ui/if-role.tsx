@@ -7,10 +7,6 @@ import type { ReactNode } from "react";
 import { useTRPC } from "../../lib/trpc-context";
 
 // Uses auth.me (same query as SessionProvider) so React Query dedupes the fetch.
-/**
- * If Role.
- * @param options - The options argument.
- */
 export function IfRole({
   role,
   children,

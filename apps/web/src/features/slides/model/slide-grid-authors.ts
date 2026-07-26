@@ -28,11 +28,6 @@ export interface AuthorRoster {
   readonly authors: readonly GridAuthor[];
 }
 
-/**
- * Build Author Roster.
- * @param section - The section argument.
- * @param foreign - The foreign argument.
- */
 export function buildAuthorRoster(
   section: ReportSectionReadModel,
   foreign: readonly CrossAuthorContentRow[],

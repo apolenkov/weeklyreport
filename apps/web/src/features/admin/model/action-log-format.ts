@@ -8,21 +8,12 @@ export function formatTimestamp(value: string): string {
   return formatDateTime(date);
 }
 
-/**
- * Truncate.
- * @param value - The value argument.
- * @param max - The max argument.
- */
 export function truncate(value: string, max: number): string {
   if (value.length <= max) return value;
   return `${value.slice(0, max - 1).trimEnd()}…`;
 }
 
 // Friendlier "Namespace: Action" label so admins need not parse camelCase.
-/**
- * Humanize Procedure.
- * @param procedure - The procedure argument.
- */
 export function humanizeProcedure(procedure: string): string {
   const [ns, action] = procedure.split(".");
   if (!ns || !action) return procedure;
@@ -40,18 +31,10 @@ const STATUS_LABEL: Record<string, string> = {
   failed: "Error",
 };
 
-/**
- * Status Label.
- * @param value - The value argument.
- */
 export function statusLabel(value: string): string {
   return STATUS_LABEL[value] ?? value;
 }
 
-/**
- * Copy To Clipboard.
- * @param text - The text argument.
- */
 export async function copyToClipboard(text: string): Promise<boolean> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- navigator.clipboard is undefined in non-secure contexts despite the non-null DOM type

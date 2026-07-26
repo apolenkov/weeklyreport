@@ -42,10 +42,6 @@ function FieldErrorMessage({
   );
 }
 
-/**
- * Record Textarea Field.
- * @param props - The props argument.
- */
 export function RecordTextareaField({
   id,
   label,

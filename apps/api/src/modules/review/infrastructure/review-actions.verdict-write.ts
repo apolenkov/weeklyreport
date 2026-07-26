@@ -112,11 +112,6 @@ async function unsubmitOnChangesRequested(
   return count > 0;
 }
 
-/**
- * Write Verdict.
- * @param prisma - The prisma argument.
- * @param params - The params argument.
- */
 export function writeVerdict(
   prisma: PrismaService,
   params: PostVerdictParams,

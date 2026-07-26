@@ -6,11 +6,6 @@ import type {
 
 // Cross-group when owner group is outside caller's allowed ids yet the product
 // still surfaced. Pass only projects in the delivered read model; one signal/request.
-/**
- * Compute Cross Group Signal.
- * @param session - The session argument.
- * @param projects - The projects argument.
- */
 export function computeCrossGroupSignal(
   session: WeeklyReportScopeSession | undefined,
   projects: { id: string; lead: { reportingGroupId: string | null } | null }[],
@@ -41,11 +36,6 @@ export function computeCrossGroupSignal(
 
 // Use snapshot-frozen ownerGroupId — never live re-query (post-publish archive
 // would drop the product and silently escape the signal). Missing owner = not cross-group.
-/**
- * Compute Cross Group Signal From Snapshot Projects.
- * @param session - The session argument.
- * @param projects - The projects argument.
- */
 export function computeCrossGroupSignalFromSnapshotProjects(
   session: WeeklyReportScopeSession | undefined,
   projects: { projectId: string; ownerGroupId?: string | null }[],

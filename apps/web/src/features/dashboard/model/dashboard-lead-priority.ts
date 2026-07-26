@@ -8,13 +8,6 @@ const QUEUE_PRIORITY_ORDER: readonly LeadInfo["priority"][] = [
   "complete",
 ];
 
-/**
- * Queue Priority.
- * @param reviewState - The reviewState argument.
- * @param canReview - The canReview argument.
- * @param isStale - The isStale argument.
- * @param status - The status argument.
- */
 export function queuePriority(
   reviewState: LeadInfo["reviewState"],
   canReview: boolean,
@@ -26,11 +19,6 @@ export function queuePriority(
   return status === "submitted" ? "complete" : "active";
 }
 
-/**
- * Compare Lead Priority.
- * @param left - The left argument.
- * @param right - The right argument.
- */
 export function compareLeadPriority(left: LeadInfo, right: LeadInfo): number {
   const priorityDifference =
     QUEUE_PRIORITY_ORDER.indexOf(left.priority) -

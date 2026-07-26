@@ -17,11 +17,6 @@ export interface LeadSlidePeriodOption {
   readonly submitted: boolean;
 }
 
-/**
- * Build Lead Slide Period Options.
- * @param history - The history argument.
- * @param activeReportId - The activeReportId argument.
- */
 export function buildLeadSlidePeriodOptions(
   history: readonly MyHistoryEntry[],
   activeReportId: string | null,
@@ -56,10 +51,6 @@ export function buildLeadSlidePeriodOptions(
 /** Empty id when history has no report — query hooks disable on this sentinel. */
 const NO_LEAD_SLIDE_REPORT_ID = "";
 
-/**
- * Resolve Lead Slide Report Id.
- * @param options - The options argument.
- */
 export function resolveLeadSlideReportId({
   options,
   requestedReportId,

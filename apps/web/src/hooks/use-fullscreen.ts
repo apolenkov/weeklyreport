@@ -17,12 +17,6 @@ export interface FullscreenHandle {
 // Single owner of a slide deck's fullscreen state and keyboard listener —
 // deck surfaces must not register their own, or exit focus and the f-key
 // guard fork.
-/**
- * Use Fullscreen.
- * @param targetRef - The targetRef argument.
- * @param focusOnExitRef - The focusOnExitRef argument.
- * @param enabled - The enabled argument.
- */
 export function useFullscreen(
   targetRef: RefObject<HTMLElement | null>,
   focusOnExitRef?: RefObject<HTMLElement | null>,

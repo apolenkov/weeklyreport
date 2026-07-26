@@ -5,10 +5,6 @@
 export type ReportSectionStatus = "draft" | "submitted";
 export type LeadStatus = "submitted" | "draft" | "pending";
 
-/**
- * Derive Lead Status.
- * @param context - The context argument.
- */
 export function deriveLeadStatus(context: {
   sectionStatus: ReportSectionStatus;
   contentCount: number;

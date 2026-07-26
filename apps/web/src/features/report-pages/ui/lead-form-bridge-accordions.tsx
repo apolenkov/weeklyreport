@@ -134,10 +134,6 @@ interface LeadFormBridgeAccordionsProps {
   readonly stagesForProduct: StagesForProduct;
 }
 
-/**
- * Lead Form Bridge Accordions.
- * @param props - The props argument.
- */
 export function LeadFormBridgeAccordions({
   viewModel,
   actions,

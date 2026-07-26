@@ -26,11 +26,6 @@ interface UseQueryErrorHandlerOpts {
 
 // Single seam for query load failures: log always; toast only when toastPrefix is set.
 // opts is read through a ref so context value changes do not re-fire the effect.
-/**
- * Use Query Error Handler.
- * @param query - The query argument.
- * @param opts - The opts argument.
- */
 export function useQueryErrorHandler(
   query: QueryErrorState,
   opts: UseQueryErrorHandlerOpts,

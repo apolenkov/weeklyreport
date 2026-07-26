@@ -57,13 +57,6 @@ function buildLegacyPdfExportSession(reportId: string): UserSession {
 // Rebuild the requester's real session (hydrateSession) so export scope
 // matches their in-app view. pdfExportGuard still enforces the allowlist.
 // Null when requester is gone (fail closed); no requestedBy → legacy session.
-/**
- * Build Pdf Export Session.
- * @param reportId - The reportId argument.
- * @param requestedBy - The requestedBy argument.
- * @param prisma - The prisma argument.
- * @param sessionRevocation - The sessionRevocation argument.
- */
 export async function buildPdfExportSession(
   reportId: string,
   requestedBy: string | undefined,
@@ -198,11 +191,6 @@ function isDevAuthEnabled(env: NodeJS.ProcessEnv): boolean {
   );
 }
 
-/**
- * Create Context Factory.
- * @param _app - The _app argument.
- * @param logger - The logger argument.
- */
 export function createContextFactory(
   _app: INestApplication,
   logger: AppLogger,

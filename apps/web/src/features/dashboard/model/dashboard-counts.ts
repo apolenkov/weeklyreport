@@ -5,10 +5,6 @@ import type {
   ReportSectionReadModel,
 } from "@customreport/shared";
 
-/**
- * Count Activity Live Content.
- * @param row - The row argument.
- */
 export function countActivityLiveContent(
   row: ActivityLiveRow | undefined,
 ): number {
@@ -18,10 +14,6 @@ export function countActivityLiveContent(
 }
 
 // Total across product + activity so an activity-only lead is not "not started".
-/**
- * Count Section Content.
- * @param section - The section argument.
- */
 export function countSectionContent(section: ReportSectionReadModel): number {
   return (
     section.items.length +
@@ -31,10 +23,6 @@ export function countSectionContent(section: ReportSectionReadModel): number {
   );
 }
 
-/**
- * Count Product Content.
- * @param section - The section argument.
- */
 export function countProductContent(section: ReportSectionReadModel): number {
   return (
     section.items.filter((i) => i.projectId != null).length +
@@ -45,10 +33,6 @@ export function countProductContent(section: ReportSectionReadModel): number {
   );
 }
 
-/**
- * Count Activity Records.
- * @param section - The section argument.
- */
 export function countActivityRecords(section: ReportSectionReadModel): number {
   return (
     section.items.filter((i) => i.activityId != null).length +
@@ -65,10 +49,6 @@ export interface ProductColumnCounts {
   readonly priorityCount: number;
 }
 
-/**
- * Product Column Counts.
- * @param section - The section argument.
- */
 export function productColumnCounts(
   section: ReportSectionReadModel | undefined,
 ): ProductColumnCounts {

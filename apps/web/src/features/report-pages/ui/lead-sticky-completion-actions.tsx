@@ -10,10 +10,6 @@ interface LeadStickyCompletionActionsProps {
   readonly actions: LeadCompletionActionContract;
 }
 
-/**
- * Lead Sticky Completion Actions.
- * @param props - The props argument.
- */
 export function LeadStickyCompletionActions({
   actions,
 }: LeadStickyCompletionActionsProps) {

@@ -117,10 +117,6 @@ function IssueRow({ item }: { readonly item: BlockedAtRiskItem }) {
   );
 }
 
-/**
- * Product Card.
- * @param options - The options argument.
- */
 export function ProductCard({ group }: { readonly group: ProductGroup }) {
   const severity = groupSeverity(group);
   const tone = SEVERITY_TONE[severity];

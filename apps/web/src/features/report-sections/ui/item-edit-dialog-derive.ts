@@ -44,10 +44,6 @@ interface ItemEditDerivedFields {
 }
 
 // Pure form derivation — no hooks, unit-testable without React.
-/**
- * Derive Item Edit Fields.
- * @param args - The args argument.
- */
 export function deriveItemEditFields(
   args: DeriveItemEditFieldsArgs,
 ): ItemEditDerivedFields {

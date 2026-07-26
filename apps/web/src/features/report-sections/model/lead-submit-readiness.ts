@@ -40,10 +40,6 @@ export interface LeadSubmitReadiness {
   readonly canOpenConfirmation: boolean;
 }
 
-/**
- * Committed Risks.
- * @param risks - The risks argument.
- */
 export function committedRisks(
   risks: readonly RiskEntry[],
 ): readonly RiskEntry[] {
@@ -151,10 +147,6 @@ function unsetStatuses(
   return promotions.filter((status) => unsetIds.has(status.id));
 }
 
-/**
- * Derive Lead Submit Readiness.
- * @param input - The input argument.
- */
 export function deriveLeadSubmitReadiness(
   input: LeadSubmitReadinessInput,
 ): LeadSubmitReadiness {
@@ -180,11 +172,6 @@ export function deriveLeadSubmitReadiness(
   };
 }
 
-/**
- * Build Lead Submit Payload.
- * @param draftPayload - The draftPayload argument.
- * @param version - The version argument.
- */
 export function buildLeadSubmitPayload(
   draftPayload: DraftSaveContent,
   version: number,

@@ -23,10 +23,6 @@ interface Props {
 }
 
 // Native select triggers the OS picker — better at 375px than a 5-button row.
-/**
- * Admin Tabs Mobile Select.
- * @param props - The props argument.
- */
 export function AdminTabsMobileSelect({ activeTab }: Props) {
   const router = useRouter();
 

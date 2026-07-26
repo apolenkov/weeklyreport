@@ -209,10 +209,6 @@ function LoadedReportContent({
   );
 }
 
-/**
- * Lead Form Loaded.
- * @param props - The props argument.
- */
 export function LeadFormLoaded(props: LeadFormLoadedProps) {
   const completion = useCompletionPresentation(props);
   const byPeriod = props.data.byPeriodData;

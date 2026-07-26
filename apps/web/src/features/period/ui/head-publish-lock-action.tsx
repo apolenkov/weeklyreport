@@ -39,10 +39,6 @@ function periodMutationCallbacks(
   };
 }
 
-/**
- * Head Publish Lock Action.
- * @param props - The props argument.
- */
 export function HeadPublishLockAction({
   reportId,
 }: HeadPublishLockActionProps) {

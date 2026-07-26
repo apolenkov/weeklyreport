@@ -104,10 +104,6 @@ interface FillFromDropdownPanelProps {
   readonly onSelect: (period: ReportPeriod) => void;
 }
 
-/**
- * Fill From Dropdown Panel.
- * @param props - The props argument.
- */
 export function FillFromDropdownPanel({
   open,
   pos,

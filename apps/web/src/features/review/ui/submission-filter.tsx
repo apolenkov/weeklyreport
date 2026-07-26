@@ -14,10 +14,6 @@ const SEGMENTS: readonly { value: SubmissionFilter; label: string }[] = [
   { value: "all", label: "All" },
 ];
 
-/**
- * Submission Filter Toggle.
- * @param options - The options argument.
- */
 export function SubmissionFilterToggle({
   value,
   onChange,
@@ -44,10 +40,6 @@ export function SubmissionFilterToggle({
 
 // Reveal when submitted-only hides draft sections that have content — avoids
 // a misleading empty accordion ("No submissions yet").
-/**
- * Draft Hidden Signal.
- * @param options - The options argument.
- */
 export function DraftHiddenSignal({
   count,
   onShowAll,

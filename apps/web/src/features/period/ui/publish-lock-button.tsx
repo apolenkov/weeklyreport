@@ -109,10 +109,6 @@ function PublishConfirmDialog({
   );
 }
 
-/**
- * Publish Lock Button.
- * @param props - The props argument.
- */
 export function PublishLockButton({
   pendingCount,
   totalLeads,

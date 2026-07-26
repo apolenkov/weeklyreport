@@ -46,10 +46,6 @@ function replaceDashboardRow(
   return [...rows.filter((row) => row.leadId !== next.leadId), next];
 }
 
-/**
- * Build Dashboard Lead Rows.
- * @param props - The props argument.
- */
 export function buildDashboardLeadRows({
   review = [],
   weeklyReport,

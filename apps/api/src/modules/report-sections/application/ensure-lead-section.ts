@@ -79,12 +79,6 @@ async function seedActivityStatuses(
   });
 }
 
-/**
- * Ensure Lead Section.
- * @param prisma - The prisma argument.
- * @param reportId - The reportId argument.
- * @param userId - The userId argument.
- */
 export async function ensureLeadSection(
   prisma: Pick<
     PrismaClient,

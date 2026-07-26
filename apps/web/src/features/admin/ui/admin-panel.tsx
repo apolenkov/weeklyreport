@@ -33,10 +33,6 @@ function useAdminQueryErrorToast(state: QueryErrorState): void {
   }, [state.enabled, state.error, state.isError, state.label]);
 }
 
-/**
- * Admin Panel.
- * @param props - The props argument.
- */
 export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
   const trpc = useTRPC();
   const dependencies = ADMIN_TAB_QUERY_DEPENDENCIES[activeTab];

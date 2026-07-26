@@ -21,10 +21,6 @@ interface PeriodsTabDialogsProps {
   readonly onConfirmDelete: () => void;
 }
 
-/**
- * Periods Tab Dialogs.
- * @param props - The props argument.
- */
 export function PeriodsTabDialogs({
   showCreate,
   onCancelCreate,

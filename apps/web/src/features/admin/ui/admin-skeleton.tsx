@@ -19,10 +19,6 @@ const tableBodyRowIndexes = Array.from(
 );
 
 // Sized to final UI to prevent CLS when the snapshot query resolves.
-/**
- * Admin Tab Skeleton.
- * @param props - The props argument.
- */
 export function AdminTabSkeleton({ variant }: AdminTabSkeletonProps) {
   if (variant === "form") {
     return (

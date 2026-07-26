@@ -20,10 +20,6 @@ interface ViewerContextControlsProps {
 }
 
 // Shared by both viewer render paths (page and slides).
-/**
- * Viewer Context Controls.
- * @param props - The props argument.
- */
 export function ViewerContextControls({
   periods,
   reportId,

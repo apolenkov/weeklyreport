@@ -3,8 +3,6 @@ import type { PrismaService } from "../../../infrastructure/prisma/prisma.servic
 /**
  * The caller's distinct assigned productIds (report-wide; assignments are not
  * report-scoped). Both cross-author reads start from this same join.
- * @param prisma - The prisma argument.
- * @param userId - The userId argument.
  */
 export async function fetchViewerProjectIds(
   prisma: PrismaService,
@@ -17,12 +15,7 @@ export async function fetchViewerProjectIds(
   return [...new Set(assignments.map((r) => r.projectId))];
 }
 
-/**
- * Other users' stage assignments on the caller's products (status-only read).
- * @param prisma - The prisma argument.
- * @param myProjectIds - The myProjectIds argument.
- * @param userId - The userId argument.
- */
+/** Other users' stage assignments on the caller's products (status-only read). */
 export function fetchForeignStatusAssignments(
   prisma: PrismaService,
   myProjectIds: string[],
@@ -46,9 +39,6 @@ export function fetchForeignStatusAssignments(
  * status is RISK-DERIVED (covering risks that name the stage), never the
  * foreign item text. The persisted traffic is consulted only as the
  * empty/non-empty base when no risk covers the stage.
- * @param prisma - The prisma argument.
- * @param reportId - The reportId argument.
- * @param otherUserIds - The otherUserIds argument.
  */
 export function fetchForeignStatusSections(
   prisma: PrismaService,
@@ -72,9 +62,6 @@ export function fetchForeignStatusSections(
 /**
  * Co-owners on shared, NON-ARCHIVED products, with the author's role (the
  * full-content read scopes to non-archived products only).
- * @param prisma - The prisma argument.
- * @param myProjectIds - The myProjectIds argument.
- * @param userId - The userId argument.
  */
 export function fetchForeignContentAssignments(
   prisma: PrismaService,
@@ -142,12 +129,6 @@ const foreignContentSectionSelect = {
   },
 } as const;
 
-/**
- * Fetch Foreign Content Sections.
- * @param prisma - The prisma argument.
- * @param reportId - The reportId argument.
- * @param otherUserIds - The otherUserIds argument.
- */
 export function fetchForeignContentSections(
   prisma: PrismaService,
   reportId: string,

@@ -6,10 +6,6 @@ export interface ActivityRouterDeps {
   activityService: ActivityService;
 }
 
-/**
- * Create Activity Router.
- * @param deps - The deps argument.
- */
 export function createActivityRouter(deps: ActivityRouterDeps) {
   return router({
     live: headProcedure.query(async ({ ctx }) => {

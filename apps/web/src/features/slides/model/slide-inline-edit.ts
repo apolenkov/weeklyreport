@@ -39,10 +39,6 @@ export type SlideInlineEditRecord =
       readonly deleteSubtitle?: string;
     };
 
-/**
- * To Dialog Products.
- * @param data - The data argument.
- */
 export function toDialogProducts(data: MappedLeadForm): Product[] {
   return data.products.map((product) => ({
     ...product,
@@ -50,18 +46,10 @@ export function toDialogProducts(data: MappedLeadForm): Product[] {
   }));
 }
 
-/**
- * To Dialog Risks.
- * @param data - The data argument.
- */
 export function toDialogRisks(data: MappedLeadForm): RiskEntry[] {
   return data.risks.map(toRiskEntry);
 }
 
-/**
- * To Dialog Activities.
- * @param section - The section argument.
- */
 export function toDialogActivities(
   section: ReportSectionReadModel,
 ): readonly { id: string; name: string }[] {
@@ -71,21 +59,12 @@ export function toDialogActivities(
   }));
 }
 
-/**
- * Own Period Ranks.
- * @param data - The data argument.
- */
 export function ownPeriodRanks(data: MappedLeadForm): readonly number[] {
   return [...data.currentWeekItems, ...data.nextWeekItems]
     .map((item) => item.priorityRank)
     .filter((rank): rank is number => rank != null);
 }
 
-/**
- * Owned Stages For Product.
- * @param section - The section argument.
- * @param productId - The productId argument.
- */
 export function ownedStagesForProduct(
   section: ReportSectionReadModel,
   productId: string,
@@ -97,12 +76,6 @@ export function ownedStagesForProduct(
   );
 }
 
-/**
- * Resolve Slide Inline Record.
- * @param section - The section argument.
- * @param data - The data argument.
- * @param ref - The ref argument.
- */
 export function resolveSlideInlineRecord(
   section: ReportSectionReadModel,
   data: MappedLeadForm,

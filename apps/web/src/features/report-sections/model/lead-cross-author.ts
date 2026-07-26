@@ -70,7 +70,6 @@ function getOrCreateStageMap(
  * here with empty risks/items would collapse a server `red`/`yellow` back to
  * on-track (the no-backing-risk path), making the foreign chip green while
  * product health reads red — so we trust the server value as-is.
- * @param crossAuthors - The crossAuthors argument.
  */
 export function buildCrossAuthorStageMap(
   crossAuthors: readonly CrossAuthorRow[],
@@ -100,8 +99,6 @@ export function buildCrossAuthorStageMap(
  * each one and its status from the cross-author query. Stages the current user
  * owns (`mine`) are never touched, and a locked stage with no cross-author
  * entry keeps its null assignee.
- * @param products - The products argument.
- * @param stageOverrides - The stageOverrides argument.
  */
 export function applyCrossAuthorStageOverrides(
   products: readonly LeadProduct[],

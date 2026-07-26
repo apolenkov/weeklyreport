@@ -114,10 +114,6 @@ function createDispatchPendingProcedure(deps: RemindersRouterDeps) {
     });
 }
 
-/**
- * Create Reminders Router.
- * @param deps - The deps argument.
- */
 export function createRemindersRouter(deps: RemindersRouterDeps) {
   return router({
     execute: createExecuteProcedure(deps),

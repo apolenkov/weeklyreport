@@ -26,9 +26,6 @@ import {
  * with the author's assignments on those products, filtered by
  * `project.archived=false`. Report-independent (assignments are report-wide);
  * report access is proven separately by the caller's own-section read.
- * @param prisma - The prisma argument.
- * @param viewerId - The viewerId argument.
- * @param authorId - The authorId argument.
  */
 export async function getSharedNonArchivedProductIds(
   prisma: PrismaService,
@@ -51,12 +48,6 @@ export async function getSharedNonArchivedProductIds(
   return [...new Set(shared.map((r) => r.projectId))];
 }
 
-/**
- * Get Cross Authors.
- * @param prisma - The prisma argument.
- * @param reportId - The reportId argument.
- * @param userId - The userId argument.
- */
 export async function getCrossAuthors(
   prisma: PrismaService,
   reportId: string,
@@ -81,12 +72,6 @@ export async function getCrossAuthors(
   return buildCrossAuthorStatusRows(others, statusMap, risksByAuthor);
 }
 
-/**
- * Get Cross Author Content.
- * @param prisma - The prisma argument.
- * @param reportId - The reportId argument.
- * @param userId - The userId argument.
- */
 export async function getCrossAuthorContent(
   prisma: PrismaService,
   reportId: string,

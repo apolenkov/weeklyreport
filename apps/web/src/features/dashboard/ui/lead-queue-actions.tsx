@@ -44,10 +44,6 @@ function QueueLink({
   );
 }
 
-/**
- * Lead Primary Action.
- * @param props - The props argument.
- */
 export function LeadPrimaryAction({
   lead,
   reportId,
@@ -155,10 +151,6 @@ function SecondaryActionSet({
   );
 }
 
-/**
- * Lead Secondary Actions.
- * @param props - The props argument.
- */
 export function LeadSecondaryActions({
   lead,
   reportId,

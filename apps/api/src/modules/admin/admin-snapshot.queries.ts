@@ -145,10 +145,6 @@ function toReminderPolicy(row: SnapshotRows["reminderPolicies"][number]) {
   });
 }
 
-/**
- * Get Snapshot.
- * @param prisma - The prisma argument.
- */
 export async function getSnapshot(
   prisma: PrismaService,
 ): Promise<AdminSnapshot> {

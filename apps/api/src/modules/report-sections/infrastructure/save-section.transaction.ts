@@ -140,12 +140,6 @@ async function readBackSavedSection(
   return mapPrismaToReportSection(saved);
 }
 
-/**
- * Apply Save Section.
- * @param tx - The tx argument.
- * @param section - The section argument.
- * @param expectedVersion - The expectedVersion argument.
- */
 export async function applySaveSection(
   tx: Prisma.TransactionClient,
   section: ReportSectionReadModel,

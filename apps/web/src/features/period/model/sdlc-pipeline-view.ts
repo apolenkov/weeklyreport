@@ -34,10 +34,6 @@ export interface ProductPipelineView {
 
 // Health/completeness always use the RAW pre-floor product + full stage list;
 // visibilityMode only narrows which chips render.
-/**
- * Derive Product Pipeline View.
- * @param args - The args argument.
- */
 export function deriveProductPipelineView(args: {
   readonly product: Product;
   readonly rawProducts: readonly Product[] | undefined;

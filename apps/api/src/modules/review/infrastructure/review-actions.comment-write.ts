@@ -134,14 +134,8 @@ async function createComment(
   }
 }
 
-/**
- * Inserts a review comment under the same Report-row lock ordering as the
- * section delete-recreate transaction, then anchors it by durable lineage.
- * @param prisma - The prisma argument.
- * @param reviewerId - The reviewerId argument.
- * @param anchor - The anchor argument.
- * @param text - The text argument.
- */
+// Takes the same Report-row lock ordering as the section delete-recreate
+// transaction, then anchors the comment by durable lineage.
 export function insertCoordinatedComment(
   prisma: PrismaService,
   reviewerId: string,

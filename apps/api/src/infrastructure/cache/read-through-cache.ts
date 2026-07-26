@@ -35,10 +35,6 @@ async function scanAndDelete(redis: Redis, match: string): Promise<void> {
   }
 }
 
-/**
- * Create Redis Read Through Cache.
- * @param options - The options argument.
- */
 export function createRedisReadThroughCache(
   options: ReadThroughCacheOptions,
 ): RedisReadThroughCache {

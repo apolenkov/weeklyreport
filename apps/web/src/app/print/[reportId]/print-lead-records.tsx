@@ -82,10 +82,6 @@ const DECISION_BADGE_STYLE: CSSProperties = {
   fontWeight: 600,
 };
 
-/**
- * Current Week Records.
- * @param props - The props argument.
- */
 export function CurrentWeekRecords({ report }: RecordListProps) {
   if (report.currentWeek.length === 0) return null;
   return (
@@ -108,10 +104,6 @@ export function CurrentWeekRecords({ report }: RecordListProps) {
   );
 }
 
-/**
- * Next Week Records.
- * @param props - The props argument.
- */
 export function NextWeekRecords({ report }: RecordListProps) {
   if (report.nextWeek.length === 0) return null;
   return (
@@ -126,10 +118,6 @@ export function NextWeekRecords({ report }: RecordListProps) {
   );
 }
 
-/**
- * Risk Records.
- * @param props - The props argument.
- */
 export function RiskRecords({ report }: RecordListProps) {
   if (report.risks.length === 0) return null;
   return (
@@ -149,10 +137,6 @@ export function RiskRecords({ report }: RecordListProps) {
   );
 }
 
-/**
- * Decision Records.
- * @param props - The props argument.
- */
 export function DecisionRecords({ report }: RecordListProps) {
   if (report.decisions.length === 0) return null;
   return (
@@ -170,10 +154,6 @@ export function DecisionRecords({ report }: RecordListProps) {
   );
 }
 
-/**
- * Priority Records.
- * @param props - The props argument.
- */
 export function PriorityRecords({ report }: RecordListProps) {
   if (report.priorities.length === 0) return null;
   return (

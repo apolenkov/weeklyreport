@@ -87,10 +87,6 @@ function activityRecordReadiness(row: ActivityLiveRow): SlideReadinessItem[] {
   ];
 }
 
-/**
- * Build Activity Slide Model.
- * @param row - The row argument.
- */
 export function buildActivitySlideModel(
   row: ActivityLiveRow,
 ): SectionSlideModel {

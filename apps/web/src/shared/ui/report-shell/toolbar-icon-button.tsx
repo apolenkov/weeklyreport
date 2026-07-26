@@ -9,10 +9,6 @@ type ToolbarIconButtonProps = Omit<ComponentProps<"button">, "type"> & {
   readonly "aria-label": string;
 };
 
-/**
- * Toolbar Icon Button.
- * @param props - The props argument.
- */
 export function ToolbarIconButton({
   title,
   className,

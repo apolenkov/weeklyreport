@@ -204,10 +204,6 @@ function buildLeadInfo(
   };
 }
 
-/**
- * Build Lead Infos.
- * @param props - The props argument.
- */
 export function buildLeadInfos({
   review,
   weeklyReport,
@@ -236,10 +232,6 @@ export function buildLeadInfos({
 
 export type PrimaryAction = "open" | "remind" | "review" | "none";
 
-/**
- * Primary Action.
- * @param lead - The lead argument.
- */
 export function primaryAction(lead: LeadInfo): PrimaryAction {
   if (lead.actions.canReview) return "review";
   if (lead.actions.canOpen) return "open";

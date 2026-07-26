@@ -75,10 +75,6 @@ function QuickAddMenu({
   );
 }
 
-/**
- * Quick Add Button.
- * @param props - The props argument.
- */
 export function QuickAddButton({
   onPick,
   disabled = false,

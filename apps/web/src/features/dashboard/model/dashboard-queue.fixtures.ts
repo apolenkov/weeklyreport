@@ -14,20 +14,11 @@ const DEFAULT_TOTAL_LEADS = 5;
 
 export const QUEUE_NOW = new Date("2026-07-16T12:00:00.000Z");
 
-/**
- * Queue Lead Id.
- * @param suffix - The suffix argument.
- */
 export const queueLeadId = (suffix: number) =>
   `20000000-0000-4000-8000-${suffix.toString().padStart(UUID_SUFFIX_LENGTH, "0")}`;
 const sectionId = (suffix: number) =>
   `30000000-0000-4000-8000-${suffix.toString().padStart(UUID_SUFFIX_LENGTH, "0")}`;
 
-/**
- * Queue Review Row.
- * @param id - The id argument.
- * @param name - The name argument.
- */
 export function queueReviewRow(
   id: string,
   name: string,
@@ -42,11 +33,6 @@ export function queueReviewRow(
   };
 }
 
-/**
- * Queue Verdict.
- * @param value - The value argument.
- * @param isCurrent - The isCurrent argument.
- */
 export function queueVerdict(
   value: SectionReviewView["verdict"],
   isCurrent = true,
@@ -61,13 +47,6 @@ export function queueVerdict(
   };
 }
 
-/**
- * Queue Section.
- * @param id - The id argument.
- * @param name - The name argument.
- * @param status - The status argument.
- * @param options - The options argument.
- */
 export function queueSection(
   id: string,
   name: string,
@@ -98,12 +77,6 @@ export function queueSection(
   };
 }
 
-/**
- * Queue Activity Row.
- * @param id - The id argument.
- * @param name - The name argument.
- * @param options - The options argument.
- */
 export function queueActivityRow(
   id: string,
   name: string,
@@ -132,12 +105,6 @@ export function queueActivityRow(
   };
 }
 
-/**
- * Queue Report.
- * @param leadSections - The leadSections argument.
- * @param periodStatus - The periodStatus argument.
- * @param totalLeads - The totalLeads argument.
- */
 export function queueReport(
   leadSections: readonly ReportSectionReadModel[],
   periodStatus: WeeklyReportReadModel["periodStatus"] = "open",
@@ -160,11 +127,6 @@ export function queueReport(
   };
 }
 
-/**
- * Queue Activity.
- * @param rows - The rows argument.
- * @param periodStatus - The periodStatus argument.
- */
 export function queueActivity(
   rows: ActivityLiveResponse["rows"],
   periodStatus: WeeklyReportReadModel["periodStatus"] = "open",

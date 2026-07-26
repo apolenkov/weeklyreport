@@ -52,13 +52,6 @@ function rejectSamlAssertion(
   res.redirect(`${deps.frontendUrl}/auth/error?reason=invalid_assertion`);
 }
 
-/**
- * Create Saml Authentication Callback.
- * @param deps - The deps argument.
- * @param req - The req argument.
- * @param res - The res argument.
- * @param next - The next argument.
- */
 export function createSamlAuthenticationCallback(
   deps: Pick<AuthRouteDeps, "auditLogger" | "frontendUrl">,
   req: Request,
@@ -131,11 +124,6 @@ function createSamlCallbackHandler(deps: AuthRouteDeps): RequestHandler {
 const HTTP_FORBIDDEN = 403;
 
 // Normalize FRONTEND_URL(S) to bare origins; raw string compare fails on trailing slash.
-/**
- * Derive Logout Origins.
- * @param frontendUrl - The frontendUrl argument.
- * @param frontendUrlsCsv - The frontendUrlsCsv argument.
- */
 export function deriveLogoutOrigins(
   frontendUrl: string,
   frontendUrlsCsv: string | undefined,
@@ -156,10 +144,6 @@ export function deriveLogoutOrigins(
   );
 }
 
-/**
- * Create Logout Handler.
- * @param deps - The deps argument.
- */
 export function createLogoutHandler(
   deps: Pick<AuthRouteDeps, "auditLogger" | "env"> & {
     allowedOrigins: ReadonlySet<string>;
@@ -197,9 +181,6 @@ export function createLogoutHandler(
 
 // Dev-login-only: callback stays mounted as 503 so misdirected assertions
 // report "not configured", not 404.
-/**
- * Create Saml Unavailable Handler.
- */
 export function createSamlUnavailableHandler(): RequestHandler {
   const HTTP_SERVICE_UNAVAILABLE = 503;
   return (_req, res) => {
@@ -251,16 +232,6 @@ function mountSamlRoutes(
   );
 }
 
-/**
- * Mount Auth Routes.
- * @param expressApp - The expressApp argument.
- * @param samlStrategy - The samlStrategy argument.
- * @param authController - The authController argument.
- * @param prisma - The prisma argument.
- * @param env - The env argument.
- * @param provisionLeadWorkspace - The provisionLeadWorkspace argument.
- * @param auditLogger - The auditLogger argument.
- */
 export function mountAuthRoutes(
   expressApp: Express,
   samlStrategy: SamlStrategy | undefined,

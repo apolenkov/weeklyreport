@@ -14,12 +14,6 @@ export type PublishCasOutcome = "transitioned" | "raced" | "archived";
 
 // Predicate closes concurrent-publish and archive↔publish races; zero-row re-read
 // through the SAME client splits raced vs archived. data applied verbatim in updateMany.
-/**
- * Publish Compare And Set.
- * @param client - The client argument.
- * @param reportId - The reportId argument.
- * @param data - The data argument.
- */
 export async function publishCompareAndSet(
   client: PublishCasClient,
   reportId: string,

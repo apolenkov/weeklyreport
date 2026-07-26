@@ -31,11 +31,6 @@ async function throwProductOwnershipConflict(
 
 // One group per product: same group is idempotent; different group rejects
 // (no silent ownership move — UI must detach first).
-/**
- * Attach Product To Group.
- * @param prisma - The prisma argument.
- * @param input - The input argument.
- */
 export async function attachProductToGroup(
   prisma: PrismaService,
   input: GroupProductEdgeInput,
@@ -81,11 +76,6 @@ export async function attachProductToGroup(
 }
 
 // deleteMany so an already-absent edge is a no-op (UI double-click / race safe).
-/**
- * Detach Product From Group.
- * @param prisma - The prisma argument.
- * @param input - The input argument.
- */
 export async function detachProductFromGroup(
   prisma: PrismaService,
   input: GroupProductEdgeInput,
@@ -96,11 +86,6 @@ export async function detachProductFromGroup(
 }
 
 // Projects as AdminProject so the UI reuses the snapshot.projects shape.
-/**
- * List Group Products.
- * @param prisma - The prisma argument.
- * @param groupId - The groupId argument.
- */
 export async function listGroupProducts(
   prisma: PrismaService,
   groupId: string,
@@ -121,11 +106,6 @@ export async function listGroupProducts(
   );
 }
 
-/**
- * List Product Groups.
- * @param prisma - The prisma argument.
- * @param productId - The productId argument.
- */
 export async function listProductGroups(
   prisma: PrismaService,
   productId: string,
@@ -139,11 +119,6 @@ export async function listProductGroups(
 }
 
 // One query for the catalog; every requested id is present (group null if unowned).
-/**
- * List Product Group Ownership.
- * @param prisma - The prisma argument.
- * @param productIds - The productIds argument.
- */
 export async function listProductGroupOwnership(
   prisma: PrismaService,
   productIds: readonly string[],

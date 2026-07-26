@@ -109,10 +109,6 @@ function DecisionsSection({
   );
 }
 
-/**
- * Accordion Sections.
- * @param options - The options argument.
- */
 export function AccordionSections({
   report,
   review,

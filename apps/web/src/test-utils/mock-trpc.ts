@@ -43,10 +43,6 @@ function ensureLeaf(
   return node;
 }
 
-/**
- * Create Mock TRPC.
- * @param descriptors - The descriptors argument.
- */
 export function createMockTRPC(descriptors: ProcedureDescriptor[]): {
   proxy: TRPCProxy;
   captured: Record<string, CapturedMutation>;

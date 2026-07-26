@@ -170,10 +170,6 @@ function GroupField({
   );
 }
 
-/**
- * User Edit Dialog Fields.
- * @param props - The props argument.
- */
 export function UserEditDialogFields({
   form,
   onFormChange,

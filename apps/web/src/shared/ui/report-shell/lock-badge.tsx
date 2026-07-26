@@ -17,10 +17,6 @@ function formatLockDescription(authorName: string | null | undefined): string {
   return `Read-only — authored by ${authorName ?? "another lead"}`;
 }
 
-/**
- * Lock Badge.
- * @param props - The props argument.
- */
 export function LockBadge({ authorName, variant = "default" }: LockBadgeProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const tooltip = useSdlcTooltip();

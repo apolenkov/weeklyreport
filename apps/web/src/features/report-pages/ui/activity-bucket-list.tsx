@@ -18,9 +18,6 @@ interface BucketCardProps {
   readonly onMoveToNextWeek?: (id: string) => void;
 }
 
-/**
- * Empty Activity Placeholder.
- */
 export function EmptyActivityPlaceholder() {
   return (
     <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
@@ -106,10 +103,6 @@ function groupByBucket(
   })).filter((group) => group.entries.length > 0);
 }
 
-/**
- * Activity Bucket List.
- * @param props - The props argument.
- */
 export function ActivityBucketList({
   entries,
   risks,

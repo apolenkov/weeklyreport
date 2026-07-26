@@ -21,10 +21,6 @@ import type { Prisma } from "@prisma/client";
  * Accepts either the full `PrismaClient`/`PrismaService` or a `$transaction`
  * client so the caller can compose it atomically with sibling writes (the
  * verdict upsert). Returns the number of rows transitioned (0 or 1).
- * @param tx - The tx argument.
- * @param sectionId - The sectionId argument.
- * @param revokedBy - The revokedBy argument.
- * @param expectedVersion - The expectedVersion argument.
  */
 export async function applyRevokeTransition(
   tx: Pick<Prisma.TransactionClient, "reportSection">,

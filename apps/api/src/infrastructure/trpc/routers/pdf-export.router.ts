@@ -8,10 +8,6 @@ export interface PdfExportRouterDeps {
   pdfExportService: PdfExportService;
 }
 
-/**
- * Create Pdf Export Router.
- * @param deps - The deps argument.
- */
 export function createPdfExportRouter(deps: PdfExportRouterDeps) {
   return router({
     // Lead is the data subject, not an exporter — leadershipProcedure only.

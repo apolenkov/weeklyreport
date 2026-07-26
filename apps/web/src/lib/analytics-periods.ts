@@ -1,13 +1,6 @@
-/**
- * Pick the two most recent period-end labels to compare on the Trends page.
- *
- * `analytics.trafficLightHistory` returns its `periods` array ascending by
- * periodEnd (the repository sorts `orderBy: { periodEnd: "asc" }`), so the last
- * two entries are the latest pair: `periodA` is the older of the two, `periodB`
- * the most recent. Returns null when fewer than two periods exist — there is
- * nothing to compare.
- * @param periods - The periods argument.
- */
+// `analytics.trafficLightHistory` returns periods ascending by periodEnd
+// (repository `orderBy: { periodEnd: "asc" }`), so the last two are the latest
+// pair: periodA older, periodB newest. Null below two — nothing to compare.
 export function latestPeriodPair(
   periods: readonly string[],
 ): { periodA: string; periodB: string } | null {

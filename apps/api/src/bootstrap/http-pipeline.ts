@@ -24,10 +24,6 @@ export interface DeferredIngressLimiters {
   readonly vitalsLimiter: RequestHandler;
 }
 
-/**
- * Configure Http Pipeline.
- * @param deps - The deps argument.
- */
 export function configureHttpPipeline(deps: {
   app: INestApplication;
   env: EnvConfig;

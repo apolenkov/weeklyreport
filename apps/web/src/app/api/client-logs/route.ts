@@ -15,10 +15,6 @@ function declaredBodyIsOversized(req: NextRequest): boolean {
   );
 }
 
-/**
- * POST.
- * @param req - The req argument.
- */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   // Outside the try: a missing API URL is a deployment misconfiguration and
   // must fail loud, not be swallowed into the fire-and-forget 204.

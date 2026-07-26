@@ -41,10 +41,6 @@ import { WeeklyReportService } from "../modules/weekly-report/index.js";
 // Resolve every tRPC-facing service from the DI container and assemble the app
 // router. The cross-cutting primitives built in bootstrap (env, autoCarryOver,
 // the queue handles and the DLQ jobs service) are threaded in.
-/**
- * Build App Router.
- * @param deps - The deps argument.
- */
 export function buildAppRouter(deps: {
   app: INestApplication;
   prisma: PrismaService;

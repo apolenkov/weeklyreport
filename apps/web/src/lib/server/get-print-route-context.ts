@@ -27,10 +27,6 @@ const NO_CONTEXT: PrintRouteContext = {
   pdfReportId: null,
 };
 
-/**
- * Decode Print Gate Response.
- * @param body - The body argument.
- */
 function decodePrintGateResponse(body: unknown): PrintRouteContext {
   const payload = decodeTrpcBatchPayload(body);
   if (payload === null || typeof payload !== "object") return NO_CONTEXT;
@@ -42,9 +38,6 @@ function decodePrintGateResponse(body: unknown): PrintRouteContext {
   };
 }
 
-/**
- * Get Print Route Context.
- */
 export async function getPrintRouteContext(): Promise<PrintRouteContext> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;

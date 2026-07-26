@@ -13,10 +13,6 @@ export interface AcknowledgeGroup {
 
 // Per-group Acknowledge on the live report — any access-holder, NOT gated by
 // canReview. "Who acknowledged" roster is head/admin only.
-/**
- * Review Acknowledge Bar.
- * @param options - The options argument.
- */
 export function ReviewAcknowledgeBar({
   reportId,
   groups,

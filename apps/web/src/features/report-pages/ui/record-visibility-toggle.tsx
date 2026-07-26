@@ -9,10 +9,6 @@ import {
 } from "../../../shared/ui/report-shell/segmented-toggle";
 
 // View-only: changes what the lead sees, never what is submitted/published.
-/**
- * Record Visibility Toggle.
- * @param options - The options argument.
- */
 export function RecordVisibilityToggle({
   value,
   onChange,
