@@ -161,9 +161,24 @@
       things only this run could establish: `lint:e2e:typecheck` resolves
       `@playwright/test` on a clean CI install (its `paths` maps into
       `apps/web/node_modules`, which need not exist there), and the E2E job
-      actually EXECUTES the rewritten `dev-auth` login recursion and
-      `global-setup`'s `execFileSync` — local runs had only loaded them.
+      executes `global-setup`'s `execFileSync` rewrite — it is the integration
+      config's `globalSetup`, so every run goes through it.
+      Correction: an earlier version of this entry also claimed the run
+      executed the rewritten `dev-auth` login recursion. It did not. The E2E
+      job runs `pnpm test:e2e:integration`, which loads only the integration
+      config; `loginByCookie` is imported solely by `catalog-sweep.spec.ts` and
+      `csp-validation.spec.ts`, and neither of their configs runs in CI. See
+      the follow-up item below.
       Note for whoever reads this next: `CLAUDE.md` claimed CI was
       manual-dispatch only. It is not — `ci.yml` triggers on
       `push: branches: [main]` and on pull requests as well. That line is
       corrected.
+- [ ] Execute `loginByCookie` at least once — the retry loop in
+      `e2e/sweep/helpers/dev-auth.ts` was rewritten from a `for` loop with two
+      mutable bindings into a recursion, and no gate in this repo runs it.
+      ESLint and `tsc` cover its shape, not its behaviour; CI's E2E job runs
+      only the integration config, which does not import it. Its two callers
+      (`catalog-sweep.spec.ts`, `csp-validation.spec.ts`) both need a live app.
+      This is the one rewrite in the change that rests on reading rather than
+      running, and it should be said out loud rather than filed under
+      "all gates green".
