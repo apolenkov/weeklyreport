@@ -226,6 +226,76 @@ describe("PeriodService — publishPeriod (unit)", () => {
     expect(repo.publishPeriod).not.toHaveBeenCalled();
   });
 
+  it("never consults the active-period resolver on the already-published fast path", async () => {
+    // Gate order: the fast return precedes the non-admin scope assert, so a
+    // retry that changes nothing is answered with success instead of a scope
+    // denial for a period that is no longer the active one.
+    const reports = new Map<string, SpyReport>([
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+        },
+      ],
+      [
+        otherReportId,
+        {
+          id: otherReportId,
+          status: "published",
+          periodStatus: "published",
+          publishedAt: new Date(),
+        },
+      ],
+    ]);
+    const base = createSpyRepository(reports);
+    const getCurrentEditableId = vi.fn(() => base.getCurrentEditableId());
+    const service = new PeriodService(
+      { ...base, getCurrentEditableId },
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
+
+    await expect(
+      service.publishPeriod(otherReportId, headSession),
+    ).resolves.toEqual({ success: true, reportId: otherReportId });
+
+    expect(getCurrentEditableId).not.toHaveBeenCalled();
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
+    expect(base.publishPeriod).not.toHaveBeenCalled();
+  });
+
+  it("denies an archived period even when it is already published", async () => {
+    // Gate order: the archived check precedes the already-published fast
+    // return, so an archived row can never be answered with success.
+    const reports = new Map<string, SpyReport>([
+      [
+        archivedReportId,
+        {
+          id: archivedReportId,
+          status: "published",
+          periodStatus: "published",
+          publishedAt: new Date(),
+          archived: true,
+        },
+      ],
+    ]);
+    const repo = createSpyRepository(reports);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
+
+    await expect(
+      service.publishPeriod(archivedReportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodScopeError);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
+    expect(repo.publishPeriod).not.toHaveBeenCalled();
+  });
+
   it("publish-then-reopen-then-publish cycle works", async () => {
     const reports = new Map<string, SpyReport>([
       [
