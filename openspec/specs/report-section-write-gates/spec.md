@@ -14,11 +14,30 @@ lock cannot be bypassed on the submit path.
 ### Requirement: Draft saves gate on canonical period status
 
 `saveDraft` MUST decide editability from the section's canonical `periodStatus`,
-never from the legacy `Report.status` column. It MUST reject the write only when
-`periodStatus === "published"`, and MUST allow the write when the period is
-`"open"` or `"reopened"`. The existing `section.status === "submitted"` read-only
-rejection MUST remain in force, so an individual submitted section stays locked
-even on an editable period.
+never from the legacy `Report.status` column. It MUST reject the write when
+`periodStatus === "published"` and MUST allow it when the period is `"open"` or
+`"reopened"` AND the report is not archived. The existing
+`section.status === "submitted"` read-only rejection MUST remain in force, so an
+individual submitted section stays locked even on an editable period.
+
+Archiving does NOT change `periodStatus`, so a gate reading that column alone
+admits an archive that commits between the service-level precheck and the write
+transaction. Every write gate MUST therefore evaluate the same predicate as
+`isEditablePeriod` (`review-authz.ts`): not archived, and status `"open"` or
+`"reopened"`. This binds the in-transaction `FOR UPDATE` gates in
+`save-section.transaction.ts`, `fill-from.transaction.ts` and
+`review-actions.verdict-write.ts` alike — they are one contract in three
+places, and two of the three carried the archived term while this text still
+said "only when published".
+
+#### Scenario: An archive committing inside the write window rejects the save
+
+- **WHEN** an admin archives a report after `saveDraft`'s service-level
+  precheck has passed and before its write transaction takes the row lock, so
+  the locked row reads `periodStatus: "open"` with `archived: true`
+- **THEN** the in-transaction gate rejects the write before any child row is
+  deleted, and the caller sees the published-period constraint error rather
+  than a partially rewritten section
 
 #### Scenario: Reopened period accepts a draft save
 
