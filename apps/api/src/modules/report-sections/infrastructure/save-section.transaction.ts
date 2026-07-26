@@ -35,11 +35,14 @@ async function lockReportForSave(
   reportId: string,
 ): Promise<void> {
   const gate = await tx.$queryRaw<
-    { periodStatus: string }[]
-  >`SELECT "periodStatus" FROM "Report" WHERE "id" = ${reportId} FOR UPDATE`;
+    { periodStatus: string; archived: boolean }[]
+  >`SELECT "periodStatus", "archived" FROM "Report" WHERE "id" = ${reportId} FOR UPDATE`;
+  // Archiving leaves periodStatus untouched, so a gate reading only that lets
+  // an archive committing inside the precheck→tx window through. Same
+  // predicate as isEditablePeriod on the authz path.
   if (
-    gate[0]?.periodStatus !== "open" &&
-    gate[0]?.periodStatus !== "reopened"
+    gate[0]?.archived === true ||
+    (gate[0]?.periodStatus !== "open" && gate[0]?.periodStatus !== "reopened")
   ) {
     throw new ReportSectionDomainError(
       "SECTION_ALREADY_SUBMITTED",
