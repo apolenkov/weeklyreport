@@ -23,10 +23,6 @@ const STRIPE_BY_STATUS: Record<StageStatus, string> = {
 const worstStatusOf = worstCanonicalStatus;
 
 // `+N more` colour: blocked > at-risk > empty > on-track across hidden stages.
-/**
- * Collapsed Indicator Colors.
- * @param statuses - The statuses argument.
- */
 export function collapsedIndicatorColors(statuses: readonly StageStatus[]): {
   border: string;
   text: string;
@@ -63,11 +59,6 @@ function worstForeignSeverity(
   return worstStatusOf(severities);
 }
 
-/**
- * Product Health Status.
- * @param product - The product argument.
- * @param crossAuthors - The crossAuthors argument.
- */
 export function productHealthStatus(
   product: Product,
   crossAuthors: readonly CrossAuthorEntry[],
@@ -78,28 +69,15 @@ export function productHealthStatus(
   ]);
 }
 
-/**
- * Own-input completeness, over the lead's OWN stages only. A stage counts as
- * filled when EITHER the lead set an explicit status on it
- * (status !== "empty") OR the lead deliberately staged their OWN risk on it
- * (the RAW `coveredByOwnRisk` flag — a stage they addressed via the risk
- * surface). It MUST still be fed the RAW product (the mapper/bridge derive
- * `coveredByOwnRisk` strictly from persisted own risks that EXPLICITLY name
- * the stage), NEVER the risk-derived render-time severity floor: the floor
- * colors empty AND foreign-covered stages, so counting it would inflate the
- * counter for stages the lead never touched. Foreign severity never touches
- * this counter.
- */
+// Own-input completeness. Must be fed the RAW product, never the render-time
+// severity floor — the floor colors untouched stages and would inflate it.
+// Rules: openspec/specs/lead-pipeline-card/spec.md.
 export interface CompletenessState {
   filled: number;
   total: number;
   complete: boolean;
 }
 
-/**
- * Compute Completeness.
- * @param product - The product argument.
- */
 export function computeCompleteness(product: Product): CompletenessState {
   const mine = product.stages.filter((s) => s.ownership === "mine");
   const filled = mine.filter(
@@ -112,10 +90,6 @@ export function computeCompleteness(product: Product): CompletenessState {
   };
 }
 
-/**
- * Get Product Card Style.
- * @param status - The status argument.
- */
 export function getProductCardStyle(status: StageStatus): CSSProperties {
   return {
     background: "var(--color-card)",

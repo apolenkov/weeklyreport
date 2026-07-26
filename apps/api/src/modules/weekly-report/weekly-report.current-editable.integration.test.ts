@@ -31,11 +31,9 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId (integration)", () =
     archived = false,
     periodEnd: string = periodStart,
   ): Promise<void> {
-    // Dual-state consistency: `status`/`periodStatus` form the legacy tuple,
-    // `periodState` the archive lifecycle. A reopened period keeps the published
-    // legacy status while `periodState` reverts to 'open' (it is editable
-    // again); an archived row's `periodState` is 'archived' even though its
-    // legacy `periodStatus` is left untouched (the mutation sentinel below).
+    // Dual-state fixture: a reopened period keeps the published legacy status
+    // while `periodState` reverts to 'open'; archived flips `periodState` only.
+    // Invariant: openspec/specs/period-dual-state/spec.md.
     const status = periodStatus === "open" ? "draft" : "published";
     const periodState = archived
       ? "archived"

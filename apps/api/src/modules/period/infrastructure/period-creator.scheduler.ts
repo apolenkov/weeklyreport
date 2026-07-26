@@ -7,6 +7,7 @@ import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { AuditLogger } from "../../../lib/audit-logger.js";
 import { SnapshotAdminService } from "../../admin/index.js";
 import { PolicyApplicatorService } from "../../reminders/index.js";
+import type { EnsuredPeriod } from "../application/period-factory.js";
 import {
   ensureCurrentPeriod,
   isOpenBoundaryConflict,
@@ -19,18 +20,38 @@ type FlipReportDelegate = Pick<
   "findMany" | "updateMany" | "findFirst"
 >;
 
-/**
- * Flip every due `scheduled` row (its `periodStart` has been reached) to
- * `open`, one row at a time in deterministic `(periodStart, id)` order. Each
- * write re-asserts `periodState: "scheduled"`, so a concurrent lifecycle
- * transition wins instead of being overwritten; a zero-row result is logged
- * and skipped. The partial unique boundary index independently protects the
- * update from a competing open row. That `P2002` is recovered by re-reading and
- * logging the winner, while any unrelated error aborts the tick unchanged.
- * @param report - The report argument.
- * @param now - The now argument.
- * @param logger - The logger argument.
- */
+interface DueScheduledRow {
+  readonly id: string;
+  readonly periodStart: Date;
+  readonly periodEnd: Date;
+}
+
+// The partial unique boundary index rejected the flip: another row already
+// holds this boundary open. Re-read the winner so the log names it, and leave
+// the duplicate scheduled row untouched for an operator to reconcile.
+async function logBoundaryConflict(
+  report: Pick<FlipReportDelegate, "findFirst">,
+  row: DueScheduledRow,
+  logger: Pick<Logger, "warn">,
+): Promise<void> {
+  const open = await report.findFirst({
+    where: {
+      periodStart: row.periodStart,
+      periodEnd: row.periodEnd,
+      periodState: "open",
+    },
+    select: { id: true },
+  });
+  logger.warn(
+    open
+      ? `scheduled→open: boundary ${row.periodStart.toISOString()}→${row.periodEnd.toISOString()} already open (period=${open.id}); duplicate scheduled row=${row.id} left in place`
+      : `scheduled→open: P2002 on row=${row.id} but no open row found on its boundary; left scheduled for the next tick`,
+  );
+}
+
+// Re-asserting `periodState: "scheduled"` in the WHERE makes a concurrent
+// lifecycle transition win instead of being overwritten; `buildTransition`
+// carries the legacy period tuple alongside the new state in the same write.
 export async function flipDueScheduledToOpen(
   report: FlipReportDelegate,
   now: Date,
@@ -44,9 +65,6 @@ export async function flipDueScheduledToOpen(
 
   for (const row of due) {
     try {
-      // The open transition writes the full field set (periodState='open' +
-      // the draft/false legacy tuple the
-      // scheduled row already carries).
       const { count } = await report.updateMany({
         where: { id: row.id, periodState: "scheduled" },
         data: buildTransition("open", {}),
@@ -55,48 +73,28 @@ export async function flipDueScheduledToOpen(
         logger.log(
           `scheduled→open skipped period=${row.id}: transitioned away from scheduled by a concurrent writer`,
         );
-        continue;
       }
     } catch (error) {
       if (!isOpenBoundaryConflict(error)) throw error;
-
-      const open = await report.findFirst({
-        where: {
-          periodStart: row.periodStart,
-          periodEnd: row.periodEnd,
-          periodState: "open",
-        },
-        select: { id: true },
-      });
-      logger.warn(
-        open
-          ? `scheduled→open: boundary ${row.periodStart.toISOString()}→${row.periodEnd.toISOString()} already open (period=${open.id}); duplicate scheduled row=${row.id} left in place`
-          : `scheduled→open: P2002 on row=${row.id} but no open row found on its boundary; left scheduled for the next tick`,
-      );
+      await logBoundaryConflict(report, row, logger);
     }
   }
 }
 
-/**
- * Daily scheduler that creates the next Period when the most recent one is in
- * the past and `AppSettings.autoCreatePeriods=true`.
- *
- * Pattern mirrors {@link RemindersScheduler}: a `runOnce(now)` test seam plus
- * a thin `@Cron` wrapper that supplies `new Date()`. We chose `@Cron` over
- * BullMQ repeatable jobs because (a) the workload is one DB write per day —
- * far below the queue/retry/DLQ threshold; (b) the codebase already has the
- * `@Cron` idiom (`RemindersScheduler`); (c) `@nestjs/bullmq` 11 has a
- * documented DiscoveryService DI bug under NestJS 11 that the existing
- * processors explicitly work around with raw `Worker`.
- *
- * Idempotency: the scheduler skips when a future Period (periodEnd > now)
- * already exists, so two ticks within the same day collapse to a single
- * Period without DB constraint races.
- *
- * Cron: fires daily at 00:05 (UTC for now; per-tz Cron is deferred until the
- * settings surface broadens). The 5-minute offset avoids midnight crowding
- * with backup/maintenance jobs.
- */
+type PeriodTickOutcome =
+  | { created: false; reason: "disabled" | "future-period-exists" }
+  | {
+      created: true;
+      periodId: string;
+      periodStart: Date;
+      periodEnd: Date;
+      deadline: Date;
+      periodState: "scheduled" | "open";
+    };
+
+// `@Cron`, not a repeatable queue job: one write/day sits far below the
+// queue/retry/DLQ threshold, and `@nestjs/bullmq` 11 has a DiscoveryService DI
+// bug under NestJS 11 the existing processors work around with a raw `Worker`.
 @Injectable()
 export class PeriodCreatorScheduler {
   private readonly logger = new Logger(PeriodCreatorScheduler.name);
@@ -114,15 +112,9 @@ export class PeriodCreatorScheduler {
     private readonly autoCarryOver?: (targetReportId: string) => Promise<void>,
   ) {}
 
-  /**
-   * Reconcile carry-over for EVERY fresh-open period, not only rows this tick
-   * flipped: `flipDueScheduledToOpen` can open several rows at once, and a
-   * period whose carry failed transiently on a previous tick gets retried
-   * here (the execution dedupe inside the orchestrator makes a re-visit a
-   * single indexed read). `periodStatus: "open"` deliberately excludes
-   * reopened periods — a reopen amends a published period and must not
-   * re-trigger carry.
-   */
+  // Sweeps every fresh-open period, not just rows this tick flipped, so a
+  // carry that failed transiently earlier is retried. `periodStatus: "open"`
+  // excludes reopened periods — a reopen must not re-trigger carry.
   private async reconcileCarryOver(): Promise<void> {
     if (!this.autoCarryOver) return;
     const openPeriods = await this.prisma.report.findMany({
@@ -134,36 +126,21 @@ export class PeriodCreatorScheduler {
     }
   }
 
-  // Every day at 00:05 UTC. The 5-minute offset keeps the tick out of the
-  // 00:00 backup window most ops shops run on.
+  // 00:05 UTC — the 5-minute offset keeps the tick out of the 00:00 backup
+  // window most ops shops run on. Per-timezone firing stays deferred until the
+  // settings surface broadens.
   @Cron("5 0 * * *")
   async runDaily(): Promise<void> {
     await this.runOnce(new Date());
   }
 
-  /**
-   * Scheduler-internal entry point exposed for unit tests so we can drive
-   * the tick deterministically with a stubbed `now`. Returns a small
-   * outcome object so tests don't have to scrape audit calls.
-   */
-  async runOnce(now: Date): Promise<
-    | { created: false; reason: "disabled" | "future-period-exists" }
-    | {
-        created: true;
-        periodId: string;
-        periodStart: Date;
-        periodEnd: Date;
-        deadline: Date;
-        periodState: "scheduled" | "open";
-      }
-  > {
+  // Test seam: takes `now` so the tick can be driven deterministically, and
+  // returns an outcome object so tests need not scrape audit calls.
+  async runOnce(now: Date): Promise<PeriodTickOutcome> {
     const settings = await this.snapshotAdminService.getSettings();
 
-    // Before creating, flip any 'scheduled' rows whose periodStart has been
-    // reached to 'open' (the SCHEDULED→OPEN transition for periods minted
-    // ahead-of-time on a previous tick). The partial unique index constrains
-    // this UPDATE, so the flip runs per-boundary with P2002 recovery instead
-    // of a single bulk updateMany.
+    // Periods minted ahead of time on an earlier tick become open here, before
+    // any create decision is made against the table.
     await flipDueScheduledToOpen(this.prisma.report, now, this.logger);
 
     if (!settings.autoCreatePeriods) {
@@ -172,8 +149,6 @@ export class PeriodCreatorScheduler {
 
     await this.reconcileCarryOver();
 
-    // Most recent period across the whole table. If it ends in the future
-    // (or right now), nothing to do — the current cycle is still open.
     const mostRecent = await this.prisma.report.findFirst({
       orderBy: { periodStart: "desc" },
       select: { id: true, periodEnd: true },
@@ -183,29 +158,20 @@ export class PeriodCreatorScheduler {
       return { created: false, reason: "future-period-exists" };
     }
 
-    // Route the create through the single period factory so deadline math,
-    // the lifecycle field set, and reminder
-    // materialisation match the lazy login-create path exactly. The factory
-    // anchors the next cycle to the day after the most recent period's end
-    // (or `now` when the table is empty — defensive against a no-period DB),
-    // computes the deadline, applies reminder policy on create, and is
-    // race-safe against a concurrent login-create.
-    const anchorDate = mostRecent
-      ? new Date(mostRecent.periodEnd.getTime() + MS_PER_DAY)
-      : now;
-
+    // The factory owns deadline math, the lifecycle field set and reminder
+    // materialisation, so this path stays identical to the lazy login-create;
+    // an empty table falls back to `now` as the anchor.
     const result = await ensureCurrentPeriod(
       this.prisma,
-      anchorDate,
+      mostRecent ? new Date(mostRecent.periodEnd.getTime() + MS_PER_DAY) : now,
       now,
       settings,
       this.policyApplicator,
     );
 
+    // A concurrent login-create won the boundary; the winning path owns the
+    // log and the audit line, so this tick reports the same as a no-op.
     if (!result.created) {
-      // A concurrent login-create won the boundary; the period now exists, so
-      // this tick has nothing to mint. Same outcome as a pre-existing future
-      // period — no log, no audit (the winning path owns those).
       return { created: false, reason: "future-period-exists" };
     }
 
@@ -217,20 +183,8 @@ export class PeriodCreatorScheduler {
     if (result.deadline === null) {
       throw new Error("Auto-created period unexpectedly has no deadline.");
     }
-    this.auditLogger.periodAutoCreate({
-      periodId: result.reportId,
-      periodStart: result.periodStart.toISOString(),
-      periodEnd: result.periodEnd.toISOString(),
-      deadline: result.deadline.toISOString(),
-      from: null,
-      to: result.periodState,
-    });
 
-    // A period minted open THIS tick post-dates the reconcile pass above; a
-    // scheduled-born one is picked up by a later tick's flip + reconcile.
-    if (result.periodState === "open" && this.autoCarryOver) {
-      await this.autoCarryOver(result.reportId);
-    }
+    await this.recordAutoCreate(result, result.deadline);
 
     return {
       created: true,
@@ -240,5 +194,25 @@ export class PeriodCreatorScheduler {
       deadline: result.deadline,
       periodState: result.periodState,
     };
+  }
+
+  private async recordAutoCreate(
+    result: EnsuredPeriod,
+    deadline: Date,
+  ): Promise<void> {
+    this.auditLogger.periodAutoCreate({
+      periodId: result.reportId,
+      periodStart: result.periodStart.toISOString(),
+      periodEnd: result.periodEnd.toISOString(),
+      deadline: deadline.toISOString(),
+      from: null,
+      to: result.periodState,
+    });
+
+    // A period minted open THIS tick post-dates the reconcile pass above; a
+    // scheduled-born one is picked up by a later tick's flip + reconcile.
+    if (result.periodState === "open" && this.autoCarryOver) {
+      await this.autoCarryOver(result.reportId);
+    }
   }
 }

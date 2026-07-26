@@ -11,6 +11,7 @@ import {
   ownedStagesForProject,
 } from "../../report-sections";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
+import { SubmitConfirmDialog } from "./submit-confirm-dialog";
 import type { QuickAddItem } from "./use-lead-form-draft";
 
 export interface LeadFormDialogsQuickAdd {
@@ -47,10 +48,67 @@ interface LeadFormDialogsProps {
   readonly draftSection: ReportSectionReadModel;
 }
 
-/**
- * Lead Form Dialogs.
- * @param props - The props argument.
- */
+// Quick-add item dialog host — the EXISTING item dialog opened by the picker for
+// current-item / next-item. The risk / blocker / decision quick-adds open the
+// dialogs the sections already host (a blocker rides the blocked-risk prefill).
+function QuickAddItemDialog({
+  viewModel,
+  quickAdd,
+  draftSection,
+}: {
+  readonly viewModel: LeadFormLoadedViewModel;
+  readonly quickAdd: LeadFormDialogsQuickAdd;
+  readonly draftSection: ReportSectionReadModel;
+}) {
+  const stagesForProduct: StagesForProduct = (productId) =>
+    ownedStagesForProject(draftSection, productId);
+  const { activityOptions, currentUser, ownPeriodRanks, products, risks } =
+    viewModel;
+  return (
+    <ItemEditDialog
+      key={`quick-add-${quickAdd.quickAddItem?.seq ?? 0}`}
+      open={quickAdd.quickAddItem !== null}
+      item={null}
+      products={products}
+      activities={activityOptions}
+      week={quickAdd.quickAddItem?.week ?? "current"}
+      currentUserName={currentUser.name}
+      defaultProductId={products[0]?.id}
+      stagesForProduct={stagesForProduct}
+      ownPeriodRanks={ownPeriodRanks}
+      risks={risks}
+      onSave={quickAdd.onQuickAddSave}
+      onCancel={quickAdd.onQuickAddCancel}
+    />
+  );
+}
+
+function SubmitConfirmDialogHost({
+  viewModel,
+  writeActions,
+  unsetOwnStageCount,
+}: {
+  readonly viewModel: LeadFormLoadedViewModel;
+  readonly writeActions: LeadFormDialogsWriteActions;
+  readonly unsetOwnStageCount: number;
+}) {
+  if (!writeActions.showSubmitConfirm) return null;
+  return (
+    <SubmitConfirmDialog
+      counts={{
+        currentWeekItems: viewModel.ownCurrentWeekItems.length,
+        nextWeekItems: viewModel.ownNextWeekItems.length,
+        risks: viewModel.ownRisks.length,
+        decisions: viewModel.ownDecisions.length,
+      }}
+      unsetOwnStageCount={unsetOwnStageCount}
+      submitPending={writeActions.submitPending}
+      onConfirm={writeActions.handleConfirmSubmit}
+      onCancel={() => writeActions.setShowSubmitConfirm(false)}
+    />
+  );
+}
+
 export function LeadFormDialogs({
   viewModel,
   quickAdd,
@@ -58,54 +116,18 @@ export function LeadFormDialogs({
   unsetOwnStageCount,
   draftSection,
 }: LeadFormDialogsProps) {
-  const stagesForProduct: StagesForProduct = (productId) =>
-    ownedStagesForProject(draftSection, productId);
-  const {
-    activityOptions,
-    currentUser,
-    ownCurrentWeekItems,
-    ownDecisions,
-    ownNextWeekItems,
-    ownPeriodRanks,
-    ownRisks,
-    products,
-    risks,
-  } = viewModel;
   return (
     <>
-      {writeActions.showSubmitConfirm && (
-        <SubmitConfirmDialog
-          counts={{
-            currentWeekItems: ownCurrentWeekItems.length,
-            nextWeekItems: ownNextWeekItems.length,
-            risks: ownRisks.length,
-            decisions: ownDecisions.length,
-          }}
-          unsetOwnStageCount={unsetOwnStageCount}
-          submitPending={writeActions.submitPending}
-          onConfirm={writeActions.handleConfirmSubmit}
-          onCancel={() => writeActions.setShowSubmitConfirm(false)}
-        />
-      )}
+      <SubmitConfirmDialogHost
+        viewModel={viewModel}
+        writeActions={writeActions}
+        unsetOwnStageCount={unsetOwnStageCount}
+      />
 
-      {/* Quick-add item dialog host — the EXISTING item dialog opened by the
-          picker for current-item / next-item. The risk / blocker / decision
-          quick-adds open the dialogs the sections already host (a blocker rides
-          the severity-blocked risk prefill). */}
-      <ItemEditDialog
-        key={`quick-add-${quickAdd.quickAddItem?.seq ?? 0}`}
-        open={quickAdd.quickAddItem !== null}
-        item={null}
-        products={products}
-        activities={activityOptions}
-        week={quickAdd.quickAddItem?.week ?? "current"}
-        currentUserName={currentUser.name}
-        defaultProductId={products[0]?.id}
-        stagesForProduct={stagesForProduct}
-        ownPeriodRanks={ownPeriodRanks}
-        risks={risks}
-        onSave={quickAdd.onQuickAddSave}
-        onCancel={quickAdd.onQuickAddCancel}
+      <QuickAddItemDialog
+        viewModel={viewModel}
+        quickAdd={quickAdd}
+        draftSection={draftSection}
       />
 
       <RequestReopenDialog
@@ -119,7 +141,7 @@ export function LeadFormDialogs({
       <ConfirmDeleteDialog
         open={writeActions.showRevokeDialog}
         title="Revoke this submission?"
-        preview={currentUser.name}
+        preview={viewModel.currentUser.name}
         subtitle="Their form returns to Draft and they can edit again."
         consequence="The lead will be notified that their submission was revoked."
         confirmLabel="Revoke"
@@ -128,93 +150,5 @@ export function LeadFormDialogs({
         onCancel={() => writeActions.setShowRevokeDialog(false)}
       />
     </>
-  );
-}
-
-// The submit summary counts the lead's OWN records only — it reflects what will
-// actually be submitted, never the foreign read-only records merged in for the
-// Everyone lens.
-interface SubmitConfirmCounts {
-  readonly currentWeekItems: number;
-  readonly nextWeekItems: number;
-  readonly risks: number;
-  readonly decisions: number;
-}
-
-const SUBMIT_COUNT_LABELS: readonly {
-  readonly key: keyof SubmitConfirmCounts;
-  readonly label: string;
-}[] = [
-  { key: "currentWeekItems", label: "current week items" },
-  { key: "nextWeekItems", label: "next week items" },
-  { key: "risks", label: "risks" },
-  { key: "decisions", label: "decisions" },
-];
-
-function SubmitConfirmDialog({
-  counts,
-  unsetOwnStageCount,
-  submitPending,
-  onConfirm,
-  onCancel,
-}: {
-  readonly counts: SubmitConfirmCounts;
-  readonly unsetOwnStageCount: number;
-  readonly submitPending: boolean;
-  readonly onConfirm: () => void;
-  readonly onCancel: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
-      <div
-        className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Confirm submission"
-      >
-        <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          Submit your report?
-        </h3>
-        <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-          Your report will be locked and visible to the group head. You will not
-          be able to make changes after submission.
-        </p>
-        <div className="mt-3 space-y-1 text-sm">
-          {SUBMIT_COUNT_LABELS.map(({ key, label }) => (
-            <div key={key} className="flex items-center gap-2">
-              <span className="font-medium">{counts[key]}</span>
-              <span className="text-[var(--color-muted-foreground)]">
-                {label}
-              </span>
-            </div>
-          ))}
-        </div>
-        {/* Warn that unset own stages will be promoted to On Track on submit
-            so the coercion is explicit. Omitted when nothing is unset. */}
-        {unsetOwnStageCount > 0 && (
-          <p className="mt-3 text-sm text-[var(--color-muted-foreground)]">
-            {unsetOwnStageCount} stage{unsetOwnStageCount === 1 ? "" : "s"} not
-            set — they will be marked On Track.
-          </p>
-        )}
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            className="btn-press inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="btn-press inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={onConfirm}
-            disabled={submitPending}
-          >
-            Submit
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }

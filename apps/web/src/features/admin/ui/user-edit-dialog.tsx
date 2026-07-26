@@ -22,10 +22,6 @@ interface UserEditDialogProps {
   readonly onClose: () => void;
 }
 
-/**
- * User Edit Dialog.
- * @param props - The props argument.
- */
 export function UserEditDialog({
   editingUser,
   form,

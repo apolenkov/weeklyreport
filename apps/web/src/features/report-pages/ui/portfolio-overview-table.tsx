@@ -45,10 +45,6 @@ function pluralize(noun: string, count: number): string {
   return `${noun}${count !== 1 ? "s" : ""}`;
 }
 
-/**
- * Portfolio Overview Table.
- * @param props - The props argument.
- */
 export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
   const isLead = props.scope === "lead";
   // Lead rows arrive pre-sorted from the mapper; product rows sort here.
@@ -86,9 +82,8 @@ export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
       </div>
 
       {/* No overflow-hidden here: the cards' hover ring (box-shadow 0 0 0 2px)
-          extends 2px past each card and the top row's ring would otherwise be
-          clipped. This wrapper carries no collapse animation, so it has no
-          reason to clip. */}
+          extends past each card and the top row's would be clipped. This
+          wrapper has no collapse animation, so it has no reason to clip. */}
       <div className="min-h-0">
         <div className="grid gap-2 px-4 pb-4 sm:grid-cols-2">
           {isLead

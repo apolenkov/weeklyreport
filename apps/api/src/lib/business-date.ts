@@ -29,10 +29,6 @@ const LAST_SECOND = 59;
 const LAST_MILLISECOND = 999;
 
 // Exported for tests only.
-/**
- * Working Day Set.
- * @param wd - The wd argument.
- */
 export function workingDaySet(wd: WorkingDays): ReadonlySet<number> {
   switch (wd) {
     case "mon-fri":
@@ -53,12 +49,6 @@ export function workingDaySet(wd: WorkingDays): ReadonlySet<number> {
 }
 
 // Wall-clock day in tz matters — not the UTC calendar day of the Date.
-/**
- * Is Business Day.
- * @param date - The date argument.
- * @param wd - The wd argument.
- * @param tz - The tz argument.
- */
 export function isBusinessDay(
   date: Date,
   wd: WorkingDays,
@@ -71,25 +61,12 @@ export function isBusinessDay(
   return workingDaySet(wd).has(dt.weekday);
 }
 
-/**
- * Next Business Day.
- * @param date - The date argument.
- * @param wd - The wd argument.
- * @param tz - The tz argument.
- */
 export function nextBusinessDay(date: Date, wd: WorkingDays, tz: string): Date {
   return addBusinessDays(date, 1, wd, tz);
 }
 
 // n=0 is as-is (no snap); use nextBusinessDay to land on a business day.
 // n≠0 walks strictly forward/back by |n| business days.
-/**
- * Add Business Days.
- * @param date - The date argument.
- * @param n - The n argument.
- * @param wd - The wd argument.
- * @param tz - The tz argument.
- */
 export function addBusinessDays(
   date: Date,
   n: number,
@@ -123,14 +100,6 @@ export function addBusinessDays(
 }
 
 // Discards periodStart clock time — deadline always lands on HH:00:00 in tz.
-/**
- * Compute Deadline.
- * @param periodStart - The periodStart argument.
- * @param deadlineDays - The deadlineDays argument.
- * @param wd - The wd argument.
- * @param tz - The tz argument.
- * @param deadlineHour - The deadlineHour argument.
- */
 export function computeDeadline(
   periodStart: Date,
   deadlineDays: number,
@@ -159,11 +128,6 @@ export function computeDeadline(
 
 // UTC-only Date.UTC arithmetic — host TZ/DST independent (scheduler-critical).
 // Optional periodLengthDays ends at Monday+(length-1); default is Mon–Sun.
-/**
- * Get Current Week Bounds.
- * @param date - The date argument.
- * @param periodLengthDays - The periodLengthDays argument.
- */
 export function getCurrentWeekBounds(
   date: Date = new Date(),
   periodLengthDays = DAYS_PER_WEEK,
@@ -176,7 +140,7 @@ export function getCurrentWeekBounds(
       `business-date: periodLengthDays must be a positive integer (got ${periodLengthDays})`,
     );
   }
-  const utcDay = date.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const utcDay = date.getUTCDay();
   // Monday is the start-of-week. Sunday (0) maps to "6 days back".
   const diffToMonday = utcDay === 0 ? 1 - DAYS_PER_WEEK : 1 - utcDay;
 

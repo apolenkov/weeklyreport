@@ -40,10 +40,6 @@ interface RiskEditDialogProps {
 
 // Mount/unmount shell: closed returns null so open remounts fresh useState
 // (parent openSeq dialogKey forces a clean snapshot of stagesForProduct).
-/**
- * Risk Edit Dialog.
- * @param props - The props argument.
- */
 export function RiskEditDialog(props: RiskEditDialogProps) {
   if (!props.open) return null;
   return <RiskEditDialogContent {...props} />;
@@ -78,134 +74,160 @@ function PreCheckedStagesBanner({
   );
 }
 
-function RiskEditDialogContent({
-  risk,
-  products,
-  onSave,
-  onCancel,
-  defaultProductId,
-  defaultActivityId,
-  initialImpact,
-  initialMitigation,
-  initialStageIds,
-  initialSeverity,
-  stagesForProduct,
-  activities = [],
-  onDelete,
-}: RiskEditDialogProps) {
-  const {
-    availableStages,
-    dialogSurfaceRef,
-    handleKeyDown,
-    handleSave,
-    headerVerb,
-    impact,
-    impactError,
-    impactRef,
-    isActivityParent,
-    isDeadEnd,
-    mitigation,
-    mitigationError,
-    mitigationRef,
-    onImpactChange,
-    onMitigationChange,
-    onParentChange,
-    onSeveritySelect,
-    onStageChange,
-    onTextChange,
-    parent,
-    parentName,
-    preCheckedStages,
-    severity,
-    stageError,
-    stageIds,
-    text,
-    textError,
-    textRef,
-  } = useRiskEditDialog({
-    risk,
-    products,
-    activities,
-    onSave,
-    onCancel,
-    defaultProductId,
-    defaultActivityId,
-    initialImpact,
-    initialMitigation,
-    initialStageIds,
-    initialSeverity,
-    stagesForProduct,
-  });
+type RiskDialog = ReturnType<typeof useRiskEditDialog>;
+type RiskFieldRefs = Pick<
+  RiskDialog,
+  "textRef" | "impactRef" | "mitigationRef"
+>;
+// Refs travel as their own props: a presentational part that received them
+// inside a bag would be reading a ref during render.
+type RiskDialogState = Omit<
+  RiskDialog,
+  keyof RiskFieldRefs | "dialogSurfaceRef"
+>;
 
-  return createPortal(
+interface RiskDialogBodyProps extends RiskFieldRefs {
+  readonly dialog: RiskDialogState;
+  readonly products: readonly Product[];
+  readonly activities: readonly ParentActivityOption[];
+}
+
+function RiskDialogBody({
+  dialog,
+  products,
+  activities,
+  textRef,
+  impactRef,
+  mitigationRef,
+}: RiskDialogBodyProps) {
+  return (
+    <>
+      {!dialog.isActivityParent && dialog.preCheckedStages.length > 0 && (
+        <PreCheckedStagesBanner
+          parentName={dialog.parentName}
+          preCheckedStages={dialog.preCheckedStages}
+        />
+      )}
+
+      <RiskEditDialogFields
+        text={dialog.text}
+        onTextChange={dialog.onTextChange}
+        textError={dialog.textError}
+        textRef={textRef}
+        impact={dialog.impact}
+        onImpactChange={dialog.onImpactChange}
+        impactError={dialog.impactError}
+        impactRef={impactRef}
+        mitigation={dialog.mitigation}
+        onMitigationChange={dialog.onMitigationChange}
+        mitigationError={dialog.mitigationError}
+        mitigationRef={mitigationRef}
+        parent={dialog.parent}
+        products={products}
+        activities={activities}
+        onParentChange={dialog.onParentChange}
+        isActivityParent={dialog.isActivityParent}
+        stageIds={dialog.stageIds}
+        availableStages={dialog.availableStages}
+        severity={dialog.severity}
+        isZeroOwnedStageDeadEnd={dialog.isDeadEnd}
+        stageError={dialog.stageError}
+        onStageChange={dialog.onStageChange}
+        onSeveritySelect={dialog.onSeveritySelect}
+      />
+    </>
+  );
+}
+
+interface RiskDialogSurfaceProps {
+  readonly dialog: RiskDialogState;
+  readonly surfaceRef: RiskDialog["dialogSurfaceRef"];
+  readonly onCancel: () => void;
+  readonly onDelete?: () => void;
+  readonly children: React.ReactNode;
+}
+
+function RiskDialogSurface({
+  dialog,
+  surfaceRef,
+  onCancel,
+  onDelete,
+  children,
+}: RiskDialogSurfaceProps) {
+  return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       onClick={onCancel}
-      onKeyDown={handleKeyDown}
+      onKeyDown={dialog.handleKeyDown}
       role="presentation"
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop click-through; not an interactive action, so no keyboard equivalent applies */}
       <div
-        ref={dialogSurfaceRef}
+        ref={surfaceRef}
         className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[var(--radius)] bg-white p-4 md:p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={`${headerVerb} dialog`}
+        aria-label={`${dialog.headerVerb} dialog`}
       >
         <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {headerVerb}{" "}
-          {parentName ? (
+          {dialog.headerVerb}{" "}
+          {dialog.parentName ? (
             <span className="text-[var(--color-muted-foreground)]">
-              — {parentName}
+              — {dialog.parentName}
             </span>
           ) : null}
         </h2>
 
-        {!isActivityParent && preCheckedStages.length > 0 && (
-          <PreCheckedStagesBanner
-            parentName={parentName}
-            preCheckedStages={preCheckedStages}
-          />
-        )}
-
-        <RiskEditDialogFields
-          text={text}
-          onTextChange={onTextChange}
-          textError={textError}
-          textRef={textRef}
-          impact={impact}
-          onImpactChange={onImpactChange}
-          impactError={impactError}
-          impactRef={impactRef}
-          mitigation={mitigation}
-          onMitigationChange={onMitigationChange}
-          mitigationError={mitigationError}
-          mitigationRef={mitigationRef}
-          parent={parent}
-          products={products}
-          activities={activities}
-          onParentChange={onParentChange}
-          isActivityParent={isActivityParent}
-          stageIds={stageIds}
-          availableStages={availableStages}
-          severity={severity}
-          isZeroOwnedStageDeadEnd={isDeadEnd}
-          stageError={stageError}
-          onStageChange={onStageChange}
-          onSeveritySelect={onSeveritySelect}
-        />
+        {children}
 
         <RecordDialogFooter
           sticky
           saveLabel="Save Risk"
           onCancel={onCancel}
-          onSave={handleSave}
+          onSave={dialog.handleSave}
           onDelete={onDelete}
-          saveDisabled={isDeadEnd}
+          saveDisabled={dialog.isDeadEnd}
         />
       </div>
-    </div>,
+    </div>
+  );
+}
+
+function RiskEditDialogContent(props: RiskEditDialogProps) {
+  const activities = props.activities ?? [];
+  const { dialogSurfaceRef, textRef, impactRef, mitigationRef, ...dialog } =
+    useRiskEditDialog({
+      risk: props.risk,
+      products: props.products,
+      activities,
+      onSave: props.onSave,
+      onCancel: props.onCancel,
+      defaultProductId: props.defaultProductId,
+      defaultActivityId: props.defaultActivityId,
+      initialImpact: props.initialImpact,
+      initialMitigation: props.initialMitigation,
+      initialStageIds: props.initialStageIds,
+      initialSeverity: props.initialSeverity,
+      stagesForProduct: props.stagesForProduct,
+    });
+
+  return createPortal(
+    <RiskDialogSurface
+      dialog={dialog}
+      surfaceRef={dialogSurfaceRef}
+      onCancel={props.onCancel}
+      onDelete={props.onDelete}
+    >
+      <RiskDialogBody
+        dialog={dialog}
+        products={props.products}
+        activities={activities}
+        textRef={textRef}
+        impactRef={impactRef}
+        mitigationRef={mitigationRef}
+      />
+    </RiskDialogSurface>,
     document.body,
   );
 }

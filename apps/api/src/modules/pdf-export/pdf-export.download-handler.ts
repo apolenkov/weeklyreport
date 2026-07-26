@@ -34,10 +34,6 @@ export interface PdfDownloadDeps {
 
 // Same-origin URL (`/pdfs/{jobId}.pdf`) so window.open carries the session
 // cookie; streams only to callers with a valid human session and report read.
-/**
- * Create Pdf Download Handler.
- * @param deps - The deps argument.
- */
 export function createPdfDownloadHandler(
   deps: PdfDownloadDeps,
 ): RequestHandler {
@@ -101,12 +97,6 @@ function streamArtifact(res: Response, filePath: string): void {
   stream.pipe(res);
 }
 
-/**
- * Handle Pdf Download.
- * @param req - The req argument.
- * @param res - The res argument.
- * @param deps - The deps argument.
- */
 export async function handlePdfDownload(
   req: Request,
   res: Response,

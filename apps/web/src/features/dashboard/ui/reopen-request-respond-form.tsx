@@ -4,6 +4,14 @@
 // limit cannot drift from what the mutation accepts.
 const MAX_REOPEN_NOTE_LENGTH = 500;
 
+// 4% wash of the accent (0,117,74). Raw rgba is the repo-wide idiom for accent
+// tints — no --color-* token exists for them.
+const ACCENT_WASH_CLASS = "bg-[rgba(0,117,74,0.04)]";
+
+// Opening height of the note box; the textarea stays resize-y so a long
+// comment is not typed through a peephole.
+const NOTE_MIN_HEIGHT = "60px";
+
 interface ReopenRequestRespondFormProps {
   readonly requestId: string;
   readonly note: string;
@@ -16,10 +24,6 @@ interface ReopenRequestRespondFormProps {
 }
 
 // pendingDecision (not isPending alone) drives which button shows "Saving…".
-/**
- * Reopen Request Respond Form.
- * @param props - The props argument.
- */
 export function ReopenRequestRespondForm({
   requestId,
   note,
@@ -31,7 +35,9 @@ export function ReopenRequestRespondForm({
   pendingDecision,
 }: ReopenRequestRespondFormProps) {
   return (
-    <div className="mt-3 space-y-2 rounded-[var(--radius)] border border-[var(--color-starbucks-accent)] bg-[rgba(0,117,74,0.04)] p-3">
+    <div
+      className={`mt-3 space-y-2 rounded-[var(--radius)] border border-[var(--color-starbucks-accent)] ${ACCENT_WASH_CLASS} p-3`}
+    >
       <label
         htmlFor={`reopen-card-note-${requestId}`}
         className="block text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]"
@@ -45,7 +51,7 @@ export function ReopenRequestRespondForm({
         maxLength={MAX_REOPEN_NOTE_LENGTH}
         placeholder="Example: approved, please update the carry-over."
         className="w-full resize-y rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm focus:border-[var(--color-starbucks-accent)] focus:outline-none"
-        style={{ minHeight: "60px" }}
+        style={{ minHeight: NOTE_MIN_HEIGHT }}
       />
       <RespondActions
         onCancel={onCancel}

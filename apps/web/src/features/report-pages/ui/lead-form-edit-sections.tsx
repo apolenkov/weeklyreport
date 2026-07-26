@@ -61,10 +61,6 @@ interface LeadFormEditSectionsProps {
   readonly crossAuthorEntries: CrossAuthorEntry[];
 }
 
-/**
- * Lead Form Edit Sections.
- * @param props - The props argument.
- */
 export function LeadFormEditSections({
   viewModel,
   actions,

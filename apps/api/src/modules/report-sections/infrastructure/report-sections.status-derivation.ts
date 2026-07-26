@@ -10,20 +10,12 @@ import { aggregateTrafficLight } from "../domain/traffic-light-aggregation";
 
 type TrafficLight = TrafficLightStatus;
 
-/**
- * Aggregate Stage Traffic.
- * @param stages - The stages argument.
- */
 export function aggregateStageTraffic(
   stages: readonly { status?: string | null }[],
 ): TrafficLight | null {
   return aggregateTrafficLight(stages.map((stage) => asTraffic(stage.status)));
 }
 
-/**
- * As Traffic.
- * @param status - The status argument.
- */
 export function asTraffic(
   status: string | null | undefined,
 ): TrafficLight | null {
@@ -32,28 +24,9 @@ export function asTraffic(
     : null;
 }
 
-/**
- * Derives the risk-aware effective product status at the read layer. For each
- * owned stage, the effective status is the worse of the raw stage status and
- * the highest-severity own risk that
- * covers it. The product status is the worst across owned stages, floored
- * against the raw `trafficLight` so the floor never lowers (a real red
- * ProjectStatus survives a milder risk) and double-application stays
- * idempotent.
- *
- * CRITICAL: risks MUST be scoped to the product (`risk.projectId === projectId`)
- * BEFORE the per-stage match. Risk coverage matches stage names only and
- * the 7 SDLC stage names are shared across every product, so an unscoped fold
- * would floor the wrong product (and a covers-all risk every product). This
- * mirrors the `buildStageGrid` call site, which pre-filters by `projectId`.
- *
- * This is aggregation-only: it never writes back to the raw persisted
- * `StageStatus.status` nor to the read-model per-stage `status` field. A product
- * with no owned stages contributes nothing to floor (covers-all means "all
- * stages the author owns on THIS product"), so the raw `trafficLight` passes
- * through unchanged.
- * @param project - The project argument.
- */
+// Risks MUST be product-scoped before the per-stage match: coverage matches
+// stage names only and the 7 SDLC names repeat across products, so an unscoped
+// fold floors the wrong product. Aggregation-only: never writes a status back.
 export function deriveEffectiveProductStatus(project: {
   projectId: string;
   trafficLight: TrafficLight | null;
@@ -87,19 +60,9 @@ export function deriveEffectiveProductStatus(project: {
   return aggregateTrafficLight([project.trafficLight, ...stageStatuses]);
 }
 
-/**
- * An activity has no SDLC stage, so its pill is floored by its own risks only: a
- * `blocked` risk forces red, an `at-risk` risk forces at least yellow. Items
- * carry progress, never an alarm, so they cannot floor the pill. `alarmFloor`
- * is that record-only floor (never the lead's
- * stored choice); `derivedStatus` folds the stored status in for the read-only
- * render surfaces (slides, head report). The stored `ActivityStatus.status` is
- * NEVER rewritten. The interactive lead picker gates a manual lower on
- * `alarmFloor` alone, so a lead can still lower a status they raised themselves
- * when no covering risk/blocker holds it up.
- * @param stored - The stored argument.
- * @param ownRisks - The ownRisks argument.
- */
+// An activity has no SDLC stage, so its pill is floored by its own risks only.
+// `alarmFloor` is that record-only floor — the lead picker gates a manual lower
+// on it alone, so a lead can still undo a raise they made themselves.
 export function deriveActivityStatus(
   stored: TrafficLight | null,
   ownRisks: readonly { severity: RiskSeverity }[],

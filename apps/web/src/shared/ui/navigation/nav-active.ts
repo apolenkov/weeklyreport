@@ -14,9 +14,9 @@ function isReportDetailPath(pathname: string): boolean {
 }
 
 // Viewer Status (`/reports/latest`) resolves to `/reports/[id]`, so a detail
-// path must light Status, not History. History stays lit only on bare
-// `/reports`. `undefined` = no viewer-specific opinion, so the shared rules
-// below still apply (head/lead History-active on detail paths is untouched).
+// path lights Status and History stays lit only on bare `/reports`.
+// `undefined` = no viewer opinion, so the shared rules below still apply and
+// head/lead stay History-active on detail paths.
 function viewerActiveLink(pathname: string, href: string): boolean | undefined {
   if (href === REPORTS_LATEST_ROUTE) {
     return pathname === REPORTS_LATEST_ROUTE || isReportDetailPath(pathname);
@@ -25,12 +25,6 @@ function viewerActiveLink(pathname: string, href: string): boolean | undefined {
   return undefined;
 }
 
-/**
- * Is Active Link.
- * @param pathname - The pathname argument.
- * @param href - The href argument.
- * @param role - The role argument.
- */
 export function isActiveLink(
   pathname: string,
   href: string,
@@ -51,8 +45,4 @@ export function isActiveLink(
   return pathname.startsWith(href);
 }
 
-/**
- * Get Logo Href.
- * @param role - The role argument.
- */
 export const getLogoHref = (role: Role) => ROLE_HOME_PATH[role];

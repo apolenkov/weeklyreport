@@ -15,11 +15,9 @@ import {
   type PublicationTelemetry,
 } from "./publication-telemetry.port.js";
 
-/**
- * Thrown by `getAssembledReport` when the requested report row is absent. Its
- * in-service caller (`publishAuto`) propagates it, so a missing report
- * surfaces as NOT_FOUND instead of a false 500.
- */
+// Thrown by `getAssembledReport` when the requested report row is absent. Its
+// in-service caller (`publishAuto`) propagates it, so a missing report surfaces
+// as NOT_FOUND instead of a false 500.
 export class PublicationNotFoundError extends Error {
   constructor(message: string) {
     super(message);

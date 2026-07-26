@@ -21,14 +21,13 @@ const FLUSH_AT_COUNT = 50;
 const MAX_QUEUE = 500;
 const INSTALLED_MARK = Symbol.for("customreport.client-logger.installed");
 
+// Mutable by design: a batching buffer producers push into and flush drains;
+// patchConsole reassigns console.error/warn because intercepting the global is
+// the module's whole purpose.
 const queue: Entry[] = [];
 // eslint-disable-next-line no-restricted-syntax -- enqueue schedules the batch flush and flush clears the handle; module-level timer state is intentional.
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
-/**
- * Safe Stringify.
- * @param arg - The arg argument.
- */
 export function safeStringify(arg: unknown): string {
   if (arg instanceof Error) return arg.message;
   if (typeof arg === "string") return arg;
@@ -39,10 +38,6 @@ export function safeStringify(arg: unknown): string {
   }
 }
 
-/**
- * Can Enqueue.
- * @param queueLength - The queueLength argument.
- */
 export function canEnqueue(queueLength: number): boolean {
   return queueLength < MAX_QUEUE;
 }
@@ -134,9 +129,6 @@ function registerWindowListeners(): void {
   });
 }
 
-/**
- * Install Client Logger.
- */
 export function installClientLogger(): void {
   const loggerConsole = console as Console & {
     [INSTALLED_MARK]?: true;

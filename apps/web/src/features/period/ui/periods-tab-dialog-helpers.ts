@@ -4,12 +4,8 @@ const ISO_DATE_LENGTH = 10;
 const ISO_DATETIME_LOCAL_LENGTH = 16;
 const NEXT_MONDAY_OFFSET_BASE = DAYS_PER_WEEK + 1;
 
-/**
- * Compute the scheduler-aligned default start date. Manual periods are not
- * restricted to Mondays; this only keeps the untouched create dialog aligned
- * with the automatic weekly cadence.
- * @param from - The from argument.
- */
+// Scheduler-aligned default start date. Manual periods are not restricted to
+// Mondays; this only keeps the untouched create dialog on the weekly cadence.
 export function nextMonday(from: Date): string {
   // getUTCDay: 0=Sun, 1=Mon..6=Sat. For Sun add 1 day; for any other
   // weekday add (NEXT_MONDAY_OFFSET_BASE - day) % DAYS_PER_WEEK days. For
@@ -29,38 +25,21 @@ export function nextMonday(from: Date): string {
   return monday.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
-/**
- * Render a UTC Date as the `YYYY-MM-DD` value that
- * `<input type="date">` expects. Used both by the next-Monday default
- * and by the edit-mode prefill of an existing row's envelope. The slice
- * matches the existing create-path `${periodStart}T00:00:00.000Z` round-trip
- * so a no-op edit round-trips without spurious diff.
- * @param d - The d argument.
- */
+// `<input type="date">` value. The slice matches the create path's
+// `${periodStart}T00:00:00.000Z` parse, so a no-op edit round-trips clean.
 export function dateInputValue(d: Date): string {
   return d.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
-/**
- * Render a UTC Date as the `YYYY-MM-DDTHH:MM` value that
- * `<input type="datetime-local">` expects. The field is UTC wall-clock on
- * both read and write: this slice produces the UTC wall-clock string, and
- * handleSubmit parses it back with an explicit `:00.000Z` suffix. Treating
- * the value as UTC on both sides keeps the round-trip stable in every
- * timezone — a bare `new Date(value)` parse would read it as local time and
- * drift the stored deadline for any non-UTC admin.
- * @param d - The d argument.
- */
+// `<input type="datetime-local">` value, UTC wall-clock on read and write —
+// handleSubmit parses it back with an explicit `:00.000Z`. A bare
+// `new Date(value)` would read local time and drift a non-UTC admin's deadline.
 export function dateTimeInputValue(d: Date): string {
   return d.toISOString().slice(0, ISO_DATETIME_LOCAL_LENGTH);
 }
 
-/**
- * Deadline range validation: must fall within [periodStart, periodEnd] when
- * both are set. Parses the datetime-local value as UTC wall-clock to match
- * the submit parse and the UTC-parsed start/end bounds.
- * @param args - The args argument.
- */
+// Deadline must fall within [periodStart, periodEnd] when both are set. Parses
+// as UTC wall-clock to match the submit parse and the UTC-parsed bounds.
 export function computeDeadlineError(args: {
   readonly deadline: string;
   readonly periodStart: string;

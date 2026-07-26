@@ -45,6 +45,8 @@ function parseUsedMemoryBytes(info: string): number | null {
 export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DLQMonitorService.name);
   private readonly queueEvents = new Map<QueueName, QueueEvents>();
+  // The interval handle only exists between onModuleInit and onModuleDestroy,
+  // so it cannot be a constructor-time readonly.
   private pollTimer: NodeJS.Timeout | null = null;
 
   constructor(

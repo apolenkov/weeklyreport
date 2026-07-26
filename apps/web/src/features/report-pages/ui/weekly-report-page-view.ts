@@ -130,12 +130,43 @@ function buildFallbackPeriodNav(
   ];
 }
 
+function derivePeriodFacet(period: MappedWeeklyReport["period"]) {
+  return {
+    periodId: period.id,
+    reportId: period.reportId,
+    periodStatus: period.periodStatus,
+    periodLabel: joinPeriodLabel(period.weekLabel, period.dateRange),
+    periods: buildFallbackPeriodNav(period),
+  };
+}
+
+function deriveProgressFacet(view: MappedWeeklyReport) {
+  const submitted = view.submissionCount;
+  const total = view.totalLeads;
+  return { submitted, total, pendingCount: Math.max(0, total - submitted) };
+}
+
+function deriveRoleFacet(
+  currentRole: CurrentRole,
+  periodStatus: PeriodStatus,
+  canPublishReport: boolean,
+) {
+  const canMutatePeriod = isHeadLike(currentRole);
+  return {
+    currentRole,
+    canMutatePeriod,
+    // head/admin/viewer get real export; lead is FORBIDDEN (pdfExport on
+    // leadershipProcedure) and sees ComingSoon — never a button that would 403.
+    canExportPdf: currentRole !== null && !isLead(currentRole),
+    showLeadExportComingSoon: isLead(currentRole),
+    canPublishReport,
+    // Publish hint for head-like roles while unpublished and not yet publishable.
+    showPublishHint:
+      canMutatePeriod && !canPublishReport && periodStatus !== "published",
+  };
+}
+
 // Pure view-model from a loaded active report (scope, review gating, filter, focus).
-/**
- * Build Weekly Report Page View.
- * @param reportData - The reportData argument.
- * @param params - The params argument.
- */
 export function buildWeeklyReportPageView(
   reportData: WeeklyReportReadModel,
   params: {
@@ -147,66 +178,30 @@ export function buildWeeklyReportPageView(
     readonly onReviewMutated: () => void;
   },
 ): WeeklyReportPageView {
-  const { currentRole, focusedAuthorId } = params;
   const view = mapWeeklyReport(reportData);
-  const {
-    reviewModel,
-    leadOverviewRows,
-    reviewEnabled,
-    canReviewAny,
-    submittedOnly,
-    accordion,
-  } = deriveReviewSurface(reportData, view, params);
-
-  const submitted = view.submissionCount;
-  const total = view.totalLeads;
-  const pendingCount = Math.max(0, total - submitted);
-  const { portfolio, products } = view;
-
-  const focusedProductId = resolveFocusedProductId(products, focusedAuthorId);
+  const reviewSurface = deriveReviewSurface(reportData, view, params);
+  const progress = deriveProgressFacet(view);
   // Empty-state + publish gate use FULL content, never the filtered accordion.
-  const hasAnyContent = accordion.hasAnyContent;
-  const canPublishReport = submitted > 0 && hasAnyContent;
-  const canMutatePeriod = isHeadLike(currentRole);
-  // Publish hint for head-like roles while unpublished and not yet publishable.
-  const showPublishHint =
-    canMutatePeriod &&
-    !canPublishReport &&
-    view.period.periodStatus !== "published";
-  const periods = buildFallbackPeriodNav(view.period);
-  const periodLabel = joinPeriodLabel(
-    view.period.weekLabel,
-    view.period.dateRange,
+  const hasAnyContent = reviewSurface.accordion.hasAnyContent;
+  const focusedProductId = resolveFocusedProductId(
+    view.products,
+    params.focusedAuthorId,
   );
 
   return {
-    currentRole,
-    canMutatePeriod,
-    // head/admin/viewer get real export; lead is FORBIDDEN (pdfExport on
-    // leadershipProcedure) and sees ComingSoon — never a button that would 403.
-    canExportPdf: currentRole !== null && !isLead(currentRole),
-    showLeadExportComingSoon: isLead(currentRole),
-    periodId: view.period.id,
-    reportId: view.period.reportId,
-    periodStatus: view.period.periodStatus,
-    periodLabel,
-    periods,
-    submitted,
-    total,
-    pendingCount,
-    portfolio,
-    leadOverviewRows,
-    reviewModel,
-    accordion,
-    reviewEnabled,
-    canReviewAny,
-    submittedOnly,
+    ...deriveRoleFacet(
+      params.currentRole,
+      view.period.periodStatus,
+      progress.submitted > 0 && hasAnyContent,
+    ),
+    ...derivePeriodFacet(view.period),
+    ...progress,
+    ...reviewSurface,
+    portfolio: view.portfolio,
     activitySections: reportData.leadSections,
     focusedProductId,
     // Same content filter as focusedProductId (reportHasContent).
     scrollTargetProductId: focusedProductId,
     hasAnyContent,
-    canPublishReport,
-    showPublishHint,
   };
 }

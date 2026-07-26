@@ -21,6 +21,9 @@ const LEAD_BRAND_GREEN = printStatusColor("on-track");
 const LEAD_INITIALS_BG = "#1E3932";
 // Soft at-risk wash for needs-attention callout.
 const NEEDS_ATTENTION_BG = "#fef9e7";
+// Severity is optional on the projection; print falls back to the milder of the
+// two, matching the on-screen accordion (accordion-sections.tsx).
+const DEFAULT_ATTENTION_SEVERITY = "at-risk";
 
 const LEAD_HEADER_STYLE: CSSProperties = {
   display: "flex",
@@ -86,7 +89,7 @@ function PrintNeedsAttention({ report }: PrintLeadSectionProps) {
       style={{
         padding: "6px 10px",
         marginBottom: "8px",
-        borderLeft: `3px solid ${printStatusColor(report.needsAttentionSeverity ?? "at-risk")}`,
+        borderLeft: `3px solid ${printStatusColor(report.needsAttentionSeverity ?? DEFAULT_ATTENTION_SEVERITY)}`,
         backgroundColor: NEEDS_ATTENTION_BG,
         fontSize: "11px",
       }}
@@ -96,10 +99,6 @@ function PrintNeedsAttention({ report }: PrintLeadSectionProps) {
   );
 }
 
-/**
- * Print Lead Section.
- * @param props - The props argument.
- */
 export function PrintLeadSection({ report }: PrintLeadSectionProps) {
   return (
     <section style={{ marginBottom: "16px", pageBreakInside: "avoid" }}>

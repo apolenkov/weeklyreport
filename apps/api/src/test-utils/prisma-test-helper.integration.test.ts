@@ -1,7 +1,6 @@
-// UserActionLog, AppSettings and ViewerGroupAccess are the wipe sentinels:
-// they sit outside seedTestData's fixture graph, so cleanDatabase's dynamic
-// table discovery is the only thing that reaches them — a regression there
-// fails these tests first.
+// UserActionLog, AppSettings and ViewerGroupAccess are the wipe sentinels: they
+// sit outside seedTestData's fixture graph, so only cleanDatabase's dynamic
+// table discovery reaches them — a regression there fails these tests first.
 
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 

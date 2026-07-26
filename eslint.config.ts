@@ -192,7 +192,6 @@ export default defineConfig([
     "**/playwright-report/**",
     "**/prisma/generated/**",
     "prisma/seed.ts",
-    "prisma/seed-simple.ts",
     "prisma/seed-demo.ts",
     "**/e2e/**",
     "openspec/**",
@@ -222,7 +221,6 @@ export default defineConfig([
           allowDefaultProject: [
             "*.config.ts",
             "*.setup.ts",
-            "prisma/*.ts",
             "tools/*.ts",
             "apps/*/*.config.ts",
             "apps/*/*.setup.ts",
@@ -559,6 +557,18 @@ export default defineConfig([
         { max: 250, skipBlankLines: true, skipComments: true },
       ],
       complexity: ["error", 20],
+    },
+  },
+  // `prisma/` has no tsconfig of its own, so projectService would parse it under
+  // the config-less default project, where `node:*` resolves to `any` and every
+  // seed helper trips no-unsafe-*. Use the project `lint:prisma:typecheck` uses.
+  {
+    files: ["prisma/**/*.ts"],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: ["./tsconfig.prisma.json"],
+      },
     },
   },
   // sonarjs (community recommended preset). Per the user directive
@@ -1022,17 +1032,13 @@ export default defineConfig([
       "sonarjs/no-duplicate-string": "off",
     },
   },
-  // JUSTIFIED PERMANENT max-lines exemptions — data / generated / one-off
-  // script / bootstrap, where splitting would not improve clarity (per
-  // ~/.claude code-style: "if splitting would hurt clarity, keep the larger
-  // unit and say why"). These are the documented end-state exempts, NOT TODO.
+  // JUSTIFIED PERMANENT max-lines exemptions — generated code, where splitting
+  // would not improve clarity (per ~/.claude code-style: "if splitting would
+  // hurt clarity, keep the larger unit and say why"). These are the documented
+  // end-state exempts, NOT TODO.
   {
     files: [
-      "apps/web/src/features/report-sections/model/mock-data.ts", // fixture data, no logic
       "packages/ui/src/components/ui/sidebar.tsx", // shadcn/ui generated primitive bundle
-      // Long-tail (300-500): each is one cohesive concern where a split would
-      // shed few lines at a clarity cost — exempt, not churn.
-      "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // tRPC instance + all procedure builders share the private `t` binding
     ],
     rules: { "max-lines": "off" },
   },
@@ -1055,45 +1061,24 @@ export default defineConfig([
     ],
     rules: { "@typescript-eslint/no-magic-numbers": "off" },
   },
-  // Fixture catalogues, vendored primitives and the UAT harness: repeated
-  // literals ARE the data (product names, route fixtures, generated class
-  // strings) — same footing as the test carve-out above.
+  // Vendored primitives and the UAT harness: repeated literals ARE the data
+  // (route fixtures, generated class strings) — same footing as the test
+  // carve-out above.
   {
     files: [
-      "apps/web/src/features/report-sections/model/mock-data.ts",
       "packages/ui/src/components/ui/sidebar.tsx",
       "apps/web/uat-suite/**",
     ],
     rules: { "sonarjs/no-duplicate-string": "off" },
   },
   //
-  // JUSTIFIED PERMANENT complexity exempts (cyclomatic > 20). Each file is a
-  // cohesive single concern where splitting below the threshold fragments
-  // logic, breaks memoization, or forces artificial slicing. Permanent (NOT a
-  // TODO); `complexity: 20` still gates new code.
+  // JUSTIFIED PERMANENT sonarjs/cognitive-complexity exempts. Cohesive single
+  // concerns where splitting below the threshold fragments logic, breaks
+  // memoization, or forces artificial slicing. Permanent (NOT a TODO).
   {
     files: [
-      "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // status-card multi-branch messaging (streak/viewer/draft/risk)
-    ],
-    rules: { complexity: "off" },
-  },
-  // JUSTIFIED PERMANENT sonarjs/cognitive-complexity exempts. Same rationale
-  // as the cyclomatic block above (many files overlap — the same cohesive
-  // monoliths).
-  {
-    files: [
-      "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // see cyclomatic block
       "apps/web/uat-suite/inventory.mjs", // classify() must stay inline (runs inside page.evaluate) + multi-phase report IIFE
     ],
     rules: { "sonarjs/cognitive-complexity": "off" },
-  },
-  // JUSTIFIED PERMANENT sonarjs/no-nested-functions exempts. Nested callbacks
-  // inside render/state-setter pipelines or browser-serialized scripts;
-  // extracting fragments the concern or breaks memoization.
-  {
-    files: [
-      "apps/web/src/features/landing/ui/tagline-cycler.tsx", // self-recursive setTimeout handler mutating timer/visible/index state
-    ],
-    rules: { "sonarjs/no-nested-functions": "off" },
   },
 ]);

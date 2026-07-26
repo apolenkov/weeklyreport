@@ -33,10 +33,6 @@ interface CollapsedStagesIndicatorProps {
   readonly count: number;
 }
 
-/**
- * Collapsed Stages Indicator.
- * @param props - The props argument.
- */
 export function CollapsedStagesIndicator({
   reveal,
   statuses,

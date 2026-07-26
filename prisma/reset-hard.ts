@@ -12,6 +12,8 @@ import { config as loadEnv } from "dotenv";
 const REPO_ROOT = resolve(__dirname, "..");
 loadEnv({ path: resolve(REPO_ROOT, ".env") });
 
+// The imports below read DATABASE_URL at module-evaluation time, so they must
+// stay under loadEnv — hoisting them to the top block breaks the script.
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";

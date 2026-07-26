@@ -10,11 +10,6 @@ export type ReminderQueuePayload =
   ReminderExecutionPayload | { reportPeriod: string };
 
 // Missing period label is a domain error — never a silently empty subject.
-/**
- * Require Rule Period Label.
- * @param repository - The repository argument.
- * @param ruleId - The ruleId argument.
- */
 export async function requireRulePeriodLabel(
   repository: Pick<RemindersRepository, "getRulePeriodLabel">,
   ruleId: string,
@@ -28,16 +23,9 @@ export async function requireRulePeriodLabel(
   return reportPeriod;
 }
 
-/**
- * Build the BullMQ `send` payload for an execution. The deadline and escalation
- * payloads carry the rich template fields plus the brand snapshot; the legacy
- * (no-payload) path emits the plain-text shape the worker's legacy branch
- * renders — and is also what the reaper re-enqueues, since the rich template
- * fields are not persisted on the execution row.
- * @param execution - The execution argument.
- * @param recipientEmail - The recipientEmail argument.
- * @param payload - The payload argument.
- */
+// Deadline/escalation carry the rich template fields plus the brand snapshot;
+// the no-payload path emits the worker's legacy plain-text shape — also what the
+// reaper re-enqueues, since the rich fields are not persisted on the execution row.
 export function buildQueuePayload(
   execution: AdminReminderExecution,
   recipientEmail: string,

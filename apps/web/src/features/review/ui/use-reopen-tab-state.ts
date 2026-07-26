@@ -62,9 +62,6 @@ function useRespondReopenMutation(onResponded: () => void) {
   );
 }
 
-/**
- * Use Reopen Tab State.
- */
 export function useReopenTabState() {
   const trpc = useTRPC();
   const [filter, setFilter] = useState<ReopenFilterStatus>("pending");

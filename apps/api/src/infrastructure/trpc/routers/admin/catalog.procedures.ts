@@ -13,10 +13,9 @@ export interface AdminCatalogDeps {
   projectAdminService: ProjectAdminService;
 }
 
-// Every catalog resolver funnels service failures through the same domain-error
-// mapper. Wrapping the resolver body (never the procedure chain, which the
-// role-coverage gate matches by reference identity) keeps that one behaviour in
-// one place instead of fourteen identical try/catch blocks.
+// Wraps the resolver body, never the procedure chain — the role-coverage gate
+// matches chains by reference identity. One mapper for every catalog resolver
+// instead of fourteen identical try/catch blocks.
 async function withDomainErrorMapping<T>(run: () => Promise<T>): Promise<T> {
   try {
     return await run();
@@ -164,10 +163,6 @@ function groupProductEdgeProcedures(deps: AdminCatalogDeps) {
   };
 }
 
-/**
- * Create Admin Catalog Procedures.
- * @param deps - The deps argument.
- */
 export function createAdminCatalogProcedures(deps: AdminCatalogDeps) {
   return {
     ...reportingGroupProcedures(deps),

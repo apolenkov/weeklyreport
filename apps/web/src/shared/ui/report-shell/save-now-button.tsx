@@ -33,13 +33,20 @@ function deriveSaveView(
   return { ariaLabel: "Save draft now", label: "Save", icon: <DiscIcon /> };
 }
 
-/**
- * Save Now Button.
- * @param props - The props argument.
- */
-export function SaveNowButton({ autosave }: SaveNowButtonProps) {
-  const { state, isInFlight, forceSave } = autosave;
+// NOT green: brand green stays the single forward-commit (Submit). The busy
+// state is report-toolbar-layout's one exemption to that single-primary rule.
+const SAVING_CLASS_NAME =
+  "border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-white disabled:opacity-100";
+const REST_CLASS_NAME =
+  "border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-40";
 
+// Post-success flash: true for SAVED_REVERT_MS after a save lands, and dropped
+// the moment autosave leaves "saved" (new edit → pending, failed save → error)
+// rather than waiting out the timer, which would strand a stale green check.
+function useSavedFlash(
+  state: AutosaveSnapshot["state"],
+  isInFlight: boolean,
+): boolean {
   const [showSaved, setShowSaved] = useState(false);
   const revertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -55,9 +62,6 @@ export function SaveNowButton({ autosave }: SaveNowButtonProps) {
         revertTimerRef.current = null;
       }, SAVED_REVERT_MS);
     } else if (state !== "saved") {
-      // Leave the post-success flash as soon as autosave is no longer "saved"
-      // (new edit → pending, or a failed save → error) — do not wait out the
-      // revert timer, which would otherwise leave a stale green check.
       setShowSaved(false);
       if (revertTimerRef.current !== null) {
         clearTimeout(revertTimerRef.current);
@@ -74,6 +78,13 @@ export function SaveNowButton({ autosave }: SaveNowButtonProps) {
     };
   }, []);
 
+  return showSaved;
+}
+
+export function SaveNowButton({ autosave }: SaveNowButtonProps) {
+  const { state, isInFlight, forceSave } = autosave;
+  const showSaved = useSavedFlash(state, isInFlight);
+
   const isSaving = isInFlight;
   const isEnabled = (state === "pending" || state === "error") && !isSaving;
 
@@ -81,16 +92,6 @@ export function SaveNowButton({ autosave }: SaveNowButtonProps) {
     if (!isEnabled) return;
     void forceSave();
   }
-
-  // Labeled neutral pill at the shared toolbar height — visible "Save" text,
-  // sized like the other labeled actions but NOT green: brand green stays the
-  // single forward-commit (Submit). The transient saving state keeps
-  // the accent busy treatment (report-toolbar-layout: Save busy accent is the
-  // one exemption to the single-primary rule).
-  const savingClassName =
-    "border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-white disabled:opacity-100";
-  const restClassName =
-    "border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-40";
 
   const { ariaLabel, label, icon } = deriveSaveView(state, isSaving, showSaved);
 
@@ -102,7 +103,7 @@ export function SaveNowButton({ autosave }: SaveNowButtonProps) {
       aria-label={ariaLabel}
       aria-busy={isSaving}
       className={`btn-press inline-flex h-[var(--toolbar-control-h)] min-w-[6.5rem] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border px-4 font-[family-name:var(--font-sans)] text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed ${
-        isSaving ? savingClassName : restClassName
+        isSaving ? SAVING_CLASS_NAME : REST_CLASS_NAME
       }`}
     >
       {icon}

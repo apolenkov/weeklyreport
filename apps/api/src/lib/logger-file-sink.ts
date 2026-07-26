@@ -16,32 +16,10 @@ export interface ResolvedFileOpts {
   maxAgeDays: number;
 }
 
+// Opaque handle. The write chain and the prune clock stay inside the closure
+// createFileSink builds, so a caller can neither read nor corrupt them.
 export interface FileSink {
-  logDir: string;
-  opts: ResolvedFileOpts;
-  queue: Promise<void>;
-  // Epoch ms of the last archive prune; gates prune to once per interval so it
-  // does not run on every emitted line. 0 = never pruned (prune on first write).
-  lastPruneAt: number;
-}
-
-/**
- * Create File Sink.
- * @param logDir - The logDir argument.
- * @param opts - The opts argument.
- */
-export function createFileSink(
-  logDir: string,
-  opts: ResolvedFileOpts,
-): FileSink {
-  return { logDir, opts, queue: Promise.resolve(), lastPruneAt: 0 };
-}
-
-async function maybePruneArchives(sink: FileSink): Promise<void> {
-  const now = Date.now();
-  if (now - sink.lastPruneAt < PRUNE_INTERVAL_MS) return;
-  sink.lastPruneAt = now;
-  await pruneOldArchives(sink.logDir, sink.opts.maxAgeDays);
+  readonly enqueue: (entry: Record<string, unknown>) => void;
 }
 
 async function pruneOldArchives(
@@ -65,25 +43,28 @@ async function pruneOldArchives(
   );
 }
 
-async function rotateIfNeeded(
-  sink: FileSink,
+// Returns the prune clock to carry forward: the given `lastPruneAt` while the
+// interval gate holds, otherwise the moment of the prune it just ran.
+async function maybePruneArchives(
+  logDir: string,
+  maxAgeDays: number,
+  lastPruneAt: number,
+): Promise<number> {
+  const now = Date.now();
+  if (now - lastPruneAt < PRUNE_INTERVAL_MS) return lastPruneAt;
+  await pruneOldArchives(logDir, maxAgeDays);
+  return now;
+}
+
+async function archiveActiveLog(
+  logDir: string,
   activePath: string,
 ): Promise<void> {
-  const stats = await fs.stat(activePath).catch(() => null);
-  if (!stats) return;
-  if (stats.size < sink.opts.maxBytes) {
-    // Not rotating: prune only once per interval so a long-lived process still
-    // drops old files without a readdir+stat on every emitted line.
-    await maybePruneArchives(sink);
-    return;
-  }
-
   const stamp = new Date().toISOString().replaceAll(/[:.]/g, "-");
   const archivePath = join(
-    sink.logDir,
+    logDir,
     `${ARCHIVE_PREFIX}${stamp}${ARCHIVE_SUFFIX}`,
   );
-
   await pipeline(
     createReadStream(activePath),
     createGzip(),
@@ -92,27 +73,61 @@ async function rotateIfNeeded(
   // truncate keeps the inode/handle valid for any open writers and is faster
   // than unlink + recreate.
   await fs.truncate(activePath, 0);
-
-  // A rotation just created a new archive — prune immediately regardless of the
-  // interval gate.
-  sink.lastPruneAt = Date.now();
-  await pruneOldArchives(sink.logDir, sink.opts.maxAgeDays);
 }
 
-/**
- * Enqueue Write.
- * @param sink - The sink argument.
- * @param entry - The entry argument.
- */
+async function rotateIfNeeded(
+  logDir: string,
+  opts: ResolvedFileOpts,
+  activePath: string,
+  lastPruneAt: number,
+): Promise<number> {
+  const stats = await fs.stat(activePath).catch(() => null);
+  if (!stats) return lastPruneAt;
+  if (stats.size < opts.maxBytes) {
+    return maybePruneArchives(logDir, opts.maxAgeDays, lastPruneAt);
+  }
+
+  await archiveActiveLog(logDir, activePath);
+  // A rotation just created a new archive — prune immediately, gate or not.
+  const prunedAt = Date.now();
+  await pruneOldArchives(logDir, opts.maxAgeDays);
+  return prunedAt;
+}
+
+export function createFileSink(
+  logDir: string,
+  opts: ResolvedFileOpts,
+): FileSink {
+  const activePath = join(logDir, ACTIVE_LOG_FILENAME);
+  // The sink's whole mutable state: writes serialize on `queue`, and
+  // `lastPruneAt` (0 = never pruned) carries the prune clock between writes.
+  const state = { queue: Promise.resolve(), lastPruneAt: 0 };
+  return {
+    enqueue: (entry) => {
+      state.queue = state.queue
+        .then(async () => {
+          state.lastPruneAt = await rotateIfNeeded(
+            logDir,
+            opts,
+            activePath,
+            state.lastPruneAt,
+          );
+        })
+        .then(() => fs.appendFile(activePath, `${JSON.stringify(entry)}\n`))
+        .catch((error: unknown) => {
+          process.stderr.write(
+            `[logger] file write failed: ${String(error)}\n`,
+          );
+        });
+    },
+  };
+}
+
+// Free-function façade kept for logger.ts's call site now that the write state
+// moved into the sink closure.
 export function enqueueWrite(
   sink: FileSink,
   entry: Record<string, unknown>,
 ): void {
-  const activePath = join(sink.logDir, ACTIVE_LOG_FILENAME);
-  sink.queue = sink.queue
-    .then(() => rotateIfNeeded(sink, activePath))
-    .then(() => fs.appendFile(activePath, `${JSON.stringify(entry)}\n`))
-    .catch((error: unknown) => {
-      process.stderr.write(`[logger] file write failed: ${String(error)}\n`);
-    });
+  sink.enqueue(entry);
 }

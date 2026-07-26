@@ -6,6 +6,7 @@ import {
   TooltipTrigger,
 } from "@customreport/ui/components/ui/tooltip";
 import { Lock } from "lucide-react";
+import type { CSSProperties } from "react";
 
 import {
   STAGE_CHIP_BOX_HEIGHT,
@@ -66,6 +67,24 @@ function chipBorderStyle(
   return coveredByRisk
     ? `1.5px dashed ${borderColor}`
     : `1.5px solid ${borderColor}`;
+}
+
+function chipStyle({
+  status,
+  isEmpty,
+  coveredByRisk,
+}: {
+  readonly status: StageStatus;
+  readonly isEmpty: boolean;
+  readonly coveredByRisk: boolean;
+}): CSSProperties {
+  const config = STATUS_CONFIG[status];
+  return {
+    height: STAGE_CHIP_BOX_HEIGHT,
+    background: config.bg,
+    color: config.text,
+    border: chipBorderStyle(isEmpty, coveredByRisk, config.border),
+  };
 }
 
 // Suffix uses displayed status on own chips: at-risk/blocked → "by risk",
@@ -131,27 +150,47 @@ function AssigneeLabel({ stage }: { readonly stage: StageAssignment }) {
   );
 }
 
-/**
- * Stage Chip.
- * @param props - The props argument.
- */
+interface ChipVisualState extends ChipAffordances {
+  readonly effectiveRawStatus: StageStatus;
+  readonly coveredByRisk: boolean;
+  readonly coverageSuffix: string;
+}
+
+// Coverage only applies to own stages; locked chips carry no authoring intent.
+function chipVisualState(
+  stage: StageAssignment,
+  readOnly: boolean,
+  rawStatus: StageStatus | undefined,
+): ChipVisualState {
+  const isEditable = stage.ownership === "mine" && !readOnly;
+  const effectiveRawStatus = rawStatus ?? stage.status;
+  return {
+    isEditable,
+    isLocked: stage.ownership === "locked",
+    isEmpty: stage.status === "empty" && isEditable,
+    effectiveRawStatus,
+    coveredByRisk:
+      stage.ownership === "mine" &&
+      effectiveRawStatus === "empty" &&
+      stage.coveredByOwnRisk === true,
+    coverageSuffix: coverageSuffixFor(stage),
+  };
+}
+
 export function StageChip({
   stage,
   onStatusChange,
   readOnly = false,
   rawStatus,
 }: StageChipProps) {
-  const config = STATUS_CONFIG[stage.status];
-  const isEditable = stage.ownership === "mine" && !readOnly;
-  const isLocked = stage.ownership === "locked";
-  const isEmpty = stage.status === "empty" && isEditable;
-  // Covered only applies to own stages; locked chips carry no authoring intent.
-  const effectiveRawStatus = rawStatus ?? stage.status;
-  const coveredByRisk =
-    stage.ownership === "mine" &&
-    effectiveRawStatus === "empty" &&
-    stage.coveredByOwnRisk === true;
-  const coverageSuffix = coverageSuffixFor(stage);
+  const {
+    isEditable,
+    isEmpty,
+    isLocked,
+    effectiveRawStatus,
+    coveredByRisk,
+    coverageSuffix,
+  } = chipVisualState(stage, readOnly, rawStatus);
 
   // Toggle is on-track ⇄ empty off RAW status. Risk-floored chips still fire
   // the click; the sync bridge ignores it and points the lead at Risks.
@@ -169,12 +208,7 @@ export function StageChip({
           <button
             type="button"
             className={chipClassName({ isEditable, isEmpty, isLocked })}
-            style={{
-              height: STAGE_CHIP_BOX_HEIGHT,
-              background: config.bg,
-              color: config.text,
-              border: chipBorderStyle(isEmpty, coveredByRisk, config.border),
-            }}
+            style={chipStyle({ status: stage.status, isEmpty, coveredByRisk })}
             aria-label={`${stage.stageName}: ${stage.status}${coverageSuffix}`}
             data-coverage={coveredByRisk ? "risk" : undefined}
             onClick={handleChipClick}

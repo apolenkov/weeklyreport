@@ -46,14 +46,9 @@ export class PeriodNotFoundError extends Error {
   }
 }
 
-/**
- * Outcome of the guarded manual-publish compare-and-set. A real transition
- * carries `transitioned: true`; a zero-row match is split by an in-transaction
- * re-read so the service can tell a concurrent publish (`reason: "raced"` —
- * idempotent success) from an archive landing inside the read→write window
- * (`reason: "archived"` — a domain error). The contradictory archived-and-
- * published row is never written.
- */
+// Outcome of the guarded manual-publish compare-and-set. A zero-row match is
+// split by an in-transaction re-read so a concurrent publish ("raced",
+// idempotent) never reads as an archive race ("archived", a domain error).
 export type PublishPeriodOutcome =
   | { readonly transitioned: true }
   | { readonly transitioned: false; readonly reason: "raced" | "archived" };
@@ -66,14 +61,9 @@ export interface PeriodRepository {
     publishedAt: Date | null;
     archived: boolean;
   } | null>;
-  /**
-   * Publish a period via a guarded compare-and-set keyed on
-   * `periodStatus != "published" AND archived = false`. A zero-row match is
-   * disambiguated by an in-transaction re-read: `reason: "raced"` (a concurrent
-   * publish won) vs `reason: "archived"` (the period was archived inside the
-   * read→write window), so the caller emits telemetry and runs ingestion at
-   * most once per transition and fails closed on an archive race.
-   */
+  // Guarded compare-and-set keyed on `periodStatus != "published" AND
+  // archived = false`, so telemetry and ingestion run at most once per real
+  // transition; PublishPeriodOutcome carries the zero-row split.
   publishPeriod(
     reportId: string,
     userId: string,
@@ -222,12 +212,9 @@ export class PeriodService {
       : () => this.repository.getCurrentEditableId();
   }
 
-  /**
-   * For a non-admin head the lifecycle target MUST be the server-derived active
-   * period; a stale or hand-crafted `reportId` fails closed. Admin may target
-   * any non-archived report (the period-management UI legitimately acts on
-   * historical/scheduled ids), so it skips the equality check.
-   */
+  // A non-admin head's lifecycle target MUST be the server-derived active
+  // period, so a stale or hand-crafted `reportId` fails closed. Admin skips the
+  // check — period management legitimately acts on historical/scheduled ids.
   private async assertHeadTargetMatches(
     reportId: string,
     session: UserSession,
@@ -244,14 +231,9 @@ export class PeriodService {
     }
   }
 
-  /**
-   * A non-admin head may hold at most one reopened period at a time. Without
-   * this, a head could walk back through history: reopening the latest published
-   * period uncovers the next as the new latest-published, which is then
-   * reopenable, and each could be republished — rewriting historical snapshots
-   * and on-time telemetry, the exact threat this change closes. Admin (the
-   * recovery path) is exempt and may reopen arbitrarily.
-   */
+  // Reopening the latest published period uncovers the next as the new
+  // latest-published; this one-at-a-time cap stops a head walking back through
+  // history, rewriting snapshots and on-time telemetry. Admin stays exempt.
   private async assertNoConcurrentReopen(session: UserSession): Promise<void> {
     if (session.role === "admin") {
       return;

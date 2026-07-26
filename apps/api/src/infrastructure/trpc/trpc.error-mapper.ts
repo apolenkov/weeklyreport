@@ -67,9 +67,8 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   [ReviewNotFoundError, "NOT_FOUND"],
   [ReviewConstraintError, "BAD_REQUEST"],
   // A verdict's version lock lost to a concurrent lead re-submit — a
-  // concurrency clash, not a validation failure — CONFLICT (409) so the client
-  // reloads the current version and re-decides, mirroring
-  // SectionVersionConflictError on the section-write path.
+  // concurrency clash, not a validation failure: CONFLICT (409) so the client
+  // reloads and re-decides, mirroring SectionVersionConflictError above.
   [ReviewVersionConflictError, "CONFLICT"],
   [AdminAccessError, "FORBIDDEN"],
   [ReportSectionAccessError, "FORBIDDEN"],
@@ -126,10 +125,6 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   [ProjectActivityDomainError, "BAD_REQUEST"],
 ];
 
-/**
- * Map Domain Error.
- * @param error - The error argument.
- */
 export function mapDomainError(error: unknown): TRPCError {
   // Pass an already-typed tRPC error through unchanged.
   if (error instanceof TRPCError) {
@@ -142,11 +137,9 @@ export function mapDomainError(error: unknown): TRPCError {
     }
   }
 
-  // Unknown error path: preserve `cause` so the loggingMiddleware can log the
-  // underlying stack/constructor/message. Without this, every internal bug
-  // surfaces as a contextless "Unexpected error" line and the root cause is
-  // unrecoverable from the log stream. This fallback MUST stay last and MUST
-  // NOT be tightened.
+  // Unknown error path: `cause` must survive so loggingMiddleware can recover
+  // the underlying stack/constructor — without it every internal bug is a
+  // contextless "Unexpected error". Must stay last and must not be tightened.
   return new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
     message: "Unexpected error",

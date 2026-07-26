@@ -69,10 +69,8 @@ describe("AdminPrismaRepository (integration)", () => {
   it("saveSnapshot updates entities correctly", async () => {
     const snapshot = await repo.getSnapshot();
 
-    // Modify the snapshot: update the lead's name via the structured parts
-    // (the denormalized `name` is recomputed server-side from these parts, so
-    // setting `name` directly no longer persists — set the parts that compose
-    // to the expected display name).
+    // The denormalized `name` is recomputed server-side from the structured
+    // parts, so setting it directly no longer persists — edit the parts.
     const updatedUsers = snapshot.users.map((u) =>
       u.id === testData.lead.id
         ? {
@@ -213,15 +211,8 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(dbLead.name).toBe(expected);
   });
 
-  // -------------------------------------------------------------------
-  // Group <-> Product M:M repository methods
-  //
-  // The seeded `lead` user belongs to `group`; the seeded `project` is
-  // led by that user. The backfill auto-creates one `GroupProduct` row
-  // mapping the seeded group to the seeded project. These tests assert
-  // the four explicit-mutation methods behave idempotently against that
-  // real baseline.
-  // -------------------------------------------------------------------
+  // Group<->Product baseline: the backfill already maps the seeded group to
+  // the seeded project, so these mutations run against a non-empty edge set.
 
   it("attachProductToGroup is idempotent and detach removes the edge", async () => {
     // The seed test cleanDatabase wipes GroupProduct too if the helper

@@ -1,8 +1,5 @@
-/**
- * The minimal shape needed to decide whether a product report carries authored
- * content. Both the mapper's `WeeklyProductReport` and the presentation
- * `ProductReport` satisfy it structurally.
- */
+// Structural minimum for the content check: both the mapper's
+// `WeeklyProductReport` and the presentation `ProductReport` satisfy it.
 export interface ReportContentSummary {
   readonly needsAttention?: string;
   readonly currentWeek: readonly unknown[];
@@ -12,13 +9,9 @@ export interface ReportContentSummary {
   readonly priorities: readonly unknown[];
 }
 
-/**
- * A product report has content — worth an accordion row and eligible to
- * publish — when it flags needs-attention or carries any authored item, risk,
- * decision, or priority. Single source for the publish gate, the accordion
- * render guard, and the per-lead grouping filter so the three cannot diverge.
- * @param report - The report argument.
- */
+// Single source for the publish gate, the accordion render guard, and the
+// per-lead grouping filter, so the three cannot diverge on what "has content"
+// means.
 export function reportHasContent(report: ReportContentSummary): boolean {
   return (
     Boolean(report.needsAttention) ||

@@ -4,6 +4,7 @@ import {
   type OnModuleDestroy,
   type OnModuleInit,
 } from "@nestjs/common";
+import type { Gauge } from "prom-client";
 
 import {
   customreportActiveLeadsTotal,
@@ -62,6 +63,11 @@ export class TelemetryGaugesPrismaRepository implements TelemetryGaugesPort {
   }
 }
 
+// prom-client@15: collect is runtime-assignable but TS only types it as a
+// constructor option — cast required.
+const collectAssignable = (gauge: Gauge): { collect: () => Promise<void> } =>
+  gauge as unknown as { collect: () => Promise<void> };
+
 // Collect callbacks run at Prom scrape (~15s); no scheduler. Destroy clears
 // them so module-graph rebuilds don't pin a torn-down prisma instance.
 @Injectable()
@@ -71,14 +77,8 @@ export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly repo: TelemetryGaugesPort) {}
 
   onModuleInit(): void {
-    // prom-client@15: collect is runtime-assignable but TS only types it as a
-    // constructor option — cast required.
-    const onTimeRatio = customreportReportsOnTimeRatio as unknown as {
-      collect: () => Promise<void>;
-    };
-    const activeLeads = customreportActiveLeadsTotal as unknown as {
-      collect: () => Promise<void>;
-    };
+    const onTimeRatio = collectAssignable(customreportReportsOnTimeRatio);
+    const activeLeads = collectAssignable(customreportActiveLeadsTotal);
 
     onTimeRatio.collect = async () => {
       // A rejection here fails prom-client's Promise.all over all collect
@@ -115,12 +115,8 @@ export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
   onModuleDestroy(): void {
     // Reset to no-op so subsequent module reloads (rare outside tests)
     // do not invoke a torn-down prisma client.
-    const onTimeRatio = customreportReportsOnTimeRatio as unknown as {
-      collect: () => Promise<void>;
-    };
-    const activeLeads = customreportActiveLeadsTotal as unknown as {
-      collect: () => Promise<void>;
-    };
+    const onTimeRatio = collectAssignable(customreportReportsOnTimeRatio);
+    const activeLeads = collectAssignable(customreportActiveLeadsTotal);
     onTimeRatio.collect = () => Promise.resolve();
     activeLeads.collect = () => Promise.resolve();
   }

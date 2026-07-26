@@ -10,12 +10,6 @@ import {
 import type { ReportPeriod } from "../../report-sections";
 
 // Prepend the displayed period when the archive toggle hides it from compiledHistory.
-/**
- * Derive Viewer Periods.
- * @param historyEntries - The historyEntries argument.
- * @param displayed - The displayed argument.
- * @param reportId - The reportId argument.
- */
 export function deriveViewerPeriods(
   historyEntries: readonly CompiledHistoryEntry[] | undefined,
   displayed: WeeklyReportGetResponse | undefined,
@@ -54,6 +48,9 @@ function toReportPeriod(
       new Date(periodEnd),
     ),
     archived: options.archived,
+    // Navigation-only shape: the viewer offers no fill-from and no submission
+    // marker, so these two carry no section identity (see period-navigator's
+    // `leadSubmittedAt`, the only source the marker trusts).
     sourceSectionId: "",
     isCurrent: false,
     isSubmitted: true,

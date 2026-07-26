@@ -29,10 +29,6 @@ const EMPTY_LOADED_CONTEXT: LeadFormLoadedContext = {
   nextWeekItems: [],
 };
 
-/**
- * Lead Form.
- * @param props - The props argument.
- */
 export function LeadForm(props: LeadFormProps) {
   const {
     reportId: pinnedReportId,

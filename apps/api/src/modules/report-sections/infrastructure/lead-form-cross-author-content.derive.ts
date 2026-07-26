@@ -31,13 +31,9 @@ interface ForeignContentAssignmentRow {
   user: { id: string; name: string; role: DbRole };
 }
 
-/**
- * Groups foreign stage assignments into per-author scoping entries, preserving
- * first-seen insertion order. `coOwnsShared` is the co-ownership authorization
- * signal (true iff the caller co-owns at least one shared, non-archived
- * product); `otherUserIds` are the co-owner ids for the section fetch.
- * @param others - The others argument.
- */
+// `coOwnsShared` is the authorization signal: `others` only ever holds stage
+// assignments on shared, non-archived products, so a non-empty grouping means
+// the caller co-owns at least one.
 export function groupCrossAuthorAuthors(
   others: readonly ForeignContentAssignmentRow[],
 ): {
@@ -115,14 +111,6 @@ interface ForeignContentSection {
   }[];
 }
 
-/**
- * Builds per-author content rows scoped to shared products only, preserving
- * `sections` order. Sections whose author is not a co-owner are skipped; each
- * stage chip is risk-derived and the record collections are filtered to the
- * author's shared products (activity-parented rows with null FK drop out).
- * @param sections - The sections argument.
- * @param authorEntries - The authorEntries argument.
- */
 export function buildCrossAuthorContentRows(
   sections: readonly ForeignContentSection[],
   authorEntries: ReadonlyMap<string, CrossAuthorEntry>,

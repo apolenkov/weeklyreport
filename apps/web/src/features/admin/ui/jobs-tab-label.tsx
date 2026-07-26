@@ -5,15 +5,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useTRPC } from "../../../lib/trpc-context";
 import { TabCountPill } from "../../../shared/ui/tab-count-pill";
 
+// DLQ depth is a background health signal, not a live counter; a slow poll
+// keeps the badge fresh without a per-render query on every admin tab.
+const DLQ_COUNT_POLL_MS = 30_000;
+
 // Count badge sits on the Jobs tab corner (not a page-header badge).
-/**
- * Jobs Tab Label.
- */
 export function JobsTabLabel() {
   const trpc = useTRPC();
   const countQuery = useQuery({
     ...trpc.admin.dlqCount.queryOptions(),
-    refetchInterval: 30_000,
+    refetchInterval: DLQ_COUNT_POLL_MS,
   });
 
   const count = countQuery.data?.count ?? 0;

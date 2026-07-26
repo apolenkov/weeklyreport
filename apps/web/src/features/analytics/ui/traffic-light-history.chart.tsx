@@ -17,27 +17,15 @@ const STATUS_LEVEL_GREEN = 3;
 const STATUS_LEVEL_TICKS = [1, 2, STATUS_LEVEL_GREEN];
 const Y_AXIS_DOMAIN_MAX = 4;
 
-/**
- * Traffic-light history sparkline.
- *
- * `connectNulls={false}` so periods where a project did NOT report render
- * as visible gaps, distinct from a reported zero.
- */
-
 const STATUS_TO_VALUE: Record<Exclude<TrafficLightCell, null>, number> = {
   green: STATUS_LEVEL_GREEN,
   yellow: 2,
   red: 1,
 };
 
-/**
- * Pivot history rows into recharts data points keyed by the stable `projectId`
- * (a UUID) rather than the project name, so two projects that share a name keep
- * separate lines instead of silently overwriting each other. The series
- * descriptor carries the human-readable name for recharts' tooltip.
- * @param periods - The periods argument.
- * @param rows - The rows argument.
- */
+// Data points are keyed by the stable `projectId`, not the project name, so two
+// projects sharing a name keep separate lines instead of overwriting each other;
+// the series descriptor carries the readable name for recharts' tooltip.
 export function buildTrafficLightHistoryChartData(
   periods: TrafficLightHistoryOutput["periods"],
   rows: TrafficLightHistoryOutput["rows"],
@@ -66,10 +54,6 @@ export function buildTrafficLightHistoryChartData(
   return { data, series };
 }
 
-/**
- * Traffic Light History Chart.
- * @param props - The props argument.
- */
 export function TrafficLightHistoryChart({
   periods,
   rows,
@@ -91,6 +75,8 @@ export function TrafficLightHistoryChart({
         <XAxis dataKey="period" />
         <YAxis ticks={STATUS_LEVEL_TICKS} domain={[0, Y_AXIS_DOMAIN_MAX]} />
         <ChartTooltip />
+        {/* connectNulls={false}: periods a project did NOT report stay visible
+            gaps instead of being bridged by a line through them. */}
         {series.map((s, idx) => (
           <Line
             key={s.dataKey}

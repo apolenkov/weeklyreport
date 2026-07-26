@@ -22,10 +22,6 @@ export type { LeadSlideFormData } from "./lead-slide-form-data";
 export type SaveOperation = "saved" | "deleted";
 
 // Single write path for inline save/delete; conflict reloads rather than toast-retrying.
-/**
- * Use Slide Draft Save Mutation.
- * @param options - The options argument.
- */
 export function useSlideDraftSaveMutation({
   refetchSection,
   onSaved,
@@ -79,11 +75,23 @@ export function useSlideDraftSaveMutation({
   return { saveDraftSection, isPending: saveDraftMut.isPending };
 }
 
+// Resolves one grid row (the open editor's or the pending delete's) back to its
+// underlying record; null until section, formData and the row ref all exist.
+function useSlideInlineRecord(
+  section: ReportSectionReadModel | null,
+  formData: LeadSlideFormData | null,
+  rowRef: GridRowEditableRef | null,
+) {
+  return useMemo(
+    () =>
+      section && formData && rowRef
+        ? resolveSlideInlineRecord(section, formData, rowRef)
+        : null,
+    [formData, rowRef, section],
+  );
+}
+
 // Pure lookups for dialog options and the open/pending-delete records — no local state.
-/**
- * Use Inline Edit Dialog Data.
- * @param options - The options argument.
- */
 export function useInlineEditDialogData({
   section,
   formData,
@@ -95,44 +103,34 @@ export function useInlineEditDialogData({
   readonly inlineEditRef: GridRowEditableRef | null;
   readonly pendingDeleteRef: GridRowEditableRef | null;
 }) {
-  const dialogProducts = useMemo(
-    () => (formData ? toDialogProducts(formData) : []),
+  const fromFormData = useMemo(
+    () => ({
+      dialogProducts: formData ? toDialogProducts(formData) : [],
+      dialogRanks: formData ? ownPeriodRanks(formData) : [],
+      dialogRisks: formData ? toDialogRisks(formData) : [],
+    }),
     [formData],
   );
   const dialogActivities = useMemo(
     () => (section ? toDialogActivities(section) : []),
     [section],
   );
-  const dialogRanks = useMemo(
-    () => (formData ? ownPeriodRanks(formData) : []),
-    [formData],
+  const inlineEditRecord = useSlideInlineRecord(
+    section,
+    formData,
+    inlineEditRef,
   );
-  const dialogRisks = useMemo(
-    () => (formData ? toDialogRisks(formData) : []),
-    [formData],
-  );
-  const inlineEditRecord = useMemo(
-    () =>
-      section && formData && inlineEditRef
-        ? resolveSlideInlineRecord(section, formData, inlineEditRef)
-        : null,
-    [formData, inlineEditRef, section],
-  );
-  const pendingDeleteRecord = useMemo(
-    () =>
-      section && formData && pendingDeleteRef
-        ? resolveSlideInlineRecord(section, formData, pendingDeleteRef)
-        : null,
-    [formData, pendingDeleteRef, section],
+  const pendingDeleteRecord = useSlideInlineRecord(
+    section,
+    formData,
+    pendingDeleteRef,
   );
   const stagesForProduct = (productId: string) =>
     section ? ownedStagesForProduct(section, productId) : [];
 
   return {
-    dialogProducts,
+    ...fromFormData,
     dialogActivities,
-    dialogRanks,
-    dialogRisks,
     inlineEditRecord,
     pendingDeleteRecord,
     stagesForProduct,

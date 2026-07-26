@@ -67,8 +67,10 @@ function validateProjectSubmission(
 
 /**
  * Validate a section submit payload against draft completeness rules.
- * @param section - The section argument.
- * @param input - The input argument.
+ * @param section - Server read model supplying the projects and activities
+ *   the author must cover.
+ * @param input - Payload under validation; the tRPC input and the applied
+ *   payload shapes are both accepted.
  */
 export function validateSubmitInput(
   section: ReportSectionReadModel,
@@ -109,8 +111,9 @@ export function validateSubmitInput(
 /**
  * Reject activity-parented draft rows whose activityId is not seeded on the section.
  * Product-parented rows (null activityId) are out of scope here.
- * @param section - The section argument.
- * @param input - The input argument.
+ * @param section - Server read model whose `activities` are the only ids the
+ *   author may reference.
+ * @param input - Payload whose item, risk and decision rows are checked.
  */
 export function validateRecordActivityIds(
   section: ReportSectionReadModel,
@@ -140,8 +143,9 @@ export function validateRecordActivityIds(
 
 /**
  * Reject activityStatuses entries whose activityId is not seeded on the section.
- * @param section - The section argument.
- * @param input - The input argument.
+ * @param section - Server read model whose `activities` are the only ids the
+ *   author may reference.
+ * @param input - Payload whose `activityStatuses` entries are checked.
  */
 export function validateActivityStatuses(
   section: ReportSectionReadModel,
@@ -261,8 +265,9 @@ function validateStageRows(
 /**
  * Stage ownership for saveDraft/submit: changed rows need author-owned stages;
  * unchanged stableId+product+stages rows are grandfathered (never clamps).
- * @param section - The section argument.
- * @param input - The input argument.
+ * @param section - Server-authoritative read model: owned stages plus the
+ *   stored rows a payload row is compared against for grandfathering.
+ * @param input - Payload whose item, risk and decision stages are checked.
  */
 export function validateStageOwnership(
   section: ReportSectionReadModel,

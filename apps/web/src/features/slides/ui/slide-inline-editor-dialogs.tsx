@@ -51,97 +51,63 @@ interface SlideInlineEditorDialogsProps {
   readonly onCancelDelete: () => void;
 }
 
-/**
- * Get Active Item Record.
- * @param record - The record argument.
- */
 export function getActiveItemRecord(
   record: SlideInlineEditRecord | null,
 ): SlideInlineItemRecord | null {
   return record?.kind === "item" ? record : null;
 }
 
-/**
- * Get Active Risk Record.
- * @param record - The record argument.
- */
 export function getActiveRiskRecord(
   record: SlideInlineEditRecord | null,
 ): SlideInlineRiskRecord | null {
   return record?.kind === "risk" ? record : null;
 }
 
-/**
- * Get Active Decision Record.
- * @param record - The record argument.
- */
 export function getActiveDecisionRecord(
   record: SlideInlineEditRecord | null,
 ): SlideInlineDecisionRecord | null {
   return record?.kind === "decision" ? record : null;
 }
 
-/**
- * Slide Inline Editor Dialogs.
- * @param props - The props argument.
- */
-export function SlideInlineEditorDialogs({
-  inlineEditRecord,
-  pendingDeleteRecord,
-  currentUserName,
-  dialogProducts,
-  dialogActivities,
-  dialogRanks,
-  dialogRisks,
-  stagesForProduct,
-  onItemSave,
-  onRiskSave,
-  onDecisionSave,
-  onCancelEdit,
-  onRequestDelete,
-  onConfirmDelete,
-  onCancelDelete,
-}: SlideInlineEditorDialogsProps) {
+export function SlideInlineEditorDialogs(props: SlideInlineEditorDialogsProps) {
+  const { inlineEditRecord, pendingDeleteRecord } = props;
+  // The three edit dialogs differ only in the record they bind; catalogs and
+  // cancel/delete wiring are identical for all of them.
+  const shared = {
+    products: props.dialogProducts,
+    activities: props.dialogActivities,
+    stagesForProduct: props.stagesForProduct,
+    onCancel: props.onCancelEdit,
+    onDelete: props.onRequestDelete,
+  };
   return (
     <>
       <InlineItemDialog
+        {...shared}
         record={getActiveItemRecord(inlineEditRecord)}
-        currentUserName={currentUserName}
-        products={dialogProducts}
-        activities={dialogActivities}
-        ranks={dialogRanks}
-        risks={dialogRisks}
-        stagesForProduct={stagesForProduct}
-        onSave={onItemSave}
-        onCancel={onCancelEdit}
-        onDelete={onRequestDelete}
+        currentUserName={props.currentUserName}
+        ranks={props.dialogRanks}
+        risks={props.dialogRisks}
+        onSave={props.onItemSave}
       />
       <InlineRiskDialog
+        {...shared}
         record={getActiveRiskRecord(inlineEditRecord)}
-        products={dialogProducts}
-        activities={dialogActivities}
-        stagesForProduct={stagesForProduct}
-        onSave={onRiskSave}
-        onCancel={onCancelEdit}
-        onDelete={onRequestDelete}
+        onSave={props.onRiskSave}
       />
       <InlineDecisionDialog
+        {...shared}
         record={getActiveDecisionRecord(inlineEditRecord)}
-        currentUserName={currentUserName}
-        products={dialogProducts}
-        activities={dialogActivities}
-        stagesForProduct={stagesForProduct}
-        onSave={onDecisionSave}
-        onCancel={onCancelEdit}
-        onDelete={onRequestDelete}
+        currentUserName={props.currentUserName}
+        onSave={props.onDecisionSave}
       />
       <ConfirmDeleteDialog
         open={pendingDeleteRecord !== null}
         title={pendingDeleteRecord?.deleteTitle ?? "Delete record?"}
         preview={pendingDeleteRecord?.deletePreview ?? ""}
         subtitle={pendingDeleteRecord?.deleteSubtitle}
-        onConfirm={onConfirmDelete}
-        onCancel={onCancelDelete}
+        onConfirm={props.onConfirmDelete}
+        onCancel={props.onCancelDelete}
       />
     </>
   );

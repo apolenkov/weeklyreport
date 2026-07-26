@@ -13,61 +13,95 @@ import { PeriodsArchiveSection } from "./periods-archive-section";
 import { PeriodsTabDialogs } from "./periods-tab-dialogs";
 import { PlusIcon } from "./periods-tab-icons";
 
-/**
- * Periods Tab.
- */
-export function PeriodsTab() {
-  const trpc = useTRPC();
+type PeriodMutations = ReturnType<typeof usePeriodMutations>;
 
-  // Archive section is collapsed by default. The query stays disabled until
-  // the user opens the section (single round-trip for the active bucket).
-  const [showArchive, setShowArchive] = useState(false);
+interface PeriodDialogState {
+  readonly showCreate: boolean;
+  readonly editingRow: PeriodListItem | null;
+  readonly deleteConfirm: PeriodListItem | null;
+  readonly openCreate: () => void;
+  readonly closeCreate: () => void;
+  readonly openEdit: (row: PeriodListItem) => void;
+  readonly closeEdit: () => void;
+  readonly requestDelete: (row: PeriodListItem) => void;
+  readonly closeDelete: () => void;
+}
 
+// Returns a capture callback: call it while opening a dialog to remember the
+// element that opened it, so focus can return there once `openState` clears.
+function useRestoreFocusOnClose(openState: unknown) {
+  const triggerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!openState && triggerRef.current) {
+      triggerRef.current.focus();
+      triggerRef.current = null;
+    }
+  }, [openState]);
+
+  return () => {
+    triggerRef.current = document.activeElement as HTMLElement;
+  };
+}
+
+function usePeriodDialogState(): PeriodDialogState {
   const [showCreate, setShowCreate] = useState(false);
   const [editingRow, setEditingRow] = useState<PeriodListItem | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<PeriodListItem | null>(
     null,
   );
 
-  // Save the trigger element before opening create/edit; restore on close.
-  const dialogTriggerRef = useRef<HTMLElement | null>(null);
+  const captureCreateTrigger = useRestoreFocusOnClose(showCreate);
+  const captureEditTrigger = useRestoreFocusOnClose(editingRow);
 
-  useEffect(() => {
-    if (!showCreate && dialogTriggerRef.current) {
-      dialogTriggerRef.current.focus();
-      dialogTriggerRef.current = null;
-    }
-  }, [showCreate]);
+  return {
+    showCreate,
+    editingRow,
+    deleteConfirm,
+    openCreate: () => {
+      captureCreateTrigger();
+      setShowCreate(true);
+    },
+    closeCreate: () => setShowCreate(false),
+    openEdit: (row) => {
+      captureEditTrigger();
+      setEditingRow(row);
+    },
+    closeEdit: () => setEditingRow(null),
+    requestDelete: setDeleteConfirm,
+    closeDelete: () => setDeleteConfirm(null),
+  };
+}
 
-  useEffect(() => {
-    if (!editingRow && dialogTriggerRef.current) {
-      dialogTriggerRef.current.focus();
-      dialogTriggerRef.current = null;
-    }
-  }, [editingRow]);
+function filterPeriodRows(
+  rows: readonly PeriodListItem[],
+  search: string,
+): readonly PeriodListItem[] {
+  const needle = search.trim().toLowerCase();
+  if (!needle) return rows;
+  return rows.filter((row) =>
+    [
+      row.weekLabel,
+      formatPeriodLabel(row.periodStart, row.periodEnd),
+      formatPeriodRange(row.periodStart, row.periodEnd),
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(needle),
+  );
+}
 
-  const [search, setSearch] = useState("");
+function usePeriodRows(showArchive: boolean, search: string) {
+  const trpc = useTRPC();
 
   const activeQuery = useQuery(
     trpc.admin.listPeriodsByState.queryOptions({ bucket: "active" }),
   );
+  // Archive section is collapsed by default. The query stays disabled until
+  // the user opens the section (single round-trip for the active bucket).
   const archiveQuery = useQuery({
     ...trpc.admin.listPeriodsByState.queryOptions({ bucket: "archive" }),
     enabled: showArchive,
-  });
-
-  const {
-    publishMut,
-    reopenMut,
-    archiveMut,
-    unarchiveMut,
-    createMut,
-    updateMut,
-    deleteMut,
-  } = usePeriodMutations({
-    onCreateSuccess: () => setShowCreate(false),
-    onEditSuccess: () => setEditingRow(null),
-    onDeleteSuccess: () => setDeleteConfirm(null),
   });
 
   const allActiveRows = useMemo(
@@ -78,65 +112,137 @@ export function PeriodsTab() {
     () => archiveQuery.data ?? [],
     [archiveQuery.data],
   );
+  const activeRows = useMemo(
+    () => filterPeriodRows(allActiveRows, search),
+    [allActiveRows, search],
+  );
 
-  const activeRows = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    if (!needle) return allActiveRows;
-    return allActiveRows.filter((row) =>
-      [
-        row.weekLabel,
-        formatPeriodLabel(row.periodStart, row.periodEnd),
-        formatPeriodRange(row.periodStart, row.periodEnd),
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(needle),
-    );
-  }, [allActiveRows, search]);
+  return { activeQuery, archiveQuery, allActiveRows, activeRows, archiveRows };
+}
 
-  const rowActions = {
-    onPublish: (row: PeriodListItem) => publishMut.mutate({ reportId: row.id }),
-    onReopen: (row: PeriodListItem) => reopenMut.mutate({ reportId: row.id }),
-    onArchive: (row: PeriodListItem) => archiveMut.mutate({ periodId: row.id }),
+function buildRowActions(
+  mutations: PeriodMutations,
+  dialogs: PeriodDialogState,
+) {
+  return {
+    onPublish: (row: PeriodListItem) =>
+      mutations.publishMut.mutate({ reportId: row.id }),
+    onReopen: (row: PeriodListItem) =>
+      mutations.reopenMut.mutate({ reportId: row.id }),
+    onArchive: (row: PeriodListItem) =>
+      mutations.archiveMut.mutate({ periodId: row.id }),
     onUnarchive: (row: PeriodListItem) =>
-      unarchiveMut.mutate({ periodId: row.id }),
-    onDelete: (row: PeriodListItem) => setDeleteConfirm(row),
-    onEdit: (row: PeriodListItem) => {
-      dialogTriggerRef.current = document.activeElement as HTMLElement;
-      setEditingRow(row);
-    },
+      mutations.unarchiveMut.mutate({ periodId: row.id }),
+    onDelete: dialogs.requestDelete,
+    onEdit: dialogs.openEdit,
   };
+}
+
+function PeriodsTabHeader({
+  activeCount,
+  search,
+  onSearchChange,
+  onNewPeriod,
+}: {
+  readonly activeCount: number;
+  readonly search: string;
+  readonly onSearchChange: (next: string) => void;
+  readonly onNewPeriod: () => void;
+}) {
+  return (
+    <TabHeader
+      title="Periods"
+      description="Reporting periods grouped by lifecycle state."
+      count={`${activeCount} active`}
+      search={
+        <TabSearch
+          value={search}
+          onChange={onSearchChange}
+          placeholder="Search periods…"
+          testId="periods-search"
+          ariaLabel="Search periods"
+        />
+      }
+      actions={
+        <button
+          type="button"
+          onClick={onNewPeriod}
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+          aria-label="New period"
+          data-testid="periods-new-button"
+        >
+          <PlusIcon />
+          New period
+        </button>
+      }
+    />
+  );
+}
+
+function PeriodsTabDialogsSlot({
+  dialogs,
+  mutations,
+}: {
+  readonly dialogs: PeriodDialogState;
+  readonly mutations: PeriodMutations;
+}) {
+  const { createMut, updateMut, deleteMut } = mutations;
+  const { editingRow, deleteConfirm } = dialogs;
+
+  return (
+    <PeriodsTabDialogs
+      showCreate={dialogs.showCreate}
+      onCancelCreate={dialogs.closeCreate}
+      // Create mode never emits `null` for weekLabel, but TS cannot see that
+      // through the dialog's mode discriminator — narrow it back here.
+      onSubmitCreate={(values) =>
+        createMut.mutate({
+          periodStart: values.periodStart,
+          periodEnd: values.periodEnd,
+          deadline: values.deadline,
+          weekLabel: values.weekLabel ?? undefined,
+        })
+      }
+      createIsPending={createMut.isPending}
+      editingRow={editingRow}
+      onCancelEdit={dialogs.closeEdit}
+      onSubmitEdit={(values) =>
+        editingRow && updateMut.mutate({ reportId: editingRow.id, ...values })
+      }
+      editIsPending={updateMut.isPending}
+      deleteConfirm={deleteConfirm}
+      deleteIsPending={deleteMut.isPending}
+      onCloseDelete={dialogs.closeDelete}
+      onConfirmDelete={() =>
+        deleteConfirm && deleteMut.mutate({ reportId: deleteConfirm.id })
+      }
+    />
+  );
+}
+
+export function PeriodsTab() {
+  const [showArchive, setShowArchive] = useState(false);
+  const [search, setSearch] = useState("");
+  const dialogs = usePeriodDialogState();
+
+  const { activeQuery, archiveQuery, allActiveRows, activeRows, archiveRows } =
+    usePeriodRows(showArchive, search);
+
+  const mutations = usePeriodMutations({
+    onCreateSuccess: dialogs.closeCreate,
+    onEditSuccess: dialogs.closeEdit,
+    onDeleteSuccess: dialogs.closeDelete,
+  });
+
+  const rowActions = buildRowActions(mutations, dialogs);
 
   return (
     <div className="space-y-6">
-      <TabHeader
-        title="Periods"
-        description="Reporting periods grouped by lifecycle state."
-        count={`${allActiveRows.length} active`}
-        search={
-          <TabSearch
-            value={search}
-            onChange={setSearch}
-            placeholder="Search periods…"
-            testId="periods-search"
-            ariaLabel="Search periods"
-          />
-        }
-        actions={
-          <button
-            type="button"
-            onClick={() => {
-              dialogTriggerRef.current = document.activeElement as HTMLElement;
-              setShowCreate(true);
-            }}
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
-            aria-label="New period"
-            data-testid="periods-new-button"
-          >
-            <PlusIcon />
-            New period
-          </button>
-        }
+      <PeriodsTabHeader
+        activeCount={allActiveRows.length}
+        search={search}
+        onSearchChange={setSearch}
+        onNewPeriod={dialogs.openCreate}
       />
 
       <PeriodsActiveSection
@@ -153,39 +259,7 @@ export function PeriodsTab() {
         {...rowActions}
       />
 
-      <PeriodsTabDialogs
-        showCreate={showCreate}
-        onCancelCreate={() => setShowCreate(false)}
-        onSubmitCreate={(values) =>
-          // Create-mode never emits `null` for weekLabel; narrow the
-          // dialog's union back to the create-schema's `string | undefined`
-          // expectation. The dialog guarantees this — but TS can't see
-          // through the mode discriminator.
-          createMut.mutate({
-            periodStart: values.periodStart,
-            periodEnd: values.periodEnd,
-            deadline: values.deadline,
-            weekLabel: values.weekLabel ?? undefined,
-          })
-        }
-        createIsPending={createMut.isPending}
-        editingRow={editingRow}
-        onCancelEdit={() => setEditingRow(null)}
-        onSubmitEdit={(values) =>
-          editingRow &&
-          updateMut.mutate({
-            reportId: editingRow.id,
-            ...values,
-          })
-        }
-        editIsPending={updateMut.isPending}
-        deleteConfirm={deleteConfirm}
-        deleteIsPending={deleteMut.isPending}
-        onCloseDelete={() => setDeleteConfirm(null)}
-        onConfirmDelete={() =>
-          deleteConfirm && deleteMut.mutate({ reportId: deleteConfirm.id })
-        }
-      />
+      <PeriodsTabDialogsSlot dialogs={dialogs} mutations={mutations} />
     </div>
   );
 }

@@ -20,10 +20,6 @@ interface NextWeekBoardGridProps {
   readonly renderItem: (item: KanbanItem) => ReactNode;
 }
 
-/**
- * Next Week Board Grid.
- * @param props - The props argument.
- */
 export function NextWeekBoardGrid({
   productColumns,
   activityLanes,
@@ -46,24 +42,14 @@ export function NextWeekBoardGrid({
         }}
       >
         {productColumns.map((col) => (
-          <div key={col.key}>
-            <BoardColumnHeader
-              col={col}
-              readOnly={readOnly}
-              showProductAdd={hasMultipleProducts}
-              onAdd={onAdd}
-            />
-            {col.items.length === 0 ? (
-              <div
-                className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-[var(--color-surface-hover)] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
-                style={{ minHeight: EMPTY_COLUMN_MIN_HEIGHT_PX }}
-              >
-                No items yet
-              </div>
-            ) : (
-              <div className="space-y-2">{col.items.map(renderItem)}</div>
-            )}
-          </div>
+          <ProductColumn
+            key={col.key}
+            col={col}
+            readOnly={readOnly}
+            hasMultipleProducts={hasMultipleProducts}
+            onAdd={onAdd}
+            renderItem={renderItem}
+          />
         ))}
       </div>
 
@@ -74,5 +60,42 @@ export function NextWeekBoardGrid({
         renderItem={renderItem}
       />
     </>
+  );
+}
+
+interface ProductColumnProps {
+  readonly col: ItemColumn;
+  readonly readOnly: boolean;
+  readonly hasMultipleProducts: boolean;
+  readonly onAdd: (seed: CreateSeed) => void;
+  readonly renderItem: (item: KanbanItem) => ReactNode;
+}
+
+function ProductColumn({
+  col,
+  readOnly,
+  hasMultipleProducts,
+  onAdd,
+  renderItem,
+}: ProductColumnProps) {
+  return (
+    <div>
+      <BoardColumnHeader
+        col={col}
+        readOnly={readOnly}
+        showProductAdd={hasMultipleProducts}
+        onAdd={onAdd}
+      />
+      {col.items.length === 0 ? (
+        <div
+          className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-[var(--color-surface-hover)] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
+          style={{ minHeight: EMPTY_COLUMN_MIN_HEIGHT_PX }}
+        >
+          No items yet
+        </div>
+      ) : (
+        <div className="space-y-2">{col.items.map(renderItem)}</div>
+      )}
+    </div>
   );
 }

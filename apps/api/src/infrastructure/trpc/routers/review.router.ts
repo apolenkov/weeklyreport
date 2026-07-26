@@ -100,23 +100,15 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
   };
 }
 
-/**
- * Create Review Router.
- * @param deps - The deps argument.
- */
 export function createReviewRouter(deps: ReviewRouterDeps) {
   return router({
     // review.dashboard is headProcedure — defense-in-depth: only heads (and
     // admins, aliased) see the submission dashboard.
     dashboard: headProcedure.query(({ ctx }) =>
       withMappedDomainErrors(async () => {
-        // Resolve the current editable period from the DB through the shared
-        // current-editable resolver (newest non-archived open/reopened period,
-        // periodStart <= now, ordered periodStart desc then id desc) instead
-        // of ctx.session.activeReportId (baked into the JWT at login, can be
-        // stale). assembledReport and publish resolve through the same method,
-        // so all three agree on the target period; the archived:false filter
-        // and id-desc tiebreak keep the pick non-arbitrary.
+        // Resolve from the DB, not ctx.session.activeReportId (baked into the
+        // JWT at login, can be stale); assembledReport and publish use the same
+        // resolver so all three agree on the target period.
         const reportId = await deps.weeklyReportService.getCurrentEditableId();
 
         if (!reportId) {

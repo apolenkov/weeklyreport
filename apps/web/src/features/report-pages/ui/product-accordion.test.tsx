@@ -192,7 +192,7 @@ describe("ProductAccordion prioritized items", () => {
     expect(screen.getByText("2 items")).toBeInTheDocument();
   });
 
-  it("does not render the removed TOP PRIORITIES section even when priorities data is present", () => {
+  it("does not render a TOP PRIORITIES section even when priorities data is present", () => {
     render(
       <ProductAccordion
         defaultOpen

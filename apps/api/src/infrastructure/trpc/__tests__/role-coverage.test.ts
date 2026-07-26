@@ -18,11 +18,9 @@ import {
 } from "../trpc.middleware.js";
 import { createAppRouter } from "../trpc.router.js";
 
-// Default-deny: every leaf must match one of eight base middleware chains by
-// identity. Capture each from a throwaway starter (slice off trailing resolver).
-// `starter` is a tRPC ProcedureBuilder; its generics make the built procedure
-// unassignable to any hand-written shape, so the cast to the _def surface the
-// gate reads happens here once instead of at every capture site.
+// Default-deny by identity (openspec/specs/role-coverage-gate): capture each
+// base chain from a throwaway starter, slicing off the trailing resolver. The
+// ProcedureBuilder generics defeat typing, so the _def cast is centralised here.
 function captureChain(starter: unknown): readonly unknown[] {
   const built = (
     starter as { query: (resolver: () => undefined) => unknown }
@@ -87,23 +85,20 @@ function isLeafProcedure(node: unknown): node is LeafProcedure {
   );
 }
 
-function collectLeafProcedures(router: {
-  _def: {
-    procedures: Record<string, unknown>;
-    record?: Record<string, unknown>;
-  };
-}): [string, LeafProcedure][] {
+// The only part of a built tRPC router this gate reads.
+interface InspectableRouter {
+  _def: { procedures: Record<string, unknown> };
+}
+
+function collectLeafProcedures(
+  router: InspectableRouter,
+): [string, LeafProcedure][] {
   return Object.entries(router._def.procedures).filter(
     (entry): entry is [string, LeafProcedure] => isLeafProcedure(entry[1]),
   );
 }
 
-function findUncoveredProcedures(router: {
-  _def: {
-    procedures: Record<string, unknown>;
-    record?: Record<string, unknown>;
-  };
-}): string[] {
+function findUncoveredProcedures(router: InspectableRouter): string[] {
   return collectLeafProcedures(router)
     .filter(([, leaf]) => !isProcedureChainAllowed(leaf._def.middlewares))
     .map(([path]) => path);

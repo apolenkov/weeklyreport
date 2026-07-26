@@ -36,71 +36,36 @@ interface ItemEditDialogProps {
 // Mount/unmount resets state (react-compiler-safe). stagesForProduct is not in
 // deps — useState seeds once from the mount snapshot so parent re-renders
 // with a new stagesForProduct ref never wipe typed text.
-/**
- * Item Edit Dialog.
- * @param props - The props argument.
- */
-export function ItemEditDialog(props: ItemEditDialogProps) {
-  if (!props.open) return null;
-  return <ItemEditDialogContent {...props} />;
+export function ItemEditDialog({ open, ...rest }: ItemEditDialogProps) {
+  if (!open) return null;
+  return <ItemEditDialogContent {...rest} />;
 }
 
-function ItemEditDialogContent({
-  item,
-  products,
-  activities = [],
-  week,
-  currentUserName,
-  defaultProductId,
-  defaultActivityId,
-  stagesForProduct,
-  ownPeriodRanks,
-  risks,
-  onSave,
-  onCancel,
-  onDelete,
-}: ItemEditDialogProps) {
-  const {
-    availableStages,
-    dialogSurfaceRef,
-    handleKeyDown,
-    handleSave,
-    headerVerb,
-    isActivityParent,
-    isDeadEnd,
-    onParentChange,
-    onPausedReasonChange,
-    onPriorityRankChange,
-    onStageChange,
-    onStatusSelect,
-    onTextChange,
-    parent,
-    parentName,
-    pausedReason,
-    pausedReasonError,
-    priorityRank,
-    rankOptions,
-    stageError,
-    stageIds,
-    status,
-    statusSlot,
-    takenRanks,
-    text,
-    textError,
-  } = useItemEditDialog({
-    item,
-    products,
-    activities,
-    week,
-    currentUserName,
-    defaultProductId,
-    defaultActivityId,
-    stagesForProduct,
-    ownPeriodRanks,
-    risks,
-    onSave,
-    onCancel,
-  });
+type ItemEditDialogContentProps = Omit<ItemEditDialogProps, "open">;
+
+function ItemEditDialogHeading({
+  headerVerb,
+  parentName,
+}: {
+  readonly headerVerb: string;
+  readonly parentName: string;
+}) {
+  return (
+    <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+      {headerVerb}{" "}
+      {parentName ? (
+        <span className="text-[var(--color-muted-foreground)]">
+          — {parentName}
+        </span>
+      ) : null}
+    </h2>
+  );
+}
+
+function ItemEditDialogContent(props: ItemEditDialogContentProps) {
+  const { activities = [], products, week, onCancel, onDelete } = props;
+  const { dialogSurfaceRef, handleKeyDown, handleSave, headerVerb, ...fields } =
+    useItemEditDialog({ ...props, activities });
 
   const choices = week === "current" ? CURRENT_WEEK_CHOICES : NEXT_WEEK_CHOICES;
 
@@ -120,42 +85,17 @@ function ItemEditDialogContent({
         aria-modal="true"
         aria-label={`${headerVerb} dialog`}
       >
-        <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {headerVerb}{" "}
-          {parentName ? (
-            <span className="text-[var(--color-muted-foreground)]">
-              — {parentName}
-            </span>
-          ) : null}
-        </h2>
+        <ItemEditDialogHeading
+          headerVerb={headerVerb}
+          parentName={fields.parentName}
+        />
 
         <ItemEditDialogFields
-          text={text}
-          onTextChange={onTextChange}
-          textError={textError}
-          priorityRank={priorityRank}
-          onPriorityRankChange={onPriorityRankChange}
-          rankOptions={rankOptions}
-          takenRanks={takenRanks}
+          {...fields}
           week={week}
-          parent={parent}
           products={products}
           activities={activities}
-          onParentChange={onParentChange}
-          isActivityParent={isActivityParent}
-          stageIds={stageIds}
-          availableStages={availableStages}
-          isDeadEnd={isDeadEnd}
-          stageError={stageError}
-          parentName={parentName}
-          onStageChange={onStageChange}
-          statusSlot={statusSlot}
           choices={choices}
-          status={status}
-          onStatusSelect={onStatusSelect}
-          pausedReason={pausedReason}
-          pausedReasonError={pausedReasonError}
-          onPausedReasonChange={onPausedReasonChange}
         />
 
         <RecordDialogFooter
@@ -163,7 +103,7 @@ function ItemEditDialogContent({
           onCancel={onCancel}
           onSave={handleSave}
           onDelete={onDelete}
-          saveDisabled={isDeadEnd}
+          saveDisabled={fields.isDeadEnd}
         />
       </div>
     </div>,

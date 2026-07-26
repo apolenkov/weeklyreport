@@ -20,7 +20,6 @@ export class AutoArchiverScheduler {
     private readonly auditLogger: AuditLogger,
   ) {}
 
-  // Every day at 00:15 UTC.
   @Cron("15 0 * * *")
   async runDaily(): Promise<void> {
     await this.runOnce(new Date());

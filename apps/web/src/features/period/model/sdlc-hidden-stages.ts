@@ -5,19 +5,11 @@ import {
 } from "../../report-sections";
 import type { CrossAuthorEntry } from "../ui/sdlc-pipeline";
 
-// Prefer `crossAuthors` (same source as product health) over stage assignee;
-// Mine mode ships locked stages with a null assignee.
-
 interface ForeignOwner {
   owner: string;
   status: StageStatus;
 }
 
-/**
- * Foreign Owners For Product.
- * @param productId - The productId argument.
- * @param crossAuthors - The crossAuthors argument.
- */
 export function foreignOwnersForProduct(
   productId: string,
   crossAuthors: readonly CrossAuthorEntry[],
@@ -44,7 +36,6 @@ export function foreignOwnersForProduct(
   );
 }
 
-// Named owner → "— <owner> (no status set)" / "— <owner>: <status>"; else "another lead".
 function hiddenStageLine(
   s: StageAssignment,
   foreignOwners: Map<string, ForeignOwner>,
@@ -63,11 +54,6 @@ function hiddenStageLine(
   return `${s.stageName} — another lead`;
 }
 
-/**
- * Hidden Stages Reveal Lines.
- * @param hidden - The hidden argument.
- * @param foreignOwners - The foreignOwners argument.
- */
 export function hiddenStagesRevealLines(
   hidden: readonly StageAssignment[],
   foreignOwners: Map<string, ForeignOwner>,
@@ -75,12 +61,9 @@ export function hiddenStagesRevealLines(
   return hidden.map((s) => hiddenStageLine(s, foreignOwners));
 }
 
-// Co-owner status from crossAuthors when present — Mine-mode raw status is locked/empty.
-/**
- * Hidden Stages Effective Statuses.
- * @param hidden - The hidden argument.
- * @param foreignOwners - The foreignOwners argument.
- */
+// Prefer the co-owner status from `crossAuthors` (same source as product
+// health) over the raw stage status: Mine mode ships locked stages as
+// empty with a null assignee.
 export function hiddenStagesEffectiveStatuses(
   hidden: readonly StageAssignment[],
   foreignOwners: Map<string, ForeignOwner>,

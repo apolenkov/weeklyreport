@@ -65,7 +65,6 @@ function useSearchHits(q: string, scope: SearchScope, isViewer: boolean) {
   return { enabled, hits, isError, isFetching };
 }
 
-// Close on outside click.
 function useCloseOnOutsideClick(
   open: boolean,
   setOpen: (value: boolean) => void,
@@ -120,10 +119,32 @@ function keyDownHandler(args: KeyDownArgs) {
   };
 }
 
-/**
- * Use Search Controller.
- * @param scope - The scope argument.
- */
+interface ActiveSelectionControls {
+  readonly activeIndex: number;
+  readonly setActiveIndex: (idx: number) => void;
+  readonly moveActive: (delta: number) => void;
+}
+
+// Selection is stored PAIRED with the hit list it was made in; a new result
+// set naturally resets it to 0 without a reset effect.
+function useActiveSelection(
+  hits: readonly SearchHit[],
+): ActiveSelectionControls {
+  const [active, setActive] = useState<ActiveSelection | null>(null);
+
+  return {
+    activeIndex: active?.hits === hits ? active.index : 0,
+    setActiveIndex: (idx: number) => setActive({ hits, index: idx }),
+    moveActive: (delta: number) => {
+      setActive((prev) => {
+        const current = prev?.hits === hits ? prev.index : 0;
+        const upper = Math.max(hits.length - 1, 0);
+        return { hits, index: Math.min(Math.max(current + delta, 0), upper) };
+      });
+    },
+  };
+}
+
 export function useSearchController(scope: SearchScope): SearchController {
   const router = useRouter();
   const { user } = useSession();
@@ -131,9 +152,6 @@ export function useSearchController(scope: SearchScope): SearchController {
 
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
-  // Selection is stored PAIRED with the hit list it was made in; a new result
-  // set naturally resets it to 0 without a reset effect.
-  const [active, setActive] = useState<ActiveSelection | null>(null);
 
   const { enabled, hits, isError, isFetching } = useSearchHits(
     q,
@@ -141,18 +159,7 @@ export function useSearchController(scope: SearchScope): SearchController {
     isViewer,
   );
   const containerRef = useCloseOnOutsideClick(open, setOpen);
-
-  const activeIndex = active?.hits === hits ? active.index : 0;
-  const moveActive = (delta: number) => {
-    setActive((prev) => {
-      const current = prev?.hits === hits ? prev.index : 0;
-      const upper = Math.max(hits.length - 1, 0);
-      return {
-        hits,
-        index: Math.min(Math.max(current + delta, 0), upper),
-      };
-    });
-  };
+  const { activeIndex, setActiveIndex, moveActive } = useActiveSelection(hits);
 
   const navigateTo = (url: string) => {
     setOpen(false);
@@ -171,7 +178,7 @@ export function useSearchController(scope: SearchScope): SearchController {
     isFetching,
     isViewer,
     activeIndex,
-    setActiveIndex: (idx: number) => setActive({ hits, index: idx }),
+    setActiveIndex,
     handleKeyDown: keyDownHandler({
       hits,
       open,

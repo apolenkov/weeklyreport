@@ -10,6 +10,12 @@ import {
   latestForViewerReportSchema,
 } from "@customreport/shared";
 
+import { createServiceLogger } from "../../lib/logger-service.js";
+import {
+  buildCompiledHistoryEntries,
+  type CompiledHistoryReportRow,
+} from "./compiled-history.js";
+
 // Non-empty when a non-admin read surfaced products from another group; the
 // router emits `scopeAccessed` off it.
 interface CrossGroupSignal {
@@ -25,12 +31,6 @@ export type WeeklyReportServiceResult =
       status: "active";
       crossGroup: CrossGroupSignal | null;
     });
-
-import { createServiceLogger } from "../../lib/logger-service.js";
-import {
-  buildCompiledHistoryEntries,
-  type CompiledHistoryReportRow,
-} from "./compiled-history.js";
 
 export class WeeklyReportDomainError extends Error {
   constructor(message: string) {
@@ -100,10 +100,9 @@ export class WeeklyReportService {
     );
   }
 
-  // Leadership resolves through the SAME lifecycle resolvers the publish/reopen
-  // authz uses, so a head's submitted `reportId` always equals the
-  // server-derived target. Leads have no lifecycle gate, so they keep the plain
-  // active id.
+  // Leadership resolves through the SAME lifecycle resolvers publish/reopen
+  // authz uses, so a head's submitted `reportId` always equals the server-
+  // derived target. Leads are ungated, so they keep the plain active id.
   private async resolveDefaultReportId(role?: Role): Promise<string | null> {
     if (role === "viewer" || role === "head") {
       return this.getCurrentLeadershipReportId();

@@ -24,8 +24,8 @@ const MIN_BATCH_SIZE = 25;
  * the whole history. */
 const FULL_SCAN_BATCH_SIZE = 200;
 
-/** Fetch batches until `needed` scoped rows are collected or the source is
- * exhausted; returns the scoped rows (possibly more than `needed`). */
+// Fetch batches until `needed` scoped rows are collected or the source is
+// exhausted; the result may hold more than `needed` rows.
 async function collectScoped(
   fetchPage: FetchExecutionsPage,
   matches: (execution: AdminReminderExecution) => boolean,
@@ -54,12 +54,6 @@ async function collectScoped(
 
 // Recipient allowlist is derived (not a column): filter batches until the
 // page fills. Cursor is a previously returned row id (valid keyset input).
-/**
- * Paginate Reminder Executions.
- * @param fetchPage - The fetchPage argument.
- * @param pagination - The pagination argument.
- * @param recipientAllowlist - The recipientAllowlist argument.
- */
 export async function paginateReminderExecutions(
   fetchPage: FetchExecutionsPage,
   pagination?: PaginationInput,

@@ -11,9 +11,110 @@ export const ACTIVITY_ITEM_ID = "77777777-7777-4777-8777-777777777777";
 export const RISK_ID = "88888888-8888-4888-8888-888888888888";
 export const DECISION_ID = "99999999-9999-4999-8999-999999999999";
 
-/**
- * Make Draft Merge Section.
- */
+// Each collection is built per call so a test mutating one fixture cannot
+// leak into the next.
+function makeProjects(): ReportSectionReadModel["projects"] {
+  return [
+    {
+      projectId: PROJECT_ID,
+      projectName: "Test Product",
+      trafficLight: "green",
+      ownedStages: [
+        {
+          stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          stageName: "Development",
+          sortOrder: 1,
+          status: "green",
+        },
+        {
+          stageId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          stageName: "Testing",
+          sortOrder: 2,
+          status: "green",
+        },
+      ],
+    },
+  ];
+}
+
+function makeItems(): ReportSectionReadModel["items"] {
+  return [
+    {
+      id: CURRENT_ITEM_ID,
+      stableId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      projectId: PROJECT_ID,
+      activityId: null,
+      type: "current",
+      text: "Current product item",
+      tag: "general",
+      workflowStatus: "paused",
+      carriedOver: false,
+      stageIds: ["Development"],
+      priorityRank: 2,
+      pausedReason: "Waiting on vendor",
+    },
+    {
+      id: ACTIVITY_ITEM_ID,
+      stableId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      projectId: null,
+      activityId: ACTIVITY_ID,
+      type: "current",
+      text: "Current activity item",
+      tag: "general",
+      workflowStatus: "in_progress",
+      carriedOver: false,
+      stageIds: [],
+      priorityRank: null,
+      pausedReason: null,
+    },
+  ];
+}
+
+function makeRisks(): ReportSectionReadModel["risks"] {
+  return [
+    {
+      id: RISK_ID,
+      stableId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      projectId: PROJECT_ID,
+      activityId: null,
+      risk: "Existing risk",
+      impact: "Existing impact",
+      mitigation: "Existing mitigation",
+      severity: "at-risk",
+      stageIds: ["Development"],
+    },
+  ];
+}
+
+function makeDecisions(): ReportSectionReadModel["decisions"] {
+  return [
+    {
+      id: DECISION_ID,
+      stableId: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+      productId: PROJECT_ID,
+      activityId: null,
+      text: "Existing decision",
+      owner: "Owner",
+      impact: "Impact",
+      deadline: null,
+      resolvedAt: new Date("2026-06-01T00:00:00Z"),
+      stageIds: ["Development"],
+    },
+  ];
+}
+
+function makeActivities(): ReportSectionReadModel["activities"] {
+  return [
+    {
+      activityId: ACTIVITY_ID,
+      activityName: "Ops rotation",
+      status: "green",
+      linkedProducts: [],
+      derivedStatus: "green",
+    },
+  ];
+}
+
 export function makeDraftMergeSection(): ReportSectionReadModel {
   return {
     reportSectionId: REPORT_SECTION_ID,
@@ -24,92 +125,10 @@ export function makeDraftMergeSection(): ReportSectionReadModel {
     version: 1,
     status: "draft",
     submittedAt: null,
-    projects: [
-      {
-        projectId: PROJECT_ID,
-        projectName: "Test Product",
-        trafficLight: "green",
-        ownedStages: [
-          {
-            stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-            stageName: "Development",
-            sortOrder: 1,
-            status: "green",
-          },
-          {
-            stageId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-            stageName: "Testing",
-            sortOrder: 2,
-            status: "green",
-          },
-        ],
-      },
-    ],
-    items: [
-      {
-        id: CURRENT_ITEM_ID,
-        stableId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-        projectId: PROJECT_ID,
-        activityId: null,
-        type: "current",
-        text: "Current product item",
-        tag: "general",
-        workflowStatus: "paused",
-        carriedOver: false,
-        stageIds: ["Development"],
-        priorityRank: 2,
-        pausedReason: "Waiting on vendor",
-      },
-      {
-        id: ACTIVITY_ITEM_ID,
-        stableId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
-        projectId: null,
-        activityId: ACTIVITY_ID,
-        type: "current",
-        text: "Current activity item",
-        tag: "general",
-        workflowStatus: "in_progress",
-        carriedOver: false,
-        stageIds: [],
-        priorityRank: null,
-        pausedReason: null,
-      },
-    ],
-    risks: [
-      {
-        id: RISK_ID,
-        stableId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
-        projectId: PROJECT_ID,
-        activityId: null,
-        risk: "Existing risk",
-        impact: "Existing impact",
-        mitigation: "Existing mitigation",
-        severity: "at-risk",
-        stageIds: ["Development"],
-      },
-    ],
-    decisions: [
-      {
-        id: DECISION_ID,
-        stableId: "ffffffff-ffff-4fff-8fff-ffffffffffff",
-        productId: PROJECT_ID,
-        activityId: null,
-        text: "Existing decision",
-        owner: "Owner",
-        impact: "Impact",
-        deadline: null,
-        resolvedAt: new Date("2026-06-01T00:00:00Z"),
-        stageIds: ["Development"],
-      },
-    ],
-    activities: [
-      {
-        activityId: ACTIVITY_ID,
-        activityName: "Ops rotation",
-        status: "green",
-        linkedProducts: [],
-        derivedStatus: "green",
-      },
-    ],
+    projects: makeProjects(),
+    items: makeItems(),
+    risks: makeRisks(),
+    decisions: makeDecisions(),
+    activities: makeActivities(),
   };
 }

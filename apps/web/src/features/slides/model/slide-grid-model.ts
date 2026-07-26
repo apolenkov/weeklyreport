@@ -165,10 +165,6 @@ function buildHeaderSummary(
 }
 
 // Own rows carry the section author; Everyone-mode foreign rows keep real author identity.
-/**
- * Build Slide Grid Model.
- * @param input - The input argument.
- */
 export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
   const { section, foreign = [] } = input;
   const productStatuses =
@@ -223,9 +219,8 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
   };
 }
 
-/** Unique stage names present on the slide, in canonical pipeline order —
- * feeds the footer stage legend.  * @param model - The model argument.
- */
+// Unique stage names present on the slide, in canonical pipeline order —
+// feeds the footer stage legend.
 export function collectStageNames(model: SlideGridModel): readonly string[] {
   const names = model.products
     .flatMap((card) => card.subsections)

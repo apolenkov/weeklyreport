@@ -8,11 +8,7 @@ import {
 import { RiskCardActions, RiskCardSummary } from "./risk-card-parts";
 
 // Prefer stageIds, fall back to legacy CSV; canonicalize so stored "Dev"
-// always displays as "Development" (stage-label-canonicalization).
-/**
- * Canonical Risk Stage Tags.
- * @param risk - The risk argument.
- */
+// always displays as "Development".
 export function canonicalRiskStageTags(risk: {
   stageIds?: readonly string[] | null;
   stageName?: string | null;
@@ -106,10 +102,44 @@ function RiskSeverityChip({ isBlocked }: { readonly isBlocked: boolean }) {
   );
 }
 
-/**
- * Risk Card.
- * @param props - The props argument.
- */
+interface RiskCardHeaderProps {
+  readonly risk: RiskEntry;
+  readonly isBlocked: boolean;
+  readonly locked: boolean;
+  readonly sectionAuthorName?: string;
+  readonly onEdit: (risk: RiskEntry) => void;
+  readonly onDelete: (id: string) => void;
+  readonly onToggleSeverity?: (risk: RiskEntry) => void;
+}
+
+function RiskCardHeader({
+  risk,
+  isBlocked,
+  locked,
+  sectionAuthorName,
+  onEdit,
+  onDelete,
+  onToggleSeverity,
+}: RiskCardHeaderProps) {
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-2">
+      <RiskSeverityChip isBlocked={isBlocked} />
+      <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
+        {risk.productName}
+      </span>
+      <RiskCardActions
+        risk={risk}
+        sectionAuthorName={sectionAuthorName}
+        locked={locked}
+        isBlocked={isBlocked}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onToggleSeverity={onToggleSeverity}
+      />
+    </div>
+  );
+}
+
 export function RiskCard({
   risk,
   readOnly,
@@ -119,52 +149,39 @@ export function RiskCard({
   onDelete,
   onToggleSeverity,
 }: RiskCardProps) {
-  const {
-    isBlocked,
-    isActivityRisk,
-    stageTags,
-    stageTagsLabel,
-    needsStage,
-    locked,
-  } = deriveRiskCardState(risk, readOnly, linkedProductStatus);
+  const state = deriveRiskCardState(risk, readOnly, linkedProductStatus);
 
   return (
     <div
       data-testid="risk-card"
       className="rounded-xl p-4"
       style={{
-        background: isBlocked ? BLOCKED_CARD_BG : AT_RISK_CARD_BG,
-        border: `1px solid ${isBlocked ? BLOCKED_CARD_BORDER : AT_RISK_CARD_BORDER}`,
+        background: state.isBlocked ? BLOCKED_CARD_BG : AT_RISK_CARD_BG,
+        border: `1px solid ${state.isBlocked ? BLOCKED_CARD_BORDER : AT_RISK_CARD_BORDER}`,
         opacity: risk.foreign ? FOREIGN_ENTRY_OPACITY : 1,
       }}
     >
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <RiskSeverityChip isBlocked={isBlocked} />
-        <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
-          {risk.productName}
-        </span>
-        <RiskCardActions
-          risk={risk}
-          sectionAuthorName={sectionAuthorName}
-          locked={locked}
-          isBlocked={isBlocked}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onToggleSeverity={onToggleSeverity}
-        />
-      </div>
+      <RiskCardHeader
+        risk={risk}
+        isBlocked={state.isBlocked}
+        locked={state.locked}
+        sectionAuthorName={sectionAuthorName}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onToggleSeverity={onToggleSeverity}
+      />
       <RiskCardSummary risk={risk} />
-      {needsStage && (
+      {state.needsStage && (
         <p className="mt-2 text-[11px] font-semibold text-[var(--color-status-at-risk-fg)]">
           ⚠ Select at least one stage — required for at-risk/blocked products.
         </p>
       )}
       <MetaRow
         authorName={risk.authorName ?? sectionAuthorName}
-        stageTags={stageTags}
-        ariaLabel={`Risk stages: ${stageTagsLabel}`}
+        stageTags={state.stageTags}
+        ariaLabel={`Risk stages: ${state.stageTagsLabel}`}
         foreign={false}
-        emptyStageChip={isActivityRisk ? "none" : "no-stage-warning"}
+        emptyStageChip={state.isActivityRisk ? "none" : "no-stage-warning"}
       />
     </div>
   );

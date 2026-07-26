@@ -47,10 +47,6 @@ function DefaultTimezoneField({
   );
 }
 
-/**
- * Reminders Sub Tab.
- * @param options - The options argument.
- */
 export function RemindersSubTab({
   serverSettings,
 }: {
@@ -61,11 +57,9 @@ export function RemindersSubTab({
   const updateSettingsMut = useUpdateSettingsMut("Reminder defaults");
 
   function handleSave() {
-    // TODO(simplify-admin-reminders-ui): the `defaultReminderAudience`
-    // AppSettings column is inert — the Reminder type preset owns the
-    // kind/audience pairing, so a default audience can no longer preselect
-    // anything. This surface omits the control so it can't lie; dropping the
-    // column + Zod field is a deferred follow-up.
+    // TODO(simplify-admin-reminders-ui): drop the inert
+    // `defaultReminderAudience` column + Zod field. The Reminder type preset
+    // owns the kind/audience pairing, so this surface omits the control.
     updateSettingsMut.mutate(
       { defaultTimezone: draft.defaultTimezone },
       { onSuccess: () => markClean() },

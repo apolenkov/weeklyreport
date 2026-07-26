@@ -351,10 +351,9 @@ describe("WeeklyReportService — viewer published-or-current gate", () => {
     expect(result.leadSections).toHaveLength(0);
   });
 
-  // viewer + NO reportId: the default MUST resolve via the SAME source as the
-  // gate (getCurrentEditableId), never getActiveReportId — otherwise a tie or an
-  // archived-open period would make the resolved default a period the gate then
-  // 404s.
+  // viewer + NO reportId: the default MUST resolve via the same source as the
+  // gate (getCurrentEditableId), never getActiveReportId — a tie or an
+  // archived-open period would default to a period the gate then 404s.
   it("viewer no-reportId resolves via the current editable id, not getActiveReportId", async () => {
     const current = makeWeeklyReport({ reportId, periodStatus: "open" });
     const stale = makeWeeklyReport({
@@ -544,10 +543,8 @@ describe("WeeklyReportService — cross-group audit signal", () => {
 
   it("passes crossGroup through unchanged for admin read (router owns the admin guard)", async () => {
     const report = makeWeeklyReport();
-    // Repository may return a signal even for admin (it doesn't know the role);
-    // the router guards on role — but the service passes it through transparently.
-    // This test confirms the service does NOT suppress the signal for admin
-    // (the suppression is the router's responsibility).
+    // The repository returns the signal regardless of role; suppression is the
+    // router's responsibility, so the service must not filter it for admin.
     const signal = { productIds: [crossProductId], groupIds: [crossGroupId] };
     const service = new WeeklyReportService(
       createCrossGroupRepository(report, signal),

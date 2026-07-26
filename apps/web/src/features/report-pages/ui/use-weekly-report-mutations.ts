@@ -33,9 +33,6 @@ export interface WeeklyReportMutations {
 }
 
 // Publish/reopen/archive with cascading invalidation on success.
-/**
- * Use Weekly Report Mutations.
- */
 export function useWeeklyReportMutations(): WeeklyReportMutations {
   const trpc = useTRPC();
   const qc = useQueryClient();

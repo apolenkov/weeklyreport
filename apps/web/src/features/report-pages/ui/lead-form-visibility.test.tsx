@@ -1,7 +1,6 @@
 /**
  * Record visibility (Mine only / Everyone) on the lead form — see
- * lead-form-cross-author-scope. Authz/persistence/status-only coverage lives in
- * lead-form.contract, use-record-visibility, and lead-form.prisma-repository.
+ * lead-form-cross-author-scope.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

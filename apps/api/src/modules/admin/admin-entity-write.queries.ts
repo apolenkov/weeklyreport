@@ -26,11 +26,6 @@ async function resolveReportingGroupId(
   return user.reportingGroupId ?? (await ensureFallbackReportingGroup(prisma));
 }
 
-/**
- * Upsert User.
- * @param prisma - The prisma argument.
- * @param user - The user argument.
- */
 export async function upsertUser(
   prisma: PrismaService,
   user: AdminUser,
@@ -78,11 +73,6 @@ export async function upsertUser(
   }
 }
 
-/**
- * Remove User.
- * @param prisma - The prisma argument.
- * @param userId - The userId argument.
- */
 export async function removeUser(
   prisma: PrismaService,
   userId: string,
@@ -107,11 +97,6 @@ export async function removeUser(
 }
 
 // Session revocation is the caller's job.
-/**
- * Deactivate User.
- * @param prisma - The prisma argument.
- * @param userId - The userId argument.
- */
 export async function deactivateUser(
   prisma: PrismaService,
   userId: string,
@@ -123,11 +108,6 @@ export async function deactivateUser(
 }
 
 // Session restoration is the caller's job.
-/**
- * Activate User.
- * @param prisma - The prisma argument.
- * @param userId - The userId argument.
- */
 export async function activateUser(
   prisma: PrismaService,
   userId: string,
@@ -138,11 +118,6 @@ export async function activateUser(
   });
 }
 
-/**
- * Upsert Project.
- * @param prisma - The prisma argument.
- * @param project - The project argument.
- */
 export async function upsertProject(
   prisma: PrismaService,
   project: AdminProject,
@@ -163,11 +138,6 @@ export async function upsertProject(
   });
 }
 
-/**
- * Remove Project.
- * @param prisma - The prisma argument.
- * @param projectId - The projectId argument.
- */
 export async function removeProject(
   prisma: PrismaService,
   projectId: string,
@@ -179,11 +149,6 @@ export async function removeProject(
   });
 }
 
-/**
- * Upsert Reminder Rule.
- * @param prisma - The prisma argument.
- * @param rule - The rule argument.
- */
 export async function upsertReminderRule(
   prisma: PrismaService,
   rule: AdminReminderRule,
@@ -203,11 +168,6 @@ export async function upsertReminderRule(
   });
 }
 
-/**
- * Remove Reminder Rule.
- * @param prisma - The prisma argument.
- * @param ruleId - The ruleId argument.
- */
 export async function removeReminderRule(
   prisma: PrismaService,
   ruleId: string,
@@ -219,11 +179,6 @@ export async function removeReminderRule(
 // Spreads resolveLifecycle so all three lifecycle machines restore verbatim;
 // deriving one field from another corrupts divergent rows (reopened: status
 // published + periodState open). Returns created so the post-commit applicator can run.
-/**
- * Write Period Row.
- * @param client - The client argument.
- * @param period - The period argument.
- */
 export async function writePeriodRow(
   client: Prisma.TransactionClient,
   period: ReportPeriod,
@@ -246,12 +201,6 @@ export async function writePeriodRow(
   return { created: true };
 }
 
-/**
- * Upsert Period.
- * @param prisma - The prisma argument.
- * @param policyApplicator - The policyApplicator argument.
- * @param period - The period argument.
- */
 export async function upsertPeriod(
   prisma: PrismaService,
   policyApplicator: PolicyApplicatorService | undefined,

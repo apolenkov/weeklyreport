@@ -1,9 +1,10 @@
 "use client";
 
+import type { WeeklyReportGetResponse } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import { getClientErrorDetails } from "../../../lib/client-error-reporting";
 import { useTRPC } from "../../../lib/trpc-context";
@@ -17,7 +18,7 @@ import {
   deriveViewerAuthority,
   ViewerAuthorityLabel,
 } from "./viewer-authority-label";
-import { ViewerContextControls } from "./viewer-context-controls";
+import { ViewerShellControls } from "./viewer-shell-controls";
 
 // Module-scope so the reference is stable across renders — a fresh literal would
 // churn the hook's `buildQuery` memoization. The viewer strips the one-shot
@@ -43,18 +44,20 @@ function ViewerRecoveryNotice() {
   );
 }
 
-function ViewerSlidesView({
-  reportId,
-  reportScope,
-  headerContextLabel,
-  exportPdf,
-  contextControls,
-}: {
-  readonly reportId: string;
-  readonly reportScope: "lead" | "product";
+interface ViewerChrome {
   readonly headerContextLabel: ReactNode;
   readonly exportPdf: ReactNode;
   readonly contextControls: ReactNode;
+}
+
+function ViewerSlidesView({
+  reportId,
+  reportScope,
+  chrome,
+}: {
+  readonly reportId: string;
+  readonly reportScope: "lead" | "product";
+  readonly chrome: ViewerChrome;
 }) {
   return (
     <>
@@ -63,11 +66,11 @@ function ViewerSlidesView({
           <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
             Status Report
           </h1>
-          {headerContextLabel}
+          {chrome.headerContextLabel}
         </div>
-        {exportPdf}
+        {chrome.exportPdf}
       </header>
-      <ReportToolbar contextControls={contextControls} />
+      <ReportToolbar contextControls={chrome.contextControls} />
       <HeadSlidesClient
         reportId={reportId}
         scope={reportScope}
@@ -77,105 +80,26 @@ function ViewerSlidesView({
   );
 }
 
-// Status-entry race recovers once via /reports/latest; direct/History failures are terminal.
-/**
- * Viewer Report Shell.
- * @param props - The props argument.
- */
-export function ViewerReportShell({
+function ViewerReportBody({
   reportId,
   mode,
   authorId,
-}: ViewerReportShellProps) {
-  const trpc = useTRPC();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // Status recovery markers belong only to the entry URL. Strip them from every
-  // in-shell navigation so a later failure cannot be mistaken for that race.
-  const { buildQuery, includeArchive, setIncludeArchive, scope, setScope } =
-    useReportShellUrlState({ stripParams: VIEWER_STRIP_PARAMS });
-
-  const historyQ = useQuery(
-    trpc.reports.compiledHistory.queryOptions({ includeArchive }),
-  );
-  const displayedQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
-
-  // The page fetch shares this query key, so handling the fail-closed
-  // open-to-published race here is sufficient and avoids duplicate recovery.
-  const source = searchParams.get("source");
-  const alreadyRetried = searchParams.get("recovery") === "1";
-  const isInvalidLink =
-    displayedQ.isError && getClientErrorDetails(displayedQ.error).isInvalidLink;
-  const shouldRecover = isInvalidLink && source === "status" && !alreadyRetried;
-
-  useEffect(() => {
-    if (shouldRecover) {
-      router.replace("/reports/latest?recovery=1");
-    }
-  }, [shouldRecover, router]);
-
-  const periods = useMemo(
-    () =>
-      deriveViewerPeriods(historyQ.data?.entries, displayedQ.data, reportId),
-    [historyQ.data, displayedQ.data, reportId],
-  );
-
-  const urlBuilder = useCallback(
-    (periodId: string) =>
-      `/reports/${encodeURIComponent(periodId)}${buildQuery({})}`,
-    [buildQuery],
-  );
-
-  const editHref = `/reports/${encodeURIComponent(reportId)}${buildQuery({ mode: null })}`;
-  const slidesHref = `/reports/${encodeURIComponent(reportId)}${buildQuery({ mode: "slides" })}`;
-
-  const reportScope = scope === "lead" ? "lead" : "product";
-
-  const contextControls = (
-    <ViewerContextControls
-      periods={periods}
-      reportId={reportId}
-      urlBuilder={urlBuilder}
-      includeArchive={includeArchive}
-      setIncludeArchive={setIncludeArchive}
-      scope={scope}
-      setScope={setScope}
-      editHref={editHref}
-      slidesHref={slidesHref}
-      mode={mode}
-    />
-  );
-
-  if (shouldRecover) {
-    return <ViewerRecoveryNotice />;
-  }
-
-  const displayed = displayedQ.data;
-  const authority =
-    displayed && displayed.status !== "no-period"
-      ? deriveViewerAuthority(displayed.periodStatus)
-      : undefined;
-  const headerContextLabel = authority ? (
-    <ViewerAuthorityLabel authority={authority} />
-  ) : undefined;
-  const exportPdf =
-    displayed && displayed.status !== "no-period" ? (
-      <ExportPdfButton
-        reportId={displayed.reportId}
-        periodStatus={displayed.periodStatus}
-      />
-    ) : undefined;
-
+  reportScope,
+  chrome,
+}: {
+  readonly reportId: string;
+  readonly mode: "form" | "slides";
+  readonly authorId: string | undefined;
+  readonly reportScope: "lead" | "product";
+  readonly chrome: ViewerChrome;
+}) {
   return (
     <div className="space-y-4">
       {mode === "slides" ? (
         <ViewerSlidesView
           reportId={reportId}
           reportScope={reportScope}
-          headerContextLabel={headerContextLabel}
-          exportPdf={exportPdf}
-          contextControls={contextControls}
+          chrome={chrome}
         />
       ) : (
         <div className="min-w-0">
@@ -183,12 +107,116 @@ export function ViewerReportShell({
             reportId={reportId}
             authorId={authorId}
             scope={reportScope}
-            documentActionsLeading={exportPdf}
-            contextControls={contextControls}
-            headerContextLabel={headerContextLabel}
+            documentActionsLeading={chrome.exportPdf}
+            contextControls={chrome.contextControls}
+            headerContextLabel={chrome.headerContextLabel}
           />
         </div>
       )}
     </div>
+  );
+}
+
+// Status-entry race recovers once via /reports/latest; direct/History failures
+// are terminal. The page fetch shares this query key, so recovering here is
+// sufficient and avoids a duplicate redirect.
+function useStatusEntryRecovery(displayedQuery: {
+  readonly isError: boolean;
+  readonly error: unknown;
+}): boolean {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const isInvalidLink =
+    displayedQuery.isError &&
+    getClientErrorDetails(displayedQuery.error).isInvalidLink;
+  const shouldRecover =
+    isInvalidLink &&
+    searchParams.get("source") === "status" &&
+    searchParams.get("recovery") !== "1";
+
+  useEffect(() => {
+    if (shouldRecover) {
+      router.replace("/reports/latest?recovery=1");
+    }
+  }, [shouldRecover, router]);
+
+  return shouldRecover;
+}
+
+// A no-period response carries neither an authority state nor an exportable
+// reportId, so both chrome slots stay empty for it.
+function deriveViewerDisplay(displayed: WeeklyReportGetResponse | undefined): {
+  readonly headerContextLabel: ReactNode;
+  readonly exportPdf: ReactNode;
+} {
+  if (!displayed || displayed.status === "no-period") {
+    return { headerContextLabel: undefined, exportPdf: undefined };
+  }
+  return {
+    headerContextLabel: (
+      <ViewerAuthorityLabel
+        authority={deriveViewerAuthority(displayed.periodStatus)}
+      />
+    ),
+    exportPdf: (
+      <ExportPdfButton
+        reportId={displayed.reportId}
+        periodStatus={displayed.periodStatus}
+      />
+    ),
+  };
+}
+
+export function ViewerReportShell({
+  reportId,
+  mode,
+  authorId,
+}: ViewerReportShellProps) {
+  const trpc = useTRPC();
+
+  // Status recovery markers belong only to the entry URL. Strip them from every
+  // in-shell navigation so a later failure cannot be mistaken for that race.
+  const urlState = useReportShellUrlState({ stripParams: VIEWER_STRIP_PARAMS });
+
+  const historyQ = useQuery(
+    trpc.reports.compiledHistory.queryOptions({
+      includeArchive: urlState.includeArchive,
+    }),
+  );
+  const displayedQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
+
+  const shouldRecover = useStatusEntryRecovery(displayedQ);
+
+  const periods = useMemo(
+    () =>
+      deriveViewerPeriods(historyQ.data?.entries, displayedQ.data, reportId),
+    [historyQ.data, displayedQ.data, reportId],
+  );
+
+  if (shouldRecover) {
+    return <ViewerRecoveryNotice />;
+  }
+
+  const chrome: ViewerChrome = {
+    ...deriveViewerDisplay(displayedQ.data),
+    contextControls: (
+      <ViewerShellControls
+        reportId={reportId}
+        mode={mode}
+        periods={periods}
+        urlState={urlState}
+      />
+    ),
+  };
+
+  return (
+    <ViewerReportBody
+      reportId={reportId}
+      mode={mode}
+      authorId={authorId}
+      reportScope={urlState.scope === "lead" ? "lead" : "product"}
+      chrome={chrome}
+    />
   );
 }

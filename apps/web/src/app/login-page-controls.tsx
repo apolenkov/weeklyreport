@@ -17,6 +17,11 @@ const LOGIN_HAIRLINE_CLASSNAME = "border-[#ece8e2]";
 // Shared min-height (~role-picker height) so AUTH_STUB card swaps do not CLS.
 const STUB_CARD_CLASSNAME = `min-h-[113px] rounded-md border ${LOGIN_HAIRLINE_CLASSNAME} bg-[var(--color-surface-empty)] px-3 py-2.5 text-left`;
 
+const PRIMARY_CTA_MIN_HEIGHT = "52px";
+// rgba(0,98,65) is --color-primary (#006241), the CTA's hover background. Spelled
+// out because the alpha channel cannot be applied to a var() colour here.
+const PRIMARY_CTA_SHADOW = "0 2px 12px rgba(0,98,65,0.2)";
+
 function RoleOptionsList() {
   return (
     <ul
@@ -44,10 +49,6 @@ interface PrimaryCtaProps {
   readonly ssoHref: string;
 }
 
-/**
- * Primary Cta.
- * @param props - The props argument.
- */
 export function PrimaryCta({ authStub, lastRole, ssoHref }: PrimaryCtaProps) {
   return (
     <a
@@ -60,8 +61,8 @@ export function PrimaryCta({ authStub, lastRole, ssoHref }: PrimaryCtaProps) {
       }
       className="flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-4 font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-white transition-[background-color,opacity,transform] hover:bg-[var(--color-primary)] hover:-translate-y-px active:translate-y-0 active:opacity-90"
       style={{
-        minHeight: "52px",
-        boxShadow: "0 2px 12px rgba(0,98,65,0.2)",
+        minHeight: PRIMARY_CTA_MIN_HEIGHT,
+        boxShadow: PRIMARY_CTA_SHADOW,
       }}
       aria-label={
         authStub
@@ -98,10 +99,6 @@ interface LastRoleCardProps {
 }
 
 // Fixed height via STUB_CARD_CLASSNAME: no collapse CLS; always a role path.
-/**
- * Last Role Card.
- * @param props - The props argument.
- */
 export function LastRoleCard({ lastRoleLoaded, lastRole }: LastRoleCardProps) {
   return !lastRoleLoaded ? (
     <div

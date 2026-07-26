@@ -20,7 +20,6 @@ import {
   UserActionStatus,
 } from "@prisma/client";
 
-import type { SeedUser } from "./seed-constants.js";
 import {
   SEED_USERS,
   SEED_REPORTING_GROUPS,
@@ -35,23 +34,14 @@ import {
   LEAD_DMITRY_ID,
   LEAD_OLGA_ID,
   LEAD_SERGEY_ID,
-  VIEWER_USER_ID,
-  ADMIN_USER_ID,
-  DEFAULT_REPORTING_GROUP_ID,
 } from "./seed-constants.js";
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 import { assertSeedCoverage } from "./seed-coverage-check.js";
+import { seedOrganizationBaseline } from "./seed-org.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
-const ADVANCED_FINANCE_GROUP_ID = "a0000000-0000-4000-8000-000000000302";
-
-// Map seed user role string to Prisma Role enum. Typed from SeedUser so the
-// seed tree keeps a single literal mirror (see SeedUser.role in seed-constants).
-function toRole(role: SeedUser["role"]): Role {
-  return Role[role];
-}
 
 // Anchor for date-relative sample timestamps. Active period start (Monday of
 // current ISO week) computed once in seed-constants; we mirror that derivation
@@ -137,153 +127,8 @@ function stageAssignmentId(prodSeq: number, stageSeq: number): string {
 
 async function main() {
   assertNonProdDestructive("seed");
-  // --- 0. Reporting groups ---
-  for (const group of SEED_REPORTING_GROUPS) {
-    await prisma.reportingGroup.upsert({
-      where: { id: group.id },
-      update: {
-        name: group.name,
-        description: group.description,
-        archived: false,
-      },
-      create: {
-        id: group.id,
-        name: group.name,
-        description: group.description,
-        archived: false,
-      },
-    });
-  }
-
-  await prisma.reportingGroup.upsert({
-    where: { id: ADVANCED_FINANCE_GROUP_ID },
-    update: {
-      name: "Finance Platforms",
-      description: "Payments, HR, and compliance-heavy delivery stream",
-      archived: false,
-    },
-    create: {
-      id: ADVANCED_FINANCE_GROUP_ID,
-      name: "Finance Platforms",
-      description: "Payments, HR, and compliance-heavy delivery stream",
-      archived: false,
-    },
-  });
-
-  // --- 1. Users (1 head, 1 admin, 1 viewer, 6 leads) ---
-  for (const user of SEED_USERS) {
-    const reportingGroupId =
-      user.id === LEAD_OLGA_ID || user.id === LEAD_SERGEY_ID
-        ? ADVANCED_FINANCE_GROUP_ID
-        : user.reportingGroupId;
-
-    await prisma.user.upsert({
-      where: { email: user.email },
-      update: {
-        id: user.id,
-        name: user.name,
-        lastName: user.lastName,
-        firstName: user.firstName,
-        middleName: user.middleName,
-        position: user.position,
-        role: toRole(user.role),
-        samlId: user.samlId,
-        reportingGroupId,
-      },
-      create: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        lastName: user.lastName,
-        firstName: user.firstName,
-        middleName: user.middleName,
-        position: user.position,
-        role: toRole(user.role),
-        samlId: user.samlId,
-        reportingGroupId,
-      },
-    });
-  }
-
-  await prisma.reportingGroup.update({
-    where: { id: DEFAULT_REPORTING_GROUP_ID },
-    data: { headUserId: HEAD_USER_ID },
-  });
-  await prisma.reportingGroup.update({
-    where: { id: ADVANCED_FINANCE_GROUP_ID },
-    data: { headUserId: ADMIN_USER_ID },
-  });
-
-  for (const groupId of [
-    DEFAULT_REPORTING_GROUP_ID,
-    ADVANCED_FINANCE_GROUP_ID,
-  ]) {
-    await prisma.viewerGroupAccess.upsert({
-      where: {
-        viewerUserId_groupId: {
-          viewerUserId: VIEWER_USER_ID,
-          groupId,
-        },
-      },
-      update: {},
-      create: {
-        viewerUserId: VIEWER_USER_ID,
-        groupId,
-      },
-    });
-  }
-
-  // --- 2. Products (12, 2 per lead) ---
-  for (const product of SEED_PRODUCTS) {
-    await prisma.project.upsert({
-      where: { id: product.id },
-      update: {
-        name: product.name,
-        leadId: product.leadId,
-      },
-      create: {
-        id: product.id,
-        name: product.name,
-        leadId: product.leadId,
-      },
-    });
-  }
-
-  // --- 2b. GroupProduct: every product has exactly one owning group.
-  // Product group is the report grouping source of truth; derive it from the
-  // seeded lead's reporting group so seed data satisfies the UAT invariant.
-  const groupByLeadId = new Map(
-    SEED_USERS.map((user) => [user.id, user.reportingGroupId] as const),
-  );
-  groupByLeadId.set(LEAD_OLGA_ID, ADVANCED_FINANCE_GROUP_ID);
-  groupByLeadId.set(LEAD_SERGEY_ID, ADVANCED_FINANCE_GROUP_ID);
-  for (const product of SEED_PRODUCTS) {
-    await prisma.groupProduct.upsert({
-      where: { productId: product.id },
-      update: {
-        groupId:
-          groupByLeadId.get(product.leadId) ?? DEFAULT_REPORTING_GROUP_ID,
-      },
-      create: {
-        groupId:
-          groupByLeadId.get(product.leadId) ?? DEFAULT_REPORTING_GROUP_ID,
-        productId: product.id,
-      },
-    });
-  }
-
-  // --- 3. SDLC stages (7) ---
-  for (const stage of SEED_STAGES) {
-    await prisma.stage.upsert({
-      where: { name: stage.name },
-      update: { sortOrder: stage.sortOrder },
-      create: {
-        id: stage.id,
-        name: stage.name,
-        sortOrder: stage.sortOrder,
-      },
-    });
-  }
+  // --- 0-3. Reporting groups, users, products, SDLC stages ---
+  await seedOrganizationBaseline(prisma);
 
   // --- 4. Stage assignments (each product's lead owns 2-3 stages on it) ---
   // Deterministic pattern: every product gets its lead assigned to 3

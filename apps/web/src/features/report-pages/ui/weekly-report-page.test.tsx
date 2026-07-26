@@ -1331,12 +1331,9 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
 
 const REVIEW_COMMENT_TEXT = "Please double-check the milestone date";
 
-/**
- * A live open-period report where the caller can review its section — canReview
- * is server-stamped, so this mirrors what the repository sends a head/designated
- * reviewer. The single item carries a reviewer comment so the read-only vs
- * review-mode split is observable.
- */
+// A live open period whose section the caller may review, mirroring the
+// server-stamped `canReview` a head/designated reviewer receives. The reviewer
+// comment makes the read-only vs review-mode split observable.
 function makeReviewableData(): ReturnType<typeof makeWeeklyReportData> {
   const base = makeWeeklyReportData("open");
   return {
@@ -1462,7 +1459,7 @@ describe("WeeklyReportPage — review-mode split (report-review-mode)", () => {
   });
 });
 
-/** makeReviewableData with a real group id, so the Acknowledge control mounts. */
+// makeReviewableData with a real group id, so the Acknowledge control mounts.
 function makeAcknowledgeableData(): ReturnType<typeof makeWeeklyReportData> {
   const base = makeReviewableData();
   return {

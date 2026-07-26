@@ -25,16 +25,12 @@ interface UseLeadFormDraftArgs {
   readonly refetchSection: () => Promise<unknown>;
   readonly loaded: LeadFormLoadedContext;
   readonly seam: LeadFormDraftSeam;
-  /** Server-static cross-author status feed (readiness re-applies its overrides in the Everyone lens). */
+  // Server-static feed; readiness re-applies its overrides in the Everyone lens.
   readonly crossAuthors: readonly CrossAuthorRow[];
   readonly isEveryone: boolean;
 }
 
 // Live view-model enters as plain `loaded` — no ref crosses into this module.
-/**
- * Use Lead Form Draft.
- * @param props - The props argument.
- */
 export function useLeadFormDraft({
   serverSection,
   sectionIdForActions,

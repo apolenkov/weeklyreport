@@ -83,10 +83,6 @@ function SearchHitOption({
   );
 }
 
-/**
- * Search Results Dropdown.
- * @param props - The props argument.
- */
 export function SearchResultsDropdown({
   resultsId,
   hits,

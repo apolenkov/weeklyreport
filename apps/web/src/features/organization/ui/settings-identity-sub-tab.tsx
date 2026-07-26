@@ -172,9 +172,6 @@ function SaveIdentityRow({
   );
 }
 
-/**
- * Identity Sub Tab.
- */
 export function IdentitySubTab() {
   const form = useOrgIdentityForm();
 

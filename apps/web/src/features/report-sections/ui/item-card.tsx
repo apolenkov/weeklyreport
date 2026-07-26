@@ -1,6 +1,7 @@
 "use client";
 
 import { deriveCardStatus } from "../model/item-card-status";
+import type { StatusBadge } from "../model/item-card-style";
 import { cardContainerStyle, STATUS_BADGE } from "../model/item-card-style";
 import type { KanbanItem, RiskEntry } from "../model/types";
 import { ItemCardActions } from "./item-card-actions";
@@ -31,24 +32,15 @@ interface ItemCardProps {
   readonly risks?: readonly RiskEntry[];
 }
 
-/**
- * Item Card.
- * @param props - The props argument.
- */
-export function ItemCard({
-  item,
-  risks,
-  onEdit,
-  onDelete,
-  publishedLocked = false,
-  onMarkComplete,
-  onMoveToNextWeek,
-  onMoveToCurrentWeek,
-  onPause,
-  readOnly = false,
-  isEditing = false,
-  onTextSave,
-}: ItemCardProps) {
+export function ItemCard(props: ItemCardProps) {
+  const {
+    item,
+    risks,
+    publishedLocked = false,
+    readOnly = false,
+    isEditing = false,
+    onTextSave,
+  } = props;
   const { displayStatus, isBlocked, isPlanned, alarmLocked, lockAuthorName } =
     deriveCardStatus(item, risks);
   const badge = STATUS_BADGE[displayStatus];
@@ -74,31 +66,15 @@ export function ItemCard({
         isEditing: showEditor,
       })}
     >
-      {/* Card top line: status on the left, item actions on the right.
-          shrink-0 keeps this row at its natural height so the fixed card
-          height never clips it — only the body text region below flexes. */}
-      <div className="mb-2 flex shrink-0 items-start justify-between gap-2">
-        <ItemCardBadges
-          badge={badge}
-          alarmLocked={alarmLocked}
-          lockAuthorName={lockAuthorName}
-          priorityRank={item.priorityRank}
-          publishedLocked={publishedLocked}
-        />
-
-        <ItemCardActions
-          item={item}
-          locked={locked}
-          isEditing={isEditing}
-          publishedLocked={publishedLocked}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onMarkComplete={onMarkComplete}
-          onMoveToNextWeek={onMoveToNextWeek}
-          onMoveToCurrentWeek={onMoveToCurrentWeek}
-          onPause={onPause}
-        />
-      </div>
+      <ItemCardHeaderRow
+        {...props}
+        badge={badge}
+        alarmLocked={alarmLocked}
+        lockAuthorName={lockAuthorName}
+        locked={locked}
+        isEditing={isEditing}
+        publishedLocked={publishedLocked}
+      />
 
       <ItemCardText
         text={item.text}
@@ -111,6 +87,36 @@ export function ItemCard({
       )}
 
       <ItemCardFooter author={item.author} stageTagsState={stageTagsState} />
+    </div>
+  );
+}
+
+// Card top line: status on the left, item actions on the right. shrink-0 keeps
+// this row at its natural height so the fixed card height never clips it — only
+// the body text region below flexes.
+interface ItemCardHeaderRowProps extends ItemCardProps {
+  readonly badge: StatusBadge;
+  readonly alarmLocked: boolean;
+  readonly lockAuthorName: string | undefined;
+  readonly locked: boolean;
+  // Resolved from ItemCardProps' optional counterparts by ItemCard.
+  readonly isEditing: boolean;
+  readonly publishedLocked: boolean;
+}
+
+function ItemCardHeaderRow(props: ItemCardHeaderRowProps) {
+  const { item, badge, alarmLocked, lockAuthorName, publishedLocked } = props;
+  return (
+    <div className="mb-2 flex shrink-0 items-start justify-between gap-2">
+      <ItemCardBadges
+        badge={badge}
+        alarmLocked={alarmLocked}
+        lockAuthorName={lockAuthorName}
+        priorityRank={item.priorityRank}
+        publishedLocked={publishedLocked}
+      />
+
+      <ItemCardActions {...props} />
     </div>
   );
 }
@@ -132,11 +138,9 @@ function ItemCardText({
       <ItemInlineTextEditor key={text} initialText={text} onCommit={onCommit} />
     );
   }
-  // flex-1 min-h-0 lets this region absorb whatever space is left inside the
-  // card's fixed height once the shrink-0 chrome rows take theirs, instead of
-  // growing the card. line-clamp-3 then clips within that space with an
-  // ellipsis; native title gives the full text on hover without pulling in a
-  // Tooltip dependency.
+  // flex-1 min-h-0 absorbs the space left by the shrink-0 chrome rows instead of
+  // growing the card; line-clamp-3 then clips inside it, and native title shows
+  // the full text without a Tooltip dependency.
   return (
     <div
       className="line-clamp-3 min-h-0 flex-1 text-sm text-[var(--color-foreground)]"

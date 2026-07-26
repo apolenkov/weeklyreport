@@ -37,10 +37,6 @@ const dbExecStatusToDomain: Record<
   failed: "failed",
 };
 
-/**
- * To Execution Create Data.
- * @param execution - The execution argument.
- */
 export function toExecutionCreateData(
   execution: AdminReminderExecution,
 ): Prisma.ReminderExecutionUncheckedCreateInput {
@@ -54,10 +50,6 @@ export function toExecutionCreateData(
   };
 }
 
-/**
- * To Execution Update Data.
- * @param execution - The execution argument.
- */
 export function toExecutionUpdateData(execution: AdminReminderExecution): {
   status: PrismaExecStatus;
   sentAt: Date | null;
@@ -70,27 +62,15 @@ export function toExecutionUpdateData(execution: AdminReminderExecution): {
   };
 }
 
-/**
- * Format Period Label.
- * @param start - The start argument.
- * @param end - The end argument.
- */
 export function formatPeriodLabel(start: Date, end: Date): string {
-  // Compact UTC-formatted label, e.g. "2026-04-13 → 2026-04-19"
   return `${start.toISOString().slice(0, ISO_DATE_LENGTH)} → ${end
     .toISOString()
     .slice(0, ISO_DATE_LENGTH)}`;
 }
 
-/**
- * True when `error` is the Prisma P2002 raised by the `dedupeKey` unique index
- * (`ReminderExecution_dedupeKey_key`). The caller only inserts a
- * `ReminderExecution`, so the `dedupeKey` substring uniquely identifies this
- * conflict; any other violation returns false (and re-throws). The shared guard
- * carries the pg-adapter matching (serialized meta + message, never
- * `meta.target` alone).
- * @param error - The error argument.
- */
+// Only a `ReminderExecution` insert reaches here, so matching the `dedupeKey`
+// unique index is unambiguous; the shared guard carries the pg-adapter matching
+// (serialized meta + message, never `meta.target` alone).
 export function isDedupeKeyConflict(error: unknown): boolean {
   return isUniqueViolation(error, {
     index: "ReminderExecution_dedupeKey_key",
@@ -98,10 +78,6 @@ export function isDedupeKeyConflict(error: unknown): boolean {
   });
 }
 
-/**
- * To Rule Domain.
- * @param rule - The rule argument.
- */
 export function toRuleDomain(rule: {
   id: string;
   kind: string;
@@ -124,36 +100,18 @@ export function toRuleDomain(rule: {
   });
 }
 
-/**
- * Extracts recipientEmail from dedupeKey. Two key shapes are in flight:
- *
- *   Legacy:     `${ruleId}:<ISO with Z>:${email}`
- *     example: `<uuid>:2026-04-12T10:00:00.000Z:user@example.com`
- *
- *   Current:    `${ruleId}:${kind}:YYYY-MM-DD:${email}`
- *     example: `<uuid>:deadline:2026-04-12:user@example.com`
- *     example: `<uuid>:escalation:2026-04-12:head@example.com`
- *
- * Strategy: split on ':' and take the LAST segment that matches an email
- * shape. Both shapes terminate with the email, so this is robust to either
- * layout. Returns '' for unparseable inputs.
- */
 // eslint-disable-next-line sonarjs/super-linear-regex -- negated character classes are linear; no catastrophic backtracking, input bounded to ~254 chars
 const EMAIL_RE = /^[^@\s:]+@[^@\s:]+\.[^@\s:]+$/;
-/**
- * Extract Recipient Email.
- * @param dedupeKey - The dedupeKey argument.
- */
+
+// Two dedupeKey layouts are in flight — legacy `${ruleId}:<ISO>:${email}` and
+// current `${ruleId}:${kind}:YYYY-MM-DD:${email}` — but both terminate with the
+// email, so the trailing segment identifies the recipient under either.
 export function extractRecipientEmail(dedupeKey: string): string {
   const last = dedupeKey.split(":").pop();
   if (last && EMAIL_RE.test(last)) return last;
   return "";
 }
 
-/**
- * To Execution Domain.
- * @param execution - The execution argument.
- */
 export function toExecutionDomain(execution: {
   id: string;
   ruleId: string;

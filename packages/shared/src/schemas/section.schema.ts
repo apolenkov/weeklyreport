@@ -20,6 +20,11 @@ import {
 // Payload guard against pathological section-save array sizes.
 const MAX_RECORDS_PER_SECTION_SAVE = 100;
 
+// Tighter than safeText's default cap: a tag renders as a single chip label and
+// an owner is a person or team name, so both must stay on one line.
+const ITEM_TAG_MAX_LENGTH = 50;
+const DECISION_OWNER_MAX_LENGTH = 200;
+
 export const projectStatusInputSchema = z.object({
   projectId: z.uuid(),
   status: trafficLightStatusSchema.optional(),
@@ -31,7 +36,7 @@ export const projectStatusInputSchema = z.object({
 export const activityStatusInputSchema = z.object({
   activityId: z.uuid(),
   status: trafficLightStatusSchema.nullable().optional(),
-  note: safeText({ max: 500 }).nullable().optional(),
+  note: safeText().nullable().optional(),
 });
 
 // One product an activity reports against (label-only).
@@ -71,13 +76,13 @@ export const itemInputSchema = z.object({
   projectId: z.uuid().nullable().optional(),
   activityId: z.uuid().nullable().optional(),
   type: itemTypeSchema,
-  text: safeText({ max: 500 }),
-  tag: safeText({ max: 50 }),
+  text: safeText(),
+  tag: safeText({ max: ITEM_TAG_MAX_LENGTH }),
   workflowStatus: itemWorkflowStatusSchema,
   carriedOver: z.boolean().default(false),
   priorityRank: z.number().int().min(1).nullable().optional(),
   // Optional so legacy paused rows and non-paused items still round-trip; UI requires when pausing.
-  pausedReason: safeText({ max: 500 }).nullable().optional(),
+  pausedReason: safeText().nullable().optional(),
   // Length-tolerant; write superRefine requires stages for product parents only.
   stageIds: writeStageIdsField,
 });
@@ -97,9 +102,9 @@ export const riskInputSchema = z.object({
   // XOR parent (see itemInputSchema): the riskWriteSchema superRefine enforces it.
   projectId: z.uuid().nullable().optional(),
   activityId: z.uuid().nullable().optional(),
-  risk: safeText({ max: 500 }),
-  impact: safeText({ max: 500 }),
-  mitigation: safeText({ max: 500 }),
+  risk: safeText(),
+  impact: safeText(),
+  mitigation: safeText(),
   severity: riskSeveritySchema,
   // Length-tolerant; the riskWriteSchema superRefine enforces the conditional
   // stage rule (≥1 for a product parent, none for an activity parent).
@@ -120,10 +125,10 @@ export const decisionInputSchema = z.object({
   id: z.uuid().optional(),
   // Durable lineage key round-tripped from the read model (see itemInputSchema).
   stableId: z.uuid().optional(),
-  text: safeText({ max: 500 }),
-  owner: safeText({ max: 200 }),
+  text: safeText(),
+  owner: safeText({ max: DECISION_OWNER_MAX_LENGTH }),
   deadline: z.coerce.date().nullable().optional(),
-  impact: safeText({ max: 500 }),
+  impact: safeText(),
   resolvedAt: z.coerce.date().nullable().optional(),
   // Length-tolerant; the decisionWriteSchema superRefine enforces the conditional
   // stage rule (≥1 for a product parent, none for an activity parent).

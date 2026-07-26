@@ -85,10 +85,6 @@ function toPeriodPolicyPatch(draft: MockSettings) {
   };
 }
 
-/**
- * Periods Sub Tab.
- * @param options - The options argument.
- */
 export function PeriodsSubTab({
   serverSettings,
 }: {

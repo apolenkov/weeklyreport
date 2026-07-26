@@ -1,38 +1,24 @@
 import { STAGE } from "@customreport/shared";
 export { riskCoversStage, splitStageNames } from "@customreport/shared";
 
-/**
- * Normalize a stage name to its canonical DB form (resolves UI chip aliases).
- * @param name - The name argument.
- */
+// "Dev" is a UI chip alias; the DB form is the full stage name.
 export function canonicalStageName(name: string): string {
   return name.toLowerCase() === "dev" ? STAGE.DEVELOPMENT : name;
 }
 
-/**
- * Canonicalize a stored stageIds list, dropping duplicates that collapse after
- * aliasing (a legacy `["Dev", "Development"]` → `["Development"]`). Record
- * dialogs run saved selections through this so a record always persists the
- * canonical stage name (stage-label-canonicalization spec 1.2).
- * @param ids - The ids argument.
- */
+// Aliasing can collapse a legacy `["Dev", "Development"]` to one entry; record
+// dialogs run saved selections through this so only canonical names persist
+// (openspec/specs/stage-label-canonicalization 1.2).
 export function canonicalStageIds(ids: readonly string[]): string[] {
   return [...new Set(ids.map(canonicalStageName))];
 }
 
-/**
- * Display-only short labels for the SDLC pipeline chip, where seven chips share
- * one row. Keyed by canonical name; the short form is NEVER stored or matched.
- * Only "Development" shortens today ("Dev"); all other stages display in full.
- */
+// Display-only, so seven chips fit one pipeline row; the short form is NEVER
+// stored or matched. Unlisted stages display in full.
 const STAGE_SHORT_LABEL: Record<string, string> = {
   [STAGE.DEVELOPMENT]: "Dev",
 };
 
-/**
- * The short pipeline-chip label for a (canonical) stage name; full name if none.
- * @param name - The name argument.
- */
 export function stageShortLabel(name: string): string {
   return STAGE_SHORT_LABEL[canonicalStageName(name)] ?? name;
 }

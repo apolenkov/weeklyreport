@@ -34,6 +34,9 @@ interface LeadFormHeaderActionsProps {
 
 type HeaderAutosave = LeadCompletionActionContract["autosave"];
 
+const FILL_FROM_LOCKED_REASON =
+  "Fill from previous cannot replace records that are part of the published report.";
+
 function formatAutosaveLabel(autosave: HeaderAutosave): string {
   if (autosave.state === "saving") return "↻ Saving…";
   if (autosave.state === "pending") return "● Pending…";
@@ -101,20 +104,65 @@ function ToolbarSecondaryButton({
   );
 }
 
-// Shared completion presentation so sticky handoff cannot fork action state.
-/**
- * Lead Form Header Actions.
- * @param props - The props argument.
- */
-export function LeadFormHeaderActions({
+// A lead can only ask the Head to unlock; head/admin revoke directly. Both
+// gates are server-computed — the client never rebuilds the policy.
+function SubmittedSectionAction({
+  authorRole,
+  canRequestReopen,
+  writeActions,
+}: {
+  readonly authorRole: LeadFormLoadedViewModel["currentUser"]["authorRole"];
+  readonly canRequestReopen: boolean;
+  readonly writeActions: LeadFormHeaderWriteActions;
+}) {
+  if (!isLead(authorRole)) {
+    return (
+      <ToolbarSecondaryButton
+        label="Revoke"
+        title="Revoke submission and unlock the section"
+        onClick={writeActions.handleRevoke}
+        disabled={writeActions.revokeMut.isPending}
+      />
+    );
+  }
+  if (!canRequestReopen) return null;
+  return (
+    <ToolbarSecondaryButton
+      label="Request Reopen"
+      title="Ask Head to unlock this section"
+      onClick={writeActions.openReopenDialog}
+      disabled={writeActions.requestReopenMut.isPending}
+    />
+  );
+}
+
+function HeaderStatusBadge({
+  isSubmitted,
+  autosave,
+}: {
+  readonly isSubmitted: boolean;
+  readonly autosave: HeaderAutosave;
+}) {
+  // Light-teal success badge reads as progress, not a locked signal.
+  if (isSubmitted) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)]">
+        ✓ Submitted
+      </span>
+    );
+  }
+  return <AutosaveBadge autosave={autosave} />;
+}
+
+// Mutating actions hide on read-only; green stays the sole forward primary.
+function HeaderActionToolbar({
   viewModel,
   writeActions,
   completionActions,
   completionSentinelRef,
   showCompletionActions,
-  isSlidesMode,
   isSubmitted,
-}: LeadFormHeaderActionsProps) {
+}: Omit<LeadFormHeaderActionsProps, "isSlidesMode">) {
   const {
     canRequestReopen,
     currentUser,
@@ -122,67 +170,58 @@ export function LeadFormHeaderActions({
     isReadOnly,
     visiblePeriods,
   } = viewModel;
-  const { autosave } = completionActions;
 
+  return (
+    <DocumentActionGroup>
+      <VersionComingSoonControl />
+      {/* TODO(lead-pdf-export): lead is excluded from pdfExport
+          (role-coverage-gate); this inert ComingSoon control never
+          reaches a backend call. */}
+      <PdfExportComingSoonControl />
+      {!isReadOnly && (
+        <FillFromButton
+          periods={visiblePeriods}
+          disabled={writeActions.fillFromMut.isPending}
+          lockedReason={fillFromLocked ? FILL_FROM_LOCKED_REASON : undefined}
+          onFillFrom={writeActions.handleFillFrom}
+        />
+      )}
+      {isSubmitted && (
+        <SubmittedSectionAction
+          authorRole={currentUser.authorRole}
+          canRequestReopen={canRequestReopen}
+          writeActions={writeActions}
+        />
+      )}
+      <div ref={completionSentinelRef} className="min-h-px min-w-px">
+        {!isReadOnly && showCompletionActions && (
+          <LeadCompletionActions
+            {...completionActions}
+            label="Header completion actions"
+          />
+        )}
+      </div>
+    </DocumentActionGroup>
+  );
+}
+
+// Shared completion presentation so sticky handoff cannot fork action state.
+export function LeadFormHeaderActions({
+  isSlidesMode,
+  ...header
+}: LeadFormHeaderActionsProps) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-4">
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <ReportTitleBlock />
-        {/* Light-teal success badge reads as progress, not a locked signal. */}
-        {!isSlidesMode &&
-          (isSubmitted ? (
-            <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)]">
-              ✓ Submitted
-            </span>
-          ) : (
-            <AutosaveBadge autosave={autosave} />
-          ))}
+        {!isSlidesMode && (
+          <HeaderStatusBadge
+            isSubmitted={header.isSubmitted}
+            autosave={header.completionActions.autosave}
+          />
+        )}
       </div>
-      {/* Mutating actions hide on read-only; green stays the sole forward primary. */}
-      <DocumentActionGroup>
-        <VersionComingSoonControl />
-        {/* TODO(lead-pdf-export): lead is excluded from pdfExport
-            (role-coverage-gate); this inert ComingSoon control never
-            reaches a backend call. */}
-        <PdfExportComingSoonControl />
-        {!isReadOnly && (
-          <FillFromButton
-            periods={visiblePeriods}
-            disabled={writeActions.fillFromMut.isPending}
-            lockedReason={
-              fillFromLocked
-                ? "Fill from previous cannot replace records that are part of the published report."
-                : undefined
-            }
-            onFillFrom={writeActions.handleFillFrom}
-          />
-        )}
-        {/* Server-computed `canRequestReopen` only — client never rebuilds policy. */}
-        {isSubmitted && isLead(currentUser.authorRole) && canRequestReopen && (
-          <ToolbarSecondaryButton
-            label="Request Reopen"
-            title="Ask Head to unlock this section"
-            onClick={writeActions.openReopenDialog}
-            disabled={writeActions.requestReopenMut.isPending}
-          />
-        )}
-        {isSubmitted && !isLead(currentUser.authorRole) && (
-          <ToolbarSecondaryButton
-            label="Revoke"
-            title="Revoke submission and unlock the section"
-            onClick={writeActions.handleRevoke}
-            disabled={writeActions.revokeMut.isPending}
-          />
-        )}
-        <div ref={completionSentinelRef} className="min-h-px min-w-px">
-          {!isReadOnly && showCompletionActions && (
-            <LeadCompletionActions
-              {...completionActions}
-              label="Header completion actions"
-            />
-          )}
-        </div>
-      </DocumentActionGroup>
+      <HeaderActionToolbar {...header} />
     </header>
   );
 }

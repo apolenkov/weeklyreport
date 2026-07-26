@@ -16,7 +16,8 @@ import { useTRPC } from "./trpc-context";
 // auth.me is publicProcedure so a null session does not trip the 401 redirect;
 // the loading boundary stays on this provider rather than on routing.
 
-// sessionRoleSchema includes 'admin' for SAML claim mapping; adminProcedure === headProcedure for v6.0.
+// sessionRoleSchema includes 'admin' for SAML claim mapping; adminProcedure and
+// headProcedure resolve to the same authorization.
 export interface SessionUser {
   id: string;
   name: string;
@@ -46,10 +47,6 @@ export interface SessionState {
 // useSession() still throws when context is absent.
 export const SessionContext = createContext<SessionState | null>(null);
 
-/**
- * Session Provider.
- * @param options - The options argument.
- */
 export function SessionProvider({ children }: { children: ReactNode }) {
   const trpc = useTRPC();
   const { data, isLoading } = useQuery(trpc.auth.me.queryOptions());
@@ -103,9 +100,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/**
- * Use Session.
- */
 export function useSession(): SessionState {
   const ctx = useContext(SessionContext);
   if (!ctx) {

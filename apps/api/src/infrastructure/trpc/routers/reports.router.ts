@@ -86,15 +86,8 @@ function createCompiledReportProcedures(deps: ReportsRouterDeps) {
         }
       }),
 
-    // Resolve the **Status target** for the `/reports/latest` redirect. The
-    // target is the current editable period (the exact id the read gate
-    // authorizes) when that period has a viewer-visible section, else the
-    // newest viewer-visible published report, else `null` (empty state). It
-    // must NOT search older editable periods: the gate authorizes only the
-    // current editable id, so routing to an older editable report would land
-    // on a target the gate rejects. `sections.some(sectionScope)` reuses the
-    // same group filter as `compiledHistory`; a lead resolves their own
-    // authored sections.
+    // Status-target resolution rules: openspec/specs/viewer-report-navigation.
+    // A lead resolves their own authored sections.
     latestForViewer: anyRoleProcedure.query(async ({ ctx }) => {
       try {
         return await deps.weeklyReportService.latestForViewer(ctx.session);
@@ -105,10 +98,6 @@ function createCompiledReportProcedures(deps: ReportsRouterDeps) {
   };
 }
 
-/**
- * Create Reports Router.
- * @param deps - The deps argument.
- */
 export function createReportsRouter(deps: ReportsRouterDeps) {
   return router({
     ...createSectionProcedures(deps),

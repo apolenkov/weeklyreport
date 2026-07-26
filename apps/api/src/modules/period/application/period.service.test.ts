@@ -1,7 +1,8 @@
-import type {
-  PeriodStatus,
-  ReportStatus,
-  UserSession,
+import {
+  MS_PER_HOUR,
+  type PeriodStatus,
+  type ReportStatus,
+  type UserSession,
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
@@ -52,7 +53,7 @@ interface SpyReport {
   status: ReportStatus;
   periodStatus: PeriodStatus;
   publishedAt: Date | null;
-  /** Defaults to false in `getReportById` when a fixture omits it. */
+  // Defaults to false in `getReportById` when a fixture omits it.
   archived?: boolean;
 }
 
@@ -514,7 +515,7 @@ describe("PeriodService — reopen policy gate", () => {
   });
 
   it("throws PeriodAccessError when reopen window has expired", async () => {
-    const publishedAt = new Date(Date.now() - 100 * 3_600_000); // 100h ago
+    const publishedAt = new Date(Date.now() - 100 * MS_PER_HOUR);
     const reports = new Map<string, SpyReport>([
       [
         reportId,
@@ -574,7 +575,7 @@ describe("PeriodService — reopen policy gate", () => {
   });
 
   it("allows reopen within the window", async () => {
-    const publishedAt = new Date(Date.now() - 2 * 3_600_000); // 2h ago
+    const publishedAt = new Date(Date.now() - 2 * MS_PER_HOUR);
     const reports = new Map<string, SpyReport>([
       [
         reportId,

@@ -11,11 +11,10 @@ import {
 import { reportSectionReadModelSchema } from "./section.schema";
 
 /**
- * Row shape for the head/admin "Активность за текущий период" panel. One
- * row per lead's section in the open report period;
- * `lastEditAt` is the most-recent updatedAt across the section's rows
- * (items + risks + decisions). Polled every 15s on the
- * dashboard.
+ * One row per lead's section in the open report period, for the polled
+ * head/admin activity panel. `lastEditAt` is the maximum updatedAt across the
+ * section's child records (not the section row itself) — see
+ * openspec/specs/activity-reporting-unit.
  */
 export const activityLiveRowSchema = z.object({
   reportId: z.uuid(),
@@ -84,10 +83,9 @@ export const pdfExportJobSchema = z.object({
 });
 
 /**
- * viewer-live-status: result of the Status-target resolver behind
- * `/reports/latest`. `reportId` is the **Status target** — the current editable
- * period (when it has a viewer-visible section), else the newest viewer-visible
- * `published` report, else `null` (empty state).
+ * Status target behind `/reports/latest`: the current editable period when it
+ * has a viewer-visible section, else the newest viewer-visible `published`
+ * report, else `null` (empty state).
  */
 export const latestForViewerReportSchema = z.object({
   reportId: z.uuid().nullable(),
@@ -133,14 +131,9 @@ export const weeklyReportReadModelSchema = z.object({
 });
 
 /**
- * Discriminated-union response for `weeklyReport.get`.
- *
- * When no active Period exists the procedure returns `{ status: 'no-period',
- * report: null }` instead of throwing NOT_FOUND. This eliminates the React
- * Query retry storm (3 × retry = 3–5 s spinner) on fresh installs and
- * between period cycles.
- *
- * Consumers guard with `if (data.status === 'no-period') return <EmptyState/>`.
+ * Response for `weeklyReport.get`. With no active Period the procedure returns
+ * the `no-period` sentinel rather than throwing NOT_FOUND, so consumers branch
+ * on `status` instead of treating an ordinary empty state as a query failure.
  */
 export const weeklyReportGetResponseSchema = z.discriminatedUnion("status", [
   weeklyReportReadModelSchema.extend({ status: z.literal("active") }),

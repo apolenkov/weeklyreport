@@ -10,10 +10,6 @@ let prismaInstance: PrismaClient | null = null;
 // Require `_test` DB name (stricter than _destructive-guard's localhost trust).
 // Guard is not imported: outside rootDir + incompatible contract. See
 // openspec/specs/destructive-db-guard/spec.md.
-/**
- * Assert Test Database Url.
- * @param url - The url argument.
- */
 export function assertTestDatabaseUrl(url: string): void {
   // WHATWG URL so userinfo never leaks; path-less/unparseable → "" fails `_test`.
   const dbName = extractDatabaseName(url);
@@ -67,9 +63,6 @@ async function discoverTables(prisma: PrismaClient): Promise<string> {
   return list;
 }
 
-/**
- * Create Test Prisma.
- */
 export function createTestPrisma(): PrismaClient {
   if (!prismaInstance) {
     pool = new pg.Pool({
@@ -83,10 +76,6 @@ export function createTestPrisma(): PrismaClient {
 
 // TRUNCATE ACCESS EXCLUSIVE is safe only with --fileParallelism=false;
 // concurrent holders (dev API / Studio on _test) hang beforeEach silently.
-/**
- * Clean Database.
- * @param prisma - The prisma argument.
- */
 export async function cleanDatabase(prisma: PrismaClient): Promise<void> {
   assertTestDatabaseUrl(requireEnv(process.env, "DATABASE_URL"));
 
@@ -96,9 +85,6 @@ export async function cleanDatabase(prisma: PrismaClient): Promise<void> {
   );
 }
 
-/**
- * Disconnect Test Prisma.
- */
 export async function disconnectTestPrisma(): Promise<void> {
   if (prismaInstance) {
     await prismaInstance.$disconnect();
@@ -129,19 +115,9 @@ export const TEST_IDS = {
   reminderExec2: "a0000000-0000-4000-a000-000000000611",
 } as const;
 
-/**
- * Seed Test Data.
- * @param prisma - The prisma argument.
- */
-export async function seedTestData(prisma: PrismaClient) {
-  const group = await prisma.reportingGroup.create({
-    data: {
-      id: TEST_IDS.group,
-      name: "Test Group",
-      description: "Test reporting group",
-    },
-  });
-
+// Sequential awaits, not Promise.all: each create depends on the previous
+// row's FK.
+async function seedUsers(prisma: PrismaClient, reportingGroupId: string) {
   const head = await prisma.user.create({
     data: {
       id: TEST_IDS.head,
@@ -151,7 +127,7 @@ export async function seedTestData(prisma: PrismaClient) {
       firstName: "Head",
       role: "head",
       samlId: "head-test",
-      reportingGroupId: group.id,
+      reportingGroupId,
     },
   });
 
@@ -164,9 +140,23 @@ export async function seedTestData(prisma: PrismaClient) {
       firstName: "Lead",
       role: "lead",
       samlId: "lead-test-1",
-      reportingGroupId: group.id,
+      reportingGroupId,
     },
   });
+
+  return { head, lead };
+}
+
+export async function seedTestData(prisma: PrismaClient) {
+  const group = await prisma.reportingGroup.create({
+    data: {
+      id: TEST_IDS.group,
+      name: "Test Group",
+      description: "Test reporting group",
+    },
+  });
+
+  const { head, lead } = await seedUsers(prisma, group.id);
 
   const project = await prisma.project.create({
     data: {

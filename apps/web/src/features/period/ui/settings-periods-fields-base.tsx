@@ -16,10 +16,6 @@ interface FieldGroupProps {
 }
 
 // Shell owns draft/Save; this component only renders the field group.
-/**
- * Period Base Fields.
- * @param props - The props argument.
- */
 export function PeriodBaseFields({ draft, setDraft }: FieldGroupProps) {
   return (
     <>

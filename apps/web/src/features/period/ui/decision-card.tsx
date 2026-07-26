@@ -76,25 +76,53 @@ function stagesAriaLabel(
     : "Decision stages: No stage set";
 }
 
-/**
- * Decision Card.
- * @param props - The props argument.
- */
-export function DecisionCard({
+// The amber deadline chip and the icon-button hairline/destructive-hover ramp
+// have no design token yet; naming them keeps the raw values to one site each.
+const DUE_CHIP_CLASS =
+  "inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fff7e6] px-2.5 py-0.5 text-[11px] font-semibold text-[#8a6d1b]";
+const ICON_BUTTON_CLASS =
+  "flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5";
+const EDIT_BUTTON_CLASS = `${ICON_BUTTON_CLASS} text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]`;
+const DELETE_BUTTON_CLASS = `${ICON_BUTTON_CLASS} text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]`;
+
+function DueChip({ deadline }: { readonly deadline: string }) {
+  return <span className={DUE_CHIP_CLASS}>Due {formatDeadline(deadline)}</span>;
+}
+
+function DecisionCardHeader({
   decision,
   readOnly,
   publishedLocked,
   onEdit,
   onDelete,
 }: DecisionCardProps) {
+  return (
+    <div className="mb-2 flex flex-wrap items-center gap-2">
+      <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
+        {decision.productName}
+      </span>
+      {decision.deadline && <DueChip deadline={decision.deadline} />}
+      {publishedLocked && <PublishedRecordMarker />}
+      <DecisionCardActions
+        decision={decision}
+        readOnly={readOnly}
+        publishedLocked={publishedLocked}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
+    </div>
+  );
+}
+
+export function DecisionCard(props: DecisionCardProps) {
+  const { decision } = props;
   const stageTags = (
     decision.stageIds && decision.stageIds.length > 0
       ? decision.stageIds
       : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
         splitStageNames(decision.stageName)
   )
-    // stage-label-canonicalization: heal legacy short "Dev" at render,
-    // mirroring the risk row and item card.
+    // Heal legacy short "Dev" at render, mirroring the risk row and item card.
     .map(canonicalStageName);
 
   return (
@@ -105,24 +133,7 @@ export function DecisionCard({
         opacity: decision.foreign ? FOREIGN_ENTRY_OPACITY : 1,
       }}
     >
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
-          {decision.productName}
-        </span>
-        {decision.deadline && (
-          <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fff7e6] px-2.5 py-0.5 text-[11px] font-semibold text-[#8a6d1b]">
-            Due {formatDeadline(decision.deadline)}
-          </span>
-        )}
-        {publishedLocked && <PublishedRecordMarker />}
-        <DecisionCardActions
-          decision={decision}
-          readOnly={readOnly}
-          publishedLocked={publishedLocked}
-          onEdit={onEdit}
-          onDelete={onDelete}
-        />
-      </div>
+      <DecisionCardHeader {...props} />
       <DecisionCardBody text={decision.text} impact={decision.impact} />
       <MetaRow
         authorName={decision.owner}
@@ -158,16 +169,16 @@ function DecisionCardActions({
     <div className="ml-auto flex gap-1">
       <button
         type="button"
-        className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+        className={EDIT_BUTTON_CLASS}
         onClick={() => onEdit(decision)}
-        aria-label={`Edit decision`}
+        aria-label="Edit decision"
       >
         <EditIcon />
       </button>
       {!publishedLocked && (
         <button
           type="button"
-          className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
+          className={DELETE_BUTTON_CLASS}
           onClick={() => onDelete(decision.id)}
           aria-label={`Delete decision for ${decision.productName}`}
         >

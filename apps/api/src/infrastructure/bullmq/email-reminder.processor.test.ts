@@ -267,10 +267,9 @@ describe("EmailReminderProcessor.processJob", () => {
     expect(mockReminders.releaseExecutionClaim).not.toHaveBeenCalled();
   });
 
-  // Transient dispatch failure with retries remaining must release the claim
-  // (not mark failed) so the next BullMQ attempt can re-claim and resend.
-  // Inside processJob's catch the counter is pre-increment: 0 = first
-  // attempt failing, 1 = second (penultimate) of 3 — neither is terminal.
+  // A non-terminal failure must release the claim (not mark failed) so the next
+  // BullMQ attempt can re-claim. In processJob's catch the counter is
+  // pre-increment: 0 = first attempt, 1 = penultimate of 3 — neither terminal.
   it.each([
     { attemptsMade: 0, label: "first attempt" },
     { attemptsMade: 1, label: "penultimate attempt, retry still pending" },

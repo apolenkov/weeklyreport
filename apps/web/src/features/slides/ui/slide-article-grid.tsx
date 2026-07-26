@@ -22,12 +22,9 @@ import type {
 import { SlideCell, type SlideRowActivateHandler } from "./slide-article-rows";
 import { SLIDE_PRODUCT_STATUS_PRESENTATION } from "./slide-product-status";
 
-/** The one shared 4-column template — identical in the header row and every
- * subsection so columns align vertically across the whole slide. Current/Next
- * carry the prose, Risks/Decisions are sparse by nature, so the content lanes
- * take the width. Keep 4 columns: the fixed position of the Risks lane is the
- * head's severity scan-line; merging would trade it for a weaker order-based
- * rule. */
+// Shared by the header row and every subsection (openspec/specs/
+// lead-slide-by-product-grid, "Subsections share one four-column grid"). Keep
+// 4 lanes: the fixed Risks position is the head's severity scan-line.
 const GRID_TEMPLATE = "grid grid-cols-[1.35fr_1.25fr_0.85fr_0.85fr] gap-x-4";
 
 const COLUMNS = [
@@ -170,10 +167,9 @@ function SubsectionRow({
   );
 }
 
-/** One product card: status stripe + dot + name, then product-level and
- * per-project subsections on the shared grid. A product with no records this
- * period renders as a collapsed dashed row.  * @param options - The options argument.
- */
+// One product card: status stripe + dot + name, then product-level and
+// per-project subsections on the shared grid. A product with no records this
+// period renders as a collapsed dashed row.
 export function SlideProductCard({
   card,
   authorsById,

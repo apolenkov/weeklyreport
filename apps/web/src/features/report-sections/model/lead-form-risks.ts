@@ -7,10 +7,6 @@ export type LeadRiskEntry = RiskEntry;
 
 // `text` is only the risk field — impact/mitigation stay on the row but are not
 // shown. Handlers keep non-empty defaults for safeText({min:1}) on those fields.
-/**
- * Map Lead Risks.
- * @param section - The section argument.
- */
 export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
   const projectIndex = buildProjectIndex(section);
   const activityNameById = buildActivityIndex(section);

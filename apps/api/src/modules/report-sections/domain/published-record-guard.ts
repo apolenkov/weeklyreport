@@ -6,11 +6,6 @@ import type {
 
 // Payload must retain every published item/decision stableId (rewrite = omit).
 // Risks excluded — re-raised, not carried. See openspec durable-record-identity.
-/**
- * Find Published Record Violation.
- * @param published - The published argument.
- * @param input - The input argument.
- */
 export function findPublishedRecordViolation(
   published: {
     itemStableIds: readonly string[];

@@ -49,22 +49,14 @@ import { router } from "./trpc.middleware.js";
 
 export interface AppRouterDeps {
   prisma: PrismaClient;
-  /**
-   * Validated env, threaded from main.ts. Read for the Telegram
-   * configured-check (`integrationsStatus`) and the reseed repo-root override
-   * (`dev.wipeAndReseed`) instead of raw `process.env`.
-   */
+  // Threaded from main.ts so procedures read the validated env, never raw
+  // `process.env`.
   env: EnvConfig;
   reportSectionsService: ReportSectionsService;
   reviewService: ReviewService;
-  /**
-   * The review capability's write surface —
-   * `review.acknowledge` / `review.comment` / `review.deleteComment` /
-   * `review.verdict` / `review.acknowledgements`. All ride `leadershipProcedure`
-   * (head + admin + viewer; lead excluded); the per-group scope + reviewer
-   * designation are enforced inside the service. Optional so role-coverage test
-   * fixtures that build the router with `{}` deps keep compiling.
-   */
+  // Review write surface: rides `leadershipProcedure` (lead excluded), with
+  // per-group scope and reviewer designation enforced inside the service.
+  // Optional for role-coverage `{}` deps.
   reviewActionsService?: ReviewActionsService;
   publicationService: PublicationService;
   pdfExportService: PdfExportService;
@@ -75,13 +67,9 @@ export interface AppRouterDeps {
   reopenRequestAdminService: ReopenRequestAdminService;
   organizationService: OrganizationService;
   remindersService: RemindersService;
-  /**
-   * Best-effort auto carry-over, fired when a manually created period is
-   * minted open (a scheduled-born one is carried later, at its
-   * scheduled→open flip). Never rejects. Optional so role-coverage test
-   * fixtures that build the router with `{}` deps keep compiling —
-   * production wiring (main.ts) always provides it.
-   */
+  // Best-effort carry-over for a period minted open; never rejects (a
+  // scheduled-born period carries at its scheduled→open flip instead).
+  // Optional for role-coverage `{}` deps; main.ts always wires it.
   autoCarryOver?: (targetReportId: string) => Promise<void>;
   archiveService: ArchiveService;
   periodService: PeriodService;
@@ -107,10 +95,6 @@ export interface AppRouterDeps {
   actionLogService?: ActionLogService;
 }
 
-/**
- * Create App Router.
- * @param deps - The deps argument.
- */
 export function createAppRouter(deps: AppRouterDeps) {
   return router({
     auth: createAuthRouter(),

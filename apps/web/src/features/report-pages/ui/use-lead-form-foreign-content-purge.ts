@@ -14,11 +14,6 @@ interface UseLeadFormForeignContentPurgeInput {
   readonly sessionRole: SessionUser["role"] | null;
 }
 
-// Effects + deps are load-bearing; lead-form-visibility.test.tsx pins them.
-/**
- * Use Lead Form Foreign Content Purge.
- * @param props - The props argument.
- */
 export function useLeadFormForeignContentPurge({
   isEveryone,
   visibilityHydrated,
@@ -29,14 +24,9 @@ export function useLeadFormForeignContentPurge({
   const trpc = useTRPC();
   const qc = useQueryClient();
 
-  // Purge the fetched foreign full content from the query cache whenever the
-  // toggle leaves Everyone OR is not yet hydrated for the current context.
-  // `enabled:false` (in useLeadFormData) stops a refetch; removing the cached
-  // query drops the data so the merged display arrays recompute to own-only. A
-  // later return to Everyone re-fetches rather than serving stale. The purge
-  // uses the bare procedure prefix (`queryKey()`, no input) so a report switch
-  // also drops the PRIOR report's cached content, not just the current
-  // report's.
+  // `enabled:false` only stops refetching: removing the cached query is what
+  // drops the data so display arrays recompute to own-only. The bare procedure
+  // prefix (no input) also drops the PRIOR report's cache on a report switch.
   useEffect(() => {
     if (isEveryone && visibilityHydrated) return;
     qc.removeQueries({
@@ -44,16 +34,10 @@ export function useLeadFormForeignContentPurge({
     });
   }, [isEveryone, visibilityHydrated, targetReportId, qc, trpc]);
 
-  // Identity guard: the `crossAuthorContent` cache key is scoped by reportId
-  // only, NOT by user — so two identities on the SAME browser + same
-  // QueryClient + same report could otherwise share a cache entry. On ANY
-  // identity change (logout, role switch, authz downgrade) drop ALL cached
-  // foreign content unconditionally, so user B can never read user A's foreign
-  // records even while both sit in Everyone. The dev switcher / logout do a
-  // full reload (fresh QueryClient) today; this guard makes the invariant hold
-  // regardless of the navigation mechanism. The lead form shows all assigned
-  // products at once (no per-product selector), so identity + report purges
-  // cover every real context-switch surface.
+  // Identity guard: the `crossAuthorContent` key is scoped by reportId only,
+  // NOT by user, so two identities sharing a browser + QueryClient could read
+  // each other's records. Drop everything on ANY identity change, even though
+  // logout / role switch full-reload into a fresh QueryClient today.
   useEffect(() => {
     qc.removeQueries({
       queryKey: trpc.leadForm.crossAuthorContent.queryKey(),

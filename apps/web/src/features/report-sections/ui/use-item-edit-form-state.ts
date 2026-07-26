@@ -90,11 +90,8 @@ function useItemEditFields({
   };
 }
 
-// Mount-seeded form state + focus trap. Parent remounts on reopen — no useEffect reset.
-/**
- * Use Item Edit Form State.
- * @param props - The props argument.
- */
+// Mount-seeded form state + focus trap; the parent remounts on reopen, so no
+// useEffect reset is needed.
 export function useItemEditFormState({
   item,
   products,

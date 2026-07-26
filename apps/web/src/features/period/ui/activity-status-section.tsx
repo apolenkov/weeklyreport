@@ -69,20 +69,17 @@ function resolveStatusPick(
     return { kind: "refused" };
   }
   // A raise is never the only record of an alarm: yellow needs any covering
-  // risk (floor != null), red a covering blocker (floor === "red"). An
-  // unbacked raise routes through risk creation instead of persisting — the
-  // status lands via the render-time floor once the risk is saved; cancel
-  // changes nothing.
+  // risk, red a covering blocker. An unbacked raise routes through risk
+  // creation, then lands via the render-time floor once the risk is saved.
   if (next !== "green" && trafficRank(next) > trafficRank(floor ?? "green")) {
     return {
       kind: "requires-risk",
       severity: next === "red" ? "blocked" : "at-risk",
     };
   }
-  // When the alarm floor sits ABOVE the lead's stored choice the pill is showing
-  // the floor, not their pick — clicking it must NOT overwrite the lower stored
-  // value, so clearing the covering risk restores it. When stored
-  // is at/above the floor, a pick is a genuine change and writes through.
+  // A floor ABOVE the stored choice means the pill is showing the floor, not
+  // the lead's pick — clicking it must not overwrite the lower stored value,
+  // so clearing the covering risk restores it.
   if (
     floor != null &&
     trafficRank(floor) > trafficRank(stored) &&
@@ -221,10 +218,6 @@ function ActivityCard({
 }
 
 // No add/remove: activity attachment is admin-provisioned.
-/**
- * Activity Status Section.
- * @param props - The props argument.
- */
 export function ActivityStatusSection({
   activities,
   readOnly,

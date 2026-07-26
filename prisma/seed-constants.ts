@@ -7,9 +7,8 @@ export * from "./seed-identifiers.js";
 export * from "./seed-people.js";
 export * from "./seed-periods.js";
 
-// Literal mirrors of the shared role and report-status vocabularies. The prisma
+// Literal mirrors of the shared role and report-status vocabularies: the prisma
 // toolchain's isolated tsconfig cannot resolve workspace packages, so they are
-// declared here — the one seed file the status-SSOT gate allowlists. The leaf
-// modules import them as types, which leaves no runtime edge back to this file.
+// declared here — the one seed file the status-SSOT gate allowlists.
 export type SeedRole = "head" | "viewer" | "admin" | "lead";
 export type SeedReportStatus = "draft" | "published";

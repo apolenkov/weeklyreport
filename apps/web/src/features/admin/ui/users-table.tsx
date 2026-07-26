@@ -16,10 +16,18 @@ interface UsersTableProps {
   readonly onDelete: (user: MockUser, trigger: HTMLButtonElement) => void;
 }
 
-/**
- * Users Table.
- * @param props - The props argument.
- */
+const COLUMNS: readonly {
+  readonly label: string;
+  readonly alignRight: boolean;
+}[] = [
+  { label: "Name", alignRight: false },
+  { label: "Email", alignRight: false },
+  { label: "Role", alignRight: false },
+  { label: "Group", alignRight: false },
+  { label: "Position", alignRight: false },
+  { label: "Actions", alignRight: true },
+];
+
 export function UsersTable({
   users,
   deactivatePending,
@@ -34,24 +42,14 @@ export function UsersTable({
       <table className="w-full text-left text-sm" data-testid="users-table">
         <thead>
           <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
-            <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-              Name
-            </th>
-            <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-              Email
-            </th>
-            <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-              Role
-            </th>
-            <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-              Group
-            </th>
-            <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-              Position
-            </th>
-            <th className="px-4 py-3 text-right font-semibold text-[var(--color-foreground)]">
-              Actions
-            </th>
+            {COLUMNS.map(({ label, alignRight }) => (
+              <th
+                key={label}
+                className={`px-4 py-3${alignRight ? " text-right" : ""} font-semibold text-[var(--color-foreground)]`}
+              >
+                {label}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>

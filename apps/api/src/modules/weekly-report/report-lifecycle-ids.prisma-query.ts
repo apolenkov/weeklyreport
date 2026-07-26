@@ -1,17 +1,11 @@
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 
-/**
- * Query Active Report Id.
- * @param prisma - The prisma argument.
- */
 export async function queryActiveReportId(
   prisma: PrismaService,
 ): Promise<string | null> {
-  // Exclude scheduled-future periods: their periodStatus defaults to "open"
-  // (the PeriodStatus enum has no "scheduled" value), so a future period
-  // would otherwise win the periodStart-desc ordering and be mis-picked as
-  // the current period. Requiring periodStart <= now returns the most recent
-  // open/reopened period that has actually started.
+  // Scheduled-future periods carry periodStatus "open" (the enum has no
+  // "scheduled" value), so without `periodStart <= now` a future period would
+  // win the periodStart-desc ordering and be mis-picked as the current period.
   const editableReport = await prisma.report.findFirst({
     where: {
       periodStatus: { in: ["open", "reopened"] },
@@ -37,10 +31,6 @@ export async function queryActiveReportId(
 // Newest non-archived open/reopened that has started. No published fallback
 // (would defeat open→published race rejection). Secondary id desc: gate and
 // latestForViewer call this separately and must pick the same id on ties.
-/**
- * Query Current Editable Id.
- * @param prisma - The prisma argument.
- */
 export async function queryCurrentEditableId(
   prisma: PrismaService,
 ): Promise<string | null> {
@@ -59,10 +49,6 @@ export async function queryCurrentEditableId(
 
 // Head reopen / published-fallback target: newest non-archived published;
 // id desc tiebreak keeps the pick deterministic on a shared periodStart.
-/**
- * Query Latest Published Non Archived Id.
- * @param prisma - The prisma argument.
- */
 export async function queryLatestPublishedNonArchivedId(
   prisma: PrismaService,
 ): Promise<string | null> {

@@ -65,17 +65,18 @@ const confirmStateFromDispatch = (result: {
   return "error";
 };
 
+interface RemindLeadState {
+  readonly confirm: ConfirmState;
+  readonly busy: boolean;
+  readonly send: () => void;
+}
+
 // Client never sees lead emails — backend resolves rule, recipient, and dedupe.
-/**
- * Remind Lead Button.
- * @param props - The props argument.
- */
-export function RemindLeadButton({
+function useRemindLead({
   reportId,
   leadId,
-  leadName,
   onMutated,
-}: RemindLeadButtonProps): React.JSX.Element {
+}: Omit<RemindLeadButtonProps, "leadName">): RemindLeadState {
   const trpc = useTRPC();
   const [confirm, setConfirm] = useState<ConfirmState>("idle");
   const timerRef = useRef<number | null>(null);
@@ -115,11 +116,43 @@ export function RemindLeadButton({
     }),
   );
 
-  const handleClick = (): void => {
-    mutation.mutate({ reportId, leadId });
+  return {
+    confirm,
+    busy: mutation.isPending,
+    send: () => {
+      mutation.mutate({ reportId, leadId });
+    },
   };
+}
 
-  const busy = mutation.isPending;
+function ConfirmIcon({
+  confirm,
+  busy,
+}: {
+  readonly confirm: ConfirmState;
+  readonly busy: boolean;
+}): React.JSX.Element {
+  if (CHECKED_CONFIRM_STATES.has(confirm)) {
+    return <Check size={12} strokeWidth={2.5} aria-hidden="true" />;
+  }
+  return busy ? (
+    <BellRing size={12} strokeWidth={2} aria-hidden="true" />
+  ) : (
+    <Bell size={12} strokeWidth={2} aria-hidden="true" />
+  );
+}
+
+export function RemindLeadButton({
+  reportId,
+  leadId,
+  leadName,
+  onMutated,
+}: RemindLeadButtonProps): React.JSX.Element {
+  const { confirm, busy, send } = useRemindLead({
+    reportId,
+    leadId,
+    onMutated,
+  });
   const label = CONFIRM_LABELS[confirm] ?? (busy ? "Sending" : "Remind");
   const liveMessage = CONFIRM_LIVE_MESSAGES[confirm](leadName);
 
@@ -127,7 +160,7 @@ export function RemindLeadButton({
     <>
       <button
         type="button"
-        onClick={handleClick}
+        onClick={send}
         disabled={busy || SETTLED_CONFIRM_STATES.has(confirm)}
         aria-busy={busy}
         aria-label={`Send reminder to ${leadName}`}
@@ -135,13 +168,7 @@ export function RemindLeadButton({
         data-testid="remind-lead-button"
         className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-2 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-default disabled:opacity-60 max-md:min-h-[var(--touch-target-min)]"
       >
-        {CHECKED_CONFIRM_STATES.has(confirm) ? (
-          <Check size={12} strokeWidth={2.5} aria-hidden="true" />
-        ) : busy ? (
-          <BellRing size={12} strokeWidth={2} aria-hidden="true" />
-        ) : (
-          <Bell size={12} strokeWidth={2} aria-hidden="true" />
-        )}
+        <ConfirmIcon confirm={confirm} busy={busy} />
         <span>{label}</span>
       </button>
       <span aria-live="polite" className="sr-only">

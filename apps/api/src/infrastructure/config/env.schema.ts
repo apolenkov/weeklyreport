@@ -4,13 +4,9 @@ import { logLevelSchema } from "../../lib/logger.js";
 
 const MIN_JWT_SECRET_LENGTH = 32;
 
-// No `.default()` anywhere in this schema by design: every value the API needs
-// to run is REQUIRED and must be supplied explicitly per environment (`.env`
-// for local, the `environment:` block per docker-compose file, the e2e config's
-// webServer env). A silent default hides whether a value is mandatory and lets
-// a misconfigured deploy boot with a wrong (e.g. localhost) value. Boot fails
-// loud on a missing var instead. Genuinely-optional features stay `.optional()`
-// (they have no default — the consumer handles absence).
+// No `.default()` anywhere by design: every value is REQUIRED and supplied
+// explicitly per environment, so a misconfigured deploy fails boot loud instead
+// of running on a silent (e.g. localhost) default. See env-schema-coverage spec.
 const envObjectSchema = z.object({
   DATABASE_URL: z.url().startsWith("postgresql://"),
   DIRECT_URL: z.url().startsWith("postgresql://").optional(),
@@ -60,18 +56,14 @@ const envObjectSchema = z.object({
   // Redis (BullMQ)
   REDIS_HOST: z.string(),
   REDIS_PORT: z.coerce.number().int().positive(),
-  // Redis memory cap in bytes. Required with no default: the DLQ monitor's
-  // memory-usage alert threshold is derived from it, so the value MUST track
-  // the `--maxmemory` set for the redis container in docker-compose.prod.yml
-  // (209715200 = 200mb). A silent default would decouple the alert from the
-  // real cap and let usage climb toward the OOM-kill point unnoticed.
+  // Redis memory cap in bytes. Required, no default: the DLQ monitor derives
+  // its memory-usage alert threshold from it, so it MUST track the redis
+  // container's `--maxmemory`, or usage creeps toward OOM-kill unnoticed.
   REDIS_MAXMEMORY_BYTES: z.coerce.number().int().positive(),
   BULLMQ_PREFIX: z.string().optional(),
-  // DLQ alert threshold consumed only by DLQMonitorService. Genuinely
-  // optional: absent → the service applies its named DEFAULT_THRESHOLD const,
-  // so no `.default()` belongs here. A PRESENT value must be a whole positive
-  // number or boot fails loud (`z.coerce`), rather than a typo silently
-  // degrading the alert to the default at first poll. Mirrors DB_POOL_MAX.
+  // Consumed only by DLQMonitorService, which applies its own named default
+  // when absent. A PRESENT value must be a whole positive number: `z.coerce`
+  // fails boot loud rather than letting a typo degrade the alert silently.
   DLQ_ALERT_THRESHOLD: z.coerce.number().int().positive().optional(),
 
   // SMTP (email reminders)
@@ -114,22 +106,14 @@ const envObjectSchema = z.object({
   // /weekly-report/* routes. Min 32 chars also enforced in the service.
   PDF_EXPORT_JWT_SECRET: z.string().min(MIN_JWT_SECRET_LENGTH),
 
-  // Heap threshold (bytes) for the /health/ready memory check. Required with
-  // no default: readiness sheds traffic as the process nears the container
-  // memory cap, so the value must track that cap explicitly per environment
-  // (~75% of the api container's memory limit). A silent default would
-  // decouple the probe from the real limit and reintroduce spurious DOWN
-  // responses.
+  // Heap threshold (bytes) for the /health/ready memory check. Required, no
+  // default: readiness sheds traffic as the process nears the container memory
+  // cap, so it must track that cap per environment (~75% of the api limit).
   HEAP_HEALTH_THRESHOLD_BYTES: z.coerce.number().int().positive(),
 
-  // pg.Pool tunables consumed only by PrismaService. Genuinely optional: when
-  // absent the service applies its own named default consts, so no `.default()`
-  // belongs here. A PRESENT value must be a whole number in range — a typo
-  // (`10junk`, `1.5`, `0`, `-1`) fails boot loud via `z.coerce` rather than
-  // silently reaching pg, which coerces `max: 0` back to 10 (a logged 0 would
-  // lie) and keeps a negative max (the pool reports permanently full and hangs
-  // every queued query). `DB_POOL_MAX` must be positive; the timeouts allow 0
-  // (0 disables the acquire timeout in pg).
+  // pg.Pool tunables consumed only by PrismaService, which applies its own named
+  // defaults when absent. A PRESENT value must parse — pg coerces `max: 0` back
+  // to 10 and hangs on a negative max; the timeouts allow 0 (0 disables them).
   DB_POOL_MAX: z.coerce.number().int().positive().optional(),
   DB_POOL_IDLE_TIMEOUT_MS: z.coerce.number().int().nonnegative().optional(),
   DB_POOL_CONNECTION_TIMEOUT_MS: z.coerce
@@ -229,9 +213,6 @@ export const envSchema = envObjectSchema.superRefine((data, ctx) => {
 
 export type EnvConfig = z.infer<typeof envSchema>;
 
-/**
- * Validate Env.
- */
 export function validateEnv(): EnvConfig {
   const result = envSchema.safeParse(process.env);
 

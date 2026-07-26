@@ -27,16 +27,22 @@ export type {
 
 const DEFAULT_DEBOUNCE_MS = 5000;
 
-/**
- * Debounced autosave hook for the Lead Form.
- *
- * - Triggers `reports.saveDraft` after `debounceMs` of payload stillness.
- * - Coalesces rapid edits into a single mutation call.
- * - Tracks dirty state (current payload vs last successfully-saved payload).
- * - Attaches a `beforeunload` listener while dirty to warn on unsaved edits.
- * - Skips autosave entirely when disabled (read-only or submitted).
- * @param args - The args argument.
- */
+// Warns on unsaved edits. Legacy browsers (Chrome <119, Firefox <109) require
+// returnValue; modern ones honour preventDefault() alone. Both are kept to
+// cover the supported browser matrix.
+function useBeforeUnloadGuard(dirty: boolean) {
+  useEffect(() => {
+    if (!dirty) return;
+    function handler(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-browser compat; returnValue needed for Chrome <119 / Firefox <109; preventDefault() alone is insufficient there
+      e.returnValue = "";
+    }
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+}
+
 export function useLeadFormAutosave(
   args: UseLeadFormAutosaveArgs,
 ): AutosaveSnapshot {
@@ -55,10 +61,9 @@ export function useLeadFormAutosave(
   const trpc = useTRPC();
   const qc = useQueryClient();
 
-  // Live optimistic-lock version. Seeded from the `version` prop and advanced
-  // SYNCHRONOUSLY inside onSuccess (from the server-confirmed value) BEFORE the
-  // queued drain fires — so a drained save rebases onto the bumped version and
-  // does not self-409 on the writer's own previous save.
+  // Live optimistic-lock version, advanced synchronously in onSuccess before
+  // the queued drain fires — so a drained save rebases onto the bumped version
+  // instead of self-409ing on the writer's own previous save.
   const versionRef = useRef(version);
 
   const [state, setState] = useState<AutosaveState>("idle");
@@ -68,10 +73,9 @@ export function useLeadFormAutosave(
   const lastSavedRef = useRef<string>("");
   const inFlightRef = useRef<string>("");
   const inFlightPayloadRef = useRef<DraftSaveContent | null>(null);
-  // The section id the in-flight save was actually sent to, captured at mutate
-  // time. `onSuccess` stamps the confirmed baseline only when this still equals
-  // the current section — otherwise the lead navigated away while the save was
-  // in flight and stamping would clobber the new section's primed baseline.
+  // Section id the in-flight save was sent to, captured at mutate time. Guards
+  // onSuccess from stamping a baseline onto a section the lead navigated to
+  // mid-flight, which would clobber that section's primed baseline.
   const inFlightSectionRef = useRef<string | null>(null);
   // Queued payload key: when forceSave is called while a mutation is in
   // flight, we stash the current key here and fire again after success.
@@ -157,11 +161,9 @@ export function useLeadFormAutosave(
   // Debounced save trigger.
   useEffect(() => {
     if (!enabled || !dirty || !reportSectionId) {
-      // A pending announcement whose edit is no longer dirty is stale — the
-      // first render races the baseline-priming effect (dirty is computed at
-      // render time from a ref the priming effect has not yet stamped), and a
-      // user can also undo back to the saved content. Saving/saved/error
-      // states are owned by the mutation callbacks and stay untouched.
+      // A pending announcement whose edit is no longer dirty is stale (first
+      // render races the baseline-priming effect; undo restores saved content).
+      // Only pending→idle is ours — the mutation callbacks own the rest.
       // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced autosave state machine: pending/idle transitions are owned by the debounce timer effect
       setState((current) => (current === "pending" ? "idle" : current));
       return;
@@ -201,20 +203,7 @@ export function useLeadFormAutosave(
     queuedRetryRevision,
   ]);
 
-  // beforeunload guard while dirty.
-  useEffect(() => {
-    if (!dirty) return;
-    function handler(e: BeforeUnloadEvent) {
-      e.preventDefault();
-      // Legacy browsers (Chrome <119, Firefox <109) require returnValue to be
-      // set. Modern browsers honour preventDefault() alone. Keep both to
-      // satisfy the browser matrix.
-      // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-browser compat; returnValue needed for Chrome <119 / Firefox <109; preventDefault() alone is insufficient there
-      e.returnValue = "";
-    }
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [dirty]);
+  useBeforeUnloadGuard(dirty);
 
   const forceSave = useRef<() => Promise<void>>(() => Promise.resolve());
   // eslint-disable-next-line react-hooks/refs -- latest-ref stable-callback pattern: render stamps the newest closure; consumers call it at event time

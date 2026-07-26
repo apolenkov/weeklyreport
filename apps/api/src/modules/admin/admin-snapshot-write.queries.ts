@@ -138,19 +138,27 @@ async function upsertProjects(
   }
 }
 
+interface NewlyCreatedPeriod {
+  id: string;
+  deadline: Date;
+}
+
 async function upsertPeriods(
   tx: Prisma.TransactionClient,
   periods: AdminSnapshot["periods"],
-): Promise<{ newlyCreatedPeriods: { id: string; deadline: Date }[] }> {
-  // New periods only (post-commit applicator); deadline-less excluded
-  // because reminder offsets are deadline-relative.
-  const newlyCreatedPeriods: { id: string; deadline: Date }[] = [];
-  for (const period of periods) {
+): Promise<{ newlyCreatedPeriods: NewlyCreatedPeriod[] }> {
+  // New periods only (post-commit applicator); deadline-less excluded because
+  // reminder offsets are deadline-relative. The reduce threads a promise so the
+  // row writes stay sequential inside the transaction.
+  const newlyCreatedPeriods = await periods.reduce<
+    Promise<NewlyCreatedPeriod[]>
+  >(async (pending, period) => {
+    const accumulated = await pending;
     const { created } = await writePeriodRow(tx, period);
-    if (created && period.deadline !== null) {
-      newlyCreatedPeriods.push({ id: period.id, deadline: period.deadline });
-    }
-  }
+    return created && period.deadline !== null
+      ? [...accumulated, { id: period.id, deadline: period.deadline }]
+      : accumulated;
+  }, Promise.resolve([]));
   return { newlyCreatedPeriods };
 }
 
@@ -195,7 +203,7 @@ async function upsertReminderRules(
       timezone: rule.timezone,
       status: rule.status,
       version: rule.version,
-      reportId: rule.reportId || null,
+      reportId: rule.reportId ?? null,
     };
 
     if (currentRuleIds.has(rule.id)) {
@@ -233,12 +241,6 @@ function groupRestoredPolicyIdsByReport(
 // Additive-only whole-snapshot restore in one txn; removals use remove* primitives.
 // Policy applicator runs post-commit on newly created periods.
 // Spec: openspec/specs/admin-snapshot-restore
-/**
- * Save Snapshot.
- * @param prisma - The prisma argument.
- * @param policyApplicator - The policyApplicator argument.
- * @param snapshot - The snapshot argument.
- */
 export async function saveSnapshot(
   prisma: PrismaService,
   policyApplicator: PolicyApplicatorService | undefined,

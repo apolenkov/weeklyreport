@@ -4,7 +4,11 @@ import { useState } from "react";
 
 import { RotatingChevron } from "../../../shared/ui/report-shell/rotating-chevron";
 import type { BlockedAtRiskItem } from "../model/dashboard";
-import { groupByProduct, ProductCard } from "./blocked-at-risk-product-card";
+import {
+  groupByProduct,
+  ProductCard,
+  type ProductGroup,
+} from "./blocked-at-risk-product-card";
 
 interface BlockedAtRiskTableProps {
   readonly items: readonly BlockedAtRiskItem[];
@@ -30,10 +34,96 @@ function AlertIcon() {
   );
 }
 
-/**
- * Blocked At Risk Table.
- * @param props - The props argument.
- */
+function HeaderLabel({
+  hasItems,
+  issueCount,
+}: {
+  readonly hasItems: boolean;
+  readonly issueCount: number;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <AlertIcon />
+      <span
+        className={`font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] ${
+          hasItems
+            ? "text-[var(--color-destructive)]"
+            : "text-[var(--color-muted-foreground)]"
+        }`}
+      >
+        Blocked & At Risk
+      </span>
+      <span
+        className={`inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold tabular-nums ${
+          hasItems
+            ? "bg-[var(--color-status-blocked-bg)] text-[var(--color-destructive)]"
+            : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)]"
+        }`}
+      >
+        {issueCount} issues
+      </span>
+    </div>
+  );
+}
+
+function ToggleHeader({
+  hasItems,
+  isExpanded,
+  issueCount,
+  onToggle,
+}: {
+  readonly hasItems: boolean;
+  readonly isExpanded: boolean;
+  readonly issueCount: number;
+  readonly onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`flex w-full items-center justify-between p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
+        hasItems
+          ? "cursor-pointer hover:bg-[var(--color-surface-hover)]"
+          : "cursor-default opacity-65"
+      }`}
+      onClick={() => {
+        if (hasItems) onToggle();
+      }}
+      disabled={!hasItems}
+      aria-disabled={!hasItems}
+      aria-expanded={isExpanded}
+    >
+      <HeaderLabel hasItems={hasItems} issueCount={issueCount} />
+      <span className={hasItems ? undefined : "opacity-45"}>
+        <RotatingChevron expanded={isExpanded} />
+      </span>
+    </button>
+  );
+}
+
+// Grid-rows 1fr/0fr keeps the collapse animatable without a measured height.
+function GroupPanel({
+  groups,
+  isExpanded,
+}: {
+  readonly groups: readonly ProductGroup[];
+  readonly isExpanded: boolean;
+}) {
+  return (
+    <div
+      className="grid transition-[grid-template-rows] duration-300"
+      style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
+    >
+      <div className="min-h-0 overflow-hidden">
+        <div className="space-y-3 px-4 pb-4 pt-4">
+          {groups.map((group) => (
+            <ProductCard key={group.product} group={group} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function BlockedAtRiskTable({ items }: BlockedAtRiskTableProps) {
   // Collapsed by default. The same risk content appears in the report below,
   // so the dashboard treats this as a fast triage peek the head opens on
@@ -51,60 +141,14 @@ export function BlockedAtRiskTable({ items }: BlockedAtRiskTableProps) {
         hasItems ? "card-surface-fill" : "bg-[rgba(0,0,0,0.035)]"
       }`}
     >
-      <button
-        type="button"
-        className={`flex w-full items-center justify-between p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
-          hasItems
-            ? "cursor-pointer hover:bg-[var(--color-surface-hover)]"
-            : "cursor-default opacity-65"
-        }`}
-        onClick={() => {
-          if (hasItems) setExpanded(!expanded);
-        }}
-        disabled={!hasItems}
-        aria-disabled={!hasItems}
-        aria-expanded={isExpanded}
-      >
-        <div className="flex items-center gap-3">
-          <AlertIcon />
-          <span
-            className={`font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] ${
-              hasItems
-                ? "text-[var(--color-destructive)]"
-                : "text-[var(--color-muted-foreground)]"
-            }`}
-          >
-            Blocked & At Risk
-          </span>
-          <span
-            className={`inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold tabular-nums ${
-              hasItems
-                ? "bg-[var(--color-status-blocked-bg)] text-[var(--color-destructive)]"
-                : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)]"
-            }`}
-          >
-            {items.length} issues
-          </span>
-        </div>
-        <span className={hasItems ? undefined : "opacity-45"}>
-          <RotatingChevron expanded={isExpanded} />
-        </span>
-      </button>
+      <ToggleHeader
+        hasItems={hasItems}
+        isExpanded={isExpanded}
+        issueCount={items.length}
+        onToggle={() => setExpanded(!expanded)}
+      />
 
-      {hasItems ? (
-        <div
-          className="grid transition-[grid-template-rows] duration-300"
-          style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
-        >
-          <div className="min-h-0 overflow-hidden">
-            <div className="space-y-3 px-4 pb-4 pt-4">
-              {groups.map((group) => (
-                <ProductCard key={group.product} group={group} />
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {hasItems ? <GroupPanel groups={groups} isExpanded={isExpanded} /> : null}
     </div>
   );
 }

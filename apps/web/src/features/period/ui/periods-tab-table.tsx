@@ -45,10 +45,6 @@ function PeriodTableHeaderRow() {
   );
 }
 
-/**
- * Period Table.
- * @param props - The props argument.
- */
 export function PeriodTable({
   rows,
   testIdPrefix,

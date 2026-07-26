@@ -10,24 +10,26 @@ interface ReopenRequestsDeps {
   reopenRequestAdminService: ReopenRequestAdminService;
 }
 
+const listReopenRequestsInput = z
+  .object({
+    status: z
+      .enum(["pending", "approved", "rejected", "all"])
+      .default("pending"),
+  })
+  .optional();
+
+const respondReopenRequestInput = z.object({
+  id: z.uuid(),
+  decision: z.enum(["approved", "rejected"]),
+  note: z.string().max(MAX_REOPEN_NOTE_LENGTH).optional(),
+});
+
 // headProcedure (not adminProcedure): head ≠ admin in real deploy; reopen
 // decision is a head capability.
-/**
- * Create Reopen Requests Procedures.
- * @param deps - The deps argument.
- */
 export function createReopenRequestsProcedures(deps: ReopenRequestsDeps) {
   return {
     listReopenRequests: headProcedure
-      .input(
-        z
-          .object({
-            status: z
-              .enum(["pending", "approved", "rejected", "all"])
-              .default("pending"),
-          })
-          .optional(),
-      )
+      .input(listReopenRequestsInput)
       .query(async ({ input, ctx }) => {
         try {
           return await deps.reopenRequestAdminService.listReopenRequests({
@@ -39,13 +41,7 @@ export function createReopenRequestsProcedures(deps: ReopenRequestsDeps) {
         }
       }),
     respondReopenRequest: headProcedure
-      .input(
-        z.object({
-          id: z.uuid(),
-          decision: z.enum(["approved", "rejected"]),
-          note: z.string().max(MAX_REOPEN_NOTE_LENGTH).optional(),
-        }),
-      )
+      .input(respondReopenRequestInput)
       .mutation(async ({ input, ctx }) => {
         try {
           return await deps.reopenRequestAdminService.respondReopenRequest({

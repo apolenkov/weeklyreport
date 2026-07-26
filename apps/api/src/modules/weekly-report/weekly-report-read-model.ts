@@ -50,43 +50,21 @@ export type WeeklyReportLiveSection = ReportSectionReadModel & {
   readonly canReview: boolean;
 };
 
-/**
- * Derive Scope Filters.
- * @param session - The session argument.
- */
 export function deriveScopeFilters(
   session: WeeklyReportScopeSession | undefined,
 ): WeeklyReportScopeFilters {
   return {
     sectionScope: scopeWhere(session, "reportSection"),
     userScope: scopeWhere(session, "user"),
-    // The weekly-report portfolio is the only `'project'`-target
-    // scope-filter consumer in the api. Its semantics are "what products
-    // does this group currently own?" — that matches the explicit
-    // GroupProduct M:M edge, not the implicit `lead.reportingGroupId`
-    // derivation. Opt this site into the explicit edge so a product
-    // attached to two groups via the join surfaces in both heads' weekly
-    // reports, and a lead rotation does not silently drop a product from
-    // its group's portfolio.
-    //
-    // Lead's write path (saveDraft / submit) does not flow through this
-    // helper — it goes through `auth.routes.ts` with `leadId: userId`
-    // directly — so flipping this site only affects READ visibility.
+    // Ownership here is the explicit GroupProduct M:M edge, not the implicit
+    // `lead.reportingGroupId` derivation: a product joined to two groups must
+    // surface in both heads' reports, and a lead rotation must not drop one.
     projectScope: scopeWhere(session, "project", {
       useExplicitGroupProducts: true,
     }),
   };
 }
 
-/**
- * Build Snapshot Result.
- * @param report - The report argument.
- * @param snapshot - The snapshot argument.
- * @param session - The session argument.
- * @param sectionScope - The sectionScope argument.
- * @param totalLeads - The totalLeads argument.
- * @param activePolicyCount - The activePolicyCount argument.
- */
 export function buildSnapshotResult(
   report: WeeklyReportRow,
   snapshot: AssembledReport,
@@ -106,14 +84,9 @@ export function buildSnapshotResult(
     (section) => section.status === "submitted",
   ).length;
 
-  // On a published period the read model is built from the frozen
-  // snapshot, not from the live project rows — so the audit signal is
-  // derived from each surfaced product's owner group as frozen INTO the
-  // snapshot, never a live re-query. A product delivered via the snapshot
-  // but since archived, or whose GroupProduct edge was since removed, would
-  // drop out of the live query yet still reach the caller; sourcing the
-  // signal from the snapshot keeps it named. The live `projects` query is
-  // unused on this branch.
+  // The signal comes from owner groups frozen INTO the snapshot, never a live
+  // re-query: a product since archived or since detached from its group would
+  // drop out of the live query yet still be delivered by the snapshot.
   const crossGroup = computeCrossGroupSignalFromSnapshotProjects(
     session,
     leadSections.flatMap((section) => section.projects),
@@ -139,16 +112,6 @@ export function buildSnapshotResult(
   };
 }
 
-/**
- * Build Live Result.
- * @param report - The report argument.
- * @param leadSections - The leadSections argument.
- * @param projects - The projects argument.
- * @param crossGroup - The crossGroup argument.
- * @param submissionCount - The submissionCount argument.
- * @param totalLeads - The totalLeads argument.
- * @param activePolicyCount - The activePolicyCount argument.
- */
 export function buildLiveResult(
   report: WeeklyReportRow,
   leadSections: WeeklyReportLiveSection[],
@@ -158,19 +121,13 @@ export function buildLiveResult(
   totalLeads: number,
   activePolicyCount: number,
 ): WeeklyReportRepositoryResult {
-  // Source product-card statuses from the floored read-model sections
-  // (`leadSections`), not the raw `report.sections[].projectStatuses`. The
-  // mapper already folds the author's own covering risks into each
-  // product's `trafficLight`, so an owned stage with status:null covered by
-  // a blocked/at-risk own risk reads red/yellow here too — the card no
-  // longer disagrees with this same payload's floored leadSections and
-  // escalations. Card membership stays driven by the scoped `projects` list
-  // (a group-owned product no lead has touched keeps its null card).
+  // Statuses come from the floored `leadSections` so a card cannot disagree
+  // with the escalations in this same payload; membership still comes from the
+  // scoped `projects` list, keeping untouched group-owned products present.
   const portfolioOverview = buildPortfolioOverview(projects, leadSections);
 
-  // Map the live Prisma rows to the read model, then run the SAME builder
-  // the published-snapshot path uses, so the Blocked-&-At-Risk panel emits
-  // byte-identical stage/product output on both surfaces.
+  // The SAME builder the published-snapshot path uses, so the Blocked-&-At-Risk
+  // panel emits identical stage/product output on both surfaces.
   const escalations = buildEscalationsFromReadSections(leadSections);
 
   return {

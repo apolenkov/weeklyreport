@@ -21,10 +21,6 @@ interface ConfirmDeleteDialogProps {
 
 // Initial focus lands on Cancel (least-destructive action) so a reflexive Enter
 // never deletes. Portal escapes overflow:hidden ancestors.
-/**
- * Confirm Delete Dialog.
- * @param props - The props argument.
- */
 export function ConfirmDeleteDialog({
   open,
   title,

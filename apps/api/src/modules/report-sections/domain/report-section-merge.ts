@@ -56,13 +56,6 @@ function withAggregatedTrafficLight(
   return { ...project, trafficLight };
 }
 
-/**
- * Merge Section.
- * @param section - The section argument.
- * @param input - The input argument.
- * @param nextStatus - The nextStatus argument.
- * @param late - The late argument.
- */
 export function mergeSection(
   section: ReportSectionReadModel,
   input: SectionWritePayload,

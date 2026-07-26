@@ -95,10 +95,6 @@ function ConfigureRemindersLink() {
   );
 }
 
-/**
- * Alert Bar.
- * @param props - The props argument.
- */
 export function AlertBar({
   pendingLeads,
   reportId,
@@ -127,6 +123,9 @@ export function AlertBar({
 
   return (
     <div
+      // No token exists for the amber alert surface: `--color-warning` is the
+      // border accent and is too saturated as a fill. The two-part shadow is the
+      // dashboard card elevation shared with kpi-cards and reopen-requests-card.
       className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[#fffbeb] p-3 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
       style={{ borderLeft: "3px solid var(--color-warning)" }}
     >

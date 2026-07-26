@@ -13,12 +13,15 @@ export const PRINT_STATE = {
   ready: "ready",
 } as const;
 
+// A4 portrait width: the shell must not exceed the print page it renders onto.
+const A4_PAGE_WIDTH = "210mm";
+
 export const SHELL_STYLE = {
   backgroundColor: "#ffffff",
   color: TEXT_PRIMARY,
   fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
   fontSize: "12px",
-  maxWidth: "210mm",
+  maxWidth: A4_PAGE_WIDTH,
   margin: "0 auto",
   padding: "24px",
 } as const;
@@ -27,10 +30,6 @@ interface PrintReportShellProps {
   readonly reportId: string;
 }
 
-/**
- * Loading Shell.
- * @param props - The props argument.
- */
 export function LoadingShell({ reportId }: PrintReportShellProps) {
   return (
     <main
@@ -43,10 +42,6 @@ export function LoadingShell({ reportId }: PrintReportShellProps) {
   );
 }
 
-/**
- * Error Shell.
- * @param props - The props argument.
- */
 export function ErrorShell({ reportId }: PrintReportShellProps) {
   return (
     <main data-print-state={PRINT_STATE.error} style={SHELL_STYLE} role="alert">
