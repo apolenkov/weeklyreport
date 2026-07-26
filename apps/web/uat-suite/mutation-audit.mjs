@@ -13,58 +13,189 @@
 //   node apps/web/uat-suite/mutation-audit.mjs --update-allowlist
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import ts from "typescript";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "../../..");
-const ROUTER_PATH = path.join(
-  REPO_ROOT,
-  "apps/api/src/infrastructure/trpc/trpc.router.ts",
-);
+const TRPC_DIR = path.join(REPO_ROOT, "apps/api/src/infrastructure/trpc");
+const ROUTER_PATH = path.join(TRPC_DIR, "trpc.router.ts");
+const ROUTERS_DIR = path.join(TRPC_DIR, "routers");
 const WEB_SRC = path.join(REPO_ROOT, "apps/web/src");
 const OUTPUT_MD = path.join(__dirname, "mutation-audit.md");
 const ALLOWLIST_PATH = path.join(__dirname, "mutation-audit.allowlist.json");
 
-const router = readFileSync(ROUTER_PATH, "utf8");
-
-function extractProcedures(src) {
-  const procs = [];
-  const lines = src.split("\n");
-  const stack = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const nsMatch = line.match(/^\s*(\w+):\s*router\(\{/);
-    if (nsMatch) {
-      stack.push({ name: nsMatch[1], depth: 1 });
-      continue;
-    }
-    if (stack.length > 0) {
-      const top = stack[stack.length - 1];
-      const opens = (line.match(/\{/g) || []).length;
-      const closes = (line.match(/\}/g) || []).length;
-      top.depth += opens - closes;
-      if (top.depth <= 0) {
-        stack.pop();
-        continue;
-      }
-    }
-    const procMatch = line.match(/^\s*(\w+):\s*\w*Procedure[\s\S]*$/);
-    if (procMatch && stack.length > 0) {
-      const lookAhead = lines.slice(i, i + 10).join(" ");
-      const kindMatch = lookAhead.match(/\.(query|mutation)\(/);
-      if (kindMatch) {
-        const ns = stack.map((s) => s.name).join(".");
-        procs.push({ namespace: ns, name: procMatch[1], kind: kindMatch[1] });
-      }
-    }
-  }
-  return procs;
+// Any shape this extractor cannot resolve is a hard stop, never a skip: the
+// previous line-based parser silently matched nothing after the router tree
+// was split into factories, so the gate passed on an empty set for months.
+function fail(message, node) {
+  console.error(`[mutation-audit] FAIL: ${message}${locationOf(node)}`);
+  process.exit(2);
 }
 
-const procedures = extractProcedures(router);
+function locationOf(node) {
+  if (!node) return "";
+  const source = node.getSourceFile();
+  const { line } = source.getLineAndCharacterOfPosition(node.getStart());
+  return ` (${path.relative(REPO_ROOT, source.fileName)}:${line + 1})`;
+}
+
+function parseSource(file) {
+  const source = readFileSync(file, "utf8");
+  // setParentNodes: getSourceFile()/getStart() on nested nodes drive `fail`.
+  return ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+}
+
+function routerSourceFiles() {
+  const nested = readdirSync(ROUTERS_DIR, { recursive: true })
+    .filter((rel) => rel.endsWith(".ts") && !rel.endsWith(".test.ts"))
+    .map((rel) => path.join(ROUTERS_DIR, rel));
+  return [ROUTER_PATH, ...nested];
+}
+
+// The expression a factory hands back: `=> router({…})` or a `return` in a block.
+function returnedExpression(fn) {
+  if (!fn.body) return null;
+  if (!ts.isBlock(fn.body)) return fn.body;
+  return fn.body.statements.find(ts.isReturnStatement)?.expression ?? null;
+}
+
+// What a name stands for once resolved: a function contributes what it
+// returns, any other binding contributes its initializer.
+function declaredValue(initializer) {
+  const isFunction =
+    ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer);
+  return isFunction ? returnedExpression(initializer) : initializer;
+}
+
+function namedDeclaration(node) {
+  if (ts.isFunctionDeclaration(node) && node.name) {
+    return { name: node.name.text, expr: returnedExpression(node) };
+  }
+  const isNamedBinding =
+    ts.isVariableDeclaration(node) &&
+    ts.isIdentifier(node.name) &&
+    node.initializer;
+  if (!isNamedBinding) return null;
+  return { name: node.name.text, expr: declaredValue(node.initializer) };
+}
+
+// Names are file-local in source but global here; ambiguity fails loud below
+// rather than resolving to whichever declaration was parsed last.
+function declarationsIn(source) {
+  const found = [];
+  const visit = (node) => {
+    const declaration = namedDeclaration(node);
+    if (declaration) found.push(declaration);
+    ts.forEachChild(node, visit);
+  };
+  ts.forEachChild(source, visit);
+  return found;
+}
+
+const DECLARATIONS = routerSourceFiles()
+  .map(parseSource)
+  .flatMap(declarationsIn)
+  .reduce(
+    (map, declaration) =>
+      map.set(declaration.name, [
+        ...(map.get(declaration.name) ?? []),
+        declaration.expr,
+      ]),
+    new Map(),
+  );
+
+function lookupDeclaration(name, node) {
+  const matches = DECLARATIONS.get(name) ?? [];
+  if (matches.length === 1) return matches[0];
+  const reason =
+    matches.length === 0
+      ? `unknown router binding \`${name}\``
+      : `ambiguous router binding \`${name}\` (${matches.length} declarations)`;
+  return fail(reason, node);
+}
+
+function resolveCall(expr) {
+  const callee = expr.expression;
+  if (ts.isPropertyAccessExpression(callee)) {
+    const kind = callee.name.text;
+    if (kind === "query" || kind === "mutation")
+      return { type: "procedure", kind };
+    return null;
+  }
+  if (!ts.isIdentifier(callee)) return null;
+  if (callee.text === "router") return resolveExpression(expr.arguments[0]);
+  return resolveExpression(lookupDeclaration(callee.text, callee));
+}
+
+// A namespace (`router({…})` or the bare object a `*Procedures` factory
+// returns) or a single procedure — a factory call looks identical either way
+// at the call site, so only its return expression settles which.
+function resolveExpression(expr) {
+  if (!expr) return null;
+  if (ts.isCallExpression(expr)) return resolveCall(expr);
+  if (ts.isIdentifier(expr)) {
+    return resolveExpression(lookupDeclaration(expr.text, expr));
+  }
+  if (ts.isObjectLiteralExpression(expr)) {
+    return { type: "namespace", entries: expr.properties.flatMap(entriesOf) };
+  }
+  return null;
+}
+
+function entriesOf(property) {
+  if (ts.isPropertyAssignment(property)) {
+    return [{ name: property.name.getText(), expr: property.initializer }];
+  }
+  if (ts.isShorthandPropertyAssignment(property)) {
+    return [{ name: property.name.text, expr: property.name }];
+  }
+  if (!ts.isSpreadAssignment(property)) {
+    return fail("unsupported router member", property);
+  }
+  const spread = resolveExpression(property.expression);
+  if (spread?.type !== "namespace") {
+    return fail("spread member is not a procedure group", property);
+  }
+  return spread.entries;
+}
+
+function flattenProcedures(node, trail) {
+  if (node.type === "procedure") {
+    return [
+      {
+        namespace: trail.slice(0, -1).join("."),
+        name: trail.at(-1),
+        kind: node.kind,
+      },
+    ];
+  }
+  return node.entries.flatMap((entry) => {
+    const resolved =
+      resolveExpression(entry.expr) ??
+      fail(
+        `cannot classify \`${[...trail, entry.name].join(".")}\``,
+        entry.expr,
+      );
+    return flattenProcedures(resolved, [...trail, entry.name]);
+  });
+}
+
+// Namespaces come from how createAppRouter composes the factories, so a
+// reported name matches what a web caller writes: trpc.<namespace>.<procedure>.
+function extractProcedures() {
+  const root = resolveExpression(lookupDeclaration("createAppRouter"));
+  if (root?.type !== "namespace") {
+    return fail("createAppRouter does not resolve to a router");
+  }
+  return flattenProcedures(root, []);
+}
+
+const procedures = extractProcedures();
 const queries = procedures.filter((p) => p.kind === "query");
 const mutations = procedures.filter((p) => p.kind === "mutation");
 
@@ -107,15 +238,25 @@ const audits = mutations.map((m) => {
       "",
     )
     .toLowerCase();
-  const namedConsumer = sameNsQueries.find((q) =>
-    q.name.toLowerCase().includes(stem.slice(0, 4)),
-  );
+  // An empty stem would make `includes("")` true for every sibling query, so a
+  // mutation named exactly `publish` or `save` would match unconditionally.
+  const stemKey = stem.slice(0, 4);
+  const namedConsumer =
+    stemKey === ""
+      ? undefined
+      : sameNsQueries.find((q) => q.name.toLowerCase().includes(stemKey));
   const refCount = gripCount(`${m.namespace.split(".").pop()}.${m.name}`);
 
-  let status;
-  if (hasList || namedConsumer) status = "VERIFIED";
-  else if (refCount > 0) status = "PARTIAL";
-  else status = "BLACK HOLE";
+  // Whether the web app calls this mutation decides; the sibling-query
+  // heuristics only say whether the caller can read the result back. Consulting
+  // them first is what let a procedure with zero consumers report VERIFIED
+  // because some unrelated `list*` query happened to share its namespace.
+  const status =
+    refCount === 0
+      ? "BLACK HOLE"
+      : hasList || namedConsumer
+        ? "VERIFIED"
+        : "PARTIAL";
 
   return {
     procedure: `${m.namespace}.${m.name}`,
