@@ -38,10 +38,7 @@ function AddItemButton({
 // Read-only sections pass `null`, not an empty element: AccordionSection keys
 // its chevron placement off the presence of the actions slot.
 /**
- * Add Item Action.
- * @param readOnly - The readOnly argument.
- * @param onClick - The onClick argument.
- * @param products - The products argument.
+ * Actions slot for the add-item control (null when read-only).
  */
 export function addItemAction(
   readOnly: boolean,
