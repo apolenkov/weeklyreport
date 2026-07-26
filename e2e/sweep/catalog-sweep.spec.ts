@@ -145,9 +145,8 @@ function renderReport(role: DbRole, results: RouteResult[]): string {
 const catalogs = loadCatalogs();
 
 for (const catalog of catalogs) {
-  // Phase 1 is report-only by contract (see the file header): findings are
-  // written to a Markdown report a human reads, and the run must stay green so
-  // every role still gets a report. An assertion here would defeat that.
+  // Report-only by contract (see the file header): the run must stay green so
+  // every role still gets its report, which an assertion here would defeat.
   // eslint-disable-next-line sonarjs/assertions-in-tests -- report-only sweep; the blocking gate is phase 2
   test(`sweep: ${catalog.role}`, async ({ page }, testInfo) => {
     const results: RouteResult[] = [];

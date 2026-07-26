@@ -40,6 +40,7 @@ export default function globalSetup(): void {
   // Prisma 7 does not auto-invoke the configured seed command after a reset.
   // Seed explicitly so dev-login cannot create ad-hoc records that replace
   // the deterministic users and reports required by cross-role specs.
+
   // argv form, not a shell string: nothing here is interpolated into a command
   // line, so the database name cannot become part of the invocation.
   const runPrisma = (...args: readonly string[]): void => {

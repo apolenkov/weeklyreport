@@ -38,17 +38,13 @@ ruleTester.run("no-comment-archaeology", noCommentArchaeology, {
     `logger.warn("${slug("AUTH", "08")}");`,
     // A non-test call with a string first argument is not a test title.
     `format("${slug("SC", "160")} regression");`,
-    // "previously" about DATA is not archaeology. Widening the prior-state
-    // pattern to a bare `previously` lit up twelve of these at once, all
-    // describing a value's history rather than the code's.
+    // `previously` about DATA is not archaeology: these describe a value's
+    // history, not the code's.
     "// Cursor is a previously returned row id (valid keyset input).",
     "// Do not clear a previously-stamped late flag on the reopen path.",
     "// `from: null` means a deadline was set on a previously deadline-less period.",
-    // These read as archaeology and are not. A `was <verb>` frame was tried to
-    // separate them and does not: every one below is a legitimate sentence
-    // about data or about what the code does now, in a repo whose domain is
-    // draft/submitted/published. They stay pinned so the pattern is not
-    // re-widened to "catch" them.
+    // Honest sentences that read like archaeology, in a domain built on
+    // draft/submitted/published. Pinned so the patterns above stay narrow.
     "// Live rows can never be rewritten by a save that read a stale status.",
     "// The URL was rewritten by the proxy before the handler saw it.",
     "// The bearer token was extracted from the Authorization header.",

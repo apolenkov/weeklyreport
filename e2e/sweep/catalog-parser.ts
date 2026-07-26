@@ -11,13 +11,9 @@
 // the catalog identically.
 // ============================================================================
 
-// Mirrors the shared `Role`/`DbRole` union (role-type spec). This file is a
-// plain-node entrypoint under `tsconfig.scripts.json`, whose `paths` is
-// deliberately empty because Node resolves these imports itself and no
-// workspace link exists at the repo root — an import of @customreport/shared
-// typechecks nowhere and throws at runtime. The four tokens stay inline, and
-// this is now the ONE role mirror in the e2e tree: every other reader gets the
-// vocabulary through this parser.
+// Mirrors the shared `Role`/`DbRole` union (role-type spec), inline because
+// this is a plain-node entrypoint: `tsconfig.scripts.json` empties `paths`, no
+// workspace link reaches the root, so the shared import cannot resolve here.
 const CANONICAL_ROLES = ["lead", "head", "admin", "viewer"] as const;
 
 type Role = (typeof CANONICAL_ROLES)[number];
