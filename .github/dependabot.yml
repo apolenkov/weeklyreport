@@ -17,6 +17,20 @@ updates:
         patterns:
           - "@opentelemetry/*"
 
+  # Without this the base images are bumped by nothing: Dockerfile.web sat on
+  # Node 25 for eight weeks after its end of life. Grouped so both images move
+  # together — check-runtime-node-sync fails a push that bumps only one.
+  - package-ecosystem: "docker"
+    directories:
+      - "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      docker-base-images:
+        patterns:
+          - "*"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
