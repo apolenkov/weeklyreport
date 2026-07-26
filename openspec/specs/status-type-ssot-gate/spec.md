@@ -23,18 +23,31 @@ stay legal), or a literal set containing all four of `"lead"`, `"head"`,
 per axis as `Role`/`DbRole`, per the `role-type` spec's own exemptions:
 runtime validators/presentation-ordered lists enumerating VALUES while
 typing from shared, the Prisma seed toolchain's one commented literal
-mirror, the e2e tree, and catalog YAML). The gate MUST cover test files.
-The only exemptions are the SSOT files themselves
-(`packages/shared/src/schemas/report-primitives.schema.ts`,
+mirror, the e2e tree, and catalog YAML).
+
+The gate MUST cover test files. The only exemptions are the SSOT files
+themselves (`packages/shared/src/schemas/report-primitives.schema.ts`,
 `packages/shared/src/schemas/canonical-status.ts`,
-`packages/shared/src/schemas/auth.ts`), the documented literal mirror
-`prisma/seed-constants.ts`, and the e2e tree's self-contained role mirrors
-(`e2e/integration/fixtures.ts`, `e2e/sweep/catalog-sweep.spec.ts`,
-`e2e/sweep/helpers/dev-auth.ts` — the `role-type` spec's e2e exemption), all
-hardcoded centrally in the gate; there is no inline annotation escape. The
-matching MUST be over the syntax tree rather than source text, and MUST run
-with inline configuration disabled so no comment can suppress a verdict; a
-file the gate cannot parse or does not lint MUST fail rather than pass.
+`packages/shared/src/schemas/auth.ts`) and the documented literal mirror
+`prisma/seed-constants.ts` — all hardcoded centrally in the gate, with no
+inline annotation escape.
+
+The e2e tree needs no exemption of its own. The gate DOES walk `e2e/**` (a
+union planted there is reported), and the tree's one remaining role mirror,
+`e2e/sweep/catalog-parser.ts`, is an `as const` VALUE list rather than a type
+re-declaration — out of scope by construction, not by allowlist. That mirror
+is load-bearing: the file is a plain-node entrypoint under
+`tsconfig.scripts.json`, whose `paths` is deliberately empty because Node
+resolves its imports itself and no workspace link reaches the repo root. Every
+other e2e reader takes the vocabulary from that parser or from
+`@customreport/shared`.
+
+The matching MUST be over the syntax tree rather than source text, and MUST
+run with inline configuration disabled so no comment can suppress a verdict; a
+file the gate cannot parse or does not lint MUST fail rather than pass. The
+syntax-tree requirement is what keeps fixture source inside string literals
+(the gate's own test file declares vocabularies that way) from being read as
+declarations, which a text scan cannot distinguish.
 
 #### Scenario: a full traffic-light union is re-declared
 
@@ -83,7 +96,7 @@ file the gate cannot parse or does not lint MUST fail rather than pass.
 
 The gate MUST run from lint-staged on every staged `.ts`/`.tsx` file
 (including tests) and from the root `lint` composite as a repo-wide `--all`
-sweep (`lint:status-literal-unions`), so hook bypasses and rebases cannot
+sweep (`lint:ssot-gate`), so hook bypasses and rebases cannot
 land violations silently.
 
 #### Scenario: commit-time gating
