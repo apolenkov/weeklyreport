@@ -193,6 +193,36 @@ describe("useLeadFormAutosave", () => {
     expect(calls).toHaveLength(1);
   });
 
+  it("does not restart the debounce window on a re-render that leaves the payload unchanged", async () => {
+    const { wrapper, calls } = buildHarness();
+    const { rerender } = renderHook(
+      ({ payload }: { payload: DraftSavePayload | null }) =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload,
+          enabled: true,
+          version: 1,
+          // A fresh callback identity every render, like a real caller.
+          onVersionChange: () => undefined,
+          debounceMs: 3000,
+        }),
+      { wrapper, initialProps: { payload: makePayload("a") } },
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    // New object, deep-equal content: the debounce must keep counting from the
+    // original edit rather than resetting.
+    rerender({ payload: makePayload("a") });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    expect(calls).toHaveLength(1);
+  });
+
   it('sets state="saved" and lastSavedAt to a Date after success', async () => {
     const { wrapper } = buildHarness();
     const { result } = renderHook(

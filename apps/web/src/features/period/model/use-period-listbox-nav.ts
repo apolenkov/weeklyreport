@@ -4,26 +4,13 @@ import {
   type SetStateAction,
   type TouchEvent as ReactTouchEvent,
   useCallback,
-  useEffect,
   useRef,
   useState,
 } from "react";
 
-import { useDialogFocus } from "../../../lib/use-dialog-focus";
-import { useDismissOnOutsidePointer } from "../../../lib/use-dismiss-on-outside-pointer";
-import {
-  ANCHORED_PANEL_GAP_PX,
-  useAnchoredPanelPosition,
-} from "./use-anchored-panel-position";
+import { useListboxPanelBehavior } from "./use-listbox-panel-behavior";
 
 const SWIPE_THRESHOLD_PX = 50;
-
-// Left-anchored and width-matched so the panel lines up under the trigger.
-const leftAnchoredPosition = (rect: DOMRect) => ({
-  top: rect.bottom + ANCHORED_PANEL_GAP_PX,
-  left: rect.left,
-  width: rect.width,
-});
 
 interface PeriodListboxNavArgs {
   readonly instanceId: string;
@@ -86,20 +73,6 @@ function useListboxSelection({
     },
     openListbox,
   };
-}
-
-// Scroll active option into view; block: "nearest" avoids hover-driven panel jerks.
-function useActiveOptionScroll(
-  open: boolean,
-  activeIdx: number,
-  optionIdPrefix: string,
-): void {
-  useEffect(() => {
-    if (!open) return;
-    document
-      .getElementById(`${optionIdPrefix}${activeIdx}`)
-      ?.scrollIntoView({ block: "nearest" });
-  }, [open, activeIdx, optionIdPrefix]);
 }
 
 interface ListboxKeyHandlerArgs {
@@ -181,10 +154,6 @@ function useSwipeNavigation(onPrev: () => void, onNext: () => void) {
 
 // PeriodNavigator listbox + swipe: trigger + portaled panel (native <option>
 // can't host badges). Focus stays on the trigger; highlight via aria-activedescendant.
-/**
- * Use Period Listbox Nav.
- * @param props - The props argument.
- */
 export function usePeriodListboxNav({
   instanceId,
   currentIndex,
@@ -208,28 +177,14 @@ export function usePeriodListboxNav({
     navigateTo,
   });
   const { open, setOpen } = selection;
-  const panelPos = useAnchoredPanelPosition(
+  const panelPos = useListboxPanelBehavior({
     open,
+    setOpen,
+    activeIdx: selection.activeIdx,
+    optionIdPrefix,
     triggerRef,
-    leftAnchoredPosition,
-  );
-
-  // containerRef = trigger (not panel): Escape/restore only; no focus into the list.
-  useDialogFocus({
-    open,
-    onClose: () => setOpen(false),
-    containerRef: triggerRef,
-    triggerRef,
+    panelRef,
   });
-
-  // The panel is portalled, so a press inside either the trigger or the panel
-  // keeps the listbox open.
-  useDismissOnOutsidePointer({
-    open,
-    refs: [triggerRef, panelRef],
-    onDismiss: () => setOpen(false),
-  });
-  useActiveOptionScroll(open, selection.activeIdx, optionIdPrefix);
 
   const keyHandlers = createListboxKeyHandlers({
     open,
