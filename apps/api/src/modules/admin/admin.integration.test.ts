@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { composeName, type ReminderPolicy } from "@customreport/shared";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
@@ -993,34 +993,6 @@ describe("AdminPrismaRepository (integration)", () => {
     ).not.toBeNull();
   });
 
-  it("upsertPeriod touches only the named period; a concurrent user survives", async () => {
-    const jit = await prisma.user.create({
-      data: {
-        ...jitUserData,
-        reportingGroupId: testData.lead.reportingGroupId,
-      },
-    });
-
-    // Edit the seeded period (update branch) — no whole-snapshot rewrite.
-    await repo.upsertPeriod({
-      id: testData.report.id,
-      periodStart: new Date("2026-04-07"),
-      periodEnd: new Date("2026-04-13"),
-      deadline: new Date("2026-04-12"),
-      status: "draft",
-    });
-
-    expect(
-      await prisma.user.findUnique({ where: { id: jit.id } }),
-    ).not.toBeNull();
-    const period = expectDefined(
-      await prisma.report.findUnique({ where: { id: testData.report.id } }),
-    );
-    expect(expectDefined(period.deadline).toISOString()).toBe(
-      new Date("2026-04-12").toISOString(),
-    );
-  });
-
   it("saveStageAssignment resolves two concurrent reassigns atomically, leaving one row", async () => {
     // Concurrent first-assigns of the same stage/project must leave one row
     // (composite-unique upsert), not two creates with a raw P2002.
@@ -1051,34 +1023,5 @@ describe("AdminPrismaRepository (integration)", () => {
     expect([testData.head.id, testData.lead.id]).toContain(
       expectDefined(rows[0]).userId,
     );
-  });
-
-  it("upsertPeriod that CREATES a period runs the post-commit applicator", async () => {
-    const applyToPeriod = vi.fn(() =>
-      Promise.resolve({ created: 0, updated: 0, skipped: 0 }),
-    );
-    const repoWithApplicator = new AdminPrismaRepository(
-      prisma as never,
-      {
-        applyToPeriod,
-      } as never,
-    );
-
-    const deadline = new Date("2026-05-05T15:00:00.000Z");
-    await repoWithApplicator.upsertPeriod({
-      id: TEST_IDS.targetReport,
-      periodStart: new Date("2026-05-01"),
-      periodEnd: new Date("2026-05-07"),
-      deadline,
-      status: "draft",
-    });
-
-    expect(
-      await prisma.report.findUnique({ where: { id: TEST_IDS.targetReport } }),
-    ).not.toBeNull();
-    expect(applyToPeriod).toHaveBeenCalledWith({
-      id: TEST_IDS.targetReport,
-      deadline,
-    });
   });
 });

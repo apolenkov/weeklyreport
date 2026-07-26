@@ -134,6 +134,7 @@ function renderPageHook(role: SessionUser["role"] = "head") {
     { path: ["period", "publish"], mutation: true },
     { path: ["period", "reopen"], mutation: true },
     { path: ["archive", "archiveReport"], mutation: true },
+    { path: ["archive", "unarchiveReport"], mutation: true },
   ]);
 
   const qc = new QueryClient({

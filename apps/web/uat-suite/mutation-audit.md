@@ -1,35 +1,24 @@
 # Mutation Consumer Audit
 
-Mutations defined: 50
+Mutations defined: 48
 Queries defined: 44
 
-- VERIFIED: 33
+- VERIFIED: 39
 - PARTIAL: 6
-- BLACK HOLE: 11 (11 unexpected)
-
-## ⚠ Unexpected black holes (CI fail)
-
-Mutations with no consumer + not in allowlist. Wire a consumer or add to mutation-audit.allowlist.json with justification.
-
-| Procedure                  | Same-NS queries | Web refs |
-| -------------------------- | --------------- | -------: |
-| admin.testTelegramSend     | 15              |        0 |
-| admin.savePeriod           | 15              |        0 |
-| admin.saveReminderRule     | 15              |        0 |
-| admin.deleteReminderRule   | 15              |        0 |
-| archive.unarchiveReport    | 2               |        0 |
-| reminders.execute          | 1               |        0 |
-| projectActivity.create     | 1               |        0 |
-| projectActivity.update     | 1               |        0 |
-| projectActivity.archive    | 1               |        0 |
-| projectActivity.attachLead | 1               |        0 |
-| projectActivity.detachLead | 1               |        0 |
+- BLACK HOLE: 3 (0 unexpected)
 
 ## ✓ Allowlisted (intentional)
 
-| Procedure         | Reason                                                                                                                                        |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| carryOver.execute | Cron-triggered: copies forward unfinished items week-over-week. No UI consumer; user sees the result as carry-over rows in next week's items. |
+| Procedure                  | Reason                                                                                                                                                                                                                                                             |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| admin.testTelegramSend     | Admin-only smoke-test producer for a transport that is deployed but not yet activated (seeds-only); pinned by a normative scenario in openspec/specs/queue-worker-architecture/spec.md.                                                                            |
+| admin.saveReminderRule     | Deliberate soft-deprecation tombstone superseded by admin.savePolicy; admin.contract.test.ts asserts it throws METHOD_NOT_SUPPORTED and never reaches the service.                                                                                                 |
+| projectActivity.create     | No consumer because the admin Activities tab is unbuilt, not because none is wanted — ADR 0012 mandates it. Tracked in openspec/changes/2026-07-26-unconsumed-write-surface.                                                                                       |
+| projectActivity.update     | Same unbuilt admin Activities tab; the join-row reconciliation this procedure performs is reachable only from apps/api tests. Tracked in openspec/changes/2026-07-26-unconsumed-write-surface.                                                                     |
+| projectActivity.archive    | Same unbuilt admin Activities tab; ProjectActivity.archived exists and is honored by the read path, so activities can be created by seeds but never retired from any product surface. Tracked in openspec/changes/2026-07-26-unconsumed-write-surface.             |
+| projectActivity.attachLead | Same unbuilt admin Activities tab. With detachLead, the only non-seed writer of ProjectActivityLead — ADR 0014 requires admin-provisioned attachment. Tracked in openspec/changes/2026-07-26-unconsumed-write-surface.                                             |
+| projectActivity.detachLead | Paired control with attachLead in the same unbuilt admin Activities tab. Tracked in openspec/changes/2026-07-26-unconsumed-write-surface.                                                                                                                          |
+| admin.deleteReminderRule   | Deliberate soft-deprecation tombstone paired with admin.saveReminderRule; admin.contract.test.ts asserts it throws METHOD_NOT_SUPPORTED and never reaches the service. Rules are derived from policies and die only with them, so having no consumer is the point. |
 
 ## ◐ Partial coverage (informational)
 

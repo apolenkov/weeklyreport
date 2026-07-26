@@ -1913,6 +1913,19 @@ describe("weeklyReportReadModelSchema", () => {
     expect(result.hasActiveReminderRule).toBe(false);
   });
 
+  it("defaults archived to false so an omitted flag never reads as archived", () => {
+    const result = weeklyReportReadModelSchema.parse(validWeeklyReport());
+    expect(result.archived).toBe(false);
+  });
+
+  it("carries archived=true through for an archived report", () => {
+    const result = weeklyReportReadModelSchema.parse({
+      ...validWeeklyReport(),
+      archived: true,
+    });
+    expect(result.archived).toBe(true);
+  });
+
   it("rejects negative submissionCount", () => {
     const result = weeklyReportReadModelSchema.safeParse({
       ...validWeeklyReport(),

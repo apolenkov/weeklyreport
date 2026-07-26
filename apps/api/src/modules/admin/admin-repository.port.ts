@@ -10,7 +10,6 @@ import type {
   PeriodStatus,
   ReminderPolicy,
   ReportingGroup,
-  ReportPeriod,
   ReportStatus,
   StageAssignment,
   UserSession,
@@ -49,7 +48,6 @@ export interface AdminRepository {
   removeProject(projectId: string): Promise<void>;
   upsertReminderRule(rule: AdminReminderRule): Promise<void>;
   removeReminderRule(ruleId: string): Promise<void>;
-  upsertPeriod(period: ReportPeriod): Promise<void>;
   getSettings(): Promise<AppSettings>;
   updateSettings(data: Partial<AppSettings>): Promise<AppSettings>;
   saveReportingGroup(group: ReportingGroup): Promise<ReportingGroup>;

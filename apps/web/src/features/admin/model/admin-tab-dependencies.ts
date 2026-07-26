@@ -1,10 +1,12 @@
-// Order is deliberate: products → periods → reminders mirrors the data flow
-// (a period scoped to products drives reminders), and 'jobs' sits after
-// 'reopen' so failure triage lives beside the other reactive admin work.
+// Order is deliberate: products → activities → periods → reminders mirrors the
+// data flow (the reporting units a period is scoped to drive reminders), and
+// 'jobs' sits after 'reopen' so failure triage lives beside the other reactive
+// admin work.
 export const ADMIN_TABS = [
   "users",
   "groups",
   "products",
+  "activities",
   "periods",
   "reminders",
   "reopen",
@@ -24,6 +26,9 @@ export const ADMIN_TAB_QUERY_DEPENDENCIES = {
   users: { snapshot: true, settings: false },
   groups: { snapshot: true, settings: false },
   products: { snapshot: true, settings: false },
+  // The activity list is its own query; the snapshot supplies the groups,
+  // leads, and products the tab picks from.
+  activities: { snapshot: true, settings: false },
   periods: { snapshot: false, settings: false },
   reminders: { snapshot: true, settings: true },
   reopen: { snapshot: false, settings: false },

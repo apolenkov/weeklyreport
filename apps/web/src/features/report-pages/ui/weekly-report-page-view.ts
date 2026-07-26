@@ -29,6 +29,7 @@ export interface WeeklyReportPageView {
   readonly periodId: string;
   readonly reportId: string;
   readonly periodStatus: PeriodStatus;
+  readonly archived: boolean;
   readonly periodLabel: string;
   readonly periods: ReportPeriod[];
   readonly submitted: number;
@@ -135,6 +136,7 @@ function derivePeriodFacet(period: MappedWeeklyReport["period"]) {
     periodId: period.id,
     reportId: period.reportId,
     periodStatus: period.periodStatus,
+    archived: period.archived,
     periodLabel: joinPeriodLabel(period.weekLabel, period.dateRange),
     periods: buildFallbackPeriodNav(period),
   };

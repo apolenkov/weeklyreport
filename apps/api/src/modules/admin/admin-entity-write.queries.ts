@@ -9,7 +9,6 @@ import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation";
-import type { PolicyApplicatorService } from "../reminders/index.js";
 import { ensureFallbackReportingGroup } from "./admin-group.queries";
 import { AdminUserConflictError } from "./admin-shared.js";
 import { resolveLifecycle } from "./snapshot-lifecycle.js";
@@ -199,34 +198,4 @@ export async function writePeriodRow(
   }
   await client.report.create({ data: { id: period.id, ...data } });
   return { created: true };
-}
-
-export async function upsertPeriod(
-  prisma: PrismaService,
-  policyApplicator: PolicyApplicatorService | undefined,
-  period: ReportPeriod,
-): Promise<void> {
-  const writeInTransaction = () =>
-    prisma.$transaction((tx) => writePeriodRow(tx, period));
-  const { created } = await writeInTransaction().catch(
-    async (error: unknown) => {
-      if (
-        !isUniqueViolation(error, {
-          index: "Report_pkey",
-          columns: ["id"],
-        })
-      ) {
-        throw error;
-      }
-      return writeInTransaction();
-    },
-  );
-  // Post-commit only: applicator failure must not roll the period back.
-  // Deadline-less periods get no rules (offsets are deadline-relative).
-  if (created && policyApplicator && period.deadline !== null) {
-    await policyApplicator.applyToPeriod({
-      id: period.id,
-      deadline: period.deadline,
-    });
-  }
 }

@@ -27,24 +27,6 @@ export async function queryInScopeSectionId(
   return section?.id ?? null;
 }
 
-export async function queryInScopeDraftSectionId(
-  prisma: PrismaService,
-  session: UserSession,
-  reportId: string,
-  recipientEmail: string,
-): Promise<string | null> {
-  const section = await prisma.reportSection.findFirst({
-    where: {
-      reportId,
-      status: "draft",
-      author: { email: recipientEmail },
-      AND: [groupScopeFilter(session, "reportSection")],
-    },
-    select: { id: true },
-  });
-  return section?.id ?? null;
-}
-
 export async function queryInScopeSectionAuthorEmails(
   prisma: PrismaService,
   session: UserSession,

@@ -48,6 +48,7 @@ function buildWeeklyReportPeriod(
     id: api.reportId,
     reportId: api.reportId,
     periodStatus: api.periodStatus,
+    archived: api.archived,
     weekLabel: api.weekLabel ?? formatWeekLabel(api.periodStart),
     dateRange: formatPeriodRangeWithYear(api.periodStart, api.periodEnd),
     isCurrent: api.periodStatus !== "published",

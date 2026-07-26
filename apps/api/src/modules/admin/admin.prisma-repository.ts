@@ -10,7 +10,6 @@ import type {
   PeriodStatus,
   ReminderPolicy,
   ReportingGroup,
-  ReportPeriod,
   ReportStatus,
   StageAssignment,
   UserSession,
@@ -153,14 +152,6 @@ export class AdminPrismaRepository implements AdminRepository {
 
   removeReminderRule(ruleId: string): Promise<void> {
     return entityWriteQueries.removeReminderRule(this.prisma, ruleId);
-  }
-
-  upsertPeriod(period: ReportPeriod): Promise<void> {
-    return entityWriteQueries.upsertPeriod(
-      this.prisma,
-      this.policyApplicator,
-      period,
-    );
   }
 
   // ---- Periods ----

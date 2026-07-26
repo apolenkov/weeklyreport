@@ -161,7 +161,6 @@ function createRepository(
     removeProject: notExercised,
     upsertReminderRule: notExercised,
     removeReminderRule: notExercised,
-    upsertPeriod: notExercised,
   };
 }
 

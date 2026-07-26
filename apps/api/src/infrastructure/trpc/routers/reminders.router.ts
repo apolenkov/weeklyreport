@@ -14,31 +14,6 @@ export interface RemindersRouterDeps {
   weeklyReportService: Pick<WeeklyReportService, "getCurrentEditableId">;
 }
 
-function createExecuteProcedure(deps: RemindersRouterDeps) {
-  return headProcedure
-    .input(
-      z.object({
-        ruleId: z.uuid(),
-        recipientEmail: z.email(),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      try {
-        await deps.remindersService.scope.authorizeExecute(
-          ctx.session,
-          input.ruleId,
-          input.recipientEmail,
-        );
-        return await deps.remindersService.requestReminderExecution(
-          input.ruleId,
-          input.recipientEmail,
-        );
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    });
-}
-
 function createListExecutionsProcedure(deps: RemindersRouterDeps) {
   return headProcedure
     .input(
@@ -116,7 +91,6 @@ function createDispatchPendingProcedure(deps: RemindersRouterDeps) {
 
 export function createRemindersRouter(deps: RemindersRouterDeps) {
   return router({
-    execute: createExecuteProcedure(deps),
     listExecutions: createListExecutionsProcedure(deps),
     dispatchPending: createDispatchPendingProcedure(deps),
   });

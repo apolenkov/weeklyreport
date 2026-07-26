@@ -4,6 +4,7 @@ import type { AdminTab } from "../model/admin-tab-dependencies";
 import type { MockReminder } from "../model/admin-types";
 import type { MappedAdminSnapshot, MockSettings } from "../model/admin-types";
 import { ActionLogTab } from "./action-log-tab";
+import { ActivitiesTab } from "./activities-tab";
 import { AdminQueryIssue } from "./admin-query-issue";
 import { AdminTabSkeleton } from "./admin-skeleton";
 import { GroupsTab } from "./groups-tab";
@@ -96,6 +97,15 @@ function SnapshotContent(props: AdminPanelContentProps) {
   if (props.activeTab === "groups") {
     return (
       <GroupsTab
+        groups={props.data.groups}
+        users={props.data.users}
+        products={props.data.products}
+      />
+    );
+  }
+  if (props.activeTab === "activities") {
+    return (
+      <ActivitiesTab
         groups={props.data.groups}
         users={props.data.users}
         products={props.data.products}

@@ -108,6 +108,7 @@ function makeWeeklyReportData(
     periodStart: new Date("2026-04-14T00:00:00Z"),
     periodEnd: new Date("2026-04-20T00:00:00Z"),
     periodStatus,
+    archived: false,
     weekLabel: "Week 16",
     submissionCount: 4,
     totalLeads: 6,
@@ -185,6 +186,7 @@ function renderPage(
     { path: ["review", "acknowledge"], mutation: true },
     { path: ["archive", "list"] },
     { path: ["archive", "archiveReport"], mutation: true },
+    { path: ["archive", "unarchiveReport"], mutation: true },
     { path: ["reports", "myHistory"] },
     { path: ["reports", "getActive"] },
     { path: ["leadForm", "byPeriod"] },
@@ -881,6 +883,7 @@ describe("WeeklyReportPage — load-failure state (driver finding 1)", () => {
       { path: ["pdfExport", "request"], mutation: true },
       { path: ["pdfExport", "status"], query: null },
       { path: ["archive", "archiveReport"], mutation: true },
+      { path: ["archive", "unarchiveReport"], mutation: true },
     ]);
 
     const qc = new QueryClient({
@@ -1500,5 +1503,114 @@ describe("WeeklyReportPage — acknowledge placement", () => {
       within(band).getByRole("button", { name: /acknowledge/i }),
     ).toBeInTheDocument();
     expect(screen.queryByTestId("acknowledge-header")).not.toBeInTheDocument();
+  });
+});
+
+describe("WeeklyReportPage — Archive / Restore wiring", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  const ARCHIVE_BUTTON = /move this report to the archive/i;
+  const RESTORE_BUTTON = /restore this report from the archive/i;
+
+  it("offers Archive, not Restore, on a published report still out of the archive", async () => {
+    renderPage(makeWeeklyReportData("published"));
+
+    expect(
+      await screen.findByRole("button", { name: ARCHIVE_BUTTON }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: RESTORE_BUTTON }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers neither control while the period is still open", async () => {
+    renderPage(makeWeeklyReportData("open"));
+
+    await screen.findByRole("button", { name: /publish & lock/i });
+    expect(
+      screen.queryByRole("button", { name: ARCHIVE_BUTTON }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: RESTORE_BUTTON }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("swaps Archive for Restore once the report is archived", async () => {
+    renderPage({ ...makeWeeklyReportData("published"), archived: true });
+
+    expect(
+      await screen.findByRole("button", { name: RESTORE_BUTTON }),
+    ).toBeInTheDocument();
+    // Archiving leaves periodStatus published, so the Archive button would
+    // still match its old gate — offering it again could only fail.
+    expect(
+      screen.queryByRole("button", { name: ARCHIVE_BUTTON }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("clicking Restore fires archive.unarchiveReport with the report id", async () => {
+    const { captured } = renderPage({
+      ...makeWeeklyReportData("published"),
+      archived: true,
+    });
+    expectDefined(
+      captured["archive.unarchiveReport"],
+    ).mutationFn.mockResolvedValue({ success: true });
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: RESTORE_BUTTON }),
+    );
+
+    const restoreMutation = expectDefined(captured["archive.unarchiveReport"]);
+    await waitFor(() => {
+      expect(restoreMutation.mutationFn).toHaveBeenCalledTimes(1);
+    });
+    expect(restoreMutation.mutationFn.mock.calls[0]?.[0]).toEqual({
+      reportId: REPORT_ID,
+    });
+  });
+
+  it("restore busts the same caches archive does and confirms with a toast", async () => {
+    const { captured } = renderPage({
+      ...makeWeeklyReportData("published"),
+      archived: true,
+    });
+    expectDefined(
+      captured["archive.unarchiveReport"],
+    ).mutationFn.mockResolvedValue({ success: true });
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: RESTORE_BUTTON }),
+    );
+
+    await waitFor(() => {
+      expect(invalidateDashboard).toHaveBeenCalledTimes(1);
+    });
+    expect(toastSuccess).toHaveBeenCalledWith("Report restored");
+    // Restore only moves the report between lists; it changes no section data.
+    expect(invalidateLeadForm).not.toHaveBeenCalled();
+    expect(invalidateLeadHistory).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a failed restore as an error toast", async () => {
+    const { captured } = renderPage({
+      ...makeWeeklyReportData("published"),
+      archived: true,
+    });
+    expectDefined(
+      captured["archive.unarchiveReport"],
+    ).mutationFn.mockRejectedValue(new TRPCClientError("Report not found"));
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: RESTORE_BUTTON }),
+    );
+
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalledWith("Report not found");
+    });
+    expect(invalidateDashboard).not.toHaveBeenCalled();
   });
 });

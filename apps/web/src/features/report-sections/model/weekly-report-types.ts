@@ -94,6 +94,8 @@ export interface WeeklyReportPeriod {
   reportId: string;
   // Lifecycle state for Publish & Lock / Reopen toggle.
   periodStatus: WeeklyReportReadModel["periodStatus"];
+  // Orthogonal to periodStatus: an archived report stays "published".
+  archived: boolean;
   weekLabel: string;
   dateRange: string;
   isCurrent: boolean;

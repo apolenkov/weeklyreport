@@ -19,6 +19,7 @@ function baseReport(
     periodEnd: new Date("2026-04-20T00:00:00Z"),
     deadline: new Date("2026-04-17T15:00:00Z"),
     periodStatus: "open",
+    archived: false,
     weekLabel: "Week 16",
     submissionCount: 0,
     totalLeads: 1,

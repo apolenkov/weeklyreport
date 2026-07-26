@@ -63,14 +63,16 @@ is honored by the read path, meaning activities can be created but never retired
 **A restore path with no button.** `archive.unarchiveReport` has no consumer, and
 deletion is foreclosed: archived reports are required to stay restorable.
 
-**Two deliberate retentions.** `admin.testTelegramSend` is a smoke-test producer
+**Three deliberate retentions.** `admin.testTelegramSend` is a smoke-test producer
 for a transport that is deployed but not activated, pinned by a normative scenario.
-`admin.saveReminderRule` is a soft-deprecation tombstone whose contract test
-asserts it throws `METHOD_NOT_SUPPORTED` — the absence of a consumer is the point.
+`admin.saveReminderRule` and `admin.deleteReminderRule` are soft-deprecation
+tombstones whose contract tests assert they throw `METHOD_NOT_SUPPORTED` and never
+reach the service — the absence of a consumer is the point. `deleteReminderRule`
+was first written up below as an orphan, on a reading that predates the commit
+turning it into a tombstone; it belongs here instead.
 
-**Three orphans.** `admin.savePeriod`, `admin.deleteReminderRule` and
-`reminders.execute` survive migrations whose other half landed. Nothing pins them
-and nothing calls them.
+**Two orphans.** `admin.savePeriod` and `reminders.execute` survive migrations
+whose other half landed. Nothing pins them and nothing calls them.
 
 ## What Changes
 
@@ -78,20 +80,25 @@ The allowlist records all eleven with the specific reason each is there, and the
 stale `carryOver.execute` entry — a namespace that no longer exists — is removed.
 That makes the gate green **and** truthful: it now fails on a twelfth.
 
-Allowlisting is deliberately not the end state for nine of them. The three orphans
+Allowlisting is deliberately not the end state for eight of them. The two orphans
 want deleting and the six missing consumers want building, but both are product
 decisions about API surface, not refactoring, so they are recorded here rather
 than taken unilaterally in a quality pass.
 
 ## Tasks
 
-- [ ] Decide the three orphans: delete `admin.savePeriod`,
-      `admin.deleteReminderRule` and `reminders.execute`, or state what keeps them
+- [x] Decide the three orphans. `admin.savePeriod` and `reminders.execute` are
+      deleted, along with the service, repository and query methods that became
+      unreachable. `admin.deleteReminderRule` is kept: it is a tombstone, not an
+      orphan, and its allowlist entry now says so
 - [ ] Build the admin Activities tab — create, edit, archive, and a lead-attachment
       editor — modeled on the existing products tab and group-products editor.
       A new admin route trips the catalog-drift gate, so add the
       `e2e/catalog/admin.yaml` scenarios with it
-- [ ] Give `archive.unarchiveReport` its restore control
+- [x] Give `archive.unarchiveReport` its restore control. Restore sits beside
+      Archive in the head report toolbar; the weekly read model now carries
+      `archived`, which is what tells the two states apart, and its allowlist
+      entry is removed
 - [ ] Remove each procedure from the allowlist as its consumer lands
 - [ ] Revisit the `hasList` heuristic: it now only separates VERIFIED from PARTIAL,
       but 43 of 50 mutations still match it on a namespace coincidence, so PARTIAL

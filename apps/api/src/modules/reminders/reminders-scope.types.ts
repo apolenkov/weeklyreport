@@ -13,11 +13,6 @@ export interface RemindersScopeRepository {
     session: UserSession,
     reportId: string,
   ): Promise<string | null>;
-  findInScopeDraftSectionId(
-    session: UserSession,
-    reportId: string,
-    recipientEmail: string,
-  ): Promise<string | null>;
   listInScopeSectionAuthorEmails(
     session: UserSession,
     reportId: string,

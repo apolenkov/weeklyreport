@@ -35,7 +35,6 @@ import {
 import {
   queryActiveRuleForDispatch,
   queryDraftSectionsForDispatch,
-  queryInScopeDraftSectionId,
   queryInScopeLeadId,
   queryInScopeSectionAuthorEmails,
   queryInScopeSectionId,
@@ -65,19 +64,6 @@ export class RemindersPrismaRepository implements RemindersRepository {
     reportId: string,
   ): Promise<string | null> {
     return queryInScopeSectionId(this.prisma, session, reportId);
-  }
-
-  findInScopeDraftSectionId(
-    session: UserSession,
-    reportId: string,
-    recipientEmail: string,
-  ): Promise<string | null> {
-    return queryInScopeDraftSectionId(
-      this.prisma,
-      session,
-      reportId,
-      recipientEmail,
-    );
   }
 
   listInScopeSectionAuthorEmails(

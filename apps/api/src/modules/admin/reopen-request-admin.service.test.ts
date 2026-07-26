@@ -37,7 +37,6 @@ function createRepository(
     removeProject: unused,
     upsertReminderRule: unused,
     removeReminderRule: unused,
-    upsertPeriod: unused,
     getSettings: unused,
     updateSettings: unused,
     saveReportingGroup: unused,

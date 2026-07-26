@@ -13,8 +13,8 @@ export class ReminderDomainError extends Error {
 }
 
 /**
- * Thrown by every reminders scope-assertion check (`authorizeExecute` /
- * `resolveExecutionsRecipientAllowlist` / `dispatchPendingReminders`).
+ * Thrown by every reminders scope-assertion check
+ * (`resolveExecutionsRecipientAllowlist` / `dispatchPendingReminders`).
  * Mapped to `FORBIDDEN` in `trpc.error-mapper.ts`; the message is the
  * caller-visible reason.
  */

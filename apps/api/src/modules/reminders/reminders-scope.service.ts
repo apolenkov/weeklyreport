@@ -60,23 +60,6 @@ export class RemindersScopeService {
     }
   }
 
-  // Closes the open-mailer hole: the recipient must be an in-scope
-  // draft-section author on the rule's report, not an arbitrary address.
-  private async assertDraftRecipientInScope(
-    session: UserSession,
-    reportId: string,
-    recipientEmail: string,
-  ): Promise<void> {
-    const sectionId = await this.repository.findInScopeDraftSectionId(
-      session,
-      reportId,
-      recipientEmail,
-    );
-    if (!sectionId) {
-      throw new ReminderScopeError("reminder-recipient-out-of-scope");
-    }
-  }
-
   // Authorize against the User row: in-scope lead may have no section yet.
   private async assertLeadInScope(
     session: UserSession,
@@ -89,17 +72,6 @@ export class RemindersScopeService {
     if (!scopedLeadId) {
       throw new ReminderScopeError("lead-out-of-scope");
     }
-  }
-
-  async authorizeExecute(
-    session: UserSession,
-    ruleId: string,
-    recipientEmail: string,
-  ): Promise<void> {
-    if (session.role === "admin") return;
-    const reportId = await this.resolveScopedReportId(ruleId);
-    await this.assertReportHasInScopeSection(session, reportId);
-    await this.assertDraftRecipientInScope(session, reportId, recipientEmail);
   }
 
   // Admin: unfiltered. Else in-scope authors + caller's email (escalation digests).

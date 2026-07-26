@@ -118,6 +118,9 @@ export const weeklyReportReadModelSchema = z.object({
   periodEnd: reportDate(),
   deadline: reportDate().nullable(),
   periodStatus: periodStatusSchema,
+  // Archiving leaves `periodStatus` at "published", so this is the only signal
+  // that separates an archived report from a live published one.
+  archived: z.boolean().default(false),
   weekLabel: z.string().nullable(),
   // `departmentName` is NOT on the weekly read model. Frontends pull the
   // brand label from `auth.me.organization` hydrated on every authenticated
