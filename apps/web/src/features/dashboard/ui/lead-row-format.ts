@@ -16,10 +16,6 @@ export const STATUS_CLASSES: Record<LeadInfo["status"], string> = {
     "border-[var(--color-border)] bg-[var(--color-muted)] text-[var(--color-muted-foreground)]",
 };
 
-/**
- * Freshness Label.
- * @param lead - The lead argument.
- */
 export function freshnessLabel(lead: LeadInfo): string {
   if (lead.status === "submitted") {
     return lead.submittedAt
@@ -32,10 +28,6 @@ export function freshnessLabel(lead: LeadInfo): string {
   return lead.isStale ? "No recent edit" : "No edits yet";
 }
 
-/**
- * Content Summary.
- * @param lead - The lead argument.
- */
 export function contentSummary(lead: LeadInfo): string {
   const productRecords = lead.reportContentCount ?? 0;
   const activityRecords = lead.activityCount ?? 0;

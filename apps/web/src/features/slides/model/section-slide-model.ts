@@ -29,11 +29,6 @@ function projectActivities(
   }));
 }
 
-/**
- * Build Section Slide Model.
- * @param section - The section argument.
- * @param options - The options argument.
- */
 export function buildSectionSlideModel(
   section: ReportSectionReadModel,
   options: BuildSectionSlideOptions = {},

@@ -18,10 +18,6 @@ interface LeadCompletionActionsProps extends LeadCompletionActionContract {
   readonly compact?: boolean;
 }
 
-/**
- * Lead Completion Actions.
- * @param props - The props argument.
- */
 export function LeadCompletionActions({
   autosave,
   onAdd,

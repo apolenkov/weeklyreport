@@ -14,10 +14,6 @@ interface RemindersDeleteDialogProps {
   readonly onCancel: () => void;
 }
 
-/**
- * Reminders Delete Dialog.
- * @param props - The props argument.
- */
 export function RemindersDeleteDialog({
   policy,
   onConfirm,

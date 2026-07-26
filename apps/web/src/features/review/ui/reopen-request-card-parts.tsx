@@ -28,10 +28,6 @@ function formatPeriod(
   );
 }
 
-/**
- * Reopen Request Meta.
- * @param options - The options argument.
- */
 export function ReopenRequestMeta({
   request: r,
 }: {
@@ -68,10 +64,6 @@ export function ReopenRequestMeta({
   );
 }
 
-/**
- * Reopen Request Notes.
- * @param options - The options argument.
- */
 export function ReopenRequestNotes({
   request: r,
 }: {
@@ -157,10 +149,6 @@ function ReopenRespondActions({
   );
 }
 
-/**
- * Reopen Respond Form.
- * @param props - The props argument.
- */
 export function ReopenRespondForm({
   requestId,
   note,

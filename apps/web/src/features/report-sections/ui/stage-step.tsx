@@ -15,10 +15,6 @@ interface StageStepProps {
   readonly deadEndNotice: ReactNode;
 }
 
-/**
- * Stage Step.
- * @param props - The props argument.
- */
 export function StageStep({
   id,
   stageIds,

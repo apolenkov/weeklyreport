@@ -11,9 +11,8 @@ export interface GridPriorityCard {
   readonly authorId: string;
 }
 
-/** Own ranked items only (foreign rows never carry a rank), ascending rank;
- * ties keep input order — the section author is the only rank source today.  * @param input - The input argument.
- */
+// Own ranked items only (foreign rows never carry a rank), ascending rank;
+// ties keep input order — the section author is the only rank source today.
 export function buildPriorityStrip(input: {
   readonly section: ReportSectionReadModel;
   readonly knownProductIds: ReadonlySet<string>;

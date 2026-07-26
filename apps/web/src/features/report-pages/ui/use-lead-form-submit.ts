@@ -33,10 +33,6 @@ interface LeadSubmitReadinessArgs {
 }
 
 // The gate reads the LIVE draft, so a lead sees readiness before autosave lands.
-/**
- * Build Lead Submit Readiness.
- * @param props - The props argument.
- */
 export function buildLeadSubmitReadiness({
   draftSection,
   draftPayload,
@@ -67,10 +63,6 @@ interface LeadFormSubmitArgs {
   readonly handleConflict: () => void;
 }
 
-/**
- * Use Lead Form Submit.
- * @param props - The props argument.
- */
 export function useLeadFormSubmit({
   draftPayload,
   seam,

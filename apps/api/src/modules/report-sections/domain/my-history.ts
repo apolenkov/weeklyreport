@@ -106,10 +106,6 @@ function toHistoryEntry(s: MyHistorySectionRow) {
   };
 }
 
-/**
- * Build My History Entries.
- * @param sections - The sections argument.
- */
 export function buildMyHistoryEntries(
   sections: readonly MyHistorySectionRow[],
 ): MyHistoryEntry[] {

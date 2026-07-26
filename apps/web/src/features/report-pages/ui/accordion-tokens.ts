@@ -94,10 +94,6 @@ export const STATUS_BADGE = {
 
 // Item row left-stripe: red only for blocked (the alarm hue); every other status
 // is carried by the right-side badge, so the rail stays a neutral spine.
-/**
- * Item Rail Tone.
- * @param status - The status argument.
- */
 export function itemRailTone(status: string): string {
   return status === "blocked" ? CSS.destructive : "var(--color-border)";
 }

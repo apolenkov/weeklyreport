@@ -57,11 +57,6 @@ function crossProductSlices(
 }
 
 // Null when nothing qualifies so the deck never renders an empty extra slide.
-/**
- * Build Cross Product Slide.
- * @param section - The section argument.
- * @param projectIds - The projectIds argument.
- */
 export function buildCrossProductSlide(
   section: ReportSectionReadModel,
   projectIds: ReadonlySet<string>,

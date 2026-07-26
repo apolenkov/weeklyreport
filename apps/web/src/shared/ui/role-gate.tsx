@@ -24,10 +24,6 @@ interface RoleGateProps {
   readonly children: ReactNode;
 }
 
-/**
- * Role Gate.
- * @param props - The props argument.
- */
 export async function RoleGate({
   allowedRoles,
   children,

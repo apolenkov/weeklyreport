@@ -208,11 +208,6 @@ function buildPage(
   };
 }
 
-/**
- * Paginate Section Slides.
- * @param model - The model argument.
- * @param recordsPerPage - The recordsPerPage argument.
- */
 export function paginateSectionSlides(
   model: SectionSlideModel,
   recordsPerPage = PRESENTATION_RECORDS_PER_PAGE,
@@ -237,11 +232,6 @@ export function paginateSectionSlides(
   }));
 }
 
-/**
- * Slides For Density.
- * @param slides - The slides argument.
- * @param density - The density argument.
- */
 export function slidesForDensity(
   slides: readonly SectionSlideModel[],
   density: SlideDensity,

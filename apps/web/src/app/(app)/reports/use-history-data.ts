@@ -73,10 +73,6 @@ function useHistoryQueryState(role: Role | null) {
 
 // One role-defaulted history view: a lead reads their personal history, every
 // other role reads the compiled one. Only the enabled query ever has data.
-/**
- * Use History Data.
- * @param role - The role argument.
- */
 export function useHistoryData(role: Role | null): HistoryView {
   const {
     isLead,

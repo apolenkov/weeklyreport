@@ -1,9 +1,6 @@
 // listMessages is thin (no retry); call-sites that wait use pollForMessage.
 const MAILPIT_BASE = "http://localhost:8025";
 
-/**
- * Is Mailpit Up.
- */
 export async function isMailpitUp(): Promise<boolean> {
   try {
     const res = await fetch(`${MAILPIT_BASE}/api/v1/messages`, {
@@ -44,9 +41,6 @@ async function listMessages(): Promise<MailpitMessage[]> {
   return body.messages ?? [];
 }
 
-/**
- * Clear Messages.
- */
 export async function clearMessages(): Promise<void> {
   const res = await fetch(`${MAILPIT_BASE}/api/v1/messages`, {
     method: "DELETE",
@@ -54,12 +48,6 @@ export async function clearMessages(): Promise<void> {
   if (!res.ok) throw new Error(`Mailpit DELETE failed: ${res.status}`);
 }
 
-/**
- * Poll For Message.
- * @param recipientEmail - The recipientEmail argument.
- * @param timeoutMs - The timeoutMs argument.
- * @param intervalMs - The intervalMs argument.
- */
 export async function pollForMessage(
   recipientEmail: string,
   timeoutMs = 3000,

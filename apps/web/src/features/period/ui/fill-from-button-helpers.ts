@@ -22,10 +22,6 @@ function periodStartTimestamp(period: ReportPeriod): number | null {
   return Date.UTC(Number.parseInt(yearText, 10), month, day);
 }
 
-/**
- * Sort Most Recent First.
- * @param periods - The periods argument.
- */
 export function sortMostRecentFirst(
   periods: readonly ReportPeriod[],
 ): ReportPeriod[] {

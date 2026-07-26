@@ -44,10 +44,6 @@ function countUnsetOwnStages(payload: DraftSaveContent | null): number {
 
 // Draft engine, add-signals, write-action dialogs and page chrome, in the
 // order LeadForm called them — the hook count must not drift across renders.
-/**
- * Use Lead Form Editing.
- * @param args - The args argument.
- */
 export function useLeadFormEditing(args: UseLeadFormEditingArgs) {
   const { pinnedReportId, data, loaded } = args;
   const seam = useLeadFormDraftSeam();

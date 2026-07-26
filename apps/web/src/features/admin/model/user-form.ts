@@ -12,10 +12,6 @@ export interface UserFormData {
   groupId: string;
 }
 
-/**
- * Empty Form.
- * @param groups - The groups argument.
- */
 export function emptyForm(groups: readonly MockGroup[]): UserFormData {
   return {
     lastName: "",
@@ -29,10 +25,6 @@ export function emptyForm(groups: readonly MockGroup[]): UserFormData {
   };
 }
 
-/**
- * Form From User.
- * @param user - The user argument.
- */
 export function formFromUser(user: MockUser): UserFormData {
   return {
     lastName: user.lastName,

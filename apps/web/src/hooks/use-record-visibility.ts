@@ -38,11 +38,6 @@ interface UseRecordVisibilityResult {
   setVisibility: (next: RecordVisibility) => void;
 }
 
-/**
- * Use Record Visibility.
- * @param userId - The userId argument.
- * @param reportId - The reportId argument.
- */
 export function useRecordVisibility(
   userId: string | null,
   reportId: string,

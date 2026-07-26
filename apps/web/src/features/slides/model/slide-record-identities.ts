@@ -6,10 +6,6 @@ import type {
 } from "./slide-grid-model";
 import { COLUMN_ORDER } from "./slide-grid-rows";
 
-/**
- * Slide Record Identities.
- * @param model - The model argument.
- */
 export function slideRecordIdentities(
   model: SectionSlideModel,
 ): readonly string[] {

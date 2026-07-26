@@ -19,12 +19,6 @@ export interface LeadFormLoadedContext {
 
 // Live-draft products for the submit gate; re-apply cross-author overrides
 // in Everyone so the coupling gate matches the loaded view model.
-/**
- * Build Readiness Products.
- * @param section - The section argument.
- * @param isEveryone - The isEveryone argument.
- * @param crossAuthors - The crossAuthors argument.
- */
 export function buildReadinessProducts(
   section: ReportSectionReadModel,
   isEveryone: boolean,
@@ -44,11 +38,6 @@ export type SubmitOutcome =
 
 // Locked stages never appear in the draft payload — exclude them from the
 // positional label lookup so owned-stage names stay aligned.
-/**
- * Build Submit Stages.
- * @param draftPayload - The draftPayload argument.
- * @param products - The products argument.
- */
 export function buildSubmitStages(
   draftPayload: DraftSaveContent | null,
   products: readonly Product[],

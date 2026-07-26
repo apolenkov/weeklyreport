@@ -91,8 +91,6 @@ const labelEntry = (
  * carrying ONLY the keys whose new value differs from the existing row (equal-
  * value writes are dropped) plus the matching per-field `diff`. An empty `data`
  * means the input was a no-op — the caller skips the write and the audit envelope.
- * @param existing - The existing argument.
- * @param input - The input argument.
  */
 export function computePeriodPatch(
   existing: PeriodEnvelope,
@@ -123,8 +121,6 @@ export function computePeriodPatch(
  * the same way `deleteReport` rejects deleting a published period. `weekLabel`
  * (a cosmetic label) stays editable, and a non-published period is unaffected;
  * reopening reverts `periodState` to open and unblocks the edit.
- * @param periodState - The periodState argument.
- * @param data - The data argument.
  */
 export function assertEnvelopeEditable(
   periodState: PeriodState,
@@ -145,8 +141,6 @@ export function assertEnvelopeEditable(
  * Default `periodEnd`: `periodStart + (periodLengthDays - 1)` calendar days at
  * end-of-day (23:59:59.999 UTC), so an N-day period spans N inclusive calendar
  * dates from any chosen start day.
- * @param periodStart - The periodStart argument.
- * @param periodLengthDays - The periodLengthDays argument.
  */
 export const defaultPeriodEnd = (
   periodStart: Date,
@@ -162,7 +156,6 @@ export const defaultPeriodEnd = (
  * `deadlineTime` is "HH:MM"; `computeDeadline` takes an hour integer, so we strip
  * minutes (the scheduler does the same — its hardcoded `18` matches "18:00").
  * Sub-hour granularity would need both this and the scheduler updated together.
- * @param deadlineTime - The deadlineTime argument.
  */
 export function deadlineHourFromSetting(deadlineTime: string): number {
   if (!DEADLINE_TIME_PATTERN.test(deadlineTime)) {
@@ -180,7 +173,6 @@ export function deadlineHourFromSetting(deadlineTime: string): number {
  * the post-fetch `canReopen` derivation surfaces the out-of-window ones in the
  * archive section without a second query. Strict server-side bucketing, if ever
  * wanted, belongs at this seam. A concrete state passes through as itself.
- * @param bucket - The bucket argument.
  */
 export function resolveBucketStates(bucket: PeriodListBucket): PeriodState[] {
   switch (bucket) {
@@ -205,9 +197,6 @@ export function resolveBucketStates(bucket: PeriodListBucket): PeriodState[] {
  * the reopen window, and policy-enabled) and `canArchive` (any not-yet-archived
  * published period — the auto-archiver handles the deferred path; manual archive
  * is the head's escape hatch) are precomputed so the UI needs no policy rules.
- * @param row - The row argument.
- * @param settings - The settings argument.
- * @param now - The now argument.
  */
 export function toPeriodListItem(
   row: PeriodRowFromRepo,
@@ -239,10 +228,7 @@ export function toPeriodListItem(
   });
 }
 
-/**
- * Canonical `updatePeriodManual` result shape shared by the no-op and write paths.
- * @param row - The row argument.
- */
+// Canonical result shape shared by updatePeriodManual's no-op and write paths.
 export function toUpdateManualResult(row: {
   id: string;
   periodStart: Date;
@@ -281,10 +267,6 @@ export interface ReopenRequestListItem {
   };
 }
 
-/**
- * Serialize a repository reopen-request row to its wire shape (Date → ISO string).
- * @param row - The row argument.
- */
 export function toReopenRequestListItem(
   row: ReopenRequestRow,
 ): ReopenRequestListItem {
@@ -308,10 +290,6 @@ export function toReopenRequestListItem(
   };
 }
 
-/**
- * Friendly overlap error pointing at the blocking row's admin-visible dates.
- * @param conflict - The conflict argument.
- */
 export const overlapMessage = (conflict: {
   periodStart: Date;
   periodEnd: Date;

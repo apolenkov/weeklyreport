@@ -10,13 +10,6 @@ export interface AccordionToggle {
   readonly value: boolean;
 }
 
-/**
- * Resolve Expanded.
- * @param toggle - The toggle argument.
- * @param highlighted - The highlighted argument.
- * @param hasContent - The hasContent argument.
- * @param defaultOpen - The defaultOpen argument.
- */
 export function resolveExpanded(
   toggle: AccordionToggle | null,
   highlighted: boolean,
@@ -31,10 +24,6 @@ export function resolveExpanded(
 
 // Skip escalation when its text already appears as a row (derived from blocked
 // item/risk; would duplicate inside Risks & Blockers). Distinct summaries still show.
-/**
- * Should Show Needs Attention.
- * @param report - The report argument.
- */
 export function shouldShowNeedsAttention(report: WeeklyProductReport): boolean {
   const attention = report.needsAttention;
   if (typeof attention !== "string" || attention.length === 0) {
@@ -48,12 +37,6 @@ export function shouldShowNeedsAttention(report: WeeklyProductReport): boolean {
   return !renderedTexts.has(attention);
 }
 
-/**
- * Use Scroll Into View On Highlight.
- * @param reportId - The reportId argument.
- * @param highlighted - The highlighted argument.
- * @param enabled - The enabled argument.
- */
 export function useScrollIntoViewOnHighlight(
   reportId: string,
   highlighted: boolean,

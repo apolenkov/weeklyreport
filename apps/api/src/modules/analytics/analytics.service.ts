@@ -43,10 +43,6 @@ const PREFIX_VELOCITY = "customreport:analytics:lead-velocity:v2:";
 const PREFIX_COMPARISON = "customreport:analytics:period-comparison:v2:";
 
 // Sort keys at every nesting depth — JSON.stringify key whitelist would drop nested keys.
-/**
- * Stable Hash.
- * @param value - The value argument.
- */
 export function stableHash(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stableHash).join(",")}]`;

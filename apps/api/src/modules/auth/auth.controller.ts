@@ -35,10 +35,6 @@ function requireJwtSecret(env: NodeJS.ProcessEnv): string {
   return secret;
 }
 
-/**
- * Create Jwt Signer.
- * @param env - The env argument.
- */
 export function createJwtSigner(env: NodeJS.ProcessEnv): JwtSigner {
   const secret = requireJwtSecret(env);
 
@@ -61,10 +57,6 @@ export function createJwtSigner(env: NodeJS.ProcessEnv): JwtSigner {
   };
 }
 
-/**
- * Create Session Cookie.
- * @param options - The options argument.
- */
 export function createSessionCookie({
   token,
   env,
@@ -87,10 +79,6 @@ export function createSessionCookie({
   });
 }
 
-/**
- * Create Auth Controller.
- * @param env - The env argument.
- */
 export function createAuthController(env: NodeJS.ProcessEnv) {
   const jwtSigner = createJwtSigner(env);
 

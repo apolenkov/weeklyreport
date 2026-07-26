@@ -4,11 +4,6 @@ import { HOURS_PER_DAY, MS_PER_HOUR } from "@customreport/shared";
 import { toIsoDateString } from "../../../lib/format-date";
 import type { KpiData } from "./dashboard";
 
-/**
- * Format Relative Deadline.
- * @param deadline - The deadline argument.
- * @param now - The now argument.
- */
 export function formatRelativeDeadline(deadline: Date, now: Date): string {
   const diffMs = deadline.getTime() - now.getTime();
   if (diffMs <= 0) return "Past";
@@ -19,12 +14,6 @@ export function formatRelativeDeadline(deadline: Date, now: Date): string {
   return `${hours}h`;
 }
 
-/**
- * Build Kpi Data.
- * @param weeklyReport - The weeklyReport argument.
- * @param pendingCount - The pendingCount argument.
- * @param now - The now argument.
- */
 export function buildKpiData(
   weeklyReport: WeeklyReportReadModel,
   pendingCount: number,

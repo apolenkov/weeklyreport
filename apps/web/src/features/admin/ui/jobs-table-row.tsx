@@ -79,10 +79,6 @@ function JobErrorCell({
   );
 }
 
-/**
- * Jobs Table Row.
- * @param props - The props argument.
- */
 export function JobsTableRow({
   job,
   isExpanded,

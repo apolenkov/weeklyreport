@@ -15,10 +15,6 @@ type VerdictBadge =
 
 // isCurrent is server-derived — a stale post-resubmit verdict reads "Awaiting
 // review". Current changes_requested outranks approved (blocking signal wins).
-/**
- * Resolve Badge.
- * @param reviews - The reviews argument.
- */
 export function resolveBadge(
   reviews: readonly SectionReviewView[],
 ): VerdictBadge {
@@ -115,10 +111,6 @@ interface SectionVerdictControlProps {
 
 // Verdict badge + Approve/Request-changes for one section. Reflects server
 // unsubmit; never mutates status or offers publish/lock (viewer-reviewer only).
-/**
- * Section Verdict Control.
- * @param props - The props argument.
- */
 export function SectionVerdictControl({
   reportSectionId,
   version,

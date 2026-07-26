@@ -12,10 +12,6 @@ import {
 // Auto carry-over closure shared by the tRPC createPeriodManual seam and the
 // login provisioning seam. Best effort by construction —
 // carryOverIntoOpenedPeriod never rejects.
-/**
- * Create Auto Carry Over.
- * @param deps - The deps argument.
- */
 export function createAutoCarryOver(deps: {
   app: INestApplication;
   prisma: PrismaService;

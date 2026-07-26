@@ -191,10 +191,6 @@ function GroupDialogFooter({
   );
 }
 
-/**
- * Group Edit Dialog.
- * @param props - The props argument.
- */
 export function GroupEditDialog(props: GroupEditDialogProps) {
   const { editingGroup, isSaving, onClose } = props;
   const surfaceRef = useRef<HTMLDivElement>(null);

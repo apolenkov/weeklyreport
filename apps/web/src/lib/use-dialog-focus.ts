@@ -41,10 +41,6 @@ interface DialogFocusOptions {
 }
 
 // Shared non-Radix modal focus: trap Tab, Escape-close, restore to opener.
-/**
- * Use Dialog Focus.
- * @param props - The props argument.
- */
 export function useDialogFocus({
   open,
   onClose,

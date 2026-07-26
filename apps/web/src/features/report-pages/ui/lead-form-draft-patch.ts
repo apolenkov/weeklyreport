@@ -39,11 +39,6 @@ export type DraftPatch =
       readonly patch: Partial<ReportSectionReadModel["items"][number]>;
     };
 
-/**
- * Apply Draft Patch.
- * @param section - The section argument.
- * @param patch - The patch argument.
- */
 export function applyDraftPatch(
   section: ReportSectionReadModel,
   patch: DraftPatch,

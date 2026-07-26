@@ -11,12 +11,6 @@ import { buildSectionSlideModel } from "./section-slide-model";
 
 // Each step returns new objects — the cached section is never mutated so
 // Everyone content stays view-only.
-/**
- * Build Lead Deck Model.
- * @param section - The section argument.
- * @param foreignHealth - The foreignHealth argument.
- * @param foreignContentRows - The foreignContentRows argument.
- */
 export function buildLeadDeckModel(
   section: ReportSectionReadModel,
   foreignHealth: Parameters<typeof applyForeignProductHealth>[1],

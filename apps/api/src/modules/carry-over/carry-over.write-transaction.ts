@@ -20,10 +20,6 @@ import {
   requirePrimaryTargetSection,
 } from "./carry-over-row-writes";
 
-/**
- * Map Prisma To Execution.
- * @param row - The row argument.
- */
 export function mapPrismaToExecution(row: {
   id: string;
   sourceReportId: string;
@@ -74,13 +70,6 @@ export function mapPrismaToExecution(row: {
 }
 
 // Re-check editability inside the txn; concurrent winner → resolve, don't insert phantom.
-/**
- * Write Carry Over.
- * @param tx - The tx argument.
- * @param execution - The execution argument.
- * @param records - The records argument.
- * @param targetSections - The targetSections argument.
- */
 export async function writeCarryOver(
   tx: Prisma.TransactionClient,
   execution: CarryOverExecution,

@@ -8,10 +8,6 @@ interface LeadHistorySkeletonProps {
 
 const DEFAULT_SKELETON_CARD_COUNT = 6;
 
-/**
- * Lead History Skeleton.
- * @param props - The props argument.
- */
 export function LeadHistorySkeleton({
   count = DEFAULT_SKELETON_CARD_COUNT,
 }: LeadHistorySkeletonProps) {

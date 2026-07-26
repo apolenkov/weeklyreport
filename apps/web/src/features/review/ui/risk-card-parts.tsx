@@ -49,10 +49,6 @@ interface RiskCardActionsProps {
   readonly onToggleSeverity?: (risk: RiskEntry) => void;
 }
 
-/**
- * Risk Card Actions.
- * @param props - The props argument.
- */
 export function RiskCardActions({
   risk,
   sectionAuthorName,
@@ -103,10 +99,6 @@ interface RiskCardSummaryProps {
 }
 
 // Dialog is the only edit surface — summary is always read-only.
-/**
- * Risk Card Summary.
- * @param props - The props argument.
- */
 export function RiskCardSummary({ risk }: RiskCardSummaryProps) {
   return (
     <div className="space-y-2 text-sm text-[var(--color-foreground)]">

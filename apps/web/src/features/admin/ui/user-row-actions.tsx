@@ -96,10 +96,6 @@ function UserOverflowMenu({
   );
 }
 
-/**
- * User Row Actions.
- * @param props - The props argument.
- */
 export function UserRowActions({
   user,
   deactivatePending,

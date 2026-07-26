@@ -10,10 +10,6 @@ interface UserEditDialogShellProps {
   readonly children: ReactNode;
 }
 
-/**
- * User Edit Dialog Shell.
- * @param props - The props argument.
- */
 export function UserEditDialogShell({
   surfaceRef,
   title,

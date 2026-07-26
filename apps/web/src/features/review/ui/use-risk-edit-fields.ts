@@ -32,10 +32,6 @@ function focusFirstInvalidProseField(
   return true;
 }
 
-/**
- * Use Risk Edit Fields.
- * @param props - The props argument.
- */
 export function useRiskEditFields({
   initialText,
   initialImpact,

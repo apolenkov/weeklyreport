@@ -15,10 +15,6 @@ export interface AnalyticsRouterDeps {
 // anyRoleProcedure: all roles consume trends; repository published-only floor
 // keeps viewers on published-period rows.
 
-/**
- * Create Analytics Router.
- * @param deps - The deps argument.
- */
 export function createAnalyticsRouter(deps: AnalyticsRouterDeps) {
   return router({
     trafficLightHistory: anyRoleProcedure

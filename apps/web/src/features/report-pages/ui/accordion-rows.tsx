@@ -11,10 +11,6 @@ import {
 } from "./accordion-row-primitives";
 import { CSS, itemRailTone, ROW_GRID } from "./accordion-tokens";
 
-/**
- * Item Row.
- * @param options - The options argument.
- */
 export function ItemRow({ item }: { readonly item: WeeklyReportItem }) {
   return (
     <div className={ROW_GRID} data-accordion-row="item">
@@ -33,10 +29,6 @@ export function ItemRow({ item }: { readonly item: WeeklyReportItem }) {
   );
 }
 
-/**
- * Risk Row.
- * @param options - The options argument.
- */
 export function RiskRow({ risk }: { readonly risk: WeeklyReportRisk }) {
   const tone =
     risk.severity === "blocked" ? CSS.destructive : CSS.statusAtRiskBorder;
@@ -78,10 +70,6 @@ export function RiskRow({ risk }: { readonly risk: WeeklyReportRisk }) {
 }
 
 // Escalations fold into Risks & Blockers instead of a separate banner.
-/**
- * Escalation Row.
- * @param options - The options argument.
- */
 export function EscalationRow({
   description,
   severity,
@@ -121,10 +109,6 @@ export function EscalationRow({
   );
 }
 
-/**
- * Decision Row.
- * @param options - The options argument.
- */
 export function DecisionRow({
   decision,
 }: {

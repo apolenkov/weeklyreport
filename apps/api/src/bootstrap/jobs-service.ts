@@ -8,10 +8,6 @@ import { JobsService } from "../modules/admin/index.js";
 // Thin wrapper around the email-reminder Queue handle for the admin DLQ tab.
 // Stays out of the NestJS DI graph — see the @nestjs/bullmq DI bug note in
 // bullmq.module.ts.
-/**
- * Create Bootstrap Jobs Service.
- * @param deps - The deps argument.
- */
 export function createBootstrapJobsService(deps: {
   emailReminderQueue: Queue;
   prisma: PrismaService;

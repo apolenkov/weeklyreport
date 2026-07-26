@@ -12,10 +12,6 @@ interface ExportPdfButtonProps {
 
 // Disabled while editable (incl. reopen): backend exports only the
 // published read model.
-/**
- * Export Pdf Button.
- * @param props - The props argument.
- */
 export function ExportPdfButton({
   reportId,
   periodStatus,

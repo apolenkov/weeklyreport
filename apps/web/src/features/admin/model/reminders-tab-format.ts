@@ -38,11 +38,6 @@ export type ReminderPresetChoice = ReminderPreset | "custom";
 
 export const CUSTOM_PRESET_LABEL = "Custom";
 
-/**
- * Preset For Policy.
- * @param kind - The kind argument.
- * @param audience - The audience argument.
- */
 export function presetForPolicy(
   kind: MockReminderPolicy["kind"],
   audience: MockReminderPolicy["audience"],
@@ -53,10 +48,6 @@ export function presetForPolicy(
   return match ? match.value : "custom";
 }
 
-/**
- * Preset Pairing.
- * @param preset - The preset argument.
- */
 export function presetPairing(preset: ReminderPreset): {
   kind: MockReminderPolicy["kind"];
   audience: MockReminderPolicy["audience"];
@@ -68,10 +59,6 @@ export function presetPairing(preset: ReminderPreset): {
   return { kind: found.kind, audience: found.audience };
 }
 
-/**
- * Describe Recipient.
- * @param audience - The audience argument.
- */
 export function describeRecipient(
   audience: MockReminderPolicy["audience"],
 ): string {
@@ -85,10 +72,6 @@ export function describeRecipient(
 
 export type OffsetUnit = "minutes" | "hours" | "days";
 
-/**
- * Offset Unit Factor.
- * @param unit - The unit argument.
- */
 export function offsetUnitFactor(unit: OffsetUnit): number {
   switch (unit) {
     case "minutes":
@@ -100,10 +83,6 @@ export function offsetUnitFactor(unit: OffsetUnit): number {
   }
 }
 
-/**
- * Get Offset Unit.
- * @param minutes - The minutes argument.
- */
 export function getOffsetUnit(minutes: number): OffsetUnit {
   const abs = Math.abs(minutes);
   if (abs > 0 && abs % MINUTES_PER_HOUR === 0 && abs <= MAX_HOUR_OFFSET_MINUTES)
@@ -113,19 +92,10 @@ export function getOffsetUnit(minutes: number): OffsetUnit {
   return "minutes";
 }
 
-/**
- * Get Offset Amount.
- * @param minutes - The minutes argument.
- * @param unit - The unit argument.
- */
 export function getOffsetAmount(minutes: number, unit: OffsetUnit): number {
   return Math.abs(minutes) / offsetUnitFactor(unit);
 }
 
-/**
- * Format Policy Timing.
- * @param policy - The policy argument.
- */
 export function formatPolicyTiming(policy: MockReminderPolicy): string {
   const minutes = policy.offsetMinutes;
   if (minutes === 0) return "At deadline";
@@ -146,10 +116,6 @@ export function formatPolicyTiming(policy: MockReminderPolicy): string {
   return `${abs} ${pluralize(abs, "minute", "minutes")} ${direction} deadline`;
 }
 
-/**
- * Format Validity Window.
- * @param policy - The policy argument.
- */
 export function formatValidityWindow(policy: MockReminderPolicy): string {
   const from = toIsoDateString(policy.validFrom);
   if (policy.validUntil === null) {
@@ -160,11 +126,6 @@ export function formatValidityWindow(policy: MockReminderPolicy): string {
 }
 
 // Earliest future active fire; pure (caller passes `now`). null → no upcoming.
-/**
- * Next Send Date.
- * @param rules - The rules argument.
- * @param now - The now argument.
- */
 export function nextSendDate(
   rules: readonly MockReminder[],
   now: Date,

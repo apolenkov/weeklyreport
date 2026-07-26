@@ -8,10 +8,6 @@ import {
 } from "../../../lib/status-presentation";
 
 // No pre-formatted tone prop — callers must go through the canonical map.
-/**
- * Slide Status Badge.
- * @param options - The options argument.
- */
 export function SlideStatusBadge({
   status,
   labelVariant,

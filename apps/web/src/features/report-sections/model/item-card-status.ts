@@ -27,11 +27,6 @@ function foreignLockAuthor(
 
 // Pill from covering-risk roll-up (not free status). Activity items stay
 // isolated; completed/planned keep progress. Foreign flooring risk names author.
-/**
- * Derive Card Status.
- * @param item - The item argument.
- * @param risks - The risks argument.
- */
 export function deriveCardStatus(
   item: KanbanItem,
   risks: readonly RiskEntry[] | undefined,

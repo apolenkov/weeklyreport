@@ -49,10 +49,6 @@ function BulkRevokeSection({
   );
 }
 
-/**
- * Dashboard Revoke All Control.
- * @param props - The props argument.
- */
 export function DashboardRevokeAllControl({
   pending,
   report,

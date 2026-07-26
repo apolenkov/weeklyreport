@@ -14,12 +14,6 @@ export type ReopenCasOutcome = "transitioned" | "archived" | "notReopenable";
 
 // Predicate requires still-published + non-archived; zero-row re-read through the
 // SAME client splits archive-won vs no-longer-published. data applied in updateMany.
-/**
- * Reopen Compare And Set.
- * @param client - The client argument.
- * @param reportId - The reportId argument.
- * @param data - The data argument.
- */
 export async function reopenCompareAndSet(
   client: ReopenCasClient,
   reportId: string,

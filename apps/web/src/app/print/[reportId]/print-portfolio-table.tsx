@@ -75,10 +75,6 @@ function PrintPortfolioRow({
   );
 }
 
-/**
- * Print Portfolio Table.
- * @param props - The props argument.
- */
 export function PrintPortfolioTable({ products }: PrintPortfolioTableProps) {
   return (
     <table

@@ -8,10 +8,6 @@ interface UserEditDialogActionsProps {
   readonly onClose: () => void;
 }
 
-/**
- * User Edit Dialog Actions.
- * @param props - The props argument.
- */
 export function UserEditDialogActions({
   canSave,
   isSaving,

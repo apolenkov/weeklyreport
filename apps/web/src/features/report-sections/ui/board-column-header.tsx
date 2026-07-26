@@ -12,10 +12,6 @@ interface BoardColumnHeaderProps {
   readonly onAdd: (seed: CreateSeed) => void;
 }
 
-/**
- * Board Column Header.
- * @param props - The props argument.
- */
 export function BoardColumnHeader({
   col,
   readOnly,

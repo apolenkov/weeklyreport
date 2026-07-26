@@ -28,18 +28,10 @@ const AUTOSAVE_COPY: Record<AutosaveState, AutosaveCopy> = {
   },
 };
 
-/**
- * Autosave Status Copy.
- * @param state - The state argument.
- */
 export function autosaveStatusCopy(state: AutosaveState): string {
   return AUTOSAVE_COPY[state].status;
 }
 
-/**
- * Autosave Readiness Copy.
- * @param state - The state argument.
- */
 export function autosaveReadinessCopy(state: AutosaveState): string {
   return AUTOSAVE_COPY[state].readiness;
 }

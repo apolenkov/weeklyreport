@@ -27,14 +27,6 @@ export interface GetByPeriodResult {
   };
 }
 
-/**
- * Read By Period.
- * @param repository - The repository argument.
- * @param reportId - The reportId argument.
- * @param userId - The userId argument.
- * @param role - The role argument.
- * @param requestedAuthorId - The requestedAuthorId argument.
- */
 export async function readByPeriod(
   repository: LeadFormRepository,
   reportId: string,

@@ -105,10 +105,6 @@ function DeleteAction({
   );
 }
 
-/**
- * Action Icon Row.
- * @param options - The options argument.
- */
 export function ActionIconRow({
   row,
   onPublish,

@@ -8,10 +8,6 @@ const DENSITIES: readonly {
   { value: "presentation", label: "Presentation" },
 ];
 
-/**
- * Slide Density Control.
- * @param options - The options argument.
- */
 export function SlideDensityControl({
   value,
   onChange,

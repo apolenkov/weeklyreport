@@ -16,10 +16,6 @@ import { createAuthController } from "../modules/auth/index.js";
 import { createPdfDownloadHandler } from "../modules/pdf-export/index.js";
 import { PDF_DOWNLOAD_ROUTE } from "./http-access-log";
 
-/**
- * Mount Api Ingress.
- * @param deps - The deps argument.
- */
 export function mountApiIngress(deps: {
   app: INestApplication;
   expressApp: Express;

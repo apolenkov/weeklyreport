@@ -166,7 +166,6 @@ export interface MappedLeadForm {
  * Compose all three queries into a single LeadForm-shaped payload. Caller is
  * responsible for ensuring all inputs are settled (i.e., not undefined) before
  * invoking — use `isLoading || !data` guards in the page component.
- * @param args - The args argument.
  */
 export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
   const section = args.byPeriod.section;

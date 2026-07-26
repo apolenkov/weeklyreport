@@ -39,9 +39,6 @@ const SdlcTooltipContext = createContext<ContextValue | null>(null);
 
 const TOOLTIP_VERTICAL_GAP_PX = 8;
 
-/**
- * Use Sdlc Tooltip.
- */
 export function useSdlcTooltip(): ContextValue {
   const ctx = useContext(SdlcTooltipContext);
   if (!ctx) {
@@ -59,10 +56,6 @@ export function useSdlcTooltip(): ContextValue {
   return ctx;
 }
 
-/**
- * Sdlc Tooltip Provider.
- * @param options - The options argument.
- */
 export function SdlcTooltipProvider({
   children,
 }: {

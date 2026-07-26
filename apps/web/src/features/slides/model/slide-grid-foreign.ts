@@ -85,10 +85,6 @@ const toForeignDecisionRow =
   });
 
 // Everyone-mode co-owner rows keep real author identity; foreign rows are never ranked.
-/**
- * Build Foreign Rows.
- * @param foreign - The foreign argument.
- */
 export function buildForeignRows(
   foreign: readonly CrossAuthorContentRow[],
 ): ForeignGridRow[] {

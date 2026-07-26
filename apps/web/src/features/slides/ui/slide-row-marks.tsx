@@ -23,18 +23,10 @@ export function useHoverTooltip<T extends HTMLElement = HTMLSpanElement>(
 }
 
 // Cycled CSS tokens; owner is always slot 0.
-/**
- * Author Slot Background.
- * @param author - The author argument.
- */
 export function authorSlotBackground(author: GridAuthor): string {
   return `var(--slide-author-${String(author.colorIndex)})`;
 }
 
-/**
- * Author Badge.
- * @param options - The options argument.
- */
 export function AuthorBadge({
   author,
   show,
@@ -102,10 +94,6 @@ const TONE_GLYPH: Partial<
   },
 };
 
-/**
- * Tone Mark.
- * @param options - The options argument.
- */
 export function ToneMark({ tone }: { readonly tone: GridTone }) {
   const entry = TONE_GLYPH[tone];
   if (!entry) return null;
@@ -131,10 +119,6 @@ function StageWatermark({ stageName }: { readonly stageName: string }) {
   );
 }
 
-/**
- * Stage Watermarks.
- * @param options - The options argument.
- */
 export function StageWatermarks({
   stageNames,
 }: {
@@ -154,10 +138,6 @@ export function StageWatermarks({
 }
 
 // Only stages that appear on the slide, in canonical pipeline order.
-/**
- * Stage Legend.
- * @param options - The options argument.
- */
 export function StageLegend({
   stageNames,
 }: {

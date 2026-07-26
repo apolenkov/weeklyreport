@@ -148,11 +148,6 @@ function useUserDeletion(deleteUser: (userId: string) => void) {
   };
 }
 
-/**
- * Use Users Tab State.
- * @param users - The users argument.
- * @param groups - The groups argument.
- */
 export function useUsersTabState(users: MockUser[], groups: MockGroup[]) {
   const dialog = useUserEditDialog(groups);
   const filters = useUsersFilterState(users);

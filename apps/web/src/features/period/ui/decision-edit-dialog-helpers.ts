@@ -11,10 +11,6 @@ export interface DecisionFieldErrors {
   stageIds?: string;
 }
 
-/**
- * Collect Decision Errors.
- * @param args - The args argument.
- */
 export function collectDecisionErrors(args: {
   readonly text: string;
   readonly impact: string;
@@ -38,11 +34,6 @@ export interface DecisionFormSeed {
   readonly stageIds: string[];
 }
 
-/**
- * Resolve Decision Form Seed.
- * @param decision - The decision argument.
- * @param defaultOwner - The defaultOwner argument.
- */
 export function resolveDecisionFormSeed(
   decision: DecisionEntry | null,
   defaultOwner: string | undefined,
@@ -58,11 +49,6 @@ export function resolveDecisionFormSeed(
   };
 }
 
-/**
- * Resolve Decision Product Name.
- * @param selectedProduct - The selectedProduct argument.
- * @param decision - The decision argument.
- */
 export function resolveDecisionProductName(
   selectedProduct: Product | undefined,
   decision: DecisionEntry | null,
@@ -78,10 +64,6 @@ interface DecisionSaveBase {
   readonly deadline: string | null;
 }
 
-/**
- * Build Decision Save Base.
- * @param args - The args argument.
- */
 export function buildDecisionSaveBase(args: {
   readonly decision: DecisionEntry | null;
   readonly text: string;
@@ -98,10 +80,6 @@ export function buildDecisionSaveBase(args: {
   };
 }
 
-/**
- * Build Activity Decision Save.
- * @param args - The args argument.
- */
 export function buildActivityDecisionSave(args: {
   readonly base: DecisionSaveBase;
   readonly decision: DecisionEntry | null;
@@ -122,10 +100,6 @@ export function buildActivityDecisionSave(args: {
 // Legacy parentless product label — matches mapLeadDecisions / DecisionsSection.
 const LEGACY_GROUP_PRODUCT_NAME = "Group";
 
-/**
- * Build Product Decision Save.
- * @param args - The args argument.
- */
 export function buildProductDecisionSave(args: {
   readonly base: DecisionSaveBase;
   readonly decision: DecisionEntry | null;

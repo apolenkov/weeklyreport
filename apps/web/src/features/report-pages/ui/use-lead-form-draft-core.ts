@@ -54,10 +54,6 @@ interface LeadFormDraftCoreArgs {
 
 // The local draft engine: editable section state, its optimistic-lock version,
 // and the autosave/reseed conversation with the server.
-/**
- * Use Lead Form Draft Core.
- * @param props - The props argument.
- */
 export function useLeadFormDraftCore({
   serverSection,
   sectionIdForActions,

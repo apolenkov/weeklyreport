@@ -45,12 +45,6 @@ function historyArchiveCountWhere(
   };
 }
 
-/**
- * Query Compiled History.
- * @param prisma - The prisma argument.
- * @param session - The session argument.
- * @param includeArchive - The includeArchive argument.
- */
 export async function queryCompiledHistory(
   prisma: PrismaService,
   session: WeeklyReportScopeSession,

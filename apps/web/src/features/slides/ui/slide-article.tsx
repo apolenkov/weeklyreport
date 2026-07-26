@@ -61,10 +61,6 @@ function SlideProductList({
 }
 
 // Shared slide canvas: auto-height, never clipped; deck scroll owns overflow below min width.
-/**
- * Slide Article.
- * @param options - The options argument.
- */
 export function SlideArticle({
   slide,
   heroControls,

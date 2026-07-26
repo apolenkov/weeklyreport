@@ -11,10 +11,6 @@ import { type ChartData, type ChartSeries, COLORS } from "./chart-palette";
 
 // Key by leadId (UUID), not display name, so two leads with the same name
 // keep separate columns.
-/**
- * Build Lead Velocity Chart Data.
- * @param rows - The rows argument.
- */
 export function buildLeadVelocityChartData(rows: LeadVelocityOutput): {
   readonly data: readonly ChartData[];
   readonly series: readonly ChartSeries[];
@@ -44,10 +40,6 @@ export function buildLeadVelocityChartData(rows: LeadVelocityOutput): {
   return { data, series };
 }
 
-/**
- * Lead Velocity Chart.
- * @param options - The options argument.
- */
 export function LeadVelocityChart({
   rows,
 }: {

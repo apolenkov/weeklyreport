@@ -11,10 +11,6 @@ function statusLabel(status: ReportSectionReadModel["status"]): string {
 
 // In-report section verdicts for designated reviewers; no publish/lock control
 // (viewer-reviewers judge only). Self-suppresses when nothing is reviewable.
-/**
- * Review Verdict Band.
- * @param options - The options argument.
- */
 export function ReviewVerdictBand({
   sections,
   onMutated,

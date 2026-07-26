@@ -134,10 +134,6 @@ function slideDeckFallback(state: SlideDeckState): ReactElement | null {
   return null;
 }
 
-/**
- * Head Slides Client.
- * @param props - The props argument.
- */
 export function HeadSlidesClient({
   reportId,
   scope = "lead",

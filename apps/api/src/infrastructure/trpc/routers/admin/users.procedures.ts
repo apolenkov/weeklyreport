@@ -14,10 +14,6 @@ export interface AdminUsersDeps {
   sessionRevocationService?: SessionRevocationService;
 }
 
-/**
- * Create Admin Users Procedures.
- * @param deps - The deps argument.
- */
 export function createAdminUsersProcedures(deps: AdminUsersDeps) {
   return {
     saveUser: adminProcedure

@@ -37,10 +37,6 @@ export interface AdminRouterDeps
     AdminReminderPoliciesDeps,
     AdminOpsDeps {}
 
-/**
- * Create Admin Router.
- * @param deps - The deps argument.
- */
 export function createAdminRouter(deps: AdminRouterDeps) {
   return router({
     ...createAdminSettingsProcedures(deps),

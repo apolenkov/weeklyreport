@@ -15,10 +15,6 @@ export interface ForbiddenPageProps {
   readonly homeHref: string;
 }
 
-/**
- * Forbidden Page.
- * @param props - The props argument.
- */
 export function ForbiddenPage({ requiredRoles, homeHref }: ForbiddenPageProps) {
   const rolesLabel = requiredRoles.join(" or ");
   return (

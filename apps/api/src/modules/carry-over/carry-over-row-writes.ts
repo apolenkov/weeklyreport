@@ -2,10 +2,6 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
 // Empty list is a broken caller invariant — fail loud (service pre-validates).
-/**
- * Require Primary Target Section.
- * @param targetSections - The targetSections argument.
- */
 export function requirePrimaryTargetSection(
   targetSections: ReportSectionReadModel[],
 ): ReportSectionReadModel {
@@ -21,11 +17,6 @@ export function requirePrimaryTargetSection(
 // skipDuplicates on stableId unique — defense-in-depth if lineage filter races.
 // Items land before decisions: the decision pass reads back existing rows, so
 // the two writes must stay sequential in this order.
-/**
- * Persist Carried Rows For Section.
- * @param tx - The tx argument.
- * @param targetSection - The targetSection argument.
- */
 export async function persistCarriedRowsForSection(
   tx: Prisma.TransactionClient,
   targetSection: ReportSectionReadModel,

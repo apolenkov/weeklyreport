@@ -80,10 +80,6 @@ function ReadyReport({
   );
 }
 
-/**
- * Print Report Template.
- * @param props - The props argument.
- */
 export function PrintReportTemplate({ reportId }: PrintReportTemplateProps) {
   const trpc = useTRPC();
   const weeklyQuery = useQuery(

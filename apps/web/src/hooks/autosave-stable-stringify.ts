@@ -1,8 +1,4 @@
 // Sorted-key JSON for deterministic dirty diffs; shared so initialSavedKey primes match.
-/**
- * Stable Stringify.
- * @param value - The value argument.
- */
 export function stableStringify(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (value instanceof Date) return JSON.stringify(value.toISOString());

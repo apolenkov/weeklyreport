@@ -10,10 +10,6 @@ const PANEL_HEIGHT_CLASS = {
 
 export type DashboardPanelKind = keyof typeof PANEL_HEIGHT_CLASS;
 
-/**
- * Dashboard Panel Loading.
- * @param options - The options argument.
- */
 export function DashboardPanelLoading({
   kind,
 }: {
@@ -37,10 +33,6 @@ interface DashboardPanelIssueProps {
   readonly onRetry: () => void;
 }
 
-/**
- * Dashboard Panel Issue.
- * @param props - The props argument.
- */
 export function DashboardPanelIssue({
   kind,
   testId,

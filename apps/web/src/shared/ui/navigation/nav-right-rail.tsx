@@ -36,10 +36,6 @@ function RightRailSkeleton() {
   );
 }
 
-/**
- * Nav Right Rail.
- * @param options - The options argument.
- */
 export function NavRightRail({
   sessionLoading,
   hasUser,

@@ -41,10 +41,6 @@ export interface ForeignMergeResult {
 
 // Everyone merges co-owners' records read-only after hydration on own deck;
 // draft-merge strips `.foreign` so they never reach submission.
-/**
- * Merge Foreign Display Records.
- * @param input - The input argument.
- */
 export function mergeForeignDisplayRecords(
   input: ForeignMergeInput,
 ): ForeignMergeResult {
@@ -77,11 +73,6 @@ export function mergeForeignDisplayRecords(
 
 // ADR 0015 resolve-not-delete: map published lineage stableIds → on-screen
 // row ids so cards can withhold Delete. Advisory; server enforces on save.
-/**
- * Published Locked Ids.
- * @param rows - The rows argument.
- * @param lineageStableIds - The lineageStableIds argument.
- */
 export function publishedLockedIds(
   rows: readonly {
     readonly id?: string | null;
@@ -108,12 +99,6 @@ const PRESENTATION_STATUS_BUCKETS: Partial<
 };
 
 // Pure projection over raw fields; foreign rows fall back to presentation status.
-/**
- * Build Unified Entries.
- * @param rawItems - The rawItems argument.
- * @param currentWeekItems - The currentWeekItems argument.
- * @param nextWeekItems - The nextWeekItems argument.
- */
 export function buildUnifiedEntries(
   rawItems: readonly SectionItem[],
   currentWeekItems: readonly KanbanItem[],
@@ -156,12 +141,6 @@ export interface VisiblePeriodsResult {
 }
 
 // Keep selected archived period visible; never empty the list if all archived.
-/**
- * Filter Visible Periods.
- * @param periods - The periods argument.
- * @param selectedPeriodId - The selectedPeriodId argument.
- * @param showArchivePeriods - The showArchivePeriods argument.
- */
 export function filterVisiblePeriods(
   periods: readonly ReportPeriod[],
   selectedPeriodId: string,

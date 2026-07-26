@@ -14,9 +14,6 @@ import type { SessionRevocationService } from "../admin/index.js";
  *    `isActive === false` bars the user. Barring the missing row closes the
  *    hard-deleted-user gap — admin snapshot-restore deletes unreferenced users
  *    without touching the revoked set, so the fast path never fires for them.
- * @param userId - The userId argument.
- * @param prisma - The prisma argument.
- * @param sessionRevocation - The sessionRevocation argument.
  */
 export async function isUserAccessBarred(
   userId: string,

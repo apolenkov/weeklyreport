@@ -14,10 +14,6 @@ export const EMPTY_GROUP_FORM: GroupFormData = {
   archived: false,
 };
 
-/**
- * Form From Group.
- * @param group - The group argument.
- */
 export function formFromGroup(group: MockGroup): GroupFormData {
   return {
     name: group.name,

@@ -14,10 +14,6 @@ import { logOtelDecision } from "./otel-decision-log";
 // The pre-bootstrap logger has no CLS yet, so it is routed through
 // NestAppLoggerAdapter and swapped for the container-resolved AppLogger as soon
 // as the app exists — one file sink, never a second concurrent writer.
-/**
- * Create Nest App.
- * @param deps - The deps argument.
- */
 export async function createNestApp(deps: {
   env: EnvConfig;
   otelDecision: OtelBootstrapResult;

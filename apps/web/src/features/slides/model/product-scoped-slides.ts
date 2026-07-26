@@ -230,10 +230,6 @@ function toProductSlide(
   };
 }
 
-/**
- * Build Product Scoped Slides.
- * @param sections - The sections argument.
- */
 export function buildProductScopedSlides(
   sections: readonly ReportSectionReadModel[],
 ): SectionSlideModel[] {

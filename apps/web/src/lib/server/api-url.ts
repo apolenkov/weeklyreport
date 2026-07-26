@@ -1,8 +1,5 @@
 // No `server-only` import: next.config.ts loads this at Node config time.
 
-/**
- * Require Api Url.
- */
 export function requireApiUrl(): string {
   // An empty string counts as unset — an env file's `API_URL=` must fall
   // through to the public var, not produce an empty base URL.
@@ -44,10 +41,6 @@ export const TRPC_BATCH_EMPTY_INPUT = encodeURIComponent('{"0":{}}');
 
 // Superjson contract is `{ json, meta? }`; non-matching payloads pass through
 // so untransformed responses still decode and domain `json` fields are not unwrapped.
-/**
- * Decode Trpc Batch Payload.
- * @param body - The body argument.
- */
 export function decodeTrpcBatchPayload(body: unknown): unknown {
   if (!Array.isArray(body) || body.length === 0) return null;
   const entry = body[0] as TrpcBatchEntry | undefined;
@@ -57,9 +50,6 @@ export function decodeTrpcBatchPayload(body: unknown): unknown {
   return isSuperJsonEnvelope(data) ? (data.json ?? null) : data;
 }
 
-/**
- * Should Use Dev Auth Fallback.
- */
 export function shouldUseDevAuthFallback(): boolean {
   return (
     process.env.NODE_ENV !== "production" &&

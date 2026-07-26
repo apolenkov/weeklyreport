@@ -29,10 +29,6 @@ export const ACTIVITY_BUCKET_LABELS: Readonly<Record<ActivityBucket, string>> =
     deferred: "Deferred",
   };
 
-/**
- * Derive Activity Bucket.
- * @param input - The input argument.
- */
 export function deriveActivityBucket(input: BucketInput): ActivityBucket {
   switch (input.workflowStatus) {
     case "done":

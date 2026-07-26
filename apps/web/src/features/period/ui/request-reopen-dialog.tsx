@@ -23,10 +23,6 @@ interface RequestReopenDialogProps {
 }
 
 // Lead-side modal to ask Head to reopen a submitted (read-only) section.
-/**
- * Request Reopen Dialog.
- * @param props - The props argument.
- */
 export function RequestReopenDialog({
   open,
   ...contentProps

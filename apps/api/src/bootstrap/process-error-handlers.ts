@@ -1,9 +1,5 @@
 import type { AppLogger } from "../lib/logger";
 
-/**
- * Register Process Error Handlers.
- * @param logger - The logger argument.
- */
 export function registerProcessErrorHandlers(logger: AppLogger): void {
   process.on("uncaughtException", (err) => {
     logger.error("uncaught exception", {

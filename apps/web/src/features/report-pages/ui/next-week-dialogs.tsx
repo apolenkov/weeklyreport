@@ -26,10 +26,6 @@ interface NextWeekDialogsProps {
 const NEXT_WEEK_DIALOG_WEEK = "next" as const;
 const DELETE_NEXT_WEEK_ITEM_TITLE = "Delete next-week item?";
 
-/**
- * Next Week Dialogs.
- * @param props - The props argument.
- */
 export function NextWeekDialogs({
   dialogKey,
   open,

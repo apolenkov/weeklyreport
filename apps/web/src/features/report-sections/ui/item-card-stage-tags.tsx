@@ -17,10 +17,6 @@ export type ItemCardStageTags =
 // Cap visible stage pills; remainder collapses into a "+N" overflow chip.
 const MAX_VISIBLE_STAGE_TAGS = 2;
 
-/**
- * Derive Item Card Stage Tags.
- * @param item - The item argument.
- */
 export function deriveItemCardStageTags(
   item: Pick<KanbanItem, "stageIds" | "stageName" | "activityId">,
 ): ItemCardStageTags {
@@ -54,10 +50,6 @@ export function deriveItemCardStageTags(
   };
 }
 
-/**
- * Item Card Stage Tags Row.
- * @param props - The props argument.
- */
 export function ItemCardStageTagsRow(props: ItemCardStageTags) {
   if (props.isActivityItem) return null;
   const { stageTags, stageTagsLabel, visibleStageTags, hiddenStageCount } =

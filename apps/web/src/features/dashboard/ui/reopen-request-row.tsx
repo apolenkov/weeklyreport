@@ -75,10 +75,6 @@ function ReopenRequestHeader({
   );
 }
 
-/**
- * Reopen Request Row.
- * @param props - The props argument.
- */
 export function ReopenRequestRow({
   request: r,
   isResponding,

@@ -13,19 +13,12 @@ import {
 
 // Layout UX gate only — API role middleware is the security boundary.
 // no-store is mandatory so role downgrades are not hidden by the data cache.
-/**
- * Decode Auth Me Response.
- * @param body - The body argument.
- */
 function decodeAuthMeResponse(body: unknown): UserSession | null {
   const payload = decodeTrpcBatchPayload(body);
   const result = userSessionSchema.safeParse(payload);
   return result.success ? result.data : null;
 }
 
-/**
- * Get Server Session.
- */
 export async function getServerSession(): Promise<UserSession | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
