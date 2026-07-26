@@ -12,7 +12,7 @@ import pg from "pg";
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 
 // Load .env from repo root regardless of cwd.
-const REPO_ROOT = resolve(__dirname, "..");
+const REPO_ROOT = resolve(import.meta.dirname, "..");
 loadEnv({ path: resolve(REPO_ROOT, ".env") });
 
 const DATABASE_URL: string = (() => {

@@ -40,14 +40,14 @@ if (!process.env.E2E_DATABASE_URL) {
 }
 
 export default defineConfig({
-  testDir: path.join(__dirname, "integration"),
+  testDir: path.join(import.meta.dirname, "integration"),
   // *.test.ts files in this dir are vitest pins (run via vitest.prisma.config.ts),
   // not Playwright specs — Playwright's default pattern would otherwise collect
   // them and crash on the vitest import.
   testIgnore: "**/*.test.ts",
-  outputDir: path.join(__dirname, "integration/.results"),
-  globalSetup: path.join(__dirname, "integration/global-setup.ts"),
-  globalTeardown: path.join(__dirname, "integration/global-teardown.ts"),
+  outputDir: path.join(import.meta.dirname, "integration/.results"),
+  globalSetup: path.join(import.meta.dirname, "integration/global-setup.ts"),
+  globalTeardown: path.join(import.meta.dirname, "integration/global-teardown.ts"),
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false, // shared DB state
@@ -97,7 +97,7 @@ export default defineConfig({
         FRONTEND_URL: WEB_URL,
         APP_BASE_URL: WEB_URL,
         PDF_BASE_URL: WEB_URL,
-        PDF_OUTPUT_DIR: path.join(__dirname, "integration/.results/pdfs"),
+        PDF_OUTPUT_DIR: path.join(import.meta.dirname, "integration/.results/pdfs"),
         PDF_EXPORT_JWT_SECRET:
           process.env.PDF_EXPORT_JWT_SECRET ??
           "e2e-pdf-export-secret-32-chars-minimum!!",

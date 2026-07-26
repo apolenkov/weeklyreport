@@ -9,6 +9,7 @@ import { PeriodStatus, type Prisma, PrismaClient, Role } from "@prisma/client";
 import pg from "pg";
 
 import { assertNonProdDestructive } from "./_destructive-guard.js";
+import { isEntrypoint } from "./_entrypoint.js";
 import { requireEnv } from "./_require-env.js";
 import { seedBaseline } from "./wipe-manual-uat.seed-baseline.js";
 import { seedActivePeriod } from "./wipe-manual-uat.seed-period.js";
@@ -152,7 +153,7 @@ async function main() {
   );
 }
 
-if (typeof require !== "undefined" && require.main === module) {
+if (isEntrypoint(import.meta.url)) {
   void main()
     .catch((error: unknown) => {
       console.error("[wipe-manual-uat] Failed:", error);

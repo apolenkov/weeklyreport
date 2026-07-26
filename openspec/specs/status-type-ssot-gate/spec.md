@@ -8,12 +8,12 @@ TBD - created by archiving change add-status-ssot-lint-gate. Update Purpose afte
 
 ### Requirement: Status literal-union re-declarations are gated
 
-The repository MUST run a scanner (`scripts/find-status-literal-unions.mjs`)
-that fails when a TypeScript union type or zod literal list outside the
-allowlisted files re-declares any of four vocabularies: a literal set
-containing all three of `"green"`, `"yellow"`, `"red"` (extras allowed —
-the three colors only ever come from `TrafficLightStatus`), a status-literal
-set equal to exactly `{"draft", "published"}` (supersets are distinct
+The repository MUST run a gate (`scripts/status-ssot-gate.ts`) that fails when
+a TypeScript union type or zod literal list outside the allowlisted files
+re-declares any of four vocabularies: a literal set containing all three of
+`"green"`, `"yellow"`, `"red"` (extras allowed — the three colors only ever
+come from `TrafficLightStatus`), a status-literal set equal to exactly
+`{"draft", "published"}` (supersets are distinct
 vocabularies by traced evidence and stay a review judgment), a literal set
 containing all four of `"blocked"`, `"at-risk"`, `"on-track"`, `"empty"`
 (extras allowed — the canonical presentation vocabulary is declared once as
@@ -23,35 +23,38 @@ stay legal), or a literal set containing all four of `"lead"`, `"head"`,
 per axis as `Role`/`DbRole`, per the `role-type` spec's own exemptions:
 runtime validators/presentation-ordered lists enumerating VALUES while
 typing from shared, the Prisma seed toolchain's one commented literal
-mirror, the e2e tree, and catalog YAML). The scanner MUST cover test files.
+mirror, the e2e tree, and catalog YAML). The gate MUST cover test files.
 The only exemptions are the SSOT files themselves
 (`packages/shared/src/schemas/report-primitives.schema.ts`,
-`apps/web/src/lib/status-presentation.ts`, `packages/shared/src/schemas/auth.ts`),
-the documented literal mirror `prisma/seed-constants.ts`, and the e2e tree's
-self-contained role mirrors (`e2e/integration/fixtures.ts`,
-`e2e/sweep/catalog-sweep.spec.ts`, `e2e/sweep/helpers/dev-auth.ts` — the
-`role-type` spec's e2e exemption), all hardcoded centrally in the scanner;
-there is no inline annotation escape.
+`packages/shared/src/schemas/canonical-status.ts`,
+`packages/shared/src/schemas/auth.ts`), the documented literal mirror
+`prisma/seed-constants.ts`, and the e2e tree's self-contained role mirrors
+(`e2e/integration/fixtures.ts`, `e2e/sweep/catalog-sweep.spec.ts`,
+`e2e/sweep/helpers/dev-auth.ts` — the `role-type` spec's e2e exemption), all
+hardcoded centrally in the gate; there is no inline annotation escape. The
+matching MUST be over the syntax tree rather than source text, and MUST run
+with inline configuration disabled so no comment can suppress a verdict; a
+file the gate cannot parse or does not lint MUST fail rather than pass.
 
 #### Scenario: a full traffic-light union is re-declared
 
 - **WHEN** a staged source or test file declares a union or zod literal list
   containing `"green"`, `"yellow"`, and `"red"` outside the SSOT file
-- **THEN** the scanner exits non-zero naming the file and line
+- **THEN** the gate exits non-zero naming the file and line
 - **AND** the commit is blocked by lint-staged
 
 #### Scenario: an exact report-status union is re-declared
 
 - **WHEN** a staged file declares a union whose status-literal set is exactly
   `{"draft", "published"}` outside the SSOT file and `prisma/seed-constants.ts`
-- **THEN** the scanner exits non-zero naming the file and line
+- **THEN** the gate exits non-zero naming the file and line
 
 #### Scenario: the canonical presentation vocabulary is re-declared
 
 - **WHEN** a staged file declares a union or zod literal list containing
   `"blocked"`, `"at-risk"`, `"on-track"`, and `"empty"` outside
-  `apps/web/src/lib/status-presentation.ts`
-- **THEN** the scanner exits non-zero naming the file and line
+  `packages/shared/src/schemas/canonical-status.ts`
+- **THEN** the gate exits non-zero naming the file and line
 
 #### Scenario: the role vocabulary is re-declared
 
@@ -59,7 +62,7 @@ there is no inline annotation escape.
   `"lead"`, `"head"`, `"admin"`, and `"viewer"` outside
   `packages/shared/src/schemas/auth.ts` or the `role-type` spec's other
   named exemptions
-- **THEN** the scanner exits non-zero naming the file and line
+- **THEN** the gate exits non-zero naming the file and line
 
 #### Scenario: legal compositions pass
 
@@ -68,11 +71,17 @@ there is no inline annotation escape.
   (`"yellow" | "red"`, `"at-risk" | "blocked"`), or declares a distinct
   vocabulary that merely includes `"draft"` and `"published"` among other
   lifecycle literals
-- **THEN** the scanner reports nothing
+- **THEN** the gate reports nothing
+
+#### Scenario: an inline disable cannot suppress a verdict
+
+- **WHEN** a violating file carries `/* eslint-disable */`, an
+  `eslint-disable-next-line`, or a rule-specific disable over the declaration
+- **THEN** the gate still exits non-zero naming the file and line
 
 ### Requirement: The gate is wired into both lint paths
 
-The scanner MUST run from lint-staged on every staged `.ts`/`.tsx` file
+The gate MUST run from lint-staged on every staged `.ts`/`.tsx` file
 (including tests) and from the root `lint` composite as a repo-wide `--all`
 sweep (`lint:status-literal-unions`), so hook bypasses and rebases cannot
 land violations silently.
@@ -80,10 +89,10 @@ land violations silently.
 #### Scenario: commit-time gating
 
 - **WHEN** a commit stages a `.ts`/`.tsx` file
-- **THEN** lint-staged runs the scanner on the staged paths
+- **THEN** lint-staged runs the gate on the staged paths
 
 #### Scenario: sweep-time gating
 
 - **WHEN** `pnpm lint` runs
-- **THEN** the scanner sweeps the whole tree via `--all` and fails the
+- **THEN** the gate sweeps the whole tree via `--all` and fails the
   composite on any hit

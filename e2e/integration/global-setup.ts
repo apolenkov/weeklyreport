@@ -35,7 +35,7 @@ export default async function globalSetup(): Promise<void> {
   const dbUrl = process.env.E2E_DATABASE_URL;
   if (!dbUrl) throw new Error("E2E_DATABASE_URL not set");
 
-  const repoRoot = findRepoRoot(__dirname);
+  const repoRoot = findRepoRoot(import.meta.dirname);
 
   // Prisma 7 does not auto-invoke the configured seed command after a reset.
   // Seed explicitly so dev-login cannot create ad-hoc records that replace

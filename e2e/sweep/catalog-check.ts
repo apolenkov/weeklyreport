@@ -24,15 +24,14 @@
 // (would need to model the unguarded root). Both are left as follow-ups.
 //
 // Pure Node, NO dependencies. Run from the repo root:
-//   node e2e/sweep/catalog-check.mjs   (aliased as `pnpm catalog:check`)
+//   node e2e/sweep/catalog-check.ts   (aliased as `pnpm catalog:check`)
 // ============================================================================
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 
-import { parseCatalog } from "./catalog-parser.mjs";
+import { type Catalog, parseCatalog } from "./catalog-parser.ts";
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
+const HERE = import.meta.dirname;
 const REPO_ROOT = path.resolve(HERE, "..", "..");
 const CATALOG_DIR = path.resolve(HERE, "..", "catalog");
 const APP_DIR = path.resolve(REPO_ROOT, "apps", "web", "src", "app");
@@ -49,11 +48,17 @@ const EXCLUDED_ROUTES = new Set([
 // trailing prose. Mirrors the parser's route regex + _generation-notes.md check.
 const CLEAN_ROUTE = /^\/\S*$/;
 
+type LoadedCatalog = {
+  readonly file: string;
+  readonly parsed: Catalog;
+  readonly dirtyRoutes: readonly string[];
+};
+
 // Derive a Next.js App Router route from a page.tsx path:
 //   apps/web/src/app/(app)/lead/report/[reportId]/page.tsx -> /lead/report/[reportId]
 // Route groups "(group)" are stripped; dynamic "[param]" segments are kept
 // verbatim (the catalog keeps them as-is). The root page.tsx maps to "/".
-function pageToRoute(absPageFile) {
+function pageToRoute(absPageFile: string): string {
   const rel = path.relative(APP_DIR, path.dirname(absPageFile));
   const segments = rel
     .split(path.sep)
@@ -62,8 +67,8 @@ function pageToRoute(absPageFile) {
 }
 
 // Recursively collect every page.tsx under the App Router and map to its route.
-function collectCodeRoutes(dir) {
-  const routes = new Set();
+function collectCodeRoutes(dir: string): Set<string> {
+  const routes = new Set<string>();
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
@@ -75,28 +80,68 @@ function collectCodeRoutes(dir) {
   return routes;
 }
 
-// Load every role catalog: the parsed routes (clean lines only) plus a raw
-// line scan for hygiene defects the parser would silently drop.
-function loadCatalogs() {
-  const files = fs
+// Raw line scan for hygiene defects the parser would silently drop.
+const dirtyRoutesOf = (text: string): readonly string[] =>
+  text
+    .split("\n")
+    .map((line) => /^\s*-\s*route:\s*(.+?)\s*$/.exec(line)?.[1])
+    .filter(
+      (value): value is string =>
+        value !== undefined && !CLEAN_ROUTE.test(value),
+    );
+
+// Load every role catalog: the parsed routes (clean lines only) plus the raw
+// scan above.
+function loadCatalogs(): readonly LoadedCatalog[] {
+  return fs
     .readdirSync(CATALOG_DIR)
     .filter((f) => f.endsWith(".yaml"))
-    .sort();
-  const catalogs = [];
-  for (const file of files) {
-    const text = fs.readFileSync(path.join(CATALOG_DIR, file), "utf8");
-    const parsed = parseCatalog(text);
-    if (!parsed) continue;
-    const dirtyRoutes = text
-      .split("\n")
-      .map((line) => /^\s*-\s*route:\s*(.+?)\s*$/.exec(line)?.[1])
-      .filter((value) => value !== undefined && !CLEAN_ROUTE.test(value));
-    catalogs.push({ file, parsed, dirtyRoutes });
-  }
-  return catalogs;
+    .sort()
+    .flatMap((file) => {
+      const text = fs.readFileSync(path.join(CATALOG_DIR, file), "utf8");
+      const parsed = parseCatalog(text);
+      return parsed ? [{ file, parsed, dirtyRoutes: dirtyRoutesOf(text) }] : [];
+    });
 }
 
-function main() {
+// 1. forward: code route with no catalog scenario.
+const uncoveredRoutes = (
+  codeRoutes: ReadonlySet<string>,
+  catalogRoutes: ReadonlySet<string>,
+): readonly string[] =>
+  [...codeRoutes]
+    .sort()
+    .filter((route) => !EXCLUDED_ROUTES.has(route) && !catalogRoutes.has(route))
+    .map((route) => `uncovered code route (no catalog scenario): ${route}`);
+
+// 2. reverse: catalog route that no longer exists in code.
+const staleRoutes = (
+  catalogs: readonly LoadedCatalog[],
+  codeRoutes: ReadonlySet<string>,
+): readonly string[] =>
+  catalogs.flatMap(({ file, parsed }) =>
+    parsed.routes
+      .filter(({ route }) => !codeRoutes.has(route))
+      .map(
+        ({ route }) =>
+          `stale catalog route (absent from code): ${route} (${file})`,
+      ),
+  );
+
+// 3. hygiene: malformed route value or empty access list.
+const hygieneFindings = (
+  catalogs: readonly LoadedCatalog[],
+): readonly string[] =>
+  catalogs.flatMap(({ file, parsed, dirtyRoutes }) => [
+    ...dirtyRoutes.map(
+      (value) => `malformed route value (not a clean URL): "${value}" (${file})`,
+    ),
+    ...parsed.routes
+      .filter(({ access }) => access.length === 0)
+      .map(({ route }) => `empty access list on route: ${route} (${file})`),
+  ]);
+
+function main(): void {
   if (!fs.existsSync(APP_DIR)) {
     console.error(`No App Router dir at ${APP_DIR}`);
     process.exit(1);
@@ -117,36 +162,11 @@ function main() {
     catalogs.flatMap(({ parsed }) => parsed.routes.map((r) => r.route)),
   );
 
-  const findings = [];
-
-  // 1. forward: code route with no catalog scenario.
-  for (const route of [...codeRoutes].sort()) {
-    if (EXCLUDED_ROUTES.has(route)) continue;
-    if (!catalogRoutes.has(route)) {
-      findings.push(`uncovered code route (no catalog scenario): ${route}`);
-    }
-  }
-
-  // 2. reverse: catalog route that no longer exists in code.
-  for (const { file, parsed } of catalogs) {
-    for (const { route } of parsed.routes) {
-      if (!codeRoutes.has(route)) {
-        findings.push(`stale catalog route (absent from code): ${route} (${file})`);
-      }
-    }
-  }
-
-  // 3. hygiene: malformed route value or empty access list.
-  for (const { file, parsed, dirtyRoutes } of catalogs) {
-    for (const value of dirtyRoutes) {
-      findings.push(`malformed route value (not a clean URL): "${value}" (${file})`);
-    }
-    for (const { route, access } of parsed.routes) {
-      if (access.length === 0) {
-        findings.push(`empty access list on route: ${route} (${file})`);
-      }
-    }
-  }
+  const findings = [
+    ...uncoveredRoutes(codeRoutes, catalogRoutes),
+    ...staleRoutes(catalogs, codeRoutes),
+    ...hygieneFindings(catalogs),
+  ];
 
   if (findings.length > 0) {
     console.error(`catalog:check — ${findings.length} drift finding(s):`);

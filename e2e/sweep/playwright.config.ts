@@ -16,7 +16,7 @@ const WEB_URL = `http://127.0.0.1:${WEB_PORT}`;
 const API_URL = `http://127.0.0.1:${API_PORT}`;
 
 // Repo root (e2e/sweep/playwright.config.ts → ../..).
-const REPO_ROOT = path.resolve(__dirname, "..", "..");
+const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
 
 export default defineConfig({
   testDir: ".",

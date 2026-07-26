@@ -94,7 +94,7 @@ explicitly called out as still unmechanized:
 
 Gate wiring: `.husky/pre-commit` runs lint-staged on staged files — ESLint
 `--fix`, Prettier, `scripts/find-archaeology.mjs` (comments and string
-literals/test titles) and `scripts/find-status-literal-unions.mjs`.
+literals/test titles) and `scripts/status-ssot-gate.ts`.
 `.husky/pre-push` runs the full local gate — typecheck, `pnpm lint`,
 `format:check`, catalog drift, mutation-consumer audit, unit tests — mirroring
 CI's cheap deterministic jobs. CI (`.github/workflows/ci.yml`) is manual

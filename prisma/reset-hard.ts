@@ -9,7 +9,7 @@ import { config as loadEnv } from "dotenv";
 // Load .env from the repo root regardless of cwd. The script may be invoked
 // via `pnpm --filter @customreport/api exec tsx ../../prisma/reset-hard.ts`,
 // in which case cwd is apps/api (no .env), or directly from the repo root.
-const REPO_ROOT = resolve(__dirname, "..");
+const REPO_ROOT = resolve(import.meta.dirname, "..");
 loadEnv({ path: resolve(REPO_ROOT, ".env") });
 
 // The imports below read DATABASE_URL at module-evaluation time, so they must
@@ -19,6 +19,7 @@ import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
 import { assertNonProdDestructive } from "./_destructive-guard.js";
+import { isEntrypoint } from "./_entrypoint.js";
 
 const DATABASE_URL: string = (() => {
   const url = process.env.DATABASE_URL;
@@ -212,7 +213,7 @@ async function main(): Promise<void> {
   );
 }
 
-if (typeof require !== "undefined" && require.main === module) {
+if (isEntrypoint(import.meta.url)) {
   void main()
     .catch((error: unknown) => {
       console.error("[reset-hard] FAILED:", error);
