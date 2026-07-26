@@ -191,3 +191,21 @@
       violations, plus 93 aborted requests to the sweep's own `next dev` port
       (navigation-cancelled chunk loads). Pre-existing product findings, not
       introduced here, and phase 1 is report-only by contract.
+- [x] Cover the retry paths, not just the happy one — the sweep proves the
+      recursion works when the first attempt succeeds, which is the one case
+      that is not a retry. `e2e/sweep/helpers/dev-auth.test.ts` drives
+      `loginByCookie` against a scripted `Page`: 10 cases over the rate-limit
+      backoff, the role-mismatch re-login, what each does on the last attempt,
+      a non-redirect status, a too-short session cookie, and `expectRole`
+      overriding the login role.
+      The tests were checked for teeth by mutation rather than assumed: four
+      separate breaks to the recursion — flattening the backoff to a constant,
+      clearing cookies on the rate-limited path, throwing instead of accepting
+      the session on a last-attempt rate limit, and dropping the mismatch
+      retry — each turn the suite red, and the file restores byte-identical.
+      Wiring: `vitest.prisma.config.ts` gains the glob plus a
+      `@customreport/shared` alias. Nothing links the workspace packages into
+      the repo root, so the import that resolves under `apps/` does not resolve
+      here; `e2e/tsconfig.json` already carries the same mapping for the
+      typecheck, and this is its runtime half. Root suite: 5 files/35 tests →
+      6 files/45 tests.
