@@ -7,6 +7,7 @@ import {
   ReportToolbar,
 } from "../../../shared/ui/report-shell/report-toolbar";
 import { PeriodNavigator, PublishLockButton } from "../../period";
+import { ArchiveRestoreActions } from "./archive-restore-actions";
 import type { WeeklyReportPageState } from "./use-weekly-report-page";
 import { useWeeklyReportPage } from "./use-weekly-report-page";
 import { ReportContent } from "./weekly-report-content";
@@ -50,17 +51,15 @@ function PeriodLifecycleActions({
 }) {
   return (
     <>
-      {/* Published-period lifecycle action, distinct from archive filter. */}
-      {page.canMutatePeriod && page.periodStatus === "published" && (
-        <button
-          type="button"
-          className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={page.handlers.archive}
-          disabled={page.mutationState.isArchivePending}
-          aria-label="Move this report to the archive"
-        >
-          {page.mutationState.archiveLabel}
-        </button>
+      {/* Archive/restore of this report, distinct from the archive filter. */}
+      {page.canMutatePeriod && (
+        <ArchiveRestoreActions
+          archived={page.archived}
+          periodStatus={page.periodStatus}
+          onArchive={page.handlers.archive}
+          onRestore={page.handlers.restore}
+          mutationState={page.mutationState}
+        />
       )}
       {/* With Publish so review → acknowledge → publish reads as one sequence. */}
       {page.canMutatePeriod && (

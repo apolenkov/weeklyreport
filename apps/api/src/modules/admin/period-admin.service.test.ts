@@ -75,7 +75,6 @@ function createRepository(row: SeedRow): AdminRepository & {
     removeProject: unused,
     upsertReminderRule: unused,
     removeReminderRule: unused,
-    upsertPeriod: unused,
     getSettings: unused,
     updateSettings: unused,
     saveReportingGroup: unused,

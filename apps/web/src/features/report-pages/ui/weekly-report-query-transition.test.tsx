@@ -64,6 +64,7 @@ function makeProviders(role: SessionUser["role"]) {
     { path: ["period", "publish"], mutation: true },
     { path: ["period", "reopen"], mutation: true },
     { path: ["archive", "archiveReport"], mutation: true },
+    { path: ["archive", "unarchiveReport"], mutation: true },
   ]);
   const client = makeQueryClient();
 

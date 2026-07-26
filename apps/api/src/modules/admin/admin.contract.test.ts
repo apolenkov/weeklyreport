@@ -9,13 +9,13 @@ import type { ReminderAdminService } from "./reminder-admin.service.js";
 /**
  * Contract guarantees for the ReminderPolicy tRPC surface —
  * `admin.listPolicies`, `admin.savePolicy`, `admin.removePolicy` — and the
- * soft-deprecation of `admin.saveReminderRule`.
+ * soft-deprecation of both per-rule writers.
  *
  * Contract assertions:
  *   1. The three new procedures exist under the `admin` namespace.
  *   2. Each is built on `adminProcedure` (admin-only, not head).
- *   3. `admin.saveReminderRule` write path throws TRPCError with code
- *      METHOD_NOT_SUPPORTED and a message mentioning `admin.savePolicy`.
+ *   3. `admin.saveReminderRule` and `admin.deleteReminderRule` throw TRPCError
+ *      with code METHOD_NOT_SUPPORTED and never reach the service.
  *
  * The tests inspect the router shape directly (no transport / Redis /
  * Prisma) — the same trick the role-coverage gate uses.
@@ -79,19 +79,16 @@ describe("admin reminder-policy contract", () => {
     expect(isAdminProcedure(getProcedure(router, procedurePath))).toBe(true);
   });
 
-  it("admin.saveReminderRule write path throws METHOD_NOT_SUPPORTED", async () => {
-    // Build a real router with a reminder service whose `upsertReminderRule`
-    // is spied so we can assert the deprecated handler never reaches it.
-    const upsertSpy = vi.fn();
-    const reminderAdminService = {
-      upsertReminderRule: upsertSpy,
-    } as unknown as ReminderAdminService;
+  // A real router over a spied reminder service, so each tombstone test can
+  // assert the deprecated handler never reaches the service behind it.
+  function callerOverReminderService(
+    reminderAdminService: Partial<ReminderAdminService>,
+  ) {
     const realDeps = {
       reminderAdminService,
     } as unknown as Parameters<typeof createAppRouter>[0];
-    const realRouter = createAppRouter(realDeps);
 
-    const caller = realRouter.createCaller({
+    return createAppRouter(realDeps).createCaller({
       session: {
         userId: "00000000-0000-4000-8000-000000000099",
         email: "admin@customreport.local",
@@ -105,6 +102,13 @@ describe("admin reminder-policy contract", () => {
       ip: "test-ip",
       isPdfExport: false,
       pdfReportId: null,
+    });
+  }
+
+  it("admin.saveReminderRule write path throws METHOD_NOT_SUPPORTED", async () => {
+    const upsertSpy = vi.fn();
+    const caller = callerOverReminderService({
+      upsertReminderRule: upsertSpy,
     });
 
     await expect(
@@ -123,6 +127,26 @@ describe("admin reminder-policy contract", () => {
     } as Record<string, unknown>);
 
     expect(upsertSpy).not.toHaveBeenCalled();
+  });
+
+  // Rules die only with their policy, so the per-rule delete must refuse in the
+  // same way its save twin does — otherwise the surface contradicts itself.
+  it("admin.deleteReminderRule write path throws METHOD_NOT_SUPPORTED", async () => {
+    const removeSpy = vi.fn();
+    const caller = callerOverReminderService({
+      removeReminderRule: removeSpy,
+    });
+
+    await expect(
+      caller.admin.deleteReminderRule({
+        ruleId: "11111111-1111-4111-8111-111111111111",
+      }),
+    ).rejects.toMatchObject({
+      code: "METHOD_NOT_SUPPORTED",
+      message: expect.stringContaining("reminder policy") as unknown,
+    } as Record<string, unknown>);
+
+    expect(removeSpy).not.toHaveBeenCalled();
   });
 });
 

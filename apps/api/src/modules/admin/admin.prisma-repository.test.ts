@@ -1,8 +1,4 @@
-import type {
-  PeriodState,
-  ReportPeriod,
-  UserSession,
-} from "@customreport/shared";
+import type { PeriodState, UserSession } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
@@ -15,72 +11,6 @@ import {
   AdminReopenRequestNotFoundError,
   AdminUserConflictError,
 } from "./admin-shared";
-
-const UPSERT_PERIOD: ReportPeriod = {
-  id: "10000000-0000-4000-8000-000000000001",
-  periodStart: new Date("2026-07-06T00:00:00.000Z"),
-  periodEnd: new Date("2026-07-12T23:59:59.999Z"),
-  deadline: new Date("2026-07-10T15:00:00.000Z"),
-  status: "draft",
-};
-
-describe("AdminPrismaRepository.upsertPeriod — transaction boundary", () => {
-  it("runs the read and create through the interactive transaction client", async () => {
-    const tx = {
-      report: {
-        findUnique: vi.fn(() => Promise.resolve(null)),
-        create: vi.fn(() => Promise.resolve({})),
-      },
-    };
-    const transaction = vi.fn(
-      (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
-    );
-    const repo = new AdminPrismaRepository({
-      $transaction: transaction,
-    } as unknown as PrismaService);
-
-    await repo.upsertPeriod(UPSERT_PERIOD);
-
-    expect(transaction).toHaveBeenCalledTimes(1);
-    expect(tx.report.findUnique).toHaveBeenCalledWith({
-      where: { id: UPSERT_PERIOD.id },
-      select: { id: true },
-    });
-    expect(tx.report.create).toHaveBeenCalledTimes(1);
-  });
-
-  it("retries as an update when a concurrent create wins the id race", async () => {
-    const primaryKeyRace = new Prisma.PrismaClientKnownRequestError(
-      "Unique constraint failed on Report_pkey (id)",
-      {
-        code: "P2002",
-        clientVersion: "test",
-        meta: { target: "Report_pkey" },
-      },
-    );
-    const tx = {
-      report: {
-        findUnique: vi
-          .fn()
-          .mockResolvedValueOnce(null)
-          .mockResolvedValueOnce({ id: UPSERT_PERIOD.id }),
-        create: vi.fn(() => Promise.reject(primaryKeyRace)),
-        update: vi.fn(() => Promise.resolve({})),
-      },
-    };
-    const transaction = vi.fn(
-      (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
-    );
-    const repo = new AdminPrismaRepository({
-      $transaction: transaction,
-    } as unknown as PrismaService);
-
-    await expect(repo.upsertPeriod(UPSERT_PERIOD)).resolves.toBeUndefined();
-
-    expect(transaction).toHaveBeenCalledTimes(2);
-    expect(tx.report.update).toHaveBeenCalledTimes(1);
-  });
-});
 
 // Manual create must reach PolicyApplicatorService like saveSnapshot does.
 describe("AdminPrismaRepository.createPeriodManual — reminder parity", () => {

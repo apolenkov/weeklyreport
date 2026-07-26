@@ -116,6 +116,7 @@ export function queueReport(
     periodEnd: new Date("2026-07-19T23:59:59.000Z"),
     deadline: new Date("2026-07-17T15:00:00.000Z"),
     periodStatus,
+    archived: false,
     weekLabel: "Week 29",
     submissionCount: leadSections.filter((row) => row.status === "submitted")
       .length,

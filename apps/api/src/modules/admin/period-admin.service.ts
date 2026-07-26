@@ -3,8 +3,6 @@ import {
   type AdminCreatePeriodManualResult,
   adminCreatePeriodManualResultSchema,
   adminCreatePeriodManualSchema,
-  type AdminSnapshot,
-  adminSnapshotSchema,
   type AdminUpdatePeriodManualInput,
   type AdminUpdatePeriodManualResult,
   adminUpdatePeriodManualSchema,
@@ -13,8 +11,6 @@ import {
   type PeriodListBucket,
   type PeriodListItem,
   type PeriodState,
-  type ReportPeriod,
-  reportPeriodSchema,
 } from "@customreport/shared";
 
 import { computeDeadline } from "../../lib/business-date.js";
@@ -91,19 +87,6 @@ export class PeriodAdminService {
 
   private async getSettings(): Promise<AppSettings> {
     return appSettingsSchema.parse(await this.repository.getSettings());
-  }
-
-  private async getSnapshot(): Promise<AdminSnapshot> {
-    return adminSnapshotSchema.parse(await this.repository.getSnapshot());
-  }
-
-  async upsertPeriod(period: ReportPeriod): Promise<AdminSnapshot> {
-    const parsedPeriod = reportPeriodSchema.parse(period);
-    // Single-period edit never re-writes stale T0 copies of other entities.
-    // Newly-created periods still trigger the post-commit applicator in the repo.
-    this.logger.info("upserted period", { periodId: parsedPeriod.id });
-    await this.repository.upsertPeriod(parsedPeriod);
-    return this.getSnapshot();
   }
 
   // Server-precomputed canReopen/canArchive; hot path uses (periodState, periodStart desc).

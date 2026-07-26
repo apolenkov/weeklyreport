@@ -196,16 +196,6 @@ describe("reminders namespace — per-group scope (integration)", () => {
   });
 
   describe("cross-group rejection (group-A head → group-B targets)", () => {
-    it("execute on a group-B rule is FORBIDDEN", async () => {
-      const caller = buildCaller("head", TEST_IDS.report);
-      await expect(
-        caller.reminders.execute({
-          ruleId: RULE_B,
-          recipientEmail: LEAD_B_EMAIL,
-        }),
-      ).rejects.toMatchObject({ code: "FORBIDDEN" });
-    });
-
     it("listExecutions on a group-B rule is FORBIDDEN", async () => {
       const caller = buildCaller("head", TEST_IDS.report);
       await expect(
@@ -235,38 +225,6 @@ describe("reminders namespace — per-group scope (integration)", () => {
         caller.reminders.dispatchPending({
           reportId: REPORT_B,
           ruleId: RULE_B,
-        }),
-      ).rejects.toMatchObject({ code: "FORBIDDEN" });
-    });
-  });
-
-  describe("positive paths and the open-mailer hole", () => {
-    it("executes for an in-scope draft author", async () => {
-      const caller = buildCaller("head", TEST_IDS.report);
-      const result = await caller.reminders.execute({
-        ruleId: RULE_A,
-        recipientEmail: LEAD_A_EMAIL,
-      });
-      expect(result.recipientEmail).toBe(LEAD_A_EMAIL);
-      expect(result.ruleId).toBe(RULE_A);
-    });
-
-    it("rejects an arbitrary (non-author) recipient email", async () => {
-      const caller = buildCaller("head", TEST_IDS.report);
-      await expect(
-        caller.reminders.execute({
-          ruleId: RULE_A,
-          recipientEmail: "stranger@evil.local",
-        }),
-      ).rejects.toMatchObject({ code: "FORBIDDEN" });
-    });
-
-    it("rejects a real draft author who is out of the caller's group", async () => {
-      const caller = buildCaller("head", TEST_IDS.report);
-      await expect(
-        caller.reminders.execute({
-          ruleId: RULE_A,
-          recipientEmail: LEAD_B_EMAIL,
         }),
       ).rejects.toMatchObject({ code: "FORBIDDEN" });
     });
@@ -322,15 +280,6 @@ describe("reminders namespace — per-group scope (integration)", () => {
   });
 
   describe("admin god-mode reaches every procedure unfiltered", () => {
-    it("executes against a group it does not belong to", async () => {
-      const caller = buildCaller("admin", REPORT_B);
-      const result = await caller.reminders.execute({
-        ruleId: RULE_B,
-        recipientEmail: LEAD_B_EMAIL,
-      });
-      expect(result.recipientEmail).toBe(LEAD_B_EMAIL);
-    });
-
     it("lists every recipient row regardless of group", async () => {
       const caller = buildCaller("admin", REPORT_B);
       const result = await caller.reminders.listExecutions({ ruleId: RULE_A });

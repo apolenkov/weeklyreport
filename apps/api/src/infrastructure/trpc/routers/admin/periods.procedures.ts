@@ -2,7 +2,6 @@ import {
   adminCreatePeriodManualSchema,
   adminUpdatePeriodManualSchema,
   periodListBucketSchema,
-  reportPeriodSchema,
 } from "@customreport/shared";
 import { z } from "zod";
 
@@ -115,13 +114,6 @@ function createManualPeriodProcedures(deps: AdminPeriodsDeps) {
 
 function createPeriodLifecycleProcedures(deps: AdminPeriodsDeps) {
   return {
-    savePeriod: adminProcedure
-      .input(reportPeriodSchema)
-      .mutation(({ input }) =>
-        withMappedDomainError(() =>
-          deps.periodAdminService.upsertPeriod(input),
-        ),
-      ),
     // Server-precomputed canReopen/canArchive so the UI needs no policy rules.
     listPeriodsByState: adminProcedure
       .input(

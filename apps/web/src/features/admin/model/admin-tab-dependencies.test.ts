@@ -11,6 +11,7 @@ describe("admin tab query dependencies", () => {
     ["users", true, false],
     ["groups", true, false],
     ["products", true, false],
+    ["activities", true, false],
     ["periods", false, false],
     ["reminders", true, true],
     ["reopen", false, false],

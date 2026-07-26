@@ -115,6 +115,7 @@ vi.mock("../../../features/report-sections/model/weekly-report", () => ({
         id: "p1",
         reportId: "r1",
         periodStatus: "open" as const,
+        archived: false,
         weekLabel: "W1",
         dateRange: "Jun 1 – Jun 7",
         isCurrent: true,

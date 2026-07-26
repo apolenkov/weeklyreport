@@ -262,17 +262,6 @@ function createRepository(
       );
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async upsertPeriod(period) {
-      const exists = currentSnapshot.periods.some(
-        (row) => row.id === period.id,
-      );
-      currentSnapshot.periods = exists
-        ? currentSnapshot.periods.map((row) =>
-            row.id === period.id ? structuredClone(period) : row,
-          )
-        : [...currentSnapshot.periods, structuredClone(period)];
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async reminderPolicyExists(policyId) {
       return currentSnapshot.policies.some((policy) => policy.id === policyId);
     },
@@ -375,10 +364,9 @@ describe("focused admin services", () => {
     expect(restored.headUserId).toBe(leaderId);
   });
 
-  it("routes project, period, and reminder writes to their owning services", async () => {
+  it("routes project and reminder writes to their owning services", async () => {
     const repository = createRepository(initialSnapshot);
     const projectService = new ProjectAdminService(repository);
-    const periodService = new PeriodAdminService(repository);
     const reminderService = new ReminderAdminService(repository);
 
     const withProject = await projectService.upsertProject({
@@ -387,13 +375,6 @@ describe("focused admin services", () => {
       leadId: leadSession.userId,
       leadName: leadSession.name,
       name: "Project 1",
-    });
-    const withPeriod = await periodService.upsertPeriod({
-      deadline: new Date("2026-04-17T15:00:00.000Z"),
-      id: "55555555-5555-4555-8555-555555555555",
-      periodEnd: new Date("2026-04-19T23:59:59.000Z"),
-      periodStart: new Date("2026-04-13T00:00:00.000Z"),
-      status: "draft",
     });
     const withRule = await reminderService.upsertReminderRule({
       fireAt: new Date("2026-04-17T09:00:00.000Z"),
@@ -407,7 +388,6 @@ describe("focused admin services", () => {
     });
 
     expect(withProject.projects).toHaveLength(1);
-    expect(withPeriod.periods).toHaveLength(1);
     expect(withRule.reminderRules).toHaveLength(1);
   });
 
@@ -706,45 +686,6 @@ describe("focused admin services", () => {
       expect(result.reminderRules).toHaveLength(1);
       expect(result.reminderRules[0]?.status).toBe("paused");
       expect(result.reminderRules[0]?.version).toBe(2);
-    });
-  });
-
-  describe("upsertPeriod — regression", () => {
-    it("creates a new period", async () => {
-      const service = new PeriodAdminService(createRepository(initialSnapshot));
-
-      const result = await service.upsertPeriod({
-        id: "55555555-5555-4555-8555-555555555555",
-        periodStart: new Date("2026-04-13T00:00:00.000Z"),
-        periodEnd: new Date("2026-04-19T23:59:59.000Z"),
-        deadline: new Date("2026-04-17T15:00:00.000Z"),
-        status: "draft",
-      });
-
-      expect(result.periods).toHaveLength(1);
-      expect(result.periods[0]?.status).toBe("draft");
-    });
-
-    it("updates existing period by ID", async () => {
-      const service = new PeriodAdminService(createRepository(initialSnapshot));
-
-      await service.upsertPeriod({
-        id: "55555555-5555-4555-8555-555555555555",
-        periodStart: new Date("2026-04-13T00:00:00.000Z"),
-        periodEnd: new Date("2026-04-19T23:59:59.000Z"),
-        deadline: new Date("2026-04-17T15:00:00.000Z"),
-        status: "draft",
-      });
-
-      const result = await service.upsertPeriod({
-        id: "55555555-5555-4555-8555-555555555555",
-        periodStart: new Date("2026-04-13T00:00:00.000Z"),
-        periodEnd: new Date("2026-04-19T23:59:59.000Z"),
-        deadline: new Date("2026-04-17T15:00:00.000Z"),
-        status: "published",
-      });
-
-      expect(result.periods).toHaveLength(1);
     });
   });
 });

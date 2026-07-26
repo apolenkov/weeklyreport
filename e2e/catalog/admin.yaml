@@ -59,6 +59,12 @@ routes:
         when: "the admin adds a new product, edits a product's name or lead owner, archives or restores a product"
         then: "A toast appears with 'Product saved' or 'Product archived'; the product list updates with active and archived sections."
         note: "Excluded deactivated leads from the picker (B9). Stages assigned per product show count via separate query (35-01). Products can be deep-linked via global search filter."
+      - id: admin-activities-manage
+        intent: "Manage project activities: create, edit, archive, and restore stage-less reporting units; attach and detach the leads who report on them."
+        given: "The admin is on the Activities tab."
+        when: "the admin adds an activity, edits its name/group/linked products/Jira accounts, archives or restores it, or expands a row to attach or detach a lead"
+        then: "A toast appears with 'Activity saved', 'Activity archived', or 'Activity restored'; the list refreshes with active and archived sections and the row's attached-lead count reflects the attachment change."
+        note: "An activity carries no SDLC stage (ADR 0012) and attaches to many leads, each reporting their own status (ADR 0014). Attachment is admin-provisioned only — there is no lead-side self-service."
       - id: admin-periods-manage
         intent: "Manage reporting periods: create, edit, publish, reopen, archive, unarchive, and delete periods; view period lifecycle by state."
         given: "The admin is on the Periods tab."
@@ -146,6 +152,45 @@ routes:
         when: "Admin selects '-- unassigned --' from the stage dropdown"
         then: "Stage assignment is deleted and success toast 'Stage assignment removed' appears. Dropdown reverts to empty/unassigned state."
         note: "Only valid if an assignment already exists; selecting unassigned on an already-empty stage is a no-op."
+  - route: /admin/activities
+    access: [admin]
+    intents:
+      - id: admin-activities-view
+        intent: "View the project activity catalog (active and archived)"
+        given: "Admin accesses the activities tab"
+        when: "The page loads"
+        then: "Activities list displays each activity's name, owning reporting group, linked product names (or 'No linked products'), Jira accounts, and attached-lead count, with a separate archived section. A local name filter is visible."
+        note: "Redirect alias (307) to /admin?tab=activities. An activity is stage-less: it carries no SDLC stage grid, unlike a product."
+      - id: admin-activity-add
+        intent: "Create a project activity"
+        given: "Admin is on the activities tab"
+        when: "Admin clicks 'Add Activity', fills the name, picks a reporting group, ticks any linked products, types comma-separated Jira accounts, and confirms"
+        then: "The activity appears in the active list and success toast 'Activity saved' appears. Save stays disabled until a name and a group are both present."
+        note: "The group picker offers active groups only and prefills the first one. Linked products are label-only and never feed product health. Dialog closes via confirm, Cancel, Escape, or backdrop click."
+      - id: admin-activity-edit
+        intent: "Update an activity's name, group, linked products, or Jira accounts"
+        given: "An active activity exists in the list"
+        when: "Admin clicks 'Edit' on the activity row and saves the changed fields"
+        then: "The activity updates and success toast 'Activity saved' appears. Linked products reconcile to exactly the ticked set, including clearing them all."
+        note: "The reporting-group picker is disabled while any lead is attached, with a note reading 'Detach all leads before moving the activity to another group.' — the server rejects that move."
+      - id: admin-activity-archive
+        intent: "Hide an activity from active lead forms"
+        given: "An active activity exists in the list"
+        when: "Admin clicks 'Archive' on the activity row and confirms"
+        then: "Confirmation shows 'Archive activity?' with the activity name; after confirming, the activity moves to the archived section and success toast 'Activity archived' appears."
+        note: "Reversible. Lead attachments and already-reported statuses are preserved."
+      - id: admin-activity-restore
+        intent: "Return an archived activity to active use"
+        given: "An archived activity exists in the archived section"
+        when: "Admin clicks 'Restore' on the archived row"
+        then: "The activity moves back to the active list and success toast 'Activity restored' appears."
+        note: "Same archive mutation with archived=false; no re-entry of group, product links, or lead attachments is required."
+      - id: admin-activity-attach-lead
+        intent: "Provision which leads report on an activity"
+        given: "An active activity row is visible"
+        when: "Admin expands the activity row and ticks a lead in the 'Leads attached' editor"
+        then: "The lead is attached, the row's attached-lead count increases, and the lead's report form starts offering that activity. Unticking detaches the lead again."
+        note: "Attachment is many-to-many — each attached lead reports their own status. Leads outside the activity's reporting group are listed but locked with a 'Belongs to <group>' hint, since the server rejects a cross-group attachment."
   - route: /admin/settings
     access: [admin]
     intents:

@@ -26,7 +26,6 @@ export function unusedRemindersRepositoryStubs(): RemindersRepository {
     listExecutions: vi.fn().mockResolvedValue([]),
     getRuleReportId: vi.fn().mockResolvedValue(null),
     findInScopeSectionId: vi.fn().mockResolvedValue(null),
-    findInScopeDraftSectionId: vi.fn().mockResolvedValue(null),
     listInScopeSectionAuthorEmails: vi.fn().mockResolvedValue([]),
     findInScopeLeadId: vi.fn().mockResolvedValue(null),
     findActiveRuleForDispatch: vi.fn().mockResolvedValue(null),

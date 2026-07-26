@@ -37,12 +37,15 @@ interface WeeklyReportPageHandlers {
   readonly publish: () => void;
   readonly reopen: () => void;
   readonly archive: () => void;
+  readonly restore: () => void;
 }
 
 interface WeeklyReportPageMutationState {
   readonly isPublishOrReopenPending: boolean;
   readonly isArchivePending: boolean;
+  readonly isRestorePending: boolean;
   readonly archiveLabel: string;
+  readonly restoreLabel: string;
 }
 
 export type WeeklyReportPageState =
@@ -162,11 +165,14 @@ function readyState({
       publish: () => mutations.publish(view.reportId),
       reopen: () => mutations.reopen(view.reportId),
       archive: () => mutations.archive(view.reportId),
+      restore: () => mutations.restore(view.reportId),
     },
     mutationState: {
       isPublishOrReopenPending: mutations.isPublishOrReopenPending,
       isArchivePending: mutations.isArchivePending,
+      isRestorePending: mutations.isRestorePending,
       archiveLabel: mutations.isArchivePending ? "Archiving…" : "Archive",
+      restoreLabel: mutations.isRestorePending ? "Restoring…" : "Restore",
     },
   };
 }

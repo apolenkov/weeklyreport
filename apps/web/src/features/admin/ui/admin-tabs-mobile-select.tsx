@@ -10,6 +10,7 @@ const TAB_LABELS: Record<AdminTab, string> = {
   users: "Users",
   groups: "Groups",
   products: "Products",
+  activities: "Activities",
   periods: "Periods",
   reminders: "Reminders",
   reopen: "Reopen",
