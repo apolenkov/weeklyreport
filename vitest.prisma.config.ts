@@ -2,10 +2,8 @@ import * as path from "node:path";
 
 import { defineConfig } from "vitest/config";
 
-// Root-level code under prisma/ (reset/wipe tooling), e2e/ (globalSetup and the
-// sweep's dev-login helper) and tools/ (the local ESLint plugin) is outside
-// every workspace suite; this config is its only runner, chained into
-// `pnpm test`.
+// Root-level code under prisma/, e2e/ and tools/ is outside every workspace
+// suite; this config is its only runner, chained into `pnpm test`.
 export default defineConfig({
   // Nothing links the workspace packages into the repo root, so an import that
   // resolves inside apps/ does not resolve here. e2e/tsconfig.json carries the

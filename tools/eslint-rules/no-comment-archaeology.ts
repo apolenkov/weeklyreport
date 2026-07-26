@@ -36,25 +36,18 @@ const STANDARDS = new Set([
 const SLUG = /\b([A-Z]{1,5})-\d{1,4}\b/g;
 
 const hasTicketSlug = (text: string): boolean =>
-  // Walk every slug on the line — a leading standard token (RFC-5322, ISO-8601)
-  // must not hide a later real ticket slug in the same text.
-  // {1,5}: single-letter prefixes count too — this repo's ledgers mint
-  // one-letter row ids that leak into comments and test titles.
+  // Every slug on the line: a leading standard token (RFC-5322) must not hide
+  // a real one later in the same text. `{1,5}` because this repo's ledgers
+  // mint one-letter row ids that leak into comments and test titles.
   [...text.matchAll(SLUG)].some(
     (match) => !STANDARDS.has((match[1] ?? "").toUpperCase()),
   );
 
 type Detector = RegExp | ((text: string) => boolean);
 
-// Each entry is a high-precision pattern that essentially never appears in a
-// legitimate comment, so a match is almost certainly archaeology, plus a label.
-// Order is meaningful: the first match names the hit.
-//
-// Precision is the whole contract, and it is bought with recall on purpose: a
-// rule that fires on honest comments gets disabled, and a disabled rule catches
-// nothing. Phrasings that read as archaeology but collide with this domain's
-// vocabulary are left to review, and sit in the test file as valid fixtures so
-// the trade is visible rather than rediscovered.
+// Patterns that essentially never appear in a legitimate comment; the first
+// match names the hit. Precision is the contract and recall is spent for it —
+// a rule that fires on honest comments gets disabled, and then catches nothing.
 const DETECTORS: readonly (readonly [Detector, string])[] = [
   [hasTicketSlug, "ticket-slug (e.g. UFB-036, AUTH-08, SC-160)"],
   [/\bR\d+[a-z]?-\d+\b/, "plan-slug (e.g. R3a-4)"],
@@ -68,25 +61,20 @@ const DETECTORS: readonly (readonly [Detector, string])[] = [
     /\b(moved|relocated|extracted|graduated|dissolved|renamed|migrated)\b[^.\n]{0,40}\b(into|out of|verbatim)\b/i,
     "change-history narration (moved/extracted/... into/out of)",
   ],
-  // `from` / `to` / `by` also read as plain data flow, so `extracted` is out of
-  // this arm: "the token was extracted from the Authorization header" is an
-  // honest comment, and the rule used to reject it.
+  // `from` / `to` / `by` also read as plain data flow, so `extracted` is out
+  // of this arm — "extracted from the Authorization header" is honest.
   [
     /\b(moved|relocated|graduated|dissolved|renamed|migrated)\b[^.\n]{0,40}\b(from|to|by)\b/i,
     "change-history narration (moved/migrated/... from/to/by)",
   ],
-  // Only verbs with no data sense. `rewritten`, `extracted` and `renamed` were
-  // tried here and removed: a URL is rewritten by a proxy, a token is extracted
-  // from a header, a column is renamed upstream — all legitimate, none an edit
-  // to this code. The valid fixtures in the test file pin those out.
+  // Only verbs with no data sense. A URL is rewritten by a proxy and a token
+  // is extracted from a header, so those two belong to review, not here.
   [
     /\b(refactored|reworked|reimplemented)\b/i,
     "change-history narration (refactored/reworked/reimplemented)",
   ],
-  // Narrating the code's own former state. `previously` must point at the code
-  // (`previously this …`) — bare `previously` and `was previously` describe a
-  // ROW's lifecycle far more often than a commit in a repo built on
-  // draft/submitted/published, and were removed for exactly that.
+  // `previously` must point at the code (`previously this …`): on its own it
+  // describes a row's lifecycle far more often than a commit in this domain.
   [
     /\bformerly\b|\bpreviously\s+this\b/i,
     "prior-state narration (formerly/previously this)",
@@ -124,10 +112,9 @@ const isTestCall = (node: CallNode): boolean => {
   return name !== null && TEST_FUNCTION.test(name);
 };
 
-// An interpolated title still carries its literal halves, and archaeology hides
-// there just as well — `` `UFB-036: ${role} cannot publish` ``. Joining the
-// quasis on a space keeps a slug from being forged across an interpolation
-// boundary while leaving each static run intact.
+// Archaeology hides in an interpolated title's literal halves too. Joining the
+// quasis on a space keeps each static run intact while stopping a slug from
+// being forged across an interpolation boundary.
 const staticString = (argument: Argument): string | null => {
   if (argument.type === "Literal")
     return typeof argument.value === "string" ? argument.value : null;
