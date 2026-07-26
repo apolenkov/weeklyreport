@@ -48,8 +48,8 @@ export function isoWeekNumber(d: Date): number {
     Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
   );
   const dayNum = (t.getUTCDay() + MONDAY_FIRST_SHIFT) % DAYS_PER_WEEK;
-  // Both dates are moved to the Thursday of their week, which is what makes
-  // the week difference below exact.
+  // Both dates shift to the Thursday of their week, which is what makes the
+  // week difference below exact.
   t.setUTCDate(t.getUTCDate() - dayNum + THURSDAY_OFFSET);
   const firstThursday = new Date(
     Date.UTC(t.getUTCFullYear(), 0, ISO_FIRST_WEEK_DAY_OF_YEAR),

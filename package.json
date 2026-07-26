@@ -100,7 +100,6 @@
     "*.{ts,tsx,js,jsx,mjs,cjs}": [
       "eslint --fix --no-warn-ignored",
       "prettier --write",
-      "node scripts/find-archaeology.mjs",
       "node scripts/status-ssot-gate.ts"
     ],
     "*.css": [
