@@ -141,9 +141,19 @@
       `depcruise` finds no violations across 1023 modules.
       `pnpm catalog:check` and `node apps/web/uat-suite/mutation-audit.mjs
 --check` are green too.
-- [ ] Docker build of both images from a clean cache — not run in this pass
-      (out of scope for a paperwork-reconciliation check; needs an explicit
-      docker build invocation to confirm).
-- [ ] CI green on all jobs after push — not verifiable without pushing, which
-      this pass deliberately did not do (CI here is manual-dispatch only per
-      `CLAUDE.md`, and no push was requested).
+- [x] Docker build of both images from a clean cache — run and green.
+      `docker build --no-cache -f Dockerfile.api` exits 0 (image 4.26 GB);
+      `Dockerfile.web` exits 0 (408 MB).
+      While the images existed, the two open Dependabot advisories were checked
+      against them rather than against the lockfile. `brace-expansion` appears
+      only inside the base layer's own `npm`. `valibot` IS copied into the
+      image's pnpm store as a dependency of `@prisma/dev` — but it is not
+      reachable: `require.resolve("valibot")` from `/app` gives
+      `MODULE_NOT_FOUND`, and the Prisma CLI is not linked into
+      `/app/node_modules`. Dead weight in the layer and scanner noise, not a
+      runtime path.
+- [x] CI green on all jobs after push — the work is pushed and CI ran on it.
+      Note for whoever reads this next: `CLAUDE.md` claimed CI was
+      manual-dispatch only. It is not — `ci.yml` triggers on
+      `push: branches: [main]` and on pull requests as well. That line is
+      corrected.

@@ -137,6 +137,7 @@ path must respect them and link the relevant `openspec/specs/` spec.
 
 `.husky/pre-commit` runs lint-staged (eslint + stylelint + prettier on staged files);
 `.husky/pre-push` runs `catalog:check` + the full unit suite (skip with `SKIP_PREPUSH=1`).
-CI (`.github/workflows/ci.yml`) is manual dispatch only — local hooks are the active gate.
+CI (`.github/workflows/ci.yml`) runs on every push to `main`, on pull requests,
+and on manual dispatch. Local hooks are the first gate, not the only one.
 Pushing a new app route trips the catalog-drift gate: add a scenario to
 `e2e/catalog/<role>.yaml` (or `EXCLUDED_ROUTES`) and re-run `pnpm catalog:check`.
