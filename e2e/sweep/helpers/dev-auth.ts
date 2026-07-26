@@ -1,6 +1,9 @@
+import {
+  sessionRoleSchema,
+  type DbRole,
+  type Role,
+} from "@customreport/shared";
 import type { Page } from "@playwright/test";
-
-type Role = "lead" | "head" | "admin" | "viewer";
 
 // Use relative URL so the request goes through the Playwright baseURL
 // (http://127.0.0.1:3100 in E2E mode) instead of hardcoded localhost:3000.
@@ -11,7 +14,7 @@ const DEV_LOGIN_PATH = "/auth/dev-login";
 const COOKIE_NAME = "customreport_session";
 
 type DevAuthIdentity = {
-  role: Role;
+  role: DbRole;
   email?: string;
   redirect?: string;
   expectRole?: Role;
@@ -45,16 +48,8 @@ function parseAuthMeRole(payload: unknown): SessionRoleResult {
     return null;
   }
 
-  const role = session.role;
-  if (
-    role === "lead" ||
-    role === "head" ||
-    role === "admin" ||
-    role === "viewer"
-  ) {
-    return role;
-  }
-  return null;
+  const parsed = sessionRoleSchema.safeParse(session.role);
+  return parsed.success ? parsed.data : null;
 }
 
 async function getSessionRole(page: Page): Promise<SessionRoleResult> {
@@ -75,7 +70,7 @@ async function getSessionRole(page: Page): Promise<SessionRoleResult> {
 }
 
 function emailFromRole(
-  role: Role,
+  role: DbRole,
   email: string | undefined,
   attempt: number,
 ): string | undefined {

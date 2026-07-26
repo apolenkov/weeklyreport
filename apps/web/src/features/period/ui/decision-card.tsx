@@ -1,3 +1,4 @@
+import { formatTimestampShort } from "../../../lib/format-date";
 import { LockBadge } from "../../../shared/ui/report-shell/lock-badge";
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
 import type { DecisionEntry } from "../../report-sections";
@@ -43,17 +44,12 @@ function DeleteIcon() {
   );
 }
 
+// Deadlines are stored as UTC date-only values, so the chip formats in UTC —
+// a local-zone render shows the previous day for viewers west of UTC.
 function formatDeadline(iso: string | null): string {
   if (!iso) return "—";
-  // Render as locale-aware short date so the chip stays compact.
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-    });
-  } catch {
-    return iso;
-  }
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? iso : formatTimestampShort(date);
 }
 
 interface DecisionCardProps {

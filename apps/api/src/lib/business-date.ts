@@ -23,11 +23,6 @@ const SUNDAY = 7;
 const DEFAULT_DEADLINE_HOUR = 18;
 const MAX_HOUR_OF_DAY = 23;
 
-// End-of-day components for the Sunday 23:59:59.999 period boundary.
-const LAST_MINUTE = 59;
-const LAST_SECOND = 59;
-const LAST_MILLISECOND = 999;
-
 // Exported for tests only.
 export function workingDaySet(wd: WorkingDays): ReadonlySet<number> {
   switch (wd) {
@@ -126,7 +121,8 @@ export function computeDeadline(
     .toJSDate();
 }
 
-// UTC-only Date.UTC arithmetic — host TZ/DST independent (scheduler-critical).
+// The explicit utc zone — not the host clock — anchors the Monday
+// (scheduler-critical); luxon's ISO week already starts on Monday.
 // Optional periodLengthDays ends at Monday+(length-1); default is Mon–Sun.
 export function getCurrentWeekBounds(
   date: Date = new Date(),
@@ -140,32 +136,13 @@ export function getCurrentWeekBounds(
       `business-date: periodLengthDays must be a positive integer (got ${periodLengthDays})`,
     );
   }
-  const utcDay = date.getUTCDay();
-  // Monday is the start-of-week. Sunday (0) maps to "6 days back".
-  const diffToMonday = utcDay === 0 ? 1 - DAYS_PER_WEEK : 1 - utcDay;
+  const monday = DateTime.fromJSDate(date, { zone: "utc" }).startOf("week");
 
-  const periodStart = new Date(
-    Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth(),
-      date.getUTCDate() + diffToMonday,
-      0,
-      0,
-      0,
-      0,
-    ),
-  );
-  const periodEnd = new Date(
-    Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth(),
-      date.getUTCDate() + diffToMonday + (periodLengthDays - 1),
-      MAX_HOUR_OF_DAY,
-      LAST_MINUTE,
-      LAST_SECOND,
-      LAST_MILLISECOND,
-    ),
-  );
-
-  return { periodStart, periodEnd };
+  return {
+    periodStart: monday.toJSDate(),
+    periodEnd: monday
+      .plus({ days: periodLengthDays - 1 })
+      .endOf("day")
+      .toJSDate(),
+  };
 }

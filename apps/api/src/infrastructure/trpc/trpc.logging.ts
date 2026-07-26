@@ -1,5 +1,6 @@
 import { MS_PER_SECOND, type Role } from "@customreport/shared";
 import type { TRPCError } from "@trpc/server";
+import { getHTTPStatusCodeFromError } from "@trpc/server/http";
 
 import { httpRequestDurationSeconds } from "../metrics/metrics.registry.js";
 import type { TrpcContext } from "./trpc.context.js";
@@ -9,22 +10,6 @@ type TrpcLogger = TrpcContext["logger"];
 const TRPC_REQUEST_LOG_PHASE = "trpc.request";
 
 const SLOW_TRPC_MS = 500;
-
-const TRPC_ERROR_HTTP_STATUS: Record<string, string> = {
-  BAD_REQUEST: "400",
-  UNAUTHORIZED: "401",
-  FORBIDDEN: "403",
-  NOT_FOUND: "404",
-  METHOD_NOT_SUPPORTED: "405",
-  TIMEOUT: "408",
-  CONFLICT: "409",
-  PRECONDITION_FAILED: "412",
-  PAYLOAD_TOO_LARGE: "413",
-  UNPROCESSABLE_CONTENT: "422",
-  TOO_MANY_REQUESTS: "429",
-  CLIENT_CLOSED_REQUEST: "499",
-  INTERNAL_SERVER_ERROR: "500",
-};
 
 // Compact response-shape descriptor for debug logs — keys/lengths only,
 // never values (full JSON previously leaked PII on auth.me / admin.*).
@@ -165,7 +150,7 @@ export function recordTrpcFailure(
 ): void {
   observeTrpcDuration(
     identity,
-    TRPC_ERROR_HTTP_STATUS[error.code] ?? "500",
+    String(getHTTPStatusCodeFromError(error)),
     duration,
   );
 

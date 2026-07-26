@@ -1,17 +1,13 @@
+import { formatDateTime } from "../../../lib/format-date";
 import { truncate } from "../model/action-log-format";
 
 const MAX_ERROR_REASON_LENGTH = 80;
 
+// The guard stays here: a queued-but-unstamped job carries 0, which
+// `formatDateTime` would render as the epoch rather than as "no timestamp".
 function formatTimestamp(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) return "—";
-  const d = new Date(ms);
-  return d.toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTime(new Date(ms));
 }
 
 // Structural (not the shared `FailedJob` alias): the tRPC client output the

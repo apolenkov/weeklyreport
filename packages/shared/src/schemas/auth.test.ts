@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { roleSchema, userSessionSchema } from "./auth";
+import { roleSchema, sessionRoleSchema, userSessionSchema } from "./auth";
 
 const uuid = () => randomUUID();
 
@@ -52,6 +52,24 @@ describe("roleSchema", () => {
       expect(roleSchema.safeParse(role).success).toBe(false);
     },
   );
+});
+
+// Consumers that used to mirror the literal list now read `.options`, and one
+// of them interpolates it into a thrown message — so the ORDER is contractual,
+// not just the membership.
+describe("role enum option order", () => {
+  it("exposes the DB axis in declaration order", () => {
+    expect(roleSchema.options).toEqual(["lead", "head", "admin", "viewer"]);
+  });
+
+  it("exposes the session axis in the same order", () => {
+    expect(sessionRoleSchema.options).toEqual([
+      "lead",
+      "head",
+      "admin",
+      "viewer",
+    ]);
+  });
 });
 
 describe("userSessionSchema — required fields", () => {

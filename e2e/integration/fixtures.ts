@@ -12,6 +12,7 @@
  * `page.context().request` shares cookies with the page that uses it.
  */
 
+import type { DbRole } from "@customreport/shared";
 import {
   test as base,
   expect,
@@ -22,8 +23,6 @@ import {
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   `http://127.0.0.1:${process.env.E2E_API_PORT ?? 3002}`;
-
-export type Role = "lead" | "head" | "admin" | "viewer";
 
 /**
  * Mints a real session JWT cookie via the dev-login endpoint and installs it
@@ -42,7 +41,7 @@ export type Role = "lead" | "head" | "admin" | "viewer";
  */
 export async function loginAs(
   context: BrowserContext,
-  opts: { role: Role; email?: string },
+  opts: { role: DbRole; email?: string },
 ): Promise<void> {
   const url = new URL(`${API_URL}/auth/dev-login`);
   url.searchParams.set("role", opts.role);

@@ -1,5 +1,5 @@
 import {
-  MS_PER_HOUR,
+  isWithinReopenWindow,
   type PeriodStatus,
   type ReportStatus,
   type UserSession,
@@ -284,9 +284,13 @@ export class PeriodService {
           "Published period is missing publishedAt; reopen window cannot be enforced.",
         );
       }
-      const windowEnd =
-        report.publishedAt.getTime() + policy.reopenWindowHours * MS_PER_HOUR;
-      if (Date.now() > windowEnd) {
+      if (
+        !isWithinReopenWindow(
+          policy.reopenWindowHours,
+          report.publishedAt,
+          Date.now(),
+        )
+      ) {
         throw new PeriodAccessError(
           `Reopen window expired (${policy.reopenWindowHours}h after publication).`,
         );

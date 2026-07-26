@@ -4,7 +4,7 @@ import {
   type ReportStatus,
   type UserSession,
 } from "@customreport/shared";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   customreportPeriodStateTransitionsTotal,
@@ -623,6 +623,52 @@ describe("PeriodService — reopen policy gate", () => {
     await service.reopenPeriod(reportId, headSession);
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.reopenPeriod).toHaveBeenCalledOnce();
+  });
+});
+
+// The window edge is what the admin list mirrors via `canReopen`; frozen time
+// is the only way to land exactly on `publishedAt + reopenWindowHours`.
+describe("PeriodService — reopen window boundary", () => {
+  const NOW = new Date("2026-05-14T09:00:00.000Z");
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const reopenAtWindowAge = async (ageMs: number): Promise<boolean> => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+    const reports = new Map<string, SpyReport>([
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "published",
+          periodStatus: "published",
+          publishedAt: new Date(NOW.getTime() - ageMs),
+        },
+      ],
+    ]);
+    const repo = createSpyRepository(reports);
+    const service = new PeriodService(repo, noopInvalidate, () =>
+      Promise.resolve({
+        allowReopenAfterPublish: true,
+        reopenWindowHours: 72,
+      }),
+    );
+
+    return service.reopenPeriod(reportId, headSession).then(
+      () => true,
+      () => false,
+    );
+  };
+
+  it("allows reopen at the exact window boundary", async () => {
+    await expect(reopenAtWindowAge(72 * MS_PER_HOUR)).resolves.toBe(true);
+  });
+
+  it("rejects reopen one millisecond past the boundary", async () => {
+    await expect(reopenAtWindowAge(72 * MS_PER_HOUR + 1)).resolves.toBe(false);
   });
 });
 

@@ -2,8 +2,8 @@ import {
   type AdminUpdatePeriodManualResult,
   adminUpdatePeriodManualResultSchema,
   type AppSettings,
+  isWithinReopenWindow,
   MS_PER_DAY,
-  MS_PER_HOUR,
   type PeriodListBucket,
   type PeriodListItem,
   periodListItemSchema,
@@ -218,7 +218,7 @@ export function toPeriodListItem(
     row.periodState === "published" &&
     settings.allowReopenAfterPublish &&
     row.publishedAt !== null &&
-    row.publishedAt.getTime() + settings.reopenWindowHours * MS_PER_HOUR > now;
+    isWithinReopenWindow(settings.reopenWindowHours, row.publishedAt, now);
   const canArchive = row.periodState === "published" && !row.archived;
   return periodListItemSchema.parse({
     id: row.id,
