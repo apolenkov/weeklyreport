@@ -18,7 +18,8 @@ import {
   resolveObject,
   rootIdentifier,
 } from "./expression-resolver.mjs";
-import { isLibraryName, modules, walk, WEB_SRC } from "./web-module-graph.mjs";
+import { MUTATION_SITES, UNREADABLE_SITES } from "./mutation-call-sites.mjs";
+import { isLibraryName, walk, WEB_SRC } from "./web-module-graph.mjs";
 
 const INVALIDATORS = new Set([
   "invalidateQueries",
@@ -115,60 +116,6 @@ function nodeFindings(node, ctx) {
 function scanFunction(fn, ctx) {
   return walk(fn.body ?? fn, (node) => nodeFindings(node, ctx));
 }
-
-const MUTATION_SITES = modules()
-  .flatMap((module) =>
-    walk(module.source, (node) => {
-      if (!ts.isCallExpression(node)) return [];
-      const callee = node.expression;
-      const isSite =
-        ts.isPropertyAccessExpression(callee) &&
-        callee.name.text === "mutationOptions";
-      const chain = isSite ? propertyChain(callee.expression) : null;
-      return chain && chain.length > 1
-        ? [{ procedure: chain.slice(1).join("."), call: node, module }]
-        : [];
-    }),
-  )
-  .reduce(
-    (map, site) =>
-      map.set(site.procedure, [...(map.get(site.procedure) ?? []), site]),
-    new Map(),
-  );
-
-// Call styles this analysis cannot follow. Today the app uses `mutationOptions`
-// everywhere, so this finds nothing — which is the point: without it the
-// "every call site" guarantee would hold by convention rather than by check,
-// and the first hook written the other way would be invisible to the audit
-// while its mutation kept whatever verdict its other call sites earned.
-const UNREADABLE_MUTATION_CALLS = new Set([
-  "useMutation",
-  "mutate",
-  "mutateAsync",
-]);
-
-const UNREADABLE_SITES = modules()
-  .flatMap((module) =>
-    walk(module.source, (node) => {
-      if (!ts.isCallExpression(node)) return [];
-      const callee = node.expression;
-      if (
-        !ts.isPropertyAccessExpression(callee) ||
-        !UNREADABLE_MUTATION_CALLS.has(callee.name.text)
-      ) {
-        return [];
-      }
-      const chain = propertyChain(callee.expression);
-      return chain && chain.length > 1
-        ? [{ procedure: chain.slice(1).join("."), module }]
-        : [];
-    }),
-  )
-  .reduce(
-    (map, site) =>
-      map.set(site.procedure, [...(map.get(site.procedure) ?? []), site]),
-    new Map(),
-  );
 
 const unique = (details) => [...new Set(details)].join(", ");
 
