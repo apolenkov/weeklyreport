@@ -185,8 +185,9 @@ the `AppSettings.autoCreatePeriods` value: carry-over follows a period becoming
 open, and that setting governs creation only. Consequently a tick with creation
 disabled MAY still materialize lead sections and clone carried items and
 decisions into a period the flip opened, exactly as
-`carry-over-automation` specifies for the enabled case. The hook is
-best-effort — the sweep MUST NOT abort the tick when a carry fails.
+`carry-over-automation` specifies for the enabled case. The hook itself MUST
+absorb every carry failure and never reject, so a failed carry cannot abort the
+tick; the sweep adds no guard of its own.
 
 #### Scenario: A period opened while creation is disabled still receives carry-over
 
