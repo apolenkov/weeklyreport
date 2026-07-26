@@ -3,7 +3,7 @@
  * PostgreSQL via real tRPC procedures (no mocks).
  */
 
-import { test, expect } from "./fixtures";
+import { expect,test } from "./fixtures";
 import { prisma } from "./helpers/db";
 import {
   ACTIVE_REPORT_ID,
@@ -13,7 +13,7 @@ import {
 } from "./helpers/seed-ids";
 
 function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
 test.describe("Admin CRUD (integration)", () => {
@@ -71,7 +71,7 @@ test.describe("Admin CRUD (integration)", () => {
     await expect(shortNameField).not.toHaveValue("", { timeout: 15_000 });
 
     // shortName is max 16 chars; keep the value short enough to fit.
-    const newShortName = `Tst${Date.now() % 10000}`;
+    const newShortName = `Tst${Date.now() % 10_000}`;
     await shortNameField.fill(newShortName);
 
     const saveBtn = adminPage.getByRole("button", {

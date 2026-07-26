@@ -19,11 +19,12 @@
  * mobile-android.
  */
 
-import { test, expect } from "./fixtures";
+import type { BrowserContext, Locator, Page } from "@playwright/test";
+
+import { expect,test } from "./fixtures";
 import { loginAs } from "./fixtures";
 import { resetMutations } from "./helpers/db";
 import { SEED_EMAILS } from "./helpers/seed-ids";
-import type { BrowserContext, Locator, Page } from "@playwright/test";
 
 const VIEWPORT_TOLERANCE_PX = 1; // sub-pixel rounding
 
@@ -75,7 +76,7 @@ async function expectDialogFitsViewport(
   dialogLabelRegex: RegExp,
 ): Promise<void> {
   const dialog = page.getByRole("dialog", { name: dialogLabelRegex }).first();
-  await expect(dialog).toBeVisible({ timeout: 5_000 });
+  await expect(dialog).toBeVisible({ timeout: 5000 });
   await expectElementFitsViewport(dialog, "dialog");
 }
 
@@ -91,12 +92,12 @@ async function expectButtonHasMinTouchTarget(
   );
   expect(
     h,
-    `button "${nameRegex}" height=${h} < ${minHeight}`,
+    `button "${nameRegex.source}" height=${h} < ${minHeight}`,
   ).toBeGreaterThanOrEqual(minHeight);
 }
 
 test.describe("Mobile — /lead/report modal flow @MOB-AUDIT", () => {
-  test.beforeEach(async ({}, testInfo) => {
+  test.beforeEach(({}, testInfo) => {
     expect(testInfo.project.name).not.toBe("chromium-integration");
   });
 
@@ -212,12 +213,12 @@ test.describe("Mobile — /lead/report modal flow @MOB-AUDIT", () => {
       await expect(allChips.first()).toBeVisible({ timeout: 15_000 });
       const count = await allChips.count();
 
-      type ChipInfo = {
+      interface ChipInfo {
         idx: number;
         right: number;
         editable: boolean;
         label: string;
-      };
+      }
       const chips: ChipInfo[] = [];
       for (let i = 0; i < count; i++) {
         const info = await allChips.nth(i).evaluate((el) => {
@@ -236,8 +237,8 @@ test.describe("Mobile — /lead/report modal flow @MOB-AUDIT", () => {
         editableChips.length,
         "Expected at least one editable stage chip for this lead",
       ).toBeGreaterThan(0);
-      editableChips.sort((a, b) => b.right - a.right);
-      const target = editableChips[0];
+      const [target] = [...editableChips].sort((a, b) => b.right - a.right);
+      if (!target) throw new Error("no editable stage chip for this lead");
       const chip = allChips.nth(target.idx);
 
       await chip.scrollIntoViewIfNeeded();
@@ -254,7 +255,7 @@ test.describe("Mobile — /lead/report modal flow @MOB-AUDIT", () => {
         const hint = page.getByText(
           /Resolve it in Risks & Blockers to change the stage/i,
         );
-        await expect(hint).toBeVisible({ timeout: 5_000 });
+        await expect(hint).toBeVisible({ timeout: 5000 });
         await expectElementFitsViewport(hint, "covering-risk hint toast");
       } else {
         // toBeVisible + auto-retrying attribute assertion — the toggle's

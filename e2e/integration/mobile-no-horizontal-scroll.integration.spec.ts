@@ -12,15 +12,16 @@
  * below fails loudly if that routing contract regresses.
  */
 
-import { test, expect } from "@playwright/test";
+import { expect,test } from "@playwright/test";
+
 import { loginAs } from "./fixtures";
 
-type PageEntry = {
+interface PageEntry {
   readonly path: string;
   readonly auth: "public" | "lead" | "head";
-};
+}
 
-const PAGES: ReadonlyArray<PageEntry> = [
+const PAGES: readonly PageEntry[] = [
   // Public surfaces — no DB / no session required.
   { path: "/", auth: "public" },
   { path: "/auth/error", auth: "public" },

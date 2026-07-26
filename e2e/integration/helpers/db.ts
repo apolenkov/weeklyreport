@@ -15,9 +15,9 @@
  * means one shared pool for the whole run.
  */
 
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";
-import { PrismaPg } from "@prisma/adapter-pg";
 
 const e2eUrl = process.env.E2E_DATABASE_URL;
 if (!e2eUrl) {
@@ -44,13 +44,21 @@ export const prisma = new PrismaClient({ adapter });
  * Cost: ~1-3s per call. With workers:1 this is acceptable in `afterEach` for
  * specs that mutate seed entities.
  */
+// Seeding the wrong database is the one mistake here that is silent and
+// destructive, so the variable is demanded rather than assumed present.
+function requireE2eDatabaseUrl(): string {
+  const url = process.env.E2E_DATABASE_URL;
+  if (!url) throw new Error("E2E_DATABASE_URL not set");
+  return url;
+}
+
 export async function resetMutations(): Promise<void> {
   const { execSync } = await import("node:child_process");
   const { findRepoRoot } = await import("../global-setup");
   const repoRoot = findRepoRoot(import.meta.dirname);
   execSync("pnpm exec prisma db seed", {
     cwd: repoRoot,
-    env: { ...process.env, DATABASE_URL: process.env.E2E_DATABASE_URL! },
+    env: { ...process.env, DATABASE_URL: requireE2eDatabaseUrl() },
     stdio: "pipe",
   });
 }

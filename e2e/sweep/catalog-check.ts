@@ -30,6 +30,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { type Catalog, parseCatalog } from "./catalog-parser.ts";
+import { byName } from "./ordering.ts";
 
 const HERE = import.meta.dirname;
 const REPO_ROOT = path.resolve(HERE, "..", "..");
@@ -48,11 +49,11 @@ const EXCLUDED_ROUTES = new Set([
 // trailing prose. Mirrors the parser's route regex + _generation-notes.md check.
 const CLEAN_ROUTE = /^\/\S*$/;
 
-type LoadedCatalog = {
+interface LoadedCatalog {
   readonly file: string;
   readonly parsed: Catalog;
   readonly dirtyRoutes: readonly string[];
-};
+}
 
 // Derive a Next.js App Router route from a page.tsx path:
 //   apps/web/src/app/(app)/lead/report/[reportId]/page.tsx -> /lead/report/[reportId]
@@ -84,7 +85,9 @@ function collectCodeRoutes(dir: string): Set<string> {
 const dirtyRoutesOf = (text: string): readonly string[] =>
   text
     .split("\n")
-    .map((line) => /^\s*-\s*route:\s*(.+?)\s*$/.exec(line)?.[1])
+    // Trim in code rather than with a trailing `\s*`: pairing that with a lazy
+    // capture makes the split between them ambiguous on every space.
+    .map((line) => /^\s*-\s*route:(.*)$/.exec(line)?.[1]?.trim())
     .filter(
       (value): value is string =>
         value !== undefined && !CLEAN_ROUTE.test(value),
@@ -96,7 +99,7 @@ function loadCatalogs(): readonly LoadedCatalog[] {
   return fs
     .readdirSync(CATALOG_DIR)
     .filter((f) => f.endsWith(".yaml"))
-    .sort()
+    .sort(byName)
     .flatMap((file) => {
       const text = fs.readFileSync(path.join(CATALOG_DIR, file), "utf8");
       const parsed = parseCatalog(text);
@@ -110,7 +113,7 @@ const uncoveredRoutes = (
   catalogRoutes: ReadonlySet<string>,
 ): readonly string[] =>
   [...codeRoutes]
-    .sort()
+    .sort(byName)
     .filter((route) => !EXCLUDED_ROUTES.has(route) && !catalogRoutes.has(route))
     .map((route) => `uncovered code route (no catalog scenario): ${route}`);
 

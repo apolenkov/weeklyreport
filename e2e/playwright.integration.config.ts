@@ -1,8 +1,10 @@
-import { defineConfig, devices } from "@playwright/test";
-import * as path from "path";
 // Side-effect import: ensure loopback health probes bypass any corporate proxy
 // (see e2e/no-proxy-localhost.ts) before the webServer probes run.
 import "./no-proxy-localhost";
+
+import * as path from "node:path";
+
+import { defineConfig, devices } from "@playwright/test";
 
 // Exported so the prodbuild config guards against ports diverging from the
 // values baked into its client bundle instead of restating the literals.
@@ -60,7 +62,9 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
-    reducedMotion: "reduce",
+    // Belongs under contextOptions, not beside it: as a bare `use` key it is
+    // not a test option and Playwright silently ran with animations on.
+    contextOptions: { reducedMotion: "reduce" },
   },
   projects: [
     {

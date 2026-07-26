@@ -6,7 +6,7 @@
  * Next.js print route through PDF_BASE_URL.
  */
 
-import { test, expect } from "./fixtures";
+import { expect,test } from "./fixtures";
 import { prisma } from "./helpers/db";
 import { PUBLISHED_REPORT_ID } from "./helpers/seed-ids";
 
@@ -87,34 +87,27 @@ test.describe("PDF export (integration)", () => {
     await expect(exportBtn).toBeVisible({ timeout: 15_000 });
     await exportBtn.first().click();
 
-    let jobId: string | null = null;
-    await expect
-      .poll(
-        async () => {
-          jobId = (await newestUnseenPdfJob(existingIds))?.id ?? null;
-          return jobId;
-        },
-        { timeout: 15_000 },
-      )
-      .not.toBeNull();
+    // Poll for the id, then read it back once. Assigning into a binding from
+    // inside the poll callback narrows it to `null` for the rest of the test,
+    // so every later use needed a `?? ""` that could only ever look up nothing.
+    const newJobId = async (): Promise<string | null> =>
+      (await newestUnseenPdfJob(existingIds))?.id ?? null;
 
-    expect(jobId).toBeTruthy();
+    await expect.poll(newJobId, { timeout: 15_000 }).not.toBeNull();
+
+    const jobId = await newJobId();
+    if (!jobId) throw new Error("no new pdfExportJob row after the export");
 
     await expect
       .poll(
         async () =>
-          (
-            await prisma.pdfExportJob.findUnique({
-              where: { id: jobId ?? "" },
-            })
-          )?.status ?? null,
+          (await prisma.pdfExportJob.findUnique({ where: { id: jobId } }))
+            ?.status ?? null,
         { timeout: 60_000 },
       )
       .toBe("completed");
 
-    const job = await prisma.pdfExportJob.findUnique({
-      where: { id: jobId ?? "" },
-    });
+    const job = await prisma.pdfExportJob.findUnique({ where: { id: jobId } });
     expect(job?.filePath).toMatch(/^\/pdfs\/.+\.pdf$/);
   });
 });

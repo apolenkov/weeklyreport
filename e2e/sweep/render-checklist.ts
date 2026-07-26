@@ -21,6 +21,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { type CatalogRoute, parseCatalog } from "./catalog-parser.ts";
+import { byName } from "./ordering.ts";
 
 const HERE = import.meta.dirname;
 const CATALOG_DIR = path.resolve(HERE, "..", "catalog");
@@ -73,7 +74,7 @@ function main(): void {
   const catalogs = fs
     .readdirSync(CATALOG_DIR)
     .filter((f) => f.endsWith(".yaml"))
-    .sort();
+    .sort(byName);
   if (catalogs.length === 0) {
     console.error("No <role>.yaml catalogs found.");
     process.exit(1);

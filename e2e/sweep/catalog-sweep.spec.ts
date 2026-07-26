@@ -20,8 +20,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import AxeBuilder from "@axe-core/playwright";
-import { roleSchema, type DbRole } from "@customreport/shared";
-import { test, type ConsoleMessage, type Request } from "@playwright/test";
+import { type DbRole } from "@customreport/shared";
+import { type ConsoleMessage, type Request,test } from "@playwright/test";
 
 // Import the seed ids directly from the source of truth. NOT via
 // e2e/integration/helpers/seed-ids (its `../../../../../` re-export path is
@@ -30,34 +30,13 @@ import {
   ACTIVE_REPORT_ID,
   PUBLISHED_REPORT_ID,
 } from "../../prisma/seed-constants";
-
+import { type Catalog, parseCatalog } from "./catalog-parser.ts";
 import { loginByCookie } from "./helpers/dev-auth";
-
-const CANONICAL_ROLES: readonly DbRole[] = roleSchema.options;
-
-function assertValidRole(
-  role: string,
-  context: string,
-): asserts role is DbRole {
-  if (!(CANONICAL_ROLES as readonly string[]).includes(role)) {
-    throw new Error(
-      `Invalid role token "${role}" in ${context} — must be one of: ${CANONICAL_ROLES.join(", ")}`,
-    );
-  }
-}
-
-type CatalogRoute = {
-  route: string;
-  access?: DbRole[];
-};
-type Catalog = {
-  role: DbRole;
-  routes: CatalogRoute[];
-};
+import { byName } from "./ordering.ts";
 
 type AnomalyKind = "console" | "pageerror" | "load" | "axe" | "network";
-type Anomaly = { kind: AnomalyKind; detail: string };
-type RouteResult = {
+interface Anomaly { kind: AnomalyKind; detail: string }
+interface RouteResult {
   route: string;
   resolved: string | null;
   access?: DbRole[];
@@ -65,7 +44,7 @@ type RouteResult = {
   status?: number | null;
   anomalies: Anomaly[];
   skipped?: string;
-};
+}
 
 const CATALOG_DIR = path.resolve(import.meta.dirname, "..", "catalog");
 const REPORT_DIR = path.resolve(import.meta.dirname, ".reports");
@@ -109,56 +88,6 @@ function resolveRoute(route: string, role: DbRole): string | null {
   return resolved.includes("[") ? null : resolved;
 }
 
-/**
- * Minimal structural reader for the generated catalog. The repo runs offline
- * here (the `yaml` package cannot be installed), and the sweep only needs the
- * structural subset — role + each route + its access list — never the
- * Given/When/Then prose. Route and access lines are simple scalars / inline
- * arrays in the generator's format contract (e2e/catalog/README.md), so a line
- * scan is robust against the quoted prose fields it deliberately skips.
- */
-function parseCatalog(text: string): Catalog | null {
-  const roleMatch = /^role:\s*(\S+)\s*$/m.exec(text);
-  if (!roleMatch) {
-    return null;
-  }
-  const role = roleMatch[1];
-  assertValidRole(role, "top-level role:");
-
-  const lines = text.split("\n");
-  const routes: CatalogRoute[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    const routeMatch = /^\s*-\s*route:\s*(\S+)\s*$/.exec(lines[i]);
-    if (!routeMatch) {
-      continue;
-    }
-    // The route's access is the first `access:` line in its block, before the
-    // next `- route:` entry.
-    let access: DbRole[] | undefined;
-    for (let j = i + 1; j < lines.length; j++) {
-      if (/^\s*-\s*route:/.test(lines[j])) {
-        break;
-      }
-      const accessMatch = /^\s*access:\s*\[(.*)\]\s*$/.exec(lines[j]);
-      if (accessMatch) {
-        const tokens = accessMatch[1]
-          .split(",")
-          .map((token) => token.trim())
-          .filter(Boolean);
-        for (const token of tokens) {
-          assertValidRole(token, `access: [...] for route ${routeMatch[1]}`);
-        }
-        // Every element was just validated against CANONICAL_ROLES above (throws
-        // on any mismatch), so this narrowing is runtime-checked, not a raw cast.
-        access = tokens as DbRole[];
-        break;
-      }
-    }
-    routes.push({ route: routeMatch[1], access });
-  }
-  return routes.length > 0 ? { role, routes } : null;
-}
-
 function loadCatalogs(): Catalog[] {
   if (!fs.existsSync(CATALOG_DIR)) {
     return [];
@@ -170,7 +99,7 @@ function loadCatalogs(): Catalog[] {
       parseCatalog(fs.readFileSync(path.join(CATALOG_DIR, file), "utf8")),
     )
     .filter((catalog): catalog is Catalog => catalog !== null)
-    .sort((a, b) => a.role.localeCompare(b.role));
+    .sort((a, b) => byName(a.role, b.role));
 }
 
 function renderReport(role: DbRole, results: RouteResult[]): string {
@@ -188,7 +117,7 @@ function renderReport(role: DbRole, results: RouteResult[]): string {
   ];
   for (const result of results) {
     lines.push(`## ${result.route}`);
-    if (result.access) {
+    if (result.access && result.access.length > 0) {
       lines.push(`- access: ${result.access.join(", ")}`);
     }
     if (result.skipped) {
@@ -197,7 +126,7 @@ function renderReport(role: DbRole, results: RouteResult[]): string {
     }
     if (result.resolved) {
       lines.push(
-        `- visited: \`${result.resolved}\` → \`${result.finalUrl}\` (HTTP ${result.status ?? "?"})`,
+        `- visited: \`${result.resolved}\` → \`${result.finalUrl ?? "?"}\` (HTTP ${result.status ?? "?"})`,
       );
     }
     if (result.anomalies.length === 0) {
@@ -216,6 +145,10 @@ function renderReport(role: DbRole, results: RouteResult[]): string {
 const catalogs = loadCatalogs();
 
 for (const catalog of catalogs) {
+  // Phase 1 is report-only by contract (see the file header): findings are
+  // written to a Markdown report a human reads, and the run must stay green so
+  // every role still gets a report. An assertion here would defeat that.
+  // eslint-disable-next-line sonarjs/assertions-in-tests -- report-only sweep; the blocking gate is phase 2
   test(`sweep: ${catalog.role}`, async ({ page }, testInfo) => {
     const results: RouteResult[] = [];
 
@@ -276,9 +209,10 @@ for (const catalog of catalogs) {
           return;
         }
         const failure = request.failure();
+        const cause = failure ? ` (${failure.errorText})` : "";
         anomalies.push({
           kind: "network",
-          detail: `request failed: ${url}${failure ? ` (${failure.errorText})` : ""}`,
+          detail: `request failed: ${url}${cause}`,
         });
       };
       page.on("console", onConsole);
@@ -369,7 +303,7 @@ for (const catalog of catalogs) {
     // The sweep's product is its report; this is its only intended stdout. It
     // is report-only by contract (phase 1) — no expect(), the run never fails
     // on findings.
-    // eslint-disable-next-line no-console -- sweep summary is the deliverable
+     
     console.log(
       `[sweep] ${catalog.role}: ${totalAnomalies} anomalies across ${results.length} routes → e2e/sweep/.reports/${catalog.role}.md`,
     );

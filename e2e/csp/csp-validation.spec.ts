@@ -28,26 +28,27 @@ import * as path from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { ACTIVE_REPORT_ID, PUBLISHED_REPORT_ID } from "../../prisma/seed-constants";
-
+import { parseCatalog } from "../sweep/catalog-parser.ts";
 import { loginByCookie } from "../sweep/helpers/dev-auth";
+import { byName } from "../sweep/ordering.ts";
 
 // Derived, never re-declared: the e2e tree cannot import the shared role
 // schema, and spelling the union out again is exactly what the
 // status-literal-union gate exists to prevent.
 type Role = Parameters<typeof loginByCookie>[1]["role"];
 
-type CspViolation = {
+interface CspViolation {
   directive: string;
   blockedURI: string;
   sourceFile: string;
   lineNumber: number;
-};
+}
 
-type RouteFinding = {
+interface RouteFinding {
   role: Role;
   route: string;
   violations: CspViolation[];
-};
+}
 
 const CATALOG_DIR = path.resolve(import.meta.dirname, "..", "catalog");
 
@@ -58,7 +59,7 @@ const CATALOG_ROLES: readonly Role[] = fs
   .readdirSync(CATALOG_DIR)
   .filter((file) => file.endsWith(".yaml"))
   .map((file) => path.basename(file, ".yaml") as Role)
-  .sort();
+  .sort(byName);
 
 const REPORT_PATH = path.resolve(import.meta.dirname, ".reports", "csp-validation.md");
 
@@ -74,14 +75,6 @@ const PRODUCTION_CSP = [
   "connect-src 'self'",
 ].join("; ");
 
-function parseRoutes(text: string): readonly string[] {
-  return text
-    .split("\n")
-    .map((line) => /^\s*-\s*route:\s*(\S+)\s*$/.exec(line))
-    .filter((match): match is RegExpExecArray => match !== null)
-    .map((match) => match[1]);
-}
-
 function resolveRoute(route: string, role: Role): string | null {
   if (!route.includes("[")) {
     return route;
@@ -96,9 +89,9 @@ function resolveRoute(route: string, role: Role): string | null {
 
 function loadCatalog(role: Role): readonly string[] {
   const file = path.join(CATALOG_DIR, `${role}.yaml`);
-  return fs.existsSync(file)
-    ? parseRoutes(fs.readFileSync(file, "utf8"))
-    : [];
+  if (!fs.existsSync(file)) return [];
+  const parsed = parseCatalog(fs.readFileSync(file, "utf8"));
+  return parsed?.routes.map((entry) => entry.route) ?? [];
 }
 
 function renderReport(findings: readonly RouteFinding[]): string {
@@ -113,11 +106,10 @@ function renderReport(findings: readonly RouteFinding[]): string {
   ];
   const body = findings.flatMap((finding) => [
     `## ${finding.role} — ${finding.route}`,
-    ...finding.violations.map(
-      (v) =>
-        `- \`${v.directive}\` blocked \`${v.blockedURI}\`` +
-        (v.sourceFile ? ` (${v.sourceFile}:${v.lineNumber})` : ""),
-    ),
+    ...finding.violations.map((v) => {
+      const origin = v.sourceFile ? ` (${v.sourceFile}:${v.lineNumber})` : "";
+      return `- \`${v.directive}\` blocked \`${v.blockedURI}\`${origin}`;
+    }),
     "",
   ]);
   return [...header, ...body].join("\n");
