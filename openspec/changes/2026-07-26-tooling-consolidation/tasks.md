@@ -152,7 +152,12 @@
       `MODULE_NOT_FOUND`, and the Prisma CLI is not linked into
       `/app/node_modules`. Dead weight in the layer and scanner noise, not a
       runtime path.
-- [x] CI green on all jobs after push — the work is pushed and CI ran on it.
+- [ ] CI green on all jobs after push — ticked prematurely once and un-ticked.
+      The work is pushed and CI is running on it, but "a run exists" is not
+      "the run passed", and the box was checked on the former. Whoever closes
+      this must read the conclusion of the run for the tip commit, not its
+      existence. Locally the same checks pass: `pnpm lint`, `pnpm typecheck`,
+      `pnpm test` under `CI=true`, `catalog:check`, `uat:audit`.
       Note for whoever reads this next: `CLAUDE.md` claimed CI was
       manual-dispatch only. It is not — `ci.yml` triggers on
       `push: branches: [main]` and on pull requests as well. That line is
