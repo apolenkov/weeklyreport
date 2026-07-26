@@ -914,6 +914,35 @@ export default defineConfig([
       ],
     },
   },
+  // ── Prop-seam guard for report-pages/ui. ──
+  // Components take a declared data slice, never a whole hook's return type, so
+  // the seam stays readable and the hook can be refactored independently. Flat
+  // config REPLACES rule options, so the `let` ban above is repeated verbatim.
+  {
+    files: ["apps/web/src/features/report-pages/ui/**/*.{ts,tsx}"],
+    ignores: [
+      "**/*.test.{ts,tsx}",
+      "**/*.spec.{ts,tsx}",
+      "**/__tests__/**",
+      "apps/*/src/test-utils/**",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "VariableDeclaration[kind='let']",
+          message:
+            "Immutability regime: prefer const. A load-bearing mutable binding may keep `let` behind an inline `eslint-disable-next-line no-restricted-syntax -- <why>`.",
+        },
+        {
+          selector:
+            "TSTypeReference[typeName.name='ReturnType'] TSTypeQuery[exprName.name=/^use/]",
+          message:
+            "Prop-seam guard: declare the data slice this component needs instead of `ReturnType<typeof useX>`.",
+        },
+      ],
+    },
+  },
   // `no-param-reassign` is globally `props:false`; the session hydration
   // chokepoint is stricter because mutating a caller-owned UserSession can leak
   // authz scope across the request pipeline.
