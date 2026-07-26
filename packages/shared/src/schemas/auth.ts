@@ -1,8 +1,8 @@
 import { z } from "zod";
 
+import { organizationPublicSchema } from "./organization";
+
 const MAX_REPORTING_GROUP_NAME_LENGTH = 200;
-const MAX_ORG_SHORT_NAME_LENGTH = 16;
-const MAX_ORG_FULL_NAME_LENGTH = 200;
 
 // DB Role enum; admin writes must match Prisma. Includes admin for SAML persistence.
 export const roleSchema = z.enum(["lead", "head", "admin", "viewer"]);
@@ -60,12 +60,7 @@ export const userSessionSchema = z.object({
   // Viewer-only; empty array is a deliberate zero-row filter, not "unset".
   viewerGroupAccess: z.array(z.uuid()).optional(),
   // Hydrated post-verify so JWTs stay small and admin renames do not stale-cache.
-  organization: z
-    .object({
-      shortName: z.string().min(1).max(MAX_ORG_SHORT_NAME_LENGTH),
-      fullName: z.string().min(1).max(MAX_ORG_FULL_NAME_LENGTH),
-    })
-    .optional(),
+  organization: organizationPublicSchema.optional(),
 });
 
 /** Session-axis role for assertRole. */

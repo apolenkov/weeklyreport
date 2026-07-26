@@ -4,8 +4,13 @@ import * as path from "path";
 // (see e2e/no-proxy-localhost.ts) before the webServer probes run.
 import "./no-proxy-localhost";
 
-const API_PORT = Number(process.env.E2E_API_PORT ?? 3102);
-const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 3105);
+// Exported so the prodbuild config guards against ports diverging from the
+// values baked into its client bundle instead of restating the literals.
+export const DEFAULT_E2E_API_PORT = 3102;
+export const DEFAULT_E2E_WEB_PORT = 3105;
+
+const API_PORT = Number(process.env.E2E_API_PORT ?? DEFAULT_E2E_API_PORT);
+const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? DEFAULT_E2E_WEB_PORT);
 const API_URL = `http://127.0.0.1:${API_PORT}`;
 const WEB_URL = `http://127.0.0.1:${WEB_PORT}`;
 const BULLMQ_PREFIX =

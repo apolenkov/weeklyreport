@@ -1,21 +1,13 @@
-import type { CanonicalStatus } from "@customreport/shared";
+import { trafficLightToCanonical } from "@customreport/shared";
 import type { ReactNode } from "react";
 
 import type {
   GridAuthor,
   GridPriorityCard,
   SlideGridModel,
-  SlideTrafficStatus,
 } from "../model/slide-grid-model";
 import { authorSlotBackground } from "./slide-article-rows";
 import { SlideStatusBadge } from "./slide-status-badge";
-
-function worstToStatus(traffic: SlideTrafficStatus): CanonicalStatus {
-  if (traffic === "red") return "blocked";
-  if (traffic === "yellow") return "at-risk";
-  if (traffic === "green") return "on-track";
-  return "empty";
-}
 
 function metric(count: number, label: string) {
   return (
@@ -49,7 +41,7 @@ export function SlideGridHeader({
   return (
     <div className="flex flex-wrap items-center gap-3 border-b border-[rgba(0,0,0,0.08)] pb-3">
       <SlideStatusBadge
-        status={worstToStatus(grid.worstStatus)}
+        status={trafficLightToCanonical(grid.worstStatus)}
         labelVariant="worstPill"
       />
       <h2 className="min-w-0 truncate text-xl font-semibold text-[var(--color-foreground)]">

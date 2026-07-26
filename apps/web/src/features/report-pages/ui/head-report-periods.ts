@@ -3,11 +3,8 @@ import type {
   WeeklyReportGetResponse,
 } from "@customreport/shared";
 
-import {
-  formatPeriodRangeWithYear,
-  isoWeekNumber,
-} from "../../../lib/format-date";
 import type { ReportPeriod } from "../../report-sections";
+import { toNavigationPeriod } from "../../report-sections";
 
 type ActivePeriodData = Extract<WeeklyReportGetResponse, { status: "active" }>;
 
@@ -17,35 +14,25 @@ interface PrependCandidate {
 }
 
 function historyEntryToPeriod(entry: CompiledHistoryEntry): ReportPeriod {
-  return {
+  return toNavigationPeriod({
     id: entry.reportId,
-    weekLabel: `Week ${isoWeekNumber(new Date(entry.periodStart))}`,
-    dateRange: formatPeriodRangeWithYear(
-      new Date(entry.periodStart),
-      new Date(entry.periodEnd),
-    ),
+    periodStart: entry.periodStart,
+    periodEnd: entry.periodEnd,
     archived: entry.archived,
-    sourceSectionId: "",
     isCurrent: false,
-    isSubmitted: true,
-  };
+  });
 }
 
 function candidateToPeriod(candidate: PrependCandidate): ReportPeriod {
   const { data } = candidate;
-  return {
+  return toNavigationPeriod({
     id: candidate.id,
-    weekLabel: `Week ${isoWeekNumber(new Date(data.periodStart))}`,
-    dateRange: formatPeriodRangeWithYear(
-      new Date(data.periodStart),
-      new Date(data.periodEnd),
-    ),
+    periodStart: data.periodStart,
+    periodEnd: data.periodEnd,
     archived: false,
-    sourceSectionId: "",
     // Mirror mapWeeklyReport: a non-published period is the current week.
     isCurrent: data.periodStatus !== "published",
-    isSubmitted: true,
-  };
+  });
 }
 
 // Prepend current + displayed weeks when history omits them. Prepended entry

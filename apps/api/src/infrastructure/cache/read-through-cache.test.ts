@@ -1,5 +1,7 @@
 // Asserts keyPrefix composition (Redis key) vs the caller-supplied key —
 // the behavior analytics/telemetry wrappers rely on but never cover themselves.
+import { Readable } from "node:stream";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EnvConfig } from "../config/env.schema";
@@ -29,14 +31,10 @@ vi.mock("ioredis", () => {
       this.store.set(key, value);
       return Promise.resolve("OK");
     }
-    scan(
-      _cursor: string,
-      _match: string,
-      pattern: string,
-    ): Promise<[string, string[]]> {
-      const prefix = pattern.replace(/\*$/, "");
+    scanStream(options: { match: string }): Readable {
+      const prefix = options.match.replace(/\*$/, "");
       const keys = [...this.store.keys()].filter((k) => k.startsWith(prefix));
-      return Promise.resolve(["0", keys]);
+      return Readable.from([keys], { objectMode: true });
     }
     del(...keys: string[]): Promise<number> {
       keys.forEach((k) => this.store.delete(k));

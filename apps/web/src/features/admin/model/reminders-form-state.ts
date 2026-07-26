@@ -1,15 +1,14 @@
 import { MINUTES_PER_DAY } from "@customreport/shared";
 
+import { toIsoDateString } from "../../../lib/format-date";
 import type { AdminReminderPolicyFormInput } from "./admin";
 import type { MockReminderPolicy } from "./admin-types";
 import {
-  isoFromDate,
   presetForPolicy,
   presetPairing,
   type ReminderPresetChoice,
 } from "./reminders-tab-format";
 
-const ISO_DATE_LENGTH = 10;
 const DEFAULT_OFFSET_DAYS_BEFORE = 1;
 const DEFAULT_OFFSET_MINUTES = -(DEFAULT_OFFSET_DAYS_BEFORE * MINUTES_PER_DAY);
 
@@ -31,10 +30,6 @@ export type PolicyFormState = AdminReminderPolicyFormInput & {
 
 const DEFAULT_PRESET = "deadline-leads" as const;
 
-function todayIsoString(): string {
-  return new Date().toISOString().slice(0, ISO_DATE_LENGTH);
-}
-
 // Start from a valid preset; never blend org audience (produced invalid pairs).
 // Only timezone comes from AppSettings.
 /**
@@ -42,7 +37,7 @@ function todayIsoString(): string {
  * @param timezone - The timezone argument.
  */
 export function emptyPolicyForm(timezone: string): PolicyFormState {
-  const today = todayIsoString();
+  const today = toIsoDateString(new Date());
   const { kind, audience } = presetPairing(DEFAULT_PRESET);
   return {
     preset: DEFAULT_PRESET,
@@ -70,10 +65,10 @@ export function policyToForm(policy: MockReminderPolicy): PolicyFormState {
     timezone: policy.timezone,
     audience: policy.audience,
     active: policy.active,
-    validFromIso: isoFromDate(policy.validFrom),
+    validFromIso: toIsoDateString(policy.validFrom),
     validUntilIso:
-      policy.validUntil === null ? null : isoFromDate(policy.validUntil),
-    todayIso: todayIsoString(),
+      policy.validUntil === null ? null : toIsoDateString(policy.validUntil),
+    todayIso: toIsoDateString(new Date()),
     foreverChecked: policy.validUntil === null,
   };
 }

@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type { HealthIndicatorResult } from "@nestjs/terminus";
 import { HealthIndicatorService } from "@nestjs/terminus";
 
+import { errorMessage } from "../../lib/error-message.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 
 @Injectable()
@@ -17,7 +18,7 @@ export class PrismaHealthIndicator {
       return this.healthIndicator.check(key).up();
     } catch (error) {
       return this.healthIndicator.check(key).down({
-        message: error instanceof Error ? error.message : String(error),
+        message: errorMessage(error),
       });
     }
   }

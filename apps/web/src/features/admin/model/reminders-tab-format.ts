@@ -4,11 +4,10 @@ import {
   MINUTES_PER_HOUR,
 } from "@customreport/shared";
 
-import { monthShortLabel } from "../../../lib/format-date";
+import { formatDateWithYear, toIsoDateString } from "../../../lib/format-date";
 import { pluralize } from "../../../lib/pluralize";
 import type { MockReminder, MockReminderPolicy } from "./admin-types";
 
-const ISO_DATE_LENGTH = 10;
 const MAX_HOUR_OFFSET_DAYS = 2;
 const MAX_HOUR_OFFSET_MINUTES =
   MAX_HOUR_OFFSET_DAYS * HOURS_PER_DAY * MINUTES_PER_HOUR;
@@ -84,14 +83,6 @@ export function describeRecipient(
   }
 }
 
-/**
- * Iso From Date.
- * @param date - The date argument.
- */
-export function isoFromDate(date: Date): string {
-  return date.toISOString().slice(0, ISO_DATE_LENGTH);
-}
-
 export type OffsetUnit = "minutes" | "hours" | "days";
 
 /**
@@ -160,11 +151,11 @@ export function formatPolicyTiming(policy: MockReminderPolicy): string {
  * @param policy - The policy argument.
  */
 export function formatValidityWindow(policy: MockReminderPolicy): string {
-  const from = isoFromDate(policy.validFrom);
+  const from = toIsoDateString(policy.validFrom);
   if (policy.validUntil === null) {
     return `Valid since ${from} · no end date`;
   }
-  const until = isoFromDate(policy.validUntil);
+  const until = toIsoDateString(policy.validUntil);
   return `${from} → ${until}`;
 }
 
@@ -183,6 +174,5 @@ export function nextSendDate(
     .sort((a, b) => a.fireAt.getTime() - b.fireAt.getTime());
   const next = upcoming.at(0);
   if (!next) return null;
-  const fireAt = next.fireAt;
-  return `${monthShortLabel(fireAt)} ${fireAt.getUTCDate()}, ${fireAt.getUTCFullYear()}`;
+  return formatDateWithYear(next.fireAt);
 }

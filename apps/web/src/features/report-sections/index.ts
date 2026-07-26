@@ -1,5 +1,5 @@
 export { FOREIGN_ENTRY_OPACITY } from "./model/item-card-style";
-export type { ItemWorkflowStatus } from "./model/item-status";
+export { persistableItemStatusToWorkflow } from "./model/item-status";
 export type { CrossAuthorRow } from "./model/lead-cross-author";
 export {
   applyCrossAuthorStageOverrides,
@@ -44,6 +44,7 @@ export {
 } from "./model/next-week-columns";
 export { resolveRecordParent } from "./model/record-parent";
 export { reportHasContent } from "./model/report-content";
+export { toNavigationPeriod } from "./model/report-period";
 export {
   STAGE_CHIP_BOX_HEIGHT,
   STAGE_ICONS,
@@ -92,6 +93,7 @@ export { BoardEmptyState } from "./ui/board-empty-state";
 export { ItemCard } from "./ui/item-card";
 export { PublishedRecordMarker } from "./ui/item-card-actions";
 export { ItemEditDialog } from "./ui/item-edit-dialog";
+export { resolveSaveProduct } from "./ui/item-edit-dialog-helpers";
 export type { ParentActivityOption, RecordParent } from "./ui/parent-picker";
 export { ParentPicker } from "./ui/parent-picker";
 export { StageChip } from "./ui/stage-chip";

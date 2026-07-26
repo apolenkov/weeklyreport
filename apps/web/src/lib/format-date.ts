@@ -37,8 +37,18 @@ export function formatDateTime(date: DateInput): string {
   });
 }
 
-// Single home for short English month labels (getUTCMonth index).
-const MONTHS_SHORT = [
+// `YYYY-MM-DD` prefix of an ISO-8601 timestamp.
+const ISO_DATE_LENGTH = 10;
+
+// UTC date-only string: the value shape `<input type="date">` reads and writes,
+// and the one the API parses back as `${value}T00:00:00.000Z`.
+export function toIsoDateString(date: Date): string {
+  return date.toISOString().slice(0, ISO_DATE_LENGTH);
+}
+
+// Single home for short English month labels (getUTCMonth index). Exported so
+// parsers of these rendered labels invert this table instead of respelling it.
+export const MONTHS_SHORT: readonly string[] = [
   "Jan",
   "Feb",
   "Mar",
@@ -54,11 +64,7 @@ const MONTHS_SHORT = [
 ];
 
 // Throw on out-of-range rather than a silent "" that would blank the month label.
-/**
- * Month Short Label.
- * @param date - The date argument.
- */
-export function monthShortLabel(date: Date): string {
+function monthShortLabel(date: Date): string {
   const label = MONTHS_SHORT[date.getUTCMonth()];
   if (label === undefined) throw new Error("month index out of range");
   return label;
@@ -66,6 +72,11 @@ export function monthShortLabel(date: Date): string {
 
 function formatTimestampShort(date: Date): string {
   return `${monthShortLabel(date)} ${date.getUTCDate()}`;
+}
+
+// Single-date label with year ("Jul 5, 2026"); UTC so the day never shifts in UTC+N.
+export function formatDateWithYear(date: Date): string {
+  return `${formatTimestampShort(date)}, ${date.getUTCFullYear()}`;
 }
 
 function formatRelativeHours(

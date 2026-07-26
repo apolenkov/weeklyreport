@@ -39,7 +39,7 @@ import type {
 } from "@customreport/shared";
 import { STAGE_NAMES } from "@customreport/shared";
 
-import { formatPeriodLabel } from "../../../lib/format-date";
+import { formatPeriodLabel, toIsoDateString } from "../../../lib/format-date";
 import { mapReminder } from "./admin-reminder-mapper";
 import type {
   MappedAdminSnapshot,
@@ -66,14 +66,6 @@ export type { MappedAdminSnapshot, MockSettings } from "./admin-types";
 
 function emptyStageGrid(): StageAssignment[] {
   return STAGE_NAMES.map((stage) => ({ stage, assigneeId: null }));
-}
-
-// "YYYY-MM-DD" — length of an ISO date-only prefix.
-const ISO_DATE_LENGTH = 10;
-
-function toIsoDateString(date: Date): string {
-  // YYYY-MM-DD
-  return date.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
 function mapUser(api: AdminUser): MockUser {

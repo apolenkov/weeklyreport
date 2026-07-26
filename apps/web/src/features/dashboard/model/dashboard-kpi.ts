@@ -1,14 +1,8 @@
 import type { WeeklyReportReadModel } from "@customreport/shared";
 import { HOURS_PER_DAY, MS_PER_HOUR } from "@customreport/shared";
 
+import { toIsoDateString } from "../../../lib/format-date";
 import type { KpiData } from "./dashboard";
-
-// "YYYY-MM-DD" — length of an ISO date-only prefix.
-const ISO_DATE_LENGTH = 10;
-
-function isoDateLabel(date: Date): string {
-  return date.toISOString().slice(0, ISO_DATE_LENGTH);
-}
 
 /**
  * Format Relative Deadline.
@@ -63,7 +57,9 @@ export function buildKpiData(
       ? "No deadline"
       : formatRelativeDeadline(weeklyReport.deadline, now);
   const deadlineTime =
-    weeklyReport.deadline === null ? "—" : isoDateLabel(weeklyReport.deadline);
+    weeklyReport.deadline === null
+      ? "—"
+      : toIsoDateString(weeklyReport.deadline);
 
   return {
     submitted,

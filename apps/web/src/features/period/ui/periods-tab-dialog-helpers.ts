@@ -1,6 +1,7 @@
 import { DAYS_PER_WEEK } from "@customreport/shared";
 
-const ISO_DATE_LENGTH = 10;
+import { toIsoDateString } from "../../../lib/format-date";
+
 const ISO_DATETIME_LOCAL_LENGTH = 16;
 const NEXT_MONDAY_OFFSET_BASE = DAYS_PER_WEEK + 1;
 
@@ -22,13 +23,7 @@ export function nextMonday(from: Date): string {
     ),
   );
   // Render as `YYYY-MM-DD` for the <input type="date"> value.
-  return monday.toISOString().slice(0, ISO_DATE_LENGTH);
-}
-
-// `<input type="date">` value. The slice matches the create path's
-// `${periodStart}T00:00:00.000Z` parse, so a no-op edit round-trips clean.
-export function dateInputValue(d: Date): string {
-  return d.toISOString().slice(0, ISO_DATE_LENGTH);
+  return toIsoDateString(monday);
 }
 
 // `<input type="datetime-local">` value, UTC wall-clock on read and write —

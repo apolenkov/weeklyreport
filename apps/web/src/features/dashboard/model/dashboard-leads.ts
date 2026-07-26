@@ -7,12 +7,10 @@ import type {
   SubmissionDashboardRow,
   WeeklyReportReadModel,
 } from "@customreport/shared";
-import {
-  initialsFromName as sharedInitialsFromName,
-  MS_PER_DAY,
-  shortNameFromName,
-} from "@customreport/shared";
+import { MS_PER_DAY, shortNameFromName } from "@customreport/shared";
 
+import { toIsoDateString } from "../../../lib/format-date";
+import { initialsFromName } from "../../../lib/user-initials";
 import type { LeadStatus } from "../../report-sections";
 import { deriveLeadStatus, trafficToStageStatus } from "../../report-sections";
 import type { LeadInfo, ProductStatus, TrafficLight } from "./dashboard";
@@ -35,8 +33,6 @@ const TRAFFIC_ICON: Record<ProductStatus, string> = {
   blocked: "✕",
   "at-risk": "!",
 };
-
-const ISO_DATE_LENGTH = 10;
 
 interface BuildLeadInfosArgs {
   readonly review?: readonly SubmissionDashboardRow[];
@@ -68,10 +64,6 @@ interface LeadQueueState {
   readonly reviewer: boolean;
   readonly canReview: boolean;
   readonly trafficLights: readonly TrafficLight[];
-}
-
-function initialsFromName(name: string): string {
-  return sharedInitialsFromName(name) || "??";
 }
 
 function trafficLightsForLead(
@@ -175,6 +167,7 @@ function buildLeadInfo(
   context: LeadBuildContext,
 ): LeadInfo {
   const state = deriveLeadQueueState(row, context);
+  const sectionSubmittedAt = state.section?.submittedAt;
 
   return {
     id: row.leadId,
@@ -194,9 +187,9 @@ function buildLeadInfo(
     reportContentCount: state.section ? countProductContent(state.section) : 0,
     ...productColumnCounts(state.section),
     activityCount: state.section ? countActivityRecords(state.section) : 0,
-    submittedAtLabel:
-      state.section?.submittedAt?.toISOString().slice(0, ISO_DATE_LENGTH) ??
-      null,
+    submittedAtLabel: sectionSubmittedAt
+      ? toIsoDateString(sectionSubmittedAt)
+      : null,
     ...sectionIdentity(state.section, state.activity),
     reviews: state.reviews,
     ...state.review,

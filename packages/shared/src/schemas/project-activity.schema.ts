@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { safeText } from "./report-primitives.schema";
+import { linkedProductSchema } from "./section.schema";
 
 const MAX_ACTIVITY_NAME_LENGTH = 200;
 const MAX_JIRA_ACCOUNT_LENGTH = 100;
@@ -13,9 +14,8 @@ export const projectActivitySchema = z.object({
   name: z.string().min(1).max(MAX_ACTIVITY_NAME_LENGTH),
   groupId: z.uuid(),
   // M:N label-only product links from linkedProductIds — never feeds product health.
-  linkedProducts: z
-    .array(z.object({ productId: z.uuid(), productName: z.string().min(1) }))
-    .default([]),
+  // Same record the section read model carries, so the two halves can't drift.
+  linkedProducts: z.array(linkedProductSchema).default([]),
   jiraAccounts: z
     .array(z.string().min(1).max(MAX_JIRA_ACCOUNT_LENGTH))
     .default([]),

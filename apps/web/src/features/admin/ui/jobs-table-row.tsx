@@ -1,3 +1,5 @@
+import { truncate } from "../model/action-log-format";
+
 const MAX_ERROR_REASON_LENGTH = 80;
 
 function formatTimestamp(ms: number): string {
@@ -10,11 +12,6 @@ function formatTimestamp(ms: number): string {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function truncate(s: string, max: number): string {
-  if (s.length <= max) return s;
-  return `${s.slice(0, max - 1).trimEnd()}…`;
 }
 
 // Structural (not the shared `FailedJob` alias): the tRPC client output the

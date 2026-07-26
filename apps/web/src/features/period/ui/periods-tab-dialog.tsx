@@ -4,6 +4,7 @@ import type { PeriodListItem } from "@customreport/shared";
 import type { RefObject } from "react";
 import { useRef, useState } from "react";
 
+import { toIsoDateString } from "../../../lib/format-date";
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
 import {
   PeriodDialogActions,
@@ -12,7 +13,6 @@ import {
 import { CreatePeriodFields } from "./periods-tab-dialog-fields";
 import {
   computeDeadlineError,
-  dateInputValue,
   dateTimeInputValue,
   nextMonday,
 } from "./periods-tab-dialog-helpers";
@@ -71,11 +71,11 @@ function usePeriodDialogForm(
 } {
   const [periodStart, setPeriodStart] = useState(() =>
     editedPeriod
-      ? dateInputValue(editedPeriod.periodStart)
+      ? toIsoDateString(editedPeriod.periodStart)
       : nextMonday(new Date()),
   );
   const [periodEnd, setPeriodEnd] = useState(() =>
-    editedPeriod ? dateInputValue(editedPeriod.periodEnd) : "",
+    editedPeriod ? toIsoDateString(editedPeriod.periodEnd) : "",
   );
   const [deadline, setDeadline] = useState(() =>
     editedPeriod && editedPeriod.deadline !== null

@@ -1,17 +1,10 @@
 import type { SectionSlideModel } from "./section-slide-contracts";
 import type {
-  GridColumnKey,
   GridProductCard,
   GridSubsection,
   SlideGridModel,
 } from "./slide-grid-model";
-
-const COLUMN_ORDER: readonly GridColumnKey[] = [
-  "current",
-  "next",
-  "risks",
-  "decisions",
-];
+import { COLUMN_ORDER } from "./slide-grid-rows";
 
 /**
  * Slide Record Identities.

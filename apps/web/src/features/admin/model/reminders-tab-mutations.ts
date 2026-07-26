@@ -2,10 +2,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../../lib/cache-keys";
+import { toIsoDateString } from "../../../lib/format-date";
 import { useTRPC } from "../../../lib/trpc-context";
 import { toReminderPolicyInput } from "./admin";
 import type { MockReminderPolicy } from "./admin-types";
-import { isoFromDate } from "./reminders-tab-format";
 
 /**
  * Toggled Payload.
@@ -19,9 +19,9 @@ export function toggledPayload(policy: MockReminderPolicy) {
       timezone: policy.timezone,
       audience: policy.audience,
       active: !policy.active,
-      validFromIso: isoFromDate(policy.validFrom),
+      validFromIso: toIsoDateString(policy.validFrom),
       validUntilIso:
-        policy.validUntil === null ? null : isoFromDate(policy.validUntil),
+        policy.validUntil === null ? null : toIsoDateString(policy.validUntil),
     },
     policy.id,
   );

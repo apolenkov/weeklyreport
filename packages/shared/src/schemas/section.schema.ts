@@ -244,19 +244,16 @@ export const submitSectionSchema = draftSaveSchema.extend({
     .default([]),
 });
 
-// Author's StageAssignment rows for this product; empty means no stake.
-export const ownedStageSchema = z.object({
-  stageId: z.uuid(),
-  stageName: z.string().min(1),
-  sortOrder: z.number().int().min(0),
-  status: trafficLightStatusSchema.nullable().optional(),
-});
-
 // Display-only stage grid metadata; saveSection writes status only from ownedStages.
 export const stageSetEntrySchema = z.object({
   stageId: z.uuid(),
   stageName: z.string().min(1),
   sortOrder: z.number().int().min(0),
+});
+
+// Author's StageAssignment rows for this product; empty means no stake.
+export const ownedStageSchema = stageSetEntrySchema.extend({
+  status: trafficLightStatusSchema.nullable().optional(),
 });
 
 export const projectReadModelSchema = z.object({

@@ -1,3 +1,5 @@
+import { toIsoDateString } from "./format-date";
+
 /**
  * Rolling 12-month window (UTC, YYYY-MM-DD) anchored on `now` — a pinned
  * calendar window drifts behind the ever-advancing report set and silently
@@ -18,12 +20,5 @@ export function deriveTrendsWindow(now: Date): {
   ).getUTCDate();
   const day = Math.min(now.getUTCDate(), lastDayOfTargetMonth);
   const from = new Date(Date.UTC(fromYear, month, day));
-  return { periodFrom: formatDate(from), periodTo: formatDate(now) };
-}
-
-function formatDate(date: Date): string {
-  const year = date.getUTCFullYear().toString();
-  const month = (date.getUTCMonth() + 1).toString().padStart(2, "0");
-  const day = date.getUTCDate().toString().padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return { periodFrom: toIsoDateString(from), periodTo: toIsoDateString(now) };
 }

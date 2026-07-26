@@ -1,5 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
+import { toIsoDateString } from "../../../lib/format-date";
 import { buildActivityIndex, buildProjectIndex } from "./lead-form-shared";
 import type { DecisionEntry, PriorityEntry } from "./types";
 
@@ -7,9 +8,6 @@ export type LeadDecisionEntry = DecisionEntry;
 export type LeadPriorityEntry = PriorityEntry;
 
 type SectionItem = ReportSectionReadModel["items"][number];
-
-// "YYYY-MM-DD" — length of an ISO date-only prefix.
-const ISO_DATE_LENGTH = 10;
 
 function clampRank(rank: number): number {
   // Keep ranks ≥ 1 (schema requires a positive int) but no upper clamp —
@@ -43,9 +41,7 @@ export function mapLeadDecisions(
     text: d.text,
     owner: d.owner,
     impact: d.impact,
-    deadline: d.deadline
-      ? new Date(d.deadline).toISOString().slice(0, ISO_DATE_LENGTH)
-      : null,
+    deadline: d.deadline ? toIsoDateString(new Date(d.deadline)) : null,
     stageIds: d.stageIds,
   }));
 }

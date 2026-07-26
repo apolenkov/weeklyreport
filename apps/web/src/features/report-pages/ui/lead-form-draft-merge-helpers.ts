@@ -5,9 +5,9 @@ import type {
 
 import {
   type DecisionEntry,
-  type ItemWorkflowStatus,
   type KanbanItem,
   normalizeStageName,
+  persistableItemStatusToWorkflow,
   type Product,
   type RiskEntry,
   stageStatusToTraffic,
@@ -15,14 +15,6 @@ import {
 
 type DraftSection = ReportSectionReadModel;
 type StageStatusValue = TrafficLightStatus | null;
-const WORKFLOW_STATUS_BY_ITEM_STATUS = {
-  completed: "done",
-  planned: "planned",
-  paused: "paused",
-  postponed: "postponed",
-  blocked: "in_progress",
-  "in-progress": "in_progress",
-} satisfies Record<KanbanItem["status"], ItemWorkflowStatus>;
 
 function aggregateTrafficLight(
   stages: readonly { status?: StageStatusValue }[],
@@ -206,7 +198,7 @@ function mergeItemRow(
   itemType: "current" | "next",
   existing: DraftSection["items"][number] | undefined,
 ) {
-  const workflowStatus = WORKFLOW_STATUS_BY_ITEM_STATUS[item.status];
+  const workflowStatus = persistableItemStatusToWorkflow(item.status);
   const parentFields = item.activityId
     ? {
         projectId: null,

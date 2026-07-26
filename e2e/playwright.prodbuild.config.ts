@@ -3,7 +3,10 @@ import * as path from "path";
 
 import type { PlaywrightTestConfig } from "@playwright/test";
 
-import baseConfig from "./playwright.integration.config";
+import baseConfig, {
+  DEFAULT_E2E_API_PORT,
+  DEFAULT_E2E_WEB_PORT,
+} from "./playwright.integration.config";
 
 /**
  * Runs the SAME integration suite against production build artifacts:
@@ -25,17 +28,18 @@ import baseConfig from "./playwright.integration.config";
  * not the production auth path.
  */
 const repoRoot = path.join(__dirname, "..");
-const API_PORT = 3102;
-const WEB_PORT = 3105;
 
 const portOverrides = ["E2E_API_PORT", "E2E_WEB_PORT"].filter(
   (key) =>
     process.env[key] !== undefined &&
-    process.env[key] !== String(key === "E2E_API_PORT" ? API_PORT : WEB_PORT),
+    process.env[key] !==
+      String(
+        key === "E2E_API_PORT" ? DEFAULT_E2E_API_PORT : DEFAULT_E2E_WEB_PORT,
+      ),
 );
 if (portOverrides.length > 0) {
   throw new Error(
-    `prodbuild e2e bakes ports ${API_PORT}/${WEB_PORT} into the client bundle at build time — unset ${portOverrides.join(", ")} (unsupported here, unlike the dev-server config)`,
+    `prodbuild e2e bakes ports ${DEFAULT_E2E_API_PORT}/${DEFAULT_E2E_WEB_PORT} into the client bundle at build time — unset ${portOverrides.join(", ")} (unsupported here, unlike the dev-server config)`,
   );
 }
 
@@ -98,7 +102,7 @@ const toProdServer = (entry: WebServerEntry): WebServerEntry =>
         env: {
           ...entry.env,
           NODE_ENV: "production",
-          PORT: String(WEB_PORT),
+          PORT: String(DEFAULT_E2E_WEB_PORT),
           HOSTNAME: "127.0.0.1",
         },
       };

@@ -2,6 +2,7 @@ import type { OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { Injectable, Logger } from "@nestjs/common";
 import { type Queue, QueueEvents } from "bullmq";
 
+import { errorMessage } from "../../lib/error-message.js";
 import type { EnvConfig } from "../config/env.schema";
 import {
   dlqFailedCurrent,
@@ -117,7 +118,7 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       // Don't let metrics-side bookkeeping crash the queue listener.
       this.logger.warn(
-        `[dlq] failed to inspect terminal failure for ${name}/${jobId}: ${error instanceof Error ? error.message : String(error)}`,
+        `[dlq] failed to inspect terminal failure for ${name}/${jobId}: ${errorMessage(error)}`,
       );
     }
   }
@@ -141,7 +142,7 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
         }
       } catch (error) {
         this.logger.warn(
-          `[dlq] threshold check failed for ${name}: ${error instanceof Error ? error.message : String(error)}`,
+          `[dlq] threshold check failed for ${name}: ${errorMessage(error)}`,
         );
       }
     }
@@ -165,7 +166,7 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
           );
         } catch (error) {
           this.logger.warn(
-            `[queue-depth] poll failed for ${name}: ${error instanceof Error ? error.message : String(error)}`,
+            `[queue-depth] poll failed for ${name}: ${errorMessage(error)}`,
           );
         }
       }),
@@ -191,7 +192,7 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
       }
     } catch (error) {
       this.logger.warn(
-        `[redis-mem] memory poll failed: ${error instanceof Error ? error.message : String(error)}`,
+        `[redis-mem] memory poll failed: ${errorMessage(error)}`,
       );
     }
   }

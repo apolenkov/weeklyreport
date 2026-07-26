@@ -1,11 +1,11 @@
 import type { RefObject } from "react";
 
 import type { Product, RiskEntry } from "../../report-sections";
+import { resolveSaveProduct } from "../../report-sections";
 import {
   buildActivityRiskEntry,
   buildProductRiskEntry,
   collectRiskErrors,
-  resolveRiskSaveProduct,
   type RiskFieldErrors,
 } from "./risk-edit-dialog-helpers";
 import type { useRiskEditFields } from "./use-risk-edit-fields";
@@ -64,7 +64,7 @@ function emitRiskSave(args: RiskSaveArgs, prose: TrimmedProse): void {
     );
     return;
   }
-  const product = resolveRiskSaveProduct(
+  const product = resolveSaveProduct(
     args.products,
     risk,
     parentStage.parent.id,
