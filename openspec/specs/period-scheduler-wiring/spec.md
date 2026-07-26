@@ -171,3 +171,33 @@ losing duplicate once the boundary resolves.
 - **WHEN** `PeriodCreatorScheduler.runOnce(now)` executes
 - **THEN** the report remains `scheduled`
 - **AND** the scheduler creates no new report
+
+### Requirement: Every tick reconciles auto carry-over for open periods
+
+`PeriodCreatorScheduler.runOnce` MUST, after the scheduled-to-open flip and
+before any create decision, invoke the auto carry-over hook once for every
+`Report` with `periodState: 'open'`, `periodStatus: 'open'` and
+`archived: false` — a sweep of all such periods, not only rows this tick
+flipped, so a carry that failed transiently on an earlier tick is retried.
+Reopened periods (`periodStatus: 'reopened'`) and archived rows MUST be
+excluded, so a reopen never re-triggers carry. The sweep MUST run regardless of
+the `AppSettings.autoCreatePeriods` value: carry-over follows a period becoming
+open, and that setting governs creation only. Consequently a tick with creation
+disabled MAY still materialize lead sections and clone carried items and
+decisions into a period the flip opened, exactly as
+`carry-over-automation` specifies for the enabled case. The hook is
+best-effort — the sweep MUST NOT abort the tick when a carry fails.
+
+#### Scenario: A period opened while creation is disabled still receives carry-over
+
+- **GIVEN** `AppSettings.autoCreatePeriods` is `false`
+- **AND** a report has `periodState: 'open'`, `periodStatus: 'open'` and `archived: false`
+- **WHEN** `PeriodCreatorScheduler.runOnce(now)` executes
+- **THEN** the auto carry-over hook is invoked for that report
+- **AND** the scheduler creates no new report
+
+#### Scenario: Reopened and archived periods are not swept
+
+- **GIVEN** a report whose `periodStatus` is `reopened`, and another that is `archived`
+- **WHEN** `PeriodCreatorScheduler.runOnce(now)` executes
+- **THEN** the auto carry-over hook is not invoked for either report

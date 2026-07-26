@@ -114,7 +114,9 @@ export class PeriodCreatorScheduler {
 
   // Sweeps every fresh-open period, not just rows this tick flipped, so a
   // carry that failed transiently earlier is retried. `periodStatus: "open"`
-  // excludes reopened periods — a reopen must not re-trigger carry.
+  // excludes reopened periods — a reopen must not re-trigger carry. Carry
+  // follows a period BECOMING open, which `autoCreatePeriods` does not govern,
+  // so the sweep runs on every tick including creation-disabled ones.
   private async reconcileCarryOver(): Promise<void> {
     if (!this.autoCarryOver) return;
     const openPeriods = await this.prisma.report.findMany({
@@ -142,12 +144,11 @@ export class PeriodCreatorScheduler {
     // Periods minted ahead of time on an earlier tick become open here, before
     // any create decision is made against the table.
     await flipDueScheduledToOpen(this.prisma.report, now, this.logger);
+    await this.reconcileCarryOver();
 
     if (!settings.autoCreatePeriods) {
       return { created: false, reason: "disabled" };
     }
-
-    await this.reconcileCarryOver();
 
     const mostRecent = await this.prisma.report.findFirst({
       orderBy: { periodStart: "desc" },

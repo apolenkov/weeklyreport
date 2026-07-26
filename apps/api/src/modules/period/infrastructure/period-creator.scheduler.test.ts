@@ -146,6 +146,37 @@ describe("PeriodCreatorScheduler", () => {
     expect(prisma.report.create).not.toHaveBeenCalled();
   });
 
+  it("reconciles carry-over for open periods when auto-create is disabled", async () => {
+    const prisma = makePrismaStub({ mostRecent: null });
+    // The flip pass queries periodState:"scheduled" (no due rows); the
+    // reconcile pass queries periodState:"open".
+    prisma.report.findMany.mockImplementation(
+      (args: { where?: { periodState?: unknown } }) =>
+        args.where?.periodState === "open" ? [{ id: "open-1" }] : [],
+    );
+    const admin = {
+      getSettings: vi
+        .fn()
+        .mockResolvedValue(makeSettings({ autoCreatePeriods: false })),
+    };
+    const autoCarryOver = vi
+      .fn<(targetReportId: string) => Promise<void>>()
+      .mockResolvedValue(undefined);
+    const scheduler = new PeriodCreatorScheduler(
+      asAny(prisma),
+      asAny(admin),
+      createNullAuditLogger(),
+      undefined,
+      autoCarryOver,
+    );
+
+    const result = await scheduler.runOnce(new Date("2026-05-12T00:05:00Z"));
+
+    expect(result).toEqual({ created: false, reason: "disabled" });
+    expect(autoCarryOver.mock.calls.map((call) => call[0])).toEqual(["open-1"]);
+    expect(prisma.report.create).not.toHaveBeenCalled();
+  });
+
   it("fire-when-eligible: prev period ended in the past → creates new Period + emits audit", async () => {
     // Previous period ended last Sunday; today is Monday → create next period.
     const prisma = makePrismaStub({
