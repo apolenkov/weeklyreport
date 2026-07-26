@@ -136,3 +136,29 @@ grill on 2026-06-30; implemented — see
       ADR 0013 carries the identical stale status and references the same
       archived change, but it is out of this change's task list — left
       untouched; flagging for separate correction.
+
+## Known gap: non-variable aliases of the tRPC client
+
+`apps/web/uat-suite/mutation-call-sites.mjs` treats a use of the client as an
+escape when it renames through a variable declaration, and as readable when it
+ends in an option builder. Four aliasing shapes were closed this way, verified
+one at a time. Three remain open, each a rename that is not a variable
+declaration:
+
+```ts
+const o = { ns: trpc.projectActivity }; // object field
+export function f(c = trpc.projectActivity) {} // parameter default
+let c;
+c = trpc.projectActivity; // assignment
+```
+
+None occurs in the tree today. The obvious fix — treat every use that is not a
+builder call and not a call argument as an escape — was implemented and reverted:
+it turns all 42 verified mutations unresolvable, because legitimate uses exist
+that are neither. A check that flags everything is as useless as one that flags
+nothing, so the completion needs the benign shapes enumerated from what the code
+actually does, not guessed.
+
+The gap is bounded: an alias of these three shapes makes the audit report a
+mutation VERIFIED on the strength of its other call sites while one call site
+goes unread. It cannot cause a false failure, only a missed one.
