@@ -1,76 +1,115 @@
 // Where the web app touches a tRPC procedure, split into the sites this audit
 // can follow and the ones it cannot.
 //
-// The split is an ALLOWLIST, deliberately. Enumerating unfollowable call styles
-// — useMutation, mutate, a destructured mutationOptions — is a blocklist, and a
-// blocklist is incomplete the moment someone writes the next one. So every
-// reference to a procedure path counts as unfollowable unless it is the callee
-// of a `mutationOptions(...)` call, which is the one shape the read-back
-// analysis knows how to walk.
+// Tracked at the CLIENT ROOT, not at the procedure path. Enumerating the ways a
+// procedure can be reached — `useMutation`, a destructured name, an aliased
+// namespace, a nested binding pattern — is a blocklist, and three rounds of
+// review found a shape each previous list had missed. Everything must pass
+// through the object `useTRPC()` returns, so following that object outward is
+// complete by construction: a use is readable only when it ends in one of the
+// option-builder calls the read-back walk understands, and every other use is an
+// escape that makes the procedures under it unresolvable.
 
 import ts from "typescript";
 
 import { propertyChain } from "./expression-resolver.mjs";
 import { modules, walk } from "./web-module-graph.mjs";
 
-const READABLE_CALL = "mutationOptions";
+const CLIENT_FACTORY = "useTRPC";
+const READABLE_CALLS = new Set([
+  "mutationOptions",
+  "queryOptions",
+  "infiniteQueryOptions",
+]);
 
-const procedureOf = (chain) =>
-  chain && chain.length > 1 ? chain.slice(1).join(".") : null;
+// `const trpc = useTRPC()` — the binding every procedure path starts from.
+const clientRoots = (module) =>
+  walk(module.source, (node) =>
+    ts.isVariableDeclaration(node) &&
+    ts.isIdentifier(node.name) &&
+    node.initializer &&
+    ts.isCallExpression(node.initializer) &&
+    ts.isIdentifier(node.initializer.expression) &&
+    node.initializer.expression.text === CLIENT_FACTORY
+      ? [{ name: node.name.text, declaration: node.name }]
+      : [],
+  );
 
-const readableCallee = (node) =>
-  ts.isCallExpression(node) &&
-  ts.isPropertyAccessExpression(node.expression) &&
-  node.expression.name.text === READABLE_CALL
-    ? node.expression.expression
-    : null;
-
-// The deepest property access is the reference; its ancestors are the same
-// reference seen from further out. Collecting only the longest chain per
-// position keeps `trpc.a.b.c` from counting as references to `trpc.a` too.
-function references(module) {
-  const readable = [];
-  const seen = new Set();
-  const all = walk(module.source, (node) => {
-    const target = readableCallee(node);
-    if (target) {
-      const procedure = procedureOf(propertyChain(target));
-      if (procedure) {
-        readable.push({ procedure, call: node, module });
-        seen.add(target);
-      }
-      return [];
-    }
-    const destructured = destructuredProcedures(node, module);
-    if (destructured) return destructured;
-    if (!ts.isPropertyAccessExpression(node) || seen.has(node)) return [];
-    const procedure = procedureOf(propertyChain(node));
-    return procedure ? [{ procedure, node, module }] : [];
-  });
-  return { readable, all };
+// Climb out of `root.a.b` to the outermost property access still rooted here.
+function outermostAccess(identifier) {
+  const climb = (node) =>
+    ts.isPropertyAccessExpression(node.parent) &&
+    node.parent.expression === node
+      ? climb(node.parent)
+      : node;
+  return climb(identifier);
 }
 
-// `const { saveUser } = trpc.admin` reaches a procedure without ever writing its
-// path, so the chain walk sees only `trpc.admin` and discards it as a prefix.
-// Rebuild the path from the namespace plus each bound name; otherwise a
-// destructured call site is invisible while the procedure keeps whatever verdict
-// its other call sites earned.
-function destructuredProcedures(node, module) {
-  if (
-    !ts.isVariableDeclaration(node) ||
-    !ts.isObjectBindingPattern(node.name) ||
-    !node.initializer
-  ) {
-    return null;
+// The path as written, minus the root: `trpc.admin.saveUser` -> "admin.saveUser".
+const pathOf = (node) => (propertyChain(node) ?? []).slice(1).join(".");
+
+// Only a RENAME hides a procedure: a destructuring or an assignment to another
+// binding gives it a name the chain walk cannot follow back. Handing the client
+// to a helper is not a rename — that is how invalidation is written here, and
+// the read-back walk already follows the delegation.
+const rebinds = (access) =>
+  access.parent !== undefined &&
+  ts.isVariableDeclaration(access.parent) &&
+  access.parent.initializer === access;
+
+// `trpc.a.b.useMutation()` — invoked through a name this analysis does not
+// understand, so whatever it does on success is unseen.
+const invokedUnreadably = (access) =>
+  ts.isPropertyAccessExpression(access) &&
+  access.parent !== undefined &&
+  ts.isCallExpression(access.parent) &&
+  access.parent.expression === access;
+
+// A use is readable only as the callee target of an option builder; the caller
+// then owns a described query or mutation the read-back walk can follow.
+function classifyUse(identifier, module) {
+  // The climb runs through the builder name too, so `trpc.a.b.mutationOptions`
+  // is what comes back — the procedure is one level in from there.
+  const access = outermostAccess(identifier);
+  const builder =
+    ts.isPropertyAccessExpression(access) &&
+    READABLE_CALLS.has(access.name.text) &&
+    access.parent &&
+    ts.isCallExpression(access.parent) &&
+    access.parent.expression === access
+      ? access
+      : null;
+  if (builder === null) {
+    if (invokedUnreadably(access)) {
+      // Drop the invoked name: `…attachLead.useMutation` reaches the procedure
+      // one level in, and that is the path the verdict is attributed to.
+      const prefix = pathOf(access.expression);
+      return { kind: "escape", prefix, node: access, module };
+    }
+    return rebinds(access)
+      ? { kind: "escape", prefix: pathOf(access), node: access, module }
+      : { kind: "ignored" };
   }
-  const namespace = procedureOf(propertyChain(node.initializer));
-  if (namespace === null) return null;
-  return node.name.elements.flatMap((element) => {
-    const source = element.propertyName ?? element.name;
-    return ts.isIdentifier(source)
-      ? [{ procedure: `${namespace}.${source.text}`, node, module }]
-      : [];
-  });
+  return builder.name.text === "mutationOptions"
+    ? {
+        kind: "readable",
+        procedure: pathOf(builder.expression),
+        call: builder.parent,
+        module,
+      }
+    : { kind: "ignored" };
+}
+
+function usesIn(module) {
+  const roots = clientRoots(module);
+  if (roots.length === 0) return [];
+  const names = new Set(roots.map((root) => root.name));
+  const declarations = new Set(roots.map((root) => root.declaration));
+  return walk(module.source, (node) =>
+    ts.isIdentifier(node) && names.has(node.text) && !declarations.has(node)
+      ? [classifyUse(node, module)]
+      : [],
+  );
 }
 
 const index = (sites) =>
@@ -80,21 +119,25 @@ const index = (sites) =>
     new Map(),
   );
 
-const scanned = modules().map(references);
+const uses = modules().flatMap(usesIn);
 
-export const MUTATION_SITES = index(scanned.flatMap((r) => r.readable));
+export const MUTATION_SITES = index(
+  uses.filter((use) => use.kind === "readable"),
+);
 
-// A reference that is not a readable call site, and is not a prefix of one.
-// Prefixes matter: `trpc.admin.saveUser.mutationOptions(...)` contains the
-// shorter chain `trpc.admin`, which is not a procedure anyone called.
-const isPrefixOfKnown = (procedure) =>
-  [...MUTATION_SITES.keys()].some((known) => known.startsWith(`${procedure}.`));
+const escapes = uses.filter((use) => use.kind === "escape");
 
+// An escape at `admin` makes every procedure under `admin` unresolvable, and an
+// escape at the bare root makes all of them so — the object left through a door
+// this analysis cannot see behind.
 export const UNREADABLE_SITES = index(
-  scanned
-    .flatMap((r) => r.all)
-    .filter(
-      (site) =>
-        MUTATION_SITES.has(site.procedure) && !isPrefixOfKnown(site.procedure),
-    ),
+  [...MUTATION_SITES.keys()].flatMap((procedure) =>
+    escapes
+      .filter(
+        (escape) =>
+          escape.prefix === "" ||
+          `${procedure}.`.startsWith(`${escape.prefix}.`),
+      )
+      .map((escape) => ({ ...escape, procedure })),
+  ),
 );
