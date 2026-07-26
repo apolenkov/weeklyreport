@@ -637,7 +637,7 @@ A repository gate MUST detect drift between the `Dockerfile.api` Playwright base
 image tag and the resolved `playwright` version and fail loudly, so the two pins
 cannot diverge silently again. The guard MUST run inside `pnpm lint`, and
 therefore inside the `.husky/pre-push` gate, alongside the existing
-`lint:prisma:typecheck` and `lint:status-literal-unions` checks.
+`lint:prisma:typecheck` and `lint:ssot-gate` checks.
 
 #### Scenario: The guard passes when the pins are in lockstep
 

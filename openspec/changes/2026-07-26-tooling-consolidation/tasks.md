@@ -16,24 +16,16 @@
       `package.json` and `.husky/**` (verified: zero `.mjs` files remain under
       `scripts/` or `e2e/sweep/`, and `package.json`'s `catalog:check` /
       `lint:runtime-node` scripts point at the renamed `.ts` files)
-- [ ] Add `mts`/`ts` coverage for these paths in `eslint.config.ts` `files` globs
-      and in `knip.json` `project`/`entry` — **only half done**. `knip.json`
-      correctly covers both (`"e2e/**/*.{ts,mjs}"`, `"scripts/**/*.{ts,mjs}"`).
-      `eslint.config.ts` adds a `scripts/**/*.ts` override (lines 611-615) but
-      `e2e/sweep/*.ts` gets **zero** ESLint coverage: `globalIgnores` still
-      carries a blanket `"**/e2e/**"` (line 196, predates this change by ~2
-      months, untouched by it). Verified live: `eslint e2e` exits 2 with "all
-      files matching the glob pattern are ignored." Not a regression this
-      change caused, but the task as written implies e2e/sweep should gain
-      lint coverage, and it did not.
-- [ ] `pnpm lint && pnpm catalog:check` green — **catalog:check is green**
-      (`catalog:check OK — 23 code routes (2 excluded), 21 catalog routes, no
-drift`), but `pnpm lint` is currently red: `eslint .` reports 2
-      `no-template-curly-in-string` warnings in
-      `tools/eslint-rules/no-comment-archaeology.test.ts:36-37` (committed at
-      `bf1d5672`, part of this change's own archaeology-rule work), which trips
-      `--max-warnings 0`. Not concurrent-edit noise — this file is clean in git
-      status and was authored by this change.
+- [x] Add `mts`/`ts` coverage for these paths in `eslint.config.ts` `files` globs
+      and in `knip.json` `project`/`entry` — done. The blanket
+      `"**/e2e/**"` in `globalIgnores` is removed, so the whole e2e tree
+      (23 TypeScript files) is linted. It produced 89 findings on first run,
+      now zero. `react-hooks/rules-of-hooks` is scoped off for `e2e/**/*.ts`
+      with the reason inline: it matches Playwright's `use` fixture callback
+      by name, and every hit was that false positive.
+- [x] `pnpm lint && pnpm catalog:check` green — both verified green. The two
+      `no-template-curly-in-string` warnings noted here earlier are gone.
+      `pnpm lint` additionally runs `lint:e2e:typecheck` now (see below).
 
 ## 2. Two scripts become ESLint rules
 
@@ -50,18 +42,19 @@ drift`), but `pnpm lint` is currently red: `eslint .` reports 2
       `nothingBut(...)` selector fragment.
 - [x] Cover backtick literal unions — confirmed: `contains`/`isNot` match both
       `Literal` and `TemplateElement` nodes.
-- [ ] Carry the seven `ALLOWLIST` paths over unchanged — **not done**. Only 4 of
-      7 survive in `scripts/status-ssot-gate.ts:66-74` (the 3 SSOT declarations + `prisma/seed-constants.ts`). The 3 e2e mirror exemptions
-      (`e2e/integration/fixtures.ts`, `e2e/sweep/catalog-sweep.spec.ts`,
-      `e2e/sweep/helpers/dev-auth.ts`) are missing, even though
-      `openspec/specs/status-type-ssot-gate/spec.md:28-34` still names all
-      seven as required. Currently harmless (`--all` finds 0 hits today because
-      those three files no longer literally re-declare a union — they import
-      the type instead), but the gate does walk `e2e/**` (its own `IGNORE`
-      regex does not exclude it), so the exemption is load-bearing the moment
-      any of those three files needs to redeclare a role/status literal again.
-      Spec and implementation have drifted; reconcile one direction or the
-      other rather than leaving this silently unticked forever.
+- [x] Carry the seven `ALLOWLIST` paths over — reconciled toward the
+      implementation, and the spec is amended to match. Four entries are
+      correct; the three e2e mirror exemptions are dead text. Evidence:
+      `fixtures.ts` and `helpers/dev-auth.ts` import the role type from
+      `@customreport/shared`, and `catalog-sweep.spec.ts` no longer declares a
+      role vocabulary at all — its private copy of the catalog parser (and the
+      mirror inside it) is deleted in favour of `catalog-parser.ts`.
+      The one mirror left in the tree, `catalog-parser.ts`'s `CANONICAL_ROLES`,
+      is an `as const` value list, which the gate excludes by construction
+      rather than by allowlist — so it needs no entry either.
+      The gate's teeth over `e2e/**` were checked rather than assumed: a
+      `type PlantedRole = "lead" | "head" | "admin" | "viewer"` planted in
+      `e2e/sweep/ordering.ts` is reported by `--all`; removing it returns 0.
 - [x] Prove the no-escape property survives — confirmed in
       `scripts/status-ssot-gate.test.ts:195-199`: a bare `/* eslint-disable */`,
       an `eslint-disable-next-line`, and an `eslint-disable-line` are each
@@ -88,15 +81,21 @@ drift`), but `pnpm lint` is currently red: `eslint .` reports 2
       from 2 entries (`find-archaeology.mjs`, `find-status-literal-unions.mjs`)
       to 1 (`status-ssot-gate.ts`) — the archaeology half is now covered by
       `eslint --fix`, which already runs first in the same lint-staged step.
-      But the npm script key in `pnpm lint` is still literally named
-      `lint:status-literal-unions` (its body was repointed at the new gate,
-      not renamed) — the task explicitly says "remove" that key, and it is
-      still there, so left unticked.
-- [ ] Prove no coverage was lost: run the old scripts and the new rules over the
-      same tree and diff the hit sets before deleting — **not verifiable
-      retrospectively**. This describes an action taken during implementation;
-      the old `.mjs` scripts are deleted, so the diff cannot be reproduced now.
-      Leaving unticked rather than assuming it happened.
+      The npm script key is now `lint:ssot-gate` — renamed rather than
+      removed, because the composite still needs a name for the repo-wide
+      `--all` sweep, and the old name was wrong twice over (the gate covers
+      roles as well as statuses, and matches syntax rather than literals).
+      Both active specs that named it are updated.
+- [x] Prove no coverage was lost: run the old scripts and the new rules over the
+      same tree and diff the hit sets — done. The scripts are recoverable from
+      history (`git show bf1d5672^:scripts/find-archaeology.mjs`,
+      `git show c406ddd1^:scripts/find-status-literal-unions.mjs`), so the diff
+      is reproducible after deletion, not before it. - archaeology: old 0 hits, new rule 0 hits — identical. - status unions: old **28** hits in 1 file, new gate 0. All 28 are in
+      `scripts/status-ssot-gate.test.ts`, and all 28 are fixture source
+      inside template literals (`` `type R = "lead" | …` `` passed to
+      `scan()`). The old text scanner could not tell a string from a
+      declaration; the AST walk can. This is a false-positive class removed,
+      not coverage lost — and it is exactly why the rewrite was worth doing.
 
 ## 3. One declaration per dependency
 
@@ -137,13 +136,14 @@ drift`), but `pnpm lint` is currently red: `eslint .` reports 2
 
 ## 5. Verification
 
-- [ ] `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm knip`, `pnpm depcruise`
-      — 4 of 5 green: `pnpm typecheck` (turbo, 5/5 tasks), `pnpm test` (turbo,
-      229 web test files / 2127 tests + api suite, all passing), `pnpm knip`
-      (0 unused-export failures, only informational config hints), and
-      `pnpm depcruise` ("no dependency violations found", 1023 modules) all
-      pass as of this check. `pnpm lint` does not — see the `no-comment-archaeology.test.ts`
-      warning noted under section 1.
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm knip`, `pnpm depcruise`
+      — 5 of 5 green. `pnpm lint` exits 0 (it now also runs
+      `lint:e2e:typecheck`); `pnpm typecheck` 5/5 tasks; `pnpm test` under
+      `CI=true` is 171 api files / 1863 tests + 229 web files / 2127 tests +
+      5 prisma files / 35 tests, all passing; `knip` reports no unused exports;
+      `depcruise` finds no violations across 1023 modules.
+      `pnpm catalog:check` and `node apps/web/uat-suite/mutation-audit.mjs
+  --check` are green too.
 - [ ] Docker build of both images from a clean cache — not run in this pass
       (out of scope for a paperwork-reconciliation check; needs an explicit
       docker build invocation to confirm).
