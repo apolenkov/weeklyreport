@@ -557,6 +557,27 @@ export default defineConfig([
       complexity: ["error", 20],
     },
   },
+  // The 50-line function budget from docs/exemplary-code-standard.md, declared
+  // only now that the backlog it describes is closed — 69 files and 92
+  // violations down to the one vendored bundle below. Declaring a ratchet ahead
+  // of the work turns the gate red for everyone and gets it widened back out.
+  // Tests are exempt: a describe callback is not a function in the sense this
+  // rule measures, and the repo already exempts them from max-lines/complexity.
+  {
+    files: ["apps/*/src/**/*.{ts,tsx}", "packages/*/src/**/*.{ts,tsx}"],
+    ignores: [
+      "**/*.test.{ts,tsx}",
+      "**/*.spec.{ts,tsx}",
+      "**/__tests__/**",
+      "apps/*/src/test-utils/**",
+    ],
+    rules: {
+      "max-lines-per-function": [
+        "error",
+        { max: 50, skipBlankLines: true, skipComments: true, IIFEs: true },
+      ],
+    },
+  },
   // `prisma/` has no tsconfig of its own, so projectService would parse it under
   // the config-less default project, where `node:*` resolves to `any` and every
   // seed helper trips no-unsafe-*. Use the project `lint:prisma:typecheck` uses.
@@ -594,7 +615,7 @@ export default defineConfig([
       // fragments logic or breaks memoization; those files carry a permanent
       // exempt in the override blocks below rather than a rewrite. New code
       // stays gated.
-      "sonarjs/cognitive-complexity": "error",
+      "sonarjs/cognitive-complexity": ["error", 10],
       "sonarjs/no-nested-functions": "error",
       // enforced in src (regression prevention); the only
       // current firings are fake fixtures (10.0.0.x IPs, fake passwords) in
