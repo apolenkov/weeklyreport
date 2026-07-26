@@ -152,12 +152,17 @@
       `MODULE_NOT_FOUND`, and the Prisma CLI is not linked into
       `/app/node_modules`. Dead weight in the layer and scanner noise, not a
       runtime path.
-- [ ] CI green on all jobs after push — ticked prematurely once and un-ticked.
-      The work is pushed and CI is running on it, but "a run exists" is not
-      "the run passed", and the box was checked on the former. Whoever closes
-      this must read the conclusion of the run for the tip commit, not its
-      existence. Locally the same checks pass: `pnpm lint`, `pnpm typecheck`,
-      `pnpm test` under `CI=true`, `catalog:check`, `uat:audit`.
+- [x] CI green on all jobs after push — run `30216549516` on commit `18668ef9`
+      concluded `success`, all four jobs: Lint/Typecheck/Unit Tests, E2E Tests,
+      Prisma migrate-reset gate, Docker Build. Commits after `18668ef9` are
+      documentation only and touch no code path any job exercises.
+      This box was ticked once on the run's _existence_ while it was still in
+      progress, then un-ticked; it is ticked now on the run's conclusion. Two
+      things only this run could establish: `lint:e2e:typecheck` resolves
+      `@playwright/test` on a clean CI install (its `paths` maps into
+      `apps/web/node_modules`, which need not exist there), and the E2E job
+      actually EXECUTES the rewritten `dev-auth` login recursion and
+      `global-setup`'s `execFileSync` — local runs had only loaded them.
       Note for whoever reads this next: `CLAUDE.md` claimed CI was
       manual-dispatch only. It is not — `ci.yml` triggers on
       `push: branches: [main]` and on pull requests as well. That line is
