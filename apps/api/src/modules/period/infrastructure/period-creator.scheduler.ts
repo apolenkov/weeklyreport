@@ -112,11 +112,9 @@ export class PeriodCreatorScheduler {
     private readonly autoCarryOver?: (targetReportId: string) => Promise<void>,
   ) {}
 
-  // Sweeps every fresh-open period, not just rows this tick flipped, so a
-  // carry that failed transiently earlier is retried. `periodStatus: "open"`
-  // excludes reopened periods — a reopen must not re-trigger carry. Carry
-  // follows a period BECOMING open, which `autoCreatePeriods` does not govern,
-  // so the sweep runs on every tick including creation-disabled ones.
+  // Sweeps every open period, not just rows this tick flipped, so a transiently
+  // failed carry is retried; carry follows a period BECOMING open, which
+  // `autoCreatePeriods` does not govern. See specs/period-scheduler-wiring.
   private async reconcileCarryOver(): Promise<void> {
     if (!this.autoCarryOver) return;
     const openPeriods = await this.prisma.report.findMany({
