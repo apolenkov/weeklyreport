@@ -41,11 +41,36 @@ function references(module) {
       }
       return [];
     }
+    const destructured = destructuredProcedures(node, module);
+    if (destructured) return destructured;
     if (!ts.isPropertyAccessExpression(node) || seen.has(node)) return [];
     const procedure = procedureOf(propertyChain(node));
     return procedure ? [{ procedure, node, module }] : [];
   });
   return { readable, all };
+}
+
+// `const { saveUser } = trpc.admin` reaches a procedure without ever writing its
+// path, so the chain walk sees only `trpc.admin` and discards it as a prefix.
+// Rebuild the path from the namespace plus each bound name; otherwise a
+// destructured call site is invisible while the procedure keeps whatever verdict
+// its other call sites earned.
+function destructuredProcedures(node, module) {
+  if (
+    !ts.isVariableDeclaration(node) ||
+    !ts.isObjectBindingPattern(node.name) ||
+    !node.initializer
+  ) {
+    return null;
+  }
+  const namespace = procedureOf(propertyChain(node.initializer));
+  if (namespace === null) return null;
+  return node.name.elements.flatMap((element) => {
+    const source = element.propertyName ?? element.name;
+    return ts.isIdentifier(source)
+      ? [{ procedure: `${namespace}.${source.text}`, node, module }]
+      : [];
+  });
 }
 
 const index = (sites) =>
