@@ -173,12 +173,21 @@
       manual-dispatch only. It is not — `ci.yml` triggers on
       `push: branches: [main]` and on pull requests as well. That line is
       corrected.
-- [ ] Execute `loginByCookie` at least once — the retry loop in
-      `e2e/sweep/helpers/dev-auth.ts` was rewritten from a `for` loop with two
-      mutable bindings into a recursion, and no gate in this repo runs it.
-      ESLint and `tsc` cover its shape, not its behaviour; CI's E2E job runs
-      only the integration config, which does not import it. Its two callers
-      (`catalog-sweep.spec.ts`, `csp-validation.spec.ts`) both need a live app.
-      This is the one rewrite in the change that rests on reading rather than
-      running, and it should be said out loud rather than filed under
-      "all gates green".
+- [x] Execute `loginByCookie` at least once — done via `pnpm test:uat`, the
+      sweep suite, which is the non-destructive caller: its config declares no
+      `globalSetup`, so unlike the CSP route it resets no database. It starts
+      the API from source and `next dev` on their own ports and logs in per
+      role. 4/4 tests passed; no report contains the `(dev-auth login)`
+      failure row the spec writes when `loginByCookie` throws, and 51 routes
+      were visited across the four roles — a walk that only happens after a
+      successful login. The rewritten recursion therefore ran for lead, head,
+      admin and viewer.
+      The CSP route was tried first and abandoned deliberately: it inherits the
+      prodbuild `globalSetup`, which runs `prisma migrate reset`, and Prisma 7's
+      consent guard requires the user's own words. Fabricating that value to get
+      a green check would have been the worst possible way to close an item
+      about not trusting unverified claims.
+      Sweep output, for whoever picks it up: 39 axe `color-contrast`
+      violations, plus 93 aborted requests to the sweep's own `next dev` port
+      (navigation-cancelled chunk loads). Pre-existing product findings, not
+      introduced here, and phase 1 is report-only by contract.
