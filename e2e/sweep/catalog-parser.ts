@@ -11,10 +11,13 @@
 // the catalog identically.
 // ============================================================================
 
-// Mirrors the shared `Role`/`DbRole` union (role-type spec). This tree's own
-// tsconfig has no workspace resolution, so the four tokens are an inline
-// literal — the same carve-out the role-vocabulary unification already uses for
-// e2e fixtures.
+// Mirrors the shared `Role`/`DbRole` union (role-type spec). This file is a
+// plain-node entrypoint under `tsconfig.scripts.json`, whose `paths` is
+// deliberately empty because Node resolves these imports itself and no
+// workspace link exists at the repo root — an import of @customreport/shared
+// typechecks nowhere and throws at runtime. The four tokens stay inline, and
+// this is now the ONE role mirror in the e2e tree: every other reader gets the
+// vocabulary through this parser.
 const CANONICAL_ROLES = ["lead", "head", "admin", "viewer"] as const;
 
 type Role = (typeof CANONICAL_ROLES)[number];
@@ -25,13 +28,16 @@ type IntentField = (typeof INTENT_FIELDS)[number];
 
 type Intent = { readonly id: string } & Record<IntentField, string>;
 
-export type CatalogRoute = {
+export interface CatalogRoute {
   readonly route: string;
-  access: string[];
+  access: Role[];
   readonly intents: Intent[];
-};
+}
 
-export type Catalog = { readonly role: Role; readonly routes: CatalogRoute[] };
+export interface Catalog {
+  readonly role: Role;
+  readonly routes: CatalogRoute[];
+}
 
 const isRole = (value: string): value is Role =>
   (CANONICAL_ROLES as readonly string[]).includes(value);
@@ -43,7 +49,10 @@ const isIntentField = (value: string): value is IntentField =>
 // produces an empty/wrong access set for every route in the file, which both
 // consumers (the blocking drift gate and the human checklist) would then
 // render as if the role legitimately has no access anywhere.
-function assertValidRole(role: string, context: string): asserts role is Role {
+function assertValidRole(
+  role: string,
+  context: string,
+): asserts role is Role {
   if (!isRole(role)) {
     throw new Error(
       `Invalid role token "${role}" in ${context} — must be one of: ${CANONICAL_ROLES.join(", ")}`,
@@ -79,7 +88,7 @@ const parseRole = (text: string): Role | null => {
   return roleMatch[1];
 };
 
-const parseAccess = (raw: string, route: string): string[] => {
+const parseAccess = (raw: string, route: string): Role[] => {
   const access = raw
     .split(",")
     .map((token) => token.trim())
@@ -87,13 +96,15 @@ const parseAccess = (raw: string, route: string): string[] => {
   for (const accessRole of access) {
     assertValidRole(accessRole, `access: [...] for route ${route}`);
   }
-  return access;
+  // Every token above went through the assertion, which throws on the first
+  // mismatch — the narrowing is runtime-checked, not a raw cast.
+  return access as Role[];
 };
 
 // Mutable cursor over the two nesting levels the format has. The loop below
 // assigns into whichever level the current line belongs to, so the state has to
 // outlive one iteration.
-type Cursor = { route: CatalogRoute | null; intent: Intent | null };
+interface Cursor { route: CatalogRoute | null; intent: Intent | null }
 
 const consumeLine = (
   line: string,
@@ -126,7 +137,10 @@ const consumeLine = (
 
 const applyField = (line: string, cursor: Cursor): Cursor => {
   if (!cursor.intent) return cursor;
-  const fieldMatch = /^\s*(intent|given|when|then|note):\s*(.*)$/.exec(line);
+  // The value capture must start non-blank: `\s*(.*)` lets both halves claim
+  // the same run of spaces, and every extra space doubles the ways to split it.
+  // An all-blank value is left out, which is what the empty field already is.
+  const fieldMatch = /^\s*(intent|given|when|then|note):\s*(\S.*)?$/.exec(line);
   const [, field, raw] = fieldMatch ?? [];
   if (field !== undefined && raw !== undefined && isIntentField(field)) {
     cursor.intent[field] = unquote(raw);
@@ -134,19 +148,26 @@ const applyField = (line: string, cursor: Cursor): Cursor => {
   return cursor;
 };
 
+interface Parse {
+  cursor: Cursor;
+  routes: CatalogRoute[];
+}
+
 // Parse the generator's deterministic catalog shape into { role, routes:[{ route,
 // access, intents:[{ id, intent, given, when, then, note }] }] }.
 export function parseCatalog(text: string): Catalog | null {
   const role = parseRole(text);
   if (!role) return null;
 
-  const routes: CatalogRoute[] = [];
-  text
-    .split("\n")
-    .reduce<Cursor>(
-      (cursor, line) => consumeLine(line, cursor, routes),
-      { route: null, intent: null },
-    );
+  // The fold carries the collected routes as well as the cursor, so the parse
+  // is the reduce's value rather than a side effect on a binding beside it.
+  const { routes } = text.split("\n").reduce<Parse>(
+    (parse, line) => ({
+      cursor: consumeLine(line, parse.cursor, parse.routes),
+      routes: parse.routes,
+    }),
+    { cursor: { route: null, intent: null }, routes: [] },
+  );
 
   return routes.length > 0 ? { role, routes } : null;
 }

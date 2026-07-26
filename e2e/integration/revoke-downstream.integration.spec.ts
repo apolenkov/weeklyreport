@@ -27,12 +27,12 @@
 
 import type { APIResponse, Page } from "@playwright/test";
 
-import { test, expect } from "./fixtures";
+import { expect,test } from "./fixtures";
 import { prisma, resetMutations } from "./helpers/db";
 import {
   ACTIVE_REPORT_ID,
-  PUBLISHED_REPORT_ID,
   LEAD_MARIA_ID,
+  PUBLISHED_REPORT_ID,
   SEED_USERS,
 } from "./helpers/seed-ids";
 
@@ -86,7 +86,7 @@ async function revokeLeadViaDashboard(
     name: "Revoke",
     exact: true,
   });
-  await expect(confirmBtn).toBeVisible({ timeout: 5_000 });
+  await expect(confirmBtn).toBeVisible({ timeout: 5000 });
   await confirmBtn.click();
 
   // Wait for the tRPC mutation to complete.
@@ -198,7 +198,7 @@ test.describe("Revoke downstream effects (integration)", () => {
       select: { authorId: true },
     });
     expect(afterSections.map((s) => s.authorId)).not.toContain(LEAD_MARIA_ID);
-    expect(afterSections.length).toBe(3);
+    expect(afterSections).toHaveLength(3);
 
     // The queue row itself no longer offers Revoke — canRevoke requires
     // status === "submitted", which the revoked section no longer has.
@@ -319,7 +319,7 @@ test.describe("Revoke downstream effects (integration)", () => {
               where: { id: MARIA_PUBLISHED_SECTION_ID },
             })
           )?.status,
-        { timeout: 5_000 },
+        { timeout: 5000 },
       )
       .toBe("submitted");
   });

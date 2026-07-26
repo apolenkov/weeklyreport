@@ -14,15 +14,26 @@
 
 import type { DbRole } from "@customreport/shared";
 import {
-  test as base,
+  type BrowserContext,
   expect,
   type Page,
-  type BrowserContext,
+  test as base,
 } from "@playwright/test";
+
+const DEFAULT_API_PORT = 3002;
+// Express `res.redirect` defaults to 302; 303/307 are accepted defensively.
+const FOUND = 302;
+const SEE_OTHER = 303;
+const TEMPORARY_REDIRECT = 307;
+const DEV_LOGIN_REDIRECT_STATUSES = new Set([
+  FOUND,
+  SEE_OTHER,
+  TEMPORARY_REDIRECT,
+]);
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
-  `http://127.0.0.1:${process.env.E2E_API_PORT ?? 3002}`;
+  `http://127.0.0.1:${process.env.E2E_API_PORT ?? DEFAULT_API_PORT}`;
 
 /**
  * Mints a real session JWT cookie via the dev-login endpoint and installs it
@@ -49,8 +60,7 @@ export async function loginAs(
 
   const res = await context.request.get(url.toString(), { maxRedirects: 0 });
   const status = res.status();
-  // Express `res.redirect` defaults to 302; accept 303/307 defensively.
-  if (status !== 302 && status !== 303 && status !== 307) {
+  if (!DEV_LOGIN_REDIRECT_STATUSES.has(status)) {
     throw new Error(
       `dev-login failed: HTTP ${status} - ${await res.text().catch(() => "<no body>")}`,
     );
@@ -66,7 +76,7 @@ export async function loginAs(
   }
 }
 
-type Fixtures = {
+interface Fixtures {
   /** Logged in as lead 1 (a submitted lead with full data). */
   leadPage: Page;
   /** Logged in as the seeded department head. */
@@ -77,7 +87,7 @@ type Fixtures = {
   viewerPage: Page;
   /** Fresh context with NO cookie — for auth-guard tests. */
   unauthedPage: Page;
-};
+}
 
 export const test = base.extend<Fixtures>({
   leadPage: async ({ browser }, use) => {

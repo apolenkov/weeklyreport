@@ -1,7 +1,7 @@
 import {
-  sessionRoleSchema,
   type DbRole,
   type Role,
+  sessionRoleSchema,
 } from "@customreport/shared";
 import type { Page } from "@playwright/test";
 
@@ -13,19 +13,31 @@ import type { Page } from "@playwright/test";
 const DEV_LOGIN_PATH = "/auth/dev-login";
 const COOKIE_NAME = "customreport_session";
 
-type DevAuthIdentity = {
+const RATE_LIMITED_STATUS = 429;
+// dev-login answers with a redirect; anything else is a failure, not a session.
+const REDIRECT_STATUS_MIN = 300;
+const REDIRECT_STATUS_MAX = 400;
+// The role probe shares the login rate limiter, so back off between tries.
+const DEFAULT_ATTEMPTS = 3;
+const RETRY_BASE_MS = 300;
+const RETRY_STEP_MS = 100;
+// Long enough to tell a real signed session from an empty or cleared cookie.
+const MIN_SESSION_COOKIE_CHARS = 20;
+const ERROR_BODY_CHARS = 300;
+
+interface DevAuthIdentity {
   role: DbRole;
   email?: string;
   redirect?: string;
   expectRole?: Role;
   maxRetries?: number;
-};
+}
 
-type AuthMeEntry = {
+interface AuthMeEntry {
   result?: { data?: { json?: unknown } | unknown };
   error?: unknown;
   message?: unknown;
-};
+}
 type SessionRoleResult = "rate_limited" | Role | null;
 
 function parseAuthMeRole(payload: unknown): SessionRoleResult {
@@ -57,7 +69,7 @@ async function getSessionRole(page: Page): Promise<SessionRoleResult> {
     maxRedirects: 0,
   });
 
-  if (response.status() === 429) {
+  if (response.status() === RATE_LIMITED_STATUS) {
     return "rate_limited";
   }
 
@@ -101,74 +113,89 @@ async function navigateAfterLogin(
   await page.goto("/", { waitUntil: "domcontentloaded" }).catch(() => null);
 }
 
-export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
-  await page.context().clearCookies();
+// Ask for the cookie and prove it arrived. Anything short of a redirect
+// carrying a plausible session is a failure worth the raw body in the message —
+// a silent retry here would hide a broken dev-login behind a role mismatch.
+async function establishSession(
+  page: Page,
+  identity: DevAuthIdentity,
+  attempt: number,
+): Promise<void> {
+  const email = emailFromRole(identity.role, identity.email, attempt);
+  const params = new URLSearchParams({
+    role: identity.role,
+    ...(email ? { email } : {}),
+    ...(identity.redirect ? { redirect: identity.redirect } : {}),
+  });
 
-  const expectedRole = identity.expectRole ?? identity.role;
-  const attempts = Math.max(1, identity.maxRetries ?? (expectedRole ? 3 : 1));
-  let assumeRoleFromAuthMe = false;
+  const response = await page
+    .context()
+    .request.get(`${DEV_LOGIN_PATH}?${params.toString()}`, {
+      maxRedirects: 0,
+    });
 
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    const email = emailFromRole(identity.role, identity.email, attempt);
-    const params = new URLSearchParams({ role: identity.role });
-    if (email) params.set("email", email);
-    if (identity.redirect) params.set("redirect", identity.redirect);
-
-    const response = await page
-      .context()
-      .request.get(`${DEV_LOGIN_PATH}?${params.toString()}`, {
-        maxRedirects: 0,
-      });
-
-    if (response.status() < 300 || response.status() >= 400) {
-      const body = await response.text().catch(() => "");
-      throw new Error(
-        `dev-login failed for role=${identity.role} attempt=${attempt}: HTTP ${response.status()} ${body.slice(0, 300)}`,
-      );
-    }
-
-    const cookies = await page.context().cookies();
-    const hasSession = cookies.some(
-      (cookie) => cookie.name === COOKIE_NAME && cookie.value.length > 20,
+  const status = response.status();
+  if (status < REDIRECT_STATUS_MIN || status >= REDIRECT_STATUS_MAX) {
+    const body = await response.text().catch(() => "");
+    throw new Error(
+      `dev-login failed for role=${identity.role} attempt=${attempt}: HTTP ${status} ${body.slice(0, ERROR_BODY_CHARS)}`,
     );
-    if (!hasSession) {
-      throw new Error(
-        `dev-login did not establish ${COOKIE_NAME} via ${DEV_LOGIN_PATH}`,
-      );
-    }
-
-    const actualRole = await getSessionRole(page);
-    if (actualRole === "rate_limited") {
-      if (attempt >= attempts) {
-        // If role check endpoint is rate-limited, assume login succeeded and
-        // defer session correctness to route-level guards (which are exercised
-        // by each regression scenario).
-        assumeRoleFromAuthMe = true;
-        break;
-      }
-      await page.waitForTimeout(300 + attempt * 100);
-      continue;
-    }
-
-    if (!expectedRole || actualRole === expectedRole) {
-      await navigateAfterLogin(page, identity.redirect);
-      return;
-    }
-
-    if (attempt >= attempts) {
-      if (expectedRole) {
-        throw new Error(
-          `dev-login role mismatch for ${identity.role}: expected ${expectedRole}, got ${actualRole ?? "null"}`,
-        );
-      }
-      return;
-    }
-
-    await page.context().clearCookies();
   }
 
-  if (assumeRoleFromAuthMe) {
-    await navigateAfterLogin(page, identity.redirect);
-    return;
+  const cookies = await page.context().cookies();
+  const hasSession = cookies.some(
+    (cookie) =>
+      cookie.name === COOKIE_NAME &&
+      cookie.value.length > MIN_SESSION_COOKIE_CHARS,
+  );
+  if (!hasSession) {
+    throw new Error(
+      `dev-login did not establish ${COOKIE_NAME} via ${DEV_LOGIN_PATH}`,
+    );
   }
+}
+
+async function attemptLogin(
+  page: Page,
+  identity: DevAuthIdentity,
+  expectedRole: DbRole | Role,
+  attempts: number,
+  attempt: number,
+): Promise<void> {
+  await establishSession(page, identity, attempt);
+
+  const actualRole = await getSessionRole(page);
+  const isLast = attempt >= attempts;
+
+  if (actualRole === "rate_limited") {
+    // Only the role probe is rate-limited; the cookie is already set. Out of
+    // retries, hand session correctness to the route guards every scenario
+    // exercises anyway rather than failing on an answer we could not get.
+    if (isLast) return navigateAfterLogin(page, identity.redirect);
+    await page.waitForTimeout(RETRY_BASE_MS + attempt * RETRY_STEP_MS);
+    return attemptLogin(page, identity, expectedRole, attempts, attempt + 1);
+  }
+
+  if (actualRole === expectedRole) {
+    return navigateAfterLogin(page, identity.redirect);
+  }
+
+  if (isLast) {
+    throw new Error(
+      `dev-login role mismatch for ${identity.role}: expected ${expectedRole}, got ${actualRole ?? "null"}`,
+    );
+  }
+
+  await page.context().clearCookies();
+  return attemptLogin(page, identity, expectedRole, attempts, attempt + 1);
+}
+
+export async function loginByCookie(
+  page: Page,
+  identity: DevAuthIdentity,
+): Promise<void> {
+  await page.context().clearCookies();
+  const expectedRole = identity.expectRole ?? identity.role;
+  const attempts = Math.max(1, identity.maxRetries ?? DEFAULT_ATTEMPTS);
+  return attemptLogin(page, identity, expectedRole, attempts, 1);
 }

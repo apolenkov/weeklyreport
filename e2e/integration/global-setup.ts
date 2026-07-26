@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import * as path from "node:path";
 
@@ -31,7 +31,7 @@ export function findRepoRoot(startDir: string): string {
  * playwright.integration.config.ts already throws if E2E_DATABASE_URL is unset,
  * so by the time we get here it is guaranteed defined.
  */
-export default async function globalSetup(): Promise<void> {
+export default function globalSetup(): void {
   const dbUrl = process.env.E2E_DATABASE_URL;
   if (!dbUrl) throw new Error("E2E_DATABASE_URL not set");
 
@@ -40,19 +40,22 @@ export default async function globalSetup(): Promise<void> {
   // Prisma 7 does not auto-invoke the configured seed command after a reset.
   // Seed explicitly so dev-login cannot create ad-hoc records that replace
   // the deterministic users and reports required by cross-role specs.
+  // argv form, not a shell string: nothing here is interpolated into a command
+  // line, so the database name cannot become part of the invocation.
+  const runPrisma = (...args: readonly string[]): void => {
+    // eslint-disable-next-line sonarjs/no-os-command-from-path -- pnpm is the documented entrypoint on a dev machine and in CI; an absolute path would be wrong on both
+    execFileSync("pnpm", ["exec", "prisma", ...args], {
+      cwd: repoRoot,
+      env: { ...process.env, DATABASE_URL: dbUrl },
+      stdio: "inherit",
+    });
+  };
+
   console.log("[e2e] Resetting integration database...");
-  execSync("pnpm exec prisma migrate reset --force", {
-    cwd: repoRoot,
-    env: { ...process.env, DATABASE_URL: dbUrl },
-    stdio: "inherit",
-  });
+  runPrisma("migrate", "reset", "--force");
 
   console.log("[e2e] Seeding integration database...");
-  execSync("pnpm exec prisma db seed", {
-    cwd: repoRoot,
-    env: { ...process.env, DATABASE_URL: dbUrl },
-    stdio: "inherit",
-  });
+  runPrisma("db", "seed");
 
   console.log("[e2e] Database ready.");
 }

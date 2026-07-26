@@ -8,18 +8,19 @@
  * the suite instead of being skipped.
  */
 
-import { test, expect } from "./fixtures";
+import type { BrowserContext, Page } from "@playwright/test";
+
+import { expect,test } from "./fixtures";
+import { loginAs } from "./fixtures";
 import { prisma, resetMutations } from "./helpers/db";
 import {
   ACTIVE_REPORT_ID,
-  PUBLISHED_REPORT_ID,
   LEAD_1_ID,
   LEAD_OLGA_ID,
   LEAD_SERGEY_ID,
+  PUBLISHED_REPORT_ID,
   SEED_EMAILS,
 } from "./helpers/seed-ids";
-import type { BrowserContext, Page } from "@playwright/test";
-import { loginAs } from "./fixtures";
 
 test.describe("Lead journey (integration)", () => {
   test.afterEach(async () => {

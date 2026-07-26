@@ -193,7 +193,6 @@ export default defineConfig([
     // generated artifact dir gates the repo on third-party build output.
     "**/playwright-report/**",
     "**/prisma/generated/**",
-    "**/e2e/**",
     "openspec/**",
     // Workflow-harness scripts (the `Workflow` tool wraps these in an async
     // function and injects args/log/parallel/agent), so they legitimately use
@@ -1154,5 +1153,12 @@ export default defineConfig([
       "apps/web/uat-suite/inventory.mjs", // classify() must stay inline (runs inside page.evaluate) + multi-phase report IIFE
     ],
     rules: { "sonarjs/cognitive-complexity": "off" },
+  },
+  // Playwright's fixture contract is `async ({ deps }, use) => { … await use(x) }`.
+  // `use` is the provider callback the runner hands in, and react-hooks matches
+  // it by name alone — every hit in this tree is that shape, not a React hook.
+  {
+    files: ["e2e/**/*.ts"],
+    rules: { "react-hooks/rules-of-hooks": "off" },
   },
 ]);

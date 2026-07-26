@@ -9,14 +9,15 @@
  * creating/editing a real Risk must not double-write.
  */
 
-import { test, expect, loginAs } from "./fixtures";
+import type { BrowserContext, Page } from "@playwright/test";
+
+import { expect, loginAs,test } from "./fixtures";
 import { prisma, resetMutations } from "./helpers/db";
 import {
   ACTIVE_REPORT_ID,
   LEAD_OLGA_ID,
   SEED_EMAILS,
 } from "./helpers/seed-ids";
-import type { BrowserContext, Page } from "@playwright/test";
 
 async function openOlgaDraft(
   browser: import("@playwright/test").Browser,
@@ -84,13 +85,13 @@ test.describe("Status<->Risk sync (integration)", () => {
       button
         .closest(".rounded-xl")
         ?.querySelector("span.font-semibold")
-        ?.textContent?.trim(),
+        ?.textContent.trim(),
     );
     if (!productName) throw new Error("Stage chip has no product container");
     const productCard = page.locator("div.rounded-xl").filter({
       has: page.getByText(productName, { exact: true }),
     });
-    const escapedStageName = stageName.replace(
+    const escapedStageName = stageName.replaceAll(
       /[.*+?^${}()|[\]\\]/g,
       String.raw`\$&`,
     );

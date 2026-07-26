@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import * as path from "path";
+import * as path from "node:path";
 
 import type { PlaywrightTestConfig } from "@playwright/test";
 
