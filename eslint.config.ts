@@ -191,8 +191,6 @@ export default defineConfig([
     // generated artifact dir gates the repo on third-party build output.
     "**/playwright-report/**",
     "**/prisma/generated/**",
-    "prisma/seed.ts",
-    "prisma/seed-demo.ts",
     "**/e2e/**",
     "openspec/**",
     // Workflow-harness scripts (the `Workflow` tool wraps these in an async

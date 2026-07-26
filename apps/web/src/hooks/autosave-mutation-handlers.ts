@@ -1,23 +1,12 @@
-import type {
-  DraftSavePayload,
-  ReportSectionReadModel,
-} from "@customreport/shared";
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import type { ReportSectionReadModel } from "@customreport/shared";
+import type { Dispatch, SetStateAction } from "react";
 
 import { isConflictError } from "../lib/trpc";
+import type { GetAutosaveRefs } from "./autosave-refs";
 import type { AutosaveState, DraftSaveContent } from "./autosave-types";
 
-// Lazy getMutate/getCurrentSectionId so deps can be built before those refs exist.
 export interface SaveDraftHandlerDeps {
-  readonly versionRef: RefObject<number>;
-  readonly lastSavedRef: RefObject<string>;
-  readonly inFlightRef: RefObject<string>;
-  readonly inFlightPayloadRef: RefObject<DraftSaveContent | null>;
-  readonly inFlightSectionRef: RefObject<string | null>;
-  readonly queuedKeyRef: RefObject<string | null>;
-  readonly queuedPayloadRef: RefObject<DraftSaveContent | null>;
-  readonly getMutate: () => (payload: DraftSavePayload) => void;
-  readonly getCurrentSectionId: () => string | null;
+  readonly getRefs: GetAutosaveRefs;
   readonly setState: Dispatch<SetStateAction<AutosaveState>>;
   readonly setLastSavedAt: Dispatch<SetStateAction<Date | null>>;
   readonly setQueuedRetryRevision: Dispatch<SetStateAction<number>>;
@@ -27,6 +16,8 @@ export interface SaveDraftHandlerDeps {
     payload: DraftSaveContent,
   ) => void;
   readonly onConflict?: () => void;
+  // Section captured at render, NOT the live one: the onError re-arm must only
+  // fire for the form the caller is currently showing.
   readonly reportSectionId: string | null;
   readonly invalidate: () => void;
   readonly reportError: (message: string) => void;
@@ -34,40 +25,38 @@ export interface SaveDraftHandlerDeps {
 
 // Drain to the section the queue was built for — the hook survives navigation.
 function drainQueuedSave(deps: SaveDraftHandlerDeps): void {
-  if (deps.queuedKeyRef.current === null) return;
-  const queued = deps.queuedPayloadRef.current;
-  const queuedKey = deps.queuedKeyRef.current;
-  deps.queuedKeyRef.current = null;
-  deps.queuedPayloadRef.current = null;
-  if (queued === null || queuedKey === deps.lastSavedRef.current) return;
+  const refs = deps.getRefs();
+  if (refs.queuedKey === null) return;
+  const queued = refs.queuedPayload;
+  const queuedKey = refs.queuedKey;
+  refs.queuedKey = null;
+  refs.queuedPayload = null;
+  if (queued === null || queuedKey === refs.lastSaved) return;
   deps.setState("saving");
-  deps.inFlightRef.current = queuedKey;
-  deps.inFlightPayloadRef.current = queued;
-  deps.inFlightSectionRef.current = queued.reportSectionId;
+  refs.inFlight = queuedKey;
+  refs.inFlightPayload = queued;
+  refs.inFlightSection = queued.reportSectionId;
   // mutate (not mutateAsync) avoids unhandled rejection; inject the bumped version.
-  deps.getMutate()({ ...queued, version: deps.versionRef.current });
+  refs.mutate({ ...queued, version: refs.version });
 }
 
-/**
- * Build Save Draft Handlers.
- * @param deps - The deps argument.
- */
 export function buildSaveDraftHandlers(deps: SaveDraftHandlerDeps): {
   onSuccess: (saved: ReportSectionReadModel) => void;
   onError: (err: unknown) => void;
 } {
   return {
     onSuccess: (saved) => {
+      const refs = deps.getRefs();
       // Bump version before drain so a queued save rebases instead of self-409ing.
-      deps.versionRef.current = saved.version;
+      refs.version = saved.version;
       deps.onVersionChange(saved.version);
 
       // Skip baseline stamp after navigation — would clobber the new section's prime.
-      if (deps.inFlightSectionRef.current === deps.getCurrentSectionId()) {
-        deps.lastSavedRef.current = deps.inFlightRef.current;
+      if (refs.inFlightSection === refs.sectionId) {
+        refs.lastSaved = refs.inFlight;
       }
-      if (deps.inFlightPayloadRef.current !== null) {
-        deps.onSaved?.(saved, deps.inFlightPayloadRef.current);
+      if (refs.inFlightPayload !== null) {
+        deps.onSaved?.(saved, refs.inFlightPayload);
       }
       deps.setState("saved");
       deps.setLastSavedAt(new Date());
@@ -76,10 +65,10 @@ export function buildSaveDraftHandlers(deps: SaveDraftHandlerDeps): {
       drainQueuedSave(deps);
     },
     onError: (err: unknown) => {
-      const queuedSectionId =
-        deps.queuedPayloadRef.current?.reportSectionId ?? null;
-      deps.queuedKeyRef.current = null;
-      deps.queuedPayloadRef.current = null;
+      const refs = deps.getRefs();
+      const queuedSectionId = refs.queuedPayload?.reportSectionId ?? null;
+      refs.queuedKey = null;
+      refs.queuedPayload = null;
       deps.setState("error");
       // 409: hand off to the conflict flow (refetch) — retrying the stale version would 409 again.
       if (deps.onConflict && isConflictError(err)) {
