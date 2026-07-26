@@ -40,6 +40,7 @@ import {
 import {
   ReportSectionAccessError,
   ReportSectionDomainError,
+  ReportSectionNotFoundError,
   SectionVersionConflictError,
 } from "../../modules/report-sections/index.js";
 import {
@@ -102,6 +103,19 @@ describe("mapDomainError", () => {
       const mapped = mapDomainError(error);
 
       expect(mapped.code).toBe("BAD_REQUEST");
+    });
+  });
+
+  describe("ReportSectionNotFoundError -> NOT_FOUND", () => {
+    it("maps a vanished report on a section write to NOT_FOUND, not BAD_REQUEST", () => {
+      const error = new ReportSectionNotFoundError(
+        "The report no longer exists.",
+      );
+      const mapped = mapDomainError(error);
+
+      expect(mapped.code).toBe("NOT_FOUND");
+      expect(mapped.message).toContain("no longer exists");
+      expect(mapped.cause).toBe(error);
     });
   });
 
@@ -316,6 +330,11 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       name: "SectionVersionConflictError",
       make: () => new SectionVersionConflictError("m"),
       code: "CONFLICT",
+    },
+    {
+      name: "ReportSectionNotFoundError",
+      make: () => new ReportSectionNotFoundError("m"),
+      code: "NOT_FOUND",
     },
     {
       name: "ReportSectionDomainError",

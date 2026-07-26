@@ -48,6 +48,16 @@ export class ReportSectionAccessError extends Error {
   }
 }
 
+// The report or section a write targets is gone. Extends Error directly (never
+// ReportSectionDomainError) so the mapper table's one-row-per-error invariant
+// holds and this surfaces as NOT_FOUND, not the BAD_REQUEST validation code.
+export class ReportSectionNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ReportSectionNotFoundError";
+  }
+}
+
 /**
  * Raised when a section write's expected version no longer matches the stored
  * row (a concurrent writer advanced it). Distinct from ReportSectionDomainError

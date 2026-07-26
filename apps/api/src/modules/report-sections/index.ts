@@ -9,6 +9,7 @@ export {
 export {
   ReportSectionAccessError,
   ReportSectionDomainError,
+  ReportSectionNotFoundError,
   ReportSectionsService,
   SectionVersionConflictError,
 } from "./application/report-sections.service.js";

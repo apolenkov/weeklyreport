@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 
 import {
   ReportSectionDomainError,
+  ReportSectionNotFoundError,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
 import { reportSectionFullInclude } from "./report-sections.include";
@@ -37,12 +38,19 @@ async function lockReportForSave(
   const gate = await tx.$queryRaw<
     { periodStatus: string; archived: boolean }[]
   >`SELECT "periodStatus", "archived" FROM "Report" WHERE "id" = ${reportId} FOR UPDATE`;
+  const gateRow = gate[0];
+  // No row means the report was deleted between the precheck and this
+  // transaction — the resource is gone, not period-locked, so it must surface
+  // as NOT_FOUND rather than a period-state constraint.
+  if (gateRow === undefined) {
+    throw new ReportSectionNotFoundError("The report no longer exists.");
+  }
   // Archiving leaves periodStatus untouched, so a gate reading only that lets
   // an archive committing inside the precheck→tx window through. Same
   // predicate as isEditablePeriod on the authz path.
   if (
-    gate[0]?.archived === true ||
-    (gate[0]?.periodStatus !== "open" && gate[0]?.periodStatus !== "reopened")
+    gateRow.archived ||
+    (gateRow.periodStatus !== "open" && gateRow.periodStatus !== "reopened")
   ) {
     throw new ReportSectionDomainError(
       "SECTION_ALREADY_SUBMITTED",

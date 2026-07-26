@@ -2,7 +2,11 @@
 import type { TrafficLightStatus } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { SectionVersionConflictError } from "../application/report-sections.service";
+import {
+  ReportSectionDomainError,
+  ReportSectionNotFoundError,
+  SectionVersionConflictError,
+} from "../application/report-sections.service";
 import type { PrismaReportSectionWithRelations } from "./report-sections.include";
 import { mapPrismaToReportSection } from "./report-sections.mappers";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
@@ -648,6 +652,31 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
 
     await expect(repo.saveSection(section, 3)).rejects.toThrow(
       /published report/i,
+    );
+    // Failed closed before any child row was touched.
+    expect(tx.item.deleteMany).not.toHaveBeenCalled();
+    expect(tx.reportSection.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("a report deleted inside the precheck window is NOT_FOUND, not a period constraint", async () => {
+    // An empty gate result means the parent Report row is gone (deleted between
+    // the service-level precheck and this transaction). The resource no longer
+    // exists, so the caller must get the NOT_FOUND-class error rather than the
+    // "published report" period-state rejection.
+    const tx = makeTx(1, baseRow({ version: 1 }));
+    tx.$queryRaw = vi.fn(() => Promise.resolve([]));
+    const prisma = {
+      $transaction: vi.fn((cb: (t: typeof tx) => unknown) => cb(tx)),
+    };
+    const repo = new ReportSectionsPrismaRepository(prisma as never);
+
+    await expect(repo.saveSection(section, 3)).rejects.toBeInstanceOf(
+      ReportSectionNotFoundError,
+    );
+    // NOT_FOUND maps from its own class; the BAD_REQUEST period-state class
+    // must not be what surfaces here.
+    await expect(repo.saveSection(section, 3)).rejects.not.toBeInstanceOf(
+      ReportSectionDomainError,
     );
     // Failed closed before any child row was touched.
     expect(tx.item.deleteMany).not.toHaveBeenCalled();
