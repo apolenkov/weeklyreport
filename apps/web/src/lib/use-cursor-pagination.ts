@@ -69,6 +69,10 @@ function mergeQueryOptions<TItem>(
   };
 }
 
+/**
+ * Infinite query helper over a cursor-paginated tRPC procedure.
+ * @param factory - Builds the infinite query options for the procedure.
+ */
 export function useCursorPagination<
   TItem,
   TInput extends CursorPaginationInput = CursorPaginationInput,

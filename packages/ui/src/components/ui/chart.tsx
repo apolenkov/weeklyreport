@@ -33,7 +33,8 @@ export function ChartContainer({
 
 /**
  * Recharts Tooltip pre-styled with theme CSS variables (card/border).
- * @param props - The props argument.
+ * @param props - Recharts Tooltip props; a caller-supplied `contentStyle` is
+ * overridden by the theme tokens.
  */
 export function ChartTooltip(props: React.ComponentProps<typeof Tooltip>) {
   return (

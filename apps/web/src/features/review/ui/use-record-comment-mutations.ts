@@ -10,10 +10,10 @@ function reviewErrorMessage(err: unknown, fallback: string): string {
 }
 
 /**
- * Use Record Comment Mutations.
- * @param anchor - The anchor argument.
- * @param onCommentAdded - The onCommentAdded argument.
- * @param onMutated - The onMutated argument.
+ * Submit/delete record comments with cache invalidation and toasts.
+ * @param anchor - Record comment target identity.
+ * @param onCommentAdded - Called after a successful add.
+ * @param onMutated - Called after any successful mutation.
  */
 export function useRecordCommentMutations(
   anchor: RecordCommentAnchor,

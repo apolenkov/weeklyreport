@@ -39,6 +39,12 @@ interface JobsServiceOptions {
 export class JobsService {
   private readonly logger: AppLogger;
 
+  /**
+   * Constructs the jobs admin surface.
+   * @param emailReminderQueue - Optional BullMQ queue adapter (absent in tests).
+   * @param logger - App logger; falls back to a null logger.
+   * @param options - Optional hooks such as reminderExecutionExists.
+   */
   constructor(
     private readonly emailReminderQueue: AdminJobsQueue | undefined,
     logger?: AppLogger,
