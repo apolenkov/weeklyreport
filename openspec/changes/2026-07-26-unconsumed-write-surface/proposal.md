@@ -159,6 +159,17 @@ that are neither. A check that flags everything is as useless as one that flags
 nothing, so the completion needs the benign shapes enumerated from what the code
 actually does, not guessed.
 
-The gap is bounded: an alias of these three shapes makes the audit report a
-mutation VERIFIED on the strength of its other call sites while one call site
-goes unread. It cannot cause a false failure, only a missed one.
+The gap cuts both ways, and the first write-up of it here was wrong to say
+otherwise.
+
+Beside an ordinary call site, an alias hides one call site: the mutation keeps
+the VERIFIED its readable sites earned while the aliased one goes unread. That is
+a missed detection.
+
+As the ONLY reference, it is worse. Consumer counting is a text scan for
+`namespace.procedure`, and an alias never writes that string —
+`const o = { ns: trpc.projectActivity }` followed by `o.ns.attachLead` contains
+neither half together. The count comes back zero, the mutation is reported as a
+black hole, and the gate fails a correctly wired call. A false failure on working
+code is the more expensive direction: it trains people to reach for the allowlist,
+which is how a gate stops meaning anything.
