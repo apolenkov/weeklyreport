@@ -537,7 +537,9 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
       // The publish/save row lock (SELECT ... FOR UPDATE on the parent
       // report) runs before the version compare-and-set; an open period lets
       // these characterizations exercise the version lock itself.
-      $queryRaw: vi.fn(() => Promise.resolve([{ periodStatus: "open" }])),
+      $queryRaw: vi.fn(() =>
+        Promise.resolve([{ periodStatus: "open", archived: false }]),
+      ),
       reportSection: {
         updateMany: vi.fn(() => Promise.resolve({ count: updateCount })),
         // The re-read now happens INSIDE the transaction (on `tx`, not the
@@ -628,6 +630,28 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
     await expect(repo.saveSection(section, 3)).rejects.toBeInstanceOf(
       SectionVersionConflictError,
     );
+  });
+
+  it("rejects a save whose report was archived inside the precheck window", async () => {
+    // Archiving leaves periodStatus alone, so a gate reading only that status
+    // sees "open" and lets the write through. The archive here commits between
+    // the service-level precheck and this transaction — the case the in-tx
+    // gate exists for.
+    const tx = makeTx(1, baseRow({ version: 1 }));
+    tx.$queryRaw = vi.fn(() =>
+      Promise.resolve([{ periodStatus: "open", archived: true }]),
+    );
+    const prisma = {
+      $transaction: vi.fn((cb: (t: typeof tx) => unknown) => cb(tx)),
+    };
+    const repo = new ReportSectionsPrismaRepository(prisma as never);
+
+    await expect(repo.saveSection(section, 3)).rejects.toThrow(
+      /published report/i,
+    );
+    // Failed closed before any child row was touched.
+    expect(tx.item.deleteMany).not.toHaveBeenCalled();
+    expect(tx.reportSection.updateMany).not.toHaveBeenCalled();
   });
 });
 
