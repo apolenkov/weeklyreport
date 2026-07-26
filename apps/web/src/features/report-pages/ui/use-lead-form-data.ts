@@ -1,22 +1,20 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useContext } from "react";
 
-import { useRecordVisibility } from "../../../hooks/use-record-visibility";
-import { crossAuthorContentFetchEnabled } from "../../../lib/cross-author-content-gate";
 import { isHeadLike } from "../../../lib/role-predicates";
+import type { SessionUser } from "../../../lib/session-provider";
 import { SessionContext } from "../../../lib/session-provider";
-import { useTRPC } from "../../../lib/trpc-context";
-import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
-import {
-  deriveActiveIds,
-  deriveDeckVisibility,
-  deriveSessionActors,
-  deriveTargetReportId,
-} from "./use-lead-form-data-helpers";
+import { deriveSessionActors } from "./use-lead-form-data-helpers";
 import { useLeadFormForeignContentPurge } from "./use-lead-form-foreign-content-purge";
+import type { LeadFormErrorSources } from "./use-lead-form-queries";
+import {
+  useCrossAuthorContent,
+  useDeckVisibility,
+  useLeadFormLoadErrors,
+  useLeadFormReports,
+} from "./use-lead-form-queries";
 import { useLeadFormRedirects } from "./use-lead-form-redirects";
 
 interface UseLeadFormDataInput {
@@ -27,85 +25,36 @@ interface UseLeadFormDataInput {
   readonly isSlidesMode: boolean;
 }
 
-// Feature-local reads/gating only — not a cross-role ReportDataCoordinator.
-/**
- * Use Lead Form Data.
- * @param props - The props argument.
- */
-export function useLeadFormData({
-  reportId: pinnedReportId,
-  redirectToCanonical,
-  isSlidesMode,
-}: UseLeadFormDataInput) {
-  const trpc = useTRPC();
-  const searchParams = useSearchParams();
-  const sessionState = useContext(SessionContext);
-  const { sessionRole, currentUserId, shouldDeferForSession } =
-    deriveSessionActors(sessionState);
-  const isHeadLikeSession = isHeadLike(sessionRole);
-  const shouldRouteHeadLikeAwayFromLeadForm = isHeadLikeSession;
+// The input restated with the pinned id under its resolved name.
+interface LeadFormRoute {
+  readonly pinnedReportId: string | undefined;
+  readonly redirectToCanonical: boolean | undefined;
+  readonly isSlidesMode: boolean;
+}
 
-  const activeQ = useQuery(trpc.reports.getActive.queryOptions());
-  const { activeReportId, activeSectionId } = deriveActiveIds(activeQ.data);
-
-  const targetReportId = deriveTargetReportId(pinnedReportId, activeReportId);
-
-  const byPeriodQ = useQuery({
-    ...trpc.leadForm.byPeriod.queryOptions({
-      reportId: targetReportId,
-    }),
-    enabled:
-      targetReportId !== "" &&
-      !shouldRouteHeadLikeAwayFromLeadForm &&
-      !shouldDeferForSession,
-    staleTime: 30_000,
-    refetchOnWindowFocus: true,
-  });
-
-  // Pinned report: use loaded section id (active may not match); else active.
-  const sectionIdForActions =
-    byPeriodQ.data?.section.reportSectionId ?? activeSectionId;
-
-  const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
-
-  const viewSettingsQ = useQuery(trpc.leadForm.viewSettings.queryOptions());
-  const unifiedView = viewSettingsQ.data?.unifiedActivityView === true;
-
-  const crossAuthorsQ = useQuery({
-    ...trpc.leadForm.crossAuthors.queryOptions({
-      reportId: targetReportId,
-    }),
-    enabled: targetReportId !== "",
-  });
-
-  // Namespaced by user + report so Everyone cannot bleed across users/reports.
-  const {
-    visibility: recordVisibility,
-    hydrated: visibilityHydrated,
-    setVisibility: setRecordVisibility,
-  } = useRecordVisibility(currentUserId, targetReportId);
-  const isEveryone = recordVisibility === "everyone";
-
-  const { isForeignSlidesDeck, toolbarVisibility } = deriveDeckVisibility({
-    isSlidesMode,
-    slidesAuthorId: searchParams.get("authorId"),
-    currentUserId,
-    recordVisibility,
-  });
-
-  // Full-content only after hydrated Everyone; foreign slides never fetch.
-  const crossAuthorContentQ = useQuery({
-    ...trpc.leadForm.crossAuthorContent.queryOptions({
-      reportId: targetReportId,
-    }),
-    enabled: crossAuthorContentFetchEnabled({
-      hasReport: targetReportId !== "",
-      visibilityHydrated,
-      isEveryone,
-      isOwnDeck: !isForeignSlidesDeck,
-    }),
-  });
-
+// Effects that contribute nothing to the returned view. Registration order is
+// load-bearing: purge, then redirects, then load-failure reporting.
+function useLeadFormEffects({
+  route,
+  activeReportId,
+  targetReportId,
+  currentUserId,
+  sessionRole,
+  isEveryone,
+  visibilityHydrated,
+  shouldRouteHeadLikeAwayFromLeadForm,
+  errorSources,
+}: {
+  readonly route: LeadFormRoute;
+  readonly activeReportId: string;
+  readonly targetReportId: string;
+  readonly currentUserId: string | null;
+  readonly sessionRole: SessionUser["role"] | null;
+  readonly isEveryone: boolean;
+  readonly visibilityHydrated: boolean;
+  readonly shouldRouteHeadLikeAwayFromLeadForm: boolean;
+  readonly errorSources: LeadFormErrorSources;
+}) {
   useLeadFormForeignContentPurge({
     isEveryone,
     visibilityHydrated,
@@ -115,61 +64,72 @@ export function useLeadFormData({
   });
 
   useLeadFormRedirects({
-    pinnedReportId,
-    redirectToCanonical,
-    isSlidesMode,
+    pinnedReportId: route.pinnedReportId,
+    redirectToCanonical: route.redirectToCanonical,
+    isSlidesMode: route.isSlidesMode,
     activeReportId,
     shouldRouteHeadLikeAwayFromLeadForm,
   });
 
-  useQueryErrorHandler(activeQ, {
-    event: "leadForm.activeReport.load_failed",
-    component: "LeadForm",
-    procedure: "reports.getActive",
-    context: { reportId: pinnedReportId ?? null },
-    toastPrefix: "Failed to load active report",
+  useLeadFormLoadErrors({
+    ...errorSources,
+    pinnedReportId: route.pinnedReportId,
+    targetReportId,
+    sessionRole,
+  });
+}
+
+// Feature-local reads/gating only — not a cross-role ReportDataCoordinator.
+export function useLeadFormData({
+  reportId: pinnedReportId,
+  redirectToCanonical,
+  isSlidesMode,
+}: UseLeadFormDataInput) {
+  const route = { pinnedReportId, redirectToCanonical, isSlidesMode };
+  const searchParams = useSearchParams();
+  const sessionState = useContext(SessionContext);
+  const { sessionRole, currentUserId, shouldDeferForSession } =
+    deriveSessionActors(sessionState);
+  const shouldRouteHeadLikeAwayFromLeadForm = isHeadLike(sessionRole);
+
+  const { errorSources, view } = useLeadFormReports({
+    pinnedReportId,
+    sectionFetchEnabled:
+      !shouldRouteHeadLikeAwayFromLeadForm && !shouldDeferForSession,
   });
 
-  useQueryErrorHandler(byPeriodQ, {
-    event: "leadForm.byPeriod.load_failed",
-    component: "LeadForm",
-    procedure: "leadForm.byPeriod",
-    context: { reportId: targetReportId || null, role: sessionRole },
-    toastPrefix: "Failed to load form",
+  const visibility = useDeckVisibility({
+    currentUserId,
+    targetReportId: view.targetReportId,
+    isSlidesMode,
+    slidesAuthorId: searchParams.get("authorId"),
   });
 
-  useQueryErrorHandler(historyQ, {
-    event: "leadForm.history.load_failed",
-    component: "LeadForm",
-    procedure: "reports.myHistory",
-    toastPrefix: "Failed to load history",
+  const foreignContent = useCrossAuthorContent({
+    targetReportId: view.targetReportId,
+    visibilityHydrated: visibility.visibilityHydrated,
+    isEveryone: visibility.isEveryone,
+    isForeignSlidesDeck: visibility.isForeignSlidesDeck,
   });
 
-  const isLoading =
-    activeQ.isLoading || byPeriodQ.isLoading || historyQ.isLoading;
-  const awaitingRoleRedirect = shouldRouteHeadLikeAwayFromLeadForm;
-  const awaitingCanonicalRedirect =
-    !!redirectToCanonical && !pinnedReportId && activeReportId !== "";
+  useLeadFormEffects({
+    route,
+    activeReportId: view.activeReportId,
+    targetReportId: view.targetReportId,
+    currentUserId,
+    sessionRole,
+    isEveryone: visibility.isEveryone,
+    visibilityHydrated: visibility.visibilityHydrated,
+    shouldRouteHeadLikeAwayFromLeadForm,
+    errorSources,
+  });
 
   return {
-    activeData: activeQ.data,
-    activeReportId,
-    targetReportId,
-    sectionIdForActions,
-    byPeriodData: byPeriodQ.data,
-    refetchSection: byPeriodQ.refetch,
-    historyData: historyQ.data,
-    unifiedView,
-    crossAuthors: crossAuthorsQ.data ?? [],
-    foreignContent: crossAuthorContentQ.data,
-    recordVisibility,
-    visibilityHydrated,
-    setRecordVisibility,
-    isEveryone,
-    isForeignSlidesDeck,
-    toolbarVisibility,
-    isLoading,
-    awaitingRoleRedirect,
-    awaitingCanonicalRedirect,
+    ...view,
+    ...visibility,
+    foreignContent,
+    awaitingRoleRedirect: shouldRouteHeadLikeAwayFromLeadForm,
+    awaitingCanonicalRedirect:
+      !!redirectToCanonical && !pinnedReportId && view.activeReportId !== "",
   };
 }

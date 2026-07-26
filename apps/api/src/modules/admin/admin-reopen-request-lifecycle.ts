@@ -17,11 +17,6 @@ import {
 const REOPEN_REQUEST_LIST_CAP = 100;
 
 // Scope is ReportSectionWhereInput, so it nests under reportSection.
-/**
- * List Reopen Requests.
- * @param prisma - The prisma argument.
- * @param input - The input argument.
- */
 export async function listReopenRequests(
   prisma: PrismaService,
   input: ListReopenRequestsInput,
@@ -69,11 +64,6 @@ export async function listReopenRequests(
   }));
 }
 
-/**
- * Count Pending Reopen Requests.
- * @param prisma - The prisma argument.
- * @param session - The session argument.
- */
 export async function countPendingReopenRequests(
   prisma: PrismaService,
   session: UserSession,
@@ -154,11 +144,6 @@ async function applyDecision(
 
 // Scoped findFirst blocks out-of-group decide; the decision itself runs in one
 // transaction.
-/**
- * Decide Reopen Request.
- * @param prisma - The prisma argument.
- * @param input - The input argument.
- */
 export async function decideReopenRequest(
   prisma: PrismaService,
   input: DecideReopenRequestInput,

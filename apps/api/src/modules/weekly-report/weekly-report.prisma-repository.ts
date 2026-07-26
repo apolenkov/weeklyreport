@@ -62,13 +62,9 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       return null;
     }
 
-    // Parse the frozen snapshot before the reads below: it decides whether the
-    // published render path runs, and that path reads nothing from the live
-    // `projects` rows — so the projects query can skip the heavy
-    // `stageAssignments` join whenever the snapshot will render. A published
-    // report whose snapshot is null/unparseable falls through to the live
-    // path, hence the join is keyed on the actual render condition, not on
-    // `periodStatus` alone.
+    // Parsed before the reads below because it decides whether the published
+    // path renders, and that path never touches live `projects` — so the heavy
+    // `stageAssignments` join keys on this, not on `periodStatus` alone.
     const snapshot = parsePublishedSnapshot(report.publishedSnapshot);
     const useSnapshot =
       snapshot !== null && report.periodStatus === "published";
@@ -145,10 +141,9 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     readonly projects: WeeklyReportProjectRow[];
     readonly activePolicyCount: number;
   }> {
-    // Three independent reads, dispatched concurrently (the count needs only
-    // `report.deadline`, already in hand). The live project portfolio is
-    // skipped OUTRIGHT on the snapshot render path — that branch reads every
-    // signal from the frozen snapshot and never touches these rows.
+    // Three independent reads dispatched concurrently. The live project
+    // portfolio is skipped outright on the snapshot render path — that branch
+    // reads every signal from the frozen snapshot and never touches these rows.
     const [leadUsers, projects, activePolicyCount] = await Promise.all([
       this.prisma.user.findMany({
         where: { role: "lead", ...userScope },
@@ -163,14 +158,9 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
               stageAssignments: true,
             },
           }),
-      // canSendReminder is driven by ReminderPolicy validity windows, not by
-      // per-report ReminderRule presence. The UI signal `hasActiveReminderRule`
-      // keeps its wire-format name to avoid a cross-cutting rename, but its
-      // semantics are: "∃ at least one active ReminderPolicy whose validity
-      // window covers this Report.deadline". The policy-driven scheduler
-      // materialises ReminderRule rows lazily, so gating on per-period rule
-      // existence would mis-match it. A deadline-less period (ruling F16) has
-      // no reference point for any validity window — zero, no query.
+      // The wire name `hasActiveReminderRule` is kept deliberately; it means
+      // "an active ReminderPolicy window covers report.deadline" (rules are
+      // materialised lazily). No deadline, no window reference — zero, no query.
       report.deadline === null
         ? Promise.resolve(0)
         : this.prisma.reminderPolicy.count({
@@ -233,13 +223,9 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     });
   }
 
-  /**
-   * The subset of `distinctGroupIds` for which a VIEWER caller carries
-   * `canReview = true` on their `ViewerGroupAccess` row. Head and
-   * admin designation is decided by `isDesignatedReviewer` without a query, so
-   * this only fires for the viewer role — one batched read over the report's
-   * distinct groups, never one query per section.
-   */
+  // Head/admin designation is decided by `isDesignatedReviewer` without a
+  // query, so this only fires for the viewer role — one batched read over the
+  // report's distinct groups, never one query per section.
   private async resolveViewerReviewGroupIds(
     session: WeeklyReportScopeSession | undefined,
     distinctGroupIds: readonly string[],

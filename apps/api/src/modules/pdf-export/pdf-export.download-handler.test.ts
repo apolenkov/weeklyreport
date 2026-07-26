@@ -49,7 +49,7 @@ const viewerSession: UserSession = {
   activeReportSectionId: null,
 };
 
-/** Express Response stand-in: a Writable that records status, headers, body. */
+// Express Response stand-in: a Writable that records status, headers, body.
 class MockResponse extends Writable {
   statusCode = 200;
   headersSent = false;

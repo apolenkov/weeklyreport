@@ -220,7 +220,6 @@ describe("ProductsTab — Add/Edit dialog a11y", () => {
     const user = userEvent.setup();
     renderTab();
 
-    // Open the dialog via the «Add Product» button.
     await user.click(screen.getByRole("button", { name: /add new product/i }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 

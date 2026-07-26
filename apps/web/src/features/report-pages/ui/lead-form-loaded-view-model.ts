@@ -14,6 +14,7 @@ import {
   type LeadActivityCard,
   type LeadCurrentUser,
   mapLeadFormData,
+  type MappedLeadForm,
   type Product,
   type ReportPeriod,
   type RiskEntry,
@@ -21,6 +22,7 @@ import {
 import {
   buildUnifiedEntries,
   filterVisiblePeriods,
+  type ForeignMergeResult,
   mergeForeignDisplayRecords,
   publishedLockedIds,
 } from "./lead-form-loaded-view-model-helpers";
@@ -85,89 +87,89 @@ export interface LeadFormLoadedViewModel {
   readonly isReadOnly: boolean;
 }
 
-/**
- * Pure projection of the loaded lead-form state into its display model.
- * Behavior contract (see openspec/specs/lead-form-loaded-view-model):
- * cross-author Everyone gating, own-only write arrays, published-lineage
- * locks, unified activity buckets, activity alarm floors, and archived-period
- * visibility all preserve the pre-extraction LeadForm semantics.
- * @param input - The input argument.
- */
-export function buildLeadFormLoadedViewModel(
-  input: LeadFormLoadedInput,
-): LeadFormLoadedViewModel {
-  const { draftSection } = input;
-  // Map raw draft state -> Lead* presentation shapes for existing children.
-  const data = mapLeadFormData({
-    active: input.active,
-    byPeriod: {
-      section: draftSection,
-      readOnly: input.serverReadOnly,
-      canRequestReopen: input.canRequestReopen,
-    },
-    history: input.history,
-  });
+// The author's own records, before co-owners' rows are merged in for display.
+interface OwnDraftRecords {
+  readonly ownCurrentWeekItems: KanbanItem[];
+  readonly ownNextWeekItems: KanbanItem[];
+  readonly ownRisks: RiskEntry[];
+  readonly ownDecisions: DecisionEntry[];
+}
 
-  // Foreign stage CHIPS show only in Everyone: the override fills the
-  // cross-author initials + risk-derived status onto foreign-owned (locked)
-  // stages. In Mine only the override is skipped so co-owners' stages stay
-  // hidden. Product HEALTH stays honest in BOTH states — it derives from the
-  // always-fetched status read inside SdlcPipeline, independent of these chips.
-  const products = input.isEveryone
+// Foreign stage CHIPS show only in Everyone; Mine skips the override so
+// co-owners' stages stay hidden. Product HEALTH stays honest in BOTH — it
+// derives from the always-fetched status read inside SdlcPipeline.
+function resolveDisplayProducts(
+  data: MappedLeadForm,
+  input: LeadFormLoadedInput,
+): Product[] {
+  return input.isEveryone
     ? applyCrossAuthorStageOverrides(
         data.products,
         buildCrossAuthorStageMap(input.crossAuthors),
       )
     : data.products;
+}
 
-  // activity-first-class: the author's attached activities offered as record
-  // parents in the item/risk dialogs (id + display name only).
-  const activityOptions = draftSection.activities.map((activity) => ({
+const pickOwnDraftRecords = (data: MappedLeadForm): OwnDraftRecords => ({
+  ownCurrentWeekItems: data.currentWeekItems,
+  ownNextWeekItems: data.nextWeekItems,
+  ownRisks: data.risks,
+  ownDecisions: data.decisions,
+});
+
+// activity-first-class: the author's attached activities offered as record
+// parents in the item/risk dialogs (id + display name only).
+const toActivityOptions = (
+  section: ReportSectionReadModel,
+): readonly { id: string; name: string }[] =>
+  section.activities.map((activity) => ({
     id: activity.activityId,
     name: activity.activityName,
   }));
 
-  const ownCurrentWeekItems: KanbanItem[] = data.currentWeekItems;
-  const ownNextWeekItems: KanbanItem[] = data.nextWeekItems;
-  const ownRisks = data.risks;
-  const ownDecisions = data.decisions;
-
-  // The interactive pill's alarm floor re-derived from the LIVE draft risks
-  // (the server-baked alarmFloor goes stale the moment a draft risk is added
-  // or removed — no refetch mid-edit). Read-only surfaces keep the server value.
-  const activityCards = data.activityCards.map((card) => ({
+// The interactive pill's floor is re-derived from the LIVE draft risks: the
+// server-baked alarmFloor goes stale the moment a draft risk is added or
+// removed (no refetch mid-edit). Read-only surfaces keep the server value.
+const withLiveAlarmFloors = (
+  cards: readonly LeadActivityCard[],
+  ownRisks: readonly RiskEntry[],
+): LeadActivityCard[] =>
+  cards.map((card) => ({
     ...card,
     alarmFloor: deriveActivityAlarmFloor(card.activityId, ownRisks),
   }));
 
-  const { currentWeekItems, nextWeekItems, risks, decisions } =
-    mergeForeignDisplayRecords({
-      products,
-      ownCurrentWeekItems,
-      ownNextWeekItems,
-      ownRisks,
-      ownDecisions,
-      foreignContent: input.foreignContent,
-      isEveryone: input.isEveryone,
-      visibilityHydrated: input.visibilityHydrated,
-      isForeignSlidesDeck: input.isForeignSlidesDeck,
-    });
-
-  // Priority ranks already assigned to own (non-foreign) items for the whole
-  // period, so the edit dialog can disable taken ranks. Foreign items are
-  // intentionally excluded — read-only rows cannot be edited.
-  const ownPeriodRanks = [...ownCurrentWeekItems, ...ownNextWeekItems]
+// Ranks already taken by own items across the period, so the edit dialog can
+// disable them. Foreign rows are excluded — read-only rows cannot be edited.
+const collectOwnPeriodRanks = (own: OwnDraftRecords): readonly number[] =>
+  [...own.ownCurrentWeekItems, ...own.ownNextWeekItems]
     .map((item) => item.priorityRank)
     .filter((rank): rank is number => rank != null);
 
-  // A reopened period's section still carries published-lineage records, so
-  // the server's fillFrom guard rejects every source. Mirror the RAW lineage
-  // check to disable the control instead of offering an action that always
-  // fails; the server guard stays the enforcement point.
-  const fillFromLocked =
-    input.publishedLineage.itemStableIds.length > 0 ||
-    input.publishedLineage.decisionStableIds.length > 0;
+// A reopened section still carries published-lineage records, so the server's
+// fillFrom guard rejects every source. Mirror the RAW check to disable the
+// control rather than offer an always-failing action; the server still guards.
+const isFillFromLocked = (
+  lineage: LeadFormLoadedInput["publishedLineage"],
+): boolean =>
+  lineage.itemStableIds.length > 0 || lineage.decisionStableIds.length > 0;
 
+interface LoadedModelParts {
+  readonly input: LeadFormLoadedInput;
+  readonly data: MappedLeadForm;
+  readonly products: Product[];
+  readonly own: OwnDraftRecords;
+  readonly foreign: ForeignMergeResult;
+}
+
+function assembleLoadedViewModel({
+  input,
+  data,
+  products,
+  own,
+  foreign,
+}: LoadedModelParts): LeadFormLoadedViewModel {
+  const { draftSection, publishedLineage } = input;
   const { hasArchivedPeriods, visiblePeriods } = filterVisiblePeriods(
     data.periods,
     input.selectedPeriodId,
@@ -176,30 +178,24 @@ export function buildLeadFormLoadedViewModel(
 
   return {
     products,
-    activityOptions,
-    ownCurrentWeekItems,
-    ownNextWeekItems,
-    ownRisks,
-    ownDecisions,
-    activityCards,
-    currentWeekItems,
-    nextWeekItems,
-    risks,
-    decisions,
-    ownPeriodRanks,
+    activityOptions: toActivityOptions(draftSection),
+    ...own,
+    activityCards: withLiveAlarmFloors(data.activityCards, own.ownRisks),
+    ...foreign,
+    ownPeriodRanks: collectOwnPeriodRanks(own),
     publishedLockedItemIds: publishedLockedIds(
       draftSection.items,
-      input.publishedLineage.itemStableIds,
+      publishedLineage.itemStableIds,
     ),
     publishedLockedDecisionIds: publishedLockedIds(
       draftSection.decisions,
-      input.publishedLineage.decisionStableIds,
+      publishedLineage.decisionStableIds,
     ),
-    fillFromLocked,
+    fillFromLocked: isFillFromLocked(publishedLineage),
     unifiedEntries: buildUnifiedEntries(
       draftSection.items,
-      currentWeekItems,
-      nextWeekItems,
+      foreign.currentWeekItems,
+      foreign.nextWeekItems,
     ),
     currentUser: data.currentUser,
     canRequestReopen: data.canRequestReopen,
@@ -207,4 +203,35 @@ export function buildLeadFormLoadedViewModel(
     visiblePeriods,
     isReadOnly: data.readOnly || input.isSubmitted,
   };
+}
+
+// Pure projection of the loaded lead-form state into its display model.
+// Cross-author gating, own-only write arrays, lineage locks, unified buckets
+// and period visibility follow openspec/specs/lead-form-loaded-view-model.
+export function buildLeadFormLoadedViewModel(
+  input: LeadFormLoadedInput,
+): LeadFormLoadedViewModel {
+  // Map raw draft state -> Lead* presentation shapes for existing children.
+  const data = mapLeadFormData({
+    active: input.active,
+    byPeriod: {
+      section: input.draftSection,
+      readOnly: input.serverReadOnly,
+      canRequestReopen: input.canRequestReopen,
+    },
+    history: input.history,
+  });
+
+  const products = resolveDisplayProducts(data, input);
+  const own = pickOwnDraftRecords(data);
+  const foreign = mergeForeignDisplayRecords({
+    products,
+    ...own,
+    foreignContent: input.foreignContent,
+    isEveryone: input.isEveryone,
+    visibilityHydrated: input.visibilityHydrated,
+    isForeignSlidesDeck: input.isForeignSlidesDeck,
+  });
+
+  return assembleLoadedViewModel({ input, data, products, own, foreign });
 }

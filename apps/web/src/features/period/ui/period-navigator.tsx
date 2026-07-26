@@ -1,11 +1,11 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import type { KeyboardEvent as ReactKeyboardEvent, RefObject } from "react";
-import { useCallback, useId, useMemo } from "react";
-
 import type { ReportPeriod } from "../../report-sections";
-import { usePeriodListboxNav } from "../model/use-period-listbox-nav";
+import type {
+  PeriodListboxNav,
+  PeriodNavigatorSelection,
+} from "../model/use-period-navigator";
+import { usePeriodNavigator } from "../model/use-period-navigator";
 import {
   ArchivedBadge,
   periodLabel,
@@ -14,13 +14,7 @@ import {
 } from "./period-listbox-panel";
 import { ChevronLeft, ChevronRight } from "./period-navigator-icons";
 
-// Lead-form addressable URL base. Period nav emits path-segment
-// URLs (`/lead/report/<reportId>`) so each week is bookmarkable.
-const LEAD_REPORT_BASE = "/lead/report";
 const PERIOD_SELECT_WIDTH_CH = 24;
-
-// The only routes that address a period as the trailing path segment.
-const ADDRESSED_PERIOD_PATH = /^\/(?:lead|head)\/report\/([^/]+)$/;
 
 interface PeriodNavigatorProps {
   readonly periods: ReportPeriod[];
@@ -53,22 +47,6 @@ interface PeriodNavigatorProps {
 const PERIOD_NAV_ARROW_BUTTON_CLASS =
   "inline-flex h-[var(--toolbar-control-h)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35";
 
-// options expose structured fields (not a flattened label string) so
-// archived/current markers render as badges inside the custom listbox.
-function toPeriodOptions(
-  periods: readonly ReportPeriod[],
-  selectedSubmitted: boolean,
-  selectedPeriodId: string | undefined,
-) {
-  return periods.map((p) => ({
-    id: p.id,
-    dateRange: p.dateRange,
-    isCurrent: p.isCurrent,
-    archived: p.archived ?? false,
-    submitted: selectedSubmitted && p.id === selectedPeriodId,
-  }));
-}
-
 function PeriodNavArrowButton({
   direction,
   onClick,
@@ -100,24 +78,23 @@ function PeriodNavArrowButton({
 }
 
 function PeriodSelectTrigger({
-  triggerRef,
-  open,
-  listboxId,
-  activeDescendantId,
+  listbox,
   selectedPeriod,
   selectedSubmitted,
-  onClick,
-  onKeyDown,
 }: {
-  readonly triggerRef: RefObject<HTMLButtonElement | null>;
-  readonly open: boolean;
-  readonly listboxId: string;
-  readonly activeDescendantId: string | undefined;
+  readonly listbox: PeriodListboxNav;
   readonly selectedPeriod: ReportPeriod | undefined;
   readonly selectedSubmitted: boolean;
-  readonly onClick: () => void;
-  readonly onKeyDown: (e: ReactKeyboardEvent<HTMLButtonElement>) => void;
 }) {
+  const {
+    open,
+    activeIdx,
+    optionIdPrefix,
+    triggerRef,
+    listboxId,
+    toggleOpen,
+    handleTriggerKeyDown,
+  } = listbox;
   return (
     <div
       className="relative max-w-full flex-none"
@@ -131,10 +108,12 @@ function PeriodSelectTrigger({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listboxId}
-        aria-activedescendant={activeDescendantId}
+        aria-activedescendant={
+          open ? `${optionIdPrefix}${activeIdx}` : undefined
+        }
         className="flex h-[var(--toolbar-control-h)] w-full cursor-pointer items-center gap-1.5 truncate rounded-[var(--radius)] border border-[var(--color-border)] bg-white px-2 pr-7 text-left text-[13px] font-semibold text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,117,74,0.16)]"
-        onClick={onClick}
-        onKeyDown={onKeyDown}
+        onClick={toggleOpen}
+        onKeyDown={handleTriggerKeyDown}
       >
         <span className="truncate">
           {selectedPeriod ? periodLabel(selectedPeriod) : ""}
@@ -149,10 +128,6 @@ function PeriodSelectTrigger({
   );
 }
 
-/**
- * Period Navigator.
- * @param props - The props argument.
- */
 export function PeriodNavigator({
   periods,
   currentPeriodId,
@@ -160,141 +135,74 @@ export function PeriodNavigator({
   showLeadSubmissionMarkers = false,
   leadSubmittedAt = null,
 }: PeriodNavigatorProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  // per-instance scoped listbox/option ids, so two navigators on one page
-  // never collide on the DOM ids that aria-controls / aria-activedescendant
-  // reference (see usePeriodListboxNav).
-  const instanceId = useId();
-
-  // Preserve path-based inference for lead and head callers that do not pass
-  // the addressed period id explicitly.
-  const pathReportId = useMemo(() => {
-    if (currentPeriodId !== undefined || !pathname) return null;
-    const match = ADDRESSED_PERIOD_PATH.exec(pathname);
-    return match ? match[1] : null;
-  }, [currentPeriodId, pathname]);
-
-  const currentIndex = useMemo(() => {
-    const resolvedPeriodId = currentPeriodId ?? pathReportId;
-    if (!resolvedPeriodId) return 0; // default to first (current) period
-    const index = periods.findIndex((period) => period.id === resolvedPeriodId);
-    return index !== -1 ? index : 0;
-  }, [currentPeriodId, pathReportId, periods]);
-
-  const selectedPeriod = periods.at(currentIndex);
-  const hasPrev = currentIndex < periods.length - 1;
-  const hasNext = currentIndex > 0;
   // Per-lead marker is only known for the displayed period (one submittedAt,
   // not whole history). Shows when the lead surface opted in and is submitted.
   const selectedSubmitted =
     showLeadSubmissionMarkers && leadSubmittedAt != null;
-  const periodOptions = useMemo(
-    () => toPeriodOptions(periods, selectedSubmitted, selectedPeriod?.id),
-    [periods, selectedSubmitted, selectedPeriod?.id],
-  );
-
-  const navigateTo = useCallback(
-    (periodId: string) => {
-      if (urlBuilder) {
-        router.push(urlBuilder(periodId));
-        return;
-      }
-      // Default: lead path-segment URLs — bookmarkable, back-button-friendly.
-      const next = new URLSearchParams(searchParams.toString());
-      const query = next.toString();
-      const suffix = query ? `?${query}` : "";
-      router.push(`${LEAD_REPORT_BASE}/${periodId}${suffix}`);
-    },
-    [router, searchParams, urlBuilder],
-  );
-
-  function handlePrev() {
-    const prev = periods.at(currentIndex + 1);
-    if (hasPrev && prev) navigateTo(prev.id);
-  }
-
-  function handleNext() {
-    const next = periods.at(currentIndex - 1);
-    if (hasNext && next) navigateTo(next.id);
-  }
-
-  const {
-    listboxId,
-    optionIdPrefix,
-    open,
-    toggleOpen,
-    activeIdx,
-    setActiveIdx,
-    triggerRef,
-    panelRef,
-    panelPos,
-    selectOption,
-    handleTriggerKeyDown,
-    handleListKeyDown,
-    handleTouchStart,
-    handleTouchEnd,
-  } = usePeriodListboxNav({
-    instanceId,
-    currentIndex,
-    periodOptionIds: useMemo(
-      () => periodOptions.map((o) => o.id),
-      [periodOptions],
-    ),
-    selectedPeriodId: selectedPeriod?.id,
-    navigateTo,
-    onPrev: handlePrev,
-    onNext: handleNext,
+  const { selection, listbox } = usePeriodNavigator({
+    periods,
+    currentPeriodId,
+    urlBuilder,
+    selectedSubmitted,
   });
 
   return (
     <div
       className="flex min-w-0 items-center gap-1.5"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+      onTouchStart={listbox.handleTouchStart}
+      onTouchEnd={listbox.handleTouchEnd}
       role="group"
       aria-label="Period navigation (swipe left/right or use arrows)"
     >
       <PeriodNavArrowButton
         direction="prev"
-        onClick={handlePrev}
-        disabled={!hasPrev}
+        onClick={selection.goPrev}
+        disabled={!selection.hasPrev}
         title="Previous period"
       />
 
       <PeriodSelectTrigger
-        triggerRef={triggerRef}
-        open={open}
-        listboxId={listboxId}
-        activeDescendantId={open ? `${optionIdPrefix}${activeIdx}` : undefined}
-        selectedPeriod={selectedPeriod}
+        listbox={listbox}
+        selectedPeriod={selection.selectedPeriod}
         selectedSubmitted={selectedSubmitted}
-        onClick={toggleOpen}
-        onKeyDown={handleTriggerKeyDown}
       />
 
       <PeriodNavArrowButton
         direction="next"
-        onClick={handleNext}
-        disabled={!hasNext}
-        title={hasNext ? "Next period" : "Latest period"}
+        onClick={selection.goNext}
+        disabled={!selection.hasNext}
+        title={selection.hasNext ? "Next period" : "Latest period"}
       />
 
-      {open && panelPos && typeof document !== "undefined" && (
-        <PeriodListboxPanel
-          options={periodOptions}
-          selectedId={selectedPeriod?.id}
-          activeIdx={activeIdx}
-          pos={panelPos}
-          panelRef={panelRef}
-          listboxId={listboxId}
-          optionIdPrefix={optionIdPrefix}
-          onHover={setActiveIdx}
-          onSelect={selectOption}
-          onKeyDown={handleListKeyDown}
-        />
-      )}
+      <PeriodOptionsPanel listbox={listbox} selection={selection} />
     </div>
+  );
+}
+
+// Portaled listbox panel; rendered only while open and after the trigger rect
+// has been measured (SSR has no document to portal into).
+function PeriodOptionsPanel({
+  listbox,
+  selection,
+}: {
+  readonly listbox: PeriodListboxNav;
+  readonly selection: PeriodNavigatorSelection;
+}) {
+  if (!listbox.open || !listbox.panelPos || typeof document === "undefined") {
+    return null;
+  }
+  return (
+    <PeriodListboxPanel
+      options={selection.options}
+      selectedId={selection.selectedPeriod?.id}
+      activeIdx={listbox.activeIdx}
+      pos={listbox.panelPos}
+      panelRef={listbox.panelRef}
+      listboxId={listbox.listboxId}
+      optionIdPrefix={listbox.optionIdPrefix}
+      onHover={listbox.setActiveIdx}
+      onSelect={listbox.selectOption}
+      onKeyDown={listbox.handleListKeyDown}
+    />
   );
 }

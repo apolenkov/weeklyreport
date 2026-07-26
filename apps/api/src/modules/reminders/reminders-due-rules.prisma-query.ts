@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { DueDeadlineRule, DueEscalationRule } from "./reminders.types.js";
 import { buildEscalationGroups } from "./reminders-escalation-grouping.js";
@@ -8,18 +10,74 @@ export interface UnresolvedGroupLogger {
   warn(message: string): void;
 }
 
-/**
- * `findDueDeadlineRules` / `findDueEscalationRules` queries, split out of
- * `RemindersPrismaRepository` to keep that file under the line budget.
- */
+// Period identity plus the still-draft sections' authors — the leads a deadline
+// reminder is addressed to.
+const deadlineRecipientsInclude = {
+  report: {
+    select: {
+      id: true,
+      periodStart: true,
+      periodEnd: true,
+      sections: {
+        where: { status: "draft" },
+        select: {
+          authorId: true,
+          author: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              notificationOptOut: true,
+            },
+          },
+        },
+      },
+    },
+  },
+} as const satisfies Prisma.ReminderRuleInclude;
+
+// Adds the deadline and each late lead's reporting-group head, the routing
+// target an escalation digest fans out to.
+const escalationRoutingInclude = {
+  report: {
+    select: {
+      id: true,
+      periodStart: true,
+      periodEnd: true,
+      deadline: true,
+      sections: {
+        where: { status: "draft" },
+        select: {
+          author: {
+            select: {
+              name: true,
+              reportingGroup: {
+                select: {
+                  name: true,
+                  head: {
+                    select: {
+                      id: true,
+                      email: true,
+                      name: true,
+                      isActive: true,
+                      role: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+} as const satisfies Prisma.ReminderRuleInclude;
 
 /**
  * Returns active deadline rules whose fireAt is in the past,
  * pre-resolved with the recipient leads (those whose ReportSection for
  * the rule's reportId is still 'draft' status). Rules without a reportId
  * are skipped — they have no concrete deadline to remind about.
- * @param prisma - The prisma argument.
- * @param now - The now argument.
  */
 export async function queryDueDeadlineRules(
   prisma: PrismaService,
@@ -31,34 +89,12 @@ export async function queryDueDeadlineRules(
       kind: "deadline",
       fireAt: { lte: now },
       reportId: { not: null },
-      // An admin can clear a period's deadline AFTER rules materialized
-      // (ruling F16); such rules must never dispatch — reminders are
-      // deadline-relative and the reference point is gone.
+      // An admin can clear a period's deadline AFTER rules materialized; such
+      // rules must never dispatch — reminders are deadline-relative and the
+      // reference point is gone.
       report: { deadline: { not: null } },
     },
-    include: {
-      report: {
-        select: {
-          id: true,
-          periodStart: true,
-          periodEnd: true,
-          sections: {
-            where: { status: "draft" },
-            select: {
-              authorId: true,
-              author: {
-                select: {
-                  id: true,
-                  email: true,
-                  name: true,
-                  notificationOptOut: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
+    include: deadlineRecipientsInclude,
   });
 
   return rules.flatMap((rule) => {
@@ -94,9 +130,6 @@ export async function queryDueDeadlineRules(
  * `isActive`); leads whose group has no resolvable active head are logged and
  * dropped. Resolution is independent of `Report.publishedBy` — escalation
  * fires while leads are still in `draft`, before any publish.
- * @param prisma - The prisma argument.
- * @param now - The now argument.
- * @param logger - The logger argument.
  */
 export async function queryDueEscalationRules(
   prisma: PrismaService,
@@ -109,44 +142,11 @@ export async function queryDueEscalationRules(
       kind: "escalation",
       fireAt: { lte: now },
       reportId: { not: null },
-      // Same F16 guard as the deadline query: a cleared deadline silences
-      // the period's rules at dispatch time.
+      // Same guard as the deadline query: a cleared deadline silences the
+      // period's rules at dispatch time.
       report: { deadline: { not: null } },
     },
-    include: {
-      report: {
-        select: {
-          id: true,
-          periodStart: true,
-          periodEnd: true,
-          deadline: true,
-          sections: {
-            where: { status: "draft" },
-            select: {
-              author: {
-                select: {
-                  name: true,
-                  reportingGroup: {
-                    select: {
-                      name: true,
-                      head: {
-                        select: {
-                          id: true,
-                          email: true,
-                          name: true,
-                          isActive: true,
-                          role: true,
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
+    include: escalationRoutingInclude,
   });
 
   return rules.flatMap((rule) => {

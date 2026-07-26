@@ -218,13 +218,6 @@ async function resolveActiveWorkspace(
   };
 }
 
-/**
- * Build User Session.
- * @param prisma - The prisma argument.
- * @param profile - The profile argument.
- * @param provisionLeadWorkspace - The provisionLeadWorkspace argument.
- * @param options - The options argument.
- */
 export async function buildUserSession(
   prisma: PrismaClient,
   profile: SamlProfile,

@@ -36,21 +36,14 @@ const COVERED_STAGE_HINT_MESSAGE =
 // Provider + Pipeline/Risks consumers: pipeline and risks live in separate
 // accordion bodies, so one component cannot emit both inline.
 
-/**
- * Payload of a chip-raise interception, carried through context into
- * RisksSection so each `signal` increment opens a prefilled RiskEditDialog.
- */
+// Chip-raise payload routed into RisksSection: each `signal` increment opens
+// exactly one prefilled RiskEditDialog.
 export interface RiskPrefillRequest {
-  /** Monotonic counter — a new dialog open per increment. */
   signal: number;
   productId: string;
   stageIds: string[];
   severity: "at-risk" | "blocked";
-  /**
-   * Set by an activity pill's unbacked raise: the create dialog opens with
-   * this activity preselected as the parent (XOR — `productId` is "" and
-   * `stageIds` empty on activity prefills).
-   */
+  // Activity-pill raise — XOR with the product fields, which are "" and [] here.
   activityId?: string;
 }
 

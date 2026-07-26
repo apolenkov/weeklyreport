@@ -6,14 +6,12 @@ import type {
   Product,
   RiskEntry,
 } from "../../report-sections";
+import type { RiskSeverity } from "./risk-edit-dialog-helpers";
 import {
-  buildActivityRiskEntry,
-  buildProductRiskEntry,
-  collectRiskErrors,
-  resolveRiskSaveProduct,
-  type RiskFieldErrors,
-  type RiskSeverity,
-} from "./risk-edit-dialog-helpers";
+  type RiskEditFields,
+  type RiskEditParentStage,
+  saveRisk,
+} from "./risk-edit-save";
 import { useRiskEditFields } from "./use-risk-edit-fields";
 import { useRiskEditParentStage } from "./use-risk-edit-parent-stage";
 
@@ -34,123 +32,51 @@ interface UseRiskEditDialogArgs {
   readonly stagesForProduct?: (productId: string) => readonly string[];
 }
 
-/**
- * Use Risk Edit Dialog.
- * @param props - The props argument.
- */
-export function useRiskEditDialog({
-  risk,
-  products,
-  activities,
-  onSave,
-  onCancel,
-  defaultProductId,
-  defaultActivityId,
-  initialImpact,
-  initialMitigation,
-  initialStageIds,
-  initialSeverity,
-  stagesForProduct,
-}: UseRiskEditDialogArgs) {
+// The prose fields are exposed verbatim; only the error-routing entry points
+// stay internal to the save path.
+function toFieldView({
+  setFieldErrors,
+  focusFirstInvalid,
+  ...view
+}: RiskEditFields) {
+  return view;
+}
+
+// Parent/stage state is exposed under the dialog's handler names; the setters
+// the save path drives directly stay internal.
+function toParentStageView({
+  setParentAndStages,
+  setSeverity,
+  handleStageChange,
+  setStageError,
+  effectiveStageIds,
+  selectedActivity,
+  ...view
+}: RiskEditParentStage) {
+  return {
+    ...view,
+    onParentChange: setParentAndStages,
+    onSeveritySelect: setSeverity,
+    onStageChange: handleStageChange,
+  };
+}
+
+export function useRiskEditDialog(args: UseRiskEditDialogArgs) {
+  const { risk, products, onSave, onCancel } = args;
   const isCreate = risk === null;
 
   const fields = useRiskEditFields({
     initialText: risk?.text ?? "",
-    initialImpact,
-    initialMitigation,
+    initialImpact: args.initialImpact,
+    initialMitigation: args.initialMitigation,
   });
 
-  const parentStage = useRiskEditParentStage({
-    risk,
-    isCreate,
-    products,
-    activities,
-    defaultProductId,
-    defaultActivityId,
-    initialStageIds,
-    initialSeverity,
-    stagesForProduct,
-  });
-
-  const headerVerb = isCreate ? "Add Risk" : "Edit Risk";
+  const parentStage = useRiskEditParentStage({ ...args, isCreate });
 
   const dialogSurfaceRef = useRef<HTMLDivElement>(null);
 
-  // After failed save, focus first invalid field. Stage checkboxes have no
-  // local ref — query the dialog surface's only fieldset instead.
-  function focusFirstInvalidField(fieldErrors: RiskFieldErrors) {
-    if (fields.focusFirstInvalid(fieldErrors)) return;
-    if (fieldErrors.stageIds) {
-      dialogSurfaceRef.current
-        ?.querySelector<HTMLInputElement>("fieldset input")
-        ?.focus();
-    }
-  }
-
   function handleSave() {
-    // Early-return no-op so onSave is never called with an empty stageIds array
-    // and the unsatisfiable "Select at least one stage." error is never reached.
-    // The Ctrl/Cmd+Enter shortcut routes through here, so it inherits the guard.
-    if (parentStage.isDeadEnd) return;
-    const t = fields.text.trim();
-    const im = fields.impact.trim();
-    const m = fields.mitigation.trim();
-    const next = collectRiskErrors({
-      text: t,
-      impact: im,
-      mitigation: m,
-      isActivityParent: parentStage.isActivityParent,
-      effectiveStageIds: parentStage.effectiveStageIds,
-    });
-    if (Object.keys(next).length > 0) {
-      fields.setFieldErrors({
-        text: next.text,
-        impact: next.impact,
-        mitigation: next.mitigation,
-      });
-      parentStage.setStageError(next.stageIds);
-      focusFirstInvalidField(next);
-      return;
-    }
-    // An activity parent yields an activity-parented risk (empty productId,
-    // no stage); a product parent keeps today's output.
-    if (parentStage.isActivityParent) {
-      onSave(
-        buildActivityRiskEntry({
-          existingId: risk?.id,
-          activityId: parentStage.parent.id,
-          activityName: parentStage.selectedActivity?.name,
-          severity: parentStage.severity,
-          text: t,
-          impact: im,
-          mitigation: m,
-        }),
-      );
-      return;
-    }
-    const product = resolveRiskSaveProduct(
-      products,
-      risk,
-      parentStage.parent.id,
-    );
-    if (!product) {
-      const noProductError = { text: "No product available" };
-      fields.setFieldErrors(noProductError);
-      parentStage.setStageError(undefined);
-      focusFirstInvalidField(noProductError);
-      return;
-    }
-    onSave(
-      buildProductRiskEntry({
-        existingId: risk?.id,
-        product,
-        stageIds: parentStage.effectiveStageIds,
-        severity: parentStage.severity,
-        text: t,
-        impact: im,
-        mitigation: m,
-      }),
-    );
+    saveRisk({ fields, parentStage, products, risk, onSave, dialogSurfaceRef });
   }
 
   // Escape + focus trap via the shared primitive; the surface autofocuses its
@@ -170,31 +96,9 @@ export function useRiskEditDialog({
 
   return {
     dialogSurfaceRef,
-    headerVerb,
-    parentName: parentStage.parentName,
-    isActivityParent: parentStage.isActivityParent,
-    preCheckedStages: parentStage.preCheckedStages,
-    text: fields.text,
-    onTextChange: fields.onTextChange,
-    textError: fields.textError,
-    textRef: fields.textRef,
-    impact: fields.impact,
-    onImpactChange: fields.onImpactChange,
-    impactError: fields.impactError,
-    impactRef: fields.impactRef,
-    mitigation: fields.mitigation,
-    onMitigationChange: fields.onMitigationChange,
-    mitigationError: fields.mitigationError,
-    mitigationRef: fields.mitigationRef,
-    parent: parentStage.parent,
-    onParentChange: parentStage.setParentAndStages,
-    stageIds: parentStage.stageIds,
-    availableStages: parentStage.availableStages,
-    severity: parentStage.severity,
-    onSeveritySelect: parentStage.setSeverity,
-    isDeadEnd: parentStage.isDeadEnd,
-    stageError: parentStage.stageError,
-    onStageChange: parentStage.handleStageChange,
+    headerVerb: isCreate ? "Add Risk" : "Edit Risk",
+    ...toFieldView(fields),
+    ...toParentStageView(parentStage),
     handleSave,
     handleKeyDown,
   };

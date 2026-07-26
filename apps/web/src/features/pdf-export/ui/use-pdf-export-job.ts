@@ -9,6 +9,13 @@ const STATUS_POLL_INTERVAL_MS = 2 * MS_PER_SECOND;
 
 type DeliveryMode = "tab" | "fallback";
 
+interface DeliveryModeRef {
+  current: DeliveryMode | null;
+}
+interface TabRef {
+  current: Window | null;
+}
+
 interface UsePdfExportJobArgs {
   readonly reportId: string;
   readonly periodStatus: PeriodStatus;
@@ -24,10 +31,6 @@ interface UsePdfExportJobResult {
 
 // Open blank tab on click (user-gesture) so later nav is not a popup; poll
 // until completed/failed and fall back to a download link if open is blocked.
-/**
- * Use Pdf Export Job.
- * @param props - The props argument.
- */
 export function usePdfExportJob({
   reportId,
   periodStatus,
@@ -45,33 +48,13 @@ export function usePdfExportJob({
   const deliveryModeRef = useRef<DeliveryMode | null>(null);
 
   const requestMut = useMutation(
-    // eslint-disable-next-line react-hooks/refs -- refs are touched inside mutation callbacks (event time); the options factory just runs during render
-    trpc.pdfExport.request.mutationOptions({
-      onSuccess: (job) => {
-        setJobId(job.jobId);
-      },
-      onError: (err: unknown) => {
-        closeHeldTab(openedTabRef);
-        deliveryModeRef.current = null;
-        toast.error(
-          err instanceof Error ? err.message : "Failed to start PDF export",
-        );
-      },
-    }),
-  );
-
-  const statusQ = useQuery(
-    trpc.pdfExport.status.queryOptions(
-      { jobId: jobId ?? "" },
-      {
-        enabled: jobId !== null,
-        refetchInterval: (q) => {
-          const status = q.state.data?.status;
-          return status === "queued" ? STATUS_POLL_INTERVAL_MS : false;
-        },
-      },
+    trpc.pdfExport.request.mutationOptions(
+      // eslint-disable-next-line react-hooks/refs -- the factory only closes over the refs; they are dereferenced inside the mutation callbacks (event time)
+      exportRequestHandlers(deliveryModeRef, openedTabRef, setJobId),
     ),
   );
+
+  const statusQ = useJobStatusPoll(jobId);
 
   useEffect(() => {
     if (jobId === null) return;
@@ -79,9 +62,7 @@ export function usePdfExportJob({
     if (outcome === null) return;
 
     if (outcome.kind === "failed") {
-      closeHeldTab(openedTabRef);
-      deliveryModeRef.current = null;
-      toast.error(outcome.message);
+      settleFailedJob(outcome.message, deliveryModeRef, openedTabRef);
       // eslint-disable-next-line react-hooks/set-state-in-effect -- polling pipeline reacting to the export job's server status — external-system sync owns this state
       setJobId(null);
       return;
@@ -89,14 +70,7 @@ export function usePdfExportJob({
 
     if (lastDownloadedJobIdRef.current === outcome.jobId) return;
     lastDownloadedJobIdRef.current = outcome.jobId;
-    deliverArtifact(
-      outcome.artifactUrl,
-      deliveryModeRef,
-      openedTabRef,
-      setFallbackUrl,
-    );
-    deliveryModeRef.current = null;
-    openedTabRef.current = null;
+    settleCompletedJob(outcome, deliveryModeRef, openedTabRef, setFallbackUrl);
     setJobId(null);
   }, [statusQ.data, statusQ.isError, jobId]);
 
@@ -114,6 +88,50 @@ export function usePdfExportJob({
   return { isExportable, isGenerating, disabled, fallbackUrl, handleExport };
 }
 
+// A failed start must release the tab held since the click, otherwise the user
+// is left staring at a blank page with no explanation.
+function exportRequestHandlers(
+  deliveryModeRef: DeliveryModeRef,
+  openedTabRef: TabRef,
+  onStarted: (jobId: string) => void,
+) {
+  return {
+    onSuccess: (job: { jobId: string }) => {
+      onStarted(job.jobId);
+    },
+    onError: (err: unknown) => {
+      settleFailedJob(
+        err instanceof Error ? err.message : "Failed to start PDF export",
+        deliveryModeRef,
+        openedTabRef,
+      );
+    },
+  };
+}
+
+// Polls only while the job is queued; any terminal status stops the interval.
+function useJobStatusPoll(jobId: string | null) {
+  const trpc = useTRPC();
+  return useQuery(
+    trpc.pdfExport.status.queryOptions(
+      { jobId: jobId ?? "" },
+      {
+        enabled: jobId !== null,
+        refetchInterval: (q) => {
+          const status = q.state.data?.status;
+          return status === "queued" ? STATUS_POLL_INTERVAL_MS : false;
+        },
+      },
+    ),
+  );
+}
+
+interface JobStatusData {
+  readonly status: string;
+  readonly jobId: string;
+  readonly artifactUrl?: string | null;
+}
+
 type JobOutcome =
   | { readonly kind: "failed"; readonly message: string }
   | {
@@ -125,8 +143,7 @@ type JobOutcome =
 // null means "keep polling": no status yet, or the job is still queued.
 function readJobOutcome(
   isError: boolean,
-  data:
-    { status: string; jobId: string; artifactUrl?: string | null } | undefined,
+  data: JobStatusData | undefined,
 ): JobOutcome | null {
   if (isError) {
     return {
@@ -151,15 +168,15 @@ function readJobOutcome(
 // Must open before any await so the browser still treats this as a user
 // gesture; a blocked popup (null) switches delivery to the fallback link.
 function openDeliveryTab(
-  deliveryModeRef: { current: DeliveryMode | null },
-  openedTabRef: { current: Window | null },
+  deliveryModeRef: DeliveryModeRef,
+  openedTabRef: TabRef,
 ): void {
   const tab = window.open("", "_blank");
   deliveryModeRef.current = tab === null ? "fallback" : "tab";
   openedTabRef.current = tab;
 }
 
-function closeHeldTab(ref: { current: Window | null }): void {
+function closeHeldTab(ref: TabRef): void {
   const tab = ref.current;
   if (tab !== null && !tab.closed) {
     tab.close();
@@ -167,12 +184,38 @@ function closeHeldTab(ref: { current: Window | null }): void {
   ref.current = null;
 }
 
+function settleFailedJob(
+  message: string,
+  deliveryModeRef: DeliveryModeRef,
+  openedTabRef: TabRef,
+): void {
+  closeHeldTab(openedTabRef);
+  deliveryModeRef.current = null;
+  toast.error(message);
+}
+
+function settleCompletedJob(
+  outcome: Extract<JobOutcome, { kind: "completed" }>,
+  deliveryModeRef: DeliveryModeRef,
+  openedTabRef: TabRef,
+  setFallbackUrl: (url: string) => void,
+): void {
+  deliverArtifact(
+    outcome.artifactUrl,
+    deliveryModeRef,
+    openedTabRef,
+    setFallbackUrl,
+  );
+  deliveryModeRef.current = null;
+  openedTabRef.current = null;
+}
+
 // Prefer the held tab; if closed/blocked, fall back to download link + info
 // toast — never claim success for a delivery the user cannot see.
 function deliverArtifact(
   artifactUrl: string,
-  deliveryModeRef: { current: DeliveryMode | null },
-  openedTabRef: { current: Window | null },
+  deliveryModeRef: DeliveryModeRef,
+  openedTabRef: TabRef,
   setFallbackUrl: (url: string) => void,
 ): void {
   const mode = deliveryModeRef.current;

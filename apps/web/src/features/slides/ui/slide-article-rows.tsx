@@ -126,9 +126,8 @@ function ItemRow({
   );
 }
 
-/** One grid cell: the sorted, author-collapsed rows of a single column, or the
- * muted em-dash placeholder when the cell is empty.  * @param options - The options argument.
- */
+// One grid cell: the sorted, author-collapsed rows of a single column, or the
+// muted em-dash placeholder when the cell is empty.
 export function SlideCell({
   rows,
   authorsById,

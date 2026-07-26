@@ -225,7 +225,7 @@ describe("LeadForm mutation wiring", () => {
     );
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
-    // The submit flow now lives in the draft module: toolbar Submit → confirm
+    // The submit flow lives in the draft module: toolbar Submit → confirm
     // dialog → confirm drives the mutation via mutateAsync; on success the
     // dialog module fires the toast and the seam invalidates the lead caches.
     act(() => screen.getByRole("button", { name: "Submit" }).click());
@@ -423,10 +423,9 @@ describe("LeadForm mutation wiring", () => {
   });
 
   it("D4: a stale orphan (red) own stage with no covering risk is coerced to green on submit, not warned", async () => {
-    // Under the one-source model a persisted stage severity is never legitimate;
-    // an orphan red renders On Track on every read, so submit must collapse it to
-    // green (matching the display) rather than re-persist a ghost severity. It is
-    // NOT counted in the "N not set" warning (that is null/unset only).
+    // Under the one-source model an orphan red renders On Track on every read,
+    // so submit collapses it to green rather than re-persist a ghost severity;
+    // the "N not set" warning stays null/unset-only.
     const seeded = makeSection();
     const withOrphan = {
       ...seeded,

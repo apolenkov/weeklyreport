@@ -15,20 +15,11 @@ interface RevokeLeadButtonProps {
 }
 
 // Invalidates weeklyReport.get so the row shows Draft without a manual refresh.
-/**
- * Revoke Lead Button.
- * @param props - The props argument.
- */
-export function RevokeLeadButton({
-  reportSectionId,
-  leadName,
-  onMutated,
-}: RevokeLeadButtonProps): React.JSX.Element {
+function useRevokeMutation(leadName: string, onMutated: () => void) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
 
-  const mutation = useMutation(
+  return useMutation(
     trpc.leadForm.revoke.mutationOptions({
       onSuccess: () => {
         toast.success(`${leadName}'s submission revoked.`);
@@ -44,6 +35,15 @@ export function RevokeLeadButton({
       },
     }),
   );
+}
+
+export function RevokeLeadButton({
+  reportSectionId,
+  leadName,
+  onMutated,
+}: RevokeLeadButtonProps): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+  const mutation = useRevokeMutation(leadName, onMutated);
 
   const handleConfirm = (): void => {
     setOpen(false);

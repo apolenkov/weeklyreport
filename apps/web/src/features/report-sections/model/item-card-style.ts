@@ -51,26 +51,13 @@ export const STATUS_BADGE = {
   },
 } as const satisfies Record<string, StatusBadge>;
 
-/**
- * Fixed card height for the static render, matching the section-level
- * empty-state placeholder ("No items yet" in current-week-section.tsx /
- * next-week-section.tsx) so every card in a column is uniform. The height
- * is sized to the CONTENT, not the empty placeholder: it fits the status-pill /
- * action row + three body lines (the `line-clamp-3` the body keeps) + the
- * author / stage-tag footer + padding. A short card fills the slack with
- * whitespace; a long one truncates at three lines with an ellipsis (its full
- * text stays available via the `title` hover tooltip). The chrome rows keep
- * their natural size (`shrink-0`); the body is the only flexible slot.
- */
+// Uniform static-render height, sized to fit the chrome rows plus three clamped
+// body lines. Rules: openspec/specs/lead-item-card-uniformity/spec.md.
 const ITEM_CARD_REFERENCE_HEIGHT = 150;
 
 /** Faded opacity applied to a card/row owned by another lead ("foreign"). */
 export const FOREIGN_ENTRY_OPACITY = 0.7;
 
-/**
- * Card Container Style.
- * @param opts - The opts argument.
- */
 export function cardContainerStyle(opts: {
   isPlanned: boolean;
   isBlocked: boolean;

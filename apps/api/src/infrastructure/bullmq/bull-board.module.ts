@@ -30,10 +30,6 @@ interface RequireHeadDeps {
 // Re-check revoked/deactivated via isUserAccessBarred so a deactivated head
 // loses queue admin immediately (not for the JWT TTL). Express 5 awaits async
 // handlers; try/catch maps a thrown verify or rejected Prisma read to 401.
-/**
- * Create Require Head Guard.
- * @param deps - The deps argument.
- */
 export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
   return async (
     req: Request,
@@ -79,10 +75,6 @@ export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
   };
 }
 
-/**
- * Mount Bull Board.
- * @param app - The app argument.
- */
 export function mountBullBoard(app: INestApplication): void {
   const registry = app.get(QueueRegistry);
   const pdfQueue = registry.get("pdf-export");

@@ -19,16 +19,18 @@ import { mapPrismaToReportSection } from "./report-sections.mappers";
 import { queryMyHistoryRows } from "./report-sections.my-history-query.js";
 import { applySaveSection } from "./save-section.transaction";
 
+// A section save rewrites every child table (project/stage/activity statuses,
+// items, risks, decisions) in one interactive transaction, which outgrows
+// Prisma's default budget on the largest sections.
+const SAVE_SECTION_TX_TIMEOUT_MS = 15_000;
+
 @Injectable()
 export class ReportSectionsPrismaRepository implements ReportSectionsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Canonical period status of the section's report, keyed on the section id —
-   * the single lookup both write-path gates read. Selects `report.periodStatus`
-   * so the reopen-editable states (`open` / `reopened`) are distinguished from
-   * the legacy `Report.status` column, which reopen leaves at `published`.
-   */
+  // Selects `report.periodStatus`, not the legacy `Report.status` column that
+  // reopen leaves at `published`, so the reopen-editable states (`open` /
+  // `reopened`) stay distinguishable for both write-path gates.
   async getReportPeriodStatusForSection(
     sectionId: string,
   ): Promise<PeriodStatus | null> {
@@ -39,11 +41,8 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
     return row?.report.periodStatus ?? null;
   }
 
-  /**
-   * Deadline-aware report lookup used by the submitSection grace-period gate.
-   * Returns null when the report does not exist so the service can no-op the
-   * gate without ad-hoc try/catch.
-   */
+  // Null (rather than a throw) on a missing report lets the submitSection
+  // grace-period gate no-op without ad-hoc try/catch.
   async getReportMeta(
     reportId: string,
   ): Promise<{ status: ReportStatus; deadline: Date | null } | null> {
@@ -70,13 +69,9 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
     return mapPrismaToReportSection(row);
   }
 
-  /**
-   * Published lineage of the section's CURRENT rows (items + decisions) — the
-   * resolve-not-delete lock's reference set. Delegates to
-   * `queryPublishedLineage`, which unions the own report's frozen
-   * `publishedSnapshot` (the reopened-period case) with live rows in other
-   * frozen published/archived reports (the carried-clone case).
-   */
+  // Reference set for the resolve-not-delete lock: the union of this report's
+  // frozen `publishedSnapshot` (reopened period) and live rows in other frozen
+  // published/archived reports (carried clone).
   getPublishedLineage(section: ReportSectionReadModel): Promise<{
     itemStableIds: readonly string[];
     decisionStableIds: readonly string[];
@@ -100,7 +95,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
     try {
       return await this.prisma.$transaction(
         (tx) => applySaveSection(tx, section, expectedVersion),
-        { timeout: 15_000 },
+        { timeout: SAVE_SECTION_TX_TIMEOUT_MS },
       );
     } catch (error) {
       if (error instanceof SectionVersionConflictError) {

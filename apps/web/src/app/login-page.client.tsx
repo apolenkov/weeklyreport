@@ -24,7 +24,6 @@ import {
 const AUTH_STUB = webEnv.authStub();
 const APP_VERSION = webEnv.appVersion();
 
-// AUTH_STUB never auto-redirects: DEV_SESSION without cookie would loop with proxy.
 interface LoginPageClientProps {
   initialOrg: OrganizationPublic;
 }
@@ -38,10 +37,6 @@ function isOrganizationPublic(value: unknown): value is OrganizationPublic {
   );
 }
 
-/**
- * Login Page Client.
- * @param props - The props argument.
- */
 export function LoginPageClient({ initialOrg }: LoginPageClientProps) {
   // Next 16 strict prerender: useSearchParams must run inside a Suspense
   // boundary or the / page bails out of static export. Wrap the body so

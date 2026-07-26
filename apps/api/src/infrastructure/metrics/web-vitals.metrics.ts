@@ -2,18 +2,9 @@ import { Histogram } from "prom-client";
 
 import { metricsRegistry } from "./metrics.registry.js";
 
-/**
- * Web-vitals instruments. Each vital is a {@link Histogram} (not a gauge) so
- * `/metrics` exposes a real latency distribution — the dashboard computes
- * p75/p95 via `histogram_quantile` instead of reading a last-write-wins point.
- * The metric names and the single `navigation_type` label are unchanged from
- * the former gauges, so only the panel query moves, not the series identity.
- *
- * Buckets bracket the web-vitals good/needs-improvement/poor thresholds for
- * each vital. The millisecond vitals (LCP/FCP/INP/TTFB) carry the raw value the
- * `web-vitals` library emits; CLS is an unscaled layout-shift score (typically
- * 0–1), so its buckets are small fractional boundaries matching that unit.
- */
+// Histograms, not gauges, so the dashboard derives p75/p95 via `histogram_quantile`
+// instead of a last-write-wins point. Buckets bracket the web-vitals
+// good/needs-improvement/poor thresholds: raw ms per vital, CLS an unscaled ~0–1 score.
 
 export const webVitalLcp = new Histogram({
   name: "web_vital_lcp",

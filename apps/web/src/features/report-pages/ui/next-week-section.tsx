@@ -2,39 +2,22 @@
 
 import type { ReactNode } from "react";
 
-import {
-  type EditableListDialogState,
-  useEditableListDialog,
-} from "../../../hooks/use-editable-list-dialog";
+import { useEditableListDialog } from "../../../hooks/use-editable-list-dialog";
 import {
   isBoardEmpty,
   ItemCard,
   type KanbanItem,
   type Product,
-  type RiskEntry,
   splitItemBoard,
 } from "../../report-sections";
 import { NextWeekBoardGrid } from "./next-week-board-grid";
 import { NextWeekDialogs } from "./next-week-dialogs";
-
-interface NextWeekSectionProps {
-  readonly items: KanbanItem[];
-  // Own risks for ItemCard alarm derivation (in-progress only; planned never floors).
-  readonly risks?: readonly RiskEntry[];
-  readonly readOnly?: boolean;
-  // Parent merges into draftSection.items by id, preserving non-presentation fields.
-  readonly onItemsChange?: (items: KanbanItem[]) => void;
-  readonly currentUserName?: string;
-  readonly products?: readonly Product[];
-  readonly activities?: readonly { id: string; name: string }[];
-  readonly stagesForProduct?: (productId: string) => readonly string[];
-  // Full-period ranks so ItemEditDialog can disable taken priority ranks.
-  readonly ownPeriodRanks?: readonly number[];
-  readonly addSignal?: number;
-  // Resolve-not-delete (ADR 0015): published-lineage ids show marker, hide Delete.
-  readonly publishedLockedIds?: ReadonlySet<string>;
-  readonly onMoveToCurrentWeek?: (id: string) => void;
-}
+import {
+  buildDialogsProps,
+  createItemHandlers,
+  type NextWeekItemHandlers,
+  type NextWeekSectionProps,
+} from "./next-week-section-model";
 
 // Stand-alone CTA seeded from the first product. Disabled (with an explanatory
 // title) for a lead who owns no product, since an item needs a product column.
@@ -92,132 +75,54 @@ function NextWeekEmptyState({
   );
 }
 
-// At most one of the three applies: edit binds an entity, create carries the
-// lane/column seed it was opened from, closed carries neither.
-function deriveDialogSeeds(state: EditableListDialogState<KanbanItem>) {
-  const none = {
-    editItem: null as KanbanItem | null,
-    createSeedProductId: undefined as string | undefined,
-    createSeedActivityId: undefined as string | undefined,
-  };
-  if (!state.open) return none;
-  if (state.mode === "edit") return { ...none, editItem: state.entity };
-  return {
-    ...none,
-    createSeedProductId: state.seedProductId,
-    createSeedActivityId: state.seedActivityId,
-  };
+// Bind a card renderer to this section's props; the grid calls it per item.
+function createItemRenderer({
+  props,
+  handlers,
+}: {
+  readonly props: NextWeekSectionProps;
+  readonly handlers: NextWeekItemHandlers;
+}) {
+  return (item: KanbanItem) => (
+    <ItemCard
+      key={item.id}
+      item={item}
+      risks={props.risks}
+      readOnly={props.readOnly ?? false}
+      isEditing={false}
+      publishedLocked={props.publishedLockedIds?.has(item.id)}
+      onEdit={handlers.handleEdit}
+      onDelete={handlers.handleDelete}
+      onMoveToCurrentWeek={props.onMoveToCurrentWeek}
+    />
+  );
 }
 
-interface ItemHandlersArgs {
-  readonly items: KanbanItem[];
-  readonly readOnly: boolean;
-  readonly onItemsChange: ((items: KanbanItem[]) => void) | undefined;
-  readonly dialogState: EditableListDialogState<KanbanItem>;
-  readonly openEdit: (item: KanbanItem) => void;
-  readonly close: () => void;
-  readonly pendingDelete: KanbanItem | null;
-  readonly requestDelete: (item: KanbanItem) => void;
-  readonly clearPendingDelete: () => void;
-}
-
-function createItemHandlers({
-  items,
-  readOnly,
-  onItemsChange,
-  dialogState,
-  openEdit,
-  close,
-  pendingDelete,
-  requestDelete,
-  clearPendingDelete,
-}: ItemHandlersArgs) {
-  function handleDialogSave(next: KanbanItem) {
-    if (readOnly) return;
-    if (dialogState.open && dialogState.mode === "create") {
-      onItemsChange?.([...items, next]);
-    } else {
-      onItemsChange?.(items.map((i) => (i.id === next.id ? next : i)));
-    }
-    close();
-  }
-
-  return {
-    handleEdit: (id: string) => {
-      const item = items.find((i) => i.id === id);
-      if (item) openEdit(item);
-    },
-    handleDelete: (id: string) => {
-      const item = items.find((i) => i.id === id);
-      if (item) requestDelete(item);
-    },
-    confirmDelete: () => {
-      if (!pendingDelete) return;
-      onItemsChange?.(items.filter((i) => i.id !== pendingDelete.id));
-      clearPendingDelete();
-    },
-    handleDialogSave,
-    handleDialogCancel: close,
-  };
-}
-
-/**
- * Next Week Section.
- * @param props - The props argument.
- */
-export function NextWeekSection({
-  items,
-  risks,
-  readOnly = false,
-  onItemsChange,
-  currentUserName,
-  products,
-  activities,
-  stagesForProduct,
-  ownPeriodRanks,
-  addSignal = 0,
-  publishedLockedIds,
-  onMoveToCurrentWeek,
-}: NextWeekSectionProps) {
+export function NextWeekSection(props: NextWeekSectionProps) {
+  const { items, products, activities } = props;
+  const { readOnly = false, addSignal = 0 } = props;
   const defaultProduct = products?.[0];
-  const hasMultipleProducts = products !== undefined && products.length > 1;
 
   // The shared lifecycle ignores add signals while read-only and remounts the
   // dialog for each open. This section requires a product column for create mode.
-  const {
-    dialogState,
-    dialogKey,
-    openCreate,
-    openEdit,
-    close,
-    pendingDelete,
-    requestDelete,
-    clearPendingDelete,
-  } = useEditableListDialog<KanbanItem>({
+  const dialog = useEditableListDialog<KanbanItem>({
     readOnly,
     addSignal,
     seedProductId: defaultProduct?.id,
     requireSeed: true,
   });
 
-  const handlers = createItemHandlers({
-    items,
-    readOnly,
-    onItemsChange,
-    dialogState,
-    openEdit,
-    close,
-    pendingDelete,
-    requestDelete,
-    clearPendingDelete,
-  });
+  const handlers = createItemHandlers({ props, dialog });
 
   if (isBoardEmpty(items, products, activities)) {
     return (
       <NextWeekEmptyState
         readOnly={readOnly}
         addButton={
-          <AddItemButton defaultProduct={defaultProduct} onAdd={openCreate} />
+          <AddItemButton
+            defaultProduct={defaultProduct}
+            onAdd={dialog.openCreate}
+          />
         }
       />
     );
@@ -226,7 +131,6 @@ export function NextWeekSection({
   // Activity lanes render in their own lighter block BELOW the grid — never
   // as peer product columns.
   const board = splitItemBoard(products, items, activities);
-  const seeds = deriveDialogSeeds(dialogState);
 
   return (
     <div
@@ -241,41 +145,12 @@ export function NextWeekSection({
         productColumns={board.productColumns}
         activityLanes={board.activityLanes}
         readOnly={readOnly}
-        hasMultipleProducts={hasMultipleProducts}
-        onAdd={openCreate}
-        renderItem={(item) => (
-          <ItemCard
-            key={item.id}
-            item={item}
-            risks={risks}
-            readOnly={readOnly}
-            isEditing={false}
-            publishedLocked={publishedLockedIds?.has(item.id)}
-            onEdit={handlers.handleEdit}
-            onDelete={handlers.handleDelete}
-            onMoveToCurrentWeek={onMoveToCurrentWeek}
-          />
-        )}
+        hasMultipleProducts={products !== undefined && products.length > 1}
+        onAdd={dialog.openCreate}
+        renderItem={createItemRenderer({ props, handlers })}
       />
 
-      <NextWeekDialogs
-        dialogKey={dialogKey}
-        open={dialogState.open}
-        editItem={seeds.editItem}
-        products={products ?? []}
-        activities={activities}
-        currentUserName={currentUserName}
-        createSeedProductId={seeds.createSeedProductId}
-        createSeedActivityId={seeds.createSeedActivityId}
-        stagesForProduct={stagesForProduct}
-        ownPeriodRanks={ownPeriodRanks}
-        risks={risks}
-        onSave={handlers.handleDialogSave}
-        onCancel={handlers.handleDialogCancel}
-        pendingDelete={pendingDelete}
-        onConfirmDelete={handlers.confirmDelete}
-        onCancelDelete={clearPendingDelete}
-      />
+      <NextWeekDialogs {...buildDialogsProps({ props, dialog, handlers })} />
     </div>
   );
 }

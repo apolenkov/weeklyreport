@@ -23,11 +23,6 @@ export interface AutoCarryOverDeps {
   logger: Pick<AppLogger, "info" | "warn">;
 }
 
-/**
- * Carry Over Into Opened Period.
- * @param deps - The deps argument.
- * @param targetReportId - The targetReportId argument.
- */
 export async function carryOverIntoOpenedPeriod(
   deps: AutoCarryOverDeps,
   targetReportId: string,
@@ -87,10 +82,6 @@ type AutoCarryOverPrisma = Pick<
 >;
 
 // Active authors only; ensureLeadSection seeds the same status rows as login provision.
-/**
- * Build Auto Carry Over Deps.
- * @param input - The input argument.
- */
 export function buildAutoCarryOverDeps(input: {
   prisma: AutoCarryOverPrisma;
   repository: AutoCarryOverDeps["repository"];

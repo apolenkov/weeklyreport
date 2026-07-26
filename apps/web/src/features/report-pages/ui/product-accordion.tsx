@@ -44,10 +44,35 @@ function surfaceProps(hasContent: boolean, isHighlightActive: boolean) {
   };
 }
 
-/**
- * Product Accordion.
- * @param props - The props argument.
- */
+// Height animates through a 0fr→1fr grid row so the collapsed panel keeps its
+// content mounted (anchor links and in-page search still reach it).
+function ExpandingSections({
+  report,
+  review,
+  showNeedsAttention,
+  expanded,
+}: {
+  readonly report: WeeklyProductReport;
+  readonly review: AccordionReviewContext | undefined;
+  readonly showNeedsAttention: boolean;
+  readonly expanded: boolean;
+}) {
+  return (
+    <div
+      className="grid transition-[grid-template-rows] duration-300"
+      style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
+    >
+      <div className="min-h-0 overflow-hidden">
+        <AccordionSections
+          report={report}
+          review={review}
+          showNeedsAttention={showNeedsAttention}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function ProductAccordion({
   report,
   defaultOpen = false,
@@ -86,18 +111,12 @@ export function ProductAccordion({
       />
 
       {hasContent ? (
-        <div
-          className="grid transition-[grid-template-rows] duration-300"
-          style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
-        >
-          <div className="min-h-0 overflow-hidden">
-            <AccordionSections
-              report={report}
-              review={review}
-              showNeedsAttention={showNeedsAttention}
-            />
-          </div>
-        </div>
+        <ExpandingSections
+          report={report}
+          review={review}
+          showNeedsAttention={showNeedsAttention}
+          expanded={expanded}
+        />
       ) : null}
     </div>
   );

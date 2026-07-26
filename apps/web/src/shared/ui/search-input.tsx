@@ -2,7 +2,10 @@
 
 import { useId } from "react";
 
-import { useSearchController } from "./search-input-controller";
+import {
+  type SearchController,
+  useSearchController,
+} from "./search-input-controller";
 import type { SearchScope } from "./search-input-utils";
 import { SearchResultsDropdown } from "./search-results-dropdown";
 
@@ -58,71 +61,109 @@ function SearchCombobox({
   );
 }
 
-/**
- * Search Input.
- * @param props - The props argument.
- */
-export function SearchInput({
-  scope,
-  placeholder,
-  className,
-}: SearchInputProps) {
+function useSearchFieldIds() {
   const reactId = useId().replaceAll(":", "");
-  const inputId = `${reactId}-search-input`;
-  const resultsId = `${reactId}-search-results`;
+  return {
+    inputId: `${reactId}-search-input`,
+    resultsId: `${reactId}-search-results`,
+  };
+}
 
-  const {
-    q,
-    setQ,
-    open,
-    setOpen,
-    containerRef,
-    enabled,
-    hits,
-    isError,
-    isFetching,
-    isViewer,
-    activeIndex,
-    setActiveIndex,
-    handleKeyDown,
-    navigateTo,
-  } = useSearchController(scope);
+// The container owns `containerRef`; the presentational parts never see it, so
+// nothing reads a ref during render.
+type SearchViewState = Omit<SearchController, "containerRef">;
 
-  const showResults = open && enabled;
-  const activeOptionId =
-    showResults && hits[activeIndex]
-      ? `${resultsId}-option-${activeIndex}`
-      : undefined;
+interface SearchFieldProps {
+  readonly inputId: string;
+  readonly resultsId: string;
+  readonly expanded: boolean;
+  readonly placeholder: string;
+  readonly search: SearchViewState;
+}
+
+function SearchField({
+  inputId,
+  resultsId,
+  expanded,
+  placeholder,
+  search,
+}: SearchFieldProps) {
+  const { q, setQ, setOpen, hits, activeIndex, handleKeyDown } = search;
 
   return (
-    <div ref={containerRef} className={`relative ${className ?? ""}`}>
+    <>
       <label className="sr-only" htmlFor={inputId}>
         Search Reports
       </label>
       <SearchCombobox
         inputId={inputId}
         resultsId={resultsId}
-        activeOptionId={activeOptionId}
-        expanded={showResults}
+        activeOptionId={
+          expanded && hits[activeIndex]
+            ? `${resultsId}-option-${activeIndex}`
+            : undefined
+        }
+        expanded={expanded}
         value={q}
-        placeholder={placeholder ?? "Search…"}
+        placeholder={placeholder}
         onOpen={() => setOpen(true)}
         onValueChange={setQ}
         onKeyDown={handleKeyDown}
       />
+    </>
+  );
+}
 
-      {showResults && (
-        <SearchResultsDropdown
-          resultsId={resultsId}
-          hits={hits}
-          activeIndex={activeIndex}
-          isError={isError}
-          isFetching={isFetching}
-          isViewer={isViewer}
-          onHoverHit={setActiveIndex}
-          onSelectHit={navigateTo}
-        />
-      )}
+function SearchResults({
+  resultsId,
+  search,
+}: {
+  readonly resultsId: string;
+  readonly search: SearchViewState;
+}) {
+  const {
+    hits,
+    activeIndex,
+    isError,
+    isFetching,
+    isViewer,
+    setActiveIndex,
+    navigateTo,
+  } = search;
+
+  return (
+    <SearchResultsDropdown
+      resultsId={resultsId}
+      hits={hits}
+      activeIndex={activeIndex}
+      isError={isError}
+      isFetching={isFetching}
+      isViewer={isViewer}
+      onHoverHit={setActiveIndex}
+      onSelectHit={navigateTo}
+    />
+  );
+}
+
+export function SearchInput({
+  scope,
+  placeholder,
+  className,
+}: SearchInputProps) {
+  const { inputId, resultsId } = useSearchFieldIds();
+  const { containerRef, ...search } = useSearchController(scope);
+  const showResults = search.open && search.enabled;
+
+  return (
+    <div ref={containerRef} className={`relative ${className ?? ""}`}>
+      <SearchField
+        inputId={inputId}
+        resultsId={resultsId}
+        expanded={showResults}
+        placeholder={placeholder ?? "Search…"}
+        search={search}
+      />
+      {showResults && <SearchResults resultsId={resultsId} search={search} />}
     </div>
   );
 }

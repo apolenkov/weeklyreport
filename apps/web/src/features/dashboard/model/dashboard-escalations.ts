@@ -3,24 +3,16 @@ import { shortNameFromName } from "@customreport/shared";
 
 import type { BlockedAtRiskItem } from "./dashboard";
 
-// Shown when a stage-keyed escalation (blocked item / unresolved risk) carries
-// no stage — the legacy stage-less item/risk case (empty stageNames). The API
-// builder returns stageName=null identically on the live and snapshot paths, so
-// this label is the single place that empty case is worded.
+// Wording for a stage-keyed escalation (blocked item / unresolved risk) that
+// carries no stage. Both the live and snapshot API paths return stageName=null
+// identically, so this is the single place that empty case is worded.
 const NO_STAGE_LABEL = "No stage set";
 
-// The product-level "flagged red" escalation (type "at_risk") is a product
-// traffic-light roll-up, not a stage-keyed blocker/risk, so it has no stage by
-// design. It is gutter-labeled "Flagged" — matching the report accordion's
-// EscalationRow — never the stage-less "No stage set", which would read as a
-// data defect on a row that legitimately has no stage.
+// A product-level "flagged red" roll-up has no stage by design, so it reads
+// "Flagged" (matching the report accordion's EscalationRow) — "No stage set"
+// would look like a data defect on a row that legitimately has none.
 const FLAGGED_STAGE_LABEL = "Flagged";
 
-/**
- * Escalation To Blocked Item.
- * @param escalation - The escalation argument.
- * @param index - The index argument.
- */
 export function escalationToBlockedItem(
   escalation: Escalation,
   index: number,

@@ -45,10 +45,6 @@ function toggleStage(selected: readonly string[], stage: string): string[] {
     : [...selected, stage];
 }
 
-/**
- * Stage Multi Select.
- * @param props - The props argument.
- */
 export function StageMultiSelect({
   id,
   value,

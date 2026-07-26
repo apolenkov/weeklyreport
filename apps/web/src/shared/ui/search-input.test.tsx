@@ -136,7 +136,6 @@ describe("SearchInput", () => {
     });
 
     expect(screen.getByText("Релиз заблокирован")).toBeInTheDocument();
-    // The marker text should be inside a <mark> element.
     const markEl = screen.getByText("заблокирован");
     expect(markEl.tagName).toBe("MARK");
   });
@@ -217,7 +216,6 @@ describe("SearchInput", () => {
   });
 
   it("clears the input and closes the dropdown on Escape", () => {
-    // Prime useQuery with results so the dropdown actually opens.
     useQueryMock.mockReturnValue({
       data: [
         {
@@ -239,7 +237,6 @@ describe("SearchInput", () => {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- the app tsconfig needs the element narrowed for .value access (TS2339)
     const input = screen.getByRole("combobox") as HTMLInputElement;
 
-    // Open the dropdown: focus, type 2+ chars, wait for debounce.
     act(() => {
       fireEvent.focus(input);
       fireEvent.change(input, { target: { value: "release" } });
@@ -252,7 +249,6 @@ describe("SearchInput", () => {
     expect(screen.getByRole("listbox")).toBeInTheDocument();
     expect(input.value).toBe("release");
 
-    // Press Escape — clears input AND unmounts the dropdown.
     act(() => {
       fireEvent.keyDown(input, { key: "Escape" });
     });

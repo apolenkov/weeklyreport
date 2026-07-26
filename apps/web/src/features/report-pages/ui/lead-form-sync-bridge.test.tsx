@@ -641,9 +641,9 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
   });
 
   it("clicking a risk-floored chip changes nothing and points at the Risks section", async () => {
-    // Dev is persisted on-track but floored to blocked by a covering own risk.
-    // The chip no longer authors or lowers severity — the click is a no-op with
-    // an info hint; the lead must edit the risk to change the stage.
+    // Dev is persisted on-track but floored to blocked by a covering own risk,
+    // so the click is a no-op with an info hint; the lead must edit the risk
+    // to change the stage.
     const user = userEvent.setup();
     const onRisksChangeSpy = vi.fn<(next: RiskEntry[]) => void>();
     const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();

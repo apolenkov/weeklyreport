@@ -145,10 +145,6 @@ function mapBlockedAtRisk(
     .filter((item): item is BlockedAtRiskItem => item !== null);
 }
 
-/**
- * Map Weekly Dashboard Data.
- * @param props - The props argument.
- */
 export function mapWeeklyDashboardData({
   weeklyReport,
   now = new Date(),
@@ -163,10 +159,6 @@ export function mapWeeklyDashboardData({
   };
 }
 
-/**
- * Map Review Dashboard Data.
- * @param props - The props argument.
- */
 export function mapReviewDashboardData({
   review,
   weeklyReport,
@@ -189,10 +181,6 @@ export function mapReviewDashboardData({
   };
 }
 
-/**
- * Map Dashboard Data.
- * @param args - The args argument.
- */
 export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
   const review = mapReviewDashboardData(args);
   const weekly = mapWeeklyDashboardData({

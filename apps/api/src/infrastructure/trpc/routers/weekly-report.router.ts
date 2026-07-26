@@ -1,7 +1,9 @@
+import type { Role } from "@customreport/shared";
 import { z } from "zod";
 
 import type { AppLogger } from "../../../lib/logger.js";
 import type { WeeklyReportService } from "../../../modules/weekly-report/index.js";
+import type { TrpcContext } from "../trpc.context.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import { anyRoleProcedure, router } from "../trpc.middleware.js";
 
@@ -51,6 +53,25 @@ function logWeeklyReportFailure(
   });
 }
 
+function logWeeklyReportSuccess(
+  logger: AppLogger,
+  scope: WeeklyReportLoadScope,
+  result: {
+    readonly reportId: string;
+    readonly periodStatus: string;
+    readonly submissionCount: number;
+    readonly totalLeads: number;
+  },
+): void {
+  logger.info("weekly report load succeeded", {
+    ...loadLogFields(scope),
+    resolvedReportId: result.reportId,
+    periodStatus: result.periodStatus,
+    submissionCount: result.submissionCount,
+    totalLeads: result.totalLeads,
+  });
+}
+
 // Emit scopeAccessed once when a non-admin read surfaces cross-group products.
 function shouldEmitScopeAudit<T extends { productIds: readonly string[] }>(
   crossGroup: T | null,
@@ -61,14 +82,30 @@ function shouldEmitScopeAudit<T extends { productIds: readonly string[] }>(
   );
 }
 
+function emitScopeAudit(
+  ctx: Pick<TrpcContext, "auditLogger" | "ip">,
+  session: { readonly userId: string; readonly role: Role },
+  crossGroup: {
+    readonly productIds: readonly string[];
+    readonly groupIds: readonly string[];
+  },
+  resourceId: string,
+): void {
+  ctx.auditLogger.scopeAccessed({
+    userId: session.userId,
+    role: session.role,
+    ip: ctx.ip,
+    accessedScope: "weeklyReport.project",
+    productIds: crossGroup.productIds,
+    groupIds: crossGroup.groupIds,
+    resourceId,
+  });
+}
+
 // weeklyReport.get uses anyRoleProcedure because
 // viewers, leads, heads, and admins all consume this surface. The
 // service layer scopes the read to published periods for viewers.
 
-/**
- * Create Weekly Report Router.
- * @param deps - The deps argument.
- */
 export function createWeeklyReportRouter(deps: WeeklyReportRouterDeps) {
   return router({
     get: anyRoleProcedure
@@ -95,26 +132,11 @@ export function createWeeklyReportRouter(deps: WeeklyReportRouterDeps) {
             const { crossGroup: _crossGroup, ...publicResult } = result;
             return publicResult;
           }
-          // crossGroup is internal — strip before return.
           const { crossGroup, ...publicResult } = result;
           if (shouldEmitScopeAudit(crossGroup, ctx.session.role)) {
-            ctx.auditLogger.scopeAccessed({
-              userId: ctx.session.userId,
-              role: ctx.session.role,
-              ip: ctx.ip,
-              accessedScope: "weeklyReport.project",
-              productIds: crossGroup.productIds,
-              groupIds: crossGroup.groupIds,
-              resourceId: result.reportId,
-            });
+            emitScopeAudit(ctx, ctx.session, crossGroup, result.reportId);
           }
-          ctx.logger.info("weekly report load succeeded", {
-            ...loadLogFields(scope),
-            resolvedReportId: result.reportId,
-            periodStatus: result.periodStatus,
-            submissionCount: result.submissionCount,
-            totalLeads: result.totalLeads,
-          });
+          logWeeklyReportSuccess(ctx.logger, scope, result);
           return publicResult;
         } catch (error) {
           logWeeklyReportFailure(ctx.logger, scope, error);

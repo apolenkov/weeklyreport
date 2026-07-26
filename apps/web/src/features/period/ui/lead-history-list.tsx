@@ -192,10 +192,6 @@ function HistoryCard({ entry }: { readonly entry: HistoryEntry }) {
   );
 }
 
-/**
- * Lead History List.
- * @param props - The props argument.
- */
 export function LeadHistoryList({ entries }: LeadHistoryListProps) {
   if (entries.length === 0) {
     return (

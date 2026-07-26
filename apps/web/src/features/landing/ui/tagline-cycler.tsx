@@ -55,9 +55,6 @@ function CyclingTagline() {
 
 // Spec landing-page-hero, "Tagline array is empty": a misconfigured empty
 // array must omit the tagline element entirely, not render an empty <p>.
-/**
- * Tagline Cycler.
- */
 export function TaglineCycler() {
   if (LANDING_TAGLINES.length === 0) return null;
   return <CyclingTagline />;

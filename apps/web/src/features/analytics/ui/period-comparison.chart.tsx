@@ -5,13 +5,8 @@ import type {
   TrafficLightCell,
 } from "@customreport/shared";
 
-/**
- * Period-vs-period delta table.
- *
- * Null cells render as '–' (en-dash); zero risk-counts render as '0'. The
- * visual distinction between the two is intentional.
- */
-
+// A null cell renders as an en-dash, never '0': "no data" and "zero risks" are
+// deliberately distinguishable at a glance.
 function statusLabel(cell: TrafficLightCell): string {
   if (cell === null) return "–";
   return cell;
@@ -30,10 +25,6 @@ function deltaClass(delta: number): string {
   return "text-muted-foreground";
 }
 
-/**
- * Period Comparison Chart.
- * @param props - The props argument.
- */
 export function PeriodComparisonChart({ rows }: PeriodComparisonOutput) {
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">No comparison data.</p>;

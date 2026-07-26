@@ -222,9 +222,8 @@ describe("RiskEditDialog - SDLC stage selector", () => {
 
   it("switching product clears the stage selection, never selects all owned stages", () => {
     // setProductAndStages must NOT default to every owned stage on a product
-    // switch — that "covers all" default is the root cause of the
-    // inflated-completeness defect. After switching, the lead marks stages
-    // explicitly, so all checkboxes start unchecked.
+    // switch: selecting all would inflate own-input completeness, so the lead
+    // marks stages explicitly and every checkbox starts unchecked.
     const twoProducts: Product[] = [
       { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
       { id: "p2", name: "Billing", overallStatus: "on-track", stages: [] },

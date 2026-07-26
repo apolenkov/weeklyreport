@@ -1250,7 +1250,7 @@ describe("ProjectAdminService — Group <-> Product M:M", () => {
     snapshot: AdminSnapshot,
   ): AdminRepository {
     const base = createRepository(snapshot);
-    // B1 invariant: keyed by productId alone — one product, one group.
+    // Keyed by productId alone — one product, one group.
     const edges = new Map<
       string,
       { id: string; groupId: string; createdAt: Date }
@@ -1576,12 +1576,9 @@ describe("PeriodAdminService — createPeriodManual", () => {
     const repo = makeCreatePeriodRepository({});
     const service = new PeriodAdminService(repo);
 
-    // defaultSettings: defaultDeadlineDays=5, workingDays='mon-fri',
-    // defaultTimezone='Europe/Moscow', deadlineTime='18:00'. periodStart
-    // is Monday 2026-05-04 00:00 UTC; +5 business days (mon→tue→wed→thu→fri→mon)
-    // lands on Monday 2026-05-11; 18:00 Europe/Moscow == 15:00 UTC. The
-    // `+5 business days` shape matches the scheduler's own date math
-    // (verified against `computeDeadline` in business-date.ts).
+    // defaultSettings: 5 business days mon-fri from Monday 2026-05-04 lands on
+    // Monday 2026-05-11; 18:00 Europe/Moscow == 15:00 UTC. Same date math as
+    // `computeDeadline` in business-date.ts.
     await service.createPeriodManual({
       periodStart: new Date("2026-05-04T00:00:00.000Z"),
     });
@@ -1653,7 +1650,7 @@ interface EditableRow {
 }
 
 function makeUpdatePeriodRepository(opts: {
-  /** Pre-seeded periods used by both the read + overlap paths. */
+  // Pre-seeded periods used by both the read + overlap paths.
   seedPeriods: EditableRow[];
   settings?: AppSettings;
 }): AdminRepository & {

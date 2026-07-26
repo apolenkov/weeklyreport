@@ -21,13 +21,19 @@ export interface TelegramOutboundJobData extends JobTraceContext {
 
 export const TELEGRAM_OUTBOUND_QUEUE_NAME = "telegram-outbound" as const;
 
+// Bounded Redis retention. Completed jobs survive only long enough for a quick
+// "did it go out?" check; failures are kept deeper because a DLQ postmortem
+// needs the payload after the fact.
+const RETAINED_COMPLETED_JOBS = 100;
+const RETAINED_FAILED_JOBS = 500;
+
 // Centralised so producers don't drift on retry policy; the 5s exponential
 // backoff floor gives a transient Telegram 429 room to settle.
 export const TELEGRAM_OUTBOUND_JOB_OPTS = {
   attempts: 3,
   backoff: { type: "exponential" as const, delay: 5000 },
-  removeOnComplete: { count: 100 },
-  removeOnFail: { count: 500 },
+  removeOnComplete: { count: RETAINED_COMPLETED_JOBS },
+  removeOnFail: { count: RETAINED_FAILED_JOBS },
 };
 
 @Injectable()

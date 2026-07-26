@@ -105,10 +105,6 @@ function createJobsRouter(deps: AdminOpsDeps) {
   });
 }
 
-/**
- * Create Admin Ops Procedures.
- * @param deps - The deps argument.
- */
 export function createAdminOpsProcedures(deps: AdminOpsDeps) {
   return {
     dlqCount: adminProcedure.query(async () => {

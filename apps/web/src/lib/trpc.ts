@@ -30,18 +30,11 @@ const PROGRESSIVE_DASHBOARD_PROCEDURES = [
   "weeklyReport.get",
 ] as const;
 
-/**
- * Is Progressive Dashboard Procedure.
- * @param path - The path argument.
- */
 export function isProgressiveDashboardProcedure(path: string): boolean {
   return (PROGRESSIVE_DASHBOARD_PROCEDURES as readonly string[]).includes(path);
 }
 
 // Redirect target is '/' (no /login route); original path is ?next=.
-/**
- * Create Auth Redirect Handler.
- */
 export function createAuthRedirectHandler(): (err: unknown) => boolean {
   return (err: unknown): boolean => {
     if (typeof window === "undefined") return false;
@@ -83,9 +76,6 @@ function forwardUnlessRedirecting<TValue, TError>(
 
 // Runs before httpBatchLink; swallows the error once redirect is in flight
 // so callers do not also toast/throw during navigation.
-/**
- * Create Auth Redirect Link.
- */
 export function createAuthRedirectLink(): TRPCLink<AppRouter> {
   const handle = createAuthRedirectHandler();
   return () =>
@@ -96,19 +86,12 @@ export function createAuthRedirectLink(): TRPCLink<AppRouter> {
 }
 
 // Optimistic-lock rejection on a stale section write — callers refetch rather than generic-error.
-/**
- * Is Conflict Error.
- * @param err - The err argument.
- */
 export function isConflictError(err: unknown): boolean {
   if (!(err instanceof TRPCClientError)) return false;
   const data = err.data as { httpStatus?: number; code?: string } | undefined;
   return data?.code === "CONFLICT" || data?.httpStatus === HTTP_CONFLICT;
 }
 
-/**
- * Make TRPC Client.
- */
 export function makeTRPCClient() {
   const transportOptions = {
     transformer: superjson,
@@ -133,10 +116,6 @@ export function makeTRPCClient() {
   });
 }
 
-/**
- * Make TRPC Proxy.
- * @param queryClient - The queryClient argument.
- */
 export function makeTRPCProxy(queryClient: QueryClient) {
   return createTRPCOptionsProxy<AppRouter>({
     client: makeTRPCClient(),

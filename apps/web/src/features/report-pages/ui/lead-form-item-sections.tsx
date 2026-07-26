@@ -176,10 +176,6 @@ function NextWeekAccordion({
   );
 }
 
-/**
- * Lead Form Item Sections.
- * @param props - The props argument.
- */
 export function LeadFormItemSections({
   unifiedView,
   ...sectionProps

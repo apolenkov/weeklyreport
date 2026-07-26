@@ -249,33 +249,36 @@ describe("SettingsTab — Identity sub-tab", () => {
     globalThis.fetch = vi
       .fn()
       .mockResolvedValue(new Response(null, { status: 200 }));
-    const { qc } = renderSettings(proxy);
-    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+    // finally, so a failed assertion cannot leak the stub into later tests.
+    try {
+      const { qc } = renderSettings(proxy);
+      const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
 
-    const shortNameInput = (await screen.findByLabelText(
-      /short name/i,
-    )) as HTMLInputElement;
-    await waitFor(() => expect(shortNameInput.value).toBe("PEO"));
-    fireEvent.change(shortNameInput, { target: { value: "NEWN" } });
+      const shortNameInput = (await screen.findByLabelText(
+        /short name/i,
+      )) as HTMLInputElement;
+      await waitFor(() => expect(shortNameInput.value).toBe("PEO"));
+      fireEvent.change(shortNameInput, { target: { value: "NEWN" } });
 
-    const user = userEvent.setup();
-    await user.click(
-      screen.getByRole("button", { name: /save organization identity/i }),
-    );
-
-    // Wait for onSuccess to have fired and invalidateAdmin to have called
-    // invalidateQueries with the specific admin.getOrganization key.
-    const orgQueryKey = [["admin", "getOrganization"]];
-    await waitFor(() => {
-      const calledKeys = invalidateSpy.mock.calls.map((c) =>
-        JSON.stringify(c[0]),
+      const user = userEvent.setup();
+      await user.click(
+        screen.getByRole("button", { name: /save organization identity/i }),
       );
-      expect(
-        calledKeys.some((k) => k.includes(JSON.stringify(orgQueryKey))),
-      ).toBe(true);
-    });
 
-    globalThis.fetch = origFetch;
+      // Wait for onSuccess to have fired and invalidateAdmin to have called
+      // invalidateQueries with the specific admin.getOrganization key.
+      const orgQueryKey = [["admin", "getOrganization"]];
+      await waitFor(() => {
+        const calledKeys = invalidateSpy.mock.calls.map((c) =>
+          JSON.stringify(c[0]),
+        );
+        expect(
+          calledKeys.some((k) => k.includes(JSON.stringify(orgQueryKey))),
+        ).toBe(true);
+      });
+    } finally {
+      globalThis.fetch = origFetch;
+    }
   });
 });
 

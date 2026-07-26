@@ -1,12 +1,13 @@
 "use client";
 
 import { shortName } from "@customreport/shared";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
-import { toast } from "sonner";
+import type { ReactNode } from "react";
 
-import { useTRPC } from "../../../lib/trpc-context";
 import type { MockUser, StageName } from "../model/admin-types";
+import {
+  useStageAssignmentData,
+  useStageAssignmentMutations,
+} from "../model/use-stage-assignments";
 
 const STAGE_COLORS: Record<StageName, string> = {
   Planning: "var(--color-starbucks-green)",
@@ -28,6 +29,26 @@ function stageColorOf(stageName: StageName): string {
   );
 }
 
+const STAGE_SELECT_BASE =
+  "w-full rounded-[var(--radius-sm)] border bg-white px-1.5 py-1.5 text-xs transition-colors focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50";
+// A dashed outline marks the coverage gap an unassigned stage represents.
+const STAGE_SELECT_CLASS = {
+  assigned: `${STAGE_SELECT_BASE} border-[var(--color-border)] text-[var(--color-foreground)]`,
+  unassigned: `${STAGE_SELECT_BASE} border-dashed border-[var(--color-muted-foreground)] text-[var(--color-muted-foreground)]`,
+} as const;
+
+interface StageCellProps {
+  readonly stage: { readonly id: string; readonly name: string };
+  readonly assignment:
+    { readonly id: string; readonly userId: string } | undefined;
+  readonly projectId: string;
+  readonly projectName: string;
+  readonly leads: readonly MockUser[];
+  readonly disabled: boolean;
+  readonly onAssign: (stageId: string, userId: string) => void;
+  readonly onClear: (assignmentId: string) => void;
+}
+
 // One editable slot: the API treats (projectId, stageId) as a single
 // assignment, so picking a different lead replaces the assignee instead of
 // adding a second row, and clearing the select deletes the row.
@@ -40,17 +61,7 @@ function StageCell({
   disabled,
   onAssign,
   onClear,
-}: {
-  readonly stage: { readonly id: string; readonly name: string };
-  readonly assignment:
-    { readonly id: string; readonly userId: string } | undefined;
-  readonly projectId: string;
-  readonly projectName: string;
-  readonly leads: readonly MockUser[];
-  readonly disabled: boolean;
-  readonly onAssign: (stageId: string, userId: string) => void;
-  readonly onClear: (assignmentId: string) => void;
-}) {
+}: StageCellProps) {
   const stageName = stage.name as StageName;
   const currentAssignee = assignment?.userId ?? "";
   const selectId = `${projectId}-${stage.id}`;
@@ -78,11 +89,9 @@ function StageCell({
         value={currentAssignee}
         onChange={(e) => handleChange(e.target.value)}
         disabled={disabled}
-        className={`w-full rounded-[var(--radius-sm)] border bg-white px-1.5 py-1.5 text-xs transition-colors focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50 ${
-          currentAssignee
-            ? "border-[var(--color-border)] text-[var(--color-foreground)]"
-            : "border-dashed border-[var(--color-muted-foreground)] text-[var(--color-muted-foreground)]"
-        }`}
+        className={
+          STAGE_SELECT_CLASS[currentAssignee ? "assigned" : "unassigned"]
+        }
         aria-label={`Assign ${stageName} stage for ${projectName}`}
       >
         <option value="">-- unassigned --</option>
@@ -96,44 +105,21 @@ function StageCell({
   );
 }
 
-// Both writes move the same (projectId, stageId) slot, so both refresh the
-// assignment list and the per-product coverage counts.
-function useStageAssignmentMutations() {
-  const trpc = useTRPC();
-  const qc = useQueryClient();
+const NOTICE_TONE_CLASS = {
+  muted: "text-[var(--color-muted-foreground)]",
+  error: "text-[var(--color-destructive)]",
+} as const;
 
-  function invalidateAssignments() {
-    void qc.invalidateQueries(trpc.admin.listStageAssignments.pathFilter());
-    void qc.invalidateQueries(
-      trpc.admin.listStageAssignmentCounts.pathFilter(),
-    );
-  }
-
-  const saveMut = useMutation(
-    trpc.admin.saveStageAssignment.mutationOptions({
-      onSuccess: () => {
-        invalidateAssignments();
-        toast.success("Stage assignment saved");
-      },
-      onError: (err) => {
-        toast.error(err.message);
-      },
-    }),
+function StageEditorNotice({
+  tone,
+  children,
+}: {
+  readonly tone: keyof typeof NOTICE_TONE_CLASS;
+  readonly children: ReactNode;
+}) {
+  return (
+    <p className={`mt-3 text-xs ${NOTICE_TONE_CLASS[tone]}`}>{children}</p>
   );
-
-  const deleteMut = useMutation(
-    trpc.admin.deleteStageAssignment.mutationOptions({
-      onSuccess: () => {
-        invalidateAssignments();
-        toast.success("Stage assignment removed");
-      },
-      onError: (err) => {
-        toast.error(err.message);
-      },
-    }),
-  );
-
-  return { saveMut, deleteMut };
 }
 
 interface StageAssignmentEditorProps {
@@ -142,69 +128,40 @@ interface StageAssignmentEditorProps {
   readonly leads: readonly MockUser[];
 }
 
-// Full catalogue (not only existing rows) so head sees coverage gaps;
-// lead dropdown is scoped to the product's owning group.
-/**
- * Stage Assignment Editor.
- * @param props - The props argument.
- */
 export function StageAssignmentEditor({
   projectId,
   projectName,
   leads,
 }: StageAssignmentEditorProps) {
-  const trpc = useTRPC();
-
-  const stagesQuery = useQuery(trpc.admin.listStages.queryOptions());
-  const assignmentsQuery = useQuery(
-    trpc.admin.listStageAssignments.queryOptions({ projectId }),
-  );
-
-  // @@unique([groupId]) on GroupProduct: each product has one owning group.
-  const productGroupsQuery = useQuery(
-    trpc.admin.listProductGroups.queryOptions({ productId: projectId }),
-  );
-
-  const filteredLeads = useMemo(() => {
-    const groups = productGroupsQuery.data ?? [];
-    if (groups.length === 0) {
-      // Product not yet assigned to a group; show all leads (graceful degradation).
-      return leads;
-    }
-    const groupIds = new Set(groups.map((g) => g.id));
-    return leads.filter((lead) => groupIds.has(lead.groupId));
-  }, [leads, productGroupsQuery.data]);
-
+  const { stages, assignments, filteredLeads, isLoading, isError } =
+    useStageAssignmentData(projectId, leads);
   const { saveMut, deleteMut } = useStageAssignmentMutations();
 
-  const stages = stagesQuery.data ?? [];
-  const assignments = assignmentsQuery.data ?? [];
-
-  const assignmentByStage = new Map(assignments.map((a) => [a.stageId, a]));
-
-  if (stagesQuery.isLoading || assignmentsQuery.isLoading) {
+  if (isLoading) {
     return (
-      <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">
+      <StageEditorNotice tone="muted">
         Loading stages for {projectName}…
-      </p>
+      </StageEditorNotice>
     );
   }
 
-  if (stagesQuery.isError || assignmentsQuery.isError) {
+  if (isError) {
     return (
-      <p className="mt-3 text-xs text-[var(--color-destructive)]">
+      <StageEditorNotice tone="error">
         Failed to load stage data.
-      </p>
+      </StageEditorNotice>
     );
   }
 
   if (stages.length === 0) {
     return (
-      <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">
+      <StageEditorNotice tone="muted">
         No stages defined yet. Seed the SDLC stages catalogue first.
-      </p>
+      </StageEditorNotice>
     );
   }
+
+  const assignmentByStage = new Map(assignments.map((a) => [a.stageId, a]));
 
   return (
     <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">

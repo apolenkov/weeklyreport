@@ -37,10 +37,6 @@ interface UnifiedActivitySectionProps {
 }
 
 // Opt-in by-state view (AppSettings.unifiedActivityView); create is via quick-add.
-/**
- * Unified Activity Section.
- * @param props - The props argument.
- */
 export function UnifiedActivitySection({
   entries,
   risks,

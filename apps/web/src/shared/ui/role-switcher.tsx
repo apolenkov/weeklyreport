@@ -31,6 +31,9 @@ export const ROLE_ORDER = [
 const LOGOUT_PATH = "/auth/logout";
 const LOGOUT_FAILED_MESSAGE =
   "Logout failed — still signed in. Check the API and try again.";
+// The seeded dev user list changes only on a reseed, so refetching the dropdown
+// more than once a minute is pure noise.
+const DEV_USERS_STALE_TIME_MS = 60_000;
 
 // Redirect only after the server confirms the logout — a non-ok response or a
 // rejected fetch leaves the visitor signed in, so run `onStay` and hold on the
@@ -161,7 +164,7 @@ function useDevRoleSwitcher() {
   const usersQ = useQuery({
     ...trpc.dev.listUsers.queryOptions(),
     enabled,
-    staleTime: 60_000,
+    staleTime: DEV_USERS_STALE_TIME_MS,
   });
 
   // On a failed logout, re-enable the controls (dev-only widget: a cheap alert
@@ -208,9 +211,6 @@ function useDevRoleSwitcher() {
   };
 }
 
-/**
- * Dev Role Switcher.
- */
 export function DevRoleSwitcher() {
   const { enabled, pending, usersQ, users, switchTo, logout, reseed } =
     useDevRoleSwitcher();

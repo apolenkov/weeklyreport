@@ -9,15 +9,15 @@ import type { Prisma } from "@prisma/client";
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation";
 
+// Same id as prisma/seed-identifiers.ts DEFAULT_REPORTING_GROUP_ID so a later
+// seed run upserts onto this row instead of creating a second default group.
 const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
 const DEFAULT_REPORTING_GROUP_NAME = "Core Development";
+const DEFAULT_REPORTING_GROUP_DESCRIPTION =
+  "Default reporting group for newly provisioned users";
 
 // TransactionClient so saveSnapshot upsert cannot commit ahead of a later failure.
 // PrismaService is structurally assignable for non-transaction callers.
-/**
- * Ensure Fallback Reporting Group.
- * @param prisma - The prisma argument.
- */
 export async function ensureFallbackReportingGroup(
   prisma: Prisma.TransactionClient,
 ): Promise<string> {
@@ -33,7 +33,7 @@ export async function ensureFallbackReportingGroup(
     create: {
       id: DEFAULT_REPORTING_GROUP_ID,
       name: DEFAULT_REPORTING_GROUP_NAME,
-      description: "Default reporting group for newly provisioned users",
+      description: DEFAULT_REPORTING_GROUP_DESCRIPTION,
       archived: false,
     },
     update: { archived: false },
@@ -42,11 +42,6 @@ export async function ensureFallbackReportingGroup(
   return created.id;
 }
 
-/**
- * Save Reporting Group.
- * @param prisma - The prisma argument.
- * @param group - The group argument.
- */
 export async function saveReportingGroup(
   prisma: PrismaService,
   group: ReportingGroup,
@@ -71,11 +66,6 @@ export async function saveReportingGroup(
   return reportingGroupSchema.parse(row);
 }
 
-/**
- * Archive Reporting Group.
- * @param prisma - The prisma argument.
- * @param groupId - The groupId argument.
- */
 export async function archiveReportingGroup(
   prisma: PrismaService,
   groupId: string,
@@ -132,11 +122,6 @@ async function upsertStageAssignmentRow(
   }
 }
 
-/**
- * Save Stage Assignment.
- * @param prisma - The prisma argument.
- * @param data - The data argument.
- */
 export async function saveStageAssignment(
   prisma: PrismaService,
   data: StageAssignmentInput,
@@ -153,11 +138,6 @@ export async function saveStageAssignment(
   });
 }
 
-/**
- * Delete Stage Assignment.
- * @param prisma - The prisma argument.
- * @param id - The id argument.
- */
 export async function deleteStageAssignment(
   prisma: PrismaService,
   id: string,
@@ -165,11 +145,6 @@ export async function deleteStageAssignment(
   await prisma.stageAssignment.delete({ where: { id } });
 }
 
-/**
- * List Stage Assignments.
- * @param prisma - The prisma argument.
- * @param projectId - The projectId argument.
- */
 export async function listStageAssignments(
   prisma: PrismaService,
   projectId: string,
@@ -196,10 +171,6 @@ export async function listStageAssignments(
 }
 
 // Full catalogue including unassigned stages (not just rows that already exist).
-/**
- * List Stages.
- * @param prisma - The prisma argument.
- */
 export async function listStages(
   prisma: PrismaService,
 ): Promise<{ id: string; name: string; sortOrder: number }[]> {
@@ -210,10 +181,6 @@ export async function listStages(
 }
 
 // GROUP BY only — products-tab header without loading every assignment row.
-/**
- * List Stage Assignment Counts.
- * @param prisma - The prisma argument.
- */
 export async function listStageAssignmentCounts(
   prisma: PrismaService,
 ): Promise<{ projectId: string; count: number }[]> {

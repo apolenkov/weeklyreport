@@ -166,10 +166,6 @@ function EditDeleteActions({
   );
 }
 
-/**
- * Item Card Actions.
- * @param props - The props argument.
- */
 export function ItemCardActions(props: ItemCardActionsProps) {
   const { item, locked, isEditing } = props;
   if (locked || isEditing) {
@@ -187,9 +183,6 @@ export function ItemCardActions(props: ItemCardActionsProps) {
   );
 }
 
-/**
- * Published Record Marker.
- */
 export function PublishedRecordMarker() {
   return (
     <span

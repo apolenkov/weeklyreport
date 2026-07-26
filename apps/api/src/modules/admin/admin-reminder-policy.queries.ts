@@ -6,10 +6,6 @@ import {
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { audienceFromPrisma, audienceToPrisma } from "./admin-enum-mappers";
 
-/**
- * List Reminder Policies.
- * @param prisma - The prisma argument.
- */
 export async function listReminderPolicies(
   prisma: PrismaService,
 ): Promise<ReminderPolicy[]> {
@@ -32,11 +28,6 @@ export async function listReminderPolicies(
   );
 }
 
-/**
- * Reminder Policy Exists.
- * @param prisma - The prisma argument.
- * @param policyId - The policyId argument.
- */
 export async function reminderPolicyExists(
   prisma: PrismaService,
   policyId: string,
@@ -48,11 +39,6 @@ export async function reminderPolicyExists(
   return row !== null;
 }
 
-/**
- * Save Reminder Policy.
- * @param prisma - The prisma argument.
- * @param policy - The policy argument.
- */
 export async function saveReminderPolicy(
   prisma: PrismaService,
   policy: ReminderPolicy,
@@ -91,11 +77,6 @@ export async function saveReminderPolicy(
 }
 
 // FK is ON DELETE SET NULL — delete rules first so they are not orphaned.
-/**
- * Delete Reminder Policy.
- * @param prisma - The prisma argument.
- * @param policyId - The policyId argument.
- */
 export async function deleteReminderPolicy(
   prisma: PrismaService,
   policyId: string,

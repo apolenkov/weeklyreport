@@ -64,57 +64,55 @@ function deckPlaceholder(state: {
   return null;
 }
 
-function DeckToolbar({
-  density,
-  onDensityChange,
-  showFullscreenControls,
-  isFullscreen,
-  onToggle,
-  toggleRef,
-}: {
-  readonly density: SlideDensity;
-  readonly onDensityChange: (next: SlideDensity) => void;
-  readonly showFullscreenControls: boolean;
-  readonly isFullscreen: boolean;
-  readonly onToggle: () => void;
-  readonly toggleRef: RefObject<HTMLButtonElement | null>;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <SlideDensityControl value={density} onChange={onDensityChange} />
-      {showFullscreenControls ? (
-        <DeckToolbarControls
-          isFullscreen={isFullscreen}
-          onToggle={onToggle}
-          toggleRef={toggleRef}
-        />
-      ) : null}
-    </div>
-  );
+// Two-sided clamp at render: shrink can strand the index past the end, and an
+// empty-deck ArrowRight stores -1, which a one-sided upper bound would accept.
+function clampSelectedIndex(raw: number, slideCount: number): number {
+  return raw >= 0 && raw < slideCount ? raw : 0;
 }
 
-/**
- * Lead Slides Client.
- * @param props - The props argument.
- */
-export function LeadSlidesClient({
-  initialReportId = null,
-  deckRef: externalDeckRef,
-  isFullscreen: externalIsFullscreen,
-  onToggle: externalOnToggle,
-  visibilityMode = "mine",
-  visibilityHydrated = false,
-}: LeadSlidesClientProps) {
-  const [rawSelectedIndex, setSelectedIndex] = useState(0);
-  const [density, setDensity] = useState<SlideDensity>("document");
-  const internalDeckRef = useRef<HTMLDivElement>(null);
-  const deckRef = externalDeckRef ?? internalDeckRef;
+function deckSurfaceClass(isFullscreen: boolean): string | undefined {
+  return isFullscreen
+    ? "h-screen overflow-auto bg-[var(--color-background)] p-4"
+    : undefined;
+}
+
+// Standalone decks own the fullscreen hook; a host that threads its own state wins.
+// Refs stay owned by the caller so no ref travels inside the returned object.
+function useDeckFullscreen({
+  internalDeckRef,
+  toggleRef,
+  externalIsFullscreen,
+  externalOnToggle,
+}: {
+  readonly internalDeckRef: RefObject<HTMLDivElement | null>;
+  readonly toggleRef: RefObject<HTMLButtonElement | null>;
+  readonly externalIsFullscreen: boolean | undefined;
+  readonly externalOnToggle: (() => void) | undefined;
+}) {
   // Hosted path disables the local hook so only one fullscreenchange listener is active.
   const hosted = externalOnToggle !== undefined;
-  const toggleButtonRef = useRef<HTMLButtonElement>(null);
-  const localFs = useFullscreen(internalDeckRef, toggleButtonRef, !hosted);
-  const isFullscreen = externalIsFullscreen ?? localFs.isFullscreen;
-  const onToggle = externalOnToggle ?? localFs.toggle;
+  const localFs = useFullscreen(internalDeckRef, toggleRef, !hosted);
+
+  return {
+    isFullscreen: externalIsFullscreen ?? localFs.isFullscreen,
+    onToggle: externalOnToggle ?? localFs.toggle,
+  };
+}
+
+type DeckFullscreen = ReturnType<typeof useDeckFullscreen>;
+
+// Slides, inline-edit dialogs and the placeholder that replaces the deck.
+function useLeadSlidesDeck({
+  initialReportId,
+  visibilityMode,
+  visibilityHydrated,
+  density,
+}: {
+  readonly initialReportId: string | null;
+  readonly visibilityMode: "mine" | "everyone";
+  readonly visibilityHydrated: boolean;
+  readonly density: SlideDensity;
+}) {
   const leadSlides = useLeadSlidesData({
     initialReportId,
     visibilityMode,
@@ -131,50 +129,133 @@ export function LeadSlidesClient({
     [leadSlides.slides, density],
   );
 
-  // Two-sided clamp at render: shrink can strand the index past the end, and an
-  // empty-deck ArrowRight stores -1, which a one-sided upper bound would accept.
-  const selectedIndex =
-    rawSelectedIndex >= 0 && rawSelectedIndex < slides.length
-      ? rawSelectedIndex
-      : 0;
+  return {
+    slides,
+    dialogs: inlineEditor.dialogs,
+    onRowActivate: inlineEditor.onRowActivate,
+    showFullscreenControls: !leadSlides.inReportMode,
+    placeholder: deckPlaceholder({
+      isLoading: leadSlides.isLoading,
+      isError: leadSlides.isError,
+      hasTargetReport: Boolean(leadSlides.targetReportId),
+    }),
+  };
+}
 
-  const placeholder = deckPlaceholder({
-    isLoading: leadSlides.isLoading,
-    isError: leadSlides.isError,
-    hasTargetReport: Boolean(leadSlides.targetReportId),
-  });
-  if (placeholder !== null) {
-    return placeholder;
-  }
+type LeadSlidesDeck = ReturnType<typeof useLeadSlidesDeck>;
 
+function DeckToolbar({
+  density,
+  onDensityChange,
+  showFullscreenControls,
+  fullscreen,
+  toggleRef,
+}: {
+  readonly density: SlideDensity;
+  readonly onDensityChange: (next: SlideDensity) => void;
+  readonly showFullscreenControls: boolean;
+  readonly fullscreen: DeckFullscreen;
+  readonly toggleRef: RefObject<HTMLButtonElement | null>;
+}) {
   return (
-    <div
-      ref={deckRef}
-      className={
-        isFullscreen
-          ? "h-screen overflow-auto bg-[var(--color-background)] p-4"
-          : undefined
-      }
-    >
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <SlideDensityControl value={density} onChange={onDensityChange} />
+      {showFullscreenControls ? (
+        <DeckToolbarControls
+          isFullscreen={fullscreen.isFullscreen}
+          onToggle={fullscreen.onToggle}
+          toggleRef={toggleRef}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function LeadSlidesDeckView({
+  deckRef,
+  toggleRef,
+  fullscreen,
+  deck,
+  density,
+  onDensityChange,
+  selectedIndex,
+  onSelect,
+}: {
+  readonly deckRef: RefObject<HTMLDivElement | null>;
+  readonly toggleRef: RefObject<HTMLButtonElement | null>;
+  readonly fullscreen: DeckFullscreen;
+  readonly deck: Omit<LeadSlidesDeck, "placeholder">;
+  readonly density: SlideDensity;
+  readonly onDensityChange: (next: SlideDensity) => void;
+  readonly selectedIndex: number;
+  readonly onSelect: (next: number) => void;
+}) {
+  return (
+    <div ref={deckRef} className={deckSurfaceClass(fullscreen.isFullscreen)}>
       <StatusSlideDeck
-        slides={slides}
+        slides={deck.slides}
         selectedIndex={selectedIndex}
-        onSelect={setSelectedIndex}
+        onSelect={onSelect}
         mode="lead"
-        onRowActivate={inlineEditor.onRowActivate}
+        onRowActivate={deck.onRowActivate}
         toolbar={
           <DeckToolbar
             density={density}
-            onDensityChange={setDensity}
-            showFullscreenControls={!leadSlides.inReportMode}
-            isFullscreen={isFullscreen}
-            onToggle={onToggle}
-            toggleRef={toggleButtonRef}
+            onDensityChange={onDensityChange}
+            showFullscreenControls={deck.showFullscreenControls}
+            fullscreen={fullscreen}
+            toggleRef={toggleRef}
           />
         }
       />
-      <DeckFullscreenOverlay isFullscreen={isFullscreen} onToggle={onToggle} />
-      {inlineEditor.dialogs}
+      <DeckFullscreenOverlay
+        isFullscreen={fullscreen.isFullscreen}
+        onToggle={fullscreen.onToggle}
+      />
+      {deck.dialogs}
     </div>
+  );
+}
+
+export function LeadSlidesClient({
+  initialReportId = null,
+  deckRef: externalDeckRef,
+  isFullscreen: externalIsFullscreen,
+  onToggle: externalOnToggle,
+  visibilityMode = "mine",
+  visibilityHydrated = false,
+}: LeadSlidesClientProps) {
+  const [rawSelectedIndex, setSelectedIndex] = useState(0);
+  const [density, setDensity] = useState<SlideDensity>("document");
+  const internalDeckRef = useRef<HTMLDivElement>(null);
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
+  const fullscreen = useDeckFullscreen({
+    internalDeckRef,
+    toggleRef: toggleButtonRef,
+    externalIsFullscreen,
+    externalOnToggle,
+  });
+  const deck = useLeadSlidesDeck({
+    initialReportId,
+    visibilityMode,
+    visibilityHydrated,
+    density,
+  });
+
+  if (deck.placeholder !== null) {
+    return deck.placeholder;
+  }
+
+  return (
+    <LeadSlidesDeckView
+      deckRef={externalDeckRef ?? internalDeckRef}
+      toggleRef={toggleButtonRef}
+      fullscreen={fullscreen}
+      deck={deck}
+      density={density}
+      onDensityChange={setDensity}
+      selectedIndex={clampSelectedIndex(rawSelectedIndex, deck.slides.length)}
+      onSelect={setSelectedIndex}
+    />
   );
 }

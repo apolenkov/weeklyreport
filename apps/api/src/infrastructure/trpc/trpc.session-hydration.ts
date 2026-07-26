@@ -7,6 +7,9 @@ import { PrismaService } from "../prisma/prisma.service.js";
 
 // Short TTL: admin renames visible within ~5s without a DB hit per request.
 const ORG_CACHE_TTL_MS = 5000;
+// One Organization row per deployment; the fixed id is the schema-level
+// singleton invariant (`organizationSchema.id` is `z.literal("singleton")`).
+const ORGANIZATION_SINGLETON_ID = "singleton";
 // eslint-disable-next-line no-restricted-syntax -- Module-level TTL singleton cache must be assignable for refresh and explicit clearOrgCache invalidation.
 let orgCache: {
   value: { shortName: string; fullName: string };
@@ -14,9 +17,6 @@ let orgCache: {
 } | null = null;
 
 // Immediate invalidation after updateOrganization.
-/**
- * Clear Org Cache.
- */
 export function clearOrgCache(): void {
   orgCache = null;
 }
@@ -58,15 +58,15 @@ async function hydrateOrganization(
     // Upsert (not create) on missing row so concurrent cold reads collapse
     // instead of racing into P2002. Seed/admin hold the real brand, not code.
     const existing = await prisma.organization.findUnique({
-      where: { id: "singleton" },
+      where: { id: ORGANIZATION_SINGLETON_ID },
       select: { shortName: true, fullName: true },
     });
     const row =
       existing ??
       (await prisma.organization.upsert({
-        where: { id: "singleton" },
+        where: { id: ORGANIZATION_SINGLETON_ID },
         create: {
-          id: "singleton",
+          id: ORGANIZATION_SINGLETON_ID,
           shortName: DEFAULT_ORGANIZATION_IDENTITY.shortName,
           fullName: DEFAULT_ORGANIZATION_IDENTITY.fullName,
         },
@@ -104,12 +104,8 @@ async function resolveSectionId(
   return session;
 }
 
-/**
- * A fixed pipeline keeps request and PDF-export sessions aligned on mutable
- * authorization scope; file-local steps prevent callers from skipping one.
- * @param session - The session argument.
- * @param prisma - The prisma argument.
- */
+// A fixed pipeline keeps request and PDF-export sessions aligned on mutable
+// authorization scope; file-local steps prevent callers from skipping one.
 export async function hydrateSession(
   session: UserSession,
   prisma: PrismaService,

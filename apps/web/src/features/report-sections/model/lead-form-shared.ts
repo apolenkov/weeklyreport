@@ -6,10 +6,6 @@ interface ProjectIndexEntry {
 }
 
 // Shared project index so every record-family mapper resolves name/status alike.
-/**
- * Build Project Index.
- * @param section - The section argument.
- */
 export function buildProjectIndex(
   section: ReportSectionReadModel,
 ): Map<string, ProjectIndexEntry> {
@@ -30,10 +26,6 @@ export function buildProjectIndex(
   ]);
 }
 
-/**
- * Build Activity Index.
- * @param section - The section argument.
- */
 export function buildActivityIndex(
   section: ReportSectionReadModel,
 ): Map<string, string> {

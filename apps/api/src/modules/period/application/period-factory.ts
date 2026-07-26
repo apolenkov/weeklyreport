@@ -13,30 +13,19 @@ import {
   initialPeriodState,
 } from "../domain/period-transition.js";
 
-/**
- * The single sanctioned period-creation writer. Both creators — the
- * period-creator cron scheduler and the lazy
- * login-create path (`buildUserSession`) — route through here, so there is
- * exactly one formula for the deadline, the lifecycle field set, and the
- * reminder-rule materialisation.
- *
- * It lives INSIDE the `period` module because `period-dual-state` requires
- * every governed `Report` lifecycle write to go through `buildTransition`, and
- * the static raw-write CI gate (`__tests__/lifecycle-write-gate.test.ts`) only
- * accepts the spread form. The factory uses `...buildTransition("create", ...)`,
- * so the three coupled lifecycle representations can never be written apart.
- */
+// The single sanctioned period-creation writer: both the period-creator cron
+// scheduler and the lazy login-create path route through here, so the deadline
+// formula and the coupled lifecycle write exist once. See
+// `openspec/specs/period-dual-state/spec.md` for why the write must stay a
+// `...buildTransition("create", ...)` spread.
 
-// Wall-clock hour (in the configured timezone) the deadline lands on. Matches
-// the period-creator scheduler's hardcoded 18; surfacing it as a setting is
-// deferred to a later phase that broadens the deadline-time-of-day surface.
+// Wall-clock hour (in the configured timezone) the deadline lands on; mirrors
+// the period-creator scheduler's constant. Intentionally not a setting.
 const DEADLINE_HOUR = 18;
 
-// The partial unique index `Report_one_open_per_boundary` (schema/init
-// migration) constrains `(periodStart, periodEnd)` across both `scheduled` and
-// `open` rows, so racing creators cannot persist two live pre-published rows.
-// It lives in raw SQL, so Prisma's P2002 `meta.target` may surface either the
-// index name or the field list.
+// Partial unique index (raw SQL in the init migration) constraining
+// `(periodStart, periodEnd)` across both `scheduled` and `open` rows, so racing
+// creators cannot persist two live pre-published rows.
 const OPEN_BOUNDARY_INDEX = "Report_one_open_per_boundary";
 
 /** Settings the factory reads; a structural subset of {@link AppSettings}. */
@@ -52,7 +41,7 @@ export interface EnsuredPeriod {
   periodStart: Date;
   periodEnd: Date;
   // Null only on a found (not minted) row whose deadline an admin explicitly
-  // cleared (ruling F16); a freshly minted period always carries one.
+  // cleared; a freshly minted period always carries one.
   deadline: Date | null;
   // A draft period can only be `scheduled` or `open` (the legacy `status:"draft"`
   // tuple maps to exactly those two states), so the public shape stays narrow.
@@ -73,38 +62,18 @@ const SELECT_PERIOD = {
   periodState: true,
 } as const;
 
-/**
- * A `status:"draft"` row is `scheduled` or `open` by the period-dual-state
- * invariant (a reopened period carries `status:"published"`, so it is excluded
- * by the find's `status:"draft"` filter). The DB column is typed as the wider
- * union, so narrow it back at the one place that relies on the invariant.
- */
+// A `status:"draft"` row is `scheduled` or `open` by the period-dual-state
+// invariant (a reopened period carries `status:"published"`). The DB column is
+// typed as the wider union, so narrow it where the invariant holds.
 function narrowDraftState(
   state: PeriodState,
 ): Extract<PeriodState, "scheduled" | "open"> {
   return state === "scheduled" ? "scheduled" : "open";
 }
 
-/**
- * True when `error` is the Prisma `P2002` raised by the partial unique index
- * `Report_one_open_per_boundary`. The violation's identity surfaces in
- * DIFFERENT places depending on the Prisma engine, verified against the real
- * `_test` DB:
- *  - classic engine: `meta.target` carries the colliding field list
- *    (`["periodStart","periodEnd"]`) — the index name is absent;
- *  - pg driver adapter (what this app runs): `meta.target` is UNSET; the index
- *    name lives in `meta.driverAdapterError.cause.originalMessage` and the
- *    columns in `cause.constraint.fields`, with the field list also echoed in
- *    the top-level `message`.
- * So matching only `meta.target` (the obvious shape) silently misses the real
- * adapter error → a raw 500. We scan the whole serialized `meta` + `message`
- * for the precise index name, backstopped by the `periodStart`+`periodEnd`
- * column pair (the classic-engine form where the name is absent). Exported so
- * every open-writer — admin create/update, reopen, unarchive, the scheduler
- * flip, AND the login/scheduler create via `ensureCurrentPeriod` — translates
- * the SAME violation identically; an unrelated unique violation re-throws.
- * @param error - The error argument.
- */
+// Exported so every open-boundary writer — admin create/update, reopen,
+// unarchive, the scheduler flip and this factory — translates the SAME P2002
+// identically; the engine-dependent error shapes live in `isUniqueViolation`.
 export function isOpenBoundaryConflict(error: unknown): boolean {
   return isUniqueViolation(error, {
     index: OPEN_BOUNDARY_INDEX,
@@ -112,31 +81,109 @@ export function isOpenBoundaryConflict(error: unknown): boolean {
   });
 }
 
-/**
- * Find-or-create the draft reporting period for the week of `anchorDate`.
- *
- * - `anchorDate` is the date whose week the period covers (the lazy login path
- *   passes `now`; the scheduler passes the day after the most recent period's
- *   end, so it mints the *next* cycle). Bounds come from `getCurrentWeekBounds`.
- * - `now` resolves the initial lifecycle state (`scheduled` before the period's
- *   start day, otherwise `open`) and gates reminder scheduling.
- * - On create (never on find), reminder rules are materialised via
- *   `policyApplicator.applyToPeriod(period, now)`. Passing `now` makes the
- *   applicator drop only the reminder instants that have already elapsed (a
- *   period minted *after* some of its reminders' `fireAt` — a late first-login)
- *   while keeping still-future ones, since the reminders scheduler fires any
- *   active rule whose `fireAt` is already past (no elapsed-`fireAt` guard) and a
- *   stale active rule would blast on the next tick.
- * - The partial unique index permits at most one row per boundary across the
- *   `scheduled` and `open` states. Concurrent creators collide on that index;
- *   the loser catches its P2002, re-reads, and returns the winner's row in
- *   either state. Any other error re-throws.
- * @param prisma - The prisma argument.
- * @param anchorDate - The anchorDate argument.
- * @param now - The now argument.
- * @param settings - The settings argument.
- * @param policyApplicator - The policyApplicator argument.
- */
+interface DraftPeriodRow {
+  readonly id: string;
+  readonly periodStart: Date;
+  readonly periodEnd: Date;
+  readonly deadline: Date | null;
+  readonly periodState: PeriodState;
+}
+
+function toFoundPeriod(row: DraftPeriodRow): EnsuredPeriod {
+  return {
+    created: false,
+    reportId: row.id,
+    periodStart: row.periodStart,
+    periodEnd: row.periodEnd,
+    deadline: row.deadline,
+    periodState: narrowDraftState(row.periodState),
+  };
+}
+
+// Best-effort: the period is the durable artifact, so failing to materialise the
+// secondary reminder rules must NOT fail the caller (a login must not 500 over
+// reminders). The rows are recoverable via `pnpm db:backfill:reminder-policies`.
+async function materialiseReminders(
+  applicator: ReminderApplicator,
+  period: { readonly id: string; readonly deadline: Date },
+  now: Date,
+): Promise<void> {
+  try {
+    await applicator.applyToPeriod(period, now);
+  } catch (error) {
+    // Constructed here, not at module load: importing this file through the
+    // period barrel must stay side-effect-free (a top-level `new Logger()`
+    // couples every barrel consumer to Nest logging and breaks mocked tests).
+    new Logger("PeriodFactory").warn(
+      `applyToPeriod failed for period=${period.id}; reminder rules deferred to backfill: ${
+        error instanceof Error ? error.message : "unknown error"
+      }`,
+    );
+  }
+}
+
+async function createPeriod(args: {
+  readonly report: ReportDelegate;
+  readonly periodStart: Date;
+  readonly periodEnd: Date;
+  readonly deadline: Date;
+  readonly now: Date;
+  readonly policyApplicator?: ReminderApplicator;
+}): Promise<EnsuredPeriod> {
+  const created = await args.report.create({
+    data: {
+      periodStart: args.periodStart,
+      periodEnd: args.periodEnd,
+      deadline: args.deadline,
+      ...buildTransition("create", {
+        periodStart: args.periodStart,
+        now: args.now,
+      }),
+    },
+    select: SELECT_PERIOD,
+  });
+
+  if (args.policyApplicator && created.deadline !== null) {
+    await materialiseReminders(
+      args.policyApplicator,
+      { id: created.id, deadline: created.deadline },
+      args.now,
+    );
+  }
+
+  return {
+    created: true,
+    reportId: created.id,
+    periodStart: created.periodStart,
+    periodEnd: created.periodEnd,
+    deadline: created.deadline,
+    periodState: initialPeriodState(args.periodStart, args.now),
+  };
+}
+
+// The race loser re-reads the winner's row, which may already have flipped from
+// `scheduled` to `open`; the winner runs its own reminder materialisation.
+async function readRaceWinner(
+  report: ReportDelegate,
+  periodStart: Date,
+  periodEnd: Date,
+): Promise<EnsuredPeriod | null> {
+  const won = await report.findFirst({
+    where: {
+      periodStart,
+      periodEnd,
+      periodState: { in: ["scheduled", "open"] },
+    },
+    select: SELECT_PERIOD,
+  });
+  return won ? toFoundPeriod(won) : null;
+}
+
+// Find-or-create the draft reporting period for the week of `anchorDate` (the
+// login path passes `now`; the scheduler passes the day after the last period's
+// end, so it mints the *next* cycle). `now` resolves the initial lifecycle state
+// and bounds reminder materialisation to still-future instants — the reminders
+// scheduler has no elapsed-`fireAt` guard, so a stale rule would blast at once.
 export async function ensureCurrentPeriod(
   prisma: { report: ReportDelegate },
   anchorDate: Date,
@@ -157,17 +204,7 @@ export async function ensureCurrentPeriod(
     },
     select: SELECT_PERIOD,
   });
-
-  if (existing) {
-    return {
-      created: false,
-      reportId: existing.id,
-      periodStart: existing.periodStart,
-      periodEnd: existing.periodEnd,
-      deadline: existing.deadline,
-      periodState: narrowDraftState(existing.periodState),
-    };
-  }
+  if (existing) return toFoundPeriod(existing);
 
   const deadline = computeDeadline(
     periodStart,
@@ -176,71 +213,22 @@ export async function ensureCurrentPeriod(
     settings.defaultTimezone,
     DEADLINE_HOUR,
   );
-  const periodState = initialPeriodState(periodStart, now);
 
   try {
-    const created = await prisma.report.create({
-      data: {
-        periodStart,
-        periodEnd,
-        deadline,
-        ...buildTransition("create", { periodStart, now }),
-      },
-      select: SELECT_PERIOD,
+    return await createPeriod({
+      report: prisma.report,
+      periodStart,
+      periodEnd,
+      deadline,
+      now,
+      policyApplicator,
     });
-
-    // Best-effort: the period is the durable artifact, so a failure to
-    // materialise the (secondary) reminder rules must NOT fail the caller — a
-    // login must not 500 over reminders, and a cron tick should still record the
-    // period. The rows are recoverable via `pnpm db:backfill:reminder-policies`.
-    if (policyApplicator && created.deadline !== null) {
-      try {
-        await policyApplicator.applyToPeriod(
-          { id: created.id, deadline: created.deadline },
-          now,
-        );
-      } catch (error) {
-        // Constructed here, not at module load: importing this file through the
-        // period barrel must stay side-effect-free (a top-level `new Logger()`
-        // couples every barrel consumer to Nest logging at load and breaks
-        // tests that mock @nestjs/common without a Logger export).
-        new Logger("PeriodFactory").warn(
-          `applyToPeriod failed for period=${created.id}; reminder rules deferred to backfill: ${
-            error instanceof Error ? error.message : "unknown error"
-          }`,
-        );
-      }
-    }
-
-    return {
-      created: true,
-      reportId: created.id,
-      periodStart: created.periodStart,
-      periodEnd: created.periodEnd,
-      deadline: created.deadline,
-      periodState,
-    };
   } catch (error) {
+    // Concurrent creators collide on the partial unique index; the loser returns
+    // the winner's row. Any other error re-throws.
     if (!isOpenBoundaryConflict(error)) throw error;
-
-    // Another creator won the race; the winner's applyToPeriod runs in its own
-    // call, so we only re-read and return its scheduled or open row.
-    const won = await prisma.report.findFirst({
-      where: {
-        periodStart,
-        periodEnd,
-        periodState: { in: ["scheduled", "open"] },
-      },
-      select: SELECT_PERIOD,
-    });
+    const won = await readRaceWinner(prisma.report, periodStart, periodEnd);
     if (!won) throw error;
-    return {
-      created: false,
-      reportId: won.id,
-      periodStart: won.periodStart,
-      periodEnd: won.periodEnd,
-      deadline: won.deadline,
-      periodState: narrowDraftState(won.periodState),
-    };
+    return won;
   }
 }

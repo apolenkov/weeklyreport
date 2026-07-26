@@ -1,9 +1,6 @@
-// No `server-only` import: next.config.ts loads this at Node config time for the
-// build-time assert, and client components load it in the browser. Next inlines
-// each `process.env.NEXT_PUBLIC_X` member expression into the bundle at build,
-// so the accessor MUST reference full literals (never `process.env[key]` nor a
-// spread) and MUST parse LAZILY at call time — an eager module-scope parse would
-// freeze values at first import and break the env-mutating component tests.
+// No `server-only`: next.config.ts loads this at Node config time and client
+// components load it in the browser. Full literals + lazy parse are mandatory
+// (openspec/specs/web-env-validation, "A typed accessor is the single seam").
 
 import { z } from "zod";
 
@@ -71,9 +68,6 @@ export const webEnv = {
 // Build-time gate (called from next.config.ts): fails `next build` loud on a
 // present-but-malformed value, naming the offending variable. All seven vars are
 // optional, so absence passes — only a malformed value rejects the build.
-/**
- * Assert Web Env.
- */
 export function assertWebEnv(): void {
   const result = webEnvSchema.safeParse(rawWebEnv());
   if (!result.success) {

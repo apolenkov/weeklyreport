@@ -34,7 +34,7 @@ describe("useEditableListDialog", () => {
     });
   });
 
-  it("does NOT reopen when readOnly toggles false→true→false with a stale signal (D1)", () => {
+  it("does NOT reopen when readOnly toggles false→true→false with a stale signal", () => {
     const { result, rerender } = renderHook(
       ({ readOnly, addSignal }) =>
         useEditableListDialog<TestEntity>({ readOnly, addSignal }),
@@ -93,7 +93,7 @@ describe("useEditableListDialog", () => {
     expect(second.result.current.dialogState.open).toBe(true);
   });
 
-  it("does NOT reopen when seedProductId changes while the signal is stale (D4)", () => {
+  it("does NOT reopen when seedProductId changes while the signal is stale", () => {
     const { result, rerender } = renderHook(
       ({ seedProductId, addSignal }) =>
         useEditableListDialog<TestEntity>({

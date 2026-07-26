@@ -31,9 +31,8 @@ function metric(count: number, label: string) {
   );
 }
 
-/** Slide header: worst-status pill, owner name, counters, and the "N of M
- * products on track" chip (alert tint while N < M).  * @param options - The options argument.
- */
+// Slide header: worst-status pill, owner name, counters, and the "N of M
+// products on track" chip (alert tint while N < M).
 export function SlideGridHeader({
   ownerName,
   grid,
@@ -131,10 +130,7 @@ function PriorityCard({
   );
 }
 
-/**
- * Frameless row of priority cards — every own ranked item, ascending rank.
- * @param options - The options argument.
- */
+// Frameless row of priority cards — every own ranked item, ascending rank.
 export function SlidePriorityStrip({
   grid,
   authorsById,
@@ -156,9 +152,8 @@ export function SlidePriorityStrip({
   );
 }
 
-/** Footer legend: every author on the slide with initials badge, name and an
- * optional role — the suffix is omitted entirely when the role is unknown.  * @param options - The options argument.
- */
+// Footer legend: every author on the slide with initials badge, name and an
+// optional role — the suffix is omitted entirely when the role is unknown.
 export function SlideLegend({
   authors,
 }: {

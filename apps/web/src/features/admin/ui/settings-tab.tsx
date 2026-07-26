@@ -23,10 +23,6 @@ interface SettingsTabProps {
   readonly settings: MockSettings;
 }
 
-/**
- * Settings Tab.
- * @param props - The props argument.
- */
 export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
   return (
     <div className="space-y-6">

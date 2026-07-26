@@ -96,6 +96,33 @@ function LeadOwnerField({
   );
 }
 
+function ProductFormFields({
+  form,
+  onFormChange,
+  leads,
+  leadProductCount,
+}: {
+  readonly form: ProductFormData;
+  readonly onFormChange: (form: ProductFormData) => void;
+  readonly leads: readonly MockUser[];
+  readonly leadProductCount: number;
+}) {
+  return (
+    <div className="mt-4 space-y-4">
+      <ProductNameField
+        value={form.name}
+        onChange={(name) => onFormChange({ ...form, name })}
+      />
+      <LeadOwnerField
+        value={form.leadId}
+        onChange={(leadId) => onFormChange({ ...form, leadId })}
+        leads={leads}
+        leadProductCount={leadProductCount}
+      />
+    </div>
+  );
+}
+
 function ProductDialogFooter({
   isEditing,
   isSaving,
@@ -129,10 +156,6 @@ function ProductDialogFooter({
   );
 }
 
-/**
- * Product Edit Dialog.
- * @param props - The props argument.
- */
 export function ProductEditDialog({
   editingProduct,
   form,
@@ -168,18 +191,12 @@ export function ProductEditDialog({
         <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
           {editingProduct ? "Edit Product" : "Add Product"}
         </h3>
-        <div className="mt-4 space-y-4">
-          <ProductNameField
-            value={form.name}
-            onChange={(name) => onFormChange({ ...form, name })}
-          />
-          <LeadOwnerField
-            value={form.leadId}
-            onChange={(leadId) => onFormChange({ ...form, leadId })}
-            leads={leads}
-            leadProductCount={leadProductCount}
-          />
-        </div>
+        <ProductFormFields
+          form={form}
+          onFormChange={onFormChange}
+          leads={leads}
+          leadProductCount={leadProductCount}
+        />
         <ProductDialogFooter
           isEditing={editingProduct !== null}
           isSaving={isSaving}

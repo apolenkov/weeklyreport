@@ -28,48 +28,27 @@ interface CurrentWeekDialogsProps {
 }
 
 // One shared dialog instance across all columns (edit/create, delete, pause).
-/**
- * Current Week Dialogs.
- * @param props - The props argument.
- */
-export function CurrentWeekDialogs({
-  dialogKey,
-  open,
-  editItem,
-  products,
-  activities,
-  currentUserName,
-  createSeedProductId,
-  createSeedActivityId,
-  stagesForProduct,
-  ownPeriodRanks,
-  risks,
-  onSave,
-  onCancel,
-  pendingDelete,
-  onConfirmDelete,
-  onCancelDelete,
-  pausePending,
-  onConfirmPause,
-  onCancelPause,
-}: CurrentWeekDialogsProps) {
+// Props stay un-destructured: the flat 20-key list is wider than the body.
+export function CurrentWeekDialogs(props: CurrentWeekDialogsProps) {
+  const { pendingDelete, pausePending } = props;
+
   return (
     <>
       <ItemEditDialog
-        key={dialogKey}
-        open={open}
-        item={editItem}
-        products={products}
-        activities={activities}
+        key={props.dialogKey}
+        open={props.open}
+        item={props.editItem}
+        products={props.products}
+        activities={props.activities}
         week="current"
-        currentUserName={currentUserName}
-        defaultProductId={createSeedProductId}
-        defaultActivityId={createSeedActivityId}
-        stagesForProduct={stagesForProduct}
-        ownPeriodRanks={ownPeriodRanks}
-        risks={risks}
-        onSave={onSave}
-        onCancel={onCancel}
+        currentUserName={props.currentUserName}
+        defaultProductId={props.createSeedProductId}
+        defaultActivityId={props.createSeedActivityId}
+        stagesForProduct={props.stagesForProduct}
+        ownPeriodRanks={props.ownPeriodRanks}
+        risks={props.risks}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
       />
 
       <ConfirmDeleteDialog
@@ -79,16 +58,16 @@ export function CurrentWeekDialogs({
         subtitle={
           pendingDelete ? `From ${pendingDelete.productName}` : undefined
         }
-        onConfirm={onConfirmDelete}
-        onCancel={onCancelDelete}
+        onConfirm={props.onConfirmDelete}
+        onCancel={props.onCancelDelete}
       />
 
       <PauseReasonDialog
         open={pausePending !== null}
         preview={pausePending?.text ?? ""}
         initialReason={pausePending?.pausedReason ?? ""}
-        onConfirm={onConfirmPause}
-        onCancel={onCancelPause}
+        onConfirm={props.onConfirmPause}
+        onCancel={props.onCancelPause}
       />
     </>
   );

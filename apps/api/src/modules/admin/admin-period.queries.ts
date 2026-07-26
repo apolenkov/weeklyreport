@@ -7,23 +7,60 @@ import type {
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { PeriodRowFromRepo } from "./admin-shared";
 
-/**
- * Period (Report) read queries for the Admin Periods tab: list/overlap/read/
- * delete-guard read/delete. Lifecycle-transition writes (create/update/
- * archive/unarchive) live in `admin-period-lifecycle.ts`.
- */
+// Read side of the Admin Periods tab; lifecycle-transition writes
+// (create/update/archive/unarchive) live in `admin-period-lifecycle.ts`.
 
-/**
- * Fetch periods matching the supplied state set, sorted newest-first
- * by `periodStart`. Submission progress (submitted vs total section
- * count) is fetched in a single grouped query so the list endpoint
- * stays at O(1) round-trips regardless of page size.
- *
- * Uses the `(periodState, periodStart desc)` composite index so filtering and
- * ordering stay on the same access path.
- * @param prisma - The prisma argument.
- * @param filter - The filter argument.
- */
+type PeriodSelection = Omit<PeriodRowFromRepo, "submittedCount" | "totalCount">;
+
+interface SectionProgress {
+  readonly totalsById: ReadonlyMap<string, number>;
+  readonly submittedById: ReadonlyMap<string, number>;
+}
+
+// Two grouped queries beat N per-period counts, and keeping totals separate
+// from the submitted filter is what makes zero-total periods (created before
+// section provisioning ran) visible instead of silently absent.
+async function fetchSectionProgress(
+  prisma: PrismaService,
+  reportIds: string[],
+): Promise<SectionProgress> {
+  const [totalRows, submittedRows] = await Promise.all([
+    prisma.reportSection.groupBy({
+      by: ["reportId"],
+      where: { reportId: { in: reportIds } },
+      _count: { _all: true },
+    }),
+    prisma.reportSection.groupBy({
+      by: ["reportId"],
+      where: { reportId: { in: reportIds }, status: "submitted" },
+      _count: { _all: true },
+    }),
+  ]);
+
+  return {
+    totalsById: new Map(
+      totalRows.map((row) => [row.reportId, row._count._all]),
+    ),
+    submittedById: new Map(
+      submittedRows.map((row) => [row.reportId, row._count._all]),
+    ),
+  };
+}
+
+function toPeriodRow(
+  period: PeriodSelection,
+  progress: SectionProgress,
+): PeriodRowFromRepo {
+  return {
+    ...period,
+    submittedCount: progress.submittedById.get(period.id) ?? 0,
+    totalCount: progress.totalsById.get(period.id) ?? 0,
+  };
+}
+
+// Rides the `(periodState, periodStart desc)` composite index so filtering and
+// ordering stay on the same access path; progress stays at O(1) round-trips
+// regardless of page size.
 export async function listPeriodsByState(
   prisma: PrismaService,
   filter: {
@@ -31,7 +68,7 @@ export async function listPeriodsByState(
     limit: number;
   },
 ): Promise<PeriodRowFromRepo[]> {
-  const reports = await prisma.report.findMany({
+  const periods = await prisma.report.findMany({
     where: { periodState: { in: filter.states as PeriodState[] } },
     orderBy: { periodStart: "desc" },
     take: filter.limit,
@@ -50,74 +87,25 @@ export async function listPeriodsByState(
     },
   });
 
-  if (reports.length === 0) return [];
+  if (periods.length === 0) return [];
 
-  const reportIds = reports.map((r) => r.id);
-
-  // Section progress in two grouped queries (one for totals, one for
-  // submitted). Cheaper than N per-period counts and cheaper than a
-  // single `groupBy` with a `where: status: submitted` because the
-  // totals query also reveals zero-total periods (newly created with
-  // no sections yet — the auto-creator may not have run section
-  // provisioning yet).
-  const [totalRows, submittedRows] = await Promise.all([
-    prisma.reportSection.groupBy({
-      by: ["reportId"],
-      where: { reportId: { in: reportIds } },
-      _count: { _all: true },
-    }),
-    prisma.reportSection.groupBy({
-      by: ["reportId"],
-      where: { reportId: { in: reportIds }, status: "submitted" },
-      _count: { _all: true },
-    }),
-  ]);
-
-  const totalsById = new Map(
-    totalRows.map((row) => [row.reportId, row._count._all]),
-  );
-  const submittedById = new Map(
-    submittedRows.map((row) => [row.reportId, row._count._all]),
+  const progress = await fetchSectionProgress(
+    prisma,
+    periods.map((period) => period.id),
   );
 
-  return reports.map((r) => ({
-    id: r.id,
-    periodStart: r.periodStart,
-    periodEnd: r.periodEnd,
-    deadline: r.deadline,
-    publishedAt: r.publishedAt,
-    periodState: r.periodState,
-    periodStatus: r.periodStatus,
-    archived: r.archived,
-    autoPublished: r.autoPublished,
-    autoArchived: r.autoArchived,
-    submittedCount: submittedById.get(r.id) ?? 0,
-    totalCount: totalsById.get(r.id) ?? 0,
-    weekLabel: r.weekLabel,
-  }));
+  return periods.map((period) => toPeriodRow(period, progress));
 }
 
-/**
- * Find the most recent Report whose [periodStart, periodEnd]
- * range overlaps the supplied closed (inclusive) range. Used by the service's
- * pre-create overlap gate to surface the blocking row's date span.
- * Returns null when the range is free.
- *
- * Closed (inclusive) intersect: a.start <= b.end AND a.end >= b.start.
- * @param prisma - The prisma argument.
- * @param input - The input argument.
- */
+// Closed (inclusive) intersect: a.start <= b.end AND a.end >= b.start. Newest
+// match wins so the pre-create gate can name the blocking row's date span.
 export async function findOverlappingPeriod(
   prisma: PrismaService,
   input: {
     periodStart: Date;
     periodEnd: Date;
-    /**
-     * Excluded id so the update path can re-run the overlap
-     * gate without self-conflicting against the row being edited. The
-     * Prisma `NOT: { id }` clause stays out of the WHERE when the
-     * caller omits the field — pure additive change for create callers.
-     */
+    // Lets the update path re-run the gate without self-conflicting against
+    // the row being edited; omitted by create callers, who need no exclusion.
     excludeId?: string;
   },
 ): Promise<{ id: string; periodStart: Date; periodEnd: Date } | null> {
@@ -133,13 +121,7 @@ export async function findOverlappingPeriod(
   return row ?? null;
 }
 
-/**
- * Read a single Report's edit envelope. Used by the service's
- * updatePeriodManual to surface a `NOT_FOUND` error early and to grab
- * the `from`-snapshot for the audit envelope.
- * @param prisma - The prisma argument.
- * @param periodId - The periodId argument.
- */
+// Selection is the audit envelope's `from`-snapshot shape, not the full row.
 export async function readPeriodById(
   prisma: PrismaService,
   periodId: string,
@@ -173,12 +155,6 @@ export async function readPeriodById(
   };
 }
 
-/**
- * Read a Report's status fields for delete-guard checks.
- * Returns null if not found.
- * @param prisma - The prisma argument.
- * @param reportId - The reportId argument.
- */
 export async function readReportForDelete(
   prisma: PrismaService,
   reportId: string,
@@ -194,12 +170,8 @@ export async function readReportForDelete(
   };
 }
 
-/**
- * Delete a Report and cascade-delete all child rows via Prisma relations
- * (onDelete: Cascade on ReportSection, Item, Risk, Decision, Priority, etc.).
- * @param prisma - The prisma argument.
- * @param reportId - The reportId argument.
- */
+// Child rows (ReportSection, Item, Risk, Decision, Priority, …) go with it via
+// the schema's `onDelete: Cascade` relations — no explicit child cleanup here.
 export async function deleteReport(
   prisma: PrismaService,
   reportId: string,

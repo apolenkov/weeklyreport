@@ -43,9 +43,6 @@ function PlaceholderAccordion({
   );
 }
 
-/**
- * Lead Form Skeleton.
- */
 export function LeadFormSkeleton() {
   return (
     <div

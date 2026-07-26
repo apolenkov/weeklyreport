@@ -2,11 +2,10 @@
 
 import { useRef } from "react";
 
-import type { EditableListDialogState } from "../../../hooks/use-editable-list-dialog";
 import { useEditableListDialog } from "../../../hooks/use-editable-list-dialog";
 import { usePauseReason } from "../../../hooks/use-pause-reason";
 import { useScrollFade } from "../../../hooks/use-scroll-fade";
-import type { KanbanItem } from "../../report-sections";
+import type { KanbanItem, Product } from "../../report-sections";
 import {
   BoardEmptyState,
   isBoardEmpty,
@@ -17,119 +16,116 @@ import { AddItemButton } from "./current-week-add-button";
 import { CurrentWeekBoardGrid } from "./current-week-board-grid";
 import { CurrentWeekDialogs } from "./current-week-dialogs";
 import type { CurrentWeekSectionProps } from "./current-week-section.types";
+import {
+  buildDialogsProps,
+  createItemHandlers,
+  type CurrentWeekItemHandlers,
+  type PauseReasonPrompt,
+} from "./current-week-section-model";
 
-function deriveDialogProps(dialogState: EditableListDialogState<KanbanItem>): {
-  editItem: KanbanItem | null;
-  createSeedProductId: string | undefined;
-  createSeedActivityId: string | undefined;
-} {
-  const isEdit = dialogState.open && dialogState.mode === "edit";
-  const isCreate = dialogState.open && dialogState.mode === "create";
-  return {
-    editItem: isEdit ? dialogState.entity : null,
-    createSeedProductId: isCreate ? dialogState.seedProductId : undefined,
-    createSeedActivityId: isCreate ? dialogState.seedActivityId : undefined,
-  };
+// Bind a card renderer to this section's props; the grid calls it per item.
+function createItemRenderer({
+  props,
+  handlers,
+  pause,
+}: {
+  readonly props: CurrentWeekSectionProps;
+  readonly handlers: CurrentWeekItemHandlers;
+  readonly pause: PauseReasonPrompt;
+}) {
+  return (item: KanbanItem) => (
+    <ItemCard
+      key={item.id}
+      item={item}
+      risks={props.risks}
+      readOnly={props.readOnly ?? false}
+      isEditing={false}
+      publishedLocked={props.publishedLockedIds?.has(item.id)}
+      onEdit={handlers.handleEdit}
+      onDelete={handlers.handleDelete}
+      onMarkComplete={props.onMarkComplete}
+      onMoveToNextWeek={props.onMoveToNextWeek}
+      {...(props.onPauseItem && !props.readOnly
+        ? { onPause: () => pause.request(item) }
+        : {})}
+    />
+  );
 }
 
-/**
- * Current Week Section.
- * @param props - The props argument.
- */
-export function CurrentWeekSection({
-  items,
-  risks,
-  readOnly = false,
-  onItemsChange,
-  currentUserName,
-  products,
-  activities,
-  stagesForProduct,
-  ownPeriodRanks,
-  addSignal = 0,
-  publishedLockedIds,
-  onMarkComplete,
-  onMoveToNextWeek,
-  onPauseItem,
-}: CurrentWeekSectionProps) {
+// Without a stand-alone CTA the emptied section would be dead — there would be
+// no product column left to host a `+ Add`.
+function CurrentWeekEmptyState({
+  readOnly,
+  defaultProduct,
+  onCreate,
+}: {
+  readonly readOnly: boolean;
+  readonly defaultProduct: Product | undefined;
+  readonly onCreate: (seed: { productId: string }) => void;
+}) {
+  return (
+    <BoardEmptyState
+      readOnly={readOnly}
+      readOnlyLabel="No current-week items."
+      editableLabel="No current-week items yet."
+      addButton={
+        !readOnly && (
+          <AddItemButton
+            defaultProduct={defaultProduct}
+            onAdd={(productId) => onCreate({ productId })}
+          />
+        )
+      }
+    />
+  );
+}
+
+// Signals that the scroll container still has content below the fold.
+function ScrollFadeOverlay() {
+  return (
+    <div
+      className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 rounded-b-lg"
+      style={{
+        background:
+          "linear-gradient(to bottom, transparent, var(--color-card))",
+      }}
+      aria-hidden="true"
+    />
+  );
+}
+
+export function CurrentWeekSection(props: CurrentWeekSectionProps) {
+  const { items, products, activities } = props;
+  const { readOnly = false, addSignal = 0 } = props;
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const canScrollDown = useScrollFade(scrollRef);
 
   // The pause-reason prompt lifecycle lives in a hook so
   // a card's Pause button only needs to name the item.
-  const pause = usePauseReason<KanbanItem>(onPauseItem);
-
-  // Only fall back to the standalone empty-state when there are neither
-  // items nor products to drive a column layout.
-  const isEmpty = isBoardEmpty(items, products, activities);
-  const hasMultipleProducts = products != null && products.length > 1;
+  const pause = usePauseReason<KanbanItem>(props.onPauseItem);
   const defaultProduct = products?.[0];
 
   // Shared dialog lifecycle (DialogState union, readOnly-ref add-signal
   // effect, openSeq remount key, pending-delete). requireSeed: this section
   // can only open create mode when a product column exists.
-  const {
-    dialogState,
-    dialogKey,
-    openCreate,
-    openEdit,
-    close,
-    pendingDelete,
-    requestDelete,
-    clearPendingDelete,
-  } = useEditableListDialog<KanbanItem>({
+  const dialog = useEditableListDialog<KanbanItem>({
     readOnly,
     addSignal,
     seedProductId: defaultProduct?.id,
     requireSeed: true,
   });
 
-  const globalAddButton = !readOnly && (
-    <AddItemButton
-      defaultProduct={defaultProduct}
-      onAdd={(productId) => openCreate({ productId })}
-    />
-  );
+  const handlers = createItemHandlers({ props, dialog });
 
-  function handleDelete(id: string) {
-    const item = items.find((i) => i.id === id);
-    if (!item) return;
-    requestDelete(item);
-  }
-
-  function confirmDelete() {
-    if (!pendingDelete) return;
-    onItemsChange?.(items.filter((i) => i.id !== pendingDelete.id));
-    clearPendingDelete();
-  }
-
-  function handleEdit(id: string) {
-    const item = items.find((i) => i.id === id);
-    if (!item) return;
-    openEdit(item);
-  }
-
-  function handleDialogSave(next: KanbanItem) {
-    if (readOnly) return;
-    if (dialogState.open && dialogState.mode === "create") {
-      onItemsChange?.([...items, next]);
-    } else {
-      onItemsChange?.(items.map((i) => (i.id === next.id ? next : i)));
-    }
-    close();
-  }
-
-  function handleDialogCancel() {
-    close();
-  }
-
-  if (isEmpty) {
+  // Only fall back to the standalone empty-state when there are neither
+  // items nor products to drive a column layout.
+  if (isBoardEmpty(items, products, activities)) {
     return (
-      <BoardEmptyState
+      <CurrentWeekEmptyState
         readOnly={readOnly}
-        readOnlyLabel="No current-week items."
-        editableLabel="No current-week items yet."
-        addButton={globalAddButton}
+        defaultProduct={defaultProduct}
+        onCreate={dialog.openCreate}
       />
     );
   }
@@ -138,25 +134,6 @@ export function CurrentWeekSection({
   // Falls back to non-empty groups when products is omitted. Activity lanes
   // sit below the grid, never as peer product columns.
   const board = splitItemBoard(products, items, activities);
-  const dlg = deriveDialogProps(dialogState);
-
-  const renderItem = (item: KanbanItem) => (
-    <ItemCard
-      key={item.id}
-      item={item}
-      risks={risks}
-      readOnly={readOnly}
-      isEditing={false}
-      publishedLocked={publishedLockedIds?.has(item.id)}
-      onEdit={handleEdit}
-      onDelete={handleDelete}
-      onMarkComplete={onMarkComplete}
-      onMoveToNextWeek={onMoveToNextWeek}
-      {...(onPauseItem && !readOnly
-        ? { onPause: () => pause.request(item) }
-        : {})}
-    />
-  );
 
   return (
     <div className="relative">
@@ -173,43 +150,16 @@ export function CurrentWeekSection({
           productColumns={board.productColumns}
           activityLanes={board.activityLanes}
           readOnly={readOnly}
-          hasMultipleProducts={hasMultipleProducts}
-          onAdd={openCreate}
-          renderItem={renderItem}
+          hasMultipleProducts={products != null && products.length > 1}
+          onAdd={dialog.openCreate}
+          renderItem={createItemRenderer({ props, handlers, pause })}
         />
 
         <CurrentWeekDialogs
-          dialogKey={dialogKey}
-          open={dialogState.open}
-          editItem={dlg.editItem}
-          products={products ?? []}
-          activities={activities}
-          currentUserName={currentUserName}
-          createSeedProductId={dlg.createSeedProductId}
-          createSeedActivityId={dlg.createSeedActivityId}
-          stagesForProduct={stagesForProduct}
-          ownPeriodRanks={ownPeriodRanks}
-          risks={risks}
-          onSave={handleDialogSave}
-          onCancel={handleDialogCancel}
-          pendingDelete={pendingDelete}
-          onConfirmDelete={confirmDelete}
-          onCancelDelete={clearPendingDelete}
-          pausePending={pause.pending}
-          onConfirmPause={pause.confirm}
-          onCancelPause={pause.cancel}
+          {...buildDialogsProps({ props, dialog, handlers, pause })}
         />
       </div>
-      {canScrollDown && (
-        <div
-          className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 rounded-b-lg"
-          style={{
-            background:
-              "linear-gradient(to bottom, transparent, var(--color-card))",
-          }}
-          aria-hidden="true"
-        />
-      )}
+      {canScrollDown && <ScrollFadeOverlay />}
     </div>
   );
 }

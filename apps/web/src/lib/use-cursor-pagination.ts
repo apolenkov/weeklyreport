@@ -78,7 +78,12 @@ export function useCursorPagination<
   input: Omit<TInput, "cursor">,
   options: CursorPaginationOptions = {},
 ): CursorPaginationResult<TItem> {
-  // Factory is cheap; useInfiniteQuery keys by queryKey so input identity need not be memoized.
+  // Factory is cheap; useInfiniteQuery keys by queryKey so input identity need
+  // not be memoized.
+
+  // The `unknown` arm and this cast exist because tRPC's
+  // `infiniteQueryOptions` returns a branded options type (own error and
+  // page-param shapes) that is not assignable to `UseInfiniteQueryOptions`.
   const built = (factory as CursorQueryOptionsFactory<TInput, TItem>)(
     input as TInput,
   );

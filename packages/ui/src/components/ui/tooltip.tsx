@@ -6,10 +6,7 @@ import type * as React from "react";
 
 import { ComingSoonBadge } from "../coming-soon-badge";
 
-/**
- * Radix tooltip provider (delay/shared config).
- * @param props - The props argument.
- */
+/** Radix tooltip provider (delay/shared config). */
 function TooltipProvider({
   delayDuration = 0,
   ...props
@@ -23,30 +20,21 @@ function TooltipProvider({
   );
 }
 
-/**
- * Radix tooltip root for a trigger+content pair.
- * @param props - The props argument.
- */
+/** Radix tooltip root for a trigger+content pair. */
 function Tooltip({
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Root>) {
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
 }
 
-/**
- * Element that shows the tooltip on hover/focus.
- * @param props - The props argument.
- */
+/** Element that shows the tooltip on hover/focus. */
 function TooltipTrigger({
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
   return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
 }
 
-/**
- * Positioned tooltip panel.
- * @param props - The props argument.
- */
+/** Positioned tooltip panel. */
 function TooltipContent({
   className,
   sideOffset = 0,
@@ -80,7 +68,6 @@ function TooltipContent({
 /**
  * Self-contained Coming Soon tooltip: own provider, portaled chromeless badge,
  * works without a shell TooltipProvider (deferred-feature controls).
- * @param options - The options argument.
  */
 function ComingSoonTooltip({
   children,

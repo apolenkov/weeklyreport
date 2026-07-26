@@ -9,7 +9,7 @@ import {
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
 import type { WeeklyReportScopeSession } from "./weekly-report.service";
 
-// Portfolio ownership comes from GroupProduct (B1: one group per product), not lead.reportingGroupId.
+// Portfolio ownership comes from GroupProduct (one group per product), not lead.reportingGroupId.
 describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integration)", () => {
   const prisma = createTestPrisma();
   const repo = new WeeklyReportPrismaRepository(prisma as never);
@@ -91,7 +91,7 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
     });
 
     // Assign the project to group A via the explicit GroupProduct edge
-    // (B1 constraint: one group per product).
+    // (one group per product).
     await prisma.groupProduct.create({
       data: { groupId: GROUP_A_ID, productId: PROJECT_ID },
     });
@@ -390,8 +390,7 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
     it("published period: cross-group product archived AFTER publish still triggers the signal", async () => {
       // The snapshot delivered the product to head A; archiving the live row
       // afterwards drops it from the `archived: false` live query. Sourcing the
-      // signal from the frozen snapshot keeps it named — the pre-fix live
-      // intersection would have silently lost it.
+      // signal from the frozen snapshot keeps it named.
       await createCrossGroupProduct();
       await publishWithSnapshot([
         {

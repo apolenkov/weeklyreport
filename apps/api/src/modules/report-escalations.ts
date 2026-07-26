@@ -7,7 +7,7 @@ import { effectiveProjectStatus } from "./published-report-snapshot.js";
 const UNKNOWN_PRODUCT_NAME = "Unknown";
 const STAGE_NAME_SEPARATOR = ", ";
 
-// stageIds holds stage NAMES, not UUIDs (TODO(STAGE-NAMING-01) in report-primitives).
+// stageIds holds stage NAMES, not UUIDs — hence a plain join, no lookup.
 function resolveStageName(
   stageIds: readonly string[] | undefined,
 ): string | null {
@@ -99,10 +99,6 @@ function productNamesFor(
   );
 }
 
-/**
- * Build Escalations From Read Sections.
- * @param sections - The sections argument.
- */
 export function buildEscalationsFromReadSections(
   sections: readonly ReportSectionReadModel[],
 ): Escalation[] {

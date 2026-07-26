@@ -8,10 +8,7 @@ const noNullBytes = (val: string) => !val.includes("\u0000");
 
 const DEFAULT_SAFE_TEXT_MAX_LENGTH = 500;
 
-/**
- * Zod string for user-facing text: rejects null bytes and invisible-only values.
- * @param opts - The opts argument.
- */
+/** Zod string for user-facing text: rejects null bytes and invisible-only values. */
 export const safeText = (opts: { min?: number; max?: number } = {}) =>
   z
     .string()
@@ -49,9 +46,9 @@ export const NEXT_ITEM_STATUSES = ["planned", "postponed"] as const;
 
 /**
  * Adds a Zod issue when workflowStatus is illegal for the item type.
- * @param type - The type argument.
- * @param workflowStatus - The workflowStatus argument.
- * @param ctx - The ctx argument.
+ * @param type - Selects the legal vocabulary: current vs next.
+ * @param workflowStatus - The candidate value to check against it.
+ * @param ctx - Refinement context the issue is reported on.
  */
 export function addItemTypeStatusIssue(
   type: "current" | "next",
@@ -85,22 +82,10 @@ export type ReportStatus = z.infer<typeof reportStatusSchema>;
 export const periodStatusSchema = z.enum(["open", "published", "reopened"]);
 
 /**
- * Explicit lifecycle state for a Period/Report, superseding the implicit
- * (status × archived × periodStatus) tuple. The legacy fields stay around
- * for the one-release compatibility window — writers update both atomically.
- * Wire format mirrors the lowercase Prisma enum.
- *
- * State transitions:
- *   - PeriodCreator   : minted with `scheduled` if periodStart > now,
- *                       otherwise `open`; flips `scheduled → open` once
- *                       the period's start day is reached.
- *   - AutoPublisher   : `open → published` at deadline + grace.
- *   - AutoArchiver    : `published → archived` after the configured
- *                       autoArchiveWeeksAfterPublish window.
- *   - publish (head)  : `open → published` (also legacy
- *                       status/periodStatus writes).
- *   - reopen (head)   : `published → open` (also legacy
- *                       periodStatus='reopened').
+ * Explicit lifecycle state for a Period/Report (values mirror the lowercase
+ * Prisma enum), superseding the implicit (status × archived × periodStatus)
+ * tuple; writers must still update the legacy fields atomically.
+ * Transitions: `openspec/specs/period-dual-state`.
  */
 export const periodStateSchema = z.enum([
   "scheduled",
@@ -112,11 +97,9 @@ export const periodStateSchema = z.enum([
 // Payload guard against pathological stage selections; normal is 1–7 stages.
 const MAX_SELECTED_STAGES = 20;
 
-// SDLC stage selection persisted as a native String[] array (the Postgres
-// text[] `stageNames` column on Item / Risk / Decision) — one stage name per
-// element. Any comma-joined rendering is display-only (chip labels) and is NOT
-// the storage format. Field is misnamed `stageIds` for legacy reasons.
-// TODO(STAGE-NAMING-01): rename stageIds→stageNames (~125 sites, 28 files — deferred)
+// Stage NAMES, one per element, persisted as the Postgres text[] `stageNames`
+// column on Item / Risk / Decision. Comma-joined rendering is display-only.
+// TODO(STAGE-NAMING-01): rename stageIds→stageNames.
 export const stageIdsField = z
   .array(z.string())
   .max(MAX_SELECTED_STAGES)
@@ -130,11 +113,9 @@ const stageNameElement = z
     message: "Stage must contain visible characters",
   });
 
-// require-risk-stage: the strict write variant — a row must always carry at
-// least one concrete SDLC stage, so missing/empty selections are rejected on
-// the write path. Items and decisions share the same rule; the READ models
-// re-loosen to `stageIdsField` so stage-less legacy rows still load and render
-// the loud "No stage set" marker.
+// Strict write variant: every written row must carry at least one concrete
+// SDLC stage. Read models re-loosen to `stageIdsField` so stage-less legacy
+// rows still load and render the loud "No stage set" marker.
 export const requiredStageIdsField = z
   .array(stageNameElement)
   .min(1)

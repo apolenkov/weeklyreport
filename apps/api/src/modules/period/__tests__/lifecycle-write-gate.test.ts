@@ -304,7 +304,7 @@ describe("lifecycle-write-gate", () => {
   it("self-test: a call-site marker exempts the write", () => {
     const exempted = `
       async function restore(tx: any) {
-        // lifecycle-write-gate-allow: snapshot restore, not a transition — TODO(x)
+        // lifecycle-write-gate-allow: snapshot restore, not a transition
         await tx.report.update({
           where: { id: "x" },
           data: { status: "published" },

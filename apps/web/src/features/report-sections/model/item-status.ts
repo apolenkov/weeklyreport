@@ -16,10 +16,6 @@ export type ItemStatus =
   "in-progress" | "completed" | "planned" | "paused" | "postponed" | "blocked";
 
 // Never produces 'blocked' — that is the risk-derived overlay only.
-/**
- * Workflow To Item Status.
- * @param ws - The ws argument.
- */
 export function workflowToItemStatus(
   ws: ItemWorkflowStatus,
 ): Exclude<ItemStatus, "blocked"> {
@@ -38,10 +34,6 @@ export function workflowToItemStatus(
 }
 
 // 'blocked' excluded at the type level (a blocker is a risk, never an item status).
-/**
- * Item Status To Workflow.
- * @param status - The status argument.
- */
 export function itemStatusToWorkflow(
   status: Exclude<ItemStatus, "blocked">,
 ): ItemWorkflowStatus {
@@ -60,10 +52,6 @@ export function itemStatusToWorkflow(
 }
 
 // Stored progress, with a type-appropriate default for legacy rows missing status.
-/**
- * Derive Item Status.
- * @param item - The item argument.
- */
 export function deriveItemStatus(item: {
   workflowStatus: ItemWorkflowStatus | null;
   type: ItemType;
@@ -74,12 +62,6 @@ export function deriveItemStatus(item: {
 
 // Covering-risk BLOCKED overlay on a base progress status — same rule as the
 // lead card. Only in-progress is eligible; at-risk amber stays deferred on head.
-/**
- * Apply Blocked Risk Overlay.
- * @param base - The base argument.
- * @param parent - The parent argument.
- * @param alarmRisks - The alarmRisks argument.
- */
 export function applyBlockedRiskOverlay(
   base: ItemStatus,
   parent: { projectId: string; stageIds?: readonly string[] | null },
@@ -97,11 +79,6 @@ export function applyBlockedRiskOverlay(
 }
 
 // Head-report badge: progress status with the blocked overlay applied.
-/**
- * Derive Head Item Status.
- * @param item - The item argument.
- * @param alarmRisks - The alarmRisks argument.
- */
 export function deriveHeadItemStatus(
   item: {
     workflowStatus: ItemWorkflowStatus | null;

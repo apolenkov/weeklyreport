@@ -18,10 +18,6 @@ function clampRank(rank: number): number {
   return rank;
 }
 
-/**
- * Map Lead Decisions.
- * @param section - The section argument.
- */
 export function mapLeadDecisions(
   section: ReportSectionReadModel,
 ): LeadDecisionEntry[] {
@@ -54,10 +50,6 @@ export function mapLeadDecisions(
   }));
 }
 
-/**
- * Map Lead Priorities.
- * @param section - The section argument.
- */
 export function mapLeadPriorities(
   section: ReportSectionReadModel,
 ): LeadPriorityEntry[] {
