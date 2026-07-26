@@ -12,7 +12,6 @@
 //   node apps/web/uat-suite/mutation-audit.mjs --check            # gate mode: audit only, writes nothing
 //   node apps/web/uat-suite/mutation-audit.mjs --update-allowlist
 
-import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -199,31 +198,24 @@ const procedures = extractProcedures();
 const queries = procedures.filter((p) => p.kind === "query");
 const mutations = procedures.filter((p) => p.kind === "mutation");
 
-function gripCount(needle) {
-  try {
-    const out = execFileSync(
-      // eslint-disable-next-line sonarjs/no-os-command-from-path -- ripgrep invoked in a dev-only static-analysis uat script; resolved from PATH intentionally
-      "rg",
-      ["-c", "--no-heading", "-F", needle, WEB_SRC],
-      {
-        encoding: "utf8",
-      },
-    );
-    return out.split("\n").filter(Boolean).length;
-  } catch (error) {
-    // rg exits 1 for "no matches" — that is a real zero. Anything else
-    // (binary missing, bad invocation, exit >= 2) must fail the audit loudly:
-    // a gate that silently counts 0 on a broken tool passes vacuously.
-    if (error && typeof error === "object" && error.status === 1) {
-      return 0;
-    }
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(
-      `[mutation-audit] FAIL: ripgrep invocation broke: ${message}`,
-    );
-    process.exit(2);
-  }
-}
+const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
+
+// Read once: every mutation is looked up against the same corpus, and shelling
+// out per procedure needed ripgrep on PATH — which no CI runner here has. That
+// dependency stayed invisible while the extractor was broken, because a gate
+// finding zero procedures never reaches this function.
+const webSources = (function collect(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return collect(full);
+    return SOURCE_EXTENSIONS.has(path.extname(entry.name))
+      ? [readFileSync(full, "utf8")]
+      : [];
+  });
+})(WEB_SRC);
+
+const gripCount = (needle) =>
+  webSources.filter((source) => source.includes(needle)).length;
 
 const audits = mutations.map((m) => {
   const sameNsQueries = queries.filter((q) => q.namespace === m.namespace);
