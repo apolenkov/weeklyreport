@@ -69,12 +69,9 @@
       confirmed: `tools/eslint-rules/no-comment-archaeology.ts` +
       `no-comment-archaeology.test.ts` (`RuleTester`, 21 passing cases including
       the RFC-5322 fixture); `pnpm exec vitest run` on that file is green.
-      Note: the same test file also trips 2 `no-template-curly-in-string`
-      ESLint warnings against the repo's own `--max-warnings 0` gate — see the
-      note under section 1's `pnpm lint` bullet.
-- [ ] Delete `scripts/find-status-literal-unions.mjs`, `scripts/find-archaeology.mjs`
+- [x] Delete `scripts/find-status-literal-unions.mjs`, `scripts/find-archaeology.mjs`
       and both `.test.mjs` files; remove `lint:status-literal-unions` from
-      `pnpm lint` and both entries from `lint-staged` — **partially done**.
+      `pnpm lint` and both entries from `lint-staged` — done.
       The four old files are confirmed gone (`find . -iname
 '*find-archaeology*'` / `'*find-status-literal-unions*'` outside
       `openspec/changes/archive/` return nothing), and `lint-staged` is down
@@ -143,7 +140,7 @@
       5 prisma files / 35 tests, all passing; `knip` reports no unused exports;
       `depcruise` finds no violations across 1023 modules.
       `pnpm catalog:check` and `node apps/web/uat-suite/mutation-audit.mjs
-  --check` are green too.
+--check` are green too.
 - [ ] Docker build of both images from a clean cache — not run in this pass
       (out of scope for a paperwork-reconciliation check; needs an explicit
       docker build invocation to confirm).
