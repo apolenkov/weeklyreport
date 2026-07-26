@@ -21,7 +21,7 @@
     // here would typecheck an import that fails at runtime.
     "paths": {}
   },
-  "include": ["scripts/**/*.ts", "e2e/sweep/**/*.ts"],
+  "include": ["scripts/**/*.ts", "tools/**/*.ts", "e2e/sweep/**/*.ts"],
   // The Playwright-loaded half of e2e/sweep resolves @playwright/test out of
   // apps/web's install and is typechecked by e2e/tsconfig.json, which carries
   // that mapping. Only the plain-node entrypoints belong to this project.

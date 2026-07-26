@@ -123,8 +123,8 @@ export function createFileSink(
   };
 }
 
-// Free-function façade kept for logger.ts's call site now that the write state
-// moved into the sink closure.
+// Free-function façade over the sink closure that owns the write state, so
+// logger.ts calls a plain function rather than reaching for the method.
 export function enqueueWrite(
   sink: FileSink,
   entry: Record<string, unknown>,

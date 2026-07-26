@@ -16,6 +16,8 @@ import unicorn from "eslint-plugin-unicorn";
 import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
 
+import { localPlugin } from "./tools/eslint-rules/index.ts";
+
 // eslint-plugin-jsx-a11y ships no type declarations, so its default import is
 // implicitly `any` — the root of every no-unsafe-* firing in this config.
 // Describe the surface this file actually touches (the recommended preset's
@@ -590,11 +592,23 @@ export default defineConfig([
       },
     },
   },
-  // `scripts/` has the same shape as `prisma/`: no tsconfig the project service
-  // can discover, so its `node:*` imports would resolve to `any`. Point it at
-  // the project that typechecks these entrypoints.
+  // Comment archaeology (change-log / ticket / phase refs) is banned by
+  // CLAUDE.md; git history holds that. Scoped to product source only —
+  // `scripts/`, `tools/` and root configs legitimately carry plan-shaped labels.
   {
-    files: ["scripts/**/*.ts"],
+    files: [
+      "apps/**/*.{ts,tsx,js,jsx,mjs}",
+      "packages/**/*.{ts,tsx,js,jsx,mjs}",
+      "prisma/**/*.{ts,tsx,js,jsx,mjs}",
+    ],
+    plugins: { local: localPlugin },
+    rules: { "local/no-comment-archaeology": "error" },
+  },
+  // `scripts/` and `tools/` have the same shape as `prisma/`: no tsconfig the
+  // project service can discover, so their `node:*` imports would resolve to
+  // `any`. Point them at the project that typechecks these entrypoints.
+  {
+    files: ["scripts/**/*.ts", "tools/**/*.ts"],
     languageOptions: {
       parserOptions: {
         projectService: false,

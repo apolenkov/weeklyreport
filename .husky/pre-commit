@@ -1,8 +1,8 @@
 #!/usr/bin/env sh
 
-# Runs ESLint + stylelint + Prettier + the comment-archaeology check on staged
-# files via lint-staged. Bypass with `git commit --no-verify` only in a real
-# emergency — otherwise fix the reported issue.
+# Runs ESLint (comment archaeology included, via the local plugin) + stylelint
+# + Prettier on staged files via lint-staged. Bypass with
+# `git commit --no-verify` only in a real emergency — otherwise fix the issue.
 
 # Session artifacts (review dumps, handoffs, pipeline scripts) belong in
 # ~/work/customreport-archive/, not docs/ — see docs/README.md.

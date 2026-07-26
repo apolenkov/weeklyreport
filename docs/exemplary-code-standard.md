@@ -46,10 +46,11 @@ pnpm test && pnpm build` green, plus a live boot from source where a boot path
    express, within a THREE-LINE budget. Delete change-log / ticket / phase
    archaeology (`Phase 35-08`, `UFB-036`, `AUTH-08`, …) — git history holds
    that — and JSDoc blocks on app-internal functions (JSDoc is public-API-only
-   per the spec). Enforced by `scripts/find-archaeology.mjs`, wired into
-   lint-staged on every commit (`package.json` → `lint-staged`); the detector
-   covers comments AND string literals / test titles, so archaeology can't
-   hide by moving out of a `//` comment. Load-bearing rationale that exceeds the budget is RELOCATED,
+   per the spec). Enforced by the `local/no-comment-archaeology` ESLint rule
+   (`tools/eslint-rules/`), scoped to `apps/`, `packages/` and `prisma/`, so it
+   runs in `pnpm lint` AND in lint-staged on every commit; the rule covers
+   comments AND test titles (`describe`/`it`/`test` and their variants), so
+   archaeology can't hide by moving out of a `//` comment. Load-bearing rationale that exceeds the budget is RELOCATED,
    not deleted: verify (or add) the covering `openspec/specs/` requirement or
    ADR first, then compress the comment to ≤2 lines, optionally naming the
    spec — a live spec name is a pointer, not archaeology. Sweeps touching
@@ -93,8 +94,8 @@ explicitly called out as still unmechanized:
 | Per-folder/per-file exempt lists in `src`                                                            | Explicit justified exemptions remain where the code is not yet decomposed. Removing an exemption is a done-signal for that file/module, not a license to silence the rule locally.                                                                                                                                                                       |
 
 Gate wiring: `.husky/pre-commit` runs lint-staged on staged files — ESLint
-`--fix`, Prettier, `scripts/find-archaeology.mjs` (comments and string
-literals/test titles) and `scripts/status-ssot-gate.ts`.
+`--fix` (which carries `local/no-comment-archaeology` over comments and test
+titles), Prettier and `scripts/status-ssot-gate.ts`.
 `.husky/pre-push` runs the full local gate — typecheck, `pnpm lint`,
 `format:check`, catalog drift, mutation-consumer audit, unit tests — mirroring
 CI's cheap deterministic jobs. CI (`.github/workflows/ci.yml`) is manual
