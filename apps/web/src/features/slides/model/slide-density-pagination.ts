@@ -10,17 +10,11 @@ import type {
   GridSubsection,
   SlideGridModel,
 } from "./slide-grid-model";
+import { COLUMN_ORDER } from "./slide-grid-rows";
 
 export type SlideDensity = "document" | "presentation";
 
 const PRESENTATION_RECORDS_PER_PAGE = 12;
-
-const COLUMN_ORDER: readonly GridColumnKey[] = [
-  "current",
-  "next",
-  "risks",
-  "decisions",
-];
 
 type LocatedRecord =
   | { readonly kind: "priority"; readonly card: GridPriorityCard }

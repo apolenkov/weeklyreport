@@ -55,10 +55,7 @@ function laterReport<T extends PeriodStamped>(a: T, b: T): T {
 export function groupReportsByLabel<T extends { periodEnd: Date }>(
   reports: readonly T[],
 ): Map<string, T[]> {
-  return reports.reduce((byLabel, report) => {
-    const label = isoDateOnly(report.periodEnd);
-    return byLabel.set(label, [...(byLabel.get(label) ?? []), report]);
-  }, new Map<string, T[]>());
+  return Map.groupBy(reports, (report) => isoDateOnly(report.periodEnd));
 }
 
 interface ProjectStatusRow {

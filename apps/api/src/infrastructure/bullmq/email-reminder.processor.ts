@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import { type Job, type WorkerOptions } from "bullmq";
 import type { ClsService } from "nestjs-cls";
 
+import { errorMessage } from "../../lib/error-message.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { SnapshotAdminService } from "../../modules/admin/index.js";
 import { renderEmail } from "../../modules/email/index.js";
@@ -118,7 +119,7 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
       // The send never happened, so the row must not stay `sending`. On the
       // last attempt `failed` is terminal; earlier, release the claim back to
       // the pre-claim status the retry's CAS matches, or the retry cannot send.
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorMessage(error);
       const maxAttempts = job.opts.attempts ?? 1;
       // This catch runs before BullMQ's moveToFailed increments attemptsMade,
       // so the counter still excludes the attempt that just failed — hence +1.

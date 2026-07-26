@@ -117,28 +117,6 @@ export function resolveRiskParentName(args: {
   return args.risk?.productId === args.parentId ? args.risk.productName : "";
 }
 
-// Cross-stage rows may reference a project outside stage-owned `products` —
-// keep the original assignment instead of reassigning to the first product.
-// products.at(0) only when the picker was never touched and risk has no product.
-/**
- * Resolve Risk Save Product.
- * @param products - The products argument.
- * @param risk - The risk argument.
- * @param parentId - The parentId argument.
- */
-export function resolveRiskSaveProduct(
-  products: readonly Product[],
-  risk: RiskEntry | null,
-  parentId: string,
-): { id: string; name: string } | undefined {
-  return (
-    products.find((p) => p.id === parentId) ??
-    (risk?.productId === parentId
-      ? { id: risk.productId, name: risk.productName }
-      : products.at(0))
-  );
-}
-
 type RiskSaveEntry = RiskEntry & { impact: string; mitigation: string };
 
 // Activity-parented: empty productId, no stage (activities own no SDLC stage).

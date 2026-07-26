@@ -4,10 +4,10 @@ import type {
   PortfolioProductOverview,
   ReportSectionReadModel,
 } from "@customreport/shared";
-import { initialsFromName as sharedInitialsFromName } from "@customreport/shared";
 
 import type { AlarmRisk } from "../../../lib/item-alarm";
 import { statusLabel } from "../../../lib/status-presentation";
+import { initialsFromName } from "../../../lib/user-initials";
 import { deriveHeadItemStatus } from "./item-status";
 import { trafficToStageStatus } from "./traffic-light";
 import type {
@@ -19,10 +19,8 @@ import type {
 type SectionItem = ReportSectionReadModel["items"][number];
 type SectionRisk = ReportSectionReadModel["risks"][number];
 
-// Shared surname-first initials; "??" placeholder for empty names on this surface.
-export function initialsFromName(name: string): string {
-  return sharedInitialsFromName(name) || "??";
-}
+// Re-exported so the weekly-report mappers keep one import site for grouping helpers.
+export { initialsFromName };
 
 export function trafficToProductStatus(
   traffic: PortfolioProductOverview["worstStatus"],

@@ -4,11 +4,9 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { AuditLogger } from "../../../lib/audit-logger.js";
+import { errorMessage } from "../../../lib/error-message.js";
 import { SnapshotAdminService } from "../../admin/index.js";
 import { PublicationService } from "../../publication/index.js";
-
-const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 // Auto-publishes draft Reports past deadline+grace when opted in.
 // No empty section stubs — missing sections render as placeholders at read time.

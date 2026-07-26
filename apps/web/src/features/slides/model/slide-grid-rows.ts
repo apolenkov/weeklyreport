@@ -66,6 +66,15 @@ export interface GridColumns {
 
 export type GridColumnKey = keyof GridColumns;
 
+// Load-bearing: record-identity strings and page chunking must walk the
+// columns in the same order, so both read this single table.
+export const COLUMN_ORDER: readonly (keyof GridColumns)[] = [
+  "current",
+  "next",
+  "risks",
+  "decisions",
+];
+
 const UNKNOWN_STAGE_RANK = STAGE_NAMES.length;
 
 function stageRank(stageName: string): number {

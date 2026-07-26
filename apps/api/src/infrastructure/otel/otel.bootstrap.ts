@@ -29,6 +29,8 @@ import {
 import { PrismaInstrumentation } from "@prisma/instrumentation";
 import { SentryPropagator } from "@sentry/opentelemetry";
 
+import { errorMessage } from "../../lib/error-message.js";
+
 export type OtelBootstrapResult =
   | {
       started: true;
@@ -82,9 +84,7 @@ let loggerProvider: LoggerProvider | null = null;
 function shutdownOtel(): void {
   void Promise.all([sdk?.shutdown(), loggerProvider?.shutdown()]).catch(
     (error: unknown) => {
-      process.stderr.write(
-        `[otel] shutdown error: ${error instanceof Error ? error.message : String(error)}\n`,
-      );
+      process.stderr.write(`[otel] shutdown error: ${errorMessage(error)}\n`);
     },
   );
 }
@@ -137,9 +137,7 @@ export function startOtel(
     sdk.start();
   } catch (error) {
     // Non-fatal: api should still boot if the collector is unreachable.
-    process.stderr.write(
-      `[otel] start failed: ${error instanceof Error ? error.message : String(error)}\n`,
-    );
+    process.stderr.write(`[otel] start failed: ${errorMessage(error)}\n`);
   }
 
   // Register global log provider so AppLogger can forward logs to Loki via OTLP.

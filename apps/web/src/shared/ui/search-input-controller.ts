@@ -1,11 +1,12 @@
 import type { SearchHit } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { isViewer as isViewerRole } from "../../lib/role-predicates";
 import { useSession } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
+import { useDismissOnOutsidePointer } from "../../lib/use-dismiss-on-outside-pointer";
 import {
   DEBOUNCE_MS,
   MAX_LEN,
@@ -63,25 +64,6 @@ function useSearchHits(q: string, scope: SearchScope, isViewer: boolean) {
   }, [data, isViewer]);
 
   return { enabled, hits, isError, isFetching };
-}
-
-function useCloseOnOutsideClick(
-  open: boolean,
-  setOpen: (value: boolean) => void,
-): React.RefObject<HTMLDivElement | null> {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handle(e: MouseEvent) {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, [open, setOpen]);
-
-  return containerRef;
 }
 
 interface KeyDownArgs {
@@ -158,7 +140,12 @@ export function useSearchController(scope: SearchScope): SearchController {
     scope,
     isViewer,
   );
-  const containerRef = useCloseOnOutsideClick(open, setOpen);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  useDismissOnOutsidePointer({
+    open,
+    refs: [containerRef],
+    onDismiss: () => setOpen(false),
+  });
   const { activeIndex, setActiveIndex, moveActive } = useActiveSelection(hits);
 
   const navigateTo = (url: string) => {

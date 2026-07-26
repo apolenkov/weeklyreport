@@ -20,12 +20,12 @@ import type {
   TrafficLightStatus,
 } from "@customreport/shared";
 import {
-  initialsFromName as sharedInitialsFromName,
   normalizeStageName,
   ROLE_LABEL,
   stageNamesMatch,
 } from "@customreport/shared";
 
+import { initialsFromName } from "../../../lib/user-initials";
 import { mapLeadDecisions, mapLeadPriorities } from "./lead-form-decisions";
 import { mapLeadItems } from "./lead-form-items";
 import {
@@ -73,13 +73,6 @@ export interface LeadCurrentUser {
    * `authorRole`.
    */
   authorRole: DbRole;
-}
-
-// Avatar initials via the canonical shared helper (surname-first ФИО), with
-// this surface's "??" placeholder for an empty name. The token logic lives once
-// in @customreport/shared so cloned copies can't diverge.
-function initialsFromName(name: string): string {
-  return sharedInitialsFromName(name) || "??";
 }
 
 // One attached activity as a STATUS-ONLY card — stored + risk/blocker-derived

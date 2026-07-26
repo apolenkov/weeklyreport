@@ -21,6 +21,7 @@
  */
 
 import { type Role, sessionRoleSchema } from "@customreport/shared";
+import { z } from "zod";
 
 export interface LastRoleRecord {
   readonly role: Role;
@@ -30,18 +31,15 @@ export interface LastRoleRecord {
 
 export const LAST_ROLE_STORAGE_KEY = "customreport:lastRole";
 
-const VALID_ROLES: ReadonlySet<Role> = new Set<Role>(sessionRoleSchema.options);
+const lastRoleRecordSchema = z.object({
+  role: sessionRoleSchema,
+  email: z.string().min(1),
+  name: z.string(),
+});
 
-function isLastRoleRecord(value: unknown): value is LastRoleRecord {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v.role === "string" &&
-    VALID_ROLES.has(v.role as Role) &&
-    typeof v.email === "string" &&
-    v.email.length > 0 &&
-    typeof v.name === "string"
-  );
+function parseLastRole(value: unknown): LastRoleRecord | null {
+  const result = lastRoleRecordSchema.safeParse(value);
+  return result.success ? result.data : null;
 }
 
 /**
@@ -54,8 +52,7 @@ export function readLastRole(): LastRoleRecord | null {
     const raw = window.localStorage.getItem(LAST_ROLE_STORAGE_KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    if (!isLastRoleRecord(parsed)) return null;
-    return parsed;
+    return parseLastRole(parsed);
   } catch {
     // Storage quota / disabled / parse error — degrade silently.
     return null;
@@ -70,7 +67,7 @@ export function readLastRole(): LastRoleRecord | null {
  */
 export function writeLastRole(record: LastRoleRecord): void {
   if (typeof window === "undefined") return;
-  if (!isLastRoleRecord(record)) return;
+  if (parseLastRole(record) === null) return;
   try {
     window.localStorage.setItem(LAST_ROLE_STORAGE_KEY, JSON.stringify(record));
   } catch {

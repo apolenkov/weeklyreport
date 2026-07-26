@@ -7,7 +7,11 @@ import {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { formatRelativePast, type RelativePastVariant } from "./format-date";
+import {
+  formatRelativePast,
+  type RelativePastVariant,
+  toIsoDateString,
+} from "./format-date";
 
 const NOW = new Date("2026-04-20T12:00:00.000Z");
 
@@ -60,5 +64,23 @@ describe("formatRelativePast", () => {
     expect(
       formatRelativePast(new Date(NOW.getTime() + MS_PER_SECOND), NOW),
     ).toBe("just now");
+  });
+});
+
+describe("toIsoDateString", () => {
+  it("returns the ISO date-only prefix", () => {
+    expect(toIsoDateString(new Date("2026-04-20T12:00:00.000Z"))).toBe(
+      "2026-04-20",
+    );
+  });
+
+  // The day is read in UTC, so a UTC+N runner must not roll it forward.
+  it("anchors the day to UTC, not the runner's timezone", () => {
+    expect(toIsoDateString(new Date("2026-07-05T23:30:00.000Z"))).toBe(
+      "2026-07-05",
+    );
+    expect(toIsoDateString(new Date("2026-07-06T00:30:00.000Z"))).toBe(
+      "2026-07-06",
+    );
   });
 });

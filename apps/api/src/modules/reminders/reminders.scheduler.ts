@@ -7,8 +7,7 @@ import { OrganizationService } from "../organization/index.js";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository";
 import { RemindersService } from "./reminders.service";
 import type { DueDeadlineRule, DueEscalationRule } from "./reminders.types";
-
-const ISO_DATE_LENGTH = 10;
+import { toReminderCycleDate } from "./reminders-dedupe-key.js";
 
 // Hourly tick: deadline (T-24h) + escalation (T+2h). Escalation bypasses
 // notificationOptOut. Dedupe key collapses two ticks in one UTC day to one email.
@@ -68,7 +67,7 @@ export class RemindersScheduler {
     rule: DueDeadlineRule,
     organization: OrganizationBrand,
   ): Promise<void> {
-    const cycleDate = rule.fireAt.toISOString().slice(0, ISO_DATE_LENGTH);
+    const cycleDate = toReminderCycleDate(rule.fireAt);
     const sectionUrl = buildSectionUrl(rule.reportId);
     const deadlineIso = rule.fireAt.toISOString();
     for (const recipient of rule.recipients) {
@@ -100,7 +99,7 @@ export class RemindersScheduler {
   ): Promise<void> {
     // One digest email per (rule, group head) per cycle. Escalation always
     // notifies the head — it ignores notificationOptOut.
-    const cycleDate = rule.fireAt.toISOString().slice(0, ISO_DATE_LENGTH);
+    const cycleDate = toReminderCycleDate(rule.fireAt);
     for (const group of rule.groups) {
       // Per-recipient isolation: one head's failure never aborts the tick.
       try {

@@ -21,23 +21,17 @@ export interface ReadThroughCacheOptions {
   readonly keyPrefix: string;
 }
 
-async function scanAndDelete(
-  redis: Redis,
-  match: string,
-  cursor: string,
-): Promise<void> {
-  const [next, batch] = await redis.scan(
-    cursor,
-    "MATCH",
+async function scanAndDelete(redis: Redis, match: string): Promise<void> {
+  // ioredis owns the SCAN cursor protocol; the stream just hands us batches.
+  const batches: AsyncIterable<readonly string[]> = redis.scanStream({
     match,
-    "COUNT",
-    SCAN_BATCH_SIZE,
-  );
-  if (batch.length > 0) {
-    await redis.del(...batch);
-  }
-  if (next !== "0") {
-    await scanAndDelete(redis, match, next);
+    count: SCAN_BATCH_SIZE,
+  });
+  for await (const batch of batches) {
+    // SCAN can yield an empty batch, and del() with no arguments errors.
+    if (batch.length > 0) {
+      await redis.del(...batch);
+    }
   }
 }
 
@@ -83,7 +77,7 @@ export function createRedisReadThroughCache(
 
     async invalidateByPrefix(prefix: string): Promise<void> {
       try {
-        await scanAndDelete(redis, `${keyPrefix}${prefix}*`, "0");
+        await scanAndDelete(redis, `${keyPrefix}${prefix}*`);
       } catch {
         // Best-effort invalidation; stale entries still expire on their TTL.
       }

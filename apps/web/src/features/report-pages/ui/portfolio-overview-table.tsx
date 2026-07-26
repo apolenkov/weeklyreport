@@ -1,5 +1,6 @@
 "use client";
 
+import { pluralize } from "../../../lib/pluralize";
 import type {
   LeadOverviewRow,
   WeeklyPortfolioProduct,
@@ -41,10 +42,6 @@ function GridIcon() {
   );
 }
 
-function pluralize(noun: string, count: number): string {
-  return `${noun}${count !== 1 ? "s" : ""}`;
-}
-
 export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
   const isLead = props.scope === "lead";
   // Lead rows arrive pre-sorted from the mapper; product rows sort here.
@@ -57,7 +54,9 @@ export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
 
   const count = isLead ? leads.length : sortedProducts.length;
   const heading = isLead ? "Leads Overview" : "Portfolio Overview";
-  const countSuffix = pluralize(isLead ? "lead" : "product", count);
+  const countSuffix = isLead
+    ? pluralize(count, "lead", "leads")
+    : pluralize(count, "product", "products");
   const subtitle = isLead
     ? "Each lead's contribution — open their section below."
     : "Products with content open detailed sections. Empty products stay muted.";

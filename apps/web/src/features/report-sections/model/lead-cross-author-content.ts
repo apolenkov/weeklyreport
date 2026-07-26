@@ -5,6 +5,7 @@
 import type { DbRole, RiskSeverity } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 
+import { toIsoDateString } from "../../../lib/format-date";
 import {
   applyBlockedRiskOverlay,
   type ItemStatus,
@@ -66,9 +67,6 @@ export type ForeignDecisionEntry = LeadDecisionEntry & {
   foreign: true;
   authorId: string;
 };
-
-/** Length of the `yyyy-mm-dd` prefix of an ISO-8601 timestamp. */
-const ISO_DATE_PREFIX_LENGTH = 10;
 
 // Known enums go through workflowToItemStatus; anything else falls back to
 // 'planned'. The fallback is load-bearing — a strict mapper would change behavior.
@@ -157,9 +155,7 @@ export function mapForeignDecisions(
       text: d.text,
       owner: d.owner,
       impact: d.impact,
-      deadline: d.deadline
-        ? d.deadline.toISOString().slice(0, ISO_DATE_PREFIX_LENGTH)
-        : null,
+      deadline: d.deadline ? toIsoDateString(d.deadline) : null,
       stageIds: d.stageNames,
       authorId: ca.authorId,
       foreign: true,

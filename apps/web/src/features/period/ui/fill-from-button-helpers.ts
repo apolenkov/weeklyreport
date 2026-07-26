@@ -1,20 +1,9 @@
+import { MONTHS_SHORT } from "../../../lib/format-date";
 import type { ReportPeriod } from "../../report-sections";
 
+// Inverse of the table these labels were rendered from, so the two cannot drift.
 const MONTH_INDEX = new Map(
-  [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ].map((month, index) => [month, index]),
+  MONTHS_SHORT.map((month, index) => [month, index] as const),
 );
 const PERIOD_START_PATTERN =
   /^([A-Z][a-z]{2}) (\d{1,2})(?:, (\d{4}))?.*?(\d{4})$/;

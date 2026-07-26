@@ -51,6 +51,16 @@ export function itemStatusToWorkflow(
   }
 }
 
+// Save path: 'blocked' is the covering-risk overlay, so what persists is the
+// progress underneath it — in-progress.
+export function persistableItemStatusToWorkflow(
+  status: ItemStatus,
+): ItemWorkflowStatus {
+  return itemStatusToWorkflow(
+    status === "blocked" ? IN_PROGRESS_STATUS : status,
+  );
+}
+
 // Stored progress, with a type-appropriate default for legacy rows missing status.
 export function deriveItemStatus(item: {
   workflowStatus: ItemWorkflowStatus | null;

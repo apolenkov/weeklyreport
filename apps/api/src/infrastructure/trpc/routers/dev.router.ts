@@ -8,6 +8,7 @@ import type { PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import { errorMessage } from "../../../lib/error-message.js";
 import type { EnvConfig } from "../../config/env.schema";
 import {
   protectedProcedure,
@@ -107,7 +108,7 @@ const extractStderr = (error: unknown): string => {
 const toReseedError = (error: unknown): TRPCError =>
   new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
-    message: `Reseed failed: ${error instanceof Error ? error.message : String(error)}\n${extractStderr(error).slice(-RESEED_STDERR_TAIL_LENGTH)}`,
+    message: `Reseed failed: ${errorMessage(error)}\n${extractStderr(error).slice(-RESEED_STDERR_TAIL_LENGTH)}`,
     cause: error instanceof Error ? error : undefined,
   });
 

@@ -3,6 +3,7 @@
 import type { PeriodListItem, PeriodState } from "@customreport/shared";
 
 import {
+  formatDateWithYear,
   formatPeriodRangeWithYear,
   formatWeekLabel,
   joinPeriodLabel,
@@ -126,7 +127,9 @@ function PeriodRow({
         />
       </td>
       <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
-        {row.deadline === null ? "No deadline" : formatDate(row.deadline)}
+        {row.deadline === null
+          ? "No deadline"
+          : formatDateWithYear(row.deadline)}
       </td>
       <td className="px-4 py-3 text-right">
         <ActionIconRow row={row} {...actions} />
@@ -225,13 +228,4 @@ function ProgressBadge({
       {submitted}/{total}
     </span>
   );
-}
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 }

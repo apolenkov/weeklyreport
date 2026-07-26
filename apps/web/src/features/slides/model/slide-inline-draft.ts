@@ -5,9 +5,8 @@ import type {
   KanbanItem,
   RiskEntry,
 } from "../../report-sections";
+import { persistableItemStatusToWorkflow } from "../../report-sections";
 import type { GridRowEditableRef } from "./slide-grid-rows";
-
-type SectionItem = ReportSectionReadModel["items"][number];
 
 /**
  * Apply Slide Inline Item Edit.
@@ -20,7 +19,7 @@ export function applySlideInlineItemEdit(
   stableId: string,
   item: KanbanItem,
 ): ReportSectionReadModel {
-  const workflowStatus = itemStatusToWorkflow(item.status);
+  const workflowStatus = persistableItemStatusToWorkflow(item.status);
   const parentFields = item.activityId
     ? { projectId: null, activityId: item.activityId, stageIds: [] as string[] }
     : {
@@ -147,23 +146,5 @@ export function deleteSlideInlineRecord(
           (decision) => decision.stableId !== ref.stableId,
         ),
       };
-  }
-}
-
-function itemStatusToWorkflow(
-  status: KanbanItem["status"],
-): SectionItem["workflowStatus"] {
-  switch (status) {
-    case "completed":
-      return "done";
-    case "planned":
-      return "planned";
-    case "paused":
-      return "paused";
-    case "postponed":
-      return "postponed";
-    case "blocked":
-    case "in-progress":
-      return "in_progress";
   }
 }

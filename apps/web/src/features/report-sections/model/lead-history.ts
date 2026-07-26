@@ -9,7 +9,7 @@ import type {
 import {
   formatPeriodRangeWithYear,
   formatRelativePast,
-  isoWeekNumber,
+  formatWeekLabel,
 } from "../../../lib/format-date";
 
 // Self-contained presentation type so consumers don't depend on mock-data.ts.
@@ -53,7 +53,7 @@ export function mapHistoryEntries(
     id: e.sectionId,
     // API has no separate periodId; report id routes the read-only history page.
     periodId: e.reportId,
-    weekLabel: `Week ${isoWeekNumber(e.periodStart)}`,
+    weekLabel: formatWeekLabel(e.periodStart),
     dateRange: formatPeriodRangeWithYear(e.periodStart, e.periodEnd),
     status: e.sectionStatus,
     archived: e.archived ?? false,
@@ -82,7 +82,7 @@ export function mapCompiledHistoryEntries(
     id: e.reportId,
     periodId: e.reportId,
     href: `/reports/${encodeURIComponent(e.reportId)}`,
-    weekLabel: `Week ${isoWeekNumber(e.periodStart)}`,
+    weekLabel: formatWeekLabel(e.periodStart),
     dateRange: formatPeriodRangeWithYear(e.periodStart, e.periodEnd),
     status: e.archived ? "archived" : "published",
     archived: e.archived,

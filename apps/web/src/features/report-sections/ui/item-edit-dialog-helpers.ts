@@ -87,22 +87,18 @@ export function resolveStatusSlot(args: CoverageArgs): StatusSlot {
   return isItemCovered(args) ? "locked" : "chips";
 }
 
-// Keep original product when it is outside the lead's stage-owned list (cross-stage).
-/**
- * Resolve Save Product.
- * @param products - The products argument.
- * @param item - The item argument.
- * @param parentId - The parentId argument.
- */
+// A cross-stage record may name a product outside the lead's stage-owned list —
+// keep that original assignment instead of reassigning. products.at(0) applies
+// only when the picker was never touched and the record has no product of its own.
 export function resolveSaveProduct(
   products: readonly Product[],
-  item: KanbanItem | null,
+  record: { readonly productId: string; readonly productName: string } | null,
   parentId: string,
 ): { id: string; name: string } | undefined {
   return (
     products.find((p) => p.id === parentId) ??
-    (item?.productId === parentId
-      ? { id: item.productId, name: item.productName }
+    (record?.productId === parentId
+      ? { id: record.productId, name: record.productName }
       : products.at(0))
   );
 }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { reminderAudienceSchema } from "../admin/reminder-policy.schema";
 import { DAYS_PER_WEEK, HOURS_PER_DAY } from "../time";
 import {
   periodStateSchema,
@@ -219,11 +220,6 @@ export type AdminUpdatePeriodManualResult = z.infer<
  */
 export const workingDaysSchema = z.enum(["mon-fri", "mon-sat", "mon-sun"]);
 
-export const reminderAudienceWireSchema = z.enum([
-  "lead-with-draft",
-  "head-of-late",
-]);
-
 /**
  * Regex guard for the `deadlineTime` HH:MM-in-24h
  * string. Pin minutes to two digits and hours to 00..23 so the admin
@@ -262,8 +258,7 @@ export const appSettingsSchema = z.object({
     .default(0),
   // ---- Reminders knobs ------------------------------------------------
   defaultTimezone: z.string().min(1).default("Europe/Moscow"),
-  defaultReminderAudience:
-    reminderAudienceWireSchema.default("lead-with-draft"),
+  defaultReminderAudience: reminderAudienceSchema.default("lead-with-draft"),
   // ---- Notifications knobs --------------------------------------------
   // Nullable email; `''` is rejected (admins can clear by sending null).
   notificationFromEmail: z

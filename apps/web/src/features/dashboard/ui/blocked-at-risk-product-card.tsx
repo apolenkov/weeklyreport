@@ -43,25 +43,14 @@ const SEVERITY_BADGE = {
 const ROW_GRID =
   "grid grid-cols-[3px_minmax(0,116px)_minmax(0,1fr)_auto] items-start gap-x-3.5";
 
-// Preserve first-appearance (escalation) order; one card per product.
-/**
- * Group By Product.
- * @param items - The items argument.
- */
+// One card per product. Map.groupBy keys in first-insertion order and keeps
+// within-group order, which is the escalation order the cards must preserve.
 export function groupByProduct(
   items: readonly BlockedAtRiskItem[],
 ): readonly ProductGroup[] {
-  return items.reduce<ProductGroup[]>((groups, item) => {
-    const existing = groups.find((group) => group.product === item.product);
-    if (existing) {
-      return groups.map((group) =>
-        group === existing
-          ? { ...group, items: [...group.items, item] }
-          : group,
-      );
-    }
-    return [...groups, { product: item.product, items: [item] }];
-  }, []);
+  return [...Map.groupBy(items, (item) => item.product)].map(
+    ([product, group]) => ({ product, items: group }),
+  );
 }
 
 // A product's worst severity drives its avatar + header dot: blocked if any of

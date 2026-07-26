@@ -1,69 +1,18 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import { useDismissOnOutsidePointer } from "../../../lib/use-dismiss-on-outside-pointer";
 import {
-  type RefObject,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+  ANCHORED_PANEL_GAP_PX,
+  useAnchoredPanelPosition,
+} from "../model/use-anchored-panel-position";
 
-const DROPDOWN_OFFSET_PX = 4;
-
-// Position the dropdown via portal to escape the toolbar's overflow clip; the
-// trigger moves with scroll/resize, so the position is re-read on both.
-function useDropdownPosition(
-  open: boolean,
-  triggerRef: RefObject<HTMLButtonElement | null>,
-) {
-  const [dropdownPos, setDropdownPos] = useState<{
-    top: number;
-    right: number;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const update = () => {
-      const r = triggerRef.current?.getBoundingClientRect();
-      if (!r) return;
-      setDropdownPos({
-        top: r.bottom + DROPDOWN_OFFSET_PX,
-        right: window.innerWidth - r.right,
-      });
-    };
-    update();
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-    };
-  }, [open, triggerRef]);
-
-  return dropdownPos;
-}
-
-// The panel is portalled out of the trigger's subtree, so a press only counts
-// as outside when it misses BOTH the trigger wrapper and the panel.
-function useCloseOnOutsidePress(
-  open: boolean,
-  close: () => void,
-  wrapRef: RefObject<HTMLDivElement | null>,
-  panelRef: RefObject<HTMLDivElement | null>,
-) {
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      const target = e.target as Node;
-      const wrapContains = wrapRef.current?.contains(target);
-      const panelContains = panelRef.current?.contains(target);
-      if (!wrapContains && !panelContains) {
-        close();
-      }
-    }
-    if (open) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open, close, wrapRef, panelRef]);
-}
+// Right-anchored so the panel grows leftward and never overflows the viewport.
+const rightAnchoredPosition = (rect: DOMRect) => ({
+  top: rect.bottom + ANCHORED_PANEL_GAP_PX,
+  right: window.innerWidth - rect.right,
+});
 
 function useCloseOnEscape(open: boolean, close: () => void) {
   useEffect(() => {
@@ -81,7 +30,7 @@ export function useFillFromDropdown() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const pos = useDropdownPosition(open, triggerRef);
+  const pos = useAnchoredPanelPosition(open, triggerRef, rightAnchoredPosition);
 
   // Every close path clears the leftover query too, so reopening always starts
   // unfiltered rather than pre-filtered by whatever was typed before.
@@ -90,7 +39,13 @@ export function useFillFromDropdown() {
     setSearch("");
   }, []);
 
-  useCloseOnOutsidePress(open, close, wrapRef, panelRef);
+  // The panel is portalled out of the trigger's subtree, so it contributes its
+  // own ref alongside the wrapper.
+  useDismissOnOutsidePointer({
+    open,
+    refs: [wrapRef, panelRef],
+    onDismiss: close,
+  });
   useCloseOnEscape(open, close);
 
   return {

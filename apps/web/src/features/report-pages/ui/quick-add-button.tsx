@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useDismissOnOutsidePointer } from "../../../lib/use-dismiss-on-outside-pointer";
+
 // "blocker" is a current item pre-set to workflowStatus=blocked, not a type.
 export type QuickAddKind =
   "current-item" | "next-item" | "decision" | "risk" | "blocker";
@@ -20,37 +22,28 @@ interface QuickAddButtonProps {
   readonly placement?: "above" | "below";
 }
 
-// While the popup is open, a click outside it or Escape dismisses it; Escape
-// also returns focus to the trigger the popup was opened from.
-function useDismissOnOutsideClickOrEscape({
+// Escape dismisses the popup and returns focus to the trigger it was opened
+// from; outside-pointer dismissal is the shared rule.
+function useDismissOnEscape({
   open,
-  wrapRef,
   triggerRef,
   onDismiss,
 }: {
   readonly open: boolean;
-  readonly wrapRef: React.RefObject<HTMLDivElement | null>;
   readonly triggerRef: React.RefObject<HTMLButtonElement | null>;
   readonly onDismiss: () => void;
 }) {
   useEffect(() => {
     if (!open) return;
-    function handleClickOutside(event: MouseEvent) {
-      if (!wrapRef.current?.contains(event.target as Node)) onDismiss();
-    }
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         onDismiss();
         triggerRef.current?.focus();
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [open, wrapRef, triggerRef, onDismiss]);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [open, triggerRef, onDismiss]);
 }
 
 function QuickAddMenu({
@@ -96,12 +89,8 @@ export function QuickAddButton({
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const close = useCallback(() => setOpen(false), []);
-  useDismissOnOutsideClickOrEscape({
-    open,
-    wrapRef,
-    triggerRef,
-    onDismiss: close,
-  });
+  useDismissOnOutsidePointer({ open, refs: [wrapRef], onDismiss: close });
+  useDismissOnEscape({ open, triggerRef, onDismiss: close });
 
   function handlePick(kind: QuickAddKind) {
     setOpen(false);

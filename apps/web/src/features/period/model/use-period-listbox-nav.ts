@@ -1,7 +1,6 @@
 import {
   type Dispatch,
   type KeyboardEvent as ReactKeyboardEvent,
-  type RefObject,
   type SetStateAction,
   type TouchEvent as ReactTouchEvent,
   useCallback,
@@ -11,16 +10,20 @@ import {
 } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
+import { useDismissOnOutsidePointer } from "../../../lib/use-dismiss-on-outside-pointer";
+import {
+  ANCHORED_PANEL_GAP_PX,
+  useAnchoredPanelPosition,
+} from "./use-anchored-panel-position";
 
 const SWIPE_THRESHOLD_PX = 50;
-// Gap between the trigger and the portaled listbox panel.
-const PERIOD_PANEL_GAP_PX = 4;
 
-interface PeriodPanelPosition {
-  readonly top: number;
-  readonly left: number;
-  readonly width: number;
-}
+// Left-anchored and width-matched so the panel lines up under the trigger.
+const leftAnchoredPosition = (rect: DOMRect) => ({
+  top: rect.bottom + ANCHORED_PANEL_GAP_PX,
+  left: rect.left,
+  width: rect.width,
+});
 
 interface PeriodListboxNavArgs {
   readonly instanceId: string;
@@ -83,55 +86,6 @@ function useListboxSelection({
     },
     openListbox,
   };
-}
-
-// Position the panel via portal to escape the toolbar's overflow clip.
-function usePanelPosition(
-  open: boolean,
-  triggerRef: RefObject<HTMLButtonElement | null>,
-): PeriodPanelPosition | null {
-  const [panelPos, setPanelPos] = useState<PeriodPanelPosition | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const update = () => {
-      const r = triggerRef.current?.getBoundingClientRect();
-      if (!r) return;
-      setPanelPos({
-        top: r.bottom + PERIOD_PANEL_GAP_PX,
-        left: r.left,
-        width: r.width,
-      });
-    };
-    update();
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-    };
-  }, [open, triggerRef]);
-
-  return panelPos;
-}
-
-// Dual-ref outside click: trigger or panel keeps the listbox open.
-function useCloseOnOutsideClick(
-  open: boolean,
-  triggerRef: RefObject<HTMLButtonElement | null>,
-  panelRef: RefObject<HTMLDivElement | null>,
-  setOpen: Dispatch<SetStateAction<boolean>>,
-): void {
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      const target = e.target as Node;
-      const triggerContains = triggerRef.current?.contains(target);
-      const panelContains = panelRef.current?.contains(target);
-      if (!triggerContains && !panelContains) setOpen(false);
-    }
-    if (open) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open, triggerRef, panelRef, setOpen]);
 }
 
 // Scroll active option into view; block: "nearest" avoids hover-driven panel jerks.
@@ -254,7 +208,11 @@ export function usePeriodListboxNav({
     navigateTo,
   });
   const { open, setOpen } = selection;
-  const panelPos = usePanelPosition(open, triggerRef);
+  const panelPos = useAnchoredPanelPosition(
+    open,
+    triggerRef,
+    leftAnchoredPosition,
+  );
 
   // containerRef = trigger (not panel): Escape/restore only; no focus into the list.
   useDialogFocus({
@@ -264,7 +222,13 @@ export function usePeriodListboxNav({
     triggerRef,
   });
 
-  useCloseOnOutsideClick(open, triggerRef, panelRef, setOpen);
+  // The panel is portalled, so a press inside either the trigger or the panel
+  // keeps the listbox open.
+  useDismissOnOutsidePointer({
+    open,
+    refs: [triggerRef, panelRef],
+    onDismiss: () => setOpen(false),
+  });
   useActiveOptionScroll(open, selection.activeIdx, optionIdPrefix);
 
   const keyHandlers = createListboxKeyHandlers({
