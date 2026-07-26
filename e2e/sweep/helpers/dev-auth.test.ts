@@ -3,11 +3,9 @@ import { describe, expect, it } from "vitest";
 
 import { loginByCookie } from "./dev-auth.ts";
 
-// The retry loop here was rewritten from a `for` with two mutable bindings into
-// a recursion. A live sweep only ever exercises the first attempt succeeding,
-// so every branch that makes the retry a retry — the rate-limit backoff, the
-// role-mismatch re-login, and what each does on the last attempt — is covered
-// against a scripted page rather than a running app.
+// A live sweep only ever reaches the first attempt succeeding, which is the one
+// case that is not a retry. The branches that make it one need a page whose
+// answers can be scripted, so they are driven here instead of against the app.
 
 const SESSION_COOKIE = "customreport_session";
 const LONG_ENOUGH = "s".repeat(40);

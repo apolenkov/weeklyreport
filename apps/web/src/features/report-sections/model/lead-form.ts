@@ -63,8 +63,8 @@ export interface LeadCurrentUser {
   initials: string;
   /**
    * Display label rendered next to the user's name in the form chrome.
-   * Previously this was a hard-coded "Dev Lead"; the chrome text now
-   * derives from the section's `authorRole`.
+   * Derived from the section's `authorRole` — a fixed label here would read
+   * "Dev Lead" to a head or admin opening the same form.
    */
   role: string;
   /**
