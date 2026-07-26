@@ -3,7 +3,6 @@ import type * as React from "react";
 
 /**
  * Surface container root that composes card layout slots.
- * @param props - The props argument.
  */
 function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -20,7 +19,6 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
 
 /**
  * Header grid for title, description, and optional action slots.
- * @param props - The props argument.
  */
 function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -37,7 +35,6 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
 
 /**
  * Primary title slot inside CardHeader.
- * @param props - The props argument.
  */
 function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -51,7 +48,6 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
 
 /**
  * Muted description slot inside CardHeader.
- * @param props - The props argument.
  */
 function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -65,7 +61,6 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
 
 /**
  * Action cell aligned in the CardHeader grid (end column, span rows).
- * @param props - The props argument.
  */
 function CardAction({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -82,7 +77,6 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
 
 /**
  * Main body content slot of Card.
- * @param props - The props argument.
  */
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -96,7 +90,6 @@ function CardContent({ className, ...props }: React.ComponentProps<"div">) {
 
 /**
  * Footer actions row of Card.
- * @param props - The props argument.
  */
 function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (

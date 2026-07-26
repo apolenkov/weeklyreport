@@ -16,7 +16,6 @@ const ICON_SHAPE = {
 /**
  * Inert deferred icon control with ComingSoon tooltip; primitive owns geometry (no className).
  * `shape` selects toolbar square vs nav pill dimensions.
- * @param options - The options argument.
  */
 export function ComingSoonIconButton({
   icon: Icon,
@@ -47,7 +46,6 @@ export function ComingSoonIconButton({
 /**
  * Inert labelled deferred control with ComingSoon tooltip; primitive owns geometry (no className).
  * `compact` strips the touch-target min-height for denser toolbars.
- * @param options - The options argument.
  */
 export function ComingSoonControl({
   icon: Icon,
