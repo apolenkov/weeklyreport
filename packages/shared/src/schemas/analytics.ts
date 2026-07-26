@@ -2,22 +2,7 @@ import { z } from "zod";
 
 import { trafficLightStatusSchema } from "./report-primitives.schema";
 
-const ISO_DATE_LENGTH = "YYYY-MM-DD".length;
-
-// Regex alone accepts 2026-02-30; refine requires UTC round-trip to the same YYYY-MM-DD.
-const isoDateOnly = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .refine(
-    (s) => {
-      const d = new Date(`${s}T00:00:00.000Z`);
-      return (
-        !Number.isNaN(d.getTime()) &&
-        d.toISOString().slice(0, ISO_DATE_LENGTH) === s
-      );
-    },
-    { message: "Not a real calendar date" },
-  );
+const isoDateOnly = z.iso.date();
 
 /** Input window for traffic-light history (optional project/lead filter). */
 export const trafficLightHistoryInputSchema = z.object({

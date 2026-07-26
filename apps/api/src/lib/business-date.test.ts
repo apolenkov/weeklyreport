@@ -338,16 +338,85 @@ describe("getCurrentWeekBounds — UTC-stable week boundaries", () => {
   });
 
   it("produces identical bounds regardless of host TZ snapshot (canonical UTC ISO)", () => {
-    // Snapshot the result for a known Date — must match a UTC-derived
-    // expectation regardless of the JIT host TZ. (Vitest cannot mutate
-    // the host TZ mid-process safely; this assertion is the "canonical
-    // ISO" lock that catches any reintroduction of local-time math.)
+    // Canonical-ISO lock: the expectation is derived from UTC, so any
+    // reintroduction of local-time math fails it under a non-UTC host.
+    // Run the suite under TZ=Pacific/Kiritimati and TZ=America/Anchorage
+    // to exercise that — a UTC-only run cannot prove zone independence.
     const fixed = new Date("2026-04-30T09:00:00.000Z");
     const { periodStart, periodEnd } = getCurrentWeekBounds(fixed);
 
     // Apr 30 2026 is a Thursday — week is Mon Apr 27 .. Sun May 3.
     expect(periodStart.toISOString()).toBe("2026-04-27T00:00:00.000Z");
     expect(periodEnd.toISOString()).toBe("2026-05-03T23:59:59.999Z");
+  });
+
+  it("anchors on the UTC calendar day when the host date-line disagrees", () => {
+    // Sunday 2026-07-26 23:00 UTC is already Monday 13:00 in Kiritimati
+    // (UTC+14) and still Sunday 14:00 in Anchorage (UTC-8). Week-start math
+    // that reads the host's calendar day lands a full 7 days off under +14.
+    const sundayNearMidnightUtc = new Date("2026-07-26T23:00:00.000Z");
+    const { periodStart, periodEnd } = getCurrentWeekBounds(
+      sundayNearMidnightUtc,
+    );
+
+    expect(periodStart.toISOString()).toBe("2026-07-20T00:00:00.000Z");
+    expect(periodEnd.toISOString()).toBe("2026-07-26T23:59:59.999Z");
+  });
+
+  it("carries the Monday anchor back across a year boundary", () => {
+    // Thursday 2026-01-01 belongs to the Mon 2025-12-29 .. Sun 2026-01-04
+    // week — the anchor crosses both the month and the year.
+    const newYearsDay = new Date("2026-01-01T12:00:00.000Z");
+    const { periodStart, periodEnd } = getCurrentWeekBounds(newYearsDay);
+
+    expect(periodStart.toISOString()).toBe("2025-12-29T00:00:00.000Z");
+    expect(periodEnd.toISOString()).toBe("2026-01-04T23:59:59.999Z");
+  });
+
+  it("carries a long period forward across a year boundary", () => {
+    // Monday 2025-12-29 with a 14-day period ends Sun 2026-01-11 — the
+    // forward span crosses the year in the other direction.
+    const lastMondayOf2025 = new Date("2025-12-29T00:00:00.000Z");
+    const { periodStart, periodEnd } = getCurrentWeekBounds(
+      lastMondayOf2025,
+      14,
+    );
+
+    expect(periodStart.toISOString()).toBe("2025-12-29T00:00:00.000Z");
+    expect(periodEnd.toISOString()).toBe("2026-01-11T23:59:59.999Z");
+  });
+
+  it("keeps bounds on the UTC clock across a US DST fall-back Sunday", () => {
+    // 2026-11-01 is the US fall-back Sunday; 05:00 and 07:00 UTC straddle
+    // the 06:00 UTC transition. Both belong to the Mon 2026-10-26 week.
+    const beforeFallBack = getCurrentWeekBounds(
+      new Date("2026-11-01T05:00:00.000Z"),
+    );
+    const afterFallBack = getCurrentWeekBounds(
+      new Date("2026-11-01T07:00:00.000Z"),
+    );
+
+    expect(beforeFallBack.periodStart.toISOString()).toBe(
+      "2026-10-26T00:00:00.000Z",
+    );
+    expect(beforeFallBack.periodEnd.toISOString()).toBe(
+      "2026-11-01T23:59:59.999Z",
+    );
+    expect(afterFallBack.periodStart.getTime()).toBe(
+      beforeFallBack.periodStart.getTime(),
+    );
+    expect(afterFallBack.periodEnd.getTime()).toBe(
+      beforeFallBack.periodEnd.getTime(),
+    );
+  });
+
+  it("yields Invalid Date bounds for an invalid input Date", () => {
+    const { periodStart, periodEnd } = getCurrentWeekBounds(
+      new Date("not-a-date"),
+    );
+
+    expect(Number.isNaN(periodStart.getTime())).toBe(true);
+    expect(Number.isNaN(periodEnd.getTime())).toBe(true);
   });
 });
 

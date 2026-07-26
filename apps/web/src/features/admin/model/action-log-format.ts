@@ -1,17 +1,11 @@
-/**
- * Format Timestamp.
- * @param value - The value argument.
- */
+import { formatDateTime } from "../../../lib/format-date";
+
+// The guard stays here: `formatDateTime` renders an unparseable value as
+// "Invalid Date", while the log table shows a hyphen for a missing timestamp.
 export function formatTimestamp(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTime(date);
 }
 
 /**

@@ -70,7 +70,8 @@ function monthShortLabel(date: Date): string {
   return label;
 }
 
-function formatTimestampShort(date: Date): string {
+// Compact day label ("Jul 26"); UTC so a date-only value never shifts a day.
+export function formatTimestampShort(date: Date): string {
   return `${monthShortLabel(date)} ${date.getUTCDate()}`;
 }
 

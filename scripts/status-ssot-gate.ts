@@ -60,7 +60,7 @@ const VOCABULARIES: readonly Vocabulary[] = [
 ];
 
 // The SSOT declarations themselves, plus the documented literal mirrors whose
-// tsconfigs (prisma/, e2e/) cannot resolve @customreport/shared. Entries are
+// tsconfig (prisma/) cannot resolve @customreport/shared. Entries are
 // repo-root-relative and matched by resolved path, so a same-named file
 // elsewhere in the tree is NOT exempt.
 const ALLOWLIST = [
@@ -71,12 +71,6 @@ const ALLOWLIST = [
   "packages/shared/src/schemas/canonical-status.ts",
   // The role vocabulary's single declaration, both axes (role-type spec).
   "packages/shared/src/schemas/auth.ts",
-  // e2e's isolated tsconfig cannot resolve @customreport/shared (no `paths`
-  // mapping) — the role-type spec names "the e2e tree" as a self-contained
-  // exemption from the re-declaration rule.
-  "e2e/integration/fixtures.ts",
-  "e2e/sweep/catalog-sweep.spec.ts",
-  "e2e/sweep/helpers/dev-auth.ts",
 ];
 
 // A vocabulary is re-declared as a TS union type or as a zod literal list.

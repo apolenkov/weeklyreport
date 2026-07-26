@@ -20,6 +20,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import AxeBuilder from "@axe-core/playwright";
+import { roleSchema, type DbRole } from "@customreport/shared";
 import { test, type ConsoleMessage, type Request } from "@playwright/test";
 
 // Import the seed ids directly from the source of truth. NOT via
@@ -32,14 +33,12 @@ import {
 
 import { loginByCookie } from "./helpers/dev-auth";
 
-type Role = "lead" | "head" | "admin" | "viewer";
+const CANONICAL_ROLES: readonly DbRole[] = roleSchema.options;
 
-// This tree's isolated tsconfig has no workspace resolution, so the canonical
-// set is an inline literal (same carve-out as catalog-parser.mjs) rather than
-// importing `sessionRoleSchema` from @customreport/shared.
-const CANONICAL_ROLES: readonly Role[] = ["lead", "head", "admin", "viewer"];
-
-function assertValidRole(role: string, context: string): asserts role is Role {
+function assertValidRole(
+  role: string,
+  context: string,
+): asserts role is DbRole {
   if (!(CANONICAL_ROLES as readonly string[]).includes(role)) {
     throw new Error(
       `Invalid role token "${role}" in ${context} — must be one of: ${CANONICAL_ROLES.join(", ")}`,
@@ -49,10 +48,10 @@ function assertValidRole(role: string, context: string): asserts role is Role {
 
 type CatalogRoute = {
   route: string;
-  access?: Role[];
+  access?: DbRole[];
 };
 type Catalog = {
-  role: Role;
+  role: DbRole;
   routes: CatalogRoute[];
 };
 
@@ -61,7 +60,7 @@ type Anomaly = { kind: AnomalyKind; detail: string };
 type RouteResult = {
   route: string;
   resolved: string | null;
-  access?: Role[];
+  access?: DbRole[];
   finalUrl?: string;
   status?: number | null;
   anomalies: Anomaly[];
@@ -98,7 +97,7 @@ const IGNORED_REQUEST_URLS: RegExp[] = [
  * An unknown placeholder returns null so the walk records a skip-with-reason
  * instead of visiting a broken literal URL.
  */
-function resolveRoute(route: string, role: Role): string | null {
+function resolveRoute(route: string, role: DbRole): string | null {
   if (!route.includes("[")) {
     return route;
   }
@@ -135,7 +134,7 @@ function parseCatalog(text: string): Catalog | null {
     }
     // The route's access is the first `access:` line in its block, before the
     // next `- route:` entry.
-    let access: Role[] | undefined;
+    let access: DbRole[] | undefined;
     for (let j = i + 1; j < lines.length; j++) {
       if (/^\s*-\s*route:/.test(lines[j])) {
         break;
@@ -151,7 +150,7 @@ function parseCatalog(text: string): Catalog | null {
         }
         // Every element was just validated against CANONICAL_ROLES above (throws
         // on any mismatch), so this narrowing is runtime-checked, not a raw cast.
-        access = tokens as Role[];
+        access = tokens as DbRole[];
         break;
       }
     }
@@ -174,7 +173,7 @@ function loadCatalogs(): Catalog[] {
     .sort((a, b) => a.role.localeCompare(b.role));
 }
 
-function renderReport(role: Role, results: RouteResult[]): string {
+function renderReport(role: DbRole, results: RouteResult[]): string {
   const totalAnomalies = results.reduce(
     (sum, result) => sum + result.anomalies.length,
     0,
