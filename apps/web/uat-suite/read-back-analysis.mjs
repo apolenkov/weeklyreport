@@ -136,6 +136,40 @@ const MUTATION_SITES = modules()
     new Map(),
   );
 
+// Call styles this analysis cannot follow. Today the app uses `mutationOptions`
+// everywhere, so this finds nothing — which is the point: without it the
+// "every call site" guarantee would hold by convention rather than by check,
+// and the first hook written the other way would be invisible to the audit
+// while its mutation kept whatever verdict its other call sites earned.
+const UNREADABLE_MUTATION_CALLS = new Set([
+  "useMutation",
+  "mutate",
+  "mutateAsync",
+]);
+
+const UNREADABLE_SITES = modules()
+  .flatMap((module) =>
+    walk(module.source, (node) => {
+      if (!ts.isCallExpression(node)) return [];
+      const callee = node.expression;
+      if (
+        !ts.isPropertyAccessExpression(callee) ||
+        !UNREADABLE_MUTATION_CALLS.has(callee.name.text)
+      ) {
+        return [];
+      }
+      const chain = propertyChain(callee.expression);
+      return chain && chain.length > 1
+        ? [{ procedure: chain.slice(1).join("."), module }]
+        : [];
+    }),
+  )
+  .reduce(
+    (map, site) =>
+      map.set(site.procedure, [...(map.get(site.procedure) ?? []), site]),
+    new Map(),
+  );
+
 const unique = (details) => [...new Set(details)].join(", ");
 
 function verdictOf(findings) {
@@ -197,6 +231,20 @@ function worstOf(sites) {
 // reason it is missing, over every call site the web app has.
 export function auditReadBack(procedure, queries) {
   const sites = MUTATION_SITES.get(procedure) ?? [];
+  const unreadable = UNREADABLE_SITES.get(procedure) ?? [];
+  // One call site this analysis cannot follow makes the verdict for ALL of them
+  // unknown: a clean success path elsewhere says nothing about the one that was
+  // never read.
+  if (unreadable.length > 0) {
+    const where = unreadable
+      .map((site) => path.relative(WEB_SRC, site.module.file))
+      .join(", ");
+    return {
+      status: "UNRESOLVED",
+      callSites: sites.length + unreadable.length,
+      detail: `call style this audit cannot follow in ${where}`,
+    };
+  }
   if (sites.length === 0) {
     return {
       status: "UNRESOLVED",
