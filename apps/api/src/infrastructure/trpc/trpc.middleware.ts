@@ -3,6 +3,10 @@ import { assertRole } from "@customreport/shared/trpc";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 
+import {
+  ANONYMOUS_USER_ID,
+  NO_CORRELATION_ID,
+} from "../../lib/actor-sentinels.js";
 import { trpcMetricsMiddleware as recordTrpcMetrics } from "../metrics/trpc-metrics.middleware.js";
 import { recordMutationAudit } from "./trpc.audit.js";
 import type { TrpcContext } from "./trpc.context.js";
@@ -28,7 +32,7 @@ const t = initTRPC.context<TrpcContext>().create({
       ...shape,
       data: {
         ...safeData,
-        requestId: ctx?.correlationId ?? "no-context",
+        requestId: ctx?.correlationId ?? NO_CORRELATION_ID,
       },
     };
   },
@@ -181,7 +185,7 @@ function buildRoleMiddleware(allowed: Role | Role[]) {
         // Even when role/userId are missing, emit so the audit trail captures
         // the attempt rather than swallowing it.
         ctx.auditLogger.roleDenied({
-          userId: ctx.session?.userId ?? "anonymous",
+          userId: ctx.session?.userId ?? ANONYMOUS_USER_ID,
           role: ctx.session?.role ?? null,
           attemptedRole: allowed,
           ip: ctx.ip,

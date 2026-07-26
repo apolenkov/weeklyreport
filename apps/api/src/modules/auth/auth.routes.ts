@@ -13,6 +13,10 @@ import passport from "passport";
 
 import { loginAttemptsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import {
+  ANONYMOUS_USER_ID,
+  UNKNOWN_CLIENT_IP,
+} from "../../lib/actor-sentinels.js";
+import {
   type AuditLogger,
   createNullAuditLogger,
 } from "../../lib/audit-logger.js";
@@ -43,9 +47,9 @@ function rejectSamlAssertion(
   res: Response,
 ): void {
   deps.auditLogger.loginFail({
-    userId: "anonymous",
+    userId: ANONYMOUS_USER_ID,
     role: null,
-    ip: req.ip ?? "unknown",
+    ip: req.ip ?? UNKNOWN_CLIENT_IP,
     reason: "invalid_assertion",
   });
   loginAttemptsTotal.inc({ method: "saml", outcome: "fail" });
@@ -100,7 +104,7 @@ function createSamlCallbackHandler(deps: AuthRouteDeps): RequestHandler {
       deps.auditLogger.loginSuccess({
         userId: session.userId,
         role: session.role,
-        ip: req.ip ?? "unknown",
+        ip: req.ip ?? UNKNOWN_CLIENT_IP,
       });
       loginAttemptsTotal.inc({ method: "saml", outcome: "success" });
 
@@ -110,9 +114,9 @@ function createSamlCallbackHandler(deps: AuthRouteDeps): RequestHandler {
       // Any post-passport failure (DB write, JWT signing, etc.) is still a
       // failed login from the user's perspective.
       deps.auditLogger.loginFail({
-        userId: "anonymous",
+        userId: ANONYMOUS_USER_ID,
         role: null,
-        ip: req.ip ?? "unknown",
+        ip: req.ip ?? UNKNOWN_CLIENT_IP,
         reason: error instanceof Error ? error.message : "callback-error",
       });
       loginAttemptsTotal.inc({ method: "saml", outcome: "fail" });
@@ -164,9 +168,9 @@ export function createLogoutHandler(
     // No session → anonymous/null so SIEM sees no-session logout (not a fake role).
     const reqUser = (request as Request & { user?: UserSession }).user;
     deps.auditLogger.logout({
-      userId: reqUser?.userId ?? "anonymous",
+      userId: reqUser?.userId ?? ANONYMOUS_USER_ID,
       role: reqUser?.role ?? null,
-      ip: request.ip ?? "unknown",
+      ip: request.ip ?? UNKNOWN_CLIENT_IP,
     });
 
     // Reuse the cookie issuer with an empty token + maxAge 0 so the cleared

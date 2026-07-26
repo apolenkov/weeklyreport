@@ -1,5 +1,9 @@
 import type { Role } from "@customreport/shared";
 
+import {
+  ANONYMOUS_USER_ID,
+  NO_CORRELATION_ID,
+} from "../../lib/actor-sentinels.js";
 import type { TrpcContext } from "./trpc.context.js";
 
 // Best-effort target from common id keys; productId precedes groupId
@@ -59,7 +63,7 @@ async function persistUserActionLog(
       data: {
         ...entry,
         ip: ctx.ip,
-        correlationId: ctx.correlationId ?? "no-context",
+        correlationId: ctx.correlationId ?? NO_CORRELATION_ID,
       },
     });
   } catch (error) {
@@ -93,7 +97,7 @@ export async function recordMutationAudit(
   record: MutationAuditRecord,
 ): Promise<void> {
   const target = extractAuditTarget(record.rawInput);
-  const userId = ctx.session?.userId ?? "anonymous";
+  const userId = ctx.session?.userId ?? ANONYMOUS_USER_ID;
   const role = ctx.session?.role ?? null;
 
   ctx.auditLogger.mutation({

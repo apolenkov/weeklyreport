@@ -1,3 +1,4 @@
+import { SYSTEM_ACTOR_ID } from "./actor-sentinels.js";
 import type { AuditEvent, AuditLogger } from "./audit-logger-types.js";
 
 // Funnel forces event against AuditEvent; satisfies-envelope would reject
@@ -138,7 +139,11 @@ export function createAdminAuditEvents(
 
 // Cron-driven transitions have no actor; the envelope's actor fields carry the
 // scheduler identity instead of a request principal.
-const CRON_ACTOR = { userId: "system", role: null, ip: "cron" } as const;
+const CRON_ACTOR = {
+  userId: SYSTEM_ACTOR_ID,
+  role: null,
+  ip: "cron",
+} as const;
 
 export function createPeriodCronAuditEvents(
   emit: AuditEmit,

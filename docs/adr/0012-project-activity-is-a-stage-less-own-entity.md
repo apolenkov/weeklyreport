@@ -1,7 +1,7 @@
 # Project Activity is a stage-less own entity, not a reused Item or Risk
 
-**Status:** proposed (locked via the demo-feedback grill on 2026-06-30; not yet
-implemented — tracked by `openspec/changes/project-activity-reporting`)
+**Status:** accepted (locked via the demo-feedback grill on 2026-06-30;
+implemented — see `openspec/changes/archive/2026-07-02-project-activity-reporting`)
 
 ## Context
 
