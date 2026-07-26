@@ -70,6 +70,35 @@ read-to-write window — fail closed).
 - **THEN** the helper reports the archived outcome and the caller does not
   publish.
 
+### Requirement: Publish Gates Are Ordered Around The Already-Published Fast Return
+
+`PeriodService.publishPeriod` SHALL order its pre-write gates so that the
+archived denial runs BEFORE the already-published fast return, and the non-admin
+active-period scope assert runs AFTER it. An archived period therefore fails
+closed even when its `periodStatus` is already `published`, while a retry on an
+already-published, non-archived period returns idempotent success without
+consulting the active-period resolver. Denying that retry would report a scope
+problem for a request that writes nothing and whose response echoes only the
+caller's own `reportId`, on periods a head may already read.
+
+#### Scenario: A retry on a no-longer-active published period stays an idempotent success
+
+- **GIVEN** a non-admin head and an already-published, non-archived report that
+  is NOT the active period
+- **WHEN** the head publishes that report
+- **THEN** the call returns idempotent success
+- **AND** the active-period resolver is never consulted, so no scope denial is
+  raised
+- **AND** no guarded write and no post-publish side-effects run.
+
+#### Scenario: An archived period is denied even when already published
+
+- **GIVEN** an archived report whose `periodStatus` is already `published`
+- **WHEN** it is published
+- **THEN** the archived denial is raised and the already-published fast return
+  is never reached
+- **AND** no guarded write runs.
+
 ### Requirement: Injected Client Preserves Each Caller's Context And Snapshot Strategy
 
 The helper SHALL accept the Prisma client (a transaction client or the base
