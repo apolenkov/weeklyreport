@@ -114,8 +114,8 @@ export type PeriodListItem = z.infer<typeof periodListItemSchema>;
  * mints a Report row without waiting for the daily `PeriodCreatorScheduler`
  * (00:05 UTC cron). Targets two scenarios:
  *
- *   1. Fresh dev/staging DBs with zero Reports: admins were previously
- *      blocked until the next cron tick or had to INSERT SQL manually.
+ *   1. Fresh dev/staging DBs with zero Reports, where the only other routes
+ *      to a first Report are waiting for the cron tick or hand-written SQL.
  *   2. Backfill / one-off cycles (e.g. a missed period, off-cadence ad-hoc).
  *
  * Only `periodStart` is required. `periodEnd` / `deadline` default from

@@ -22,6 +22,9 @@ const interpolation = (name: string): string => `$\{${name}}`;
 
 const TICKET = `ticket-slug (e.g. ${slug("UFB", "036")}, ${slug("AUTH", "08")}, ${slug("SC", "160")})`;
 const NARRATION = "change-history narration (moved/extracted/... into/from/by)";
+const REWRITE = "change-history narration (was rewritten/refactored/...)";
+const PRIOR_STATE =
+  "prior-state narration (used to be/formerly/previously this)";
 
 ruleTester.run("no-comment-archaeology", noCommentArchaeology, {
   valid: [
@@ -35,6 +38,15 @@ ruleTester.run("no-comment-archaeology", noCommentArchaeology, {
     `logger.warn("${slug("AUTH", "08")}");`,
     // A non-test call with a string first argument is not a test title.
     `format("${slug("SC", "160")} regression");`,
+    // "previously" about DATA is not archaeology. Widening the prior-state
+    // pattern to a bare `previously` lit up twelve of these at once, all
+    // describing a value's history rather than the code's.
+    "// Cursor is a previously returned row id (valid keyset input).",
+    "// Do not clear a previously-stamped late flag on the reopen path.",
+    "// `from: null` means a deadline was set on a previously deadline-less period.",
+    // Likewise a passive verb about what the code does now, not what was done
+    // to it: only the `was/has been` frame narrates an edit.
+    "// Live rows can never be rewritten by a save that read a stale status.",
     // Interpolation must not forge a slug across the boundary, and an
     // interpolated title that carries no archaeology stays legal.
     `it(\`renders ${interpolation("role")} without a banner\`, () => {});`,
@@ -62,6 +74,24 @@ ruleTester.run("no-comment-archaeology", noCommentArchaeology, {
     {
       code: "// Extracted the row builder into this module.",
       errors: [{ messageId: "comment", data: { label: NARRATION } }],
+    },
+    {
+      // The verb list carried no rewrite verb, so a comment narrating a loop's
+      // conversion to a recursion went in under the rule.
+      code: "// The retry loop was rewritten from a `for` into a recursion.",
+      errors: [{ messageId: "comment", data: { label: REWRITE } }],
+    },
+    {
+      code: "// This used to be a loop over the raw rows.",
+      errors: [{ messageId: "comment", data: { label: PRIOR_STATE } }],
+    },
+    {
+      code: "// Previously this mapper synthesized a fake grid.",
+      errors: [{ messageId: "comment", data: { label: PRIOR_STATE } }],
+    },
+    {
+      code: "// Admins were previously blocked until the next cron tick.",
+      errors: [{ messageId: "comment", data: { label: PRIOR_STATE } }],
     },
     {
       // Block comments are judged line by line, so the report lands on the

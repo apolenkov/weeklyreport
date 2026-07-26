@@ -61,6 +61,20 @@ const DETECTORS: readonly (readonly [Detector, string])[] = [
     /\b(moved|relocated|extracted|graduated|dissolved|renamed|migrated)\b[^.\n]{0,40}\b(into|from|out of|to|by|verbatim)\b/i,
     "change-history narration (moved/extracted/... into/from/by)",
   ],
+  // The auxiliary is what makes this precise. "was rewritten" narrates a past
+  // edit; "can be rewritten by a later save" describes what the code does now,
+  // and a bare verb cannot tell the two apart.
+  [
+    /\b(was|were|has been|have been)\s+(rewritten|refactored|reworked|reimplemented|extracted|renamed)\b/i,
+    "change-history narration (was rewritten/refactored/...)",
+  ],
+  // Naming the code's own former state, which git already records. Deliberately
+  // narrow: "a previously returned row id" and "a previously-stamped flag"
+  // describe DATA, not an edit, and must keep passing.
+  [
+    /\b(used to be|used to have|formerly)\b|\bpreviously\s+(this|it)\b|\b(was|were)\s+previously\b/i,
+    "prior-state narration (used to be/formerly/previously this)",
+  ],
   [/\b\w+ dissolve\b/i, "dissolve narration"],
   [/\bmax-lines split\b/i, "split narration"],
 ];

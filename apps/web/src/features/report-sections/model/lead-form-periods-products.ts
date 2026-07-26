@@ -181,9 +181,9 @@ function buildStageGrid(
  * "mine" vs foreign-owned "locked". A stage with no assignment is absent from
  * the set and excluded — no vacant chip.
  *
- * Previously this mapper synthesized a fake grid that hard-coded the lead
- * onto "Dev", so assigning a lead to all 7 stages on the Products admin tab
- * did not show up on /lead/report.
+ * The grid must come from `stageSet` rather than be synthesized here: a
+ * synthesized one cannot reflect what the Products admin tab assigned, so
+ * stages set there would never reach /lead/report.
  */
 export function mapLeadProducts(
   section: ReportSectionReadModel,
