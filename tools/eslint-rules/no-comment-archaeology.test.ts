@@ -16,6 +16,10 @@ const ruleTester = new RuleTester();
 const slug = (letters: string, digits: string): string =>
   `${letters}-${digits}`;
 
+// Same reason as `slug`: a fixture that needs to LOOK interpolated must not be
+// a literal `${…}` inside a plain string, which the repo bans.
+const interpolation = (name: string): string => `$\{${name}}`;
+
 const TICKET = `ticket-slug (e.g. ${slug("UFB", "036")}, ${slug("AUTH", "08")}, ${slug("SC", "160")})`;
 const NARRATION = "change-history narration (moved/extracted/... into/from/by)";
 
@@ -33,8 +37,8 @@ ruleTester.run("no-comment-archaeology", noCommentArchaeology, {
     `format("${slug("SC", "160")} regression");`,
     // Interpolation must not forge a slug across the boundary, and an
     // interpolated title that carries no archaeology stays legal.
-    "it(`renders ${role} without a banner`, () => {});",
-    "it(`RFC-5322 parsing for ${role}`, () => {});",
+    `it(\`renders ${interpolation("role")} without a banner\`, () => {});`,
+    `it(\`RFC-5322 parsing for ${interpolation("role")}\`, () => {});`,
   ],
   invalid: [
     {

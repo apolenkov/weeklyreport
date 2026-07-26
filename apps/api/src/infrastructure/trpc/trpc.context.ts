@@ -2,6 +2,10 @@ import type { UserSession } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 
+import {
+  NO_CORRELATION_ID,
+  UNKNOWN_CLIENT_IP,
+} from "../../lib/actor-sentinels.js";
 import { type AuditLogger, createAuditLogger } from "../../lib/audit-logger.js";
 import {
   type HumanSessionDeps,
@@ -115,11 +119,6 @@ export interface TrpcContext {
   // JWT reportId claim; null when isPdfExport is false.
   pdfReportId: string | null;
 }
-
-// Sentinel when the request has no correlation-id header (or empty array).
-const NO_CORRELATION_ID = "no-context";
-// Sentinel when Express cannot determine client IP (no socket / trust proxy).
-const UNKNOWN_CLIENT_IP = "unknown";
 
 function readRequestId(header: string | string[] | undefined): string {
   if (Array.isArray(header)) return header[0] ?? NO_CORRELATION_ID;

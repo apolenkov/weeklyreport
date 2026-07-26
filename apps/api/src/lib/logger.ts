@@ -5,6 +5,7 @@ import { logs, SeverityNumber } from "@opentelemetry/api-logs";
 import { ClsService } from "nestjs-cls";
 import { z } from "zod";
 
+import { NO_CORRELATION_ID } from "./actor-sentinels.js";
 import {
   createFileSink,
   enqueueWrite,
@@ -85,7 +86,7 @@ export interface LoggerOptions {
   // Omit to disable file logging.
   logDir?: string;
   service?: string;
-  // Reads correlationId from CLS; 'no-context' outside an active scope.
+  // Reads correlationId from CLS; NO_CORRELATION_ID outside an active scope.
   clsService?: ClsService;
   maxBytes?: number;
   maxAgeDays?: number;
@@ -166,9 +167,9 @@ class AppLoggerImpl implements AppLogger {
     const cls = this.clsService;
     if (cls?.isActive()) {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cls.get returns undefined when the key is unset despite the generic return type
-      return cls.get<string>("correlationId") ?? "no-context";
+      return cls.get<string>("correlationId") ?? NO_CORRELATION_ID;
     }
-    return "no-context";
+    return NO_CORRELATION_ID;
   }
 
   private emit(

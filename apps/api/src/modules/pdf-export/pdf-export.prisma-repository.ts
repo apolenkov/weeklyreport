@@ -9,6 +9,7 @@ import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { SYSTEM_ACTOR_ID } from "../../lib/actor-sentinels.js";
 import { canReadReport } from "../../lib/report-read-access.js";
 import { computePortfolioOverviewFromReadSections } from "../published-report-snapshot.js";
 import {
@@ -95,7 +96,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
         status: pdfStatusToDb[job.status],
         // Thread session userId for audit; fall back to 'system' for non-tRPC
         // callers (workers, scripts) so the column stays NOT NULL.
-        requestedBy: requestedBy ?? "system",
+        requestedBy: requestedBy ?? SYSTEM_ACTOR_ID,
         filePath: job.artifactUrl,
         checksum: job.checksum,
         error: null,

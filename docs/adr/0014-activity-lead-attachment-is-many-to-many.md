@@ -1,7 +1,7 @@
 # A Project Activity attaches to many leads, each reporting their own status
 
-**Status:** proposed (locked via the demo-feedback grill on 2026-06-30; not yet
-implemented — tracked by `openspec/changes/project-activity-reporting`)
+**Status:** accepted (locked via the demo-feedback grill on 2026-06-30;
+implemented — see `openspec/changes/archive/2026-07-02-project-activity-reporting`)
 
 ## Context
 

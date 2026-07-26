@@ -99,13 +99,17 @@ function buildPortfolioOverview(
   };
 }
 
+// Display name shown in the UI for a report the auto-publish cron closed
+// with no human head to attribute it to.
+const SYSTEM_PUBLISHER_NAME = "system";
+
 function deriveAutoPublishedReport(report: AssembledReport): AssembledReport {
   return assembledReportSchema.parse({
     ...report,
     status: "published",
     publishedAt: new Date(),
     publishedById: null,
-    publishedByName: "system",
+    publishedByName: SYSTEM_PUBLISHER_NAME,
   });
 }
 

@@ -91,18 +91,48 @@ than taken unilaterally in a quality pass.
       deleted, along with the service, repository and query methods that became
       unreachable. `admin.deleteReminderRule` is kept: it is a tombstone, not an
       orphan, and its allowlist entry now says so
-- [ ] Build the admin Activities tab — create, edit, archive, and a lead-attachment
+- [x] Build the admin Activities tab — create, edit, archive, and a lead-attachment
       editor — modeled on the existing products tab and group-products editor.
       A new admin route trips the catalog-drift gate, so add the
-      `e2e/catalog/admin.yaml` scenarios with it
+      `e2e/catalog/admin.yaml` scenarios with it. Confirmed: the tab exists
+      (`apps/web/src/app/(app)/admin/activities`, `activities-tab.tsx`,
+      `activity-edit-dialog.tsx`, `activity-leads-editor.tsx`), wired to
+      `projectActivity.create/update/archive/attachLead/detachLead`; catalog
+      scenarios are present (`e2e/catalog/admin.yaml:62-168`, routes
+      `admin-activities-manage` / `admin-activities-view`) and
+      `pnpm catalog:check` is green.
 - [x] Give `archive.unarchiveReport` its restore control. Restore sits beside
       Archive in the head report toolbar; the weekly read model now carries
       `archived`, which is what tells the two states apart, and its allowlist
-      entry is removed
-- [ ] Remove each procedure from the allowlist as its consumer lands
-- [ ] Revisit the `hasList` heuristic: it now only separates VERIFIED from PARTIAL,
+      entry is removed. Confirmed: `archive-restore-actions.tsx` wires the
+      control into `weekly-report-page.tsx`; the allowlist has no
+      `archive.unarchiveReport` entry.
+- [x] Remove each procedure from the allowlist as its consumer lands.
+      Confirmed: `apps/web/uat-suite/mutation-audit.allowlist.json` now holds
+      exactly the 3 deliberate retentions (`testTelegramSend`,
+      `saveReminderRule`, `deleteReminderRule`) — no stale `carryOver.execute`,
+      no `projectActivity.*` entries, no `archive.unarchiveReport`. Running
+      `pnpm uat:audit --check` reports `BLACK HOLE: 3 (0 unexpected)`, and
+      `mutation-audit.md` lists all five `projectActivity.*` procedures plus
+      `archive.unarchiveReport` as VERIFIED (lines 78, 85-89) with real
+      `invalidateQueries` read-backs.
+- [x] Revisit the `hasList` heuristic: it now only separates VERIFIED from PARTIAL,
       but 43 of 50 mutations still match it on a namespace coincidence, so PARTIAL
       is close to meaningless. A read-back check should look at what the caller
-      actually invalidates, not at sibling names
-- [ ] ADR 0012 and 0014 still read "Status: proposed … not yet implemented" while
-      their change is archived with every task ticked. Correct the status
+      actually invalidates, not at sibling names. Confirmed: `hasList` no
+      longer appears anywhere in `apps/web/uat-suite`; classification now runs
+      through `auditReadBack` in `read-back-analysis.mjs`, which inspects each
+      call site's actual `invalidateQueries(...)` calls. The discriminating
+      evidence is the count shift: a plain run now reports
+      `VERIFIED: 41, PARTIAL: 2, UNRESOLVED: 2, BLACK HOLE: 3` — PARTIAL down
+      from ~43 to 2, with the ambiguous cases broken out into a new
+      UNRESOLVED bucket instead of being silently folded into VERIFIED or
+      PARTIAL.
+- [x] ADR 0012 and 0014 still read "Status: proposed … not yet implemented" while
+      their change is archived with every task ticked. Correct the status.
+      Done: both now read `**Status:** accepted (locked via the demo-feedback
+grill on 2026-06-30; implemented — see
+`openspec/changes/archive/2026-07-02-project-activity-reporting`)`.
+      ADR 0013 carries the identical stale status and references the same
+      archived change, but it is out of this change's task list — left
+      untouched; flagging for separate correction.

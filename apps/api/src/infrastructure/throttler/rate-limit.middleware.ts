@@ -8,6 +8,7 @@ import rateLimit, {
 import Redis from "ioredis";
 import { type RedisReply, RedisStore } from "rate-limit-redis";
 
+import { UNKNOWN_CLIENT_IP } from "../../lib/actor-sentinels";
 import type { AppLogger } from "../../lib/logger";
 import type { EnvConfig } from "../config/env.schema";
 import { buildRedisConnectionOptions } from "../config/redis-connection";
@@ -66,7 +67,7 @@ function buildBaseConfig(logger: AppLogger): Partial<Options> {
     // ipKeyGenerator normalises IPv6 by /64; without it low-bit churn bypasses
     // the limit and express-rate-limit emits ERR_ERL_KEY_GEN_IPV6 every request.
     keyGenerator: (req) => {
-      const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
+      const ip = req.ip ?? req.socket.remoteAddress ?? UNKNOWN_CLIENT_IP;
       return ipKeyGenerator(ip);
     },
     handler: (req, res, _next, opts) => {

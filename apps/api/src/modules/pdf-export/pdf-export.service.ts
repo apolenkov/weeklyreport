@@ -25,6 +25,9 @@ export class PdfExportDomainError extends Error {
 // Persisted template id for the phase-2 PDF layout; enqueue and read paths must agree.
 export const PDF_EXPORT_TEMPLATE_VERSION = "phase-2-pdf-v1";
 
+// Telemetry role label for non-tRPC callers (workers/cron) with no session role.
+const SYSTEM_ROLE_LABEL = "system";
+
 export type PdfExportJobRecord = PdfExportJob & { requestedBy: string };
 
 export interface PdfExportRepository {
@@ -119,7 +122,7 @@ export class PdfExportService {
       });
     }
 
-    this.telemetry.recordRequest(requestedByRole ?? "system");
+    this.telemetry.recordRequest(requestedByRole ?? SYSTEM_ROLE_LABEL);
 
     return job;
   }
