@@ -341,10 +341,15 @@ services:
         API_URL: http://api:3001
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL must be set}
     environment:
-      # Only the server-side API_URL (read at runtime) belongs here: NEXT_PUBLIC_*
-      # is inlined at BUILD time via build.args above, so a runtime line for it
+      # Only server-side vars (read at runtime) belong here: NEXT_PUBLIC_* is
+      # inlined at BUILD time via build.args above, so a runtime line for it
       # would be a no-op. Required — a default would mask a misrouted origin.
       API_URL: ${API_URL:?API_URL must be set (server-side origin, e.g. http://api:3001)}
+      # Feeds sentry.server.config.ts, so Server-Component failures (root
+      # generateMetadata, getOrgPublic) and instrumentation.ts onRequestError
+      # reach Bugsink. Optional like the api's: unset means log-only, and every
+      # such failure still writes to this service's stderr.
+      SENTRY_DSN: ${SENTRY_DSN:-}
     depends_on:
       api:
         condition: service_healthy

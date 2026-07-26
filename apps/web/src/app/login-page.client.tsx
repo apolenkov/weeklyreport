@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  DEFAULT_ORGANIZATION_IDENTITY,
-  type OrganizationPublic,
-} from "@customreport/shared";
+import type { OrganizationPublic } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -26,15 +23,6 @@ const APP_VERSION = webEnv.appVersion();
 
 interface LoginPageClientProps {
   initialOrg: OrganizationPublic;
-}
-
-function isOrganizationPublic(value: unknown): value is OrganizationPublic {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof (value as { shortName?: unknown }).shortName === "string" &&
-    typeof (value as { fullName?: unknown }).fullName === "string"
-  );
 }
 
 export function LoginPageClient({ initialOrg }: LoginPageClientProps) {
@@ -174,15 +162,13 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
   const sessionQ = useQuery(trpc.auth.me.queryOptions());
   const sessionRole = getSessionRole(sessionQ.data);
 
-  // initialOrg from RSC keeps SSR and first paint aligned.
+  // initialOrg from RSC keeps SSR and first paint aligned, and makes the
+  // query data non-nullable: the server helper already resolved an identity.
   const orgQ = useQuery({
     ...trpc.org.getPublic.queryOptions(),
     initialData: initialOrg,
   });
-  // Generic identity fallback — real brand strings live in Organization.
-  const org = isOrganizationPublic(orgQ.data)
-    ? orgQ.data
-    : DEFAULT_ORGANIZATION_IDENTITY;
+  const org = orgQ.data;
 
   const stayOnLanding = searchParams.get("stay") === "1";
   const safeNext = sanitizeNext(
