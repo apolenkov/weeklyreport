@@ -38,6 +38,7 @@ import {
 import {
   ReportSectionAccessError,
   ReportSectionDomainError,
+  ReportSectionNotFoundError,
   SectionVersionConflictError,
 } from "../../modules/report-sections/index.js";
 import {
@@ -62,6 +63,10 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   // failure — CONFLICT (409) so the client reloads and retries, distinct from
   // the ReportSectionDomainError BAD_REQUEST below.
   [SectionVersionConflictError, "CONFLICT"],
+  // The report/section a write targets vanished inside the lock window — the
+  // resource is gone, so NOT_FOUND, distinct from the period-state and
+  // validation rejections that share ReportSectionDomainError's BAD_REQUEST.
+  [ReportSectionNotFoundError, "NOT_FOUND"],
   [ReportSectionDomainError, "BAD_REQUEST"],
   [ReviewAccessError, "FORBIDDEN"],
   [ReviewNotFoundError, "NOT_FOUND"],

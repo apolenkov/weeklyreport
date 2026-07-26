@@ -30,6 +30,16 @@ transaction. Every write gate MUST therefore evaluate the same predicate as
 places, and two of the three carried the archived term while this text still
 said "only when published".
 
+A gate that reads no row at all is a different case: the row it locks was
+deleted inside the same window — the parent `Report` for the save gate, the
+section-joined row for `fill-from` and the verdict gate. Each MUST separate that
+from the period-state rejection and raise a not-found-class error, which the
+tRPC mapper surfaces as `NOT_FOUND`. `saveDraft` and `submitSection` raise
+`ReportSectionNotFoundError`; a period-state constraint stays
+`ReportSectionDomainError("SECTION_ALREADY_SUBMITTED")` → `BAD_REQUEST`. A save
+whose SECTION (not report) vanished is caught downstream by the version
+compare-and-set and stays `SectionVersionConflictError` → `CONFLICT`.
+
 #### Scenario: An archive committing inside the write window rejects the save
 
 - **WHEN** an admin archives a report after `saveDraft`'s service-level
@@ -38,6 +48,16 @@ said "only when published".
 - **THEN** the in-transaction gate rejects the write before any child row is
   deleted, and the caller sees the published-period constraint error rather
   than a partially rewritten section
+
+#### Scenario: A report deleted inside the write window is NOT_FOUND
+
+- **WHEN** the report is deleted after `saveDraft`'s service-level precheck has
+  passed and before its write transaction takes the row lock, so the locking
+  read returns no gate row at all
+- **THEN** the write is rejected before any child row is deleted with
+  `ReportSectionNotFoundError`, which the tRPC error mapper turns into
+  `NOT_FOUND` — not the `SECTION_ALREADY_SUBMITTED` period-state constraint,
+  which would tell the client a live report is published
 
 #### Scenario: Reopened period accepts a draft save
 
