@@ -71,10 +71,11 @@ peerDependencyRules:
     "type-coverage-core>typescript": "6"
 
 overrides:
-  "@xmldom/xmldom": ">=0.8.13"
-  protobufjs: ">=8.0.2"
-  # Upper bounds are load-bearing: an open-ended floor let `pnpm update` carry
-  # vite across a major silently, which is a decision, not a currency bump.
+  # Upper bounds are load-bearing on EVERY entry here: an open-ended floor let
+  # `pnpm update` carry vite across a major silently, which is a decision, not a
+  # currency bump. Below 1.0 the minor is the breaking axis, hence `<0.10`.
+  "@xmldom/xmldom": ">=0.8.13 <0.10"
+  protobufjs: ">=8.0.2 <9"
   vite: ">=8.1.5 <9"
   fast-uri: ">=3.1.2 <4"
   # dependabot 2026-07-24: find-my-way via @prisma/dev, sharp via next,

@@ -47,8 +47,8 @@ catalogs:
       version: 4.4.3
 
 overrides:
-  '@xmldom/xmldom': '>=0.8.13'
-  protobufjs: '>=8.0.2'
+  '@xmldom/xmldom': '>=0.8.13 <0.10'
+  protobufjs: '>=8.0.2 <9'
   vite: '>=8.1.5 <9'
   fast-uri: '>=3.1.2 <4'
   find-my-way: '>=9.7.0 <10'
