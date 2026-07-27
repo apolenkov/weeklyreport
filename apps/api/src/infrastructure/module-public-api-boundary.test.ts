@@ -70,23 +70,36 @@ async function lintTemporaryInternalImport() {
   }
 }
 
+// Each case runs ESLint over the tree in-process, ~10s idle. Twice that left no
+// room once the web and shared suites run alongside it, and a boundary gate that
+// fails on machine load is one people learn to re-run rather than read.
+const ESLINT_RUN_BUDGET_MS = 60_000;
+
 describe("API module public boundary", () => {
-  it("allows infrastructure to import a module public barrel", async () => {
-    const messages = parseMessages(await runEslint());
+  it(
+    "allows infrastructure to import a module public barrel",
+    async () => {
+      const messages = parseMessages(await runEslint());
 
-    expect(messages).toEqual([]);
-  }, 20_000);
+      expect(messages).toEqual([]);
+    },
+    ESLINT_RUN_BUDGET_MS,
+  );
 
-  it("rejects infrastructure imports of module internals", async () => {
-    const messages = await lintTemporaryInternalImport();
+  it(
+    "rejects infrastructure imports of module internals",
+    async () => {
+      const messages = await lintTemporaryInternalImport();
 
-    expect(messages).toEqual([
-      expect.objectContaining({
-        ruleId: "import-x/no-restricted-paths",
-        message: expect.stringContaining(
-          "through an owning public entrypoint",
-        ) as unknown,
-      }),
-    ]);
-  }, 20_000);
+      expect(messages).toEqual([
+        expect.objectContaining({
+          ruleId: "import-x/no-restricted-paths",
+          message: expect.stringContaining(
+            "through an owning public entrypoint",
+          ) as unknown,
+        }),
+      ]);
+    },
+    ESLINT_RUN_BUDGET_MS,
+  );
 });
