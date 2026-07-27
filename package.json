@@ -19,7 +19,7 @@
     "dev:fresh": "rm -rf apps/web/.next && turbo run dev --parallel",
     "dev:watch": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --watch",
     "build": "turbo run build",
-    "lint": "eslint . && stylelint \"**/*.css\" --allow-empty-input && pnpm lint:prisma:typecheck && pnpm lint:scripts:typecheck && pnpm lint:e2e:typecheck && pnpm lint:ssot-gate && pnpm lint:runtime-node && pnpm depcruise && pnpm knip",
+    "lint": "eslint . --max-warnings 0 && stylelint \"**/*.css\" --allow-empty-input && pnpm lint:prisma:typecheck && pnpm lint:scripts:typecheck && pnpm lint:e2e:typecheck && pnpm lint:ssot-gate && pnpm lint:runtime-node && pnpm depcruise && pnpm knip",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:prisma:typecheck": "tsc --project tsconfig.prisma.json --noEmit",
