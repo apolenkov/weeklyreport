@@ -201,6 +201,12 @@ export default defineConfig([
     "**/*.workflow.mjs",
     ".claude/workflows/**",
   ]),
+  // A disable directive that no longer suppresses anything asserts a constraint
+  // the code already satisfies. ESLint reports these at `warn` by default, which
+  // is a severity `pnpm lint` does not gate on — so every one would accumulate.
+  {
+    linterOptions: { reportUnusedDisableDirectives: "error" },
+  },
   {
     files: ["**/*.ts", "**/*.tsx"],
     plugins: {
@@ -302,7 +308,7 @@ export default defineConfig([
       ],
       // Deliberate severity choices:
       "@typescript-eslint/no-explicit-any": "error",
-      "@typescript-eslint/no-non-null-assertion": "warn",
+      "@typescript-eslint/no-non-null-assertion": "error",
       "@typescript-eslint/no-unused-vars": "off", // delegated to unused-imports
       "unused-imports/no-unused-vars": [
         "error",
@@ -315,7 +321,7 @@ export default defineConfig([
           destructuredArrayIgnorePattern: "^_",
         },
       ],
-      "unused-imports/no-unused-imports": "warn",
+      "unused-imports/no-unused-imports": "error",
 
       // React rules enforced at error.
       "react/jsx-no-useless-fragment": "error",
@@ -341,15 +347,15 @@ export default defineConfig([
       "no-var": "error",
       "no-param-reassign": ["error", { props: false }],
 
-      // ESLint core rules (warn = won't gate)
+      // ESLint core rules
       "prefer-rest-params": "error",
-      "prefer-template": "warn",
-      "no-template-curly-in-string": "warn",
-      "no-unused-private-class-members": "warn",
+      "prefer-template": "error",
+      "no-template-curly-in-string": "error",
+      "no-unused-private-class-members": "error",
 
       // Type-aware rules
       "@typescript-eslint/no-floating-promises": "error",
-      "@typescript-eslint/prefer-optional-chain": "warn",
+      "@typescript-eslint/prefer-optional-chain": "error",
 
       // Syntactic / proven-noop type-aware rules (safe autofix).
       "@typescript-eslint/dot-notation": "error",
@@ -527,7 +533,7 @@ export default defineConfig([
       // React-Compiler-powered diagnostics (purity, set-state-in-effect,
       // immutability, refs, …) that pair with react-compiler/react-compiler.
       ...reactHooks.configs.recommended.rules,
-      "react-hooks/exhaustive-deps": "warn",
+      "react-hooks/exhaustive-deps": "error",
       // refs: error since the burn-down. The compiler taints a WHOLE hook
       // return object that bundles refs with data, so dialog components
       // DESTRUCTURE the hook result instead of holding the bag; the surviving
