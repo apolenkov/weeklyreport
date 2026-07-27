@@ -168,37 +168,6 @@ without affecting unrelated work. The merge decision is the user's.
   changes encountered, and files touched are reported to the user for the merge
   decision
 
-### Requirement: Node Type Definitions MUST Track The Runtime Major
-
-The `@types/node` major version declared in the workspace MUST be at or below
-the Node major the project actually runs (as established by `.nvmrc` and the CI
-`NODE_VERSION`), and MUST NOT be declared ahead of that runtime major without a
-recorded justification. When `@types/node` is declared in more than one
-workspace, all declarations MUST share the same major.
-
-#### Scenario: Types are brought up to the runtime major
-
-- **WHEN** `@types/node` is bumped to `^25.9.1` in root `package.json` and
-  `apps/web/package.json`
-- **THEN** the declared major (25) is confirmed to be at or below the Node major
-  in `.nvmrc` (`25`) and CI `NODE_VERSION` (`25`)
-- **AND** both workspace declarations are on the same `@types/node` major
-
-#### Scenario: Types are never ahead of the runtime without justification
-
-- **WHEN** an `@types/node` major bump is proposed
-- **THEN** the bump is rejected if its major exceeds the Node major run by
-  `.nvmrc` and CI, unless the proposal records an explicit justification for
-  running types ahead of the runtime
-
-#### Scenario: Runtime guardrails are not changed by a types-only bump
-
-- **WHEN** the `@types/node` major is bumped for alignment
-- **THEN** `engines.node`, `.nvmrc`, and the CI `NODE_VERSION` are left
-  unchanged by that bump
-- **AND** any remaining mismatch between the `engines.node` floor and the
-  runtime major is recorded rather than silently edited
-
 ### Requirement: A Major Type Bump MUST Pass The Full Gate Suite
 
 A major upgrade of `@types/node` MUST be validated by the full gate suite on the
@@ -603,34 +572,6 @@ revertable commit so it can be dropped if it is the sole failure.
 - **AND** if the bump is the sole gate failure, its commit can be reverted
   without unwinding the rest of the wave
 
-### Requirement: The Playwright Base Image Tag MUST Track the Resolved playwright Dependency
-
-The `Dockerfile.api` base image tag MUST name the same version as the
-`playwright` package resolved in `pnpm-lock.yaml` (the tag has the form
-`mcr.microsoft.com/playwright:v<x.y.z>-noble`), because the image runs
-with `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` and the bundled Chromium revision is
-coupled to the Playwright version. A mismatch means the workspace Playwright
-looks up a browser revision the image does not ship, and PDF export fails at
-`chromium.launch()` in the built image while unit and E2E suites — which run
-their own `playwright install` — stay green and hide the break.
-
-#### Scenario: The image tag matches the resolved dependency
-
-- **WHEN** `Dockerfile.api` and `pnpm-lock.yaml` are inspected after the change
-- **THEN** the `FROM mcr.microsoft.com/playwright:v<x.y.z>-noble` base tag names
-  the same version (`1.61.1`) as the resolved `playwright` and `playwright-core`
-  lines in `pnpm-lock.yaml`
-- **AND** no `v1.59.1-noble` reference remains anywhere in `Dockerfile.api`,
-  including the `# TODO: pin @sha256` note
-
-#### Scenario: PDF export can launch Chromium in the built image
-
-- **WHEN** the production API image is built from `Dockerfile.api` and a
-  PDF-export job invokes `chromium.launch({ headless: true })` from
-  `apps/api/src/infrastructure/bullmq/pdf-export.processor.ts`
-- **THEN** Chromium launches against the revision baked into the base image
-  rather than throwing "Executable doesn't exist"
-
 ### Requirement: A Repository Gate MUST Fail When the Image Tag and playwright Version Drift
 
 A repository gate MUST detect drift between the `Dockerfile.api` Playwright base
@@ -652,3 +593,43 @@ therefore inside the `.husky/pre-push` gate, alongside the existing
 - **THEN** `node scripts/check-playwright-image-sync.mjs` exits non-zero, naming
   both the image tag and the resolved dependency version
 - **AND** `pnpm lint` fails as a result, blocking the push
+
+### Requirement: The Node Major MUST Be The One The Images Run
+
+The Node major that the shipped container images execute is the runtime major.
+`.nvmrc`, the CI Node version, `engines.node`, and every `@types/node`
+declaration MUST equal it — they follow the images rather than define them,
+because a gate that passes on a major no container runs proves nothing about
+the deployed code. When `@types/node` is declared in more than one workspace,
+all declarations MUST share that same major.
+
+#### Scenario: Every declaration agrees with the images
+
+- **WHEN** `scripts/check-runtime-node-sync.ts` runs as part of `pnpm lint`
+- **THEN** `.nvmrc`, `engines.node`, the `FROM node:<major>` tag in
+  `Dockerfile.api`, the same tag in `Dockerfile.web`, and the `@types/node`
+  major in the workspace catalog all resolve to one major
+- **AND** the guard exits non-zero naming each disagreeing source when they do
+  not
+
+#### Scenario: A base image is changed
+
+- **WHEN** either Dockerfile's base image is changed to one carrying a
+  different Node major
+- **THEN** the change is incomplete until `.nvmrc`, `engines.node` and the
+  `@types/node` declaration are moved with it in the same change
+- **AND** a base image whose Node major is not visible in the `FROM` line is
+  rejected, because it makes the runtime major unreadable from the repository
+
+#### Scenario: A types bump is proposed ahead of the runtime
+
+- **WHEN** an `@types/node` major bump is proposed that exceeds the major the
+  images run
+- **THEN** the bump is rejected unless the images move in the same change
+
+#### Scenario: The runtime major reaches end of life
+
+- **WHEN** the Node major in use reaches its end-of-life date in the
+  nodejs/Release schedule
+- **THEN** moving off it is treated as a defect to be scheduled, not a
+  currency upgrade to be deferred
