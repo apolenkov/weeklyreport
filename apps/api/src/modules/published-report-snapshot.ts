@@ -33,9 +33,7 @@ type SnapshotReportRow = Prisma.ReportGetPayload<{
 export function buildAssembledReportFromPrismaRow(
   row: SnapshotReportRow,
 ): AssembledReport {
-  const sections = row.sections.map((section) =>
-    mapPrismaToReportSection(section),
-  );
+  const sections = row.sections.map(mapPrismaToReportSection);
   // The mapper floors each product's traffic light by the author's covering
   // risks. Deriving totals from those mapped sections keeps product cards and
   // top-line totals consistent within the snapshot.
@@ -192,6 +190,11 @@ export function buildPortfolioProductsFromSnapshotSections(
     .sort((a, b) => a.productName.localeCompare(b.productName, "ru"));
 }
 
+// Not tacit on purpose: aggregateTrafficLight accepts
+// `readonly (TrafficLightStatus | null | undefined)[]`, and this export pins the
+// narrower contract snapshot callers actually satisfy. Aliasing it would widen
+// the published signature to admit nullish members.
+// eslint-disable-next-line functional/prefer-tacit -- signature pin, see above
 export function computeWorstStatus(
   statuses: readonly TrafficLightStatus[],
 ): TrafficLightStatus | null {

@@ -109,7 +109,5 @@ function toHistoryEntry(s: MyHistorySectionRow) {
 export function buildMyHistoryEntries(
   sections: readonly MyHistorySectionRow[],
 ): MyHistoryEntry[] {
-  return myHistoryEntrySchema
-    .array()
-    .parse(sections.map((section) => toHistoryEntry(section)));
+  return myHistoryEntrySchema.array().parse(sections.map(toHistoryEntry));
 }

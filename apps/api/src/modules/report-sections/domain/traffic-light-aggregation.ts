@@ -9,8 +9,6 @@ export function aggregateTrafficLight(
   statuses: readonly (TrafficLightStatus | null | undefined)[],
 ): TrafficLightStatus | null {
   return canonicalToTrafficLight(
-    worstCanonicalStatus(
-      statuses.map((status) => trafficLightToCanonical(status)),
-    ),
+    worstCanonicalStatus(statuses.map(trafficLightToCanonical)),
   );
 }
