@@ -289,7 +289,6 @@ describe("focused admin services", () => {
     const service = new ReminderAdminService(repository);
 
     await expect(service.policyExists(policyId)).resolves.toBe(true);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts the mock was bypassed, not invoked unbound
     expect(repository.listReminderPolicies).not.toHaveBeenCalled();
   });
 
@@ -1828,7 +1827,6 @@ describe("focused services — users, integrations, and stages", () => {
     await expect(service.deactivateUser("user-1")).resolves.toEqual({
       success: true,
     });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(vi.mocked(repo.deactivateUser)).toHaveBeenCalledWith("user-1");
   });
 
@@ -1839,7 +1837,6 @@ describe("focused services — users, integrations, and stages", () => {
     await expect(service.activateUser("user-1")).resolves.toEqual({
       success: true,
     });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(vi.mocked(repo.activateUser)).toHaveBeenCalledWith("user-1");
   });
 

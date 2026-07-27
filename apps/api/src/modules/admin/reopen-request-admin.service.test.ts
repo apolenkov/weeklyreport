@@ -134,7 +134,6 @@ describe("ReopenRequestAdminService.respondReopenRequest", () => {
       session: headSession,
     });
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method
     expect(repo.decideReopenRequest).toHaveBeenCalledWith(
       expect.objectContaining({ reviewNote: null }),
     );

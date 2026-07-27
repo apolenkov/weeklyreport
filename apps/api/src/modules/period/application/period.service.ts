@@ -54,7 +54,7 @@ export type PublishPeriodOutcome =
   | { readonly transitioned: false; readonly reason: "raced" | "archived" };
 
 export interface PeriodRepository {
-  getReportById(reportId: string): Promise<{
+  getReportById: (reportId: string) => Promise<{
     id: string;
     status: ReportStatus;
     periodStatus: PeriodStatus;
@@ -64,11 +64,11 @@ export interface PeriodRepository {
   // Guarded compare-and-set keyed on `periodStatus != "published" AND
   // archived = false`, so telemetry and ingestion run at most once per real
   // transition; PublishPeriodOutcome carries the zero-row split.
-  publishPeriod(
+  publishPeriod: (
     reportId: string,
     userId: string,
-  ): Promise<PublishPeriodOutcome>;
-  reopenPeriod(reportId: string): Promise<void>;
+  ) => Promise<PublishPeriodOutcome>;
+  reopenPeriod: (reportId: string) => Promise<void>;
   /**
    * The current active editable period id (the `period.publish` target) and the
    * latest non-archived published period id (the `period.reopen` target). Both
@@ -76,20 +76,20 @@ export interface PeriodRepository {
    * lifecycle target matches the `reportId` its weekly-report page resolves —
    * one query definition, no second copy.
    */
-  getCurrentEditableId(): Promise<string | null>;
-  getLatestPublishedNonArchivedId(): Promise<string | null>;
+  getCurrentEditableId: () => Promise<string | null>;
+  getLatestPublishedNonArchivedId: () => Promise<string | null>;
   /**
    * The id of an existing reopened, non-archived period, or null. Read by the
    * single-active-reopen guard so a non-admin head cannot hold two reopened
    * periods at once (which would let them walk back through history).
    */
-  getReopenedNonArchivedId(): Promise<string | null>;
+  getReopenedNonArchivedId: () => Promise<string | null>;
   /**
    * List of section ids tied to a report — read by the post-publish
    * ingestion seam (see {@link IngestionPublishHook}) so a future async
    * consumer can enqueue per-section work after a period publishes.
    */
-  listSectionIds(reportId: string): Promise<string[]>;
+  listSectionIds: (reportId: string) => Promise<string[]>;
 }
 
 // DI token binding the PeriodRepository port to its adapter at the module
