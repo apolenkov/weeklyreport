@@ -91,7 +91,7 @@
     "stylelint": "^17.14.1",
     "stylelint-config-standard": "^40.0.0",
     "tsx": "catalog:",
-    "turbo": "2.10.6",
+    "turbo": "^2.10.7",
     "type-coverage": "^2.30.1",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.65.0",
