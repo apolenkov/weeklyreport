@@ -50,35 +50,35 @@ export interface WeeklyReportRepositoryResult {
 }
 
 export interface WeeklyReportRepository {
-  getWeeklyReport: (
+  getWeeklyReport(
     reportId: string,
     session?: WeeklyReportScopeSession,
-  ) => Promise<WeeklyReportRepositoryResult | null>;
-  getActiveReportId: () => Promise<string | null>;
+  ): Promise<WeeklyReportRepositoryResult | null>;
+  getActiveReportId(): Promise<string | null>;
   // Unlike `getActiveReportId`, has NO published fallback and filters
   // `archived`, so the viewer gate cannot leak a published or archived-open
   // period through it.
-  getCurrentEditableId: () => Promise<string | null>;
+  getCurrentEditableId(): Promise<string | null>;
   // The head's reopen authz target and leadership published fallback; skipping
   // archived rows keeps the default usable after a newer row is archived.
-  getLatestPublishedNonArchivedId: () => Promise<string | null>;
+  getLatestPublishedNonArchivedId(): Promise<string | null>;
   // Scoped lead → own authored sections, otherwise group scope.
-  getCompiledHistory: (
+  getCompiledHistory(
     session: WeeklyReportScopeSession,
     includeArchive: boolean,
-  ) => Promise<{
+  ): Promise<{
     readonly reports: readonly CompiledHistoryReportRow[];
     readonly archiveCount: number;
   }>;
   // Confirms or rejects this exact id only — it must NOT fall back to
   // searching older editable periods.
-  getVisibleReportId: (
+  getVisibleReportId(
     reportId: string,
     session: WeeklyReportScopeSession,
-  ) => Promise<string | null>;
-  getLatestPublishedVisibleId: (
+  ): Promise<string | null>;
+  getLatestPublishedVisibleId(
     session: WeeklyReportScopeSession,
-  ) => Promise<string | null>;
+  ): Promise<string | null>;
 }
 
 export class WeeklyReportService {
