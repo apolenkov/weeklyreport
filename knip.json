@@ -1,7 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "ignore": ["apps/web/uat-suite/**"],
-  "ignoreBinaries": ["tail", "playwright"],
+  "ignoreBinaries": ["tail"],
   "ignoreDependencies": ["@playwright/test", "@axe-core/playwright"],
   "workspaces": {
     ".": {
