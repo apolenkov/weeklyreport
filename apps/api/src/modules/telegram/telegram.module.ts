@@ -31,7 +31,7 @@ export function selectTelegramAdapter(env: EnvConfig): TelegramAdapter {
   providers: [
     {
       provide: TELEGRAM_ADAPTER,
-      useFactory: (env: EnvConfig) => selectTelegramAdapter(env),
+      useFactory: selectTelegramAdapter,
       inject: [ENV_CONFIG],
     },
     {

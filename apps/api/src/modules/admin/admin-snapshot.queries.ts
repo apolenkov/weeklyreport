@@ -152,14 +152,12 @@ export async function getSnapshot(
 
   return adminSnapshotSchema.parse({
     groups: rows.groups.map((group) => reportingGroupSchema.parse(group)),
-    users: rows.users.map((user) => toAdminUser(user)),
-    projects: rows.projects.map((project) => toAdminProject(project)),
-    periods: rows.periods.map((period) => toReportPeriod(period)),
-    reminderRules: rows.reminderRules.map((rule) => toReminderRule(rule)),
-    reminderExecutions: rows.reminderExecutions.map((execution) =>
-      toReminderExecution(execution),
-    ),
+    users: rows.users.map(toAdminUser),
+    projects: rows.projects.map(toAdminProject),
+    periods: rows.periods.map(toReportPeriod),
+    reminderRules: rows.reminderRules.map(toReminderRule),
+    reminderExecutions: rows.reminderExecutions.map(toReminderExecution),
     // Inline policies keep the snapshot fetch one round trip.
-    policies: rows.reminderPolicies.map((policy) => toReminderPolicy(policy)),
+    policies: rows.reminderPolicies.map(toReminderPolicy),
   });
 }

@@ -34,7 +34,7 @@ export class ReviewPrismaRepository implements ReviewRepository {
       },
     });
 
-    return sections.map((section) => toDashboardRow(section));
+    return sections.map(toDashboardRow);
   }
 }
 

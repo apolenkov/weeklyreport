@@ -169,9 +169,7 @@ function toExportJob(row: {
 export function toAssembledReport(
   report: Prisma.ReportGetPayload<{ include: typeof reportFullInclude }>,
 ): AssembledReport {
-  const sections = report.sections.map((section) =>
-    mapPrismaToReportSection(section),
-  );
+  const sections = report.sections.map(mapPrismaToReportSection);
   // Top-line totals from floored trafficLight (not raw projectStatuses) so
   // cards and totals agree; re-applies the mapper's own-risk floor.
   const portfolio = computePortfolioOverviewFromReadSections(sections);

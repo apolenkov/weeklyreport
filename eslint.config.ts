@@ -1018,6 +1018,20 @@ export default defineConfig([
       ],
     },
   },
+  // Point-free ratchet, api modules only. The rule is arity-aware (verified: it
+  // does NOT report `xs.map((x) => f(x))` when `f` has a second optional
+  // parameter), so a tacit rewrite here cannot leak `map`'s index argument.
+  // Scoped deliberately: outside this boundary the rule's suggestion strips the
+  // type predicate from `(x): x is string => Boolean(x)`, which breaks narrowing
+  // (measured: 2 typecheck errors across web + trpc infrastructure).
+  // `checkMemberExpressions` stays default-off — it would add the `this`-binding
+  // hazard of `.map(obj.method)`.
+  {
+    files: ["apps/api/src/modules/**/*.ts"],
+    ignores: ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**"],
+    plugins: { functional: functionalPlugin },
+    rules: { "functional/prefer-tacit": "error" },
+  },
   // Zone 6 — ui stays domain-free (package-name zone). packages/ui primitives must
   // not import @customreport/shared domain schemas; charts receive finished series
   // as props. Currently 0 violations.

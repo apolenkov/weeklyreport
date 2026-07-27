@@ -99,7 +99,7 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
       where: { reportId },
       include: reportSectionFullInclude,
     });
-    return rows.map((row) => mapPrismaToReportSection(row));
+    return rows.map(mapPrismaToReportSection);
   }
 
   async saveCarryOver(
