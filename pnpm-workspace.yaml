@@ -80,6 +80,10 @@ overrides:
   find-my-way: ">=9.7.0"
   sharp: ">=0.35.0"
   postcss: ">=8.5.12"
+  # dependabot 2026-07-27: GHSA-5qjj-4xww-7phc. @prisma/dev pins valibot to an
+  # exact 1.2.0, so only an override reaches the fix; bounded below major 2
+  # because compatibility was argued from semver, not tested across a major.
+  valibot: ">=1.4.2 <2"
 
 patchedDependencies:
   "samlify@2.13.1": patches/samlify@2.13.1.patch
