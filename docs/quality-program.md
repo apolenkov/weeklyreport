@@ -11,6 +11,8 @@ verifiable in this repository (commands, configs, and specs are linked).
   boundaries) + stylelint + Prisma schema lint + `depcruise` + `knip`.
   "Done" means `--max-warnings 0` with no per-file exemption
   (`eslint.config.ts` holds only documented JUSTIFIED PERMANENT entries).
+  `scripts/lint-gate.ts` runs all 10 checks in one pass and reports each
+  PASS/FAIL, so one failing check can no longer hide the ones behind it.
 - **Acyclic architecture.** dependency-cruiser gate: 0 runtime import cycles
   across 812 modules / 2168 dependencies (was 41 cycles before the 2026-07
   burn-down). Spec: `openspec/specs/directory-architecture-standard/`.

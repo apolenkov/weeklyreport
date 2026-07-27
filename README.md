@@ -84,7 +84,7 @@ pnpm dev
 ```bash
 pnpm dev            # web + api в dev-режиме (turbo --parallel)
 pnpm typecheck      # проверка типов во всех пакетах
-pnpm lint           # ESLint + stylelint + проверка типов Prisma
+pnpm lint           # все 10 проверок статического анализа, отчёт по каждой
 pnpm test           # unit-тесты (Vitest)
 pnpm build          # production-сборка
 pnpm format         # Prettier по всему дереву

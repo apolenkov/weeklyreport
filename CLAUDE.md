@@ -26,11 +26,15 @@ Use `pnpm` from the repo root (Node >=24). Never `npm`/Yarn.
 ```bash
 pnpm dev:watch          # docker compose dev with --watch
 pnpm typecheck          # turbo run typecheck (depends on prisma generate)
-pnpm lint               # eslint . && stylelint && lint:prisma:typecheck — NOT just eslint
+pnpm lint               # scripts/lint-gate.ts — ALL 10 checks run, every failure reported
 pnpm test               # turbo run vitest (unit only)
 pnpm build              # turbo run build
 ```
 
+- `pnpm lint` is `scripts/lint-gate.ts`: it runs all 10 checks (eslint, stylelint,
+  3 tsc projects, SSOT test + sweep, runtime-node, depcruise, knip), prints a
+  PASS/FAIL table and exits 1 if any failed. Each is runnable alone
+  (`pnpm lint:eslint`, …). `pnpm lint --fail-fast` restores stop-at-first.
 - Run one unit test: `cd apps/web && pnpm exec vitest run src/path/to/file.test.tsx`
   (same in `apps/api`). Do NOT wrap `vitest` in `rtk` — it mis-parses TSX and reports 0 tests.
 - If TS errors reference a known Prisma model (e.g. TS2339), run
