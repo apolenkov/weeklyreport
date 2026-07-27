@@ -100,7 +100,6 @@ describe("TelegramProcessor failure logging", () => {
       new Error("boom"),
     );
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(logger.error).toHaveBeenCalledWith(
       "telegram-outbound job failed",
       expect.objectContaining({ correlationId: "corr-9", error: "boom" }),

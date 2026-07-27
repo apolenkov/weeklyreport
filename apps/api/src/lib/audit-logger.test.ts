@@ -308,7 +308,7 @@ describe("createNullAuditLogger", () => {
 
 describe("createAuditLogger — scopeDenied", () => {
   it("emits the {event, userId, role, ip, attemptedScope, resourceId} envelope on warn", () => {
-    const calls: { level: string; meta: Record<string, unknown> }[] = [];
+    const calls: { level: string; meta?: Record<string, unknown> }[] = [];
     const logger: AppLogger = {
       debug: () => {
         /* not used here */
@@ -316,8 +316,9 @@ describe("createAuditLogger — scopeDenied", () => {
       info: () => {
         /* not used here */
       },
-      warn: (_msg: string, meta: Record<string, unknown>) =>
-        calls.push({ level: "warn", meta }),
+      warn: (_msg: string, meta?: Record<string, unknown>) => {
+        calls.push({ level: "warn", meta });
+      },
       error: () => {
         /* not used here */
       },

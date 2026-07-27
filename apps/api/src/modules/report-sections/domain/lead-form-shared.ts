@@ -36,75 +36,80 @@ export class LeadFormConstraintError extends Error {
 }
 
 export interface LeadFormRepository {
-  getSectionById(sectionId: string): Promise<ReportSectionReadModel | null>;
+  getSectionById: (sectionId: string) => Promise<ReportSectionReadModel | null>;
   // Scoped load for revoke; out-of-group → null (no existence oracle).
-  getSectionByIdScoped(
+  getSectionByIdScoped: (
     sectionId: string,
     scope: Record<string, unknown>,
-  ): Promise<ReportSectionReadModel | null>;
+  ) => Promise<ReportSectionReadModel | null>;
   // Head cross-read bounds requestedAuthorId to the head's single group.
-  getUserReportingGroupId(userId: string): Promise<string | null>;
-  getSectionForPeriod(
+  getUserReportingGroupId: (userId: string) => Promise<string | null>;
+  getSectionForPeriod: (
     reportId: string,
     userId: string,
-  ): Promise<{
+  ) => Promise<{
     section: ReportSectionReadModel;
     readOnly: boolean;
     // archived is the Report flag, not a periodStatus value.
     reopenFacts: ReopenEligibilityFacts;
   } | null>;
   // Atomic group+section snapshot for head cross-read (no race window).
-  getSectionForPeriodAsGroupPeer(
+  getSectionForPeriodAsGroupPeer: (
     reportId: string,
     authorId: string,
     peerUserId: string,
-  ): Promise<{
+  ) => Promise<{
     section: ReportSectionReadModel;
     readOnly: boolean;
     reopenFacts: ReopenEligibilityFacts;
   } | null>;
   // Same rule as canRequestReopen; null when section missing.
-  getSectionReopenContext(
+  getSectionReopenContext: (
     sectionId: string,
-  ): Promise<{ authorId: string; facts: ReopenEligibilityFacts } | null>;
+  ) => Promise<{ authorId: string; facts: ReopenEligibilityFacts } | null>;
   // periodStatus (not status) so reopened periods stay fillable.
-  getReportPeriodStatusForSection(sectionId: string): Promise<string | null>;
+  getReportPeriodStatusForSection: (
+    sectionId: string,
+  ) => Promise<string | null>;
   // Published stableIds for lock marker; empty for never-published drafts.
-  getPublishedLineage(section: ReportSectionReadModel): Promise<{
+  getPublishedLineage: (section: ReportSectionReadModel) => Promise<{
     itemStableIds: readonly string[];
     decisionStableIds: readonly string[];
   }>;
-  revokeSectionSubmission(sectionId: string, revokedBy: string): Promise<void>;
-  fillFromSection(
+  revokeSectionSubmission: (
+    sectionId: string,
+    revokedBy: string,
+  ) => Promise<void>;
+  fillFromSection: (
     targetSectionId: string,
     sourceSectionId: string,
     expectedVersion: number,
-  ): Promise<number>;
-  createReopenRequest(
+  ) => Promise<number>;
+  createReopenRequest: (
     sectionId: string,
     userId: string,
     reason?: string,
-  ): Promise<void>;
+  ) => Promise<void>;
   // Shared non-archived products: both gate and content filter (cannot diverge).
-  getSharedNonArchivedProductIds(
+  getSharedNonArchivedProductIds: (
     viewerId: string,
     authorId: string,
-  ): Promise<string[]>;
-  getCrossAuthors(
+  ) => Promise<string[]>;
+  getCrossAuthors: (
     reportId: string,
     userId: string,
-  ): Promise<CrossAuthorStatusRow[]>;
+  ) => Promise<CrossAuthorStatusRow[]>;
   // Full-content Everyone read; coOwnsShared distinguishes denied vs empty for metrics.
-  getCrossAuthorContent(
+  getCrossAuthorContent: (
     reportId: string,
     userId: string,
-  ): Promise<{ coOwnsShared: boolean; rows: CrossAuthorSectionRow[] }>;
+  ) => Promise<{ coOwnsShared: boolean; rows: CrossAuthorSectionRow[] }>;
   // Scope on updateMany so heads revoke only their group's submissions.
-  revokeAllSubmitted(
+  revokeAllSubmitted: (
     reportId: string,
     revokedBy: string,
     scope: Record<string, unknown>,
-  ): Promise<number>;
+  ) => Promise<number>;
 }
 
 export interface CrossAuthorStatusRow {

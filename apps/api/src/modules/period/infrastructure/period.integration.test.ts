@@ -290,7 +290,6 @@ describe("PeriodService — integration (publish lifecycle)", () => {
 
     await service.publishPeriod(reportId, headSession);
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.publishPeriod).toHaveBeenCalledWith(
       reportId,
       headSession.userId,

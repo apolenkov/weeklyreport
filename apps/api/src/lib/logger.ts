@@ -21,11 +21,11 @@ export const logLevelSchema = z.enum(["debug", "info", "warn", "error"]);
 type LogLevel = z.infer<typeof logLevelSchema>;
 
 export interface AppLogger {
-  debug(message: string, context?: Record<string, unknown>): void;
-  info(message: string, context?: Record<string, unknown>): void;
-  warn(message: string, context?: Record<string, unknown>): void;
-  error(message: string, context?: Record<string, unknown>): void;
-  child(context: Record<string, unknown>): AppLogger;
+  debug: (message: string, context?: Record<string, unknown>) => void;
+  info: (message: string, context?: Record<string, unknown>) => void;
+  warn: (message: string, context?: Record<string, unknown>) => void;
+  error: (message: string, context?: Record<string, unknown>) => void;
+  child: (context: Record<string, unknown>) => AppLogger;
 }
 
 interface LogEntry {

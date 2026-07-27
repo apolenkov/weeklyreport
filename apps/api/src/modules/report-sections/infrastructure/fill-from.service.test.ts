@@ -144,7 +144,6 @@ describe("LeadFormService — fillFrom", () => {
 
     expect(result.success).toBe(true);
     expect(result.copiedItems).toBe(5);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.fillFromSection).toHaveBeenCalledWith(
       targetSectionId,
       sourceSectionId,
@@ -197,7 +196,6 @@ describe("LeadFormService — fillFrom", () => {
       service.fillFrom(targetSectionId, sourceSectionId, userId, 1),
     ).rejects.toThrow("Cannot fill a section of a published report");
     // The live-row mutation must never run.
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.fillFromSection).not.toHaveBeenCalled();
   });
 
@@ -223,7 +221,6 @@ describe("LeadFormService — fillFrom", () => {
       service.fillFrom(targetSectionId, sourceSectionId, userId, 1),
     ).rejects.toThrow("Can only fill from your own section");
     // The cross-group content copy must never run.
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.fillFromSection).not.toHaveBeenCalled();
   });
 
@@ -236,7 +233,6 @@ describe("LeadFormService — fillFrom", () => {
     await expect(
       service.fillFrom(targetSectionId, sourceSectionId, userId, 1),
     ).rejects.toThrow(`Source section ${sourceSectionId} not found`);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.fillFromSection).not.toHaveBeenCalled();
   });
 
@@ -262,7 +258,6 @@ describe("LeadFormService — fillFrom", () => {
     );
 
     expect(result.success).toBe(true);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.fillFromSection).toHaveBeenCalled();
   });
 });
