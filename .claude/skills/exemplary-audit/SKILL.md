@@ -63,11 +63,15 @@ pnpm exec eslint <paths> --max-warnings 0; ec=$?; echo "exit=$ec"
   `2` = fatal error, formatter failure, missing suppressions file, or unpruned
   suppressions; `0` = clean.
 
-**Known trap in this repo.** `pnpm lint` is an `&&` chain — eslint, stylelint,
-three tsc projects, the SSOT gate, the runtime-node check, depcruise, knip. A
-failure in any link means every later link **never runs**. "The tree is green"
-and "all nine checks passed" are different claims. When you need a specific
-tool's state, invoke that tool directly; do not infer it from `pnpm lint`.
+**Former trap, now fixed.** `pnpm lint` used to be an `&&` chain, so a failure
+in the first link meant the other nine **never ran** and "the tree is green"
+was indistinguishable from "all checks passed". It is now
+`scripts/lint-gate.ts`: all 10 checks run, each prints its own output, and the
+closing table names every PASS/FAIL with its exit status. Read that table —
+still not the single exit code — and re-run a single tool
+(`pnpm lint:eslint`, `pnpm knip`, …) when you need one tool's state in
+isolation. `pnpm lint --fail-fast` restores the old stop-at-first behavior and
+must NOT be used when measuring.
 
 ### Step 2 — Plant a violation before believing a zero
 
@@ -240,5 +244,6 @@ Then, for each `REAL`: proposed landing (A or B), and the commit that carries it
 - Do not report a count without the options it was measured at.
 - Do not count `VACUOUS` rules toward "N rules clean".
 - Do not enable a rule in one commit and fix it in the next.
-- Do not read a tool's health out of `pnpm lint`'s single exit code.
+- Do not read a tool's health out of `pnpm lint`'s single exit code — read the
+  per-check table it prints, or run that one tool.
 - Do not add a `files:` override to make a number go away.
