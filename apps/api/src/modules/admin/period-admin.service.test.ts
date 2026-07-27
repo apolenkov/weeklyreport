@@ -99,6 +99,7 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
         deadline: new Date("2026-05-10T15:00:00.000Z"),
       }),
     ).rejects.toBeInstanceOf(AdminAccessError);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.updatePeriodManual).not.toHaveBeenCalled();
   });
 
@@ -112,6 +113,7 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
         periodStart: new Date("2026-05-05T00:00:00.000Z"),
       }),
     ).rejects.toBeInstanceOf(AdminAccessError);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.updatePeriodManual).not.toHaveBeenCalled();
   });
 
@@ -125,6 +127,7 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
     });
 
     expect(result.weekLabel).toBe("Sprint 11 (final)");
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.updatePeriodManual).toHaveBeenCalledOnce();
   });
 
@@ -140,6 +143,7 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
     expect(expectDefined(result.deadline).toISOString()).toBe(
       "2026-05-10T15:00:00.000Z",
     );
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.updatePeriodManual).toHaveBeenCalledOnce();
   });
 
@@ -154,6 +158,7 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
       periodEnd: new Date("2026-05-12T23:59:59.999Z"),
     });
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.updatePeriodManual).toHaveBeenCalledOnce();
   });
 
