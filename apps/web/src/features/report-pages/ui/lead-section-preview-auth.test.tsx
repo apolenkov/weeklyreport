@@ -5,13 +5,18 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 // Keep auth.me perpetually pending so the loading branch is what renders.
+// `vi.hoisted` because the mock factory is hoisted above this module's body.
+const { neverSettles } = vi.hoisted(() => ({
+  neverSettles: (): Promise<never> => new Promise<never>(() => undefined),
+}));
+
 vi.mock("../../../lib/trpc-context", () => ({
   useTRPC: () => ({
     auth: {
       me: {
         queryOptions: () => ({
           queryKey: ["auth", "me"],
-          queryFn: () => new Promise(() => undefined),
+          queryFn: neverSettles,
         }),
       },
     },

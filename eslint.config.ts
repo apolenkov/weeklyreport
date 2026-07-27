@@ -569,7 +569,8 @@ export default defineConfig([
   // violations down to the one vendored bundle below. Declaring a ratchet ahead
   // of the work turns the gate red for everyone and gets it widened back out.
   // Tests are exempt: a describe callback is not a function in the sense this
-  // rule measures, and the repo already exempts them from max-lines/complexity.
+  // rule measures, so the budget would fire on every one of them. Test file
+  // SIZE is bounded instead, by the tests' own `max-lines` ceiling below.
   {
     files: ["apps/*/src/**/*.{ts,tsx}", "packages/*/src/**/*.{ts,tsx}"],
     ignores: [
@@ -1066,8 +1067,24 @@ export default defineConfig([
       ],
     },
   },
-  // Test-file override: disable jsx-a11y on tests and exempt size/complexity
-  // budgets (tests routinely exceed them).
+  // Tooling files are not product source — exempt from size/complexity budgets
+  // (eslint.config.ts itself is 400+ lines; *.config.ts / *.setup.ts likewise).
+  {
+    files: ["**/*.config.ts", "**/*.setup.ts", "tools/**"],
+    rules: {
+      "max-lines": "off",
+      complexity: "off",
+      // Config knobs (ports, thresholds, rule options) ARE the named values —
+      // lifting them to consts above adds indirection, not clarity. Same for
+      // repeated path/glob literals in override lists.
+      "@typescript-eslint/no-magic-numbers": "off",
+      "sonarjs/no-duplicate-string": "off",
+    },
+  },
+  // Test-file override. Tests get their OWN budgets, not a blanket pass —
+  // they outnumber product files, so exempting them puts most of the repo
+  // outside the standard. Ordered AFTER the tooling block so a test under
+  // `tools/` keeps the test ceiling instead of inheriting `max-lines: off`.
   {
     files: [
       "**/*.test.ts",
@@ -1083,16 +1100,31 @@ export default defineConfig([
           "off",
         ]),
       ),
-      "max-lines": "off",
+      // 650 = the outlier fence of the measured test-file distribution, on the
+      // same metric `max-lines` uses (skipBlankLines + skipComments): p95 = 638
+      // and the Tukey far-out fence Q3 + 3·IQR = 209 + 3·146 = 647 land in the
+      // same place. Files above it were not cohesive units — they were
+      // dumping grounds (one held 38 unrelated schema suites) — and were split
+      // by subject rather than exempted.
+      "max-lines": [
+        "error",
+        { max: 650, skipBlankLines: true, skipComments: true },
+      ],
+      // Cyclomatic/cognitive complexity stay off: no defensible
+      // arrange-act-assert metric exists, and a number picked at random is
+      // worse than no number. `max-lines-per-function` likewise — every
+      // describe/it callback is a function, so it would fire on all of them.
       complexity: "off",
+      "sonarjs/cognitive-complexity": "off",
       // Test literals (fixture counts, expected values, dates) are the
       // assertion itself — naming each one adds noise, not meaning.
       "@typescript-eslint/no-magic-numbers": "off",
-      // tests are exempt from complexity budgets (same as
-      // the core `complexity`/`max-lines` above) — long arrange/act/assert
-      // bodies and nested setup callbacks are idiomatic test structure.
-      "sonarjs/cognitive-complexity": "off",
-      "sonarjs/no-nested-functions": "off",
+      // Enforced at the src threshold (4). The rule skips test-framework
+      // callbacks, so `describe` > `it` cost zero levels and the budget
+      // measures real helper nesting exactly as it does in src — the
+      // "nested setup callbacks are idiomatic" rationale for exempting it
+      // did not survive reading the rule.
+      "sonarjs/no-nested-functions": "error",
       // test fixtures legitimately embed fake IPs and
       // fake secrets (10.0.0.x audit-log samples, dummy PDF-export passwords).
       // The rules stay `error` in src; tests are exempt by design.
@@ -1108,20 +1140,6 @@ export default defineConfig([
       "sonarjs/no-alphabetical-sort": "off",
       // Repeated fixture strings are the test's vocabulary — lifting them to
       // consts obscures what each assertion literally checks.
-      "sonarjs/no-duplicate-string": "off",
-    },
-  },
-  // Tooling files are not product source — exempt from size/complexity budgets
-  // (eslint.config.ts itself is 400+ lines; *.config.ts / *.setup.ts likewise).
-  {
-    files: ["**/*.config.ts", "**/*.setup.ts", "tools/**"],
-    rules: {
-      "max-lines": "off",
-      complexity: "off",
-      // Config knobs (ports, thresholds, rule options) ARE the named values —
-      // lifting them to consts above adds indirection, not clarity. Same for
-      // repeated path/glob literals in override lists.
-      "@typescript-eslint/no-magic-numbers": "off",
       "sonarjs/no-duplicate-string": "off",
     },
   },

@@ -1,0 +1,508 @@
+import type {
+  PeriodStatus,
+  ReportSectionReadModel,
+} from "@customreport/shared";
+import { describe, expect, it } from "vitest";
+
+import { expectDefined } from "../../../test-utils/expect-defined.js";
+import {
+  type ReportSectionsRepository,
+  ReportSectionsService,
+} from "./report-sections.service";
+
+const testGraceSettings = () =>
+  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
+
+const SECTION_ID = "11111111-1111-4111-8111-111111111111";
+const REPORT_ID = "22222222-2222-4222-8222-222222222222";
+const AUTHOR_ID = "33333333-3333-4333-8333-333333333333";
+const PROJECT_ID_1 = "44444444-4444-4444-8444-444444444444";
+const baseSection: ReportSectionReadModel = {
+  reportSectionId: SECTION_ID,
+  reportId: REPORT_ID,
+  authorId: AUTHOR_ID,
+  authorName: "Lead 1",
+  version: 1,
+  status: "draft",
+  submittedAt: null,
+  projects: [
+    {
+      projectId: PROJECT_ID_1,
+      projectName: "Project Alpha",
+      trafficLight: null,
+      // the author owns the Development stage
+      // on this project, so the write payloads (stageIds: ["Development"]) pass
+      // the stage-ownership guard.
+      ownedStages: [
+        {
+          stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          stageName: "Development",
+          sortOrder: 0,
+        },
+      ],
+    },
+  ],
+  items: [
+    {
+      projectId: PROJECT_ID_1,
+      type: "current",
+      text: "Deliver feature X",
+      tag: "feature",
+      workflowStatus: "in_progress",
+      carriedOver: false,
+      // items carry ≥1 stage on write.
+      stageIds: ["Development"],
+    },
+  ],
+  risks: [],
+  decisions: [],
+  activities: [],
+};
+
+// read-model item types stageIds optional;
+// the write payloads below require it. Expose a stage-guaranteed copy.
+const writeItems = baseSection.items.map((it) => ({
+  ...it,
+  stageIds: it.stageIds ?? [],
+}));
+
+function createRepository(
+  section: ReportSectionReadModel,
+  periodStatus: PeriodStatus = "open",
+): ReportSectionsRepository {
+  let currentSection = structuredClone(section);
+
+  // Stubs return a resolved promise instead of being `async`: same contract,
+  // no per-method require-await suppression.
+  return {
+    getSectionById(reportSectionId) {
+      return Promise.resolve(
+        reportSectionId === currentSection.reportSectionId
+          ? structuredClone(currentSection)
+          : null,
+      );
+    },
+    getReportPeriodStatusForSection() {
+      return Promise.resolve(periodStatus);
+    },
+    getReportMeta() {
+      return Promise.resolve(null);
+    },
+    getPublishedLineage() {
+      return Promise.resolve({ itemStableIds: [], decisionStableIds: [] });
+    },
+    saveSection(nextSection) {
+      currentSection = structuredClone(nextSection);
+      return Promise.resolve(structuredClone(currentSection));
+    },
+    getMyHistoryRows() {
+      return Promise.resolve([]);
+    },
+  };
+}
+
+function validDraft(overrides: Record<string, unknown> = {}) {
+  return {
+    reportSectionId: SECTION_ID,
+    version: 1,
+    status: "draft" as const,
+    projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" as const }],
+    items: writeItems,
+    risks: [],
+    decisions: [],
+    ...overrides,
+  };
+}
+
+function validSubmit(overrides: Record<string, unknown> = {}) {
+  return {
+    ...validDraft(),
+    confirmed: true as const,
+    ...overrides,
+  };
+}
+
+describe("ReportSectionsService — submitSection happy path", () => {
+  it("submits section with valid input", async () => {
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
+    const result = await service.submitSection(validSubmit());
+
+    expect(result.status).toBe("submitted");
+    expect(result.submittedAt).toBeInstanceOf(Date);
+  });
+
+  it("sets traffic light from input", async () => {
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
+    const result = await service.submitSection(
+      validSubmit({
+        projectStatuses: [{ projectId: PROJECT_ID_1, status: "red" }],
+      }),
+    );
+
+    expect(result.projects[0]?.trafficLight).toBe("red");
+  });
+
+  it("preserves items, risks, decisions from input", async () => {
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
+    const result = await service.submitSection(
+      validSubmit({
+        items: [
+          {
+            projectId: PROJECT_ID_1,
+            type: "current",
+            text: "Task A",
+            tag: "feature",
+            workflowStatus: "done",
+            carriedOver: false,
+            stageIds: ["Development"],
+          },
+        ],
+        risks: [
+          {
+            projectId: PROJECT_ID_1,
+            risk: "Risk",
+            impact: "Impact",
+            mitigation: "Mitigation",
+            severity: "at-risk",
+            // stageIds is required (min 1) on writes.
+            stageIds: ["Development"],
+          },
+        ],
+      }),
+    );
+
+    expect(result.items).toHaveLength(1);
+    expect(result.risks).toHaveLength(1);
+  });
+});
+
+describe("ReportSectionsService — submitSection validation errors", () => {
+  it("rejects when section already submitted", async () => {
+    const submitted: ReportSectionReadModel = {
+      ...baseSection,
+      status: "submitted",
+      submittedAt: new Date("2026-04-06T12:00:00Z"),
+      projects: [
+        { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
+      ],
+    };
+    const service = new ReportSectionsService(
+      createRepository(submitted),
+      testGraceSettings,
+    );
+
+    await expect(service.submitSection(validSubmit())).rejects.toMatchObject({
+      code: "SECTION_ALREADY_SUBMITTED",
+    });
+  });
+
+  it("rejects when traffic light is missing for a project", async () => {
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
+
+    await expect(
+      service.submitSection(
+        validSubmit({
+          projectStatuses: [
+            {
+              projectId: "99999999-9999-4999-8999-999999999999",
+              status: "green",
+            },
+          ],
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "MISSING_TRAFFIC_LIGHT" });
+  });
+
+  it("rejects when no current items for a project", async () => {
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
+
+    await expect(
+      service.submitSection(
+        validSubmit({
+          items: [
+            {
+              projectId: PROJECT_ID_1,
+              type: "next",
+              text: "Future work",
+              tag: "planning",
+              workflowStatus: "planned",
+              carriedOver: false,
+              stageIds: ["Development"],
+            },
+          ],
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "MISSING_CURRENT_ITEM" });
+  });
+
+  it("rejects confirmed: false", async () => {
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
+
+    await expect(
+      service.submitSection({
+        ...validSubmit(),
+        // Negative test: schema requires `confirmed: true` (z.literal(true)).
+        confirmed: false as unknown as true,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects empty projectStatuses", async () => {
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
+
+    await expect(
+      service.submitSection(
+        validSubmit({
+          projectStatuses: [],
+        }),
+      ),
+    ).rejects.toThrow();
+  });
+});
+
+describe("ReportSectionsService — traffic light all valid statuses", () => {
+  it.each(["green", "yellow", "red"] as const)(
+    "sets traffic light to %s",
+    async (status) => {
+      const service = new ReportSectionsService(
+        createRepository(baseSection),
+        testGraceSettings,
+      );
+      const saved = await service.saveDraft(
+        validDraft({
+          projectStatuses: [{ projectId: PROJECT_ID_1, status }],
+        }),
+      );
+      expect(saved.projects[0]?.trafficLight).toBe(status);
+    },
+  );
+
+  it("sets traffic light to null when status is omitted", async () => {
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
+    const saved = await service.saveDraft(
+      validDraft({
+        projectStatuses: [{ projectId: PROJECT_ID_1 }],
+      }),
+    );
+    expect(saved.projects[0]?.trafficLight).toBeNull();
+  });
+});
+
+describe("ReportSectionsService — item tag and workflowStatus combinations", () => {
+  const tags = [
+    "feature",
+    "bugfix",
+    "infra",
+    "ops",
+    "support",
+    "tech-debt",
+  ] as const;
+  // The current-item vocabulary (blocked is never a stored status; next-only
+  // values are covered by the per-type rejection tests).
+  const statuses = ["done", "in_progress", "paused"] as const;
+
+  for (const tag of tags) {
+    for (const ws of statuses) {
+      it(`accepts item with tag="${tag}" workflowStatus="${ws}"`, async () => {
+        const service = new ReportSectionsService(
+          createRepository(baseSection),
+          testGraceSettings,
+        );
+        const saved = await service.saveDraft(
+          validDraft({
+            items: [
+              {
+                projectId: PROJECT_ID_1,
+                type: "current",
+                text: `Test item ${tag}/${ws}`,
+                tag,
+                workflowStatus: ws,
+                carriedOver: false,
+                stageIds: ["Development"],
+              },
+            ],
+          }),
+        );
+        expect(saved.items).toHaveLength(1);
+        expect(saved.items[0]?.tag).toBe(tag);
+        expect(saved.items[0]?.workflowStatus).toBe(ws);
+      });
+    }
+  }
+});
+
+describe("ReportSectionsService — double submit rejected", () => {
+  it("second submit on same section throws SECTION_ALREADY_SUBMITTED", async () => {
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
+
+    const submitted = await service.submitSection(validSubmit());
+    expect(submitted.status).toBe("submitted");
+
+    await expect(service.submitSection(validSubmit())).rejects.toMatchObject({
+      code: "SECTION_ALREADY_SUBMITTED",
+    });
+  });
+
+  it("saveDraft after submit is rejected", async () => {
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
+
+    await service.submitSection(validSubmit());
+
+    await expect(service.saveDraft(validDraft())).rejects.toMatchObject({
+      code: "SECTION_ALREADY_SUBMITTED",
+    });
+  });
+});
+
+describe("ReportSectionsService — risk/decision Zod validation", () => {
+  it("rejects risk with empty risk text", async () => {
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
+
+    await expect(
+      service.saveDraft(
+        validDraft({
+          risks: [
+            {
+              projectId: PROJECT_ID_1,
+              risk: "",
+              impact: "Some impact",
+              mitigation: "Some mitigation",
+              severity: "at-risk",
+              // keep stageIds valid so the rejection
+              // stays attributable to the empty text under test.
+              stageIds: ["Development"],
+            },
+          ],
+        }),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("rejects risk with empty impact text", async () => {
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
+
+    await expect(
+      service.saveDraft(
+        validDraft({
+          risks: [
+            {
+              projectId: PROJECT_ID_1,
+              risk: "A valid risk",
+              impact: "",
+              mitigation: "Some mitigation",
+              severity: "at-risk",
+              // keep stageIds valid so the rejection
+              // stays attributable to the empty impact under test.
+              stageIds: ["Development"],
+            },
+          ],
+        }),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("rejects risk without stageIds", async () => {
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
+
+    await expect(
+      service.saveDraft(
+        validDraft({
+          risks: [
+            {
+              projectId: PROJECT_ID_1,
+              risk: "A valid risk",
+              impact: "Some impact",
+              mitigation: "Some mitigation",
+              severity: "at-risk",
+            },
+          ],
+        }),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("rejects decision with empty text", async () => {
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
+
+    await expect(
+      service.saveDraft(
+        validDraft({
+          decisions: [
+            {
+              productId: PROJECT_ID_1,
+              text: "",
+              owner: "Owner",
+              impact: "Impact",
+              stageIds: ["Development"],
+            },
+          ],
+        }),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("rejects decision with empty owner", async () => {
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      testGraceSettings,
+    );
+
+    await expect(
+      service.saveDraft(
+        validDraft({
+          decisions: [
+            {
+              productId: PROJECT_ID_1,
+              text: "Valid decision",
+              owner: "",
+              impact: "Impact",
+              stageIds: ["Development"],
+            },
+          ],
+        }),
+      ),
+    ).rejects.toThrow();
+  });
+});
