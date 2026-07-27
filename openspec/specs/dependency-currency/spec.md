@@ -178,7 +178,10 @@ MUST be resolved with real fixes rather than `any`.
 
 - **WHEN** the `@types/node` major bump is applied and the lockfile refreshed
 - **THEN** `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build` all pass
-  while running on Node 25
+  while running on the major the container images execute, as established by
+  "The Node Major MUST Be The One The Images Run"
+- **AND** the target major is read from that authority rather than written here,
+  so this scenario cannot come to demand a runtime no image provides
 
 #### Scenario: Type breaks are fixed, not widened
 
