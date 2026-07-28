@@ -7,9 +7,14 @@ import type { RecordCommentView } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RecordComments } from "./record-comments";
+
+const mutationCalls = vi.hoisted(() => ({
+  comment: [] as unknown[],
+  deleteComment: [] as unknown[],
+}));
 
 vi.mock("../../../lib/cache-keys", () => ({
   invalidateReview: vi.fn(),
@@ -21,13 +26,19 @@ vi.mock("../../../lib/trpc-context", () => ({
       comment: {
         mutationOptions: (options: Record<string, unknown>) => ({
           ...options,
-          mutationFn: () => Promise.resolve({}),
+          mutationFn: (input: unknown) => {
+            mutationCalls.comment.push(input);
+            return Promise.resolve({});
+          },
         }),
       },
       deleteComment: {
         mutationOptions: (options: Record<string, unknown>) => ({
           ...options,
-          mutationFn: () => Promise.resolve({}),
+          mutationFn: (input: unknown) => {
+            mutationCalls.deleteComment.push(input);
+            return Promise.resolve({});
+          },
         }),
       },
     },
@@ -43,6 +54,11 @@ const OWN_COMMENT: RecordCommentView = {
   text: "Please split this item.",
   createdAt: new Date("2026-07-01T10:00:00Z"),
 };
+
+beforeEach(() => {
+  mutationCalls.comment.length = 0;
+  mutationCalls.deleteComment.length = 0;
+});
 
 function renderWithClient(ui: ReactElement) {
   return render(
@@ -86,6 +102,12 @@ describe("RecordComments — mutation success", () => {
     await waitFor(() => {
       expect(onMutated).toHaveBeenCalledTimes(1);
       expect(draft).toHaveValue("");
+      expect(mutationCalls.comment).toEqual([
+        {
+          itemId: "11111111-1111-4111-8111-111111111111",
+          text: "Ready to publish.",
+        },
+      ]);
     });
   });
 
@@ -106,6 +128,9 @@ describe("RecordComments — mutation success", () => {
 
     await waitFor(() => {
       expect(onMutated).toHaveBeenCalledTimes(1);
+      expect(mutationCalls.deleteComment).toEqual([
+        { commentId: OWN_COMMENT.id },
+      ]);
     });
   });
 });

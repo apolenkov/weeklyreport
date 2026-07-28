@@ -1,10 +1,13 @@
 "use client";
 
 import type { RecordCommentView } from "@customreport/shared";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { toast } from "sonner";
 
+import { invalidateReview } from "../../../lib/cache-keys";
+import { useTRPC } from "../../../lib/trpc-context";
 import { ReviewCommentList } from "../../../shared/ui/review-comment-list";
-import { useRecordCommentMutations } from "./use-record-comment-mutations";
 
 /** A comment anchors to exactly one concrete record. */
 export interface RecordCommentAnchor {
@@ -18,6 +21,51 @@ const UUID_RE =
 
 function anchorId(anchor: RecordCommentAnchor): string | undefined {
   return anchor.itemId ?? anchor.riskId ?? anchor.decisionId;
+}
+
+function reviewErrorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback;
+}
+
+function useRecordCommentMutations(
+  anchor: RecordCommentAnchor,
+  onCommentAdded: () => void,
+  onMutated: () => void,
+) {
+  const trpc = useTRPC();
+  const qc = useQueryClient();
+
+  const commentMut = useMutation(
+    trpc.review.comment.mutationOptions({
+      onSuccess: () => {
+        onCommentAdded();
+        invalidateReview(qc, trpc);
+        onMutated();
+      },
+      onError: (err: unknown) => {
+        toast.error(reviewErrorMessage(err, "Failed to add comment"));
+      },
+    }),
+  );
+
+  const deleteMut = useMutation(
+    trpc.review.deleteComment.mutationOptions({
+      onSuccess: () => {
+        invalidateReview(qc, trpc);
+        onMutated();
+      },
+      onError: (err: unknown) => {
+        toast.error(reviewErrorMessage(err, "Failed to delete comment"));
+      },
+    }),
+  );
+
+  return {
+    submitComment: (text: string) => commentMut.mutate({ ...anchor, text }),
+    isCommentPending: commentMut.isPending,
+    deleteComment: (commentId: string) => deleteMut.mutate({ commentId }),
+    isDeletePending: deleteMut.isPending,
+  };
 }
 
 interface CommentComposerFormProps {

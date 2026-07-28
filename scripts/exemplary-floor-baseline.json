@@ -1,6 +1,6 @@
 {
-  "filesOnFloor": 842,
-  "productTotal": 929,
+  "filesOnFloor": 841,
+  "productTotal": 928,
   "overrideBlocks": 26,
   "liveSuppressions": 126,
   "justifiedRegressions": [
@@ -15,6 +15,12 @@
       "from": 843,
       "to": 842,
       "reason": "Merged the A-class reopen-request-card-parts product module into its A-class card owner."
+    },
+    {
+      "counter": "filesOnFloor",
+      "from": 842,
+      "to": 841,
+      "reason": "Merged the A-class record-comment mutation hook into its A-class feature owner."
     }
   ]
 }
