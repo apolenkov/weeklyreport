@@ -29,43 +29,73 @@ describe("deriveEffectiveProductStatus — characterization grid", () => {
       severity: RiskSeverity;
       stageIds?: readonly string[];
     }[];
+    // Rows follow trafficLights; columns follow stageStatuses.
+    readonly expected: readonly (readonly (TrafficLightStatus | null)[])[];
   }[] = [
-    { label: "no risks", risks: [] },
+    {
+      label: "no risks",
+      risks: [],
+      expected: [
+        ["green", "yellow", "red", "green"],
+        ["yellow", "yellow", "red", "yellow"],
+        ["red", "red", "red", "red"],
+        ["green", "yellow", "red", null],
+      ],
+    },
     {
       label: "covering at-risk",
       risks: [{ severity: "at-risk", stageIds: ["Development"] }],
+      expected: [
+        ["yellow", "yellow", "red", "yellow"],
+        ["yellow", "yellow", "red", "yellow"],
+        ["red", "red", "red", "red"],
+        ["yellow", "yellow", "red", "yellow"],
+      ],
     },
     {
       label: "covering blocked",
       risks: [{ severity: "blocked", stageIds: ["Development"] }],
+      expected: [
+        ["red", "red", "red", "red"],
+        ["red", "red", "red", "red"],
+        ["red", "red", "red", "red"],
+        ["red", "red", "red", "red"],
+      ],
     },
     {
       label: "non-covering risk",
       risks: [{ severity: "blocked", stageIds: ["Testing"] }],
+      expected: [
+        ["green", "yellow", "red", "green"],
+        ["yellow", "yellow", "red", "yellow"],
+        ["red", "red", "red", "red"],
+        ["green", "yellow", "red", null],
+      ],
     },
   ];
 
-  const cases = trafficLights.flatMap((trafficLight) =>
-    stageStatuses.flatMap((stageStatus) =>
+  const cases = trafficLights.flatMap((trafficLight, trafficIndex) =>
+    stageStatuses.flatMap((stageStatus, stageIndex) =>
       riskSets.map((riskSet) => ({
         trafficLight,
         stageStatus,
         riskLabel: riskSet.label,
         risks: riskSet.risks,
+        expected: riskSet.expected[trafficIndex]?.[stageIndex],
       })),
     ),
   );
 
   it.each(cases)(
     "trafficLight=$trafficLight stageStatus=$stageStatus risks=$riskLabel",
-    ({ trafficLight, stageStatus, risks }) => {
+    ({ trafficLight, stageStatus, risks, expected }) => {
       const status = deriveEffectiveProductStatus({
         projectId: PROJECT_ID,
         trafficLight,
         ownedStages: [{ stageName: "Development", status: stageStatus }],
         risks: risks.map((r) => ({ ...r, projectId: PROJECT_ID })),
       });
-      expect(status).toMatchSnapshot();
+      expect(status).toBe(expected);
     },
   );
 
@@ -118,16 +148,50 @@ describe("deriveActivityStatus — characterization grid", () => {
     },
   ];
 
-  const cases = storedStatuses.flatMap((stored) =>
-    riskSets.map((riskSet) => ({
+  // Rows follow storedStatuses; columns follow riskSets.
+  const expected: readonly {
+    readonly derivedStatus: TrafficLightStatus | null;
+    readonly alarmFloor: TrafficLightStatus | null;
+  }[][] = [
+    [
+      { derivedStatus: "green", alarmFloor: null },
+      { derivedStatus: "yellow", alarmFloor: "yellow" },
+      { derivedStatus: "red", alarmFloor: "red" },
+      { derivedStatus: "red", alarmFloor: "red" },
+    ],
+    [
+      { derivedStatus: "yellow", alarmFloor: null },
+      { derivedStatus: "yellow", alarmFloor: "yellow" },
+      { derivedStatus: "red", alarmFloor: "red" },
+      { derivedStatus: "red", alarmFloor: "red" },
+    ],
+    [
+      { derivedStatus: "red", alarmFloor: null },
+      { derivedStatus: "red", alarmFloor: "yellow" },
+      { derivedStatus: "red", alarmFloor: "red" },
+      { derivedStatus: "red", alarmFloor: "red" },
+    ],
+    [
+      { derivedStatus: null, alarmFloor: null },
+      { derivedStatus: "yellow", alarmFloor: "yellow" },
+      { derivedStatus: "red", alarmFloor: "red" },
+      { derivedStatus: "red", alarmFloor: "red" },
+    ],
+  ];
+
+  const cases = storedStatuses.flatMap((stored, storedIndex) =>
+    riskSets.map((riskSet, riskIndex) => ({
       stored,
       riskLabel: riskSet.label,
       risks: riskSet.risks,
+      expected: expected[storedIndex]?.[riskIndex],
     })),
   );
 
-  it.each(cases)("stored=$stored risks=$riskLabel", ({ stored, risks }) => {
-    const result = deriveActivityStatus(stored, risks);
-    expect(result).toMatchSnapshot();
-  });
+  it.each(cases)(
+    "stored=$stored risks=$riskLabel",
+    ({ stored, risks, expected: expectedResult }) => {
+      expect(deriveActivityStatus(stored, risks)).toEqual(expectedResult);
+    },
+  );
 });

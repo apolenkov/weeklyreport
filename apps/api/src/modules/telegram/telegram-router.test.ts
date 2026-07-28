@@ -1,35 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import { createAppRouter } from "../../infrastructure/trpc/trpc.router.js";
+import { createNullAuditLogger } from "../../lib/audit-logger.js";
+import { createNullLogger } from "../../lib/logger.js";
 
-// Stub deps only — never invoke resolvers here; pins procedure path contract
-// while schema/adapter unit tests cover resolver bodies.
-function buildStubRouter() {
-  const stubDeps = {} as Parameters<typeof createAppRouter>[0];
+function buildStubRouter(
+  deps: Record<string, unknown> = {},
+): ReturnType<typeof createAppRouter> {
+  const stubDeps = deps as unknown as Parameters<typeof createAppRouter>[0];
   return createAppRouter(stubDeps);
 }
-
-describe("admin.integrationsStatus + admin.testTelegramSend", () => {
-  it("exposes admin.integrationsStatus as a leaf procedure", () => {
-    const router = buildStubRouter();
-    const procedures = (
-      router as unknown as {
-        _def: { procedures: Record<string, unknown> };
-      }
-    )._def.procedures;
-    expect(procedures["admin.integrationsStatus"]).toBeDefined();
-  });
-
-  it("exposes admin.testTelegramSend as a leaf procedure", () => {
-    const router = buildStubRouter();
-    const procedures = (
-      router as unknown as {
-        _def: { procedures: Record<string, unknown> };
-      }
-    )._def.procedures;
-    expect(procedures["admin.testTelegramSend"]).toBeDefined();
-  });
-});
 
 describe("admin.testTelegramSend wire-up", () => {
   it("returns INTERNAL_SERVER_ERROR when telegramOutboundQueue is not wired", async () => {
@@ -37,14 +17,6 @@ describe("admin.testTelegramSend wire-up", () => {
     // Drive the procedure via the router caller so we exercise the real
     // adminProcedure middleware chain. The stub deps deliberately omit
     // telegramOutboundQueue → expect the documented INTERNAL_SERVER_ERROR.
-    const nullLogger = {
-      info: () => undefined,
-      warn: () => undefined,
-      error: () => undefined,
-      debug: () => undefined,
-      verbose: () => undefined,
-      fatal: () => undefined,
-    } as const;
     const caller = (
       router as unknown as {
         createCaller: (ctx: unknown) => {
@@ -65,10 +37,8 @@ describe("admin.testTelegramSend wire-up", () => {
         activeReportId: null,
         activeReportSectionId: null,
       },
-      logger: nullLogger,
-      auditLogger: {
-        mutation: () => undefined,
-      },
+      logger: createNullLogger(),
+      auditLogger: createNullAuditLogger(),
       ip: "test-ip",
       isPdfExport: false,
       pdfReportId: null,
@@ -77,5 +47,34 @@ describe("admin.testTelegramSend wire-up", () => {
     await expect(
       caller.admin.testTelegramSend({ chatId: "12345", text: "hello" }),
     ).rejects.toThrow(/telegram outbound queue is not wired/i);
+  });
+});
+
+describe("admin.integrationsStatus wire-up", () => {
+  it("returns the service result through an authenticated caller", async () => {
+    const expected = { telegram: { configured: false, bindings: 2 } };
+    const router = buildStubRouter({
+      env: {},
+      snapshotAdminService: {
+        integrationsStatus: () => Promise.resolve(expected),
+      },
+    });
+    const caller = router.createCaller({
+      session: {
+        userId: "00000000-0000-4000-8000-000000000099",
+        email: "admin@customreport.local",
+        name: "Admin User",
+        role: "admin",
+        activeReportId: null,
+        activeReportSectionId: null,
+      },
+      logger: createNullLogger(),
+      auditLogger: createNullAuditLogger(),
+      ip: "test-ip",
+      isPdfExport: false,
+      pdfReportId: null,
+    });
+
+    await expect(caller.admin.integrationsStatus()).resolves.toEqual(expected);
   });
 });
