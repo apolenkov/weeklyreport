@@ -19,21 +19,21 @@ export interface RiskAddPrefill {
   stageNames: string[];
   severity: "at-risk" | "blocked";
   // Pill raise — preselects the activity parent.
-  activityId?: string;
+  activityId?: string | undefined;
 }
 
 interface RiskCreatePrefill {
-  readonly stageNames?: string[];
-  readonly severity?: "at-risk" | "blocked";
+  readonly stageNames?: string[] | undefined;
+  readonly severity?: "at-risk" | "blocked" | undefined;
 }
 
 interface RiskListEditingOptions {
   readonly risks: RiskEntry[];
   readonly readOnly: boolean;
-  readonly onChange?: (next: RiskEntry[]) => void;
+  readonly onChange?: ((next: RiskEntry[]) => void) | undefined;
   readonly addSignal: number;
-  readonly addPrefill?: RiskAddPrefill;
-  readonly seedProductId?: string;
+  readonly addPrefill?: RiskAddPrefill | undefined;
+  readonly seedProductId?: string | undefined;
 }
 
 export interface RiskListEditing extends UseEditableListDialogResult<RiskEntry> {

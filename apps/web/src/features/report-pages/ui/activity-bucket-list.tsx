@@ -9,13 +9,13 @@ import { ItemCard, type RiskEntry } from "../../report-sections";
 import type { UnifiedActivityEntry } from "./unified-activity-section";
 
 interface BucketCardProps {
-  readonly risks?: readonly RiskEntry[];
+  readonly risks?: readonly RiskEntry[] | undefined;
   readonly readOnly: boolean;
-  readonly publishedLockedIds?: ReadonlySet<string>;
+  readonly publishedLockedIds?: ReadonlySet<string> | undefined;
   readonly onEdit: (entry: UnifiedActivityEntry) => void;
   readonly onDelete: (entry: UnifiedActivityEntry) => void;
-  readonly onMarkComplete?: (id: string) => void;
-  readonly onMoveToNextWeek?: (id: string) => void;
+  readonly onMarkComplete?: ((id: string) => void) | undefined;
+  readonly onMoveToNextWeek?: ((id: string) => void) | undefined;
 }
 
 export function EmptyActivityPlaceholder() {

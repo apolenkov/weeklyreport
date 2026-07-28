@@ -7,7 +7,7 @@ import type {
 
 function toAdminJobHandle(job: Job): AdminJobHandle {
   return {
-    id: job.id,
+    ...(job.id === undefined ? {} : { id: job.id }),
     name: job.name,
     failedReason: job.failedReason,
     stacktrace: job.stacktrace ? [...job.stacktrace] : [],

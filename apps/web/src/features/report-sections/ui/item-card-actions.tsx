@@ -50,14 +50,14 @@ interface ItemCardActionsProps {
   readonly locked: boolean;
   readonly isEditing: boolean;
   // Resolve-not-delete (ADR 0015): published-lineage records withhold Delete.
-  readonly publishedLocked?: boolean;
-  readonly onEdit?: (id: string) => void;
-  readonly onDelete?: (id: string) => void;
+  readonly publishedLocked?: boolean | undefined;
+  readonly onEdit?: ((id: string) => void) | undefined;
+  readonly onDelete?: ((id: string) => void) | undefined;
   // Move handlers flip status/type in place so durable identity (comment anchors) survives.
-  readonly onMarkComplete?: (id: string) => void;
-  readonly onMoveToNextWeek?: (id: string) => void;
-  readonly onMoveToCurrentWeek?: (id: string) => void;
-  readonly onPause?: (id: string) => void;
+  readonly onMarkComplete?: ((id: string) => void) | undefined;
+  readonly onMoveToNextWeek?: ((id: string) => void) | undefined;
+  readonly onMoveToCurrentWeek?: ((id: string) => void) | undefined;
+  readonly onPause?: ((id: string) => void) | undefined;
 }
 
 interface StatusActionSpec {

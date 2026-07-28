@@ -40,10 +40,8 @@ function removeWeekItem(
 interface UnifiedActivityEditingArgs {
   readonly entries: readonly UnifiedActivityEntry[];
   readonly readOnly: boolean;
-  readonly onWeekItemsChange?: (
-    week: "current" | "next",
-    items: KanbanItem[],
-  ) => void;
+  readonly onWeekItemsChange?:
+    ((week: "current" | "next", items: KanbanItem[]) => void) | undefined;
 }
 
 // Foreign records are read-only regardless of the section's own lock, so both

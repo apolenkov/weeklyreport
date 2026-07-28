@@ -150,13 +150,13 @@ export function deriveRiskDialogSeedProps(
     | {
         open: true;
         mode: "create";
-        seedProductId?: string;
-        seedActivityId?: string;
+        seedProductId?: string | undefined;
+        seedActivityId?: string | undefined;
       }
     | { open: true; mode: "edit"; entity: RiskSaveEntry },
   createPrefill: {
-    stageNames?: string[];
-    severity?: RiskSeverity;
+    stageNames?: string[] | undefined;
+    severity?: RiskSeverity | undefined;
   } | null,
 ) {
   const creating = dialogState.open && dialogState.mode === "create";

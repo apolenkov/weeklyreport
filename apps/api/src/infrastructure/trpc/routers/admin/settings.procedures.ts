@@ -1,6 +1,7 @@
 import {
   adminTestTelegramSendSchema,
   appSettingsUpdateSchema,
+  omitUndefinedProperties,
   organizationUpdateSchema,
 } from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
@@ -71,7 +72,9 @@ function createSnapshotSettingsProcedures(deps: AdminSettingsDeps) {
       .input(appSettingsUpdateSchema)
       .mutation(async ({ input }) => {
         try {
-          return await deps.snapshotAdminService.updateSettings(input);
+          return await deps.snapshotAdminService.updateSettings(
+            omitUndefinedProperties(input),
+          );
         } catch (error) {
           throw mapDomainError(error);
         }

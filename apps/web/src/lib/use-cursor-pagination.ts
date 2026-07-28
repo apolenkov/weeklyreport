@@ -65,7 +65,9 @@ function mergeQueryOptions<TItem>(
 > {
   return {
     ...built,
-    enabled: options.enabled ?? built.enabled,
+    ...((options.enabled ?? built.enabled) === undefined
+      ? {}
+      : { enabled: options.enabled ?? built.enabled }),
   };
 }
 

@@ -6,6 +6,7 @@ import {
   type AppSettings,
   appSettingsSchema,
   appSettingsUpdateSchema,
+  omitUndefinedProperties,
 } from "@customreport/shared";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger";
@@ -28,7 +29,7 @@ export class SnapshotAdminService {
   async updateSettings(data: Partial<AppSettings>): Promise<AppSettings> {
     const parsed = appSettingsUpdateSchema.parse(data);
     return appSettingsSchema.parse(
-      await this.repository.updateSettings(parsed),
+      await this.repository.updateSettings(omitUndefinedProperties(parsed)),
     );
   }
 

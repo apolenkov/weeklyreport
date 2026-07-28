@@ -104,7 +104,6 @@ function useActionLogPagination() {
         {
           getNextPageParam: (last: { nextCursor: string | null }) =>
             last.nextCursor ?? undefined,
-          initialCursor: undefined,
         },
       ),
     { limit: PAGE_SIZE },

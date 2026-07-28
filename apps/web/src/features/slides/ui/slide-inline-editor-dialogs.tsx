@@ -36,7 +36,7 @@ export type SlideInlineDecisionRecord = Extract<
 interface SlideInlineEditorDialogsProps {
   readonly inlineEditRecord: SlideInlineEditRecord | null;
   readonly pendingDeleteRecord: SlideInlineEditRecord | null;
-  readonly currentUserName?: string;
+  readonly currentUserName?: string | undefined;
   readonly dialogProducts: ReturnType<typeof toDialogProducts>;
   readonly dialogActivities: ReturnType<typeof toDialogActivities>;
   readonly dialogRanks: ReturnType<typeof ownPeriodRanks>;
@@ -126,7 +126,7 @@ function InlineItemDialog({
   onDelete,
 }: {
   readonly record: SlideInlineItemRecord | null;
-  readonly currentUserName?: string;
+  readonly currentUserName?: string | undefined;
   readonly products: ReturnType<typeof toDialogProducts>;
   readonly activities: ReturnType<typeof toDialogActivities>;
   readonly ranks: ReturnType<typeof ownPeriodRanks>;
@@ -200,7 +200,7 @@ function InlineDecisionDialog({
   onDelete,
 }: {
   readonly record: SlideInlineDecisionRecord | null;
-  readonly currentUserName?: string;
+  readonly currentUserName?: string | undefined;
   readonly products: ReturnType<typeof toDialogProducts>;
   readonly activities: ReturnType<typeof toDialogActivities>;
   readonly stagesForProduct: (productId: string) => readonly string[];

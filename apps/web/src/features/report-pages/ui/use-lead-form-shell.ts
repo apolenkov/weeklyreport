@@ -7,8 +7,8 @@ import { useLeadFormData } from "./use-lead-form-data";
 
 interface UseLeadFormShellInput {
   // Explicit report id from `[reportId]`; bare-route redirect on UseLeadFormDataInput.
-  readonly pinnedReportId?: string;
-  readonly redirectToCanonical?: boolean;
+  readonly pinnedReportId?: string | undefined;
+  readonly redirectToCanonical?: boolean | undefined;
   readonly isSlidesMode: boolean;
 }
 

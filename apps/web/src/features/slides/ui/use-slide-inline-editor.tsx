@@ -37,7 +37,7 @@ interface UseSlideInlineEditorArgs {
 }
 
 interface SlideInlineEditor {
-  readonly onRowActivate?: (ref: GridRowEditableRef) => void;
+  readonly onRowActivate?: ((ref: GridRowEditableRef) => void) | undefined;
   readonly dialogs: ReactNode;
 }
 

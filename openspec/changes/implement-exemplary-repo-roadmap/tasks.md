@@ -109,8 +109,9 @@
 ## 5. Accepted decisions and implementation
 
 - [x] R1 ruling: migrate and permanently enable `exactOptionalPropertyTypes`.
-- [ ] R1 implementation: classify and fix all 290 measured errors, enable the
-      flag, and add a planted regression.
+- [x] R1 implementation: remeasure and classify all 295 current workspace
+      errors (API 59, web 230, shared 4, UI 2), enable the flag for every
+      extending project, and add a planted regression.
 - [x] R2 ruling: settled telemetry uses `periodStatus = "published"` and
       excludes reopened periods until republish.
 - [x] R2 implementation: single-home the selector across all three consumers

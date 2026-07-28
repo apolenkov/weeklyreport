@@ -14,7 +14,7 @@ export class ActionLogPrismaRepository implements ActionLogRepository {
     return this.prisma.userActionLog.findMany({
       take: pagination.limit,
       skip: pagination.cursor ? 1 : 0,
-      cursor: pagination.cursor ? { id: pagination.cursor } : undefined,
+      ...(pagination.cursor ? { cursor: { id: pagination.cursor } } : {}),
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
   }

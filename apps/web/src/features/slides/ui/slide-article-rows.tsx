@@ -87,7 +87,7 @@ function ItemRow({
   readonly row: GridRow;
   readonly author: GridAuthor | undefined;
   readonly showStages: boolean;
-  readonly onRowActivate?: SlideRowActivateHandler;
+  readonly onRowActivate?: SlideRowActivateHandler | undefined;
 }) {
   const srLabel = TONE_SR_LABEL[row.tone];
   const { activatable, activate, handleKeyDown } = useRowActivation({
@@ -139,7 +139,7 @@ export function SlideCell({
   readonly authorsById: ReadonlyMap<string, GridAuthor>;
   readonly showStages: boolean;
   readonly label: string;
-  readonly onRowActivate?: SlideRowActivateHandler;
+  readonly onRowActivate?: SlideRowActivateHandler | undefined;
 }) {
   if (rows.length === 0) {
     return (

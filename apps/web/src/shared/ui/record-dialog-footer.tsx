@@ -4,9 +4,9 @@ interface RecordDialogFooterProps {
   readonly saveLabel: string;
   readonly onCancel: () => void;
   readonly onSave: () => void;
-  readonly onDelete?: () => void;
-  readonly saveDisabled?: boolean;
-  readonly sticky?: boolean;
+  readonly onDelete?: (() => void) | undefined;
+  readonly saveDisabled?: boolean | undefined;
+  readonly sticky?: boolean | undefined;
 }
 
 export function RecordDialogFooter({

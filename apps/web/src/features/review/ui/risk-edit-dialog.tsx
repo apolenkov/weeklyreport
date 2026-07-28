@@ -19,24 +19,25 @@ interface RiskEditDialogProps {
   readonly risk: RiskEntry | null;
   readonly products: readonly Product[];
   // When set, parent picker offers activities; activity parent hides stages.
-  readonly activities?: readonly ParentActivityOption[];
+  readonly activities?: readonly ParentActivityOption[] | undefined;
   readonly onSave: (
     next: RiskEntry & { impact: string; mitigation: string },
   ) => void;
   readonly onCancel: () => void;
-  readonly defaultProductId?: string;
+  readonly defaultProductId?: string | undefined;
   // Create-mode activity parent seed (XOR with product); activity pill raise.
-  readonly defaultActivityId?: string;
+  readonly defaultActivityId?: string | undefined;
   // Impact/mitigation are not on presentation RiskEntry but the lead-form
   // writes them onto section.risks, so the dialog returns a richer object.
-  readonly initialImpact?: string;
-  readonly initialMitigation?: string;
+  readonly initialImpact?: string | undefined;
+  readonly initialMitigation?: string | undefined;
   // Chip-raise create prefill; ignored in edit mode (risk values win).
-  readonly initialStageNames?: string[];
-  readonly initialSeverity?: RiskSeverity;
+  readonly initialStageNames?: string[] | undefined;
+  readonly initialSeverity?: RiskSeverity | undefined;
   // Owned stages for the stage select; [] disables Save with a dead-end notice.
-  readonly stagesForProduct?: (productId: string) => readonly string[];
-  readonly onDelete?: () => void;
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
+  readonly onDelete?: (() => void) | undefined;
 }
 
 // Mount/unmount shell: closed returns null so open remounts fresh useState
@@ -144,7 +145,7 @@ interface RiskDialogSurfaceProps {
   readonly dialog: RiskDialogState;
   readonly surfaceRef: RiskDialog["dialogSurfaceRef"];
   readonly onCancel: () => void;
-  readonly onDelete?: () => void;
+  readonly onDelete?: (() => void) | undefined;
   readonly children: React.ReactNode;
 }
 

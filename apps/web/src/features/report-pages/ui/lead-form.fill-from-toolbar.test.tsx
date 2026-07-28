@@ -141,7 +141,11 @@ function buildHarness(
       query:
         opts.byPeriodQueryFn ??
         (() => ({
-          section: makeSection({ status: opts.sectionStatus }),
+          section: makeSection(
+            opts.sectionStatus === undefined
+              ? {}
+              : { status: opts.sectionStatus },
+          ),
           readOnly: opts.byPeriodReadOnly ?? false,
           // Server-computed; default true so Request-Reopen tests have a precondition.
           canRequestReopen:

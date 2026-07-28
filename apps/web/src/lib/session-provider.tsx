@@ -22,12 +22,12 @@ export interface SessionUser {
   id: string;
   name: string;
   // Structured ФИО from auth.me; optional for SAML stubs / PDF-export sessions.
-  lastName?: string;
-  firstName?: string;
-  middleName?: string | null;
+  lastName?: string | undefined;
+  firstName?: string | undefined;
+  middleName?: string | null | undefined;
   email: string;
   role: Role;
-  reportingGroupName?: string;
+  reportingGroupName?: string | undefined;
 }
 
 // Hydrated on auth.me for the nav brand; anonymous pages use org.getPublic instead.

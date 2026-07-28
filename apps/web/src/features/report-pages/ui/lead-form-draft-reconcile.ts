@@ -6,7 +6,10 @@ import {
 } from "../../../hooks/use-lead-form-autosave";
 import { sectionToDraftPayload } from "../../report-sections";
 
-type DraftRecord = Readonly<{ id?: string; stableId?: string }>;
+type DraftRecord = Readonly<{
+  id?: string | undefined;
+  stableId?: string | undefined;
+}>;
 
 export type ReseedTrigger =
   "unchanged" | "save-echo" | "external-clean" | "external-dirty";

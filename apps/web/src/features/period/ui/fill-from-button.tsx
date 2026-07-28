@@ -30,8 +30,8 @@ interface FillFromButtonProps {
    * Called with the SECTION id of the chosen period (NOT the report id) so the
    * parent can wire `leadForm.fillFrom({ targetSectionId, sourceSectionId })`.
    */
-  readonly onFillFrom?: (sourceSectionId: string) => void;
-  readonly disabled?: boolean;
+  readonly onFillFrom?: ((sourceSectionId: string) => void) | undefined;
+  readonly disabled?: boolean | undefined;
   /**
    * Set when the target section carries published-lineage records (a reopened
    * period): the server's fillFrom guard rejects every source
@@ -39,7 +39,7 @@ interface FillFromButtonProps {
    * is surfaced as the tooltip. UI-only — the server guard stays the
    * enforcement point.
    */
-  readonly lockedReason?: string;
+  readonly lockedReason?: string | undefined;
 }
 
 function CopyIcon() {

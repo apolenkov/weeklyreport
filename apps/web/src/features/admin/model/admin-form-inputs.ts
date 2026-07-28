@@ -91,8 +91,8 @@ export function toReportingGroupInput(
 export interface AdminProjectFormInput {
   name: string;
   leadOwnerId: string;
-  leadName?: string;
-  archived?: boolean;
+  leadName?: string | undefined;
+  archived?: boolean | undefined;
 }
 
 export class UnresolvedProjectLeadError extends Error {

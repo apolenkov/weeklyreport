@@ -13,12 +13,13 @@ import { Toaster as Sonner, type ToasterProps } from "sonner";
 /**
  * App-level toast host (Sonner) themed for light/dark via next-themes.
  */
-const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
+const Toaster = ({ theme: themeOverride, ...props }: ToasterProps) => {
+  const { theme: activeTheme } = useTheme();
+  const theme = themeOverride ?? activeTheme ?? "system";
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={theme as NonNullable<ToasterProps["theme"]>}
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,

@@ -24,24 +24,24 @@ type ReadyWeeklyReportPage = Extract<WeeklyReportPageState, { kind: "ready" }>;
 
 interface WeeklyReportPageProps {
   // Concrete report UUID; when set the query targets that report.
-  readonly reportId?: string;
+  readonly reportId?: string | undefined;
   // Auto-redirect to `/head/report/<reportId>` once known; off on `[reportId]`.
   // `canonicalBasePath` (default `/head/report`) selects the addressed surface.
-  readonly redirectToCanonical?: boolean;
-  readonly canonicalBasePath?: string;
-  readonly authorId?: string;
+  readonly redirectToCanonical?: boolean | undefined;
+  readonly canonicalBasePath?: string | undefined;
+  readonly authorId?: string | undefined;
   // "product" accordion list, or "lead" grouping (shared products appear under each).
-  readonly scope?: "product" | "lead";
+  readonly scope?: "product" | "lead" | undefined;
   // Shell-supplied Document-action leading controls (before archive/publish).
   // When omitted the page renders Export itself (ComingSoon for lead).
-  readonly documentActionsLeading?: ReactNode;
+  readonly documentActionsLeading?: ReactNode | undefined;
   // Full Context-control row from the shell; replaces the default period nav.
   // Mutually exclusive with `contextControlsLeading`.
-  readonly contextControls?: ReactNode;
+  readonly contextControls?: ReactNode | undefined;
   // Controls prepended before the page's default period navigator.
-  readonly contextControlsLeading?: ReactNode;
+  readonly contextControlsLeading?: ReactNode | undefined;
   // Header-line label (not a control) — stays out of the two action rows.
-  readonly headerContextLabel?: ReactNode;
+  readonly headerContextLabel?: ReactNode | undefined;
 }
 
 function PeriodLifecycleActions({

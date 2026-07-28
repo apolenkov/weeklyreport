@@ -14,8 +14,9 @@ function getBullMQPrefix(env: EnvConfig): string | undefined {
 }
 
 export function getBullMQOptions(env: EnvConfig) {
+  const prefix = getBullMQPrefix(env);
   return {
     connection: getBullMQConnectionOptions(env),
-    prefix: getBullMQPrefix(env),
+    ...(prefix === undefined ? {} : { prefix }),
   };
 }

@@ -38,7 +38,10 @@ export function computeCrossGroupSignal(
 // would drop the product and silently escape the signal). Missing owner = not cross-group.
 export function computeCrossGroupSignalFromSnapshotProjects(
   session: WeeklyReportScopeSession | undefined,
-  projects: { projectId: string; ownerGroupId?: string | null }[],
+  projects: {
+    projectId: string;
+    ownerGroupId?: string | null | undefined;
+  }[],
 ): WeeklyReportRepositoryResult["crossGroup"] {
   if (!session || session.role === "admin") return null;
 

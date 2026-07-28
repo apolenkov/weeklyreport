@@ -28,7 +28,11 @@ export function collectItemErrors(args: {
 
 // Focus order: text → stage → pausedReason; later errors never jump past earlier.
 export function firstInvalidControl(
-  next: { text?: string; stageNames?: string; pausedReason?: string },
+  next: {
+    text?: string | undefined;
+    stageNames?: string | undefined;
+    pausedReason?: string | undefined;
+  },
   surface: HTMLElement | null,
 ): HTMLElement | null {
   if (next.text) return document.getElementById("item-text");

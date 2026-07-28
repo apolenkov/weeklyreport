@@ -76,7 +76,7 @@ async function bumpSectionVersion(
       submittedAt: section.submittedAt,
       // Persist the late flag computed by submitSection; saveDraft / reopen
       // paths carry the prior value through mergeSection.
-      late: section.late,
+      ...(section.late === undefined ? {} : { late: section.late }),
       version: { increment: 1 },
     },
   });

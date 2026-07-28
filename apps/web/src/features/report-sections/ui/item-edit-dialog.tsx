@@ -16,22 +16,23 @@ interface ItemEditDialogProps {
   readonly item: KanbanItem | null;
   readonly products: readonly Product[];
   // When set, parent picker offers activities; activity parent hides stage step.
-  readonly activities?: readonly ParentActivityOption[];
+  readonly activities?: readonly ParentActivityOption[] | undefined;
   // Next week omits Completed/Blocked — those are in-flight, not yet-to-start.
   readonly week: "current" | "next";
-  readonly currentUserName?: string;
+  readonly currentUserName?: string | undefined;
   // Preselect column product; without it create would misleadingly use products[0].
-  readonly defaultProductId?: string;
+  readonly defaultProductId?: string | undefined;
   // Activity-lane create; XOR with defaultProductId.
-  readonly defaultActivityId?: string;
-  readonly stagesForProduct?: (productId: string) => readonly string[];
+  readonly defaultActivityId?: string | undefined;
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
   // Ranks in use this period (own item's rank excluded). Collisions stay visible, never crash.
-  readonly ownPeriodRanks?: readonly number[];
+  readonly ownPeriodRanks?: readonly number[] | undefined;
   // Covering risk floors status chips to a locked message (alarm is risk-derived).
-  readonly risks?: readonly RiskEntry[];
+  readonly risks?: readonly RiskEntry[] | undefined;
   readonly onSave: (next: KanbanItem) => void;
   readonly onCancel: () => void;
-  readonly onDelete?: () => void;
+  readonly onDelete?: (() => void) | undefined;
 }
 
 // Mount/unmount resets state (react-compiler-safe). stagesForProduct is not in

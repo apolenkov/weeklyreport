@@ -24,7 +24,11 @@ function makeCapturingLogger(): { logger: AppLogger; entries: Captured[] } {
   const push =
     (level: Captured["level"]) =>
     (message: string, context?: Record<string, unknown>) => {
-      entries.push({ level, message, context });
+      entries.push({
+        level,
+        message,
+        ...(context === undefined ? {} : { context }),
+      });
     };
   const logger: AppLogger = {
     debug: push("debug"),
@@ -317,7 +321,10 @@ describe("createAuditLogger — scopeDenied", () => {
         /* not used here */
       },
       warn: (_msg: string, meta?: Record<string, unknown>) => {
-        calls.push({ level: "warn", meta });
+        calls.push({
+          level: "warn",
+          ...(meta === undefined ? {} : { meta }),
+        });
       },
       error: () => {
         /* not used here */

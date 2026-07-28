@@ -14,23 +14,24 @@ import { useRiskListEditing } from "./use-risk-list-editing";
 
 interface RisksSectionProps {
   readonly risks: RiskEntry[];
-  readonly readOnly?: boolean;
-  readonly onChange?: (next: RiskEntry[]) => void;
-  readonly addPrefill?: RiskAddPrefill;
+  readonly readOnly?: boolean | undefined;
+  readonly onChange?: ((next: RiskEntry[]) => void) | undefined;
+  readonly addPrefill?: RiskAddPrefill | undefined;
   // Absent/empty disables +Add Risk (dialog needs a project picker seed).
-  readonly products?: readonly Product[];
-  readonly activities?: readonly ParentActivityOption[];
+  readonly products?: readonly Product[] | undefined;
+  readonly activities?: readonly ParentActivityOption[] | undefined;
   // Owned stages for the dialog stage selector, scoped per project.
-  readonly stagesForProduct?: (productId: string) => readonly string[];
-  readonly sectionAuthorName?: string;
-  readonly addSignal?: number;
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
+  readonly sectionAuthorName?: string | undefined;
+  readonly addSignal?: number | undefined;
 }
 
 interface RiskListProps {
   readonly risks: RiskEntry[];
   readonly readOnly: boolean;
-  readonly products?: readonly Product[];
-  readonly sectionAuthorName?: string;
+  readonly products?: readonly Product[] | undefined;
+  readonly sectionAuthorName?: string | undefined;
   readonly onEdit: (risk: RiskEntry) => void;
   readonly onDelete: (id: string) => void;
   readonly onToggleSeverity: (risk: RiskEntry) => void;
@@ -78,9 +79,10 @@ function RiskList({
 
 interface RisksSectionDialogsProps {
   readonly editing: RiskListEditing;
-  readonly products?: readonly Product[];
-  readonly activities?: readonly ParentActivityOption[];
-  readonly stagesForProduct?: (productId: string) => readonly string[];
+  readonly products?: readonly Product[] | undefined;
+  readonly activities?: readonly ParentActivityOption[] | undefined;
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
 }
 
 function RisksSectionDialogs({

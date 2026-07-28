@@ -23,13 +23,14 @@ interface UseRiskEditDialogArgs {
     next: RiskEntry & { impact: string; mitigation: string },
   ) => void;
   readonly onCancel: () => void;
-  readonly defaultProductId?: string;
-  readonly defaultActivityId?: string;
-  readonly initialImpact?: string;
-  readonly initialMitigation?: string;
-  readonly initialStageNames?: string[];
-  readonly initialSeverity?: RiskSeverity;
-  readonly stagesForProduct?: (productId: string) => readonly string[];
+  readonly defaultProductId?: string | undefined;
+  readonly defaultActivityId?: string | undefined;
+  readonly initialImpact?: string | undefined;
+  readonly initialMitigation?: string | undefined;
+  readonly initialStageNames?: string[] | undefined;
+  readonly initialSeverity?: RiskSeverity | undefined;
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
 }
 
 // The prose fields are exposed verbatim; only the error-routing entry points

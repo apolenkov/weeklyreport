@@ -20,10 +20,10 @@ export type { AccordionReviewContext } from "./reviewed-row";
 
 interface ProductAccordionProps {
   readonly report: WeeklyProductReport;
-  readonly defaultOpen?: boolean;
-  readonly highlighted?: boolean;
-  readonly scrollIntoViewOnHighlight?: boolean;
-  readonly review?: AccordionReviewContext;
+  readonly defaultOpen?: boolean | undefined;
+  readonly highlighted?: boolean | undefined;
+  readonly scrollIntoViewOnHighlight?: boolean | undefined;
+  readonly review?: AccordionReviewContext | undefined;
 }
 
 // Empty cards render dimmed; an active highlight gets the accent ring. Kept

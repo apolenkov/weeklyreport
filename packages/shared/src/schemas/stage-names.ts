@@ -89,7 +89,10 @@ export function splitStageNames(
  * @param stageName - The stage being tested for coverage.
  */
 export function riskCoversStage(
-  risk: { stageName?: string | null; stageNames?: readonly string[] },
+  risk: {
+    stageName?: string | null | undefined;
+    stageNames?: readonly string[] | undefined;
+  },
   stageName: string,
 ): boolean {
   if (risk.stageNames !== undefined) {

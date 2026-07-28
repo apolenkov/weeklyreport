@@ -34,8 +34,8 @@ export function SlideGridHeader({
   readonly ownerName: string;
   readonly grid: SlideGridModel;
   /** Deck-owned controls (fullscreen, period picker) rendered at the end. */
-  readonly heroControls?: ReactNode;
-  readonly pageLabel?: string;
+  readonly heroControls?: ReactNode | undefined;
+  readonly pageLabel?: string | undefined;
 }) {
   const short = grid.onTrack.on < grid.onTrack.total;
   return (

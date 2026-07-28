@@ -38,7 +38,9 @@ export class ActionLogService {
     const limit = pagination?.limit ?? DEFAULT_ACTION_LOG_LIMIT;
     const rows = await this.repository.listActionLog({
       limit: limit + 1,
-      cursor: pagination?.cursor,
+      ...(pagination?.cursor === undefined
+        ? {}
+        : { cursor: pagination.cursor }),
     });
     const hasMore = rows.length > limit;
     const items = rows.slice(0, limit);

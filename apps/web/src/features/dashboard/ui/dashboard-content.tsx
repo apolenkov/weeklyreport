@@ -24,11 +24,11 @@ import { ReopenRequestsCard } from "./reopen-requests-card";
 
 interface DashboardContentProps {
   readonly organizationName: string;
-  readonly activity?: ActivityLiveResponse;
+  readonly activity?: ActivityLiveResponse | undefined;
   readonly activityState: DashboardSourceState;
-  readonly review?: SubmissionDashboardRow[];
+  readonly review?: SubmissionDashboardRow[] | undefined;
   readonly reviewState: DashboardSourceState;
-  readonly weeklyReport?: WeeklyReportReadModel;
+  readonly weeklyReport?: WeeklyReportReadModel | undefined;
   readonly weeklyState: DashboardSourceState;
   readonly revokeAllPending: boolean;
   readonly onRevokeAll: (reportId: string) => void;
@@ -60,11 +60,11 @@ function DashboardHeader({
 
 interface DashboardPanelsProps {
   readonly activitySource: DashboardSourceState;
-  readonly queue?: ReturnType<typeof mapReviewDashboardData>;
+  readonly queue?: ReturnType<typeof mapReviewDashboardData> | undefined;
   readonly queueSource: DashboardSourceState;
   readonly weeklySource: DashboardSourceState;
-  readonly weekly?: ReturnType<typeof mapWeeklyDashboardData>;
-  readonly weeklyReport?: WeeklyReportReadModel;
+  readonly weekly?: ReturnType<typeof mapWeeklyDashboardData> | undefined;
+  readonly weeklyReport?: WeeklyReportReadModel | undefined;
   readonly canSendReminder: boolean;
   readonly onRefreshDashboard: () => void;
 }

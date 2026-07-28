@@ -6,6 +6,7 @@ export * from "./admin/reminder-policy-time";
 export * from "./auth";
 export * from "./constants";
 export * from "./name/user-name";
+export * from "./object/omit-undefined-properties";
 export * from "./organization/default-reporting-group";
 export * from "./period/reopen-window";
 export * from "./schemas/analytics";

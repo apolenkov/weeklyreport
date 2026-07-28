@@ -10,13 +10,14 @@ interface CurrentWeekDialogsProps {
   readonly open: boolean;
   readonly editItem: KanbanItem | null;
   readonly products: readonly Product[];
-  readonly activities?: readonly { id: string; name: string }[];
-  readonly currentUserName?: string;
+  readonly activities?: readonly { id: string; name: string }[] | undefined;
+  readonly currentUserName?: string | undefined;
   readonly createSeedProductId: string | undefined;
   readonly createSeedActivityId: string | undefined;
-  readonly stagesForProduct?: (productId: string) => readonly string[];
-  readonly ownPeriodRanks?: readonly number[];
-  readonly risks?: readonly RiskEntry[];
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
+  readonly ownPeriodRanks?: readonly number[] | undefined;
+  readonly risks?: readonly RiskEntry[] | undefined;
   readonly onSave: (next: KanbanItem) => void;
   readonly onCancel: () => void;
   readonly pendingDelete: KanbanItem | null;

@@ -88,7 +88,7 @@ const REPORT_ROWS = [
       status: r.status,
       archived: isPublished,
       periodState: isPublished ? PeriodState.archived : PeriodState.scheduled,
-      publishedAt: r.publishedAt,
+      ...(r.publishedAt === undefined ? {} : { publishedAt: r.publishedAt }),
       publishedById: r.publishedAt ? HEAD_ID : null,
     };
   }),

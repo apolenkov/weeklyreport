@@ -29,11 +29,12 @@ const CHIP_LOCKED_CLASSES = "cursor-not-allowed";
 
 interface StageChipProps {
   readonly stage: StageAssignment;
-  readonly onStatusChange?: (stageName: string, newStatus: StageStatus) => void;
-  readonly readOnly?: boolean;
+  readonly onStatusChange?:
+    ((stageName: string, newStatus: StageStatus) => void) | undefined;
+  readonly readOnly?: boolean | undefined;
   // Pre-floor status: distinguishes explicit set vs own-risk floor; click toggles raw.
   // Defaults to floored status for read-only/head paths that pass none.
-  readonly rawStatus?: StageStatus;
+  readonly rawStatus?: StageStatus | undefined;
 }
 
 interface ChipAffordances {

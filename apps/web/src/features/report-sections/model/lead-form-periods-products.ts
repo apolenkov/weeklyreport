@@ -50,10 +50,10 @@ export function ownedStagesForProject(
 
 interface OwnedStageInput {
   stageName: string;
-  status?: TrafficLightStatus | null;
+  status?: TrafficLightStatus | null | undefined;
 }
 interface StageRisk {
-  stageNames?: readonly string[];
+  stageNames?: readonly string[] | undefined;
   severity: RiskSeverity;
 }
 

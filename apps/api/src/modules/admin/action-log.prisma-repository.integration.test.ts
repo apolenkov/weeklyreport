@@ -47,13 +47,21 @@ describe("ActionLogPrismaRepository composite keyset (integration)", () => {
 
   it("traverses equal timestamps in stable order without gaps or duplicates", async () => {
     const first = await repository.listActionLog({ limit: 2 });
+    const firstCursor = first.at(-1)?.id;
+    if (firstCursor === undefined) {
+      throw new Error("The first page did not provide a pagination cursor");
+    }
     const second = await repository.listActionLog({
       limit: 2,
-      cursor: first.at(-1)?.id,
+      cursor: firstCursor,
     });
+    const secondCursor = second.at(-1)?.id;
+    if (secondCursor === undefined) {
+      throw new Error("The second page did not provide a pagination cursor");
+    }
     const third = await repository.listActionLog({
       limit: 2,
-      cursor: second.at(-1)?.id,
+      cursor: secondCursor,
     });
     const traversed = [...first, ...second, ...third].map((row) => row.id);
 

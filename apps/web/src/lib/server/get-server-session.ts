@@ -30,7 +30,7 @@ export async function getServerSession(): Promise<UserSession | null> {
   try {
     const response = await fetch(url, {
       method: "GET",
-      headers: token ? { cookie: `${AUTH_COOKIE_NAME}=${token}` } : undefined,
+      ...(token ? { headers: { cookie: `${AUTH_COOKIE_NAME}=${token}` } } : {}),
       cache: "no-store",
     });
     if (!response.ok) return null;

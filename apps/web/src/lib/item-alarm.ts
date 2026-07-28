@@ -10,9 +10,9 @@ export type ItemAlarm = "at-risk" | "blocked" | null;
 
 export interface AlarmItem {
   readonly productId: string;
-  readonly stageNames?: readonly string[];
+  readonly stageNames?: readonly string[] | undefined;
   /** @deprecated legacy single-stage label; read only to heal old rows. */
-  readonly stageName?: string;
+  readonly stageName?: string | undefined;
   readonly status:
     | "in-progress"
     | "completed"
@@ -24,8 +24,8 @@ export interface AlarmItem {
 
 export interface AlarmRisk {
   readonly productId: string;
-  readonly stageNames?: readonly string[];
-  readonly stageName?: string;
+  readonly stageNames?: readonly string[] | undefined;
+  readonly stageName?: string | undefined;
   readonly severity: "at-risk" | "blocked";
   // Empty (placeholder) risk text covers nothing.
   readonly text: string;

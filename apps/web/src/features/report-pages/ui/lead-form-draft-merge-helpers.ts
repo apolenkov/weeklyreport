@@ -17,7 +17,7 @@ type DraftSection = ReportSectionReadModel;
 type StageStatusValue = TrafficLightStatus | null;
 
 function aggregateTrafficLight(
-  stages: readonly { status?: StageStatusValue }[],
+  stages: readonly { status?: StageStatusValue | undefined }[],
 ): StageStatusValue {
   if (stages.some((stage) => stage.status === "red")) return "red";
   if (stages.some((stage) => stage.status === "yellow")) return "yellow";

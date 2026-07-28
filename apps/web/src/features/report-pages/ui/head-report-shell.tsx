@@ -46,7 +46,7 @@ interface ReportShellUrlState {
 interface HeadReportShellProps {
   readonly reportId: string;
   readonly mode: "form" | "slides";
-  readonly authorId?: string;
+  readonly authorId?: string | undefined;
 }
 
 // Org fullName comes from auth.me; the shared context bar is suppressed for the

@@ -150,6 +150,7 @@ function buildHugeSection(
 ): DemoSection {
   const stage = rotationStage(idx);
   const health = hugeHealth(idx);
+  const risk = hugeRisk(product.name, stage, health);
   return {
     leadId: product.leadId,
     leadLabel: labelById.get(product.leadId) ?? "Lead",
@@ -159,7 +160,7 @@ function buildHugeSection(
       idx % 2 === 0 ? ReportSectionStatus.draft : ReportSectionStatus.submitted,
     ownedStages: [stage],
     items: hugeItems(product.name, stage, idx, priorityRankOf(product)),
-    risk: hugeRisk(product.name, stage, health),
+    ...(risk === undefined ? {} : { risk }),
     decision: {
       text: `Зафиксировать приоритеты по продукту «${product.name}»`,
       impact: "Снимает неопределённость по очереди задач",

@@ -1,4 +1,8 @@
-import { paginationInputSchema, queueNameSchema } from "@customreport/shared";
+import {
+  omitUndefinedProperties,
+  paginationInputSchema,
+  queueNameSchema,
+} from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
 import type { Queue } from "bullmq";
 import { z } from "zod";
@@ -86,7 +90,7 @@ function createJobsRouter(deps: AdminOpsDeps) {
           if (!service) {
             return { jobs: [], nextCursor: null };
           }
-          return await service.listFailed(input);
+          return await service.listFailed(omitUndefinedProperties(input));
         } catch (error) {
           throw mapDomainError(error);
         }

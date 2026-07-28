@@ -14,10 +14,11 @@ interface UnifiedActivityDialogsProps {
   readonly editState: UnifiedActivityEditState | null;
   readonly pendingDelete: UnifiedActivityEntry | null;
   readonly products: readonly Product[];
-  readonly currentUserName?: string;
-  readonly stagesForProduct?: (productId: string) => readonly string[];
-  readonly ownPeriodRanks?: readonly number[];
-  readonly risks?: readonly RiskEntry[];
+  readonly currentUserName?: string | undefined;
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
+  readonly ownPeriodRanks?: readonly number[] | undefined;
+  readonly risks?: readonly RiskEntry[] | undefined;
   readonly onSave: (next: KanbanItem) => void;
   readonly onCancelEdit: () => void;
   readonly onConfirmDelete: () => void;

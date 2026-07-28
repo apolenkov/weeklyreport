@@ -7,7 +7,7 @@ import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
 
 interface DashboardRevokeAllControlProps {
   readonly pending: boolean;
-  readonly report?: WeeklyReportReadModel;
+  readonly report?: WeeklyReportReadModel | undefined;
   readonly submittedCount: number;
   readonly onRevokeAll: (reportId: string) => void;
 }

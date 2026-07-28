@@ -10,18 +10,18 @@ const TEXTAREA_BORDER_DEFAULT =
 interface RecordTextareaFieldProps {
   readonly id: string;
   readonly label: string;
-  readonly required?: boolean;
+  readonly required?: boolean | undefined;
   readonly value: string;
   readonly onChange: (value: string) => void;
-  readonly error?: string;
-  readonly placeholder?: string;
-  readonly minHeightPx?: number;
-  readonly autoFocus?: boolean;
-  readonly textareaRef?: Ref<HTMLTextAreaElement>;
-  readonly hint?: ReactNode;
+  readonly error?: string | undefined;
+  readonly placeholder?: string | undefined;
+  readonly minHeightPx?: number | undefined;
+  readonly autoFocus?: boolean | undefined;
+  readonly textareaRef?: Ref<HTMLTextAreaElement> | undefined;
+  readonly hint?: ReactNode | undefined;
   // When true, wrapper and textarea take flex-1 to fill a multi-field column;
   // false for a lone field with no height to share.
-  readonly fill?: boolean;
+  readonly fill?: boolean | undefined;
 }
 
 function FieldErrorMessage({

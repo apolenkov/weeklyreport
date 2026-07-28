@@ -24,10 +24,11 @@ interface DeriveItemEditFieldsArgs {
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
   readonly stageNames: readonly string[];
-  readonly stagesForProduct?: (productId: string) => readonly string[];
-  readonly ownPeriodRanks?: readonly number[];
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
+  readonly ownPeriodRanks?: readonly number[] | undefined;
   readonly status: ItemStatus;
-  readonly risks?: readonly RiskEntry[];
+  readonly risks?: readonly RiskEntry[] | undefined;
 }
 
 interface ItemEditDerivedFields {

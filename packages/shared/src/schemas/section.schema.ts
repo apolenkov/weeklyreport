@@ -151,8 +151,8 @@ export const decisionReadModelSchema = decisionInputSchema.extend({
 // Parent XOR + stages stay off base inputs so read/submit schemas remain .extend-able.
 const addParentXorIssues = (
   value: {
-    readonly activityId?: string | null;
-    readonly stageNames?: readonly string[];
+    readonly activityId?: string | null | undefined;
+    readonly stageNames?: readonly string[] | undefined;
   },
   productId: string | null | undefined,
   productPath: "projectId" | "productId",

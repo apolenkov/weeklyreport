@@ -14,7 +14,7 @@ import { useProductsTabState } from "./use-products-tab-state";
 interface ProductsTabProps {
   readonly products: AdminProductView[];
   readonly users: AdminUserView[];
-  readonly productFilter?: string | null;
+  readonly productFilter?: string | null | undefined;
 }
 
 export function ProductsTab({

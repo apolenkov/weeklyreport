@@ -15,7 +15,7 @@ interface UseItemEditSaveArgs {
   readonly item: KanbanItem | null;
   readonly initial: KanbanItem;
   readonly products: readonly Product[];
-  readonly currentUserName?: string;
+  readonly currentUserName?: string | undefined;
   readonly dialogSurfaceRef: RefObject<HTMLDivElement | null>;
   readonly text: string;
   readonly status: ItemStatus;
