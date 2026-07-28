@@ -9,9 +9,15 @@ import {
   ReopenIcon,
   UnarchiveIcon,
 } from "./periods-tab-icons";
-import type { PeriodTableProps } from "./periods-tab-table";
 
-type PeriodActionHandlers = Omit<PeriodTableProps, "rows" | "testIdPrefix">;
+export interface PeriodActionHandlers {
+  readonly onPublish: (row: PeriodListItem) => void;
+  readonly onReopen: (row: PeriodListItem) => void;
+  readonly onArchive: (row: PeriodListItem) => void;
+  readonly onUnarchive: (row: PeriodListItem) => void;
+  readonly onDelete: (row: PeriodListItem) => void;
+  readonly onEdit: (row: PeriodListItem) => void;
+}
 
 // Publish/reopen/archive/unarchive — the lifecycle transitions, each shown
 // only in the state that admits it.

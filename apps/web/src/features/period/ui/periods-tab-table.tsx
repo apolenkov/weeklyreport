@@ -8,17 +8,14 @@ import {
   formatWeekLabel,
   joinPeriodLabel,
 } from "../../../lib/format-date";
-import { ActionIconRow } from "./periods-action-icon-row";
+import {
+  ActionIconRow,
+  type PeriodActionHandlers,
+} from "./periods-action-icon-row";
 
-export interface PeriodTableProps {
+export interface PeriodTableProps extends PeriodActionHandlers {
   readonly rows: readonly PeriodListItem[];
   readonly testIdPrefix: "active" | "archive";
-  readonly onPublish: (row: PeriodListItem) => void;
-  readonly onReopen: (row: PeriodListItem) => void;
-  readonly onArchive: (row: PeriodListItem) => void;
-  readonly onUnarchive: (row: PeriodListItem) => void;
-  readonly onDelete: (row: PeriodListItem) => void;
-  readonly onEdit: (row: PeriodListItem) => void;
 }
 
 const PERIOD_COLUMN_HEADINGS = [
