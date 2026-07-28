@@ -10,7 +10,7 @@
       decrement the baseline for its one violation.
 - [x] Refactor the periods action/table cluster; prove action rendering and
       decrement the baseline for its one violation.
-- [ ] Refactor the lead-form section-composition cluster; prove all affected
+- [x] Refactor the lead-form section-composition cluster; prove all affected
       editing and accordion journeys and decrement its three violations.
 - [ ] Refactor the unified-activity cluster; prove bucket rendering, dialog
       editing, and mutation behavior and decrement its four violations.

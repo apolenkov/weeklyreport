@@ -47,12 +47,14 @@ export interface RiskPrefillRequest {
   activityId?: string;
 }
 
+export type StagesForProduct = (productId: string) => readonly string[];
+
 interface BridgeContextValue {
   products: Product[];
   risks: RiskEntry[];
   readOnly: boolean;
   activities?: readonly { id: string; name: string }[];
-  stagesForProduct?: (productId: string) => readonly string[];
+  stagesForProduct?: StagesForProduct;
   sectionAuthorName?: string;
   risksAddSignal?: number;
   crossAuthors?: readonly CrossAuthorEntry[];
@@ -86,8 +88,7 @@ interface LeadFormSyncBridgeProviderProps {
   readonly onRisksChange: (next: RiskEntry[]) => void;
   readonly readOnly?: boolean | undefined;
   readonly activities?: readonly { id: string; name: string }[] | undefined;
-  readonly stagesForProduct?:
-    ((productId: string) => readonly string[]) | undefined;
+  readonly stagesForProduct?: StagesForProduct | undefined;
   readonly sectionAuthorName?: string | undefined;
   readonly risksAddSignal?: number | undefined;
   readonly crossAuthors?: readonly CrossAuthorEntry[] | undefined;
