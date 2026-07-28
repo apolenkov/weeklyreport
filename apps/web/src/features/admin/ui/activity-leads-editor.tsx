@@ -2,13 +2,13 @@
 
 import type { ProjectActivity } from "@customreport/shared";
 
-import type { MockUser } from "../model/admin-types";
+import type { AdminUserView } from "../model/admin-types";
 import { useActivityLeads } from "./use-activity-leads";
 
 const HINT_CLASS = "block text-xs text-[var(--color-muted-foreground)]";
 
 interface LeadToggleRowProps {
-  readonly lead: MockUser;
+  readonly lead: AdminUserView;
   readonly activityName: string;
   readonly checked: boolean;
   readonly lockedHint: string | undefined;
@@ -63,7 +63,7 @@ export function ActivityLeadsEditor({
   users,
 }: {
   readonly activity: ProjectActivity;
-  readonly users: readonly MockUser[];
+  readonly users: readonly AdminUserView[];
 }) {
   const state = useActivityLeads({ activity, users });
 

@@ -5,7 +5,7 @@ import {
   useUpdateSettingsMut,
 } from "../../../shared/ui/settings-tab-shared";
 import { useServerSeededDraft } from "../../../shared/ui/use-server-seeded-draft";
-import type { MockSettings } from "../model/admin-types";
+import type { AdminSettingsView } from "../model/admin-types";
 import { TIMEZONE_OPTIONS } from "../model/timezone-options";
 
 function DefaultTimezoneField({
@@ -50,10 +50,10 @@ function DefaultTimezoneField({
 export function RemindersSubTab({
   serverSettings,
 }: {
-  readonly serverSettings: MockSettings;
+  readonly serverSettings: AdminSettingsView;
 }) {
   const { draft, setDraft, markClean } =
-    useServerSeededDraft<MockSettings>(serverSettings);
+    useServerSeededDraft<AdminSettingsView>(serverSettings);
   const updateSettingsMut = useUpdateSettingsMut("Reminder defaults");
 
   function handleSave() {

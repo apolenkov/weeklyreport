@@ -4,7 +4,7 @@ import {
   type ActivityFormData,
   toggleLinkedProduct,
 } from "../model/activity-form";
-import type { MockGroup, MockProduct } from "../model/admin-types";
+import type { AdminGroupView, AdminProductView } from "../model/admin-types";
 
 const FIELD_LABEL_CLASS =
   "mb-1 block text-sm font-medium text-[var(--color-foreground)]";
@@ -47,7 +47,7 @@ function ReportingGroupField({
 }: {
   readonly value: string;
   readonly onChange: (value: string) => void;
-  readonly groups: readonly MockGroup[];
+  readonly groups: readonly AdminGroupView[];
   readonly lockedByLeads: boolean;
 }) {
   return (
@@ -85,7 +85,7 @@ function LinkedProductsField({
 }: {
   readonly form: ActivityFormData;
   readonly onFormChange: (form: ActivityFormData) => void;
-  readonly products: readonly MockProduct[];
+  readonly products: readonly AdminProductView[];
 }) {
   return (
     <fieldset>
@@ -160,8 +160,8 @@ export function ActivityFormFields({
 }: {
   readonly form: ActivityFormData;
   readonly onFormChange: (form: ActivityFormData) => void;
-  readonly groups: readonly MockGroup[];
-  readonly products: readonly MockProduct[];
+  readonly groups: readonly AdminGroupView[];
+  readonly products: readonly AdminProductView[];
   readonly groupLockedByLeads: boolean;
 }) {
   return (

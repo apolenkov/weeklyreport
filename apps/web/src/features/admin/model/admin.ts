@@ -16,13 +16,13 @@ import { STAGE_NAMES } from "@customreport/shared";
 import { formatPeriodLabel, toIsoDateString } from "../../../lib/format-date";
 import { mapReminder } from "./admin-reminder-mapper";
 import type {
+  AdminGroupView,
+  AdminPeriodView,
+  AdminProductView,
+  AdminReminderPolicyView,
+  AdminSettingsView,
+  AdminUserView,
   MappedAdminSnapshot,
-  MockGroup,
-  MockPeriod,
-  MockProduct,
-  MockReminderPolicy,
-  MockSettings,
-  MockUser,
   PeriodStatus,
   StageAssignment,
 } from "./admin-types";
@@ -34,7 +34,7 @@ export {
   toReminderPolicyInput,
   toReportingGroupInput,
 } from "./admin-form-inputs";
-export type { MappedAdminSnapshot, MockSettings } from "./admin-types";
+export type { AdminSettingsView, MappedAdminSnapshot } from "./admin-types";
 
 // ---- Helpers ----
 
@@ -42,7 +42,7 @@ function emptyStageGrid(): StageAssignment[] {
   return STAGE_NAMES.map((stage) => ({ stage, assigneeId: null }));
 }
 
-function mapUser(api: AdminUser): MockUser {
+function mapUser(api: AdminUser): AdminUserView {
   return {
     id: api.id,
     name: api.name,
@@ -58,7 +58,7 @@ function mapUser(api: AdminUser): MockUser {
   };
 }
 
-function mapGroup(api: ReportingGroup): MockGroup {
+function mapGroup(api: ReportingGroup): AdminGroupView {
   return {
     id: api.id,
     name: api.name,
@@ -68,7 +68,7 @@ function mapGroup(api: ReportingGroup): MockGroup {
   };
 }
 
-function mapProject(api: AdminProject): MockProduct {
+function mapProject(api: AdminProject): AdminProductView {
   return {
     id: api.id,
     name: api.name,
@@ -80,9 +80,9 @@ function mapProject(api: AdminProject): MockProduct {
   };
 }
 
-function mapPeriod(api: ReportPeriod): MockPeriod {
+function mapPeriod(api: ReportPeriod): AdminPeriodView {
   // adminSnapshotSchema ships reportPeriodSchema (status: 'draft' | 'published').
-  // Mock UI expects 'open' | 'published' | 'reopened'. Map 'draft' -> 'open';
+  // Admin UI expects 'open' | 'published' | 'reopened'. Map 'draft' -> 'open';
   // 'reopened' is unreachable from this endpoint (only periodReadModelSchema
   // exposes periodStatus).
   const status: PeriodStatus =
@@ -98,7 +98,7 @@ function mapPeriod(api: ReportPeriod): MockPeriod {
 }
 
 // Keep validity bounds as Dates so every editor input uses one formatter.
-function mapReminderPolicy(api: ReminderPolicy): MockReminderPolicy {
+function mapReminderPolicy(api: ReminderPolicy): AdminReminderPolicyView {
   return {
     id: api.id,
     kind: api.kind,
@@ -128,7 +128,7 @@ export function mapAdminSnapshot(api: AdminSnapshot): MappedAdminSnapshot {
 }
 
 // Wire and presentation settings are intentionally field-for-field.
-export function mapAdminSettings(api: AppSettings): MockSettings {
+export function mapAdminSettings(api: AppSettings): AdminSettingsView {
   return {
     autoCreatePeriods: api.autoCreatePeriods,
     defaultDeadlineDays: api.defaultDeadlineDays,

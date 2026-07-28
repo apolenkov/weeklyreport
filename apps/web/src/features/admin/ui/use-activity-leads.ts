@@ -6,11 +6,11 @@ import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
-import type { MockUser } from "../model/admin-types";
+import type { AdminUserView } from "../model/admin-types";
 
 interface ActivityLeadsArgs {
   readonly activity: ProjectActivity;
-  readonly users: readonly MockUser[];
+  readonly users: readonly AdminUserView[];
 }
 
 function useActivityLeadMutations() {
@@ -61,7 +61,7 @@ export function useActivityLeads({ activity, users }: ActivityLeadsArgs) {
 
   const { attach, detach, mutating } = useActivityLeadMutations();
 
-  const isOutOfGroup = (lead: MockUser): boolean =>
+  const isOutOfGroup = (lead: AdminUserView): boolean =>
     lead.groupId !== activity.groupId;
 
   function toggle(leadId: string, nextChecked: boolean): void {

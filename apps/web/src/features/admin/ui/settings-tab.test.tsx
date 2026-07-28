@@ -27,7 +27,7 @@ vi.mock("sonner", () => ({
   },
 }));
 
-import type { MockSettings } from "../model/admin-types";
+import type { AdminSettingsView } from "../model/admin-types";
 import { SettingsTab } from "./settings-tab";
 
 // Telegram integration status shape returned by
@@ -68,7 +68,7 @@ function buildProxy(integrations: IntegrationStub = DEFAULT_INTEGRATIONS) {
 
 function renderSettings(
   proxy: ReturnType<typeof buildProxy>["proxy"],
-  settingsOverride?: Partial<MockSettings>,
+  settingsOverride?: Partial<AdminSettingsView>,
 ) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
@@ -91,7 +91,7 @@ function renderSettings(
 
 // Defaults mirror SQL defaults so Periods / Reminders / Notifications
 // render with realistic initial state.
-const baseSettings: MockSettings = {
+const baseSettings: AdminSettingsView = {
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
   periodLengthDays: 7,
@@ -317,7 +317,7 @@ describe("SettingsTab — Periods sub-tab (new fields)", () => {
       expect(updateSettingsFn).toHaveBeenCalled();
     });
     const payload = updateSettingsFn.mock
-      .calls[0]?.[0] as Partial<MockSettings>;
+      .calls[0]?.[0] as Partial<AdminSettingsView>;
     expect(payload.periodLengthDays).toBe(14);
     expect(payload.gracePeriodHours).toBe(48);
     // Other fields preserved on the PATCH payload.
@@ -411,7 +411,7 @@ describe("SettingsTab — Periods sub-tab (period-cycle inputs)", () => {
       expect(updateSettingsFn).toHaveBeenCalled();
     });
     const payload = updateSettingsFn.mock
-      .calls[0]?.[0] as Partial<MockSettings>;
+      .calls[0]?.[0] as Partial<AdminSettingsView>;
     expect(payload.deadlineTime).toBe("09:30");
     expect(payload.reopenWindowHours).toBe(24);
     // allowReopenAfterPublish was not touched — stays true.

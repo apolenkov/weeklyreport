@@ -1,6 +1,6 @@
 import { ROLE_LABEL, sessionRoleSchema } from "@customreport/shared";
 
-import type { MockGroup, MockUser } from "./admin-types";
+import type { AdminGroupView, AdminUserView } from "./admin-types";
 
 export const USER_ROLE_FILTER_OPTIONS = [
   { value: "", label: "All roles" },
@@ -19,7 +19,7 @@ export const USER_STATUS_FILTER_OPTIONS = [
 export type UserStatusFilter =
   (typeof USER_STATUS_FILTER_OPTIONS)[number]["value"];
 
-export function userGroupFilterOptions(groups: readonly MockGroup[]) {
+export function userGroupFilterOptions(groups: readonly AdminGroupView[]) {
   return [
     { value: "", label: "All groups" },
     ...groups.map((group) => ({ value: group.id, label: group.name })),
@@ -33,7 +33,7 @@ interface UserTableFilters {
   readonly status: UserStatusFilter;
 }
 
-function matchesSearch(user: MockUser, search: string): boolean {
+function matchesSearch(user: AdminUserView, search: string): boolean {
   const needle = search.trim().toLowerCase();
   if (needle === "") return true;
   return [
@@ -49,9 +49,9 @@ function matchesSearch(user: MockUser, search: string): boolean {
 }
 
 export function filterAdminUsers(
-  users: readonly MockUser[],
+  users: readonly AdminUserView[],
   filters: UserTableFilters,
-): MockUser[] {
+): AdminUserView[] {
   return users.filter((user) => {
     if (filters.role !== "" && user.role !== filters.role) return false;
     if (filters.groupId !== "" && user.groupId !== filters.groupId)

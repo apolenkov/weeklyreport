@@ -140,8 +140,7 @@ type PeriodManualEditInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
   readonly changes: Partial<{
     periodStart: { from: string; to: string };
     periodEnd: { from: string; to: string };
-    // Three-state deadline (ruling F16): `to: null` = explicit clear,
-    // `from: null` = a deadline was set on a previously deadline-less period.
+    // `to: null` clears a deadline; `from: null` records a newly set deadline.
     deadline: { from: string | null; to: string | null };
     weekLabel: { from: string | null; to: string | null };
   }>;

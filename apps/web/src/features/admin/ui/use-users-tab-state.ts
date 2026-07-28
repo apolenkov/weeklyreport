@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 
 import { toAdminUserInput } from "../model/admin";
-import type { MockGroup, MockUser } from "../model/admin-types";
+import type { AdminGroupView, AdminUserView } from "../model/admin-types";
 import { emptyForm, formFromUser, type UserFormData } from "../model/user-form";
 import {
   filterAdminUsers,
@@ -12,7 +12,7 @@ import {
 import { useUserMutations } from "../model/users-tab-mutations";
 
 function changesUserGroup(
-  editingUser: MockUser | null,
+  editingUser: AdminUserView | null,
   form: UserFormData,
 ): boolean {
   return editingUser !== null && form.groupId !== editingUser.groupId;
@@ -29,7 +29,7 @@ function canSaveUser(form: UserFormData, isSaving: boolean): boolean {
 
 // The picker lists active groups plus — only while editing a user who still
 // sits in an archived one — that archived group, so the form never drops it.
-function useUserFormGroups(groups: MockGroup[], selectedGroupId: string) {
+function useUserFormGroups(groups: AdminGroupView[], selectedGroupId: string) {
   const activeGroups = useMemo(
     () => groups.filter((group) => !group.archived),
     [groups],
@@ -60,10 +60,10 @@ export interface UsersFilterState {
   readonly setGroupFilter: (next: string) => void;
   readonly statusFilter: UserStatusFilter;
   readonly setStatusFilter: (next: UserStatusFilter) => void;
-  readonly filteredUsers: MockUser[];
+  readonly filteredUsers: AdminUserView[];
 }
 
-function useUsersFilterState(users: MockUser[]): UsersFilterState {
+function useUsersFilterState(users: AdminUserView[]): UsersFilterState {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [groupFilter, setGroupFilter] = useState("");
@@ -91,8 +91,8 @@ function useUsersFilterState(users: MockUser[]): UsersFilterState {
   };
 }
 
-function useUserEditDialog(groups: MockGroup[]) {
-  const [editingUser, setEditingUser] = useState<MockUser | null>(null);
+function useUserEditDialog(groups: AdminGroupView[]) {
+  const [editingUser, setEditingUser] = useState<AdminUserView | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [form, setForm] = useState<UserFormData>(() => emptyForm(groups));
   const { activeGroups, groupOptions } = useUserFormGroups(
@@ -113,7 +113,7 @@ function useUserEditDialog(groups: MockGroup[]) {
       setForm(emptyForm(groups));
       setShowDialog(true);
     },
-    openEdit: (user: MockUser) => {
+    openEdit: (user: AdminUserView) => {
       setEditingUser(user);
       setForm(formFromUser(user));
       setShowDialog(true);
@@ -124,14 +124,14 @@ function useUserEditDialog(groups: MockGroup[]) {
 // The trigger element is stashed so the confirm dialog can restore focus to the
 // row button it replaced; it is written on click only, never read while rendering.
 function useUserDeletion(deleteUser: (userId: string) => void) {
-  const [deleteTarget, setDeleteTarget] = useState<MockUser | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminUserView | null>(null);
   const deleteTriggerRef = useRef<HTMLElement | null>(null);
 
   return {
     deleteTarget,
     deleteTriggerRef,
     cancelDelete: () => setDeleteTarget(null),
-    openDelete: (user: MockUser, trigger: HTMLButtonElement) => {
+    openDelete: (user: AdminUserView, trigger: HTMLButtonElement) => {
       deleteTriggerRef.current = trigger;
       setDeleteTarget(user);
     },
@@ -143,7 +143,10 @@ function useUserDeletion(deleteUser: (userId: string) => void) {
   };
 }
 
-export function useUsersTabState(users: MockUser[], groups: MockGroup[]) {
+export function useUsersTabState(
+  users: AdminUserView[],
+  groups: AdminGroupView[],
+) {
   const dialog = useUserEditDialog(groups);
   const filters = useUsersFilterState(users);
   const { saveUserMut, deleteUserMut, deactivateUserMut, activateUserMut } =
@@ -180,9 +183,9 @@ export function useUsersTabState(users: MockUser[], groups: MockGroup[]) {
       saveUserMut.mutate(input);
     },
     cancelGroupChange: () => setPendingGroupChange(null),
-    deactivateUser: (user: MockUser) =>
+    deactivateUser: (user: AdminUserView) =>
       deactivateUserMut.mutate({ userId: user.id }),
-    activateUser: (user: MockUser) =>
+    activateUser: (user: AdminUserView) =>
       activateUserMut.mutate({ userId: user.id }),
   };
 }

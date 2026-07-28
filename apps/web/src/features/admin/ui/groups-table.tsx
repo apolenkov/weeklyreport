@@ -1,13 +1,13 @@
 "use client";
 
-import type { MockGroup, MockUser } from "../model/admin-types";
+import type { AdminGroupView, AdminUserView } from "../model/admin-types";
 
 interface GroupsTableProps {
-  readonly groups: readonly MockGroup[];
-  readonly headById: ReadonlyMap<string, MockUser>;
+  readonly groups: readonly AdminGroupView[];
+  readonly headById: ReadonlyMap<string, AdminUserView>;
   readonly activeGroupCount: number;
-  readonly onEdit: (group: MockGroup) => void;
-  readonly onArchive: (group: MockGroup) => void;
+  readonly onEdit: (group: AdminGroupView) => void;
+  readonly onArchive: (group: AdminGroupView) => void;
 }
 
 // Compact table-row actions (denser than --touch-target-min header controls).
@@ -73,11 +73,11 @@ function GroupsTableHead() {
 }
 
 interface GroupRowProps {
-  readonly group: MockGroup;
+  readonly group: AdminGroupView;
   readonly headName: string;
   readonly canArchive: boolean;
-  readonly onEdit: (group: MockGroup) => void;
-  readonly onArchive: (group: MockGroup) => void;
+  readonly onEdit: (group: AdminGroupView) => void;
+  readonly onArchive: (group: AdminGroupView) => void;
 }
 
 function GroupRow({

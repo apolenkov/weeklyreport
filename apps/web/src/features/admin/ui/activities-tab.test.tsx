@@ -10,7 +10,11 @@ import {
   type CapturedMutation,
   createMockTRPC,
 } from "../../../test-utils/mock-trpc";
-import type { MockGroup, MockProduct, MockUser } from "../model/admin-types";
+import type {
+  AdminGroupView,
+  AdminProductView,
+  AdminUserView,
+} from "../model/admin-types";
 import { ActivitiesTab } from "./activities-tab";
 
 vi.mock("sonner", () => ({
@@ -44,7 +48,7 @@ const OTHER_LEAD_ID = "44444444-4444-4444-8444-444444444444";
 const PRODUCT_ID = "55555555-5555-4555-8555-555555555555";
 const ACTIVITY_ID = "66666666-6666-4666-8666-666666666666";
 
-const group: MockGroup = {
+const group: AdminGroupView = {
   id: GROUP_ID,
   name: "Platform",
   description: null,
@@ -52,9 +56,13 @@ const group: MockGroup = {
   headUserId: null,
 };
 
-const otherGroup: MockGroup = { ...group, id: OTHER_GROUP_ID, name: "Data" };
+const otherGroup: AdminGroupView = {
+  ...group,
+  id: OTHER_GROUP_ID,
+  name: "Data",
+};
 
-const lead: MockUser = {
+const lead: AdminUserView = {
   id: LEAD_ID,
   name: "Alice",
   lastName: "Alice",
@@ -68,7 +76,7 @@ const lead: MockUser = {
   isActive: true,
 };
 
-const otherGroupLead: MockUser = {
+const otherGroupLead: AdminUserView = {
   ...lead,
   id: OTHER_LEAD_ID,
   name: "Bob",
@@ -77,7 +85,7 @@ const otherGroupLead: MockUser = {
   department: "Data",
 };
 
-const product: MockProduct = {
+const product: AdminProductView = {
   id: PRODUCT_ID,
   name: "Checkout",
   leadOwnerId: LEAD_ID,
@@ -97,7 +105,7 @@ const activity: ProjectActivity = {
 
 function renderTab(opts?: {
   activities?: ProjectActivity[];
-  users?: MockUser[];
+  users?: AdminUserView[];
 }): { captured: Record<string, CapturedMutation> } {
   const { proxy, captured } = createMockTRPC([
     {

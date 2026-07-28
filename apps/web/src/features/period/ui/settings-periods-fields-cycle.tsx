@@ -2,7 +2,7 @@
 
 import type { Dispatch, SetStateAction } from "react";
 
-import type { MockSettings } from "../../admin";
+import type { AdminSettingsView } from "../../admin";
 
 // Empty time inputs resolve here — matches auto-create's fixed 18:00 default.
 const DEFAULT_DEADLINE_TIME = "18:00";
@@ -18,8 +18,8 @@ const FIELD_LABEL_CLASS =
 const FIELD_HINT_CLASS = "mt-1 text-xs text-[var(--color-muted-foreground)]";
 
 interface DraftFieldProps {
-  readonly draft: MockSettings;
-  readonly setDraft: Dispatch<SetStateAction<MockSettings>>;
+  readonly draft: AdminSettingsView;
+  readonly setDraft: Dispatch<SetStateAction<AdminSettingsView>>;
 }
 
 function DeadlineTimeField({ draft, setDraft }: DraftFieldProps) {

@@ -74,35 +74,14 @@ export function createSamlStrategyOptions(
 // nameless assertion provisions under this placeholder for an admin to correct.
 const UNKNOWN_DISPLAY_NAME = "Unknown User";
 
-// Parse the raw SAML profile through the shared Zod schema so a missing or
-// unrecognised attribute fails closed. devMode retains a permissive fallback
-// for local development where no real IdP populates the assertion.
+// Parse every assertion through the shared schema. devMode relaxes only replay
+// checking; it must never provision a synthetic identity.
 export function verifySamlProfile(
-  options: SamlStrategyOptions,
+  _options: SamlStrategyOptions,
   rawProfile: Record<string, unknown> | null | undefined,
 ): { ok: true; profile: VerifiedSamlProfile } | { ok: false; error: Error } {
   if (!rawProfile) {
     return { ok: false, error: new Error("SAML profile is missing") };
-  }
-
-  if (options.devMode) {
-    // rawProfile fields are `unknown` (Record<string, unknown>); take the first
-    // string-typed candidate so a non-string attribute can't stringify to
-    // "[object Object]" (no-base-to-string).
-    const firstString = (...values: unknown[]): string | undefined =>
-      values.find((v): v is string => typeof v === "string");
-    const samlId =
-      firstString(rawProfile.nameID, rawProfile.email) ?? "unknown-saml-id";
-    const email = firstString(rawProfile.email) ?? "unknown@example.com";
-    const displayName =
-      firstString(rawProfile.displayName, rawProfile.cn) ??
-      UNKNOWN_DISPLAY_NAME;
-    // The assertion carries no role: every SAML-provisioned user defaults to
-    // viewer; admins assign real roles afterwards.
-    return {
-      ok: true,
-      profile: { samlId, email, displayName, role: "viewer" },
-    };
   }
 
   const parsed = SamlProfileSchema.safeParse({
@@ -118,7 +97,7 @@ export function verifySamlProfile(
     };
   }
 
-  // Same as the devMode branch: no role in the assertion, so default to viewer.
+  // Assertions do not assign application roles; admins do that after provision.
   return {
     ok: true,
     profile: {

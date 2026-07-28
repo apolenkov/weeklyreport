@@ -11,11 +11,10 @@ import { adminProcedure, router } from "../../trpc.middleware.js";
 const MAX_FAILED_JOBS_LIMIT = 200;
 
 export interface AdminOpsDeps {
-  // Optional so role-coverage fixtures build with `{}` without Redis.
+  // Optional at router construction; listFailed degrades to an empty queue,
+  // while mutations and metrics fail loud through the guards below.
   emailReminderQueue?: Queue;
-  // Optional for `{}` fixtures: listFailed returns empty; retryFailed fails loud.
   jobsService?: JobsService;
-  // Optional for `{}` fixtures; real boot always wires it.
   actionLogService?: ActionLogService;
 }
 

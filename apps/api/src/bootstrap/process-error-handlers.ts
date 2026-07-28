@@ -16,5 +16,6 @@ export function registerProcessErrorHandlers(logger: AppLogger): void {
           ? { name: reason.name, message: reason.message, stack: reason.stack }
           : String(reason),
     });
+    process.exit(1);
   });
 }

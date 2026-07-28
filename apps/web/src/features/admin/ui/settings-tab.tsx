@@ -16,11 +16,11 @@ import {
   NotificationsSubTab,
 } from "../../organization";
 import { PeriodsSubTab } from "../../period";
-import type { MockSettings } from "../model/admin-types";
+import type { AdminSettingsView } from "../model/admin-types";
 import { RemindersSubTab } from "./settings-reminders-sub-tab";
 
 interface SettingsTabProps {
-  readonly settings: MockSettings;
+  readonly settings: AdminSettingsView;
 }
 
 export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {

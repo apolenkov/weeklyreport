@@ -7,7 +7,7 @@ import type {
 
 export type { StageName } from "@customreport/shared";
 
-export interface MockUser {
+export interface AdminUserView {
   id: string;
   // Stored display name, denormalized from the parts below.
   name: string;
@@ -27,7 +27,7 @@ export interface MockUser {
   isActive: boolean;
 }
 
-export interface MockGroup {
+export interface AdminGroupView {
   id: string;
   name: string;
   description: string | null;
@@ -40,7 +40,7 @@ export interface StageAssignment {
   assigneeId: string | null;
 }
 
-export interface MockProduct {
+export interface AdminProductView {
   id: string;
   name: string;
   leadOwnerId: string;
@@ -50,7 +50,7 @@ export interface MockProduct {
 
 export type { PeriodStatus } from "@customreport/shared";
 
-export interface MockPeriod {
+export interface AdminPeriodView {
   id: string;
   weekLabel: string;
   startDate: string;
@@ -60,7 +60,7 @@ export interface MockPeriod {
   status: PeriodStatus;
 }
 
-export interface MockReminder {
+export interface AdminReminderView {
   id: string;
   name: string;
   description: string;
@@ -80,7 +80,7 @@ export interface MockReminder {
 }
 
 // Wire shape 1:1; no name/description synthesis — editor shows every column.
-export interface MockReminderPolicy {
+export interface AdminReminderPolicyView {
   id: string;
   kind: ReminderPolicyKind;
   offsetMinutes: number;
@@ -94,7 +94,7 @@ export interface MockReminderPolicy {
 
 // Admin-tunable fields on the Periods / Reminders / Notifications sub-tabs;
 // must stay aligned with the wire `appSettingsSchema`.
-export interface MockSettings {
+export interface AdminSettingsView {
   autoCreatePeriods: boolean;
   defaultDeadlineDays: number;
   // Periods tab
@@ -118,11 +118,11 @@ export interface MockSettings {
 }
 
 export interface MappedAdminSnapshot {
-  groups: MockGroup[];
-  users: MockUser[];
-  products: MockProduct[];
-  periods: MockPeriod[];
-  reminders: MockReminder[];
+  groups: AdminGroupView[];
+  users: AdminUserView[];
+  products: AdminProductView[];
+  periods: AdminPeriodView[];
+  reminders: AdminReminderView[];
   /** Policies surfaced for the Reminders Tab editor. */
-  policies: MockReminderPolicy[];
+  policies: AdminReminderPolicyView[];
 }

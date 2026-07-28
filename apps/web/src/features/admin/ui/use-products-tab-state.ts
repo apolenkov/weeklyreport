@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 
 import { useTRPC } from "../../../lib/trpc-context";
 import { toAdminProjectInput } from "../model/admin";
-import type { MockProduct, MockUser } from "../model/admin-types";
+import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import {
   EMPTY_PRODUCT_FORM,
   formFromProduct,
@@ -15,27 +15,27 @@ import { useProductMutations } from "../model/products-tab-mutations";
 import { useProductDeepLinkExpand } from "./use-product-deep-link-expand";
 
 interface UseProductsTabStateArgs {
-  readonly products: MockProduct[];
-  readonly users: MockUser[];
+  readonly products: AdminProductView[];
+  readonly users: AdminUserView[];
   readonly productFilter?: string | null;
 }
 
 // The picker offers active leads only, while getUserById reads the full user
 // list so assignments to an already-deactivated lead still resolve to a name.
-function useProductLeads(users: MockUser[]) {
+function useProductLeads(users: AdminUserView[]) {
   const leads = useMemo(
     () => users.filter((u) => u.role === "lead" && u.isActive),
     [users],
   );
   return {
     leads,
-    getUserById: (id: string): MockUser | undefined =>
+    getUserById: (id: string): AdminUserView | undefined =>
       users.find((u) => u.id === id),
   };
 }
 
 function useProductExpansion(
-  products: MockProduct[],
+  products: AdminProductView[],
   productFilter: string | null | undefined,
 ) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -53,9 +53,9 @@ function useProductExpansion(
   };
 }
 
-function useProductEditDialog(leads: readonly MockUser[]) {
+function useProductEditDialog(leads: readonly AdminUserView[]) {
   const [showDialog, setShowDialog] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<MockProduct | null>(
+  const [editingProduct, setEditingProduct] = useState<AdminProductView | null>(
     null,
   );
   const [form, setForm] = useState<ProductFormData>(EMPTY_PRODUCT_FORM);
@@ -71,7 +71,7 @@ function useProductEditDialog(leads: readonly MockUser[]) {
       setForm({ ...EMPTY_PRODUCT_FORM, leadId: leads[0]?.id ?? "" });
       setShowDialog(true);
     },
-    openEdit: (product: MockProduct) => {
+    openEdit: (product: AdminProductView) => {
       setEditingProduct(product);
       setForm(formFromProduct(product));
       setShowDialog(true);
@@ -80,7 +80,7 @@ function useProductEditDialog(leads: readonly MockUser[]) {
 }
 
 function useProductFilters(
-  products: MockProduct[],
+  products: AdminProductView[],
   productFilter: string | null | undefined,
 ) {
   // Local name filter, distinct from the global SearchInput deep-link.
@@ -122,7 +122,7 @@ function useStageCountByProject(): ReadonlyMap<string, number> {
 }
 
 function useProductArchive(archiveProduct: (projectId: string) => void) {
-  const [pendingArchive, setPendingArchive] = useState<MockProduct | null>(
+  const [pendingArchive, setPendingArchive] = useState<AdminProductView | null>(
     null,
   );
   return {
@@ -145,8 +145,8 @@ function productSaveActions({
   saveProject,
 }: {
   readonly form: ProductFormData;
-  readonly editingProduct: MockProduct | null;
-  readonly getUserById: (id: string) => MockUser | undefined;
+  readonly editingProduct: AdminProductView | null;
+  readonly getUserById: (id: string) => AdminUserView | undefined;
   readonly saveProject: (input: ReturnType<typeof toAdminProjectInput>) => void;
 }) {
   const write = (
@@ -170,7 +170,7 @@ function productSaveActions({
         },
         editingProduct?.id,
       ),
-    handleRestore: (product: MockProduct) =>
+    handleRestore: (product: AdminProductView) =>
       write(
         {
           name: product.name,

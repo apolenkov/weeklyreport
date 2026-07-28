@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
-import type { MockUser } from "./admin-types";
+import type { AdminUserView } from "./admin-types";
 
 // Both writes move the same (projectId, stageId) slot, so both refresh the
 // assignment list and the per-product coverage counts.
@@ -51,7 +51,7 @@ export function useStageAssignmentMutations() {
 // the lead dropdown is scoped to the product's owning group.
 export function useStageAssignmentData(
   projectId: string,
-  leads: readonly MockUser[],
+  leads: readonly AdminUserView[],
 ) {
   const trpc = useTRPC();
 

@@ -2,7 +2,7 @@
 
 import type { Dispatch, SetStateAction } from "react";
 
-import type { MockSettings } from "../../admin";
+import type { AdminSettingsView } from "../../admin";
 import {
   NumberField,
   ToggleField,
@@ -11,8 +11,8 @@ import {
 import * as fieldLimits from "./settings-periods-fields-base-helpers";
 
 interface FieldGroupProps {
-  readonly draft: MockSettings;
-  readonly setDraft: Dispatch<SetStateAction<MockSettings>>;
+  readonly draft: AdminSettingsView;
+  readonly setDraft: Dispatch<SetStateAction<AdminSettingsView>>;
 }
 
 // Shell owns draft/Save; this component only renders the field group.

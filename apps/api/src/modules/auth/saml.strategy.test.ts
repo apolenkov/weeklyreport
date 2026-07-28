@@ -33,7 +33,7 @@ const devEnv = {
 } as unknown as NodeJS.ProcessEnv;
 
 describe("verifySamlProfile", () => {
-  describe("devMode=true (legacy fallback preserved)", () => {
+  describe("devMode=true", () => {
     it("missing role defaults to viewer", () => {
       const result = verifySamlProfile(devOptions, {
         nameID: "u-1",
@@ -52,6 +52,13 @@ describe("verifySamlProfile", () => {
       });
       expect(result.ok).toBe(true);
       if (result.ok) expect(result.profile.role).toBe("viewer");
+    });
+
+    it("rejects a profile without a stable identity", () => {
+      const result = verifySamlProfile(devOptions, {
+        displayName: "No Identity",
+      });
+      expect(result.ok).toBe(false);
     });
   });
 

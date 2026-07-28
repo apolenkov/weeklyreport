@@ -2,7 +2,7 @@ import { MINUTES_PER_DAY } from "@customreport/shared";
 
 import { toIsoDateString } from "../../../lib/format-date";
 import type { AdminReminderPolicyFormInput } from "./admin";
-import type { MockReminderPolicy } from "./admin-types";
+import type { AdminReminderPolicyView } from "./admin-types";
 import {
   presetForPolicy,
   presetPairing,
@@ -49,7 +49,7 @@ export function emptyPolicyForm(timezone: string): PolicyFormState {
   };
 }
 
-export function policyToForm(policy: MockReminderPolicy): PolicyFormState {
+export function policyToForm(policy: AdminReminderPolicyView): PolicyFormState {
   return {
     preset: presetForPolicy(policy.kind, policy.audience),
     kind: policy.kind,

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { toReminderPolicyInput } from "../model/admin";
-import type { MockReminderPolicy } from "../model/admin-types";
+import type { AdminReminderPolicyView } from "../model/admin-types";
 import {
   emptyPolicyForm,
   type PolicyFormState,
@@ -29,9 +29,9 @@ export type RemindersEditor =
   | { readonly mode: "edit"; readonly id: string };
 
 function filterPolicies(
-  policies: readonly MockReminderPolicy[],
+  policies: readonly AdminReminderPolicyView[],
   normalizedSearch: string,
-): readonly MockReminderPolicy[] {
+): readonly AdminReminderPolicyView[] {
   if (!normalizedSearch) return policies;
   return policies.filter((p) =>
     [
@@ -61,7 +61,7 @@ function policyPayload(form: PolicyFormState, editor: RemindersEditor) {
 }
 
 function useReminderEditor(
-  policies: readonly MockReminderPolicy[],
+  policies: readonly AdminReminderPolicyView[],
   defaultTimezone: string,
 ) {
   const [editor, setEditor] = useState<RemindersEditor>(() =>
@@ -89,18 +89,17 @@ function useReminderEditor(
       setForm(emptyPolicyForm(defaultTimezone));
       setEditor({ mode: "add" });
     },
-    handleEditReminder: (policy: MockReminderPolicy) => {
+    handleEditReminder: (policy: AdminReminderPolicyView) => {
       setForm(policyToForm(policy));
       setEditor({ mode: "edit", id: policy.id });
     },
   };
 }
 
-function useRemindersListState(policies: readonly MockReminderPolicy[]) {
+function useRemindersListState(policies: readonly AdminReminderPolicyView[]) {
   const [search, setSearch] = useState("");
-  const [pendingDelete, setPendingDelete] = useState<MockReminderPolicy | null>(
-    null,
-  );
+  const [pendingDelete, setPendingDelete] =
+    useState<AdminReminderPolicyView | null>(null);
   // Id of the reminder whose own save/remove is in flight — so a mutation
   // disables only that row's controls, not the whole list.
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -126,7 +125,7 @@ function useRemindersListState(policies: readonly MockReminderPolicy[]) {
 }
 
 export function useRemindersTabState(
-  policies: readonly MockReminderPolicy[],
+  policies: readonly AdminReminderPolicyView[],
   defaultTimezone: string,
 ) {
   const editorState = useReminderEditor(policies, defaultTimezone);
@@ -150,7 +149,7 @@ export function useRemindersTabState(
         },
       });
     },
-    handleToggleActive: (policy: MockReminderPolicy) => {
+    handleToggleActive: (policy: AdminReminderPolicyView) => {
       listState.setBusyId(policy.id);
       saveMut.mutate(toggledPayload(policy), {
         onSuccess: () => toast.success("Reminder updated"),

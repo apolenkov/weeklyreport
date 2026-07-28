@@ -2,19 +2,19 @@
 
 import { STAGE_NAMES } from "@customreport/shared";
 
-import type { MockProduct, MockUser } from "../model/admin-types";
+import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import { ProductGroupChips } from "./product-group-chips";
 import { StageAssignmentEditor } from "./stage-assignment-editor";
 
 interface ActiveProductRowProps {
-  readonly product: MockProduct;
-  readonly owner: MockUser | undefined;
+  readonly product: AdminProductView;
+  readonly owner: AdminUserView | undefined;
   readonly assignedCount: number;
   readonly isExpanded: boolean;
-  readonly leads: readonly MockUser[];
+  readonly leads: readonly AdminUserView[];
   readonly onToggleExpand: (id: string) => void;
-  readonly onEdit: (product: MockProduct) => void;
-  readonly onArchive: (product: MockProduct) => void;
+  readonly onEdit: (product: AdminProductView) => void;
+  readonly onArchive: (product: AdminProductView) => void;
   readonly isArchiving: boolean;
 }
 
@@ -62,8 +62,8 @@ function ProductSummary({
   isExpanded,
   onToggleExpand,
 }: {
-  readonly product: MockProduct;
-  readonly owner: MockUser | undefined;
+  readonly product: AdminProductView;
+  readonly owner: AdminUserView | undefined;
   readonly isExpanded: boolean;
   readonly onToggleExpand: (id: string) => void;
 }) {
@@ -103,10 +103,10 @@ function ProductRowActions({
   onArchive,
   isArchiving,
 }: {
-  readonly product: MockProduct;
+  readonly product: AdminProductView;
   readonly assignedCount: number;
-  readonly onEdit: (product: MockProduct) => void;
-  readonly onArchive: (product: MockProduct) => void;
+  readonly onEdit: (product: AdminProductView) => void;
+  readonly onArchive: (product: AdminProductView) => void;
   readonly isArchiving: boolean;
 }) {
   return (
@@ -140,8 +140,8 @@ function StageAssignmentDrawer({
   leads,
   isExpanded,
 }: {
-  readonly product: MockProduct;
-  readonly leads: readonly MockUser[];
+  readonly product: AdminProductView;
+  readonly leads: readonly AdminUserView[];
   readonly isExpanded: boolean;
 }) {
   return (

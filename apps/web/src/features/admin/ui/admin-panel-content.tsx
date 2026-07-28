@@ -1,8 +1,11 @@
 import { PeriodsTab } from "../../period";
 import { ReopenTab } from "../../review";
 import type { AdminTab } from "../model/admin-tab-dependencies";
-import type { MockReminder } from "../model/admin-types";
-import type { MappedAdminSnapshot, MockSettings } from "../model/admin-types";
+import type { AdminReminderView } from "../model/admin-types";
+import type {
+  AdminSettingsView,
+  MappedAdminSnapshot,
+} from "../model/admin-types";
 import { ActionLogTab } from "./action-log-tab";
 import { ActivitiesTab } from "./activities-tab";
 import { AdminQueryIssue } from "./admin-query-issue";
@@ -18,7 +21,7 @@ interface AdminPanelContentProps {
   readonly activeTab: AdminTab;
   readonly productFilter?: string | null;
   readonly data?: MappedAdminSnapshot;
-  readonly settings?: MockSettings;
+  readonly settings?: AdminSettingsView;
   readonly snapshotError: boolean;
   readonly settingsError: boolean;
   readonly retrySnapshot: () => void;
@@ -41,8 +44,8 @@ function SettingsContent(props: AdminPanelContentProps) {
   );
 }
 
-function groupRulesByPolicyId(rules: readonly MockReminder[]) {
-  return rules.reduce<Readonly<Record<string, readonly MockReminder[]>>>(
+function groupRulesByPolicyId(rules: readonly AdminReminderView[]) {
+  return rules.reduce<Readonly<Record<string, readonly AdminReminderView[]>>>(
     (groups, rule) =>
       rule.policyId === null
         ? groups

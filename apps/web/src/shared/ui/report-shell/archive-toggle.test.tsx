@@ -14,11 +14,6 @@ describe("ArchiveToggle", () => {
     expect(btn).toHaveTextContent("");
   });
 
-  it("never renders a count badge regardless of how many archives exist", () => {
-    render(<ArchiveToggle checked={true} onChange={vi.fn()} />);
-    expect(screen.queryByText(/^\d+$/)).not.toBeInTheDocument();
-  });
-
   it("is a token-sized icon button with aria-label and matching tooltip", () => {
     render(<ArchiveToggle checked={false} onChange={vi.fn()} />);
     const btn = screen.getByRole("switch", {

@@ -2,7 +2,7 @@
 
 import type { DbRole } from "@customreport/shared";
 
-import type { MockGroup } from "../model/admin-types";
+import type { AdminGroupView } from "../model/admin-types";
 import type { UserFormData } from "../model/user-form";
 
 const LABEL_CLASS =
@@ -93,8 +93,8 @@ function IdentityFields({ form, onFormChange }: FormBinding) {
 function withRole(
   form: UserFormData,
   role: DbRole,
-  activeGroups: readonly MockGroup[],
-  groups: readonly MockGroup[],
+  activeGroups: readonly AdminGroupView[],
+  groups: readonly AdminGroupView[],
 ): UserFormData {
   return {
     ...form,
@@ -112,8 +112,8 @@ function RoleField({
   activeGroups,
   groups,
 }: FormBinding & {
-  readonly activeGroups: readonly MockGroup[];
-  readonly groups: readonly MockGroup[];
+  readonly activeGroups: readonly AdminGroupView[];
+  readonly groups: readonly AdminGroupView[];
 }) {
   return (
     <div>
@@ -143,7 +143,7 @@ function GroupField({
   form,
   onFormChange,
   groupOptions,
-}: FormBinding & { readonly groupOptions: readonly MockGroup[] }) {
+}: FormBinding & { readonly groupOptions: readonly AdminGroupView[] }) {
   return (
     <div>
       <label htmlFor="user-group" className={LABEL_CLASS}>
@@ -177,9 +177,9 @@ export function UserEditDialogFields({
   activeGroups,
   groups,
 }: FormBinding & {
-  readonly groupOptions: readonly MockGroup[];
-  readonly activeGroups: readonly MockGroup[];
-  readonly groups: readonly MockGroup[];
+  readonly groupOptions: readonly AdminGroupView[];
+  readonly activeGroups: readonly AdminGroupView[];
+  readonly groups: readonly AdminGroupView[];
 }) {
   return (
     <div className="mt-4 space-y-4">

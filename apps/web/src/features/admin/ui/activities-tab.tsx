@@ -7,7 +7,11 @@ import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import { PlusIcon } from "../../../shared/ui/icons";
 import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
 import type { ActivityFormData } from "../model/activity-form";
-import type { MockGroup, MockProduct, MockUser } from "../model/admin-types";
+import type {
+  AdminGroupView,
+  AdminProductView,
+  AdminUserView,
+} from "../model/admin-types";
 import { ActivitiesTable } from "./activities-table";
 import { ActivityEditDialog } from "./activity-edit-dialog";
 import { AdminQueryIssue } from "./admin-query-issue";
@@ -15,16 +19,16 @@ import { AdminTabSkeleton } from "./admin-skeleton";
 import { useActivitiesTabState } from "./use-activities-tab-state";
 
 interface ActivitiesTabProps {
-  readonly groups: readonly MockGroup[];
-  readonly users: readonly MockUser[];
-  readonly products: readonly MockProduct[];
+  readonly groups: readonly AdminGroupView[];
+  readonly users: readonly AdminUserView[];
+  readonly products: readonly AdminProductView[];
 }
 
 // Pickers offer active rows only; the name lookup reads the full group list so
 // an activity still resolves to a name after its group is archived.
 function useActivityPickerData(
-  groups: readonly MockGroup[],
-  products: readonly MockProduct[],
+  groups: readonly AdminGroupView[],
+  products: readonly AdminProductView[],
 ) {
   return {
     activeGroups: useMemo(
@@ -101,8 +105,8 @@ interface ActivitiesTabDialogsProps {
   readonly editingActivity: ProjectActivity | null;
   readonly form: ActivityFormData;
   readonly setForm: (form: ActivityFormData) => void;
-  readonly groups: readonly MockGroup[];
-  readonly products: readonly MockProduct[];
+  readonly groups: readonly AdminGroupView[];
+  readonly products: readonly AdminProductView[];
   readonly canSave: boolean;
   readonly isSaving: boolean;
   readonly handleSave: () => void;

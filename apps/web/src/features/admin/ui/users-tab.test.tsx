@@ -13,7 +13,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
-import type { MockGroup, MockUser } from "../model/admin-types";
+import type { AdminGroupView, AdminUserView } from "../model/admin-types";
 import { UsersTab } from "./users-tab";
 
 // Silence toast calls — the mutations resolve async; these tests don't wait
@@ -41,7 +41,7 @@ function buildProxy() {
   ]);
 }
 
-const GROUP: MockGroup = {
+const GROUP: AdminGroupView = {
   id: "g1",
   name: "Alpha",
   description: null,
@@ -49,7 +49,7 @@ const GROUP: MockGroup = {
   headUserId: null,
 };
 
-const USER: MockUser = {
+const USER: AdminUserView = {
   id: "u1",
   name: "Ivanova Alice",
   lastName: "Ivanova",
@@ -63,7 +63,10 @@ const USER: MockUser = {
   isActive: true,
 };
 
-function renderTab(users: MockUser[] = [USER], groups: MockGroup[] = [GROUP]) {
+function renderTab(
+  users: AdminUserView[] = [USER],
+  groups: AdminGroupView[] = [GROUP],
+) {
   const { proxy, captured } = buildProxy();
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -174,7 +177,7 @@ describe("UsersTab — invalidation contract", () => {
 
 describe("UsersTab — group change confirmation", () => {
   it("defers the save mutation until the shared dialog is confirmed", async () => {
-    const otherGroup: MockGroup = {
+    const otherGroup: AdminGroupView = {
       ...GROUP,
       id: "g2",
       name: "Beta",
@@ -344,7 +347,7 @@ describe("UsersTab — delete modal focus management", () => {
 
 describe("UsersTab — role label rendering", () => {
   it("renders the head role's badge with the shared label, not the raw token", () => {
-    const headUser: MockUser = { ...USER, id: "u2", role: "head" };
+    const headUser: AdminUserView = { ...USER, id: "u2", role: "head" };
     renderTab([headUser]);
 
     const row = screen.getByText(headUser.email).closest("tr");

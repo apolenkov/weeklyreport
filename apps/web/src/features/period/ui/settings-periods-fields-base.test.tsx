@@ -2,10 +2,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
 
-import type { MockSettings } from "../../admin";
+import type { AdminSettingsView } from "../../admin";
 import { PeriodBaseFields } from "./settings-periods-fields-base";
 
-const SETTINGS: MockSettings = {
+const SETTINGS: AdminSettingsView = {
   autoCreatePeriods: true,
   defaultDeadlineDays: 3,
   periodLengthDays: 7,

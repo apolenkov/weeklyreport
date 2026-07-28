@@ -162,12 +162,11 @@ describe("WeeklyReportPage — async Export PDF button role gating", () => {
   });
 });
 
-// report-toolbar-layout: the period-context bar renders through the shared
 // The page splits controls by axis: document actions render on the page header
 // line (DocumentActionGroup), and the bordered ReportToolbar holds only the
 // single Context-control bar below the header. Department context is a header
 // label, not a toolbar control, so the default toolbar carries no center label.
-describe("WeeklyReportPage — shared period toolbar (report-toolbar-layout)", () => {
+describe("WeeklyReportPage — shared period toolbar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -234,9 +233,6 @@ describe("WeeklyReportPage — shared period toolbar (report-toolbar-layout)", (
   });
 });
 
-// report-toolbar-parity + head-toolbar-semantics: exactly one labeled Export-PDF
-// renders, on the page header line's document-action group (not inside the
-// bordered toolbar); the publish precondition hint sits on the report-status row.
 describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -1,6 +1,6 @@
 import type { DbRole } from "@customreport/shared";
 
-import type { MockGroup, MockUser } from "./admin-types";
+import type { AdminGroupView, AdminUserView } from "./admin-types";
 
 export interface UserFormData {
   lastName: string;
@@ -12,7 +12,7 @@ export interface UserFormData {
   groupId: string;
 }
 
-export function emptyForm(groups: readonly MockGroup[]): UserFormData {
+export function emptyForm(groups: readonly AdminGroupView[]): UserFormData {
   return {
     lastName: "",
     firstName: "",
@@ -25,7 +25,7 @@ export function emptyForm(groups: readonly MockGroup[]): UserFormData {
   };
 }
 
-export function formFromUser(user: MockUser): UserFormData {
+export function formFromUser(user: AdminUserView): UserFormData {
   return {
     lastName: user.lastName,
     firstName: user.firstName,

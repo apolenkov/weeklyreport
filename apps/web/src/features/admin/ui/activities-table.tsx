@@ -2,14 +2,14 @@
 
 import type { ProjectActivity } from "@customreport/shared";
 
-import type { MockUser } from "../model/admin-types";
+import type { AdminUserView } from "../model/admin-types";
 import { ActiveActivityRow } from "./active-activity-row";
 
 interface ActivitiesTableProps {
   readonly activeActivities: readonly ProjectActivity[];
   readonly archivedActivities: readonly ProjectActivity[];
   readonly groupNameById: ReadonlyMap<string, string>;
-  readonly users: readonly MockUser[];
+  readonly users: readonly AdminUserView[];
   readonly expandedId: string | null;
   readonly onToggleExpand: (id: string) => void;
   readonly onEdit: (activity: ProjectActivity) => void;

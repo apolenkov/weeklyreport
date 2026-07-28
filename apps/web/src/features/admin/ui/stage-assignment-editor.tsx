@@ -3,7 +3,7 @@
 import { shortName } from "@customreport/shared";
 import type { ReactNode } from "react";
 
-import type { MockUser, StageName } from "../model/admin-types";
+import type { AdminUserView, StageName } from "../model/admin-types";
 import {
   useStageAssignmentData,
   useStageAssignmentMutations,
@@ -43,7 +43,7 @@ interface StageCellProps {
     { readonly id: string; readonly userId: string } | undefined;
   readonly projectId: string;
   readonly projectName: string;
-  readonly leads: readonly MockUser[];
+  readonly leads: readonly AdminUserView[];
   readonly disabled: boolean;
   readonly onAssign: (stageId: string, userId: string) => void;
   readonly onClear: (assignmentId: string) => void;
@@ -125,7 +125,7 @@ function StageEditorNotice({
 interface StageAssignmentEditorProps {
   readonly projectId: string;
   readonly projectName: string;
-  readonly leads: readonly MockUser[];
+  readonly leads: readonly AdminUserView[];
 }
 
 export function StageAssignmentEditor({
