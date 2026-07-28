@@ -3,6 +3,7 @@ import type { PrismaClient } from "@prisma/client";
 export async function assertSeedCoverage(
   prisma: PrismaClient,
   label: string,
+  reportId: string,
 ): Promise<void> {
   const REQUIRED_STATUSES = [
     "planned",
@@ -15,6 +16,7 @@ export async function assertSeedCoverage(
   const statusGroups = await prisma.item.groupBy({
     by: ["workflowStatus"],
     _count: true,
+    where: { reportSection: { reportId } },
   });
   const present = new Set(statusGroups.map((g) => g.workflowStatus));
   const missingStatuses = REQUIRED_STATUSES.filter((s) => !present.has(s));
@@ -22,6 +24,7 @@ export async function assertSeedCoverage(
   const severityGroups = await prisma.risk.groupBy({
     by: ["severity"],
     _count: true,
+    where: { reportSection: { reportId } },
   });
   const severities = new Set(severityGroups.map((g) => g.severity));
   const missingSeverities = (["at-risk", "blocked"] as const).filter(
@@ -29,7 +32,7 @@ export async function assertSeedCoverage(
   );
 
   const spreadRanks = await prisma.item.count({
-    where: { priorityRank: { gt: 1 } },
+    where: { priorityRank: { gt: 1 }, reportSection: { reportId } },
   });
 
   const problems = [

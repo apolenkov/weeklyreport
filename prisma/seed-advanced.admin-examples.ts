@@ -54,7 +54,10 @@ async function seedActionLog(prisma: PrismaClient): Promise<void> {
 }
 
 /** Seeds the review and action rows the admin tabs read. */
-export async function seedAdminExamples(prisma: PrismaClient): Promise<void> {
+export async function seedAdminExamples(
+  prisma: PrismaClient,
+): Promise<{ readonly reopenRequests: number; readonly actionLogs: number }> {
   await seedReopenRequest(prisma);
   await seedActionLog(prisma);
+  return { reopenRequests: 1, actionLogs: 1 };
 }

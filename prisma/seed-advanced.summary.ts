@@ -1,10 +1,3 @@
-import {
-  SEED_PRODUCTS,
-  SEED_REPORTING_GROUPS,
-  SEED_STAGES,
-  SEED_USERS,
-} from "./seed-constants.js";
-
 /** Rows written by one report generation, folded into the run summary. */
 export interface SectionCounts {
   readonly sections: number;
@@ -35,25 +28,37 @@ export const sumSectionCounts = (
 ): SectionCounts => parts.reduce(addSectionCounts, NO_SECTION_COUNTS);
 
 interface SeedSummary {
+  readonly groups: number;
+  readonly users: number;
+  readonly products: number;
+  readonly stages: number;
   readonly stageAssignments: number;
+  readonly reports: number;
   readonly sections: SectionCounts;
   readonly risks: number;
   readonly decisions: number;
   readonly reminderPolicies: number;
   readonly reminderRules: number;
+  readonly viewerGroupAccesses: number;
+  readonly reopenRequests: number;
+  readonly actionLogs: number;
 }
+
+const countLabel = (count: number, singular: string): string =>
+  `${count} ${singular}${count === 1 ? "" : "s"}`;
 
 /** Prints the one-line run report the seed has always ended with. */
 export function logSeedSummary(summary: SeedSummary): void {
   const { sections } = summary;
   console.log(
-    `Seeded: ${SEED_REPORTING_GROUPS.length + 1} groups, ${SEED_USERS.length} users, ${SEED_PRODUCTS.length} products, ` +
-      `${SEED_STAGES.length} stages, ${summary.stageAssignments} assignments, ` +
-      `2 reports, ${sections.sections} sections, ${sections.items} items, ` +
+    `Seeded: ${summary.groups} groups, ${summary.users} users, ${summary.products} products, ` +
+      `${summary.stages} stages, ${summary.stageAssignments} assignments, ` +
+      `${summary.reports} reports, ${sections.sections} sections, ${sections.items} items, ` +
       `${sections.projectStatuses} project statuses, ${sections.stageStatuses} stage statuses, ${summary.risks} risks, ` +
       `${summary.decisions} decisions, ` +
       `${summary.reminderPolicies} reminder policies, ` +
       `${summary.reminderRules} reminder rules, ` +
-      `2 viewer group accesses, 1 reopen request, 1 action log`,
+      `${summary.viewerGroupAccesses} viewer group accesses, ` +
+      `${countLabel(summary.reopenRequests, "reopen request")}, ${countLabel(summary.actionLogs, "action log")}`,
   );
 }

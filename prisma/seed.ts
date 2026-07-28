@@ -23,6 +23,7 @@ import {
   logSeedSummary,
   sumSectionCounts,
 } from "./seed-advanced.summary.js";
+import { SEED_REPORTS } from "./seed-constants.js";
 import { assertSeedCoverage } from "./seed-coverage-check.js";
 import { seedOrganizationBaseline } from "./seed-org.js";
 
@@ -35,11 +36,11 @@ const prisma = new PrismaClient({ adapter });
 // restores it rather than duplicating rows.
 async function main(): Promise<void> {
   assertNonProdDestructive("seed");
-  await seedOrganizationBaseline(prisma);
+  const organization = await seedOrganizationBaseline(prisma);
   const stageAssignments = await seedStageAssignments(prisma);
 
-  await seedActiveReport(prisma);
-  await seedPublishedReport(prisma);
+  const activeReports = await seedActiveReport(prisma);
+  const publishedReports = await seedPublishedReport(prisma);
 
   const active = await seedActiveSections(prisma);
   const risks = await seedRisks(prisma);
@@ -49,20 +50,23 @@ async function main(): Promise<void> {
   const published = await seedPublishedSections(prisma);
   const history = await seedHistoryPeriods(prisma);
 
-  await seedAdminExamples(prisma);
+  const adminExamples = await seedAdminExamples(prisma);
   const reminders = await seedReminders(prisma);
   await seedSingletons(prisma);
 
   logSeedSummary({
+    ...organization,
     stageAssignments,
-    sections: sumSectionCounts([active, published, history]),
+    reports: activeReports + publishedReports + history.reports,
+    sections: sumSectionCounts([active, published, history.sections]),
     risks,
     decisions,
     reminderPolicies: reminders.policies,
     reminderRules: reminders.rules,
+    ...adminExamples,
   });
 
-  await assertSeedCoverage(prisma, "seed");
+  await assertSeedCoverage(prisma, "seed", SEED_REPORTS.active.id);
 }
 
 void main()
