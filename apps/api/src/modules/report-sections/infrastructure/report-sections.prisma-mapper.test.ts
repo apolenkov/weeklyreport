@@ -1,3 +1,4 @@
+// Pins referencedProjects name emission for unowned projects (no "Unknown").
 import type { TrafficLightStatus } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
@@ -314,6 +315,7 @@ describe("mapPrismaToReportSection — own-risk product floor", () => {
   });
 });
 
+// Activity pill floors from own records without rewriting stored status.
 describe("mapPrismaToReportSection — activity derived-status floor", () => {
   const ACTIVITY_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const LINKED_PRODUCT = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
@@ -400,11 +402,3 @@ describe("mapPrismaToReportSection — activity derived-status floor", () => {
     expect(section.activities[0]?.derivedStatus).toBe("green");
   });
 });
-
-/**
- * `getMyHistoryRows` MUST order entries by reporting-period chronology
- * (`report.periodStart desc`), NOT by the section row's `createdAt` —
- * `createdAt` is insertion time, unrelated to the period a report covers. This
- * keeps the lead history newest-period-first and matches `compiledHistory`, so
- * the summary-rail streak stays honest.
- */
