@@ -12,7 +12,7 @@
       decrement the baseline for its one violation.
 - [x] Refactor the lead-form section-composition cluster; prove all affected
       editing and accordion journeys and decrement its three violations.
-- [ ] Refactor the unified-activity cluster; prove bucket rendering, dialog
+- [x] Refactor the unified-activity cluster; prove bucket rendering, dialog
       editing, and mutation behavior and decrement its four violations.
 - [ ] Refactor the SDLC-pipeline cluster; prove view-model, health, hidden-stage,
       and UI ownership and decrement its five violations.

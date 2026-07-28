@@ -7,8 +7,10 @@ import {
   type Product,
   type RiskEntry,
 } from "../../report-sections";
-import type { UnifiedActivityEntry } from "./unified-activity-section";
-import type { UnifiedActivityEditState } from "./use-unified-activity-editing";
+import type {
+  UnifiedActivityEditState,
+  UnifiedActivityEntry,
+} from "./use-unified-activity-editing";
 
 interface UnifiedActivityDialogsProps {
   readonly editState: UnifiedActivityEditState | null;

@@ -1,20 +1,17 @@
 "use client";
 
-import type { ActivityBucket } from "../../../lib/activity-buckets";
 import type { KanbanItem, Product, RiskEntry } from "../../report-sections";
 import {
   ActivityBucketList,
   EmptyActivityPlaceholder,
 } from "./activity-bucket-list";
 import { UnifiedActivityDialogs } from "./unified-activity-dialogs";
-import { useUnifiedActivityEditing } from "./use-unified-activity-editing";
+import {
+  type UnifiedActivityEntry,
+  useUnifiedActivityEditing,
+} from "./use-unified-activity-editing";
 
-// Bucket is a projection; week is persisted Item.type and never changes here (ADR 0011).
-export interface UnifiedActivityEntry {
-  readonly item: KanbanItem;
-  readonly bucket: ActivityBucket;
-  readonly week: "current" | "next";
-}
+export type { UnifiedActivityEntry } from "./use-unified-activity-editing";
 
 interface UnifiedActivitySectionProps {
   readonly entries: readonly UnifiedActivityEntry[];
