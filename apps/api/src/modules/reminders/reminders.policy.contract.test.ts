@@ -30,9 +30,8 @@ describe("reminderPolicySchema", () => {
     expect(parsed.validUntil?.getTime()).toBe(validUntil.getTime());
   });
 
-  it('default-fills validFrom to "now" when omitted', () => {
-    const before = Date.now();
-    const parsed = reminderPolicySchema.parse({
+  it("rejects an omitted validFrom at the wire boundary", () => {
+    const result = reminderPolicySchema.safeParse({
       id: baseId,
       kind: "follow_up",
       offsetMinutes: 60,
@@ -42,11 +41,13 @@ describe("reminderPolicySchema", () => {
       // validFrom omitted on purpose
       validUntil: null,
     });
-    const after = Date.now();
 
-    expect(parsed.validFrom).toBeInstanceOf(Date);
-    expect(parsed.validFrom.getTime()).toBeGreaterThanOrEqual(before);
-    expect(parsed.validFrom.getTime()).toBeLessThanOrEqual(after);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toContainEqual(
+        expect.objectContaining({ path: ["validFrom"] }),
+      );
+    }
   });
 
   it("default-fills validUntil to null when omitted", () => {
@@ -187,6 +188,7 @@ describe("reminderPolicySchema", () => {
       timezone: "Europe/Moscow",
       audience: "head-of-late",
       active: true,
+      validFrom,
     });
     expect(parsed.kind).toBe("escalation");
     expect(parsed.audience).toBe("head-of-late");

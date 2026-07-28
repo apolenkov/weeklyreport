@@ -41,8 +41,9 @@ export const reminderPolicySchema = z
       ),
     audience: reminderAudienceSchema,
     active: z.boolean(),
-    // validFrom defaults so older fixtures without the field still parse.
-    validFrom: z.coerce.date().default(() => new Date()),
+    // Required because deriving a validity boundary from parse time makes the
+    // same wire payload change meaning between reads.
+    validFrom: z.coerce.date(),
     validUntil: z.coerce.date().nullable().default(null),
   })
   // Wire-level window invariant; UI can be bypassed by a malicious admin client.

@@ -83,4 +83,16 @@ describe("reminderPolicySchema", () => {
 
     expect(result.success).toBe(true);
   });
+
+  it("rejects an omitted validFrom at its own path", () => {
+    const { validFrom: _validFrom, ...withoutValidFrom } = validPolicy;
+    const result = reminderPolicySchema.safeParse(withoutValidFrom);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toContainEqual(
+        expect.objectContaining({ path: ["validFrom"] }),
+      );
+    }
+  });
 });
