@@ -52,13 +52,13 @@ function primeHooks(sessionRole: string): void {
 
 describe("DevRoleSwitcher — data-reset controls for every dev role", () => {
   beforeEach(() => {
-    process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER = "true";
+    vi.stubEnv("NEXT_PUBLIC_DEV_ROLE_SWITCHER", "true");
     useQueryMock.mockReset();
     useMutationMock.mockReset();
   });
 
   afterEach(() => {
-    delete process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER;
+    vi.unstubAllEnvs();
   });
 
   it("renders the reset controls for an admin dev session", async () => {
@@ -100,7 +100,7 @@ describe("DevRoleSwitcher — logout honesty", () => {
   const realLocation = window.location;
 
   beforeEach(() => {
-    process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER = "true";
+    vi.stubEnv("NEXT_PUBLIC_DEV_ROLE_SWITCHER", "true");
     useQueryMock.mockReset();
     useMutationMock.mockReset();
     hrefAssign.mockReset();
@@ -117,7 +117,7 @@ describe("DevRoleSwitcher — logout honesty", () => {
   });
 
   afterEach(() => {
-    delete process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER;
+    vi.unstubAllEnvs();
     fetchMock.mockReset();
     vi.unstubAllGlobals();
     Object.defineProperty(window, "location", {

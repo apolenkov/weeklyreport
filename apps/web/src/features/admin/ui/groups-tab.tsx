@@ -10,7 +10,11 @@ import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import { PlusIcon } from "../../../shared/ui/icons";
 import { TabFilter, TabHeader, TabSearch } from "../../../shared/ui/tab-header";
 import { toReportingGroupInput } from "../model/admin";
-import type { MockGroup, MockProduct, MockUser } from "../model/admin-types";
+import type {
+  AdminGroupView,
+  AdminProductView,
+  AdminUserView,
+} from "../model/admin-types";
 import {
   EMPTY_GROUP_FORM,
   formFromGroup,
@@ -27,17 +31,17 @@ const ARCHIVE_OPTIONS = [
 type ArchiveFilterValue = (typeof ARCHIVE_OPTIONS)[number]["value"];
 
 interface GroupsTabProps {
-  readonly groups: MockGroup[];
-  readonly users: MockUser[];
+  readonly groups: AdminGroupView[];
+  readonly users: AdminUserView[];
   // product roster for the «Products attached» section inside the edit
   // dialog. Optional so callers that don't thread products through (e.g.
   // unit tests) keep compiling — the section short-circuits to an empty list.
-  readonly products?: MockProduct[];
+  readonly products?: AdminProductView[];
 }
 
 // only head/admin users may lead a group. Filter the candidate
 // dropdown so leads/viewers can't be picked.
-function useGroupLeadCandidates(users: MockUser[]) {
+function useGroupLeadCandidates(users: AdminUserView[]) {
   const headCandidates = useMemo(
     () => users.filter((u) => u.role === "head" || u.role === "admin"),
     [users],
@@ -49,7 +53,7 @@ function useGroupLeadCandidates(users: MockUser[]) {
   return { headCandidates, headById };
 }
 
-function useGroupFilters(groups: MockGroup[]) {
+function useGroupFilters(groups: AdminGroupView[]) {
   const [search, setSearch] = useState("");
   const [archiveFilter, setArchiveFilter] =
     useState<ArchiveFilterValue>("active");
@@ -77,13 +81,15 @@ function useGroupFilters(groups: MockGroup[]) {
 }
 
 function useGroupDialogState() {
-  const [editingGroup, setEditingGroup] = useState<MockGroup | null>(null);
-  const [archiveTarget, setArchiveTarget] = useState<MockGroup | null>(null);
+  const [editingGroup, setEditingGroup] = useState<AdminGroupView | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<AdminGroupView | null>(
+    null,
+  );
   const [showDialog, setShowDialog] = useState(false);
   const [form, setForm] = useState<GroupFormData>(EMPTY_GROUP_FORM);
 
   // Add and Edit differ only by the group the form is seeded from.
-  function openDialog(group: MockGroup | null) {
+  function openDialog(group: AdminGroupView | null) {
     setEditingGroup(group);
     setForm(group === null ? EMPTY_GROUP_FORM : formFromGroup(group));
     setShowDialog(true);
@@ -157,7 +163,7 @@ function useGroupCommands(dialog: GroupDialogState) {
   };
 }
 
-function useGroupsTab(groups: MockGroup[], users: MockUser[]) {
+function useGroupsTab(groups: AdminGroupView[], users: AdminUserView[]) {
   const { headCandidates, headById } = useGroupLeadCandidates(users);
   const filters = useGroupFilters(groups);
   const dialog = useGroupDialogState();

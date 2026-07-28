@@ -6,7 +6,7 @@ import {
   CheckIcon,
   useUpdateSettingsMut,
 } from "../../../shared/ui/settings-tab-shared";
-import type { MockSettings } from "../../admin";
+import type { AdminSettingsView } from "../../admin";
 
 // The wire schema accepts null (clear) or a valid email; we keep the input as a
 // string and translate empty → null on save. UI guard: a non-empty string that
@@ -19,11 +19,11 @@ function looksLikeEmail(trimmed: string): boolean {
 // Seed only fresh server data: skip while dirty (refetch must not clobber
 // edits) and skip already-seeded refs — else post-save dirty flip re-fires
 // against pre-save props and the field flickers back.
-function useServerSeededDraft(serverSettings: MockSettings) {
-  const [draft, setDraft] = useState<MockSettings>(serverSettings);
+function useServerSeededDraft(serverSettings: AdminSettingsView) {
+  const [draft, setDraft] = useState<AdminSettingsView>(serverSettings);
   const [isDirty, setIsDirty] = useState(false);
 
-  const lastSeeded = useRef<MockSettings>(serverSettings);
+  const lastSeeded = useRef<AdminSettingsView>(serverSettings);
   useEffect(() => {
     if (!isDirty && serverSettings !== lastSeeded.current) {
       lastSeeded.current = serverSettings;
@@ -107,7 +107,7 @@ function NotificationSaveRow({
 export function NotificationsSubTab({
   serverSettings,
 }: {
-  readonly serverSettings: MockSettings;
+  readonly serverSettings: AdminSettingsView;
 }) {
   const { draft, setDraft, setIsDirty } = useServerSeededDraft(serverSettings);
 

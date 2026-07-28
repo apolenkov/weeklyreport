@@ -6,7 +6,7 @@
 
 import type { AdminReminderRule } from "@customreport/shared";
 
-import type { MockReminder } from "./admin-types";
+import type { AdminReminderView } from "./admin-types";
 
 function reminderName(kind: AdminReminderRule["kind"]): string {
   switch (kind) {
@@ -39,7 +39,7 @@ function reminderDescription(rule: AdminReminderRule): string {
   }
 }
 
-export function mapReminder(api: AdminReminderRule): MockReminder {
+export function mapReminder(api: AdminReminderRule): AdminReminderView {
   return {
     id: api.id,
     name: reminderName(api.kind),

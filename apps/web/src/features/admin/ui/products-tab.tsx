@@ -4,7 +4,7 @@ import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import { PlusIcon } from "../../../shared/ui/icons";
 import { SearchInput } from "../../../shared/ui/search-input";
 import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
-import type { MockProduct, MockUser } from "../model/admin-types";
+import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import type { ProductFormData } from "../model/product-form";
 import { ProductEditDialog } from "./product-edit-dialog";
 import { ProductFilterBanner } from "./product-filter-banner";
@@ -12,8 +12,8 @@ import { ProductsTable } from "./products-table";
 import { useProductsTabState } from "./use-products-tab-state";
 
 interface ProductsTabProps {
-  readonly products: MockProduct[];
-  readonly users: MockUser[];
+  readonly products: AdminProductView[];
+  readonly users: AdminUserView[];
   readonly productFilter?: string | null;
 }
 
@@ -61,16 +61,16 @@ export function ProductsTab({
 
 interface ProductsTabDialogsProps {
   readonly showDialog: boolean;
-  readonly editingProduct: MockProduct | null;
+  readonly editingProduct: AdminProductView | null;
   readonly form: ProductFormData;
   readonly setForm: (form: ProductFormData) => void;
-  readonly leads: readonly MockUser[];
+  readonly leads: readonly AdminUserView[];
   readonly leadProductCount: number;
   readonly isSaving: boolean;
   readonly handleSave: () => void;
   readonly closeDialog: () => void;
-  readonly pendingArchive: MockProduct | null;
-  readonly setPendingArchive: (product: MockProduct | null) => void;
+  readonly pendingArchive: AdminProductView | null;
+  readonly setPendingArchive: (product: AdminProductView | null) => void;
   readonly confirmArchive: () => void;
 }
 

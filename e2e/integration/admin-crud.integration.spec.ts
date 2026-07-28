@@ -37,22 +37,21 @@ test.describe("Admin CRUD (integration)", () => {
     await nameField.fill(uniqueName);
 
     const saveBtn = dialog.getByRole("button", { name: "Add Product" });
-    await saveBtn.click();
+    try {
+      await saveBtn.click();
+      await adminPage.waitForResponse(
+        (r) => r.url().includes("/trpc/") && r.request().method() === "POST",
+        { timeout: 15_000 },
+      );
 
-    await adminPage.waitForResponse(
-      (r) => r.url().includes("/trpc/") && r.request().method() === "POST",
-      { timeout: 15_000 },
-    );
-
-    const product = await prisma.project.findFirst({
-      where: { name: uniqueName },
-    });
-    expect(product).not.toBeNull();
-
-    // Cleanup — this row is outside the seed baseline, so resetMutations()
-    // (which only re-upserts seeded rows) won't remove it.
-    if (product) {
-      await prisma.project.delete({ where: { id: product.id } });
+      const product = await prisma.project.findFirst({
+        where: { name: uniqueName },
+      });
+      expect(product).not.toBeNull();
+    } finally {
+      // This row is outside the seed baseline; clean it even after an assertion
+      // or navigation failure so later single-worker specs keep stable counts.
+      await prisma.project.deleteMany({ where: { name: uniqueName } });
     }
   });
 

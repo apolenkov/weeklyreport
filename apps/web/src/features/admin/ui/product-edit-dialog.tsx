@@ -5,7 +5,7 @@ import { useRef } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
 import { DialogSurface } from "../../../shared/ui/dialog-surface";
-import type { MockProduct, MockUser } from "../model/admin-types";
+import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import type { ProductFormData } from "../model/product-form";
 
 const FIELD_LABEL_CLASS =
@@ -14,10 +14,10 @@ const FIELD_CONTROL_CLASS =
   "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]";
 
 interface ProductEditDialogProps {
-  readonly editingProduct: MockProduct | null;
+  readonly editingProduct: AdminProductView | null;
   readonly form: ProductFormData;
   readonly onFormChange: (form: ProductFormData) => void;
-  readonly leads: readonly MockUser[];
+  readonly leads: readonly AdminUserView[];
   readonly leadProductCount: number;
   readonly isSaving: boolean;
   readonly onSave: () => void;
@@ -57,7 +57,7 @@ function LeadOwnerField({
 }: {
   readonly value: string;
   readonly onChange: (value: string) => void;
-  readonly leads: readonly MockUser[];
+  readonly leads: readonly AdminUserView[];
   readonly leadProductCount: number;
 }) {
   return (
@@ -105,7 +105,7 @@ function ProductFormFields({
 }: {
   readonly form: ProductFormData;
   readonly onFormChange: (form: ProductFormData) => void;
-  readonly leads: readonly MockUser[];
+  readonly leads: readonly AdminUserView[];
   readonly leadProductCount: number;
 }) {
   return (

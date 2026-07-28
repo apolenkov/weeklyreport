@@ -9,16 +9,16 @@ import {
 import { MoreHorizontal, Trash2 } from "lucide-react";
 import { useRef } from "react";
 
-import type { MockUser } from "../model/admin-types";
+import type { AdminUserView } from "../model/admin-types";
 
 interface UserRowActionsProps {
-  readonly user: MockUser;
+  readonly user: AdminUserView;
   readonly deactivatePending: boolean;
   readonly activatePending: boolean;
-  readonly onEdit: (user: MockUser) => void;
-  readonly onDeactivate: (user: MockUser) => void;
-  readonly onActivate: (user: MockUser) => void;
-  readonly onDelete: (user: MockUser, trigger: HTMLButtonElement) => void;
+  readonly onEdit: (user: AdminUserView) => void;
+  readonly onDeactivate: (user: AdminUserView) => void;
+  readonly onActivate: (user: AdminUserView) => void;
+  readonly onDelete: (user: AdminUserView, trigger: HTMLButtonElement) => void;
 }
 
 const ROUTINE_ACTION_CLASS =

@@ -58,13 +58,18 @@ export function decideOtelBootstrap(
   if (!endpoint) {
     return { started: false, reason: "no-endpoint" };
   }
-  const ratio = Number(
-    env.OTEL_TRACES_SAMPLER_ARG ?? String(DEFAULT_TRACES_SAMPLING_RATIO),
-  );
+  const rawRatio = env.OTEL_TRACES_SAMPLER_ARG;
   const samplingRatio =
-    Number.isFinite(ratio) && ratio >= 0 && ratio <= 1
-      ? ratio
-      : DEFAULT_TRACES_SAMPLING_RATIO;
+    rawRatio === undefined ? DEFAULT_TRACES_SAMPLING_RATIO : Number(rawRatio);
+  if (
+    !Number.isFinite(samplingRatio) ||
+    samplingRatio < 0 ||
+    samplingRatio > 1
+  ) {
+    throw new Error(
+      `OTEL_TRACES_SAMPLER_ARG must be a number between 0 and 1; received ${JSON.stringify(rawRatio)}`,
+    );
+  }
   return { started: true, reason: "enabled", samplingRatio, endpoint };
 }
 

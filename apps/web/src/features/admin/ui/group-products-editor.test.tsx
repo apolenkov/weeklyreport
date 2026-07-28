@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { MockProduct } from "../model/admin-types";
+import type { AdminProductView } from "../model/admin-types";
 
 // Mock @tanstack/react-query — two useQuery calls (attached-products list
 // and the batched ownership lookup, routed by queryKey), the useMutation
@@ -93,7 +93,7 @@ import { GroupProductsEditor } from "./group-products-editor";
 
 const GROUP_ID = "11111111-1111-4111-8111-111111111aaa";
 
-const PRODUCT_A: MockProduct = {
+const PRODUCT_A: AdminProductView = {
   id: "p-a",
   name: "Платформа интеграций",
   leadOwnerId: "u-1",
@@ -101,7 +101,7 @@ const PRODUCT_A: MockProduct = {
   status: "active",
 };
 
-const PRODUCT_B: MockProduct = {
+const PRODUCT_B: AdminProductView = {
   id: "p-b",
   name: "Partner portal",
   leadOwnerId: "u-1",
@@ -109,7 +109,7 @@ const PRODUCT_B: MockProduct = {
   status: "active",
 };
 
-const PRODUCT_ARCHIVED: MockProduct = {
+const PRODUCT_ARCHIVED: AdminProductView = {
   id: "p-z",
   name: "Old retired product",
   leadOwnerId: "u-1",

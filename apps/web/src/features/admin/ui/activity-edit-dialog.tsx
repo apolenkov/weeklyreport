@@ -6,15 +6,15 @@ import { useRef } from "react";
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
 import { DialogSurface } from "../../../shared/ui/dialog-surface";
 import type { ActivityFormData } from "../model/activity-form";
-import type { MockGroup, MockProduct } from "../model/admin-types";
+import type { AdminGroupView, AdminProductView } from "../model/admin-types";
 import { ActivityFormFields } from "./activity-form-fields";
 
 interface ActivityEditDialogProps {
   readonly editingActivity: ProjectActivity | null;
   readonly form: ActivityFormData;
   readonly onFormChange: (form: ActivityFormData) => void;
-  readonly groups: readonly MockGroup[];
-  readonly products: readonly MockProduct[];
+  readonly groups: readonly AdminGroupView[];
+  readonly products: readonly AdminProductView[];
   readonly canSave: boolean;
   readonly isSaving: boolean;
   readonly onSave: () => void;

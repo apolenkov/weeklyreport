@@ -1,19 +1,19 @@
 "use client";
 
-import type { MockProduct, MockUser } from "../model/admin-types";
+import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import { ActiveProductRow } from "./active-product-row";
 
 interface ProductsTableProps {
-  readonly activeProducts: readonly MockProduct[];
-  readonly archivedProducts: readonly MockProduct[];
-  readonly getUserById: (id: string) => MockUser | undefined;
+  readonly activeProducts: readonly AdminProductView[];
+  readonly archivedProducts: readonly AdminProductView[];
+  readonly getUserById: (id: string) => AdminUserView | undefined;
   readonly stageCountByProject: ReadonlyMap<string, number>;
-  readonly leads: readonly MockUser[];
+  readonly leads: readonly AdminUserView[];
   readonly expandedId: string | null;
   readonly onToggleExpand: (id: string) => void;
-  readonly onEdit: (product: MockProduct) => void;
-  readonly onArchive: (product: MockProduct) => void;
-  readonly onRestore: (product: MockProduct) => void;
+  readonly onEdit: (product: AdminProductView) => void;
+  readonly onArchive: (product: AdminProductView) => void;
+  readonly onRestore: (product: AdminProductView) => void;
   readonly isArchiving: boolean;
   readonly isSaving: boolean;
 }
@@ -65,8 +65,8 @@ function ArchivedProductList({
   onRestore,
   isSaving,
 }: {
-  readonly archivedProducts: readonly MockProduct[];
-  readonly onRestore: (product: MockProduct) => void;
+  readonly archivedProducts: readonly AdminProductView[];
+  readonly onRestore: (product: AdminProductView) => void;
   readonly isSaving: boolean;
 }) {
   if (archivedProducts.length === 0) return null;

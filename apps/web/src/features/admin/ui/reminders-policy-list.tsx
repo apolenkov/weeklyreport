@@ -1,6 +1,9 @@
 "use client";
 
-import type { MockReminder, MockReminderPolicy } from "../model/admin-types";
+import type {
+  AdminReminderPolicyView,
+  AdminReminderView,
+} from "../model/admin-types";
 import type { PolicyFormState } from "../model/reminders-form-state";
 import { PolicyForm } from "./policy-form";
 import { PolicyRow } from "./policy-row";
@@ -21,19 +24,19 @@ interface PolicyEditorProps {
 }
 
 interface RemindersPolicyListProps {
-  readonly policies: readonly MockReminderPolicy[];
-  readonly filteredPolicies: readonly MockReminderPolicy[];
+  readonly policies: readonly AdminReminderPolicyView[];
+  readonly filteredPolicies: readonly AdminReminderPolicyView[];
   readonly derivedRulesByPolicyId: Readonly<
-    Record<string, readonly MockReminder[]>
+    Record<string, readonly AdminReminderView[]>
   >;
   readonly editor: RemindersEditor;
   readonly editorProps: PolicyEditorProps;
   readonly busyId: string | null;
   readonly now: Date;
   readonly onNewReminder: () => void;
-  readonly onToggleActive: (policy: MockReminderPolicy) => void;
-  readonly onEdit: (policy: MockReminderPolicy) => void;
-  readonly onRemove: (policy: MockReminderPolicy) => void;
+  readonly onToggleActive: (policy: AdminReminderPolicyView) => void;
+  readonly onEdit: (policy: AdminReminderPolicyView) => void;
+  readonly onRemove: (policy: AdminReminderPolicyView) => void;
 }
 
 export function RemindersPolicyList({

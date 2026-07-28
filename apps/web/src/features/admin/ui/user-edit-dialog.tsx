@@ -3,19 +3,19 @@
 import { useRef } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
-import type { MockGroup, MockUser } from "../model/admin-types";
+import type { AdminGroupView, AdminUserView } from "../model/admin-types";
 import type { UserFormData } from "../model/user-form";
 import { UserEditDialogActions } from "./user-edit-dialog-actions";
 import { UserEditDialogFields } from "./user-edit-dialog-fields";
 import { UserEditDialogShell } from "./user-edit-dialog-shell";
 
 interface UserEditDialogProps {
-  readonly editingUser: MockUser | null;
+  readonly editingUser: AdminUserView | null;
   readonly form: UserFormData;
   readonly onFormChange: (form: UserFormData) => void;
-  readonly groupOptions: readonly MockGroup[];
-  readonly activeGroups: readonly MockGroup[];
-  readonly groups: readonly MockGroup[];
+  readonly groupOptions: readonly AdminGroupView[];
+  readonly activeGroups: readonly AdminGroupView[];
+  readonly groups: readonly AdminGroupView[];
   readonly canSave: boolean;
   readonly isSaving: boolean;
   readonly onSave: () => void;

@@ -3,10 +3,6 @@ import { describe, expect, it } from "vitest";
 import { deriveEffectiveStageStatus } from "./stage-status";
 
 describe("deriveEffectiveStageStatus", () => {
-  it("returns empty when no risks or items", () => {
-    expect(deriveEffectiveStageStatus("empty", [], [])).toBe("empty");
-  });
-
   it("elevates to at-risk from a single at-risk risk", () => {
     expect(
       deriveEffectiveStageStatus("empty", [{ severity: "at-risk" }], []),

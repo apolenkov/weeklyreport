@@ -6,7 +6,7 @@ import {
 
 import { formatDateWithYear, toIsoDateString } from "../../../lib/format-date";
 import { pluralize } from "../../../lib/pluralize";
-import type { MockReminder, MockReminderPolicy } from "./admin-types";
+import type { AdminReminderPolicyView, AdminReminderView } from "./admin-types";
 
 const MAX_HOUR_OFFSET_DAYS = 2;
 const MAX_HOUR_OFFSET_MINUTES =
@@ -29,8 +29,8 @@ export const REMINDER_PRESETS = [
 ] as const satisfies readonly {
   value: string;
   label: string;
-  kind: MockReminderPolicy["kind"];
-  audience: MockReminderPolicy["audience"];
+  kind: AdminReminderPolicyView["kind"];
+  audience: AdminReminderPolicyView["audience"];
 }[];
 
 export type ReminderPreset = (typeof REMINDER_PRESETS)[number]["value"];
@@ -39,8 +39,8 @@ export type ReminderPresetChoice = ReminderPreset | "custom";
 export const CUSTOM_PRESET_LABEL = "Custom";
 
 export function presetForPolicy(
-  kind: MockReminderPolicy["kind"],
-  audience: MockReminderPolicy["audience"],
+  kind: AdminReminderPolicyView["kind"],
+  audience: AdminReminderPolicyView["audience"],
 ): ReminderPresetChoice {
   const match = REMINDER_PRESETS.find(
     (preset) => preset.kind === kind && preset.audience === audience,
@@ -49,8 +49,8 @@ export function presetForPolicy(
 }
 
 export function presetPairing(preset: ReminderPreset): {
-  kind: MockReminderPolicy["kind"];
-  audience: MockReminderPolicy["audience"];
+  kind: AdminReminderPolicyView["kind"];
+  audience: AdminReminderPolicyView["audience"];
 } {
   const found = REMINDER_PRESETS.find((p) => p.value === preset);
   if (!found) {
@@ -60,7 +60,7 @@ export function presetPairing(preset: ReminderPreset): {
 }
 
 export function describeRecipient(
-  audience: MockReminderPolicy["audience"],
+  audience: AdminReminderPolicyView["audience"],
 ): string {
   switch (audience) {
     case "lead-with-draft":
@@ -96,7 +96,7 @@ export function getOffsetAmount(minutes: number, unit: OffsetUnit): number {
   return Math.abs(minutes) / offsetUnitFactor(unit);
 }
 
-export function formatPolicyTiming(policy: MockReminderPolicy): string {
+export function formatPolicyTiming(policy: AdminReminderPolicyView): string {
   const minutes = policy.offsetMinutes;
   if (minutes === 0) return "At deadline";
 
@@ -116,7 +116,7 @@ export function formatPolicyTiming(policy: MockReminderPolicy): string {
   return `${abs} ${pluralize(abs, "minute", "minutes")} ${direction} deadline`;
 }
 
-export function formatValidityWindow(policy: MockReminderPolicy): string {
+export function formatValidityWindow(policy: AdminReminderPolicyView): string {
   const from = toIsoDateString(policy.validFrom);
   if (policy.validUntil === null) {
     return `Valid since ${from} · no end date`;
@@ -127,7 +127,7 @@ export function formatValidityWindow(policy: MockReminderPolicy): string {
 
 // Earliest future active fire; pure (caller passes `now`). null → no upcoming.
 export function nextSendDate(
-  rules: readonly MockReminder[],
+  rules: readonly AdminReminderView[],
   now: Date,
 ): string | null {
   const upcoming = rules

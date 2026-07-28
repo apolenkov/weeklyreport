@@ -5,13 +5,6 @@ import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 
 // DOM-parity for skeleton structure; structural drift vs the real page fails here.
 describe("WeeklyReportSkeleton", () => {
-  it("renders with aria-busy and accessible label", () => {
-    render(<WeeklyReportSkeleton />);
-    const root = screen.getByLabelText("Loading status report");
-    expect(root).toBeInTheDocument();
-    expect(root).toHaveAttribute("aria-busy", "true");
-  });
-
   function getRoot(container: HTMLElement): HTMLElement {
     const root = container.querySelector<HTMLElement>(
       '[data-testid="weekly-report-skeleton"]',
@@ -45,20 +38,6 @@ describe("WeeklyReportSkeleton", () => {
     // The last top-level child is the `space-y-3` list of accordion cards.
     const accordionList = root.lastElementChild as HTMLElement;
     expect(accordionList.children).toHaveLength(6);
-  });
-
-  it("root element has role='status'", () => {
-    const { container } = render(<WeeklyReportSkeleton />);
-    const root = getRoot(container);
-    expect(root).toHaveAttribute("role", "status");
-  });
-
-  it("getByRole('status') resolves to the root with accessible name 'Loading status report'", () => {
-    render(<WeeklyReportSkeleton />);
-    const root = screen.getByRole("status", {
-      name: /loading status report/i,
-    });
-    expect(root).toBeInTheDocument();
   });
 
   it("root element exposes the pinned accessibility attributes", () => {

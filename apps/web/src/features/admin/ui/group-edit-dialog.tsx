@@ -4,16 +4,20 @@ import { useRef } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
 import { DialogSurface } from "../../../shared/ui/dialog-surface";
-import type { MockGroup, MockProduct, MockUser } from "../model/admin-types";
+import type {
+  AdminGroupView,
+  AdminProductView,
+  AdminUserView,
+} from "../model/admin-types";
 import type { GroupFormData } from "../model/group-form";
 import { GroupProductsEditor } from "./group-products-editor";
 
 interface GroupEditDialogProps {
-  readonly editingGroup: MockGroup | null;
+  readonly editingGroup: AdminGroupView | null;
   readonly form: GroupFormData;
   readonly onFormChange: (form: GroupFormData) => void;
-  readonly headCandidates: readonly MockUser[];
-  readonly products: readonly MockProduct[];
+  readonly headCandidates: readonly AdminUserView[];
+  readonly products: readonly AdminProductView[];
   readonly canSave: boolean;
   readonly isSaving: boolean;
   readonly onSave: () => void;

@@ -2,13 +2,13 @@
 
 import type { ProjectActivity } from "@customreport/shared";
 
-import type { MockUser } from "../model/admin-types";
+import type { AdminUserView } from "../model/admin-types";
 import { ActivityLeadsEditor } from "./activity-leads-editor";
 
 interface ActiveActivityRowProps {
   readonly activity: ProjectActivity;
   readonly groupName: string;
-  readonly users: readonly MockUser[];
+  readonly users: readonly AdminUserView[];
   readonly isExpanded: boolean;
   readonly onToggleExpand: (id: string) => void;
   readonly onEdit: (activity: ProjectActivity) => void;

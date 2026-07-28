@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
-import type { MockProduct } from "../model/admin-types";
+import type { AdminProductView } from "../model/admin-types";
 import { invalidateGroupProductOwnership } from "../model/group-products-invalidation";
 
 export interface OwningGroup {
@@ -15,7 +15,7 @@ export interface OwningGroup {
 
 interface GroupProductsArgs {
   readonly groupId: string;
-  readonly products: readonly MockProduct[];
+  readonly products: readonly AdminProductView[];
 }
 
 function useGroupProductMutations(groupId: string) {
@@ -63,7 +63,7 @@ function useGroupProductMutations(groupId: string) {
 // Single batched ownership read for every active product, replacing the
 // per-product listProductGroups fan-out. Skipped when there are no active
 // products (the empty-list branch renders instead).
-function useProductOwnership(activeProducts: readonly MockProduct[]) {
+function useProductOwnership(activeProducts: readonly AdminProductView[]) {
   const trpc = useTRPC();
 
   const productIds = useMemo(

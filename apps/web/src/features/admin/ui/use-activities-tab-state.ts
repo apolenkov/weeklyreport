@@ -12,13 +12,13 @@ import {
   formFromActivity,
   parseJiraAccounts,
 } from "../model/activity-form";
-import type { MockGroup } from "../model/admin-types";
+import type { AdminGroupView } from "../model/admin-types";
 
 interface UseActivitiesTabStateArgs {
-  readonly groups: readonly MockGroup[];
+  readonly groups: readonly AdminGroupView[];
 }
 
-function useActivityDialog(groups: readonly MockGroup[]) {
+function useActivityDialog(groups: readonly AdminGroupView[]) {
   const [showDialog, setShowDialog] = useState(false);
   const [editingActivity, setEditingActivity] =
     useState<ProjectActivity | null>(null);

@@ -1,4 +1,4 @@
-import type { MockProduct } from "./admin-types";
+import type { AdminProductView } from "./admin-types";
 
 export interface ProductFormData {
   name: string;
@@ -10,7 +10,7 @@ export const EMPTY_PRODUCT_FORM: ProductFormData = {
   leadId: "",
 };
 
-export function formFromProduct(product: MockProduct): ProductFormData {
+export function formFromProduct(product: AdminProductView): ProductFormData {
   return {
     name: product.name,
     leadId: product.leadOwnerId,

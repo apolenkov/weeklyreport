@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
-import type { MockProduct, MockUser } from "../model/admin-types";
+import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import { ProductsTab } from "./products-tab";
 
 vi.mock("sonner", () => ({
@@ -55,7 +55,7 @@ const LEAD_ID = "u-lead-1";
 const PRODUCT_ID = "p-product-1";
 const SECOND_PRODUCT_ID = "p-product-2";
 
-const mockLead: MockUser = {
+const mockLead: AdminUserView = {
   id: LEAD_ID,
   name: "Alice",
   lastName: "Alice",
@@ -69,7 +69,7 @@ const mockLead: MockUser = {
   isActive: true,
 };
 
-const mockProduct: MockProduct = {
+const mockProduct: AdminProductView = {
   id: PRODUCT_ID,
   name: "Test Product",
   leadOwnerId: LEAD_ID,
@@ -77,15 +77,15 @@ const mockProduct: MockProduct = {
   status: "active",
 };
 
-const secondProduct: MockProduct = {
+const secondProduct: AdminProductView = {
   ...mockProduct,
   id: SECOND_PRODUCT_ID,
   name: "Second Product",
 };
 
 function renderTab(opts?: {
-  products?: MockProduct[];
-  users?: MockUser[];
+  products?: AdminProductView[];
+  users?: AdminUserView[];
   productFilter?: string | null;
 }) {
   const { proxy } = createMockTRPC([
@@ -319,7 +319,7 @@ describe("ProductsTab — slide-capacity advisory", () => {
     vi.clearAllMocks();
   });
 
-  function ownedProducts(n: number): MockProduct[] {
+  function ownedProducts(n: number): AdminProductView[] {
     return Array.from({ length: n }, (_, i) => ({
       id: `p-${String(i)}`,
       name: `Product ${String(i)}`,

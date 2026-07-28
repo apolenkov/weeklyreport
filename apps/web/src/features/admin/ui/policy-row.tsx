@@ -1,6 +1,9 @@
 "use client";
 
-import type { MockReminder, MockReminderPolicy } from "../model/admin-types";
+import type {
+  AdminReminderPolicyView,
+  AdminReminderView,
+} from "../model/admin-types";
 import {
   describeRecipient,
   formatPolicyTiming,
@@ -8,9 +11,9 @@ import {
 } from "../model/reminders-tab-format";
 
 interface PolicyRowProps {
-  readonly policy: MockReminderPolicy;
+  readonly policy: AdminReminderPolicyView;
   /** Derived rules for this policy — used only to compute the next-send line. */
-  readonly derivedRules: readonly MockReminder[];
+  readonly derivedRules: readonly AdminReminderView[];
   /** True only while THIS reminder's own save/remove is in flight. */
   readonly isBusy: boolean;
   /** Injected so the next-send line is deterministic in tests. */
@@ -33,7 +36,7 @@ function PolicyToggle({
   isBusy,
   onToggleActive,
 }: {
-  readonly policy: MockReminderPolicy;
+  readonly policy: AdminReminderPolicyView;
   readonly timing: string;
   readonly isBusy: boolean;
   readonly onToggleActive: () => void;
@@ -73,7 +76,7 @@ function PolicySummary({
   headingId,
   nextSendLine,
 }: {
-  readonly policy: MockReminderPolicy;
+  readonly policy: AdminReminderPolicyView;
   readonly timing: string;
   readonly headingId: string;
   readonly nextSendLine: string;

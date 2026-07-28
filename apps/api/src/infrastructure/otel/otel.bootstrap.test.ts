@@ -45,32 +45,17 @@ describe("OTel bootstrap decision", () => {
     }
   });
 
-  it("falls back to 1.0 if OTEL_TRACES_SAMPLER_ARG is malformed", () => {
-    const decision = decideOtelBootstrap({
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel:4318",
-      OTEL_TRACES_SAMPLER_ARG: "not-a-number",
-    });
-    expect(decision.started).toBe(true);
-    if (decision.started) {
-      expect(decision.samplingRatio).toBe(1.0);
-    }
-  });
-
-  it("clamps out-of-range sampling ratios to default", () => {
-    const tooHigh = decideOtelBootstrap({
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel:4318",
-      OTEL_TRACES_SAMPLER_ARG: "2.5",
-    });
-    expect(tooHigh.started).toBe(true);
-    if (tooHigh.started) expect(tooHigh.samplingRatio).toBe(1.0);
-
-    const negative = decideOtelBootstrap({
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel:4318",
-      OTEL_TRACES_SAMPLER_ARG: "-0.5",
-    });
-    expect(negative.started).toBe(true);
-    if (negative.started) expect(negative.samplingRatio).toBe(1.0);
-  });
+  it.each(["not-a-number", "2.5", "-0.5", "0,1"])(
+    "rejects invalid OTEL_TRACES_SAMPLER_ARG=%s",
+    (value) => {
+      expect(() =>
+        decideOtelBootstrap({
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel:4318",
+          OTEL_TRACES_SAMPLER_ARG: value,
+        }),
+      ).toThrow(/OTEL_TRACES_SAMPLER_ARG must be a number between 0 and 1/u);
+    },
+  );
 
   it("case-insensitive matching on OTEL_SDK_DISABLED", () => {
     const decision = decideOtelBootstrap({

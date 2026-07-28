@@ -5,9 +5,9 @@ import { invalidateAdmin } from "../../../lib/cache-keys";
 import { toIsoDateString } from "../../../lib/format-date";
 import { useTRPC } from "../../../lib/trpc-context";
 import { toReminderPolicyInput } from "./admin";
-import type { MockReminderPolicy } from "./admin-types";
+import type { AdminReminderPolicyView } from "./admin-types";
 
-export function toggledPayload(policy: MockReminderPolicy) {
+export function toggledPayload(policy: AdminReminderPolicyView) {
   return toReminderPolicyInput(
     {
       kind: policy.kind,

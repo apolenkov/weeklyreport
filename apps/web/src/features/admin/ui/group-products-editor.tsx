@@ -1,6 +1,6 @@
 "use client";
 
-import type { MockProduct } from "../model/admin-types";
+import type { AdminProductView } from "../model/admin-types";
 import { type OwningGroup, useGroupProducts } from "./use-group-products";
 
 const HINT_CLASS = "block text-xs text-[var(--color-muted-foreground)]";
@@ -36,7 +36,7 @@ function ProductRowLabel({
 }
 
 interface ProductToggleRowProps {
-  readonly product: MockProduct;
+  readonly product: AdminProductView;
   readonly groupId: string;
   readonly checked: boolean;
   readonly owningGroup: OwningGroup | undefined;
@@ -106,7 +106,7 @@ function ProductToggleList({
   onToggle,
 }: {
   readonly groupId: string;
-  readonly products: readonly MockProduct[];
+  readonly products: readonly AdminProductView[];
   readonly attachedIds: ReadonlySet<string>;
   readonly owningGroupByProductId: ReadonlyMap<string, OwningGroup>;
   readonly mutating: boolean;
@@ -139,7 +139,7 @@ export function GroupProductsEditor({
   products,
 }: {
   readonly groupId: string;
-  readonly products: readonly MockProduct[];
+  readonly products: readonly AdminProductView[];
 }) {
   const state = useGroupProducts({ groupId, products });
 

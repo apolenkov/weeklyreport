@@ -2,7 +2,7 @@
 
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
-import type { MockGroup, MockUser } from "../model/admin-types";
+import type { AdminGroupView, AdminUserView } from "../model/admin-types";
 import { userGroupFilterOptions } from "../model/user-table-filters";
 import { useUsersTabState } from "./use-users-tab-state";
 import { UserEditDialog } from "./user-edit-dialog";
@@ -10,8 +10,8 @@ import { UsersTabHeader } from "./users-tab-header";
 import { UsersTable } from "./users-table";
 
 interface UsersTabProps {
-  readonly users: MockUser[];
-  readonly groups: MockGroup[];
+  readonly users: AdminUserView[];
+  readonly groups: AdminGroupView[];
 }
 
 export function UsersTab({ users, groups }: UsersTabProps) {

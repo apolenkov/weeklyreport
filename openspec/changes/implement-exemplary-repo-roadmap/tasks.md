@@ -29,6 +29,8 @@
 - [x] Remove the measured split-test banner residue.
 - [x] Retitle the measured tests whose names described a different subject.
 - [x] Compress the named apps-only JSDoc outliers to current WHY comments.
+- [x] Remove the remaining named change-history labels and redundant/vacuous
+      assertions from the measured test tail.
 - [ ] Close non-blocked architecture and ownership items.
 - [x] Make Nest BullModule the single owner of raw queue handles and expose
       those same handles through `QueueRegistry`.
@@ -38,6 +40,9 @@
       twelve per-dialog propagation suppressions.
 - [x] Move `ComingSoonTooltip` out of the vendored tooltip primitive.
 - [x] Delete the unconsumed sidebar bundle and its dedicated exemptions.
+- [x] Rename all seven live admin presentation models from the fossilized
+      `Mock*` vocabulary to collision-free `Admin*View` types across every
+      importer.
 - [ ] Burn down live suppressions and override blocks without weakening gates.
 - [ ] Close non-blocked test-integrity items.
 - [ ] Close non-blocked dependency and vocabulary duplication.
@@ -50,6 +55,10 @@
 - [x] Enforce the documented `ai.*` audit exclusion with a regression test.
 - [x] Require auth-route audit logging and remove the false localhost-default claim.
 - [x] Replace the nonexistent `AppShell` README claim with the real `NavBar`.
+- [x] Restore fail-loud runtime behavior for unhandled rejections, malformed
+      OTel sampling ratios, and SAML assertions without a stable identity.
+- [x] Pin the client-log body limit from the production constant and make the
+      admin CRUD integration cleanup survive assertion/navigation failures.
 
 ## 4. Adjudicated findings
 

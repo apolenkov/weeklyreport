@@ -1,6 +1,9 @@
 "use client";
 
-import type { MockReminder, MockReminderPolicy } from "../model/admin-types";
+import type {
+  AdminReminderPolicyView,
+  AdminReminderView,
+} from "../model/admin-types";
 import { PolicyForm } from "./policy-form";
 import { RemindersDeleteDialog } from "./reminders-delete-dialog";
 import { RemindersPolicyList } from "./reminders-policy-list";
@@ -8,14 +11,14 @@ import { RemindersTabHeader } from "./reminders-tab-header";
 import { useRemindersTabState } from "./use-reminders-tab-state";
 
 interface RemindersTabProps {
-  readonly policies: readonly MockReminderPolicy[];
+  readonly policies: readonly AdminReminderPolicyView[];
   /**
    * Read-only derived rules grouped by `policyId`, used only to compute each
    * card's next-send line. Rules whose `policyId` is `null` (legacy) are not
    * surfaced here.
    */
   readonly derivedRulesByPolicyId: Readonly<
-    Record<string, readonly MockReminder[]>
+    Record<string, readonly AdminReminderView[]>
   >;
   /** Organisation-wide timezone required to seed a new reminder. */
   readonly defaultTimezone: string;

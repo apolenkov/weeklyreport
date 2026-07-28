@@ -15,9 +15,9 @@ import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type {
-  MockPeriod,
-  MockReminder,
-  MockReminderPolicy,
+  AdminPeriodView,
+  AdminReminderPolicyView,
+  AdminReminderView,
 } from "../model/admin-types";
 import { RemindersTab } from "./reminders-tab";
 
@@ -33,7 +33,7 @@ vi.mock("sonner", () => ({
   },
 }));
 
-const period: MockPeriod = {
+const period: AdminPeriodView = {
   id: "a0000000-0000-4000-8000-000000000001",
   weekLabel: "Week 19",
   startDate: "2026-05-04",
@@ -42,7 +42,7 @@ const period: MockPeriod = {
   status: "open" as const,
 };
 
-const policyDeadline: MockReminderPolicy = {
+const policyDeadline: AdminReminderPolicyView = {
   id: "b0000000-0000-4000-8000-000000000001",
   kind: "deadline",
   offsetMinutes: -1440,
@@ -53,7 +53,7 @@ const policyDeadline: MockReminderPolicy = {
   validUntil: null,
 };
 
-const policyEscalation: MockReminderPolicy = {
+const policyEscalation: AdminReminderPolicyView = {
   id: "b0000000-0000-4000-8000-000000000002",
   kind: "escalation",
   offsetMinutes: 120,
@@ -66,7 +66,7 @@ const policyEscalation: MockReminderPolicy = {
 
 // A legacy pairing the two presets do not cover (`follow_up` is never offered),
 // so the form must surface it read-only as "Custom" and preserve it on save.
-const policyCustom: MockReminderPolicy = {
+const policyCustom: AdminReminderPolicyView = {
   id: "b0000000-0000-4000-8000-000000000003",
   kind: "follow_up",
   offsetMinutes: -2880, // 2 days before
@@ -79,7 +79,7 @@ const policyCustom: MockReminderPolicy = {
 
 // Far-future fire time so the next-send line is deterministic whatever day the
 // suite runs.
-const futureRule: MockReminder = {
+const futureRule: AdminReminderView = {
   id: "c0000000-0000-4000-8000-000000000001",
   name: "Deadline reminder",
   description: "auto",
@@ -93,8 +93,8 @@ const futureRule: MockReminder = {
 };
 
 function renderTab(args?: {
-  policies?: MockReminderPolicy[];
-  derivedRulesByPolicyId?: Record<string, MockReminder[]>;
+  policies?: AdminReminderPolicyView[];
+  derivedRulesByPolicyId?: Record<string, AdminReminderView[]>;
   defaultTimezone?: string;
 }) {
   const { proxy, captured } = createMockTRPC([

@@ -4,9 +4,7 @@ vi.mock("../../../lib/server/api-url", () => ({
   requireApiUrl: () => "http://api.test:3002",
 }));
 
-import { POST } from "./route";
-
-const CLIENT_LOGS_MAX_BODY_BYTES = 128 * 1024;
+import { CLIENT_LOGS_MAX_BODY_BYTES, POST } from "./route";
 
 function makeRequest(
   headers: Record<string, string>,
@@ -22,6 +20,10 @@ function makeRequest(
 describe("client-logs proxy route", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("pins the public body limit at 128 KiB", () => {
+    expect(CLIENT_LOGS_MAX_BODY_BYTES).toBe(128 * 1024);
   });
 
   it("passes the edge proxy's X-Forwarded-For chain through to the API", async () => {

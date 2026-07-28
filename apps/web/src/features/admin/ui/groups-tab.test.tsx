@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
-import type { MockGroup, MockUser } from "../model/admin-types";
+import type { AdminGroupView, AdminUserView } from "../model/admin-types";
 import { GroupsTab } from "./groups-tab";
 
 vi.mock("sonner", () => ({
@@ -18,7 +18,7 @@ vi.mock("sonner", () => ({
   },
 }));
 
-const USERS: MockUser[] = [
+const USERS: AdminUserView[] = [
   {
     id: "u-head-1",
     name: "Alice Head",
@@ -34,7 +34,7 @@ const USERS: MockUser[] = [
   },
 ];
 
-const GROUPS: MockGroup[] = [
+const GROUPS: AdminGroupView[] = [
   {
     id: "g-1",
     name: "Alpha Group",
@@ -51,7 +51,10 @@ const GROUPS: MockGroup[] = [
   },
 ];
 
-function renderTab(opts?: { groups?: MockGroup[]; users?: MockUser[] }) {
+function renderTab(opts?: {
+  groups?: AdminGroupView[];
+  users?: AdminUserView[];
+}) {
   const { proxy, captured } = createMockTRPC([
     { path: ["admin", "snapshot"] },
     { path: ["admin", "saveReportingGroup"], mutation: true },

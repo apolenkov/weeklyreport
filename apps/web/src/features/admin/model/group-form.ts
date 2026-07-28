@@ -1,4 +1,4 @@
-import type { MockGroup } from "./admin-types";
+import type { AdminGroupView } from "./admin-types";
 
 export interface GroupFormData {
   name: string;
@@ -14,7 +14,7 @@ export const EMPTY_GROUP_FORM: GroupFormData = {
   archived: false,
 };
 
-export function formFromGroup(group: MockGroup): GroupFormData {
+export function formFromGroup(group: AdminGroupView): GroupFormData {
   return {
     name: group.name,
     description: group.description ?? "",
