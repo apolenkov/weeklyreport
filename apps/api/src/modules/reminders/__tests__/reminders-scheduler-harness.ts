@@ -1,0 +1,99 @@
+import type {
+  AdminReminderExecution,
+  AdminReminderRule,
+} from "@customreport/shared";
+
+import type { OrganizationService } from "../../organization/organization.service";
+import type { DueDeadlineRule, RemindersRepository } from "../reminders.types";
+import { unusedRemindersRepositoryStubs } from "../reminders-scope.repository-stub.js";
+
+// Deterministic brand snapshot for payload subject assertions (`[Demo]`).
+export const fakeOrganizationService = {
+  getPublic: () =>
+    Promise.resolve({
+      shortName: "Demo",
+      fullName: "Example Software Department",
+    }),
+} as unknown as OrganizationService;
+
+export const ruleId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+export const reportId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+export const activeRule: AdminReminderRule = {
+  id: ruleId,
+  reportId,
+  kind: "deadline",
+  fireAt: new Date("2026-04-19T15:00:00.000Z"),
+  timezone: "UTC",
+  status: "active",
+  version: 1,
+  policyId: null,
+};
+
+export function dueRuleFromRecipients(
+  recipients: {
+    userId: string;
+    email: string;
+    name: string;
+    notificationOptOut?: boolean;
+  }[],
+): DueDeadlineRule {
+  return {
+    id: activeRule.id,
+    reportId,
+    fireAt: activeRule.fireAt,
+    reportPeriodLabel: "2026-04-13 → 2026-04-19",
+    recipients: recipients.map((r) => ({
+      ...r,
+      notificationOptOut: r.notificationOptOut ?? false,
+    })),
+  };
+}
+
+export function createServiceRepo(): RemindersRepository {
+  const executions = new Map<string, AdminReminderExecution>();
+
+  return {
+    ...unusedRemindersRepositoryStubs(),
+    getRule(rid) {
+      return Promise.resolve(
+        rid === activeRule.id ? structuredClone(activeRule) : null,
+      );
+    },
+    findExecutionByDedupeKey(dedupeKey) {
+      for (const exec of executions.values()) {
+        if (exec.dedupeKey === dedupeKey) {
+          return Promise.resolve(structuredClone(exec));
+        }
+      }
+      return Promise.resolve(null);
+    },
+    insertExecutionOnConflict(execution) {
+      for (const exec of executions.values()) {
+        if (exec.dedupeKey === execution.dedupeKey) {
+          return Promise.resolve({
+            execution: structuredClone(exec),
+            inserted: false,
+          });
+        }
+      }
+      executions.set(execution.id, structuredClone(execution));
+      return Promise.resolve({
+        execution: structuredClone(execution),
+        inserted: true,
+      });
+    },
+    saveExecution(execution) {
+      executions.set(execution.id, structuredClone(execution));
+      return Promise.resolve(structuredClone(execution));
+    },
+    getExecution(id) {
+      return Promise.resolve(executions.get(id) ?? null);
+    },
+    listExecutions(rid) {
+      return Promise.resolve(
+        [...executions.values()].filter((e) => e.ruleId === rid),
+      );
+    },
+  };
+}
