@@ -1,6 +1,14 @@
 {
-  "filesOnFloor": 829,
-  "productTotal": 925,
+  "filesOnFloor": 828,
+  "productTotal": 924,
   "overrideBlocks": 26,
-  "liveSuppressions": 139
+  "liveSuppressions": 139,
+  "justifiedRegressions": [
+    {
+      "counter": "filesOnFloor",
+      "from": 829,
+      "to": 828,
+      "reason": "Moved an A-class product-only fixture into test utilities."
+    }
+  ]
 }

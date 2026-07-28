@@ -23,6 +23,10 @@ durable invariants and open decisions; `adjudicate-exemplary-findings` owns the
   verification.
 - Keep decisions explicitly marked as human decisions unresolved until the
   user rules on them.
+- Reclassify the A-class `mock-data.ts` product-only fixture into test
+  utilities. This intentionally changes `filesOnFloor` from 829 to 828 and
+  `productTotal` from 925 to 924 without changing the 89.6% floor ratio; the
+  baseline records the exact justified transition.
 
 ## Non-goals
 
