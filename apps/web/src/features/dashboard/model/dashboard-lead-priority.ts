@@ -1,7 +1,15 @@
 import type { LeadStatus } from "../../report-sections";
-import type { LeadInfo } from "./dashboard";
+import type {
+  LeadPriority,
+  ReviewPresentation,
+} from "./dashboard-lead-presentation";
 
-const QUEUE_PRIORITY_ORDER: readonly LeadInfo["priority"][] = [
+interface PrioritizedLead {
+  readonly priority: LeadPriority;
+  readonly name: string;
+}
+
+const QUEUE_PRIORITY_ORDER: readonly LeadPriority[] = [
   "action-needed",
   "stale",
   "active",
@@ -9,17 +17,20 @@ const QUEUE_PRIORITY_ORDER: readonly LeadInfo["priority"][] = [
 ];
 
 export function queuePriority(
-  reviewState: LeadInfo["reviewState"],
+  reviewState: ReviewPresentation["reviewState"],
   canReview: boolean,
   isStale: boolean,
   status: LeadStatus,
-): LeadInfo["priority"] {
+): LeadPriority {
   if (reviewState === "changes-requested" || canReview) return "action-needed";
   if (isStale) return "stale";
   return status === "submitted" ? "complete" : "active";
 }
 
-export function compareLeadPriority(left: LeadInfo, right: LeadInfo): number {
+export function compareLeadPriority(
+  left: PrioritizedLead,
+  right: PrioritizedLead,
+): number {
   const priorityDifference =
     QUEUE_PRIORITY_ORDER.indexOf(left.priority) -
     QUEUE_PRIORITY_ORDER.indexOf(right.priority);

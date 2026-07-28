@@ -13,7 +13,6 @@ import { toIsoDateString } from "../../../lib/format-date";
 import { initialsFromName } from "../../../lib/user-initials";
 import type { LeadStatus } from "../../report-sections";
 import { deriveLeadStatus, trafficToStageStatus } from "../../report-sections";
-import type { LeadInfo, ProductStatus, TrafficLight } from "./dashboard";
 import {
   countActivityLiveContent,
   countActivityRecords,
@@ -23,7 +22,10 @@ import {
 } from "./dashboard-counts";
 import {
   attentionLabel,
+  type LeadInfo,
+  type ProductStatus,
   reviewPresentation,
+  type TrafficLight,
 } from "./dashboard-lead-presentation";
 import { compareLeadPriority, queuePriority } from "./dashboard-lead-priority";
 import { buildDashboardLeadRows } from "./dashboard-lead-rows";

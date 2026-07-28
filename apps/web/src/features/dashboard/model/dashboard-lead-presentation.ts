@@ -1,10 +1,62 @@
-import type { SectionReviewView } from "@customreport/shared";
+import type { DbRole, SectionReviewView } from "@customreport/shared";
 
-import type { LeadInfo, TrafficLight } from "./dashboard";
+import type { LeadStatus } from "../../report-sections";
+
+export type ProductStatus = "on-track" | "at-risk" | "blocked";
+
+export interface TrafficLight {
+  status: ProductStatus;
+  icon: string;
+}
+
+export interface ReviewPresentation {
+  reviewState: "changes-requested" | "approved" | "awaiting" | "none";
+  reviewLabel: string;
+}
+
+export type AttentionLabel = "Blocked" | "At risk" | "On track" | "No signal";
+
+export type LeadPriority = "action-needed" | "stale" | "active" | "complete";
+
+export interface LeadInfo extends ReviewPresentation {
+  id: string;
+  initials: string;
+  name: string;
+  role: DbRole;
+  status: LeadStatus;
+  trafficLights: TrafficLight[];
+  lastEditAt: Date | null;
+  submittedAt: Date | null;
+  isStale: boolean;
+  isCurrentUser: boolean;
+  productCount?: number;
+  reportContentCount?: number;
+  currentItemCount?: number;
+  nextItemCount?: number;
+  riskCount?: number;
+  decisionCount?: number;
+  priorityCount?: number;
+  /** Count of activity-parented records (work units). */
+  activityCount?: number;
+  submittedAtLabel?: string | null;
+  /** The section UUID needed for the per-lead Revoke button. */
+  reportSectionId?: string;
+  version?: number;
+  reviews: readonly SectionReviewView[];
+  attentionLabel: AttentionLabel;
+  actions: {
+    readonly canOpen: boolean;
+    readonly canRemind: boolean;
+    readonly canReview: boolean;
+    readonly canRequestChanges: boolean;
+    readonly canRevoke: boolean;
+  };
+  priority: LeadPriority;
+}
 
 export function reviewPresentation(
   reviews: readonly SectionReviewView[],
-): Pick<LeadInfo, "reviewState" | "reviewLabel"> {
+): ReviewPresentation {
   const current = reviews.filter((review) => review.isCurrent);
   if (current.some((review) => review.verdict === "changes_requested")) {
     return {
@@ -22,7 +74,7 @@ export function reviewPresentation(
 
 export function attentionLabel(
   trafficLights: readonly TrafficLight[],
-): LeadInfo["attentionLabel"] {
+): AttentionLabel {
   if (trafficLights.some((light) => light.status === "blocked"))
     return "Blocked";
   if (trafficLights.some((light) => light.status === "at-risk"))
