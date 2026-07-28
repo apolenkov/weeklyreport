@@ -6,7 +6,7 @@ import {
   type ActivityBucket,
 } from "../../../lib/activity-buckets";
 import { ItemCard, type RiskEntry } from "../../report-sections";
-import type { UnifiedActivityEntry } from "./unified-activity-section";
+import type { UnifiedActivityEntry } from "./use-unified-activity-editing";
 
 interface BucketCardProps {
   readonly risks?: readonly RiskEntry[] | undefined;
