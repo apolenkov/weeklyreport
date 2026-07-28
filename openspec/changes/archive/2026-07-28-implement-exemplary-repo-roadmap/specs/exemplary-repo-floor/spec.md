@@ -91,3 +91,20 @@ commit.
 - **THEN** the same commit updates `productTotal` to the current-tree value
 - **AND** first-parent history does not treat that diagnostic change as a
   ratchet regression
+
+#### Scenario: A change touches the lint surface
+
+- **WHEN** a change adds, removes, or edits an `eslint.config.ts` `files:`
+  block, or adds/removes an `eslint-disable` directive
+- **THEN** `pnpm catalogue` is re-run and the resulting three counters are
+  compared to the stored baseline
+- **AND** a regression on any counter is either justified in the same
+  baseline change or the change is rejected
+
+#### Scenario: `catalogue.json` is stale
+
+- **WHEN** `catalogue.json`'s mtime predates the latest commit to
+  `scripts/exemplary-catalogue.ts`
+- **THEN** any counter read from it MUST be treated as unverified
+- **AND** `pnpm catalogue` MUST be re-run before the counter is cited in a
+  proposal or report
