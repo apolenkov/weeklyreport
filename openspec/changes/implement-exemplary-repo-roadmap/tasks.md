@@ -44,7 +44,9 @@
 - [x] Remove change-history labels from the two lead-form model comment sets.
 - [x] Move product-only mock data into test utilities.
 - [x] Replace the slide-editor fixture's double assertion with direct type checking.
-- [ ] Land the remaining 15 confirmed fixes in risk-isolated slices.
+- [x] Single-home reminder policy timing and validity calculations for runtime
+      and backfill consumers.
+- [ ] Land the remaining 13 confirmed fixes in risk-isolated slices.
 
 ## 5. Human decisions
 

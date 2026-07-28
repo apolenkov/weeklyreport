@@ -1,6 +1,9 @@
+import {
+  computeReminderFireAt,
+  reminderPolicyAppliesTo,
+} from "@customreport/shared";
 import { Injectable, Logger } from "@nestjs/common";
 import type { ReminderPolicy } from "@prisma/client";
-import { DateTime } from "luxon";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
@@ -16,37 +19,6 @@ export class PolicyApplicatorService {
   private readonly logger = new Logger(PolicyApplicatorService.name);
 
   constructor(private readonly prisma: PrismaService) {}
-
-  // Precise-minute arithmetic, not wall-clock preservation: an offset that
-  // straddles a DST transition lands `offsetMinutes` of real elapsed time from
-  // the deadline. Kept in sync BY HAND with prisma/backfill-policy-rules.ts.
-  computeFireAt(deadline: Date, offsetMinutes: number, tz: string): Date {
-    return DateTime.fromJSDate(deadline, { zone: "utc" })
-      .setZone(tz)
-      .plus({ minutes: offsetMinutes })
-      .toUTC()
-      .toJSDate();
-  }
-
-  // Centralized so the applicator, the backfill and the unit test share one boolean.
-  static policyAppliesTo(
-    policy: {
-      active: boolean;
-      validFrom: Date;
-      validUntil: Date | null;
-    },
-    period: { deadline: Date },
-  ): boolean {
-    if (!policy.active) return false;
-    if (period.deadline.getTime() < policy.validFrom.getTime()) return false;
-    if (
-      policy.validUntil !== null &&
-      period.deadline.getTime() > policy.validUntil.getTime()
-    ) {
-      return false;
-    }
-    return true;
-  }
 
   // With `now` supplied, a rule whose `fireAt` is already past is skipped instead
   // of created active: the scheduler fires any active rule with `fireAt <= now`,
@@ -112,7 +84,7 @@ export class PolicyApplicatorService {
     if (excludePolicyIds?.has(policy.id)) {
       return "skipped";
     }
-    const fireAt = this.computeFireAt(
+    const fireAt = computeReminderFireAt(
       period.deadline,
       policy.offsetMinutes,
       policy.timezone,
@@ -121,7 +93,7 @@ export class PolicyApplicatorService {
     // one whose instant has already elapsed (it would fire stale, since the
     // scheduler has no elapsed-fireAt lower bound). One gate, one skip path.
     const elapsed = now !== undefined && fireAt.getTime() <= now.getTime();
-    if (!PolicyApplicatorService.policyAppliesTo(policy, period) || elapsed) {
+    if (!reminderPolicyAppliesTo(policy, period.deadline) || elapsed) {
       return "skipped";
     }
     return this.upsertRuleForPolicy(policy, period, fireAt);

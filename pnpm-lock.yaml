@@ -74,9 +74,6 @@ importers:
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
-      luxon:
-        specifier: 'catalog:'
-        version: 3.7.2
       pg:
         specifier: ^8.22.0
         version: 8.22.0
@@ -93,9 +90,6 @@ importers:
       '@next/eslint-plugin-next':
         specifier: ^16.2.12
         version: 16.2.12
-      '@types/luxon':
-        specifier: 'catalog:'
-        version: 3.7.2
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -482,10 +476,16 @@ importers:
       '@trpc/server':
         specifier: 'catalog:'
         version: 11.18.0(@typescript/typescript6@6.0.2)
+      luxon:
+        specifier: 'catalog:'
+        version: 3.7.2
       zod:
         specifier: 'catalog:'
         version: 4.4.3
     devDependencies:
+      '@types/luxon':
+        specifier: 'catalog:'
+        version: 3.7.2
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1

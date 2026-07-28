@@ -6,9 +6,12 @@ import { resolve } from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type ReminderPolicy } from "@prisma/client";
 import { config as loadEnv } from "dotenv";
-import { DateTime } from "luxon";
 import pg from "pg";
 
+import {
+  computeReminderFireAt,
+  reminderPolicyAppliesTo,
+} from "../packages/shared/src/admin/reminder-policy-time.js";
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 
 // Load .env from repo root regardless of cwd.
@@ -22,36 +25,6 @@ const DATABASE_URL: string = (() => {
   }
   return raw;
 })();
-
-// Kept in sync BY HAND with PolicyApplicatorService.computeFireAt: the prisma
-// toolchain's isolated tsconfig.prisma.json cannot import apps/api or
-// packages/shared, so the zone-aware math has to be duplicated here.
-function computeFireAt(
-  deadline: Date,
-  offsetMinutes: number,
-  tz: string,
-): Date {
-  return DateTime.fromJSDate(deadline, { zone: "utc" })
-    .setZone(tz)
-    .plus({ minutes: offsetMinutes })
-    .toUTC()
-    .toJSDate();
-}
-
-function policyAppliesTo(
-  policy: { active: boolean; validFrom: Date; validUntil: Date | null },
-  period: { deadline: Date },
-): boolean {
-  if (!policy.active) return false;
-  if (period.deadline.getTime() < policy.validFrom.getTime()) return false;
-  if (
-    policy.validUntil !== null &&
-    period.deadline.getTime() > policy.validUntil.getTime()
-  ) {
-    return false;
-  }
-  return true;
-}
 
 interface OpenPeriod {
   readonly id: string;
@@ -91,7 +64,7 @@ async function applyPolicyToPeriod(
   });
 
   const ruleFields = {
-    fireAt: computeFireAt(
+    fireAt: computeReminderFireAt(
       period.deadline,
       policy.offsetMinutes,
       policy.timezone,
@@ -130,7 +103,7 @@ async function applyAll(
 
   return pairs.reduce<Promise<Totals>>(async (carried, { period, policy }) => {
     const totals = await carried;
-    if (!policyAppliesTo(policy, period)) {
+    if (!reminderPolicyAppliesTo(policy, period.deadline)) {
       return { ...totals, skipped: totals.skipped + 1 };
     }
     const outcome = await applyPolicyToPeriod(prisma, period, policy);

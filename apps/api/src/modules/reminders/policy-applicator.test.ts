@@ -1,3 +1,7 @@
+import {
+  computeReminderFireAt,
+  reminderPolicyAppliesTo,
+} from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { PolicyApplicatorService } from "./policy-applicator.service";
@@ -6,7 +10,7 @@ import { PolicyApplicatorService } from "./policy-applicator.service";
 /*  Validity gate (pure)                                               */
 /* ------------------------------------------------------------------ */
 
-describe("PolicyApplicatorService.policyAppliesTo — validity gate", () => {
+describe("reminderPolicyAppliesTo — validity gate", () => {
   const validFrom = new Date("2026-05-01T00:00:00.000Z");
   const validUntil = new Date("2026-08-01T00:00:00.000Z");
 
@@ -44,24 +48,22 @@ describe("PolicyApplicatorService.policyAppliesTo — validity gate", () => {
   ] as const)(
     "returns $expected when $label",
     ({ policy, deadline, expected }) => {
-      expect(
-        PolicyApplicatorService.policyAppliesTo(policy, { deadline }),
-      ).toBe(expected);
+      expect(reminderPolicyAppliesTo(policy, deadline)).toBe(expected);
     },
   );
 
   it("boundary: deadline === validFrom is INSIDE the window", () => {
-    const result = PolicyApplicatorService.policyAppliesTo(
+    const result = reminderPolicyAppliesTo(
       { active: true, validFrom, validUntil },
-      { deadline: new Date("2026-05-01T00:00:00.000Z") },
+      new Date("2026-05-01T00:00:00.000Z"),
     );
     expect(result).toBe(true);
   });
 
   it("boundary: deadline === validUntil is INSIDE the window", () => {
-    const result = PolicyApplicatorService.policyAppliesTo(
+    const result = reminderPolicyAppliesTo(
       { active: true, validFrom, validUntil },
-      { deadline: new Date("2026-08-01T00:00:00.000Z") },
+      new Date("2026-08-01T00:00:00.000Z"),
     );
     expect(result).toBe(true);
   });
@@ -71,26 +73,26 @@ describe("PolicyApplicatorService.policyAppliesTo — validity gate", () => {
 /*  computeFireAt — DST-correct math                                   */
 /* ------------------------------------------------------------------ */
 
-describe("PolicyApplicatorService.computeFireAt — DST-correct math", () => {
-  const fakePrisma = {} as never;
-
+describe("computeReminderFireAt — DST-correct math", () => {
   it("subtracts 24h in Europe/Moscow (no DST — fixed UTC+3)", () => {
-    const svc = new PolicyApplicatorService(fakePrisma);
     // Deadline: 2026-06-01 21:00 MSK = 18:00 UTC
     const deadline = new Date("2026-06-01T18:00:00.000Z");
-    const fireAt = svc.computeFireAt(deadline, -24 * 60, "Europe/Moscow");
+    const fireAt = computeReminderFireAt(deadline, -24 * 60, "Europe/Moscow");
     // T-24h: 2026-05-31 21:00 MSK = 18:00 UTC
     expect(fireAt.toISOString()).toBe("2026-05-31T18:00:00.000Z");
   });
 
   it("handles DST forward in America/New_York (clocks +1h)", () => {
-    const svc = new PolicyApplicatorService(fakePrisma);
     // Deadline: 2026-03-09 09:00 EDT = 13:00 UTC (after DST jump)
     const deadline = new Date("2026-03-09T13:00:00.000Z");
     // T-24h in wall-clock should be 2026-03-08 09:00 EST = 14:00 UTC
     // (because NY was still on EST then). Luxon's DateTime arithmetic
     // gives exact-24h elapsed, which means 2026-03-08 13:00 UTC.
-    const fireAt = svc.computeFireAt(deadline, -24 * 60, "America/New_York");
+    const fireAt = computeReminderFireAt(
+      deadline,
+      -24 * 60,
+      "America/New_York",
+    );
     expect(fireAt.toISOString()).toBe("2026-03-08T13:00:00.000Z");
   });
 });
