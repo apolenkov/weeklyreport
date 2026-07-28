@@ -27,7 +27,7 @@
 ## Драйв-механика
 
 - Вход: `GET /auth/dev-login?role=X&email=<seed>&redirect=<path>`; lead1@/head@/admin@/viewer@customreport.local; Finance-группа (olga@, sergey@) для group-scope контроля.
-- Стек из исходников (docker-образы стейлые): api :3002 (pnpm dev, фон), web :3000; перед прогоном свежий `db:reset:hard`+seed-simple; api-stdout → файл для фазы C.
+- Стек из исходников (docker-образы стейлые): api :3002 (pnpm dev, фон), web :3000; перед прогоном свежий `pnpm db:reset:hard demo`; api-stdout → файл для фазы C.
 - ОДИН Playwright MCP браузер ⇒ волкеры строго ПОСЛЕДОВАТЕЛЬНЫ. Чанки по 6–10 состояний; Haiku на чанк (механика по точному скрипту), Opus — триаж вердиктов по индексу+логам (лестница «дёшево ищем — дорого проверяем»).
 - Скриншоты: `docs/ui-atlas/2026-07-15/<role>/<route-slug>/<NN>-<state>.png` + `index.jsonl` (append: file, role, route, state, путь достижения, console-error count). Playwright MCP browser_take_screenshot пишет в свой outputDir — забирать/переименовывать после чанка.
 - Порядок: read-only состояния сначала; мутирующие (publish/reopen/revoke/archive, delete-\*) — последними в роли, в фиксированной последовательности; wipe+reseed из dev-switcher — ИСКЛЮЧЁН из прогона.

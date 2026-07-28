@@ -16,19 +16,15 @@ import {
   router,
 } from "../trpc.middleware.js";
 
-// wipeAndReseed: child-process timeout per seed tier — larger tiers write
+// wipeAndReseed: child-process timeout per seed profile — stress writes
 // more rows and need more wall-clock room.
-const MANUAL_UAT_RESEED_TIMEOUT_MINUTES = 1;
-const HUGE_RESEED_TIMEOUT_MINUTES = 5;
+const STRESS_RESEED_TIMEOUT_MINUTES = 5;
 const DEFAULT_RESEED_TIMEOUT_MINUTES = 2;
-const MANUAL_UAT_RESEED_TIMEOUT_MS =
-  MANUAL_UAT_RESEED_TIMEOUT_MINUTES * MS_PER_MINUTE;
-const HUGE_RESEED_TIMEOUT_MS = HUGE_RESEED_TIMEOUT_MINUTES * MS_PER_MINUTE;
+const STRESS_RESEED_TIMEOUT_MS = STRESS_RESEED_TIMEOUT_MINUTES * MS_PER_MINUTE;
 const DEFAULT_RESEED_TIMEOUT_MS =
   DEFAULT_RESEED_TIMEOUT_MINUTES * MS_PER_MINUTE;
 const RESEED_OUTPUT_TAIL_LINES = 15;
 const RESEED_STDERR_TAIL_LENGTH = 500;
-const RESEED_VARIANT_MANUAL_UAT = "manual-uat";
 // Prisma AI consent gate expects this Russian yes; any other value aborts reset.
 const PRISMA_AI_DANGEROUS_ACTION_CONSENT = "давай";
 
@@ -39,8 +35,7 @@ export interface DevRouterDeps {
   env: EnvConfig;
 }
 
-type ReseedVariant =
-  "small" | "middle" | "huge" | typeof RESEED_VARIANT_MANUAL_UAT;
+type ReseedVariant = "minimal" | "demo" | "full" | "stress";
 
 // Refuse unless AUTH_DEV_MODE so an accidental prod deploy cannot wipe data.
 // Reads the validated env (boolean post-transform), never raw process.env.
@@ -53,24 +48,16 @@ const assertDevMode = (env: EnvConfig): void => {
   }
 };
 
-// Tiers mirror package.json seed scripts; reset applies migrations, then seed.
+// Reset applies migrations, then the sole public seed-profile selector.
 const buildReseedScript = (variant: ReseedVariant): string => {
-  if (variant === RESEED_VARIANT_MANUAL_UAT) {
-    return "pnpm --dir apps/api exec tsx ../../prisma/wipe-manual-uat.ts";
-  }
   const reset = "pnpm exec prisma migrate reset --force";
-  const seed =
-    variant === "middle"
-      ? "pnpm --dir apps/api exec tsx ../../prisma/seed-simple.ts"
-      : `pnpm --dir apps/api exec tsx ../../prisma/seed-demo.ts ${variant}`;
+  const seed = `pnpm db:seed:profile ${variant}`;
   return `${reset} && ${seed}`;
 };
 
 const reseedTimeoutMs = (variant: ReseedVariant): number => {
-  if (variant === RESEED_VARIANT_MANUAL_UAT)
-    return MANUAL_UAT_RESEED_TIMEOUT_MS;
-  return variant === "huge"
-    ? HUGE_RESEED_TIMEOUT_MS
+  return variant === "stress"
+    ? STRESS_RESEED_TIMEOUT_MS
     : DEFAULT_RESEED_TIMEOUT_MS;
 };
 
@@ -133,8 +120,8 @@ export function createDevRouter(deps: DevRouterDeps) {
       .input(
         z.object({
           variant: z
-            .enum(["small", "middle", "huge", RESEED_VARIANT_MANUAL_UAT])
-            .default("small"),
+            .enum(["minimal", "demo", "full", "stress"])
+            .default("minimal"),
         }),
       )
       .mutation(({ input }) => {

@@ -25,7 +25,8 @@ export function findRepoRoot(startDir: string): string {
  * Runs ONCE before any integration test.
  *
  * - `prisma migrate reset --force` drops + recreates schema without auto-seeding
- * - `prisma db seed` runs the configured canonical seed against E2E_DATABASE_URL
+ * - `prisma db seed` runs the configured explicit `full` profile
+ *   against E2E_DATABASE_URL
  *
  * MUST run against E2E_DATABASE_URL — never the dev DATABASE_URL. The
  * playwright.integration.config.ts already throws if E2E_DATABASE_URL is unset,
@@ -55,7 +56,7 @@ export default function globalSetup(): void {
   console.log("[e2e] Resetting integration database...");
   runPrisma("migrate", "reset", "--force");
 
-  console.log("[e2e] Seeding integration database...");
+  console.log("[e2e] Seeding integration database with profile full...");
   runPrisma("db", "seed");
 
   console.log("[e2e] Database ready.");

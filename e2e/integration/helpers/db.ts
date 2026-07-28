@@ -33,13 +33,11 @@ const adapter = new PrismaPg(pool);
 export const prisma = new PrismaClient({ adapter });
 
 /**
- * Re-run the canonical seed to restore mutable state to the seeded baseline.
+ * Re-run the configured `full` profile to restore the seeded baseline.
  *
- * NOT a full migrate-reset — just `tsx prisma/seed.ts`. The seed is
- * idempotent (uses upsert by ID/email/composite-key), so it safely re-applies
- * baseline values on top of whatever the previous test left behind. New rows
- * created by tests (e.g., new Items, new Projects) are NOT deleted by this —
- * tests that create such rows must clean them up explicitly with `prisma`.
+ * The profile starts from its wiping demo base and then adds all full
+ * capabilities, so rows created by a previous test cannot leak into the next
+ * assertion.
  *
  * Cost: ~1-3s per call. With workers:1 this is acceptable in `afterEach` for
  * specs that mutate seed entities.

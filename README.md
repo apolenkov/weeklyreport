@@ -57,8 +57,8 @@ cp .env.example .env
 pnpm observability:up
 
 # 4. Залить схему и демо-данные в базу
-pnpm db:fresh:simple      # быстрый минимальный сид
-# pnpm db:fresh:advanced  # объёмный сид, ближе к реальным данным
+pnpm db:seed:profile minimal # быстрый минимальный сид
+# demo | full | stress       # возрастающие возможности и объём
 
 # 5. Запустить web + api локально (в одном процессе, параллельно)
 pnpm dev
@@ -98,7 +98,7 @@ pnpm format         # Prettier по всему дереву
 ```bash
 pnpm logs           # хвост лога API (apps/api/.logs/app.log)
 pnpm logs:errors    # только error/warn из лога API
-pnpm db:fresh:simple # пересобрать базу с нуля и залить демо-данные
+pnpm db:seed:profile demo # пересобрать базу и залить демонстрационный профиль
 ```
 
 ## Куда смотреть дальше

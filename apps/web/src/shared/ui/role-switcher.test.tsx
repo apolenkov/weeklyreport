@@ -69,10 +69,10 @@ describe("DevRoleSwitcher — data-reset controls for every dev role", () => {
     await user.click(screen.getByTestId("dev-role-switcher-trigger"));
 
     expect(
-      screen.getByTestId("dev-role-switcher-reseed-small"),
+      screen.getByTestId("dev-role-switcher-reseed-minimal"),
     ).toBeInTheDocument();
     expect(
-      screen.getByTestId("dev-role-switcher-wipe-manual-uat"),
+      screen.getByTestId("dev-role-switcher-reseed-stress"),
     ).toBeInTheDocument();
   });
 
@@ -84,10 +84,10 @@ describe("DevRoleSwitcher — data-reset controls for every dev role", () => {
     await user.click(screen.getByTestId("dev-role-switcher-trigger"));
 
     expect(
-      screen.getByTestId("dev-role-switcher-reseed-small"),
+      screen.getByTestId("dev-role-switcher-reseed-minimal"),
     ).toBeInTheDocument();
     expect(
-      screen.getByTestId("dev-role-switcher-wipe-manual-uat"),
+      screen.getByTestId("dev-role-switcher-reseed-stress"),
     ).toBeInTheDocument();
     expect(screen.getByTestId("dev-role-switcher-logout")).toBeInTheDocument();
   });

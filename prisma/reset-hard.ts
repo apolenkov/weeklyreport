@@ -1,4 +1,4 @@
-// Drop all app rows, flush Redis, re-seed (seed-simple). Requires healthy postgres+redis.
+// Drop all app rows, flush Redis, and seed an explicit named profile.
 
 import { spawnSync } from "node:child_process";
 import net from "node:net";
@@ -20,6 +20,7 @@ import pg from "pg";
 
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 import { isEntrypoint } from "./_entrypoint.js";
+import { parseSeedProfile } from "./seed-profile-contract.js";
 
 const DATABASE_URL: string = (() => {
   const url = process.env.DATABASE_URL;
@@ -157,6 +158,7 @@ async function truncateAll(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  const profile = parseSeedProfile(process.argv[2]);
   assertNonProdDestructive("reset-hard");
 
   console.log("[reset-hard] Starting hard reset…");
@@ -183,10 +185,7 @@ async function main(): Promise<void> {
   await truncateAll();
   await flushRedis();
 
-  console.log("[reset-hard] Re-seeding via seed-simple…");
-  // Invoke seed-simple via the api workspace so tsx is on PATH, and pass
-  // process.env explicitly so dotenv-loaded DATABASE_URL crosses the boundary
-  // even though seed-simple.ts itself only reads dotenv from its own cwd.
+  console.log(`[reset-hard] Re-seeding profile ${profile}…`);
   const seed = spawnSync(
     // eslint-disable-next-line sonarjs/no-os-command-from-path -- pnpm (workspace package manager) invoked intentionally in dev-only seeding; shell:false set
     "pnpm",
@@ -195,7 +194,8 @@ async function main(): Promise<void> {
       "@customreport/api",
       "exec",
       "tsx",
-      "../../prisma/seed-simple.ts",
+      "../../prisma/seed-profile.ts",
+      profile,
     ],
     {
       stdio: "inherit",
@@ -205,7 +205,9 @@ async function main(): Promise<void> {
     },
   );
   if (seed.status !== 0) {
-    throw new Error(`seed-simple exited with code ${seed.status ?? "unknown"}`);
+    throw new Error(
+      `seed profile ${profile} exited with code ${seed.status ?? "unknown"}`,
+    );
   }
 
   console.log(
