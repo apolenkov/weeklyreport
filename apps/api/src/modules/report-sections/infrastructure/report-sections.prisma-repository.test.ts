@@ -163,13 +163,9 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
   });
 });
 
-/**
- * `getMyHistoryRows` MUST order entries by reporting-period chronology
- * (`report.periodStart desc`), NOT by the section row's `createdAt` —
- * `createdAt` is insertion time, unrelated to the period a report covers. This
- * keeps the lead history newest-period-first and matches `compiledHistory`, so
- * the summary-rail streak stays honest.
- */
+// Ordering keys on report.periodStart, not the row's createdAt: createdAt is
+// insertion time and says nothing about which period a report covers, so
+// sorting by it would scramble the lead history against compiledHistory.
 describe("ReportSectionsPrismaRepository.getMyHistoryRows — ordering", () => {
   it("orders by report.periodStart desc, with createdAt as the stable tiebreak", async () => {
     const findMany = vi.fn(() => Promise.resolve([]));
