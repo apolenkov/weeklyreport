@@ -92,31 +92,6 @@ export interface AdminReminderPolicyView {
   validUntil: Date | null;
 }
 
-// Admin-tunable fields on the Periods / Reminders / Notifications sub-tabs;
-// must stay aligned with the wire `appSettingsSchema`.
-export interface AdminSettingsView {
-  autoCreatePeriods: boolean;
-  defaultDeadlineDays: number;
-  // Periods tab
-  periodLengthDays: number;
-  workingDays: "mon-fri" | "mon-sat" | "mon-sun";
-  gracePeriodHours: number;
-  allowLateSubmissions: boolean;
-  autoPublishAfterDeadline: boolean;
-  autoArchiveWeeksAfterPublish: number;
-  // Period-cycle knobs.
-  deadlineTime: string; // HH:MM (24h)
-  allowReopenAfterPublish: boolean;
-  reopenWindowHours: number;
-  // Opt-in unified by-state lead-form view (presentation projection).
-  unifiedActivityView: boolean;
-  // Reminders tab
-  defaultTimezone: string;
-  defaultReminderAudience: "lead-with-draft" | "head-of-late";
-  // Notifications tab
-  notificationFromEmail: string | null;
-}
-
 export interface MappedAdminSnapshot {
   groups: AdminGroupView[];
   users: AdminUserView[];

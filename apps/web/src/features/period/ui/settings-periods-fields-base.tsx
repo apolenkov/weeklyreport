@@ -1,8 +1,8 @@
 "use client";
 
+import type { AppSettings } from "@customreport/shared";
 import type { Dispatch, SetStateAction } from "react";
 
-import type { AdminSettingsView } from "../../admin";
 import {
   NumberField,
   ToggleField,
@@ -11,8 +11,8 @@ import {
 import * as fieldLimits from "./settings-periods-fields-base-helpers";
 
 interface FieldGroupProps {
-  readonly draft: AdminSettingsView;
-  readonly setDraft: Dispatch<SetStateAction<AdminSettingsView>>;
+  readonly draft: AppSettings;
+  readonly setDraft: Dispatch<SetStateAction<AppSettings>>;
 }
 
 // Shell owns draft/Save; this component only renders the field group.

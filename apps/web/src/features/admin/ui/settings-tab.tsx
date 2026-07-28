@@ -1,5 +1,6 @@
 "use client";
 
+import type { AppSettings } from "@customreport/shared";
 import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
 import { ComingSoonTooltip } from "@customreport/ui/components/coming-soon-tooltip";
 import {
@@ -16,11 +17,10 @@ import {
   NotificationsSubTab,
 } from "../../organization";
 import { PeriodsSubTab } from "../../period";
-import type { AdminSettingsView } from "../model/admin-types";
 import { RemindersSubTab } from "./settings-reminders-sub-tab";
 
 interface SettingsTabProps {
-  readonly settings: AdminSettingsView;
+  readonly settings: AppSettings;
 }
 
 export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {

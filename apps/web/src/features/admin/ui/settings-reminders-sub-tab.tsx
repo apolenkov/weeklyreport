@@ -1,11 +1,12 @@
 "use client";
 
+import type { AppSettings } from "@customreport/shared";
+
 import {
   CheckIcon,
   useUpdateSettingsMut,
 } from "../../../shared/ui/settings-tab-shared";
 import { useServerSeededDraft } from "../../../shared/ui/use-server-seeded-draft";
-import type { AdminSettingsView } from "../model/admin-types";
 import { TIMEZONE_OPTIONS } from "../model/timezone-options";
 
 function DefaultTimezoneField({
@@ -50,10 +51,10 @@ function DefaultTimezoneField({
 export function RemindersSubTab({
   serverSettings,
 }: {
-  readonly serverSettings: AdminSettingsView;
+  readonly serverSettings: AppSettings;
 }) {
   const { draft, setDraft, markClean } =
-    useServerSeededDraft<AdminSettingsView>(serverSettings);
+    useServerSeededDraft<AppSettings>(serverSettings);
   const updateSettingsMut = useUpdateSettingsMut("Reminder defaults");
 
   function handleSave() {

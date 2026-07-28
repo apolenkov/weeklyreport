@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts are required for value, checked, and options access under the app tsconfig. */
 
+import type { AppSettings } from "@customreport/shared";
 import { MAX_FULL_NAME_LENGTH } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -27,7 +28,6 @@ vi.mock("sonner", () => ({
   },
 }));
 
-import type { AdminSettingsView } from "../model/admin-types";
 import { SettingsTab } from "./settings-tab";
 
 // Telegram integration status shape returned by
@@ -68,7 +68,7 @@ function buildProxy(integrations: IntegrationStub = DEFAULT_INTEGRATIONS) {
 
 function renderSettings(
   proxy: ReturnType<typeof buildProxy>["proxy"],
-  settingsOverride?: Partial<AdminSettingsView>,
+  settingsOverride?: Partial<AppSettings>,
 ) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
@@ -91,7 +91,7 @@ function renderSettings(
 
 // Defaults mirror SQL defaults so Periods / Reminders / Notifications
 // render with realistic initial state.
-const baseSettings: AdminSettingsView = {
+const baseSettings: AppSettings = {
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
   periodLengthDays: 7,
@@ -316,8 +316,7 @@ describe("SettingsTab — Periods sub-tab (new fields)", () => {
     await waitFor(() => {
       expect(updateSettingsFn).toHaveBeenCalled();
     });
-    const payload = updateSettingsFn.mock
-      .calls[0]?.[0] as Partial<AdminSettingsView>;
+    const payload = updateSettingsFn.mock.calls[0]?.[0] as Partial<AppSettings>;
     expect(payload.periodLengthDays).toBe(14);
     expect(payload.gracePeriodHours).toBe(48);
     // Other fields preserved on the PATCH payload.
@@ -410,8 +409,7 @@ describe("SettingsTab — Periods sub-tab (period-cycle inputs)", () => {
     await waitFor(() => {
       expect(updateSettingsFn).toHaveBeenCalled();
     });
-    const payload = updateSettingsFn.mock
-      .calls[0]?.[0] as Partial<AdminSettingsView>;
+    const payload = updateSettingsFn.mock.calls[0]?.[0] as Partial<AppSettings>;
     expect(payload.deadlineTime).toBe("09:30");
     expect(payload.reopenWindowHours).toBe(24);
     // allowReopenAfterPublish was not touched — stays true.

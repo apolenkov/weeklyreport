@@ -18,25 +18,25 @@
       and UI ownership and decrement its five violations.
 - [x] Refactor the dashboard-model cluster; prove KPI, lead priority,
       presentation, and escalation derivation and decrement its five violations.
-- [ ] Refactor the admin/period/organization settings cluster; prove settings
+- [x] Refactor the admin/period/organization settings cluster; prove settings
       routes, panel composition, and public feature APIs and decrement its six
       violations.
 
 ## 2. Per-cluster verification
 
-- [ ] For every cluster, run its targeted unit/integration tests.
-- [ ] Run `pnpm typecheck`, `pnpm depcruise`, and `pnpm lint:type-cycles`.
-- [ ] Update `scripts/type-cycle-baseline.json` by the exact measured decrement
+- [x] For every cluster, run its targeted unit/integration tests.
+- [x] Run `pnpm typecheck`, `pnpm depcruise`, and `pnpm lint:type-cycles`.
+- [x] Update `scripts/type-cycle-baseline.json` by the exact measured decrement
       in the same commit.
-- [ ] Update all affected durable specs and all four seed profiles when a slice
+- [x] Update all affected durable specs and all four seed profiles when a slice
       changes product, wire, or persisted semantics.
-- [ ] Checkpoint HTML, `roadmap.json`, and `HANDOFF.md`; commit and push before
+- [x] Checkpoint HTML, `roadmap.json`, and `HANDOFF.md`; commit and push before
       beginning the next cluster.
 
 ## 3. Completion
 
-- [ ] Prove the pre-compilation graph exits 0 with zero `no-circular`
+- [x] Prove the pre-compilation graph exits 0 with zero `no-circular`
       violations and baseline `{"cycles": 0}`.
-- [ ] Prove the ordinary runtime graph still exits 0.
-- [ ] Run `pnpm lint`, `pnpm typecheck`, and affected product journeys.
-- [ ] Run `openspec validate refactor-type-cycle-clusters --strict`.
+- [x] Prove the ordinary runtime graph still exits 0.
+- [x] Run `pnpm lint`, `pnpm typecheck`, and affected product journeys.
+- [x] Run `openspec validate refactor-type-cycle-clusters --strict`.
