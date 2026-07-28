@@ -1,4 +1,4 @@
-import { ComingSoonTooltip } from "@customreport/ui/components/ui/tooltip";
+import { ComingSoonTooltip } from "@customreport/ui/components/coming-soon-tooltip";
 import { cn } from "@customreport/ui/lib/utils";
 import type { LucideIcon } from "lucide-react";
 

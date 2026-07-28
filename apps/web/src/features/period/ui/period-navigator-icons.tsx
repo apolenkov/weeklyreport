@@ -1,5 +1,3 @@
-/** Icon set for the Period Navigator's prev/next arrows and select chevron. */
-
 export function ChevronLeft() {
   return (
     <svg
@@ -17,9 +15,6 @@ export function ChevronLeft() {
   );
 }
 
-/**
- * Chevron Right.
- */
 export function ChevronRight() {
   return (
     <svg

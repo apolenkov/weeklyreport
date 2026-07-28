@@ -16,10 +16,7 @@ import {
   ANONYMOUS_USER_ID,
   UNKNOWN_CLIENT_IP,
 } from "../../lib/actor-sentinels.js";
-import {
-  type AuditLogger,
-  createNullAuditLogger,
-} from "../../lib/audit-logger.js";
+import type { AuditLogger } from "../../lib/audit-logger.js";
 import { requireEnv } from "../../lib/env.js";
 import {
   type createAuthController,
@@ -243,11 +240,10 @@ export function mountAuthRoutes(
   prisma: PrismaClient,
   env: NodeJS.ProcessEnv,
   provisionLeadWorkspace: ProvisionLeadWorkspace,
-  auditLogger: AuditLogger = createNullAuditLogger(),
+  auditLogger: AuditLogger,
 ): void {
-  // FRONTEND_URL is validated by env.schema (real URL in prod via the
-  // production fence, localhost default in dev synced into process.env by
-  // main.ts), so it is always present — no hardcoded localhost fallback here.
+  // FRONTEND_URL is required by env.schema in every posture; auth routing has
+  // no local fallback because redirect authority is security-sensitive.
   const frontendUrl = requireEnv(env, "FRONTEND_URL");
   const deps: AuthRouteDeps = {
     prisma,

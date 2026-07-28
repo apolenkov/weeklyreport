@@ -25,10 +25,16 @@
 
 - [ ] Close non-blocked code-style items.
 - [ ] Close non-blocked architecture and ownership items.
+- [x] Move `ComingSoonTooltip` out of the vendored tooltip primitive.
+- [x] Delete the unconsumed sidebar bundle and its dedicated exemptions.
 - [ ] Burn down live suppressions and override blocks without weakening gates.
 - [ ] Close non-blocked test-integrity items.
 - [ ] Close non-blocked dependency and vocabulary duplication.
 - [ ] Correct false documentation/control claims and demo-data defects.
+- [x] Make telemetry fallback comments describe the real zero payload.
+- [x] Enforce the documented `ai.*` audit exclusion with a regression test.
+- [x] Require auth-route audit logging and remove the false localhost-default claim.
+- [x] Replace the nonexistent `AppShell` README claim with the real `NavBar`.
 
 ## 4. Adjudicated findings
 

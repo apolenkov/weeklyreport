@@ -90,6 +90,11 @@ const auditTestRouter = router({
       .input(z.object({ id: z.string() }))
       .mutation(() => "auth-ok"),
   }),
+  ai: router({
+    fakeMutation: protectedProcedure
+      .input(z.object({ prompt: z.string() }))
+      .mutation(() => "ai-ok"),
+  }),
   admin: router({
     deactivateUser: userTargetMutation,
     activateUser: userTargetMutation,
@@ -200,6 +205,15 @@ describe("mutation-audit middleware", () => {
     const caller = makeAuditCaller(audit, leadSession);
 
     await caller.auth.fakeMutation({ id: "b" });
+
+    expect(mutation).not.toHaveBeenCalled();
+  });
+
+  it("keeps ai.* prompts out of the audit stream", async () => {
+    const { audit, mutation } = makeAuditSpy();
+    const caller = makeAuditCaller(audit, leadSession);
+
+    await caller.ai.fakeMutation({ prompt: "private prompt" });
 
     expect(mutation).not.toHaveBeenCalled();
   });

@@ -20,7 +20,7 @@ Next.js rewrites in `next.config.ts` proxy `/trpc/*` and `/auth/*` to the API se
 
 ## Key Components
 
-- `AppShell` — SidebarProvider + role-based navigation + header
+- `NavBar` — session-aware, role-filtered navigation and account controls
 - `ReportSectionForm` — Full report editing form with autosave
 - `AdminPanel` — Tabbed CRUD interface for admin entities
 - `DataTable` — Sortable, accessible table with keyboard navigation
