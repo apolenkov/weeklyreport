@@ -87,6 +87,7 @@ const mutationAuditMiddleware = t.middleware(
   async ({ ctx, next, path, type, getRawInput }) => {
     if (type !== "mutation") return next();
     if (path.startsWith("auth.")) return next();
+    if (path.startsWith("ai.")) return next();
 
     const start = performance.now();
     const result = await next();

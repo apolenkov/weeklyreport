@@ -87,7 +87,7 @@ export interface AppRouterDeps {
   telegramOutboundQueue?: Queue;
   // Optional for role-coverage `{}` deps; undefined Queue → empty/no-op.
   jobsService?: JobsService;
-  // Optional for role-coverage `{}` deps; undefined → procedure hidden.
+  // Optional for role-coverage; undefined returns a schema-valid zero payload.
   telemetryService?: TelemetryService;
   // Optional for role-coverage; undefined → skip Redis, JWT TTL only.
   sessionRevocationService?: SessionRevocationService;

@@ -1,13 +1,13 @@
 "use client";
 
 import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
+import { ComingSoonTooltip } from "@customreport/ui/components/coming-soon-tooltip";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@customreport/ui/components/ui/tabs";
-import { ComingSoonTooltip } from "@customreport/ui/components/ui/tooltip";
 
 import { TabHeader } from "../../../shared/ui/tab-header";
 import {

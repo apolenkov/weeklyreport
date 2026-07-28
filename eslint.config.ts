@@ -1184,16 +1184,6 @@ export default defineConfig([
       "sonarjs/no-duplicate-string": "off",
     },
   },
-  // JUSTIFIED PERMANENT max-lines exemptions — generated code, where splitting
-  // would not improve clarity (per ~/.claude code-style: "if splitting would
-  // hurt clarity, keep the larger unit and say why"). These are the documented
-  // end-state exempts, NOT TODO.
-  {
-    files: [
-      "packages/ui/src/components/ui/sidebar.tsx", // shadcn/ui generated primitive bundle
-    ],
-    rules: { "max-lines": "off" },
-  },
   // JUSTIFIED PERMANENT no-magic-numbers exemptions — files where the numbers
   // ARE the content: naming each one adds indirection without meaning. New
   // logic in other files stays gated.
@@ -1213,14 +1203,10 @@ export default defineConfig([
     ],
     rules: { "@typescript-eslint/no-magic-numbers": "off" },
   },
-  // Vendored primitives and the UAT harness: repeated literals ARE the data
-  // (route fixtures, generated class strings) — same footing as the test
-  // carve-out above.
+  // UAT route fixtures use repeated literals as data — same footing as the
+  // test carve-out above.
   {
-    files: [
-      "packages/ui/src/components/ui/sidebar.tsx",
-      "apps/web/uat-suite/**",
-    ],
+    files: ["apps/web/uat-suite/**"],
     rules: { "sonarjs/no-duplicate-string": "off" },
   },
   //

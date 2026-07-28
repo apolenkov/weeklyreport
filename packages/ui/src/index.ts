@@ -2,6 +2,7 @@
 // Utility
 
 export { ComingSoonBadge } from "./components/coming-soon-badge";
+export { ComingSoonTooltip } from "./components/coming-soon-tooltip";
 // UI Components
 export { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 export {
@@ -83,32 +84,6 @@ export {
   SheetTitle,
   SheetTrigger,
 } from "./components/ui/sheet";
-export {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupAction,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInput,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuBadge,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSkeleton,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
-  SidebarProvider,
-  SidebarRail,
-  SidebarSeparator,
-  SidebarTrigger,
-  useSidebar,
-} from "./components/ui/sidebar";
 export { Skeleton } from "./components/ui/skeleton";
 export { Toaster } from "./components/ui/sonner";
 export {

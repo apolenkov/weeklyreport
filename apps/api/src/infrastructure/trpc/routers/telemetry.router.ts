@@ -3,8 +3,8 @@ import { mapDomainError } from "../trpc.error-mapper.js";
 import { leadershipProcedure, router } from "../trpc.middleware.js";
 
 export interface TelemetryRouterDeps {
-  // Optional for role-coverage fixtures with `{}` deps; when undefined the
-  // procedure is hidden from the surface, not 500-ed.
+  // Optional for role-coverage fixtures; an absent service returns a
+  // schema-valid zero payload so the harness can traverse the procedure.
   telemetryService?: TelemetryService;
 }
 

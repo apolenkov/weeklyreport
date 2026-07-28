@@ -188,12 +188,19 @@ const buildRow = async (
 };
 
 const buildRows = async (): Promise<readonly Row[]> => {
-  const files = git(["ls-files", "*.ts", "*.tsx"])
+  const files = git([
+    "ls-files",
+    "--cached",
+    "--others",
+    "--exclude-standard",
+    "--",
+    "*.ts",
+    "*.tsx",
+  ])
     .trim()
     .split("\n")
-    // A staged deletion remains in git ls-files until the commit lands. The
-    // catalogue describes the current tree, so a path absent from that tree is
-    // not a row and must not make the pre-commit measurement crash.
+    // A staged deletion remains in the cached set until the commit lands. The
+    // catalogue describes the current tree, so absent paths are not rows.
     .filter((file) => existsSync(`${REPO_ROOT}${file}`));
   const fanIn = readFanIn();
   const churn = readChurn();

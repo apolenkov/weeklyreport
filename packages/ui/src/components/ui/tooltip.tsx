@@ -4,8 +4,6 @@ import { cn } from "@customreport/ui/lib/utils";
 import { Tooltip as TooltipPrimitive } from "radix-ui";
 import type * as React from "react";
 
-import { ComingSoonBadge } from "../coming-soon-badge";
-
 /** Radix tooltip provider (delay/shared config). */
 function TooltipProvider({
   delayDuration = 0,
@@ -42,7 +40,7 @@ function TooltipContent({
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content> & {
-  /** Omit the dark Radix arrow — used by the chromeless ComingSoonTooltip. */
+  /** Omit the Radix arrow when a consumer supplies its own visual surface. */
   readonly hideArrow?: boolean;
 }) {
   return (
@@ -65,39 +63,4 @@ function TooltipContent({
   );
 }
 
-/**
- * Self-contained Coming Soon tooltip: own provider, portaled chromeless badge,
- * works without a shell TooltipProvider (deferred-feature controls).
- */
-function ComingSoonTooltip({
-  children,
-}: {
-  readonly children: React.ReactNode;
-}) {
-  return (
-    <TooltipProvider delayDuration={0}>
-      <Tooltip>
-        <TooltipTrigger asChild>{children}</TooltipTrigger>
-        <TooltipContent
-          hideArrow
-          side="bottom"
-          align="center"
-          sideOffset={6}
-          // Whitespace blanking so Radix does not double the control's aria-label with the badge.
-          aria-label=" "
-          className="border-0 bg-transparent p-0 shadow-none"
-        >
-          <ComingSoonBadge />
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
-
-export {
-  ComingSoonTooltip,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-};
+export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger };
