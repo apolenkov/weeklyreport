@@ -8,13 +8,15 @@
         "prisma/*.ts",
         "scripts/*.{ts,mjs}",
         "e2e/playwright.integration.config.ts",
+        "e2e/playwright.seed-profiles.config.ts",
         "e2e/playwright.prodbuild.config.ts",
         "e2e/playwright.csp.config.ts",
         "e2e/sweep/playwright.config.ts",
         "e2e/sweep/render-checklist.ts",
         "e2e/**/*.spec.ts",
         "e2e/integration/global-setup.ts",
-        "e2e/integration/global-teardown.ts"
+        "e2e/integration/global-teardown.ts",
+        "e2e/seed-profiles/global-setup.ts"
       ],
       "project": [
         "prisma/**/*.ts",
