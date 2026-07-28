@@ -17,6 +17,9 @@ const LEAD_B = "b0000000-0000-4000-8000-0000000000b1";
 const SECTION_B = "b0000000-0000-4000-8000-0000000000b2";
 const REPORT_B = "b0000000-0000-4000-8000-0000000000b3";
 const REPORT_B_SECTION = "b0000000-0000-4000-8000-0000000000b4";
+const REOPENED_REPORT = "a0000000-0000-4000-8000-0000000000a3";
+const REOPENED_SECTION = "a0000000-0000-4000-8000-0000000000a4";
+const SECOND_LEAD = "a0000000-0000-4000-8000-0000000000a5";
 type TestData = Awaited<ReturnType<typeof seedTestData>>;
 
 const headA: UserSession = {
@@ -157,5 +160,71 @@ describe("Telemetry group scoping (integration)", () => {
       onTimeRatio: 0,
       sparkline: [0],
     });
+  });
+
+  it("excludes a reopened period until it is republished", async () => {
+    const settled = await prisma.report.findUniqueOrThrow({
+      where: { id: TEST_IDS.report },
+    });
+    if (!settled.deadline) {
+      throw new Error("seeded settled period must carry a deadline");
+    }
+    await prisma.user.create({
+      data: {
+        id: SECOND_LEAD,
+        email: "lead-a2@test.local",
+        name: "Lead A2",
+        lastName: "A2",
+        firstName: "Lead",
+        role: "lead",
+        samlId: "lead-a2",
+        reportingGroupId: TEST_IDS.group,
+      },
+    });
+    await prisma.report.create({
+      data: {
+        id: REOPENED_REPORT,
+        periodStart: new Date(settled.periodStart.getTime() + 7 * 86_400_000),
+        periodEnd: new Date(settled.periodEnd.getTime() + 7 * 86_400_000),
+        deadline: new Date(settled.deadline.getTime() + 7 * 86_400_000),
+        status: "published",
+        periodStatus: "reopened",
+        periodState: "open",
+      },
+    });
+    await prisma.reportSection.create({
+      data: {
+        id: REOPENED_SECTION,
+        reportId: REOPENED_REPORT,
+        authorId: SECOND_LEAD,
+        status: "submitted",
+        late: false,
+      },
+    });
+
+    await expect(
+      repository.activeLeadsLastPublishedPeriod(headA),
+    ).resolves.toBe(1);
+    await expect(
+      repository.lateSectionsLastPublishedPeriod(headA),
+    ).resolves.toBe(1);
+    await expect(repository.onTimeRatioPerPeriod(1, headA)).resolves.toEqual([
+      0,
+    ]);
+
+    await prisma.report.update({
+      where: { id: REOPENED_REPORT },
+      data: { periodStatus: "published", periodState: "published" },
+    });
+
+    await expect(
+      repository.activeLeadsLastPublishedPeriod(headA),
+    ).resolves.toBe(1);
+    await expect(
+      repository.lateSectionsLastPublishedPeriod(headA),
+    ).resolves.toBe(0);
+    await expect(repository.onTimeRatioPerPeriod(1, headA)).resolves.toEqual([
+      1,
+    ]);
   });
 });

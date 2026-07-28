@@ -7,7 +7,6 @@ import {
   buildAdminCaller,
   createRepository,
   defaultGroup,
-  defaultSettings,
   GROUP_ID,
   headSession,
   initialSnapshot,
@@ -588,67 +587,5 @@ describe("admin.snapshot (live adminProcedure)", () => {
     await expect(
       buildAdminCaller(service, adminSession).admin.snapshot(),
     ).resolves.toMatchObject({ users: [{ role: "head" }] });
-  });
-});
-
-describe("SnapshotAdminService — settings", () => {
-  it("returns default settings", async () => {
-    const service = new SnapshotAdminService(createRepository(initialSnapshot));
-    const result = await service.getSettings();
-
-    expect(result).toEqual(defaultSettings);
-  });
-
-  it("round-trips the 9 new AppSettings fields", async () => {
-    const service = new SnapshotAdminService(createRepository(initialSnapshot));
-
-    const result = await service.updateSettings({
-      periodLengthDays: 14,
-      workingDays: "mon-sun",
-      gracePeriodHours: 0,
-      defaultTimezone: "Europe/Berlin",
-      defaultReminderAudience: "head-of-late",
-      notificationFromEmail: "noreply@example.com",
-      allowLateSubmissions: false,
-      autoPublishAfterDeadline: true,
-      autoArchiveWeeksAfterPublish: 4,
-    });
-
-    expect(result.periodLengthDays).toBe(14);
-    expect(result.workingDays).toBe("mon-sun");
-    expect(result.gracePeriodHours).toBe(0);
-    expect(result.defaultTimezone).toBe("Europe/Berlin");
-    expect(result.defaultReminderAudience).toBe("head-of-late");
-    expect(result.notificationFromEmail).toBe("noreply@example.com");
-    expect(result.allowLateSubmissions).toBe(false);
-    expect(result.autoPublishAfterDeadline).toBe(true);
-    expect(result.autoArchiveWeeksAfterPublish).toBe(4);
-  });
-
-  it("updates settings fully", async () => {
-    const service = new SnapshotAdminService(createRepository(initialSnapshot));
-    const result = await service.updateSettings({
-      autoCreatePeriods: true,
-      defaultDeadlineDays: 7,
-    });
-
-    expect(result.autoCreatePeriods).toBe(true);
-    expect(result.defaultDeadlineDays).toBe(7);
-  });
-
-  it("applies partial update preserving other fields", async () => {
-    const service = new SnapshotAdminService(createRepository(initialSnapshot));
-
-    await service.updateSettings({
-      autoCreatePeriods: true,
-      defaultDeadlineDays: 10,
-    });
-
-    const result = await service.updateSettings({
-      defaultDeadlineDays: 3,
-    });
-
-    expect(result.autoCreatePeriods).toBe(true);
-    expect(result.defaultDeadlineDays).toBe(3);
   });
 });

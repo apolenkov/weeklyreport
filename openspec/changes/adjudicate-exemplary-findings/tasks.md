@@ -25,8 +25,8 @@
 - [x] Replace the native user-group and dirty fill-from prompts with shared
       confirmation dialogs and regression coverage.
 - [x] Single-home the duplicated reopen-response form and its note cap.
-- [ ] Land the remaining 4 confirmed findings after the user decides the
-      family-wide split-harness convention.
+- [x] Land the remaining 4 confirmed findings under the accepted family-wide
+      split-harness convention.
 - [x] Plan and land shared-schema/cross-feature changes in isolated slices
       (shared ownership, `stageNames`, and complete AppSettings reads).
 

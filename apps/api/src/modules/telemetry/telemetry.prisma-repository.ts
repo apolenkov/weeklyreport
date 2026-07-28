@@ -3,7 +3,10 @@ import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter, guardGroupScope } from "../../lib/group-scope.js";
-import { queryActiveLeadsLastPublishedPeriod } from "./telemetry.queries.js";
+import {
+  queryActiveLeadsLastPublishedPeriod,
+  querySettledPeriodIds,
+} from "./telemetry.queries.js";
 import type { TelemetryRepository } from "./telemetry.service.js";
 
 @Injectable()
@@ -39,15 +42,16 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
   async lateSectionsLastPublishedPeriod(session: UserSession): Promise<number> {
     guardGroupScope(session);
     const scope = groupScopeFilter(session, "reportSection");
-    const report = await this.prisma.report.findFirst({
-      where: { status: "published" },
-      orderBy: { periodStart: "desc" },
-      select: { id: true },
-    });
-    if (!report) return 0;
+    const scoped = Object.keys(scope).length > 0;
+    const [reportId] = await querySettledPeriodIds(
+      this.prisma,
+      1,
+      scoped ? { sections: { some: scope } } : {},
+    );
+    if (!reportId) return 0;
     return this.prisma.reportSection.count({
       where: {
-        reportId: report.id,
+        reportId,
         status: "submitted",
         late: true,
         ...scope,
@@ -88,30 +92,26 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
     guardGroupScope(session);
     const scope = groupScopeFilter(session, "reportSection");
     const scoped = Object.keys(scope).length > 0;
-    const reports = await this.prisma.report.findMany({
-      where: {
-        status: "published",
-        ...(scoped ? { sections: { some: scope } } : {}),
-      },
-      orderBy: { periodStart: "desc" },
-      take: n,
-      select: { id: true },
-    });
-    if (reports.length === 0) return [];
+    const reportIds = await querySettledPeriodIds(
+      this.prisma,
+      n,
+      scoped ? { sections: { some: scope } } : {},
+    );
+    if (reportIds.length === 0) return [];
 
     // Chain each period after the previous one so a degraded database receives
     // only two bounded count queries at a time.
-    return [...reports]
+    return [...reportIds]
       .reverse()
-      .reduce<Promise<number[]>>(async (ratiosPromise, report) => {
+      .reduce<Promise<number[]>>(async (ratiosPromise, reportId) => {
         const ratios = await ratiosPromise;
         const [total, onTime] = await Promise.all([
           this.prisma.reportSection.count({
-            where: { reportId: report.id, status: "submitted", ...scope },
+            where: { reportId, status: "submitted", ...scope },
           }),
           this.prisma.reportSection.count({
             where: {
-              reportId: report.id,
+              reportId,
               status: "submitted",
               late: false,
               ...scope,

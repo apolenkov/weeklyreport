@@ -1,25 +1,16 @@
-// Timer recipe for this file:
-//   - vi.useFakeTimers() is active for all tests (see beforeEach).
-//   - Use vi.advanceTimersByTimeAsync(n) inside act() to advance the debounce
-//     clock — this drains microtasks AND TanStack Query's setTimeout(0) notifier.
-//   - vi.runAllTimersAsync() is allowed only as a terminal drain when no later
-//     assertion depends on un-elapsed time.
-//   - NEVER use Testing Library waitFor / findBy* here: globals:false in
-//     vitest.config.ts and no jest shim in vitest.setup.ts means TL's polling
-//     timer is itself faked and the call deadlocks until test timeout.
-
 import type { DraftSavePayload } from "@customreport/shared";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import { TRPCClientError } from "@trpc/client";
-import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TRPCProxyContext } from "../lib/trpc-context";
-import { expectDefined } from "../test-utils/expect-defined.js";
-import { createMockTRPC } from "../test-utils/mock-trpc";
 import { stableStringify, useLeadFormAutosave } from "./use-lead-form-autosave";
+import {
+  AUTOSAVE_SECTION_ID as SECTION_ID,
+  buildAutosaveHarness as buildHarness,
+  makeAutosavePayload as makePayload,
+  makeAutosavePayloadFor as makePayloadFor,
+} from "./use-lead-form-autosave-harness";
 
 vi.mock("sonner", () => ({
   toast: {
@@ -28,88 +19,7 @@ vi.mock("sonner", () => ({
   },
 }));
 
-const SECTION_ID = "11111111-1111-1111-1111-111111111111";
-const PROJECT_ID = "22222222-2222-2222-2222-222222222222";
-
-function makePayload(text = "first"): DraftSavePayload {
-  return {
-    reportSectionId: SECTION_ID,
-    // The hook ignores this and injects its live version at mutate time; kept
-    // only so the literal satisfies DraftSavePayload.
-    version: 1,
-    status: "draft",
-    projectStatuses: [{ projectId: PROJECT_ID, status: "green" }],
-    items: [
-      {
-        projectId: PROJECT_ID,
-        type: "current",
-        text,
-        tag: "tag",
-        workflowStatus: "in_progress",
-        carriedOver: false,
-        // stageNames required on write.
-        stageNames: ["Development"],
-      },
-    ],
-    risks: [],
-    decisions: [],
-  };
-}
-
-function makePayloadFor(sectionId: string, text: string): DraftSavePayload {
-  return { ...makePayload(text), reportSectionId: sectionId };
-}
-
 const SECTION_B = "33333333-3333-3333-3333-333333333333";
-
-function buildHarness(
-  opts: { mutationFn?: (vars: unknown) => Promise<unknown> } = {},
-) {
-  const calls: unknown[] = [];
-  const userMutationFn =
-    opts.mutationFn ??
-    (() => {
-      // saveDraft returns the persisted read model; the hook only reads
-      // `.version` off it to advance the optimistic lock.
-      return Promise.resolve({ version: 2 });
-    });
-
-  const { proxy, captured } = createMockTRPC([
-    {
-      path: ["reports", "saveDraft"],
-      mutation: true,
-    },
-    { path: ["reports", "getActive"] },
-    { path: ["reports", "myHistory"] },
-    { path: ["leadForm", "byPeriod"] },
-  ]);
-
-  // Wire the captured saveDraft mutationFn to delegate to the harness's
-  // own calls array and user-supplied mutationFn — same contract as before.
-  expectDefined(captured["reports.saveDraft"]).mutationFn.mockImplementation(
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises -- async mock implementation; Promise is consumed by React Query, not discarded
-    async (vars: unknown) => {
-      calls.push(vars);
-      return userMutationFn(vars);
-    },
-  );
-
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-
-  function wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TRPCProxyContext.Provider value={proxy}>
-          {children}
-        </TRPCProxyContext.Provider>
-      </QueryClientProvider>
-    );
-  }
-
-  return { wrapper, calls, queryClient };
-}
 
 beforeEach(() => {
   vi.useFakeTimers();
