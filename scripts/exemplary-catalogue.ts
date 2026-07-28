@@ -54,9 +54,17 @@ const TEST_INFRA =
 
 // A framework entry has no importer by construction: Next.js loads routes,
 // layouts, proxy.ts and instrumentation by convention, and a package barrel is
-// consumed by name. Counting them as unreferenced measures the convention.
-const FRAMEWORK_ENTRY =
-  /\/app\/.*\/(page|layout|route|error|loading|not-found|template)\.tsx?$|\/app\/(page|layout)\.tsx$|instrumentation(-client)?\.ts$|\/proxy\.ts$|src\/index\.ts$/;
+// consumed by name. Each is anchored to the one path the convention allows —
+// matched by filename alone, an ordinary module called proxy.ts or index.ts
+// would inherit the exemption wherever someone put it.
+const FRAMEWORK_ENTRY = new RegExp(
+  [
+    String.raw`^apps/web/src/app/(?:.*/)?(?:page|layout|route|template|default|loading|error|global-error|not-found)\.tsx?$`,
+    String.raw`^apps/web/instrumentation(?:-client)?\.ts$`,
+    String.raw`^apps/web/src/proxy\.ts$`,
+    String.raw`^packages/[^/]+/src/index\.ts$`,
+  ].join("|"),
+);
 
 const classifyKind = (file: string): Kind => {
   if (/\.(test|spec)\.tsx?$/.test(file) || TEST_INFRA.test(file)) return "test";
