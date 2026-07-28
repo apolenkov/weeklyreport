@@ -1,7 +1,6 @@
 // Wire-up tests: tRPC stub intercepts publish/reopen/get; no MSW handlers.
 // Assert mutation variables, cache invalidation, and toast on success.
 
-import type { TrafficLightStatus } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -55,104 +54,11 @@ import {
 import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
+import {
+  makeWeeklyReportData,
+  REPORT_ID,
+} from "./__tests__/weekly-report-page-harness";
 import { WeeklyReportPage } from "./weekly-report-page";
-
-const REPORT_ID = "11111111-1111-4111-8111-111111111111";
-const AUTHOR_ID_A = "11111111-1111-4111-8111-aaaaaaaaaaaa";
-const PRODUCT_ID_A = "11111111-1111-4111-8111-cccccccccccc";
-function makeWeeklyReportData(
-  periodStatus: "open" | "published" | "reopened",
-  overrides?: {
-    readonly portfolioOverview?: {
-      readonly productId: string;
-      readonly productName: string;
-      readonly worstStatus: TrafficLightStatus | "empty";
-      readonly stageCount: number;
-      readonly leadNames: string[];
-    }[];
-    readonly leadSections?: {
-      readonly reportSectionId: string;
-      readonly reportId: string;
-      readonly authorId: string;
-      readonly authorName: string;
-      readonly status: "submitted" | "draft" | "locked";
-      readonly submittedAt: Date | null;
-      readonly projects: { projectId: string; projectName: string }[];
-      readonly items: {
-        readonly id: string;
-        readonly projectId: string;
-        readonly type: "current" | "next";
-        readonly text: string;
-        readonly tag: string;
-        readonly workflowStatus:
-          "in_progress" | "done" | "blocked" | "canceled" | "not_started";
-        readonly carriedOver: boolean;
-        readonly completed: boolean;
-      }[];
-      readonly risks: never[];
-      readonly decisions: never[];
-      readonly priorities: never[];
-      readonly activities?: {
-        readonly activityId: string;
-        readonly activityName: string;
-        readonly status: TrafficLightStatus | null;
-        readonly note?: string | null;
-      }[];
-    }[];
-  },
-) {
-  return {
-    reportId: REPORT_ID,
-    periodStart: new Date("2026-04-14T00:00:00Z"),
-    periodEnd: new Date("2026-04-20T00:00:00Z"),
-    periodStatus,
-    archived: false,
-    weekLabel: "Week 16",
-    submissionCount: 4,
-    totalLeads: 6,
-    portfolioOverview: overrides?.portfolioOverview ?? [
-      {
-        productId: PRODUCT_ID_A,
-        productName: "Product Alpha",
-        worstStatus: "green",
-        stageCount: 1,
-        leadNames: ["Alice"],
-      },
-    ],
-    leadSections: overrides?.leadSections ?? [
-      {
-        reportSectionId: "22222222-2222-4222-8222-aaaaaaaaaaa1",
-        reportId: REPORT_ID,
-        authorId: AUTHOR_ID_A,
-        authorName: "Alice",
-        status: "submitted",
-        submittedAt: new Date("2026-04-14T09:00:00Z"),
-        projects: [
-          {
-            projectId: PRODUCT_ID_A,
-            projectName: "Product Alpha",
-          },
-        ],
-        items: [
-          {
-            id: "33333333-3333-4333-8333-aaaaaaaaaa01",
-            projectId: PRODUCT_ID_A,
-            type: "current",
-            text: "Done task A",
-            tag: "Dev",
-            workflowStatus: "done",
-            carriedOver: false,
-            completed: true,
-          },
-        ],
-        risks: [],
-        decisions: [],
-        priorities: [],
-      },
-    ],
-    escalations: [],
-  };
-}
 
 function renderPage(
   data: ReturnType<typeof makeWeeklyReportData>,
