@@ -3,6 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 import { ESLint } from "eslint";
 
+import { countSuppressionDirectivesByPath } from "./eslint-suppression-inventory.ts";
 import {
   type FloorSnapshot,
   parseFloorSnapshot,
@@ -25,8 +26,6 @@ const CHURN_WINDOW = "90 days ago";
 const REPO_ROOT = new URL("..", import.meta.url).pathname;
 const DEPCRUISE_BIN = `${REPO_ROOT}node_modules/.bin/depcruise`;
 const BASELINE_RELATIVE_PATH = "scripts/exemplary-floor-baseline.json";
-const BASELINE_PATH = `${REPO_ROOT}${BASELINE_RELATIVE_PATH}`;
-const CHECK_FLAG = "--check";
 
 // Both commands emit far more than the 1 MiB default; this is a dev script, so
 // the honest bound is "whatever it produces" rather than a guessed ceiling.
@@ -35,13 +34,10 @@ const PERCENT = 100;
 const HUB_COUNT = 10;
 const COUNT_WIDTH = 3;
 
-type Kind = "product" | "test" | "tooling" | "config";
-type Class = "A" | "B" | "C" | "E" | "F";
-
 interface Row {
   readonly file: string;
-  readonly kind: Kind;
-  readonly cls: Class;
+  readonly kind: "product" | "test" | "tooling" | "config";
+  readonly cls: "A" | "B" | "C" | "E" | "F";
   readonly suppressions: number;
   readonly relaxed: readonly string[];
   readonly fanIn: number;
@@ -77,7 +73,7 @@ const FRAMEWORK_ENTRY = new RegExp(
   ].join("|"),
 );
 
-const classifyKind = (file: string): Kind => {
+const classifyKind = (file: string): Row["kind"] => {
   if (/\.(test|spec)\.tsx?$/.test(file) || TEST_INFRA.test(file)) return "test";
   if (/^(scripts|tools|prisma|e2e)\//.test(file)) return "tooling";
   if (/\.config\.ts$/.test(file)) return "config";
@@ -146,8 +142,8 @@ const classify = (
   suppressions: number,
   relaxed: readonly string[],
   fanIn: number,
-  kind: Kind,
-): Class => {
+  kind: Row["kind"],
+): Row["cls"] => {
   if (!linted) return "F";
   if (suppressions > 0) return "B";
   if (relaxed.length > 0) return "C";
@@ -161,12 +157,11 @@ const buildRow = async (
   eslint: ESLint,
   fanIn: ReadonlyMap<string, number>,
   churn: ReadonlyMap<string, number>,
+  suppressions: number,
 ): Promise<Row> => {
-  const source = readFileSync(`${REPO_ROOT}${file}`, "utf8");
   const config = (await eslint.calculateConfigForFile(file)) as
     ResolvedConfig | undefined;
   const relaxed = config === undefined ? [] : relaxedRules(config);
-  const suppressions = (source.match(/eslint-disable/g) ?? []).length;
   const kind = classifyKind(file);
   const inbound = fanIn.get(file) ?? 0;
   return {
@@ -205,7 +200,12 @@ const buildRows = async (): Promise<readonly Row[]> => {
   const fanIn = readFanIn();
   const churn = readChurn();
   const eslint = new ESLint({ cwd: REPO_ROOT });
-  return Promise.all(files.map((file) => buildRow(file, eslint, fanIn, churn)));
+  const suppressionCounts = countSuppressionDirectivesByPath(files);
+  return Promise.all(
+    files.map((file) =>
+      buildRow(file, eslint, fanIn, churn, suppressionCounts.get(file) ?? 0),
+    ),
+  );
 };
 
 const tally = (
@@ -273,7 +273,7 @@ const snapshotOf = (rows: readonly Row[]): FloorSnapshot => {
 
 const checkRatchet = (rows: readonly Row[]): void => {
   const actual = snapshotOf(rows);
-  const baseline = readFloorBaseline(BASELINE_PATH);
+  const baseline = readFloorBaseline(`${REPO_ROOT}${BASELINE_RELATIVE_PATH}`);
   const previous = previousBaseline();
   const violations = ratchetViolations(actual, baseline, previous);
   process.stdout.write(
@@ -286,7 +286,7 @@ const checkRatchet = (rows: readonly Row[]): void => {
 };
 
 const args = process.argv.slice(2);
-const unknownArgs = args.filter((arg) => arg !== CHECK_FLAG);
+const unknownArgs = args.filter((arg) => arg !== "--check");
 if (unknownArgs.length > 0)
   throw new Error(`Unknown argument(s): ${unknownArgs.join(", ")}`);
 
@@ -296,4 +296,4 @@ writeFileSync(
   `${JSON.stringify(rows, undefined, 1)}\n`,
 );
 report(rows);
-if (args.includes(CHECK_FLAG)) checkRatchet(rows);
+if (args.includes("--check")) checkRatchet(rows);

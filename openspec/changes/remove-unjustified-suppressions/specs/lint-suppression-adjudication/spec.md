@@ -5,9 +5,12 @@
 ### Requirement: Every live suppression MUST have an adjudicated identity
 
 Every inline `eslint-disable`, `eslint-disable-next-line`, and
-`eslint-disable-line` counted by the repository catalogue MUST have exactly one
+`eslint-disable-line` parsed from a directive comment MUST have exactly one
 ledger record keyed by path, directive source fingerprint, and rule. The record
 MUST contain a source-grounded verdict of `remove`, `replace`, or `retain`.
+Strings and explanatory prose containing `eslint-disable` MUST NOT count as
+live directives, but every such observation from the 126-entry starting raw
+snapshot MUST remain recorded as measurement noise.
 
 #### Scenario: A directive moves after a neighboring edit
 
@@ -45,10 +48,11 @@ equivalent unsafe behavior is hidden behind a cast or helper.
 
 ### Requirement: Completion means zero unresolved adjudications
 
-The change MUST be considered complete only when every one of the 126 starting suppressions and
-every suppression added during the campaign has a current verdict, every
-`remove` or `replace` verdict is implemented, every `retain` verdict has proof,
-and the baseline equals the measured retained total.
+The change MUST be considered complete only when all 115 starting directives,
+all 11 starting measurement-noise observations, and every directive added
+during the campaign have a current verdict; every `remove` or `replace` verdict
+is implemented; every `retain` verdict has proof; and the baseline equals the
+measured retained total.
 
 #### Scenario: Some justified suppressions remain
 
