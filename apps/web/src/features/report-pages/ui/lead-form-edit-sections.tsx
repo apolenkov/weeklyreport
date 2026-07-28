@@ -1,52 +1,27 @@
 "use client";
 
-import type {
-  ReportSectionReadModel,
-  TrafficLightStatus,
-} from "@customreport/shared";
-import type { ComponentProps } from "react";
+import type { ReportSectionReadModel } from "@customreport/shared";
 
 import type { RecordVisibility } from "../../../hooks/use-record-visibility";
 import type { CrossAuthorEntry } from "../../period";
 import {
-  type DecisionEntry,
   mapLeadReviewFeedback,
   ownedStagesForProject,
 } from "../../report-sections";
 import { LeadReviewFeedback } from "../../review";
-import { LeadFormDecisionsSection } from "./lead-form-decisions-section";
-import { LeadFormEditBridgeSections } from "./lead-form-edit-bridge-sections";
-import type { LeadFormItemSectionsActions } from "./lead-form-item-sections";
-import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import {
-  LeadFormSyncBridge,
-  type RiskPrefillRequest,
-} from "./lead-form-sync-bridge";
+  type LeadFormDecisionsActions,
+  LeadFormDecisionsSection,
+} from "./lead-form-decisions-section";
+import {
+  LeadFormEditBridgeSections,
+  type LeadFormEditBridgeSectionsActions,
+} from "./lead-form-edit-bridge-sections";
+import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
+import type { StagesForProduct } from "./lead-form-sync-bridge";
 
-type SyncBridgeProviderProps = ComponentProps<
-  typeof LeadFormSyncBridge.Provider
->;
-
-export type StagesForProduct = SyncBridgeProviderProps["stagesForProduct"];
-
-export interface LeadFormEditSectionsActions extends LeadFormItemSectionsActions {
-  readonly onProductsChange: SyncBridgeProviderProps["onProductsChange"];
-  readonly onRisksChange: SyncBridgeProviderProps["onRisksChange"];
-  readonly onDecisionsChange: (next: DecisionEntry[]) => void;
-  readonly onActivityStatusChange: (
-    activityId: string,
-    status: TrafficLightStatus,
-  ) => void;
-  readonly onActivityRaiseRequiresRisk: (
-    activityId: string,
-    severity: "at-risk" | "blocked",
-  ) => void;
-  readonly addRisk: () => void;
-  readonly addDecision: () => void;
-  readonly risksAddSignal: number;
-  readonly decisionsAddSignal: number;
-  readonly riskPrefill: RiskPrefillRequest | null;
-}
+export type LeadFormEditSectionsActions = LeadFormEditBridgeSectionsActions &
+  LeadFormDecisionsActions;
 
 interface LeadFormEditSectionsProps {
   readonly viewModel: LeadFormLoadedViewModel;

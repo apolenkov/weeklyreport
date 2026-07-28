@@ -10,14 +10,28 @@ import { ActivityStatusSection } from "../../period";
 import type { LeadActivityCard } from "../../report-sections";
 import { LeadFormAddButton } from "./lead-form-add-button";
 import { NO_PRODUCTS_ASSIGNED_MESSAGE } from "./lead-form-add-item-button";
-import type {
-  LeadFormEditSectionsActions,
-  StagesForProduct,
-} from "./lead-form-edit-sections";
 import { AlertIcon, GridIcon } from "./lead-form-icons";
-import { LeadFormItemSections } from "./lead-form-item-sections";
+import {
+  LeadFormItemSections,
+  type LeadFormItemSectionsActions,
+} from "./lead-form-item-sections";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
-import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
+import {
+  LeadFormSyncBridge,
+  type StagesForProduct,
+} from "./lead-form-sync-bridge";
+
+export interface LeadFormBridgeAccordionsActions extends LeadFormItemSectionsActions {
+  readonly onActivityStatusChange: (
+    activityId: string,
+    status: TrafficLightStatus,
+  ) => void;
+  readonly onActivityRaiseRequiresRisk: (
+    activityId: string,
+    severity: "at-risk" | "blocked",
+  ) => void;
+  readonly addRisk: () => void;
+}
 
 function ProductStatusAccordion({
   groupExpanded,
@@ -127,7 +141,7 @@ function RisksAccordion({
 
 interface LeadFormBridgeAccordionsProps {
   readonly viewModel: LeadFormLoadedViewModel;
-  readonly actions: LeadFormEditSectionsActions;
+  readonly actions: LeadFormBridgeAccordionsActions;
   readonly draftSection: ReportSectionReadModel;
   readonly groupExpanded: boolean;
   readonly unifiedView: boolean;

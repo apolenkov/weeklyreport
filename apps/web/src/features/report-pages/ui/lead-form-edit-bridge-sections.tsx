@@ -1,20 +1,33 @@
 "use client";
 
 import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ComponentProps } from "react";
 
 import type { RecordVisibility } from "../../../hooks/use-record-visibility";
 import type { CrossAuthorEntry } from "../../period";
+import type { LeadFormBridgeAccordionsActions } from "./lead-form-bridge-accordions";
 import { LeadFormBridgeAccordions } from "./lead-form-bridge-accordions";
-import type {
-  LeadFormEditSectionsActions,
-  StagesForProduct,
-} from "./lead-form-edit-sections";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
-import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
+import {
+  LeadFormSyncBridge,
+  type RiskPrefillRequest,
+  type StagesForProduct,
+} from "./lead-form-sync-bridge";
+
+type SyncBridgeProviderProps = ComponentProps<
+  typeof LeadFormSyncBridge.Provider
+>;
+
+export interface LeadFormEditBridgeSectionsActions extends LeadFormBridgeAccordionsActions {
+  readonly onProductsChange: SyncBridgeProviderProps["onProductsChange"];
+  readonly onRisksChange: SyncBridgeProviderProps["onRisksChange"];
+  readonly risksAddSignal: number;
+  readonly riskPrefill: RiskPrefillRequest | null;
+}
 
 interface LeadFormEditBridgeSectionsProps {
   readonly viewModel: LeadFormLoadedViewModel;
-  readonly actions: LeadFormEditSectionsActions;
+  readonly actions: LeadFormEditBridgeSectionsActions;
   readonly draftSection: ReportSectionReadModel;
   readonly groupExpanded: boolean;
   readonly unifiedView: boolean;
