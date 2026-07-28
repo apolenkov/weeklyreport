@@ -31,7 +31,7 @@ const snapshot = {
   ],
 };
 
-describe("snapshotLineageForSection", () => {
+describe("published snapshot lineage", () => {
   it("collects item + decision stableIds for exactly the requested section", () => {
     const lineage = snapshotLineageForSection(snapshot, SECTION_ID);
     expect([...lineage.itemStableIds]).toEqual([ITEM_LINEAGE]);

@@ -14,13 +14,9 @@ const QUEUE_NAMES = [
 ] as const;
 type QueueName = (typeof QUEUE_NAMES)[number];
 
-/**
- * Single owner of the raw `Queue` handles for this process. The DLQ monitor,
- * Bull Board, and the admin bootstrap queues all inject one shared handle per
- * name instead of each opening its own Redis connection for the same queue.
- * Handles are built eagerly (a Queue is a lightweight producer/inspector) and
- * closed together on shutdown.
- */
+// Owns one raw Queue handle per name for inspectors and producers, avoiding
+// duplicate Redis connections. Handles are cheap to build eagerly and close
+// together on shutdown.
 @Injectable()
 export class QueueRegistry implements OnModuleDestroy {
   // Built in the constructor (not a field initializer) because an ES2022

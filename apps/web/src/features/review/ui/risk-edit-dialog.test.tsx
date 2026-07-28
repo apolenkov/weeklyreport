@@ -16,7 +16,7 @@ const products: Product[] = [
   },
 ];
 
-describe("RiskEditDialog — compact touch floor (responsive-compact-layout)", () => {
+describe("RiskEditDialog — compact touch floor", () => {
   it("footer actions and severity chips floor at the touch target below md", () => {
     // jsdom cannot evaluate media queries; the class assertions are the teeth.
     // Desktop density is untouched (md:min-h restores the 40px/34px values).
@@ -55,8 +55,8 @@ const a11yProps = {
   onSave: vi.fn(),
 } as const;
 
-describe("RiskEditDialog — backdrop keydown/click a11y", () => {
-  it("Escape on the backdrop div calls onCancel (noStaticElementInteractions justification)", () => {
+describe("RiskEditDialog — backdrop dismissal and focus", () => {
+  it("Escape on the backdrop calls onCancel", () => {
     const onCancel = vi.fn();
     render(<RiskEditDialog {...a11yProps} onCancel={onCancel} />);
 
@@ -70,7 +70,7 @@ describe("RiskEditDialog — backdrop keydown/click a11y", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it("Escape on the backdrop div calls e.preventDefault() (no browser-native dismiss side-effect)", () => {
+  it("Escape on the backdrop prevents the browser-native dismiss side effect", () => {
     const onCancel = vi.fn();
     render(<RiskEditDialog {...a11yProps} onCancel={onCancel} />);
 
@@ -92,7 +92,7 @@ describe("RiskEditDialog — backdrop keydown/click a11y", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it("Cancel button click calls onCancel (keyboard-closable alternative justification)", () => {
+  it("Cancel button click calls onCancel", () => {
     const onCancel = vi.fn();
     render(<RiskEditDialog {...a11yProps} onCancel={onCancel} />);
 
@@ -101,7 +101,7 @@ describe("RiskEditDialog — backdrop keydown/click a11y", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it("clicking the backdrop div calls onCancel (click-to-close path)", () => {
+  it("clicking the backdrop calls onCancel", () => {
     const onCancel = vi.fn();
     render(<RiskEditDialog {...a11yProps} onCancel={onCancel} />);
 
@@ -115,7 +115,7 @@ describe("RiskEditDialog — backdrop keydown/click a11y", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it("clicking the inner dialog div does NOT call onCancel (stopPropagation guard, useKeyWithClickEvents justification)", () => {
+  it("clicking the inner dialog does not call onCancel", () => {
     const onCancel = vi.fn();
     render(<RiskEditDialog {...a11yProps} onCancel={onCancel} />);
 
@@ -124,7 +124,7 @@ describe("RiskEditDialog — backdrop keydown/click a11y", () => {
     expect(onCancel).not.toHaveBeenCalled();
   });
 
-  it("textarea#risk-text receives document focus on mount (noAutofocus justification)", () => {
+  it("moves document focus to the risk textarea on mount", () => {
     render(<RiskEditDialog {...a11yProps} onCancel={vi.fn()} />);
 
     const textarea = document.getElementById("risk-text");
@@ -134,7 +134,7 @@ describe("RiskEditDialog — backdrop keydown/click a11y", () => {
 
 // Typed text and selected severity must survive parent re-renders that pass a
 // new stagesForProduct function reference (autosave → React Query invalidate).
-describe("RiskEditDialog — form-race regression", () => {
+describe("RiskEditDialog — form state across parent renders", () => {
   it("preserves typed text when parent re-renders with a new stagesForProduct ref", () => {
     const onSave = vi.fn();
     const stagesV1 = () => ["Dev", "Testing"] as const;
@@ -513,7 +513,7 @@ describe("RiskEditDialog — zero-owned-stage guard", () => {
   });
 });
 
-describe("RiskEditDialog — classification field order (unify-record-dialogs)", () => {
+describe("RiskEditDialog — classification field order", () => {
   it("orders the classification panel Product → Stages → Severity", () => {
     render(
       <RiskEditDialog
@@ -540,7 +540,7 @@ describe("RiskEditDialog — classification field order (unify-record-dialogs)",
   });
 });
 
-describe("RiskEditDialog — activity parenting (activity-first-class)", () => {
+describe("RiskEditDialog — activity parenting", () => {
   const oneProduct: Product[] = [
     { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
   ];

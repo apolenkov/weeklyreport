@@ -25,10 +25,6 @@ import {
 // ---------------------------------------------------------------------------
 
 const uuid = () => randomUUID();
-// ---------------------------------------------------------------------------
-// draftSaveSchema boundaries
-// ---------------------------------------------------------------------------
-
 describe("carryOverStatusSchema", () => {
   it('accepts "completed"', () => {
     expect(carryOverStatusSchema.safeParse("completed").success).toBe(true);

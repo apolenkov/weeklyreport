@@ -17,10 +17,6 @@ import {
 // ---------------------------------------------------------------------------
 
 const uuid = () => randomUUID();
-// ---------------------------------------------------------------------------
-// draftSaveSchema boundaries
-// ---------------------------------------------------------------------------
-
 describe("periodStatusSchema", () => {
   it('accepts "open"', () => {
     expect(periodStatusSchema.safeParse("open").success).toBe(true);
@@ -327,7 +323,3 @@ describe("stageAssignmentSchema", () => {
     expect(result.success).toBe(false);
   });
 });
-
-// ---------------------------------------------------------------------------
-// appSettingsSchema
-// ---------------------------------------------------------------------------

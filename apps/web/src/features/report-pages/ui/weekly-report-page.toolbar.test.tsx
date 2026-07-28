@@ -327,7 +327,7 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
 // A load failure (e.g. a malformed reportId → 400 BAD_REQUEST) must render a
 // distinct invalid-link state, NOT the misleading "No active reporting period"
 // empty-state.
-describe("WeeklyReportPage — load-failure state (driver finding 1)", () => {
+describe("WeeklyReportPage — load-failure state", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();

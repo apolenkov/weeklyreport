@@ -53,7 +53,7 @@ function renderLayout(org: OrganizationPublic): Document {
   return new DOMParser().parseFromString(html, "text/html");
 }
 
-describe("RootLayout — no inline org-data script", () => {
+describe("RootLayout metadata, fonts, and inline-script safety", () => {
   it("uses the required organization name for metadata", async () => {
     vi.mocked(getOrgPublic).mockResolvedValue(STUB_ORG);
 

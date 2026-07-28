@@ -1,32 +1,6 @@
-/**
- * Translates `admin.snapshot` + `admin.getSettings` to the presentation types
- * consumed by the admin tabs.
- *
- * Used by the Users, Products, Periods, Reminders, and Settings tabs. The
- * mapper is intentionally self-contained so downstream consumers depend on
- * the feature model rather than a particular UI module.
- *
- * The presentation types live in `admin-types.ts` and the form-state→API
- * helpers in `admin-form-inputs.ts`; this module keeps the snapshot/settings
- * read-mappers and re-exports both siblings so all importers resolve through
- * `./admin` unchanged.
- *
- * Field-mapping notes:
- * - `adminSnapshotSchema` does NOT carry stages or stageAssignments. We default
- *   each product to 7 empty stage rows (assigneeId: null) so ProductsTab still
- *   renders. Real stage assignments are wired separately via `admin.listStageAssignments`.
- * - `adminUserSchema` carries reporting group fields. The legacy
- *   `department` presentation property now renders the group name.
- * - `adminProjectSchema.archived: boolean` collapses to mock `status: 'active'|'archived'`.
- * - `reportPeriodSchema.status` is `'draft'|'published'`. We map `'draft' -> 'open'`
- *   (the schema lacks a `'reopened'` enum at this read endpoint — `periodReadModelSchema`
- *   has `periodStatus` but `admin.snapshot` returns `reportPeriodSchema`).
- * - `weekLabel` is synthesized from `periodStart` (ISO week number).
- * - `adminReminderRuleSchema` has no name/description. We synthesize from `kind`
- *   and `fireAt`.
- * - `appSettingsSchema` is a 1:1 match for `MockSettings` (autoCreatePeriods,
- *   defaultDeadlineDays + the added period/reminder knobs).
- */
+// Maps admin wire models to tab-owned presentation models. Snapshot products
+// get an empty stage grid because assignments load separately; draft periods
+// map to the UI's open status.
 
 import type {
   AdminProject,
@@ -123,11 +97,7 @@ function mapPeriod(api: ReportPeriod): MockPeriod {
   };
 }
 
-/**
- * Translates `reminderPolicySchema` → presentation. Field-for-field; keeps
- * `validFrom` + `validUntil` as JS Dates so the editor's date inputs can
- * format them with one consistent helper.
- */
+// Keep validity bounds as Dates so every editor input uses one formatter.
 function mapReminderPolicy(api: ReminderPolicy): MockReminderPolicy {
   return {
     id: api.id,
@@ -143,13 +113,7 @@ function mapReminderPolicy(api: ReminderPolicy): MockReminderPolicy {
 
 // ---- Public mappers ----
 
-/**
- * Translates `admin.snapshot` API output into the slices each admin tab needs.
- *
- * The Reminder status → active mapping:
- *   apiStatus === 'active' => mock.active === true
- *   apiStatus === 'paused' => mock.active === false
- */
+// Reminder status collapses to the tab's active boolean.
 export function mapAdminSnapshot(api: AdminSnapshot): MappedAdminSnapshot {
   return {
     groups: api.groups.map(mapGroup),
@@ -163,11 +127,7 @@ export function mapAdminSnapshot(api: AdminSnapshot): MappedAdminSnapshot {
   };
 }
 
-/**
- * Translates `admin.getSettings` API output into the SettingsTab presentation
- * shape. Field-for-field copy — `appSettingsSchema` and `MockSettings` stay
- * structurally identical.
- */
+// Wire and presentation settings are intentionally field-for-field.
 export function mapAdminSettings(api: AppSettings): MockSettings {
   return {
     autoCreatePeriods: api.autoCreatePeriods,

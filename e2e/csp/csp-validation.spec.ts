@@ -1,17 +1,7 @@
 /**
- * CSP validation — does the app actually work under the policy production
- * enforces?
- *
- * `deploy/caddy/Caddyfile` has served an ENFORCING Content-Security-Policy
- * since 38-02, but the in-browser validation its staging counterpart asks for
- * was never run, so nothing proved the app survives its own policy. This spec
- * runs it: every catalog route, per role, loaded with the production policy
- * injected on the document response, collecting every violation the browser
- * reports.
- *
- * Unlike the phase-1 sweep this one FAILS on findings. A violation here means
- * production is already blocking something — a report nobody reads is the
- * reason this went unverified for so long.
+ * Loads every catalog route under the production CSP and fails on any browser
+ * violation. This is blocking because a violation means the deployed policy
+ * already prevents part of the application from running.
  *
  * Fidelity notes:
  * - The policy string is the production one verbatim minus `report-uri`, which

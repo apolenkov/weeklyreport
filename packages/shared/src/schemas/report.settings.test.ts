@@ -7,10 +7,6 @@ import { appSettingsSchema, appSettingsUpdateSchema } from "./report";
 // Fixtures
 // ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// draftSaveSchema boundaries
-// ---------------------------------------------------------------------------
-
 describe("appSettingsSchema", () => {
   it("accepts valid settings", () => {
     const result = appSettingsSchema.safeParse({
@@ -329,7 +325,3 @@ describe("appSettingsUpdateSchema", () => {
     ).toBe(false);
   });
 });
-
-// ---------------------------------------------------------------------------
-// weeklyReportReadModelSchema
-// ---------------------------------------------------------------------------

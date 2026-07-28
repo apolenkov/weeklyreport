@@ -1,5 +1,5 @@
 /**
- * E2E-06: Cross-role lifecycle integration tests.
+ * Cross-role lifecycle integration tests.
  *
  * Drives two browser contexts (lead + head) through:
  *   submit -> publish -> locked-for-lead -> revoke -> re-edit
@@ -21,7 +21,7 @@ test.describe("Cross-role lifecycle (integration)", () => {
     await resetMutations();
   });
 
-  test("lead submits → head publishes → lead sees locked", async ({
+  test("lead UI reflects a published period as locked", async ({
     browser,
   }) => {
     const leadCtx = await browser.newContext();
@@ -79,7 +79,7 @@ test.describe("Cross-role lifecycle (integration)", () => {
     await headCtx.close();
   });
 
-  test("head publishes → lead UI updates on next navigation", async ({
+  test("lead UI refreshes published state on the next navigation", async ({
     browser,
   }) => {
     const leadCtx = await browser.newContext();
@@ -120,7 +120,9 @@ test.describe("Cross-role lifecycle (integration)", () => {
     await leadCtx.close();
   });
 
-  test("head revokes → lead can edit again", async ({ browser }) => {
+  test("lead UI becomes editable after a report returns to draft", async ({
+    browser,
+  }) => {
     // Pre-publish.
     await prisma.report.update({
       where: { id: ACTIVE_REPORT_ID },

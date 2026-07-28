@@ -6,11 +6,9 @@ import * as path from "node:path";
 
 import { defineConfig, devices } from "@playwright/test";
 
-// Behavioral UI sweep harness (phase 1, report-only). Drives the durable
-// Scenario Catalog (e2e/catalog/<role>.yaml) per role via dev-auth, walks the
-// entry-point routes, and records anomalies (console errors + axe). It does NOT
-// fail CI on findings — phase 1 is a report, the blocking gate is phase 2.
-// See openspec/changes/behavioral-ui-regression-gate + docs/adr/0001.
+// Drives the durable Scenario Catalog per role and records console/a11y
+// anomalies without blocking CI, as required by the durable sweep spec.
+// See openspec/specs/behavioral-ui-regression-gate/spec.md.
 
 const WEB_PORT = Number(process.env.SWEEP_WEB_PORT ?? 3100);
 const API_PORT = Number(process.env.SWEEP_API_PORT ?? 3101);

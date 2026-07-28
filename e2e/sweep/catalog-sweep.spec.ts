@@ -1,19 +1,13 @@
 /**
- * Behavioral UI sweep — phase 1, report-only (NON-BLOCKING).
- *
- * Reads the durable Scenario Catalog (e2e/catalog/<role>.yaml), logs in per
- * role via dev-auth, walks every entry-point route, and records anomalies
- * (console errors, page errors, failed loads, axe violations) into a per-role
- * Markdown report. It deliberately NEVER fails the run on findings: phase 1 is
- * a report a human reads, the blocking gate is phase 2 (deferred until the
- * product stabilizes). Console-error classification mirrors final-gates-resweep
- * (errors counted; the favicon 404 ignored).
+ * Reads the durable Scenario Catalog, walks each role's entry-point routes,
+ * and writes console, load, and a11y anomalies to per-role Markdown reports.
+ * Findings do not fail CI; that non-blocking contract is deliberate.
  *
  * This is the Layer-1 entry-point sweep ("does every role-reachable route load
  * cleanly?"). Within-route exhaustive exploration is the AI Driver's run-time
  * job, not this spec's.
  *
- * See openspec/changes/behavioral-ui-regression-gate + docs/adr/0001 +
+ * See openspec/specs/behavioral-ui-regression-gate/spec.md + docs/adr/0001 +
  * e2e/catalog/README.md.
  */
 import * as fs from "node:fs";
@@ -147,7 +141,7 @@ const catalogs = loadCatalogs();
 for (const catalog of catalogs) {
   // Report-only by contract (see the file header): the run must stay green so
   // every role still gets its report, which an assertion here would defeat.
-  // eslint-disable-next-line sonarjs/assertions-in-tests -- report-only sweep; the blocking gate is phase 2
+  // eslint-disable-next-line sonarjs/assertions-in-tests -- this test's product is the non-blocking anomaly report
   test(`sweep: ${catalog.role}`, async ({ page }, testInfo) => {
     const results: RouteResult[] = [];
 
@@ -299,9 +293,7 @@ for (const catalog of catalogs) {
       type: "sweep",
       description: `${catalog.role}: ${totalAnomalies} anomalies across ${results.length} routes`,
     });
-    // The sweep's product is its report; this is its only intended stdout. It
-    // is report-only by contract (phase 1) — no expect(), the run never fails
-    // on findings.
+    // The sweep's product is its report; this is its only intended stdout.
      
     console.log(
       `[sweep] ${catalog.role}: ${totalAnomalies} anomalies across ${results.length} routes → e2e/sweep/.reports/${catalog.role}.md`,
