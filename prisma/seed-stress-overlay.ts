@@ -17,29 +17,13 @@ import {
   LEAD_1_ID,
   SEED_STAGES,
 } from "./seed-constants.js";
+import {
+  STRESS_ID_KIND,
+  STRESS_PROJECT_IDS,
+  stressId,
+} from "./seed-stress-ids.js";
 
-const STRESS_PROJECT_COUNT = 36;
 const ITEMS_PER_STRESS_PROJECT = 3;
-const UUID_PREFIX = "e0000000-0000-4000-8000-";
-const HEX_RADIX = 16;
-const UUID_SUFFIX_WIDTH = 10;
-const ID_KIND = {
-  project: 1,
-  groupProduct: 2,
-  stageAssignment: 3,
-  projectStatus: 4,
-  stageStatus: 5,
-  item: 6,
-  itemStable: 7,
-} as const;
-
-const suffix = (kind: number, index: number): string =>
-  `${kind.toString(HEX_RADIX).padStart(2, "0")}${index
-    .toString(HEX_RADIX)
-    .padStart(UUID_SUFFIX_WIDTH, "0")}`;
-
-const stressId = (kind: number, index: number): string =>
-  `${UUID_PREFIX}${suffix(kind, index)}`;
 
 async function seedStressItems(
   prisma: PrismaClient,
@@ -54,7 +38,7 @@ async function seedStressItems(
   )) {
     const itemIndex =
       (projectIndex - 1) * ITEMS_PER_STRESS_PROJECT + itemOffset;
-    const itemId = stressId(ID_KIND.item, itemIndex);
+    const itemId = stressId(STRESS_ID_KIND.item, itemIndex);
     const text = `Stress product ${projectIndex}, deterministic row ${itemOffset}`;
     const isNext = itemOffset === ITEMS_PER_STRESS_PROJECT;
     await prisma.item.upsert({
@@ -62,7 +46,7 @@ async function seedStressItems(
       update: { projectId, text, stageNames: [stageName] },
       create: {
         id: itemId,
-        stableId: stressId(ID_KIND.itemStable, itemIndex),
+        stableId: stressId(STRESS_ID_KIND.itemStable, itemIndex),
         reportSectionId: sectionId,
         projectId,
         type: isNext ? ItemType.next : ItemType.current,
@@ -82,7 +66,7 @@ async function seedStressProject(
   sectionId: string,
   index: number,
 ): Promise<void> {
-  const projectId = stressId(ID_KIND.project, index);
+  const projectId = stressId(STRESS_ID_KIND.project, index);
   const stage = SEED_STAGES[(index - 1) % SEED_STAGES.length];
   if (!stage) throw new Error("Stress overlay requires at least one stage");
   const name = `Stress product ${index}`;
@@ -96,7 +80,7 @@ async function seedStressProject(
     where: { productId: projectId },
     update: { groupId: DEFAULT_REPORTING_GROUP_ID },
     create: {
-      id: stressId(ID_KIND.groupProduct, index),
+      id: stressId(STRESS_ID_KIND.groupProduct, index),
       groupId: DEFAULT_REPORTING_GROUP_ID,
       productId: projectId,
     },
@@ -105,7 +89,7 @@ async function seedStressProject(
     where: { stageId_projectId: { stageId: stage.id, projectId } },
     update: { userId: LEAD_1_ID },
     create: {
-      id: stressId(ID_KIND.stageAssignment, index),
+      id: stressId(STRESS_ID_KIND.stageAssignment, index),
       userId: LEAD_1_ID,
       stageId: stage.id,
       projectId,
@@ -117,7 +101,7 @@ async function seedStressProject(
     },
     update: { status: TrafficLightStatus.green },
     create: {
-      id: stressId(ID_KIND.projectStatus, index),
+      id: stressId(STRESS_ID_KIND.projectStatus, index),
       reportSectionId: sectionId,
       projectId,
       status: TrafficLightStatus.green,
@@ -133,7 +117,7 @@ async function seedStressProject(
     },
     update: { status: TrafficLightStatus.green },
     create: {
-      id: stressId(ID_KIND.stageStatus, index),
+      id: stressId(STRESS_ID_KIND.stageStatus, index),
       reportSectionId: sectionId,
       projectId,
       stageId: stage.id,
@@ -157,10 +141,8 @@ export async function seedStressOverlay(prisma: PrismaClient): Promise<void> {
     throw new Error("Stress overlay requires the full active lead section");
   }
 
-  for (const index of Array.from(
-    { length: STRESS_PROJECT_COUNT },
-    (_, offset) => offset + 1,
-  )) {
+  for (const [offset] of STRESS_PROJECT_IDS.entries()) {
+    const index = offset + 1;
     await seedStressProject(prisma, section.id, index);
   }
 }

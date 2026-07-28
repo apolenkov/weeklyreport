@@ -21,7 +21,7 @@
 - [x] Ensure `stress` contains every full capability at deterministic
       high-volume scale.
 - [x] Make reset select a profile explicitly and preserve the destructive guard.
-- [ ] Scope post-seed checks to profile-owned report/entity IDs.
+- [x] Scope post-seed checks to profile-owned report/entity IDs.
 
 ## 3. API and web consumers
 
@@ -32,18 +32,18 @@
 
 ## 4. Profile proof
 
-- [ ] Add manifest/count/stable-ID validation for every profile.
-- [ ] Add a minimal boot/auth/edit smoke journey.
-- [ ] Add a demo multi-role/health/Mine-versus-Everyone smoke journey.
-- [ ] Add a full admin/history/reopen/publish smoke journey.
-- [ ] Add a stress pagination/scroll/query-volume smoke journey while retaining
+- [x] Add manifest/count/stable-ID validation for every profile.
+- [x] Add a minimal boot/auth/edit smoke journey.
+- [x] Add a demo multi-role/health/Mine-versus-Everyone smoke journey.
+- [x] Add a full admin/history/reopen/publish smoke journey.
+- [x] Add a stress pagination/scroll/query-volume smoke journey while retaining
       the full capability manifest.
-- [ ] Prove reseeding each profile produces identical IDs/text and bounded
+- [x] Prove reseeding each profile produces identical IDs/text and bounded
       counts, excluding permitted week-relative dates.
 
 ## 5. Completion verification
 
-- [ ] Run all four profile seed commands against disposable test databases.
-- [ ] Run seed unit tests, Prisma tests, profile smoke journeys,
+- [x] Run all four profile seed commands against disposable test databases.
+- [x] Run seed unit tests, Prisma tests, profile smoke journeys,
       `pnpm typecheck`, `pnpm lint`, and affected visual/e2e suites.
-- [ ] Run `openspec validate refactor-seed-profile-ladder --strict`.
+- [x] Run `openspec validate refactor-seed-profile-ladder --strict`.
