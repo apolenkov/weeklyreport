@@ -18,12 +18,12 @@
       budget and real nested-function enforcement.
 - [ ] Resolve the remaining structural test-suppression decisions after the
       user rules on the contested harness convention.
-- [ ] Treat `functional/prefer-immutable-types` as its own measured project,
+- [x] Treat `functional/prefer-immutable-types` as its own measured project,
       not a mechanical autofix wave.
 
 ## 3. Six-area roadmap
 
-- [ ] Close non-blocked code-style items.
+- [x] Close non-blocked code-style items.
 - [x] Remove the measured e2e phase/ticket archaeology and repair durable spec
       pointers.
 - [x] Remove the measured split-test banner residue.
@@ -31,7 +31,7 @@
 - [x] Compress the named apps-only JSDoc outliers to current WHY comments.
 - [x] Remove the remaining named change-history labels and redundant/vacuous
       assertions from the measured test tail.
-- [ ] Close non-blocked architecture and ownership items.
+- [x] Close non-blocked architecture and ownership items.
 - [x] Make Nest BullModule the single owner of raw queue handles and expose
       those same handles through `QueueRegistry`.
 - [x] Single-home fallback reporting-group identity and provisioning, and split
@@ -43,16 +43,19 @@
 - [x] Rename all seven live admin presentation models from the fossilized
       `Mock*` vocabulary to collision-free `Admin*View` types across every
       importer.
-- [ ] Burn down live suppressions and override blocks without weakening gates.
-- [ ] Close non-blocked test-integrity items.
-- [ ] Close non-blocked dependency and vocabulary duplication.
+- [x] Burn down live suppressions and override blocks without weakening gates
+      (140 → 127 suppressions; 27 → 26 override blocks).
+- [x] Close non-blocked test-integrity items.
+- [x] Close non-blocked dependency and vocabulary duplication.
 - [x] Replace exact-key cache busting with named submission-dashboard and
       period-lifecycle invalidation sets at every measured holdout.
 - [x] Single-home the duplicated domain-error wrapper and classify weekly
       report domain failures by constructor rather than mutable error name.
 - [x] Rename the name-valued `stageIds` wire/read/write/UI vocabulary to
       `stageNames` atomically while retaining genuine singular `stageId` UUIDs.
-- [ ] Correct false documentation/control claims and demo-data defects.
+- [x] Remove all product-behavior defaults from `appSettingsSchema`; require
+      complete repository reads while preserving partial update semantics.
+- [x] Correct false documentation/control claims and demo-data defects.
 - [x] Make telemetry fallback comments describe the real zero payload.
 - [x] Enforce the documented `ai.*` audit exclusion with a regression test.
 - [x] Require auth-route audit logging and remove the false localhost-default claim.

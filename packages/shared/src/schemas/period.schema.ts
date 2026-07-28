@@ -12,13 +12,10 @@ import {
 const MAX_WEEK_LABEL_LENGTH = 64;
 const MAX_DEFAULT_DEADLINE_DAYS = 30;
 const MAX_PERIOD_LENGTH_DAYS = 31;
-const DEFAULT_PERIOD_LENGTH_DAYS = DAYS_PER_WEEK;
 // Cap shared by gracePeriodHours and reopenWindowHours: one week.
 const ONE_WEEK_HOURS = HOURS_PER_DAY * DAYS_PER_WEEK;
-const DEFAULT_GRACE_PERIOD_HOURS = HOURS_PER_DAY;
 const MAX_AUTO_ARCHIVE_WEEKS_AFTER_PUBLISH = 52;
 const MAX_EMAIL_LENGTH = 254; // RFC 5321 max email length
-const DEFAULT_REOPEN_WINDOW_HOURS = 72; // 3 days
 
 export const reportPeriodSchema = z.object({
   id: z.uuid(),
@@ -235,35 +232,22 @@ export const appSettingsSchema = z.object({
   autoCreatePeriods: z.boolean(),
   defaultDeadlineDays: z.number().int().min(1).max(MAX_DEFAULT_DEADLINE_DAYS),
   // ---- Periods knobs --------------------------------------------------
-  periodLengthDays: z
-    .number()
-    .int()
-    .min(1)
-    .max(MAX_PERIOD_LENGTH_DAYS)
-    .default(DEFAULT_PERIOD_LENGTH_DAYS),
-  workingDays: workingDaysSchema.default("mon-fri"),
-  gracePeriodHours: z
-    .number()
-    .int()
-    .min(0)
-    .max(ONE_WEEK_HOURS)
-    .default(DEFAULT_GRACE_PERIOD_HOURS),
-  allowLateSubmissions: z.boolean().default(true),
-  autoPublishAfterDeadline: z.boolean().default(false),
+  periodLengthDays: z.number().int().min(1).max(MAX_PERIOD_LENGTH_DAYS),
+  workingDays: workingDaysSchema,
+  gracePeriodHours: z.number().int().min(0).max(ONE_WEEK_HOURS),
+  allowLateSubmissions: z.boolean(),
+  autoPublishAfterDeadline: z.boolean(),
   autoArchiveWeeksAfterPublish: z
     .number()
     .int()
     .min(0)
-    .max(MAX_AUTO_ARCHIVE_WEEKS_AFTER_PUBLISH)
-    .default(0),
+    .max(MAX_AUTO_ARCHIVE_WEEKS_AFTER_PUBLISH),
   // ---- Reminders knobs ------------------------------------------------
-  defaultTimezone: z.string().min(1).default("Europe/Moscow"),
-  defaultReminderAudience: reminderAudienceSchema.default("lead-with-draft"),
+  defaultTimezone: z.string().min(1),
+  defaultReminderAudience: reminderAudienceSchema,
   // ---- Notifications knobs --------------------------------------------
   // Nullable email; `''` is rejected (admins can clear by sending null).
-  notificationFromEmail: z
-    .union([z.email().max(MAX_EMAIL_LENGTH), z.null()])
-    .default(null),
+  notificationFromEmail: z.union([z.email().max(MAX_EMAIL_LENGTH), z.null()]),
   // ---- Period-cycle knobs ---------------------------------------------
   // Publish/reopen gating + manual-creation deadline default. All fields
   // below have live consumers.
@@ -271,50 +255,20 @@ export const appSettingsSchema = z.object({
   // garbage values cannot reach the deadline-computation path. Manual period
   // creation applies it at whole-hour precision; the auto-creation scheduler
   // currently uses a fixed 18:00.
-  deadlineTime: z.string().regex(deadlineTimeRegex).default("18:00"),
-  allowReopenAfterPublish: z.boolean().default(true),
+  deadlineTime: z.string().regex(deadlineTimeRegex),
+  allowReopenAfterPublish: z.boolean(),
   // Window after `publishedAt` during which a published report can be
   // reopened. `0..168` (one week) matches the `gracePeriodHours`
   // convention. Default `72` (3 days) chosen as a practical floor for
   // "noticed the bug on Monday, reopen Friday's report" use cases.
-  reopenWindowHours: z
-    .number()
-    .int()
-    .min(0)
-    .max(ONE_WEEK_HOURS)
-    .default(DEFAULT_REOPEN_WINDOW_HOURS),
+  reopenWindowHours: z.number().int().min(0).max(ONE_WEEK_HOURS),
   // Opt-in unified by-state lead-form view (a pure presentation projection —
   // ADR 0011). Off keeps the classic two-section format. The default mirrors
   // the DB column default; the DB row is the source of truth (no env knob).
-  unifiedActivityView: z.boolean().default(false),
+  unifiedActivityView: z.boolean(),
 });
 
-// Zod's `.partial()` makes every key optional but does NOT strip a field's
-// `.default()`: parsing an update payload that omits a defaulted key still
-// materializes that default, and the admin write path (which persists any
-// non-`undefined` key) would then silently reset a setting the caller never
-// mentioned. Strip every field's default before making the shape partial, so an
-// omitted key parses to `undefined` (and is left untouched), while an explicit
-// value still writes through and every field constraint still applies.
-type WithoutDefaults<Shape extends z.ZodRawShape> = {
-  [K in keyof Shape]: Shape[K] extends z.ZodDefault<infer Inner>
-    ? Inner
-    : Shape[K];
-};
-
-const withoutDefaults = <Shape extends z.ZodRawShape>(
-  shape: Shape,
-): WithoutDefaults<Shape> =>
-  Object.fromEntries(
-    Object.entries(shape).map(([key, field]) => [
-      key,
-      field instanceof z.ZodDefault ? field.unwrap() : field,
-    ]),
-  ) as WithoutDefaults<Shape>;
-
-export const appSettingsUpdateSchema = z
-  .object(withoutDefaults(appSettingsSchema.shape))
-  .partial();
+export const appSettingsUpdateSchema = appSettingsSchema.partial();
 
 // ---------------------------------------------------------------------------
 // Period read model (extended)

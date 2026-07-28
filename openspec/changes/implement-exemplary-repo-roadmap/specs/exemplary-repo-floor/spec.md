@@ -15,6 +15,26 @@ the singular assignment `stageId`, SHALL retain their identifier spelling.
 - **AND** no mapper translates between a name-valued `stageIds` field and
   `stageNames`
 
+### Requirement: Persisted product settings never materialize schema defaults
+
+`appSettingsSchema` SHALL require every persisted setting returned by the
+repository. Missing columns or incomplete mappers MUST fail parsing instead of
+inventing product behavior in the wire schema. `appSettingsUpdateSchema` SHALL
+remain partial so omitted update keys are left untouched.
+
+#### Scenario: A repository omits a persisted setting
+
+- **WHEN** an AppSettings read omits any persisted field
+- **THEN** `appSettingsSchema` rejects the object
+- **AND** no timezone, deadline, reopen, notification, or presentation behavior
+  is synthesized by Zod
+
+#### Scenario: An update changes one setting
+
+- **WHEN** an AppSettings update contains one valid field
+- **THEN** `appSettingsUpdateSchema` accepts it
+- **AND** absent fields remain absent from the parsed output
+
 ## MODIFIED Requirements
 
 ### Requirement: Three ratchet counters move in one direction only
