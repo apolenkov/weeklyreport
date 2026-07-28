@@ -1,7 +1,14 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 import { ESLint } from "eslint";
+
+import {
+  type FloorSnapshot,
+  parseFloorSnapshot,
+  ratchetViolations,
+  readFloorBaseline,
+} from "./exemplary-floor-ratchet.ts";
 
 // A file standing on one of these has a budget switched off for it. Which block
 // granted the relaxation does not matter here; that it exists does.
@@ -17,6 +24,9 @@ const BUDGET_RULES = [
 const CHURN_WINDOW = "90 days ago";
 const REPO_ROOT = new URL("..", import.meta.url).pathname;
 const DEPCRUISE_BIN = `${REPO_ROOT}node_modules/.bin/depcruise`;
+const BASELINE_RELATIVE_PATH = "scripts/exemplary-floor-baseline.json";
+const BASELINE_PATH = `${REPO_ROOT}${BASELINE_RELATIVE_PATH}`;
+const CHECK_FLAG = "--check";
 
 // Both commands emit far more than the 1 MiB default; this is a dev script, so
 // the honest bound is "whatever it produces" rather than a guessed ceiling.
@@ -44,6 +54,7 @@ const git = (args: readonly string[]): string =>
     cwd: REPO_ROOT,
     encoding: "utf8",
     maxBuffer: UNBOUNDED,
+    stdio: ["ignore", "pipe", "pipe"],
   });
 
 // Test infrastructure is not named *.test.ts, so matching only that filename
@@ -177,7 +188,13 @@ const buildRow = async (
 };
 
 const buildRows = async (): Promise<readonly Row[]> => {
-  const files = git(["ls-files", "*.ts", "*.tsx"]).trim().split("\n");
+  const files = git(["ls-files", "*.ts", "*.tsx"])
+    .trim()
+    .split("\n")
+    // A staged deletion remains in git ls-files until the commit lands. The
+    // catalogue describes the current tree, so a path absent from that tree is
+    // not a row and must not make the pre-commit measurement crash.
+    .filter((file) => existsSync(`${REPO_ROOT}${file}`));
   const fanIn = readFanIn();
   const churn = readChurn();
   const eslint = new ESLint({ cwd: REPO_ROOT });
@@ -220,9 +237,56 @@ const report = (rows: readonly Row[]): void => {
   );
 };
 
+const countOverrideBlocks = (): number =>
+  readFileSync(`${REPO_ROOT}eslint.config.ts`, "utf8")
+    .split("\n")
+    .filter((line) => line.trimStart().startsWith("files: [")).length;
+
+const previousBaseline = (): FloorSnapshot | undefined => {
+  const pathInParent = git([
+    "ls-tree",
+    "--name-only",
+    "HEAD^",
+    "--",
+    BASELINE_RELATIVE_PATH,
+  ]).trim();
+  if (pathInParent === "") return undefined;
+  return parseFloorSnapshot(git(["show", `HEAD^:${BASELINE_RELATIVE_PATH}`]));
+};
+
+const snapshotOf = (rows: readonly Row[]): FloorSnapshot => {
+  const product = rows.filter((row) => row.kind === "product");
+  return {
+    filesOnFloor: product.filter((row) => row.cls === "A").length,
+    productTotal: product.length,
+    overrideBlocks: countOverrideBlocks(),
+    liveSuppressions: rows.reduce((sum, row) => sum + row.suppressions, 0),
+  };
+};
+
+const checkRatchet = (rows: readonly Row[]): void => {
+  const actual = snapshotOf(rows);
+  const baseline = readFloorBaseline(BASELINE_PATH);
+  const previous = previousBaseline();
+  const violations = ratchetViolations(actual, baseline, previous);
+  process.stdout.write(
+    `exemplary-floor ${violations.length === 0 ? "PASS" : "FAIL"} ${JSON.stringify(actual)}\n`,
+  );
+  if (violations.length > 0) {
+    process.stderr.write(`${violations.join("\n")}\n`);
+    process.exitCode = 1;
+  }
+};
+
+const args = process.argv.slice(2);
+const unknownArgs = args.filter((arg) => arg !== CHECK_FLAG);
+if (unknownArgs.length > 0)
+  throw new Error(`Unknown argument(s): ${unknownArgs.join(", ")}`);
+
 const rows = await buildRows();
 writeFileSync(
   `${REPO_ROOT}catalogue.json`,
   `${JSON.stringify(rows, undefined, 1)}\n`,
 );
 report(rows);
+if (args.includes(CHECK_FLAG)) checkRatchet(rows);

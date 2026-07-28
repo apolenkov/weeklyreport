@@ -30,6 +30,8 @@
     "lint:ssot-gate:test": "node --test scripts/status-ssot-gate.test.ts",
     "lint:ssot-gate": "node scripts/status-ssot-gate.ts --all",
     "lint:runtime-node": "node scripts/check-runtime-node-sync.ts",
+    "lint:exemplary-floor:test": "node --test scripts/exemplary-floor-ratchet.test.ts",
+    "lint:exemplary-floor": "tsx scripts/exemplary-catalogue.ts --check",
     "knip": "knip",
     "typecov": "type-coverage -p packages/shared --at-least 100 && type-coverage -p packages/ui --at-least 99.9 && type-coverage -p apps/api --at-least 99.95 && type-coverage -p apps/web --at-least 99.6",
     "depcruise": "depcruise apps/api/src apps/web/src packages/shared/src packages/ui/src --config .dependency-cruiser.cjs",

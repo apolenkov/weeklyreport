@@ -42,6 +42,14 @@ const CHECKS: readonly Check[] = [
   { script: "lint:ssot-gate:test", what: "status-SSOT gate unit tests" },
   { script: "lint:ssot-gate", what: "status-SSOT re-declaration sweep" },
   { script: "lint:runtime-node", what: "Node/pnpm version drift guard" },
+  {
+    script: "lint:exemplary-floor:test",
+    what: "exemplary-floor ratchet unit tests",
+  },
+  {
+    script: "lint:exemplary-floor",
+    what: "exemplary-floor three-counter ratchet",
+  },
   { script: "depcruise", what: "dependency-cruiser module graph" },
   { script: "knip", what: "knip dead code and dependencies" },
 ];
