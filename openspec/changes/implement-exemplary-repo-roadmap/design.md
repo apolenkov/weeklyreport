@@ -33,6 +33,28 @@ Work lands in independently verifiable slices:
 4. broad debt burn-down projects;
 5. human-decision items after explicit rulings.
 
+## Accepted decision package (2026-07-28)
+
+The owner accepted all six rulings and delegated the five engineering
+decisions. Work remains sliced so an interrupted session resumes from
+`tasks.md`, not from conversational context.
+
+| ID  | Ruling                                                            | Completion evidence                                                          |
+| --- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| R1  | migrate and enable `exactOptionalPropertyTypes`                   | zero workspace errors with the flag on plus a planted failure                |
+| R2  | settled telemetry selects `periodStatus = "published"`            | shared selector and reopen/republish tests across all three consumers        |
+| R3  | baseline 27 type-only cycles, reject increases, burn down to zero | same-shell exit capture and planted 28th-cycle failure                       |
+| R4  | allow small local harness repetition after budget splits          | misleading names and divergent fakes removed; remaining four findings closed |
+| R5  | adjudicate each firing Vitest rule                                | durable per-rule ledger with measurement, probe, ruling, and gate result     |
+| R6  | derive provenance resolution from OpenSpec trees                  | resolver has resolved/unresolved/ambiguous tests and no committed mapping    |
+
+R2 uses the canonical lifecycle flavour because `reopen` intentionally leaves
+legacy `status` at `published` while making the period editable again. R4 keeps
+the test's setup local unless extraction creates leverage by owning behavior;
+textual deduplication alone does not justify a new seam. R6 similarly places
+one deep resolver interface over tree traversal without adding a maintained
+index.
+
 ## `functional/prefer-immutable-types` measurement
 
 The installed `eslint-plugin-functional` 10.0.0 rule was executed through the

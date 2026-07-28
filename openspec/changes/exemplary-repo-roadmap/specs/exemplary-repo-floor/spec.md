@@ -88,7 +88,7 @@ Known instances recorded 2026-07-28, pending a fix change each:
   `apps/api/src/modules/telemetry/telemetry.gauges.ts`,
   `apps/api/src/modules/telemetry/telemetry.queries.ts`, and
   `apps/api/src/modules/telemetry/telemetry.prisma-repository.ts`.
-  A one-sided fix desyncs the other two; see the open decision below.
+  A one-sided fix desyncs the other two; see the accepted decision below.
 - Domain-error mapping is spelled three ways with identical bodies
   (`withDomainErrorMapping` / `withMappedDomainError` /
   `withMappedDomainErrors`), plus 8 routers inlining the same try/catch.
@@ -224,52 +224,68 @@ generic best-practice framing, or it is rejected on sight.
   now fires on real code in this repo, or it is rejected without
   implementation
 
-### Requirement: Open decisions are recorded, not silently resolved by whoever touches the file next
+### Requirement: The six exemplary-campaign decisions are explicit and durable
 
-Each open decision below MUST be recorded here and MUST NOT be resolved as a
-side effect of an unrelated change — a ruling requires a human, because the
-walk found the "obvious" fix on at least one side is wrong or contested for
-every item on this list. Recording them here prevents a future contributor
-from picking a side by accident while editing one of the named files.
+The owner accepted the following rulings on 2026-07-28. A future change MUST
+NOT reverse one incidentally; it states the changed policy and evidence in its
+proposal. The telemetry ruling is product semantics. The other five are
+delegated engineering policy, implemented and adjudicated by the campaign
+owner according to the criteria below.
 
-- **`exactOptionalPropertyTypes`**: off today; enabling it surfaces 290
-  `tsc` errors. Undecided: schedule a fix wave, or record why the exposure
-  (undefined-vs-missing bugs, the shape of A3's stage-id fallback in
-  `REPORT.md`) is accepted.
-- **The telemetry lifecycle-column trio**: `telemetry.gauges.ts`,
-  `telemetry.queries.ts`, and `telemetry.prisma-repository.ts` gate
-  inconsistently on `status` vs `periodStatus` under a period reopen.
-  Undecided: what the on-time-ratio metric means under a reopen — "of
-  periods published" (legacy `status`) vs "of periods no longer editable"
-  (`periodStatus`). Whichever is chosen, all three files change together;
-  changing one desyncs the other two.
-- **27 type-only import cycles**: invisible to `depcruise`'s default
-  configuration (0 violations, verified live 2026-07-28); visible only with
-  `--ts-pre-compilation-deps`, which turns up 27 `no-circular` violations —
-  the same count as measured before this change, reconfirmed live
-  2026-07-28. That same run surfaces a 28th, unrelated violation
-  (`not-to-unresolvable`: `apps/web/src/lib/trpc.ts` →
-  `@customreport/api/infrastructure/trpc/trpc.router`), which is not a
-  cycle and is outside this decision's scope, but is worth a look — and the
-  run's plain exit code was 28 (piped through no filter), while a naive
-  `| tail` on the same command reports exit 0, so any script gating on this
-  MUST capture the exit code same-shell. Undecided: whether type-only
-  cycles are worth gating on in this codebase.
-- **The split-for-budget harness-duplication convention**: 6
-  file pairs/families duplicate a test harness after a `max-lines` split.
-  One instance (`periods-tab.test.tsx` /
-  `periods-tab.dialogs.test.tsx`) was confirmed a defect by the walk's
-  verifier; a near-identical instance
-  (`use-lead-form-autosave.test.tsx` /
-  `use-lead-form-autosave.queueing.test.tsx`) was overturned as a
-  deliberate, consistently-applied convention (split commit `f3a90ab5`).
-  Undecided: ratify the convention repo-wide (then only the lying headers
-  get fixed) or ban it (then all 6 pairs get one shared `.tsx` harness).
+1. **`exactOptionalPropertyTypes` is enabled through a dedicated migration
+   wave.** The measured 290 errors (API 58, web 225, shared 4, UI 3) are
+   classified at the missing / explicit `undefined` / `null` boundary. The
+   flag becomes permanent only after every workspace typecheck passes and a
+   planted regression proves the gate.
+2. **Settled-period telemetry uses `periodStatus = "published"`.** A reopened
+   period is editable and is excluded from the on-time ratio, active-lead, and
+   late-section "last published" metrics until it is republished. The selection
+   predicate has one owner used by `telemetry.gauges.ts`,
+   `telemetry.queries.ts`, and `telemetry.prisma-repository.ts`.
+3. **Type-only cycles are ratcheted debt.** The measured baseline is 27
+   `no-circular` violations under `--ts-pre-compilation-deps`; no new cycle is
+   allowed and the target is zero. The command captures its own exit status
+   without a pipeline. The unrelated unresolved import from
+   `apps/web/src/lib/trpc.ts` is fixed or separately recorded, never counted as
+   a cycle.
+4. **Local test-harness repetition after a `max-lines` split is allowed.** It
+   is allowed only inside one test family when the harness is small, stable,
+   and crosses the same production seam. Duplicated domain behavior, divergent
+   fakes, and misleading suite names remain defects; shared builders are
+   extracted when they carry real behavior.
+5. **Firing Vitest rules are adjudicated individually.** A rule is adopted
+   only after measurement with the production ESLint configuration, a planted
+   violation, acceptable false-positive cost, and fixes that preserve test
+   intent. The decision ledger records rule, count, ruling, reason, fixes,
+   planted probe, and final gate state.
+6. **Provenance resolution is derived, not a second source of truth.** The
+   resolver reads the current `openspec/specs/` and active
+   `openspec/changes/` trees directly. It returns resolved, unresolved, or
+   ambiguous; ambiguity requires review. No generated mapping is committed.
 
-#### Scenario: A fix is proposed for one of these files
+#### Scenario: A reopened period is visible to telemetry
 
-- **WHEN** a change would edit one of the files named in an open decision
-  above
-- **THEN** the change's `proposal.md` states which side of the open
-  decision it takes and why, so the decision is made explicitly rather than
-  inherited from whoever happened to touch the file first
+- **WHEN** the latest historically-published period has
+  `periodStatus = "reopened"`
+- **THEN** settled-period telemetry excludes it
+- **AND** selects the next latest `periodStatus = "published"` period
+- **AND** includes the reopened period again after republish
+
+#### Scenario: A new type-only cycle is introduced
+
+- **WHEN** the pre-compilation dependency graph contains more cycles than the
+  accepted baseline
+- **THEN** the ratchet fails even if the runtime graph remains acyclic
+
+#### Scenario: A split test file repeats local setup
+
+- **WHEN** two budget-split suites repeat a small harness but exercise the same
+  production seam without duplicated domain behavior
+- **THEN** the repetition is allowed
+- **AND** each suite name and header describes only the behavior it owns
+
+#### Scenario: A campaign ruling is reconsidered
+
+- **WHEN** a future change proposes the opposite policy
+- **THEN** its proposal names this ruling, supplies new evidence, and treats the
+  reversal as an explicit decision rather than cleanup

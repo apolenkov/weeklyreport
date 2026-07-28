@@ -106,14 +106,28 @@
 - [ ] Land the remaining 4 confirmed fixes after the user decides the
       family-wide split-harness convention.
 
-## 5. Human decisions
+## 5. Accepted decisions and implementation
 
-- [ ] Decide `exactOptionalPropertyTypes`.
-- [ ] Decide telemetry lifecycle semantics across all three owners.
-- [ ] Decide whether type-only cycles are gated debt.
-- [ ] Decide the family-wide split-harness convention.
-- [ ] Decide the remaining firing Vitest rules individually.
-- [ ] Decide resolver automation versus hand-triage for provenance references.
+- [x] R1 ruling: migrate and permanently enable `exactOptionalPropertyTypes`.
+- [ ] R1 implementation: classify and fix all 290 measured errors, enable the
+      flag, and add a planted regression.
+- [x] R2 ruling: settled telemetry uses `periodStatus = "published"` and
+      excludes reopened periods until republish.
+- [ ] R2 implementation: single-home the selector across all three consumers
+      and cover publish, reopen, fallback-to-older, and republish.
+- [x] R3 ruling: baseline the 27 type-only cycles as gated debt with target 0.
+- [ ] R3 implementation: add the ratchet with same-shell exit capture and
+      investigate the unrelated unresolved tRPC import.
+- [x] R4 ruling: allow small local harness repetition after budget splits;
+      duplicated behavior, divergent fakes, and lying suite names stay banned.
+- [ ] R4 implementation: close the final four confirmed findings and the
+      structural-suppression task under the accepted convention.
+- [x] R5 ruling: adjudicate every firing Vitest rule independently.
+- [ ] R5 implementation: store the per-rule evidence ledger and land every
+      accepted rule without weakening test intent.
+- [x] R6 ruling: derive provenance resolution from live OpenSpec trees without
+      a committed generated mapping.
+- [ ] R6 implementation: add and test resolved/unresolved/ambiguous outcomes.
 
 ## 6. Completion verification
 

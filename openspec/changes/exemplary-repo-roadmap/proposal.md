@@ -21,8 +21,9 @@ and every reader re-derives the same triage.
 This change is a **decision and record change**, not an implementation
 change. It defines the mechanical floor, pins three ratchet counters that
 must never regress, records the durable cross-file rules the walk surfaced
-that no gate enforces today, and records what was declined and what still
-needs a human call. No file outside `openspec/` is edited by this change.
+that no gate enforces today, and records what was declined. The owner reviewed
+and accepted the six previously-open decisions on 2026-07-28; their
+implementation remains in `implement-exemplary-repo-roadmap`.
 
 DevOps (CI runners, secrets, deploy) is explicitly out of scope; a separate
 effort owns it.
@@ -34,8 +35,9 @@ effort owns it.
   surfaced (JSDoc placement, comment-archaeology resolution, single-owner
   rules for duplicated logic, docs-must-match-code).
 - Record the declined mechanical rules so they are not re-proposed.
-- Record the open decisions that need a human ruling, with their measured
-  size, so they can be scheduled rather than re-discovered.
+- Record the six owner rulings, their measured size, implementation criteria,
+  and the distinction between the telemetry product decision and the five
+  delegated engineering decisions.
 - Publish `roadmap.json` (outside `openspec/`, in the archive) joining the
   catalogue and the walk's per-file verdicts for every tracked file, for a
   rendered roadmap view.
@@ -44,10 +46,8 @@ effort owns it.
 
 - No file under `apps/*`, `packages/*`, `prisma/*`, or `scripts/*` is edited.
 - No CI, deploy, secrets, or infra requirement is added or changed.
-- No ruling is made on the open decisions listed in the new spec (ratio
-  semantics for the telemetry trio, `exactOptionalPropertyTypes`, the 27
-  type-only cycles, the split-harness convention) — they are recorded as
-  open, not decided.
+- Implementing the six accepted rulings is out of scope here; this change
+  records them durably and the implementation change owns the code and gates.
 - The 57 unadjudicated recovery-pass flags and the confirmed-findings list
   in `REPORT.md` are not re-verified by this change; both are recorded as
   not-yet-actionable.

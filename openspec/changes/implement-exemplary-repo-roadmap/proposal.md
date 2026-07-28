@@ -21,8 +21,8 @@ durable invariants and open decisions; `adjudicate-exemplary-findings` owns the
 - Track the PDF's ordered rule-adoption work and six-area backlog to completion.
 - Consume confirmed per-file findings only after adjudication and direct
   verification.
-- Keep decisions explicitly marked as human decisions unresolved until the
-  user rules on them.
+- Implement the six rulings accepted by the owner on 2026-07-28 and keep their
+  progress independently resumable in the task ledger.
 - Reclassify the A-class `mock-data.ts` product-only fixture into test
   utilities. This intentionally changes `filesOnFloor` from 829 to 828 and
   `productTotal` from 925 to 924 without changing the 89.6% floor ratio; the
@@ -31,6 +31,5 @@ durable invariants and open decisions; `adjudicate-exemplary-findings` owns the
 ## Non-goals
 
 - Do not re-run the completed 16M-token per-file walk.
-- Do not silently decide `exactOptionalPropertyTypes`, telemetry reopen
-  semantics, type-only cycles, or the split-harness convention.
+- Do not reverse an accepted campaign ruling as an incidental cleanup.
 - Do not treat a green gate as proof of a source claim the gate does not test.
