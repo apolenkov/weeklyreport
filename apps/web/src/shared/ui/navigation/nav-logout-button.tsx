@@ -1,24 +1,19 @@
 "use client";
 
+import { toast } from "sonner";
+
+import { logoutThenRedirect } from "../../lib/logout-then-redirect";
+
 const LOGOUT_BUTTON_CLASS =
   "inline-flex h-8 w-10 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]";
 
-/**
- * Nav Logout Button.
- */
 export function NavLogoutButton() {
   return (
     <button
       type="button"
       onClick={() => {
-        // Redirect home only after the server confirms logout. A non-OK
-        // response or a rejected request leaves the session cookie intact,
-        // so staying on the page is the honest state.
-        void fetch("/auth/logout", {
-          method: "POST",
-          credentials: "include",
-        }).then((response) => {
-          if (response.ok) window.location.href = "/";
+        logoutThenRedirect("/", () => {
+          toast.error("Sign out failed. You are still signed in.");
         });
       }}
       data-testid="nav-logout"

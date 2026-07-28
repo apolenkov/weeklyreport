@@ -43,7 +43,7 @@ describe("ArchivePrismaRepository (integration)", () => {
     const emptyList = await repo.listArchiveReports();
     expect(emptyList.items).toHaveLength(0);
 
-    // Publish the report AND set archived=true (A22: both flags required)
+    // Archive visibility requires both published state and explicit archival.
     await prisma.report.update({
       where: { id: testData.report.id },
       data: {
@@ -84,7 +84,7 @@ describe("ArchivePrismaRepository (integration)", () => {
     expect(detail).toBeNull();
   });
 
-  it("A22: published-but-NOT-archived reports do NOT appear in archive list", async () => {
+  it("excludes published reports that were not archived", async () => {
     // Publish the report WITHOUT setting archived=true
     await prisma.report.update({
       where: { id: testData.report.id },
@@ -104,12 +104,12 @@ describe("ArchivePrismaRepository (integration)", () => {
       },
     });
 
-    // A22: archive must be empty — published but not explicitly archived
+    // Published alone is insufficient; archival is an explicit transition.
     const list = (await repo.listArchiveReports()).items;
     expect(list).toHaveLength(0);
   });
 
-  it("A22: published-AND-archived reports DO appear in archive list", async () => {
+  it("includes reports that are both published and archived", async () => {
     // Publish and explicitly archive the report
     await prisma.report.update({
       where: { id: testData.report.id },
@@ -135,7 +135,7 @@ describe("ArchivePrismaRepository (integration)", () => {
   });
 
   it("getArchiveReport returns full detail for published report", async () => {
-    // Publish the report with some data AND set archived=true (A22: required)
+    // Archive detail is available only after the explicit archive transition.
     await prisma.report.update({
       where: { id: testData.report.id },
       data: {
@@ -199,7 +199,7 @@ describe("ArchivePrismaRepository (integration)", () => {
     ).toBe("Archive item");
   });
 
-  it("W6: archive summary floors a no-snapshot report by an own covering risk", async () => {
+  it("floors a no-snapshot archive summary by an own covering risk", async () => {
     // Published + archived WITHOUT a stored snapshot (seed / legacy shape), so
     // the summary takes the read-model fallback. The lead owns a stage with NO
     // submitted status; a stale green ProjectStatus would read green — but the
@@ -257,7 +257,7 @@ describe("ArchivePrismaRepository (integration)", () => {
     expect(expectDefined(detail).report.portfolioOverview.status).toBe("red");
   });
 
-  it("D-6: archive detail reads the publish-time snapshot after draft edits", async () => {
+  it("reads the publish-time snapshot after later draft edits", async () => {
     const stage = await prisma.stage.create({
       data: {
         id: "a0000000-0000-4000-a000-000000000aa3",
@@ -434,12 +434,8 @@ describe("ArchivePrismaRepository (integration)", () => {
     reportingGroupId: groupBId,
   };
 
-  /**
-   * Attaches a second reporting group (B) to the seeded report so its sections
-   * span two groups: group A (the seeded lead's section) reads GREEN, group B
-   * reads RED (a blocked, covers-all risk on group B's owned stage). A scoped
-   * read must see only its own group's section and portfolio.
-   */
+  // The second group is red while the seeded group is green, so a scoped read
+  // must derive its portfolio from only the caller's group.
   async function seedCrossGroupSections(): Promise<{ sectionBId: string }> {
     const projectBId = "a0000000-0000-4000-a000-000000000b03";
     const stageAId = "a0000000-0000-4000-a000-000000000b04";

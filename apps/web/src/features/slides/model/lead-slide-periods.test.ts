@@ -53,6 +53,7 @@ describe("lead slide periods", () => {
       [historyEntry(PUBLISHED_REPORT_ID, "2026-05-04T00:00:00.000Z")],
       CURRENT_REPORT_ID,
     );
+    expect(options).toHaveLength(1);
     expect(options[0]?.label).not.toContain("(Current)");
     expect(options[0]?.label).not.toContain("(Archived)");
   });

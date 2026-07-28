@@ -96,4 +96,25 @@ describe("decodePrintGateResponse", () => {
       closed,
     );
   });
+
+  it("rejects a malformed truthy session at the server boundary", () => {
+    const body = [
+      {
+        result: {
+          data: {
+            json: {
+              session: { role: "head" },
+              isPdfExport: false,
+              pdfReportId: null,
+            },
+          },
+        },
+      },
+    ];
+    expect(decodePrintGateResponse(body)).toEqual({
+      session: null,
+      isPdfExport: false,
+      pdfReportId: null,
+    });
+  });
 });

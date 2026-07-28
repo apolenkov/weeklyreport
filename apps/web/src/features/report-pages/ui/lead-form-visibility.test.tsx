@@ -426,7 +426,7 @@ describe("LeadForm — Record visibility: view-only submit", () => {
     act(() => {
       headerSubmit.click();
     });
-    const dialog = await screen.findByRole("dialog", {
+    const dialog = await screen.findByRole("alertdialog", {
       name: /Confirm submission/i,
     });
     const confirmBtn = within(dialog).getByRole("button", {

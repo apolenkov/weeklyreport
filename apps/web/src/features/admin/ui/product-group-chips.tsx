@@ -4,15 +4,29 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useTRPC } from "../../../lib/trpc-context";
 
-/**
- * Read-only «Groups» chip set for the Products tab.
- * Fetches `admin.listProductGroups({ productId })` and renders one
- * pill per attached ReportingGroup. Editing is intentionally not wired
- * here — chip removal lives in the Groups tab edit dialog (the
- * `GroupProductsEditor` companion component). This keeps the Products
- * tab a read surface for the M:M edge and avoids two competing edit
- * paths for the same edge.
- */
+function ProductGroupChipsMessage({
+  kind,
+  children,
+}: {
+  readonly kind: "loading" | "error" | "empty";
+  readonly children: React.ReactNode;
+}) {
+  const tone =
+    kind === "error"
+      ? "text-[var(--color-destructive)]"
+      : "text-[var(--color-muted-foreground)]";
+  return (
+    <span
+      className={`text-xs ${kind === "empty" ? "italic " : ""}${tone}`}
+      data-testid={`product-group-chips-${kind}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+// Editing lives in the Groups tab so the GroupProduct edge has one write path;
+// this Products-tab surface is intentionally read-only.
 export function ProductGroupChips({
   productId,
 }: {
@@ -25,24 +39,26 @@ export function ProductGroupChips({
 
   if (groupsQuery.isLoading) {
     return (
-      <span
-        className="text-xs text-[var(--color-muted-foreground)]"
-        data-testid="product-group-chips-loading"
-      >
+      <ProductGroupChipsMessage kind="loading">
         Loading groups…
-      </span>
+      </ProductGroupChipsMessage>
+    );
+  }
+
+  if (groupsQuery.isError) {
+    return (
+      <ProductGroupChipsMessage kind="error">
+        Groups unavailable
+      </ProductGroupChipsMessage>
     );
   }
 
   const groups = groupsQuery.data ?? [];
   if (groups.length === 0) {
     return (
-      <span
-        className="text-xs italic text-[var(--color-muted-foreground)]"
-        data-testid="product-group-chips-empty"
-      >
+      <ProductGroupChipsMessage kind="empty">
         No groups
-      </span>
+      </ProductGroupChipsMessage>
     );
   }
 

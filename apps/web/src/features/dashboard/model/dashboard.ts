@@ -141,8 +141,7 @@ function mapBlockedAtRisk(
     .filter(
       (e) => e.type !== "at_risk" || !stageKeyedProducts.has(e.productName),
     )
-    .map((e, idx) => escalationToBlockedItem(e, idx))
-    .filter((item): item is BlockedAtRiskItem => item !== null);
+    .map((e, idx) => escalationToBlockedItem(e, idx));
 }
 
 export function mapWeeklyDashboardData({

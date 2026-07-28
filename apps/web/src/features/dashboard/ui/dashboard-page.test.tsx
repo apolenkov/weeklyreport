@@ -100,7 +100,7 @@ describe("DashboardPage progressive readiness", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps weekly-backed panels visible while review remains pending", () => {
+  it("keeps every weekly-backed panel visible while review remains pending", () => {
     setQueryState("review.dashboard", {
       status: "pending",
       fetchStatus: "fetching",
@@ -115,14 +115,11 @@ describe("DashboardPage progressive readiness", () => {
     expect(
       screen.getByRole("button", { name: "Revoke All (2)" }),
     ).toBeVisible();
-    expect(screen.getByTestId("dashboard-kpi-loading")).toBeInTheDocument();
-    expect(screen.getByTestId("dashboard-blocked-loading")).toBeInTheDocument();
-    // Literal copy of the selector the bfcache-recovery script in
-    // app/(app)/head/dashboard/page.tsx queries — keep them in sync by hand
-    // if that script ever changes.
+    expect(screen.getByText("KPI")).toBeInTheDocument();
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
     expect(
       document.querySelector("[data-dashboard-loading='true']"),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
   });
 
   it("keeps self-contained panels visible while weekly context is pending", () => {
@@ -188,7 +185,7 @@ describe("DashboardPage progressive readiness", () => {
     expect(weeklyRefetch).not.toHaveBeenCalled();
   });
 
-  it("scopes a review failure and retry to review-backed panels", () => {
+  it("does not hide weekly-backed panels when review fails", () => {
     const reviewRefetch = vi.fn().mockResolvedValue({});
     const weeklyRefetch = vi.fn().mockResolvedValue({});
     setQueryState("review.dashboard", {
@@ -203,10 +200,10 @@ describe("DashboardPage progressive readiness", () => {
     });
     render(<DashboardPage />);
     expect(screen.getByText("Lead summary")).toBeInTheDocument();
-    const issue = screen.getByTestId("dashboard-kpi-error");
-    expect(issue).toHaveTextContent("review failed");
-    fireEvent.click(within(issue).getByRole("button", { name: "Retry" }));
-    expect(reviewRefetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("KPI")).toBeInTheDocument();
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
+    expect(screen.queryByTestId("dashboard-kpi-error")).not.toBeInTheDocument();
+    expect(reviewRefetch).not.toHaveBeenCalled();
     expect(weeklyRefetch).not.toHaveBeenCalled();
   });
 
@@ -247,7 +244,8 @@ describe("DashboardPage progressive readiness", () => {
     );
     expect(reviewRefetch).toHaveBeenCalledTimes(1);
     expect(weeklyRefetch).not.toHaveBeenCalled();
-    expect(screen.getByTestId("dashboard-kpi-error")).toBeInTheDocument();
+    expect(screen.getByText("KPI")).toBeInTheDocument();
+    expect(screen.queryByTestId("dashboard-kpi-error")).not.toBeInTheDocument();
     expect(screen.getByText("Lead summary")).toBeInTheDocument();
   });
 

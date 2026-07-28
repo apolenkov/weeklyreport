@@ -215,7 +215,7 @@ describe("LeadForm mutation wiring", () => {
     // dialog → confirm drives the mutation via mutateAsync; on success the
     // dialog module fires the toast and the seam invalidates the lead caches.
     act(() => screen.getByRole("button", { name: "Submit" }).click());
-    const dialog = await screen.findByRole("dialog", {
+    const dialog = await screen.findByRole("alertdialog", {
       name: "Confirm submission",
     });
     act(() => within(dialog).getByRole("button", { name: "Submit" }).click());
@@ -240,7 +240,7 @@ describe("LeadForm mutation wiring", () => {
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
     act(() => screen.getByRole("button", { name: "Submit" }).click());
-    const dialog = await screen.findByRole("dialog", {
+    const dialog = await screen.findByRole("alertdialog", {
       name: "Confirm submission",
     });
     act(() => within(dialog).getByRole("button", { name: "Submit" }).click());
@@ -268,7 +268,7 @@ describe("LeadForm mutation wiring", () => {
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
     act(() => screen.getByRole("button", { name: "Submit" }).click());
-    const dialog = await screen.findByRole("dialog", {
+    const dialog = await screen.findByRole("alertdialog", {
       name: "Confirm submission",
     });
     act(() => within(dialog).getByRole("button", { name: "Submit" }).click());
@@ -315,7 +315,7 @@ describe("LeadForm mutation wiring", () => {
     act(() => {
       screen.getByRole("button", { name: "Submit" }).click();
     });
-    const dialog = await screen.findByRole("dialog", {
+    const dialog = await screen.findByRole("alertdialog", {
       name: "Confirm submission",
     });
     act(() => {
@@ -348,7 +348,7 @@ describe("LeadForm mutation wiring", () => {
     act(() => {
       screen.getByRole("button", { name: "Submit" }).click();
     });
-    const dialog = await screen.findByRole("dialog", {
+    const dialog = await screen.findByRole("alertdialog", {
       name: "Confirm submission",
     });
     expect(
@@ -400,7 +400,7 @@ describe("LeadForm mutation wiring", () => {
     act(() => {
       screen.getByRole("button", { name: "Submit" }).click();
     });
-    const dialog = await screen.findByRole("dialog", {
+    const dialog = await screen.findByRole("alertdialog", {
       name: "Confirm submission",
     });
     expect(
@@ -443,7 +443,7 @@ describe("LeadForm mutation wiring", () => {
     act(() => {
       screen.getByRole("button", { name: "Submit" }).click();
     });
-    const dialog = await screen.findByRole("dialog", {
+    const dialog = await screen.findByRole("alertdialog", {
       name: "Confirm submission",
     });
     // The orphan displays On Track, so it is NOT an "unset" stage — no warning.
@@ -510,7 +510,7 @@ describe("LeadForm mutation wiring", () => {
       screen.getByRole("button", { name: "Submit report" }),
     ).toBeDisabled();
     expect(
-      screen.queryByRole("dialog", { name: "Confirm submission" }),
+      screen.queryByRole("alertdialog", { name: "Confirm submission" }),
     ).toBeNull();
   });
 
@@ -555,7 +555,7 @@ describe("LeadForm mutation wiring", () => {
     act(() => {
       screen.getByRole("button", { name: "Submit" }).click();
     });
-    const dialog = await screen.findByRole("dialog", {
+    const dialog = await screen.findByRole("alertdialog", {
       name: "Confirm submission",
     });
     act(() => {

@@ -9,20 +9,10 @@ import {
   useContext,
   useMemo,
   useState,
-  useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
 
-// Hydration gate without effect-driven state: server snapshot is false, client true.
-const emptySubscribe = () => () => {
-  /* nothing to unsubscribe — the hydration "store" never changes */
-};
-const useIsHydrated = () =>
-  useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false,
-  );
+import { useHydratedClient } from "../lib/use-hydrated-client";
 
 interface TooltipState {
   content: string;
@@ -62,7 +52,7 @@ export function SdlcTooltipProvider({
   readonly children: ReactNode;
 }) {
   const [state, setState] = useState<TooltipState | null>(null);
-  const mounted = useIsHydrated();
+  const mounted = useHydratedClient();
 
   const show = useCallback((rect: DOMRect, content: string) => {
     if (!content) return;

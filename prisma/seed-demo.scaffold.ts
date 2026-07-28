@@ -56,18 +56,19 @@ const STATIC_USER_ROWS = [
   },
 ];
 
-// A demo lead reuses its canonical identity when the email matches a seed user;
-// otherwise the display name is split into last/first as a fallback.
 function leadUserRow(lead: DemoLead) {
   const seedUser = SEED_USERS.find((u) => u.email === lead.email);
+  if (!seedUser) {
+    throw new Error(`Demo seed: lead ${lead.email} is not in user catalogue`);
+  }
   return {
     id: lead.id,
     email: lead.email,
-    name: seedUser?.name ?? lead.name,
-    lastName: seedUser?.lastName ?? lead.name.split(/\s+/)[0] ?? lead.name,
-    firstName: seedUser?.firstName ?? lead.name.split(/\s+/)[1] ?? "Lead",
-    middleName: seedUser?.middleName ?? null,
-    position: seedUser?.position ?? null,
+    name: seedUser.name,
+    lastName: seedUser.lastName,
+    firstName: seedUser.firstName,
+    middleName: seedUser.middleName,
+    position: seedUser.position,
     role: Role.lead,
     samlId: lead.samlId,
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,

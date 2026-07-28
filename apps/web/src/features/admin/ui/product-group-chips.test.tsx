@@ -40,6 +40,21 @@ describe("ProductGroupChips", () => {
     expect(screen.getByText("No groups")).toBeInTheDocument();
   });
 
+  it("distinguishes a failed query from an empty group list", () => {
+    useQueryMock.mockReturnValue({
+      isLoading: false,
+      isError: true,
+      data: undefined,
+    });
+    render(<ProductGroupChips productId={PRODUCT_ID} />);
+    expect(screen.getByTestId("product-group-chips-error")).toHaveTextContent(
+      "Groups unavailable",
+    );
+    expect(
+      screen.queryByTestId("product-group-chips-empty"),
+    ).not.toBeInTheDocument();
+  });
+
   it("renders one pill per attached group, preserving server order", () => {
     useQueryMock.mockReturnValue({
       isLoading: false,

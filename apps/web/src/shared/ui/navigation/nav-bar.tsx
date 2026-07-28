@@ -3,12 +3,12 @@
 import { usePathname } from "next/navigation";
 
 import { useSession } from "../../../lib/session-provider";
+import { useHydratedClient } from "../../lib/use-hydrated-client";
 import { DesktopNav } from "./desktop-nav";
 import { MobileNav } from "./mobile-nav";
 import { buildNavBarModel } from "./nav-bar-model";
 import { NavBrand } from "./nav-brand";
 import { NavRightRail } from "./nav-right-rail";
-import { useHydratedClient } from "./use-hydrated-client";
 
 /**
  * Nav Bar.

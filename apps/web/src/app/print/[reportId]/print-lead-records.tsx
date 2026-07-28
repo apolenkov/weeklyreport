@@ -1,11 +1,11 @@
 import type { CSSProperties } from "react";
 
+import { STATUS_BADGE } from "../../../features/report-sections/model/item-card-style";
 import type { WeeklyProductReport } from "../../../features/report-sections/model/weekly-report-types";
 import {
   printStatusColor,
   TEXT_PRIMARY,
   TEXT_SECONDARY,
-  workflowBadge,
 } from "./print-report-theme";
 
 interface RecordListProps {
@@ -95,7 +95,7 @@ export function CurrentWeekRecords({ report }: RecordListProps) {
             </span>{" "}
             {item.text}{" "}
             <span style={workflowStatusBadgeStyle(item.status)}>
-              {workflowBadge(item.status)}
+              {STATUS_BADGE[item.status].label}
             </span>
           </li>
         ))}
