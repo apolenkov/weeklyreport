@@ -116,7 +116,7 @@
 - [x] R2 implementation: single-home the selector across all three consumers
       and cover publish, reopen, fallback-to-older, and republish.
 - [x] R3 ruling: baseline the 27 type-only cycles as gated debt with target 0.
-- [ ] R3 implementation: add the ratchet with same-shell exit capture and
+- [x] R3 implementation: add the ratchet with same-shell exit capture and
       investigate the unrelated unresolved tRPC import.
 - [x] R4 ruling: allow small local harness repetition after budget splits;
       duplicated behavior, divergent fakes, and lying suite names stay banned.
@@ -127,7 +127,7 @@
       accepted rule without weakening test intent.
 - [x] R6 ruling: derive provenance resolution from live OpenSpec trees without
       a committed generated mapping.
-- [ ] R6 implementation: add and test resolved/unresolved/ambiguous outcomes.
+- [x] R6 implementation: add and test resolved/unresolved/ambiguous outcomes.
 
 ## 6. Completion verification
 
