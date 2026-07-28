@@ -28,9 +28,10 @@
 
 ## 5. Ledger and verification
 
-- [ ] Store all 126 starting entries with source fingerprint, verdict, reason,
-      owner, proof, and implementation commit.
-- [ ] Add a main-gate ledger check that rejects missing live directives,
+- [ ] Store all 126 starting observations (115 directives and 11
+      measurement-noise records) with source fingerprint, verdict, reason,
+      owner where applicable, proof, and implementation commit.
+- [x] Add a main-gate ledger check that rejects missing live directives,
       resolved stale entries, and retained entries without proof metadata.
 - [ ] Run planted production-config probes for every retained rule/shape family.
 - [ ] Re-run `pnpm catalogue`, update the exact `liveSuppressions` baseline, and

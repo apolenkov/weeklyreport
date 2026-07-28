@@ -2,7 +2,7 @@
   "filesOnFloor": 842,
   "productTotal": 929,
   "overrideBlocks": 26,
-  "liveSuppressions": 126,
+  "liveSuppressions": 115,
   "justifiedRegressions": [
     {
       "counter": "filesOnFloor",

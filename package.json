@@ -29,6 +29,8 @@
     "lint:ssot-gate:test": "node --test scripts/status-ssot-gate.test.ts",
     "lint:ssot-gate": "node scripts/status-ssot-gate.ts --all",
     "lint:runtime-node": "node scripts/check-runtime-node-sync.ts",
+    "lint:suppressions:test": "node --test scripts/eslint-suppression-inventory.test.ts",
+    "lint:suppressions": "tsx scripts/eslint-suppression-ledger.ts --check",
     "lint:exemplary-floor:test": "node --test scripts/exemplary-floor-ratchet.test.ts",
     "lint:exemplary-floor": "tsx scripts/exemplary-catalogue.ts --check",
     "lint:type-cycles:test": "node --test scripts/type-cycle-ratchet.test.ts",

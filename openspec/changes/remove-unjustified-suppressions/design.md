@@ -15,6 +15,12 @@ rule name. Each entry records:
 Line numbers are locators, not identity: the path/rule plus source fingerprint
 allows the ledger to survive neighboring edits.
 
+The starting snapshot also preserves 11 `eslint-disable` substrings that were
+not directive comments. They have `replace` verdicts against the old raw-string
+measurement. The executable inventory uses the TypeScript ESLint parser's
+comment stream, so strings and explanatory prose cannot inflate the live
+baseline.
+
 ## Decision sequence
 
 ```text
@@ -30,7 +36,9 @@ directive
         +-- planted adjacent violation still fails --> retain
 ```
 
-The campaign finishes at zero unadjudicated or unjustified directives. The
+The campaign starts from 126 raw observations: 115 directives and 11
+measurement-noise records. It finishes at zero unadjudicated or unjustified
+directives. The
 retained raw count is discovered from evidence, not selected in advance.
 
 ## Verification integrity
