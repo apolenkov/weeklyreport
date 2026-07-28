@@ -53,10 +53,10 @@ const TEST_INFRA =
   /(?:(?:^|\/)(?:test-utils|__tests__|__fixtures__)\/)|(?:(?:-harness|\.fixtures|\.setup|-stubs?)\.tsx?$)/;
 
 // A framework entry has no importer by construction: Next.js loads routes,
-// layouts and instrumentation by convention, and a package barrel is consumed
-// by name. Counting them as unreferenced measures the convention, not the code.
+// layouts, proxy.ts and instrumentation by convention, and a package barrel is
+// consumed by name. Counting them as unreferenced measures the convention.
 const FRAMEWORK_ENTRY =
-  /\/app\/.*\/(page|layout|route|error|loading|not-found|template)\.tsx?$|\/app\/(page|layout)\.tsx$|instrumentation(-client)?\.ts$|src\/index\.ts$/;
+  /\/app\/.*\/(page|layout|route|error|loading|not-found|template)\.tsx?$|\/app\/(page|layout)\.tsx$|instrumentation(-client)?\.ts$|\/proxy\.ts$|src\/index\.ts$/;
 
 const classifyKind = (file: string): Kind => {
   if (/\.(test|spec)\.tsx?$/.test(file) || TEST_INFRA.test(file)) return "test";
