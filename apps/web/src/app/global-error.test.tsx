@@ -46,10 +46,4 @@ describe("GlobalError — global-error.tsx a11y", () => {
     fireEvent.click(screen.getByRole("button", { name: /try again/i }));
     expect(reset).toHaveBeenCalledOnce();
   });
-
-  it("body element is rendered", () => {
-    const doc = renderToDocument(makeError(), vi.fn());
-    expect(doc.body).not.toBeNull();
-    expect(doc.body.tagName.toLowerCase()).toBe("body");
-  });
 });

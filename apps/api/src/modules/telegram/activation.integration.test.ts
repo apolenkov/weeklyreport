@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TelegramModule } from "./telegram.module.js";
 
-const botToken = process.env.TG_BOT_TOKEN?.trim();
 const ACTIVATION_ENV = {
   APP_BASE_URL: "http://localhost:3000",
   AUTH_DEV_MODE: "false",
@@ -25,6 +24,7 @@ const ACTIVATION_ENV = {
   REDIS_HOST: "localhost",
   REDIS_MAXMEMORY_BYTES: "209715200",
   REDIS_PORT: "6379",
+  TG_BOT_TOKEN: "1234:activation-test-token",
 } as const;
 
 @Module({
@@ -38,7 +38,7 @@ const ACTIVATION_ENV = {
 })
 class TelegramActivationTestModule {}
 
-describe.skipIf(!botToken)("Telegram activation (real bot)", () => {
+describe("Telegram activation", () => {
   beforeEach(() => {
     Object.entries(ACTIVATION_ENV).forEach(([key, value]) => {
       vi.stubEnv(key, value);

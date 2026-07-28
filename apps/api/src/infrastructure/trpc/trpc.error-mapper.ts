@@ -151,3 +151,13 @@ export function mapDomainError(error: unknown): TRPCError {
     cause: error instanceof Error ? error : undefined,
   });
 }
+
+export async function withDomainErrorMapping<T>(
+  run: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    throw mapDomainError(error);
+  }
+}

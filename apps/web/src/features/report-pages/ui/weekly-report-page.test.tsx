@@ -15,6 +15,7 @@ vi.mock("../../../lib/cache-keys", () => ({
   invalidateDashboard: vi.fn(),
   invalidateLeadForm: vi.fn(),
   invalidateLeadHistory: vi.fn(),
+  invalidatePeriodLifecycle: vi.fn(),
   invalidateReview: vi.fn(),
 }));
 
@@ -41,11 +42,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/head/report",
 }));
 
-import {
-  invalidateDashboard,
-  invalidateLeadForm,
-  invalidateLeadHistory,
-} from "../../../lib/cache-keys";
+import { invalidatePeriodLifecycle } from "../../../lib/cache-keys";
 import {
   SessionContext,
   type SessionUser,
@@ -383,9 +380,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     await userEvent.click(expectDefined(buttons[buttons.length - 1]));
 
     await waitFor(() => {
-      expect(invalidateDashboard).toHaveBeenCalled();
-      expect(invalidateLeadForm).toHaveBeenCalled();
-      expect(invalidateLeadHistory).toHaveBeenCalled();
+      expect(invalidatePeriodLifecycle).toHaveBeenCalled();
       expect(toastSuccess).toHaveBeenCalled();
     });
   });
@@ -408,7 +403,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     await waitFor(() => {
       expect(toastError).toHaveBeenCalledWith("Forbidden");
     });
-    expect(invalidateLeadForm).not.toHaveBeenCalled();
+    expect(invalidatePeriodLifecycle).not.toHaveBeenCalled();
   });
 
   it("clicking Reopen Period (via confirm dialog) fires period.reopen with reportId when periodStatus is published", async () => {
@@ -436,7 +431,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     });
   });
 
-  it("on reopen success: invalidateDashboard + invalidateLeadForm + invalidateLeadHistory fire", async () => {
+  it("on reopen success: all report projections invalidate", async () => {
     const { captured } = renderPage(makeWeeklyReportData("published"));
     expectDefined(captured["period.reopen"]).mutationFn.mockResolvedValue(
       undefined,
@@ -450,9 +445,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     );
 
     await waitFor(() => {
-      expect(invalidateDashboard).toHaveBeenCalled();
-      expect(invalidateLeadForm).toHaveBeenCalled();
-      expect(invalidateLeadHistory).toHaveBeenCalled();
+      expect(invalidatePeriodLifecycle).toHaveBeenCalled();
       expect(toastSuccess).toHaveBeenCalled();
     });
   });

@@ -3,7 +3,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { invalidateAdmin } from "../../../lib/cache-keys";
+import {
+  invalidateAdmin,
+  invalidatePeriodLifecycle,
+} from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
 
 // Server messages pipe through verbatim (overlap ranges, policy rejections, etc.).
@@ -11,18 +14,24 @@ function notifyError(err: { readonly message: string }) {
   toast.error(err.message);
 }
 
-type NotifyDone = (message: string, closeDialog?: () => void) => () => void;
+type NotifyDone = (
+  message: string,
+  closeDialog?: () => void,
+  invalidatesReportViews?: boolean,
+) => () => void;
 
 function usePeriodDoneNotifier(): NotifyDone {
   const trpc = useTRPC();
   const qc = useQueryClient();
 
-  return (message, closeDialog) => () => {
-    void qc.invalidateQueries(trpc.admin.listPeriodsByState.pathFilter());
-    invalidateAdmin(qc, trpc);
-    toast.success(message);
-    closeDialog?.();
-  };
+  return (message, closeDialog, invalidatesReportViews = false) =>
+    () => {
+      void qc.invalidateQueries(trpc.admin.listPeriodsByState.pathFilter());
+      invalidateAdmin(qc, trpc);
+      if (invalidatesReportViews) invalidatePeriodLifecycle(qc, trpc);
+      toast.success(message);
+      closeDialog?.();
+    };
 }
 
 // Lifecycle transitions of an existing period; no dialog to dismiss.
@@ -32,13 +41,13 @@ function usePeriodStateMutations(notifyDone: NotifyDone) {
   return {
     publishMut: useMutation(
       trpc.period.publish.mutationOptions({
-        onSuccess: notifyDone("Period published"),
+        onSuccess: notifyDone("Period published", undefined, true),
         onError: notifyError,
       }),
     ),
     reopenMut: useMutation(
       trpc.period.reopen.mutationOptions({
-        onSuccess: notifyDone("Period reopened"),
+        onSuccess: notifyDone("Period reopened", undefined, true),
         onError: notifyError,
       }),
     ),

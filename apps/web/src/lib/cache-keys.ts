@@ -34,6 +34,27 @@ export function invalidateLeadHistory(qc: QueryClient, trpc: TRPCProxy): void {
   void qc.invalidateQueries(trpc.reports.myHistory.pathFilter());
 }
 
+// Publishing and reopening change every report-facing projection, regardless
+// of which screen initiated the lifecycle transition.
+export function invalidatePeriodLifecycle(
+  qc: QueryClient,
+  trpc: TRPCProxy,
+): void {
+  invalidateDashboard(qc, trpc);
+  invalidateLeadForm(qc, trpc);
+  invalidateLeadHistory(qc, trpc);
+}
+
+// Submission revocation changes both report projections and the live activity
+// stream shown beside them on the dashboard.
+export function invalidateSubmissionDashboard(
+  qc: QueryClient,
+  trpc: TRPCProxy,
+): void {
+  invalidateDashboard(qc, trpc);
+  void qc.invalidateQueries(trpc.activity.live.pathFilter());
+}
+
 // review-acknowledgement: a reviewer action (comment, delete, verdict) mutates
 // the section read model. A `changes_requested` verdict auto-un-submits, so the
 // head report AND the lead's own form must both refetch to reflect the return.

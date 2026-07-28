@@ -9,7 +9,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { invalidateLeadForm } from "../../../lib/cache-keys";
+import { invalidatePeriodLifecycle } from "../../../lib/cache-keys";
 import { makeQueryClient } from "../../../lib/query-client";
 import { SessionContext } from "../../../lib/session-provider";
 import { TRPCProxyContext } from "../../../lib/trpc-context";
@@ -18,9 +18,7 @@ import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { HeadPublishLockAction } from "./head-publish-lock-action";
 
 vi.mock("../../../lib/cache-keys", () => ({
-  invalidateDashboard: vi.fn(),
-  invalidateLeadForm: vi.fn(),
-  invalidateLeadHistory: vi.fn(),
+  invalidatePeriodLifecycle: vi.fn(),
 }));
 
 vi.mock("sonner", () => ({
@@ -110,7 +108,7 @@ describe("HeadPublishLockAction report-key transitions", () => {
     });
   });
 
-  it("invalidates the lead-form cache after publish success", async () => {
+  it("invalidates all report projections after publish success", async () => {
     const { Providers, captured } = makeHarness();
     render(<HeadPublishLockAction reportId="report-a" />, {
       wrapper: Providers,
@@ -123,10 +121,10 @@ describe("HeadPublishLockAction report-key transitions", () => {
       expectDefined(onSuccess)();
     });
 
-    expect(invalidateLeadForm).toHaveBeenCalledTimes(1);
+    expect(invalidatePeriodLifecycle).toHaveBeenCalledTimes(1);
   });
 
-  it("does not invalidate the lead-form cache after publish failure", async () => {
+  it("does not invalidate report projections after publish failure", async () => {
     const { Providers, captured } = makeHarness();
     render(<HeadPublishLockAction reportId="report-a" />, {
       wrapper: Providers,
@@ -139,6 +137,6 @@ describe("HeadPublishLockAction report-key transitions", () => {
       expectDefined(onError)(new Error("publish failed"));
     });
 
-    expect(invalidateLeadForm).not.toHaveBeenCalled();
+    expect(invalidatePeriodLifecycle).not.toHaveBeenCalled();
   });
 });

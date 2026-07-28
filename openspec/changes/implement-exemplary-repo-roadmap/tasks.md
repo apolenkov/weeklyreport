@@ -41,6 +41,10 @@
 - [ ] Burn down live suppressions and override blocks without weakening gates.
 - [ ] Close non-blocked test-integrity items.
 - [ ] Close non-blocked dependency and vocabulary duplication.
+- [x] Replace exact-key cache busting with named submission-dashboard and
+      period-lifecycle invalidation sets at every measured holdout.
+- [x] Single-home the duplicated domain-error wrapper and classify weekly
+      report domain failures by constructor rather than mutable error name.
 - [ ] Correct false documentation/control claims and demo-data defects.
 - [x] Make telemetry fallback comments describe the real zero payload.
 - [x] Enforce the documented `ai.*` audit exclusion with a regression test.
@@ -72,6 +76,8 @@
       and cover the deferred overwrite.
 - [x] Single-home both reopen-response forms, including the note cap and
       decision-specific pending state.
+- [x] Make the Telegram activation integration test deterministic, remove its
+      secret-dependent skip, and repair the vacuous SVG accessibility loop.
 - [ ] Land the remaining 4 confirmed fixes after the user decides the
       family-wide split-harness convention.
 

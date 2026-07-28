@@ -4,11 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useContext } from "react";
 import { toast } from "sonner";
 
-import {
-  invalidateDashboard,
-  invalidateLeadForm,
-  invalidateLeadHistory,
-} from "../../../lib/cache-keys";
+import { invalidatePeriodLifecycle } from "../../../lib/cache-keys";
 import { isHeadLike } from "../../../lib/role-predicates";
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
@@ -28,9 +24,7 @@ function periodMutationCallbacks(
 ) {
   return {
     onSuccess: () => {
-      invalidateDashboard(qc, trpc);
-      invalidateLeadForm(qc, trpc);
-      invalidateLeadHistory(qc, trpc);
+      invalidatePeriodLifecycle(qc, trpc);
       toast.success(messages.success);
     },
     onError: (err: unknown) => {

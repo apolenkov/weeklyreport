@@ -2,7 +2,10 @@ import type { Role } from "@customreport/shared";
 import { z } from "zod";
 
 import type { AppLogger } from "../../../lib/logger.js";
-import type { WeeklyReportService } from "../../../modules/weekly-report/index.js";
+import {
+  WeeklyReportDomainError,
+  type WeeklyReportService,
+} from "../../../modules/weekly-report/index.js";
 import type { TrpcContext } from "../trpc.context.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import { anyRoleProcedure, router } from "../trpc.middleware.js";
@@ -11,7 +14,6 @@ const WEEKLY_REPORT_LOAD_LOG_PHASE = "weekly-report.load";
 const WEEKLY_REPORT_GET_PROCEDURE = "weeklyReport.get";
 // Domain failures are expected outcomes of a valid request (warn); anything
 // else is a defect and must surface at error level.
-const WEEKLY_REPORT_DOMAIN_ERROR_NAME = "WeeklyReportDomainError";
 
 export interface WeeklyReportRouterDeps {
   weeklyReportService: WeeklyReportService;
@@ -44,7 +46,7 @@ function logWeeklyReportFailure(
       ? { name: error.name, message: error.message }
       : { name: typeof error, message: String(error) };
   const logFailure =
-    errorInfo.name === WEEKLY_REPORT_DOMAIN_ERROR_NAME
+    error instanceof WeeklyReportDomainError
       ? logger.warn.bind(logger)
       : logger.error.bind(logger);
   logFailure("weekly report load failed", {
