@@ -1,6 +1,6 @@
-// Row builders shared by the mapper suite and the repository suite, which were
-// one file until the pair outgrew the test size budget. Kept together because a
-// fabricated row must stay identical across both to be worth asserting on.
+// Row builders for the mapper and repository suites. Shared rather than copied
+// because a fabricated row must stay identical across both to be worth
+// asserting on.
 import type { TrafficLightStatus } from "@customreport/shared";
 
 import type { PrismaReportSectionWithRelations } from "../report-sections.include";

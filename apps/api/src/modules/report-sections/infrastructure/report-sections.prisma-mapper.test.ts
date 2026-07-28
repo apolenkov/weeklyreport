@@ -20,8 +20,8 @@ import {
   UNOWNED_PROJECT,
 } from "./__tests__/report-sections-prisma-harness";
 
-// A project the author owns no stage on still emits its real name, never the
-// "Unknown" placeholder a missing ownership lookup used to produce.
+// A project's name comes from its own row, not from the ownership join, so a
+// project a risk merely references still carries its real name.
 describe("mapPrismaToReportSection — referencedProjects", () => {
   it("emits a name-only entry for a project a risk references but the author owns no stage on", () => {
     const section = mapRow(
