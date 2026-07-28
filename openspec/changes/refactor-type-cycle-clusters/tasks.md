@@ -8,7 +8,7 @@
       decrement the baseline for its one violation.
 - [x] Refactor the record-comments cluster; prove comment mutation ownership and
       decrement the baseline for its one violation.
-- [ ] Refactor the periods action/table cluster; prove action rendering and
+- [x] Refactor the periods action/table cluster; prove action rendering and
       decrement the baseline for its one violation.
 - [ ] Refactor the lead-form section-composition cluster; prove all affected
       editing and accordion journeys and decrement its three violations.
