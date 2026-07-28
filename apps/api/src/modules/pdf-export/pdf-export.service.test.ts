@@ -15,7 +15,13 @@ import {
 } from "vitest";
 
 import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import type { AppLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import {
+  NOOP_PDF_EXPORT_TELEMETRY,
+  type PdfExportEnqueuer,
+  type PdfExportTelemetry,
+} from "./pdf-export.ports.js";
 import {
   PdfExportDomainError,
   type PdfExportJobRecord,
@@ -26,6 +32,27 @@ import { verifyPdfExportToken } from "./pdf-export.token";
 import { PdfExportInfrastructureTelemetry } from "./pdf-export-telemetry.adapter.js";
 
 const reportId = "22222222-2222-4222-8222-222222222222";
+const TEST_PDF_SECRET = "test-pdf-export-secret-at-least-32-chars";
+const NOOP_PDF_QUEUE: PdfExportEnqueuer = {
+  enqueue: () => Promise.resolve(),
+};
+
+function createPdfExportService(
+  repository: PdfExportRepository,
+  logger?: AppLogger,
+  queue: PdfExportEnqueuer = NOOP_PDF_QUEUE,
+  telemetry: PdfExportTelemetry = NOOP_PDF_EXPORT_TELEMETRY,
+): PdfExportService {
+  return new PdfExportService(repository, logger, queue, telemetry);
+}
+
+beforeEach(() => {
+  vi.stubEnv("PDF_EXPORT_JWT_SECRET", TEST_PDF_SECRET);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 const requesterSession: UserSession = {
   userId: "00000000-0000-4000-8000-00000000aaaa",
   email: "head@test.local",
@@ -121,7 +148,7 @@ describe("PdfExportService", () => {
     const repository = createRepository(null);
     const createExportJob = vi.spyOn(repository, "createExportJob");
     const queue = { enqueue: vi.fn() };
-    const service = new PdfExportService(repository, undefined, queue);
+    const service = createPdfExportService(repository, undefined, queue);
 
     await expect(
       service.requestPdfExport(reportId, requesterSession),
@@ -133,7 +160,7 @@ describe("PdfExportService", () => {
   });
 
   it("rejects export requests for unpublished reports", async () => {
-    const service = new PdfExportService(createRepository(draftReport));
+    const service = createPdfExportService(createRepository(draftReport));
 
     await expect(
       service.requestPdfExport(reportId, requesterSession),
@@ -141,7 +168,7 @@ describe("PdfExportService", () => {
   });
 
   it("creates an async queued export job for a published report", async () => {
-    const service = new PdfExportService(createRepository(publishedReport));
+    const service = createPdfExportService(createRepository(publishedReport));
     const job = await service.requestPdfExport(reportId, requesterSession);
 
     expect(job.reportId).toBe(reportId);
@@ -150,7 +177,7 @@ describe("PdfExportService", () => {
   });
 
   it("marks export jobs complete with deterministic metadata", async () => {
-    const service = new PdfExportService(createRepository(publishedReport));
+    const service = createPdfExportService(createRepository(publishedReport));
     const queued = await service.requestPdfExport(reportId, requesterSession);
     const completed = await service.markExportCompleted(
       queued.jobId,
@@ -165,7 +192,7 @@ describe("PdfExportService", () => {
 
   it("threads requestedBy from the session userId into createExportJob", async () => {
     const capture: { lastRequestedBy?: string } = {};
-    const service = new PdfExportService(
+    const service = createPdfExportService(
       createRepository(publishedReport, capture),
     );
     const sessionUserId = "00000000-0000-4000-8000-00000000abcd";
@@ -177,7 +204,7 @@ describe("PdfExportService", () => {
 
   it("always attributes the job to the required session", async () => {
     const capture: { lastRequestedBy?: string } = {};
-    const service = new PdfExportService(
+    const service = createPdfExportService(
       createRepository(publishedReport, capture),
     );
 
@@ -187,7 +214,7 @@ describe("PdfExportService", () => {
   });
 
   it("still rejects unpublished reports even when a requestedBy is supplied", async () => {
-    const service = new PdfExportService(createRepository(draftReport));
+    const service = createPdfExportService(createRepository(draftReport));
 
     await expect(
       service.requestPdfExport(
@@ -198,7 +225,7 @@ describe("PdfExportService", () => {
   });
 
   it("hides export status from a different requester", async () => {
-    const service = new PdfExportService(createRepository(publishedReport));
+    const service = createPdfExportService(createRepository(publishedReport));
     const ownerId = "00000000-0000-4000-8000-00000000aaaa";
     const otherId = "00000000-0000-4000-8000-00000000bbbb";
     const job = await service.requestPdfExport(reportId, sessionFor(ownerId));
@@ -218,7 +245,7 @@ describe("PdfExportService", () => {
 
   it("rejects an out-of-scope report before enqueue", async () => {
     const queue = { enqueue: vi.fn() };
-    const service = new PdfExportService(
+    const service = createPdfExportService(
       createRepository(publishedReport, undefined, false),
       undefined,
       queue,
@@ -234,7 +261,7 @@ describe("PdfExportService", () => {
     const queue = {
       enqueue: vi.fn().mockRejectedValue(new Error("Redis down")),
     };
-    const service = new PdfExportService(
+    const service = createPdfExportService(
       createRepository(publishedReport),
       undefined,
       queue,
@@ -264,7 +291,7 @@ describe("PdfExportService", () => {
   // confirm the optional `requestedByRole` is threaded through and the
   // omission path defaults to 'system' (worker / cron callers).
   it("bumps customreport_pdf_export_requests_total{role} per call", async () => {
-    const service = new PdfExportService(
+    const service = createPdfExportService(
       createRepository(publishedReport),
       undefined,
       undefined,
@@ -349,7 +376,7 @@ describe("PDF export JWT signing", () => {
 
   it("signPdfExportToken throws PdfExportDomainError when secret is missing", () => {
     vi.stubEnv("PDF_EXPORT_JWT_SECRET", "");
-    const service = new PdfExportService(createRepository(publishedReport));
+    const service = createPdfExportService(createRepository(publishedReport));
 
     expect(() => service.signPdfExportToken(reportId)).toThrow(
       PdfExportDomainError,
@@ -359,7 +386,7 @@ describe("PDF export JWT signing", () => {
   it("signPdfExportToken throws PdfExportDomainError when secret is too short (<32 chars)", () => {
     // 17 chars: under the 32-char floor.
     vi.stubEnv("PDF_EXPORT_JWT_SECRET", "seventeen-chars-x");
-    const service = new PdfExportService(createRepository(publishedReport));
+    const service = createPdfExportService(createRepository(publishedReport));
 
     expect(() => service.signPdfExportToken(reportId)).toThrow(
       PdfExportDomainError,
@@ -376,7 +403,7 @@ describe("PDF export JWT signing", () => {
   });
 
   it("signPdfExportToken produces a JWT carrying claim {reportId} and exp ≤ 5min", () => {
-    const service = new PdfExportService(createRepository(publishedReport));
+    const service = createPdfExportService(createRepository(publishedReport));
     const before = Math.floor(Date.now() / 1000);
     const token = service.signPdfExportToken(reportId);
     const after = Math.floor(Date.now() / 1000);
@@ -407,7 +434,7 @@ describe("PDF export JWT signing", () => {
       },
     };
 
-    const service = new PdfExportService(
+    const service = createPdfExportService(
       createRepository(publishedReport),
       undefined,
       fakeQueue,
@@ -444,7 +471,7 @@ describe("PDF export JWT signing", () => {
     const presigned = jwt.sign({ reportId, custom: "override" }, PDF_SECRET, {
       expiresIn: "1m",
     });
-    const service = new PdfExportService(
+    const service = createPdfExportService(
       createRepository(publishedReport),
       undefined,
       fakeQueue,
@@ -458,7 +485,7 @@ describe("PDF export JWT signing", () => {
 describe("markExportFailed", () => {
   it("updates job status to failed with error message", async () => {
     const repo = createRepository(publishedReport);
-    const service = new PdfExportService(repo);
+    const service = createPdfExportService(repo);
 
     const queued = await service.requestPdfExport(reportId, requesterSession);
 
@@ -480,7 +507,7 @@ describe("markExportFailed", () => {
       return originalMarkExportFailed(jobId, error);
     };
 
-    const service = new PdfExportService(repo);
+    const service = createPdfExportService(repo);
     const queued = await service.requestPdfExport(reportId, requesterSession);
 
     await service.markExportFailed(queued.jobId, "browser crashed");
@@ -499,7 +526,7 @@ describe("buildAuthCookies", () => {
     process.env.AUTH_JWT_COOKIE_NAME = "my_custom_session";
 
     try {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const cookies = service.buildAuthCookies("test-jwt-token");
 
       expect(cookies).toHaveLength(1);
@@ -519,7 +546,7 @@ describe("buildAuthCookies", () => {
     delete process.env.AUTH_JWT_COOKIE_NAME;
 
     try {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const cookies = service.buildAuthCookies("test-jwt-token");
 
       expect(cookies[0]?.name).toBe("customreport_session");
@@ -531,7 +558,7 @@ describe("buildAuthCookies", () => {
   });
 
   it("sets httpOnly to true for security", () => {
-    const service = new PdfExportService(createRepository(publishedReport));
+    const service = createPdfExportService(createRepository(publishedReport));
     const cookies = service.buildAuthCookies("test-jwt-token");
 
     expect(cookies[0]?.httpOnly).toBe(true);
@@ -545,7 +572,7 @@ describe("buildAuthCookies", () => {
     process.env.PDF_BASE_URL = "https://reports.company.com";
 
     try {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const cookies = service.buildAuthCookies("test-jwt-token");
 
       expect(cookies[0]?.url).toBe("https://reports.company.com");
@@ -563,7 +590,7 @@ describe("buildAuthCookies", () => {
     process.env.PDF_BASE_URL = "http://localhost:3000";
 
     try {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const cookies = service.buildAuthCookies("test-jwt-token");
 
       expect(cookies[0]?.url).toBe("http://localhost:3000");
@@ -590,7 +617,7 @@ describe("buildAuthCookies", () => {
     process.env.PDF_BASE_URL = "http://10.0.0.5:3000";
 
     try {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const cookies = service.buildAuthCookies("test-jwt-token");
 
       expect(cookies[0]?.url).toBe("http://10.0.0.5:3000");
@@ -609,7 +636,7 @@ describe("buildAuthCookies", () => {
     process.env.PDF_BASE_URL = "http://web-internal.cluster.local:3000";
 
     try {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const cookies = service.buildAuthCookies("test-jwt-token");
 
       expect(cookies[0]?.url).toBe("http://web-internal.cluster.local:3000");
@@ -626,7 +653,7 @@ describe("buildAuthCookies", () => {
 
 describe("requestPdfExport + getPdfExportStatus round trip", () => {
   it("returns the latest async export status for an existing job", async () => {
-    const service = new PdfExportService(createRepository(publishedReport));
+    const service = createPdfExportService(createRepository(publishedReport));
     const queued = await service.requestPdfExport(reportId, requesterSession);
     const completed = await service.markExportCompleted(
       queued.jobId,

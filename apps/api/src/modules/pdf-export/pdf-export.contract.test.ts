@@ -3,9 +3,15 @@ import type {
   PdfExportJob,
   UserSession,
 } from "@customreport/shared";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { AppLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import {
+  NOOP_PDF_EXPORT_TELEMETRY,
+  type PdfExportEnqueuer,
+  type PdfExportTelemetry,
+} from "./pdf-export.ports.js";
 import {
   PdfExportDomainError,
   type PdfExportJobRecord,
@@ -15,6 +21,27 @@ import {
 
 const reportId = "22222222-2222-4222-8222-222222222222";
 const unknownReportId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const TEST_PDF_SECRET = "test-pdf-export-secret-at-least-32-chars";
+const NOOP_PDF_QUEUE: PdfExportEnqueuer = {
+  enqueue: () => Promise.resolve(),
+};
+
+function createPdfExportService(
+  repository: PdfExportRepository,
+  logger?: AppLogger,
+  queue: PdfExportEnqueuer = NOOP_PDF_QUEUE,
+  telemetry: PdfExportTelemetry = NOOP_PDF_EXPORT_TELEMETRY,
+): PdfExportService {
+  return new PdfExportService(repository, logger, queue, telemetry);
+}
+
+beforeEach(() => {
+  vi.stubEnv("PDF_EXPORT_JWT_SECRET", TEST_PDF_SECRET);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 const requesterSession: UserSession = {
   userId: "00000000-0000-4000-8000-00000000aaaa",
   email: "head@test.local",
@@ -104,7 +131,7 @@ function createMockQueue() {
 describe("PdfExportService — contract tests", () => {
   describe("requestPdfExport", () => {
     it("creates a job for a published report", async () => {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const job = await service.requestPdfExport(reportId, requesterSession);
 
       expect(job).toBeDefined();
@@ -115,7 +142,7 @@ describe("PdfExportService — contract tests", () => {
     });
 
     it("throws PdfExportDomainError when report is not found", async () => {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
 
       await expect(
         service.requestPdfExport(unknownReportId, requesterSession),
@@ -127,7 +154,7 @@ describe("PdfExportService — contract tests", () => {
     });
 
     it("throws PdfExportDomainError when report is a draft", async () => {
-      const service = new PdfExportService(createRepository(draftReport));
+      const service = createPdfExportService(createRepository(draftReport));
 
       await expect(
         service.requestPdfExport(reportId, requesterSession),
@@ -139,7 +166,7 @@ describe("PdfExportService — contract tests", () => {
     });
 
     it('creates a job with status "queued"', async () => {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const job = await service.requestPdfExport(reportId, requesterSession);
 
       expect(job.status).toBe("queued");
@@ -152,7 +179,7 @@ describe("PdfExportService — contract tests", () => {
       process.env.PDF_EXPORT_JWT_SECRET = "a".repeat(32);
       try {
         const mockQueue = createMockQueue();
-        const service = new PdfExportService(
+        const service = createPdfExportService(
           createRepository(publishedReport),
           undefined,
           mockQueue,
@@ -179,7 +206,7 @@ describe("PdfExportService — contract tests", () => {
     });
 
     it("works without a queue (null queue)", async () => {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const job = await service.requestPdfExport(reportId, requesterSession);
 
       expect(job).toBeDefined();
@@ -187,7 +214,7 @@ describe("PdfExportService — contract tests", () => {
     });
 
     it('sets templateVersion to "phase-2-pdf-v1"', async () => {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const job = await service.requestPdfExport(reportId, requesterSession);
 
       expect(job.templateVersion).toBe("phase-2-pdf-v1");
@@ -195,7 +222,7 @@ describe("PdfExportService — contract tests", () => {
 
     it("rejects a cross-group request before enqueue", async () => {
       const queue = createMockQueue();
-      const service = new PdfExportService(
+      const service = createPdfExportService(
         createRepository(publishedReport, false),
         undefined,
         queue,
@@ -210,7 +237,7 @@ describe("PdfExportService — contract tests", () => {
 
   describe("requestPdfExport — job lifecycle", () => {
     it("export job transitions: queued -> completed", async () => {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const job = await service.requestPdfExport(reportId, requesterSession);
       expect(job.status).toBe("queued");
 
@@ -225,7 +252,7 @@ describe("PdfExportService — contract tests", () => {
 
     it("export job failure marks status as failed", async () => {
       const repo = createRepository(publishedReport);
-      const service = new PdfExportService(repo);
+      const service = createPdfExportService(repo);
       const job = await service.requestPdfExport(reportId, requesterSession);
 
       await service.markExportFailed(job.jobId, "Browser crashed");
@@ -238,7 +265,7 @@ describe("PdfExportService — contract tests", () => {
     });
 
     it("created job has correct reportId and templateVersion", async () => {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const job = await service.requestPdfExport(reportId, requesterSession);
 
       expect(job.reportId).toBe(reportId);
@@ -252,7 +279,7 @@ describe("PdfExportService — contract tests", () => {
 
   describe("getPdfExportStatus", () => {
     it("returns the job when found", async () => {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const created = await service.requestPdfExport(
         reportId,
         requesterSession,
@@ -269,7 +296,7 @@ describe("PdfExportService — contract tests", () => {
     });
 
     it("does not reveal a job to a different requester", async () => {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const ownerId = "00000000-0000-4000-8000-00000000aaaa";
       const otherId = "00000000-0000-4000-8000-00000000bbbb";
       const created = await service.requestPdfExport(
@@ -283,7 +310,7 @@ describe("PdfExportService — contract tests", () => {
     });
 
     it("throws PdfExportDomainError when job is not found", async () => {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const missingJobId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
       await expect(
@@ -298,7 +325,7 @@ describe("PdfExportService — contract tests", () => {
 
   describe("markExportCompleted", () => {
     it('sets status to "completed" with artifactUrl and checksum', async () => {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const queued = await service.requestPdfExport(reportId, requesterSession);
 
       const completed = await service.markExportCompleted(
@@ -313,7 +340,7 @@ describe("PdfExportService — contract tests", () => {
     });
 
     it("sets completedAt timestamp", async () => {
-      const service = new PdfExportService(createRepository(publishedReport));
+      const service = createPdfExportService(createRepository(publishedReport));
       const queued = await service.requestPdfExport(reportId, requesterSession);
 
       const before = new Date();
@@ -340,7 +367,7 @@ describe("PdfExportService — contract tests", () => {
       // spyOn calls through, so the repository still records the failure.
       const markExportFailed = vi.spyOn(repo, "markExportFailed");
 
-      const service = new PdfExportService(repo);
+      const service = createPdfExportService(repo);
       const queued = await service.requestPdfExport(reportId, requesterSession);
 
       await service.markExportFailed(queued.jobId, "Playwright timeout");
@@ -361,7 +388,9 @@ describe("PdfExportService — contract tests", () => {
       delete process.env.PDF_BASE_URL;
 
       try {
-        const service = new PdfExportService(createRepository(publishedReport));
+        const service = createPdfExportService(
+          createRepository(publishedReport),
+        );
         expect(() => service.buildAuthCookies("jwt-token-value")).toThrow(
           /PDF_BASE_URL/,
         );
@@ -377,7 +406,9 @@ describe("PdfExportService — contract tests", () => {
       process.env.AUTH_JWT_COOKIE_NAME = "custom_auth_token";
 
       try {
-        const service = new PdfExportService(createRepository(publishedReport));
+        const service = createPdfExportService(
+          createRepository(publishedReport),
+        );
         const cookies = service.buildAuthCookies("my-jwt");
 
         expect(expectDefined(cookies[0]).name).toBe("custom_auth_token");
@@ -399,7 +430,9 @@ describe("PdfExportService — contract tests", () => {
       process.env.PDF_BASE_URL = "https://reports.company.com";
 
       try {
-        const service = new PdfExportService(createRepository(publishedReport));
+        const service = createPdfExportService(
+          createRepository(publishedReport),
+        );
         const cookies = service.buildAuthCookies("secure-token");
 
         expect(expectDefined(cookies[0]).url).toBe(
