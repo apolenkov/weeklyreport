@@ -4,7 +4,7 @@
 
 - [x] Refactor the slide-grid cluster; prove model/subsection ownership and
       decrement the baseline for its one violation.
-- [ ] Refactor the reopen-request-card cluster; prove card/parts composition and
+- [x] Refactor the reopen-request-card cluster; prove card/parts composition and
       decrement the baseline for its one violation.
 - [ ] Refactor the record-comments cluster; prove comment mutation ownership and
       decrement the baseline for its one violation.
