@@ -16,13 +16,13 @@ import {
 export interface HistoryEntry {
   id: string;
   periodId: string;
-  href?: string;
+  href?: string | undefined;
   weekLabel: string;
   dateRange: string;
   status: "submitted" | "draft" | "published" | "archived";
-  archived?: boolean;
+  archived?: boolean | undefined;
   submittedAt: string | null;
-  publishedAt?: string | null;
+  publishedAt?: string | null | undefined;
   createdAt: string | null;
   lastEditAt: string | null;
   trafficLights: { green: number; yellow: number; red: number };
@@ -30,7 +30,7 @@ export interface HistoryEntry {
   riskCount: number;
   decisionCount: number;
   priorityCount: number;
-  productCount?: number;
+  productCount?: number | undefined;
 }
 
 function formatHistoryTimestamp(

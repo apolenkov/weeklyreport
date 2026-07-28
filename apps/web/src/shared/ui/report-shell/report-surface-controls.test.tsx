@@ -180,7 +180,7 @@ function paramsOf(reportId: string): Promise<{ reportId: string }> {
 }
 
 function searchParamsOf(authorId?: string): Promise<{ authorId?: string }> {
-  return Promise.resolve({ authorId });
+  return Promise.resolve(authorId === undefined ? {} : { authorId });
 }
 
 function sessionOf(role: Role): PrintRouteContext["session"] {

@@ -143,9 +143,12 @@ export const noCommentArchaeology: Rule.RuleModule = {
     // the location on the offending line of a block comment.
     const checkComment = (comment: {
       readonly value: string;
-      readonly loc?: {
-        readonly start: { line: number; column: number };
-      } | null;
+      readonly loc?:
+        | {
+            readonly start: { line: number; column: number };
+          }
+        | null
+        | undefined;
     }): void => {
       const start = comment.loc?.start ?? { line: 1, column: 0 };
       for (const [index, text] of comment.value.split("\n").entries()) {

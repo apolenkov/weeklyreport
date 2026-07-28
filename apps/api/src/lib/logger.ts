@@ -82,14 +82,14 @@ const DEFAULT_MAX_BYTES = DEFAULT_MAX_BYTES_MB * KB_PER_MB * BYTES_PER_KB;
 const DEFAULT_MAX_AGE_DAYS = 30;
 
 export interface LoggerOptions {
-  minLevel?: LogLevel;
+  minLevel?: LogLevel | undefined;
   // Omit to disable file logging.
-  logDir?: string;
-  service?: string;
+  logDir?: string | undefined;
+  service?: string | undefined;
   // Reads correlationId from CLS; NO_CORRELATION_ID outside an active scope.
-  clsService?: ClsService;
-  maxBytes?: number;
-  maxAgeDays?: number;
+  clsService?: ClsService | undefined;
+  maxBytes?: number | undefined;
+  maxAgeDays?: number | undefined;
 }
 
 class AppLoggerImpl implements AppLogger {

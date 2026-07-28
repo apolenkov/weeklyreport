@@ -84,21 +84,22 @@ interface LeadFormSyncBridgeProviderProps {
   readonly risks: RiskEntry[];
   readonly onProductsChange: (next: Product[]) => void;
   readonly onRisksChange: (next: RiskEntry[]) => void;
-  readonly readOnly?: boolean;
-  readonly activities?: readonly { id: string; name: string }[];
-  readonly stagesForProduct?: (productId: string) => readonly string[];
-  readonly sectionAuthorName?: string;
-  readonly risksAddSignal?: number;
-  readonly crossAuthors?: readonly CrossAuthorEntry[];
+  readonly readOnly?: boolean | undefined;
+  readonly activities?: readonly { id: string; name: string }[] | undefined;
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
+  readonly sectionAuthorName?: string | undefined;
+  readonly risksAddSignal?: number | undefined;
+  readonly crossAuthors?: readonly CrossAuthorEntry[] | undefined;
   // Omitted defaults to "everyone" (full grid); "mine" renders only the
   // lead's own stage chips.
-  readonly visibilityMode?: "mine" | "everyone";
+  readonly visibilityMode?: "mine" | "everyone" | undefined;
   // Merged risks for rendering only — the sync hook still runs on own-only
   // `risks` to avoid false-positive mutations.
-  readonly displayRisks?: RiskEntry[];
+  readonly displayRisks?: RiskEntry[] | undefined;
   // One-shot prefill routed from outside the pipeline; each new `signal`
   // opens the create dialog exactly once.
-  readonly externalRiskPrefill?: RiskPrefillRequest | null;
+  readonly externalRiskPrefill?: RiskPrefillRequest | null | undefined;
   readonly children: ReactNode;
 }
 

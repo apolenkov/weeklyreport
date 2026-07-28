@@ -10,8 +10,8 @@ import { RiskCardActions, RiskCardSummary } from "./risk-card-parts";
 // Prefer stageNames, fall back to legacy CSV; canonicalize so stored "Dev"
 // always displays as "Development".
 export function canonicalRiskStageTags(risk: {
-  stageNames?: readonly string[] | null;
-  stageName?: string | null;
+  stageNames?: readonly string[] | null | undefined;
+  stageName?: string | null | undefined;
 }): string[] {
   const raw =
     risk.stageNames && risk.stageNames.length > 0
@@ -29,13 +29,13 @@ const AT_RISK_CARD_BORDER = "rgba(212,160,23,0.15)";
 interface RiskCardProps {
   readonly risk: RiskEntry;
   readonly readOnly: boolean;
-  readonly sectionAuthorName?: string;
-  readonly linkedProductStatus?: StageStatus;
+  readonly sectionAuthorName?: string | undefined;
+  readonly linkedProductStatus?: StageStatus | undefined;
   readonly onEdit: (risk: RiskEntry) => void;
   readonly onDelete: (id: string) => void;
   // One-click blocked <-> at-risk without the full edit dialog. Omitted on
   // read-only / foreign cards (action row is a LockBadge).
-  readonly onToggleSeverity?: (risk: RiskEntry) => void;
+  readonly onToggleSeverity?: ((risk: RiskEntry) => void) | undefined;
 }
 
 interface RiskCardState {
@@ -106,10 +106,10 @@ interface RiskCardHeaderProps {
   readonly risk: RiskEntry;
   readonly isBlocked: boolean;
   readonly locked: boolean;
-  readonly sectionAuthorName?: string;
+  readonly sectionAuthorName?: string | undefined;
   readonly onEdit: (risk: RiskEntry) => void;
   readonly onDelete: (id: string) => void;
-  readonly onToggleSeverity?: (risk: RiskEntry) => void;
+  readonly onToggleSeverity?: ((risk: RiskEntry) => void) | undefined;
 }
 
 function RiskCardHeader({

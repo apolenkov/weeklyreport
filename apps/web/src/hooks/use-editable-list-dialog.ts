@@ -17,8 +17,8 @@ export type EditableListDialogState<TEntity> =
 // Product and activity are mutually exclusive: a product column's "+ Add"
 // seeds one, an activity lane's "+ Add" the other.
 export interface CreateSeed {
-  readonly productId?: string;
-  readonly activityId?: string;
+  readonly productId?: string | undefined;
+  readonly activityId?: string | undefined;
 }
 
 interface UseEditableListDialogOptions {
@@ -27,10 +27,10 @@ interface UseEditableListDialogOptions {
   readonly addSignal: number;
   // Seed product for signal-opened create mode. Stays in the effect deps —
   // canonical across all four section copies.
-  readonly seedProductId?: string;
+  readonly seedProductId?: string | undefined;
   // current/next-week require a seed product to open from the signal (the
   // created item must attach to a product column); risks/decisions do not.
-  readonly requireSeed?: boolean;
+  readonly requireSeed?: boolean | undefined;
 }
 
 export interface UseEditableListDialogResult<TEntity> {
@@ -56,8 +56,10 @@ function createModeState<TEntity>(
   return {
     open: true,
     mode: "create",
-    seedProductId: seed?.productId,
-    seedActivityId: seed?.activityId,
+    ...(seed?.productId === undefined ? {} : { seedProductId: seed.productId }),
+    ...(seed?.activityId === undefined
+      ? {}
+      : { seedActivityId: seed.activityId }),
   };
 }
 
@@ -67,6 +69,19 @@ function buildDialogKey<TEntity extends { id: string }>(
 ): string {
   const target = state.open && state.mode === "edit" ? state.entity.id : "new";
   return `${openSeq}-${target}`;
+}
+
+function usePendingDelete<TEntity>(readOnlyRef: { readonly current: boolean }) {
+  const [pendingDelete, setPendingDelete] = useState<TEntity | null>(null);
+  const requestDelete = useCallback(
+    (entity: TEntity) => {
+      if (readOnlyRef.current) return;
+      setPendingDelete(entity);
+    },
+    [readOnlyRef],
+  );
+  const clearPendingDelete = useCallback(() => setPendingDelete(null), []);
+  return { pendingDelete, requestDelete, clearPendingDelete };
 }
 
 export function useEditableListDialog<TEntity extends { id: string }>({
@@ -80,7 +95,6 @@ export function useEditableListDialog<TEntity extends { id: string }>({
   // Monotonic counter so repeated opens of the same entity get a fresh key
   // even when entity.id is unchanged (prevents stale state in the dialog).
   const [openSeq, setOpenSeq] = useState(0);
-  const [pendingDelete, setPendingDelete] = useState<TEntity | null>(null);
 
   // Read via ref so addSignal effect omits readOnly from deps (snapshot enter
   // would re-open from a stale counter). Do not move this write into an effect.
@@ -107,13 +121,8 @@ export function useEditableListDialog<TEntity extends { id: string }>({
   }, []);
 
   const close = useCallback(() => setDialogState({ open: false }), []);
-
-  const requestDelete = useCallback((entity: TEntity) => {
-    if (readOnlyRef.current) return;
-    setPendingDelete(entity);
-  }, []);
-
-  const clearPendingDelete = useCallback(() => setPendingDelete(null), []);
+  const { pendingDelete, requestDelete, clearPendingDelete } =
+    usePendingDelete<TEntity>(readOnlyRef);
 
   useEffect(() => {
     if (addSignal === NO_SIGNAL_HANDLED) return;
@@ -123,7 +132,11 @@ export function useEditableListDialog<TEntity extends { id: string }>({
     lastHandledSignal.current = addSignal;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- consumes the addSignal SIGNAL prop (an event delivered via props) with ref-based once-guards; state updates are the event's handler
     setOpenSeq((n) => n + 1);
-    setDialogState({ open: true, mode: "create", seedProductId });
+    setDialogState({
+      open: true,
+      mode: "create",
+      ...(seedProductId === undefined ? {} : { seedProductId }),
+    });
   }, [addSignal, seedProductId, requireSeed]);
 
   const dialogKey = buildDialogKey(openSeq, dialogState);

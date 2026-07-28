@@ -39,7 +39,7 @@ function SlideProductList({
 }: {
   readonly grid: SlideGridModel;
   readonly authorsById: ReadonlyMap<string, GridAuthor>;
-  readonly onRowActivate?: SlideRowActivateHandler;
+  readonly onRowActivate?: SlideRowActivateHandler | undefined;
 }) {
   return (
     <div className="flex flex-1 flex-col gap-3">
@@ -67,8 +67,8 @@ export function SlideArticle({
   onRowActivate,
 }: {
   readonly slide: SectionSlideModel;
-  readonly heroControls?: ReactNode;
-  readonly onRowActivate?: SlideRowActivateHandler;
+  readonly heroControls?: ReactNode | undefined;
+  readonly onRowActivate?: SlideRowActivateHandler | undefined;
 }) {
   const grid = slide.grid;
 

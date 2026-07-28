@@ -24,11 +24,12 @@ interface UseRiskEditParentStageArgs {
   readonly isCreate: boolean;
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
-  readonly defaultProductId?: string;
-  readonly defaultActivityId?: string;
-  readonly initialStageNames?: string[];
-  readonly initialSeverity?: RiskSeverity;
-  readonly stagesForProduct?: (productId: string) => readonly string[];
+  readonly defaultProductId?: string | undefined;
+  readonly defaultActivityId?: string | undefined;
+  readonly initialStageNames?: string[] | undefined;
+  readonly initialSeverity?: RiskSeverity | undefined;
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
 }
 
 // All four seeds are computed once on mount and stay sticky: re-deriving them
@@ -86,7 +87,8 @@ interface RiskParentDerivationArgs {
   readonly activities: readonly ParentActivityOption[];
   readonly stageNames: readonly string[];
   readonly risk: RiskEntry | null;
-  readonly stagesForProduct?: (productId: string) => readonly string[];
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
 }
 
 // Tracks the selected parent (not the mount-time seed) so the stage strip and

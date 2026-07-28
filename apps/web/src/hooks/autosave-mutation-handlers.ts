@@ -11,11 +11,10 @@ export interface SaveDraftHandlerDeps {
   readonly setLastSavedAt: Dispatch<SetStateAction<Date | null>>;
   readonly setQueuedRetryRevision: Dispatch<SetStateAction<number>>;
   readonly onVersionChange: (version: number) => void;
-  readonly onSaved?: (
-    section: ReportSectionReadModel,
-    payload: DraftSaveContent,
-  ) => void;
-  readonly onConflict?: () => void;
+  readonly onSaved?:
+    | ((section: ReportSectionReadModel, payload: DraftSaveContent) => void)
+    | undefined;
+  readonly onConflict?: (() => void) | undefined;
   // Section captured at render, NOT the live one: the onError re-arm must only
   // fire for the form the caller is currently showing.
   readonly reportSectionId: string | null;

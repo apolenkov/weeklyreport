@@ -19,9 +19,9 @@ import { UsersTab } from "./users-tab";
 
 interface AdminPanelContentProps {
   readonly activeTab: AdminTab;
-  readonly productFilter?: string | null;
-  readonly data?: MappedAdminSnapshot;
-  readonly settings?: AdminSettingsView;
+  readonly productFilter?: string | null | undefined;
+  readonly data?: MappedAdminSnapshot | undefined;
+  readonly settings?: AdminSettingsView | undefined;
   readonly snapshotError: boolean;
   readonly settingsError: boolean;
   readonly retrySnapshot: () => void;

@@ -1,6 +1,7 @@
 import {
   adminCreatePeriodManualSchema,
   adminUpdatePeriodManualSchema,
+  omitUndefinedProperties,
   periodListBucketSchema,
 } from "@customreport/shared";
 import { z } from "zod";
@@ -114,7 +115,9 @@ function createPeriodLifecycleProcedures(deps: AdminPeriodsDeps) {
       )
       .query(({ input }) =>
         withDomainErrorMapping(() =>
-          deps.periodAdminService.listPeriodsByState(input),
+          deps.periodAdminService.listPeriodsByState(
+            omitUndefinedProperties(input),
+          ),
         ),
       ),
     // Atomic archived=true + periodState=archived (dual-state invariant).

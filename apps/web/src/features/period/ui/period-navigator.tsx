@@ -22,26 +22,26 @@ interface PeriodNavigatorProps {
    * Addressed period id. When supplied, this takes precedence over the
    * pathname regex used to infer the current period.
    */
-  readonly currentPeriodId?: string;
+  readonly currentPeriodId?: string | undefined;
   /**
    * Optional URL builder for navigation. When provided, replaces the default
    * lead-specific `/lead/report/<periodId>` path construction so the navigator
    * can be reused by other roles via a custom addressed-path scheme.
    * Receives the target periodId; must return the full href to push.
    */
-  readonly urlBuilder?: (periodId: string) => string;
+  readonly urlBuilder?: ((periodId: string) => string) | undefined;
   /**
    * Opt-in per-lead submitted marker. Only the lead surface passes this;
    * head and viewer navigators omit it and therefore never show the marker.
    */
-  readonly showLeadSubmissionMarkers?: boolean;
+  readonly showLeadSubmissionMarkers?: boolean | undefined;
   /**
    * The current lead's `ReportSection.submittedAt` for the displayed
    * period. Sourced ONLY from the lead's own section — never the head shell's
    * fabricated `isSubmitted` flag. The marker shows on the selected period
    * when `showLeadSubmissionMarkers` is set and this value is non-null.
    */
-  readonly leadSubmittedAt?: Date | string | null;
+  readonly leadSubmittedAt?: Date | string | null | undefined;
 }
 
 const PERIOD_NAV_ARROW_BUTTON_CLASS =

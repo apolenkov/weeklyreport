@@ -24,10 +24,10 @@ import {
 } from "./weekly-report-page-view";
 
 interface UseWeeklyReportPageParams {
-  readonly reportId?: string;
-  readonly redirectToCanonical?: boolean;
+  readonly reportId?: string | undefined;
+  readonly redirectToCanonical?: boolean | undefined;
   readonly canonicalBasePath: string;
-  readonly authorId?: string;
+  readonly authorId?: string | undefined;
   readonly scope: "product" | "lead";
 }
 

@@ -7,14 +7,14 @@ interface DialogSurfaceProps {
   readonly onDismiss: () => void;
   readonly children: ReactNode;
   readonly surfaceClassName: string;
-  readonly backdropClassName?: string;
-  readonly role?: "dialog" | "alertdialog";
-  readonly ariaLabel?: string;
-  readonly ariaLabelledBy?: string;
-  readonly ariaDescribedBy?: string;
-  readonly testId?: string;
-  readonly mode?: string;
-  readonly onBackdropKeyDown?: KeyboardEventHandler<HTMLDivElement>;
+  readonly backdropClassName?: string | undefined;
+  readonly role?: "dialog" | "alertdialog" | undefined;
+  readonly ariaLabel?: string | undefined;
+  readonly ariaLabelledBy?: string | undefined;
+  readonly ariaDescribedBy?: string | undefined;
+  readonly testId?: string | undefined;
+  readonly mode?: string | undefined;
+  readonly onBackdropKeyDown?: KeyboardEventHandler<HTMLDivElement> | undefined;
 }
 
 const DEFAULT_BACKDROP_CLASS =

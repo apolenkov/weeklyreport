@@ -109,9 +109,9 @@ export interface TrpcContext {
   session: UserSession | null;
   logger: AppLogger;
   // Set by CorrelationIdMiddleware before tRPC context construction.
-  correlationId?: string;
+  correlationId?: string | undefined;
   // Optional in direct unit callers; real HTTP contexts always receive it.
-  prisma?: PrismaService;
+  prisma?: PrismaService | undefined;
   // Shared across requests; AppLogger is request-agnostic (CLS correlation).
   auditLogger: AuditLogger;
   // From req.ip (trust-proxy aware) — never raw X-Forwarded-For (threat T3).

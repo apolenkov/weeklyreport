@@ -10,9 +10,9 @@ import {
 import type { ParentActivityOption, RecordParent } from "./parent-picker";
 
 export interface ItemEditErrors {
-  text?: string;
-  stageNames?: string;
-  pausedReason?: string;
+  text?: string | undefined;
+  stageNames?: string | undefined;
+  pausedReason?: string | undefined;
 }
 
 interface UseItemEditFormStateArgs {
@@ -20,9 +20,9 @@ interface UseItemEditFormStateArgs {
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
   readonly week: "current" | "next";
-  readonly currentUserName?: string;
-  readonly defaultProductId?: string;
-  readonly defaultActivityId?: string;
+  readonly currentUserName?: string | undefined;
+  readonly defaultProductId?: string | undefined;
+  readonly defaultActivityId?: string | undefined;
   readonly onCancel: () => void;
 }
 

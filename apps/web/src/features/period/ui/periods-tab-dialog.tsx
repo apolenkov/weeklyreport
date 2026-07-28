@@ -22,9 +22,9 @@ import {
 // deadline-driven automation skips it. Create-mode omits them instead.
 export interface CreatePeriodValues {
   periodStart: Date;
-  periodEnd?: Date;
-  deadline?: Date | null;
-  weekLabel?: string | null;
+  periodEnd?: Date | undefined;
+  deadline?: Date | null | undefined;
+  weekLabel?: string | null | undefined;
 }
 
 const DEADLINE_CLEARED_HINT =

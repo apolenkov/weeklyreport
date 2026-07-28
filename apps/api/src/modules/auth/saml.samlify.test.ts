@@ -31,7 +31,6 @@ function buildIdP(): IdPInstance {
   return samlify.IdentityProvider({
     entityID: "http://idp.test/metadata",
     privateKey: idpKey,
-    privateKeyPass: undefined,
     isAssertionEncrypted: false,
     signingCert: idpCert,
     encryptCert: idpCert,
@@ -49,7 +48,6 @@ function buildSP(useIdpCert: string): SPInstance {
   return samlify.ServiceProvider({
     entityID: "http://sp.test/metadata",
     privateKey: spKey,
-    privateKeyPass: undefined,
     signingCert: spCert,
     encryptCert: spCert,
     wantMessageSigned: false,

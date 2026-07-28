@@ -41,12 +41,12 @@ function ToggleSeverityButton({
 
 interface RiskCardActionsProps {
   readonly risk: RiskEntry;
-  readonly sectionAuthorName?: string;
+  readonly sectionAuthorName?: string | undefined;
   readonly locked: boolean;
   readonly isBlocked: boolean;
   readonly onEdit: (risk: RiskEntry) => void;
   readonly onDelete: (id: string) => void;
-  readonly onToggleSeverity?: (risk: RiskEntry) => void;
+  readonly onToggleSeverity?: ((risk: RiskEntry) => void) | undefined;
 }
 
 export function RiskCardActions({

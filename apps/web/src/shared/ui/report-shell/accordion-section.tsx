@@ -8,14 +8,14 @@ interface AccordionSectionProps {
   readonly icon: React.ReactNode;
   readonly title: string;
   readonly titleColor?: string;
-  readonly badge?: string;
-  readonly badgeStyle?: React.CSSProperties;
-  readonly subtitle?: string;
+  readonly badge?: string | undefined;
+  readonly badgeStyle?: React.CSSProperties | undefined;
+  readonly subtitle?: string | undefined;
   readonly defaultOpen?: boolean;
   // Set by the parent's "Toggle All" to force every section into one state.
-  readonly groupExpanded?: boolean;
-  readonly testId?: string;
-  readonly actions?: React.ReactNode;
+  readonly groupExpanded?: boolean | undefined;
+  readonly testId?: string | undefined;
+  readonly actions?: React.ReactNode | undefined;
   readonly children: React.ReactNode;
 }
 
@@ -23,9 +23,9 @@ interface AccordionHeadingProps {
   readonly icon: React.ReactNode;
   readonly title: string;
   readonly titleColor: string;
-  readonly badge?: string;
-  readonly badgeStyle?: React.CSSProperties;
-  readonly subtitle?: string;
+  readonly badge?: string | undefined;
+  readonly badgeStyle?: React.CSSProperties | undefined;
+  readonly subtitle?: string | undefined;
 }
 
 function AccordionHeading({

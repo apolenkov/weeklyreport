@@ -242,10 +242,12 @@ delegated engineering policy, implemented and adjudicated by the campaign
 owner according to the criteria below.
 
 1. **`exactOptionalPropertyTypes` is enabled through a dedicated migration
-   wave.** The measured 290 errors (API 58, web 225, shared 4, UI 3) are
-   classified at the missing / explicit `undefined` / `null` boundary. The
-   flag becomes permanent only after every workspace typecheck passes and a
-   planted regression proves the gate.
+   wave.** The audit measured 290 errors (API 58, web 225, shared 4, UI 3);
+   the implementation remeasurement on the changed tree found and classified
+   295 (API 59, web 230, shared 4, UI 2) at the missing / explicit
+   `undefined` / `null` boundary. The flag is permanent in the shared base
+   config only after all workspace, scripts, Prisma, and e2e typechecks pass
+   and a planted regression proves the gate.
 2. **Settled-period telemetry uses `periodStatus = "published"`.** A reopened
    period is editable and is excluded from the on-time ratio, active-lead, and
    late-section "last published" metrics until it is republished. The selection

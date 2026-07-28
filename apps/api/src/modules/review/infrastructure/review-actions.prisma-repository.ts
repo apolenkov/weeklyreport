@@ -94,6 +94,7 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
         select: sectionGroupSelect,
       });
     }
+    if (anchor.decisionId === undefined) return null;
     return this.prisma.decision.findUnique({
       where: { id: anchor.decisionId },
       select: sectionGroupSelect,

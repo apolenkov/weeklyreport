@@ -17,7 +17,10 @@ export interface LeadReviewFeedbackRecord {
 
 // Drop records with zero comments; shared by the three mapLeadReviewFeedback branches.
 function toFeedbackRecords<
-  T extends { id?: string | null; comments?: readonly RecordCommentView[] },
+  T extends {
+    id?: string | null | undefined;
+    comments?: readonly RecordCommentView[] | undefined;
+  },
 >(
   records: readonly T[],
   kind: LeadReviewFeedbackRecord["kind"],

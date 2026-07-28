@@ -14,33 +14,34 @@ import { DecisionEditDialog } from "./decision-edit-dialog";
 
 interface DecisionsSectionProps {
   readonly decisions: DecisionEntry[];
-  readonly readOnly?: boolean;
-  readonly onChange?: (decisions: DecisionEntry[]) => void;
-  readonly defaultProductName?: string;
+  readonly readOnly?: boolean | undefined;
+  readonly onChange?: ((decisions: DecisionEntry[]) => void) | undefined;
+  readonly defaultProductName?: string | undefined;
   /**
    * Display name of the currently signed-in user. Used to seed the Owner
    * field for newly-created decisions. Ownership for Edit/Delete is decided
    * by the id-based `foreign` flag, NOT by matching this free-text name.
    */
-  readonly currentUserName?: string;
+  readonly currentUserName?: string | undefined;
   /**
    * Stages owned on the selected product, passed through so changing the
    * product re-scopes the available stages.
    */
-  readonly stagesForProduct?: (productId: string) => readonly string[];
-  readonly products?: readonly Product[];
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
+  readonly products?: readonly Product[] | undefined;
   /**
    * The author's attached activities, forwarded so a decision can use an
    * activity rather than a product as its parent.
    */
-  readonly activities?: readonly ParentActivityOption[];
-  readonly defaultProductId?: string;
-  readonly addSignal?: number;
+  readonly activities?: readonly ParentActivityOption[] | undefined;
+  readonly defaultProductId?: string | undefined;
+  readonly addSignal?: number | undefined;
   /**
    * Decision ids locked because their lineage appeared in a published report;
    * rows stay resolvable but cannot be deleted (server rejects the write).
    */
-  readonly publishedLockedIds?: ReadonlySet<string>;
+  readonly publishedLockedIds?: ReadonlySet<string> | undefined;
 }
 
 // A decision created from this section inherits the section's product when the

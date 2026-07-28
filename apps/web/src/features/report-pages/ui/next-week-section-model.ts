@@ -4,20 +4,21 @@ import type { KanbanItem, Product, RiskEntry } from "../../report-sections";
 export interface NextWeekSectionProps {
   readonly items: KanbanItem[];
   // Own risks for ItemCard alarm derivation (in-progress only; planned never floors).
-  readonly risks?: readonly RiskEntry[];
-  readonly readOnly?: boolean;
+  readonly risks?: readonly RiskEntry[] | undefined;
+  readonly readOnly?: boolean | undefined;
   // Parent merges into draftSection.items by id, preserving non-presentation fields.
-  readonly onItemsChange?: (items: KanbanItem[]) => void;
-  readonly currentUserName?: string;
-  readonly products?: readonly Product[];
-  readonly activities?: readonly { id: string; name: string }[];
-  readonly stagesForProduct?: (productId: string) => readonly string[];
+  readonly onItemsChange?: ((items: KanbanItem[]) => void) | undefined;
+  readonly currentUserName?: string | undefined;
+  readonly products?: readonly Product[] | undefined;
+  readonly activities?: readonly { id: string; name: string }[] | undefined;
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
   // Full-period ranks so ItemEditDialog can disable taken priority ranks.
-  readonly ownPeriodRanks?: readonly number[];
-  readonly addSignal?: number;
+  readonly ownPeriodRanks?: readonly number[] | undefined;
+  readonly addSignal?: number | undefined;
   // Resolve-not-delete (ADR 0015): published-lineage ids show marker, hide Delete.
-  readonly publishedLockedIds?: ReadonlySet<string>;
-  readonly onMoveToCurrentWeek?: (id: string) => void;
+  readonly publishedLockedIds?: ReadonlySet<string> | undefined;
+  readonly onMoveToCurrentWeek?: ((id: string) => void) | undefined;
 }
 
 export type NextWeekDialog = UseEditableListDialogResult<KanbanItem>;

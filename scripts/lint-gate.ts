@@ -66,6 +66,10 @@ const CHECKS: readonly Check[] = [
     script: "lint:vitest-rules:test",
     what: "Vitest rule ledger and planted probes",
   },
+  {
+    script: "lint:exact-optional:test",
+    what: "exact optional properties config and planted probe",
+  },
   { script: "depcruise", what: "dependency-cruiser module graph" },
   { script: "knip", what: "knip dead code and dependencies" },
 ];

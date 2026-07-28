@@ -151,7 +151,7 @@ function toProjectView(group: AuthorProjectGroup, ctx: ProjectViewContext) {
       risks: ctx.sectionRisks.map((r) => ({
         projectId: r.projectId,
         severity: r.severity as RiskSeverity,
-        stageNames: r.stageNames.length > 0 ? r.stageNames : undefined,
+        ...(r.stageNames.length > 0 ? { stageNames: r.stageNames } : {}),
       })),
     }),
     ownedStages,

@@ -115,13 +115,15 @@ export function createRateLimits(options: {
     client ? redisStoreFor(client, bucket) : undefined;
 
   const baseConfig = buildBaseConfig(logger);
-  const limiterFor = (bucket: string, limit: number): RequestHandler =>
-    rateLimit({
+  const limiterFor = (bucket: string, limit: number): RequestHandler => {
+    const store = storeFor(bucket);
+    return rateLimit({
       ...baseConfig,
       limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : limit,
       message: bucket,
-      store: storeFor(bucket),
+      ...(store === undefined ? {} : { store }),
     });
+  };
 
   return {
     authLimiter: limiterFor("auth", AUTH_LIMIT_PER_MINUTE),

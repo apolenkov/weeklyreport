@@ -35,11 +35,11 @@ const TRAFFIC_ICON: Record<ProductStatus, string> = {
 };
 
 interface BuildLeadInfosArgs {
-  readonly review?: readonly SubmissionDashboardRow[];
+  readonly review?: readonly SubmissionDashboardRow[] | undefined;
   readonly weeklyReport: WeeklyReportReadModel;
-  readonly activity?: ActivityLiveResponse;
+  readonly activity?: ActivityLiveResponse | undefined;
   readonly now: Date;
-  readonly currentUserId?: string;
+  readonly currentUserId?: string | undefined;
 }
 
 interface LeadBuildContext {
@@ -47,7 +47,7 @@ interface LeadBuildContext {
   readonly sectionByAuthor: ReadonlyMap<string, ReportSectionReadModel>;
   readonly activityByLead: ReadonlyMap<string, ActivityLiveRow>;
   readonly now: Date;
-  readonly currentUserId?: string;
+  readonly currentUserId?: string | undefined;
 }
 
 interface LeadQueueState {

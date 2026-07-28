@@ -141,7 +141,7 @@ function SubsectionRow({
 }: {
   readonly subsection: GridSubsection;
   readonly authorsById: ReadonlyMap<string, GridAuthor>;
-  readonly onRowActivate?: SlideRowActivateHandler;
+  readonly onRowActivate?: SlideRowActivateHandler | undefined;
 }) {
   // A record-less subsection (status-only project) collapses to its header —
   // a 4-column row of em-dashes says nothing the status dot doesn't.
@@ -177,7 +177,7 @@ export function SlideProductCard({
 }: {
   readonly card: GridProductCard;
   readonly authorsById: ReadonlyMap<string, GridAuthor>;
-  readonly onRowActivate?: SlideRowActivateHandler;
+  readonly onRowActivate?: SlideRowActivateHandler | undefined;
 }) {
   if (card.noData) {
     return (

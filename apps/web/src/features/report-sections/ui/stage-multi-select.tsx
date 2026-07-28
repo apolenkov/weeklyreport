@@ -6,11 +6,11 @@ interface StageMultiSelectProps {
   readonly id: string;
   readonly value: readonly string[];
   readonly stages: readonly string[];
-  readonly error?: string;
+  readonly error?: string | undefined;
   readonly onChange: (next: string[]) => void;
-  readonly previewSeverity?: "at-risk" | "blocked";
+  readonly previewSeverity?: "at-risk" | "blocked" | undefined;
   // Required: drop "empty = all stages" copy; empty selection is invalid.
-  readonly required?: boolean;
+  readonly required?: boolean | undefined;
 }
 
 // Empty selection → "all stages" only when optional; required mode suppresses that banner.

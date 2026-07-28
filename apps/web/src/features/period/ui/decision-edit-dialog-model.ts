@@ -13,11 +13,12 @@ import { resolveDecisionProductName } from "./decision-edit-dialog-helpers";
 
 export interface UseDecisionEditDialogArgs {
   readonly decision: DecisionEntry | null;
-  readonly defaultOwner?: string;
-  readonly stagesForProduct?: (productId: string) => readonly string[];
-  readonly products?: readonly Product[];
+  readonly defaultOwner?: string | undefined;
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
+  readonly products?: readonly Product[] | undefined;
   readonly activities: readonly ParentActivityOption[];
-  readonly defaultProductId?: string;
+  readonly defaultProductId?: string | undefined;
   readonly onSave: (next: DecisionEntry) => void;
   readonly onCancel: () => void;
 }

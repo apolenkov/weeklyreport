@@ -74,9 +74,9 @@ export function shortNameFromName(name: string): string {
  * heuristic when parts are absent (SAML-stub case).
  */
 export function initials(input: {
-  lastName?: string | null;
-  firstName?: string | null;
-  name?: string | null;
+  lastName?: string | null | undefined;
+  firstName?: string | null | undefined;
+  name?: string | null | undefined;
 }): string {
   const fromParts =
     `${firstLetter(input.lastName)}${firstLetter(input.firstName)}`.toUpperCase();

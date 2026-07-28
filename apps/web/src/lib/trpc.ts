@@ -15,7 +15,7 @@ import {
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import superjson from "superjson";
 
-import { fetchWithTraceparent } from "./trace-context";
+import { createTraceparent } from "./trace-context";
 
 // Pages where a 401 must not redirect (would loop): login and /auth/* callbacks.
 const AUTH_REDIRECT_EXEMPT = /^\/(?:$|auth(?:\/|$))/;
@@ -96,7 +96,7 @@ export function makeTRPCClient() {
   const transportOptions = {
     transformer: superjson,
     url: "/trpc",
-    fetch: fetchWithTraceparent,
+    headers: () => ({ traceparent: createTraceparent() }),
   } as const;
 
   return createTRPCClientCore<AppRouter>({

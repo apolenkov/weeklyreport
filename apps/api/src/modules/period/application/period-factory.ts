@@ -221,7 +221,7 @@ export async function ensureCurrentPeriod(
       periodEnd,
       deadline,
       now,
-      policyApplicator,
+      ...(policyApplicator === undefined ? {} : { policyApplicator }),
     });
   } catch (error) {
     // Concurrent creators collide on the partial unique index; the loser returns

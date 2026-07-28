@@ -115,7 +115,14 @@ function buildHarness(
       path: ["leadForm", "byPeriod"],
       query:
         opts.byPeriodQueryFn ??
-        (() => byPeriodPayload(makeSection({ status: opts.sectionStatus }))),
+        (() =>
+          byPeriodPayload(
+            makeSection(
+              opts.sectionStatus === undefined
+                ? {}
+                : { status: opts.sectionStatus },
+            ),
+          )),
     },
     {
       path: ["leadForm", "viewSettings"],

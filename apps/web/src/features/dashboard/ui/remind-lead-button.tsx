@@ -55,7 +55,7 @@ const CHECKED_CONFIRM_STATES: ReadonlySet<ConfirmState> = new Set<ConfirmState>(
 );
 
 const confirmStateFromDispatch = (result: {
-  readonly reason?: string;
+  readonly reason?: string | undefined;
   readonly dispatched: number;
   readonly alreadySent: number;
 }): ConfirmState => {

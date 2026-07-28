@@ -10,12 +10,12 @@ export interface LeadCompletionActionContract {
   readonly addDisabled: boolean;
   readonly onSubmit: () => void;
   readonly submitDisabled: boolean;
-  readonly submitDisabledReason?: string;
+  readonly submitDisabledReason?: string | undefined;
 }
 
 interface LeadCompletionActionsProps extends LeadCompletionActionContract {
   readonly label: string;
-  readonly compact?: boolean;
+  readonly compact?: boolean | undefined;
 }
 
 export function LeadCompletionActions({

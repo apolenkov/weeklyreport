@@ -10,14 +10,14 @@ interface ConfirmDeleteDialogProps {
   readonly open: boolean;
   readonly title: string;
   readonly preview: string;
-  readonly subtitle?: string;
-  readonly consequence?: string;
-  readonly confirmLabel?: string;
-  readonly reversible?: boolean;
-  readonly tone?: "destructive" | "primary";
+  readonly subtitle?: string | undefined;
+  readonly consequence?: string | undefined;
+  readonly confirmLabel?: string | undefined;
+  readonly reversible?: boolean | undefined;
+  readonly tone?: "destructive" | "primary" | undefined;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
-  readonly triggerRef?: RefObject<HTMLElement | null>;
+  readonly triggerRef?: RefObject<HTMLElement | null> | undefined;
 }
 
 // Initial focus lands on Cancel (least-destructive action) so a reflexive Enter

@@ -11,8 +11,8 @@ interface Entry {
   level: Level;
   message: string;
   source: "console" | "window-error" | "unhandled-rejection";
-  url?: string;
-  stack?: string;
+  url?: string | undefined;
+  stack?: string | undefined;
   ts: number;
 }
 

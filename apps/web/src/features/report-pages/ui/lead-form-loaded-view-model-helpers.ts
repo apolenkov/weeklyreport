@@ -75,8 +75,8 @@ export function mergeForeignDisplayRecords(
 // row ids so cards can withhold Delete. Advisory; server enforces on save.
 export function publishedLockedIds(
   rows: readonly {
-    readonly id?: string | null;
-    readonly stableId?: string | null;
+    readonly id?: string | null | undefined;
+    readonly stableId?: string | null | undefined;
   }[],
   lineageStableIds: readonly string[],
 ): ReadonlySet<string> {

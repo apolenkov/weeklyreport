@@ -13,7 +13,7 @@ export type ActivityAlarmFloor = "yellow" | "red" | null;
 
 /** Minimal risk shape the derivation reads. */
 interface ActivityAlarmRisk {
-  readonly activityId?: string | null;
+  readonly activityId?: string | null | undefined;
   readonly severity: "at-risk" | "blocked";
   /** The risk's own text — an empty (placeholder) risk covers nothing. */
   readonly text: string;

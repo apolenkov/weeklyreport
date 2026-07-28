@@ -9,12 +9,13 @@ interface UseItemEditDialogArgs {
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
   readonly week: "current" | "next";
-  readonly currentUserName?: string;
-  readonly defaultProductId?: string;
-  readonly defaultActivityId?: string;
-  readonly stagesForProduct?: (productId: string) => readonly string[];
-  readonly ownPeriodRanks?: readonly number[];
-  readonly risks?: readonly RiskEntry[];
+  readonly currentUserName?: string | undefined;
+  readonly defaultProductId?: string | undefined;
+  readonly defaultActivityId?: string | undefined;
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
+  readonly ownPeriodRanks?: readonly number[] | undefined;
+  readonly risks?: readonly RiskEntry[] | undefined;
   readonly onSave: (next: KanbanItem) => void;
   readonly onCancel: () => void;
 }

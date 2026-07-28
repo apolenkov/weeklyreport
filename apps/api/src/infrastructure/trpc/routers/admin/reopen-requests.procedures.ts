@@ -33,7 +33,7 @@ export function createReopenRequestsProcedures(deps: ReopenRequestsDeps) {
       .query(async ({ input, ctx }) => {
         try {
           return await deps.reopenRequestAdminService.listReopenRequests({
-            status: input?.status,
+            ...(input?.status === undefined ? {} : { status: input.status }),
             session: ctx.session,
           });
         } catch (error) {
@@ -47,7 +47,7 @@ export function createReopenRequestsProcedures(deps: ReopenRequestsDeps) {
           return await deps.reopenRequestAdminService.respondReopenRequest({
             id: input.id,
             decision: input.decision,
-            note: input.note,
+            ...(input.note === undefined ? {} : { note: input.note }),
             decidedBy: ctx.session.userId,
             session: ctx.session,
           });

@@ -15,9 +15,9 @@ interface StatusSlideDeckProps {
   readonly selectedIndex: number;
   readonly onSelect: (index: number) => void;
   readonly mode: "lead" | "head";
-  readonly toolbar?: ReactNode;
-  readonly heroControls?: ReactNode;
-  readonly onRowActivate?: SlideRowActivateHandler;
+  readonly toolbar?: ReactNode | undefined;
+  readonly heroControls?: ReactNode | undefined;
+  readonly onRowActivate?: SlideRowActivateHandler | undefined;
 }
 
 function selectedSlide(

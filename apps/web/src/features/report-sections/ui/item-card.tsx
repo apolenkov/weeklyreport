@@ -14,22 +14,22 @@ import { ItemInlineTextEditor } from "./item-inline-text-editor";
 
 interface ItemCardProps {
   readonly item: KanbanItem;
-  readonly onEdit?: (id: string) => void;
-  readonly onDelete?: (id: string) => void;
+  readonly onEdit?: ((id: string) => void) | undefined;
+  readonly onDelete?: ((id: string) => void) | undefined;
   // Resolve-not-delete (ADR 0015): published lineage withholds Delete.
-  readonly publishedLocked?: boolean;
-  readonly onMarkComplete?: (id: string) => void;
-  readonly onMoveToNextWeek?: (id: string) => void;
-  readonly onMoveToCurrentWeek?: (id: string) => void;
-  readonly onPause?: (id: string) => void;
-  readonly readOnly?: boolean;
+  readonly publishedLocked?: boolean | undefined;
+  readonly onMarkComplete?: ((id: string) => void) | undefined;
+  readonly onMoveToNextWeek?: ((id: string) => void) | undefined;
+  readonly onMoveToCurrentWeek?: ((id: string) => void) | undefined;
+  readonly onPause?: ((id: string) => void) | undefined;
+  readonly readOnly?: boolean | undefined;
   // Parent owns editingId so only one card is editable at a time.
-  readonly isEditing?: boolean;
+  readonly isEditing?: boolean | undefined;
   // Escape re-sends original text as a no-op-but-close signal.
-  readonly onTextSave?: (id: string, nextText: string) => void;
+  readonly onTextSave?: ((id: string, nextText: string) => void) | undefined;
   // At-risk/blocked pill is derived from covering risks (not free status).
   // Activity sections pass none — severity stays isolated by design.
-  readonly risks?: readonly RiskEntry[];
+  readonly risks?: readonly RiskEntry[] | undefined;
 }
 
 export function ItemCard(props: ItemCardProps) {

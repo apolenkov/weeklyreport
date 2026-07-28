@@ -31,7 +31,9 @@ function isActivityCarryable(
 // Lineages the target already holds — skipping them keeps counts accurate and
 // avoids silent skipDuplicates / P2002 misread as a dedupe race.
 function stableIdSet(
-  records: readonly { readonly stableId?: string | null }[],
+  records: readonly {
+    readonly stableId?: string | null | undefined;
+  }[],
 ): ReadonlySet<string> {
   return new Set(
     records.flatMap((record) => (record.stableId ? [record.stableId] : [])),

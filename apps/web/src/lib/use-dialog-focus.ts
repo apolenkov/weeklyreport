@@ -37,7 +37,7 @@ interface DialogFocusOptions {
    * Optional caller-managed trigger for always-mounted dialogs whose
    * first-render opener capture is stale. Remount-on-open dialogs need none.
    */
-  readonly triggerRef?: RefObject<HTMLElement | null>;
+  readonly triggerRef?: RefObject<HTMLElement | null> | undefined;
 }
 
 // Shared non-Radix modal focus: trap Tab, Escape-close, restore to opener.

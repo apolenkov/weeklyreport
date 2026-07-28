@@ -8,6 +8,7 @@ import {
   adminUpdatePeriodManualSchema,
   type AppSettings,
   appSettingsSchema,
+  omitUndefinedProperties,
   type PeriodListBucket,
   type PeriodListItem,
   type PeriodState,
@@ -184,7 +185,10 @@ export class PeriodAdminService {
     }
 
     // data carries only keys whose value differs; equal writes are dropped.
-    const { data, diff } = computePeriodPatch(existing, input);
+    const { data, diff } = computePeriodPatch(
+      existing,
+      omitUndefinedProperties(input),
+    );
 
     if (Object.keys(data).length === 0) {
       // Unchanged row for cache echo; empty diff → router skips audit.

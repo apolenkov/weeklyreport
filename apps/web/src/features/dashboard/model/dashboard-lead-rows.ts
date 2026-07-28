@@ -7,9 +7,9 @@ import type {
 } from "@customreport/shared";
 
 interface DashboardLeadRowsInput {
-  readonly review?: readonly SubmissionDashboardRow[];
+  readonly review?: readonly SubmissionDashboardRow[] | undefined;
   readonly weeklyReport: WeeklyReportReadModel;
-  readonly activity?: ActivityLiveResponse;
+  readonly activity?: ActivityLiveResponse | undefined;
 }
 
 function sectionDashboardRow(

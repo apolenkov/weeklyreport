@@ -105,7 +105,7 @@ export async function recordMutationAudit(
     role,
     ip: ctx.ip,
     procedure: record.procedure,
-    target,
+    ...(target === undefined ? {} : { target }),
     status: record.status,
     duration: record.durationMs,
     ...(record.failureReason === null ? {} : { reason: record.failureReason }),

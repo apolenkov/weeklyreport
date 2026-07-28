@@ -180,7 +180,11 @@ const toRow = (
   stableId: string | undefined,
   projectId: string | undefined,
   stageNames: readonly string[] | undefined,
-): StageOwnershipRow => ({ stableId, projectId, stageNames: stageNames ?? [] });
+): StageOwnershipRow => ({
+  ...(stableId === undefined ? {} : { stableId }),
+  projectId,
+  stageNames: stageNames ?? [],
+});
 
 // The stage names the SECTION AUTHOR owns on a row's product. `ownedStages` is
 // server-authoritative (StageAssignment-derived); an undefined projectId (a

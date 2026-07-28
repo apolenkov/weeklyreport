@@ -34,7 +34,7 @@ async function insertCarriedItems(
 
   await tx.item.createMany({
     data: carriedItems.map((i) => ({
-      id: i.id ?? undefined,
+      ...(i.id === undefined ? {} : { id: i.id }),
       // Item replay defense relies on the non-null stableId unique index;
       // decisions also have explicit id-based dedupe below.
       stableId: requireStableItemId(i.stableId),
@@ -83,11 +83,11 @@ async function insertCarriedDecisions(
 
   await tx.decision.createMany({
     data: decisionsWithParent.map((d) => ({
-      id: d.id ?? undefined,
+      ...(d.id === undefined ? {} : { id: d.id }),
       // Carry the source decision's durable lineage key onto the
       // clone (rides the `...decision` spread in
       // cloneUnresolvedDecision).
-      stableId: d.stableId,
+      ...(d.stableId === undefined ? {} : { stableId: d.stableId }),
       reportSectionId: targetSection.reportSectionId,
       text: d.text,
       owner: d.owner,

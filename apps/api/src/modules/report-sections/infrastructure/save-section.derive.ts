@@ -48,7 +48,7 @@ export function toItemRows(section: ReportSectionReadModel, sectionId: string) {
     // Preserve the durable lineage key through the recreate. Undefined for a
     // brand-new record → omitted so the `@default(uuid())` mints one; never
     // `?? null` (the column is NOT NULL).
-    stableId: i.stableId,
+    ...(i.stableId === undefined ? {} : { stableId: i.stableId }),
     // XOR parent: product-parented rows write projectId; activity-parented rows
     // write activityId (product FK null). The hand-written CHECK is the
     // backstop; the write schema already enforced XOR.
@@ -69,7 +69,7 @@ export function toRiskRows(section: ReportSectionReadModel, sectionId: string) {
   return section.risks.map((r) => ({
     reportSectionId: sectionId,
     // Preserve the durable lineage key (see items above).
-    stableId: r.stableId,
+    ...(r.stableId === undefined ? {} : { stableId: r.stableId }),
     // XOR parent (see items above).
     projectId: r.projectId ?? null,
     activityId: r.activityId ?? null,
@@ -94,7 +94,7 @@ export function toDecisionRows(
   return decisions.map((d) => ({
     reportSectionId: sectionId,
     // Preserve the durable lineage key (see items above).
-    stableId: d.stableId,
+    ...(d.stableId === undefined ? {} : { stableId: d.stableId }),
     text: d.text,
     owner: d.owner,
     deadline: d.deadline ?? null,

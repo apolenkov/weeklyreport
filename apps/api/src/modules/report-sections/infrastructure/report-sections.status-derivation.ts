@@ -11,7 +11,7 @@ import { aggregateTrafficLight } from "../domain/traffic-light-aggregation";
 type TrafficLight = TrafficLightStatus;
 
 export function aggregateStageTraffic(
-  stages: readonly { status?: string | null }[],
+  stages: readonly { status?: string | null | undefined }[],
 ): TrafficLight | null {
   return aggregateTrafficLight(stages.map((stage) => asTraffic(stage.status)));
 }
@@ -30,18 +30,22 @@ export function asTraffic(
 export function deriveEffectiveProductStatus(project: {
   projectId: string;
   trafficLight: TrafficLight | null;
-  ownedStages?: readonly {
-    stageName: string;
-    status?: string | null;
-  }[];
-  risks?: readonly {
-    // Nullable/optional: an activity-parented risk carries no product FK — it
-    // never matches a product's projectId below, so it cannot floor product
-    // health.
-    projectId?: string | null;
-    severity: RiskSeverity;
-    stageNames?: readonly string[];
-  }[];
+  ownedStages?:
+    | readonly {
+        stageName: string;
+        status?: string | null | undefined;
+      }[]
+    | undefined;
+  risks?:
+    | readonly {
+        // Nullable/optional: an activity-parented risk carries no product FK — it
+        // never matches a product's projectId below, so it cannot floor product
+        // health.
+        projectId?: string | null | undefined;
+        severity: RiskSeverity;
+        stageNames?: readonly string[] | undefined;
+      }[]
+    | undefined;
 }): TrafficLight | null {
   const scopedRisks = (project.risks ?? []).filter(
     (risk) => risk.projectId === project.projectId,

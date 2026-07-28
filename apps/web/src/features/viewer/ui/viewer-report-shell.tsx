@@ -28,7 +28,7 @@ const VIEWER_STRIP_PARAMS: readonly string[] = ["source", "recovery"];
 interface ViewerReportShellProps {
   readonly reportId: string;
   readonly mode: "form" | "slides";
-  readonly authorId?: string;
+  readonly authorId?: string | undefined;
 }
 
 // Shown only while the one-shot /reports/latest redirect is in flight, so the

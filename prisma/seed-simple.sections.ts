@@ -126,7 +126,9 @@ function buildItemRows(
       reportSectionId: sectionId,
       type: ItemType.current,
       projectId:
-        idx === 0 ? lead.productId : secondary[(idx - 1) % secondary.length],
+        idx === 0
+          ? lead.productId
+          : (secondary[(idx - 1) % secondary.length] ?? lead.productId),
       text: it.text,
       tag: it.tag,
       workflowStatus: it.status,
@@ -138,7 +140,10 @@ function buildItemRows(
       id: `a0000000-0000-4000-8000-00000005${leadIdx + 1}01${idx + 1}`,
       reportSectionId: sectionId,
       type: ItemType.next,
-      projectId: idx === 0 ? lead.productId : secondary[idx % secondary.length],
+      projectId:
+        idx === 0
+          ? lead.productId
+          : (secondary[idx % secondary.length] ?? lead.productId),
       text: it.text,
       tag: it.tag,
       // The per-type CHECK constraint allows only planned or postponed here.

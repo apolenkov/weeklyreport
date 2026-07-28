@@ -35,6 +35,7 @@
     "lint:type-cycles": "tsx scripts/type-cycle-ratchet.ts",
     "lint:provenance:test": "node --test scripts/openspec-provenance-resolver.test.ts",
     "lint:vitest-rules:test": "node --test scripts/vitest-rule-ledger.node-test.ts",
+    "lint:exact-optional:test": "node --test scripts/exact-optional-property-types.test.ts",
     "knip": "knip",
     "typecov": "type-coverage -p packages/shared --at-least 100 && type-coverage -p packages/ui --at-least 99.9 && type-coverage -p apps/api --at-least 99.95 && type-coverage -p apps/web --at-least 99.6",
     "depcruise": "depcruise apps/api/src apps/web/src packages/shared/src packages/ui/src --config .dependency-cruiser.cjs",

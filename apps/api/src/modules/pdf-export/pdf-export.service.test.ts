@@ -107,7 +107,11 @@ function createRepository(
     },
     createExportJob(job: PdfExportJob, requestedBy?: string) {
       if (capture) {
-        capture.lastRequestedBy = requestedBy;
+        if (requestedBy === undefined) {
+          delete capture.lastRequestedBy;
+        } else {
+          capture.lastRequestedBy = requestedBy;
+        }
       }
       jobs.set(job.jobId, {
         ...structuredClone(job),

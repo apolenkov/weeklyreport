@@ -63,7 +63,7 @@ interface LeadFormLoadedProps {
   readonly writeActions: LeadFormLoadedWriteActions;
   readonly isSlidesMode: boolean;
   readonly isSubmitted: boolean;
-  readonly pinnedReportId?: string;
+  readonly pinnedReportId?: string | undefined;
   readonly showArchivePeriods: boolean;
   readonly setShowArchivePeriods: (next: boolean) => void;
   readonly groupExpanded: boolean;

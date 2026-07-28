@@ -20,20 +20,19 @@ interface UnifiedActivitySectionProps {
   readonly entries: readonly UnifiedActivityEntry[];
   // Own risks for ItemCard alarm derivation (parity with Current/Next); activity
   // items skip derivation (no product-stage parent).
-  readonly risks?: readonly RiskEntry[];
-  readonly readOnly?: boolean;
+  readonly risks?: readonly RiskEntry[] | undefined;
+  readonly readOnly?: boolean | undefined;
   // Per-week items so the parent reuses existing per-type merge handlers.
-  readonly onWeekItemsChange?: (
-    week: "current" | "next",
-    items: KanbanItem[],
-  ) => void;
-  readonly currentUserName?: string;
-  readonly products?: readonly Product[];
-  readonly stagesForProduct?: (productId: string) => readonly string[];
-  readonly ownPeriodRanks?: readonly number[];
-  readonly publishedLockedIds?: ReadonlySet<string>;
-  readonly onMarkComplete?: (id: string) => void;
-  readonly onMoveToNextWeek?: (id: string) => void;
+  readonly onWeekItemsChange?:
+    ((week: "current" | "next", items: KanbanItem[]) => void) | undefined;
+  readonly currentUserName?: string | undefined;
+  readonly products?: readonly Product[] | undefined;
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
+  readonly ownPeriodRanks?: readonly number[] | undefined;
+  readonly publishedLockedIds?: ReadonlySet<string> | undefined;
+  readonly onMarkComplete?: ((id: string) => void) | undefined;
+  readonly onMoveToNextWeek?: ((id: string) => void) | undefined;
 }
 
 // Opt-in by-state view (AppSettings.unifiedActivityView); create is via quick-add.

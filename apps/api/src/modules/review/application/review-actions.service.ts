@@ -82,9 +82,9 @@ export const REVIEW_ACTIONS_REPOSITORY = Symbol("ReviewActionsRepository");
 
 function toAnchor(input: ReviewCommentInput): RecordAnchor {
   return {
-    itemId: input.itemId,
-    riskId: input.riskId,
-    decisionId: input.decisionId,
+    ...(input.itemId === undefined ? {} : { itemId: input.itemId }),
+    ...(input.riskId === undefined ? {} : { riskId: input.riskId }),
+    ...(input.decisionId === undefined ? {} : { decisionId: input.decisionId }),
   };
 }
 

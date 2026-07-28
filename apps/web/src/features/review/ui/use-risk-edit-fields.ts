@@ -1,15 +1,15 @@
 import { type RefObject, useRef, useState } from "react";
 
 interface UseRiskEditFieldsArgs {
-  readonly initialText?: string;
-  readonly initialImpact?: string;
-  readonly initialMitigation?: string;
+  readonly initialText?: string | undefined;
+  readonly initialImpact?: string | undefined;
+  readonly initialMitigation?: string | undefined;
 }
 
 interface RiskEditProseErrors {
-  text?: string;
-  impact?: string;
-  mitigation?: string;
+  text?: string | undefined;
+  impact?: string | undefined;
+  mitigation?: string | undefined;
 }
 
 interface ProseFieldRefs {

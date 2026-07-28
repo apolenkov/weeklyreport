@@ -17,7 +17,7 @@ import { useProductDeepLinkExpand } from "./use-product-deep-link-expand";
 interface UseProductsTabStateArgs {
   readonly products: AdminProductView[];
   readonly users: AdminUserView[];
-  readonly productFilter?: string | null;
+  readonly productFilter?: string | null | undefined;
 }
 
 // The picker offers active leads only, while getUserById reads the full user
