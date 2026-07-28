@@ -1,4 +1,8 @@
-import type { DbRole, RiskSeverity } from "@customreport/shared";
+import {
+  type DbRole,
+  itemWorkflowStatusSchema,
+  type RiskSeverity,
+} from "@customreport/shared";
 
 import type { CrossAuthorSectionRow } from "../domain/lead-form-shared";
 import {
@@ -111,6 +115,21 @@ interface ForeignContentSection {
   }[];
 }
 
+function selectSharedItems(
+  items: ForeignContentSection["items"],
+  sharedIds: ReadonlySet<string>,
+): CrossAuthorSectionRow["items"] {
+  return items
+    .filter(
+      (item): item is typeof item & { projectId: string } =>
+        item.projectId !== null && sharedIds.has(item.projectId),
+    )
+    .map((item) => ({
+      ...item,
+      workflowStatus: itemWorkflowStatusSchema.parse(item.workflowStatus),
+    }));
+}
+
 export function buildCrossAuthorContentRows(
   sections: readonly ForeignContentSection[],
   authorEntries: ReadonlyMap<string, CrossAuthorEntry>,
@@ -146,10 +165,7 @@ export function buildCrossAuthorContentRows(
         // activity-first-class: the cross-lead grid is product-scoped — an
         // activity-parented row (null product FK) belongs to no shared product,
         // so the type-guard filter both narrows the type and excludes it.
-        items: section.items.filter(
-          (i): i is typeof i & { projectId: string } =>
-            i.projectId != null && sharedIds.has(i.projectId),
-        ),
+        items: selectSharedItems(section.items, sharedIds),
         risks: section.risks
           .filter(
             (r): r is typeof r & { projectId: string } =>

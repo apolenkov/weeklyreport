@@ -425,6 +425,35 @@ describe("buildCrossAuthorContentRows", () => {
     expect(rows).toEqual([]);
   });
 
+  it("rejects an unknown stored workflow status instead of coercing it", () => {
+    expect(() =>
+      buildCrossAuthorContentRows(
+        [
+          {
+            authorId: AUTHOR_A,
+            items: [
+              {
+                id: "i-invalid",
+                projectId: PROJECT_1,
+                type: "current",
+                text: "invalid item",
+                tag: "feature",
+                workflowStatus: "unknown",
+                carriedOver: false,
+                priorityRank: null,
+                stageNames: [],
+              },
+            ],
+            risks: [],
+            decisions: [],
+            stageStatuses: [],
+          },
+        ],
+        authorEntries,
+      ),
+    ).toThrow();
+  });
+
   it("uses persisted status as the empty/non-empty base when no risk covers", () => {
     const rows = buildCrossAuthorContentRows(
       [

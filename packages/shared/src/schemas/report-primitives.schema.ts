@@ -41,6 +41,7 @@ export const itemWorkflowStatusSchema = z.enum([
   "postponed",
   "done",
 ]);
+export type ItemWorkflowStatus = z.infer<typeof itemWorkflowStatusSchema>;
 export const CURRENT_ITEM_STATUSES = ["in_progress", "paused", "done"] as const;
 export const NEXT_ITEM_STATUSES = ["planned", "postponed"] as const;
 

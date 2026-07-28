@@ -8,7 +8,7 @@ import { shortNameFromName } from "@customreport/shared";
 import { toIsoDateString } from "../../../lib/format-date";
 import {
   applyBlockedRiskOverlay,
-  type ItemStatus,
+  type ItemWorkflowStatus,
   workflowToItemStatus,
 } from "./item-status";
 import type {
@@ -29,7 +29,7 @@ export interface CrossAuthorContentRow {
     projectId: string;
     type: string;
     text: string;
-    workflowStatus: string;
+    workflowStatus: ItemWorkflowStatus;
     stageNames: string[];
   }[];
   risks: {
@@ -68,19 +68,15 @@ export type ForeignDecisionEntry = LeadDecisionEntry & {
   authorId: string;
 };
 
-// Known enums go through workflowToItemStatus; anything else falls back to
-// 'planned'. The fallback is load-bearing — a strict mapper would change behavior.
-export function coerceWorkflowToItemStatus(ws: string): ItemStatus {
-  if (
-    ws === "done" ||
-    ws === "in_progress" ||
-    ws === "paused" ||
-    ws === "postponed" ||
-    ws === "planned"
-  ) {
-    return workflowToItemStatus(ws);
+function requireProductName(
+  productNameById: ReadonlyMap<string, string>,
+  productId: string,
+): string {
+  const name = productNameById.get(productId);
+  if (name === undefined) {
+    throw new Error(`Cross-author product ${productId} has no display name.`);
   }
-  return "planned";
+  return name;
 }
 
 // Everyone state: foreign kanban items by week type; ids use foreign:<author>:<id>.
@@ -102,10 +98,10 @@ export function mapForeignItems(
       .map((i): ForeignKanbanItem => ({
         id: `foreign:${ca.authorId}:${i.id}`,
         productId: i.projectId,
-        productName: productNameById.get(i.projectId) ?? i.projectId,
+        productName: requireProductName(productNameById, i.projectId),
         stageIds: i.stageNames,
         status: applyBlockedRiskOverlay(
-          coerceWorkflowToItemStatus(i.workflowStatus),
+          workflowToItemStatus(i.workflowStatus),
           { projectId: i.projectId, stageIds: i.stageNames },
           alarmRisks,
         ),
@@ -129,7 +125,7 @@ export function mapForeignRisks(
     ca.risks.map((r): ForeignRiskEntry => ({
       id: `foreign:${ca.authorId}:${r.id}`,
       productId: r.projectId,
-      productName: productNameById.get(r.projectId) ?? r.projectId,
+      productName: requireProductName(productNameById, r.projectId),
       stageIds: r.stageNames,
       severity: r.severity,
       text: r.risk,
@@ -151,7 +147,7 @@ export function mapForeignDecisions(
     ca.decisions.map((d): ForeignDecisionEntry => ({
       id: `foreign:${ca.authorId}:${d.id}`,
       productId: d.productId,
-      productName: productNameById.get(d.productId) ?? d.productId,
+      productName: requireProductName(productNameById, d.productId),
       text: d.text,
       owner: d.owner,
       impact: d.impact,
