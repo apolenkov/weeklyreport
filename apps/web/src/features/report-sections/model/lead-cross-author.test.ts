@@ -4,14 +4,12 @@
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
-import { workflowToItemStatus } from "./item-status";
 import {
   applyCrossAuthorStageOverrides,
   buildCrossAuthorStageMap,
   type CrossAuthorRow,
 } from "./lead-cross-author";
 import {
-  coerceWorkflowToItemStatus,
   type CrossAuthorContentRow,
   mapForeignDecisions,
   mapForeignItems,
@@ -153,6 +151,7 @@ describe("applyCrossAuthorStageOverrides", () => {
 
 const AUTHOR_ID = "author-9";
 const PROJECT_ID = "proj-x";
+const PRODUCT_NAMES = new Map([[PROJECT_ID, "Alpha Product"]]);
 
 function makeContentRow(
   overrides: Partial<CrossAuthorContentRow> = {},
@@ -190,8 +189,8 @@ describe("mapForeignItems", () => {
       ],
     });
 
-    const current = mapForeignItems([row], new Map(), "current");
-    const next = mapForeignItems([row], new Map(), "next");
+    const current = mapForeignItems([row], PRODUCT_NAMES, "current");
+    const next = mapForeignItems([row], PRODUCT_NAMES, "next");
 
     expect(current).toHaveLength(1);
     expect(current[0]?.id).toBe(`foreign:${AUTHOR_ID}:item-current`);
@@ -199,7 +198,7 @@ describe("mapForeignItems", () => {
     expect(next[0]?.id).toBe(`foreign:${AUTHOR_ID}:item-next`);
   });
 
-  it("falls back to the raw projectId as productName on a lookup miss", () => {
+  it("fails loudly when a product name is missing", () => {
     const row = makeContentRow({
       items: [
         {
@@ -213,11 +212,9 @@ describe("mapForeignItems", () => {
       ],
     });
 
-    const mapped = expectDefined(
-      mapForeignItems([row], new Map(), "current")[0],
+    expect(() => mapForeignItems([row], new Map(), "current")).toThrow(
+      `Cross-author product ${PROJECT_ID} has no display name.`,
     );
-
-    expect(mapped.productName).toBe(PROJECT_ID);
   });
 
   it("uses the productNameById lookup when it hits", () => {
@@ -271,7 +268,7 @@ describe("mapForeignItems", () => {
     });
 
     const mapped = expectDefined(
-      mapForeignItems([row], new Map(), "current")[0],
+      mapForeignItems([row], PRODUCT_NAMES, "current")[0],
     );
 
     expect(mapped.status).toBe("blocked");
@@ -292,7 +289,7 @@ describe("mapForeignItems", () => {
     });
 
     const mapped = expectDefined(
-      mapForeignItems([row], new Map(), "current")[0],
+      mapForeignItems([row], PRODUCT_NAMES, "current")[0],
     );
 
     expect(mapped.status).toBe("in-progress");
@@ -324,7 +321,7 @@ describe("mapForeignRisks", () => {
       ],
     });
 
-    const mapped = mapForeignRisks([row], new Map());
+    const mapped = mapForeignRisks([row], PRODUCT_NAMES);
 
     expect(mapped[0]?.id).toBe(`foreign:${AUTHOR_ID}:risk-1`);
     expect(mapped[0]?.severity).toBe("at-risk");
@@ -349,7 +346,7 @@ describe("mapForeignDecisions", () => {
       ],
     });
 
-    const mapped = expectDefined(mapForeignDecisions([row], new Map())[0]);
+    const mapped = expectDefined(mapForeignDecisions([row], PRODUCT_NAMES)[0]);
 
     expect(mapped.id).toBe(`foreign:${AUTHOR_ID}:decision-1`);
     expect(mapped.deadline).toBe("2026-08-01");
@@ -370,27 +367,8 @@ describe("mapForeignDecisions", () => {
       ],
     });
 
-    const mapped = expectDefined(mapForeignDecisions([row], new Map())[0]);
+    const mapped = expectDefined(mapForeignDecisions([row], PRODUCT_NAMES)[0]);
 
     expect(mapped.deadline).toBeNull();
-  });
-});
-
-describe("coerceWorkflowToItemStatus", () => {
-  it.each([
-    ["done", workflowToItemStatus("done")],
-    ["in_progress", workflowToItemStatus("in_progress")],
-    ["paused", workflowToItemStatus("paused")],
-    ["postponed", workflowToItemStatus("postponed")],
-    ["planned", workflowToItemStatus("planned")],
-  ] as const)(
-    "delegates known workflow value %s to workflowToItemStatus",
-    (ws, expected) => {
-      expect(coerceWorkflowToItemStatus(ws)).toBe(expected);
-    },
-  );
-
-  it("falls back to 'planned' for an unknown workflow string", () => {
-    expect(coerceWorkflowToItemStatus("some-legacy-value")).toBe("planned");
   });
 });

@@ -2,6 +2,8 @@
 // sole progress source: no completed flag, no stored blocked. `blocked` is a
 // covering-risk display overlay only — never settable or persistable.
 
+import type { ItemWorkflowStatus } from "@customreport/shared";
+
 import {
   type AlarmRisk,
   deriveItemAlarmFromRisks,
@@ -9,8 +11,7 @@ import {
 
 const IN_PROGRESS_STATUS = "in-progress";
 
-export type ItemWorkflowStatus =
-  "planned" | "in_progress" | "paused" | "postponed" | "done";
+export type { ItemWorkflowStatus } from "@customreport/shared";
 export type ItemType = "current" | "next";
 export type ItemStatus =
   "in-progress" | "completed" | "planned" | "paused" | "postponed" | "blocked";

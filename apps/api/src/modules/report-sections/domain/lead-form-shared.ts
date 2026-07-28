@@ -1,5 +1,6 @@
 import type {
   DbRole,
+  ItemWorkflowStatus,
   ReportSectionReadModel,
   RiskSeverity,
   TrafficLightStatus,
@@ -136,7 +137,7 @@ export interface CrossAuthorSectionRow {
     type: string;
     text: string;
     tag: string;
-    workflowStatus: string;
+    workflowStatus: ItemWorkflowStatus;
     carriedOver: boolean;
     priorityRank: number | null;
     stageNames: string[];

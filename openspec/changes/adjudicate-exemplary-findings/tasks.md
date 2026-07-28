@@ -16,7 +16,9 @@
 - [x] Drive advanced-seed summary counts from writer results.
 - [x] Scope seed coverage queries to the report created by that seed.
 - [x] Require an explicit reminder-policy `validFrom` at the wire boundary.
-- [ ] Land the remaining 10 confirmed findings in isolated slices.
+- [x] Reject unknown cross-author workflow states and missing product names
+      instead of presenting silent semantic fallbacks.
+- [ ] Land the remaining 9 confirmed findings in isolated slices.
 - [ ] Plan and land shared-schema/cross-feature changes in isolated slices.
 
 ## Verification
