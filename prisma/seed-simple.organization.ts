@@ -1,5 +1,6 @@
 import { type PrismaClient, ReminderAudience } from "@prisma/client";
 
+import { DEFAULT_REPORTING_GROUP } from "../packages/shared/src/organization/default-reporting-group.js";
 import {
   DEFAULT_REPORTING_GROUP_ID,
   FINANCE_GROUP_ID,
@@ -33,7 +34,7 @@ export async function seedReportingGroups(prisma: PrismaClient): Promise<void> {
   await prisma.reportingGroup.create({
     data: {
       id: DEFAULT_REPORTING_GROUP_ID,
-      name: "Software Development",
+      name: DEFAULT_REPORTING_GROUP.name,
       description: "Default reporting group for CustomReport demo users",
     },
   });

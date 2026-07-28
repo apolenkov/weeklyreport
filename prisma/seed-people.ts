@@ -1,6 +1,7 @@
 // The 9 canonical seed identities (1 head, 1 viewer, 1 admin, 6 leads) and the
 // reporting group they belong to.
 
+import { DEFAULT_REPORTING_GROUP } from "../packages/shared/src/organization/default-reporting-group.js";
 import type { SeedRole } from "./seed-constants.js";
 import {
   ADMIN_EMAIL,
@@ -42,7 +43,7 @@ export interface SeedReportingGroup {
 export const SEED_REPORTING_GROUPS: readonly SeedReportingGroup[] = [
   {
     id: DEFAULT_REPORTING_GROUP_ID,
-    name: "Software Development",
+    name: DEFAULT_REPORTING_GROUP.name,
     description: "Default reporting group for CustomReport demo users",
   },
 ] as const;

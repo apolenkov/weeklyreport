@@ -406,8 +406,8 @@ describe("PeriodsTab — a11y dialog behavioral regressions", () => {
     await user.click(await screen.findByTestId(`action-delete-${openRow.id}`));
     expect(screen.getByTestId("periods-delete-dialog")).toBeInTheDocument();
 
-    // The inner div has role="dialog" and an onClick that calls
-    // e.stopPropagation(), so the backdrop's onClick is NOT triggered.
+    // DialogSurface dismisses only when target and currentTarget are the
+    // backdrop, so a click on the panel is ignored.
     await user.click(screen.getByRole("alertdialog"));
 
     // The dialog must STILL be in the DOM.
@@ -472,8 +472,8 @@ describe("PeriodsTab — a11y dialog behavioral regressions", () => {
     await user.click(await screen.findByTestId("periods-new-button"));
     expect(screen.getByTestId("periods-create-dialog")).toBeInTheDocument();
 
-    // The inner div (role="dialog") has an onClick that calls
-    // e.stopPropagation(), preventing the backdrop's onCancel from firing.
+    // DialogSurface dismisses only direct backdrop clicks, so clicking the
+    // panel does not call onCancel.
     await user.click(screen.getByRole("dialog"));
 
     // The dialog must STILL be in the DOM.

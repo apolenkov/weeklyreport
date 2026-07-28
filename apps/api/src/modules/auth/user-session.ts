@@ -2,6 +2,7 @@ import type { DbRole, UserSession } from "@customreport/shared";
 import type { PrismaClient } from "@prisma/client";
 
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
+import { ensureFallbackReportingGroup } from "../organization/index.js";
 
 // Turns a verified SAML / dev-login identity into a UserSession: resolve-or-
 // provision the user, and for a lead with no active section delegate period +
@@ -19,8 +20,6 @@ export interface SamlProfile {
 export type ProvisionLeadWorkspace = (
   userId: string,
 ) => Promise<{ reportId: string; sectionId: string }>;
-
-const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
 
 // SAML gives only displayName but ФИО columns are required, and we don't guess
 // name order: whole displayName → lastName; firstName is a whitespace placeholder
@@ -94,25 +93,7 @@ async function resolveNextReportingGroupId(
   if (profile.role === "viewer") return null;
   if (existing?.reportingGroupId) return existing.reportingGroupId;
 
-  const oldestActive = await prisma.reportingGroup.findFirst({
-    where: { archived: false },
-    orderBy: { createdAt: "asc" },
-    select: { id: true },
-  });
-  if (oldestActive) return oldestActive.id;
-
-  const seededDefault = await prisma.reportingGroup.upsert({
-    where: { id: DEFAULT_REPORTING_GROUP_ID },
-    create: {
-      id: DEFAULT_REPORTING_GROUP_ID,
-      name: "Software Development",
-      description: "Default reporting group for newly provisioned users",
-      archived: false,
-    },
-    update: { archived: false },
-    select: { id: true },
-  });
-  return seededDefault.id;
+  return ensureFallbackReportingGroup(prisma);
 }
 
 // Two concurrent first-logins of the same new identity both miss the find and

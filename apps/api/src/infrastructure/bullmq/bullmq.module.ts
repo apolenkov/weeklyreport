@@ -1,6 +1,10 @@
-import { BullModule, type RegisterQueueOptions } from "@nestjs/bullmq";
+import {
+  BullModule,
+  getQueueToken,
+  type RegisterQueueOptions,
+} from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
-import type { DefaultJobOptions } from "bullmq";
+import type { DefaultJobOptions, Queue } from "bullmq";
 
 import { ConfigModule, ENV_CONFIG } from "../config/config.module.js";
 import type { EnvConfig } from "../config/env.schema";
@@ -49,8 +53,8 @@ function registerQueueOptionsFor(name: QueueName): RegisterQueueOptions {
   providers: [
     {
       provide: QueueRegistry,
-      useFactory: (env: EnvConfig) => new QueueRegistry(env),
-      inject: [ENV_CONFIG],
+      useFactory: (...queues: Queue[]) => new QueueRegistry(queues),
+      inject: QUEUE_NAMES.map((name) => getQueueToken(name)),
     },
     {
       provide: DLQMonitorService,

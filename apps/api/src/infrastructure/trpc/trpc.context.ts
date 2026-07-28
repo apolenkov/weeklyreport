@@ -1,4 +1,7 @@
-import type { UserSession } from "@customreport/shared";
+import {
+  DEFAULT_REPORTING_GROUP,
+  type UserSession,
+} from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 
@@ -28,7 +31,6 @@ export { clearOrgCache } from "./trpc.session-hydration.js";
 
 // DEV_SESSION must carry reportingGroupId so groupScopeFilter scopes
 // the activity panel to the head's group in dev / integration mode.
-// UUID matches DEFAULT_REPORTING_GROUP_ID in prisma/seed-constants.ts.
 const DEV_SESSION: UserSession = {
   userId: "a0000000-0000-4000-8000-000000000099",
   email: "head@customreport.local",
@@ -36,8 +38,8 @@ const DEV_SESSION: UserSession = {
   role: "head",
   activeReportId: "a0000000-0000-4000-8000-000000000001",
   activeReportSectionId: null,
-  reportingGroupId: "a0000000-0000-4000-8000-000000000301",
-  reportingGroupName: "Software Development",
+  reportingGroupId: DEFAULT_REPORTING_GROUP.id,
+  reportingGroupName: DEFAULT_REPORTING_GROUP.name,
 };
 
 // Synthetic session for PDF-export JWTs; must satisfy userSessionSchema.

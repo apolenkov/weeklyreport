@@ -9,7 +9,7 @@ import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation";
-import { ensureFallbackReportingGroup } from "./admin-group.queries";
+import { ensureFallbackReportingGroup } from "../organization/index.js";
 import { AdminUserConflictError } from "./admin-shared.js";
 import { resolveLifecycle } from "./snapshot-lifecycle.js";
 

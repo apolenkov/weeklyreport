@@ -39,6 +39,7 @@ import type {
 } from "./admin-shared";
 import * as snapshotQueries from "./admin-snapshot.queries";
 import * as snapshotWriteQueries from "./admin-snapshot-write.queries";
+import * as stageQueries from "./admin-stage.queries";
 
 /**
  * Prisma implementation of AdminRepository.
@@ -86,15 +87,15 @@ export class AdminPrismaRepository implements AdminRepository {
     stageId: string;
     projectId: string;
   }): Promise<StageAssignment> {
-    return groupQueries.saveStageAssignment(this.prisma, data);
+    return stageQueries.saveStageAssignment(this.prisma, data);
   }
 
   deleteStageAssignment(id: string): Promise<void> {
-    return groupQueries.deleteStageAssignment(this.prisma, id);
+    return stageQueries.deleteStageAssignment(this.prisma, id);
   }
 
   listStageAssignments(projectId: string): Promise<StageAssignment[]> {
-    return groupQueries.listStageAssignments(this.prisma, projectId);
+    return stageQueries.listStageAssignments(this.prisma, projectId);
   }
 
   // ---- ReminderPolicy ----
@@ -298,11 +299,11 @@ export class AdminPrismaRepository implements AdminRepository {
   }
 
   listStages(): Promise<StageRow[]> {
-    return groupQueries.listStages(this.prisma);
+    return stageQueries.listStages(this.prisma);
   }
 
   listStageAssignmentCounts(): Promise<StageAssignmentCountRow[]> {
-    return groupQueries.listStageAssignmentCounts(this.prisma);
+    return stageQueries.listStageAssignmentCounts(this.prisma);
   }
 
   // ---- Reopen-request lifecycle ----

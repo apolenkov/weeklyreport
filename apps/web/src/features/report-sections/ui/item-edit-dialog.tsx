@@ -2,6 +2,7 @@
 
 import { createPortal } from "react-dom";
 
+import { DialogSurface } from "../../../shared/ui/dialog-surface";
 import { RecordDialogFooter } from "../../../shared/ui/record-dialog-footer";
 import type { KanbanItem, Product, RiskEntry } from "../model/types";
 import { ItemEditDialogFields } from "./item-edit-dialog-fields";
@@ -70,43 +71,35 @@ function ItemEditDialogContent(props: ItemEditDialogContentProps) {
   const choices = week === "current" ? CURRENT_WEEK_CHOICES : NEXT_WEEK_CHOICES;
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      onClick={onCancel}
-      onKeyDown={handleKeyDown}
-      role="presentation"
+    <DialogSurface
+      surfaceRef={dialogSurfaceRef}
+      onDismiss={onCancel}
+      onBackdropKeyDown={handleKeyDown}
+      backdropClassName="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+      surfaceClassName="w-full max-w-3xl rounded-[var(--radius)] bg-white p-4 md:p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
+      ariaLabel={`${headerVerb} dialog`}
     >
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops propagation to keep clicks inside the dialog from closing it; there is no keyboard action to mirror */}
-      <div
-        ref={dialogSurfaceRef}
-        className="w-full max-w-3xl rounded-[var(--radius)] bg-white p-4 md:p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${headerVerb} dialog`}
-      >
-        <ItemEditDialogHeading
-          headerVerb={headerVerb}
-          parentName={fields.parentName}
-        />
+      <ItemEditDialogHeading
+        headerVerb={headerVerb}
+        parentName={fields.parentName}
+      />
 
-        <ItemEditDialogFields
-          {...fields}
-          week={week}
-          products={products}
-          activities={activities}
-          choices={choices}
-        />
+      <ItemEditDialogFields
+        {...fields}
+        week={week}
+        products={products}
+        activities={activities}
+        choices={choices}
+      />
 
-        <RecordDialogFooter
-          saveLabel="Save Item"
-          onCancel={onCancel}
-          onSave={handleSave}
-          onDelete={onDelete}
-          saveDisabled={fields.isDeadEnd}
-        />
-      </div>
-    </div>,
+      <RecordDialogFooter
+        saveLabel="Save Item"
+        onCancel={onCancel}
+        onSave={handleSave}
+        onDelete={onDelete}
+        saveDisabled={fields.isDeadEnd}
+      />
+    </DialogSurface>,
     document.body,
   );
 }

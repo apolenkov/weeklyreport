@@ -22,8 +22,7 @@ export function createAppServices(deps: {
 } {
   const { app, env, logger } = deps;
 
-  // Shared queue handles for the admin DLQ count and the Telegram smoke-test.
-  // Owned by QueueRegistry — one connection per name, closed on shutdown.
+  // Shared BullModule handles for the admin DLQ count and Telegram smoke-test.
   const queueRegistry = app.get(QueueRegistry);
   const emailReminderQueue = queueRegistry.get("email-reminder");
   const telegramOutboundQueue = queueRegistry.get("telegram-outbound");

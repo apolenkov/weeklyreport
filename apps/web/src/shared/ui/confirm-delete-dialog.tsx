@@ -4,6 +4,7 @@ import { type ReactNode, type RefObject, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../lib/use-dialog-focus";
+import { DialogSurface } from "./dialog-surface";
 
 interface ConfirmDeleteDialogProps {
   readonly open: boolean;
@@ -80,24 +81,16 @@ function ConfirmDialogShell({
   readonly children: ReactNode;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
-      onClick={onDismiss}
-      role="presentation"
+    <DialogSurface
+      surfaceRef={surfaceRef}
+      onDismiss={onDismiss}
+      surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
+      role="alertdialog"
+      ariaLabelledBy="confirm-delete-title"
+      ariaDescribedBy="confirm-delete-preview"
     >
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop-close propagation for inside clicks; no keyboard equivalent needed */}
-      <div
-        ref={surfaceRef}
-        className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="confirm-delete-title"
-        aria-describedby="confirm-delete-preview"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
-    </div>
+      {children}
+    </DialogSurface>
   );
 }
 

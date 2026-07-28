@@ -30,6 +30,12 @@
 - [x] Retitle the measured tests whose names described a different subject.
 - [x] Compress the named apps-only JSDoc outliers to current WHY comments.
 - [ ] Close non-blocked architecture and ownership items.
+- [x] Make Nest BullModule the single owner of raw queue handles and expose
+      those same handles through `QueueRegistry`.
+- [x] Single-home fallback reporting-group identity and provisioning, and split
+      stage queries out of the group query module.
+- [x] Single-home modal backdrop semantics in `DialogSurface` and remove the
+      twelve per-dialog propagation suppressions.
 - [x] Move `ComingSoonTooltip` out of the vendored tooltip primitive.
 - [x] Delete the unconsumed sidebar bundle and its dedicated exemptions.
 - [ ] Burn down live suppressions and override blocks without weakening gates.

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
+import { DialogSurface } from "../../../shared/ui/dialog-surface";
 
 interface PauseReasonDialogProps {
   readonly open: boolean;
@@ -41,29 +42,20 @@ function PauseReasonDialogContent({
   const trimmed = reason.trim();
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
-      onClick={onCancel}
-      role="presentation"
+    <DialogSurface
+      surfaceRef={surfaceRef}
+      onDismiss={onCancel}
+      surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
+      ariaLabelledBy="pause-reason-title"
     >
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop-close propagation for inside clicks; no keyboard equivalent needed */}
-      <div
-        ref={surfaceRef}
-        className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="pause-reason-title"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <PauseReasonPreview preview={preview} />
-        <PauseReasonField reason={reason} onReasonChange={setReason} />
-        <PauseReasonActions
-          canConfirm={trimmed.length > 0}
-          onCancel={onCancel}
-          onConfirm={() => onConfirm(trimmed)}
-        />
-      </div>
-    </div>,
+      <PauseReasonPreview preview={preview} />
+      <PauseReasonField reason={reason} onReasonChange={setReason} />
+      <PauseReasonActions
+        canConfirm={trimmed.length > 0}
+        onCancel={onCancel}
+        onConfirm={() => onConfirm(trimmed)}
+      />
+    </DialogSurface>,
     document.body,
   );
 }

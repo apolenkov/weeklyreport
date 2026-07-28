@@ -1,9 +1,10 @@
 "use client";
 
-import { type RefObject, useRef } from "react";
+import { useRef } from "react";
 import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../lib/use-dialog-focus";
+import { DialogSurface } from "./dialog-surface";
 
 type ConfirmationDialogVariant = "default" | "destructive";
 
@@ -62,32 +63,24 @@ function DialogActions({
   );
 }
 
-type DialogSurfaceProps = Omit<
+type ConfirmationBodyProps = Omit<
   ConfirmationDialogProps,
   "open" | "testId" | "variant"
 > & {
-  readonly dialogRef: RefObject<HTMLDivElement | null>;
   readonly confirmLabel: string;
   readonly cancelLabel: string;
   readonly isDestructive: boolean;
   readonly isPending: boolean;
 };
 
-function DialogSurface({
-  dialogRef,
+function ConfirmationBody({
   title,
   description,
   children,
   ...actions
-}: DialogSurfaceProps) {
+}: ConfirmationBodyProps) {
   return (
-    <div
-      ref={dialogRef}
-      className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
-      role="alertdialog"
-      aria-modal="true"
-      aria-label={title}
-    >
+    <>
       <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
         {title}
       </h3>
@@ -98,7 +91,7 @@ function DialogSurface({
       {children && <div className="mt-3">{children}</div>}
 
       <DialogActions {...actions} />
-    </div>
+    </>
   );
 }
 
@@ -122,16 +115,15 @@ export function ConfirmationDialog({
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      role="presentation"
-      data-testid={testId}
+    <DialogSurface
+      surfaceRef={dialogRef}
+      onDismiss={onClose}
+      surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
+      role="alertdialog"
+      ariaLabel={title}
+      testId={testId}
     >
-      <DialogSurface
-        dialogRef={dialogRef}
+      <ConfirmationBody
         title={title}
         description={description}
         onClose={onClose}
@@ -142,8 +134,8 @@ export function ConfirmationDialog({
         isPending={isPending}
       >
         {children}
-      </DialogSurface>
-    </div>,
+      </ConfirmationBody>
+    </DialogSurface>,
     document.body,
   );
 }
