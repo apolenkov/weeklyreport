@@ -563,4 +563,20 @@ describe("LeadFormService — fillFrom", () => {
       service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
     ).rejects.toThrow(`Target section ${SECTION_ID} not found.`);
   });
+
+  it("fails when source section does not exist before copying", async () => {
+    const repo = createMockRepository({
+      getSectionById: vi.fn((id: string) =>
+        Promise.resolve(
+          id === SECTION_ID ? structuredClone(draftSection) : null,
+        ),
+      ),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
+    ).rejects.toThrow(`Source section ${SOURCE_SECTION_ID} not found.`);
+    expect(repo.fillFromSection).not.toHaveBeenCalled();
+  });
 });

@@ -85,6 +85,10 @@
 - [x] Move blocked-status dialog assertions to their owning component, remove
       a redundant accessibility assertion, and exercise Telegram procedures
       through public callers with canonical null loggers.
+- [x] Fold the only unique fill-from source-missing case into the application
+      contract suite and delete the duplicated infrastructure-layer suite.
+- [x] Rename the landing-client suite to its real subject and make
+      `page.test.tsx` cover the server organization-fetch wiring it names.
 - [ ] Land the remaining 4 confirmed fixes after the user decides the
       family-wide split-harness convention.
 
