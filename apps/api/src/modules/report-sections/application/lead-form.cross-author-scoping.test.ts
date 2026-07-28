@@ -422,13 +422,10 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
     expect(section.items).toHaveLength(4);
     expect(readOnly).toBe(true);
     // group-scoped read never consults product co-ownership
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getSharedNonArchivedProductIds).not.toHaveBeenCalled();
     // the head's cross-author read IS bounded to its own reporting group
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getUserReportingGroupId).toHaveBeenCalledWith(OTHER_USER_ID);
     // the atomic group-scoped read is what actually loaded the section
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getSectionForPeriodAsGroupPeer).toHaveBeenCalledWith(
       REPORT_ID,
       OTHER_USER_ID,
@@ -453,7 +450,6 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
     ).rejects.toThrow(LeadFormAccessError);
 
     // the pre-check rejected before the atomic group-scoped read ever ran
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getSectionForPeriodAsGroupPeer).not.toHaveBeenCalled();
   });
 
@@ -480,7 +476,6 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
     // the pre-check DID pass (same group, per the stale snapshot above) — the
     // rejection came from the atomic read itself, proving it re-checks the
     // group rather than trusting the pre-check's result.
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getSectionForPeriodAsGroupPeer).toHaveBeenCalledWith(
       REPORT_ID,
       OTHER_USER_ID,
@@ -510,7 +505,6 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
     expect(section.authorId).toBe(OTHER_USER_ID);
     expect(section.projects).toHaveLength(2);
     // admin is global — the group check is never consulted
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getUserReportingGroupId).not.toHaveBeenCalled();
   });
 
@@ -531,7 +525,6 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
     expect(section.authorId).toBe(AUTHOR_ID);
     expect(readOnly).toBe(false);
     // the foreign section's status/metadata were never read
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getSectionForPeriod).not.toHaveBeenCalledWith(
       REPORT_ID,
       OTHER_USER_ID,
@@ -558,9 +551,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
 
     // report-access precheck runs FIRST: co-ownership is never consulted and the
     // foreign section is never read.
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getSharedNonArchivedProductIds).not.toHaveBeenCalled();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getSectionForPeriod).not.toHaveBeenCalledWith(
       REPORT_ID,
       OTHER_USER_ID,

@@ -56,9 +56,7 @@ describe("AdminPrismaRepository.createPeriodManual — reminder parity", () => {
     const result = await repo.createPeriodManual(INPUT, now);
 
     expect(result).toEqual(CREATED);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method
     expect(applicator.applyToPeriod).toHaveBeenCalledTimes(1);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method
     expect(applicator.applyToPeriod).toHaveBeenCalledWith(CREATED, now);
   });
 

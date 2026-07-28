@@ -65,7 +65,6 @@ describe("SAML authentication callback", () => {
     expect(await metricsRegistry.metrics()).toContain(
       'cr_login_attempts_total{method="saml",outcome="fail"} 1',
     );
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(res.redirect).toHaveBeenCalledWith(
       `${FRONTEND_URL}/auth/error?reason=invalid_assertion`,
     );
@@ -91,7 +90,6 @@ describe("SAML authentication callback", () => {
     expect(await loginAttemptsTotal.get()).toMatchObject({
       values: [{ labels: { method: "saml", outcome: "fail" }, value: 1 }],
     });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(res.redirect).toHaveBeenCalledWith(
       `${FRONTEND_URL}/auth/error?reason=invalid_assertion`,
     );
@@ -113,7 +111,6 @@ describe("SAML authentication callback", () => {
     expect(await metricsRegistry.metrics()).not.toContain(
       'cr_login_attempts_total{method="saml",outcome="fail"}',
     );
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(res.redirect).not.toHaveBeenCalled();
   });
 });

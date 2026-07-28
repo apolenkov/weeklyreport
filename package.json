@@ -72,6 +72,7 @@
     "@types/react": "catalog:",
     "@typescript/native": "npm:typescript@^7.0.2",
     "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/eslint-plugin": "^1.6.24",
     "dependency-cruiser": "^18.1.0",
     "eslint": "^10.8.0",
     "eslint-import-resolver-typescript": "^4.4.5",

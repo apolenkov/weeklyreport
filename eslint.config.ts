@@ -1,5 +1,6 @@
 import eslintComments from "@eslint-community/eslint-plugin-eslint-comments";
 import nextPlugin from "@next/eslint-plugin-next";
+import vitest from "@vitest/eslint-plugin";
 import type { ESLint, Linter } from "eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 import { createTypeScriptImportResolver } from "eslint-import-resolver-typescript";
@@ -433,11 +434,11 @@ export default defineConfig([
         "error",
         { ignorePrimitives: { string: true } },
       ],
-      // unbound-method: every firing is in a test — a vitest spy assertion
-      // (`expect(mock.method)`) or mock-cast where the reference is a vi.fn with
-      // no `this`, so they carry a per-site disable with reason. The one genuine
-      // method-capture (reminders.scheduler.test) was fixed with `.bind`, not a
-      // disable.
+      // unbound-method: product code carries no firings. Tests swap this for
+      // `vitest/unbound-method` (see the test-file override), which models
+      // `expect(mock.method)` natively instead of needing a disable per spy
+      // assertion. The one genuine method-capture (reminders.scheduler.test)
+      // was fixed with `.bind`, not a disable.
       "@typescript-eslint/unbound-method": "error",
       // no-base-to-string: 7 real "[object Object]" risks on `unknown` operands
       // (SAML profile fields, generic data-table cells, a spawn error's stderr),
@@ -1093,7 +1094,15 @@ export default defineConfig([
       "**/*.spec.tsx",
       "**/__tests__/**",
     ],
+    plugins: { vitest },
     rules: {
+      // `expect(mock.method)` is the whole point of a spy assertion, but the
+      // base rule cannot tell it from a genuine `this`-losing method capture,
+      // so it demanded a disable at 133 sites — 123 of them that one shape.
+      // The vitest rule understands `expect` calls and flags everything else,
+      // so this is a stricter check than the 133 blanket suppressions were.
+      "@typescript-eslint/unbound-method": "off",
+      "vitest/unbound-method": "error",
       ...Object.fromEntries(
         Object.keys(jsxA11y.configs.recommended.rules).map((rule) => [
           rule,

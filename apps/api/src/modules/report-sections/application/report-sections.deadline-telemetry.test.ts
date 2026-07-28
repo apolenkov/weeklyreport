@@ -145,7 +145,6 @@ describe("ReportSectionsService — deadline gate", () => {
 
     expect(saved.status).toBe("submitted");
     expect(saved.late).toBe(false);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getReportMeta).toHaveBeenCalledTimes(1);
   });
 

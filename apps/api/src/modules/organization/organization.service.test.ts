@@ -55,7 +55,6 @@ describe("OrganizationService", () => {
     });
     expect(next.shortName).toBe("PLAT");
     expect(next.fullName).toBe("Platform Engineering");
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.updateOrganization).toHaveBeenCalledWith({
       shortName: "PLAT",
       fullName: "Platform Engineering",

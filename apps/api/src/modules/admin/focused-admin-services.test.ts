@@ -38,7 +38,6 @@ describe("focused admin services", () => {
     const service = new ReminderAdminService(repository);
 
     await expect(service.policyExists(policyId)).resolves.toBe(true);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts the mock was bypassed, not invoked unbound
     expect(repository.listReminderPolicies).not.toHaveBeenCalled();
   });
 

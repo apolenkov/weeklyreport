@@ -38,7 +38,7 @@ describe("QueueRegistry", () => {
     const registry = new QueueRegistry(STUB_ENV);
     const closes = QUEUE_NAMES.map(
       (name) =>
-        // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+        // eslint-disable-next-line vitest/unbound-method -- vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose
         registry.get(name).close as ReturnType<typeof vi.fn>,
     );
 

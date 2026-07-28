@@ -125,11 +125,8 @@ describe("WeeklyReportService — unit tests", () => {
 
     await service.getWeeklyReport(reportId);
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getWeeklyReport).toHaveBeenCalledOnce();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getWeeklyReport).toHaveBeenCalledWith(reportId, undefined);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getActiveReportId).not.toHaveBeenCalled();
   });
 
@@ -141,9 +138,7 @@ describe("WeeklyReportService — unit tests", () => {
 
     await service.getWeeklyReport();
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getActiveReportId).toHaveBeenCalledOnce();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getWeeklyReport).toHaveBeenCalledWith(
       activeReportId,
       undefined,
@@ -177,7 +172,6 @@ describe("WeeklyReportService — unit tests", () => {
       report: null,
       crossGroup: null,
     });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getWeeklyReport).not.toHaveBeenCalled();
   });
 
@@ -389,11 +383,8 @@ describe("WeeklyReportService — viewer published-or-current gate", () => {
     if (result.status !== "active") throw new Error("expected active");
     expect(result.periodStatus).toBe("published");
     expect(result.reportId).toBe(reportId);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getCurrentEditableId).toHaveBeenCalledOnce();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getLatestPublishedNonArchivedId).toHaveBeenCalledOnce();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getActiveReportId).not.toHaveBeenCalled();
   });
 
@@ -591,11 +582,8 @@ describe("WeeklyReportService — head default resolution", () => {
 
     await service.getWeeklyReport(undefined, "head");
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getCurrentEditableId).toHaveBeenCalledOnce();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getActiveReportId).not.toHaveBeenCalled();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getWeeklyReport).toHaveBeenCalledWith(reportId, undefined);
   });
 
@@ -615,13 +603,9 @@ describe("WeeklyReportService — head default resolution", () => {
 
     await service.getWeeklyReport(undefined, "head");
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getCurrentEditableId).toHaveBeenCalledOnce();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getLatestPublishedNonArchivedId).toHaveBeenCalledOnce();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getActiveReportId).not.toHaveBeenCalled();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getWeeklyReport).toHaveBeenCalledWith(
       olderPublishedId,
       undefined,
@@ -636,13 +620,9 @@ describe("WeeklyReportService — head default resolution", () => {
 
     await service.getWeeklyReport(undefined, "lead");
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getActiveReportId).toHaveBeenCalledOnce();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getCurrentEditableId).not.toHaveBeenCalled();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getLatestPublishedNonArchivedId).not.toHaveBeenCalled();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.getWeeklyReport).toHaveBeenCalledWith(
       activeReportId,
       undefined,
