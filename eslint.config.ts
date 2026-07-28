@@ -1101,6 +1101,44 @@ export default defineConfig([
       // so this is a stricter check than the 133 blanket suppressions were.
       "@typescript-eslint/unbound-method": "off",
       "vitest/unbound-method": "error",
+      // The rest of the plugin's 82 rules were measured across the suite; these
+      // are the ones already at zero, so each is a guarantee rather than a
+      // burn-down. The four other zero-firing rules are excluded: two are
+      // allowlist rules that cannot fire without options, one is padding
+      // (Prettier's ground), and unbound-method is set above.
+      "vitest/consistent-each-for": "error",
+      "vitest/consistent-test-it": "error",
+      "vitest/consistent-vitest-vi": "error",
+      "vitest/hoisted-apis-on-top": "error",
+      "vitest/max-nested-describe": "error",
+      "vitest/no-alias-methods": "error",
+      "vitest/no-done-callback": "error",
+      "vitest/no-duplicate-hooks": "error",
+      // A stray `.only` silently stops every other test in the file from
+      // running, and a duplicated title silently shadows one of the two.
+      "vitest/no-focused-tests": "error",
+      "vitest/no-identical-title": "error",
+      "vitest/no-interpolation-in-snapshots": "error",
+      "vitest/no-mocks-import": "error",
+      // An `expect` outside a test body never runs and never fails.
+      "vitest/no-standalone-expect": "error",
+      "vitest/no-test-prefixes": "error",
+      "vitest/no-test-return-statement": "error",
+      "vitest/no-unneeded-async-expect-function": "error",
+      "vitest/prefer-comparison-matcher": "error",
+      "vitest/prefer-equality-matcher": "error",
+      "vitest/prefer-hooks-on-top": "error",
+      "vitest/prefer-snapshot-hint": "error",
+      "vitest/prefer-to-be": "error",
+      "vitest/prefer-to-be-object": "error",
+      "vitest/prefer-to-contain": "error",
+      "vitest/prefer-to-have-been-called-times": "error",
+      "vitest/prefer-to-have-length": "error",
+      "vitest/prefer-todo": "error",
+      "vitest/require-awaited-expect-poll": "error",
+      "vitest/require-local-test-context-for-concurrent-snapshots": "error",
+      "vitest/valid-describe-callback": "error",
+      "vitest/valid-expect-in-promise": "error",
       ...Object.fromEntries(
         Object.keys(jsxA11y.configs.recommended.rules).map((rule) => [
           rule,
