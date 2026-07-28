@@ -325,34 +325,33 @@ describe("ReportSectionsService — item tag and workflowStatus combinations", (
   // values are covered by the per-type rejection tests).
   const statuses = ["done", "in_progress", "paused"] as const;
 
-  for (const tag of tags) {
-    for (const ws of statuses) {
-      it(`accepts item with tag="${tag}" workflowStatus="${ws}"`, async () => {
-        const service = new ReportSectionsService(
-          createRepository(baseSection),
-          testGraceSettings,
-        );
-        const saved = await service.saveDraft(
-          validDraft({
-            items: [
-              {
-                projectId: PROJECT_ID_1,
-                type: "current",
-                text: `Test item ${tag}/${ws}`,
-                tag,
-                workflowStatus: ws,
-                carriedOver: false,
-                stageNames: ["Development"],
-              },
-            ],
-          }),
-        );
-        expect(saved.items).toHaveLength(1);
-        expect(saved.items[0]?.tag).toBe(tag);
-        expect(saved.items[0]?.workflowStatus).toBe(ws);
-      });
-    }
-  }
+  it.each(tags.flatMap((tag) => statuses.map((ws) => [tag, ws] as const)))(
+    'accepts item with tag="%s" workflowStatus="%s"',
+    async (tag, ws) => {
+      const service = new ReportSectionsService(
+        createRepository(baseSection),
+        testGraceSettings,
+      );
+      const saved = await service.saveDraft(
+        validDraft({
+          items: [
+            {
+              projectId: PROJECT_ID_1,
+              type: "current",
+              text: `Test item ${tag}/${ws}`,
+              tag,
+              workflowStatus: ws,
+              carriedOver: false,
+              stageNames: ["Development"],
+            },
+          ],
+        }),
+      );
+      expect(saved.items).toHaveLength(1);
+      expect(saved.items[0]?.tag).toBe(tag);
+      expect(saved.items[0]?.workflowStatus).toBe(ws);
+    },
+  );
 });
 
 describe("ReportSectionsService — double submit rejected", () => {

@@ -548,16 +548,16 @@ describe("PeriodsTab — deadline UTC round-trip under a non-UTC timezone", () =
     process.env.TZ = "Europe/Moscow";
   });
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterAll(() => {
     if (originalTz === undefined) {
       delete process.env.TZ;
     } else {
       process.env.TZ = originalTz;
     }
-  });
-
-  beforeEach(() => {
-    vi.clearAllMocks();
   });
 
   // Encodes the assumption the round-trip teeth rest on: if the non-UTC TZ

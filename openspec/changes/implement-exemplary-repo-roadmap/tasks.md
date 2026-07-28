@@ -123,7 +123,7 @@
 - [x] R4 implementation: close the final four confirmed findings and the
       structural-suppression task under the accepted convention.
 - [x] R5 ruling: adjudicate every firing Vitest rule independently.
-- [ ] R5 implementation: store the per-rule evidence ledger and land every
+- [x] R5 implementation: store the per-rule evidence ledger and land every
       accepted rule without weakening test intent.
 - [x] R6 ruling: derive provenance resolution from live OpenSpec trees without
       a committed generated mapping.

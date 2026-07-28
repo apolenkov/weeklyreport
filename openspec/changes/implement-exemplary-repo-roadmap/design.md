@@ -55,6 +55,20 @@ textual deduplication alone does not justify a new seam. R6 similarly places
 one deep resolver interface over tree traversal without adding a maintained
 index.
 
+## Vitest rule frontier
+
+The installed `@vitest/eslint-plugin` 1.6.24 exposes 82 rules. Production flat
+config already enforced 31. The remaining 51 were measured over 549 test files
+with the same parser, settings, and file scopes as `pnpm lint`: 49 fired and 2
+configuration-only restriction rules were vacuous.
+
+The durable per-rule ledger is `scripts/vitest-rule-ledger.json`. Three rules
+were accepted after site inspection: `prefer-each` (2 fixes),
+`prefer-hooks-in-order` (1), and `prefer-vi-mocked` (2). The other 48 have an
+individual rejection reason; none is hidden behind a category-level dismissal.
+A main-gate test validates the ledger, proves all three accepted rules are
+enabled, and plants one firing shape for each.
+
 ## `functional/prefer-immutable-types` measurement
 
 The installed `eslint-plugin-functional` 10.0.0 rule was executed through the

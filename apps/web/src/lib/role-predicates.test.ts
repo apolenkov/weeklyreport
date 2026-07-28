@@ -29,15 +29,12 @@ const TRUTH_TABLE: readonly {
   { name: "isHeadLike", predicate: isHeadLike, trueFor: ["head", "admin"] },
 ];
 
-describe("role-predicates", () => {
-  for (const { name, predicate, trueFor } of TRUTH_TABLE) {
-    describe(name, () => {
-      for (const state of ROLE_STATES) {
-        const expected = trueFor.includes(state);
-        it(`${String(state)} -> ${String(expected)}`, () => {
-          expect(predicate(state)).toBe(expected);
-        });
-      }
+describe.each(TRUTH_TABLE)(
+  "role-predicates: $name",
+  ({ predicate, trueFor }) => {
+    it.each(ROLE_STATES)("%s", (state) => {
+      const expected = trueFor.includes(state);
+      expect(predicate(state)).toBe(expected);
     });
-  }
-});
+  },
+);
